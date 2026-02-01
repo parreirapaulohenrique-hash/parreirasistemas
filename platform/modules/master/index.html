@@ -65,13 +65,81 @@
             </div>
         </main>
 
-        <button class="fab-add" onclick="alert('Funcionalidade de Novo Cadastro em breve!')">
+        <button class="fab-add" onclick="window.openModal()">
             <span class="material-icons-round">add</span>
         </button>
     </div>
 
+    <!-- Tenant Modal -->
+    <div id="tenantModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Novo Cliente (Tenant)</h3>
+                <button class="btn-close" onclick="closeModal()">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <form id="tenantForm">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">ID da Empresa (Slug)</label>
+                        <input type="text" id="tenantId" class="form-input" placeholder="ex: novaempresa" required
+                            pattern="[a-z0-9]+" title="Apenas letras minúsculas e números">
+                        <small style="color: var(--text-secondary); font-size: 0.8rem;">Usado no login. Apenas letras
+                            minúsculas.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Razão Social / Nome</label>
+                        <input type="text" id="tenantName" class="form-input" placeholder="Ex: Nova Empresa Ltda"
+                            required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">CNPJ</label>
+                        <input type="text" id="tenantCnpj" class="form-input" placeholder="00.000.000/0000-00">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Email Admin</label>
+                        <input type="email" id="tenantEmail" class="form-input" placeholder="admin@empresa.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Módulos Ativos</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="modules" value="dispatch" checked> Despacho
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="modules" value="master"> Master (Admin)
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="modules" value="wms"> WMS
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="modules" value="erp"> ERP
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="modules" value="sales-force"> Sales Force
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <span class="material-icons-round">save</span>
+                        Salvar Cliente
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script type="module" src="js/app.js"></script>
+
 </body>
 
 </html>

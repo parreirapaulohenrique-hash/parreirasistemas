@@ -393,7 +393,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 // Security: Whitelist of Allowed Tenants to prevent typos creating orphan environments
-                const ALLOWED_TENANTS = ['parreiralog', 'centralpecas', 'ltdistribuidora', 'parreira']; // Add new clients here manually
+                // Security: Whitelist of Allowed Tenants (Hardcoded + Dynamic)
+                const storedTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
+                const dynamicIds = storedTenants.map(t => t.id);
+                const ALLOWED_TENANTS = ['parreiralog', 'centralpecas', 'ltdistribuidora', 'parreira', ...dynamicIds];
 
                 if (!ALLOWED_TENANTS.includes(tenantId)) {
                     alert(`A empresa '${tenantId}' não está habilitada no sistema.\n\nVerifique a grafia ou entre em contato com o suporte para liberar o acesso.`);

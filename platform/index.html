@@ -212,8 +212,10 @@
     <div class="version-badge" id="versionBadge">v1.0.0</div>
 
     <script>
-        // Whitelist compartilhada de tenants permitidos
-        const ALLOWED_TENANTS = ['parreiralog', 'centralpecas', 'ltdistribuidora', 'parreira'];
+        // Whitelist compartilhada de tenants permitidos (Hardcoded + Dynamic)
+        const storedTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
+        const dynamicIds = storedTenants.map(t => t.id);
+        const ALLOWED_TENANTS = ['parreiralog', 'centralpecas', 'ltdistribuidora', 'parreira', ...dynamicIds];
 
         // Mock users for platform login (since we don't have a shared DB yet)
         const MOCK_USERS = [
