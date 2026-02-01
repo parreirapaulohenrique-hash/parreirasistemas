@@ -1,29 +1,20 @@
 export const mockTenants = [
     {
-        id: 't001',
-        name: 'Parreira Logística Ltda',
-        cnpj: '12.345.678/0001-90',
+        id: 't_parreira',
+        name: 'Parreira Logística (Matriz)',
+        cnpj: '37.123.456/0001-99',
         adminEmail: 'paulo@parreiralog.com.br',
-        modules: ['dispatch', 'wms'],
+        modules: ['dispatch', 'master', 'wms'],
         status: 'active',
-        createdAt: '2026-01-15'
+        createdAt: '2024-01-01'
     },
     {
-        id: 't002',
-        name: 'Transportadora Global SA',
-        cnpj: '98.765.432/0001-10',
-        adminEmail: 'contato@globaltrans.com',
+        id: 't_central',
+        name: 'Central Peças',
+        cnpj: '12.987.654/0001-11',
+        adminEmail: 'admin@centralpecas.com.br',
         modules: ['dispatch'],
         status: 'active',
-        createdAt: '2026-01-20'
-    },
-    {
-        id: 't003',
-        name: 'AgroSul Distribuição',
-        cnpj: '45.123.789/0001-55',
-        adminEmail: 'financeiro@agrosul.com',
-        modules: ['erp', 'wms', 'dispatch'],
-        status: 'pending',
-        createdAt: '2026-01-30'
+        createdAt: '2026-01-31'
     }
 ];
