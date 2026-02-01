@@ -71,18 +71,14 @@ Write-Host "  ✅ Push concluído!" -ForegroundColor Green
 Write-Host ""
 
 # ============================================
-# ETAPA 5: ACIONAR DEPLOY NO VERCEL
-# ============================================
-Write-Host "[5/5] Acionando deploy no Vercel..." -ForegroundColor Yellow
-$deployHookUrl = "https://api.vercel.com/v1/integrations/deploy/prj_7uWD3gxuFH6CkRFWonMvDug3YblX/VRfUlFl2xw"
-try {
-    Invoke-RestMethod -Uri $deployHookUrl -Method Post -ErrorAction Stop | Out-Null
-    Write-Host "  ✅ Deploy acionado no Vercel!" -ForegroundColor Green
-}
-catch {
-    Write-Host "  ⚠️ Erro ao acionar deploy: $_" -ForegroundColor Yellow
-}
+# Deploy acionado automaticamente pelo GitHub Integration
+Write-Host "✅ Push concluído! O Vercel iniciará o deploy automaticamente." -ForegroundColor Green
 Write-Host ""
+Write-Host "========================================"
+Write-Host "  PROCESSO DE ENVIO CONCLUÍDO! 🚀"
+Write-Host "========================================"
+Write-Host ""
+Write-Host "Verifique o status em: https://vercel.com/dashboard"
 
 # ============================================
 # FINALIZAÇÃO
