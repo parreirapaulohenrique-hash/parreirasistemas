@@ -1,5 +1,5 @@
 {
-  "version": "3.0.5",
-  "date": "2026-01-31",
-  "changes": "Correção build Vercel: Removido legacy config do vercel.json"
+  "version": "3.1.0",
+  "date": "2026-02-01",
+  "changes": "Feature: Suporte a Multi-tenant dinâmico via Master Panel"
 }
