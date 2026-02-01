@@ -219,7 +219,7 @@
 
         // Update Whitelist
         const dynamicIds = storedTenants.map(t => t.id);
-        const ALLOWED_TENANTS = ['parreiralog', 'centralpecas', 'ltdistribuidora', 'parreira', ...dynamicIds];
+        const ALLOWED_TENANTS = ['ltdistribuidora', 'centralpecas', 'parreira', ...dynamicIds];
 
         // MOCK USERS for Fallback (if registry is empty/broken)
         // Isso garante que o admin (você) consiga entrar mesmo se o localStorage for limpo.

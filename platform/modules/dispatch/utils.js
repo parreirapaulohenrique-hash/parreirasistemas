@@ -91,42 +91,31 @@ const Utils = {
             return !!this.tenantId && this.tenantId !== 'null' && this.tenantId !== 'undefined';
         },
 
-        // --- ALIAS RESOLVER (Virtual Rename) ---
-        // Permite que 'ltdistribuidora' acesse os dados de 'parreiralog' transparentemente
-        getRealTenantId() {
-            if (this.tenantId === 'ltdistribuidora') return 'parreiralog';
-            return this.tenantId;
-        },
-
-        // --- SAVE WITH CHUNKING SUPPORT ---
+        // --- SAVE LOGIC (Direct to TenantID) ---
         async save(key, data) {
-            const realTenantId = this.getRealTenantId();
-
             // --- FIREBASE MODE ---
             if (typeof firebase !== 'undefined' && window.db) {
                 try {
                     const jsonContent = JSON.stringify(data);
                     if (jsonContent.length < 800000) {
-                        await window.db.collection('tenants').doc(realTenantId).collection('legacy_store').doc(key).set({
+                        await window.db.collection('tenants').doc(this.tenantId).collection('legacy_store').doc(key).set({
                             content: jsonContent,
                             updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
                             isChunked: false
                         });
                         return;
                     }
-                    // Chunking for Firebase...
-                    // (Simplificado: assumindo que não usaremos chunking massivo agora para evitar complexidade)
-                    console.log(`📦 Payload grande ignorado no modo alias rápido.`);
+                    console.log(`📦 Payload grande ignorado.`);
                 } catch (e) { console.error("Cloud Save Error", e); }
                 return;
             }
 
-            // --- LOCAL SIMULATION MODE (Offline Multi-Tenant) ---
+            // --- LOCAL SIMULATION MODE ---
             if (this.hasTenant()) {
-                const simKey = `tenant_${realTenantId}_${key}`;
+                const simKey = `tenant_${this.tenantId}_${key}`;
                 try {
                     localStorage.setItem(simKey, JSON.stringify(data));
-                    console.log(`💾 [SimCloud] Salvo localmente: ${simKey} (Alias: ${this.tenantId})`);
+                    console.log(`💾 [SimCloud] Salvo localmente: ${simKey}`);
                 } catch (e) {
                     console.error('❌ [SimCloud] Erro ao salvar:', e);
                 }
@@ -292,21 +281,19 @@ const Utils = {
         },
 
         listen() {
-            const realTenantId = this.getRealTenantId();
-
             // --- FIREBASE MODE ---
             if (typeof firebase !== 'undefined' && window.db && !window.hasAttachedListeners) {
                 window.hasAttachedListeners = true;
                 const keys = ['dispatches', 'freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients', 'invoice_history'];
-                console.log(`📡 Iniciando Sync SaaS (Firestore) para: ${realTenantId}`);
+                console.log(`📡 Iniciando Sync SaaS (Firestore) para: ${this.tenantId}`);
 
                 keys.forEach(key => {
-                    window.db.collection('tenants').doc(realTenantId).collection('legacy_store').doc(key).onSnapshot((doc) => {
+                    window.db.collection('tenants').doc(this.tenantId).collection('legacy_store').doc(key).onSnapshot((doc) => {
                         if (doc.exists) {
                             const data = doc.data();
-                            this.processIncomingData(key, data.content); // Simplified for alias mode
+                            this.processIncomingData(key, data.content);
                         } else {
-                            this.processIncomingData(key, null);
+                            this.processIncomingData(key, null); // Clear if deleted
                         }
                     });
                 });
@@ -316,11 +303,11 @@ const Utils = {
             // --- SIMULATED CLOUD MODE ---
             if (!window.db && !window.hasAttachedListeners) {
                 window.hasAttachedListeners = true;
-                console.log(`📡 Iniciando Sync SaaS (Simulado) para: ${realTenantId}`);
+                console.log(`📡 Iniciando Sync SaaS (Simulado) para: ${this.tenantId}`);
 
                 window.addEventListener('storage', (e) => {
-                    if (e.key && e.key.startsWith(`tenant_${realTenantId}_`)) {
-                        const internalKey = e.key.replace(`tenant_${realTenantId}_`, '');
+                    if (e.key && e.key.startsWith(`tenant_${this.tenantId}_`)) {
+                        const internalKey = e.key.replace(`tenant_${this.tenantId}_`, '');
                         console.log(`📥 [SimCloud] Update de outra aba: ${internalKey}`);
                         localStorage.setItem(internalKey, e.newValue);
                         // Refresh UI if needed
