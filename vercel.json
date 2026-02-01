@@ -5,8 +5,12 @@
             "destination": "/platform/index.html"
         },
         {
-            "source": "/platform",
-            "destination": "/platform/index.html"
+            "source": "/modules/(.*)",
+            "destination": "/platform/modules/$1"
+        },
+        {
+            "source": "/core/(.*)",
+            "destination": "/platform/core/$1"
         },
         {
             "source": "/platform/(.*)",
