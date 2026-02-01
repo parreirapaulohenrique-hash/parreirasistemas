@@ -1,0 +1,4 @@
+DEPLOY FUNCIONOU!
+Versão: 1.8.29
+Data: 2026-01-16
+Se você está lendo isso, o Vercel atualizou os arquivos.

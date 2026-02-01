@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Migração SaaS - ParreiraLog</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: #222;
+            color: #fff;
+            padding: 50px;
+            text-align: center;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+
+        #log {
+            margin-top: 20px;
+            text-align: left;
+            background: #111;
+            padding: 20px;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+</head>
+
+<body>
+    <h1>🏢 Migração para Estrutura SaaS</h1>
+    <p>Este script irá mover seus dados de dados da Raiz para a pasta segura <b>tenants/parreiralog</b>.</p>
+
+    <button id="btnStart" onclick="startMigration()">Iniciar Migração</button>
+    <div id="log">Aguardando...</div>
+
+    <script src="firebase-config.js"></script>
+    <script>
+        const logDiv = document.getElementById('log');
+        function log(msg) { logDiv.innerHTML += msg + '\n'; }
+
+        async function startMigration() {
+            const btn = document.getElementById('btnStart');
+            btn.disabled = true;
+            btn.innerText = "Migrando...";
+
+            log("🚀 Iniciando...");
+
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+            const db = firebase.firestore();
+            await firebase.auth().signInAnonymously();
+
+            const TARGET_TENANT = 'parreiralog';
+            const keys = ['dispatches', 'freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2'];
+
+            let count = 0;
+
+            for (const key of keys) {
+                log(`📦 Lendo coleção antiga: ${key}...`);
+
+                // 1. Read Old
+                const oldRef = db.collection('legacy_store').doc(key);
+                const oldDoc = await oldRef.get();
+
+                if (oldDoc.exists) {
+                    const data = oldDoc.data();
+                    log(`   ✅ Dados encontrados (${data.content ? data.content.length : 0} bytes). Copiando para ${TARGET_TENANT}...`);
+
+                    // 2. Write New
+                    const newRef = db.collection('tenants').doc(TARGET_TENANT).collection('legacy_store').doc(key);
+                    await newRef.set(data);
+
+                    log(`   ✨ Copiado com sucesso!`);
+                    count++;
+                } else {
+                    log(`   ⚠️ Coleção ${key} não existe na raiz. Pulando.`);
+                }
+            }
+
+            log(`\n✅ FIM DA MIGRAÇÃO! ${count} coleções foram movidas para 'tenants/${TARGET_TENANT}'.`);
+            log(`Agora você pode atualizar o código do site para o modo SaaS.`);
+            btn.innerText = "Concluído";
+        }
+    </script>
+</body>
+
+</html>

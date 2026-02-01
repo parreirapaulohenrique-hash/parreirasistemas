@@ -1,8 +1,9 @@
-# Ignorar tudo por padrão
-*
+# Ignorar tudo na raiz (mas não recursivamente por padrão para facilitar whitelist)
+/*
 
-# Permitir pastas e arquivos do sistema
-!/platform/
+# Permitir pastas e arquivos do sistema (Recursivo)
+!/platform
+!/platform/**
 !/vercel.json
 
 # Permitir ferramentas de deploy e documentação básica
