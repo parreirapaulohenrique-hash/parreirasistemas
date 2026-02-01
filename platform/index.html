@@ -96,42 +96,207 @@
         <p>&copy; 2026 Parreira Sistemas. Desenvolvido com ❤️</p>
     </footer>
 
+    <!-- Login Modal -->
+    <style>
+        .login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .login-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 2.5rem;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .login-header h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: white;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-login:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+    </style>
+
+    <div class="login-overlay" id="loginOverlay" style="display: none;">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="logo-icon" style="margin: 0 auto 1rem; width: 64px; height: 64px;">
+                    <span class="material-icons-round" style="font-size: 32px;">hub</span>
+                </div>
+                <h2>Parreira Sistemas</h2>
+                <p style="color: var(--text-secondary);">Faça login para continuar</p>
+            </div>
+
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label class="form-label">ID da Empresa</label>
+                    <input type="text" id="tenantId" class="form-input" placeholder="Ex: parreiralog" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Usuário</label>
+                    <input type="text" id="username" class="form-input" placeholder="Usuário" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Senha</label>
+                    <input type="password" id="password" class="form-input" placeholder="Senha" required>
+                </div>
+
+                <button type="submit" class="btn-login">ENTRAR</button>
+            </form>
+        </div>
+    </div>
+
     <div class="version-badge" id="versionBadge">v1.0.0</div>
 
     <script>
-        // Check login
-        document.addEventListener('DOMContentLoaded', function () {
-            const user = JSON.parse(localStorage.getItem('logged_user') || 'null');
+        // Whitelist compartilhada de tenants permitidos
+        const ALLOWED_TENANTS = ['parreiralog', 'centralpecas', 'ltdistribuidora'];
 
-            if (!user) {
-                // Redirect to dispatch login for now
-                window.location.href = 'modules/dispatch/index.html';
+        // Mock users for platform login (since we don't have a shared DB yet)
+        const MOCK_USERS = [
+            { login: 'admin', pass: 'admin', name: 'Administrador', role: 'supervisor' }
+        ];
+
+        document.addEventListener('DOMContentLoaded', function () {
+            checkLogin();
+            loadVersion();
+        });
+
+        function checkLogin() {
+            const user = JSON.parse(localStorage.getItem('logged_user') || 'null');
+            const tenant = localStorage.getItem('app_tenant_id');
+
+            if (!user || !tenant) {
+                document.getElementById('loginOverlay').style.display = 'flex';
                 return;
             }
 
+            renderUserInfo(user);
+        }
+
+        function renderUserInfo(user) {
             document.getElementById('userName').textContent = user.name || user.login;
             document.getElementById('userRole').textContent = user.role === 'supervisor' ? 'Supervisor' : 'Operacional';
 
-            // Enable master panel for supervisors
-            if (user.role === 'supervisor') {
+            if (user.role === 'supervisor' || user.role === 'admin') {
                 const masterCard = document.querySelector('.module-master');
-                masterCard.classList.remove('disabled');
+                if (masterCard) masterCard.classList.remove('disabled');
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+
+            const tenant = document.getElementById('tenantId').value.trim().toLowerCase();
+            const user = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value;
+
+            if (!ALLOWED_TENANTS.includes(tenant)) {
+                alert(`Empresa '${tenant}' não encontrada ou não habilitada.`);
+                return;
             }
 
-            // Load version
+            // Simple validation mimicking Dispatch logic
+            // In a real scenario, this would check against the tenant's user database
+            // For now, allow admin/admin or any previously saved user in localStorage if matching
+
+            let validUser = MOCK_USERS.find(u => u.login === user && u.pass === pass);
+
+            // Try to find in localStorage 'app_users' if available (shared domain storage)
+            if (!validUser) {
+                const storedUsers = JSON.parse(localStorage.getItem('app_users') || '[]');
+                validUser = storedUsers.find(u => u.login === user && u.pass === pass);
+            }
+
+            if (validUser) {
+                // Save session
+                localStorage.setItem('app_tenant_id', tenant);
+                localStorage.setItem('logged_user', JSON.stringify(validUser));
+
+                // Hide overlay and render
+                document.getElementById('loginOverlay').style.display = 'none';
+                renderUserInfo(validUser);
+            } else {
+                alert('Usuário ou senha inválidos.');
+            }
+        }
+
+        function loadVersion() {
             fetch('modules/dispatch/version.json')
                 .then(r => r.json())
                 .then(data => {
-                    document.getElementById('versionBadge').textContent = 'v' + data.version;
+                    const badge = document.getElementById('versionBadge');
+                    if (badge) badge.textContent = 'v' + data.version;
                 })
                 .catch(() => { });
-        });
+        }
 
         function openModule(module) {
             const card = document.querySelector(`.module-${module === 'sales-force' ? 'sales' : module}`);
-            if (card && card.classList.contains('disabled')) {
-                return;
-            }
+            if (card && card.classList.contains('disabled')) return;
 
             switch (module) {
                 case 'dispatch':
@@ -141,20 +306,17 @@
                     window.location.href = 'modules/master/index.html';
                     break;
                 case 'erp':
-                    window.location.href = 'modules/erp/index.html';
-                    break;
                 case 'wms':
-                    window.location.href = 'modules/wms/index.html';
-                    break;
                 case 'sales-force':
-                    window.location.href = 'modules/sales-force/index.html';
+                    alert('Módulo em desenvolvimento.');
                     break;
             }
         }
 
         function logout() {
             localStorage.removeItem('logged_user');
-            window.location.href = 'modules/dispatch/index.html';
+            // localStorage.removeItem('app_tenant_id'); // Optional: keep tenant for convenience
+            location.reload();
         }
     </script>
 </body>
