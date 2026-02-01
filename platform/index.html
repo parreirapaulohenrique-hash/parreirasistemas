@@ -217,7 +217,8 @@
 
         // Mock users for platform login (since we don't have a shared DB yet)
         const MOCK_USERS = [
-            { login: 'admin', pass: 'admin', name: 'Administrador', role: 'supervisor' }
+            { login: 'admin', pass: 'admin', name: 'Administrador', role: 'supervisor' },
+            { login: 'parreira', pass: 'parreira123', name: 'Paulo Parreira', role: 'supervisor' }
         ];
 
         document.addEventListener('DOMContentLoaded', function () {
@@ -241,9 +242,16 @@
             document.getElementById('userName').textContent = user.name || user.login;
             document.getElementById('userRole').textContent = user.role === 'supervisor' ? 'Supervisor' : 'Operacional';
 
-            if (user.role === 'supervisor' || user.role === 'admin') {
+            // Enable master panel ONLY for admin and parreira
+            const allowedMasterUsers = ['admin', 'parreira'];
+            if (allowedMasterUsers.includes(user.login)) {
                 const masterCard = document.querySelector('.module-master');
-                if (masterCard) masterCard.classList.remove('disabled');
+                if (masterCard) {
+                    masterCard.classList.remove('disabled');
+                    // Update status text
+                    const statusSpan = masterCard.querySelector('.module-status');
+                    if (statusSpan) statusSpan.innerHTML = '👑 Acesso Liberado';
+                }
             }
         }
 
