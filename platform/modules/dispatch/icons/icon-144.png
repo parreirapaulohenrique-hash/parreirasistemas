@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">
+  <rect width="144" height="144" rx="20" fill="#1e293b"/>
+  <text x="72" y="85" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#3b82f6" text-anchor="middle">PL</text>
+  <rect x="20" y="110" width="104" height="8" rx="4" fill="#3b82f6"/>
+</svg>

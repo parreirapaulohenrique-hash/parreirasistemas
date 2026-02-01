@@ -1,0 +1,22 @@
+{
+    "version": 2,
+    "public": true,
+    "rewrites": [
+        {
+            "source": "/",
+            "destination": "/platform/index.html"
+        },
+        {
+            "source": "/platform",
+            "destination": "/platform/index.html"
+        },
+        {
+            "source": "/platform/(.*)",
+            "destination": "/platform/$1"
+        },
+        {
+            "source": "/web/(.*)",
+            "destination": "/web/$1"
+        }
+    ]
+}
