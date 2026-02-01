@@ -209,18 +209,22 @@
         </div>
     </div>
 
-    <div class="version-badge" id="versionBadge">v1.1.0</div>
+    <div class="version-badge" id="versionBadge">v3.2.0 (Secure)</div>
 
     <script>
         // Whitelist compartilhada de tenants permitidos (Hardcoded + Dynamic)
+        // Registry: Tenants and Users (Shared LocalStorage)
         const storedTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
+        const storedUsers = JSON.parse(localStorage.getItem('platform_users_registry') || '[]');
+
+        // Update Whitelist
         const dynamicIds = storedTenants.map(t => t.id);
         const ALLOWED_TENANTS = ['parreiralog', 'centralpecas', 'ltdistribuidora', 'parreira', ...dynamicIds];
 
-        // Mock users for platform login (since we don't have a shared DB yet)
-        const MOCK_USERS = [
-            { login: 'admin', pass: 'admin', name: 'Administrador', role: 'supervisor' },
-            { login: 'parreira', pass: 'parreira123', name: 'Paulo Parreira', role: 'supervisor' }
+        // MOCK USERS for Fallback (if registry is empty/broken)
+        // Isso garante que o admin (você) consiga entrar mesmo se o localStorage for limpo.
+        const FALLBACK_USERS = [
+            { login: 'paulo', pass: 'master@2026', name: 'Paulo Parreira', role: 'admin', tenant: 'parreira' }
         ];
 
         document.addEventListener('DOMContentLoaded', function () {
@@ -240,57 +244,70 @@
             renderUserInfo(user);
         }
 
-        function renderUserInfo(user) {
-            document.getElementById('userName').textContent = user.name || user.login;
-            document.getElementById('userRole').textContent = user.role === 'supervisor' ? 'Supervisor' : 'Operacional';
-
-            // Enable master panel ONLY for admin and parreira
-            const allowedMasterUsers = ['admin', 'parreira'];
-            if (allowedMasterUsers.includes(user.login)) {
-                const masterCard = document.querySelector('.module-master');
-                if (masterCard) {
-                    masterCard.classList.remove('disabled');
-                    // Update status text
-                    const statusSpan = masterCard.querySelector('.module-status');
-                    if (statusSpan) statusSpan.innerHTML = '👑 Acesso Liberado';
-                }
-            }
-        }
-
-        function handleLogin(e) {
+        async function handleLogin(e) {
             e.preventDefault();
 
-            const tenant = document.getElementById('tenantId').value.trim().toLowerCase();
+            const tenant = document.getElementById('tenantId').value.trim(); // Allow mixed case input, strictly handled below? JS usually case sensitive
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value;
 
+            // 1. Validate Tenant
             if (!ALLOWED_TENANTS.includes(tenant)) {
-                alert(`Empresa '${tenant}' não encontrada ou não habilitada.`);
+                alert('Empresa não encontrada ou inativa!');
                 return;
             }
 
-            // Simple validation mimicking Dispatch logic
-            // In a real scenario, this would check against the tenant's user database
-            // For now, allow admin/admin or any previously saved user in localStorage if matching
+            // 2. Validate User against Central Registry
+            // Logic: Try to find user in storedUsers belonging to this tenant 
+            // OR if user is 'admin'/'parreira', they might have multi-tenant access (simplification)
 
-            let validUser = MOCK_USERS.find(u => u.login === user && u.pass === pass);
+            let validUser = storedUsers.find(u => u.login === user && u.pass === pass && (u.tenant === tenant || u.tenant === 'parreira'));
 
-            // Try to find in localStorage 'app_users' if available (shared domain storage)
+            // Fallback for initial setup (if registry empty or admin fallback)
             if (!validUser) {
-                const storedUsers = JSON.parse(localStorage.getItem('app_users') || '[]');
-                validUser = storedUsers.find(u => u.login === user && u.pass === pass);
+                validUser = FALLBACK_USERS.find(u => u.login === user && u.pass === pass);
+                // If fallback, assume supervisor role
+                if (validUser) validUser.tenant = tenant;
             }
 
             if (validUser) {
-                // Save session
-                localStorage.setItem('app_tenant_id', tenant);
+                // Login Success
                 localStorage.setItem('logged_user', JSON.stringify(validUser));
+                localStorage.setItem('app_tenant_id', tenant);
 
-                // Hide overlay and render
+                // Show UI
                 document.getElementById('loginOverlay').style.display = 'none';
                 renderUserInfo(validUser);
+
+                // Redirect if needed (e.g. if we were on a specific module)
+                // location.reload(); 
             } else {
-                alert('Usuário ou senha inválidos.');
+                alert('Usuário ou senha incorretos para esta empresa!');
+            }
+        }
+
+        function renderUserInfo(user) {
+            document.getElementById('userName').textContent = user.name || user.login;
+            document.getElementById('userRole').textContent = user.role === 'supervisor' || user.role === 'admin' ? 'Supervisor' : 'Operacional';
+
+            // Enable master panel ONLY for admin and parreira tenants or users with role 'admin'
+            const isMaster = user.tenant === 'parreira' || user.role === 'admin' || user.login === 'admin';
+
+            const masterCard = document.querySelector('.module-master');
+            if (masterCard) {
+                if (!isMaster) {
+                    masterCard.classList.add('disabled'); // Ensure it's disabled
+                    masterCard.style.opacity = '0.5';
+                    masterCard.style.pointerEvents = 'none';
+                    masterCard.querySelector('.module-status').textContent = 'Restrito';
+                    masterCard.querySelector('.module-status').className = 'module-status inactive';
+                } else {
+                    masterCard.classList.remove('disabled'); // Ensure it's enabled
+                    masterCard.style.opacity = '1';
+                    masterCard.style.pointerEvents = 'auto';
+                    masterCard.querySelector('.module-status').textContent = 'Acesso Total';
+                    masterCard.querySelector('.module-status').className = 'module-status active';
+                }
             }
         }
 

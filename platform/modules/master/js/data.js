@@ -1,21 +1,19 @@
 export const mockTenants = [
     {
         id: 'parreira',
-        name: 'Parreira Sistemas (Owner)',
+        name: 'Parreira Sistemas',
         cnpj: '00.000.000/0001-00',
-        adminEmail: 'admin@parreirasistemas.com',
-        modules: ['dispatch', 'master', 'wms', 'erp', 'sales-force'],
+        modules: ['master', 'dispatch', 'erp', 'wms'],
         status: 'active',
-        createdAt: '2024-01-01'
+        adminEmail: 'paulo@parreirasistemas.com.br'
     },
     {
         id: 'ltdistribuidora',
         name: 'LT Distribuidora Peças Motos',
         cnpj: '08.747.452/0001-43',
-        adminEmail: 'paulo@ltdistribuidora.com.br',
-        modules: ['dispatch', 'master', 'wms'],
+        modules: ['dispatch'],
         status: 'active',
-        createdAt: '2024-01-01'
+        adminEmail: 'contato@ltdistribuidora.com.br'
     },
     {
         id: 'centralpecas',

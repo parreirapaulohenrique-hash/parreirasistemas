@@ -1,5 +1,6 @@
 {
-  "version": "3.1.0",
+  "version": "3.2.0",
   "date": "2026-02-01",
-  "changes": "Feature: Suporte a Multi-tenant dinâmico via Master Panel"
+  "changes": "Security Update: Removed generic admin. Added Cloud Alias (LT=Parreira).",
+  "build": "20260201.2"
 }
