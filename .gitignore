@@ -8,3 +8,4 @@
 # Permitir ferramentas de deploy e documentação básica
 !/deploy.ps1
 !/.gitignore
+!/index.html
