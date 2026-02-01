@@ -1,5 +1,5 @@
 {
-  "version": "3.0.3-DEBUG",
+  "version": "3.0.4",
   "date": "2026-01-31",
-  "changes": "TESTE DE DEPLOY - COR DE FUNDO AZUL"
+  "changes": "Correção definitiva fluxo de deploy automático (Reset Git + Ajuste Vercel)"
 }

@@ -65,8 +65,8 @@ Write-Host ""
 # ============================================
 # ETAPA 4: PUSH PARA O GITHUB
 # ============================================
-Write-Host "[4/5] Enviando para o GitHub (Branch PROD)..." -ForegroundColor Yellow
-git push origin prod
+Write-Host "[4/5] Enviando para o GitHub (Branch MAIN)..." -ForegroundColor Yellow
+git push origin main
 Write-Host "  ✅ Push concluído!" -ForegroundColor Green
 Write-Host ""
 
