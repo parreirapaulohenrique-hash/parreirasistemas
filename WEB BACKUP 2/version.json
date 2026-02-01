@@ -1,5 +1,0 @@
-{
-  "version": "2.1.1",
-  "date": "2026-01-31",
-  "changes": "Correção: Bug na conferência de fatura corrigido - referência a usuários estava incorreta (users → app_users). Adicionados logs de debug para rastreamento."
-}

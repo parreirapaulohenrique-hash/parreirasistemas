@@ -1,0 +1,10 @@
+# Ignorar tudo por padrão
+*
+
+# Permitir pastas e arquivos do sistema
+!/platform/
+!/vercel.json
+
+# Permitir ferramentas de deploy e documentação básica
+!/deploy.ps1
+!/.gitignore
