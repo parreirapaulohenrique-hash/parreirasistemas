@@ -122,53 +122,89 @@ const Utils = {
             }
         },
 
+        // --- LOAD WITH AUTO-MIGRATION (Copy-On-Read) ---
         async loadAll() {
             console.log(`🔄 [Cloud] loadAll() chamado. TenantId: ${this.tenantId}`);
             if (!this.hasTenant()) return false;
-
-            const realTenantId = this.getRealTenantId();
-            if (realTenantId !== this.tenantId) console.log(`🔗 [Alias] Redirecionando ${this.tenantId} -> ${realTenantId}`);
 
             const keys = ['dispatches', 'freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients', 'invoice_history'];
 
             // --- FIREBASE MODE ---
             if (typeof firebase !== 'undefined' && window.db) {
-                // ... existing firebase load logic ... 
-                // (Keeping existing logic implicit or if replacing whole block, need to be careful. 
-                // Since I am replacing, I must include the logic or valid fallback.)
+                try {
+                    // 1. Try Load from Current Tenant
+                    const promises = keys.map(key =>
+                        window.db.collection('tenants').doc(this.tenantId).collection('legacy_store').doc(key).get()
+                    );
+                    const docs = await Promise.all(promises);
 
-                // RE-IMPLEMENTING FIREBASE LOAD LOGIC TO BE SAFE (Simplifying for this tool call limit)
-                // The user's code had a complex loadChunks. I should try to preserve it or use a simpler replacement if focusing on Local.
-                // Ideally I should only touch the fallback.
-                // But replacing the whole function requires full code.
+                    for (let i = 0; i < docs.length; i++) {
+                        const doc = docs[i];
+                        const key = keys[i];
+
+                        if (doc.exists) {
+                            // Normal Load
+                            const data = doc.data();
+                            if (data.isChunked) {
+                                if (this.loadChunks) {
+                                    const fullArray = await this.loadChunks(key, data.chunkCount);
+                                    localStorage.setItem(key, JSON.stringify(fullArray));
+                                }
+                            } else {
+                                if (data.content && data.content.length >= 2) localStorage.setItem(key, data.content);
+                            }
+                        } else if (this.tenantId === 'ltdistribuidora') {
+                            // --- MIGRATION CHECK: If missing in 'ltdistribuidora', check 'parreiralog' ---
+                            console.log(`🕵️ [Migration] ${key} não encontrado em ${this.tenantId}. Buscando em parreiralog...`);
+                            try {
+                                const oldDoc = await window.db.collection('tenants').doc('parreiralog').collection('legacy_store').doc(key).get();
+                                if (oldDoc.exists) {
+                                    const oldData = oldDoc.data();
+                                    console.log(`📦 [Migration] Conteúdo encontrado em parreiralog. MIGRANDO...`);
+
+                                    // 1. Save to New Location (Async)
+                                    window.db.collection('tenants').doc(this.tenantId).collection('legacy_store').doc(key).set(oldData);
+
+                                    // 2. Use Data Now
+                                    if (oldData.isChunked) {
+                                        console.warn('Skipping chunked migration auto-copy');
+                                    } else {
+                                        if (oldData.content) localStorage.setItem(key, oldData.content);
+                                    }
+                                }
+                            } catch (migErr) { console.warn('Migration check failed', migErr); }
+                        }
+                    }
+                    setTimeout(() => { if (window.renderAppHistory) window.renderAppHistory(); }, 100);
+                } catch (error) { console.error('Cloud Load Error', error); }
+
+                this.listen();
+                return true;
             }
 
-            // --- LOCAL SIMULATION MODE (Fallback if no DB) ---
+            // --- LOCAL SIMULATION MODE (Fallback) ---
             if (!window.db) {
-                console.log('⚠️ [Cloud] Sem Firebase. Usando Simulação Local Multi-Tenant.');
+                console.log('⚠️ [Cloud] Sem Firebase. Usando Simulação Local.');
                 keys.forEach(key => {
-                    const simKey = `tenant_${realTenantId}_${key}`;
+                    const simKey = `tenant_${this.tenantId}_${key}`;
                     const customData = localStorage.getItem(simKey);
 
                     if (customData) {
                         localStorage.setItem(key, customData);
-                        console.log(`📥 [SimCloud] Carregado ${key} de ${simKey}`);
                     } else {
-                        // Data migration note: If 'parreiralog' (old default) had data in root keys, 
-                        // and we are loading for the first time, we might want to preserve it?
-                        // But dispatch/app.js wipes root keys before calling this.
-                        // So the Migration Script in Master MUST have run before this to save root -> tenant_...
-                        console.log(`⚪ [SimCloud] Nada encontrado para ${simKey}`);
-                        // Fallback: Se não achar no tenant_ID, tenta na raiz (migração legado implícita)
-                        const rootData = localStorage.getItem(key);
-                        if (rootData && rootData.length > 5) {
-                            console.log(`↩️ [Fallback] Usando dados da raiz para ${key}`);
-                            localStorage.setItem(key, rootData); // Apply root data if found
+                        // Migration Fallback Local
+                        if (this.tenantId === 'ltdistribuidora') {
+                            const oldKey = `tenant_parreiralog_${key}`;
+                            const oldData = localStorage.getItem(oldKey);
+                            if (oldData) {
+                                console.log(`📦 [LocalMigration] Migrando ${key} para ltdistribuidora`);
+                                localStorage.setItem(simKey, oldData);
+                                localStorage.setItem(key, oldData);
+                            }
                         }
                     }
                 });
 
-                // UI Refresh
                 setTimeout(() => {
                     if (window.renderUserList) window.renderUserList();
                     if (window.renderClientsList) window.renderClientsList();
@@ -177,152 +213,176 @@ const Utils = {
                     if (window.renderAppHistory) window.renderAppHistory();
                 }, 100);
 
-                // Start Local Listener (Polling/StorageEvent)
                 this.listen();
                 return true;
             }
-
-            // ... (Firebase logic previously here)
-            // To avoid deleting the massive Firebase logic which I cannot fully reproduce from memory perfectly without seeing lines 95-252 again...
-            // I should use a more targeted replace or ensure I copy the Firebase logic from the previous view_file.
-
-            // Re-pasting original Firebase Logic for Safety + Local Fallback at the end
-            try {
-                const promises = keys.map(key =>
-                    window.db.collection('tenants').doc(realTenantId).collection('legacy_store').doc(key).get()
-                );
-                const docs = await Promise.all(promises);
-                for (let i = 0; i < docs.length; i++) {
-                    const doc = docs[i];
-                    const key = keys[i];
-                    if (doc.exists) {
-                        const data = doc.data();
-                        if (data.isChunked) {
-                            const fullArray = await this.loadChunks(key, data.chunkCount);
-                            localStorage.setItem(key, JSON.stringify(fullArray));
-                        } else {
-                            if (data.content && data.content.length >= 2) localStorage.setItem(key, data.content);
+            return true;
+        },
+        console.log(`⚪ [SimCloud] Nada encontrado para ${simKey}`);
+        // Fallback: Se não achar no tenant_ID, tenta na raiz (migração legado implícita)
+        const rootData = localStorage.getItem(key);
+        if(rootData && rootData.length > 5) {
+            console.log(`↩️ [Fallback] Usando dados da raiz para ${key}`);
+localStorage.setItem(key, rootData); // Apply root data if found
                         }
                     }
-                }
-                setTimeout(() => {
-                    if (window.renderAppHistory) window.renderAppHistory();
-                }, 100);
-            } catch (error) { console.error('Cloud Load Error', error); }
+                });
 
-            this.listen();
-            return true;
+// UI Refresh
+setTimeout(() => {
+    if (window.renderUserList) window.renderUserList();
+    if (window.renderClientsList) window.renderClientsList();
+    if (window.renderCarrierConfigs) window.renderCarrierConfigs();
+    if (window.renderRulesList) window.renderRulesList();
+    if (window.renderAppHistory) window.renderAppHistory();
+}, 100);
+
+// Start Local Listener (Polling/StorageEvent)
+this.listen();
+return true;
+            }
+
+// ... (Firebase logic previously here)
+// To avoid deleting the massive Firebase logic which I cannot fully reproduce from memory perfectly without seeing lines 95-252 again...
+// I should use a more targeted replace or ensure I copy the Firebase logic from the previous view_file.
+
+// Re-pasting original Firebase Logic for Safety + Local Fallback at the end
+try {
+    const promises = keys.map(key =>
+        window.db.collection('tenants').doc(realTenantId).collection('legacy_store').doc(key).get()
+    );
+    const docs = await Promise.all(promises);
+    for (let i = 0; i < docs.length; i++) {
+        const doc = docs[i];
+        const key = keys[i];
+        if (doc.exists) {
+            const data = doc.data();
+            if (data.isChunked) {
+                const fullArray = await this.loadChunks(key, data.chunkCount);
+                localStorage.setItem(key, JSON.stringify(fullArray));
+            } else {
+                if (data.content && data.content.length >= 2) localStorage.setItem(key, data.content);
+            }
+        }
+    }
+    setTimeout(() => {
+        if (window.renderAppHistory) window.renderAppHistory();
+    }, 100);
+} catch (error) { console.error('Cloud Load Error', error); }
+
+this.listen();
+return true;
         },
 
         // --- HELPER: Puxar partes e remontar ---
         async loadChunks(key, count) {
-            console.log(`📥 Baixando ${count} partes de ${key}...`);
-            let fullData = [];
-            const promises = [];
+    console.log(`📥 Baixando ${count} partes de ${key}...`);
+    let fullData = [];
+    const promises = [];
 
-            for (let i = 0; i < count; i++) {
-                promises.push(
-                    window.db.collection('tenants').doc(this.tenantId).collection('legacy_store').doc(`${key}_chunk_${i}`).get()
-                );
+    for (let i = 0; i < count; i++) {
+        promises.push(
+            window.db.collection('tenants').doc(this.tenantId).collection('legacy_store').doc(`${key}_chunk_${i}`).get()
+        );
+    }
+
+    try {
+        const docs = await Promise.all(promises);
+        // Ordenar por índice só por garantia (mas Promise.all mantem ordem do array de promises)
+        docs.forEach(d => {
+            if (d.exists) {
+                const chunkData = JSON.parse(d.data().content);
+                fullData = fullData.concat(chunkData);
             }
+        });
+        console.log(`✅ ${key} reconstruído: ${fullData.length} itens.`);
+        return fullData;
+    } catch (e) {
+        console.error("Erro ao baixar chunks", e);
+        return [];
+    }
+},
 
-            try {
-                const docs = await Promise.all(promises);
-                // Ordenar por índice só por garantia (mas Promise.all mantem ordem do array de promises)
-                docs.forEach(d => {
-                    if (d.exists) {
-                        const chunkData = JSON.parse(d.data().content);
-                        fullData = fullData.concat(chunkData);
-                    }
-                });
-                console.log(`✅ ${key} reconstruído: ${fullData.length} itens.`);
-                return fullData;
-            } catch (e) {
-                console.error("Erro ao baixar chunks", e);
-                return [];
-            }
-        },
+// --- LÓGICA CENTRAL DE RECEBIMENTO DE DADOS ---
+processIncomingData(key, cloudContentString) {
+    console.log(`📩 [Cloud] Recebendo ${key}: ${cloudContentString ? cloudContentString.length + ' chars' : 'null'}`);
+    const localContent = localStorage.getItem(key);
 
-        // --- LÓGICA CENTRAL DE RECEBIMENTO DE DADOS ---
-        processIncomingData(key, cloudContentString) {
-            console.log(`📩 [Cloud] Recebendo ${key}: ${cloudContentString ? cloudContentString.length + ' chars' : 'null'}`);
-            const localContent = localStorage.getItem(key);
+    // 1. Anti-Echo (60s) - Proteção contra sobrescrita após importação/limpeza
+    const lastWrite = Utils.lastWriteTime[key] || 0;
+    const timeSinceWrite = Date.now() - lastWrite;
+    if (timeSinceWrite < 60000) {
+        console.log(`🛡️ [Anti-Echo] Ignorando nuvem para ${key} (escrita há ${Math.round(timeSinceWrite / 1000)}s).`);
+        return;
+    }
 
-            // 1. Anti-Echo (60s) - Proteção contra sobrescrita após importação/limpeza
-            const lastWrite = Utils.lastWriteTime[key] || 0;
-            const timeSinceWrite = Date.now() - lastWrite;
-            if (timeSinceWrite < 60000) {
-                console.log(`🛡️ [Anti-Echo] Ignorando nuvem para ${key} (escrita há ${Math.round(timeSinceWrite / 1000)}s).`);
-                return;
-            }
+    // 2. Anti-Rollback (Tamanho) - Ajustado para PERMITIR zerar dados ([] = 2 chars)
+    // Se veio da nuvem valido, a gente confia.
+    if (cloudContentString && cloudContentString.length >= 2) {
+        if (cloudContentString !== localContent) {
+            console.log(`🔄 [SaaS] Atualizando local: ${key}`);
+            localStorage.setItem(key, cloudContentString);
 
-            // 2. Anti-Rollback (Tamanho) - Ajustado para PERMITIR zerar dados ([] = 2 chars)
-            // Se veio da nuvem valido, a gente confia.
-            if (cloudContentString && cloudContentString.length >= 2) {
-                if (cloudContentString !== localContent) {
-                    console.log(`🔄 [SaaS] Atualizando local: ${key}`);
-                    localStorage.setItem(key, cloudContentString);
-
-                    // UI Refresh
-                    if (key === 'dispatches' && window.renderAppHistory) window.renderAppHistory();
-                    if (key === 'freight_tables' && window.renderRulesList) window.renderRulesList();
-                    if (key === 'carrier_configs' && window.renderCarrierConfigs) window.renderCarrierConfigs();
-                    if (key === 'app_users' && window.renderUserList) window.renderUserList();
-                    if (key === 'clients' && window.renderClientsList) window.renderClientsList();
-                    if (key === 'carrier_list' && window.renderCarrierConfigs) window.renderCarrierConfigs();
-                }
-            } else {
-                // Nuvem realmente vazia/nula (menos de 2 chars)
-                // Proteção: Só apagar local se realmente quisermos (por enquanto, PROTEÇÃO ATIVA: não apaga)
-                if (localContent) {
-                    console.warn(`⚠️ [SaaS] Nuvem inválida para ${key}, mas local existe. Mantendo local.`);
-                }
-            }
-        },
-
-        listen() {
-            // --- FIREBASE MODE ---
-            if (typeof firebase !== 'undefined' && window.db && !window.hasAttachedListeners) {
-                window.hasAttachedListeners = true;
-                const keys = ['dispatches', 'freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients', 'invoice_history'];
-                console.log(`📡 Iniciando Sync SaaS (Firestore) para: ${this.tenantId}`);
-
-                keys.forEach(key => {
-                    window.db.collection('tenants').doc(this.tenantId).collection('legacy_store').doc(key).onSnapshot((doc) => {
-                        if (doc.exists) {
-                            const data = doc.data();
-                            this.processIncomingData(key, data.content);
-                        } else {
-                            this.processIncomingData(key, null); // Clear if deleted
-                        }
-                    });
-                });
-                return;
-            }
-
-            // --- SIMULATED CLOUD MODE ---
-            if (!window.db && !window.hasAttachedListeners) {
-                window.hasAttachedListeners = true;
-                console.log(`📡 Iniciando Sync SaaS (Simulado) para: ${this.tenantId}`);
-
-                window.addEventListener('storage', (e) => {
-                    if (e.key && e.key.startsWith(`tenant_${this.tenantId}_`)) {
-                        const internalKey = e.key.replace(`tenant_${this.tenantId}_`, '');
-                        console.log(`📥 [SimCloud] Update de outra aba: ${internalKey}`);
-                        localStorage.setItem(internalKey, e.newValue);
-                        // Refresh UI if needed
-                        if (internalKey === 'dispatches' && window.renderAppHistory) window.renderAppHistory();
-                    }
-                });
-            }
-        },
-
-        listenToCloudChanges: (keys) => { }, // Legacy stub
-
-        normalizeString: (str) => {
-            if (!str) return '';
-            return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase();
+            // UI Refresh
+            if (key === 'dispatches' && window.renderAppHistory) window.renderAppHistory();
+            if (key === 'freight_tables' && window.renderRulesList) window.renderRulesList();
+            if (key === 'carrier_configs' && window.renderCarrierConfigs) window.renderCarrierConfigs();
+            if (key === 'app_users' && window.renderUserList) window.renderUserList();
+            if (key === 'clients' && window.renderClientsList) window.renderClientsList();
+            if (key === 'carrier_list' && window.renderCarrierConfigs) window.renderCarrierConfigs();
         }
+    } else {
+        // Nuvem realmente vazia/nula (menos de 2 chars)
+        // Proteção: Só apagar local se realmente quisermos (por enquanto, PROTEÇÃO ATIVA: não apaga)
+        if (localContent) {
+            console.warn(`⚠️ [SaaS] Nuvem inválida para ${key}, mas local existe. Mantendo local.`);
+        }
+    }
+},
+
+listen() {
+    // --- FIREBASE MODE ---
+    if (typeof firebase !== 'undefined' && window.db && !window.hasAttachedListeners) {
+        window.hasAttachedListeners = true;
+        const keys = ['dispatches', 'freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients', 'invoice_history'];
+        console.log(`📡 Iniciando Sync SaaS (Firestore) para: ${this.tenantId}`);
+
+        keys.forEach(key => {
+            window.db.collection('tenants').doc(this.tenantId).collection('legacy_store').doc(key).onSnapshot((doc) => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    this.processIncomingData(key, data.content);
+                } else {
+                    this.processIncomingData(key, null); // Clear if deleted
+                }
+            });
+        });
+        return;
+    }
+
+    // --- SIMULATED CLOUD MODE ---
+    if (!window.db && !window.hasAttachedListeners) {
+        window.hasAttachedListeners = true;
+        console.log(`📡 Iniciando Sync SaaS (Simulado) para: ${this.tenantId}`);
+
+        window.addEventListener('storage', (e) => {
+            if (e.key && e.key.startsWith(`tenant_${this.tenantId}_`)) {
+                const internalKey = e.key.replace(`tenant_${this.tenantId}_`, '');
+                console.log(`📥 [SimCloud] Update de outra aba: ${internalKey}`);
+                localStorage.setItem(internalKey, e.newValue);
+                // Refresh UI if needed
+                if (internalKey === 'dispatches' && window.renderAppHistory) window.renderAppHistory();
+            }
+        });
+    }
+},
+
+listenToCloudChanges: (keys) => { }, // Legacy stub
+
+    normalizeString: (str) => {
+        if (!str) return '';
+        return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase();
+    }
     }
 };
 
