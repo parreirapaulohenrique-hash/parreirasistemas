@@ -159,7 +159,7 @@
 
             <!-- Product Modal -->
             <div id="productModal" class="modal-overlay">
-                <div class="modal-card modal-lg">
+                <div class="modal-card modal-lg" style="max-width: 900px;">
                     <div class="modal-header">
                         <h3>Cadastro de Produto</h3>
                         <button class="btn btn-secondary btn-icon" onclick="closeProductModal()">
@@ -168,90 +168,203 @@
                     </div>
                     <form id="productForm">
                         <div class="modal-body">
+                            <!-- Header Info -->
+                            <div class="row" style="margin-bottom: 1rem;">
+                                <div class="form-group" style="flex: 1;">
+                                    <label class="form-label">Código (SKU)</label>
+                                    <input type="text" id="prodSku" class="form-input" required>
+                                </div>
+                                <div class="form-group" style="flex: 4;">
+                                    <label class="form-label">Descrição do Produto</label>
+                                    <input type="text" id="prodName" class="form-input" required>
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label class="form-label">Data Cadastro</label>
+                                    <input type="date" id="prodDate" class="form-input" disabled>
+                                </div>
+                            </div>
+
+                            <div class="row" style="margin-bottom: 1.5rem;">
+                                <div class="form-group" style="width: 100%;">
+                                    <label class="form-label">Grupo do Produto</label>
+                                    <div style="display:flex; gap:0.5rem;">
+                                        <select id="prodGroup" class="form-input">
+                                            <option value="">Selecione...</option>
+                                            <option value="lubrificantes">Lubrificantes</option>
+                                            <option value="filtros">Filtros</option>
+                                            <option value="pneus">Pneus</option>
+                                            <option value="pecas">Peças Diversas</option>
+                                        </select>
+                                        <button type="button" class="btn btn-secondary btn-icon"
+                                            title="Gerenciar Grupos">
+                                            <span class="material-icons-round">settings</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Tabs Navigation -->
                             <div class="tabs-nav">
                                 <button type="button" class="tab-btn active"
-                                    onclick="switchTab(this, 'tab-geral')">Geral</button>
+                                    onclick="switchTab(this, 'tab-details')">Detalhes & Unidades</button>
                                 <button type="button" class="tab-btn"
-                                    onclick="switchTab(this, 'tab-logistica')">Logística (WMS)</button>
-                                <button type="button" class="tab-btn"
-                                    onclick="switchTab(this, 'tab-fiscal')">Fiscal/Preço</button>
+                                    onclick="switchTab(this, 'tab-logistica')">Logística & Endereço</button>
+                                <button type="button" class="tab-btn" onclick="switchTab(this, 'tab-fiscal')">Fiscal &
+                                    Fornecedor</button>
                             </div>
 
-                            <!-- Tab: Geral -->
-                            <div id="tab-geral" class="tab-content active">
+                            <!-- Tab: Detalhes -->
+                            <div id="tab-details" class="tab-content active">
                                 <div class="row">
                                     <div class="form-group col-4">
-                                        <label class="form-label">SKU (Código)</label>
-                                        <input type="text" id="prodSku" class="form-input" required>
+                                        <label class="form-label">Unid. Comercial</label>
+                                        <input type="text" id="unitCom" class="form-input" placeholder="UN, PC, LT">
                                     </div>
-                                    <div class="form-group col-8">
-                                        <label class="form-label">Nome do Produto</label>
-                                        <input type="text" id="prodName" class="form-input" required>
+                                    <div class="form-group col-4">
+                                        <label class="form-label">Unid. Embalagem</label>
+                                        <input type="text" id="unitBox" class="form-input" placeholder="CX, FD">
+                                    </div>
+                                    <div class="form-group col-4">
+                                        <label class="form-label">Fator (Qtde na CX)</label>
+                                        <input type="number" id="unitFactor" class="form-input" placeholder="1">
                                     </div>
                                 </div>
+
                                 <div class="row">
                                     <div class="form-group col-6">
-                                        <label class="form-label">EAN / GTIN</label>
-                                        <input type="text" id="prodEan" class="form-input">
+                                        <label class="form-label">Cód. Barras (EAN13)</label>
+                                        <input type="text" id="eanCode" class="form-input">
                                     </div>
                                     <div class="form-group col-6">
-                                        <label class="form-label">Foto (URL)</label>
-                                        <input type="text" id="prodImage" class="form-input" placeholder="http://...">
+                                        <label class="form-label">Cód. Barras CX (DUN14)</label>
+                                        <input type="text" id="dunCode" class="form-input">
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="form-group col-4">
+                                        <label class="form-label">Marca</label>
+                                        <input type="text" id="prodBrand" class="form-input">
+                                    </div>
+                                    <div class="form-group col-4">
+                                        <label class="form-label">Família</label>
+                                        <input type="text" id="prodFamily" class="form-input">
+                                    </div>
+                                    <div class="form-group col-4">
+                                        <label class="form-label">Produto para Revenda?</label>
+                                        <select id="isResale" class="form-input">
+                                            <option value="sim">Sim</option>
+                                            <option value="nao">Não (Consumo/Imob)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Canais de Venda</label>
+                                    <div
+                                        style="display:flex; gap:1.5rem; padding:0.5rem; background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:var(--radius-md);">
+                                        <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.9rem;">
+                                            <input type="checkbox" checked> Tela de Vendas
+                                        </label>
+                                        <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.9rem;">
+                                            <input type="checkbox" checked> App Mobile (Sales Force)
+                                        </label>
+                                        <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.9rem;">
+                                            <input type="checkbox"> E-commerce B2B
+                                        </label>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Tab: Logística -->
                             <div id="tab-logistica" class="tab-content">
-                                <div class="alert-info">
-                                    <span class="material-icons-round">info</span>
-                                    <span>Esses dados são cruciais para o cálculo de frete (Despacho) e armazenagem
-                                        (WMS).</span>
-                                </div>
+                                <h4
+                                    style="margin-bottom:1rem; font-size:0.9rem; color:var(--text-secondary); text-transform:uppercase;">
+                                    Dimensões & Peso</h4>
                                 <div class="row">
+                                    <div class="form-group col-6">
+                                        <label class="form-label">Peso Líquido (kg)</label>
+                                        <input type="number" step="0.001" id="weightNet" class="form-input">
+                                    </div>
                                     <div class="form-group col-6">
                                         <label class="form-label">Peso Bruto (kg)</label>
-                                        <input type="number" step="0.001" id="prodWeight" class="form-input">
-                                    </div>
-                                    <div class="form-group col-6">
-                                        <label class="form-label">Cubagem (m³)</label>
-                                        <input type="number" step="0.0001" id="prodVolume" class="form-input" readonly
-                                            placeholder="Calc. Automático">
+                                        <input type="number" step="0.001" id="weightGross" class="form-input">
                                     </div>
                                 </div>
-                                <label class="form-label">Dimensões da Embalagem (cm)</label>
                                 <div class="row">
                                     <div class="form-group col-4">
-                                        <input type="number" id="prodHeight" class="form-input" placeholder="Altura">
+                                        <label class="form-label">Altura (cm)</label>
+                                        <input type="number" id="dimHeight" class="form-input">
                                     </div>
                                     <div class="form-group col-4">
-                                        <input type="number" id="prodWidth" class="form-input" placeholder="Largura">
+                                        <label class="form-label">Largura (cm)</label>
+                                        <input type="number" id="dimWidth" class="form-input">
                                     </div>
                                     <div class="form-group col-4">
-                                        <input type="number" id="prodDepth" class="form-input"
-                                            placeholder="Profundidade">
+                                        <label class="form-label">Profundidade (cm)</label>
+                                        <input type="number" id="dimDepth" class="form-input">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Volume (m³)</label>
+                                    <input type="number" step="0.0001" id="prodVol" class="form-input"
+                                        placeholder="Calculado automaticamente" readonly>
+                                </div>
+
+                                <h4
+                                    style="margin:1rem 0; font-size:0.9rem; color:var(--text-secondary); text-transform:uppercase; border-top:1px solid var(--border-color); padding-top:1rem;">
+                                    Endereçamento (WMS)</h4>
+                                <div class="row">
+                                    <div class="form-group col-4">
+                                        <label class="form-label">Rua</label>
+                                        <input type="text" id="wmsStreet" class="form-input">
+                                    </div>
+                                    <div class="form-group col-4">
+                                        <label class="form-label">Prédio/Bloco</label>
+                                        <input type="text" id="wmsBuilding" class="form-input">
+                                    </div>
+                                    <div class="form-group col-4">
+                                        <label class="form-label">Apto/Nível</label>
+                                        <input type="text" id="wmsLevel" class="form-input">
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Tab: Fiscal e Preço -->
+                            <!-- Tab: Fiscal e Fornecedor -->
                             <div id="tab-fiscal" class="tab-content">
                                 <div class="row">
-                                    <div class="form-group col-6">
-                                        <label class="form-label">Preço de Venda (R$)</label>
-                                        <input type="number" step="0.01" id="prodPrice" class="form-input" required>
-                                    </div>
-                                    <div class="form-group col-6">
-                                        <label class="form-label">Múltiplo de Venda</label>
-                                        <input type="number" id="prodMultiple" class="form-input" value="1" min="1">
+                                    <div class="form-group col-12">
+                                        <label class="form-label">Fornecedor Padrão</label>
+                                        <div style="display:flex; gap:0.5rem;">
+                                            <input type="text" id="supplierName" class="form-input"
+                                                placeholder="Buscar Fornecedor...">
+                                            <button type="button" class="btn btn-secondary"><span
+                                                    class="material-icons-round">search</span></button>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="row">
                                     <div class="form-group col-6">
-                                        <label class="form-label">NCM</label>
-                                        <input type="text" id="prodNcm" class="form-input">
+                                        <label class="form-label">Fabricante</label>
+                                        <input type="text" id="manufacturer" class="form-input">
                                     </div>
+                                    <div class="form-group col-6">
+                                        <label class="form-label">Cód. no Fabricante</label>
+                                        <input type="text" id="manufacturerCode" class="form-input">
+                                    </div>
+                                </div>
+
+                                <div class="form-group"
+                                    style="margin-top:1rem; border-top:1px solid var(--border-color); padding-top:1rem;">
+                                    <label class="form-label">NCM (Classificação Fiscal)</label>
+                                    <div style="display:flex; gap:0.5rem;">
+                                        <input type="text" id="ncmCode" class="form-input" style="width: 120px;"
+                                            placeholder="Código">
+                                        <input type="text" id="ncmDesc" class="form-input"
+                                            placeholder="Descrição do NCM" readonly>
+                                    </div>
+                                </div>
+                                <div class="row">
                                     <div class="form-group col-6">
                                         <label class="form-label">Origem</label>
                                         <select id="prodOrigin" class="form-input">
@@ -259,6 +372,10 @@
                                             <option value="1">1 - Estrangeira (Imp. Direta)</option>
                                             <option value="2">2 - Estrangeira (Adq. no M.I.)</option>
                                         </select>
+                                    </div>
+                                    <div class="form-group col-6">
+                                        <label class="form-label">% IPI</label>
+                                        <input type="number" id="taxIpi" class="form-input" placeholder="0.00">
                                     </div>
                                 </div>
                             </div>
