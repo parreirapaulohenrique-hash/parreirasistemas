@@ -355,11 +355,11 @@
 }
 
 /* Sidebar Footer & User Profile */
+/* Sidebar Footer & User Profile */
 .sidebar-footer {
     padding: 1.5rem;
     border-top: 1px solid var(--border);
-    margin-top: auto;
-    /* Push to bottom */
+    /* margin-top: auto; REMOVED */
     display: flex;
     align-items: center;
     justify-content: space-between;
