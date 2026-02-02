@@ -36,12 +36,15 @@ window.switchView = (viewName) => {
     const titles = {
         'dashboard': 'Visão Geral',
         'products': 'Gestão de Produtos',
-        'entities': 'Entidades (CRM)',
+        'entities': 'Gestão de Clientes e Parceiros',
         'sales': 'Vendas',
         'finance': 'Financeiro',
         'fiscal': 'Fiscal'
     };
     document.getElementById('pageTitle').textContent = titles[viewName] || 'ERP';
+
+    // Load Data on View Switch
+    if (viewName === 'entities') renderEntities();
 };
 
 // --- Product Modal Logic ---
@@ -111,3 +114,61 @@ window.filterProducts = () => {
 
 // Initialize
 renderProducts();
+
+// --- Entities (Clients) Logic ---
+window.openEntityModal = () => {
+    document.getElementById('entityModal').style.display = 'flex';
+};
+
+window.closeEntityModal = () => {
+    document.getElementById('entityModal').style.display = 'none';
+};
+
+let entities = [
+    { code: 1355, name: 'SIMAO MEIRELES FURTADO', fantasy: 'SF PECAS', cnpj: '52.352.619/0001-69', city: 'Belém/PA', seller: '32 - ABNAEL', status: 'active' },
+    { code: 1356, name: 'AUTO CENTER PARREIRA', fantasy: 'PARREIRA AUTO', cnpj: '00.000.000/0001-91', city: 'Ananindeua/PA', seller: '1 - INTERNO', status: 'active' }
+];
+
+window.renderEntities = (filter = '') => {
+    const tbody = document.getElementById('entitiesTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    const filtered = entities.filter(e =>
+        e.name.toLowerCase().includes(filter.toLowerCase()) ||
+        e.fantasy.toLowerCase().includes(filter.toLowerCase()) ||
+        e.cnpj.includes(filter)
+    );
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum cliente encontrado.</td></tr>';
+        return;
+    }
+
+    filtered.forEach(e => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="font-weight:600">${e.code}</td>
+            <td>
+                <div style="font-weight:600; color:var(--text-primary)">${e.name}</div>
+                <div style="font-size:0.8rem; color:var(--text-secondary)">${e.fantasy}</div>
+            </td>
+            <td>${e.cnpj}</td>
+            <td>${e.city}</td>
+            <td><span class="status-badge status-pending" style="color:var(--primary-color)">${e.seller}</span></td>
+            <td><span class="status-badge status-shipped">ATIVO</span></td>
+            <td style="text-align:right">
+                <button class="btn btn-secondary btn-icon" style="padding:0.4rem;">
+                    <span class="material-icons-round" style="font-size:1rem;">edit</span>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+};
+
+window.filterEntities = () => {
+    const term = document.getElementById('entitySearch').value;
+    renderEntities(term);
+};

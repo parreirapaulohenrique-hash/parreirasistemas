@@ -147,14 +147,293 @@
                     </div>
                 </div>
 
-                <!-- Other Views Placeholders -->
+                <!-- View: Entities (Clients) -->
                 <div id="view-entities" class="page-content" style="display:none;">
-                    <div class="empty-state" style="text-align:center; padding:3rem; color:var(--text-secondary);">
-                        <span class="material-icons-round" style="font-size:3rem;">construction</span>
-                        <h3>Cadastro de Entidades</h3>
-                        <p>Em desenvolvimento.</p>
+                    <div class="welcome-banner">
+                        <h2>Gestão de Clientes</h2>
+                        <p>Cadastro centralizado de clientes, fornecedores e parceiros.</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div style="display:flex; gap:0.5rem; width: 100%; max-width: 400px;">
+                                <input type="text" id="entitySearch" class="form-input"
+                                    placeholder="Buscar por Nome, Fantasia ou CNPJ..." onkeyup="filterEntities()">
+                            </div>
+                            <button class="btn btn-primary" onclick="openEntityModal()">
+                                <span class="material-icons-round">person_add</span> Novo Cliente
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Cód.</th>
+                                        <th>Razão Social / Fantasia</th>
+                                        <th>CNPJ / CPF</th>
+                                        <th>Cidade/UF</th>
+                                        <th>Vendedor</th>
+                                        <th>Status</th>
+                                        <th style="text-align:right">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="entitiesTableBody">
+                                    <!-- JS Render -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
+
+                <!-- Entity Modal -->
+                <div id="entityModal" class="modal-overlay">
+                    <div class="modal-card modal-lg" style="max-width: 1000px;">
+                        <div class="modal-header">
+                            <h3>Cadastro de Parceiro</h3>
+                            <button class="btn btn-secondary btn-icon" onclick="closeEntityModal()">
+                                <span class="material-icons-round">close</span>
+                            </button>
+                        </div>
+                        <form id="entityForm">
+                            <div class="modal-body">
+                                <!-- Header Info: Código e Razão -->
+                                <div class="row" style="margin-bottom: 1rem;">
+                                    <div class="form-group" style="flex: 1;">
+                                        <label class="form-label">Código</label>
+                                        <input type="text" id="cliCode" class="form-input" placeholder="Auto" disabled>
+                                    </div>
+                                    <div class="form-group" style="flex: 4;">
+                                        <label class="form-label">Razão Social</label>
+                                        <input type="text" id="cliName" class="form-input" required>
+                                    </div>
+                                    <div class="form-group" style="flex: 2;">
+                                        <label class="form-label">CNPJ / CPF</label>
+                                        <input type="text" id="cliDoc" class="form-input" required>
+                                    </div>
+                                    <div class="form-group" style="flex: 1;">
+                                        <label class="form-label">Tipo</label>
+                                        <select id="cliType" class="form-input">
+                                            <option value="J">J - Jurídica</option>
+                                            <option value="F">F - Física</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Tabs Navigation -->
+                                <div class="tabs-nav">
+                                    <button type="button" class="tab-btn active"
+                                        onclick="switchTab(this, 'tab-cli-geral')">Geral & Contato</button>
+                                    <button type="button" class="tab-btn"
+                                        onclick="switchTab(this, 'tab-cli-endereco')">Endereço</button>
+                                    <button type="button" class="tab-btn"
+                                        onclick="switchTab(this, 'tab-cli-comercial')">Comercial & Vendas</button>
+                                    <button type="button" class="tab-btn"
+                                        onclick="switchTab(this, 'tab-cli-fiscal')">Fiscal & Parâmetros</button>
+                                </div>
+
+                                <!-- Tab: Geral -->
+                                <div id="tab-cli-geral" class="tab-content active">
+                                    <div class="row">
+                                        <div class="form-group col-6">
+                                            <label class="form-label">Nome Fantasia</label>
+                                            <input type="text" id="cliFantasy" class="form-input">
+                                        </div>
+                                        <div class="form-group col-6">
+                                            <label class="form-label">Inscrição Estadual (IE)</label>
+                                            <input type="text" id="cliIe" class="form-input">
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="form-group col-6">
+                                            <label class="form-label">Contato Principal</label>
+                                            <input type="text" id="cliContact" class="form-input">
+                                        </div>
+                                        <div class="form-group col-6">
+                                            <label class="form-label">Data de Nascimento/Fundação</label>
+                                            <input type="date" id="cliBirth" class="form-input">
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="form-group col-6">
+                                            <label class="form-label">Email Principal (NFe)</label>
+                                            <input type="email" id="cliEmail" class="form-input"
+                                                style="text-transform:lowercase">
+                                        </div>
+                                        <div class="form-group col-6">
+                                            <label class="form-label">Email Secundário (Cópia)</label>
+                                            <input type="email" id="cliEmailCc" class="form-input"
+                                                style="text-transform:lowercase">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Observações Gerais</label>
+                                        <textarea id="cliNotes" class="form-input" rows="3"></textarea>
+                                    </div>
+                                </div>
+
+                                <!-- Tab: Endereço (Requested) -->
+                                <div id="tab-cli-endereco" class="tab-content">
+                                    <div class="row">
+                                        <div class="form-group col-3">
+                                            <label class="form-label">CEP</label>
+                                            <div style="display:flex; gap:0.5rem;">
+                                                <input type="text" id="cliZip" class="form-input">
+                                                <button type="button" class="btn btn-secondary btn-icon"><span
+                                                        class="material-icons-round">search</span></button>
+                                            </div>
+                                        </div>
+                                        <div class="form-group col-7">
+                                            <label class="form-label">Logradouro (Rua, Av...)</label>
+                                            <input type="text" id="cliStreet" class="form-input">
+                                        </div>
+                                        <div class="form-group col-2">
+                                            <label class="form-label">Número</label>
+                                            <input type="text" id="cliNumber" class="form-input">
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="form-group col-4">
+                                            <label class="form-label">Bairro</label>
+                                            <input type="text" id="cliDistrict" class="form-input">
+                                        </div>
+                                        <div class="form-group col-4">
+                                            <label class="form-label">Cidade</label>
+                                            <input type="text" id="cliCity" class="form-input">
+                                        </div>
+                                        <div class="form-group col-2">
+                                            <label class="form-label">UF</label>
+                                            <input type="text" id="cliState" class="form-input">
+                                        </div>
+                                        <div class="form-group col-2">
+                                            <label class="form-label">IBGE</label>
+                                            <input type="text" id="cliIbge" class="form-input">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Complemento / Ponto de Referência</label>
+                                        <input type="text" id="cliComp" class="form-input">
+                                    </div>
+                                </div>
+
+                                <!-- Tab: Comercial -->
+                                <div id="tab-cli-comercial" class="tab-content">
+                                    <div class="row">
+                                        <div class="form-group col-6">
+                                            <label class="form-label">Vendedor 1 (RCA)</label>
+                                            <select id="cliSeller1" class="form-input">
+                                                <option value="">Selecione...</option>
+                                                <option value="1">1 - Vendedor Interno</option>
+                                                <option value="32">32 - Abnael Lisboa</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group col-6">
+                                            <label class="form-label">Vendedor 2</label>
+                                            <select id="cliSeller2" class="form-input">
+                                                <option value="">Sem vendedor secundário</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="form-group col-4">
+                                            <label class="form-label">Limite de Crédito (R$)</label>
+                                            <input type="number" step="0.01" id="cliCreditLimit" class="form-input">
+                                        </div>
+                                        <div class="form-group col-4">
+                                            <label class="form-label">Plano de Pagamento Padrão</label>
+                                            <select id="cliPaymentPlan" class="form-input">
+                                                <option value="0">A Vista</option>
+                                                <option value="7">7 Dias</option>
+                                                <option value="14">14 Dias</option>
+                                                <option value="21">21 Dias</option>
+                                                <option value="28">28 Dias</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group col-4">
+                                            <label class="form-label">Ramo de Atividade</label>
+                                            <select id="cliActivity" class="form-input">
+                                                <option value="comercio">Comércio</option>
+                                                <option value="industria">Indústria</option>
+                                                <option value="servico">Serviço</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <h4
+                                        style="margin:1rem 0; font-size:0.9rem; color:var(--accent-danger); border-top:1px solid var(--border-color); padding-top:1rem;">
+                                        Status e Bloqueio</h4>
+                                    <div class="row"
+                                        style="background: rgba(239,68,68,0.05); padding:1rem; border-radius:var(--radius-md); border:1px solid rgba(239,68,68,0.2);">
+                                        <div class="form-group col-3">
+                                            <label class="form-label">Cliente Bloqueado?</label>
+                                            <select id="cliBlocked" class="form-input" style="font-weight:700;">
+                                                <option value="nao">Não</option>
+                                                <option value="sim">SIM</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group col-9">
+                                            <label class="form-label">Motivo do Bloqueio</label>
+                                            <input type="text" id="cliBlockReason" class="form-input"
+                                                placeholder="Ex: Débito em atraso...">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Tab: Fiscal & Parâmetros -->
+                                <div id="tab-cli-fiscal" class="tab-content">
+                                    <div class="row">
+                                        <div class="form-group col-4">
+                                            <label class="form-label">Tipo de Inscrição</label>
+                                            <select id="cliTaxType" class="form-input">
+                                                <option value="1">1 - Contribuinte ICMS</option>
+                                                <option value="2">2 - Contribuinte Isento</option>
+                                                <option value="9">9 - Não Contribuinte</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group col-4">
+                                            <label class="form-label">Simples Nacional?</label>
+                                            <select id="cliSimples" class="form-input">
+                                                <option value="sim">Sim</option>
+                                                <option value="nao">Não</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group col-4">
+                                            <label class="form-label">Suframa</label>
+                                            <input type="text" id="cliSuframa" class="form-input">
+                                        </div>
+                                    </div>
+
+                                    <h4
+                                        style="margin:1rem 0; font-size:0.9rem; color:var(--text-secondary); text-transform:uppercase;">
+                                        Parâmetros de Faturamento</h4>
+                                    <div class="row" style="flex-wrap:wrap; gap:1rem;">
+                                        <label class="check-label"><input type="checkbox" id="parIcmsAnt"> ICMS
+                                            Antecipado?</label>
+                                        <label class="check-label"><input type="checkbox" id="parComissao" checked> Paga
+                                            Comissão?</label>
+                                        <label class="check-label"><input type="checkbox" id="parIsentoIcms"> Isento
+                                            ICMS?</label>
+                                        <label class="check-label"><input type="checkbox" id="parIsentoPis"> Isento
+                                            PIS/COFINS?</label>
+                                        <label class="check-label"><input type="checkbox" id="parIsentoIss"> Isento
+                                            ISS?</label>
+                                        <label class="check-label"><input type="checkbox" id="parBoleto"> Isento Taxa
+                                            Boleto?</label>
+                                        <label class="check-label"><input type="checkbox" id="parFracionado" checked>
+                                            Aceita Venda Fracionada?</label>
+                                    </div>
+                                </div>
+
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary"
+                                    onclick="closeEntityModal()">Cancelar</button>
+                                <button type="submit" class="btn btn-primary">Salvar Cliente</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Footer Scripts -->
             </div>
 
             <!-- Product Modal -->
