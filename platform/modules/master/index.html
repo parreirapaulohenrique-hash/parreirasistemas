@@ -86,7 +86,7 @@
                 </div>
             </div>
 
-            <button class="fab-add" id="btnNewTenant">
+            <button class="fab-add" onclick="window.openModal('tenantModal')">
                 <span class="material-icons-round">add</span>
             </button>
         </main>
@@ -94,7 +94,7 @@
         <!-- View: Users -->
         <main class="main-content" id="view-users" style="display: none;">
             <!-- ... -->
-            <button class="fab-add" id="btnNewUser">
+            <button class="fab-add" onclick="window.openModal('userModal')">
                 <span class="material-icons-round">person_add</span>
             </button>
         </main>
@@ -105,13 +105,14 @@
         <div class="modal-card">
             <div class="modal-header">
                 <h3>Novo Cliente (Tenant)</h3>
-                <button class="btn-close" id="btnCloseTenant">
+                <button class="btn-close" onclick="window.closeModal('tenantModal')">
                     <span class="material-icons-round">close</span>
                 </button>
             </div>
             <!-- ... -->
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" id="btnCancelTenant">Cancelar</button>
+                <button type="button" class="btn btn-secondary"
+                    onclick="window.closeModal('tenantModal')">Cancelar</button>
                 <!-- ... -->
             </div>
             </form>
@@ -123,13 +124,14 @@
         <div class="modal-card">
             <div class="modal-header">
                 <h3>Novo Usuário</h3>
-                <button class="btn-close" id="btnCloseUser">
+                <button class="btn-close" onclick="window.closeModal('userModal')">
                     <span class="material-icons-round">close</span>
                 </button>
             </div>
             <!-- ... -->
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" id="btnCancelUser">Cancelar</button>
+                <button type="button" class="btn btn-secondary"
+                    onclick="window.closeModal('userModal')">Cancelar</button>
                 <!-- ... -->
             </div>
             </form>
@@ -143,7 +145,7 @@
     <script src="firebase-config.js"></script>
 
     <!-- Scripts -->
-    <script type="module" src="js/app.js?v=1.0.13"></script>
+    <script type="module" src="js/app.js?v=1.0.14"></script>
 
 </body>
 

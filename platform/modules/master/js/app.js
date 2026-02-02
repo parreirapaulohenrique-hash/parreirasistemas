@@ -43,31 +43,14 @@ if (platformUsers.length === 0) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Basic init
     renderTenants();
     renderUsers();
     setupForms();
     loadVersion();
 
-    // Event Listeners for Modals (Fix for Module Scope)
-    const attachModalEvents = (btnId, modalId) => {
-        const btn = document.getElementById(btnId);
-        if (btn) btn.addEventListener('click', () => openModal(modalId));
-    };
-
-    const attachCloseEvents = (btnId, modalId) => {
-        const btn = document.getElementById(btnId);
-        if (btn) btn.addEventListener('click', () => closeModal(modalId));
-    };
-
-    // Open Buttons
-    attachModalEvents('btnNewTenant', 'tenantModal');
-    attachModalEvents('btnNewUser', 'userModal');
-
-    // Close Buttons
-    attachCloseEvents('btnCloseTenant', 'tenantModal');
-    attachCloseEvents('btnCancelTenant', 'tenantModal');
-    attachCloseEvents('btnCloseUser', 'userModal');
-    attachCloseEvents('btnCancelUser', 'userModal');
+    // NOTE: Modal events are handled via inline onclick="window.openModal(...)" 
+    // for maximum reliability after module loading issues.
 });
 
 function loadVersion() {
