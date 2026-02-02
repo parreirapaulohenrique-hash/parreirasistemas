@@ -312,13 +312,15 @@
         }
 
         function loadVersion() {
-            fetch('modules/dispatch/version.json')
+            // Load Platform Core Version
+            fetch('version.json')
                 .then(r => r.json())
                 .then(data => {
                     const badge = document.getElementById('versionBadge');
-                    if (badge) badge.textContent = 'v' + data.version;
+                    if (badge) badge.textContent = `v${data.version}`;
+                    console.log(`🚀 ${data.name} loaded. Build: ${data.build}`);
                 })
-                .catch(() => { });
+                .catch(err => console.warn('Falha ao carregar versão da plataforma', err));
         }
 
         function openModule(module) {

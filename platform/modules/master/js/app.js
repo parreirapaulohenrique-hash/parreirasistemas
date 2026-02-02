@@ -45,8 +45,20 @@ if (platformUsers.length === 0) {
 document.addEventListener('DOMContentLoaded', () => {
     renderTenants();
     renderUsers();
+    renderUsers();
     setupForms();
+    loadVersion();
 });
+
+function loadVersion() {
+    fetch('version.json')
+        .then(r => r.json())
+        .then(data => {
+            const el = document.getElementById('masterVersion');
+            if (el) el.textContent = `v${data.version}`;
+        })
+        .catch(e => console.warn('Master version load failed', e));
+}
 
 // View Navigation
 window.switchView = (viewName) => {

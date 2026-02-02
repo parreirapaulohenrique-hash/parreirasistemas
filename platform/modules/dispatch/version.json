@@ -1,6 +1,8 @@
 {
+  "module": "module-dispatch",
+  "name": "Despacho Logístico",
   "version": "3.4.0",
   "date": "2026-02-01",
-  "changes": "UI Master Panel Reorganizado + Backup Automático em Camadas + Abertura em Nova Aba",
+  "last_change": "UI Master Panel Reorganizado + Backup Automático em Camadas + Abertura em Nova Aba",
   "build": "20260201.4"
 }

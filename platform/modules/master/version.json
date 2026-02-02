@@ -1,0 +1,8 @@
+{
+    "module": "module-master",
+    "name": "Master Panel (Admin)",
+    "version": "1.0.0",
+    "date": "2026-02-01",
+    "last_change": "Initial Release with Tenant & User Management + UI Reorganization",
+    "build": "20260201.1"
+}
