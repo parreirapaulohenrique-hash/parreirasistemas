@@ -1,6 +1,6 @@
 {
-  "version": "3.3.0",
+  "version": "3.4.0",
   "date": "2026-02-01",
-  "changes": "Feature: Remoção definitiva de Alias com Migração On-Demand",
-  "build": "20260201.3"
+  "changes": "UI Master Panel Reorganizado + Backup Automático em Camadas + Abertura em Nova Aba",
+  "build": "20260201.4"
 }
