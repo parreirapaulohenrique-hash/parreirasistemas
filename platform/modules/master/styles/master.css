@@ -330,3 +330,72 @@
 .fab-add {
     display: none;
 }
+
+/* Sidebar Footer & User Profile */
+.sidebar-footer {
+    padding: 1.5rem;
+    border-top: 1px solid var(--border);
+    margin-top: auto;
+    /* Push to bottom */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    /* Take available space */
+    min-width: 0;
+    /* Prevent overflow */
+}
+
+.avatar {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.u-name {
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.u-role {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.btn-logout {
+    color: var(--text-secondary);
+    padding: 0.5rem;
+    border-radius: 8px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    flex-shrink: 0;
+}
+
+.btn-logout:hover {
+    background: rgba(239, 68, 68, 0.1);
+    /* Red tint */
+    color: #ef4444;
+    /* Red color */
+}
