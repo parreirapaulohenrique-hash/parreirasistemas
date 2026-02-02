@@ -21,6 +21,29 @@
     position: fixed;
     height: 100vh;
     z-index: 100;
+    overflow-y: auto;
+    /* Allow scroll if content is tall */
+}
+
+/* Sidebar Nav - Removed flex:1 to compact layout */
+.sidebar-nav {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Sidebar Footer & User Profile */
+.sidebar-footer {
+    padding: 1.5rem;
+    border-top: 1px solid var(--border);
+    /* Removed margin-top: auto to avoid huge gap */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    background: var(--bg-card);
+    /* Ensure text legible on scroll */
 }
 
 .sidebar-header {
@@ -41,7 +64,7 @@
 }
 
 .sidebar-nav {
-    flex: 1;
+    /* flex: 1; REMOVED to avoid pushing footer down */
     padding: 1.5rem;
     display: flex;
     flex-direction: column;
