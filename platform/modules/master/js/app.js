@@ -113,20 +113,19 @@ function renderTenants() {
 
         tr.innerHTML = `
             <td>
-                <div style="font-weight: 500; display:flex; align-items:center; gap:6px;">
-                    ${tenant.name} 
-                    ${isDynamic ? '<span style="font-size:0.65em; background:var(--primary-color); color:white; padding:2px 6px; border-radius:4px;">NOVO</span>' : ''}
+                <div class="cell-info">
+                    <span class="cell-title">${tenant.name} ${isDynamic ? '<span style="font-size:0.65em; background:var(--primary-color); color:white; padding:1px 5px; border-radius:4px; vertical-align:middle;">NOVO</span>' : ''}</span>
+                    <span class="cell-subtitle">ID: ${tenant.id}</span>
                 </div>
-                <div style="font-size: 0.8rem; color: var(--text-secondary);">${tenant.id}</div>
             </td>
-            <td>${tenant.cnpj || '-'}</td>
+            <td><span style="font-family:monospace; color:var(--text-secondary);">${tenant.cnpj || '-'}</span></td>
             <td>
                 ${tenant.modules.map(mod => `<span class="module-tag">${formatModuleName(mod)}</span>`).join('')}
             </td>
             <td>
                 <span class="status-badge ${statusClass}">Ativo</span>
             </td>
-            <td>
+            <td style="text-align: right;">
                 <button class="action-btn" title="Editar" onclick="alert('Editar: ${tenant.id}')">
                     <span class="material-icons-round">edit</span>
                 </button>
@@ -146,14 +145,17 @@ function renderUsers() {
 
     platformUsers.forEach(user => {
         const tr = document.createElement('tr');
+        const roleClass = user.role === 'admin' ? 'admin' : '';
         tr.innerHTML = `
             <td>
-                <div style="font-weight: 500;">${user.name}</div>
+                <div class="cell-info">
+                    <span class="cell-title">${user.name}</span>
+                    <span class="cell-subtitle">@${user.login}</span>
+                </div>
             </td>
-            <td>${user.login}</td>
-            <td><span class="module-tag" style="background:var(--bg-card); border:1px solid var(--border-color);">${user.tenant}</span></td>
-            <td>${formatRole(user.role)}</td>
-            <td>
+            <td><span class="module-tag" style="background:transparent; border:1px solid var(--border);">${user.tenant}</span></td>
+            <td><span class="role-badge ${roleClass}">${formatRole(user.role)}</span></td>
+            <td style="text-align: right;">
                 <button class="action-btn" title="Editar">
                     <span class="material-icons-round">edit</span>
                 </button>

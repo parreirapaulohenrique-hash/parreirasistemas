@@ -31,7 +31,18 @@ Write-Host "  → WEB → WEB BACKUP 1" -ForegroundColor Gray
 Remove-Item -Path "$projectPath\WEB BACKUP 1\*" -Recurse -Force -ErrorAction SilentlyContinue
 Copy-Item -Path "$projectPath\web\*" -Destination "$projectPath\WEB BACKUP 1\" -Recurse -Force -ErrorAction SilentlyContinue
 
-Write-Host "  ✅ Backup concluído!" -ForegroundColor Green
+# --- BACKUP PLATFORM ---
+# Platform Backup 1 -> Backup 2
+Write-Host "  → PLATFORM BACKUP 1 → PLATFORM BACKUP 2" -ForegroundColor Gray
+Remove-Item -Path "$projectPath\platform backup 2\*" -Recurse -Force -ErrorAction SilentlyContinue
+Copy-Item -Path "$projectPath\platform backup 1\*" -Destination "$projectPath\platform backup 2\" -Recurse -Force -ErrorAction SilentlyContinue
+
+# Platform -> Backup 1
+Write-Host "  → PLATFORM → PLATFORM BACKUP 1" -ForegroundColor Gray
+Remove-Item -Path "$projectPath\platform backup 1\*" -Recurse -Force -ErrorAction SilentlyContinue
+Copy-Item -Path "$projectPath\platform\*" -Destination "$projectPath\platform backup 1\" -Recurse -Force -ErrorAction SilentlyContinue
+
+Write-Host "  ✅ Backup (Web + Platform) concluído!" -ForegroundColor Green
 Write-Host ""
 
 # ============================================

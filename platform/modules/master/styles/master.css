@@ -133,13 +133,48 @@
 }
 
 .status-badge.active {
-    background: rgba(16, 185, 129, 0.1);
-    color: var(--success);
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .status-badge.pending {
-    background: rgba(245, 158, 11, 0.1);
-    color: var(--warning);
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+/* User/Tenant Cell Info */
+.cell-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cell-title {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.cell-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.role-badge {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    display: inline-block;
+}
+
+.role-badge.admin {
+    border-color: #8b5cf6;
+    color: #a78bfa;
+    background: rgba(139, 92, 246, 0.1);
 }
 
 .module-tag {
