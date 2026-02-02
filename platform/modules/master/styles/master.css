@@ -133,8 +133,8 @@
 .data-table th {
     background: rgba(255, 255, 255, 0.03);
     text-align: left;
-    padding: 1.25rem 1.5rem;
-    /* Mais espaçamento */
+    padding: 0.75rem 1rem;
+    /* Compact padding */
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -144,9 +144,10 @@
 }
 
 .data-table td {
-    padding: 1.25rem 1.5rem;
+    padding: 0.75rem 1rem;
+    /* Compact padding */
     border-bottom: 1px solid var(--border);
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     vertical-align: middle;
     color: var(--text-primary);
     transition: background 0.2s;
@@ -359,11 +360,16 @@
 .sidebar-footer {
     padding: 1.5rem;
     border-top: 1px solid var(--border);
-    /* margin-top: auto; REMOVED */
+    margin-top: auto;
+    /* Revert: Push to bottom as requested */
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
+    background: var(--bg-card);
+    position: sticky;
+    /* Ensure it stays visible if sidebar scrolls */
+    bottom: 0;
 }
 
 .user-info {

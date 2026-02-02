@@ -1,8 +1,8 @@
 {
     "module": "module-master",
     "name": "Master Panel (Admin)",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "date": "2026-02-01",
-    "last_change": "Compacted Sidebar (Removed Gap) + Scrollbar Fixes",
-    "build": "20260201.7"
+    "last_change": "Reverted Sidebar Bottom + Compacted Main Table",
+    "build": "20260201.8"
 }
