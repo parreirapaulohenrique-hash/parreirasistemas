@@ -1,8 +1,8 @@
 {
     "module": "platform-core",
     "name": "Parreira Platform Portal",
-    "version": "3.4.0",
+    "version": "3.4.1",
     "date": "2026-02-01",
-    "last_change": "Implemented multi-level backup and module isolation (Standardized Versioning)",
-    "build": "20260201.1"
+    "last_change": "Strict versioning implementation + UI fixes",
+    "build": "20260201.2"
 }
