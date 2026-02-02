@@ -1,8 +1,8 @@
 {
     "module": "platform-core",
     "name": "Parreira Platform Portal",
-    "version": "3.4.7",
+    "version": "3.4.8",
     "date": "2026-02-01",
-    "last_change": "Master UI Layout Tweaks (v1.0.7)",
-    "build": "20260201.8"
+    "last_change": "Master UI Revert (v1.0.8)",
+    "build": "20260201.9"
 }

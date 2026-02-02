@@ -1,8 +1,8 @@
 {
     "module": "module-master",
     "name": "Master Panel (Admin)",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "date": "2026-02-01",
-    "last_change": "Reverted Sidebar Bottom + Compacted Main Table",
-    "build": "20260201.8"
+    "last_change": "Reverted Inline Form to Modal (Clean Layout)",
+    "build": "20260201.9"
 }

@@ -268,7 +268,6 @@
     border: none;
     transition: transform 0.2s;
     z-index: 200;
-    /* Ensure above footer if needed */
 }
 
 .fab-add:hover {
