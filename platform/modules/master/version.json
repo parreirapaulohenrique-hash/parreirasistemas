@@ -1,8 +1,8 @@
 {
     "module": "module-master",
     "name": "Master Panel (Admin)",
-    "version": "1.0.10",
+    "version": "1.0.11",
     "date": "2026-02-01",
-    "last_change": "Restored Missing Sidebar Styles & Fixed Footer Position",
-    "build": "20260201.11"
+    "last_change": "Refactored JS Events for Reliability (Form Fix)",
+    "build": "20260201.12"
 }
