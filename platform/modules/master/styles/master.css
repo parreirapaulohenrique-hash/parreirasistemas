@@ -237,45 +237,45 @@
 }
 
 /* Actions */
-/* Layout Grid Split */
-.content-grid {
-    display: grid;
-    grid-template-columns: 1fr 340px;
-    /* Table takes space, Form is fixed width */
-    gap: 2rem;
-    align-items: start;
+.action-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
 }
 
-@media (max-width: 1200px) {
-    .content-grid {
-        grid-template-columns: 1fr;
-        /* Stack on smaller screens */
-    }
-}
-
-/* Inline Form Card */
-.form-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.5rem;
-    position: sticky;
-    top: 90px;
-    /* Sticky scroll */
-}
-
-.form-card h3 {
-    margin-bottom: 1.5rem;
-    font-size: 1.1rem;
+.action-btn:hover {
     color: var(--text-primary);
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.fab-add {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #8b5cf6;
+    color: white;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+    cursor: pointer;
+    border: none;
+    transition: transform 0.2s;
+    z-index: 200;
+    /* Ensure above footer if needed */
 }
 
-/* Form Elements Refined */
+.fab-add:hover {
+    transform: scale(1.05);
+}
+
+/* Modal Form Styles (Reused from previous inline, kept here for modal) */
 .form-group {
     margin-bottom: 1.25rem;
 }
@@ -328,31 +328,6 @@
     accent-color: #8b5cf6;
     width: 16px;
     height: 16px;
-}
-
-.btn-submit {
-    width: 100%;
-    padding: 1rem;
-    background: #8b5cf6;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    transition: background 0.2s;
-}
-
-.btn-submit:hover {
-    background: #7c3aed;
-}
-
-/* Hide FAB since form is visible */
-.fab-add {
-    display: none;
 }
 
 /* Sidebar Footer & User Profile */

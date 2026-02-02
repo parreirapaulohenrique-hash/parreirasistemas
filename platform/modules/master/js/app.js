@@ -206,7 +206,7 @@ function setupForms() {
 
             // Success Feedback
             alert('Cliente cadastrado com sucesso!');
-            e.target.reset(); // Clear Inline Form
+            closeModal('tenantModal'); // Revert to Modal Close
             renderTenants(); // Refresh Table
         });
     }

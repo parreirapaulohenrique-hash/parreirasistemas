@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link rel="stylesheet" href="../../core/styles/portal.css">
-    <link rel="stylesheet" href="styles/master.css?v=1.0.7">
+    <link rel="stylesheet" href="styles/master.css?v=1.0.8">
 
 <body>
     <div class="app-container">
@@ -59,87 +59,36 @@
                     <h2>Gestão de Clientes</h2>
                     <p>Gerencie as empresas e licenças da plataforma.</p>
                 </div>
-            </header>
-
-            <div class="page-content">
-                <div class="content-grid">
-                    <!-- Left: Table -->
-                    <div class="data-table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Empresa</th>
-                                    <th>CNPJ</th>
-                                    <th>Módulos Ativos</th>
-                                    <th>Status</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tenantsTableBody">
-                                <!-- Populated by JS -->
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Right: Form (Always Visible) -->
-                    <div class="form-card">
-                        <h3>
-                            <span class="material-icons-round">add_business</span>
-                            Novo Cliente
-                        </h3>
-                        <form id="tenantForm">
-                            <div class="form-group">
-                                <label class="form-label">ID da Empresa (Slug)</label>
-                                <input type="text" id="tenantId" class="form-input" placeholder="ex: novaempresa"
-                                    required pattern="[a-z0-9]+" title="Apenas letras minúsculas e números">
-                                <small
-                                    style="color: var(--text-secondary); font-size: 0.75rem; display:block; margin-top:4px;">
-                                    Apenas letras minúsculas. Usado no login.
-                                </small>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label">Razão Social / Nome</label>
-                                <input type="text" id="tenantName" class="form-input"
-                                    placeholder="Ex: Nova Empresa Ltda" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label">CNPJ</label>
-                                <input type="text" id="tenantCnpj" class="form-input" placeholder="00.000.000/0000-00">
-                            </div>
-
-                            <div class="form-group" style="display:none;"> <!-- Hidden for now simplicity -->
-                                <label class="form-label">Email Admin</label>
-                                <input type="email" id="tenantEmail" class="form-input" placeholder="admin@empresa.com">
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label">Módulos Contratados</label>
-                                <div class="checkbox-group">
-                                    <label class="checkbox-item">
-                                        <input type="checkbox" name="modules" value="dispatch" checked> Despacho
-                                    </label>
-                                    <label class="checkbox-item">
-                                        <input type="checkbox" name="modules" value="master"> Admin Panel
-                                    </label>
-                                    <label class="checkbox-item">
-                                        <input type="checkbox" name="modules" value="wms"> WMS Avançado
-                                    </label>
-                                    <label class="checkbox-item">
-                                        <input type="checkbox" name="modules" value="erp"> ERP
-                                    </label>
-                                </div>
-                            </div>
-
-                            <button type="submit" class="btn-submit">
-                                <span class="material-icons-round">save</span>
-                                CADASTRAR CLIENTE
-                            </button>
-                        </form>
+                <div class="header-actions">
+                    <div class="search-box">
+                        <span class="material-icons-round">search</span>
+                        <input type="text" placeholder="Buscar cliente...">
                     </div>
                 </div>
+            </header>
+
+            <div class="content-body">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Empresa</th>
+                                <th>CNPJ</th>
+                                <th>Módulos Ativos</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tenantsTableBody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
+
+            <button class="fab-add" onclick="window.openModal('tenantModal')">
+                <span class="material-icons-round">add</span>
+            </button>
         </main>
 
         <!-- View: Users -->
