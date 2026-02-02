@@ -106,11 +106,13 @@ function openModal(modalId) {
     }
 }
 
-if (modal) {
-    modal.classList.remove('active');
-    const form = modal.querySelector('form');
-    if (form) form.reset();
-}
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('active');
+        const form = modal.querySelector('form');
+        if (form) form.reset();
+    }
 }
 
 function getAllTenants() {
