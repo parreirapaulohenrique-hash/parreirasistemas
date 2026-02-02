@@ -1,8 +1,8 @@
 {
     "module": "module-master",
     "name": "Master Panel (Admin)",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "date": "2026-02-01",
-    "last_change": "Polished Data Tables Layout (Padding, Hover, Typography)",
-    "build": "20260201.4"
+    "last_change": "Implemented Split-View Layout (Inline Registration Form)",
+    "build": "20260201.5"
 }

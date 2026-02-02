@@ -1,8 +1,8 @@
 {
     "module": "platform-core",
     "name": "Parreira Platform Portal",
-    "version": "3.4.3",
+    "version": "3.4.4",
     "date": "2026-02-01",
-    "last_change": "Refined Master UI styles (v1.0.3)",
-    "build": "20260201.4"
+    "last_change": "Master Panel Split-View Update (v1.0.4)",
+    "build": "20260201.5"
 }
