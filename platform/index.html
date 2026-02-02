@@ -51,13 +51,14 @@
             </div>
 
             <!-- ERP -->
-            <div class="module-card module-erp disabled" onclick="openModule('erp')">
+            <!-- ERP -->
+            <div class="module-card module-erp" onclick="openModule('erp')">
                 <div class="module-icon">
                     <span class="material-icons-round">account_balance</span>
                 </div>
                 <h3>ERP</h3>
                 <p>Gestão completa: Financeiro, Fiscal, CRM, Vendas, Cadastros.</p>
-                <span class="module-status coming">🚧 Em desenvolvimento</span>
+                <span class="module-status active">✅ Disponível</span>
             </div>
 
             <!-- Sales Force -->
@@ -335,6 +336,8 @@
                     window.open('modules/master/index.html', '_blank');
                     break;
                 case 'erp':
+                    window.open('modules/erp/index.html', '_blank');
+                    break;
                 case 'wms':
                 case 'sales-force':
                     alert('Módulo em desenvolvimento.');
