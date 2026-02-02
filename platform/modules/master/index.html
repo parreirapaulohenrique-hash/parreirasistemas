@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link rel="stylesheet" href="../../core/styles/portal.css">
-    <link rel="stylesheet" href="styles/master.css?v=1.0.10">
+    <link rel="stylesheet" href="styles/master.css?v=1.0.11">
 
 <body>
     <div class="app-container">
@@ -86,45 +86,15 @@
                 </div>
             </div>
 
-            <button class="fab-add" onclick="window.openModal('tenantModal')">
+            <button class="fab-add" id="btnNewTenant">
                 <span class="material-icons-round">add</span>
             </button>
         </main>
 
         <!-- View: Users -->
         <main class="main-content" id="view-users" style="display: none;">
-            <header class="header">
-                <div>
-                    <h2>Gestão de Usuários</h2>
-                    <p>Controle quem acessa o sistema e suas permissões.</p>
-                </div>
-                <div class="header-actions">
-                    <div class="search-box">
-                        <span class="material-icons-round">search</span>
-                        <input type="text" placeholder="Buscar usuário...">
-                    </div>
-                </div>
-            </header>
-
-            <div class="content-body">
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Usuário / Login</th>
-                                <th>Empresa (Tenant)</th>
-                                <th>Perfil</th>
-                                <th style="text-align: right;">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="usersTableBody">
-                            <!-- Populated by JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <button class="fab-add" onclick="window.openModal('userModal')">
+            <!-- ... -->
+            <button class="fab-add" id="btnNewUser">
                 <span class="material-icons-round">person_add</span>
             </button>
         </main>
@@ -135,65 +105,15 @@
         <div class="modal-card">
             <div class="modal-header">
                 <h3>Novo Cliente (Tenant)</h3>
-                <button class="btn-close" onclick="closeModal('tenantModal')">
+                <button class="btn-close" id="btnCloseTenant">
                     <span class="material-icons-round">close</span>
                 </button>
             </div>
-            <form id="tenantForm">
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label class="form-label">ID da Empresa (Slug)</label>
-                        <input type="text" id="tenantId" class="form-input" placeholder="ex: novaempresa" required
-                            pattern="[a-z0-9]+" title="Apenas letras minúsculas e números">
-                        <small style="color: var(--text-secondary); font-size: 0.8rem;">Usado no login. Apenas letras
-                            minúsculas.</small>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Razão Social / Nome</label>
-                        <input type="text" id="tenantName" class="form-input" placeholder="Ex: Nova Empresa Ltda"
-                            required>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">CNPJ</label>
-                        <input type="text" id="tenantCnpj" class="form-input" placeholder="00.000.000/0000-00">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Email Admin</label>
-                        <input type="email" id="tenantEmail" class="form-input" placeholder="admin@empresa.com">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Módulos Ativos</label>
-                        <div class="checkbox-group">
-                            <label class="checkbox-item">
-                                <input type="checkbox" name="modules" value="dispatch" checked> Despacho
-                            </label>
-                            <label class="checkbox-item">
-                                <input type="checkbox" name="modules" value="master"> Master (Admin)
-                            </label>
-                            <label class="checkbox-item">
-                                <input type="checkbox" name="modules" value="wms"> WMS
-                            </label>
-                            <label class="checkbox-item">
-                                <input type="checkbox" name="modules" value="erp"> ERP
-                            </label>
-                            <label class="checkbox-item">
-                                <input type="checkbox" name="modules" value="sales-force"> Sales Force
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary"
-                        onclick="closeModal('tenantModal')">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">
-                        <span class="material-icons-round">save</span>
-                        Salvar Cliente
-                    </button>
-                </div>
+            <!-- ... -->
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btnCancelTenant">Cancelar</button>
+                <!-- ... -->
+            </div>
             </form>
         </div>
     </div>
@@ -203,51 +123,15 @@
         <div class="modal-card">
             <div class="modal-header">
                 <h3>Novo Usuário</h3>
-                <button class="btn-close" onclick="closeModal('userModal')">
+                <button class="btn-close" id="btnCloseUser">
                     <span class="material-icons-round">close</span>
                 </button>
             </div>
-            <form id="userForm">
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label class="form-label">Empresa (Tenant)</label>
-                        <select id="userTenant" class="form-input" required>
-                            <!-- Populated by JS -->
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Nome Completo</label>
-                        <input type="text" id="userNameInput" class="form-input" placeholder="Ex: João da Silva"
-                            required>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Login/Usuário</label>
-                        <input type="text" id="userLogin" class="form-input" placeholder="Ex: joao.silva" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Senha</label>
-                        <input type="password" id="userPass" class="form-input" placeholder="*****" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Perfil de Acesso</label>
-                        <select id="userRole" class="form-input">
-                            <option value="operacional">Operacional</option>
-                            <option value="supervisor">Supervisor / Gerente</option>
-                            <option value="admin">Administrador do Sistema</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('userModal')">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">
-                        <span class="material-icons-round">save</span>
-                        Salvar Usuário
-                    </button>
-                </div>
+            <!-- ... -->
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btnCancelUser">Cancelar</button>
+                <!-- ... -->
+            </div>
             </form>
         </div>
     </div>
@@ -259,7 +143,7 @@
     <script src="firebase-config.js"></script>
 
     <!-- Scripts -->
-    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/app.js?v=1.0.11"></script>
 
 </body>
 

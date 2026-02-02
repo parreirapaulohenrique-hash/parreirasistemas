@@ -45,9 +45,29 @@ if (platformUsers.length === 0) {
 document.addEventListener('DOMContentLoaded', () => {
     renderTenants();
     renderUsers();
-    renderUsers();
     setupForms();
     loadVersion();
+
+    // Event Listeners for Modals (Fix for Module Scope)
+    const attachModalEvents = (btnId, modalId) => {
+        const btn = document.getElementById(btnId);
+        if (btn) btn.addEventListener('click', () => openModal(modalId));
+    };
+
+    const attachCloseEvents = (btnId, modalId) => {
+        const btn = document.getElementById(btnId);
+        if (btn) btn.addEventListener('click', () => closeModal(modalId));
+    };
+
+    // Open Buttons
+    attachModalEvents('btnNewTenant', 'tenantModal');
+    attachModalEvents('btnNewUser', 'userModal');
+
+    // Close Buttons
+    attachCloseEvents('btnCloseTenant', 'tenantModal');
+    attachCloseEvents('btnCancelTenant', 'tenantModal');
+    attachCloseEvents('btnCloseUser', 'userModal');
+    attachCloseEvents('btnCancelUser', 'userModal');
 });
 
 function loadVersion() {
@@ -75,7 +95,7 @@ window.switchView = (viewName) => {
 };
 
 // Modal Control
-window.openModal = (modalId) => {
+function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.add('active');
@@ -84,31 +104,20 @@ window.openModal = (modalId) => {
             populateTenantSelect();
         }
     }
-};
+}
 
-window.closeModal = (modalId) => {
+function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.remove('active');
         const form = modal.querySelector('form');
         if (form) form.reset();
     }
-};
-
-function getAllTenants() {
-    return [...mockTenants, ...dynamicTenants];
 }
 
-function populateTenantSelect() {
-    const select = document.getElementById('userTenant');
-    select.innerHTML = '<option value="">Selecione a empresa...</option>';
-    getAllTenants().forEach(t => {
-        const option = document.createElement('option');
-        option.value = t.id;
-        option.textContent = `${t.name} (${t.id})`;
-        select.appendChild(option);
-    });
-}
+// Global exposure for potential inline usage (backup)
+window.openModal = openModal;
+window.closeModal = closeModal;
 
 // --- Tenants Logic ---
 
