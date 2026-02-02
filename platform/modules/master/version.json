@@ -1,8 +1,8 @@
 {
     "module": "module-master",
     "name": "Master Panel (Admin)",
-    "version": "1.0.8",
+    "version": "1.0.10",
     "date": "2026-02-01",
-    "last_change": "Reverted Inline Form to Modal (Clean Layout)",
-    "build": "20260201.9"
+    "last_change": "Restored Missing Sidebar Styles & Fixed Footer Position",
+    "build": "20260201.11"
 }
