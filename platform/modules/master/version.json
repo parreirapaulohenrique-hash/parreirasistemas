@@ -1,8 +1,8 @@
 {
     "module": "module-master",
     "name": "Master Panel (Admin)",
-    "version": "1.0.11",
+    "version": "1.0.12",
     "date": "2026-02-01",
-    "last_change": "Refactored JS Events for Reliability (Form Fix)",
-    "build": "20260201.12"
+    "last_change": "Restored Data Loading Functions (Critical Fix)",
+    "build": "20260201.13"
 }

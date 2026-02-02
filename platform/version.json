@@ -1,8 +1,8 @@
 {
     "module": "platform-core",
     "name": "Parreira Platform Portal",
-    "version": "3.4.11",
+    "version": "3.4.12",
     "date": "2026-02-01",
-    "last_change": "Master UI Event Fix (v1.0.11)",
-    "build": "20260201.12"
+    "last_change": "Fix Data Loading Bug (v1.0.12)",
+    "build": "20260201.13"
 }

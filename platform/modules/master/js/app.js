@@ -106,13 +106,27 @@ function openModal(modalId) {
     }
 }
 
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.remove('active');
-        const form = modal.querySelector('form');
-        if (form) form.reset();
-    }
+if (modal) {
+    modal.classList.remove('active');
+    const form = modal.querySelector('form');
+    if (form) form.reset();
+}
+}
+
+function getAllTenants() {
+    return [...mockTenants, ...dynamicTenants];
+}
+
+function populateTenantSelect() {
+    const select = document.getElementById('userTenant');
+    if (!select) return;
+    select.innerHTML = '<option value="">Selecione a empresa...</option>';
+    getAllTenants().forEach(t => {
+        const option = document.createElement('option');
+        option.value = t.id;
+        option.textContent = `${t.name} (${t.id})`;
+        select.appendChild(option);
+    });
 }
 
 // Global exposure for potential inline usage (backup)
