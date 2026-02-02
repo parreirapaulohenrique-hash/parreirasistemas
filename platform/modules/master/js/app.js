@@ -78,14 +78,23 @@ window.switchView = (viewName) => {
 };
 
 // Modal Control
+// --- Global Global Exposure (Immediately) ---
+window.openModal = openModal;
+window.closeModal = closeModal;
+
+// Modal Control
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.add('active');
+        modal.style.display = 'flex'; // FORCE VISIBILITY
+
         // Refresh selects if needed
         if (modalId === 'userModal') {
             populateTenantSelect();
         }
+    } else {
+        console.error('Modal not found:', modalId);
     }
 }
 
@@ -93,6 +102,8 @@ function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.remove('active');
+        modal.style.display = 'none'; // FORCE HIDE
+
         const form = modal.querySelector('form');
         if (form) form.reset();
     }
@@ -113,10 +124,8 @@ function populateTenantSelect() {
         select.appendChild(option);
     });
 }
+// (Globals exposed at top)
 
-// Global exposure for potential inline usage (backup)
-window.openModal = openModal;
-window.closeModal = closeModal;
 
 // --- Tenants Logic ---
 

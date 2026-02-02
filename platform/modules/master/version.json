@@ -1,8 +1,8 @@
 {
     "module": "module-master",
     "name": "Master Panel (Admin)",
-    "version": "1.0.14",
+    "version": "1.0.15",
     "date": "2026-02-01",
-    "last_change": "Reverted to Inline OnClick for Modal (Stability)",
-    "build": "20260201.15"
+    "last_change": "Forced Modal Visibility via JS (Critical UI Fix)",
+    "build": "20260201.16"
 }
