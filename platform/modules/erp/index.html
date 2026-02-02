@@ -6,154 +6,283 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Parreira ERP | Core</title>
 
-    <!-- Design System -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-    <link rel="stylesheet" href="../../core/styles/portal.css">
-    <link rel="stylesheet" href="styles/erp.css?v=2.0.0">
-
-    <style>
-        /* ERP Specific Overrides (Will move to erp.css) */
-        :root {
-            --erp-primary: #0ea5e9;
-            /* Sky Blue for ERP */
-            --erp-bg: #0f172a;
-        }
-
-        .sidebar {
-            background: var(--bg-card);
-            border-right: 1px solid var(--border);
-        }
-
-        .nav-item.active {
-            background: rgba(14, 165, 233, 0.1);
-            color: var(--erp-primary);
-        }
-    </style>
+    <!-- Using new consolidated style -->
+    <link rel="stylesheet" href="styles/erp.css?v=2.1.0">
 </head>
 
 <body>
     <div class="app-container">
         <!-- Sidebar -->
         <aside class="sidebar">
-            <div class="sidebar-header">
-                <a href="../../index.html" class="sidebar-logo">
-                    <span class="material-icons-round" style="color:var(--erp-primary)">grid_view</span>
-                    <span>Parreira ERP</span>
-                </a>
+            <div class="logo-area">
+                <span class="material-icons-round" style="font-size: 1.5rem;">hub</span>
+                <h1 style="font-size: 1.25rem;">Parreira ERP</h1>
             </div>
 
-            <nav class="sidebar-nav">
-                <a href="#" class="nav-item active" onclick="switchView('dashboard')">
+            <nav class="nav-menu">
+                <a class="nav-item active" onclick="switchView('dashboard')">
                     <span class="material-icons-round">dashboard</span>
                     <span>Visão Geral</span>
                 </a>
 
-                <div class="nav-divider">CADASTROS</div>
+                <div class="nav-divider">CADASTROS GERAIS</div>
 
-                <a href="#" class="nav-item" onclick="switchView('products')">
+                <a class="nav-item" onclick="switchView('products')">
                     <span class="material-icons-round">inventory_2</span>
                     <span>Produtos</span>
                 </a>
-                <a href="#" class="nav-item" onclick="switchView('entities')">
+                <a class="nav-item" onclick="switchView('entities')">
                     <span class="material-icons-round">group</span>
-                    <span>Entidades (CRM)</span>
+                    <span>Entidades</span>
                 </a>
 
                 <div class="nav-divider">OPERAÇÕES</div>
 
-                <a href="#" class="nav-item" onclick="switchView('sales')">
+                <a class="nav-item" onclick="switchView('sales')">
                     <span class="material-icons-round">shopping_cart</span>
                     <span>Vendas</span>
                 </a>
-                <a href="#" class="nav-item" onclick="switchView('finance')">
+                <a class="nav-item" onclick="switchView('finance')">
                     <span class="material-icons-round">payments</span>
                     <span>Financeiro</span>
-                </a>
-                <a href="#" class="nav-item" onclick="switchView('fiscal')">
-                    <span class="material-icons-round">receipt_long</span>
-                    <span>Fiscal</span>
                 </a>
             </nav>
 
             <div class="sidebar-footer">
-                <div class="user-info">
-                    <div class="avatar" id="userAvatar">U</div>
-                    <div style="display:flex; flex-direction:column; overflow:hidden;">
-                        <span class="u-name" id="userName">Usuário</span>
-                        <span class="u-role" id="userTenant">Tenant</span>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <span class="material-icons-round" style="color:var(--text-secondary)">person</span>
+                    <div style="display:flex; flex-direction:column;">
+                        <span id="userName" style="font-size:0.85rem; font-weight:600;">Usuário</span>
+                        <span id="userTenant" style="font-size:0.7rem; color:var(--text-secondary)">Tenant</span>
                     </div>
                 </div>
-                <a href="../../index.html" class="btn-logout" title="Voltar ao Portal">
+                <a href="../../index.html" style="color:var(--accent-danger); text-decoration:none;" title="Sair">
                     <span class="material-icons-round">logout</span>
                 </a>
             </div>
         </aside>
 
         <!-- Main Content -->
-        <div class="main-content">
+        <main class="main-content">
             <!-- Top Bar -->
             <header class="top-bar">
-                <h2 id="pageTitle">Visão Geral</h2>
+                <div class="breadcrumb">
+                    <span class="text-secondary" id="breadParent">ERP</span> / <span class="current"
+                        id="pageTitle">Visão Geral</span>
+                </div>
                 <div class="top-actions">
-                    <div class="branch-selector"
-                        style="display:flex; align-items:center; gap:0.5rem; padding:0.5rem 1rem; background:rgba(255,255,255,0.05); border-radius:8px;">
-                        <span class="material-icons-round"
-                            style="font-size:1.2rem; color:var(--text-secondary)">store</span>
-                        <select id="branchSelect"
-                            style="background:none; border:none; color:var(--text-primary); outline:none; font-family:inherit;">
-                            <option value="matriz">Matriz (Principal)</option>
-                        </select>
-                    </div>
+                    <!-- Branch Selector can be added here later -->
                 </div>
             </header>
 
-            <!-- Views -->
-            <div id="view-dashboard" class="page-content">
-                <div class="empty-state">
-                    <span class="material-icons-round"
-                        style="font-size:3rem; color:var(--text-secondary); opacity:0.5;">dashboard</span>
-                    <p>Dashboard em desenvolvimento</p>
+            <div class="content-wrapper">
+
+                <!-- View: Dashboard -->
+                <div id="view-dashboard" class="page-content">
+                    <div class="welcome-banner">
+                        <h2>Bem-vindo ao ERP Core</h2>
+                        <p>Gestão centralizada de Produtos, Pessoas e Financeiro.</p>
+                    </div>
+
+                    <div class="grid-2-col" style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Resumo de Cadastros</h3>
+                            </div>
+                            <div class="card-body" style="padding:2rem; text-align:center;">
+                                <div style="font-size:2rem; font-weight:700;">0</div>
+                                <div style="color:var(--text-secondary);">Produtos Ativos</div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Vendas do Mês</h3>
+                            </div>
+                            <div class="card-body" style="padding:2rem; text-align:center;">
+                                <div style="font-size:2rem; font-weight:700; color:var(--accent-success);">R$ 0,00</div>
+                                <div style="color:var(--text-secondary);">Faturamento</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Products -->
+                <div id="view-products" class="page-content" style="display:none;">
+                    <div class="welcome-banner">
+                        <h2>Catálogo de Produtos</h2>
+                        <p>Gerencie o cadastro mestre de produtos para WMS e Vendas.</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div style="display:flex; gap:0.5rem; width: 100%; max-width: 400px;">
+                                <input type="text" id="productSearch" class="form-input"
+                                    placeholder="Buscar SKU ou Nome..." onkeyup="filterProducts()">
+                            </div>
+                            <button class="btn btn-primary" onclick="openProductModal()">
+                                <span class="material-icons-round">add</span> Novo Produto
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>SKU</th>
+                                        <th>Produto</th>
+                                        <th>Logística</th>
+                                        <th>Preço (R$)</th>
+                                        <th>Estoque</th>
+                                        <th style="text-align:right">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="productsTableBody">
+                                    <tr>
+                                        <td colspan="6" class="empty-state">Nenhum produto cadastrado.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Other Views Placeholders -->
+                <div id="view-entities" class="page-content" style="display:none;">
+                    <div class="empty-state" style="text-align:center; padding:3rem; color:var(--text-secondary);">
+                        <span class="material-icons-round" style="font-size:3rem;">construction</span>
+                        <h3>Cadastro de Entidades</h3>
+                        <p>Em desenvolvimento.</p>
+                    </div>
                 </div>
             </div>
 
-            <div id="view-products" class="page-content" style="display:none;">
-                <!-- Products Table Placeholder -->
-                <div class="header-actions" style="display:flex; justify-content:space-between; margin-bottom:1rem;">
-                    <h3>Catálogo de Produtos</h3>
-                    <button class="btn btn-primary" onclick="openProductModal()">+ Novo Produto</button>
-                </div>
-                <div class="data-table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>SKU</th>
-                                <th>Produto</th>
-                                <th>Preço Base</th>
-                                <th>Estoque</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="productsTableBody">
-                            <tr>
-                                <td colspan="5" style="text-align:center; padding:2rem;">Carregando produtos...</td>
-                            </tr>
-                        </tbody>
-                    </table>
+            <!-- Product Modal -->
+            <div id="productModal" class="modal-overlay">
+                <div class="modal-card modal-lg">
+                    <div class="modal-header">
+                        <h3>Cadastro de Produto</h3>
+                        <button class="btn btn-secondary btn-icon" onclick="closeProductModal()">
+                            <span class="material-icons-round">close</span>
+                        </button>
+                    </div>
+                    <form id="productForm">
+                        <div class="modal-body">
+                            <!-- Tabs Navigation -->
+                            <div class="tabs-nav">
+                                <button type="button" class="tab-btn active"
+                                    onclick="switchTab(this, 'tab-geral')">Geral</button>
+                                <button type="button" class="tab-btn"
+                                    onclick="switchTab(this, 'tab-logistica')">Logística (WMS)</button>
+                                <button type="button" class="tab-btn"
+                                    onclick="switchTab(this, 'tab-fiscal')">Fiscal/Preço</button>
+                            </div>
+
+                            <!-- Tab: Geral -->
+                            <div id="tab-geral" class="tab-content active">
+                                <div class="row">
+                                    <div class="form-group col-4">
+                                        <label class="form-label">SKU (Código)</label>
+                                        <input type="text" id="prodSku" class="form-input" required>
+                                    </div>
+                                    <div class="form-group col-8">
+                                        <label class="form-label">Nome do Produto</label>
+                                        <input type="text" id="prodName" class="form-input" required>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="form-group col-6">
+                                        <label class="form-label">EAN / GTIN</label>
+                                        <input type="text" id="prodEan" class="form-input">
+                                    </div>
+                                    <div class="form-group col-6">
+                                        <label class="form-label">Foto (URL)</label>
+                                        <input type="text" id="prodImage" class="form-input" placeholder="http://...">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tab: Logística -->
+                            <div id="tab-logistica" class="tab-content">
+                                <div class="alert-info">
+                                    <span class="material-icons-round">info</span>
+                                    <span>Esses dados são cruciais para o cálculo de frete (Despacho) e armazenagem
+                                        (WMS).</span>
+                                </div>
+                                <div class="row">
+                                    <div class="form-group col-6">
+                                        <label class="form-label">Peso Bruto (kg)</label>
+                                        <input type="number" step="0.001" id="prodWeight" class="form-input">
+                                    </div>
+                                    <div class="form-group col-6">
+                                        <label class="form-label">Cubagem (m³)</label>
+                                        <input type="number" step="0.0001" id="prodVolume" class="form-input" readonly
+                                            placeholder="Calc. Automático">
+                                    </div>
+                                </div>
+                                <label class="form-label">Dimensões da Embalagem (cm)</label>
+                                <div class="row">
+                                    <div class="form-group col-4">
+                                        <input type="number" id="prodHeight" class="form-input" placeholder="Altura">
+                                    </div>
+                                    <div class="form-group col-4">
+                                        <input type="number" id="prodWidth" class="form-input" placeholder="Largura">
+                                    </div>
+                                    <div class="form-group col-4">
+                                        <input type="number" id="prodDepth" class="form-input"
+                                            placeholder="Profundidade">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tab: Fiscal e Preço -->
+                            <div id="tab-fiscal" class="tab-content">
+                                <div class="row">
+                                    <div class="form-group col-6">
+                                        <label class="form-label">Preço de Venda (R$)</label>
+                                        <input type="number" step="0.01" id="prodPrice" class="form-input" required>
+                                    </div>
+                                    <div class="form-group col-6">
+                                        <label class="form-label">Múltiplo de Venda</label>
+                                        <input type="number" id="prodMultiple" class="form-input" value="1" min="1">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="form-group col-6">
+                                        <label class="form-label">NCM</label>
+                                        <input type="text" id="prodNcm" class="form-input">
+                                    </div>
+                                    <div class="form-group col-6">
+                                        <label class="form-label">Origem</label>
+                                        <select id="prodOrigin" class="form-input">
+                                            <option value="0">0 - Nacional</option>
+                                            <option value="1">1 - Estrangeira (Imp. Direta)</option>
+                                            <option value="2">2 - Estrangeira (Adq. no M.I.)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary"
+                                onclick="closeProductModal()">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">Salvar Produto</button>
+                        </div>
+                    </form>
                 </div>
             </div>
 
-            <!-- Other views placeholders... -->
-        </div>
+        </main>
     </div>
 
-    <!-- Firebase SDKs -->
+    <!-- Scripts -->
+    <!-- Basic Firebase for Auth -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="../../core/js/firebase-config.js"></script>
 
-    <!-- ERP Scripts -->
     <script type="module" src="js/app.js"></script>
 </body>
 
