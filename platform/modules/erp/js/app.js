@@ -36,7 +36,8 @@ window.switchView = (viewName) => {
     const titles = {
         'dashboard': 'Visão Geral',
         'products': 'Gestão de Produtos',
-        'entities': 'Gestão de Clientes e Parceiros',
+        'entities': 'Gestão de Clientes',
+        'suppliers': 'Gestão de Fornecedores',
         'sales': 'Vendas',
         'finance': 'Financeiro',
         'fiscal': 'Fiscal'
@@ -45,6 +46,7 @@ window.switchView = (viewName) => {
 
     // Load Data on View Switch
     if (viewName === 'entities') renderEntities();
+    if (viewName === 'suppliers') renderSuppliers();
 };
 
 // --- Product Modal Logic ---
@@ -125,40 +127,54 @@ window.closeEntityModal = () => {
 };
 
 // --- CNPJ Search Integration ---
-window.openCNPJSearch = () => {
+window.openCNPJSearch = (context = 'client') => {
     if (!window.CNPJLookup) {
         alert('Módulo de consulta não carregado. Recarregue a página.');
         return;
     }
 
     CNPJLookup.showLookupModal((data) => {
-        // Map fields BrasilAPI -> ERP Form
-        document.getElementById('cliDoc').value = data.cnpj;
-        document.getElementById('cliName').value = data.razaoSocial;
-        document.getElementById('cliFantasy').value = data.nomeFantasia;
+        if (context === 'client') {
+            // Map fields BrasilAPI -> ERP Form (Clients)
+            document.getElementById('cliDoc').value = data.cnpj;
+            document.getElementById('cliName').value = data.razaoSocial;
+            document.getElementById('cliFantasy').value = data.nomeFantasia;
 
-        // Address
-        document.getElementById('cliZip').value = data.cep;
-        document.getElementById('cliStreet').value = data.logradouro;
-        document.getElementById('cliNumber').value = data.numero;
-        document.getElementById('cliComp').value = data.complemento;
-        document.getElementById('cliDistrict').value = data.bairro;
-        document.getElementById('cliCity').value = data.cidade;
-        document.getElementById('cliState').value = data.uf;
+            document.getElementById('cliZip').value = data.cep;
+            document.getElementById('cliStreet').value = data.logradouro;
+            document.getElementById('cliNumber').value = data.numero;
+            document.getElementById('cliComp').value = data.complemento;
+            document.getElementById('cliDistrict').value = data.bairro;
+            document.getElementById('cliCity').value = data.cidade;
+            document.getElementById('cliState').value = data.uf;
 
-        // Contact
-        document.getElementById('cliEmail').value = data.email;
-        if (data.telefone) document.getElementById('cliContact').value = data.telefone;
+            document.getElementById('cliEmail').value = data.email;
+            if (data.telefone) document.getElementById('cliContact').value = data.telefone;
 
-        // Fiscal
-        if (data.optanteSimples) {
-            document.getElementById('cliSimples').value = 'sim';
-        } else {
-            document.getElementById('cliSimples').value = 'nao';
+            if (data.optanteSimples) {
+                document.getElementById('cliSimples').value = 'sim';
+            } else {
+                document.getElementById('cliSimples').value = 'nao';
+            }
+            document.getElementById('cliType').value = 'J';
+
+        } else if (context === 'supplier') {
+            // Map fields BrasilAPI -> ERP Form (Suppliers)
+            document.getElementById('supDoc').value = data.cnpj;
+            document.getElementById('supName').value = data.razaoSocial;
+            document.getElementById('supFantasy').value = data.nomeFantasia;
+
+            document.getElementById('supZip').value = data.cep;
+            document.getElementById('supStreet').value = data.logradouro;
+            document.getElementById('supNumber').value = data.numero;
+            document.getElementById('supDistrict').value = data.bairro;
+            document.getElementById('supCity').value = data.cidade;
+            document.getElementById('supState').value = data.uf;
+
+            document.getElementById('supEmail').value = data.email;
+            if (data.telefone) document.getElementById('supPhone').value = data.telefone;
+            document.getElementById('supType').value = 'J';
         }
-
-        // Auto-select type
-        document.getElementById('cliType').value = 'J';
 
         alert('✅ Dados preenchidos com sucesso!');
     });
