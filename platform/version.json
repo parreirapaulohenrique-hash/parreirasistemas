@@ -1,8 +1,10 @@
+```
 {
     "module": "platform-core",
     "name": "Parreira Platform Portal",
-    "version": "3.4.2",
+    "version": "3.4.3",
     "date": "2026-02-01",
-    "last_change": "Updated child modules (Master v1.0.2 Layout Fix)",
-    "build": "20260201.3"
+    "last_change": "Refined Master UI styles (v1.0.3)",
+    "build": "20260201.4"
 }
+```

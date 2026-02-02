@@ -91,56 +91,83 @@
     padding: 2rem;
 }
 
-/* Data Table */
+/* Data Table Refined */
 .data-table-container {
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     overflow: hidden;
 }
 
 .data-table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    /* Allows border-radius on rows if needed */
+    border-spacing: 0;
 }
 
 .data-table th {
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(255, 255, 255, 0.03);
     text-align: left;
-    padding: 1rem;
-    font-size: 0.85rem;
+    padding: 1.25rem 1.5rem;
+    /* Mais espaçamento */
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     color: var(--text-secondary);
-    font-weight: 500;
+    font-weight: 600;
     border-bottom: 1px solid var(--border);
 }
 
 .data-table td {
-    padding: 1rem;
+    padding: 1.25rem 1.5rem;
     border-bottom: 1px solid var(--border);
-    font-size: 0.9rem;
+    font-size: 0.95rem;
+    vertical-align: middle;
+    color: var(--text-primary);
+    transition: background 0.2s;
+}
+
+.data-table tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
+    /* Hover Effect */
 }
 
 .data-table tr:last-child td {
     border-bottom: none;
 }
 
-/* Status Badges */
+/* Status Badges Polished */
 .status-badge {
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    /* Pill shape */
     font-size: 0.75rem;
-    font-weight: 500;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.status-badge::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
 }
 
 .status-badge.active {
-    background: rgba(16, 185, 129, 0.15);
-    color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+    color: #34d399;
     border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .status-badge.pending {
-    background: rgba(245, 158, 11, 0.15);
-    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.1);
+    color: #fbbf24;
     border: 1px solid rgba(245, 158, 11, 0.2);
 }
 
