@@ -203,9 +203,11 @@ function setupForms() {
 
             dynamicTenants.push(newTenant);
             localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
-            alert('Cliente cadastrado!');
-            closeModal('tenantModal');
-            renderTenants();
+
+            // Success Feedback
+            alert('Cliente cadastrado com sucesso!');
+            e.target.reset(); // Clear Inline Form
+            renderTenants(); // Refresh Table
         });
     }
 
