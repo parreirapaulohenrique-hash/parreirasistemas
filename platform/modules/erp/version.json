@@ -1,0 +1,8 @@
+{
+    "module": "module-erp",
+    "name": "Parreira ERP Core",
+    "version": "2.0.0",
+    "date": "2026-02-01",
+    "last_change": "Initial Setup (Structure & Dashboard)",
+    "build": "20260201.01"
+}
