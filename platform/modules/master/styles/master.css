@@ -329,76 +329,127 @@
     height: 16px;
 }
 
-/* Sidebar Footer & User Profile */
-/* Sidebar Footer & User Profile */
-.sidebar-footer {
-    padding: 1.5rem;
-    border-top: 1px solid var(--border);
-    margin-top: auto;
-    /* Revert: Push to bottom as requested */
+/* Modal Overlay & Structure */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    display: none;
+    /* Hidden by default */
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-overlay.active {
+    display: flex;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.modal-card {
+    background: var(--bg-card);
+    width: 90%;
+    max-width: 500px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+}
+
+.modal-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
     background: var(--bg-card);
-    position: sticky;
-    /* Ensure it stays visible if sidebar scrolls */
-    bottom: 0;
 }
 
-.user-info {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex: 1;
-    /* Take available space */
-    min-width: 0;
-    /* Prevent overflow */
-}
-
-.avatar {
-    width: 36px;
-    height: 36px;
-    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    font-size: 0.9rem;
-    flex-shrink: 0;
-}
-
-.u-name {
-    font-weight: 500;
+.modal-header h3 {
+    font-size: 1.1rem;
     color: var(--text-primary);
-    font-size: 0.9rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-weight: 600;
 }
 
-.u-role {
-    font-size: 0.75rem;
+.btn-close {
+    background: none;
+    border: none;
     color: var(--text-secondary);
-}
-
-.btn-logout {
-    color: var(--text-secondary);
-    padding: 0.5rem;
-    border-radius: 8px;
-    transition: all 0.2s;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
-    text-decoration: none;
-    flex-shrink: 0;
 }
 
-.btn-logout:hover {
-    background: rgba(239, 68, 68, 0.1);
-    /* Red tint */
-    color: #ef4444;
-    /* Red color */
+.btn-close:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+}
+
+.modal-footer {
+    padding: 1.25rem 1.5rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+}
+
+.btn-secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+}
+
+.btn-primary {
+    background: #8b5cf6;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #7c3aed;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
