@@ -208,7 +208,61 @@ window.renderEntities = (filter = '') => {
     });
 };
 
-window.filterEntities = () => {
-    const term = document.getElementById('entitySearch').value;
-    renderEntities(term);
+// --- Suppliers Logic ---
+window.openSupplierModal = () => {
+    document.getElementById('supplierModal').style.display = 'flex';
 };
+
+window.closeSupplierModal = () => {
+    document.getElementById('supplierModal').style.display = 'none';
+};
+
+let suppliers = [
+    { code: 451, name: 'LUBRIFICANTES DO BRASIL LTDA', fantasy: 'LUBRAX', cnpj: '33.000.167/0001-01', city: 'Rio de Janeiro/RJ', type: 'Revenda' },
+    { code: 452, name: 'MICHELIN PNEUS S/A', fantasy: 'MICHELIN', cnpj: '00.000.000/0002-00', city: 'São Paulo/SP', type: 'Indústria' }
+];
+
+window.renderSuppliers = (filter = '') => {
+    const tbody = document.getElementById('suppliersTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    const filtered = suppliers.filter(s =>
+        s.name.toLowerCase().includes(filter.toLowerCase()) ||
+        s.cnpj.includes(filter)
+    );
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum fornecedor encontrado.</td></tr>';
+        return;
+    }
+
+    filtered.forEach(s => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="font-weight:600">${s.code}</td>
+            <td>
+                <div style="font-weight:600; color:var(--text-primary)">${s.name}</div>
+                <div style="font-size:0.8rem; color:var(--text-secondary)">${s.fantasy}</div>
+            </td>
+            <td>${s.cnpj}</td>
+            <td>${s.city}</td>
+            <td><span class="status-badge status-pending" style="color:var(--text-primary); background:rgba(255,255,255,0.1)">${s.type}</span></td>
+            <td style="text-align:right">
+                <button class="btn btn-secondary btn-icon" style="padding:0.4rem;">
+                    <span class="material-icons-round" style="font-size:1rem;">edit</span>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+};
+
+window.filterSuppliers = () => {
+    const term = document.getElementById('supplierSearch').value;
+    renderSuppliers(term);
+};
+
+// Update CNPJ Search to handle both Contexts
+/* NOTE: Modify openCNPJSearch to accept a 'context' arg */

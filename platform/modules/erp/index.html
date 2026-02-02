@@ -442,6 +442,259 @@
                 <!-- Footer Scripts -->
             </div>
 
+            <!-- VIEW: SUPPLIERS (Fornecedores) -->
+            <div id="view-suppliers" class="page-content" style="display:none;">
+                <div class="welcome-banner">
+                    <h2>Gestão de Fornecedores</h2>
+                    <p>Controle de parceiros de suprimentos, transportadoras e representantes.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div style="display:flex; gap:0.5rem; width: 100%; max-width: 400px;">
+                            <input type="text" id="supplierSearch" class="form-input"
+                                placeholder="Buscar Fornecedor ou CNPJ..." onkeyup="filterSuppliers()">
+                        </div>
+                        <button class="btn btn-primary" onclick="openSupplierModal()">
+                            <span class="material-icons-round">add_business</span> Novo Fornecedor
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Cód.</th>
+                                    <th>Fornecedor / Fantasia</th>
+                                    <th>CNPJ</th>
+                                    <th>Cidade/UF</th>
+                                    <th>Tipo</th>
+                                    <th style="text-align:right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="suppliersTableBody">
+                                <!-- JS Render -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUPPLIER MODAL -->
+            <div id="supplierModal" class="modal-overlay">
+                <div class="modal-card modal-lg" style="max-width: 1000px;">
+                    <div class="modal-header">
+                        <h3>Cadastro de Fornecedor</h3>
+                        <button class="btn btn-secondary btn-icon" onclick="closeSupplierModal()">
+                            <span class="material-icons-round">close</span>
+                        </button>
+                    </div>
+                    <form id="supplierForm">
+                        <div class="modal-body">
+                            <!-- Header Info -->
+                            <div class="row" style="margin-bottom: 1rem;">
+                                <div class="form-group" style="flex: 1;">
+                                    <label class="form-label">Código</label>
+                                    <input type="text" id="supCode" class="form-input" placeholder="Auto" disabled>
+                                </div>
+                                <div class="form-group" style="flex: 4;">
+                                    <label class="form-label">Razão Social (Fornecedor)</label>
+                                    <input type="text" id="supName" class="form-input" required>
+                                </div>
+                                <div class="form-group" style="flex: 2;">
+                                    <label class="form-label">CNPJ / CPF</label>
+                                    <div style="display:flex; gap:0.5rem;">
+                                        <input type="text" id="supDoc" class="form-input" required>
+                                        <button type="button" class="btn btn-secondary btn-icon"
+                                            onclick="openCNPJSearch('supplier')" title="Buscar CNPJ">
+                                            <span class="material-icons-round">search</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label class="form-label">Tipo</label>
+                                    <select id="supType" class="form-input">
+                                        <option value="J">Jurídica</option>
+                                        <option value="F">Física</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row" style="margin-bottom: 1.5rem;">
+                                <div class="form-group col-6">
+                                    <label class="form-label">Nome Fantasia</label>
+                                    <input type="text" id="supFantasy" class="form-input">
+                                </div>
+                                <div class="form-group col-6">
+                                    <label class="form-label">Inscrição Estadual (IE)</label>
+                                    <input type="text" id="supIe" class="form-input">
+                                </div>
+                            </div>
+
+                            <!-- Tabs -->
+                            <div class="tabs-nav">
+                                <button type="button" class="tab-btn active"
+                                    onclick="switchTab(this, 'tab-sup-comercial')">Dados Comerciais</button>
+                                <button type="button" class="tab-btn"
+                                    onclick="switchTab(this, 'tab-sup-rep')">Representante</button>
+                                <button type="button" class="tab-btn"
+                                    onclick="switchTab(this, 'tab-sup-outros')">Financeiro & Outros</button>
+                            </div>
+
+                            <!-- Tab 1: Dados Comerciais (Endereço + Contato) -->
+                            <div id="tab-sup-comercial" class="tab-content active">
+                                <div class="row">
+                                    <div class="form-group col-3">
+                                        <label class="form-label">CEP</label>
+                                        <div style="display:flex; gap:0.5rem;">
+                                            <input type="text" id="supZip" class="form-input">
+                                            <button type="button" class="btn btn-secondary btn-icon"><span
+                                                    class="material-icons-round">search</span></button>
+                                        </div>
+                                    </div>
+                                    <div class="form-group col-7">
+                                        <label class="form-label">Endereço</label>
+                                        <input type="text" id="supStreet" class="form-input">
+                                    </div>
+                                    <div class="form-group col-2">
+                                        <label class="form-label">Nr.</label>
+                                        <input type="text" id="supNumber" class="form-input">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="form-group col-5">
+                                        <label class="form-label">Bairro</label>
+                                        <input type="text" id="supDistrict" class="form-input">
+                                    </div>
+                                    <div class="form-group col-5">
+                                        <label class="form-label">Cidade</label>
+                                        <input type="text" id="supCity" class="form-input">
+                                    </div>
+                                    <div class="form-group col-2">
+                                        <label class="form-label">UF</label>
+                                        <input type="text" id="supState" class="form-input">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="form-group col-4">
+                                        <label class="form-label">Telefone</label>
+                                        <input type="text" id="supPhone" class="form-input">
+                                    </div>
+                                    <div class="form-group col-8">
+                                        <label class="form-label">Nome para Contato</label>
+                                        <input type="text" id="supContactName" class="form-input">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tab 2: Representante -->
+                            <div id="tab-sup-rep" class="tab-content">
+                                <div class="alert-info">
+                                    <span class="material-icons-round">info</span>
+                                    <span>Dados do representante legal ou contato comercial direto.</span>
+                                </div>
+                                <div class="row">
+                                    <div class="form-group col-12">
+                                        <label class="form-label">Nome do Representante</label>
+                                        <input type="text" id="repName" class="form-input">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="form-group col-8">
+                                        <label class="form-label">Endereço (Representante)</label>
+                                        <input type="text" id="repAddr" class="form-input">
+                                    </div>
+                                    <div class="form-group col-4">
+                                        <label class="form-label">Bairro</label>
+                                        <input type="text" id="repDistrict" class="form-input">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="form-group col-6">
+                                        <label class="form-label">Cidade / UF</label>
+                                        <input type="text" id="repCity" class="form-input">
+                                    </div>
+                                    <div class="form-group col-6">
+                                        <label class="form-label">Telefone / Celular</label>
+                                        <input type="text" id="repPhone" class="form-input">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="form-group col-12">
+                                        <label class="form-label">Email do Representante</label>
+                                        <input type="email" id="repEmail" class="form-input">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tab 3: Outros Dados & Financeiro -->
+                            <div id="tab-sup-outros" class="tab-content">
+                                <div class="row">
+                                    <div class="form-group col-6">
+                                        <label class="form-label">Email Principal (NFe/Pedidos)</label>
+                                        <input type="email" id="supEmail" class="form-input">
+                                    </div>
+                                    <div class="form-group col-6">
+                                        <label class="form-label">Fornecedor Principal?</label>
+                                        <div style="display:flex; align-items:center; height:42px;">
+                                            <label style="margin-right:1rem;"><input type="radio" name="isMain"
+                                                    value="sim"> Sim</label>
+                                            <label><input type="radio" name="isMain" value="nao" checked> Não</label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h4
+                                    style="margin:1rem 0; font-size:0.9rem; color:var(--text-secondary); text-transform:uppercase; border-top:1px solid var(--border-color); padding-top:1rem;">
+                                    Classificação</h4>
+                                <div class="form-group">
+                                    <div style="display:flex; gap:1.5rem; flex-wrap:wrap;">
+                                        <label><input type="radio" name="supCategory" value="revenda"> Revenda</label>
+                                        <label><input type="radio" name="supCategory" value="transp">
+                                            Transportador</label>
+                                        <label><input type="radio" name="supCategory" value="ambos"> Revenda |
+                                            Transp.</label>
+                                        <label><input type="radio" name="supCategory" value="outros" checked>
+                                            Outros</label>
+                                    </div>
+                                </div>
+
+                                <h4
+                                    style="margin:1rem 0; font-size:0.9rem; color:var(--text-secondary); text-transform:uppercase; border-top:1px solid var(--border-color); padding-top:1rem;">
+                                    Dados Bancários</h4>
+                                <div class="row">
+                                    <div class="form-group col-3">
+                                        <label class="form-label">Banco</label>
+                                        <input type="text" id="supBank" class="form-input" placeholder="000">
+                                    </div>
+                                    <div class="form-group col-3">
+                                        <label class="form-label">Agência</label>
+                                        <input type="text" id="supAgency" class="form-input">
+                                    </div>
+                                    <div class="form-group col-4">
+                                        <label class="form-label">Conta Corrente</label>
+                                        <input type="text" id="supAccount" class="form-input">
+                                    </div>
+                                    <div class="form-group col-2">
+                                        <label class="form-label">Cód. Comprador</label>
+                                        <input type="text" id="supBuyerCode" class="form-input">
+                                    </div>
+                                </div>
+
+                                <div class="form-group" style="margin-top:1rem;">
+                                    <label class="form-label">Observação</label>
+                                    <input type="text" id="supNotes" class="form-input">
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary"
+                                onclick="closeSupplierModal()">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">Salvar Fornecedor</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <!-- Product Modal -->
             <div id="productModal" class="modal-overlay">
                 <div class="modal-card modal-lg" style="max-width: 900px;">
