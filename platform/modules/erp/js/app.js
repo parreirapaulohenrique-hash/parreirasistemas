@@ -124,6 +124,46 @@ window.closeEntityModal = () => {
     document.getElementById('entityModal').style.display = 'none';
 };
 
+// --- CNPJ Search Integration ---
+window.openCNPJSearch = () => {
+    if (!window.CNPJLookup) {
+        alert('Módulo de consulta não carregado. Recarregue a página.');
+        return;
+    }
+
+    CNPJLookup.showLookupModal((data) => {
+        // Map fields BrasilAPI -> ERP Form
+        document.getElementById('cliDoc').value = data.cnpj;
+        document.getElementById('cliName').value = data.razaoSocial;
+        document.getElementById('cliFantasy').value = data.nomeFantasia;
+
+        // Address
+        document.getElementById('cliZip').value = data.cep;
+        document.getElementById('cliStreet').value = data.logradouro;
+        document.getElementById('cliNumber').value = data.numero;
+        document.getElementById('cliComp').value = data.complemento;
+        document.getElementById('cliDistrict').value = data.bairro;
+        document.getElementById('cliCity').value = data.cidade;
+        document.getElementById('cliState').value = data.uf;
+
+        // Contact
+        document.getElementById('cliEmail').value = data.email;
+        if (data.telefone) document.getElementById('cliContact').value = data.telefone;
+
+        // Fiscal
+        if (data.optanteSimples) {
+            document.getElementById('cliSimples').value = 'sim';
+        } else {
+            document.getElementById('cliSimples').value = 'nao';
+        }
+
+        // Auto-select type
+        document.getElementById('cliType').value = 'J';
+
+        alert('✅ Dados preenchidos com sucesso!');
+    });
+};
+
 let entities = [
     { code: 1355, name: 'SIMAO MEIRELES FURTADO', fantasy: 'SF PECAS', cnpj: '52.352.619/0001-69', city: 'Belém/PA', seller: '32 - ABNAEL', status: 'active' },
     { code: 1356, name: 'AUTO CENTER PARREIRA', fantasy: 'PARREIRA AUTO', cnpj: '00.000.000/0001-91', city: 'Ananindeua/PA', seller: '1 - INTERNO', status: 'active' }
