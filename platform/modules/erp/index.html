@@ -1975,6 +1975,450 @@
                         Carregando versão...
                     </div>
                 </footer>
+
+                <!-- ========================================== -->
+                <!-- MODALS FINANCEIROS                         -->
+                <!-- ========================================== -->
+
+                <!-- 1. GRUPO -->
+                <div id="finGroupModal" class="modal-overlay"
+                    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
+                    <div class="modal-card"
+                        style="background:var(--bg-card); border-radius:var(--radius-lg); max-width:500px; width:90%; max-height:90vh; overflow:auto;">
+                        <div class="modal-header"
+                            style="display:flex; justify-content:space-between; align-items:center; padding:1rem 1.5rem; border-bottom:1px solid var(--border-color);">
+                            <h3 style="margin:0;">Cadastro de Grupo</h3>
+                            <button class="btn btn-secondary btn-icon" onclick="closeModal('finGroupModal')"
+                                style="background:transparent; border:none; cursor:pointer;">
+                                <span class="material-icons-round" style="color:var(--text-secondary);">close</span>
+                            </button>
+                        </div>
+                        <div class="modal-body" style="padding:1.5rem;">
+                            <div style="display:grid; grid-template-columns:1fr 2fr; gap:1rem;">
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Código</label>
+                                    <input type="text" class="form-input" placeholder="1001"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Grupo</label>
+                                    <input type="text" class="form-input"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer"
+                            style="display:flex; justify-content:flex-end; gap:1rem; padding:1rem 1.5rem; border-top:1px solid var(--border-color);">
+                            <button class="btn btn-secondary" onclick="closeModal('finGroupModal')"
+                                style="padding:0.75rem 1.5rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary); cursor:pointer;">Cancelar</button>
+                            <button class="btn btn-primary"
+                                onclick="alert('Grupo salvo!'); closeModal('finGroupModal');"
+                                style="padding:0.75rem 1.5rem; background:var(--primary-color); border:none; border-radius:var(--radius-md); color:white; cursor:pointer;">Salvar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. PLANO DE CONTAS -->
+                <div id="finPlanModal" class="modal-overlay"
+                    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
+                    <div class="modal-card"
+                        style="background:var(--bg-card); border-radius:var(--radius-lg); max-width:700px; width:90%; max-height:90vh; overflow:auto;">
+                        <div class="modal-header"
+                            style="display:flex; justify-content:space-between; align-items:center; padding:1rem 1.5rem; border-bottom:1px solid var(--border-color);">
+                            <h3 style="margin:0;">Plano de Contas</h3>
+                            <button class="btn btn-secondary btn-icon" onclick="closeModal('finPlanModal')"
+                                style="background:transparent; border:none; cursor:pointer;">
+                                <span class="material-icons-round" style="color:var(--text-secondary);">close</span>
+                            </button>
+                        </div>
+                        <div class="modal-body" style="padding:1.5rem;">
+                            <div style="display:grid; grid-template-columns:1fr 3fr; gap:1rem; margin-bottom:1rem;">
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Código</label>
+                                    <input type="text" class="form-input" placeholder="11010"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Conta</label>
+                                    <input type="text" class="form-input"
+                                        placeholder="RECEITAS COM VENDA DE MERCADORIAS"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Conta
+                                        Contábil</label>
+                                    <input type="text" class="form-input"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Vl.
+                                        Orçado</label>
+                                    <input type="text" class="form-input"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                            </div>
+                            <fieldset
+                                style="border:1px solid var(--border-color); padding:1rem; border-radius:var(--radius-md);">
+                                <legend style="padding:0 0.5rem; font-size:0.8rem; color:var(--text-secondary);">Tipo de
+                                    Conta</legend>
+                                <div style="display:flex; gap:1.5rem; flex-wrap:wrap;">
+                                    <label
+                                        style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; color:var(--text-primary);"><input
+                                            type="radio" name="accType" checked> Ativo</label>
+                                    <label
+                                        style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; color:var(--text-primary);"><input
+                                            type="radio" name="accType"> Receita</label>
+                                    <label
+                                        style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; color:var(--text-primary);"><input
+                                            type="radio" name="accType"> Despesa</label>
+                                    <label
+                                        style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; color:var(--text-primary);"><input
+                                            type="radio" name="accType"> Excluída</label>
+                                </div>
+                            </fieldset>
+                        </div>
+                        <div class="modal-footer"
+                            style="display:flex; justify-content:flex-end; gap:1rem; padding:1rem 1.5rem; border-top:1px solid var(--border-color);">
+                            <button class="btn btn-secondary" onclick="closeModal('finPlanModal')"
+                                style="padding:0.75rem 1.5rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary); cursor:pointer;">Cancelar</button>
+                            <button class="btn btn-primary"
+                                onclick="alert('Plano de Contas salvo!'); closeModal('finPlanModal');"
+                                style="padding:0.75rem 1.5rem; background:var(--primary-color); border:none; border-radius:var(--radius-md); color:white; cursor:pointer;">Salvar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. COBRANÇA -->
+                <div id="finBillingModal" class="modal-overlay"
+                    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
+                    <div class="modal-card"
+                        style="background:var(--bg-card); border-radius:var(--radius-lg); max-width:800px; width:90%; max-height:90vh; overflow:auto;">
+                        <div class="modal-header"
+                            style="display:flex; justify-content:space-between; align-items:center; padding:1rem 1.5rem; border-bottom:1px solid var(--border-color);">
+                            <h3 style="margin:0;">Cadastro de Cobrança</h3>
+                            <button class="btn btn-secondary btn-icon" onclick="closeModal('finBillingModal')"
+                                style="background:transparent; border:none; cursor:pointer;">
+                                <span class="material-icons-round" style="color:var(--text-secondary);">close</span>
+                            </button>
+                        </div>
+                        <div class="modal-body" style="padding:1.5rem;">
+                            <div style="display:grid; grid-template-columns:1fr 3fr; gap:1rem; margin-bottom:1rem;">
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Código</label>
+                                    <input type="text" class="form-input" placeholder="PIX"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Descrição</label>
+                                    <input type="text" class="form-input" placeholder="PIX BANCO DO BRASIL"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:1rem;">
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Moeda</label>
+                                    <input type="text" class="form-input" value="D"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Carência
+                                        (dias)</label>
+                                    <input type="number" class="form-input"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Dias
+                                        Protesto</label>
+                                    <input type="number" class="form-input"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">(%)
+                                        Juros</label>
+                                    <input type="text" class="form-input"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer"
+                            style="display:flex; justify-content:flex-end; gap:1rem; padding:1rem 1.5rem; border-top:1px solid var(--border-color);">
+                            <button class="btn btn-secondary" onclick="closeModal('finBillingModal')"
+                                style="padding:0.75rem 1.5rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary); cursor:pointer;">Cancelar</button>
+                            <button class="btn btn-primary"
+                                onclick="alert('Cobrança salva!'); closeModal('finBillingModal');"
+                                style="padding:0.75rem 1.5rem; background:var(--primary-color); border:none; border-radius:var(--radius-md); color:white; cursor:pointer;">Salvar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. PLANO DE PAGAMENTO -->
+                <div id="finPayPlanModal" class="modal-overlay"
+                    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
+                    <div class="modal-card"
+                        style="background:var(--bg-card); border-radius:var(--radius-lg); max-width:600px; width:90%; max-height:90vh; overflow:auto;">
+                        <div class="modal-header"
+                            style="display:flex; justify-content:space-between; align-items:center; padding:1rem 1.5rem; border-bottom:1px solid var(--border-color);">
+                            <h3 style="margin:0;">Plano de Pagamento</h3>
+                            <button class="btn btn-secondary btn-icon" onclick="closeModal('finPayPlanModal')"
+                                style="background:transparent; border:none; cursor:pointer;">
+                                <span class="material-icons-round" style="color:var(--text-secondary);">close</span>
+                            </button>
+                        </div>
+                        <div class="modal-body" style="padding:1.5rem;">
+                            <div style="display:grid; grid-template-columns:1fr 3fr; gap:1rem; margin-bottom:1rem;">
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Código</label>
+                                    <input type="text" class="form-input" placeholder="01"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Descrição</label>
+                                    <input type="text" class="form-input" placeholder="À VISTA"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:1rem;">
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Qtd.
+                                        Parcelas</label>
+                                    <input type="number" class="form-input" value="1"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Dias
+                                        1ª Parcela</label>
+                                    <input type="number" class="form-input" value="0"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Intervalo
+                                        (dias)</label>
+                                    <input type="number" class="form-input" value="30"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer"
+                            style="display:flex; justify-content:flex-end; gap:1rem; padding:1rem 1.5rem; border-top:1px solid var(--border-color);">
+                            <button class="btn btn-secondary" onclick="closeModal('finPayPlanModal')"
+                                style="padding:0.75rem 1.5rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary); cursor:pointer;">Cancelar</button>
+                            <button class="btn btn-primary"
+                                onclick="alert('Plano de Pagamento salvo!'); closeModal('finPayPlanModal');"
+                                style="padding:0.75rem 1.5rem; background:var(--primary-color); border:none; border-radius:var(--radius-md); color:white; cursor:pointer;">Salvar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. CAIXAS E BANCOS -->
+                <div id="finBankModal" class="modal-overlay"
+                    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
+                    <div class="modal-card"
+                        style="background:var(--bg-card); border-radius:var(--radius-lg); max-width:700px; width:90%; max-height:90vh; overflow:auto;">
+                        <div class="modal-header"
+                            style="display:flex; justify-content:space-between; align-items:center; padding:1rem 1.5rem; border-bottom:1px solid var(--border-color);">
+                            <h3 style="margin:0;">Caixas e Bancos</h3>
+                            <button class="btn btn-secondary btn-icon" onclick="closeModal('finBankModal')"
+                                style="background:transparent; border:none; cursor:pointer;">
+                                <span class="material-icons-round" style="color:var(--text-secondary);">close</span>
+                            </button>
+                        </div>
+                        <div class="modal-body" style="padding:1.5rem;">
+                            <div style="display:grid; grid-template-columns:1fr 3fr 1fr; gap:1rem; margin-bottom:1rem;">
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Código</label>
+                                    <input type="text" class="form-input" placeholder="6"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Descrição</label>
+                                    <input type="text" class="form-input" placeholder="BANCO DO BRASIL"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Banco</label>
+                                    <input type="text" class="form-input" placeholder="001"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:1rem;">
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Agência</label>
+                                    <input type="text" class="form-input"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Conta</label>
+                                    <input type="text" class="form-input"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Dígito</label>
+                                    <input type="text" class="form-input"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer"
+                            style="display:flex; justify-content:flex-end; gap:1rem; padding:1rem 1.5rem; border-top:1px solid var(--border-color);">
+                            <button class="btn btn-secondary" onclick="closeModal('finBankModal')"
+                                style="padding:0.75rem 1.5rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary); cursor:pointer;">Cancelar</button>
+                            <button class="btn btn-primary"
+                                onclick="alert('Caixa/Banco salvo!'); closeModal('finBankModal');"
+                                style="padding:0.75rem 1.5rem; background:var(--primary-color); border:none; border-radius:var(--radius-md); color:white; cursor:pointer;">Salvar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================== -->
+                <!-- MODALS FISCAIS                             -->
+                <!-- ========================================== -->
+
+                <!-- 6. CFOP -->
+                <div id="fisCfopModal" class="modal-overlay"
+                    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
+                    <div class="modal-card"
+                        style="background:var(--bg-card); border-radius:var(--radius-lg); max-width:600px; width:90%; max-height:90vh; overflow:auto;">
+                        <div class="modal-header"
+                            style="display:flex; justify-content:space-between; align-items:center; padding:1rem 1.5rem; border-bottom:1px solid var(--border-color);">
+                            <h3 style="margin:0;">Cadastro CFOP</h3>
+                            <button class="btn btn-secondary btn-icon" onclick="closeModal('fisCfopModal')"
+                                style="background:transparent; border:none; cursor:pointer;">
+                                <span class="material-icons-round" style="color:var(--text-secondary);">close</span>
+                            </button>
+                        </div>
+                        <div class="modal-body" style="padding:1.5rem;">
+                            <div style="display:grid; grid-template-columns:1fr 3fr; gap:1rem; margin-bottom:1rem;">
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">CFOP</label>
+                                    <input type="text" class="form-input" placeholder="5102"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Descrição</label>
+                                    <input type="text" class="form-input" placeholder="Venda de mercadoria adquirida"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label"
+                                    style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Observação
+                                    Fiscal</label>
+                                <textarea class="form-input" rows="3"
+                                    style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary); resize:vertical;"></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer"
+                            style="display:flex; justify-content:flex-end; gap:1rem; padding:1rem 1.5rem; border-top:1px solid var(--border-color);">
+                            <button class="btn btn-secondary" onclick="closeModal('fisCfopModal')"
+                                style="padding:0.75rem 1.5rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary); cursor:pointer;">Cancelar</button>
+                            <button class="btn btn-primary" onclick="alert('CFOP salvo!'); closeModal('fisCfopModal');"
+                                style="padding:0.75rem 1.5rem; background:var(--primary-color); border:none; border-radius:var(--radius-md); color:white; cursor:pointer;">Salvar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7. PARÂMETROS ICMS -->
+                <div id="fisIcmsModal" class="modal-overlay"
+                    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
+                    <div class="modal-card"
+                        style="background:var(--bg-card); border-radius:var(--radius-lg); max-width:700px; width:90%; max-height:90vh; overflow:auto;">
+                        <div class="modal-header"
+                            style="display:flex; justify-content:space-between; align-items:center; padding:1rem 1.5rem; border-bottom:1px solid var(--border-color);">
+                            <h3 style="margin:0;">Parâmetros ICMS</h3>
+                            <button class="btn btn-secondary btn-icon" onclick="closeModal('fisIcmsModal')"
+                                style="background:transparent; border:none; cursor:pointer;">
+                                <span class="material-icons-round" style="color:var(--text-secondary);">close</span>
+                            </button>
+                        </div>
+                        <div class="modal-body" style="padding:1.5rem;">
+                            <div
+                                style="display:grid; grid-template-columns:repeat(3, 1fr); gap:1rem; margin-bottom:1rem;">
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">UF
+                                        Origem</label>
+                                    <select class="form-input"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                        <option>PA</option>
+                                        <option>SP</option>
+                                        <option>RJ</option>
+                                        <option>MG</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">UF
+                                        Destino</label>
+                                    <select class="form-input"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                        <option>SP</option>
+                                        <option>PA</option>
+                                        <option>RJ</option>
+                                        <option>MG</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Alíquota
+                                        ICMS (%)</label>
+                                    <input type="text" class="form-input" placeholder="12"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:1rem;">
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Base
+                                        de Cálculo (%)</label>
+                                    <input type="text" class="form-input" placeholder="100"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label"
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">CST</label>
+                                    <input type="text" class="form-input" placeholder="00"
+                                        style="width:100%; padding:0.75rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary);">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer"
+                            style="display:flex; justify-content:flex-end; gap:1rem; padding:1rem 1.5rem; border-top:1px solid var(--border-color);">
+                            <button class="btn btn-secondary" onclick="closeModal('fisIcmsModal')"
+                                style="padding:0.75rem 1.5rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary); cursor:pointer;">Cancelar</button>
+                            <button class="btn btn-primary"
+                                onclick="alert('Parâmetros ICMS salvos!'); closeModal('fisIcmsModal');"
+                                style="padding:0.75rem 1.5rem; background:var(--primary-color); border:none; border-radius:var(--radius-md); color:white; cursor:pointer;">Salvar</button>
+                        </div>
+                    </div>
+                </div>
+
         </main>
     </div>
 

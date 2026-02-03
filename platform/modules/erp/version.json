@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.5.1",
+    "version": "2.5.2",
     "date": "2026-02-03",
-    "last_change": "Added Vendas, Compras, Financeiro, Fiscal operation tabs",
-    "build": "20260203.08"
+    "last_change": "Added all Financial and Fiscal modals with working buttons",
+    "build": "20260203.09"
 }
