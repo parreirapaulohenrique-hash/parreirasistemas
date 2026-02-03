@@ -76,6 +76,7 @@ window.switchView = (viewName) => {
         'suppliers': 'Gestão de Fornecedores',
         'employees': 'Gestão de Funcionários',
         'sales': 'Vendas',
+        'purchases': 'Compras',
         'finance': 'Financeiro',
         'fiscal': 'Fiscal'
     };

@@ -99,6 +99,18 @@
                     <span class="material-icons-round">shopping_cart</span>
                     <span>Vendas</span>
                 </a>
+                <a class="nav-item" onclick="switchView('purchases')">
+                    <span class="material-icons-round">storefront</span>
+                    <span>Compras</span>
+                </a>
+                <a class="nav-item" onclick="switchView('finance')">
+                    <span class="material-icons-round">payments</span>
+                    <span>Financeiro</span>
+                </a>
+                <a class="nav-item" onclick="switchView('fiscal')">
+                    <span class="material-icons-round">gavel</span>
+                    <span>Fiscal</span>
+                </a>
             </nav>
 
             <div class="sidebar-footer">
@@ -159,7 +171,81 @@
                     </div>
                 </div>
 
-                <!-- View: Products -->
+                <!-- View: Sales (Vendas) -->
+                <div id="view-sales" class="page-content" style="display:none;">
+                    <div class="welcome-banner">
+                        <h2>Vendas</h2>
+                        <p>Módulo de gestão de pedidos, orçamentos e faturamento.</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Em Desenvolvimento</h3>
+                        </div>
+                        <div class="card-body" style="padding:3rem; text-align:center;">
+                            <span class="material-icons-round"
+                                style="font-size:4rem; color:var(--accent-warning);">construction</span>
+                            <p style="margin-top:1rem; color:var(--text-secondary);">Este módulo está em
+                                desenvolvimento.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Purchases (Compras) -->
+                <div id="view-purchases" class="page-content" style="display:none;">
+                    <div class="welcome-banner">
+                        <h2>Compras</h2>
+                        <p>Módulo de gestão de compras, pedidos a fornecedores e recebimento.</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Em Desenvolvimento</h3>
+                        </div>
+                        <div class="card-body" style="padding:3rem; text-align:center;">
+                            <span class="material-icons-round"
+                                style="font-size:4rem; color:var(--accent-warning);">construction</span>
+                            <p style="margin-top:1rem; color:var(--text-secondary);">Este módulo está em
+                                desenvolvimento.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Finance (Financeiro) -->
+                <div id="view-finance" class="page-content" style="display:none;">
+                    <div class="welcome-banner">
+                        <h2>Financeiro</h2>
+                        <p>Módulo de gestão de contas a pagar, receber e fluxo de caixa.</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Em Desenvolvimento</h3>
+                        </div>
+                        <div class="card-body" style="padding:3rem; text-align:center;">
+                            <span class="material-icons-round"
+                                style="font-size:4rem; color:var(--accent-warning);">construction</span>
+                            <p style="margin-top:1rem; color:var(--text-secondary);">Este módulo está em
+                                desenvolvimento.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Fiscal -->
+                <div id="view-fiscal" class="page-content" style="display:none;">
+                    <div class="welcome-banner">
+                        <h2>Fiscal</h2>
+                        <p>Módulo de gestão fiscal, notas fiscais e obrigações acessórias.</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Em Desenvolvimento</h3>
+                        </div>
+                        <div class="card-body" style="padding:3rem; text-align:center;">
+                            <span class="material-icons-round"
+                                style="font-size:4rem; color:var(--accent-warning);">construction</span>
+                            <p style="margin-top:1rem; color:var(--text-secondary);">Este módulo está em
+                                desenvolvimento.</p>
+                        </div>
+                    </div>
+                </div>
                 <div id="view-products" class="page-content" style="display:none;">
                     <div class="welcome-banner">
                         <h2>Catálogo de Produtos</h2>
