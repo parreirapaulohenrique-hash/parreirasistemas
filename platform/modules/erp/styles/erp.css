@@ -366,3 +366,29 @@ body {
     margin-bottom: 1.5rem;
     font-size: 0.9rem;
 }
+
+/* --- Submenus --- */
+.nav-submenu {
+    display: none;
+    flex-direction: column;
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.nav-sub-item {
+    font-size: 0.85rem;
+    padding: 0.5rem 1rem 0.5rem 3.5rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+}
+
+.nav-sub-item:hover {
+    color: var(--primary-color);
+    background: var(--bg-hover);
+    border-left-color: var(--primary-color);
+}

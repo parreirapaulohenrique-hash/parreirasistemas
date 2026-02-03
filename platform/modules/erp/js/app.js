@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Parreira ERP Inicializado');
 
     // Load Version
-    fetch('version.json')
+    fetch('version.json?v=' + new Date().getTime())
         .then(response => response.json())
         .then(data => {
             const versionEl = document.getElementById('systemVersion');
@@ -27,6 +27,31 @@ document.addEventListener('DOMContentLoaded', () => {
     // Default View
     switchView('dashboard');
 });
+
+
+
+// Toggle Sidebar Submenus
+window.toggleSubmenu = function (id) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.style.display = (el.style.display === 'flex' || el.style.display === 'block') ? 'none' : 'flex';
+    }
+}
+
+// Generic Modal Open/Close
+window.openModal = function (modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+window.closeModal = function (modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
 
 // Navigation
 window.switchView = (viewName) => {

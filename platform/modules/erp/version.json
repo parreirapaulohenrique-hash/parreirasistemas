@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.3.5",
-    "date": "2026-02-02",
-    "last_change": "Added Employees Module (RH & Access Control)",
-    "build": "20260202.01"
+    "version": "2.4.1",
+    "date": "2026-02-03",
+    "last_change": "Fixed: Added openModal/closeModal functions for Financial & Fiscal menus",
+    "build": "20260203.02"
 }

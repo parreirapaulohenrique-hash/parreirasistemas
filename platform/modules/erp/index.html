@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <!-- Using new consolidated style -->
-    <link rel="stylesheet" href="styles/erp.css?v=2.1.0">
+    <link rel="stylesheet" href="styles/erp.css?v=2.4.0">
 </head>
 
 <body>
@@ -52,10 +52,36 @@
                     <span class="material-icons-round">shopping_cart</span>
                     <span>Vendas</span>
                 </a>
-                <a class="nav-item" onclick="switchView('finance')">
-                    <span class="material-icons-round">payments</span>
-                    <span>Financeiro</span>
-                </a>
+                <!-- Financeiro Submenu -->
+                <div class="nav-group">
+                    <a class="nav-item" onclick="toggleSubmenu('sub-finance')">
+                        <span class="material-icons-round">payments</span>
+                        <span>Financeiro</span>
+                        <span class="material-icons-round ms-auto"
+                            style="font-size:1.2rem; margin-left:auto;">expand_more</span>
+                    </a>
+                    <div id="sub-finance" class="nav-submenu">
+                        <a class="nav-sub-item" onclick="openModal('finGroupModal')">Grupos</a>
+                        <a class="nav-sub-item" onclick="openModal('finPlanModal')">Plano de Contas</a>
+                        <a class="nav-sub-item" onclick="openModal('finBillingModal')">Cobrança</a>
+                        <a class="nav-sub-item" onclick="openModal('finPayPlanModal')">Planos de Pagto</a>
+                        <a class="nav-sub-item" onclick="openModal('finBankModal')">Caixas e Bancos</a>
+                    </div>
+                </div>
+
+                <!-- Fiscal Submenu -->
+                <div class="nav-group">
+                    <a class="nav-item" onclick="toggleSubmenu('sub-fiscal')">
+                        <span class="material-icons-round">gavel</span>
+                        <span>Fiscal</span>
+                        <span class="material-icons-round ms-auto"
+                            style="font-size:1.2rem; margin-left:auto;">expand_more</span>
+                    </a>
+                    <div id="sub-fiscal" class="nav-submenu">
+                        <a class="nav-sub-item" onclick="openModal('fisCfopModal')">CFOP</a>
+                        <a class="nav-sub-item" onclick="openModal('fisIcmsModal')">Parâmetros ICMS</a>
+                    </div>
+                </div>
             </nav>
 
             <div class="sidebar-footer">
@@ -1352,6 +1378,485 @@
                 </div>
 
 
+
+                <!-- ========================================== -->
+                <!-- MODALS FINANCEIROS                         -->
+                <!-- ========================================== -->
+
+                <!-- 1. GRUPO -->
+                <div id="finGroupModal" class="modal-overlay">
+                    <div class="modal-card" style="max-width: 500px;">
+                        <div class="modal-header">
+                            <h3>Cadastro de Grupo</h3>
+                            <button class="btn btn-secondary btn-icon" onclick="closeModal('finGroupModal')"><span
+                                    class="material-icons-round">close</span></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row">
+                                <div class="form-group col-4">
+                                    <label class="form-label">Código</label>
+                                    <input type="text" class="form-input" placeholder="1001">
+                                </div>
+                                <div class="form-group col-8">
+                                    <label class="form-label">Grupo</label>
+                                    <input type="text" class="form-input">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="closeModal('finGroupModal')">Cancelar</button>
+                            <button class="btn btn-primary">Salvar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. PLANO DE CONTAS -->
+                <div id="finPlanModal" class="modal-overlay">
+                    <div class="modal-card" style="max-width: 800px;">
+                        <div class="modal-header">
+                            <h3>Plano de Contas</h3>
+                            <button class="btn btn-secondary btn-icon" onclick="closeModal('finPlanModal')"><span
+                                    class="material-icons-round">close</span></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row">
+                                <div class="form-group col-3">
+                                    <label class="form-label">Código</label>
+                                    <input type="text" class="form-input" placeholder="11010">
+                                </div>
+                                <div class="form-group col-9">
+                                    <label class="form-label">Conta</label>
+                                    <input type="text" class="form-input">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="form-group col-4">
+                                    <label class="form-label">Conta Contábil</label>
+                                    <input type="text" class="form-input">
+                                </div>
+                                <div class="form-group col-4">
+                                    <label class="form-label">Vl. Orçado</label>
+                                    <input type="text" class="form-input">
+                                </div>
+                            </div>
+                            <fieldset
+                                style="border:1px solid var(--border-color); padding:1rem; margin-bottom:1rem; border-radius:4px;">
+                                <legend style="padding:0 0.5rem; font-size:0.8rem; color:var(--text-secondary);">Tipo de
+                                    Conta</legend>
+                                <div style="display:flex; gap:1rem;">
+                                    <label class="check-label"><input type="radio" name="accType" checked> Ativo</label>
+                                    <label class="check-label"><input type="radio" name="accType"> Receita</label>
+                                    <label class="check-label"><input type="radio" name="accType"> Despesa</label>
+                                    <label class="check-label"><input type="radio" name="accType"> Excluída</label>
+                                </div>
+                            </fieldset>
+                            <div class="row">
+                                <div class="col-6">
+                                    <fieldset
+                                        style="border:1px solid var(--border-color); padding:0.5rem; border-radius:4px;">
+                                        <legend style="padding:0 0.5rem; font-size:0.8rem;">Investimento (S/N)</legend>
+                                        <div style="display:flex; gap:1rem;">
+                                            <label class="check-label"><input type="radio" name="accInv"> Sim</label>
+                                            <label class="check-label"><input type="radio" name="accInv" checked>
+                                                Não</label>
+                                        </div>
+                                    </fieldset>
+                                </div>
+                                <div class="col-6">
+                                    <fieldset
+                                        style="border:1px solid var(--border-color); padding:0.5rem; border-radius:4px;">
+                                        <legend style="padding:0 0.5rem; font-size:0.8rem;">Exibir DRE</legend>
+                                        <div style="display:flex; gap:1rem;">
+                                            <label class="check-label"><input type="radio" name="accDre"> Sim</label>
+                                            <label class="check-label"><input type="radio" name="accDre" checked>
+                                                Não</label>
+                                        </div>
+                                    </fieldset>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="closeModal('finPlanModal')">Cancelar</button>
+                            <button class="btn btn-primary">Salvar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. CADASTRO DE COBRANÇA -->
+                <div id="finBillingModal" class="modal-overlay">
+                    <div class="modal-card modal-lg"
+                        style="max-width: 900px; height:90vh; display:flex; flex-direction:column;">
+                        <div class="modal-header">
+                            <h3>Cadastro de Cobrança</h3>
+                            <button class="btn btn-secondary btn-icon" onclick="closeModal('finBillingModal')"><span
+                                    class="material-icons-round">close</span></button>
+                        </div>
+                        <div class="modal-body" style="overflow-y:auto;">
+                            <div class="row">
+                                <div class="form-group col-3">
+                                    <label class="form-label">Código</label>
+                                    <input type="text" class="form-input" placeholder="PIX">
+                                </div>
+                                <div class="form-group col-9">
+                                    <label class="form-label">Descrição da Cobrança</label>
+                                    <input type="text" class="form-input" placeholder="PIX BASA">
+                                </div>
+                            </div>
+                            <!-- Linha 2 -->
+                            <div class="row">
+                                <div class="form-group col-3">
+                                    <label class="form-label">Moeda</label>
+                                    <input type="text" class="form-input" value="D">
+                                </div>
+                                <div class="form-group col-3">
+                                    <label class="form-label">Carência (dias)</label>
+                                    <input type="number" class="form-input">
+                                </div>
+                                <div class="form-group col-3">
+                                    <label class="form-label">Dias Protesto</label>
+                                    <input type="number" class="form-input">
+                                </div>
+                            </div>
+                            <!-- Linha 3 -->
+                            <div class="row">
+                                <div class="form-group col-2">
+                                    <label class="form-label">(%) Acres.Fin.</label>
+                                    <input type="text" class="form-input">
+                                </div>
+                                <div class="form-group col-2">
+                                    <label class="form-label">(%) Comissão</label>
+                                    <input type="text" class="form-input">
+                                </div>
+                                <div class="form-group col-3">
+                                    <label class="form-label">Hierarquia</label>
+                                    <input type="text" class="form-input">
+                                </div>
+                                <div class="form-group col-2">
+                                    <label class="form-label">(%) Juros</label>
+                                    <input type="text" class="form-input">
+                                </div>
+                                <div class="form-group col-3">
+                                    <label class="form-label">Bloqueio Automático</label>
+                                    <input type="number" class="form-input" value="1">
+                                </div>
+                            </div>
+                            <!-- Linha 4 -->
+                            <div class="row">
+                                <div class="form-group col-2">
+                                    <label class="form-label">Cód. Cx.Banco</label>
+                                    <input type="text" class="form-input" value="6">
+                                </div>
+                                <div class="form-group col-5">
+                                    <label class="form-label">Meio de Pagamento (NF-e)</label>
+                                    <select class="form-input">
+                                        <option>17 - Pagamento Instantâneo (PIX)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group col-5">
+                                    <label class="form-label">Tipo Movimento (Baixa/Conciliação)</label>
+                                    <select class="form-input">
+                                        <option>Separado</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- Checkboxes Area -->
+                            <div
+                                style="background:var(--bg-secondary); padding:1rem; border:1px solid var(--border-color); border-radius:4px; display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; margin-top:1rem;">
+                                <label class="check-label"><input type="checkbox" checked> Disponível nas vendas</label>
+                                <label class="check-label"><input type="checkbox"> Bloquear cliente auto.</label>
+                                <label class="check-label"><input type="checkbox" checked> Pagar comissão</label>
+                                <label class="check-label"><input type="checkbox" checked> Disponível no APP</label>
+                                <label class="check-label"><input type="checkbox" checked> Desbloquear cliente
+                                    auto.</label>
+                                <label class="check-label"><input type="checkbox"> Gera boletos</label>
+                                <label class="check-label"><input type="checkbox" checked> Baixa automática</label>
+                                <label class="check-label"><input type="checkbox" checked> Cobrança "à vista"</label>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="closeModal('finBillingModal')">Cancelar</button>
+                            <button class="btn btn-primary">Salvar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. PLANO DE PAGAMENTO -->
+                <div id="finPayPlanModal" class="modal-overlay">
+                    <div class="modal-card modal-lg" style="max-width: 800px;">
+                        <div class="modal-header">
+                            <h3>Plano de Pagamento</h3>
+                            <button class="btn btn-secondary btn-icon" onclick="closeModal('finPayPlanModal')"><span
+                                    class="material-icons-round">close</span></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row">
+                                <div class="form-group col-2">
+                                    <label class="form-label">Código</label>
+                                    <input type="text" class="form-input" value="15">
+                                </div>
+                                <div class="form-group col-10">
+                                    <label class="form-label">Descrição do Prazo</label>
+                                    <input type="text" class="form-input" value="7/14 DIAS">
+                                </div>
+                            </div>
+                            <h5 style="margin-top:1rem; border-bottom:1px solid var(--border-color);">Parametrizações
+                            </h5>
+                            <div class="row">
+                                <div class="form-group col-12">
+                                    <label class="form-label">Parcelas (Dias)</label>
+                                    <div style="display:flex; gap:0.25rem;">
+                                        <input type="text" class="form-input" style="width:50px; text-align:center;"
+                                            value="7">
+                                        <input type="text" class="form-input" style="width:50px; text-align:center;"
+                                            value="14">
+                                        <input type="text" class="form-input" style="width:50px; text-align:center;">
+                                        <input type="text" class="form-input" style="width:50px; text-align:center;">
+                                        <input type="text" class="form-input" style="width:50px; text-align:center;">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-6">
+                                    <label class="form-label">Tipo de Plano</label>
+                                    <div style="display:flex; gap:1rem;">
+                                        <label class="check-label"><input type="radio" name="payType"> A vista</label>
+                                        <label class="check-label"><input type="radio" name="payType" checked> A
+                                            prazo</label>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">Libera Cliente Bloqueado?</label>
+                                    <div style="display:flex; gap:1rem;">
+                                        <label class="check-label"><input type="radio" name="payUnlock"> Sim</label>
+                                        <label class="check-label"><input type="radio" name="payUnlock" checked>
+                                            Não</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="closeModal('finPayPlanModal')">Cancelar</button>
+                            <button class="btn btn-primary">Salvar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. CAIXAS E BANCOS -->
+                <div id="finBankModal" class="modal-overlay">
+                    <div class="modal-card modal-lg" style="max-width: 1000px;">
+                        <div class="modal-header">
+                            <h3>Caixas e Bancos</h3>
+                            <button class="btn btn-secondary btn-icon" onclick="closeModal('finBankModal')"><span
+                                    class="material-icons-round">close</span></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row">
+                                <div class="form-group col-2">
+                                    <label class="form-label">Código</label>
+                                    <input type="text" class="form-input" value="1">
+                                </div>
+                                <div class="form-group col-2">
+                                    <label class="form-label">Empresa</label>
+                                    <input type="text" class="form-input" value="01">
+                                </div>
+                                <div class="form-group col-8">
+                                    <label class="form-label">Nome</label>
+                                    <input type="text" class="form-input" value="CAIXA PDV 01">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="form-group col-3"><label class="form-label">Variação</label><input
+                                        class="form-input"></div>
+                                <div class="form-group col-3"><label class="form-label">Nº Banco</label><input
+                                        class="form-input"></div>
+                                <div class="form-group col-3"><label class="form-label">Agência</label><input
+                                        class="form-input"></div>
+                                <div class="form-group col-3"><label class="form-label">Conta</label><input
+                                        class="form-input"></div>
+                            </div>
+                            <div class="row">
+                                <div class="form-group col-8"><label class="form-label">Dir. Arquivo
+                                        Remessa</label><input class="form-input" value="C:\Acontec\Spool\"></div>
+                                <div class="form-group col-4"><label class="form-label">Layout Boleto</label><select
+                                        class="form-input">
+                                        <option>Padrão</option>
+                                    </select></div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="closeModal('finBankModal')">Cancelar</button>
+                            <button class="btn btn-primary">Salvar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================== -->
+                <!-- MODALS FISCAIS                             -->
+                <!-- ========================================== -->
+
+                <!-- 6. CFOP -->
+                <div id="fisCfopModal" class="modal-overlay">
+                    <div class="modal-card modal-lg">
+                        <div class="modal-header">
+                            <h3>Cadastro de CFOP</h3>
+                            <button class="btn btn-secondary btn-icon" onclick="closeModal('fisCfopModal')"><span
+                                    class="material-icons-round">close</span></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row">
+                                <div class="form-group col-2">
+                                    <label class="form-label">Cód. Fiscal</label>
+                                    <input type="text" class="form-input" value="0">
+                                </div>
+                                <div class="form-group col-10">
+                                    <label class="form-label">Descrição da Operação</label>
+                                    <input type="text" class="form-input">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="form-group col-4">
+                                    <label class="form-label">Baixar Estoque?</label>
+                                    <select class="form-input">
+                                        <option>Sim</option>
+                                        <option>Não</option>
+                                    </select>
+                                </div>
+                                <div class="form-group col-4">
+                                    <label class="form-label">Gerar Financeiro?</label>
+                                    <select class="form-input">
+                                        <option>Sim</option>
+                                        <option>Não</option>
+                                    </select>
+                                </div>
+                                <div class="form-group col-4">
+                                    <label class="form-label">Tipo do CFOP</label>
+                                    <select class="form-input">
+                                        <option>Entrada</option>
+                                        <option>Saída</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="closeModal('fisCfopModal')">Cancelar</button>
+                            <button class="btn btn-primary">Salvar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7. ICMS & TRIBUTOS -->
+                <div id="fisIcmsModal" class="modal-overlay">
+                    <div class="modal-card modal-lg"
+                        style="max-width: 1100px; height:90vh; display:flex; flex-direction:column;">
+                        <div class="modal-header">
+                            <h3>Parâmetros de ICMS</h3>
+                            <button class="btn btn-secondary btn-icon" onclick="closeModal('fisIcmsModal')"><span
+                                    class="material-icons-round">close</span></button>
+                        </div>
+
+                        <!-- Tabs -->
+                        <div class="tabs-nav" style="margin-top:0;">
+                            <button type="button" class="tab-btn active"
+                                onclick="switchTab(this, 'tab-ricms-trib')">Tributos</button>
+                            <button type="button" class="tab-btn"
+                                onclick="switchTab(this, 'tab-ricms-trans-fil')">Transf. Filiais</button>
+                            <button type="button" class="tab-btn"
+                                onclick="switchTab(this, 'tab-ricms-trans-dep')">Transf. Depósitos</button>
+                            <button type="button" class="tab-btn" onclick="switchTab(this, 'tab-ricms-ecf')">Cupom
+                                Fiscal</button>
+                            <button type="button" class="tab-btn" onclick="switchTab(this, 'tab-ricms-simples')">Simples
+                                Nacional</button>
+                        </div>
+
+                        <div class="modal-body" style="overflow-y:auto;">
+                            <!-- TAB: TRIBUTOS -->
+                            <div id="tab-ricms-trib" class="tab-content active">
+                                <h5 style="background:var(--bg-secondary); padding:0.5rem;">Contribuinte</h5>
+                                <div class="row">
+                                    <div class="form-group col-2"><label class="form-label">Cod. Tribut.</label><input
+                                            class="form-input"></div>
+                                    <div class="form-group col-2"><label class="form-label">[%] ICMS NF</label><input
+                                            class="form-input"></div>
+                                    <div class="form-group col-2"><label class="form-label">[%] ICMS Subs</label><input
+                                            class="form-input"></div>
+                                    <div class="form-group col-2"><label class="form-label">% Base Red.</label><input
+                                            class="form-input"></div>
+                                </div>
+                                <h5 style="background:var(--bg-secondary); padding:0.5rem; margin-top:1rem;">Não
+                                    Contribuinte</h5>
+                                <div class="row">
+                                    <div class="form-group col-2"><label class="form-label">% Icm P.F.</label><input
+                                            class="form-input"></div>
+                                    <div class="form-group col-2"><label class="form-label">CST</label><input
+                                            class="form-input"></div>
+                                </div>
+                            </div>
+
+                            <!-- TAB: TRANSF FILIAIS -->
+                            <div id="tab-ricms-trans-fil" class="tab-content">
+                                <div class="alert-info"><span>Configurações para transferência entre filiais da mesma
+                                        empresa.</span></div>
+                                <div class="row">
+                                    <div class="form-group col-3"><label class="form-label">CFOP Estadual</label><input
+                                            class="form-input"></div>
+                                    <div class="form-group col-3"><label class="form-label">CFOP Interest.</label><input
+                                            class="form-input"></div>
+                                </div>
+                            </div>
+
+                            <!-- TAB: TRANSF DEPÓSITOS -->
+                            <div id="tab-ricms-trans-dep" class="tab-content">
+                                <div class="alert-info"><span>Configurações para movimentação entre depósitos
+                                        locais.</span></div>
+                                <div class="row">
+                                    <div class="form-group col-3"><label class="form-label">CFOP Saída</label><input
+                                            class="form-input"></div>
+                                    <div class="form-group col-3"><label class="form-label">CFOP Entrada</label><input
+                                            class="form-input"></div>
+                                </div>
+                            </div>
+
+                            <!-- TAB: ECF -->
+                            <div id="tab-ricms-ecf" class="tab-content">
+                                <div class="row">
+                                    <div class="form-group col-3"><label class="form-label">CFOP Est.</label><input
+                                            class="form-input"></div>
+                                    <div class="form-group col-3"><label class="form-label">% ICMS</label><input
+                                            class="form-input"></div>
+                                    <div class="form-group col-3"><label class="form-label">Sit. Tribut.</label><input
+                                            class="form-input"></div>
+                                </div>
+                            </div>
+
+                            <!-- TAB: SIMPLES NACIONAL -->
+                            <div id="tab-ricms-simples" class="tab-content">
+                                <h5 style="background:var(--bg-secondary); padding:0.5rem;">Clientes - Optantes do
+                                    Simples</h5>
+                                <div class="row">
+                                    <div class="form-group col-2"><label class="form-label">[%] ICMS</label><input
+                                            class="form-input"></div>
+                                    <div class="form-group col-2"><label class="form-label">[%] IVA S.T.</label><input
+                                            class="form-input" value="0,00"></div>
+                                    <div class="form-group col-3"><label class="form-label">CSOSN
+                                            Contribuinte</label><input class="form-input" value="000"></div>
+                                </div>
+                                <div class="row" style="margin-top:1rem;">
+                                    <div class="col-12">
+                                        <label class="check-label"><input type="radio" checked> Sim</label>
+                                        <label class="check-label"><input type="radio"> Não</label>
+                                        <span>Destaca S.T.?</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div> <!-- End Modal Body -->
+
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="closeModal('fisIcmsModal')">Cancelar</button>
+                            <button class="btn btn-primary">Salvar</button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Footer / LGPD Notice -->
                 <footer class="app-footer">
                     <div>
@@ -1378,7 +1883,7 @@
     <script src="../../core/js/firebase-config.js"></script>
 
     <script src="js/cnpj-lookup.js"></script>
-    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/app.js?v=2.4.1"></script>
 </body>
 
 </html>
