@@ -444,44 +444,46 @@
                 </div>
 
                 <!-- Footer Scripts -->
-            </div>
 
-            <!-- VIEW: SUPPLIERS (Fornecedores) -->
-            <div id="view-suppliers" class="page-content" style="display:none;">
-                <div class="welcome-banner">
-                    <h2>Gestão de Fornecedores</h2>
-                    <p>Controle de parceiros de suprimentos, transportadoras e representantes.</p>
-                </div>
+                <!-- VIEW: SUPPLIERS (Fornecedores) -->
+                <div id="view-suppliers" class="page-content" style="display:none;">
+                    <div class="welcome-banner">
+                        <h2>Gestão de Fornecedores</h2>
+                        <p>Controle de parceiros de suprimentos, transportadoras e representantes.</p>
+                    </div>
 
-                <div class="card">
-                    <div class="card-header">
-                        <div style="display:flex; gap:0.5rem; width: 100%; max-width: 400px;">
-                            <input type="text" id="supplierSearch" class="form-input"
-                                placeholder="Buscar Fornecedor ou CNPJ..." onkeyup="filterSuppliers()">
+                    <div class="card">
+                        <div class="card-header">
+                            <div style="display:flex; gap:0.5rem; width: 100%; max-width: 400px;">
+                                <input type="text" id="supplierSearch" class="form-input"
+                                    placeholder="Buscar Fornecedor ou CNPJ..." onkeyup="filterSuppliers()">
+                            </div>
+                            <button class="btn btn-primary" onclick="openSupplierModal()">
+                                <span class="material-icons-round">add_business</span> Novo Fornecedor
+                            </button>
                         </div>
-                        <button class="btn btn-primary" onclick="openSupplierModal()">
-                            <span class="material-icons-round">add_business</span> Novo Fornecedor
-                        </button>
-                    </div>
-                    <div class="card-body">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Cód.</th>
-                                    <th>Fornecedor / Fantasia</th>
-                                    <th>CNPJ</th>
-                                    <th>Cidade/UF</th>
-                                    <th>Tipo</th>
-                                    <th style="text-align:right">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="suppliersTableBody">
-                                <!-- JS Render -->
-                            </tbody>
-                        </table>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Cód.</th>
+                                        <th>Fornecedor / Fantasia</th>
+                                        <th>CNPJ</th>
+                                        <th>Cidade/UF</th>
+                                        <th>Tipo</th>
+                                        <th style="text-align:right">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="suppliersTableBody">
+                                    <!-- JS Render -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
+
+
 
             <!-- SUPPLIER MODAL -->
             <div id="supplierModal" class="modal-overlay">
