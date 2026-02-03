@@ -71,6 +71,28 @@ window.closeProductModal = () => {
     document.getElementById('productModal').style.display = 'none';
 };
 
+
+window.toggleSalesTab = () => {
+    const isSeller = document.getElementById('empIsSeller').checked;
+    const tabBtn = document.getElementById('tabBtnSales');
+    const tabContent = document.getElementById('tab-emp-sales');
+
+    if (isSeller) {
+        tabBtn.style.display = 'block';
+        // Auto-switch to tab if needed, or just warn
+        tabBtn.classList.add('pulse-anim'); // Optional visual cue
+    } else {
+        tabBtn.style.display = 'none';
+        tabBtn.classList.remove('active');
+        tabContent.classList.remove('active');
+        // Switch back to main if sales tab was active
+        if (tabContent.classList.contains('active')) {
+            switchTab(document.querySelectorAll('.tab-btn')[0], 'tab-emp-main');
+        }
+        // Also clear fields? Maybe not, to preserve data if accidentally unchecked
+    }
+};
+
 window.switchTab = (btn, tabId) => {
     // 1. Reset Tabs
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
