@@ -28,7 +28,7 @@
                 </a>
 
 
-                <!-- Cadastros Gerais Submenu -->
+                <!-- Cadastros - Menu Principal com 3 níveis -->
                 <div class="nav-group">
                     <a class="nav-item" onclick="toggleSubmenu('sub-cadastros')">
                         <span class="material-icons-round">folder_shared</span>
@@ -37,6 +37,9 @@
                             style="font-size:1.2rem; margin-left:auto;">expand_more</span>
                     </a>
                     <div id="sub-cadastros" class="nav-submenu">
+
+                        <!-- 2º Nível: Gerais -->
+                        <div class="nav-sublevel-title">Gerais</div>
                         <a class="nav-sub-item" onclick="switchView('products')">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">inventory_2</span>Produtos
@@ -53,6 +56,40 @@
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">badge</span>Funcionários
                         </a>
+
+                        <!-- 2º Nível: Financeiro -->
+                        <div class="nav-sublevel-title">Financeiro</div>
+                        <a class="nav-sub-item" onclick="openModal('finGroupModal')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">folder</span>Grupos
+                        </a>
+                        <a class="nav-sub-item" onclick="openModal('finPlanModal')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">account_tree</span>Plano de Contas
+                        </a>
+                        <a class="nav-sub-item" onclick="openModal('finBillingModal')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">receipt_long</span>Cobrança
+                        </a>
+                        <a class="nav-sub-item" onclick="openModal('finPayPlanModal')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">calendar_month</span>Planos de Pagto
+                        </a>
+                        <a class="nav-sub-item" onclick="openModal('finBankModal')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">account_balance</span>Caixas e Bancos
+                        </a>
+
+                        <!-- 2º Nível: Fiscal -->
+                        <div class="nav-sublevel-title">Fiscal</div>
+                        <a class="nav-sub-item" onclick="openModal('fisCfopModal')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">list_alt</span>CFOP
+                        </a>
+                        <a class="nav-sub-item" onclick="openModal('fisIcmsModal')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">percent</span>Parâmetros ICMS
+                        </a>
                     </div>
                 </div>
 
@@ -62,36 +99,6 @@
                     <span class="material-icons-round">shopping_cart</span>
                     <span>Vendas</span>
                 </a>
-                <!-- Financeiro Submenu -->
-                <div class="nav-group">
-                    <a class="nav-item" onclick="toggleSubmenu('sub-finance')">
-                        <span class="material-icons-round">payments</span>
-                        <span>Financeiro</span>
-                        <span class="material-icons-round ms-auto"
-                            style="font-size:1.2rem; margin-left:auto;">expand_more</span>
-                    </a>
-                    <div id="sub-finance" class="nav-submenu">
-                        <a class="nav-sub-item" onclick="openModal('finGroupModal')">Grupos</a>
-                        <a class="nav-sub-item" onclick="openModal('finPlanModal')">Plano de Contas</a>
-                        <a class="nav-sub-item" onclick="openModal('finBillingModal')">Cobrança</a>
-                        <a class="nav-sub-item" onclick="openModal('finPayPlanModal')">Planos de Pagto</a>
-                        <a class="nav-sub-item" onclick="openModal('finBankModal')">Caixas e Bancos</a>
-                    </div>
-                </div>
-
-                <!-- Fiscal Submenu -->
-                <div class="nav-group">
-                    <a class="nav-item" onclick="toggleSubmenu('sub-fiscal')">
-                        <span class="material-icons-round">gavel</span>
-                        <span>Fiscal</span>
-                        <span class="material-icons-round ms-auto"
-                            style="font-size:1.2rem; margin-left:auto;">expand_more</span>
-                    </a>
-                    <div id="sub-fiscal" class="nav-submenu">
-                        <a class="nav-sub-item" onclick="openModal('fisCfopModal')">CFOP</a>
-                        <a class="nav-sub-item" onclick="openModal('fisIcmsModal')">Parâmetros ICMS</a>
-                    </div>
-                </div>
             </nav>
 
             <div class="sidebar-footer">

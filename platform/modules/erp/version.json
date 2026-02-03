@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.4.5",
+    "version": "2.5.0",
     "date": "2026-02-03",
-    "last_change": "Renamed Cadastros Gerais to Cadastros",
-    "build": "20260203.06"
+    "last_change": "Menu reestruturado com 3 níveis: Cadastros > Gerais/Financeiro/Fiscal > itens",
+    "build": "20260203.07"
 }
