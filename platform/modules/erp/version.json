@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.5.7",
+    "version": "2.5.8",
     "date": "2026-02-03",
-    "last_change": "Added onclick handlers to all modal Salvar buttons",
-    "build": "20260203.14"
+    "last_change": "CRUD functionality for Grupos cadastro",
+    "build": "20260203.15"
 }

@@ -1488,28 +1488,41 @@
 
                 <!-- 1. GRUPO -->
                 <div id="finGroupModal" class="modal-overlay">
-                    <div class="modal-card" style="max-width: 500px;">
+                    <div class="modal-card" style="max-width: 700px;">
                         <div class="modal-header">
                             <h3>Cadastro de Grupo</h3>
-                            <button class="btn btn-secondary btn-icon" onclick="closeModal('finGroupModal')"><span
+                            <button class="btn btn-secondary btn-icon"
+                                onclick="clearForm('finGroupModal'); closeModal('finGroupModal')"><span
                                     class="material-icons-round">close</span></button>
                         </div>
                         <div class="modal-body">
+                            <!-- Formulário -->
                             <div class="row">
                                 <div class="form-group col-4">
-                                    <label class="form-label">Código</label>
-                                    <input type="text" class="form-input" placeholder="1001">
+                                    <label class="form-label">Código *</label>
+                                    <input type="text" id="grpCodigo" class="form-input" placeholder="1001">
                                 </div>
                                 <div class="form-group col-8">
-                                    <label class="form-label">Grupo</label>
-                                    <input type="text" class="form-input">
+                                    <label class="form-label">Nome do Grupo *</label>
+                                    <input type="text" id="grpNome" class="form-input"
+                                        placeholder="Ex: Vendas, Serviços...">
+                                </div>
+                            </div>
+
+                            <!-- Grid de Listagem -->
+                            <div
+                                style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                                <h5 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                                    <span class="material-icons-round">list</span> Grupos Cadastrados
+                                </h5>
+                                <div id="gruposGrid" style="max-height: 250px; overflow-y: auto;">
+                                    <!-- Grid será preenchida via JS -->
                                 </div>
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button class="btn btn-secondary" onclick="closeModal('finGroupModal')">Cancelar</button>
-                            <button class="btn btn-primary"
-                                onclick="alert('Grupo salvo!'); closeModal('finGroupModal')">Salvar</button>
+                            <button class="btn btn-secondary" onclick="clearForm('finGroupModal')">Limpar</button>
+                            <button class="btn btn-primary" onclick="saveGrupo()">Salvar</button>
                         </div>
                     </div>
                 </div>
@@ -2429,7 +2442,8 @@
     <script src="../../core/js/firebase-config.js"></script>
 
     <script src="js/cnpj-lookup.js"></script>
-    <script type="module" src="js/app.js?v=2.4.1"></script>
+    <script src="js/cadastros.js"></script>
+    <script type="module" src="js/app.js?v=2.5.8"></script>
 </body>
 
 </html>

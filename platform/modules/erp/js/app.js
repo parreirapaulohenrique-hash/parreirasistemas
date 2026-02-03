@@ -43,6 +43,11 @@ window.openModal = function (modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.style.display = 'flex';
+
+        // Render grids for cadastros modals
+        if (modalId === 'finGroupModal' && typeof renderGruposGrid === 'function') {
+            renderGruposGrid();
+        }
     }
 }
 
