@@ -455,6 +455,7 @@ body {
     overflow: auto;
     position: relative;
     z-index: 10000;
+    pointer-events: auto;
 }
 
 .modal-header {
@@ -480,6 +481,8 @@ body {
     gap: 1rem;
     padding: 1rem 1.5rem;
     border-top: 1px solid var(--border-color);
+    position: relative;
+    z-index: 10001;
 }
 
 .modal-footer .btn {
@@ -488,6 +491,9 @@ body {
     cursor: pointer;
     font-weight: 500;
     transition: var(--transition);
+    pointer-events: auto;
+    position: relative;
+    z-index: 10002;
 }
 
 .modal-footer .btn-secondary {
