@@ -59,34 +59,34 @@
 
                         <!-- 2º Nível: Financeiro -->
                         <div class="nav-sublevel-title">Financeiro</div>
-                        <a class="nav-sub-item" onclick="openModal('finGroupModal')">
+                        <a class="nav-sub-item" onclick="switchView('groups')">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">folder</span>Grupos
                         </a>
-                        <a class="nav-sub-item" onclick="openModal('finPlanModal')">
+                        <a class="nav-sub-item" onclick="switchView('accountPlans')">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">account_tree</span>Plano de Contas
                         </a>
-                        <a class="nav-sub-item" onclick="openModal('finBillingModal')">
+                        <a class="nav-sub-item" onclick="switchView('billing')">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">receipt_long</span>Cobrança
                         </a>
-                        <a class="nav-sub-item" onclick="openModal('finPayPlanModal')">
+                        <a class="nav-sub-item" onclick="switchView('paymentPlans')">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">calendar_month</span>Planos de Pagto
                         </a>
-                        <a class="nav-sub-item" onclick="openModal('finBankModal')">
+                        <a class="nav-sub-item" onclick="switchView('banks')">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">account_balance</span>Caixas e Bancos
                         </a>
 
                         <!-- 2º Nível: Fiscal -->
                         <div class="nav-sublevel-title">Fiscal</div>
-                        <a class="nav-sub-item" onclick="openModal('fisCfopModal')">
+                        <a class="nav-sub-item" onclick="switchView('cfop')">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">list_alt</span>CFOP
                         </a>
-                        <a class="nav-sub-item" onclick="openModal('fisIcmsModal')">
+                        <a class="nav-sub-item" onclick="switchView('icmsParams')">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">percent</span>Parâmetros ICMS
                         </a>
@@ -246,6 +246,249 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- View: Grupos (Financeiro) -->
+                <div id="view-groups" class="page-content" style="display:none;">
+                    <div class="welcome-banner">
+                        <h2>Gestão de Grupos</h2>
+                        <p>Cadastro de grupos para classificação financeira.</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div style="display:flex; gap:0.5rem; width: 100%; max-width: 400px;">
+                                <input type="text" id="groupSearch" class="form-input"
+                                    placeholder="Buscar por código ou nome..." onkeyup="filterGroups()">
+                            </div>
+                            <button class="btn btn-primary" onclick="openModal('finGroupModal')">
+                                <span class="material-icons-round">add</span> Novo Grupo
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:100px;">Cód.</th>
+                                        <th>Nome do Grupo</th>
+                                        <th style="width:120px; text-align:right;">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="groupsTableBody">
+                                    <!-- JS Render -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Plano de Contas (Financeiro) -->
+                <div id="view-accountPlans" class="page-content" style="display:none;">
+                    <div class="welcome-banner">
+                        <h2>Plano de Contas</h2>
+                        <p>Estrutura contábil para classificação de receitas e despesas.</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div style="display:flex; gap:0.5rem; width: 100%; max-width: 400px;">
+                                <input type="text" id="accountPlanSearch" class="form-input"
+                                    placeholder="Buscar por código ou conta..." onkeyup="filterAccountPlans()">
+                            </div>
+                            <button class="btn btn-primary" onclick="openModal('finPlanModal')">
+                                <span class="material-icons-round">add</span> Nova Conta
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:100px;">Cód.</th>
+                                        <th>Conta</th>
+                                        <th>Conta Contábil</th>
+                                        <th style="width:120px;">Tipo</th>
+                                        <th style="width:120px; text-align:right;">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="accountPlansTableBody">
+                                    <!-- JS Render -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Cobrança (Financeiro) -->
+                <div id="view-billing" class="page-content" style="display:none;">
+                    <div class="welcome-banner">
+                        <h2>Cadastro de Cobrança</h2>
+                        <p>Regras de cobrança, taxas e parâmetros financeiros.</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div style="display:flex; gap:0.5rem; width: 100%; max-width: 400px;">
+                                <input type="text" id="billingSearch" class="form-input"
+                                    placeholder="Buscar por código ou descrição..." onkeyup="filterBilling()">
+                            </div>
+                            <button class="btn btn-primary" onclick="openModal('finBillingModal')">
+                                <span class="material-icons-round">add</span> Nova Cobrança
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:100px;">Cód.</th>
+                                        <th>Descrição</th>
+                                        <th>Moeda</th>
+                                        <th>Juros (%)</th>
+                                        <th style="width:120px; text-align:right;">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="billingTableBody">
+                                    <!-- JS Render -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Planos de Pagamento (Financeiro) -->
+                <div id="view-paymentPlans" class="page-content" style="display:none;">
+                    <div class="welcome-banner">
+                        <h2>Planos de Pagamento</h2>
+                        <p>Configuração de parcelamentos e prazos de pagamento.</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div style="display:flex; gap:0.5rem; width: 100%; max-width: 400px;">
+                                <input type="text" id="paymentPlanSearch" class="form-input"
+                                    placeholder="Buscar por código ou descrição..." onkeyup="filterPaymentPlans()">
+                            </div>
+                            <button class="btn btn-primary" onclick="openModal('finPayPlanModal')">
+                                <span class="material-icons-round">add</span> Novo Plano
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:100px;">Cód.</th>
+                                        <th>Descrição do Prazo</th>
+                                        <th>Parcelas</th>
+                                        <th>Tipo</th>
+                                        <th style="width:120px; text-align:right;">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="paymentPlansTableBody">
+                                    <!-- JS Render -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Caixas e Bancos (Financeiro) -->
+                <div id="view-banks" class="page-content" style="display:none;">
+                    <div class="welcome-banner">
+                        <h2>Caixas e Bancos</h2>
+                        <p>Cadastro de contas bancárias e caixas da empresa.</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div style="display:flex; gap:0.5rem; width: 100%; max-width: 400px;">
+                                <input type="text" id="bankSearch" class="form-input"
+                                    placeholder="Buscar por nome ou banco..." onkeyup="filterBanks()">
+                            </div>
+                            <button class="btn btn-primary" onclick="openModal('finBankModal')">
+                                <span class="material-icons-round">add</span> Novo Caixa/Banco
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:80px;">Cód.</th>
+                                        <th>Nome</th>
+                                        <th>Banco</th>
+                                        <th>Agência</th>
+                                        <th>Conta</th>
+                                        <th style="width:120px; text-align:right;">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="banksTableBody">
+                                    <!-- JS Render -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: CFOP (Fiscal) -->
+                <div id="view-cfop" class="page-content" style="display:none;">
+                    <div class="welcome-banner">
+                        <h2>Cadastro de CFOP</h2>
+                        <p>Códigos Fiscais de Operações e Prestações.</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div style="display:flex; gap:0.5rem; width: 100%; max-width: 400px;">
+                                <input type="text" id="cfopSearch" class="form-input"
+                                    placeholder="Buscar por código ou descrição..." onkeyup="filterCfop()">
+                            </div>
+                            <button class="btn btn-primary" onclick="openModal('fisCfopModal')">
+                                <span class="material-icons-round">add</span> Novo CFOP
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:120px;">Cód. Fiscal</th>
+                                        <th>Descrição da Operação</th>
+                                        <th style="width:120px; text-align:right;">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cfopTableBody">
+                                    <!-- JS Render -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Parâmetros ICMS (Fiscal) -->
+                <div id="view-icmsParams" class="page-content" style="display:none;">
+                    <div class="welcome-banner">
+                        <h2>Parâmetros de ICMS</h2>
+                        <p>Configuração de alíquotas e regras de tributação por estado.</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div style="display:flex; gap:0.5rem; width: 100%; max-width: 400px;">
+                                <input type="text" id="icmsSearch" class="form-input"
+                                    placeholder="Buscar por código ou descrição..." onkeyup="filterIcmsParams()">
+                            </div>
+                            <button class="btn btn-primary" onclick="openModal('fisIcmsModal')">
+                                <span class="material-icons-round">add</span> Novo Parâmetro
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:100px;">Cód. Tribut.</th>
+                                        <th>ICMS NF (%)</th>
+                                        <th>ICMS Subs (%)</th>
+                                        <th>Base Red. (%)</th>
+                                        <th style="width:120px; text-align:right;">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="icmsParamsTableBody">
+                                    <!-- JS Render -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="view-products" class="page-content" style="display:none;">
                     <div class="welcome-banner">
                         <h2>Catálogo de Produtos</h2>
@@ -1508,20 +1751,10 @@
                                         placeholder="Ex: Vendas, Serviços...">
                                 </div>
                             </div>
-
-                            <!-- Grid de Listagem -->
-                            <div
-                                style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
-                                <h5 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                                    <span class="material-icons-round">list</span> Grupos Cadastrados
-                                </h5>
-                                <div id="gruposGrid" style="max-height: 250px; overflow-y: auto;">
-                                    <!-- Grid será preenchida via JS -->
-                                </div>
-                            </div>
                         </div>
                         <div class="modal-footer">
-                            <button class="btn btn-secondary" onclick="clearForm('finGroupModal')">Limpar</button>
+                            <button class="btn btn-secondary"
+                                onclick="clearForm('finGroupModal'); closeModal('finGroupModal')">Cancelar</button>
                             <button class="btn btn-primary" onclick="saveGrupo()">Salvar</button>
                         </div>
                     </div>

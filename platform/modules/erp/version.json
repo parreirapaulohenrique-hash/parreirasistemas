@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.5.8",
+    "version": "2.5.9",
     "date": "2026-02-03",
-    "last_change": "CRUD functionality for Grupos cadastro",
-    "build": "20260203.15"
+    "last_change": "Page-based layout for financial/fiscal cadastros",
+    "build": "20260203.16"
 }

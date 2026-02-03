@@ -170,51 +170,40 @@ window.saveGrupo = function () {
 };
 
 /**
- * Renderiza a grid de grupos
+ * Renderiza a grid de grupos na página
  */
 window.renderGruposGrid = function () {
-    const grid = document.getElementById('gruposGrid');
-    if (!grid) return;
+    const tbody = document.getElementById('groupsTableBody');
+    if (!tbody) return;
 
     const grupos = loadCadastros('groups');
 
     if (grupos.length === 0) {
-        grid.innerHTML = `
-            <div class="empty-state" style="text-align:center; padding:2rem; color:var(--text-secondary);">
-                <span class="material-icons-round" style="font-size:3rem;">folder_open</span>
-                <p>Nenhum grupo cadastrado</p>
-            </div>
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="3" style="text-align:center; padding:2rem; color:var(--text-secondary);">
+                    <span class="material-icons-round" style="font-size:2rem; vertical-align:middle;">folder_open</span>
+                    <span style="margin-left:0.5rem;">Nenhum grupo cadastrado</span>
+                </td>
+            </tr>
         `;
         return;
     }
 
-    grid.innerHTML = `
-        <table class="data-table" style="width:100%;">
-            <thead>
-                <tr>
-                    <th style="width:100px;">Código</th>
-                    <th>Nome</th>
-                    <th style="width:120px;">Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${grupos.map(g => `
-                    <tr>
-                        <td>${g.codigo}</td>
-                        <td>${g.nome}</td>
-                        <td>
-                            <button class="btn btn-icon" onclick="editGrupo('${g.id}')" title="Editar">
-                                <span class="material-icons-round">edit</span>
-                            </button>
-                            <button class="btn btn-icon btn-danger" onclick="deleteGrupo('${g.id}')" title="Excluir">
-                                <span class="material-icons-round">delete</span>
-                            </button>
-                        </td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
+    tbody.innerHTML = grupos.map(g => `
+        <tr>
+            <td>${g.codigo}</td>
+            <td>${g.nome}</td>
+            <td style="text-align:right;">
+                <button class="btn btn-icon" onclick="editGrupo('${g.id}')" title="Editar">
+                    <span class="material-icons-round">edit</span>
+                </button>
+                <button class="btn btn-icon btn-danger" onclick="deleteGrupo('${g.id}')" title="Excluir">
+                    <span class="material-icons-round">delete</span>
+                </button>
+            </td>
+        </tr>
+    `).join('');
 };
 
 /**

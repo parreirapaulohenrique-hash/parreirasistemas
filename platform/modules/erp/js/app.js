@@ -92,7 +92,14 @@ window.switchView = (viewName) => {
         'sales': 'Vendas',
         'purchases': 'Compras',
         'finance': 'Financeiro',
-        'fiscal': 'Fiscal'
+        'fiscal': 'Fiscal',
+        'groups': 'Gestão de Grupos',
+        'accountPlans': 'Plano de Contas',
+        'billing': 'Cadastro de Cobrança',
+        'paymentPlans': 'Planos de Pagamento',
+        'banks': 'Caixas e Bancos',
+        'cfop': 'Cadastro de CFOP',
+        'icmsParams': 'Parâmetros de ICMS'
     };
     document.getElementById('pageTitle').textContent = titles[viewName] || 'ERP';
 
@@ -100,6 +107,9 @@ window.switchView = (viewName) => {
     if (viewName === 'entities') renderEntities();
     if (viewName === 'suppliers') renderSuppliers();
     if (viewName === 'employees') renderEmployees();
+
+    // Cadastros Financeiros/Fiscais
+    if (viewName === 'groups' && typeof renderGruposGrid === 'function') renderGruposGrid();
 };
 
 // --- Product Modal Logic ---
