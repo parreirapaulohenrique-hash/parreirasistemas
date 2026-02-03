@@ -38,6 +38,7 @@ window.switchView = (viewName) => {
         'products': 'Gestão de Produtos',
         'entities': 'Gestão de Clientes',
         'suppliers': 'Gestão de Fornecedores',
+        'employees': 'Gestão de Funcionários',
         'sales': 'Vendas',
         'finance': 'Financeiro',
         'fiscal': 'Fiscal'
@@ -47,6 +48,7 @@ window.switchView = (viewName) => {
     // Load Data on View Switch
     if (viewName === 'entities') renderEntities();
     if (viewName === 'suppliers') renderSuppliers();
+    if (viewName === 'employees') renderEmployees();
 };
 
 // --- Product Modal Logic ---
@@ -281,4 +283,57 @@ window.filterSuppliers = () => {
 };
 
 // Update CNPJ Search to handle both Contexts
-/* NOTE: Modify openCNPJSearch to accept a 'context' arg */
+// --- Employees Logic ---
+window.openEmployeeModal = () => {
+    document.getElementById('employeeModal').style.display = 'flex';
+};
+
+window.closeEmployeeModal = () => {
+    document.getElementById('employeeModal').style.display = 'none';
+};
+
+let employees = [
+    { code: 62, name: 'PAULO HENRIQUE PARREIRA', role: 'Diretor', sector: 'Administrativo', cpf: '000.000.000-00', status: 'Ativo' },
+    { code: 63, name: 'VENDEDOR INTERNO', role: 'Vendedor', sector: 'Comercial', cpf: '111.111.111-11', status: 'Ativo' }
+];
+
+window.renderEmployees = (filter = '') => {
+    const tbody = document.getElementById('employeesTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    const filtered = employees.filter(e =>
+        e.name.toLowerCase().includes(filter.toLowerCase()) ||
+        e.code.toString().includes(filter)
+    );
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum funcionário encontrado.</td></tr>';
+        return;
+    }
+
+    filtered.forEach(e => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="font-weight:600">${e.code}</td>
+            <td>
+                <div style="font-weight:600; color:var(--text-primary)">${e.name}</div>
+            </td>
+            <td>${e.role} / ${e.sector}</td>
+            <td>${e.cpf}</td>
+            <td><span class="status-badge status-shipped">${e.status}</span></td>
+            <td style="text-align:right">
+                <button class="btn btn-secondary btn-icon" style="padding:0.4rem;">
+                    <span class="material-icons-round" style="font-size:1rem;">edit</span>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+};
+
+window.filterEmployees = () => {
+    const term = document.getElementById('employeeSearch').value;
+    renderEmployees(term);
+};
