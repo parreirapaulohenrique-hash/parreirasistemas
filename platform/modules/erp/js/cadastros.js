@@ -192,14 +192,11 @@ window.renderGruposGrid = function () {
 
     tbody.innerHTML = grupos.map(g => `
         <tr>
-            <td>${g.codigo}</td>
+            <td style="font-weight:600">${g.codigo}</td>
             <td>${g.nome}</td>
             <td style="text-align:right;">
-                <button class="btn btn-icon" onclick="editGrupo('${g.id}')" title="Editar">
-                    <span class="material-icons-round">edit</span>
-                </button>
-                <button class="btn btn-icon btn-danger" onclick="deleteGrupo('${g.id}')" title="Excluir">
-                    <span class="material-icons-round">delete</span>
+                <button class="btn btn-secondary btn-icon" style="padding:0.4rem;" onclick="editGrupo('${g.id}')" title="Editar">
+                    <span class="material-icons-round" style="font-size:1rem;">edit</span>
                 </button>
             </td>
         </tr>

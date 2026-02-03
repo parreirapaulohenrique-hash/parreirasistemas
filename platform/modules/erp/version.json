@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.5.9",
+    "version": "2.6.0",
     "date": "2026-02-03",
-    "last_change": "Page-based layout for financial/fiscal cadastros",
-    "build": "20260203.16"
+    "last_change": "Standardized action icons to match Gerais pattern",
+    "build": "20260203.17"
 }
