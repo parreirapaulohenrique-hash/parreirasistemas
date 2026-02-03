@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.5.3",
+    "version": "2.5.4",
     "date": "2026-02-03",
-    "last_change": "Fixed modal z-index and button click issues",
-    "build": "20260203.10"
+    "last_change": "Removed inline z-index from modals to fix button click",
+    "build": "20260203.11"
 }
