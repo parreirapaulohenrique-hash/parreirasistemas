@@ -2010,10 +2010,9 @@
                         </div>
                         <div class="modal-footer"
                             style="display:flex; justify-content:flex-end; gap:1rem; padding:1rem 1.5rem; border-top:1px solid var(--border-color);">
-                            <button class="btn btn-secondary" onclick="closeModal('finGroupModal')"
+                            <button type="button" onclick="closeModal('finGroupModal')"
                                 style="padding:0.75rem 1.5rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary); cursor:pointer;">Cancelar</button>
-                            <button class="btn btn-primary"
-                                onclick="alert('Grupo salvo!'); closeModal('finGroupModal');"
+                            <button type="button" id="btnSaveGroup"
                                 style="padding:0.75rem 1.5rem; background:var(--primary-color); border:none; border-radius:var(--radius-md); color:white; cursor:pointer;">Salvar</button>
                         </div>
                     </div>

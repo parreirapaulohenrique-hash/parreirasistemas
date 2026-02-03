@@ -53,6 +53,15 @@ window.closeModal = function (modalId) {
     }
 }
 
+// Event delegation for modal buttons - handles clicks that might be blocked
+document.addEventListener('click', function (e) {
+    // Handle save button clicks
+    if (e.target.id === 'btnSaveGroup' || e.target.closest('#btnSaveGroup')) {
+        alert('Grupo salvo!');
+        closeModal('finGroupModal');
+    }
+}, true); // Use capture phase to get events before they're blocked
+
 // Navigation
 window.switchView = (viewName) => {
     // Hide all views
