@@ -1,8 +1,19 @@
 // Parreira ERP Core Logic
-// v2.0.0
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Parreira ERP Inicializado');
+
+    // Load Version
+    fetch('version.json')
+        .then(response => response.json())
+        .then(data => {
+            const versionEl = document.getElementById('systemVersion');
+            if (versionEl) {
+                versionEl.textContent = `v${data.version} • ${data.date}`;
+                versionEl.title = `Build: ${data.build} | ${data.last_change}`;
+            }
+        })
+        .catch(err => console.error('Error loading version:', err));
 
     // Check Auth/Tenant
     const user = JSON.parse(localStorage.getItem('platform_user_logged'));
