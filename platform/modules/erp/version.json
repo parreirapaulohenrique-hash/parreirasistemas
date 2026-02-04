@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.7.2",
+    "version": "2.8.1",
     "date": "2026-02-04",
-    "last_change": "NF-e Transmission moved to Operations > Fiscal submenu",
-    "build": "20260204.05"
+    "last_change": "Moved PDV from Fiscal to Financeiro submenu",
+    "build": "20260204.07"
 }
