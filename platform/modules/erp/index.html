@@ -94,6 +94,10 @@
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">calculate</span>PIS/COFINS
                         </a>
+                        <a class="nav-sub-item" onclick="switchView('nfeTransmissao')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">send</span>Transmissão NF-e
+                        </a>
                     </div>
                 </div>
 
@@ -232,8 +236,86 @@
                     </div>
                 </div>
 
-                <!-- View: Fiscal (NF-e Transmission) -->
+                <!-- View: Fiscal (Main) -->
                 <div id="view-fiscal" class="page-content" style="display:none;">
+                    <div class="welcome-banner">
+                        <h2>Fiscal</h2>
+                        <p>Módulo de gestão fiscal, notas fiscais eletrônicas e obrigações acessórias.</p>
+                    </div>
+                    <div class="row" style="gap:1.5rem;">
+                        <div class="col-4">
+                            <div class="card" style="cursor:pointer;" onclick="switchView('nfeTransmissao')">
+                                <div class="card-body" style="padding:1.5rem; text-align:center;">
+                                    <span class="material-icons-round"
+                                        style="font-size:3rem; color:var(--primary-color);">send</span>
+                                    <h3 style="margin-top:1rem; font-size:1.1rem;">Transmissão NF-e</h3>
+                                    <p style="color:var(--text-secondary); font-size:0.85rem; margin-top:0.5rem;">
+                                        Emitir, transmitir e gerenciar NF-e</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="card" style="cursor:pointer;" onclick="switchView('cfop')">
+                                <div class="card-body" style="padding:1.5rem; text-align:center;">
+                                    <span class="material-icons-round"
+                                        style="font-size:3rem; color:var(--accent-success);">list_alt</span>
+                                    <h3 style="margin-top:1rem; font-size:1.1rem;">CFOP</h3>
+                                    <p style="color:var(--text-secondary); font-size:0.85rem; margin-top:0.5rem;">
+                                        Cadastro de operações fiscais</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="card" style="cursor:pointer;" onclick="switchView('icmsParams')">
+                                <div class="card-body" style="padding:1.5rem; text-align:center;">
+                                    <span class="material-icons-round"
+                                        style="font-size:3rem; color:var(--accent-warning);">percent</span>
+                                    <h3 style="margin-top:1rem; font-size:1.1rem;">Parâmetros ICMS</h3>
+                                    <p style="color:var(--text-secondary); font-size:0.85rem; margin-top:0.5rem;">
+                                        Configurar alíquotas ICMS</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row" style="gap:1.5rem; margin-top:1.5rem;">
+                        <div class="col-4">
+                            <div class="card" style="cursor:pointer;" onclick="switchView('pisCofins')">
+                                <div class="card-body" style="padding:1.5rem; text-align:center;">
+                                    <span class="material-icons-round"
+                                        style="font-size:3rem; color:#8b5cf6;">calculate</span>
+                                    <h3 style="margin-top:1rem; font-size:1.1rem;">PIS/COFINS</h3>
+                                    <p style="color:var(--text-secondary); font-size:0.85rem; margin-top:0.5rem;">
+                                        Parâmetros PIS e COFINS</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="card" style="opacity:0.5;">
+                                <div class="card-body" style="padding:1.5rem; text-align:center;">
+                                    <span class="material-icons-round"
+                                        style="font-size:3rem; color:var(--text-secondary);">article</span>
+                                    <h3 style="margin-top:1rem; font-size:1.1rem;">Livros Fiscais</h3>
+                                    <p style="color:var(--text-secondary); font-size:0.85rem; margin-top:0.5rem;">Em
+                                        desenvolvimento</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="card" style="opacity:0.5;">
+                                <div class="card-body" style="padding:1.5rem; text-align:center;">
+                                    <span class="material-icons-round"
+                                        style="font-size:3rem; color:var(--text-secondary);">assignment</span>
+                                    <h3 style="margin-top:1rem; font-size:1.1rem;">SPED</h3>
+                                    <p style="color:var(--text-secondary); font-size:0.85rem; margin-top:0.5rem;">Em
+                                        desenvolvimento</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: NF-e Transmission (Submenu of Fiscal) -->
+                <div id="view-nfeTransmissao" class="page-content" style="display:none;">
                     <div class="welcome-banner">
                         <h2>Transmissão de NF-e</h2>
                         <p>Módulo de emissão, transmissão e gestão de Notas Fiscais Eletrônicas com comunicação SEFAZ.

@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.7.0",
+    "version": "2.7.1",
     "date": "2026-02-04",
-    "last_change": "NF-e transmission module with 5 horizontal tabs and SEFAZ integration structure",
-    "build": "20260204.03"
+    "last_change": "NF-e Transmission as submenu of Fiscal with dashboard cards",
+    "build": "20260204.04"
 }
