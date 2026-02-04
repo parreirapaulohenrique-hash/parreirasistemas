@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.8.1",
+    "version": "2.9.0",
     "date": "2026-02-04",
-    "last_change": "Moved PDV from Fiscal to Financeiro submenu",
-    "build": "20260204.07"
+    "last_change": "Added Pedido de Venda Interna screen with complete order entry functionality",
+    "build": "20260204.08"
 }
