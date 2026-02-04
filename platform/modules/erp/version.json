@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.6.2",
+    "version": "2.7.0",
     "date": "2026-02-04",
-    "last_change": "Added PIS/COFINS fiscal cadastro with tabbed form",
-    "build": "20260204.02"
+    "last_change": "NF-e transmission module with 5 horizontal tabs and SEFAZ integration structure",
+    "build": "20260204.03"
 }

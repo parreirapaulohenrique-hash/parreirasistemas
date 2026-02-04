@@ -92,7 +92,7 @@ window.switchView = (viewName) => {
         'sales': 'Vendas',
         'purchases': 'Compras',
         'finance': 'Financeiro',
-        'fiscal': 'Fiscal',
+        'fiscal': 'Transmissão de NF-e',
         'groups': 'Gestão de Grupos',
         'accountPlans': 'Plano de Contas',
         'billing': 'Cadastro de Cobrança',

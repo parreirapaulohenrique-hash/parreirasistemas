@@ -232,21 +232,375 @@
                     </div>
                 </div>
 
-                <!-- View: Fiscal -->
+                <!-- View: Fiscal (NF-e Transmission) -->
                 <div id="view-fiscal" class="page-content" style="display:none;">
                     <div class="welcome-banner">
-                        <h2>Fiscal</h2>
-                        <p>Módulo de gestão fiscal, notas fiscais e obrigações acessórias.</p>
+                        <h2>Transmissão de NF-e</h2>
+                        <p>Módulo de emissão, transmissão e gestão de Notas Fiscais Eletrônicas com comunicação SEFAZ.
+                        </p>
                     </div>
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>Em Desenvolvimento</h3>
+
+                    <!-- Common Filters Card -->
+                    <div class="card" style="margin-bottom:1rem;">
+                        <div class="card-body" style="padding:1rem;">
+                            <div class="row">
+                                <div class="form-group col-1">
+                                    <label class="form-label">Empresa</label>
+                                    <select class="form-input" id="nfeEmpresa">
+                                        <option value="01">01</option>
+                                    </select>
+                                </div>
+                                <div class="form-group col-2">
+                                    <label class="form-label">Período de Vendas</label>
+                                    <div style="display:flex; gap:0.25rem; align-items:center;">
+                                        <input type="date" class="form-input" id="nfePeriodoIni" value="2026-02-02">
+                                        <span>até</span>
+                                        <input type="date" class="form-input" id="nfePeriodoFim" value="2026-02-02">
+                                    </div>
+                                </div>
+                                <div class="form-group col-2">
+                                    <label class="form-label">Notas Fiscais</label>
+                                    <div style="display:flex; gap:0.25rem; align-items:center;">
+                                        <input type="number" class="form-input" id="nfeNotaIni" placeholder="0">
+                                        <span>até</span>
+                                        <input type="number" class="form-input" id="nfeNotaFim" placeholder="0">
+                                    </div>
+                                </div>
+                                <div class="form-group col-2">
+                                    <label class="form-label">Pedidos de Vendas</label>
+                                    <div style="display:flex; gap:0.25rem; align-items:center;">
+                                        <input type="number" class="form-input" id="nfePedidoIni" placeholder="0">
+                                        <span>até</span>
+                                        <input type="number" class="form-input" id="nfePedidoFim" placeholder="0">
+                                    </div>
+                                </div>
+                                <div class="form-group col-2">
+                                    <label class="form-label">Frete por Conta</label>
+                                    <select class="form-input" id="nfeFrete">
+                                        <option value="0">0 - Emitente</option>
+                                        <option value="1">1 - Destinatário</option>
+                                        <option value="2">2 - Terceiros</option>
+                                        <option value="9">9 - Sem Frete</option>
+                                    </select>
+                                </div>
+                                <div class="form-group col-2">
+                                    <label class="form-label">Tipo de Operação</label>
+                                    <select class="form-input" id="nfeTipoOp">
+                                        <option value="">Todas</option>
+                                        <option value="internas">Vendas Internas</option>
+                                        <option value="externas">Vendas Externas</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row" style="margin-top:0.5rem;">
+                                <div class="form-group col-2">
+                                    <label class="form-label">Tipo de Documento</label>
+                                    <select class="form-input" id="nfeTipoDoc">
+                                        <option value="nfe">Nota Fiscal Eletrônica</option>
+                                        <option value="nfce">NFC-e</option>
+                                    </select>
+                                </div>
+                                <div class="form-group col-1">
+                                    <label class="form-label">Carregamento</label>
+                                    <input type="number" class="form-input" id="nfeCarreg" placeholder="0">
+                                </div>
+                                <div class="form-group col-1">
+                                    <label class="form-label">Cód. Cliente</label>
+                                    <input type="number" class="form-input" id="nfeCodCliente" placeholder="0">
+                                </div>
+                                <div class="form-group col-4">
+                                    <label class="form-label">Razão Social [Cliente]</label>
+                                    <input type="text" class="form-input" id="nfeRazaoSocial" placeholder="">
+                                </div>
+                                <div class="form-group col-2">
+                                    <label class="form-label">&nbsp;</label>
+                                    <div style="display:flex; gap:0.5rem;">
+                                        <label class="check-label"><input type="checkbox" id="nfeSemTransp"> Não sair
+                                            Transportadora</label>
+                                    </div>
+                                </div>
+                                <div class="form-group col-2">
+                                    <label class="form-label">&nbsp;</label>
+                                    <button class="btn btn-primary" onclick="buscarNotasFiscais()" style="width:100%;">
+                                        <span class="material-icons-round">search</span> Buscar
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <div class="card-body" style="padding:3rem; text-align:center;">
-                            <span class="material-icons-round"
-                                style="font-size:4rem; color:var(--accent-warning);">construction</span>
-                            <p style="margin-top:1rem; color:var(--text-secondary);">Este módulo está em
-                                desenvolvimento.</p>
+                    </div>
+
+                    <!-- Horizontal Tabs -->
+                    <div class="card">
+                        <div class="tabs-nav" style="border-bottom:1px solid var(--border-color); padding:0;">
+                            <button type="button" class="tab-btn active"
+                                onclick="switchTab(this, 'tab-nfe-transmitir')">
+                                <span class="material-icons-round" style="font-size:1rem;">send</span> A Transmitir
+                            </button>
+                            <button type="button" class="tab-btn" onclick="switchTab(this, 'tab-nfe-emtransmissao')">
+                                <span class="material-icons-round" style="font-size:1rem;">hourglass_empty</span> Em
+                                Transmissão
+                            </button>
+                            <button type="button" class="tab-btn" onclick="switchTab(this, 'tab-nfe-retorno')">
+                                <span class="material-icons-round" style="font-size:1rem;">sync</span> Retorno
+                            </button>
+                            <button type="button" class="tab-btn" onclick="switchTab(this, 'tab-nfe-danfe')">
+                                <span class="material-icons-round" style="font-size:1rem;">description</span> DANF-e
+                            </button>
+                            <button type="button" class="tab-btn" onclick="switchTab(this, 'tab-nfe-relatorio')">
+                                <span class="material-icons-round" style="font-size:1rem;">assessment</span> Relatório
+                            </button>
+                        </div>
+
+                        <!-- TAB: A TRANSMITIR -->
+                        <div id="tab-nfe-transmitir" class="tab-content active">
+                            <div class="card-body" style="padding:0.5rem;">
+                                <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
+                                    <label class="check-label"><input type="checkbox"> Notas Fiscais em
+                                        Contingência</label>
+                                </div>
+                                <div style="overflow-x:auto; max-height:400px;">
+                                    <table class="data-table" style="font-size:0.85rem;">
+                                        <thead style="position:sticky; top:0; background:var(--bg-card);">
+                                            <tr>
+                                                <th style="width:50px;"><input type="checkbox" id="selectAllTransmitir">
+                                                </th>
+                                                <th style="width:50px;">Emp.</th>
+                                                <th style="width:80px;">Num.Nota</th>
+                                                <th style="width:90px;">Dt.Emissão</th>
+                                                <th style="width:80px;">Dt.Saída</th>
+                                                <th style="width:80px;">Pedido</th>
+                                                <th style="width:70px;">Carreg.</th>
+                                                <th style="width:90px;">Placa Veículo</th>
+                                                <th style="width:70px;">Código</th>
+                                                <th>Cliente</th>
+                                                <th style="width:120px;">Status</th>
+                                                <th style="width:90px;">Dt.Geração</th>
+                                                <th style="width:180px;">Chave de Acesso</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="nfeTransmitirTableBody">
+                                            <tr>
+                                                <td colspan="13"
+                                                    style="text-align:center; padding:2rem; color:var(--text-secondary);">
+                                                    <span class="material-icons-round"
+                                                        style="font-size:2rem; vertical-align:middle;">folder_open</span>
+                                                    <span style="margin-left:0.5rem;">Nenhuma nota fiscal pendente de
+                                                        transmissão</span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div
+                                    style="display:flex; justify-content:flex-end; gap:0.5rem; padding:1rem; border-top:1px solid var(--border-color); margin-top:0.5rem;">
+                                    <button class="btn btn-primary" onclick="transmitirNFeSelecionadas()">
+                                        <span class="material-icons-round">send</span> Transmitir Selecionadas
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB: EM TRANSMISSÃO -->
+                        <div id="tab-nfe-emtransmissao" class="tab-content">
+                            <div class="card-body" style="padding:1rem;">
+                                <div class="alert-info" style="margin-bottom:1rem;">
+                                    <span class="material-icons-round"
+                                        style="vertical-align:middle;">hourglass_empty</span>
+                                    <strong>" Aguarde "</strong> - Existem <span id="qtdEmTransmissao">0</span> Notas em
+                                    Transmissão.
+                                </div>
+                                <div style="overflow-x:auto; max-height:400px;">
+                                    <table class="data-table" style="font-size:0.85rem;">
+                                        <thead style="position:sticky; top:0; background:var(--bg-card);">
+                                            <tr>
+                                                <th style="width:50px;">Filial</th>
+                                                <th style="width:80px;">Num. Nota</th>
+                                                <th style="width:80px;">Carregam.</th>
+                                                <th style="width:80px;">C.NFe</th>
+                                                <th style="width:120px;">Status</th>
+                                                <th>Chave de Acesso</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="nfeEmTransmissaoTableBody">
+                                            <tr>
+                                                <td colspan="6"
+                                                    style="text-align:center; padding:2rem; color:var(--text-secondary);">
+                                                    <span class="material-icons-round"
+                                                        style="font-size:2rem; vertical-align:middle;">check_circle</span>
+                                                    <span style="margin-left:0.5rem;">Nenhuma nota em transmissão no
+                                                        momento</span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB: RETORNO -->
+                        <div id="tab-nfe-retorno" class="tab-content">
+                            <div class="card-body" style="padding:1rem;">
+                                <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+                                    <button class="btn btn-secondary" onclick="consultarRetornoSEFAZ()">
+                                        <span class="material-icons-round">sync</span> Consultar Retorno SEFAZ
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="reprocessarNotas()">
+                                        <span class="material-icons-round">refresh</span> Reprocessar Pendentes
+                                    </button>
+                                </div>
+                                <div style="overflow-x:auto; max-height:400px;">
+                                    <table class="data-table" style="font-size:0.85rem;">
+                                        <thead style="position:sticky; top:0; background:var(--bg-card);">
+                                            <tr>
+                                                <th style="width:50px;">Emp.</th>
+                                                <th style="width:80px;">Num.Nota</th>
+                                                <th style="width:80px;">Série</th>
+                                                <th style="width:90px;">Dt.Emissão</th>
+                                                <th style="width:70px;">Código</th>
+                                                <th>Razão Social</th>
+                                                <th style="width:100px;">Valor NF</th>
+                                                <th style="width:120px;">Status SEFAZ</th>
+                                                <th style="width:180px;">Protocolo</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="nfeRetornoTableBody">
+                                            <tr>
+                                                <td colspan="9"
+                                                    style="text-align:center; padding:2rem; color:var(--text-secondary);">
+                                                    <span class="material-icons-round"
+                                                        style="font-size:2rem; vertical-align:middle;">sync</span>
+                                                    <span style="margin-left:0.5rem;">Execute a consulta para ver os
+                                                        retornos da SEFAZ</span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB: DANF-e -->
+                        <div id="tab-nfe-danfe" class="tab-content">
+                            <div class="card-body" style="padding:0.5rem;">
+                                <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+                                    <label class="check-label"><input type="checkbox" id="nfeImprimirDataSaida" checked>
+                                        Imprimir Data de Saída no DANFE</label>
+                                    <label class="check-label"><input type="checkbox" id="nfeMostrarImpressa" checked>
+                                        Mostrar notas fiscais já impressas</label>
+                                    <label class="check-label"><input type="checkbox" id="nfeListarCancelada"> Listar
+                                        NF-e Cancelada</label>
+                                </div>
+                                <div style="overflow-x:auto; max-height:400px;">
+                                    <table class="data-table" style="font-size:0.85rem;">
+                                        <thead style="position:sticky; top:0; background:var(--bg-card);">
+                                            <tr>
+                                                <th style="width:40px;">Filial</th>
+                                                <th style="width:70px;">Num.Not</th>
+                                                <th style="width:70px;">Pedido</th>
+                                                <th style="width:80px;">Carregam.</th>
+                                                <th style="width:60px;">Impr.</th>
+                                                <th style="width:90px;">Dt.Emissão</th>
+                                                <th style="width:90px;">Dt.Status</th>
+                                                <th style="width:130px;">Status</th>
+                                                <th style="width:60px;">Código</th>
+                                                <th>Cliente</th>
+                                                <th style="width:140px;">Protocolo</th>
+                                                <th style="width:80px; text-align:right;">Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="nfeDanfeTableBody">
+                                            <tr>
+                                                <td colspan="12"
+                                                    style="text-align:center; padding:2rem; color:var(--text-secondary);">
+                                                    <span class="material-icons-round"
+                                                        style="font-size:2rem; vertical-align:middle;">description</span>
+                                                    <span style="margin-left:0.5rem;">Execute a busca para listar as
+                                                        notas autorizadas</span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div
+                                    style="display:flex; justify-content:flex-end; gap:0.5rem; padding:1rem; border-top:1px solid var(--border-color); margin-top:0.5rem;">
+                                    <button class="btn btn-secondary" onclick="imprimirDANFESelecionadas()">
+                                        <span class="material-icons-round">print</span> Imprimir DANF-e
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="downloadXMLSelecionadas()">
+                                        <span class="material-icons-round">download</span> Download XML
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB: RELATÓRIO -->
+                        <div id="tab-nfe-relatorio" class="tab-content">
+                            <div class="card-body" style="padding:1rem;">
+                                <fieldset
+                                    style="border:1px solid var(--border-color); padding:1rem; border-radius:6px; margin-bottom:1rem;">
+                                    <legend style="font-weight:600; padding:0 0.5rem;">Situação na SEFAZ</legend>
+                                    <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+                                        <label class="check-label"><input type="radio" name="situacaoSefaz"
+                                                value="autorizada" checked> NF-e Autorizada</label>
+                                        <label class="check-label"><input type="radio" name="situacaoSefaz"
+                                                value="duplicidade"> NF-e Duplicidade</label>
+                                        <label class="check-label"><input type="radio" name="situacaoSefaz"
+                                                value="cancelada"> NF-e Cancelada</label>
+                                        <label class="check-label"><input type="radio" name="situacaoSefaz"
+                                                value="irregularidade"> NF-e Irregularidade Fiscal</label>
+                                        <label class="check-label"><input type="radio" name="situacaoSefaz"
+                                                value="inutilizada"> NF-e Inutilizada</label>
+                                        <label class="check-label"><input type="radio" name="situacaoSefaz"
+                                                value="erros"> NF-e [Erros Diversos]</label>
+                                        <label class="check-label"><input type="radio" name="situacaoSefaz"
+                                                value="gerada"> NF-e [Gerada]</label>
+                                    </div>
+                                </fieldset>
+                                <div style="overflow-x:auto; max-height:350px;">
+                                    <table class="data-table" style="font-size:0.85rem;">
+                                        <thead style="position:sticky; top:0; background:var(--bg-card);">
+                                            <tr>
+                                                <th style="width:30px;">*</th>
+                                                <th style="width:40px;">Op.</th>
+                                                <th style="width:40px;">Emp.</th>
+                                                <th style="width:70px;">Num.Nota</th>
+                                                <th style="width:50px;">Série</th>
+                                                <th style="width:90px;">Dt.Emissão</th>
+                                                <th style="width:70px;">Código</th>
+                                                <th>Razão Social</th>
+                                                <th style="width:90px;">Valor NF</th>
+                                                <th style="width:90px;">Dt.Geração</th>
+                                                <th style="width:60px;">C.NFe</th>
+                                                <th style="width:130px;">Status</th>
+                                                <th style="width:120px;">Chave de Acesso</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="nfeRelatorioTableBody">
+                                            <tr>
+                                                <td colspan="13"
+                                                    style="text-align:center; padding:2rem; color:var(--text-secondary);">
+                                                    <span class="material-icons-round"
+                                                        style="font-size:2rem; vertical-align:middle;">assessment</span>
+                                                    <span style="margin-left:0.5rem;">Execute a busca para gerar o
+                                                        relatório</span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div
+                                    style="display:flex; justify-content:space-between; gap:1rem; padding:1rem; border-top:1px solid var(--border-color); margin-top:0.5rem; background:var(--bg-secondary); border-radius:0 0 6px 6px;">
+                                    <div style="display:flex; gap:2rem;">
+                                        <div><strong>Documentos listados:</strong> <span id="relDocumentos">0</span>
+                                        </div>
+                                        <div><strong>Valor total listados:</strong> <span id="relValorTotal">R$
+                                                0,00</span></div>
+                                    </div>
+                                    <button class="btn btn-secondary" onclick="exportarRelatorioNFe()">
+                                        <span class="material-icons-round">download</span> Exportar Relatório
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
