@@ -99,7 +99,8 @@ window.switchView = (viewName) => {
         'paymentPlans': 'Planos de Pagamento',
         'banks': 'Caixas e Bancos',
         'cfop': 'Cadastro de CFOP',
-        'icmsParams': 'Parâmetros de ICMS'
+        'icmsParams': 'Parâmetros de ICMS',
+        'pisCofins': 'PIS/COFINS'
     };
     document.getElementById('pageTitle').textContent = titles[viewName] || 'ERP';
 

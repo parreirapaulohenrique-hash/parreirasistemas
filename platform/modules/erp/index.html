@@ -90,6 +90,10 @@
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">percent</span>Parâmetros ICMS
                         </a>
+                        <a class="nav-sub-item" onclick="switchView('pisCofins')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">calculate</span>PIS/COFINS
+                        </a>
                     </div>
                 </div>
 
@@ -482,6 +486,40 @@
                                     </tr>
                                 </thead>
                                 <tbody id="icmsParamsTableBody">
+                                    <!-- JS Render -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: PIS/COFINS (Fiscal) -->
+                <div id="view-pisCofins" class="page-content" style="display:none;">
+                    <div class="welcome-banner">
+                        <h2>PIS/COFINS</h2>
+                        <p>Configuração de alíquotas PIS e COFINS para operações fiscais.</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div style="display:flex; gap:0.5rem; width: 100%; max-width: 400px;">
+                                <input type="text" id="pisCofinsSearch" class="form-input"
+                                    placeholder="Buscar por código ou descrição..." onkeyup="filterPisCofins()">
+                            </div>
+                            <button class="btn btn-primary" onclick="openModal('fisPisCofinsModal')">
+                                <span class="material-icons-round">add</span> Novo Parâmetro
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:80px;">Cód.</th>
+                                        <th>Descrição do Imposto</th>
+                                        <th style="width:100px;">Principal</th>
+                                        <th style="width:120px; text-align:right;">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pisCofinsTableBody">
                                     <!-- JS Render -->
                                 </tbody>
                             </table>
@@ -2209,6 +2247,365 @@
                             <button class="btn btn-secondary" onclick="closeModal('fisIcmsModal')">Cancelar</button>
                             <button class="btn btn-primary"
                                 onclick="alert('Parâmetros ICMS salvos!'); closeModal('fisIcmsModal')">Salvar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 8. PIS/COFINS -->
+                <div id="fisPisCofinsModal" class="modal-overlay">
+                    <div class="modal-card modal-lg"
+                        style="max-width: 1100px; height:90vh; display:flex; flex-direction:column;">
+                        <div class="modal-header">
+                            <h3>Parâmetros PIS/COFINS</h3>
+                            <button class="btn btn-secondary btn-icon" onclick="closeModal('fisPisCofinsModal')"><span
+                                    class="material-icons-round">close</span></button>
+                        </div>
+
+                        <!-- Header Form -->
+                        <div style="padding:1rem 1.5rem; border-bottom:1px solid var(--border-color);">
+                            <div class="row">
+                                <div class="form-group col-2">
+                                    <label class="form-label">Código</label>
+                                    <input type="text" class="form-input" id="pcCodigo">
+                                </div>
+                                <div class="form-group col-8">
+                                    <label class="form-label">Descrição do Imposto</label>
+                                    <input type="text" class="form-input" id="pcDescricao">
+                                </div>
+                                <div class="form-group col-2">
+                                    <label class="form-label">Principal?</label>
+                                    <select class="form-input" id="pcPrincipal">
+                                        <option value="">Selecione</option>
+                                        <option value="S">Sim</option>
+                                        <option value="N">Não</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tabs -->
+                        <div class="tabs-nav" style="margin-top:0;">
+                            <button type="button" class="tab-btn active"
+                                onclick="switchTab(this, 'tab-piscofins-contrib')">Clientes Contribuintes</button>
+                            <button type="button" class="tab-btn"
+                                onclick="switchTab(this, 'tab-piscofins-ncontrib')">Clientes Não Contribuintes</button>
+                        </div>
+
+                        <div class="modal-body" style="overflow-y:auto;">
+                            <!-- TAB: CONTRIBUINTES -->
+                            <div id="tab-piscofins-contrib" class="tab-content active">
+                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;">
+                                    <!-- Coluna Esquerda -->
+                                    <div>
+                                        <!-- Saídas -->
+                                        <fieldset
+                                            style="border:1px solid var(--border-color); padding:1rem; border-radius:6px; margin-bottom:1rem;">
+                                            <legend style="font-weight:600; padding:0 0.5rem;">Saídas</legend>
+                                            <div class="row">
+                                                <div class="form-group col-8"><label class="form-label">CST</label>
+                                                    <select class="form-input">
+                                                        <option></option>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group col-4"><label class="form-label">[%]</label>
+                                                    <input class="form-input">
+                                                </div>
+                                            </div>
+                                            <div class="form-group"><label class="form-label">Pis</label><select
+                                                    class="form-input">
+                                                    <option></option>
+                                                </select></div>
+                                            <div class="form-group"><label class="form-label">Cofins</label><select
+                                                    class="form-input">
+                                                    <option></option>
+                                                </select></div>
+                                        </fieldset>
+                                        <!-- Bonificação (Saídas) -->
+                                        <fieldset
+                                            style="border:1px solid var(--border-color); padding:1rem; border-radius:6px; margin-bottom:1rem;">
+                                            <legend style="font-weight:600; padding:0 0.5rem;">Bonificação (Saídas)
+                                            </legend>
+                                            <div class="row">
+                                                <div class="form-group col-8"><label class="form-label">CST</label>
+                                                    <select class="form-input">
+                                                        <option></option>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group col-4"><label class="form-label">[%]</label>
+                                                    <input class="form-input">
+                                                </div>
+                                            </div>
+                                            <div class="form-group"><label class="form-label">Pis</label><select
+                                                    class="form-input">
+                                                    <option></option>
+                                                </select></div>
+                                            <div class="form-group"><label class="form-label">Cofins</label><select
+                                                    class="form-input">
+                                                    <option></option>
+                                                </select></div>
+                                        </fieldset>
+                                        <!-- Devolução (Saídas) -->
+                                        <fieldset
+                                            style="border:1px solid var(--border-color); padding:1rem; border-radius:6px; margin-bottom:1rem;">
+                                            <legend style="font-weight:600; padding:0 0.5rem;">Devolução (Saídas)
+                                            </legend>
+                                            <div class="row">
+                                                <div class="form-group col-8"><label class="form-label">CST</label>
+                                                    <select class="form-input">
+                                                        <option></option>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group col-4"><label class="form-label">[%]</label>
+                                                    <input class="form-input">
+                                                </div>
+                                            </div>
+                                            <div class="form-group"><label class="form-label">Pis</label><select
+                                                    class="form-input">
+                                                    <option></option>
+                                                </select></div>
+                                            <div class="form-group"><label class="form-label">Cofins</label><select
+                                                    class="form-input">
+                                                    <option></option>
+                                                </select></div>
+                                        </fieldset>
+                                        <!-- Transferências -->
+                                        <fieldset
+                                            style="border:1px solid var(--border-color); padding:1rem; border-radius:6px;">
+                                            <legend style="font-weight:600; padding:0 0.5rem;">Transferências</legend>
+                                            <div class="row">
+                                                <div class="form-group col-8"><label class="form-label">CST</label>
+                                                    <select class="form-input">
+                                                        <option></option>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group col-4"><label class="form-label">[%]</label>
+                                                    <input class="form-input">
+                                                </div>
+                                            </div>
+                                            <div class="form-group"><label class="form-label">Pis</label><select
+                                                    class="form-input">
+                                                    <option></option>
+                                                </select></div>
+                                            <div class="form-group"><label class="form-label">Cofins</label><select
+                                                    class="form-input">
+                                                    <option></option>
+                                                </select></div>
+                                        </fieldset>
+                                    </div>
+                                    <!-- Coluna Direita -->
+                                    <div>
+                                        <!-- Entradas -->
+                                        <fieldset
+                                            style="border:1px solid var(--border-color); padding:1rem; border-radius:6px; margin-bottom:1rem;">
+                                            <legend style="font-weight:600; padding:0 0.5rem;">Entradas</legend>
+                                            <div class="row">
+                                                <div class="form-group col-8"><label class="form-label">CST</label>
+                                                    <select class="form-input">
+                                                        <option></option>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group col-4"><label class="form-label">[%]</label>
+                                                    <input class="form-input">
+                                                </div>
+                                            </div>
+                                            <div class="form-group"><label class="form-label">Pis</label><select
+                                                    class="form-input">
+                                                    <option></option>
+                                                </select></div>
+                                            <div class="form-group"><label class="form-label">Cofins</label><select
+                                                    class="form-input">
+                                                    <option></option>
+                                                </select></div>
+                                        </fieldset>
+                                        <!-- Bonificação (Entradas) -->
+                                        <fieldset
+                                            style="border:1px solid var(--border-color); padding:1rem; border-radius:6px; margin-bottom:1rem;">
+                                            <legend style="font-weight:600; padding:0 0.5rem;">Bonificação (Entradas)
+                                            </legend>
+                                            <div class="row">
+                                                <div class="form-group col-8"><label class="form-label">CST</label>
+                                                    <select class="form-input">
+                                                        <option></option>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group col-4"><label class="form-label">[%]</label>
+                                                    <input class="form-input">
+                                                </div>
+                                            </div>
+                                            <div class="form-group"><label class="form-label">Pis</label><select
+                                                    class="form-input">
+                                                    <option></option>
+                                                </select></div>
+                                            <div class="form-group"><label class="form-label">Cofins</label><select
+                                                    class="form-input">
+                                                    <option></option>
+                                                </select></div>
+                                        </fieldset>
+                                        <!-- Devolução (Entradas) -->
+                                        <fieldset
+                                            style="border:1px solid var(--border-color); padding:1rem; border-radius:6px; margin-bottom:1rem;">
+                                            <legend style="font-weight:600; padding:0 0.5rem;">Devolução (Entradas)
+                                            </legend>
+                                            <div class="row">
+                                                <div class="form-group col-8"><label class="form-label">CST</label>
+                                                    <select class="form-input">
+                                                        <option></option>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group col-4"><label class="form-label">[%]</label>
+                                                    <input class="form-input">
+                                                </div>
+                                            </div>
+                                            <div class="form-group"><label class="form-label">Pis</label><select
+                                                    class="form-input">
+                                                    <option></option>
+                                                </select></div>
+                                            <div class="form-group"><label class="form-label">Cofins</label><select
+                                                    class="form-input">
+                                                    <option></option>
+                                                </select></div>
+                                        </fieldset>
+                                        <!-- Uso/Consumo (Entradas) -->
+                                        <fieldset
+                                            style="border:1px solid var(--border-color); padding:1rem; border-radius:6px;">
+                                            <legend style="font-weight:600; padding:0 0.5rem;">Uso/Consumo (Entradas)
+                                            </legend>
+                                            <div class="row">
+                                                <div class="form-group col-8"><label class="form-label">CST</label>
+                                                    <select class="form-input">
+                                                        <option></option>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group col-4"><label class="form-label">[%]</label>
+                                                    <input class="form-input">
+                                                </div>
+                                            </div>
+                                            <div class="form-group"><label class="form-label">Pis</label><select
+                                                    class="form-input">
+                                                    <option></option>
+                                                </select></div>
+                                            <div class="form-group"><label class="form-label">Cofins</label><select
+                                                    class="form-input">
+                                                    <option></option>
+                                                </select></div>
+                                        </fieldset>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- TAB: NÃO CONTRIBUINTES -->
+                            <div id="tab-piscofins-ncontrib" class="tab-content">
+                                <div class="alert-info" style="margin-bottom:1rem;">
+                                    <span class="material-icons-round" style="vertical-align:middle;">info</span>
+                                    <span>Configurações para clientes não contribuintes (Pessoa Física, MEI,
+                                        etc.)</span>
+                                </div>
+                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;">
+                                    <!-- Coluna Esquerda -->
+                                    <div>
+                                        <fieldset
+                                            style="border:1px solid var(--border-color); padding:1rem; border-radius:6px; margin-bottom:1rem;">
+                                            <legend style="font-weight:600; padding:0 0.5rem;">Saídas</legend>
+                                            <div class="row">
+                                                <div class="form-group col-8"><label class="form-label">CST</label>
+                                                    <select class="form-input">
+                                                        <option></option>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group col-4"><label class="form-label">[%]</label>
+                                                    <input class="form-input">
+                                                </div>
+                                            </div>
+                                            <div class="form-group"><label class="form-label">Pis</label><select
+                                                    class="form-input">
+                                                    <option></option>
+                                                </select></div>
+                                            <div class="form-group"><label class="form-label">Cofins</label><select
+                                                    class="form-input">
+                                                    <option></option>
+                                                </select></div>
+                                        </fieldset>
+                                        <fieldset
+                                            style="border:1px solid var(--border-color); padding:1rem; border-radius:6px;">
+                                            <legend style="font-weight:600; padding:0 0.5rem;">Bonificação (Saídas)
+                                            </legend>
+                                            <div class="row">
+                                                <div class="form-group col-8"><label class="form-label">CST</label>
+                                                    <select class="form-input">
+                                                        <option></option>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group col-4"><label class="form-label">[%]</label>
+                                                    <input class="form-input">
+                                                </div>
+                                            </div>
+                                            <div class="form-group"><label class="form-label">Pis</label><select
+                                                    class="form-input">
+                                                    <option></option>
+                                                </select></div>
+                                            <div class="form-group"><label class="form-label">Cofins</label><select
+                                                    class="form-input">
+                                                    <option></option>
+                                                </select></div>
+                                        </fieldset>
+                                    </div>
+                                    <!-- Coluna Direita -->
+                                    <div>
+                                        <fieldset
+                                            style="border:1px solid var(--border-color); padding:1rem; border-radius:6px; margin-bottom:1rem;">
+                                            <legend style="font-weight:600; padding:0 0.5rem;">Entradas</legend>
+                                            <div class="row">
+                                                <div class="form-group col-8"><label class="form-label">CST</label>
+                                                    <select class="form-input">
+                                                        <option></option>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group col-4"><label class="form-label">[%]</label>
+                                                    <input class="form-input">
+                                                </div>
+                                            </div>
+                                            <div class="form-group"><label class="form-label">Pis</label><select
+                                                    class="form-input">
+                                                    <option></option>
+                                                </select></div>
+                                            <div class="form-group"><label class="form-label">Cofins</label><select
+                                                    class="form-input">
+                                                    <option></option>
+                                                </select></div>
+                                        </fieldset>
+                                        <fieldset
+                                            style="border:1px solid var(--border-color); padding:1rem; border-radius:6px;">
+                                            <legend style="font-weight:600; padding:0 0.5rem;">Bonificação (Entradas)
+                                            </legend>
+                                            <div class="row">
+                                                <div class="form-group col-8"><label class="form-label">CST</label>
+                                                    <select class="form-input">
+                                                        <option></option>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group col-4"><label class="form-label">[%]</label>
+                                                    <input class="form-input">
+                                                </div>
+                                            </div>
+                                            <div class="form-group"><label class="form-label">Pis</label><select
+                                                    class="form-input">
+                                                    <option></option>
+                                                </select></div>
+                                            <div class="form-group"><label class="form-label">Cofins</label><select
+                                                    class="form-input">
+                                                    <option></option>
+                                                </select></div>
+                                        </fieldset>
+                                    </div>
+                                </div>
+                            </div>
+                        </div> <!-- End Modal Body -->
+
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary"
+                                onclick="closeModal('fisPisCofinsModal')">Cancelar</button>
+                            <button class="btn btn-primary"
+                                onclick="alert('Parâmetros PIS/COFINS salvos!'); closeModal('fisPisCofinsModal')">Salvar</button>
                         </div>
                     </div>
                 </div>
