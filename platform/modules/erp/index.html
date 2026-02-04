@@ -107,10 +107,20 @@
 
                 <div class="nav-divider">OPERAÇÕES</div>
 
-                <a class="nav-item" onclick="switchView('sales')">
-                    <span class="material-icons-round">shopping_cart</span>
-                    <span>Vendas</span>
-                </a>
+                <div class="nav-group">
+                    <a class="nav-item" onclick="toggleSubmenu('sub-vendas-op')">
+                        <span class="material-icons-round">shopping_cart</span>
+                        <span>Vendas</span>
+                        <span class="material-icons-round ms-auto"
+                            style="font-size:1.2rem; margin-left:auto;">expand_more</span>
+                    </a>
+                    <div id="sub-vendas-op" class="nav-submenu">
+                        <a class="nav-sub-item" onclick="switchView('sales')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">receipt_long</span>Pedido de Venda
+                        </a>
+                    </div>
+                </div>
                 <a class="nav-item" onclick="switchView('finance')">
                     <span class="material-icons-round">payments</span>
                     <span>Financeiro</span>
