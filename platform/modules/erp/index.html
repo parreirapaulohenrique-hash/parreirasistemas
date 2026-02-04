@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
@@ -93,6 +93,14 @@
                         <a class="nav-sub-item" onclick="switchView('pisCofins')">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">calculate</span>PIS/COFINS
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('cbsIbs')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">account_balance</span>Tributos CBS/IBS
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('pdv')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">point_of_sale</span>PDV
                         </a>
                     </div>
                 </div>
@@ -907,6 +915,66 @@
                                 <tbody id="pisCofinsTableBody">
                                     <!-- JS Render -->
                                 </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <!-- View: CBS/IBS Tributos (Fiscal) -->
+                <div id="view-cbsIbs" class="page-content" style="display:none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <div style="display:flex; gap:0.5rem; width: 100%; max-width: 400px;">
+                                <input type="text" id="cbsIbsSearch" class="form-input"
+                                    placeholder="Buscar por código ou descrição..." onkeyup="filterCbsIbs()">
+                            </div>
+                            <button class="btn btn-primary" onclick="openModal('cbsIbsModal')">
+                                <span class="material-icons-round">add</span> Novo Tributo
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:80px;">Código</th>
+                                        <th>Descrição</th>
+                                        <th style="width:80px;">IBS Mun.</th>
+                                        <th style="width:80px;">CBS</th>
+                                        <th style="width:80px;">IBS UF</th>
+                                        <th style="width:80px;">CST</th>
+                                        <th style="width:100px; text-align:right;">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cbsIbsTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: PDV (Fiscal) -->
+                <div id="view-pdv" class="page-content" style="display:none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <div style="display:flex; gap:0.5rem; width: 100%; max-width: 400px;">
+                                <input type="text" id="pdvSearch" class="form-input"
+                                    placeholder="Buscar por Nº PDV ou descrição..." onkeyup="filterPdv()">
+                            </div>
+                            <button class="btn btn-primary" onclick="openModal('pdvModal')">
+                                <span class="material-icons-round">add</span> Novo PDV
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:70px;">Nº PDV</th>
+                                        <th>Descrição</th>
+                                        <th>Nome Computador</th>
+                                        <th>IP Computador</th>
+                                        <th style="width:100px;">Ambiente</th>
+                                        <th style="width:100px; text-align:right;">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pdvTableBody"></tbody>
                             </table>
                         </div>
                     </div>
@@ -3426,6 +3494,198 @@
                             <button class="btn btn-primary"
                                 onclick="alert('Parâmetros ICMS salvos!'); closeModal('fisIcmsModal');"
                                 style="padding:0.75rem 1.5rem; background:var(--primary-color); border:none; border-radius:var(--radius-md); color:white; cursor:pointer;">Salvar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal: CBS/IBS Tributos -->
+                <div id="cbsIbsModal" class="modal-overlay" onclick="if(event.target===this) closeModal('cbsIbsModal')">
+                    <div class="modal-content"
+                        style="max-width:900px; max-height:90vh; overflow-y:auto; background:var(--bg-card); border-radius:var(--radius-lg); border:1px solid var(--border-color);">
+                        <div class="modal-header"
+                            style="padding:1.5rem; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                            <h3 style="font-size:1.25rem; font-weight:600;">Cadastro de Tributos CBS/IBS</h3>
+                            <button onclick="closeModal('cbsIbsModal')"
+                                style="background:none; border:none; cursor:pointer; color:var(--text-secondary);"><span
+                                    class="material-icons-round">close</span></button>
+                        </div>
+                        <div class="modal-body" style="padding:1.5rem;">
+                            <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+                                <div style="flex:1;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Código</label><input
+                                        type="text" id="cbsIbsCodigo" class="form-input" style="width:100%;"></div>
+                                <div style="flex:4;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Descrição</label><input
+                                        type="text" id="cbsIbsDescricao" class="form-input" style="width:100%;"></div>
+                            </div>
+                            <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+                                <div style="flex:1;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">[%]
+                                        IBS Município</label><input type="text" id="cbsIbsMunicipio" class="form-input"
+                                        placeholder="0,00" style="width:100%;"></div>
+                                <div style="flex:1;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">[%]
+                                        IBS Red. Mun.</label><input type="text" id="cbsIbsRedMunicipio"
+                                        class="form-input" placeholder="0,00" style="width:100%;"></div>
+                                <div style="flex:1;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">[%]
+                                        IBS Dif. Mun.</label><input type="text" id="cbsIbsDifMunicipio"
+                                        class="form-input" placeholder="0,00" style="width:100%;"></div>
+                                <div style="flex:1;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">[%]
+                                        CBS</label><input type="text" id="cbsCbs" class="form-input" placeholder="0,00"
+                                        style="width:100%;"></div>
+                                <div style="flex:1;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">[%]
+                                        Red. CBS</label><input type="text" id="cbsRedCbs" class="form-input"
+                                        placeholder="0,00" style="width:100%;"></div>
+                            </div>
+                            <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+                                <div style="flex:1;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">[%]
+                                        IBS UF</label><input type="text" id="cbsIbsUf" class="form-input"
+                                        placeholder="0,00" style="width:100%;"></div>
+                                <div style="flex:1;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">[%]
+                                        IBS Red. UF</label><input type="text" id="cbsIbsRedUf" class="form-input"
+                                        placeholder="0,00" style="width:100%;"></div>
+                                <div style="flex:1;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">[%]
+                                        IBS Dif. UF</label><input type="text" id="cbsIbsDifUf" class="form-input"
+                                        placeholder="0,00" style="width:100%;"></div>
+                                <div style="flex:1;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">[%]
+                                        Dif. CBS</label><input type="text" id="cbsDifCbs" class="form-input"
+                                        placeholder="0,00" style="width:100%;"></div>
+                            </div>
+                            <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+                                <div style="flex:1;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">CST</label><input
+                                        type="text" id="cbsCst" class="form-input" style="width:100%;"></div>
+                                <div style="flex:3;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Descrição
+                                        da CST</label><input type="text" id="cbsCstDescricao" class="form-input"
+                                        readonly style="width:100%; background:var(--bg-secondary);"></div>
+                            </div>
+                            <div style="display:flex; gap:1rem;">
+                                <div style="flex:1;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Cód.
+                                        Classif. Tribut.</label><input type="text" id="cbsCodClassif" class="form-input"
+                                        style="width:100%;"></div>
+                                <div style="flex:3;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Descrição
+                                        da Classificação Tributária</label><input type="text" id="cbsClassifDescricao"
+                                        class="form-input" readonly style="width:100%; background:var(--bg-secondary);">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer"
+                            style="display:flex; justify-content:flex-end; gap:1rem; padding:1rem 1.5rem; border-top:1px solid var(--border-color);">
+                            <button class="btn btn-secondary" onclick="closeModal('cbsIbsModal')">Cancelar</button>
+                            <button class="btn btn-primary" onclick="saveCbsIbs()">Salvar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal: PDV -->
+                <div id="pdvModal" class="modal-overlay" onclick="if(event.target===this) closeModal('pdvModal')">
+                    <div class="modal-content"
+                        style="max-width:900px; max-height:90vh; overflow-y:auto; background:var(--bg-card); border-radius:var(--radius-lg); border:1px solid var(--border-color);">
+                        <div class="modal-header"
+                            style="padding:1.5rem; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                            <h3 style="font-size:1.25rem; font-weight:600;">Cadastro de PDV</h3>
+                            <button onclick="closeModal('pdvModal')"
+                                style="background:none; border:none; cursor:pointer; color:var(--text-secondary);"><span
+                                    class="material-icons-round">close</span></button>
+                        </div>
+                        <div class="modal-body" style="padding:1.5rem;">
+                            <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+                                <div style="flex:1;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Nº
+                                        PDV</label><input type="number" id="pdvNumero" class="form-input"
+                                        style="width:100%;"></div>
+                                <div style="flex:1;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Empresa</label><select
+                                        id="pdvEmpresa" class="form-input" style="width:100%;">
+                                        <option value="1">1 - Matriz</option>
+                                        <option value="2">2 - Filial</option>
+                                    </select></div>
+                                <div style="flex:3;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Descrição
+                                        Alternativa</label><input type="text" id="pdvDescricao" class="form-input"
+                                        style="width:100%;"></div>
+                            </div>
+                            <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+                                <div style="flex:2;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Nome
+                                        do Computador</label><input type="text" id="pdvNomeComputador"
+                                        class="form-input" placeholder="LOCALHOST" style="width:100%;"></div>
+                                <div style="flex:2;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">IP
+                                        do Computador</label><input type="text" id="pdvIpComputador" class="form-input"
+                                        placeholder="192.168.1.1" style="width:100%;"></div>
+                            </div>
+                            <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+                                <div style="flex:1;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Tipo
+                                        de Emissão NFC-e</label><select id="pdvTipoEmissao" class="form-input"
+                                        style="width:100%;">
+                                        <option value="1">1 - Normal</option>
+                                        <option value="9">9 - Contingência</option>
+                                    </select></div>
+                                <div style="flex:1;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Ambiente</label><select
+                                        id="pdvAmbiente" class="form-input" style="width:100%;">
+                                        <option value="1">1 - Produção</option>
+                                        <option value="2">2 - Homologação</option>
+                                    </select></div>
+                            </div>
+                            <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+                                <div style="flex:1;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Id.
+                                        CSC</label><input type="text" id="pdvIdCsc" class="form-input"
+                                        style="width:100%;"></div>
+                                <div style="flex:3;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">CSC
+                                        (Respeitar maiúsculas e minúsculas)</label><input type="text" id="pdvCsc"
+                                        class="form-input" style="width:100%;"></div>
+                            </div>
+                            <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+                                <div style="flex:1;"><label
+                                        style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.875rem;">Caixa
+                                        para Movimento de Valores</label><input type="text" id="pdvCaixaMovimento"
+                                        class="form-input" style="width:100%;"></div>
+                            </div>
+                            <fieldset
+                                style="border:1px solid var(--border-color); border-radius:8px; padding:1rem; margin-top:1rem;">
+                                <legend style="color:var(--text-secondary); font-size:0.875rem; padding:0 0.5rem;">
+                                    Diretórios de Transmissão NFC-e</legend>
+                                <div style="margin-bottom:0.75rem;"><label
+                                        style="display:block; margin-bottom:0.25rem; color:var(--text-secondary); font-size:0.8rem;">Diretório
+                                        onde serão salvos os eventos</label><input type="text" id="pdvDirEventos"
+                                        class="form-input" style="width:100%;"></div>
+                                <div style="margin-bottom:0.75rem;"><label
+                                        style="display:block; margin-bottom:0.25rem; color:var(--text-secondary); font-size:0.8rem;">Diretório
+                                        onde serão salvos as inutilizações</label><input type="text"
+                                        id="pdvDirInutilizacoes" class="form-input" style="width:100%;"></div>
+                                <div style="margin-bottom:0.75rem;"><label
+                                        style="display:block; margin-bottom:0.25rem; color:var(--text-secondary); font-size:0.8rem;">Diretório
+                                        onde serão salvos as notas de saída</label><input type="text"
+                                        id="pdvDirNotasSaida" class="form-input" style="width:100%;"></div>
+                                <div style="margin-bottom:0.75rem;"><label
+                                        style="display:block; margin-bottom:0.25rem; color:var(--text-secondary); font-size:0.8rem;">Diretório
+                                        onde serão salvos os arquivos enviados</label><input type="text"
+                                        id="pdvDirEnviados" class="form-input" style="width:100%;"></div>
+                                <div><label
+                                        style="display:block; margin-bottom:0.25rem; color:var(--text-secondary); font-size:0.8rem;">Diretório
+                                        onde se encontram os arquivos de schemas</label><input type="text"
+                                        id="pdvDirSchemas" class="form-input" style="width:100%;"></div>
+                            </fieldset>
+                        </div>
+                        <div class="modal-footer"
+                            style="display:flex; justify-content:flex-end; gap:1rem; padding:1rem 1.5rem; border-top:1px solid var(--border-color);">
+                            <button class="btn btn-secondary" onclick="closeModal('pdvModal')">Cancelar</button>
+                            <button class="btn btn-primary" onclick="savePdv()">Salvar</button>
                         </div>
                     </div>
                 </div>

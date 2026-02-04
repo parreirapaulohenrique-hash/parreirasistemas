@@ -101,7 +101,9 @@ window.switchView = (viewName) => {
         'banks': 'Caixas e Bancos',
         'cfop': 'Cadastro de CFOP',
         'icmsParams': 'Parâmetros de ICMS',
-        'pisCofins': 'PIS/COFINS'
+        'pisCofins': 'PIS/COFINS',
+        'cbsIbs': 'Tributos CBS/IBS',
+        'pdv': 'Cadastro de PDV'
     };
     document.getElementById('pageTitle').textContent = titles[viewName] || 'ERP';
 

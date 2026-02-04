@@ -293,6 +293,239 @@ async function loadFromFirebase(collection) {
     return null;
 }
 
+// ===========================================
+// FUNÇÕES ESPECÍFICAS - CBS/IBS TRIBUTOS
+// ===========================================
+
+// Salva tributo CBS/IBS
+window.saveCbsIbs = function () {
+    const data = {
+        codigo: document.getElementById('cbsIbsCodigo').value,
+        descricao: document.getElementById('cbsIbsDescricao').value,
+        ibsMunicipio: document.getElementById('cbsIbsMunicipio').value,
+        ibsRedMunicipio: document.getElementById('cbsIbsRedMunicipio').value,
+        ibsDifMunicipio: document.getElementById('cbsIbsDifMunicipio').value,
+        cbs: document.getElementById('cbsCbs').value,
+        redCbs: document.getElementById('cbsRedCbs').value,
+        ibsUf: document.getElementById('cbsIbsUf').value,
+        ibsRedUf: document.getElementById('cbsIbsRedUf').value,
+        ibsDifUf: document.getElementById('cbsIbsDifUf').value,
+        difCbs: document.getElementById('cbsDifCbs').value,
+        cst: document.getElementById('cbsCst').value,
+        codClassif: document.getElementById('cbsCodClassif').value
+    };
+
+    if (!data.codigo || !data.descricao) {
+        alert('Código e Descrição são obrigatórios!');
+        return;
+    }
+
+    saveCadastro('cbsIbs', data);
+    closeModal('cbsIbsModal');
+    clearForm('cbsIbsModal');
+    renderCbsIbsGrid();
+    alert('Tributo CBS/IBS salvo com sucesso!');
+};
+
+// Renderiza grid de CBS/IBS
+function renderCbsIbsGrid() {
+    const tbody = document.getElementById('cbsIbsTableBody');
+    if (!tbody) return;
+
+    const items = loadCadastros('cbsIbs');
+    tbody.innerHTML = items.map(item => `
+        <tr>
+            <td>${item.codigo}</td>
+            <td>${item.descricao}</td>
+            <td>${item.ibsMunicipio || '0,00'}%</td>
+            <td>${item.cbs || '0,00'}%</td>
+            <td>${item.ibsUf || '0,00'}%</td>
+            <td>${item.cst || '-'}</td>
+            <td style="text-align:right;">
+                <button class="btn btn-sm" onclick="editCbsIbs('${item.id}')" title="Editar">
+                    <span class="material-icons-round" style="font-size:1rem;">edit</span>
+                </button>
+                <button class="btn btn-sm" onclick="deleteCbsIbs('${item.id}')" title="Excluir">
+                    <span class="material-icons-round" style="font-size:1rem; color:#ef4444;">delete</span>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Filtro CBS/IBS
+window.filterCbsIbs = function () {
+    const search = document.getElementById('cbsIbsSearch').value.toLowerCase();
+    const items = loadCadastros('cbsIbs').filter(item =>
+        item.codigo.toLowerCase().includes(search) ||
+        item.descricao.toLowerCase().includes(search)
+    );
+    const tbody = document.getElementById('cbsIbsTableBody');
+    tbody.innerHTML = items.map(item => `
+        <tr>
+            <td>${item.codigo}</td>
+            <td>${item.descricao}</td>
+            <td>${item.ibsMunicipio || '0,00'}%</td>
+            <td>${item.cbs || '0,00'}%</td>
+            <td>${item.ibsUf || '0,00'}%</td>
+            <td>${item.cst || '-'}</td>
+            <td style="text-align:right;">
+                <button class="btn btn-sm" onclick="editCbsIbs('${item.id}')" title="Editar">
+                    <span class="material-icons-round" style="font-size:1rem;">edit</span>
+                </button>
+                <button class="btn btn-sm" onclick="deleteCbsIbs('${item.id}')" title="Excluir">
+                    <span class="material-icons-round" style="font-size:1rem; color:#ef4444;">delete</span>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+};
+
+window.editCbsIbs = function (id) {
+    const item = getCadastro('cbsIbs', id);
+    if (!item) return;
+    document.getElementById('cbsIbsCodigo').value = item.codigo;
+    document.getElementById('cbsIbsDescricao').value = item.descricao;
+    document.getElementById('cbsIbsMunicipio').value = item.ibsMunicipio || '';
+    document.getElementById('cbsIbsRedMunicipio').value = item.ibsRedMunicipio || '';
+    document.getElementById('cbsIbsDifMunicipio').value = item.ibsDifMunicipio || '';
+    document.getElementById('cbsCbs').value = item.cbs || '';
+    document.getElementById('cbsRedCbs').value = item.redCbs || '';
+    document.getElementById('cbsIbsUf').value = item.ibsUf || '';
+    document.getElementById('cbsIbsRedUf').value = item.ibsRedUf || '';
+    document.getElementById('cbsIbsDifUf').value = item.ibsDifUf || '';
+    document.getElementById('cbsDifCbs').value = item.difCbs || '';
+    document.getElementById('cbsCst').value = item.cst || '';
+    document.getElementById('cbsCodClassif').value = item.codClassif || '';
+    openModal('cbsIbsModal');
+};
+
+window.deleteCbsIbs = function (id) {
+    if (confirm('Confirma a exclusão deste tributo?')) {
+        deleteCadastro('cbsIbs', id);
+        renderCbsIbsGrid();
+    }
+};
+
+// ===========================================
+// FUNÇÕES ESPECÍFICAS - PDV
+// ===========================================
+
+// Salva PDV
+window.savePdv = function () {
+    const data = {
+        numero: document.getElementById('pdvNumero').value,
+        empresa: document.getElementById('pdvEmpresa').value,
+        descricao: document.getElementById('pdvDescricao').value,
+        nomeComputador: document.getElementById('pdvNomeComputador').value,
+        ipComputador: document.getElementById('pdvIpComputador').value,
+        tipoEmissao: document.getElementById('pdvTipoEmissao').value,
+        ambiente: document.getElementById('pdvAmbiente').value,
+        idCsc: document.getElementById('pdvIdCsc').value,
+        csc: document.getElementById('pdvCsc').value,
+        caixaMovimento: document.getElementById('pdvCaixaMovimento').value,
+        dirEventos: document.getElementById('pdvDirEventos').value,
+        dirInutilizacoes: document.getElementById('pdvDirInutilizacoes').value,
+        dirNotasSaida: document.getElementById('pdvDirNotasSaida').value,
+        dirEnviados: document.getElementById('pdvDirEnviados').value,
+        dirSchemas: document.getElementById('pdvDirSchemas').value
+    };
+
+    if (!data.numero) {
+        alert('Nº PDV é obrigatório!');
+        return;
+    }
+
+    saveCadastro('pdv', data);
+    closeModal('pdvModal');
+    clearForm('pdvModal');
+    renderPdvGrid();
+    alert('PDV salvo com sucesso!');
+};
+
+// Renderiza grid de PDV
+function renderPdvGrid() {
+    const tbody = document.getElementById('pdvTableBody');
+    if (!tbody) return;
+
+    const items = loadCadastros('pdv');
+    const ambientes = { '1': 'Produção', '2': 'Homologação' };
+    tbody.innerHTML = items.map(item => `
+        <tr>
+            <td>${item.numero}</td>
+            <td>${item.descricao || '-'}</td>
+            <td>${item.nomeComputador || '-'}</td>
+            <td>${item.ipComputador || '-'}</td>
+            <td>${ambientes[item.ambiente] || '-'}</td>
+            <td style="text-align:right;">
+                <button class="btn btn-sm" onclick="editPdv('${item.id}')" title="Editar">
+                    <span class="material-icons-round" style="font-size:1rem;">edit</span>
+                </button>
+                <button class="btn btn-sm" onclick="deletePdv('${item.id}')" title="Excluir">
+                    <span class="material-icons-round" style="font-size:1rem; color:#ef4444;">delete</span>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Filtro PDV
+window.filterPdv = function () {
+    const search = document.getElementById('pdvSearch').value.toLowerCase();
+    const items = loadCadastros('pdv').filter(item =>
+        String(item.numero).includes(search) ||
+        (item.descricao && item.descricao.toLowerCase().includes(search)) ||
+        (item.nomeComputador && item.nomeComputador.toLowerCase().includes(search))
+    );
+    const ambientes = { '1': 'Produção', '2': 'Homologação' };
+    const tbody = document.getElementById('pdvTableBody');
+    tbody.innerHTML = items.map(item => `
+        <tr>
+            <td>${item.numero}</td>
+            <td>${item.descricao || '-'}</td>
+            <td>${item.nomeComputador || '-'}</td>
+            <td>${item.ipComputador || '-'}</td>
+            <td>${ambientes[item.ambiente] || '-'}</td>
+            <td style="text-align:right;">
+                <button class="btn btn-sm" onclick="editPdv('${item.id}')" title="Editar">
+                    <span class="material-icons-round" style="font-size:1rem;">edit</span>
+                </button>
+                <button class="btn btn-sm" onclick="deletePdv('${item.id}')" title="Excluir">
+                    <span class="material-icons-round" style="font-size:1rem; color:#ef4444;">delete</span>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+};
+
+window.editPdv = function (id) {
+    const item = getCadastro('pdv', id);
+    if (!item) return;
+    document.getElementById('pdvNumero').value = item.numero;
+    document.getElementById('pdvEmpresa').value = item.empresa || '1';
+    document.getElementById('pdvDescricao').value = item.descricao || '';
+    document.getElementById('pdvNomeComputador').value = item.nomeComputador || '';
+    document.getElementById('pdvIpComputador').value = item.ipComputador || '';
+    document.getElementById('pdvTipoEmissao').value = item.tipoEmissao || '1';
+    document.getElementById('pdvAmbiente').value = item.ambiente || '1';
+    document.getElementById('pdvIdCsc').value = item.idCsc || '';
+    document.getElementById('pdvCsc').value = item.csc || '';
+    document.getElementById('pdvCaixaMovimento').value = item.caixaMovimento || '';
+    document.getElementById('pdvDirEventos').value = item.dirEventos || '';
+    document.getElementById('pdvDirInutilizacoes').value = item.dirInutilizacoes || '';
+    document.getElementById('pdvDirNotasSaida').value = item.dirNotasSaida || '';
+    document.getElementById('pdvDirEnviados').value = item.dirEnviados || '';
+    document.getElementById('pdvDirSchemas').value = item.dirSchemas || '';
+    openModal('pdvModal');
+};
+
+window.deletePdv = function (id) {
+    if (confirm('Confirma a exclusão deste PDV?')) {
+        deleteCadastro('pdv', id);
+        renderPdvGrid();
+    }
+};
+
 // Inicializar quando o DOM estiver pronto
 document.addEventListener('DOMContentLoaded', () => {
     initCadastros();
