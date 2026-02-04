@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.10.0",
+    "version": "2.10.1",
     "date": "2026-02-04",
-    "last_change": "Added Cancelamento de Pedidos screen with tabs, filters, and order grid",
-    "build": "20260204.10"
+    "last_change": "Completed Devoluções de clientes tab with filters and grid",
+    "build": "20260204.11"
 }

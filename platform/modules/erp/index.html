@@ -724,10 +724,105 @@
 
                         <!-- Tab: Devoluções de clientes -->
                         <div id="tab-devolucoes-clientes" class="tab-content" style="padding:1rem; display:none;">
-                            <div style="text-align:center; padding:2rem; color:var(--text-secondary);">
-                                <span class="material-icons-round" style="font-size:3rem;">assignment_return</span>
-                                <p style="margin-top:0.5rem;">Selecione os filtros e clique em Buscar para listar as
-                                    devoluções de clientes.</p>
+                            <!-- Filters Row 1 -->
+                            <div style="display:flex; gap:0.75rem; margin-bottom:0.75rem; flex-wrap:wrap;">
+                                <div style="width:70px;">
+                                    <label
+                                        style="display:block; font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.25rem;">Empresa</label>
+                                    <select id="devClienteEmpresa" class="form-input" style="width:100%;">
+                                        <option value="01">01</option>
+                                        <option value="02">02</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label
+                                        style="display:block; font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.25rem;">Período
+                                        de Emissão</label>
+                                    <div style="display:flex; gap:0.25rem; align-items:center;">
+                                        <input type="date" id="devClienteDataIni" class="form-input"
+                                            style="width:130px;">
+                                        <span style="font-size:0.8rem;">até</span>
+                                        <input type="date" id="devClienteDataFim" class="form-input"
+                                            style="width:130px;">
+                                    </div>
+                                </div>
+                                <div style="width:100px;">
+                                    <label
+                                        style="display:block; font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.25rem;">Nº
+                                        da entrada</label>
+                                    <input type="text" id="devClienteNumEntrada" class="form-input" value="0"
+                                        style="width:100%; text-align:right;">
+                                </div>
+                                <div style="width:100px;">
+                                    <label
+                                        style="display:block; font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.25rem;">Cód.
+                                        Cliente</label>
+                                    <input type="text" id="devClienteCodCliente" class="form-input" value="0"
+                                        style="width:100%; text-align:right;">
+                                </div>
+                                <div style="flex:1; min-width:200px;">
+                                    <label
+                                        style="display:block; font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.25rem;">Cliente
+                                        [Razão Social]</label>
+                                    <input type="text" id="devClienteNomeCliente" class="form-input"
+                                        style="width:100%;">
+                                </div>
+                            </div>
+                            <!-- Filters Row 2 -->
+                            <div style="display:flex; gap:0.75rem; margin-bottom:1rem; flex-wrap:wrap;">
+                                <div style="width:100px;">
+                                    <label
+                                        style="display:block; font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.25rem;">Nº
+                                        Nota Origem</label>
+                                    <input type="text" id="devClienteNotaOrigem" class="form-input" value="0"
+                                        style="width:100%; text-align:right;">
+                                </div>
+                                <div style="width:100px;">
+                                    <label
+                                        style="display:block; font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.25rem;">Número
+                                        da Nota</label>
+                                    <input type="text" id="devClienteNumNota" class="form-input" value="0"
+                                        style="width:100%; text-align:right;">
+                                </div>
+                                <div style="width:120px;">
+                                    <label
+                                        style="display:block; font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.25rem;">Valor
+                                        da devolução</label>
+                                    <input type="text" id="devClienteValor" class="form-input" value="0,00"
+                                        style="width:100%; text-align:right;">
+                                </div>
+                            </div>
+
+                            <!-- Devoluções Grid -->
+                            <div
+                                style="overflow-x:auto; max-height:350px; border:1px solid var(--border-color); border-radius:6px;">
+                                <table class="data-table" style="font-size:0.8rem;">
+                                    <thead style="position:sticky; top:0; background:var(--bg-card);">
+                                        <tr>
+                                            <th style="width:30px;"></th>
+                                            <th style="width:60px;">Empresa</th>
+                                            <th style="width:60px;">Espécie</th>
+                                            <th style="width:110px;">Data do lançamento</th>
+                                            <th style="width:90px;">Nº Transação</th>
+                                            <th style="width:70px;">Nº Nota</th>
+                                            <th style="width:70px;">Nº Origem</th>
+                                            <th style="width:60px;">Código</th>
+                                            <th>Cliente</th>
+                                            <th style="width:110px; text-align:right;">Valor da devolução</th>
+                                            <th style="width:100px;">Observação</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="devolucoesClienteTableBody">
+                                        <!-- JS Render -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Footer -->
+                            <div style="display:flex; align-items:center; gap:0.5rem; margin-top:1rem;">
+                                <span id="devClienteQtdDocs"
+                                    style="font-weight:600; background:var(--bg-secondary); padding:0.25rem 0.5rem; border-radius:4px;">0</span>
+                                <span style="font-size:0.85rem;">Documentos listados</span>
                             </div>
                         </div>
                     </div>
