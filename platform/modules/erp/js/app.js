@@ -103,7 +103,8 @@ window.switchView = (viewName) => {
         'icmsParams': 'Parâmetros de ICMS',
         'pisCofins': 'PIS/COFINS',
         'cbsIbs': 'Tributos CBS/IBS',
-        'pdv': 'Cadastro de PDV'
+        'pdv': 'Cadastro de PDV',
+        'cancelamento': 'Cancelamento de Pedidos'
     };
     document.getElementById('pageTitle').textContent = titles[viewName] || 'ERP';
 
