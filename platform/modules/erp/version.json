@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.7.1",
+    "version": "2.7.2",
     "date": "2026-02-04",
-    "last_change": "NF-e Transmission as submenu of Fiscal with dashboard cards",
-    "build": "20260204.04"
+    "last_change": "NF-e Transmission moved to Operations > Fiscal submenu",
+    "build": "20260204.05"
 }
