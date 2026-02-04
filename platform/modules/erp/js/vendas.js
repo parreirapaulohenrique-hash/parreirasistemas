@@ -372,3 +372,209 @@ window.switchTabCancel = function (btn, tabId) {
         tab.style.display = 'block';
     }
 };
+
+// ===========================================
+// MÓDULO PDV - FRENTE DE CAIXA
+// ===========================================
+
+let pdvItens = [];
+let pdvDesconto = 0;
+
+// Adicionar item no PDV
+window.adicionarItemPdv = function () {
+    const codigo = document.getElementById('pdvCodigo').value.trim();
+    const qtd = parseFloat(document.getElementById('pdvQtd').value) || 1;
+
+    if (!codigo) {
+        document.getElementById('pdvCodigo').focus();
+        return;
+    }
+
+    // Buscar produto (mock para demonstração)
+    const produtos = JSON.parse(localStorage.getItem('erp_products') || '[]');
+    let produto = produtos.find(p => p.sku === codigo || p.codigoBarras === codigo);
+
+    // Mock se não encontrar
+    if (!produto) {
+        produto = {
+            sku: codigo,
+            nome: 'PRODUTO ' + codigo,
+            preco: Math.floor(Math.random() * 50) + 5
+        };
+    }
+
+    const total = produto.preco * qtd;
+
+    pdvItens.push({
+        item: pdvItens.length + 1,
+        codigo: produto.sku || codigo,
+        descricao: produto.nome,
+        qtd: qtd,
+        unitario: produto.preco,
+        total: total
+    });
+
+    // Mostrar último produto
+    document.getElementById('pdvUltimoProduto').style.display = 'block';
+    document.getElementById('pdvNomeProduto').textContent = produto.nome;
+    document.getElementById('pdvPrecoProduto').textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
+
+    // Limpar e atualizar
+    document.getElementById('pdvCodigo').value = '';
+    document.getElementById('pdvQtd').value = '1';
+    document.getElementById('pdvCodigo').focus();
+
+    renderizarItensPdv();
+    atualizarTotaisPdv();
+};
+
+// Renderizar itens do PDV
+function renderizarItensPdv() {
+    const tbody = document.getElementById('pdvItensTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = pdvItens.map((item, idx) => `
+        <tr>
+            <td style="text-align:center;">${item.item}</td>
+            <td>${item.codigo}</td>
+            <td>${item.descricao}</td>
+            <td style="text-align:center;">${item.qtd}</td>
+            <td style="text-align:right;">R$ ${item.unitario.toFixed(2).replace('.', ',')}</td>
+            <td style="text-align:right; font-weight:600;">R$ ${item.total.toFixed(2).replace('.', ',')}</td>
+            <td>
+                <button onclick="removerItemPdv(${idx})" style="background:none; border:none; cursor:pointer; color:#ef4444;">
+                    <span class="material-icons-round" style="font-size:1rem;">delete</span>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Atualizar totais
+function atualizarTotaisPdv() {
+    const subtotal = pdvItens.reduce((sum, item) => sum + item.total, 0);
+    const total = subtotal - pdvDesconto;
+
+    document.getElementById('pdvQtdItens').textContent = pdvItens.length;
+    document.getElementById('pdvSubtotal').textContent = 'R$ ' + subtotal.toFixed(2).replace('.', ',');
+    document.getElementById('pdvDesconto').textContent = 'R$ ' + pdvDesconto.toFixed(2).replace('.', ',');
+    document.getElementById('pdvTotalGeral').textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
+}
+
+// Remover item
+window.removerItemPdv = function (idx) {
+    pdvItens.splice(idx, 1);
+    // Renumera itens
+    pdvItens.forEach((item, i) => item.item = i + 1);
+    renderizarItensPdv();
+    atualizarTotaisPdv();
+};
+
+// Cancelar item selecionado
+window.cancelarItemPdv = function () {
+    if (pdvItens.length === 0) {
+        alert('Não há itens para cancelar.');
+        return;
+    }
+    if (confirm('Cancelar o último item?')) {
+        pdvItens.pop();
+        pdvItens.forEach((item, i) => item.item = i + 1);
+        renderizarItensPdv();
+        atualizarTotaisPdv();
+    }
+};
+
+// Aplicar desconto
+window.aplicarDescontoPdv = function () {
+    const valorStr = prompt('Informe o valor do desconto:');
+    if (valorStr) {
+        pdvDesconto = parseFloat(valorStr.replace(',', '.')) || 0;
+        atualizarTotaisPdv();
+    }
+};
+
+// Finalizar venda
+window.finalizarVendaPdv = function (formaPagto) {
+    if (pdvItens.length === 0) {
+        alert('Adicione pelo menos um item!');
+        return;
+    }
+
+    const subtotal = pdvItens.reduce((sum, item) => sum + item.total, 0);
+    const total = subtotal - pdvDesconto;
+
+    const formas = {
+        'dinheiro': 'DINHEIRO',
+        'pix': 'PIX',
+        'credito': 'CARTÃO CRÉDITO',
+        'debito': 'CARTÃO DÉBITO'
+    };
+
+    if (formaPagto === 'dinheiro') {
+        const recebido = prompt('Valor recebido:', total.toFixed(2));
+        if (recebido) {
+            const troco = parseFloat(recebido.replace(',', '.')) - total;
+            if (troco >= 0) {
+                alert(`Venda finalizada!\n\nForma: ${formas[formaPagto]}\nTotal: R$ ${total.toFixed(2)}\nRecebido: R$ ${parseFloat(recebido.replace(',', '.')).toFixed(2)}\nTroco: R$ ${troco.toFixed(2)}`);
+                limparPdv();
+            } else {
+                alert('Valor insuficiente!');
+            }
+        }
+    } else {
+        alert(`Venda finalizada!\n\nForma: ${formas[formaPagto]}\nTotal: R$ ${total.toFixed(2)}`);
+        limparPdv();
+    }
+};
+
+// Limpar PDV
+function limparPdv() {
+    pdvItens = [];
+    pdvDesconto = 0;
+    document.getElementById('pdvUltimoProduto').style.display = 'none';
+    renderizarItensPdv();
+    atualizarTotaisPdv();
+    document.getElementById('pdvCodigo').focus();
+}
+
+// Fechar caixa
+window.fecharCaixa = function () {
+    if (confirm('Deseja fechar o caixa?')) {
+        alert('Caixa fechado com sucesso!');
+        switchView('dashboard');
+    }
+};
+
+// Atalhos PDV
+document.addEventListener('keydown', function (e) {
+    const pdvView = document.getElementById('view-frenteCaixa');
+    if (pdvView && pdvView.style.display !== 'none') {
+        if (e.key === 'Enter' && document.activeElement.id === 'pdvCodigo') {
+            e.preventDefault();
+            adicionarItemPdv();
+        } else if (e.key === 'F3') {
+            e.preventDefault();
+            aplicarDescontoPdv();
+        } else if (e.key === 'F4') {
+            e.preventDefault();
+            cancelarItemPdv();
+        } else if (e.key === 'F5') {
+            e.preventDefault();
+            finalizarVendaPdv('dinheiro');
+        } else if (e.key === 'F6') {
+            e.preventDefault();
+            finalizarVendaPdv('pix');
+        } else if (e.key === 'F7') {
+            e.preventDefault();
+            finalizarVendaPdv('credito');
+        } else if (e.key === 'F8') {
+            e.preventDefault();
+            finalizarVendaPdv('debito');
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            if (pdvItens.length > 0 && confirm('Cancelar toda a venda?')) {
+                limparPdv();
+            }
+        }
+    }
+});

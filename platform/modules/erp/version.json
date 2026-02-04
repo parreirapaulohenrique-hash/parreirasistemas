@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.10.1",
+    "version": "2.11.0",
     "date": "2026-02-04",
-    "last_change": "Completed Devoluções de clientes tab with filters and grid",
-    "build": "20260204.11"
+    "last_change": "Added PDV Frente de Caixa with complete POS functionality",
+    "build": "20260204.12"
 }

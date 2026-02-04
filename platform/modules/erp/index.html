@@ -123,6 +123,10 @@
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">cancel</span>Cancelamento
                         </a>
+                        <a class="nav-sub-item" onclick="switchView('frenteCaixa')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">point_of_sale</span>Frente de Caixa
+                        </a>
                     </div>
                 </div>
                 <a class="nav-item" onclick="switchView('finance')">
@@ -823,6 +827,199 @@
                                 <span id="devClienteQtdDocs"
                                     style="font-weight:600; background:var(--bg-secondary); padding:0.25rem 0.5rem; border-radius:4px;">0</span>
                                 <span style="font-size:0.85rem;">Documentos listados</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Frente de Caixa (PDV) -->
+                <div id="view-frenteCaixa" class="page-content" style="display:none;">
+                    <!-- PDV Header Bar -->
+                    <div class="card"
+                        style="margin-bottom:1rem; background:linear-gradient(135deg, var(--primary-color), #1e40af);">
+                        <div class="card-body"
+                            style="padding:0.75rem 1rem; display:flex; justify-content:space-between; align-items:center; color:white;">
+                            <div style="display:flex; align-items:center; gap:1rem;">
+                                <span class="material-icons-round" style="font-size:2rem;">point_of_sale</span>
+                                <div>
+                                    <div style="font-size:1.25rem; font-weight:600;">Frente de Caixa</div>
+                                    <div style="font-size:0.8rem; opacity:0.9;">PDV - Ponto de Venda</div>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:1rem; align-items:center;">
+                                <div style="text-align:right;">
+                                    <div style="font-size:0.75rem; opacity:0.8;">Operador</div>
+                                    <div style="font-weight:600;">CAIXA 01</div>
+                                </div>
+                                <button class="btn" onclick="fecharCaixa()"
+                                    style="background:rgba(255,255,255,0.2); color:white; border:1px solid rgba(255,255,255,0.3);">
+                                    <span class="material-icons-round" style="font-size:1rem;">logout</span> Fechar
+                                    Caixa
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main PDV Layout -->
+                    <div style="display:flex; gap:1rem; height:calc(100vh - 280px); min-height:400px;">
+                        <!-- Left: Product Entry + Items List -->
+                        <div style="flex:2; display:flex; flex-direction:column; gap:1rem;">
+                            <!-- Product Entry -->
+                            <div class="card">
+                                <div class="card-body" style="padding:1rem;">
+                                    <div style="display:flex; gap:0.75rem; align-items:flex-end;">
+                                        <div style="flex:1;">
+                                            <label
+                                                style="display:block; font-size:0.75rem; color:var(--text-secondary); margin-bottom:0.25rem;">Código
+                                                / Código de Barras</label>
+                                            <input type="text" id="pdvCodigo" class="form-input"
+                                                placeholder="Digite ou escaneie o código..."
+                                                style="width:100%; font-size:1.1rem; padding:0.75rem;" autofocus>
+                                        </div>
+                                        <div style="width:100px;">
+                                            <label
+                                                style="display:block; font-size:0.75rem; color:var(--text-secondary); margin-bottom:0.25rem;">Quantidade</label>
+                                            <input type="text" id="pdvQtd" class="form-input" value="1"
+                                                style="width:100%; text-align:center; font-size:1.1rem; padding:0.75rem;">
+                                        </div>
+                                        <button class="btn btn-primary" onclick="adicionarItemPdv()"
+                                            style="padding:0.75rem 1.5rem; font-size:1rem;">
+                                            <span class="material-icons-round">add_shopping_cart</span>
+                                        </button>
+                                    </div>
+                                    <!-- Last Product Info -->
+                                    <div id="pdvUltimoProduto"
+                                        style="margin-top:0.75rem; padding:0.75rem; background:var(--bg-secondary); border-radius:8px; display:none;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                                            <div>
+                                                <div style="font-size:0.8rem; color:var(--text-secondary);">Último item
+                                                    adicionado:</div>
+                                                <div id="pdvNomeProduto" style="font-weight:600;"></div>
+                                            </div>
+                                            <div style="text-align:right;">
+                                                <div id="pdvPrecoProduto"
+                                                    style="font-size:1.25rem; font-weight:700; color:var(--accent-success);">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Items List -->
+                            <div class="card" style="flex:1; overflow:hidden; display:flex; flex-direction:column;">
+                                <div class="card-header"
+                                    style="padding:0.75rem 1rem; border-bottom:1px solid var(--border-color);">
+                                    <h3 style="font-size:1rem;">Itens do Cupom</h3>
+                                </div>
+                                <div style="flex:1; overflow-y:auto;">
+                                    <table class="data-table" style="font-size:0.85rem;">
+                                        <thead style="position:sticky; top:0; background:var(--bg-card);">
+                                            <tr>
+                                                <th style="width:40px;">Item</th>
+                                                <th style="width:80px;">Código</th>
+                                                <th>Descrição</th>
+                                                <th style="width:50px; text-align:center;">Qtd</th>
+                                                <th style="width:80px; text-align:right;">Unitário</th>
+                                                <th style="width:90px; text-align:right;">Total</th>
+                                                <th style="width:40px;"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="pdvItensTableBody">
+                                            <!-- JS Render -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Totals + Payment -->
+                        <div style="width:320px; display:flex; flex-direction:column; gap:1rem;">
+                            <!-- Total Display -->
+                            <div class="card" style="background:linear-gradient(135deg, #10b981, #059669);">
+                                <div class="card-body" style="padding:1.5rem; text-align:center; color:white;">
+                                    <div style="font-size:0.9rem; opacity:0.9; margin-bottom:0.25rem;">TOTAL A PAGAR
+                                    </div>
+                                    <div id="pdvTotalGeral"
+                                        style="font-size:3rem; font-weight:700; letter-spacing:-1px;">R$ 0,00</div>
+                                    <div
+                                        style="display:flex; justify-content:space-around; margin-top:1rem; padding-top:1rem; border-top:1px solid rgba(255,255,255,0.2);">
+                                        <div>
+                                            <div style="font-size:0.75rem; opacity:0.8;">Itens</div>
+                                            <div id="pdvQtdItens" style="font-weight:600; font-size:1.1rem;">0</div>
+                                        </div>
+                                        <div>
+                                            <div style="font-size:0.75rem; opacity:0.8;">Subtotal</div>
+                                            <div id="pdvSubtotal" style="font-weight:600; font-size:1.1rem;">R$ 0,00
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div style="font-size:0.75rem; opacity:0.8;">Desconto</div>
+                                            <div id="pdvDesconto" style="font-weight:600; font-size:1.1rem;">R$ 0,00
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Payment Options -->
+                            <div class="card" style="flex:1;">
+                                <div class="card-header"
+                                    style="padding:0.75rem 1rem; border-bottom:1px solid var(--border-color);">
+                                    <h3 style="font-size:1rem;">Pagamento</h3>
+                                </div>
+                                <div class="card-body"
+                                    style="padding:1rem; display:flex; flex-direction:column; gap:0.5rem;">
+                                    <button class="btn btn-primary" onclick="finalizarVendaPdv('dinheiro')"
+                                        style="width:100%; padding:0.75rem; justify-content:flex-start; gap:0.75rem;">
+                                        <span class="material-icons-round">payments</span>
+                                        <span style="flex:1; text-align:left;">Dinheiro</span>
+                                        <span style="font-size:0.75rem; opacity:0.8;">[F5]</span>
+                                    </button>
+                                    <button class="btn btn-primary" onclick="finalizarVendaPdv('pix')"
+                                        style="width:100%; padding:0.75rem; justify-content:flex-start; gap:0.75rem; background:#00875f;">
+                                        <span class="material-icons-round">qr_code_2</span>
+                                        <span style="flex:1; text-align:left;">PIX</span>
+                                        <span style="font-size:0.75rem; opacity:0.8;">[F6]</span>
+                                    </button>
+                                    <button class="btn btn-primary" onclick="finalizarVendaPdv('credito')"
+                                        style="width:100%; padding:0.75rem; justify-content:flex-start; gap:0.75rem; background:#7c3aed;">
+                                        <span class="material-icons-round">credit_card</span>
+                                        <span style="flex:1; text-align:left;">Cartão Crédito</span>
+                                        <span style="font-size:0.75rem; opacity:0.8;">[F7]</span>
+                                    </button>
+                                    <button class="btn btn-primary" onclick="finalizarVendaPdv('debito')"
+                                        style="width:100%; padding:0.75rem; justify-content:flex-start; gap:0.75rem; background:#0891b2;">
+                                        <span class="material-icons-round">credit_score</span>
+                                        <span style="flex:1; text-align:left;">Cartão Débito</span>
+                                        <span style="font-size:0.75rem; opacity:0.8;">[F8]</span>
+                                    </button>
+                                    <div style="border-top:1px solid var(--border-color); margin:0.5rem 0;"></div>
+                                    <button class="btn btn-secondary" onclick="aplicarDescontoPdv()"
+                                        style="width:100%; padding:0.5rem;">
+                                        <span class="material-icons-round" style="font-size:1rem;">percent</span>
+                                        Desconto [F3]
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="cancelarItemPdv()"
+                                        style="width:100%; padding:0.5rem; color:#ef4444; border-color:#ef4444;">
+                                        <span class="material-icons-round" style="font-size:1rem;">remove_circle</span>
+                                        Cancelar Item [F4]
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Function Keys Legend -->
+                            <div class="card">
+                                <div class="card-body"
+                                    style="padding:0.75rem; font-size:0.7rem; color:var(--text-secondary);">
+                                    <div style="display:flex; flex-wrap:wrap; gap:0.5rem;">
+                                        <span><b>F1</b> Ajuda</span>
+                                        <span><b>F2</b> Consulta</span>
+                                        <span><b>F9</b> Sangria</span>
+                                        <span><b>F10</b> Suprimento</span>
+                                        <span><b>ESC</b> Cancelar Venda</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

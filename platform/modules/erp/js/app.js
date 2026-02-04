@@ -104,7 +104,8 @@ window.switchView = (viewName) => {
         'pisCofins': 'PIS/COFINS',
         'cbsIbs': 'Tributos CBS/IBS',
         'pdv': 'Cadastro de PDV',
-        'cancelamento': 'Cancelamento de Pedidos'
+        'cancelamento': 'Cancelamento de Pedidos',
+        'frenteCaixa': 'Frente de Caixa'
     };
     document.getElementById('pageTitle').textContent = titles[viewName] || 'ERP';
 
