@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.13.0",
+    "version": "2.13.1",
     "date": "2026-02-05",
-    "last_change": "Added Logistics module and Separation Map view",
-    "build": "20260205.13"
+    "last_change": "Added Logistics Conference module screens",
+    "build": "20260205.15"
 }

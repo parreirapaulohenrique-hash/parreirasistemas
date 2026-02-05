@@ -142,6 +142,10 @@
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">map</span>Mapa de Separação
                         </a>
+                        <a class="nav-sub-item" onclick="switchView('logisticaConferenciaLista')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">playlist_add_check</span>Conferência
+                        </a>
                     </div>
                 </div>
                 <a class="nav-item" onclick="switchView('finance')">
@@ -4458,6 +4462,202 @@
                                         style="font-size:1.1rem; margin-right:0.5rem;">print</span>
                                     Gerar Mapa
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Logística - Lista de Conferência -->
+                <div id="view-logisticaConferenciaLista" class="page-content" style="display:none;">
+                    <!-- Filtros -->
+                    <div class="card" style="margin-bottom:1rem;">
+                        <div class="card-body" style="padding:0.8rem; display:flex; gap:1rem; align-items:center;">
+                            <div
+                                style="display:flex; align-items:center; gap:0.5rem; flex:1; background:var(--bg-secondary); padding:0.4rem 0.8rem; border-radius:4px;">
+                                <span class="material-icons-round" style="color:var(--text-secondary);">search</span>
+                                <input type="text" placeholder="Filtro e Pesquisa"
+                                    style="border:none; background:transparent; width:100%; outline:none; font-size:0.9rem;">
+                            </div>
+                            <button class="btn btn-secondary" style="font-size:0.8rem;">Monitorando: Hoje</button>
+                            <button class="btn btn-secondary" style="font-size:0.8rem;"><span
+                                    class="material-icons-round"
+                                    style="font-size:1rem; margin-right:0.4rem;">refresh</span>Atualizar</button>
+                            <div style="display:flex;">
+                                <button class="btn"
+                                    style="border-radius:4px 0 0 4px; border:1px solid var(--border-color);">Aguardando</button>
+                                <button class="btn btn-primary" style="border-radius:0 4px 4px 0;">Executando</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lista de Tarefas -->
+                    <div style="display:flex; flex-direction:column; gap:0.8rem;">
+                        <!-- Card 1 -->
+                        <div class="card clickable-card" onclick="switchView('logisticaConferenciaDetalhe')"
+                            style="cursor:pointer; border-left:4px solid var(--accent-primary);">
+                            <div class="card-body" style="padding:1rem; display:flex; align-items:center; gap:1rem;">
+                                <div
+                                    style="width:50px; height:50px; background:var(--bg-secondary); border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--accent-primary);">
+                                    <span class="material-icons-round" style="font-size:1.8rem;">barcode_reader</span>
+                                </div>
+                                <div style="flex:1;">
+                                    <div style="display:flex; justify-content:space-between; margin-bottom:0.2rem;">
+                                        <span style="font-weight:700; color:var(--accent-primary);">#15191</span>
+                                        <span style="font-size:0.8rem; color:var(--text-secondary);"><span
+                                                class="material-icons-round"
+                                                style="font-size:0.8rem; vertical-align:middle;">place</span> RUA
+                                            3.37.101</span>
+                                    </div>
+                                    <div style="font-weight:600; font-size:0.95rem; margin-bottom:0.2rem;">CONFERENCIA
+                                        DE PRODUTO DE SEPARAÇÃO</div>
+                                    <div style="font-size:0.85rem; color:var(--text-secondary);">VAN • 50285</div>
+                                </div>
+                                <div style="text-align:right;">
+                                    <div style="font-size:1.2rem; color:var(--accent-success); font-weight:bold;">&darr;
+                                    </div>
+                                    <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.4rem;">
+                                        Item: 8 Peso: 41.29 KG</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card 2 -->
+                        <div class="card clickable-card" onclick="switchView('logisticaConferenciaDetalhe')"
+                            style="cursor:pointer; border-left:4px solid var(--accent-primary);">
+                            <div class="card-body" style="padding:1rem; display:flex; align-items:center; gap:1rem;">
+                                <div
+                                    style="width:50px; height:50px; background:var(--bg-secondary); border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--accent-primary);">
+                                    <span class="material-icons-round" style="font-size:1.8rem;">barcode_reader</span>
+                                </div>
+                                <div style="flex:1;">
+                                    <div style="display:flex; justify-content:space-between; margin-bottom:0.2rem;">
+                                        <span style="font-weight:700; color:var(--accent-primary);">#29671</span>
+                                        <div style="display:flex; gap:1rem; align-items:center;">
+                                            <span
+                                                style="font-size:0.8rem; color:#ef4444; background:#fee2e2; padding:0.1rem 0.4rem; border-radius:4px; font-weight:600;">🏷️
+                                                2367</span>
+                                            <span style="font-size:0.8rem; color:var(--text-secondary);"><span
+                                                    class="material-icons-round"
+                                                    style="font-size:0.8rem; vertical-align:middle;">place</span> RUA
+                                                3.2.503</span>
+                                        </div>
+                                    </div>
+                                    <div style="font-weight:600; font-size:0.95rem; margin-bottom:0.2rem;">CONFERENCIA
+                                        DE PRODUTO DE SEPARAÇÃO</div>
+                                    <div style="font-size:0.85rem; color:var(--text-secondary);">RETIRA EXTERNA • 57676
+                                    </div>
+                                </div>
+                                <div style="text-align:right;">
+                                    <div style="font-size:1.2rem; color:var(--accent-success); font-weight:bold;">&darr;
+                                    </div>
+                                    <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.4rem;">
+                                        Item: 1 Peso: 2.00 KG</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Logística - Detalhe Conferência (Execução) -->
+                <div id="view-logisticaConferenciaDetalhe" class="page-content" style="display:none;">
+                    <!-- Header Actions -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                        <button class="btn btn-secondary" onclick="switchView('logisticaConferenciaLista')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">arrow_back</span>Voltar
+                        </button>
+                        <div style="display:flex; gap:0.5rem;">
+                            <button class="btn btn-secondary"
+                                style="border-radius:50%; width:36px; height:36px; padding:0; display:flex; align-items:center; justify-content:center;"><span
+                                    class="material-icons-round">more_vert</span></button>
+                            <button class="btn btn-primary"
+                                style="background:#fff; color:var(--text-primary); border:1px solid var(--border-color);">Finalizar</button>
+                        </div>
+                    </div>
+
+                    <!-- Info Header -->
+                    <div class="card"
+                        style="margin-bottom:1rem; background:transparent; border:none; box-shadow:none; padding:0;">
+                        <div style="font-size:1.1rem; font-weight:600; margin-bottom:0.2rem;">Tarefa de Conferência de
+                            Checkout</div>
+                        <div style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.5rem;">Para realizar
+                            esta tarefa informe o código de barras de todos os item(s) e depois clique em Finalizar
+                        </div>
+                        <div
+                            style="font-size:0.75rem; color:var(--text-secondary); display:flex; gap:1rem; flex-wrap:wrap;">
+                            <span><span class="material-icons-round"
+                                    style="font-size:0.8rem; vertical-align:middle;">place</span> SEM LOCAL</span>
+                            <span>Distribuição: TRANSPORTADORA</span>
+                            <span>Número: 62125</span>
+                            <span>Data/Hora: 24/01/2026 08:19</span>
+                        </div>
+                    </div>
+
+                    <!-- Input Bar -->
+                    <div class="card" style="margin-bottom:1rem; border-left:4px solid var(--accent-primary);">
+                        <div class="card-body" style="padding:0.8rem; display:flex; align-items:center; gap:0.5rem;">
+                            <span class="material-icons-round"
+                                style="color:var(--text-secondary);">qr_code_scanner</span>
+                            <input type="text" placeholder="Informe o código de barras" class="form-input"
+                                style="flex:1; border:none; outline:none; font-size:1rem;" autofocus>
+                            <div
+                                style="background:var(--accent-success); color:white; padding:0.2rem 0.6rem; border-radius:4px; font-weight:bold;">
+                                1</div>
+                            <span class="material-icons-round"
+                                style="color:var(--text-secondary); cursor:pointer;">close</span>
+                        </div>
+                    </div>
+
+                    <!-- Split Views -->
+                    <div style="display:flex; gap:1rem; height:calc(100vh - 300px);">
+                        <!-- Esquerda: Pendentes -->
+                        <div style="flex:1; display:flex; flex-direction:column;">
+                            <div
+                                style="background:#fcd34d; color:#000; padding:0.4rem 0.8rem; border-radius:4px 4px 0 0; font-weight:600; font-size:0.85rem; display:flex; justify-content:space-between;">
+                                <span>Pendentes</span>
+                                <span>4 Item(s)</span>
+                            </div>
+                            <div class="card"
+                                style="flex:1; border-top-left-radius:0; border-top-right-radius:0; overflow-y:auto; padding:0;">
+                                <div style="padding:1rem; border-bottom:1px solid var(--border-color);">
+                                    <div style="font-weight:600; font-size:0.9rem;">CAMARA DE AR 17-2.50 LCT</div>
+                                    <div style="font-size:0.8rem; color:#3b82f6; font-weight:600;">8705</div>
+                                    <div style="height:2px; background:#e5e7eb; margin-top:0.5rem; width:100%;">
+                                        <div style="height:100%; width:0%; background:#3b82f6;"></div>
+                                    </div>
+                                </div>
+                                <div style="padding:1rem; border-bottom:1px solid var(--border-color);">
+                                    <div style="font-weight:600; font-size:0.9rem;">CAMARA DE AR 14/300 LCT</div>
+                                    <div style="font-size:0.8rem; color:#3b82f6; font-weight:600;">8707</div>
+                                </div>
+                                <div style="padding:1rem; border-bottom:1px solid var(--border-color);">
+                                    <div style="font-weight:600; font-size:0.9rem;">CAMARA DE AR 18/300 LCT</div>
+                                    <div style="font-size:0.8rem; color:#3b82f6; font-weight:600;">8708</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Direita: Conferidos -->
+                        <div style="flex:1; display:flex; flex-direction:column;">
+                            <div
+                                style="background:#22c55e; color:#fff; padding:0.4rem 0.8rem; border-radius:4px 4px 0 0; font-weight:600; font-size:0.85rem; display:flex; justify-content:space-between;">
+                                <span>Conferidos</span>
+                                <span>1 Item(s)</span>
+                            </div>
+                            <div class="card"
+                                style="flex:1; border-top-left-radius:0; border-top-right-radius:0; overflow-y:auto; padding:0;">
+                                <div
+                                    style="padding:1rem; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                                    <div>
+                                        <div style="font-weight:600; font-size:0.9rem;">CAMARA DE AR 17-2.50 LCT</div>
+                                        <div style="font-size:0.8rem; color:#3b82f6; font-weight:600;">8705</div>
+                                    </div>
+                                    <div style="text-align:right;">
+                                        <div style="font-size:0.8rem; margin-bottom:0.2rem;">Quantidade: 7</div>
+                                        <span class="material-icons-round"
+                                            style="font-size:1.1rem; color:var(--text-secondary); cursor:pointer;">delete</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
