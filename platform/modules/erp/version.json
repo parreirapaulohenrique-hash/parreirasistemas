@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.13.1",
+    "version": "2.13.2",
     "date": "2026-02-05",
-    "last_change": "Added Logistics Conference module screens",
+    "last_change": "Added Cash Settlement module screens",
     "build": "20260205.15"
 }

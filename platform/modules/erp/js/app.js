@@ -97,6 +97,8 @@ window.switchView = (viewName) => {
         'logisticaMapa': 'Emissão de Mapa de Separação',
         'logisticaConferenciaLista': 'Lista de Conferência',
         'logisticaConferenciaDetalhe': 'Execução de Conferência',
+        'acertoCaixaLista': 'Acerto de Caixas (Interno / Externo)',
+        'acertoCaixaDetalhe': 'Acerto de Caixas (Detalhe)',
         'groups': 'Gestão de Grupos',
         'accountPlans': 'Plano de Contas',
         'billing': 'Cadastro de Cobrança',
