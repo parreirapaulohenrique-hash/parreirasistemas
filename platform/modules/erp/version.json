@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.12.0",
+    "version": "2.12.1",
     "date": "2026-02-04",
-    "last_change": "Reorganized sales screen layout to fit at 100% zoom without scrolling",
-    "build": "20260204.14"
+    "last_change": "Sales screen horizontal layout - maximized grid space",
+    "build": "20260204.15"
 }

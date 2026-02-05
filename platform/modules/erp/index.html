@@ -209,311 +209,260 @@
 
                 <!-- View: Sales (Pedido de Venda Interna) -->
                 <div id="view-sales" class="page-content" style="display:none;">
-                    <!-- Action Buttons + Order Header in Same Row -->
-                    <div class="card" style="margin-bottom:0.5rem;">
-                        <div class="card-body" style="padding:0.5rem 0.75rem;">
-                            <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                    <!-- Header: Buttons + Totals -->
+                    <div class="card" style="margin-bottom:0.4rem;">
+                        <div class="card-body" style="padding:0.4rem 0.6rem;">
+                            <div style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap;">
                                 <button class="btn btn-secondary" onclick="buscarVendas()"
-                                    style="padding:0.4rem 0.6rem; font-size:0.8rem;">
-                                    <span class="material-icons-round" style="font-size:0.9rem;">search</span> Buscar
+                                    style="padding:0.3rem 0.5rem; font-size:0.75rem;">
+                                    <span class="material-icons-round" style="font-size:0.85rem;">search</span> Buscar
                                 </button>
                                 <button class="btn btn-primary" onclick="novaVenda()"
-                                    style="padding:0.4rem 0.6rem; font-size:0.8rem;">
-                                    <span class="material-icons-round" style="font-size:0.9rem;">add</span> Nova [F1]
+                                    style="padding:0.3rem 0.5rem; font-size:0.75rem;">
+                                    <span class="material-icons-round" style="font-size:0.85rem;">add</span> Nova [F1]
                                 </button>
                                 <button class="btn btn-primary" onclick="gravarVenda()"
-                                    style="padding:0.4rem 0.6rem; font-size:0.8rem; background:var(--accent-success);">
-                                    <span class="material-icons-round" style="font-size:0.9rem;">save</span> Gravar [F2]
+                                    style="padding:0.3rem 0.5rem; font-size:0.75rem; background:var(--accent-success);">
+                                    <span class="material-icons-round" style="font-size:0.85rem;">save</span> Gravar
+                                    [F2]
                                 </button>
                                 <button class="btn btn-secondary" onclick="cancelarVenda()"
-                                    style="padding:0.4rem 0.6rem; font-size:0.8rem; border-color:#ef4444; color:#ef4444;">
-                                    <span class="material-icons-round" style="font-size:0.9rem;">cancel</span> Cancelar
+                                    style="padding:0.3rem 0.5rem; font-size:0.75rem; border-color:#ef4444; color:#ef4444;">
+                                    <span class="material-icons-round" style="font-size:0.85rem;">cancel</span> Cancelar
                                     [F4]
                                 </button>
-                                <div style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
-                                    <span style="font-size:0.75rem; color:var(--text-secondary);">Pedido:</span>
+                                <div
+                                    style="margin-left:auto; display:flex; gap:0.6rem; align-items:center; font-size:0.75rem;">
+                                    <span style="color:var(--text-secondary);">Pedido:</span>
                                     <span id="vendaNumPedido"
-                                        style="font-weight:700; background:var(--accent-success); color:#fff; padding:0.2rem 0.6rem; border-radius:4px;">0</span>
+                                        style="font-weight:700; background:var(--accent-success); color:#fff; padding:0.15rem 0.5rem; border-radius:4px;">0</span>
+                                    <span style="color:var(--text-secondary);">Itens:</span>
+                                    <span id="vendaQtItens" style="font-weight:600;">0</span>
+                                    <span style="color:var(--text-secondary);">Peso:</span>
+                                    <span id="vendaPesoTotal" style="font-weight:600;">0,00</span>
+                                    <span
+                                        style="border-left:1px solid var(--border-color); padding-left:0.5rem; color:var(--text-secondary);">Desc:</span>
+                                    <input type="text" id="vendaDescontoPct" class="form-input" value="0"
+                                        style="width:40px; padding:0.2rem; font-size:0.75rem; text-align:right;"
+                                        placeholder="%">
+                                    <span
+                                        style="font-weight:700; font-size:0.9rem; color:var(--accent-success);">TOTAL:</span>
+                                    <span id="vendaTotalGeral"
+                                        style="font-size:1rem; font-weight:700; color:var(--accent-success);">0,00</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Main Content: Three Columns -->
-                    <div style="display:flex; gap:0.5rem;">
-                        <!-- Column 1: Client & Payment Info -->
-                        <div class="card" style="width:280px; flex-shrink:0;">
-                            <div class="card-body" style="padding:0.5rem;">
-                                <!-- Row 1: Data, Empresa, Operação -->
-                                <div style="display:flex; gap:0.4rem; margin-bottom:0.4rem;">
-                                    <div style="flex:1;">
-                                        <label
-                                            style="display:block; font-size:0.65rem; color:var(--text-secondary);">Data</label>
-                                        <input type="date" id="vendaData" class="form-input"
-                                            style="width:100%; padding:0.3rem; font-size:0.8rem;">
-                                    </div>
-                                    <div style="width:45px;">
-                                        <label
-                                            style="display:block; font-size:0.65rem; color:var(--text-secondary);">Emp.</label>
-                                        <select id="vendaEmpresa" class="form-input"
-                                            style="width:100%; padding:0.3rem; font-size:0.8rem;">
-                                            <option>01</option>
-                                            <option>02</option>
-                                        </select>
-                                    </div>
-                                    <div style="flex:1;">
-                                        <label
-                                            style="display:block; font-size:0.65rem; color:var(--text-secondary);">Operação</label>
-                                        <select id="vendaOperacao" class="form-input"
-                                            style="width:100%; padding:0.3rem; font-size:0.75rem;">
-                                            <option>Externa</option>
-                                            <option>Interna</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <!-- Row 2: Cliente -->
-                                <div style="margin-bottom:0.4rem;">
+                    <!-- Row 1: Client + Payment Info (all inline) -->
+                    <div class="card" style="margin-bottom:0.4rem;">
+                        <div class="card-body" style="padding:0.4rem 0.6rem;">
+                            <div
+                                style="display:flex; gap:0.5rem; align-items:flex-end; flex-wrap:wrap; font-size:0.75rem;">
+                                <div style="width:100px;">
                                     <label
-                                        style="display:block; font-size:0.65rem; color:var(--text-secondary);">Cliente</label>
-                                    <div style="display:flex; gap:0.25rem;">
-                                        <input type="text" id="vendaCodCliente" class="form-input" placeholder="Cód"
-                                            style="width:50px; padding:0.3rem; font-size:0.8rem;">
-                                        <button class="btn btn-secondary" onclick="buscarCliente()"
-                                            style="padding:0.3rem;"><span class="material-icons-round"
-                                                style="font-size:0.9rem;">search</span></button>
-                                        <input type="text" id="vendaNomeCliente" class="form-input" placeholder="Nome"
-                                            style="flex:1; padding:0.3rem; font-size:0.8rem;" readonly>
-                                    </div>
+                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Data</label>
+                                    <input type="date" id="vendaData" class="form-input"
+                                        style="width:100%; padding:0.25rem; font-size:0.75rem;">
                                 </div>
-                                <!-- Row 3: CPF/CNPJ, Limite, Crédito -->
-                                <div style="display:flex; gap:0.4rem; margin-bottom:0.4rem;">
-                                    <div style="flex:2;">
-                                        <label
-                                            style="display:block; font-size:0.65rem; color:var(--text-secondary);">CPF/CNPJ</label>
-                                        <input type="text" id="vendaCpfCnpj" class="form-input"
-                                            style="width:100%; padding:0.3rem; font-size:0.75rem;" readonly>
-                                    </div>
-                                    <div style="flex:1;">
-                                        <label
-                                            style="display:block; font-size:0.65rem; color:var(--text-secondary);">Limite</label>
-                                        <input type="text" id="vendaLimite" class="form-input" value="0,00"
-                                            style="width:100%; padding:0.3rem; font-size:0.75rem; text-align:right;"
-                                            readonly>
-                                    </div>
-                                    <div style="flex:1;">
-                                        <label
-                                            style="display:block; font-size:0.65rem; color:var(--text-secondary);">Crédito</label>
-                                        <input type="text" id="vendaCredito" class="form-input" value="0,00"
-                                            style="width:100%; padding:0.3rem; font-size:0.75rem; text-align:right; color:var(--accent-success);"
-                                            readonly>
-                                    </div>
-                                </div>
-                                <!-- Row 4: Vendedor, Tipo -->
-                                <div style="display:flex; gap:0.4rem; margin-bottom:0.4rem;">
-                                    <div style="width:45px;">
-                                        <label
-                                            style="display:block; font-size:0.65rem; color:var(--text-secondary);">Cód</label>
-                                        <input type="text" id="vendaCodVendedor" class="form-input"
-                                            style="width:100%; padding:0.3rem; font-size:0.8rem;">
-                                    </div>
-                                    <div style="flex:1;">
-                                        <label
-                                            style="display:block; font-size:0.65rem; color:var(--text-secondary);">Vendedor</label>
-                                        <select id="vendaVendedor" class="form-input"
-                                            style="width:100%; padding:0.3rem; font-size:0.75rem;">
-                                            <option>Selecione...</option>
-                                        </select>
-                                    </div>
-                                    <div style="width:35px;">
-                                        <label
-                                            style="display:block; font-size:0.65rem; color:var(--text-secondary);">Tipo</label>
-                                        <select id="vendaTipo" class="form-input"
-                                            style="width:100%; padding:0.3rem; font-size:0.8rem;">
-                                            <option>1</option>
-                                            <option>2</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <!-- Row 5: Cobrança, Forma Pagto -->
-                                <div style="display:flex; gap:0.4rem; margin-bottom:0.4rem;">
-                                    <div style="width:45px;">
-                                        <label
-                                            style="display:block; font-size:0.65rem; color:var(--text-secondary);">Cobr.</label>
-                                        <select id="vendaCobranca" class="form-input"
-                                            style="width:100%; padding:0.3rem; font-size:0.8rem;">
-                                            <option>D</option>
-                                            <option>B</option>
-                                        </select>
-                                    </div>
-                                    <div style="flex:1;">
-                                        <label
-                                            style="display:block; font-size:0.65rem; color:var(--text-secondary);">Forma
-                                            Pagamento</label>
-                                        <select id="vendaFormaPagto" class="form-input"
-                                            style="width:100%; padding:0.3rem; font-size:0.75rem;">
-                                            <option>DINHEIRO</option>
-                                            <option>CARTÃO</option>
-                                            <option>PIX</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <!-- Row 6: Transportadora -->
-                                <div>
+                                <div style="width:40px;">
                                     <label
-                                        style="display:block; font-size:0.65rem; color:var(--text-secondary);">Transportadora</label>
+                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Emp</label>
+                                    <select id="vendaEmpresa" class="form-input"
+                                        style="width:100%; padding:0.25rem; font-size:0.75rem;">
+                                        <option>01</option>
+                                        <option>02</option>
+                                    </select>
+                                </div>
+                                <div style="width:70px;">
+                                    <label
+                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Operação</label>
+                                    <select id="vendaOperacao" class="form-input"
+                                        style="width:100%; padding:0.25rem; font-size:0.75rem;">
+                                        <option>Externa</option>
+                                        <option>Interna</option>
+                                    </select>
+                                </div>
+                                <div style="width:50px;">
+                                    <label
+                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Cliente</label>
+                                    <input type="text" id="vendaCodCliente" class="form-input" placeholder="Cód"
+                                        style="width:100%; padding:0.25rem; font-size:0.75rem;">
+                                </div>
+                                <button class="btn btn-secondary" onclick="buscarCliente()"
+                                    style="padding:0.25rem;"><span class="material-icons-round"
+                                        style="font-size:0.8rem;">search</span></button>
+                                <div style="flex:1; min-width:120px;">
+                                    <label style="display:block; font-size:0.6rem; color:var(--text-secondary);">Nome do
+                                        Cliente</label>
+                                    <input type="text" id="vendaNomeCliente" class="form-input"
+                                        style="width:100%; padding:0.25rem; font-size:0.75rem;" readonly>
+                                </div>
+                                <div style="width:100px;">
+                                    <label
+                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">CPF/CNPJ</label>
+                                    <input type="text" id="vendaCpfCnpj" class="form-input"
+                                        style="width:100%; padding:0.25rem; font-size:0.75rem;" readonly>
+                                </div>
+                                <div style="width:60px;">
+                                    <label
+                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Limite</label>
+                                    <input type="text" id="vendaLimite" class="form-input" value="0,00"
+                                        style="width:100%; padding:0.25rem; font-size:0.75rem; text-align:right;"
+                                        readonly>
+                                </div>
+                                <div style="width:60px;">
+                                    <label
+                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Crédito</label>
+                                    <input type="text" id="vendaCredito" class="form-input" value="0,00"
+                                        style="width:100%; padding:0.25rem; font-size:0.75rem; text-align:right; color:var(--accent-success);"
+                                        readonly>
+                                </div>
+                                <div style="width:40px;">
+                                    <label
+                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Vend</label>
+                                    <input type="text" id="vendaCodVendedor" class="form-input"
+                                        style="width:100%; padding:0.25rem; font-size:0.75rem;">
+                                </div>
+                                <div style="width:100px;">
+                                    <label
+                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Vendedor</label>
+                                    <select id="vendaVendedor" class="form-input"
+                                        style="width:100%; padding:0.25rem; font-size:0.75rem;">
+                                        <option>Selecione...</option>
+                                    </select>
+                                </div>
+                                <div style="width:35px;">
+                                    <label
+                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Tipo</label>
+                                    <select id="vendaTipo" class="form-input"
+                                        style="width:100%; padding:0.25rem; font-size:0.75rem;">
+                                        <option>1</option>
+                                        <option>2</option>
+                                    </select>
+                                </div>
+                                <div style="width:35px;">
+                                    <label
+                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Cobr</label>
+                                    <select id="vendaCobranca" class="form-input"
+                                        style="width:100%; padding:0.25rem; font-size:0.75rem;">
+                                        <option>D</option>
+                                        <option>B</option>
+                                    </select>
+                                </div>
+                                <div style="width:80px;">
+                                    <label
+                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Pagamento</label>
+                                    <select id="vendaFormaPagto" class="form-input"
+                                        style="width:100%; padding:0.25rem; font-size:0.75rem;">
+                                        <option>DINHEIRO</option>
+                                        <option>CARTÃO</option>
+                                        <option>PIX</option>
+                                    </select>
+                                </div>
+                                <div style="width:100px;">
+                                    <label
+                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Transportadora</label>
                                     <select id="vendaTransportadora" class="form-input"
-                                        style="width:100%; padding:0.3rem; font-size:0.75rem;">
+                                        style="width:100%; padding:0.25rem; font-size:0.75rem;">
                                         <option>Selecione...</option>
                                     </select>
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Column 2: Items Entry + Grid -->
-                        <div class="card" style="flex:1;">
-                            <div class="card-body" style="padding:0.5rem;">
-                                <!-- Item Entry Row -->
-                                <div style="display:flex; gap:0.4rem; margin-bottom:0.4rem; align-items:flex-end;">
-                                    <div style="width:50px;">
-                                        <label
-                                            style="display:block; font-size:0.65rem; color:var(--text-secondary);">Ret.</label>
-                                        <select id="itemRetira" class="form-input"
-                                            style="width:100%; padding:0.3rem; font-size:0.8rem;">
-                                            <option>01</option>
-                                            <option>02</option>
-                                        </select>
-                                    </div>
-                                    <div style="width:70px;">
-                                        <label
-                                            style="display:block; font-size:0.65rem; color:var(--text-secondary);">Código</label>
-                                        <div style="display:flex; gap:0.15rem;">
-                                            <input type="text" id="itemCodigo" class="form-input"
-                                                style="flex:1; padding:0.3rem; font-size:0.8rem;">
-                                            <button class="btn btn-secondary" onclick="buscarProduto()"
-                                                style="padding:0.2rem;"><span class="material-icons-round"
-                                                    style="font-size:0.85rem;">search</span></button>
-                                        </div>
-                                    </div>
-                                    <div style="flex:1;">
-                                        <label
-                                            style="display:block; font-size:0.65rem; color:var(--text-secondary);">Produto</label>
-                                        <input type="text" id="itemProduto" class="form-input"
-                                            style="width:100%; padding:0.3rem; font-size:0.8rem;" readonly>
-                                    </div>
-                                    <div style="width:55px;">
-                                        <label
-                                            style="display:block; font-size:0.65rem; color:var(--text-secondary);">Embal.</label>
-                                        <input type="text" id="itemEmbalagem" class="form-input"
-                                            style="width:100%; padding:0.3rem; font-size:0.8rem;" readonly>
-                                    </div>
-                                    <div style="width:60px;">
-                                        <label
-                                            style="display:block; font-size:0.65rem; color:var(--text-secondary);">Qtd</label>
-                                        <input type="text" id="itemQtd" class="form-input" value="0"
-                                            style="width:100%; padding:0.3rem; font-size:0.8rem; text-align:right;">
-                                    </div>
-                                    <div style="width:55px;">
-                                        <label
-                                            style="display:block; font-size:0.65rem; color:var(--text-secondary);">Desc%</label>
-                                        <input type="text" id="itemDesconto" class="form-input" value="0"
-                                            style="width:100%; padding:0.3rem; font-size:0.8rem; text-align:right;">
-                                    </div>
-                                    <div style="width:70px;">
-                                        <label
-                                            style="display:block; font-size:0.65rem; color:var(--text-secondary);">Preço</label>
-                                        <input type="text" id="itemPreco" class="form-input" value="0,00"
-                                            style="width:100%; padding:0.3rem; font-size:0.8rem; text-align:right;">
-                                    </div>
-                                    <div style="width:75px;">
-                                        <label
-                                            style="display:block; font-size:0.65rem; color:var(--text-secondary);">Parcial</label>
-                                        <input type="text" id="itemTotalParcial" class="form-input" value="0,00"
-                                            style="width:100%; padding:0.3rem; font-size:0.8rem; text-align:right; background:var(--bg-secondary);"
-                                            readonly>
-                                    </div>
-                                    <button class="btn btn-primary" onclick="adicionarItem()"
-                                        style="padding:0.35rem 0.6rem; background:var(--accent-success);">
-                                        <span class="material-icons-round" style="font-size:1rem;">add</span>
-                                    </button>
+                    <!-- Row 2: Item Entry -->
+                    <div class="card" style="margin-bottom:0.4rem;">
+                        <div class="card-body" style="padding:0.4rem 0.6rem;">
+                            <div style="display:flex; gap:0.5rem; align-items:flex-end; font-size:0.75rem;">
+                                <div style="width:45px;">
+                                    <label
+                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Ret</label>
+                                    <select id="itemRetira" class="form-input"
+                                        style="width:100%; padding:0.25rem; font-size:0.75rem;">
+                                        <option>01</option>
+                                        <option>02</option>
+                                    </select>
                                 </div>
-                                <!-- Items Grid -->
-                                <div
-                                    style="overflow-x:auto; max-height:calc(100vh - 340px); min-height:150px; border:1px solid var(--border-color); border-radius:4px;">
-                                    <table class="data-table" style="font-size:0.75rem;">
-                                        <thead style="position:sticky; top:0; background:var(--bg-card);">
-                                            <tr>
-                                                <th style="width:30px;">Ret</th>
-                                                <th style="width:30px;">Seq</th>
-                                                <th style="width:55px;">Código</th>
-                                                <th>Descrição do Produto</th>
-                                                <th style="width:50px;">Emb.</th>
-                                                <th style="width:30px;">Un</th>
-                                                <th style="width:45px;">Qtd</th>
-                                                <th style="width:40px;">D%</th>
-                                                <th style="width:60px;">P.Neg</th>
-                                                <th style="width:60px;">V.Unt</th>
-                                                <th style="width:65px;">Parcial</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="itensVendaTableBody"><!-- JS --></tbody>
-                                    </table>
+                                <div style="width:60px;">
+                                    <label
+                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Código</label>
+                                    <input type="text" id="itemCodigo" class="form-input"
+                                        style="width:100%; padding:0.25rem; font-size:0.75rem;">
                                 </div>
+                                <button class="btn btn-secondary" onclick="buscarProduto()"
+                                    style="padding:0.25rem;"><span class="material-icons-round"
+                                        style="font-size:0.8rem;">search</span></button>
+                                <div style="flex:1; min-width:150px;">
+                                    <label
+                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Produto</label>
+                                    <input type="text" id="itemProduto" class="form-input"
+                                        style="width:100%; padding:0.25rem; font-size:0.75rem;" readonly>
+                                </div>
+                                <div style="width:55px;">
+                                    <label
+                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Embal</label>
+                                    <input type="text" id="itemEmbalagem" class="form-input"
+                                        style="width:100%; padding:0.25rem; font-size:0.75rem;" readonly>
+                                </div>
+                                <div style="width:55px;">
+                                    <label
+                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Qtd</label>
+                                    <input type="text" id="itemQtd" class="form-input" value="0"
+                                        style="width:100%; padding:0.25rem; font-size:0.75rem; text-align:right;">
+                                </div>
+                                <div style="width:50px;">
+                                    <label
+                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Desc%</label>
+                                    <input type="text" id="itemDesconto" class="form-input" value="0"
+                                        style="width:100%; padding:0.25rem; font-size:0.75rem; text-align:right;">
+                                </div>
+                                <div style="width:65px;">
+                                    <label
+                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Preço</label>
+                                    <input type="text" id="itemPreco" class="form-input" value="0,00"
+                                        style="width:100%; padding:0.25rem; font-size:0.75rem; text-align:right;">
+                                </div>
+                                <div style="width:70px;">
+                                    <label
+                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Parcial</label>
+                                    <input type="text" id="itemTotalParcial" class="form-input" value="0,00"
+                                        style="width:100%; padding:0.25rem; font-size:0.75rem; text-align:right; background:var(--bg-secondary);"
+                                        readonly>
+                                </div>
+                                <button class="btn btn-primary" onclick="adicionarItem()"
+                                    style="padding:0.3rem 0.6rem; background:var(--accent-success);">
+                                    <span class="material-icons-round" style="font-size:0.9rem;">add</span> Inserir
+                                </button>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Column 3: Totals -->
-                        <div class="card" style="width:140px; flex-shrink:0;">
-                            <div class="card-body" style="padding:0.5rem;">
-                                <div style="display:flex; flex-direction:column; gap:0.4rem;">
-                                    <div>
-                                        <label
-                                            style="display:block; font-size:0.65rem; color:var(--text-secondary);">Qt.Itens</label>
-                                        <div id="vendaQtItens"
-                                            style="font-weight:600; font-size:0.9rem; text-align:center; background:var(--bg-secondary); padding:0.25rem; border-radius:4px;">
-                                            0</div>
-                                    </div>
-                                    <div>
-                                        <label
-                                            style="display:block; font-size:0.65rem; color:var(--text-secondary);">Peso
-                                            Total</label>
-                                        <div id="vendaPesoTotal"
-                                            style="font-weight:600; font-size:0.9rem; text-align:center; background:var(--bg-secondary); padding:0.25rem; border-radius:4px;">
-                                            0,00</div>
-                                    </div>
-                                    <div>
-                                        <label
-                                            style="display:block; font-size:0.65rem; color:var(--text-secondary);">Créd.Troca</label>
-                                        <div id="vendaCredTroca"
-                                            style="font-weight:600; font-size:0.9rem; text-align:center; background:var(--bg-secondary); padding:0.25rem; border-radius:4px;">
-                                            0,00</div>
-                                    </div>
-                                    <div>
-                                        <label
-                                            style="display:block; font-size:0.65rem; color:var(--text-secondary);">Subtotal</label>
-                                        <input type="text" id="vendaValorFinal" class="form-input" value="0,00"
-                                            style="width:100%; padding:0.25rem; font-size:0.85rem; text-align:right;">
-                                    </div>
-                                    <div>
-                                        <label
-                                            style="display:block; font-size:0.65rem; color:var(--text-secondary);">Desconto</label>
-                                        <div style="display:flex; gap:0.2rem;">
-                                            <input type="text" id="vendaDescontoTotal" class="form-input" value=""
-                                                style="flex:1; padding:0.25rem; font-size:0.8rem; text-align:right;">
-                                            <input type="text" id="vendaDescontoPct" class="form-input" value="0"
-                                                style="width:35px; padding:0.25rem; font-size:0.8rem; text-align:right;"
-                                                placeholder="%">
-                                        </div>
-                                    </div>
-                                    <div
-                                        style="border-top:1px solid var(--border-color); padding-top:0.4rem; margin-top:0.2rem;">
-                                        <label
-                                            style="display:block; font-size:0.7rem; color:var(--text-secondary);">TOTAL
-                                            GERAL</label>
-                                        <div id="vendaTotalGeral"
-                                            style="font-size:1.1rem; font-weight:700; color:var(--accent-success); text-align:center; background:var(--bg-secondary); padding:0.3rem; border-radius:4px;">
-                                            0,00</div>
-                                    </div>
-                                </div>
+                    <!-- Grid: Max Space -->
+                    <div class="card" style="flex:1;">
+                        <div class="card-body" style="padding:0.4rem;">
+                            <div
+                                style="overflow:auto; height:calc(100vh - 260px); border:1px solid var(--border-color); border-radius:4px;">
+                                <table class="data-table" style="font-size:0.75rem;">
+                                    <thead style="position:sticky; top:0; background:var(--bg-card); z-index:1;">
+                                        <tr>
+                                            <th style="width:35px;">Ret</th>
+                                            <th style="width:35px;">Seq</th>
+                                            <th style="width:60px;">Código</th>
+                                            <th>Descrição do Produto</th>
+                                            <th style="width:55px;">Embal</th>
+                                            <th style="width:35px;">Un</th>
+                                            <th style="width:50px;">Qtd</th>
+                                            <th style="width:45px;">D%</th>
+                                            <th style="width:70px;">P.Negoc</th>
+                                            <th style="width:70px;">Vl.Unit</th>
+                                            <th style="width:75px;">Parcial</th>
+                                            <th style="width:40px;">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="itensVendaTableBody"><!-- JS --></tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
