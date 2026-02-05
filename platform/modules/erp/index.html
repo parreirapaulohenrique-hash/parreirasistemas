@@ -4681,10 +4681,10 @@
                 <div id="view-acertoCaixaLista" class="page-content" style="display:none;">
                     <!-- Actions Bar -->
                     <div class="card"
-                        style="margin-bottom:0.5rem; background:linear-gradient(to bottom, #eff6ff, #dbeafe);">
+                        style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
                         <div class="card-body" style="padding:0.5rem; display:flex; gap:0.5rem;">
                             <button class="btn"
-                                style="background:#fb923c; color:white; font-weight:bold; border:1px solid #f97316;">Buscar</button>
+                                style="background:#fb923c; color:white; font-weight:bold; border:none;">Buscar</button>
                             <button class="btn btn-secondary">Desdobrar</button>
                             <button class="btn btn-secondary">Imprimir <span class="material-icons-round"
                                     style="font-size:1rem;">expand_more</span></button>
@@ -4695,19 +4695,25 @@
                     </div>
 
                     <!-- Filters -->
-                    <div class="card" style="margin-bottom:0.5rem;">
+                    <div class="card"
+                        style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
                         <div class="card-body" style="padding:0.5rem 0.8rem; font-size:0.75rem;">
                             <!-- Row 1 -->
                             <div style="display:flex; gap:1rem; margin-bottom:0.4rem; align-items:flex-end;">
-                                <div style="width:50px;"><label style="display:block;">Empresa</label><input type="text"
-                                        value="01" class="form-input" style="padding:0.2rem;"></div>
-                                <div style="width:60px;"><label style="display:block;">Nº Carreg.</label><input
-                                        type="text" value="0" class="form-input" style="padding:0.2rem;"></div>
-                                <div style="width:100px;"><label style="display:block;">Data Emissão</label><input
+                                <div style="width:50px;"><label
+                                        style="display:block; color:var(--text-secondary);">Empresa</label><input
+                                        type="text" value="01" class="form-input" style="padding:0.2rem;"></div>
+                                <div style="width:60px;"><label style="display:block; color:var(--text-secondary);">Nº
+                                        Carreg.</label><input type="text" value="0" class="form-input"
+                                        style="padding:0.2rem;"></div>
+                                <div style="width:100px;"><label
+                                        style="display:block; color:var(--text-secondary);">Data Emissão</label><input
                                         type="date" class="form-input" style="padding:0.2rem;"></div>
-                                <div style="width:100px;"><label style="display:block;">Cobrança</label><input
+                                <div style="width:100px;"><label
+                                        style="display:block; color:var(--text-secondary);">Cobrança</label><input
                                         type="text" class="form-input" style="padding:0.2rem;"></div>
-                                <div style="width:250px;"><label style="display:block;">Cliente</label>
+                                <div style="width:250px;"><label
+                                        style="display:block; color:var(--text-secondary);">Cliente</label>
                                     <div style="display:flex; gap:0.2rem;">
                                         <input type="text" placeholder="Cód" style="width:50px; padding:0.2rem;"
                                             class="form-input">
@@ -4715,29 +4721,34 @@
                                             class="form-input">
                                     </div>
                                 </div>
-                                <div style="flex:1;"><label style="display:block;">Origem da Venda</label><select
-                                        class="form-input" style="padding:0.2rem;">
+                                <div style="flex:1;"><label style="display:block; color:var(--text-secondary);">Origem
+                                        da Venda</label><select class="form-input" style="padding:0.2rem;">
                                         <option>[ Todos ]</option>
                                     </select></div>
                             </div>
                             <!-- Row 2 -->
                             <div style="display:flex; gap:1rem; align-items:flex-end;">
-                                <div style="width:60px;"><label style="display:block;">Nº Nota</label><input type="text"
-                                        value="0" class="form-input" style="padding:0.2rem;"></div>
-                                <div style="width:80px;"><label style="display:block;">Valor</label><input type="text"
-                                        value="0,00" class="form-input" style="padding:0.2rem;"></div>
-                                <div style="width:80px;"><label style="display:block;">Nº Pedido</label><input
-                                        type="text" value="0" class="form-input" style="padding:0.2rem;"></div>
-                                <div style="width:200px;"><label style="display:block;">Parceiro</label><select
+                                <div style="width:60px;"><label style="display:block; color:var(--text-secondary);">Nº
+                                        Nota</label><input type="text" value="0" class="form-input"
+                                        style="padding:0.2rem;"></div>
+                                <div style="width:80px;"><label
+                                        style="display:block; color:var(--text-secondary);">Valor</label><input
+                                        type="text" value="0,00" class="form-input" style="padding:0.2rem;"></div>
+                                <div style="width:80px;"><label style="display:block; color:var(--text-secondary);">Nº
+                                        Pedido</label><input type="text" value="0" class="form-input"
+                                        style="padding:0.2rem;"></div>
+                                <div style="width:200px;"><label
+                                        style="display:block; color:var(--text-secondary);">Parceiro</label><select
                                         class="form-input" style="padding:0.2rem;">
                                         <option>[ Acerto ]</option>
                                     </select></div>
-                                <div style="width:100px;"><label style="display:block;">Nº Turno</label><select
-                                        class="form-input" style="padding:0.2rem;">
+                                <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Nº
+                                        Turno</label><select class="form-input" style="padding:0.2rem;">
                                         <option></option>
                                     </select></div>
-                                <div style="flex:1;"><label style="display:block;">Listar movimento</label><select
-                                        class="form-input" style="padding:0.2rem; font-weight:bold;">
+                                <div style="flex:1;"><label style="display:block; color:var(--text-secondary);">Listar
+                                        movimento</label><select class="form-input"
+                                        style="padding:0.2rem; font-weight:bold;">
                                         <option>Movimento diário [ Geral ]</option>
                                     </select></div>
                             </div>
@@ -4745,11 +4756,11 @@
                     </div>
 
                     <!-- Grid -->
-                    <div class="card" style="flex:1; overflow:hidden;">
+                    <div class="card"
+                        style="flex:1; overflow:hidden; background:var(--bg-card); border:1px solid var(--border-color);">
                         <div class="card-body" style="padding:0; height:calc(100vh - 350px); overflow:auto;">
-                            <table class="data-table" style="font-size:0.75rem; white-space:nowrap;">
-                                <thead
-                                    style="background:linear-gradient(to bottom, #f3f4f6, #e5e7eb); position:sticky; top:0;">
+                            <table class="data-table" style="font-size:0.75rem; white-space:nowrap; width:100%;">
+                                <thead style="background:var(--bg-secondary); position:sticky; top:0;">
                                     <tr>
                                         <th style="width:30px;"></th>
                                         <th style="width:30px;">Imp.</th>
@@ -4768,68 +4779,71 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <!-- Rows mock replicating image -->
-                                    <tr onclick="switchView('acertoCaixaDetalhe')" style="cursor:pointer;">
+                                    <tr onclick="switchView('acertoCaixaDetalhe')"
+                                        style="cursor:pointer; border-bottom:1px solid var(--border-color);">
                                         <td>👁️</td>
                                         <td>🖨️</td>
                                         <td>✔️</td>
                                         <td>01</td>
                                         <td>1</td>
-                                        <td style="color:blue;">49657</td>
+                                        <td style="color:var(--accent-primary);">49657</td>
                                         <td>1</td>
                                         <td>1556</td>
                                         <td>A C F DE CARVALHO COM. DE PCS</td>
                                         <td>64341</td>
                                         <td>05/02/2026</td>
-                                        <td style="color:blue;">101,43</td>
+                                        <td style="color:var(--accent-primary);">101,43</td>
                                         <td>0,00</td>
                                         <td>14 MAB</td>
                                     </tr>
-                                    <tr onclick="switchView('acertoCaixaDetalhe')" style="cursor:pointer;">
+                                    <tr onclick="switchView('acertoCaixaDetalhe')"
+                                        style="cursor:pointer; border-bottom:1px solid var(--border-color);">
                                         <td>👁️</td>
                                         <td>🖨️</td>
                                         <td></td>
                                         <td>01</td>
                                         <td>1</td>
-                                        <td style="color:blue;">49670</td>
+                                        <td style="color:var(--accent-primary);">49670</td>
                                         <td>1</td>
                                         <td>1556</td>
                                         <td>A C F DE CARVALHO COM. DE PCS</td>
                                         <td>64368</td>
                                         <td>05/02/2026</td>
-                                        <td style="color:blue;">130,01</td>
+                                        <td style="color:var(--accent-primary);">130,01</td>
                                         <td>0,00</td>
                                         <td>4 EDU</td>
                                     </tr>
-                                    <tr onclick="switchView('acertoCaixaDetalhe')" style="cursor:pointer;">
+                                    <tr onclick="switchView('acertoCaixaDetalhe')"
+                                        style="cursor:pointer; border-bottom:1px solid var(--border-color);">
                                         <td>👁️</td>
                                         <td>🖨️</td>
                                         <td>✔️</td>
                                         <td>01</td>
                                         <td>1</td>
-                                        <td style="color:blue;">49671</td>
+                                        <td style="color:var(--accent-primary);">49671</td>
                                         <td>1</td>
                                         <td>1556</td>
                                         <td>A C F DE CARVALHO COM. DE PCS</td>
                                         <td>64369</td>
                                         <td>05/02/2026</td>
-                                        <td style="color:blue;">190,00</td>
+                                        <td style="color:var(--accent-primary);">190,00</td>
                                         <td>0,00</td>
                                         <td>4 EDU</td>
                                     </tr>
-                                    <tr onclick="switchView('acertoCaixaDetalhe')" style="cursor:pointer;">
+                                    <tr onclick="switchView('acertoCaixaDetalhe')"
+                                        style="cursor:pointer; border-bottom:1px solid var(--border-color);">
                                         <td>👁️</td>
                                         <td>🖨️</td>
                                         <td>✔️</td>
                                         <td>01</td>
                                         <td>1</td>
-                                        <td style="color:blue;">49688</td>
+                                        <td style="color:var(--accent-primary);">49688</td>
                                         <td>1</td>
                                         <td>1556</td>
                                         <td>A C F DE CARVALHO COM. DE PCS</td>
                                         <td>64275</td>
                                         <td>05/02/2026</td>
-                                        <td style="color:blue;">646,08</td>
+                                        <td style="color:var(--accent-primary);">646,08</td>
                                         <td>0,00</td>
                                         <td>29 NIL</td>
                                     </tr>
@@ -4839,22 +4853,24 @@
                     </div>
 
                     <!-- Footer Totals -->
-                    <div class="card" style="margin-top:0.5rem; background:#e0f2fe; border:1px solid #bae6fd;">
+                    <div class="card"
+                        style="margin-top:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
                         <div class="card-body"
-                            style="padding:0.4rem; display:flex; gap:1rem; flex-wrap:wrap; font-size:0.75rem; font-weight:bold;">
+                            style="padding:0.4rem; display:flex; gap:1rem; flex-wrap:wrap; font-size:0.75rem; font-weight:bold; color:var(--text-primary);">
                             <div>Qt. Títulos: <span
-                                    style="background:white; border:1px solid #ccc; padding:0 0.4rem;">150</span></div>
+                                    style="background:var(--bg-secondary); border:1px solid var(--border-color); padding:0 0.4rem; border-radius:4px;">150</span>
+                            </div>
                             <div>Valor Listado: <span
-                                    style="background:white; border:1px solid #ccc; padding:0 0.4rem;">51.454,38</span>
+                                    style="background:var(--bg-secondary); border:1px solid var(--border-color); padding:0 0.4rem; border-radius:4px;">51.454,38</span>
                             </div>
                             <div>Vl. Confirmados: <span
-                                    style="background:white; border:1px solid #ccc; padding:0 0.4rem;">37.934,35</span>
+                                    style="background:var(--bg-secondary); border:1px solid var(--border-color); padding:0 0.4rem; border-radius:4px;">37.934,35</span>
                             </div>
                             <div>Vl. Abertos: <span
-                                    style="background:white; border:1px solid #ccc; padding:0 0.4rem;">13.520,03</span>
+                                    style="background:var(--bg-secondary); border:1px solid var(--border-color); padding:0 0.4rem; border-radius:4px;">13.520,03</span>
                             </div>
                             <div style="margin-left:auto;">Total: <span
-                                    style="background:white; border:1px solid #ccc; padding:0 0.4rem;">51.454,38</span>
+                                    style="background:var(--bg-secondary); border:1px solid var(--border-color); padding:0 0.4rem; border-radius:4px;">51.454,38</span>
                             </div>
                         </div>
                     </div>
@@ -4864,45 +4880,44 @@
                 <div id="view-acertoCaixaDetalhe" class="page-content" style="display:none;">
                     <!-- Top Buttons -->
                     <div class="card"
-                        style="margin-bottom:1rem; background:linear-gradient(to bottom, #eff6ff, #dbeafe);">
+                        style="margin-bottom:1rem; background:var(--bg-card); border:1px solid var(--border-color);">
                         <div class="card-body"
                             style="padding:0.8rem; display:flex; gap:1rem; justify-content:space-between;">
                             <div style="display:flex; gap:1rem;">
                                 <button class="btn btn-primary"
                                     style="min-width:120px; font-weight:bold;">Gravar</button>
                                 <button class="btn"
-                                    style="min-width:150px; background:#fb923c; color:white; font-weight:bold; border:1px solid #f97316;">Documentos
+                                    style="min-width:150px; background:#fb923c; color:white; font-weight:bold; border:none;">Documentos
                                     fiscais ▼</button>
-                                <button class="btn btn-secondary"
-                                    style="min-width:120px; font-weight:bold; background:#e2e8f0;">Imprimir
+                                <button class="btn btn-secondary" style="min-width:120px; font-weight:bold;">Imprimir
                                     pedido</button>
                             </div>
                             <button class="btn btn-secondary" onclick="switchView('acertoCaixaLista')"
-                                style="min-width:100px; font-weight:bold; background:#e2e8f0;">Voltar</button>
+                                style="min-width:100px; font-weight:bold;">Voltar</button>
                         </div>
                     </div>
 
                     <!-- Form -->
-                    <div class="card" style="background:#eff6ff;">
+                    <div class="card" style="background:var(--bg-card); border:1px solid var(--border-color);">
                         <div class="card-body" style="padding:1.5rem;">
                             <!-- Row 1 -->
                             <div style="display:flex; gap:2rem; margin-bottom:1.5rem;">
                                 <div style="width:100px;">
                                     <label
-                                        style="display:block; font-size:0.9rem; color:#1e3a8a; margin-bottom:0.2rem;">Empresa</label>
+                                        style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Empresa</label>
                                     <input type="text" value="01" class="form-input"
                                         style="font-size:1rem; padding:0.4rem;">
                                 </div>
                                 <div style="width:150px;">
                                     <label
-                                        style="display:block; font-size:0.9rem; color:#1e3a8a; margin-bottom:0.2rem;">Nº
+                                        style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Nº
                                         Pedido</label>
                                     <input type="text" value="64368" class="form-input"
                                         style="font-size:1rem; padding:0.4rem; text-align:right;">
                                 </div>
                                 <div style="width:100px;">
                                     <label
-                                        style="display:block; font-size:0.9rem; color:#1e3a8a; margin-bottom:0.2rem;">Prestação</label>
+                                        style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Prestação</label>
                                     <input type="text" value="1" class="form-input"
                                         style="font-size:1rem; padding:0.4rem; text-align:right;">
                                 </div>
@@ -4912,13 +4927,13 @@
                             <div style="display:flex; gap:2rem; margin-bottom:1.5rem;">
                                 <div style="width:120px;">
                                     <label
-                                        style="display:block; font-size:0.9rem; color:#1e3a8a; margin-bottom:0.2rem;">Código</label>
+                                        style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Código</label>
                                     <input type="text" value="1556" class="form-input"
                                         style="font-size:1rem; padding:0.4rem; text-align:right;">
                                 </div>
                                 <div style="flex:1;">
                                     <label
-                                        style="display:block; font-size:0.9rem; color:#1e3a8a; margin-bottom:0.2rem;">Cliente</label>
+                                        style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Cliente</label>
                                     <input type="text" value="A C F DE CARVALHO COM. DE PCS E SERVICOS"
                                         class="form-input" style="font-size:1rem; padding:0.4rem;">
                                 </div>
@@ -4928,33 +4943,33 @@
                             <div style="display:flex; gap:2rem; margin-bottom:2rem;">
                                 <div style="flex:1;">
                                     <label
-                                        style="display:block; font-size:0.9rem; color:#1e3a8a; margin-bottom:0.2rem;">Valor</label>
+                                        style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Valor</label>
                                     <input type="text" value="130,01" class="form-input"
                                         style="font-size:1rem; padding:0.4rem; text-align:right;">
                                 </div>
                                 <div style="flex:1;">
                                     <label
-                                        style="display:block; font-size:0.9rem; color:#1e3a8a; margin-bottom:0.2rem;">Vencimento</label>
+                                        style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Vencimento</label>
                                     <input type="text" value="07/03/2026" class="form-input"
                                         style="font-size:1rem; padding:0.4rem;">
                                 </div>
                                 <div style="flex:1;">
                                     <label
-                                        style="display:block; font-size:0.9rem; color:#1e3a8a; margin-bottom:0.2rem;">Cobrança</label>
+                                        style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Cobrança</label>
                                     <select class="form-input" style="font-size:1rem; padding:0.4rem;">
                                         <option>DUPL</option>
                                     </select>
                                 </div>
                                 <div style="flex:1;">
                                     <label
-                                        style="display:block; font-size:0.9rem; color:#1e3a8a; margin-bottom:0.2rem;">Valor
+                                        style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Valor
                                         Pago</label>
                                     <input type="text" value="0,00" class="form-input"
                                         style="font-size:1rem; padding:0.4rem; text-align:right;">
                                 </div>
                                 <div style="flex:1;">
                                     <label
-                                        style="display:block; font-size:0.9rem; color:#1e3a8a; margin-bottom:0.2rem;">Troco</label>
+                                        style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Troco</label>
                                     <input type="text" value="0,00" class="form-input"
                                         style="font-size:1rem; padding:0.4rem; text-align:right;">
                                 </div>
@@ -4962,16 +4977,16 @@
 
                             <!-- Checkboxes -->
                             <div
-                                style="border:1px solid #bfdbfe; background:#dbeafe; padding:0.8rem; margin-bottom:0.5rem; border-radius:4px;">
+                                style="border:1px solid var(--border-color); background:var(--bg-secondary); padding:0.8rem; margin-bottom:0.5rem; border-radius:4px;">
                                 <label
-                                    style="display:flex; align-items:center; gap:0.5rem; font-weight:600; font-size:0.9rem;">
+                                    style="display:flex; align-items:center; gap:0.5rem; font-weight:600; font-size:0.9rem; color:var(--text-primary);">
                                     <input type="checkbox"> Acertar todas as parcelas deste pedido
                                 </label>
                             </div>
                             <div
-                                style="border:1px solid #bfdbfe; background:#dbeafe; padding:0.8rem; border-radius:4px;">
+                                style="border:1px solid var(--border-color); background:var(--bg-secondary); padding:0.8rem; border-radius:4px;">
                                 <label
-                                    style="display:flex; align-items:center; gap:0.5rem; font-weight:600; font-size:0.9rem;">
+                                    style="display:flex; align-items:center; gap:0.5rem; font-weight:600; font-size:0.9rem; color:var(--text-primary);">
                                     <input type="checkbox"> Selecionar página na impressão do pedido
                                 </label>
                             </div>
