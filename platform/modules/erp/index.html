@@ -254,117 +254,137 @@
                         </div>
                     </div>
 
-                    <!-- Row 1: Client + Payment Info (all inline) -->
+                    <!-- Row 1: Basic Info + Client -->
                     <div class="card" style="margin-bottom:0.4rem;">
-                        <div class="card-body" style="padding:0.4rem 0.6rem;">
+                        <div class="card-body" style="padding:0.5rem 0.8rem;">
                             <div
-                                style="display:flex; gap:0.5rem; align-items:flex-end; flex-wrap:wrap; font-size:0.75rem;">
-                                <div style="width:100px;">
+                                style="display:flex; gap:0.8rem; align-items:flex-end; flex-wrap:wrap; font-size:0.8rem;">
+                                <div style="width:130px;">
                                     <label
-                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Data</label>
+                                        style="display:block; font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.2rem;">Data</label>
                                     <input type="date" id="vendaData" class="form-input"
-                                        style="width:100%; padding:0.25rem; font-size:0.75rem;">
+                                        style="width:100%; padding:0.35rem; font-size:0.8rem;">
                                 </div>
-                                <div style="width:40px;">
+                                <div style="width:60px;">
                                     <label
-                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Emp</label>
+                                        style="display:block; font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.2rem;">Empresa</label>
                                     <select id="vendaEmpresa" class="form-input"
-                                        style="width:100%; padding:0.25rem; font-size:0.75rem;">
+                                        style="width:100%; padding:0.35rem; font-size:0.8rem;">
                                         <option>01</option>
                                         <option>02</option>
                                     </select>
                                 </div>
-                                <div style="width:70px;">
+                                <div style="width:110px;">
                                     <label
-                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Operação</label>
+                                        style="display:block; font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.2rem;">Operação</label>
                                     <select id="vendaOperacao" class="form-input"
-                                        style="width:100%; padding:0.25rem; font-size:0.75rem;">
+                                        style="width:100%; padding:0.35rem; font-size:0.8rem;">
                                         <option>Externa</option>
                                         <option>Interna</option>
                                     </select>
                                 </div>
-                                <div style="width:50px;">
+                                <div style="width:70px;">
                                     <label
-                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Cliente</label>
+                                        style="display:block; font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.2rem;">Cliente</label>
                                     <input type="text" id="vendaCodCliente" class="form-input" placeholder="Cód"
-                                        style="width:100%; padding:0.25rem; font-size:0.75rem;">
+                                        style="width:100%; padding:0.35rem; font-size:0.8rem;">
                                 </div>
                                 <button class="btn btn-secondary" onclick="buscarCliente()"
-                                    style="padding:0.25rem;"><span class="material-icons-round"
-                                        style="font-size:0.8rem;">search</span></button>
-                                <div style="flex:1; min-width:120px;">
-                                    <label style="display:block; font-size:0.6rem; color:var(--text-secondary);">Nome do
-                                        Cliente</label>
+                                    style="padding:0.35rem 0.5rem;"><span class="material-icons-round"
+                                        style="font-size:1rem;">search</span></button>
+                                <div style="flex:1; min-width:200px;">
+                                    <label
+                                        style="display:block; font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.2rem;">Nome
+                                        do Cliente</label>
                                     <input type="text" id="vendaNomeCliente" class="form-input"
-                                        style="width:100%; padding:0.25rem; font-size:0.75rem;" readonly>
+                                        style="width:100%; padding:0.35rem; font-size:0.8rem;" readonly>
                                 </div>
-                                <div style="width:100px;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row 2: Financial + Seller -->
+                    <div class="card" style="margin-bottom:0.4rem;">
+                        <div class="card-body" style="padding:0.5rem 0.8rem;">
+                            <div
+                                style="display:flex; gap:0.8rem; align-items:flex-end; flex-wrap:wrap; font-size:0.8rem;">
+                                <div style="width:140px;">
                                     <label
-                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">CPF/CNPJ</label>
+                                        style="display:block; font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.2rem;">CPF/CNPJ</label>
                                     <input type="text" id="vendaCpfCnpj" class="form-input"
-                                        style="width:100%; padding:0.25rem; font-size:0.75rem;" readonly>
-                                </div>
-                                <div style="width:60px;">
-                                    <label
-                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Limite</label>
-                                    <input type="text" id="vendaLimite" class="form-input" value="0,00"
-                                        style="width:100%; padding:0.25rem; font-size:0.75rem; text-align:right;"
-                                        readonly>
-                                </div>
-                                <div style="width:60px;">
-                                    <label
-                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Crédito</label>
-                                    <input type="text" id="vendaCredito" class="form-input" value="0,00"
-                                        style="width:100%; padding:0.25rem; font-size:0.75rem; text-align:right; color:var(--accent-success);"
-                                        readonly>
-                                </div>
-                                <div style="width:40px;">
-                                    <label
-                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Vend</label>
-                                    <input type="text" id="vendaCodVendedor" class="form-input"
-                                        style="width:100%; padding:0.25rem; font-size:0.75rem;">
+                                        style="width:100%; padding:0.35rem; font-size:0.8rem;" readonly>
                                 </div>
                                 <div style="width:100px;">
                                     <label
-                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Vendedor</label>
+                                        style="display:block; font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.2rem;">Limite</label>
+                                    <input type="text" id="vendaLimite" class="form-input" value="0,00"
+                                        style="width:100%; padding:0.35rem; font-size:0.8rem; text-align:right;"
+                                        readonly>
+                                </div>
+                                <div style="width:100px;">
+                                    <label
+                                        style="display:block; font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.2rem;">Crédito</label>
+                                    <input type="text" id="vendaCredito" class="form-input" value="0,00"
+                                        style="width:100%; padding:0.35rem; font-size:0.8rem; text-align:right; color:var(--accent-success);"
+                                        readonly>
+                                </div>
+                                <div style="width:60px;">
+                                    <label
+                                        style="display:block; font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.2rem;">Vend.</label>
+                                    <input type="text" id="vendaCodVendedor" class="form-input"
+                                        style="width:100%; padding:0.35rem; font-size:0.8rem;">
+                                </div>
+                                <div style="flex:1; min-width:200px;">
+                                    <label
+                                        style="display:block; font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.2rem;">Vendedor</label>
                                     <select id="vendaVendedor" class="form-input"
-                                        style="width:100%; padding:0.25rem; font-size:0.75rem;">
+                                        style="width:100%; padding:0.35rem; font-size:0.8rem;">
                                         <option>Selecione...</option>
                                     </select>
                                 </div>
-                                <div style="width:35px;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row 3: Payment + Transport -->
+                    <div class="card" style="margin-bottom:0.4rem;">
+                        <div class="card-body" style="padding:0.5rem 0.8rem;">
+                            <div
+                                style="display:flex; gap:0.8rem; align-items:flex-end; flex-wrap:wrap; font-size:0.8rem;">
+                                <div style="width:80px;">
                                     <label
-                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Tipo</label>
+                                        style="display:block; font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.2rem;">Tipo</label>
                                     <select id="vendaTipo" class="form-input"
-                                        style="width:100%; padding:0.25rem; font-size:0.75rem;">
+                                        style="width:100%; padding:0.35rem; font-size:0.8rem;">
                                         <option>1</option>
                                         <option>2</option>
                                     </select>
                                 </div>
-                                <div style="width:35px;">
+                                <div style="width:80px;">
                                     <label
-                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Cobr</label>
+                                        style="display:block; font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.2rem;">Cobrança</label>
                                     <select id="vendaCobranca" class="form-input"
-                                        style="width:100%; padding:0.25rem; font-size:0.75rem;">
+                                        style="width:100%; padding:0.35rem; font-size:0.8rem;">
                                         <option>D</option>
                                         <option>B</option>
                                     </select>
                                 </div>
-                                <div style="width:80px;">
+                                <div style="width:180px;">
                                     <label
-                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Pagamento</label>
+                                        style="display:block; font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.2rem;">Forma
+                                        Pagamento</label>
                                     <select id="vendaFormaPagto" class="form-input"
-                                        style="width:100%; padding:0.25rem; font-size:0.75rem;">
+                                        style="width:100%; padding:0.35rem; font-size:0.8rem;">
                                         <option>DINHEIRO</option>
                                         <option>CARTÃO</option>
                                         <option>PIX</option>
                                     </select>
                                 </div>
-                                <div style="width:100px;">
+                                <div style="flex:1; min-width:200px;">
                                     <label
-                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Transportadora</label>
+                                        style="display:block; font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.2rem;">Transportadora</label>
                                     <select id="vendaTransportadora" class="form-input"
-                                        style="width:100%; padding:0.25rem; font-size:0.75rem;">
+                                        style="width:100%; padding:0.35rem; font-size:0.8rem;">
                                         <option>Selecione...</option>
                                     </select>
                                 </div>
@@ -372,78 +392,75 @@
                         </div>
                     </div>
 
-                    <!-- Row 2: Item Entry -->
-                    <div class="card" style="margin-bottom:0.4rem;">
-                        <div class="card-body" style="padding:0.4rem 0.6rem;">
-                            <div style="display:flex; gap:0.5rem; align-items:flex-end; font-size:0.75rem;">
+                    <!-- Grid: Adjusted Height -->
+                    <div class="card" style="flex:1;">
+                        <div class="card-body" style="padding:0.4rem;">
+                            <!-- Item Entry inside Grid Card -->
+                            <div
+                                style="display:flex; gap:0.5rem; align-items:flex-end; margin-bottom:0.5rem; padding:0 0.4rem;">
                                 <div style="width:45px;">
                                     <label
-                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Ret</label>
+                                        style="display:block; font-size:0.65rem; color:var(--text-secondary); margin-bottom:0.1rem;">Ret</label>
                                     <select id="itemRetira" class="form-input"
-                                        style="width:100%; padding:0.25rem; font-size:0.75rem;">
+                                        style="width:100%; padding:0.3rem; font-size:0.75rem;">
                                         <option>01</option>
                                         <option>02</option>
                                     </select>
                                 </div>
-                                <div style="width:60px;">
-                                    <label
-                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Código</label>
-                                    <input type="text" id="itemCodigo" class="form-input"
-                                        style="width:100%; padding:0.25rem; font-size:0.75rem;">
-                                </div>
-                                <button class="btn btn-secondary" onclick="buscarProduto()"
-                                    style="padding:0.25rem;"><span class="material-icons-round"
-                                        style="font-size:0.8rem;">search</span></button>
-                                <div style="flex:1; min-width:150px;">
-                                    <label
-                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Produto</label>
-                                    <input type="text" id="itemProduto" class="form-input"
-                                        style="width:100%; padding:0.25rem; font-size:0.75rem;" readonly>
-                                </div>
-                                <div style="width:55px;">
-                                    <label
-                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Embal</label>
-                                    <input type="text" id="itemEmbalagem" class="form-input"
-                                        style="width:100%; padding:0.25rem; font-size:0.75rem;" readonly>
-                                </div>
-                                <div style="width:55px;">
-                                    <label
-                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Qtd</label>
-                                    <input type="text" id="itemQtd" class="form-input" value="0"
-                                        style="width:100%; padding:0.25rem; font-size:0.75rem; text-align:right;">
-                                </div>
-                                <div style="width:50px;">
-                                    <label
-                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Desc%</label>
-                                    <input type="text" id="itemDesconto" class="form-input" value="0"
-                                        style="width:100%; padding:0.25rem; font-size:0.75rem; text-align:right;">
-                                </div>
-                                <div style="width:65px;">
-                                    <label
-                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Preço</label>
-                                    <input type="text" id="itemPreco" class="form-input" value="0,00"
-                                        style="width:100%; padding:0.25rem; font-size:0.75rem; text-align:right;">
-                                </div>
                                 <div style="width:70px;">
                                     <label
-                                        style="display:block; font-size:0.6rem; color:var(--text-secondary);">Parcial</label>
+                                        style="display:block; font-size:0.65rem; color:var(--text-secondary); margin-bottom:0.1rem;">Código</label>
+                                    <input type="text" id="itemCodigo" class="form-input"
+                                        style="width:100%; padding:0.3rem; font-size:0.75rem;">
+                                </div>
+                                <button class="btn btn-secondary" onclick="buscarProduto()"
+                                    style="padding:0.25rem 0.4rem;"><span class="material-icons-round"
+                                        style="font-size:0.9rem;">search</span></button>
+                                <div style="flex:1;">
+                                    <label
+                                        style="display:block; font-size:0.65rem; color:var(--text-secondary); margin-bottom:0.1rem;">Produto</label>
+                                    <input type="text" id="itemProduto" class="form-input"
+                                        style="width:100%; padding:0.3rem; font-size:0.75rem;" readonly>
+                                </div>
+                                <div style="width:60px;">
+                                    <label
+                                        style="display:block; font-size:0.65rem; color:var(--text-secondary); margin-bottom:0.1rem;">Embal</label>
+                                    <input type="text" id="itemEmbalagem" class="form-input"
+                                        style="width:100%; padding:0.3rem; font-size:0.75rem;" readonly>
+                                </div>
+                                <div style="width:60px;">
+                                    <label
+                                        style="display:block; font-size:0.65rem; color:var(--text-secondary); margin-bottom:0.1rem;">Qtd</label>
+                                    <input type="text" id="itemQtd" class="form-input" value="0"
+                                        style="width:100%; padding:0.3rem; font-size:0.75rem; text-align:right;">
+                                </div>
+                                <div style="width:60px;">
+                                    <label
+                                        style="display:block; font-size:0.65rem; color:var(--text-secondary); margin-bottom:0.1rem;">Desc%</label>
+                                    <input type="text" id="itemDesconto" class="form-input" value="0"
+                                        style="width:100%; padding:0.3rem; font-size:0.75rem; text-align:right;">
+                                </div>
+                                <div style="width:80px;">
+                                    <label
+                                        style="display:block; font-size:0.65rem; color:var(--text-secondary); margin-bottom:0.1rem;">Preço</label>
+                                    <input type="text" id="itemPreco" class="form-input" value="0,00"
+                                        style="width:100%; padding:0.3rem; font-size:0.75rem; text-align:right;">
+                                </div>
+                                <div style="width:80px;">
+                                    <label
+                                        style="display:block; font-size:0.65rem; color:var(--text-secondary); margin-bottom:0.1rem;">Total</label>
                                     <input type="text" id="itemTotalParcial" class="form-input" value="0,00"
-                                        style="width:100%; padding:0.25rem; font-size:0.75rem; text-align:right; background:var(--bg-secondary);"
+                                        style="width:100%; padding:0.3rem; font-size:0.75rem; text-align:right; background:var(--bg-secondary);"
                                         readonly>
                                 </div>
                                 <button class="btn btn-primary" onclick="adicionarItem()"
-                                    style="padding:0.3rem 0.6rem; background:var(--accent-success);">
-                                    <span class="material-icons-round" style="font-size:0.9rem;">add</span> Inserir
+                                    style="padding:0.35rem 0.8rem; background:var(--accent-success);">
+                                    <span class="material-icons-round" style="font-size:1rem;">add</span>
                                 </button>
                             </div>
-                        </div>
-                    </div>
 
-                    <!-- Grid: Max Space -->
-                    <div class="card" style="flex:1;">
-                        <div class="card-body" style="padding:0.4rem;">
                             <div
-                                style="overflow:auto; height:calc(100vh - 260px); border:1px solid var(--border-color); border-radius:4px;">
+                                style="overflow:auto; height:calc(100vh - 420px); border:1px solid var(--border-color); border-radius:4px;">
                                 <table class="data-table" style="font-size:0.75rem;">
                                     <thead style="position:sticky; top:0; background:var(--bg-card); z-index:1;">
                                         <tr>

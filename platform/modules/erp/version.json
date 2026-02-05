@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.12.1",
+    "version": "2.12.2",
     "date": "2026-02-04",
-    "last_change": "Sales screen horizontal layout - maximized grid space",
-    "build": "20260204.15"
+    "last_change": "Sales screen layout: 3 rows configuration",
+    "build": "20260204.16"
 }
