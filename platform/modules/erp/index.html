@@ -129,6 +129,21 @@
                         </a>
                     </div>
                 </div>
+
+                <div class="nav-group">
+                    <a class="nav-item" onclick="toggleSubmenu('sub-logistica')">
+                        <span class="material-icons-round">local_shipping</span>
+                        <span>Logística</span>
+                        <span class="material-icons-round ms-auto"
+                            style="font-size:1.2rem; margin-left:auto;">expand_more</span>
+                    </a>
+                    <div id="sub-logistica" class="nav-submenu">
+                        <a class="nav-sub-item" onclick="switchView('logisticaMapa')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">map</span>Mapa de Separação
+                        </a>
+                    </div>
+                </div>
                 <a class="nav-item" onclick="switchView('finance')">
                     <span class="material-icons-round">payments</span>
                     <span>Financeiro</span>
@@ -4415,6 +4430,35 @@
                             style="display:flex; justify-content:flex-end; gap:1rem; padding:1rem 1.5rem; border-top:1px solid var(--border-color);">
                             <button class="btn btn-secondary" onclick="closeModal('pdvModal')">Cancelar</button>
                             <button class="btn btn-primary" onclick="savePdv()">Salvar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Logística - Mapa de Separação -->
+                <div id="view-logistica-mapa" class="page-content" style="display:none;">
+                    <div class="card" style="margin-bottom:1rem;">
+                        <div class="card-body" style="padding:1.5rem;">
+                            <h2 style="font-size:1.1rem; margin-bottom:1rem; color:var(--text-primary);">Filtros de
+                                Emissão do Mapa de Separação</h2>
+                            <div style="display:flex; gap:1rem; align-items:flex-end;">
+                                <div>
+                                    <label
+                                        style="display:block; margin-bottom:0.25rem; font-size:0.8rem; color:var(--text-secondary);">Data
+                                        Inicial</label>
+                                    <input type="date" class="form-input">
+                                </div>
+                                <div>
+                                    <label
+                                        style="display:block; margin-bottom:0.25rem; font-size:0.8rem; color:var(--text-secondary);">Data
+                                        Final</label>
+                                    <input type="date" class="form-input">
+                                </div>
+                                <button class="btn btn-primary">
+                                    <span class="material-icons-round"
+                                        style="font-size:1.1rem; margin-right:0.5rem;">print</span>
+                                    Gerar Mapa
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

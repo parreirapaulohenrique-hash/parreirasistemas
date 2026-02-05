@@ -94,6 +94,7 @@ window.switchView = (viewName) => {
         'finance': 'Financeiro',
         'fiscal': 'Fiscal',
         'nfeTransmissao': 'Transmissão de NF-e',
+        'logisticaMapa': 'Emissão de Mapa de Separação',
         'groups': 'Gestão de Grupos',
         'accountPlans': 'Plano de Contas',
         'billing': 'Cadastro de Cobrança',
