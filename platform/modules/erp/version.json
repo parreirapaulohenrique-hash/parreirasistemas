@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.11.0",
+    "version": "2.11.1",
     "date": "2026-02-04",
-    "last_change": "Added PDV Frente de Caixa with complete POS functionality",
-    "build": "20260204.12"
+    "last_change": "Simplified NF-e Transmission filters to single fields",
+    "build": "20260204.13"
 }
