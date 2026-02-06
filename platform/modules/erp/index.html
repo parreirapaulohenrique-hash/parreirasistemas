@@ -127,6 +127,10 @@
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">point_of_sale</span>Frente de Caixa
                         </a>
+                        <a class="nav-sub-item" onclick="switchView('devolucaoLista')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">replay</span>Devolução
+                        </a>
                     </div>
                 </div>
 
@@ -4994,6 +4998,193 @@
                     </div>
                 </div>
 
+        </main>
+
+        <!-- View: Devolução - Lista -->
+        <div id="view-devolucaoLista" class="page-content" style="display:none;">
+            <!-- Header Actions -->
+            <div class="card"
+                style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
+                <div class="card-body" style="padding:0.5rem; display:flex; gap:0.5rem;">
+                    <button class="btn btn-primary" onclick="openModal('devolucaoWizard')"
+                        style="min-width:100px;">Novo</button>
+                    <button class="btn btn-secondary" style="min-width:100px;">Gravar</button>
+                    <button class="btn btn-secondary" style="min-width:100px;">Cancelar</button>
+                    <div style="flex:1;"></div>
+                    <button class="btn btn-secondary" style="min-width:100px;">Sair</button>
+                </div>
+            </div>
+
+            <!-- Header Inputs -->
+            <div class="card"
+                style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
+                <div class="card-body" style="padding:0.8rem; font-size:0.8rem;">
+                    <!-- Row 1 -->
+                    <div style="display:flex; gap:1rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+                        <div style="width:150px;"><label style="display:block; color:var(--text-secondary);">Operação de
+                                Entrada</label><select class="form-input" style="padding:0.2rem;">
+                                <option>Dev. simples</option>
+                            </select></div>
+                        <div style="width:80px;"><label
+                                style="display:block; color:var(--text-secondary);">Transação</label><input type="text"
+                                value="9081" class="form-input" style="padding:0.2rem;"></div>
+                        <div style="width:60px;"><label
+                                style="display:block; color:var(--text-secondary);">Empresa</label><input type="number"
+                                value="01" class="form-input" style="padding:0.2rem;"></div>
+                        <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Nº
+                                Nota</label><input type="text" value="9081" class="form-input" style="padding:0.2rem;">
+                        </div>
+                        <div style="width:50px;"><label
+                                style="display:block; color:var(--text-secondary);">Série</label><input type="text"
+                                class="form-input" style="padding:0.2rem;"></div>
+                        <div style="width:50px;"><label
+                                style="display:block; color:var(--text-secondary);">Espécie</label><input type="text"
+                                value="OE" class="form-input" style="padding:0.2rem;"></div>
+                        <div style="width:120px;"><label style="display:block; color:var(--text-secondary);">Data de
+                                Emissão</label><input type="date" value="2026-02-05" class="form-input"
+                                style="padding:0.2rem;"></div>
+                        <div style="width:120px;"><label style="display:block; color:var(--text-secondary);">Data de
+                                Entrada</label><input type="date" value="2026-02-05" class="form-input"
+                                style="padding:0.2rem;"></div>
+                        <div style="flex:1;"><label style="display:block; color:var(--text-secondary);">Motivo da
+                                devolução</label><select class="form-input" style="padding:0.2rem;">
+                                <option></option>
+                            </select></div>
+                    </div>
+                    <!-- Row 2 -->
+                    <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+                        <div style="width:100px;">
+                            <label style="display:block; color:var(--text-secondary);">Código do Cliente</label>
+                            <div style="display:flex;">
+                                <input type="text" class="form-input" style="padding:0.2rem;">
+                                <button class="btn btn-secondary" style="padding:0 0.5rem;">...</button>
+                            </div>
+                        </div>
+                        <div style="flex:2;"><label style="display:block; color:var(--text-secondary);">Razão social do
+                                cliente</label><input type="text" class="form-input" style="padding:0.2rem;"></div>
+                        <div style="width:150px;"><label style="display:block; color:var(--text-secondary);">Nota
+                                emitida pelo cliente?</label><select class="form-input" style="padding:0.2rem;">
+                                <option>Não</option>
+                            </select></div>
+                        <div style="flex:1;"><label style="display:block; color:var(--text-secondary);">Chave de
+                                acesso</label><input type="text" class="form-input" style="padding:0.2rem;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div style="display:flex; margin-bottom:0;">
+                <button class="btn tab-btn active" onclick="switchTab(this, 'tab-dev-movimento')"
+                    style="background:#dbeafe; border:1px solid var(--border-color); border-bottom:none; border-radius:4px 4px 0 0; padding:0.5rem 1rem; font-weight:bold; color:black;">Movimento
+                    de Venda</button>
+                <button class="btn tab-btn" onclick="switchTab(this, 'tab-dev-itens')"
+                    style="background:var(--bg-card); border:1px solid transparent; padding:0.5rem 1rem; color:var(--text-secondary);">Itens
+                    Lançados</button>
+                <button class="btn tab-btn" onclick="switchTab(this, 'tab-dev-credito')"
+                    style="background:var(--bg-card); border:1px solid transparent; padding:0.5rem 1rem; color:var(--text-secondary);">Crédito
+                    de cliente</button>
+            </div>
+
+            <!-- Tab Content: Movimento -->
+            <div id="tab-dev-movimento" class="card tab-content active"
+                style="border-top-left-radius:0; border:1px solid var(--border-color); background:var(--bg-card); height:calc(100vh - 400px); display:flex; flex-direction:column;">
+                <!-- Search Filter inside Tab -->
+                <div
+                    style="padding:0.5rem; border-bottom:1px solid var(--border-color); display:flex; gap:1rem; align-items:flex-end; font-size:0.8rem; flex-wrap:wrap;">
+                    <div
+                        style="font-weight:bold; color:var(--accent-primary); display:flex; align-items:center; gap:0.5rem;">
+                        <span>▼</span> Pesquisar vendas para o cliente
+                    </div>
+                    <div style="margin-left:auto; display:flex; gap:1rem; align-items:flex-end;">
+                        <div><label style="display:block;">Período de emissão</label>
+                            <div style="display:flex; gap:0.2rem;">
+                                <input type="date" value="2026-02-01" class="form-input" style="padding:0.2rem;">
+                                <span>até</span>
+                                <input type="date" value="2026-02-05" class="form-input" style="padding:0.2rem;">
+                            </div>
+                        </div>
+                        <div><label style="display:block;">Nº Nota</label><input type="text" value="0"
+                                class="form-input" style="padding:0.2rem; width:80px; text-align:right;"></div>
+                        <button class="btn btn-secondary" style="font-weight:bold;">Buscar</button>
+                    </div>
+                </div>
+
+                <!-- Grid -->
+                <div style="flex:1; background:var(--bg-secondary); overflow:auto; padding:1rem;">
+                    <p style="text-align:center; color:var(--text-secondary);">Nenhum resultado para exibir</p>
+                </div>
+            </div>
+
+            <!-- Tab Content: Itens -->
+            <div id="tab-dev-itens" class="card tab-content"
+                style="display:none; border-top-left-radius:0; border:1px solid var(--border-color); background:var(--bg-card); height:calc(100vh - 400px); padding:1rem;">
+                <p style="text-align:center;">Itens lançados aparecerão aqui.</p>
+            </div>
+
+            <!-- Tab Content: Crédito -->
+            <div id="tab-dev-credito" class="card tab-content"
+                style="display:none; border-top-left-radius:0; border:1px solid var(--border-color); background:var(--bg-card); height:calc(100vh - 400px); padding:1rem;">
+                <p style="text-align:center;">Informações de crédito.</p>
+            </div>
+
+            <!-- Footer Totals -->
+            <div class="card"
+                style="margin-top:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
+                <div class="card-body"
+                    style="padding:0.5rem; display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:1rem; font-size:0.75rem;">
+                    <div><label style="display:block;">Valor Total</label><input type="text" class="form-input"
+                            readonly></div>
+                    <div><label style="display:block;">Valor da Base de ICMS</label><input type="text"
+                            class="form-input" readonly></div>
+                    <div><label style="display:block;">Valor do ICMS</label><input type="text" class="form-input"
+                            readonly></div>
+                    <div><label style="display:block;">Valor da base de ST</label><input type="text" class="form-input"
+                            readonly></div>
+                    <div><label style="display:block;">Valor da ST</label><input type="text" class="form-input"
+                            readonly></div>
+                    <div><label style="display:block;">Valor Líquido</label><input type="text" class="form-input"
+                            readonly></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Devolução Wizard -->
+        <div id="modal-devolucaoWizard" class="modal">
+            <div class="modal-content" style="max-width:600px;">
+                <div class="modal-header"
+                    style="background:#1e3a8a; color:white; padding:0.5rem 1rem; display:flex; justify-content:space-between; align-items:center;">
+                    <h4 style="margin:0;">Devolução de cliente</h4>
+                    <button onclick="closeModal('devolucaoWizard')"
+                        style="background:none; border:none; color:white; font-size:1.5rem;">&times;</button>
+                </div>
+                <div class="modal-body" style="padding:1.5rem;">
+                    <div style="margin-bottom:1rem; border-bottom:1px solid #eee; padding-bottom:1rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <button class="btn btn-secondary">↩ Devolução Manual</button>
+                            <button class="btn" style="background:var(--accent-primary); color:white;">Próximo
+                                ▶</button>
+                        </div>
+                    </div>
+
+                    <h5 style="margin-bottom:1rem;">Informe os dados abaixo para iniciar o processo de devolução</h5>
+
+                    <div style="margin-bottom:1rem;">
+                        <label style="display:block; font-weight:bold; margin-bottom:0.3rem;">Selecione o tipo de
+                            devolução</label>
+                        <select class="form-input" style="width:100%; font-size:1rem; padding:0.5rem;">
+                            <option>[ Selecione ]</option>
+                            <option>Devolução normal (emissão empresa)</option>
+                            <option>Devolução simples</option>
+                        </select>
+                    </div>
+
+                    <div style="margin-bottom:1rem;">
+                        <label style="display:block; color:var(--text-secondary);">Motivo da devolução</label>
+                        <input type="text" class="form-input" style="width:100%;">
+                    </div>
+                </div>
+            </div>
+        </div>
         </main>
     </div>
 

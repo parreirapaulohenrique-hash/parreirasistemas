@@ -110,7 +110,8 @@ window.switchView = (viewName) => {
         'cbsIbs': 'Tributos CBS/IBS',
         'pdv': 'Cadastro de PDV',
         'cancelamento': 'Cancelamento de Pedidos',
-        'frenteCaixa': 'Frente de Caixa'
+        'frenteCaixa': 'Frente de Caixa',
+        'devolucaoLista': 'Devolução de Vendas'
     };
     document.getElementById('pageTitle').textContent = titles[viewName] || 'ERP';
 
