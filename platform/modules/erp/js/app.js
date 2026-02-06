@@ -74,7 +74,15 @@ window.switchView = (viewName) => {
 
     // Show selected
     const target = document.getElementById(`view-${viewName}`);
-    if (target) target.style.display = 'block';
+    if (target) {
+        // Check if view uses flexbox (inline style or class logic could go here)
+        // Since we set flex-direction inline in HTML for some views, we check that.
+        if (target.style.flexDirection || target.classList.contains('flex-view')) {
+            target.style.display = 'flex';
+        } else {
+            target.style.display = 'block';
+        }
+    }
 
     // Update Sidebar
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
