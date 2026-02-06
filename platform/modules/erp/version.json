@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.14.0",
+    "version": "2.14.1",
     "date": "2026-02-06",
-    "last_change": "Novo Módulo de Devolução de Vendas",
-    "build": "20260206.10"
+    "last_change": "Ajuste Visual Wizard Devolução (Dark Theme)",
+    "build": "20260206.13"
 }

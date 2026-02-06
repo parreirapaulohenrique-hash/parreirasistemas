@@ -5149,38 +5149,53 @@
         </div>
 
         <!-- Modal: Devolução Wizard -->
-        <div id="modal-devolucaoWizard" class="modal">
-            <div class="modal-content" style="max-width:600px;">
+        <div id="modal-devolucaoWizard" class="modal"
+            style="display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.5);">
+            <div class="modal-content"
+                style="max-width:600px; width:100%; background:#0f172a; color:white; border-radius:8px; overflow:hidden; box-shadow:0 10px 25px rgba(0,0,0,0.5);">
                 <div class="modal-header"
-                    style="background:#1e3a8a; color:white; padding:0.5rem 1rem; display:flex; justify-content:space-between; align-items:center;">
-                    <h4 style="margin:0;">Devolução de cliente</h4>
+                    style="background:#1e3a8a; color:white; padding:1rem 1.5rem; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155;">
+                    <h4 style="margin:0; font-weight:600; font-size:1.1rem;">Devolução de cliente</h4>
                     <button onclick="closeModal('devolucaoWizard')"
-                        style="background:none; border:none; color:white; font-size:1.5rem;">&times;</button>
+                        style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
                 </div>
-                <div class="modal-body" style="padding:1.5rem;">
-                    <div style="margin-bottom:1rem; border-bottom:1px solid #eee; padding-bottom:1rem;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <button class="btn btn-secondary">↩ Devolução Manual</button>
-                            <button class="btn" style="background:var(--accent-primary); color:white;">Próximo
-                                ▶</button>
+                <div class="modal-body" style="padding:1.5rem 2rem;">
+
+                    <!-- Top Navigation Buttons -->
+                    <div
+                        style="margin-bottom:1.5rem; border-bottom:1px solid #334155; padding-bottom:1rem; display:flex; justify-content:space-between; align-items:center;">
+                        <button class="btn"
+                            style="background:transparent; border:1px solid #475569; color:white; border-radius:4px; padding:0.5rem 1rem; display:flex; align-items:center; gap:0.5rem;">
+                            <span class="material-icons-round" style="font-size:1rem;">reply</span> Devolução Manual
+                        </button>
+                        <button class="btn"
+                            style="background:transparent; border:none; color:white; font-weight:bold; font-size:1rem; display:flex; align-items:center; gap:0.5rem; padding:0.5rem 1rem;">
+                            Próximo <span style="font-size:0.8rem;">▶</span>
+                        </button>
+                    </div>
+
+                    <div style="margin-bottom:1.5rem;">
+                        <h5 style="margin:0 0 1rem 0; font-size:1rem; font-weight:600;">Informe os dados abaixo para
+                            iniciar o processo de devolução</h5>
+
+                        <div style="margin-bottom:1rem;">
+                            <label
+                                style="display:block; font-weight:bold; margin-bottom:0.5rem; font-size:1.1rem;">Selecione
+                                o tipo de devolução</label>
+                            <select class="form-input"
+                                style="width:100%; font-size:1rem; padding:0.6rem; background:#1e293b; color:white; border:1px solid #475569; border-radius:4px;">
+                                <option>[ Selecione ]</option>
+                                <option value="normal">Devolução normal (emissão empresa)</option>
+                                <option value="simples">Devolução simples</option>
+                            </select>
                         </div>
-                    </div>
 
-                    <h5 style="margin-bottom:1rem;">Informe os dados abaixo para iniciar o processo de devolução</h5>
-
-                    <div style="margin-bottom:1rem;">
-                        <label style="display:block; font-weight:bold; margin-bottom:0.3rem;">Selecione o tipo de
-                            devolução</label>
-                        <select class="form-input" style="width:100%; font-size:1rem; padding:0.5rem;">
-                            <option>[ Selecione ]</option>
-                            <option>Devolução normal (emissão empresa)</option>
-                            <option>Devolução simples</option>
-                        </select>
-                    </div>
-
-                    <div style="margin-bottom:1rem;">
-                        <label style="display:block; color:var(--text-secondary);">Motivo da devolução</label>
-                        <input type="text" class="form-input" style="width:100%;">
+                        <div style="margin-bottom:1rem;">
+                            <label style="display:block; color:#94a3b8; margin-bottom:0.3rem;">Motivo da
+                                devolução</label>
+                            <input type="text" class="form-input"
+                                style="width:100%; padding:0.6rem; background:#1e293b; color:white; border:1px solid #475569; border-radius:4px;">
+                        </div>
                     </div>
                 </div>
             </div>
