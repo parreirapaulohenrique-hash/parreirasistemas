@@ -131,6 +131,10 @@
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">replay</span>Devolução
                         </a>
+                        <a class="nav-sub-item" onclick="switchView('consultaDevolucao')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">manage_search</span>Consulta Devolução
+                        </a>
                     </div>
                 </div>
 
@@ -5201,7 +5205,195 @@
                 </div>
             </div>
         </div>
-        </main>
+    </div>
+
+    <!-- View: Consulta Devolução -->
+    <div id="view-consultaDevolucao" class="page-content"
+        style="display:none; height:calc(100vh - 110px); flex-direction:column;">
+        <!-- Actions -->
+        <div class="card"
+            style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
+            <div class="card-body" style="padding:0.5rem; display:flex; gap:0.5rem;">
+                <button class="btn btn-secondary" style="font-weight:bold; min-width:100px;">Buscar</button>
+                <div style="position:relative; display:inline-block;">
+                    <button class="btn btn-secondary"
+                        style="min-width:120px; display:flex; align-items:center; justify-content:space-between;">
+                        Imprimir <span class="material-icons-round" style="font-size:1rem;">arrow_drop_down</span>
+                    </button>
+                </div>
+                <div style="flex:1;"></div>
+                <button class="btn btn-secondary" style="min-width:100px;">Sair</button>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="card"
+            style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
+            <div class="card-body" style="padding:0.8rem; font-size:0.75rem;">
+                <!-- Row 1 -->
+                <div style="display:flex; gap:1rem; margin-bottom:0.5rem; flex-wrap:wrap; align-items:flex-end;">
+                    <div style="width:50px;"><label
+                            style="display:block; color:var(--text-secondary);">Empresa</label><input type="number"
+                            value="01" class="form-input" style="padding:0.2rem;"></div>
+
+                    <div><label style="display:block; color:var(--text-secondary);">Período de entrada</label>
+                        <div style="display:flex; gap:0.2rem; align-items:center;">
+                            <input type="date" value="2026-02-06" class="form-input" style="padding:0.2rem;">
+                            <span>até</span>
+                            <input type="date" value="2026-02-06" class="form-input" style="padding:0.2rem;">
+                        </div>
+                    </div>
+
+                    <div><label style="display:block; color:var(--text-secondary);">Nº Nota</label>
+                        <div style="display:flex; gap:0.2rem; align-items:center;">
+                            <input type="text" value="0" class="form-input"
+                                style="padding:0.2rem; width:60px; text-align:right;">
+                            <span>até</span>
+                            <!-- Implicit range logic from screenshot (single field displayed but implied range? Screenshot shows single inputs for specific nums but ranges for others. I'll stick to screenshot visual) -->
+                            <!-- Actually screenshot shows "No Nota          0" which looks like single field or maybe start/end if wide. Let's assume start/end based on layout -->
+                            <input type="text" class="form-input" value="0"
+                                style="padding:0.2rem; width:60px; text-align:right; display:none;">
+                            <!-- Hidden for now to match screenshot exact count if needed, but context says "Nota (Início/Fim)". Screenshot shows "No Nota" label then two inputs? No, looks like one wide label "No Nota" and maybe one input. Wait, screenshot text: "No Nota 0". Just one. "No Nota origem 0". Just one. -->
+                            <!-- Wait, screenshot has "Supervisor 0 até 0". "Rca 0 até 0". -->
+                            <!-- "No Nota" and "No Nota Origem" seem to have only ONE input 0 in the screenshot. -->
+                            <!-- I will follow screenshot: No Nota (1 input), No Nota origem (1 input). -->
+                        </div>
+                    </div>
+                    <div style="width:80px;"><label style="display:block; color:var(--text-secondary);">Nº
+                            Nota</label><input type="text" value="0" class="form-input"
+                            style="padding:0.2rem; text-align:right;"></div>
+                    <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Nº Nota
+                            origem</label><input type="text" value="0" class="form-input"
+                            style="padding:0.2rem; text-align:right;"></div>
+
+                    <div style="width:60px;"><label
+                            style="display:block; color:var(--text-secondary);">Código</label><input type="text"
+                            value="0" class="form-input" style="padding:0.2rem; text-align:right;"></div>
+                    <div style="flex:2;"><label
+                            style="display:block; color:var(--text-secondary);">Cliente</label><input type="text"
+                            class="form-input" style="padding:0.2rem;"></div>
+                </div>
+
+                <!-- Row 2 -->
+                <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-end;">
+                    <div><label style="display:block; color:var(--text-secondary);">Supervisor</label>
+                        <div style="display:flex; gap:0.2rem; align-items:center;">
+                            <input type="text" value="0" class="form-input"
+                                style="padding:0.2rem; width:50px; text-align:right;">
+                            <span>até</span>
+                            <input type="text" value="0" class="form-input"
+                                style="padding:0.2rem; width:50px; text-align:right;">
+                        </div>
+                    </div>
+                    <div><label style="display:block; color:var(--text-secondary);">Rca</label>
+                        <div style="display:flex; gap:0.2rem; align-items:center;">
+                            <input type="text" value="0" class="form-input"
+                                style="padding:0.2rem; width:50px; text-align:right;">
+                            <span>até</span>
+                            <input type="text" value="0" class="form-input"
+                                style="padding:0.2rem; width:50px; text-align:right;">
+                        </div>
+                    </div>
+                    <div><label style="display:block; color:var(--text-secondary);">Transação de Entrada</label>
+                        <div style="display:flex; gap:0.2rem; align-items:center;">
+                            <input type="text" value="0" class="form-input"
+                                style="padding:0.2rem; width:50px; text-align:right;">
+                            <span>até</span>
+                            <input type="text" value="0" class="form-input"
+                                style="padding:0.2rem; width:50px; text-align:right;">
+                        </div>
+                    </div>
+                    <div style="flex:2;"><label style="display:block; color:var(--text-secondary);">Motivo da
+                            devolução</label><select class="form-input" style="padding:0.2rem;">
+                            <option></option>
+                        </select></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Master Grid -->
+        <div class="card"
+            style="flex:1; margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color); display:flex; flex-direction:column; min-height:150px;">
+            <div style="overflow:auto; flex:1;">
+                <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
+                    <thead style="background:var(--bg-secondary); position:sticky; top:0;">
+                        <tr style="text-align:left; color:var(--text-secondary);">
+                            <th style="padding:0.3rem;">Fil.</th>
+                            <th style="padding:0.3rem;">Num.Entrada</th>
+                            <th style="padding:0.3rem;">NF</th>
+                            <th style="padding:0.3rem;">Série</th>
+                            <th style="padding:0.3rem;">Esp.</th>
+                            <th style="padding:0.3rem;">Dt.Entrada</th>
+                            <th style="padding:0.3rem;">Tp.</th>
+                            <th style="padding:0.3rem;">Código</th>
+                            <th style="padding:0.3rem;">Cliente</th>
+                            <th style="padding:0.3rem;">Vl.Total</th>
+                            <th style="padding:0.3rem;">Vl.Frete</th>
+                            <th style="padding:0.3rem;">Vl.Desc.</th>
+                            <th style="padding:0.3rem;">Vl.Outras</th>
+                            <th style="padding:0.3rem;">Vl.ICM</th>
+                            <th style="padding:0.3rem;">Vl.ST</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Empty Row Placeholder -->
+                        <tr>
+                            <td colspan="15" style="text-align:center; padding:1rem; color:var(--text-secondary);">
+                                Nenhum registro encontrado</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Resize Handle / Splitter (Visual only) -->
+        <div style="height:4px; background:var(--border-color); cursor:ns-resize; margin-bottom:0.5rem;"></div>
+
+        <!-- Detail Grid -->
+        <div class="card"
+            style="flex:1; margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color); display:flex; flex-direction:column; min-height:150px;">
+            <div style="overflow:auto; flex:1;">
+                <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
+                    <thead style="background:var(--bg-secondary); position:sticky; top:0;">
+                        <tr style="text-align:left; color:var(--text-secondary);">
+                            <th style="padding:0.3rem;">Emp.</th>
+                            <th style="padding:0.3rem;">Seq.</th>
+                            <th style="padding:0.3rem;">Data</th>
+                            <th style="padding:0.3rem;">Código</th>
+                            <th style="padding:0.3rem;">Descrição</th>
+                            <th style="padding:0.3rem;">Embal.</th>
+                            <th style="padding:0.3rem;">UN</th>
+                            <th style="padding:0.3rem;">Oper.</th>
+                            <th style="padding:0.3rem;">Qtde</th>
+                            <th style="padding:0.3rem;">%ICM</th>
+                            <th style="padding:0.3rem;">P.Tabela</th>
+                            <th style="padding:0.3rem;">P.Unitário</th>
+                            <th style="padding:0.3rem;">Sub.Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="13" style="text-align:center; padding:1rem; color:var(--text-secondary);">
+                                Nenhum item selecionado</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Footer Totals -->
+        <div class="card" style="margin-top:auto; background:var(--bg-card); border:1px solid var(--border-color);">
+            <div class="card-body" style="padding:0.5rem; display:flex; gap:2rem; font-size:0.8rem;">
+                <div><label style="display:block; color:var(--text-secondary);">Qtde devoluções</label>
+                    <div style="font-weight:bold; font-size:1.1rem;">0</div>
+                </div>
+                <div><label style="display:block; color:var(--text-secondary);">Valor das devoluções</label>
+                    <div style="font-weight:bold; font-size:1.1rem; color:var(--accent-primary);">0,00</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
     </div>
 
     <!-- Scripts -->

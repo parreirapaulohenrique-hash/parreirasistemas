@@ -111,7 +111,8 @@ window.switchView = (viewName) => {
         'pdv': 'Cadastro de PDV',
         'cancelamento': 'Cancelamento de Pedidos',
         'frenteCaixa': 'Frente de Caixa',
-        'devolucaoLista': 'Devolução de Vendas'
+        'devolucaoLista': 'Devolução de Vendas',
+        'consultaDevolucao': 'Consulta Devolução de Cliente'
     };
     document.getElementById('pageTitle').textContent = titles[viewName] || 'ERP';
 
