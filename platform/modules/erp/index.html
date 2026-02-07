@@ -9,7 +9,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <!-- Using new consolidated style -->
-    <link rel="stylesheet" href="styles/erp.css?v=2.15.4">
+    <link rel="stylesheet" href="styles/erp.css?v=2.15.5">
+    <style>
+        /* FORCE SIDEBAR ALIGNMENT */
+        .nav-submenu .nav-sub-item {
+            padding-left: 3.5rem !important;
+            display: flex !important;
+            align-items: center !important;
+        }
+    </style>
 </head>
 
 <body>
@@ -131,6 +139,7 @@
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">replay</span>Devolução
                         </a>
+                        <!-- New items with explicit classes match -->
                         <a class="nav-sub-item" onclick="switchView('consultaDevolucao')">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">manage_search</span>Consulta Devolução
