@@ -415,7 +415,10 @@ body {
 
 .nav-sub-item {
     font-size: 0.85rem;
-    padding: 0.5rem 1rem 0.5rem 3.0rem !important;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    padding-right: 1rem;
+    padding-left: 3rem !important;
     color: var(--text-secondary);
     text-decoration: none;
     display: flex;
@@ -424,6 +427,11 @@ body {
     cursor: pointer;
     transition: all 0.2s;
     border-left: 3px solid transparent;
+}
+
+/* High Specificity Override */
+.nav-submenu .nav-sub-item {
+    padding-left: 3.5rem !important;
 }
 
 .nav-sub-item:hover {
