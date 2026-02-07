@@ -123,28 +123,35 @@
                             style="font-size:1.2rem; margin-left:auto;">expand_more</span>
                     </a>
                     <div id="sub-vendas-op" class="nav-submenu">
-                        <a class="nav-sub-item" onclick="switchView('sales')">
+                        <!-- Replicating Header Structure from Cadastros -->
+                        <div class="nav-sublevel-title">Operações de Venda</div>
+
+                        <a class="nav-sub-item" onclick="switchView('sales')" style="padding-left: 3.5rem !important;">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">receipt_long</span>Pedido de Venda
                         </a>
-                        <a class="nav-sub-item" onclick="switchView('cancelamento')">
+                        <a class="nav-sub-item" onclick="switchView('cancelamento')"
+                            style="padding-left: 3.5rem !important;">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">cancel</span>Cancelamento
                         </a>
-                        <a class="nav-sub-item" onclick="switchView('frenteCaixa')">
+                        <a class="nav-sub-item" onclick="switchView('frenteCaixa')"
+                            style="padding-left: 3.5rem !important;">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">point_of_sale</span>Frente de Caixa
                         </a>
-                        <a class="nav-sub-item" onclick="switchView('devolucaoLista')">
+                        <a class="nav-sub-item" onclick="switchView('devolucaoLista')"
+                            style="padding-left: 3.5rem !important;">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">replay</span>Devolução
                         </a>
-                        <!-- New items with explicit classes match -->
-                        <a class="nav-sub-item" onclick="switchView('consultaDevolucao')">
+                        <a class="nav-sub-item" onclick="switchView('consultaDevolucao')"
+                            style="padding-left: 3.5rem !important;">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">manage_search</span>Consulta Devolução
                         </a>
-                        <a class="nav-sub-item" onclick="switchView('consultaPedidos')">
+                        <a class="nav-sub-item" onclick="switchView('consultaPedidos')"
+                            style="padding-left: 3.5rem !important;">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">list_alt</span>Consulta Pedidos
                         </a>
