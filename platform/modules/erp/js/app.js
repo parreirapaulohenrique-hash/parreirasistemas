@@ -120,7 +120,8 @@ window.switchView = (viewName) => {
         'cancelamento': 'Cancelamento de Pedidos',
         'frenteCaixa': 'Frente de Caixa',
         'devolucaoLista': 'Devolução de Vendas',
-        'consultaDevolucao': 'Consulta Devolução de Cliente'
+        'consultaDevolucao': 'Consulta Devolução de Cliente',
+        'consultaPedidos': 'Consulta Pedidos de Venda'
     };
     document.getElementById('pageTitle').textContent = titles[viewName] || 'ERP';
 

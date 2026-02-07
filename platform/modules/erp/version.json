@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.15.1",
-    "date": "2026-02-06",
-    "last_change": "Fix Exibição Consulta Devolução",
-    "build": "20260206.16"
+    "version": "2.15.2",
+    "date": "2026-02-07",
+    "last_change": "Inclusão Consulta Pedidos",
+    "build": "20260207.08"
 }

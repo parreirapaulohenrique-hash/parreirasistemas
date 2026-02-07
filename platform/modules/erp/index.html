@@ -135,6 +135,10 @@
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">manage_search</span>Consulta Devolução
                         </a>
+                        <a class="nav-sub-item" onclick="switchView('consultaPedidos')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">list_alt</span>Consulta Pedidos
+                        </a>
                     </div>
                 </div>
 
@@ -5392,6 +5396,275 @@
                 </div>
             </div>
 
+        </div>
+
+        <!-- View: Consulta Pedidos -->
+        <div id="view-consultaPedidos" class="page-content"
+            style="display:none; height:calc(100vh - 110px); flex-direction:column;">
+            <!-- Actions -->
+            <div class="card"
+                style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
+                <div class="card-body" style="padding:0.5rem; display:flex; gap:0.5rem;">
+                    <button class="btn btn-primary" style="font-weight:bold; min-width:100px;">Buscar</button>
+                    <div style="position:relative; display:inline-block;">
+                        <button class="btn btn-secondary"
+                            style="min-width:120px; display:flex; align-items:center; justify-content:space-between;">
+                            Imprimir <span class="material-icons-round" style="font-size:1rem;">arrow_drop_down</span>
+                        </button>
+                    </div>
+                    <div style="flex:1;"></div>
+                    <button class="btn btn-secondary" style="min-width:100px;">Sair</button>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="card"
+                style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
+                <div class="card-body" style="padding:0.5rem; font-size:0.75rem;">
+                    <!-- Row 1 -->
+                    <div style="display:flex; gap:0.5rem; margin-bottom:0.3rem; align-items:flex-end; flex-wrap:wrap;">
+                        <div style="width:60px;"><label
+                                style="display:block; color:var(--text-secondary);">Empresa</label>
+                            <select class="form-input" style="padding:0.1rem;">
+                                <option>01</option>
+                            </select>
+                        </div>
+                        <div><label style="display:block; color:var(--text-secondary);">Período das vendas</label>
+                            <div style="display:flex; gap:0.2rem; align-items:center;">
+                                <input type="date" value="2026-02-07" class="form-input" style="padding:0.1rem;">
+                                <span>até</span>
+                                <input type="date" value="2026-02-07" class="form-input" style="padding:0.1rem;">
+                            </div>
+                        </div>
+                        <div style="width:60px;"><label
+                                style="display:block; color:var(--text-secondary);">Código</label><input type="text"
+                                value="0" class="form-input" style="padding:0.1rem; text-align:right;"></div>
+                        <div style="flex:1; min-width:200px;"><label
+                                style="display:block; color:var(--text-secondary);">Cliente</label><input type="text"
+                                class="form-input" style="padding:0.1rem;"></div>
+                        <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Tp.
+                                entrega</label>
+                            <select class="form-input" style="padding:0.1rem;">
+                                <option>Todos</option>
+                            </select>
+                        </div>
+                        <div style="width:120px;"><label style="display:block; color:var(--text-secondary);">CPF /
+                                CNPJ</label><input type="text" class="form-input" style="padding:0.1rem;"></div>
+                        <div style="width:60px;"><label style="display:block; color:var(--text-secondary);">Nº
+                                Nota</label><input type="text" value="0" class="form-input"
+                                style="padding:0.1rem; text-align:right;"></div>
+                    </div>
+
+                    <!-- Row 2 -->
+                    <div style="display:flex; gap:0.5rem; margin-bottom:0.3rem; align-items:flex-end; flex-wrap:wrap;">
+                        <div style="width:150px;"><label style="display:block; color:var(--text-secondary);">RCA</label>
+                            <div style="display:flex; gap:0.2rem;">
+                                <input type="text" class="form-input" style="padding:0.1rem;">
+                                <button class="btn btn-secondary" style="padding:0 0.5rem;">...</button>
+                            </div>
+                        </div>
+                        <div style="width:120px;"><label
+                                style="display:block; color:var(--text-secondary);">Cobrança</label>
+                            <div style="display:flex; gap:0.2rem;">
+                                <input type="text" class="form-input" style="padding:0.1rem;">
+                                <button class="btn btn-secondary" style="padding:0 0.5rem;">...</button>
+                            </div>
+                        </div>
+                        <div style="width:60px;"><label
+                                style="display:block; color:var(--text-secondary);">Código</label><input type="text"
+                                value="0" class="form-input" style="padding:0.1rem; text-align:right;"></div>
+                        <div style="flex:1; min-width:200px;"><label
+                                style="display:block; color:var(--text-secondary);">Produto</label><input type="text"
+                                class="form-input" style="padding:0.1rem;"></div>
+                        <div style="width:80px;"><label
+                                style="display:block; color:var(--text-secondary);">Índice</label>
+                            <select class="form-input" style="padding:0.1rem;">
+                                <option>Todos</option>
+                            </select>
+                        </div>
+                        <div style="width:80px;"><label style="display:block; color:var(--text-secondary);">Nº
+                                Pedido</label><input type="text" value="0" class="form-input"
+                                style="padding:0.1rem; text-align:right;"></div>
+                        <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Nº
+                                Carregamento</label><input type="text" value="0" class="form-input"
+                                style="padding:0.1rem; text-align:right;"></div>
+                    </div>
+
+                    <!-- Row 3 -->
+                    <div style="display:flex; gap:0.5rem; margin-bottom:0.3rem; align-items:flex-end; flex-wrap:wrap;">
+                        <div style="width:200px;"><label style="display:block; color:var(--text-secondary);">Rotas e
+                                praças</label>
+                            <div style="display:flex; gap:0.2rem;">
+                                <select class="form-input" style="padding:0.1rem;">
+                                    <option>[ Todas as rotas ]</option>
+                                </select>
+                                <button class="btn btn-secondary" style="padding:0 0.5rem;">...</button>
+                            </div>
+                        </div>
+                        <div style="width:120px;"><label style="display:block; color:var(--text-secondary);">Origem da
+                                Venda</label>
+                            <select class="form-input" style="padding:0.1rem;">
+                                <option>[ Todos ]</option>
+                            </select>
+                        </div>
+                        <div style="width:150px;"><label style="display:block; color:var(--text-secondary);">Apenas
+                                vendas</label>
+                            <select class="form-input" style="padding:0.1rem;">
+                                <option>[ Todas ]</option>
+                            </select>
+                        </div>
+                        <div style="width:120px;"><label style="display:block; color:var(--text-secondary);">Ponto de
+                                venda (PDV)</label>
+                            <input type="text" class="form-input" style="padding:0.1rem;">
+                        </div>
+                        <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Tipo
+                                cliente</label>
+                            <select class="form-input" style="padding:0.1rem;">
+                                <option>Todos</option>
+                            </select>
+                        </div>
+                        <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Status do
+                                Pedido</label>
+                            <select class="form-input" style="padding:0.1rem;">
+                                <option>[ Todos ]</option>
+                            </select>
+                        </div>
+                        <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Tipo de
+                                Fat.</label>
+                            <select class="form-input" style="padding:0.1rem;">
+                                <option>[ Todos ]</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Row 4 Checkboxes -->
+                    <div
+                        style="display:flex; gap:1rem; padding-top:0.3rem; border-top:1px solid var(--border-color); flex-wrap:wrap;">
+                        <label style="display:flex; align-items:center; gap:0.3rem; font-weight:bold;">
+                            <input type="checkbox"> Listar apenas vendas com troca
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.3rem; font-weight:bold;">
+                            <input type="checkbox"> Mostrar débito e crédito da venda
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.3rem; font-weight:bold;">
+                            <input type="checkbox"> Devoluções [ apenas das vendas listadas ]
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Master Grid -->
+            <div class="card"
+                style="flex:1; margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color); display:flex; flex-direction:column; min-height:150px;">
+                <div style="overflow:auto; flex:1;">
+                    <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
+                        <thead style="background:var(--bg-secondary); position:sticky; top:0;">
+                            <tr style="text-align:left; color:var(--text-secondary);">
+                                <th style="padding:0.3rem;">Empresa</th>
+                                <th style="padding:0.3rem;">T.V.</th>
+                                <th style="padding:0.3rem;">Pos.</th>
+                                <th style="padding:0.3rem;">Nº Pedido</th>
+                                <th style="padding:0.3rem;">Nº Nota</th>
+                                <th style="padding:0.3rem;">Nº Carreg.</th>
+                                <th style="padding:0.3rem;">Dt. Retirada</th>
+                                <th style="padding:0.3rem;">Faturado em</th>
+                                <th style="padding:0.3rem;">Impresso</th>
+                                <th style="padding:0.3rem;">Dt.Emissão</th>
+                                <th style="padding:0.3rem;">hh:mm</th>
+                                <th style="padding:0.3rem;">Código</th>
+                                <th style="padding:0.3rem;">Cliente</th>
+                                <th style="padding:0.3rem;">Cobrança</th>
+                                <th style="padding:0.3rem;">Plano de Pagamen...</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Empty Row Placeholder -->
+                            <tr>
+                                <td colspan="15" style="text-align:center; padding:1rem; color:var(--text-secondary);">
+                                    Nenhum pedido encontrado</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Resize Handle / Splitter (Visual only) -->
+            <div style="height:4px; background:var(--border-color); cursor:ns-resize; margin-bottom:0.5rem;"></div>
+
+            <!-- Detail Grid -->
+            <div class="card"
+                style="flex:1; margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color); display:flex; flex-direction:column; min-height:150px;">
+                <div style="overflow:auto; flex:1;">
+                    <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
+                        <thead style="background:var(--bg-secondary); position:sticky; top:0;">
+                            <tr style="text-align:left; color:var(--text-secondary);">
+                                <th style="padding:0.3rem;">Retira</th>
+                                <th style="padding:0.3rem;">Código</th>
+                                <th style="padding:0.3rem;">Item descrição</th>
+                                <th style="padding:0.3rem;">Embalagem</th>
+                                <th style="padding:0.3rem;">Un.</th>
+                                <th style="padding:0.3rem;">Quantidade</th>
+                                <th style="padding:0.3rem;">P.Unitário</th>
+                                <th style="padding:0.3rem;">Subtotal</th>
+                                <th style="padding:0.3rem;">[%] M.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="9" style="text-align:center; padding:1rem; color:var(--text-secondary);">
+                                    Nenhum item selecionado</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Footer Totals -->
+            <div class="card" style="margin-top:auto; background:var(--bg-card); border:1px solid var(--border-color);">
+                <div class="card-body"
+                    style="padding:0.5rem; display:flex; gap:1rem; font-size:0.75rem; flex-wrap:wrap;">
+                    <div><label style="display:block; color:var(--text-secondary); font-weight:bold;">Qtde.
+                            pedidos</label>
+                        <input type="text" class="form-input" style="width:80px; text-align:center;" readonly>
+                    </div>
+                    <div><label style="display:block; color:var(--text-secondary); font-weight:bold;">Peso dos
+                            pedidos</label>
+                        <input type="text" class="form-input" style="width:100px; text-align:right;" readonly>
+                    </div>
+                    <div><label style="display:block; color:var(--text-secondary); font-weight:bold;">Valor dos
+                            Pedidos</label>
+                        <input type="text" class="form-input" style="width:100px; text-align:right;" readonly>
+                    </div>
+                    <div><label style="display:block; color:var(--accent-primary); font-weight:bold;">Total do
+                            CMV</label>
+                        <input type="text" value="0,00" class="form-input"
+                            style="width:100px; text-align:right; font-weight:bold;" readonly>
+                    </div>
+                    <div><label style="display:block; color:var(--text-secondary); font-weight:bold;">Total
+                            devoluções</label>
+                        <input type="text" value="0,00" class="form-input"
+                            style="width:100px; text-align:right; font-weight:bold;" readonly>
+                    </div>
+                    <div><label style="display:block; color:var(--text-secondary); font-weight:bold;">Custo
+                            devoluções</label>
+                        <input type="text" value="0,00" class="form-input"
+                            style="width:100px; text-align:right; font-weight:bold;" readonly>
+                    </div>
+                    <div><label style="display:block; color:var(--text-secondary); font-weight:bold;">Valor venda
+                            líquida</label>
+                        <input type="text" value="0,00" class="form-input"
+                            style="width:100px; text-align:right; font-weight:bold;" readonly>
+                    </div>
+                    <div><label style="display:block; color:var(--text-secondary); font-weight:bold;">Total
+                            volumes</label>
+                        <input type="text" value="0" class="form-input"
+                            style="width:80px; text-align:center; font-weight:bold;" readonly>
+                    </div>
+                    <div><label style="display:block; color:var(--text-secondary); font-weight:bold;">Margem [%]</label>
+                        <input type="text" class="form-input" style="width:80px; text-align:center;" readonly>
+                    </div>
+                </div>
+            </div>
         </div>
         </main>
 
