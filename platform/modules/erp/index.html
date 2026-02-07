@@ -126,54 +126,36 @@
                         <!-- Replicating Header Structure from Cadastros -->
                         <div class="nav-sublevel-title">Operações de Venda</div>
 
-                        <!-- DEBUG ITEM -->
-                        <div
-                            style="padding-left: 50px; background: red; color: white; font-weight: bold; margin: 5px 0;">
-                            DEBUG: 50px PADDING</div>
-
-                        <a id="debug-target" class="nav-sub-item" onclick="switchView('sales')"
-                            style="padding-left: 3.5rem !important; border: 1px solid lime;">
+                        <a class="nav-sub-item" onclick="switchView('sales')" style="padding-left: 2.25rem !important;">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">receipt_long</span>Pedido de Venda
                         </a>
                         <a class="nav-sub-item" onclick="switchView('cancelamento')"
-                            style="padding-left: 3.5rem !important;">
+                            style="padding-left: 2.25rem !important;">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">cancel</span>Cancelamento
                         </a>
                         <a class="nav-sub-item" onclick="switchView('frenteCaixa')"
-                            style="padding-left: 3.5rem !important;">
+                            style="padding-left: 2.25rem !important;">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">point_of_sale</span>Frente de Caixa
                         </a>
                         <a class="nav-sub-item" onclick="switchView('devolucaoLista')"
-                            style="padding-left: 3.5rem !important;">
+                            style="padding-left: 2.25rem !important;">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">replay</span>Devolução
                         </a>
                         <a class="nav-sub-item" onclick="switchView('consultaDevolucao')"
-                            style="padding-left: 3.5rem !important;">
+                            style="padding-left: 2.25rem !important;">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">manage_search</span>Consulta Devolução
                         </a>
                         <a class="nav-sub-item" onclick="switchView('consultaPedidos')"
-                            style="padding-left: 3.5rem !important;">
+                            style="padding-left: 2.25rem !important;">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">list_alt</span>Consulta Pedidos
                         </a>
                     </div>
-                    <script>
-                        setTimeout(() => {
-                            const el = document.getElementById('debug-target');
-                            if (el) {
-                                console.log('--- DEBUG ALINHAMENTO ---');
-                                console.log('Classes:', el.className);
-                                console.log('Inline Style:', el.style.paddingLeft);
-                                console.log('Computed PaddingLeft:', window.getComputedStyle(el).paddingLeft);
-                                console.log('Computed Display:', window.getComputedStyle(el).display);
-                            }
-                        }, 5000);
-                    </script>
                 </div>
 
                 <div class="nav-group">
