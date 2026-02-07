@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.15.7",
+    "version": "2.15.8",
     "date": "2026-02-07",
-    "last_change": "Fix Sidebar Alinhamento (Nuclear)",
-    "build": "20260207.13"
+    "last_change": "Inclusão de Debug para Sidebar",
+    "build": "20260207.14"
 }
