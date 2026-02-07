@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.15.3",
+    "version": "2.15.4",
     "date": "2026-02-07",
-    "last_change": "Fix Alinhamento Sidebar (Cache)",
-    "build": "20260207.09"
+    "last_change": "Fix Indentação Submenu (Force)",
+    "build": "20260207.10"
 }

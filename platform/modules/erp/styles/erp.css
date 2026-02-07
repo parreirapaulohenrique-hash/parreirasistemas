@@ -415,7 +415,7 @@ body {
 
 .nav-sub-item {
     font-size: 0.85rem;
-    padding: 0.5rem 1rem 0.5rem 3.5rem;
+    padding: 0.5rem 1rem 0.5rem 3.0rem !important;
     color: var(--text-secondary);
     text-decoration: none;
     display: flex;
