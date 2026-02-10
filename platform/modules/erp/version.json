@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.15.9",
-    "date": "2026-02-07",
-    "last_change": "Ajuste Fino Sidebar (36px)",
-    "build": "20260207.15"
+    "version": "2.15.10",
+    "date": "2026-02-10",
+    "last_change": "Limpeza Geral Sidebar (2.25rem)",
+    "build": "20260210.16"
 }
