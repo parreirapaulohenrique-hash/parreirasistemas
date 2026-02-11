@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>WMS Coletor</title>
+
+    <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <link rel="stylesheet" href="styles/coletor.css">
+</head>
+
+<body>
+    <!-- App Container -->
+    <div id="app">
+
+        <!-- Top Bar -->
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <span class="material-icons-round" style="color:var(--primary);">warehouse</span>
+                <span class="top-bar-title" id="screenTitle">WMS Coletor</span>
+            </div>
+            <div class="top-bar-right">
+                <span id="userBadge" class="user-badge">OP</span>
+            </div>
+        </header>
+
+        <!-- Scanner Bar (visible on operational screens) -->
+        <div class="scanner-bar" id="scannerBar" style="display:none;">
+            <span class="material-icons-round scanner-icon">qr_code_scanner</span>
+            <input type="text" id="scannerInput" class="scanner-input" placeholder="Escanear ou digitar código..."
+                autocomplete="off" autofocus>
+            <button class="scanner-btn" onclick="processScan()">
+                <span class="material-icons-round">search</span>
+            </button>
+        </div>
+
+        <!-- Screen Content -->
+        <main class="screen-content" id="screenContent">
+
+            <!-- Screen: Home -->
+            <div id="screen-home" class="screen active">
+                <div class="home-grid">
+                    <div class="home-card" onclick="navigateTo('recebimento')">
+                        <span class="material-icons-round home-card-icon" style="color:#0ea5e9;">move_to_inbox</span>
+                        <span class="home-card-label">Receber</span>
+                        <span class="home-card-badge" id="badgeReceber">0</span>
+                    </div>
+                    <div class="home-card" onclick="navigateTo('armazenar')">
+                        <span class="material-icons-round home-card-icon"
+                            style="color:#8b5cf6;">system_update_alt</span>
+                        <span class="home-card-label">Armazenar</span>
+                        <span class="home-card-badge" id="badgeArmazenar">0</span>
+                    </div>
+                    <div class="home-card" onclick="navigateTo('separar')">
+                        <span class="material-icons-round home-card-icon" style="color:#f59e0b;">shopping_basket</span>
+                        <span class="home-card-label">Separar</span>
+                        <span class="home-card-badge" id="badgeSeparar">0</span>
+                    </div>
+                    <div class="home-card" onclick="navigateTo('inventario')">
+                        <span class="material-icons-round home-card-icon" style="color:#10b981;">inventory_2</span>
+                        <span class="home-card-label">Inventário</span>
+                        <span class="home-card-badge" id="badgeInventario">0</span>
+                    </div>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="stats-row">
+                    <div class="stat-chip">
+                        <span class="stat-value" id="statEnderecos">0</span>
+                        <span class="stat-label">Endereços</span>
+                    </div>
+                    <div class="stat-chip">
+                        <span class="stat-value" id="statOcupados" style="color:#ef4444;">0</span>
+                        <span class="stat-label">Ocupados</span>
+                    </div>
+                    <div class="stat-chip">
+                        <span class="stat-value" id="statPendentes" style="color:#f59e0b;">0</span>
+                        <span class="stat-label">Pendentes</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Screen: Recebimento -->
+            <div id="screen-recebimento" class="screen"></div>
+
+            <!-- Screen: Armazenar -->
+            <div id="screen-armazenar" class="screen"></div>
+
+            <!-- Screen: Separar -->
+            <div id="screen-separar" class="screen"></div>
+
+            <!-- Screen: Inventário -->
+            <div id="screen-inventario" class="screen"></div>
+
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-tab active" onclick="navigateTo('home')">
+                <span class="material-icons-round">home</span>
+                <span>Início</span>
+            </button>
+            <button class="nav-tab" onclick="navigateTo('recebimento')">
+                <span class="material-icons-round">move_to_inbox</span>
+                <span>Receber</span>
+            </button>
+            <button class="nav-tab" onclick="navigateTo('armazenar')">
+                <span class="material-icons-round">system_update_alt</span>
+                <span>Armazenar</span>
+            </button>
+            <button class="nav-tab" onclick="navigateTo('separar')">
+                <span class="material-icons-round">shopping_basket</span>
+                <span>Separar</span>
+            </button>
+            <button class="nav-tab" onclick="navigateTo('inventario')">
+                <span class="material-icons-round">inventory_2</span>
+                <span>Inventário</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/coletor-core.js"></script>
+    <script>
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(() => console.log('SW registrado'))
+                .catch(e => console.warn('SW falhou:', e));
+        }
+    </script>
+</body>
+
+</html>

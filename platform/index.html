@@ -81,6 +81,16 @@
                 <span class="module-status active">✅ Disponível</span>
             </div>
 
+            <!-- WMS Coletor -->
+            <div class="module-card module-wms-coletor" onclick="openModule('wms-coletor')">
+                <div class="module-icon" style="background: linear-gradient(135deg, #06b6d4 0%, #0e7490 100%);">
+                    <span class="material-icons-round">phone_android</span>
+                </div>
+                <h3>WMS Coletor</h3>
+                <p>App mobile para operadores de armazém com scanner.</p>
+                <span class="module-status active">✅ Disponível</span>
+            </div>
+
             <!-- Dispatch -->
             <div class="module-card module-dispatch" onclick="openModule('dispatch')">
                 <div class="module-icon">
@@ -340,6 +350,9 @@
                     break;
                 case 'wms':
                     window.open('modules/wms/index.html', '_blank');
+                    break;
+                case 'wms-coletor':
+                    window.open('modules/wms-coletor/index.html', '_blank');
                     break;
                 case 'sales-force':
                     alert('Módulo em desenvolvimento.');
