@@ -48,5 +48,8 @@ function switchView(viewId) {
         if (viewId === 'locations' && window.loadLocationsView) {
             window.loadLocationsView();
         }
+        if (viewId === 'inbound' && window.loadInboundView) {
+            window.loadInboundView();
+        }
     }
 }
