@@ -4,11 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Parreira WMS | Logística</title>
+    <title>Parreira WMS | Gestão de Armazém</title>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-    <link rel="stylesheet" href="../../core/styles/portal.css">
     <link rel="stylesheet" href="styles/wms.css">
 </head>
 
@@ -22,50 +21,177 @@
             </div>
 
             <nav class="nav-menu">
+                <!-- Dashboard -->
                 <a class="nav-item active" onclick="switchView('dashboard')">
                     <span class="material-icons-round">dashboard</span>
                     <span>Visão Geral</span>
                 </a>
 
-                <div class="nav-divider">OPERAÇÕES</div>
-
-                <!-- Endereçamento -->
-                <a class="nav-item" onclick="switchView('locations')">
-                    <span class="material-icons-round">dns</span>
-                    <span>Endereçamento</span>
+                <!-- 1. CADASTROS (with submenu) -->
+                <a class="nav-item has-submenu" onclick="toggleSubmenu(this)">
+                    <span class="material-icons-round">edit_note</span>
+                    <span>Cadastros</span>
+                    <span class="material-icons-round submenu-arrow">expand_more</span>
                 </a>
+                <div class="submenu">
+                    <a class="submenu-item" onclick="switchView('cad-usuarios')">Usuário</a>
+                    <a class="submenu-item" onclick="switchView('cad-perfil-senha')">Perfil de Seg. de Senha</a>
+                    <a class="submenu-item" onclick="switchView('cad-tipo-empresa')">Tipo de Empresa</a>
+                    <a class="submenu-item" onclick="switchView('cad-filial')">Filial</a>
+                    <a class="submenu-item" onclick="switchView('cad-cliente')">Cliente</a>
+                    <a class="submenu-item" onclick="switchView('cad-fornecedor')">Fornecedor</a>
+                    <a class="submenu-item" onclick="switchView('cad-setor')">Setor Executante</a>
+                    <a class="submenu-item" onclick="switchView('cad-contato')">Contato</a>
+                    <a class="submenu-item" onclick="switchView('cad-etiquetas')">Etiquetas</a>
+                    <a class="submenu-item" onclick="switchView('cad-motivo-transf')">Motivo de Transferência</a>
+                    <!-- Sub-submenus -->
+                    <a class="submenu-item has-sub" onclick="toggleSubSubmenu(this)">
+                        <span>Produtos</span>
+                        <span class="material-icons-round" style="font-size:0.9rem;">chevron_right</span>
+                    </a>
+                    <div class="sub-submenu">
+                        <a class="submenu-item sub" onclick="switchView('cad-prod-grupo')">Grupo</a>
+                        <a class="submenu-item sub" onclick="switchView('cad-prod-subgrupo')">Sub-Grupo</a>
+                        <a class="submenu-item sub" onclick="switchView('cad-prod-familia')">Família</a>
+                        <a class="submenu-item sub" onclick="switchView('cad-prod-cadastro')">Cadastro de Produto</a>
+                    </div>
+                    <a class="submenu-item has-sub" onclick="toggleSubSubmenu(this)">
+                        <span>Endereços</span>
+                        <span class="material-icons-round" style="font-size:0.9rem;">chevron_right</span>
+                    </a>
+                    <div class="sub-submenu">
+                        <a class="submenu-item sub" onclick="switchView('cad-end-tipo')">Tipo de Endereço</a>
+                        <a class="submenu-item sub" onclick="switchView('cad-end-cadastro')">Endereçamento</a>
+                    </div>
+                    <a class="submenu-item has-sub" onclick="toggleSubSubmenu(this)">
+                        <span>Recepção</span>
+                        <span class="material-icons-round" style="font-size:0.9rem;">chevron_right</span>
+                    </a>
+                    <div class="sub-submenu">
+                        <a class="submenu-item sub" onclick="switchView('cad-rec-tipo-nf')">Tipo de NF</a>
+                        <a class="submenu-item sub" onclick="switchView('cad-rec-regras')">Regras de Recebimento</a>
+                    </div>
+                    <a class="submenu-item has-sub" onclick="toggleSubSubmenu(this)">
+                        <span>Expedição</span>
+                        <span class="material-icons-round" style="font-size:0.9rem;">chevron_right</span>
+                    </a>
+                    <div class="sub-submenu">
+                        <a class="submenu-item sub" onclick="switchView('cad-exp-doca')">Docas</a>
+                        <a class="submenu-item sub" onclick="switchView('cad-exp-transportadora')">Transportadora</a>
+                    </div>
+                    <a class="submenu-item has-sub" onclick="toggleSubSubmenu(this)">
+                        <span>Ordem de Serviço</span>
+                        <span class="material-icons-round" style="font-size:0.9rem;">chevron_right</span>
+                    </a>
+                    <div class="sub-submenu">
+                        <a class="submenu-item sub" onclick="switchView('cad-os-tipo')">Tipo de OS</a>
+                        <a class="submenu-item sub" onclick="switchView('cad-os-prioridade')">Prioridade</a>
+                    </div>
+                </div>
 
-                <!-- Recebimento -->
-                <a class="nav-item" onclick="switchView('inbound')">
+                <!-- 2. RELATÓRIOS MANUTENÇÃO -->
+                <a class="nav-item has-submenu" onclick="toggleSubmenu(this)">
+                    <span class="material-icons-round">build</span>
+                    <span>Rel. Manutenção</span>
+                    <span class="material-icons-round submenu-arrow">expand_more</span>
+                </a>
+                <div class="submenu">
+                    <a class="submenu-item" onclick="switchView('relm-endereco-vazio')">Endereços Vazios</a>
+                    <a class="submenu-item" onclick="switchView('relm-endereco-bloqueado')">Endereços Bloqueados</a>
+                    <a class="submenu-item" onclick="switchView('relm-produto-sem-end')">Produtos sem Endereço</a>
+                    <a class="submenu-item" onclick="switchView('relm-curva-abc')">Curva ABC</a>
+                    <a class="submenu-item" onclick="switchView('relm-ocupacao')">Ocupação por Rua</a>
+                    <a class="submenu-item" onclick="switchView('relm-parametros')">Parâmetros de Armazenagem</a>
+                    <a class="submenu-item" onclick="switchView('relm-auditoria-cadastro')">Auditoria de Cadastros</a>
+                </div>
+
+                <!-- 3. RELATÓRIOS OPERAÇÃO -->
+                <a class="nav-item has-submenu" onclick="toggleSubmenu(this)">
+                    <span class="material-icons-round">assessment</span>
+                    <span>Rel. Operação</span>
+                    <span class="material-icons-round submenu-arrow">expand_more</span>
+                </a>
+                <div class="submenu">
+                    <a class="submenu-item" onclick="switchView('relo-recebimento')">Recebimentos do Dia</a>
+                    <a class="submenu-item" onclick="switchView('relo-armazenagem')">Armazenagens Pendentes</a>
+                    <a class="submenu-item" onclick="switchView('relo-separacao')">Separações do Dia</a>
+                    <a class="submenu-item" onclick="switchView('relo-expedicao')">Expedições do Dia</a>
+                    <a class="submenu-item" onclick="switchView('relo-produtividade')">Produtividade Operador</a>
+                    <a class="submenu-item" onclick="switchView('relo-divergencias')">Divergências</a>
+                    <a class="submenu-item" onclick="switchView('relo-movimentacao')">Movimentação (Kardex)</a>
+                </div>
+
+                <!-- 4. ENTRADA DE PRODUTOS -->
+                <a class="nav-item has-submenu" onclick="toggleSubmenu(this)">
                     <span class="material-icons-round">move_to_inbox</span>
-                    <span>Recebimento</span>
+                    <span>Entrada de Produtos</span>
+                    <span class="material-icons-round submenu-arrow">expand_more</span>
                 </a>
+                <div class="submenu">
+                    <a class="submenu-item" onclick="switchView('ent-agendamento')">Agendamento de Doca</a>
+                    <a class="submenu-item" onclick="switchView('ent-recebimento')">Recebimento de NF</a>
+                    <a class="submenu-item" onclick="switchView('ent-conferencia')">Conferência</a>
+                    <a class="submenu-item" onclick="switchView('ent-armazenagem')">Armazenagem (Putaway)</a>
+                    <a class="submenu-item" onclick="switchView('ent-devolucao')">Devolução de Cliente</a>
+                </div>
 
-                <!-- Armazenagem -->
-                <a class="nav-item" onclick="switchView('putaway')">
-                    <span class="material-icons-round">system_update_alt</span>
-                    <span>Armazenagem</span>
-                </a>
-
-                <!-- Separação -->
-                <a class="nav-item" onclick="switchView('picking')">
-                    <span class="material-icons-round">shopping_basket</span>
-                    <span>Separação</span>
-                </a>
-
-                <!-- Expedição -->
-                <a class="nav-item" onclick="switchView('outbound')">
-                    <span class="material-icons-round">local_shipping</span>
-                    <span>Expedição</span>
-                </a>
-
-                <div class="nav-divider">CONTROLE</div>
-
-                <!-- Estoque -->
-                <a class="nav-item" onclick="switchView('stock')">
+                <!-- 5. ESTOQUE -->
+                <a class="nav-item has-submenu" onclick="toggleSubmenu(this)">
                     <span class="material-icons-round">inventory_2</span>
-                    <span>Consulta Estoque</span>
+                    <span>Estoque</span>
+                    <span class="material-icons-round submenu-arrow">expand_more</span>
                 </a>
+                <div class="submenu">
+                    <a class="submenu-item" onclick="switchView('est-consulta')">Consulta de Estoque</a>
+                    <a class="submenu-item" onclick="switchView('est-endereco')">Consulta por Endereço</a>
+                    <a class="submenu-item" onclick="switchView('est-transferencia')">Transferência de Endereço</a>
+                    <a class="submenu-item" onclick="switchView('est-bloqueio')">Bloqueio / Quarentena</a>
+                    <a class="submenu-item" onclick="switchView('est-inventario')">Inventário</a>
+                    <a class="submenu-item" onclick="switchView('est-ajuste')">Ajuste de Estoque</a>
+                </div>
+
+                <!-- 6. SAÍDA DE PRODUTOS -->
+                <a class="nav-item has-submenu" onclick="toggleSubmenu(this)">
+                    <span class="material-icons-round">local_shipping</span>
+                    <span>Saída de Produtos</span>
+                    <span class="material-icons-round submenu-arrow">expand_more</span>
+                </a>
+                <div class="submenu">
+                    <a class="submenu-item" onclick="switchView('sai-ondas')">Formação de Ondas</a>
+                    <a class="submenu-item" onclick="switchView('sai-separacao')">Separação (Picking)</a>
+                    <a class="submenu-item" onclick="switchView('sai-conferencia')">Conferência de Saída</a>
+                    <a class="submenu-item" onclick="switchView('sai-embalagem')">Embalagem (Packing)</a>
+                    <a class="submenu-item" onclick="switchView('sai-romaneio')">Romaneio</a>
+                    <a class="submenu-item" onclick="switchView('sai-expedicao')">Expedição</a>
+                </div>
+
+                <!-- 7. AUDITORIA -->
+                <a class="nav-item has-submenu" onclick="toggleSubmenu(this)">
+                    <span class="material-icons-round">policy</span>
+                    <span>Auditoria</span>
+                    <span class="material-icons-round submenu-arrow">expand_more</span>
+                </a>
+                <div class="submenu">
+                    <a class="submenu-item" onclick="switchView('aud-inventario')">Inventário Cíclico</a>
+                    <a class="submenu-item" onclick="switchView('aud-contagem')">Contagem Rotativa</a>
+                    <a class="submenu-item" onclick="switchView('aud-divergencias')">Divergências</a>
+                    <a class="submenu-item" onclick="switchView('aud-rastreio')">Rastreabilidade (Kardex)</a>
+                    <a class="submenu-item" onclick="switchView('aud-log')">Log de Operações</a>
+                </div>
+
+                <!-- 8. CONFIGURAÇÕES -->
+                <a class="nav-item has-submenu" onclick="toggleSubmenu(this)">
+                    <span class="material-icons-round">settings</span>
+                    <span>Configurações</span>
+                    <span class="material-icons-round submenu-arrow">expand_more</span>
+                </a>
+                <div class="submenu">
+                    <a class="submenu-item" onclick="switchView('cfg-geral')">Gerais</a>
+                    <a class="submenu-item" onclick="switchView('cfg-armazenagem')">Regras de Armazenagem</a>
+                    <a class="submenu-item" onclick="switchView('cfg-separacao')">Regras de Separação</a>
+                    <a class="submenu-item" onclick="switchView('cfg-etiqueta')">Layout de Etiqueta</a>
+                    <a class="submenu-item" onclick="switchView('cfg-integracao')">Integrações</a>
+                </div>
             </nav>
 
             <div class="sidebar-footer">
@@ -128,29 +254,20 @@
                             <span class="material-icons-round"
                                 style="font-size:4rem; color:var(--primary-color); opacity:0.5;">warehouse</span>
                             <h3 style="margin-top:1rem;">Parreira WMS</h3>
-                            <p class="text-secondary" style="margin-top:0.5rem;">Gerencie endereços, receba mercadorias,
-                                separe pedidos.</p>
+                            <p class="text-secondary" style="margin-top:0.5rem;">Sistema de Gestão de Armazém orientado
+                                ao Supervisor de Estoque.</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- View: Locations (Endereçamento) -->
+                <!-- Views: Endereçamento (used by locations.js) -->
                 <div id="view-locations" class="page-content" style="display:none;"></div>
 
-                <!-- Placeholders for other views -->
+                <!-- Views: Recebimento (used by inbound.js) -->
                 <div id="view-inbound" class="page-content" style="display:none;"></div>
-                <div id="view-putaway" class="page-content" style="display:none;">
-                    <h2>Armazenagem (Em breve)</h2>
-                </div>
-                <div id="view-picking" class="page-content" style="display:none;">
-                    <h2>Separação (Em breve)</h2>
-                </div>
-                <div id="view-outbound" class="page-content" style="display:none;">
-                    <h2>Expedição (Em breve)</h2>
-                </div>
-                <div id="view-stock" class="page-content" style="display:none;">
-                    <h2>Estoque (Em breve)</h2>
-                </div>
+
+                <!-- Generic dynamic view container -->
+                <div id="view-dynamic" class="page-content" style="display:none;"></div>
             </div>
         </main>
     </div>
