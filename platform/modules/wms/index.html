@@ -4,102 +4,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WMS | Parreira Sistemas</title>
+    <title>Parreira WMS | Logística</title>
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #06b6d4;
-            --bg-dark: #0f172a;
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg-dark);
-            color: var(--text-primary);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .container {
-            text-align: center;
-            padding: 3rem;
-        }
-
-        .icon {
-            width: 120px;
-            height: 120px;
-            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
-            border-radius: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 2rem;
-        }
-
-        .icon .material-icons-round {
-            font-size: 60px;
-            color: white;
-        }
-
-        h1 {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-        }
-
-        p {
-            color: var(--text-secondary);
-            margin-bottom: 2rem;
-        }
-
-        .badge {
-            background: rgba(6, 182, 212, 0.1);
-            color: var(--primary);
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            display: inline-block;
-            margin-bottom: 2rem;
-        }
-
-        .btn {
-            background: #1e293b;
-            color: var(--text-primary);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .btn:hover {
-            background: var(--primary);
-        }
-    </style>
+    <link rel="stylesheet" href="../../core/styles/portal.css">
+    <link rel="stylesheet" href="styles/wms.css">
 </head>
 
 <body>
-    <div class="container">
-        <div class="icon"><span class="material-icons-round">warehouse</span></div>
-        <h1>WMS</h1>
-        <p>Gestão de armazém para +10.000 SKUs com rastreabilidade completa.</p>
-        <div class="badge">🚧 Em Desenvolvimento</div>
-        <br><br>
-        <a href="../../index.html" class="btn"><span class="material-icons-round">arrow_back</span> Voltar ao Portal</a>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo-area">
+                <span class="material-icons-round" style="font-size: 1.5rem;">warehouse</span>
+                <h1 style="font-size: 1.25rem;">Parreira WMS</h1>
+            </div>
+
+            <nav class="nav-menu">
+                <a class="nav-item active" onclick="switchView('dashboard')">
+                    <span class="material-icons-round">dashboard</span>
+                    <span>Visão Geral</span>
+                </a>
+
+                <div class="nav-divider">OPERAÇÕES</div>
+
+                <!-- Endereçamento -->
+                <a class="nav-item" onclick="switchView('locations')">
+                    <span class="material-icons-round">dns</span>
+                    <span>Endereçamento</span>
+                </a>
+
+                <!-- Recebimento -->
+                <a class="nav-item" onclick="switchView('inbound')">
+                    <span class="material-icons-round">move_to_inbox</span>
+                    <span>Recebimento</span>
+                </a>
+
+                <!-- Armazenagem -->
+                <a class="nav-item" onclick="switchView('putaway')">
+                    <span class="material-icons-round">system_update_alt</span>
+                    <span>Armazenagem</span>
+                </a>
+
+                <!-- Separação -->
+                <a class="nav-item" onclick="switchView('picking')">
+                    <span class="material-icons-round">shopping_basket</span>
+                    <span>Separação</span>
+                </a>
+
+                <!-- Expedição -->
+                <a class="nav-item" onclick="switchView('outbound')">
+                    <span class="material-icons-round">local_shipping</span>
+                    <span>Expedição</span>
+                </a>
+
+                <div class="nav-divider">CONTROLE</div>
+
+                <!-- Estoque -->
+                <a class="nav-item" onclick="switchView('stock')">
+                    <span class="material-icons-round">inventory_2</span>
+                    <span>Consulta Estoque</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <span class="material-icons-round" style="color:var(--text-secondary)">person</span>
+                    <div style="display:flex; flex-direction:column;">
+                        <span id="userName" style="font-size:0.85rem; font-weight:600;">Usuário</span>
+                        <span id="userTenant" style="font-size:0.7rem; color:var(--text-secondary)">Tenant</span>
+                    </div>
+                </div>
+                <a href="../../index.html" style="color:var(--accent-danger); text-decoration:none;" title="Sair">
+                    <span class="material-icons-round">logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <header class="top-bar">
+                <div class="breadcrumb">
+                    <span class="text-secondary" id="breadParent">WMS</span> / <span class="current"
+                        id="pageTitle">Visão Geral</span>
+                </div>
+            </header>
+
+            <div class="content-wrapper">
+                <!-- View: Dashboard -->
+                <div id="view-dashboard" class="page-content">
+                    <div class="card">
+                        <div class="card-body" style="padding:2rem; text-align:center;">
+                            <h3>Bem-vindo ao WMS</h3>
+                            <p class="text-secondary">Selecione uma opção no menu lateral.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Locations (Endereçamento) -->
+                <div id="view-locations" class="page-content" style="display:none;">
+                    <!-- Content will be injected by js/locations.js -->
+                </div>
+
+                <!-- Placeholders for other views -->
+                <div id="view-inbound" class="page-content" style="display:none;">
+                    <h2>Recebimento (Em breve)</h2>
+                </div>
+                <div id="view-putaway" class="page-content" style="display:none;">
+                    <h2>Armazenagem (Em breve)</h2>
+                </div>
+                <div id="view-picking" class="page-content" style="display:none;">
+                    <h2>Separação (Em breve)</h2>
+                </div>
+                <div id="view-outbound" class="page-content" style="display:none;">
+                    <h2>Expedição (Em breve)</h2>
+                </div>
+                <div id="view-stock" class="page-content" style="display:none;">
+                    <h2>Estoque (Em breve)</h2>
+                </div>
+            </div>
+        </main>
     </div>
+
+    <!-- Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+
+    <script src="../../core/js/firebase-config.js"></script>
+    <script src="../../core/js/utils.js"></script>
+    <script src="js/wms-core.js"></script>
+    <script src="js/locations.js"></script>
 </body>
 
 </html>
