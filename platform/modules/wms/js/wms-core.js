@@ -6,14 +6,14 @@ const WMS_VERSION = '3.0.0-alpha';
 // --- Auth & Tenant Check ---
 document.addEventListener('DOMContentLoaded', async () => {
     // Check if user is logged in via localStorage (fast check)
-    const savedUser = localStorage.getItem('currentUser');
+    const savedUser = localStorage.getItem('logged_user');
     if (!savedUser) {
         window.location.href = '../../index.html'; // Redirect to login
         return;
     }
 
     const user = JSON.parse(savedUser);
-    document.getElementById('userName').textContent = user.name || user.email;
+    document.getElementById('userName').textContent = user.name || user.login;
     document.getElementById('userTenant').textContent = user.tenantId || 'Tenant';
 
     // Highlight active menu
