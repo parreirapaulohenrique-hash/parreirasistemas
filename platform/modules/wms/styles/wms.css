@@ -67,8 +67,8 @@ body {
 .nav-menu {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
     padding-right: 0.5rem;
