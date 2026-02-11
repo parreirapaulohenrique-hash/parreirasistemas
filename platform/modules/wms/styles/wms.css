@@ -122,75 +122,51 @@ body {
     font-size: 1.25rem;
 }
 
-/* Submenu toggle arrow */
-.nav-item.has-submenu {
-    justify-content: flex-start;
+/* ===== SUBMENUS (ERP Pattern) ===== */
+.nav-submenu {
+    display: none;
+    flex-direction: column;
+    background: rgba(0, 0, 0, 0.02);
 }
 
-.submenu-arrow {
-    margin-left: auto;
-    font-size: 1.1rem !important;
-    transition: transform 0.2s;
-}
-
-.nav-item.has-submenu.open .submenu-arrow {
-    transform: rotate(180deg);
-}
-
-/* Submenu container */
-.submenu {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.25s ease;
-    margin-left: 0.5rem;
-    border-left: 2px solid var(--border-color);
-    padding-left: 0;
-}
-
-.submenu.open {
-    max-height: 1500px;
-}
-
-.submenu-item {
+.nav-sub-item {
+    font-size: 0.85rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    padding-right: 1rem;
+    padding-left: 2.25rem;
+    color: var(--text-secondary);
+    text-decoration: none;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 0.5rem 0.75rem 0.5rem 1rem;
-    font-size: 0.85rem;
-    color: var(--text-secondary);
+    gap: 0.5rem;
     cursor: pointer;
-    transition: var(--transition);
-    border-radius: 4px;
-    text-decoration: none;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
 }
 
-.submenu-item:hover,
-.submenu-item.active {
-    background: rgba(14, 165, 233, 0.08);
+.nav-sub-item:hover {
     color: var(--primary-color);
+    background: rgba(14, 165, 233, 0.08);
+    border-left-color: var(--primary-color);
 }
 
-.submenu-item.has-sub {
-    font-weight: 500;
+/* Sublevel titles for categories within a submenu */
+.nav-sublevel-title {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    color: var(--primary-color);
+    margin: 0.75rem 0 0.25rem 0.5rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding-left: 0.5rem;
+    border-left: 2px solid var(--primary-color);
 }
 
-/* Sub-submenu */
-.sub-submenu {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.2s ease;
-    margin-left: 0.75rem;
-    border-left: 1px solid var(--border-color);
+.nav-sublevel-title:first-child {
+    margin-top: 0;
 }
 
-.sub-submenu.open {
-    max-height: 500px;
-}
-
-.submenu-item.sub {
-    padding-left: 1rem;
-    font-size: 0.8rem;
-}
 
 /* Sidebar footer */
 .sidebar-footer {

@@ -1,8 +1,8 @@
 {
     "module": "platform-core",
     "name": "Parreira Platform Portal",
-    "version": "3.6.0",
+    "version": "3.7.0",
     "date": "2026-02-11",
-    "last_change": "Enabled WMS Module (v3.0.0)",
-    "build": "20260211.01"
+    "last_change": "Card WMS Coletor + Removido texto welcome + Cards subidos",
+    "build": "20260211.03"
 }

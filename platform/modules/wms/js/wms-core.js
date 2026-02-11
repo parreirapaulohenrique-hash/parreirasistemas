@@ -19,41 +19,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     switchView('dashboard');
 });
 
-// --- Submenu Toggle ---
-window.toggleSubmenu = function (navItem) {
-    const submenu = navItem.nextElementSibling;
-    if (!submenu || !submenu.classList.contains('submenu')) return;
-
-    const isOpen = submenu.classList.contains('open');
-
-    // Close all other submenus
-    document.querySelectorAll('.submenu.open').forEach(s => {
-        s.classList.remove('open');
-        s.previousElementSibling.classList.remove('open');
-    });
-
-    // Toggle this one
-    if (!isOpen) {
-        submenu.classList.add('open');
-        navItem.classList.add('open');
-    }
-};
-
-// --- Sub-Submenu Toggle ---
-window.toggleSubSubmenu = function (item) {
-    const subSub = item.nextElementSibling;
-    if (!subSub || !subSub.classList.contains('sub-submenu')) return;
-
-    const isOpen = subSub.classList.contains('open');
-
-    // Close other sub-submenus in same parent
-    const parent = item.closest('.submenu');
-    if (parent) {
-        parent.querySelectorAll('.sub-submenu.open').forEach(s => s.classList.remove('open'));
-    }
-
-    if (!isOpen) {
-        subSub.classList.add('open');
+// --- Submenu Toggle (ERP Pattern - ID based) ---
+window.toggleSubmenu = function (id) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.style.display = (el.style.display === 'flex' || el.style.display === 'block') ? 'none' : 'flex';
     }
 };
 
