@@ -72,13 +72,13 @@
             </div>
 
             <!-- WMS -->
-            <div class="module-card module-wms disabled" onclick="openModule('wms')">
+            <div class="module-card module-wms" onclick="openModule('wms')">
                 <div class="module-icon">
                     <span class="material-icons-round">warehouse</span>
                 </div>
                 <h3>WMS</h3>
                 <p>Gestão de armazém para +10.000 SKUs com rastreabilidade.</p>
-                <span class="module-status coming">🚧 Em desenvolvimento</span>
+                <span class="module-status active">✅ Disponível</span>
             </div>
 
             <!-- Dispatch -->
@@ -339,6 +339,8 @@
                     window.open('modules/erp/index.html', '_blank');
                     break;
                 case 'wms':
+                    window.open('modules/wms/index.html', '_blank');
+                    break;
                 case 'sales-force':
                     alert('Módulo em desenvolvimento.');
                     break;
