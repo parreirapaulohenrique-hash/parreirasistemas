@@ -1,7 +1,7 @@
 // WMS Core Logic
 // Navigation, Auth, Submenu Control, Dynamic View Loading
 
-const WMS_VERSION = '3.1.0';
+const WMS_VERSION = '3.4.0';
 
 // --- Auth & Tenant Check ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -153,8 +153,8 @@ function switchView(viewId) {
         document.getElementById('pageTitle').textContent = title;
 
         // Highlight active submenu item
-        document.querySelectorAll('.submenu-item').forEach(el => el.classList.remove('active'));
-        const activeItem = document.querySelector(`.submenu-item[onclick="switchView('${viewId}')"]`);
+        document.querySelectorAll('.nav-sub-item').forEach(el => el.classList.remove('active'));
+        const activeItem = document.querySelector(`.nav-sub-item[onclick="switchView('${viewId}')"]`);
         if (activeItem) activeItem.classList.add('active');
 
         // Highlight active nav-item (dashboard only)
@@ -167,11 +167,15 @@ function switchView(viewId) {
         }
 
         // Trigger view-specific loaders
-        if (resolvedId === 'locations' && window.loadLocationsView) {
+        if (viewId === 'dashboard' && window.loadDashboardView) {
+            window.loadDashboardView();
+        } else if (resolvedId === 'locations' && window.loadLocationsView) {
             window.loadLocationsView();
         } else if (resolvedId === 'inbound' && window.loadInboundView) {
             window.loadInboundView();
-        } else if (resolvedId !== 'dashboard' && !VIEW_ALIASES[viewId]) {
+        } else if (viewId.startsWith('est-') && window.loadEstoqueView) {
+            window.loadEstoqueView(viewId);
+        } else if (viewId !== 'dashboard' && !VIEW_ALIASES[viewId]) {
             // Show placeholder for views not yet implemented
             if (target.id === 'view-dynamic' || target.innerHTML.trim() === '') {
                 const icon = getViewIcon(viewId);

@@ -225,45 +225,7 @@
 
             <div class="content-wrapper">
                 <!-- View: Dashboard -->
-                <div id="view-dashboard" class="page-content">
-                    <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:1rem; margin-bottom:1.5rem;">
-                        <div class="card" style="border-left:3px solid #10b981;">
-                            <div class="card-body" style="padding:1rem;">
-                                <div style="font-size:0.75rem; color:var(--text-secondary);">Total Endereços</div>
-                                <div id="statTotal" style="font-size:1.75rem; font-weight:700;">0</div>
-                            </div>
-                        </div>
-                        <div class="card" style="border-left:3px solid #10b981;">
-                            <div class="card-body" style="padding:1rem;">
-                                <div style="font-size:0.75rem; color:var(--text-secondary);">Livres</div>
-                                <div id="statLivres" style="font-size:1.75rem; font-weight:700; color:#10b981;">0</div>
-                            </div>
-                        </div>
-                        <div class="card" style="border-left:3px solid #ef4444;">
-                            <div class="card-body" style="padding:1rem;">
-                                <div style="font-size:0.75rem; color:var(--text-secondary);">Ocupados</div>
-                                <div id="statOcupados" style="font-size:1.75rem; font-weight:700; color:#ef4444;">0
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card" style="border-left:3px solid #f59e0b;">
-                            <div class="card-body" style="padding:1rem;">
-                                <div style="font-size:0.75rem; color:var(--text-secondary);">Bloqueados</div>
-                                <div id="statBloqueados" style="font-size:1.75rem; font-weight:700; color:#f59e0b;">0
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-body" style="padding:2rem; text-align:center;">
-                            <span class="material-icons-round"
-                                style="font-size:4rem; color:var(--primary-color); opacity:0.5;">warehouse</span>
-                            <h3 style="margin-top:1rem;">Parreira WMS</h3>
-                            <p class="text-secondary" style="margin-top:0.5rem;">Sistema de Gestão de Armazém orientado
-                                ao Supervisor de Estoque.</p>
-                        </div>
-                    </div>
-                </div>
+                <div id="view-dashboard" class="page-content"></div>
 
                 <!-- Views: Endereçamento (used by locations.js) -->
                 <div id="view-locations" class="page-content" style="display:none;"></div>
@@ -283,8 +245,10 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 
     <script src="js/wms-core.js"></script>
+    <script src="js/dashboard.js"></script>
     <script src="js/locations.js"></script>
     <script src="js/inbound.js"></script>
+    <script src="js/estoque.js"></script>
 </body>
 
 </html>

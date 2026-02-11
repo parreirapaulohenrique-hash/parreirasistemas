@@ -145,7 +145,8 @@ body {
     border-left: 3px solid transparent;
 }
 
-.nav-sub-item:hover {
+.nav-sub-item:hover,
+.nav-sub-item.active {
     color: var(--primary-color);
     background: rgba(14, 165, 233, 0.08);
     border-left-color: var(--primary-color);
