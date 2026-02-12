@@ -175,6 +175,8 @@ function switchView(viewId) {
             window.loadInboundView();
         } else if (viewId.startsWith('est-') && window.loadEstoqueView) {
             window.loadEstoqueView(viewId);
+        } else if (viewId.startsWith('ent-') && viewId !== 'ent-recebimento' && window.loadEntradaView) {
+            window.loadEntradaView(viewId);
         } else if (viewId !== 'dashboard' && !VIEW_ALIASES[viewId]) {
             // Show placeholder for views not yet implemented
             if (target.id === 'view-dynamic' || target.innerHTML.trim() === '') {
