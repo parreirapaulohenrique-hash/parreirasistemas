@@ -1,0 +1,8 @@
+{
+    "module": "module-sales-force",
+    "name": "Força de Vendas PWA",
+    "version": "1.0.0",
+    "date": "2026-02-12",
+    "last_change": "PWA completo: Login, Dashboard, Clientes, Catálogo, Pedidos, Metas, Roteiro",
+    "build": "20260212.01"
+}

@@ -3,103 +3,162 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Força de Vendas | Parreira Sistemas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f172a">
+    <title>Força de Vendas | Parreira</title>
+    <link rel="manifest" href="manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #f59e0b;
-            --bg-dark: #0f172a;
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg-dark);
-            color: var(--text-primary);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .container {
-            text-align: center;
-            padding: 3rem;
-        }
-
-        .icon {
-            width: 120px;
-            height: 120px;
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            border-radius: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 2rem;
-        }
-
-        .icon .material-icons-round {
-            font-size: 60px;
-            color: white;
-        }
-
-        h1 {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-        }
-
-        p {
-            color: var(--text-secondary);
-            margin-bottom: 2rem;
-        }
-
-        .badge {
-            background: rgba(245, 158, 11, 0.1);
-            color: var(--primary);
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            display: inline-block;
-            margin-bottom: 2rem;
-        }
-
-        .btn {
-            background: #1e293b;
-            color: var(--text-primary);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .btn:hover {
-            background: var(--primary);
-        }
-    </style>
+    <link rel="stylesheet" href="styles/fv.css">
 </head>
 
 <body>
-    <div class="container">
-        <div class="icon"><span class="material-icons-round">phone_android</span></div>
-        <h1>Força de Vendas</h1>
-        <p>App para vendedores externos com funcionamento offline.</p>
-        <div class="badge">🚧 Em Desenvolvimento</div>
-        <br><br>
-        <a href="../../index.html" class="btn"><span class="material-icons-round">arrow_back</span> Voltar ao Portal</a>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="screen active">
+        <div class="login-container">
+            <div class="login-icon">
+                <span class="material-icons-round">phone_android</span>
+            </div>
+            <h1>Força de Vendas</h1>
+            <p class="subtitle">Parreira Sistemas</p>
+            <div class="login-form">
+                <div class="input-group">
+                    <span class="material-icons-round input-icon">person</span>
+                    <input type="text" id="loginUser" placeholder="Código do vendedor" autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <span class="material-icons-round input-icon">lock</span>
+                    <input type="password" id="loginPass" placeholder="Senha" autocomplete="off">
+                </div>
+                <button class="btn-primary btn-lg" onclick="doLogin()">
+                    <span class="material-icons-round">login</span> Entrar
+                </button>
+                <div class="login-hint">Vendedor: <strong>32</strong> | Senha: <strong>1234</strong></div>
+            </div>
+        </div>
     </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="screen">
+        <!-- Top Bar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <span class="material-icons-round" id="menuBtn" onclick="toggleDrawer()">menu</span>
+                <h2 id="screenTitle">Dashboard</h2>
+            </div>
+            <div class="topbar-right">
+                <div class="sync-indicator" id="syncIndicator" onclick="forceSync()">
+                    <span class="material-icons-round">cloud_done</span>
+                </div>
+                <div class="avatar" id="userAvatar">V</div>
+            </div>
+        </header>
+
+        <!-- Side Drawer -->
+        <div class="drawer-overlay" id="drawerOverlay" onclick="toggleDrawer()"></div>
+        <nav class="drawer" id="drawer">
+            <div class="drawer-header">
+                <div class="drawer-avatar">V</div>
+                <div>
+                    <div class="drawer-name" id="drawerName">Vendedor</div>
+                    <div class="drawer-role">Força de Vendas</div>
+                </div>
+            </div>
+            <div class="drawer-menu">
+                <button class="drawer-item active" onclick="navigateTo('dashboard')">
+                    <span class="material-icons-round">dashboard</span> Dashboard
+                </button>
+                <button class="drawer-item" onclick="navigateTo('clientes')">
+                    <span class="material-icons-round">people</span> Clientes
+                    <span class="badge-drawer" id="badgeClientes"></span>
+                </button>
+                <button class="drawer-item" onclick="navigateTo('catalogo')">
+                    <span class="material-icons-round">inventory_2</span> Catálogo
+                </button>
+                <button class="drawer-item" onclick="navigateTo('pedidos')">
+                    <span class="material-icons-round">receipt_long</span> Pedidos
+                    <span class="badge-drawer" id="badgePedidos"></span>
+                </button>
+                <button class="drawer-item" onclick="navigateTo('novoPedido')">
+                    <span class="material-icons-round">add_shopping_cart</span> Novo Pedido
+                </button>
+                <div class="drawer-divider"></div>
+                <button class="drawer-item" onclick="navigateTo('metas')">
+                    <span class="material-icons-round">flag</span> Metas
+                </button>
+                <button class="drawer-item" onclick="navigateTo('rotas')">
+                    <span class="material-icons-round">map</span> Roteiro
+                </button>
+                <div class="drawer-divider"></div>
+                <button class="drawer-item" onclick="doLogout()">
+                    <span class="material-icons-round">logout</span> Sair
+                </button>
+            </div>
+        </nav>
+
+        <!-- Content Area -->
+        <main class="content" id="contentArea">
+            <!-- Dashboard -->
+            <section id="view-dashboard" class="view active"></section>
+
+            <!-- Clientes -->
+            <section id="view-clientes" class="view"></section>
+
+            <!-- Catálogo -->
+            <section id="view-catalogo" class="view"></section>
+
+            <!-- Pedidos -->
+            <section id="view-pedidos" class="view"></section>
+
+            <!-- Novo Pedido -->
+            <section id="view-novoPedido" class="view"></section>
+
+            <!-- Metas -->
+            <section id="view-metas" class="view"></section>
+
+            <!-- Rotas -->
+            <section id="view-rotas" class="view"></section>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="bottom-nav-item active" onclick="navigateTo('dashboard')">
+                <span class="material-icons-round">dashboard</span>
+                <span>Home</span>
+            </button>
+            <button class="bottom-nav-item" onclick="navigateTo('clientes')">
+                <span class="material-icons-round">people</span>
+                <span>Clientes</span>
+            </button>
+            <button class="bottom-nav-item fab" onclick="navigateTo('novoPedido')">
+                <span class="material-icons-round">add</span>
+            </button>
+            <button class="bottom-nav-item" onclick="navigateTo('pedidos')">
+                <span class="material-icons-round">receipt_long</span>
+                <span>Pedidos</span>
+            </button>
+            <button class="bottom-nav-item" onclick="navigateTo('metas')">
+                <span class="material-icons-round">flag</span>
+                <span>Metas</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Scripts -->
+    <script src="../../core/js/firebase-config.js"></script>
+    <script src="js/fv-core.js"></script>
+    <script src="js/fv-screens.js"></script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').then(() => console.log('SW registered'));
+        }
+    </script>
 </body>
 
 </html>
