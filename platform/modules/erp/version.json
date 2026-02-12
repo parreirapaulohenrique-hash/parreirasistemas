@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.15.11",
-    "date": "2026-02-10",
-    "last_change": "Reestruturação Visual Sidebar",
-    "build": "20260210.17"
+    "version": "2.16.0",
+    "date": "2026-02-12",
+    "last_change": "Cadastros Financeiros e Fiscais completos (7 módulos CRUD)",
+    "build": "20260212.01"
 }
