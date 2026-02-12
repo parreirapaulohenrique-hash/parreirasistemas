@@ -1,8 +1,8 @@
 {
-    "module": "module-wms-coletor",
+    "module": "wms-coletor",
     "name": "Parreira WMS Coletor",
-    "version": "1.0.0",
-    "date": "2026-02-11",
-    "last_change": "Scaffold PWA Mobile",
-    "build": "20260211.01"
+    "version": "1.1.0",
+    "date": "2026-02-12",
+    "last_change": "4 telas funcionais: Recebimento, Armazenar, Separar, Inventário",
+    "build": "20260212.01"
 }
