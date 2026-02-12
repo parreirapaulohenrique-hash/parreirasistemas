@@ -12,9 +12,9 @@ window.loadSaidaView = function (viewId) {
         case 'sai-ondas': renderOndas(container); break;
         case 'sai-separacao': renderSeparacao(container); break;
         case 'sai-conferencia': renderConfSaida(container); break;
-        case 'sai-embalagem': renderPlaceholderSaida(container, 'Embalagem (Packing)', 'package_2', 'Montagem de caixas, pesagem e etiquetagem dos volumes.'); break;
-        case 'sai-romaneio': renderPlaceholderSaida(container, 'Romaneio', 'receipt_long', 'Listagem de volumes por carga para conferência de embarque.'); break;
-        case 'sai-expedicao': renderPlaceholderSaida(container, 'Expedição', 'local_shipping', 'Liberação de carga e registro de saída do veículo.'); break;
+        case 'sai-embalagem': renderEmbalagem(container); break;
+        case 'sai-romaneio': renderRomaneio(container); break;
+        case 'sai-expedicao': renderExpedicao(container); break;
     }
 };
 
@@ -447,22 +447,232 @@ window.conferirOnda = function (ondaId) {
 };
 
 // ========================
-// PLACEHOLDER ENRICHED
+// 4. EMBALAGEM (PACKING)
 // ========================
-function renderPlaceholderSaida(container, title, icon, desc) {
+function renderEmbalagem(container) {
+    const ondas = getOndasMock().filter(o => o.status === 'separada' || o.status === 'conferida');
+    const volumes = JSON.parse(localStorage.getItem('wms_volumes') || '[]');
+
     container.innerHTML = `
         <div class="card">
             <div class="card-header">
                 <h3 style="font-size:0.95rem; font-weight:600;">
-                    <span class="material-icons-round" style="font-size:1.1rem; vertical-align:middle;">${icon}</span>
-                    ${title}
+                    <span class="material-icons-round" style="font-size:1.1rem; vertical-align:middle;">package_2</span>
+                    Embalagem (Packing)
                 </h3>
+                <span class="badge badge-info">${ondas.length} ondas prontas</span>
             </div>
-            <div style="padding:3rem; text-align:center; color:var(--text-secondary);">
-                <span class="material-icons-round" style="font-size:3rem; opacity:0.25; display:block; margin-bottom:1rem;">${icon}</span>
-                <h3 style="color:var(--text-primary); margin-bottom:0.5rem;">Em Construção</h3>
-                <p style="font-size:0.85rem;">${desc}</p>
+            <div style="padding:1rem;">
+                ${ondas.length === 0 ? '<p style="text-align:center; color:var(--text-secondary); padding:2rem;">Nenhuma onda aguardando embalagem</p>' :
+            ondas.map(o => `
+                    <div class="card" style="margin-bottom:0.75rem; border-left:3px solid var(--wms-primary);">
+                        <div style="padding:1rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+                            <div>
+                                <strong>Onda ${o.id}</strong>
+                                <span style="font-size:0.8rem; color:var(--text-secondary);"> · ${o.itens?.length || 0} itens · ${o.pedidos?.length || 0} pedidos</span>
+                            </div>
+                            <div style="display:flex; gap:0.5rem;">
+                                <button class="btn btn-secondary" onclick="criarVolume('${o.id}')">
+                                    <span class="material-icons-round" style="font-size:1rem;">add_box</span> Criar Volume
+                                </button>
+                                <button class="btn btn-primary" onclick="finalizarEmbalagem('${o.id}')">
+                                    <span class="material-icons-round" style="font-size:1rem;">check</span> Finalizar
+                                </button>
+                            </div>
+                        </div>
+                        <div id="volumes-${o.id}" style="padding:0 1rem 1rem;">
+                            ${(volumes.filter(v => v.ondaId === o.id)).map((v, i) => `
+                                <div style="display:flex; align-items:center; gap:0.75rem; padding:0.5rem; background:var(--bg-hover); border-radius:6px; margin-bottom:0.25rem;">
+                                    <span class="material-icons-round" style="font-size:1.2rem; color:var(--wms-primary);">inventory_2</span>
+                                    <div style="flex:1;">
+                                        <strong style="font-size:0.85rem;">Vol. ${v.numero}</strong>
+                                        <span style="font-size:0.75rem; color:var(--text-secondary);"> · ${v.peso || 0}kg · ${v.lacre || 'Sem lacre'}</span>
+                                    </div>
+                                    <span class="badge ${v.status === 'fechado' ? 'badge-success' : 'badge-warning'}">${v.status}</span>
+                                </div>
+                            `).join('') || '<p style="font-size:0.8rem; color:var(--text-secondary);">Nenhum volume criado</p>'}
+                        </div>
+                    </div>
+                `).join('')}
             </div>
         </div>
     `;
 }
+
+window.criarVolume = function (ondaId) {
+    const volumes = JSON.parse(localStorage.getItem('wms_volumes') || '[]');
+    const nextNum = volumes.filter(v => v.ondaId === ondaId).length + 1;
+    volumes.push({
+        id: 'vol_' + Date.now(),
+        ondaId: ondaId,
+        numero: nextNum,
+        peso: Math.round(Math.random() * 20 + 5),
+        largura: 40, altura: 30, profundidade: 50,
+        lacre: 'LC-' + (1000 + volumes.length),
+        status: 'aberto',
+        createdAt: new Date().toISOString()
+    });
+    localStorage.setItem('wms_volumes', JSON.stringify(volumes));
+    renderEmbalagem(document.getElementById('view-dynamic'));
+};
+
+window.finalizarEmbalagem = function (ondaId) {
+    const volumes = JSON.parse(localStorage.getItem('wms_volumes') || '[]');
+    volumes.filter(v => v.ondaId === ondaId).forEach(v => v.status = 'fechado');
+    localStorage.setItem('wms_volumes', JSON.stringify(volumes));
+    alert('✅ Embalagem finalizada! Volumes lacrados.');
+    renderEmbalagem(document.getElementById('view-dynamic'));
+};
+
+// ========================
+// 5. ROMANEIO
+// ========================
+function renderRomaneio(container) {
+    const ondas = getOndasMock();
+    const volumes = JSON.parse(localStorage.getItem('wms_volumes') || '[]');
+    const cargas = JSON.parse(localStorage.getItem('wms_cargas') || '[]');
+    const romaneios = cargas.length > 0 ? cargas : [
+        { id: 'CRG-001', data: new Date().toISOString().split('T')[0], transportadora: 'Trans. São Paulo Express', placa: 'ABC-1234', ondas: ondas.slice(0, 2).map(o => o.id), totalVolumes: 8, pesoTotal: 145.5, status: 'gerado' },
+        { id: 'CRG-002', data: new Date().toISOString().split('T')[0], transportadora: 'Log Norte LTDA', placa: 'DEF-5678', ondas: ondas.slice(2).map(o => o.id), totalVolumes: 4, pesoTotal: 72.3, status: 'conferido' }
+    ];
+
+    container.innerHTML = `
+        <div class="card">
+            <div class="card-header">
+                <h3 style="font-size:0.95rem; font-weight:600;">
+                    <span class="material-icons-round" style="font-size:1.1rem; vertical-align:middle;">receipt_long</span>
+                    Romaneio de Carga
+                </h3>
+                <button class="btn btn-primary" onclick="gerarRomaneio()">
+                    <span class="material-icons-round" style="font-size:1rem;">note_add</span> Gerar Romaneio
+                </button>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="data-table">
+                    <thead><tr>
+                        <th>Carga</th><th>Data</th><th>Transportadora</th><th>Placa</th>
+                        <th>Volumes</th><th>Peso (kg)</th><th>Status</th><th>Ações</th>
+                    </tr></thead>
+                    <tbody>
+                        ${romaneios.map(r => `
+                            <tr>
+                                <td><strong>${r.id}</strong></td>
+                                <td>${r.data}</td>
+                                <td>${r.transportadora}</td>
+                                <td>${r.placa}</td>
+                                <td style="text-align:center;">${r.totalVolumes}</td>
+                                <td style="text-align:center;">${r.pesoTotal}</td>
+                                <td><span class="badge ${r.status === 'conferido' ? 'badge-success' : 'badge-warning'}">${r.status}</span></td>
+                                <td>
+                                    <button class="btn btn-secondary btn-icon" onclick="imprimirRomaneio('${r.id}')" title="Imprimir" style="padding:0.3rem;">
+                                        <span class="material-icons-round" style="font-size:1rem;">print</span>
+                                    </button>
+                                    <button class="btn btn-secondary btn-icon" onclick="conferirRomaneio('${r.id}')" title="Conferir" style="padding:0.3rem;">
+                                        <span class="material-icons-round" style="font-size:1rem;">fact_check</span>
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+window.gerarRomaneio = function () {
+    const cargas = JSON.parse(localStorage.getItem('wms_cargas') || '[]');
+    const novo = {
+        id: 'CRG-' + String(cargas.length + 3).padStart(3, '0'),
+        data: new Date().toISOString().split('T')[0],
+        transportadora: 'Nova Transportadora',
+        placa: 'XXX-0000',
+        ondas: [],
+        totalVolumes: 0,
+        pesoTotal: 0,
+        status: 'gerado'
+    };
+    cargas.push(novo);
+    localStorage.setItem('wms_cargas', JSON.stringify(cargas));
+    alert(`✅ Romaneio ${novo.id} gerado!`);
+    renderRomaneio(document.getElementById('view-dynamic'));
+};
+
+window.imprimirRomaneio = function (id) {
+    alert(`🖨️ Imprimindo romaneio ${id}...`);
+};
+
+window.conferirRomaneio = function (id) {
+    const cargas = JSON.parse(localStorage.getItem('wms_cargas') || '[]');
+    const c = cargas.find(c => c.id === id);
+    if (c) { c.status = 'conferido'; localStorage.setItem('wms_cargas', JSON.stringify(cargas)); }
+    renderRomaneio(document.getElementById('view-dynamic'));
+};
+
+// ========================
+// 6. EXPEDIÇÃO
+// ========================
+function renderExpedicao(container) {
+    const cargas = JSON.parse(localStorage.getItem('wms_cargas') || '[]');
+    const expedições = JSON.parse(localStorage.getItem('wms_expedicoes') || '[]');
+    const todas = expedições.length > 0 ? expedições : [
+        { id: 'EXP-001', cargaId: 'CRG-001', doca: 'Doca 03', motorista: 'José da Silva', cpfMotorista: '123.456.789-00', placa: 'ABC-1234', horaSaida: '', status: 'aguardando' },
+        { id: 'EXP-002', cargaId: 'CRG-002', doca: 'Doca 01', motorista: 'Carlos Oliveira', cpfMotorista: '987.654.321-00', placa: 'DEF-5678', horaSaida: '14:35', status: 'liberado' }
+    ];
+
+    container.innerHTML = `
+        <div class="card">
+            <div class="card-header">
+                <h3 style="font-size:0.95rem; font-weight:600;">
+                    <span class="material-icons-round" style="font-size:1.1rem; vertical-align:middle;">local_shipping</span>
+                    Expedição
+                </h3>
+                <span class="badge badge-info">${todas.filter(e => e.status === 'aguardando').length} aguardando</span>
+            </div>
+            <div style="padding:1rem;">
+                ${todas.map(exp => `
+                    <div class="card" style="margin-bottom:0.75rem; border-left:3px solid ${exp.status === 'liberado' ? 'var(--success)' : exp.status === 'em_doca' ? 'var(--wms-primary)' : 'var(--warning)'};">
+                        <div style="padding:1rem;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.75rem;">
+                                <div>
+                                    <strong style="font-size:1rem;">${exp.id}</strong>
+                                    <span class="badge ${exp.status === 'liberado' ? 'badge-success' : exp.status === 'em_doca' ? 'badge-info' : 'badge-warning'}" style="margin-left:0.5rem;">
+                                        ${exp.status === 'liberado' ? 'Liberado' : exp.status === 'em_doca' ? 'Na Doca' : 'Aguardando'}
+                                    </span>
+                                </div>
+                                ${exp.status !== 'liberado' ? `
+                                    <button class="btn btn-primary" onclick="liberarExpedicao('${exp.id}')">
+                                        <span class="material-icons-round" style="font-size:1rem;">check_circle</span> Liberar
+                                    </button>
+                                ` : ''}
+                            </div>
+                            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:0.5rem; font-size:0.85rem;">
+                                <div><span style="color:var(--text-secondary); font-size:0.75rem;">Carga</span><br><strong>${exp.cargaId}</strong></div>
+                                <div><span style="color:var(--text-secondary); font-size:0.75rem;">Doca</span><br><strong>${exp.doca}</strong></div>
+                                <div><span style="color:var(--text-secondary); font-size:0.75rem;">Motorista</span><br><strong>${exp.motorista}</strong></div>
+                                <div><span style="color:var(--text-secondary); font-size:0.75rem;">Placa</span><br><strong>${exp.placa}</strong></div>
+                                <div><span style="color:var(--text-secondary); font-size:0.75rem;">Hora Saída</span><br><strong>${exp.horaSaida || '—'}</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+window.liberarExpedicao = function (expId) {
+    const exps = JSON.parse(localStorage.getItem('wms_expedicoes') || '[]');
+    let exp = exps.find(e => e.id === expId);
+    if (!exp) {
+        // default data
+        exp = { id: expId, status: 'liberado', horaSaida: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) };
+        exps.push(exp);
+    } else {
+        exp.status = 'liberado';
+        exp.horaSaida = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    }
+    localStorage.setItem('wms_expedicoes', JSON.stringify(exps));
+    alert(`✅ Expedição ${expId} liberada! Veículo autorizado para saída.`);
+    renderExpedicao(document.getElementById('view-dynamic'));
+};

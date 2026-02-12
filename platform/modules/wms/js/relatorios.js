@@ -12,9 +12,9 @@ window.loadRelatoriosView = function (viewId) {
         case 'rel-recebimento': renderRelRecebimento(container); break;
         case 'rel-produtividade': renderRelProdutividade(container); break;
         case 'rel-estoque': renderRelEstoque(container); break;
-        case 'rel-movimentacao': renderPlaceholderRel(container, 'Relatório de Movimentação', 'swap_vert', 'Histórico de entradas, saídas e transferências por período.'); break;
-        case 'rel-enderecamento': renderPlaceholderRel(container, 'Relatório de Endereçamento', 'grid_view', 'Ocupação por rua, prédio e andar com mapa de calor.'); break;
-        case 'rel-indicadores': renderPlaceholderRel(container, 'Indicadores Operacionais', 'insights', 'KPIs de lead time, acuracidade e throughput.'); break;
+        case 'rel-movimentacao': renderRelMovimentacao(container); break;
+        case 'rel-enderecamento': renderRelEnderecamento(container); break;
+        case 'rel-indicadores': renderRelIndicadores(container); break;
     }
 };
 
@@ -283,21 +283,115 @@ function renderRelEstoque(container) {
 }
 
 // ========================
-// PLACEHOLDER
+// 4. MOVIMENTAÇÃO
 // ========================
-function renderPlaceholderRel(container, title, icon, desc) {
+function renderRelMovimentacao(container) {
+    const movs = [
+        { data: '12/02 10:15', tipo: 'Entrada NF', ref: 'NF-12345', sku: 'SKU-1001', qtd: 500, de: 'Doca 02', para: 'A-01-01-01' },
+        { data: '12/02 11:30', tipo: 'Transferência', ref: 'TRF-088', sku: 'SKU-1001', qtd: 100, de: 'A-01-01-01', para: 'A-01-02-03' },
+        { data: '12/02 14:00', tipo: 'Separação', ref: 'OND-003', sku: 'SKU-1001', qtd: -50, de: 'A-01-02-03', para: 'Expedição' },
+        { data: '12/02 15:20', tipo: 'Ajuste', ref: 'AJ-002', sku: 'SKU-2015', qtd: -5, de: 'B-02-03-02', para: '-' },
+        { data: '11/02 16:45', tipo: 'Devolução', ref: 'DEV-015', sku: 'SKU-3042', qtd: 10, de: 'Cliente', para: 'C-03-01-01' },
+    ];
     container.innerHTML = `
         <div class="card">
             <div class="card-header">
-                <h3 style="font-size:0.95rem; font-weight:600;">
-                    <span class="material-icons-round" style="font-size:1.1rem; vertical-align:middle;">${icon}</span>
-                    ${title}
-                </h3>
+                <h3 style="font-size:0.95rem; font-weight:600;"><span class="material-icons-round" style="font-size:1.1rem; vertical-align:middle;">swap_vert</span> Movimentação (Kardex)</h3>
             </div>
-            <div style="padding:3rem; text-align:center; color:var(--text-secondary);">
-                <span class="material-icons-round" style="font-size:3rem; opacity:0.25; display:block; margin-bottom:1rem;">${icon}</span>
-                <h3 style="color:var(--text-primary); margin-bottom:0.5rem;">Em Construção</h3>
-                <p style="font-size:0.85rem;">${desc}</p>
+            <div style="overflow-x:auto;">
+                <table class="data-table">
+                    <thead><tr><th>Data/Hora</th><th>Tipo</th><th>Referência</th><th>SKU</th><th>Qtd</th><th>Origem</th><th>Destino</th></tr></thead>
+                    <tbody>
+                        ${movs.map(m => {
+        const color = m.qtd >= 0 ? 'var(--success)' : 'var(--danger)';
+        return `<tr>
+                                <td>${m.data}</td><td>${m.tipo}</td><td><strong>${m.ref}</strong></td><td>${m.sku}</td>
+                                <td style="text-align:center; color:${color}; font-weight:bold;">${m.qtd >= 0 ? '+' : ''}${m.qtd}</td>
+                                <td>${m.de}</td><td>${m.para}</td>
+                            </tr>`;
+    }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+// ========================
+// 5. ENDEREÇAMENTO (Mapa)
+// ========================
+function renderRelEnderecamento(container) {
+    const ruas = [
+        { nome: 'Rua A', total: 120, ocupados: 95, bloqueados: 3 },
+        { nome: 'Rua B', total: 100, ocupados: 62, bloqueados: 5 },
+        { nome: 'Rua C', total: 80, ocupados: 45, bloqueados: 0 },
+        { nome: 'Blocado', total: 40, ocupados: 35, bloqueados: 2 },
+        { nome: 'Picking', total: 60, ocupados: 58, bloqueados: 0 },
+    ];
+    container.innerHTML = `
+        <div class="card">
+            <div class="card-header">
+                <h3 style="font-size:0.95rem; font-weight:600;"><span class="material-icons-round" style="font-size:1.1rem; vertical-align:middle;">grid_view</span> Mapa de Ocupação</h3>
+            </div>
+            <div style="padding:1rem;">
+                ${ruas.map(r => {
+        const pctOcup = Math.round(r.ocupados / r.total * 100);
+        const pctBloq = Math.round(r.bloqueados / r.total * 100);
+        const pctLivre = 100 - pctOcup - pctBloq;
+        const barColor = pctOcup > 85 ? '#ef4444' : pctOcup > 60 ? '#f59e0b' : '#10b981';
+        return `
+                    <div style="margin-bottom:1rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
+                            <strong style="font-size:0.85rem;">${r.nome}</strong>
+                            <span style="font-size:0.8rem; color:var(--text-secondary);">${r.ocupados}/${r.total} (${pctOcup}%)</span>
+                        </div>
+                        <div style="display:flex; height:20px; border-radius:6px; overflow:hidden;">
+                            <div style="width:${pctOcup}%; background:${barColor};" title="Ocupado"></div>
+                            <div style="width:${pctBloq}%; background:#ef4444;" title="Bloqueado"></div>
+                            <div style="width:${pctLivre}%; background:var(--bg-hover);" title="Livre"></div>
+                        </div>
+                    </div>`;
+    }).join('')}
+                <div style="display:flex; gap:1.5rem; font-size:0.8rem; margin-top:0.5rem;">
+                    <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#f59e0b;margin-right:4px;"></span>Ocupado</span>
+                    <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#ef4444;margin-right:4px;"></span>Bloqueado</span>
+                    <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--bg-hover);margin-right:4px;"></span>Livre</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// ========================
+// 6. INDICADORES OPERACIONAIS
+// ========================
+function renderRelIndicadores(container) {
+    const kpis = [
+        { nome: 'Lead Time Recebimento', valor: '2.3h', meta: '3h', status: 'ok', icon: 'timer' },
+        { nome: 'Lead Time Separação', valor: '1.8h', meta: '2h', status: 'ok', icon: 'timer' },
+        { nome: 'Acuracidade Inventário', valor: '98.5%', meta: '99%', status: 'warning', icon: 'verified' },
+        { nome: 'Throughput/Hora', valor: '145 un', meta: '120 un', status: 'ok', icon: 'speed' },
+        { nome: 'Ocupação CD', valor: '72%', meta: '85%', status: 'ok', icon: 'warehouse' },
+        { nome: 'Devoluções', valor: '0.8%', meta: '1%', status: 'ok', icon: 'undo' },
+        { nome: 'OTIF (On Time In Full)', valor: '96.2%', meta: '98%', status: 'warning', icon: 'local_shipping' },
+        { nome: 'Avarias', valor: '0.3%', meta: '0.5%', status: 'ok', icon: 'broken_image' }
+    ];
+    container.innerHTML = `
+        <div class="card">
+            <div class="card-header">
+                <h3 style="font-size:0.95rem; font-weight:600;"><span class="material-icons-round" style="font-size:1.1rem; vertical-align:middle;">insights</span> Indicadores Operacionais</h3>
+            </div>
+            <div style="padding:1rem; display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:1rem;">
+                ${kpis.map(k => `
+                    <div class="card" style="padding:1.25rem; border-left:3px solid ${k.status === 'ok' ? 'var(--success)' : 'var(--warning)'};">
+                        <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem;">
+                            <span class="material-icons-round" style="font-size:1.2rem; color:${k.status === 'ok' ? 'var(--success)' : 'var(--warning)'};">${k.icon}</span>
+                            <span style="font-size:0.8rem; color:var(--text-secondary);">${k.nome}</span>
+                        </div>
+                        <div style="font-size:1.5rem; font-weight:700;">${k.valor}</div>
+                        <div style="font-size:0.75rem; color:var(--text-secondary);">Meta: ${k.meta}</div>
+                    </div>
+                `).join('')}
             </div>
         </div>
     `;

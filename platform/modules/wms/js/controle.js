@@ -12,11 +12,11 @@ window.loadControleView = function (viewId) {
         case 'aud-inventario': renderInventarioCiclico(container); break;
         case 'est-transferencia': renderTransferencia(container); break;
         case 'est-bloqueio': renderBloqueio(container); break;
-        case 'est-ajuste': renderPlaceholderCtrl(container, 'Ajuste de Estoque', 'tune', 'Ajuste manual de saldo com motivo e autorização.'); break;
-        case 'aud-contagem': renderPlaceholderCtrl(container, 'Contagem Rotativa', 'pin', 'Contagens rotativas programadas por setor.'); break;
-        case 'aud-divergencias': renderPlaceholderCtrl(container, 'Divergências', 'difference', 'Relatório de divergências encontradas em conferências e inventários.'); break;
-        case 'aud-rastreio': renderPlaceholderCtrl(container, 'Rastreabilidade (Kardex)', 'history', 'Histórico completo de movimentações por SKU, lote e endereço.'); break;
-        case 'aud-log': renderPlaceholderCtrl(container, 'Log de Operações', 'list_alt', 'Registro de todas as operações realizadas com usuário, data e hora.'); break;
+        case 'est-ajuste': renderAjusteEstoque(container); break;
+        case 'aud-contagem': renderContagemRotativa(container); break;
+        case 'aud-divergencias': renderDivergencias(container); break;
+        case 'aud-rastreio': renderRastreabilidade(container); break;
+        case 'aud-log': renderLogOperacoes(container); break;
     }
 };
 
@@ -527,21 +527,221 @@ window.liberarBloqueio = function (blqId) {
 };
 
 // ========================
-// PLACEHOLDER ENRICHED
+// 4. AJUSTE DE ESTOQUE
 // ========================
-function renderPlaceholderCtrl(container, title, icon, desc) {
+function renderAjusteEstoque(container) {
+    const ajustes = JSON.parse(localStorage.getItem('wms_ajustes') || '[]');
+    const historico = ajustes.length > 0 ? ajustes : [
+        { id: 'AJ-001', sku: 'SKU-1001', descricao: 'Parafuso M8x30', endereco: 'A-01-01-01', qtdAnterior: 500, qtdNova: 490, motivo: 'Avaria', usuario: 'supervisor1', data: new Date().toLocaleDateString('pt-BR'), status: 'aprovado' },
+        { id: 'AJ-002', sku: 'SKU-2015', descricao: 'Óleo 15W40', endereco: 'B-02-03-02', qtdAnterior: 120, qtdNova: 125, motivo: 'Recontagem', usuario: 'operador3', data: new Date().toLocaleDateString('pt-BR'), status: 'pendente' }
+    ];
+
     container.innerHTML = `
         <div class="card">
             <div class="card-header">
-                <h3 style="font-size:0.95rem; font-weight:600;">
-                    <span class="material-icons-round" style="font-size:1.1rem; vertical-align:middle;">${icon}</span>
-                    ${title}
-                </h3>
+                <h3 style="font-size:0.95rem; font-weight:600;"><span class="material-icons-round" style="font-size:1.1rem; vertical-align:middle;">tune</span> Ajuste de Estoque</h3>
+                <button class="btn btn-primary" onclick="novoAjuste()"><span class="material-icons-round" style="font-size:1rem;">add</span> Novo Ajuste</button>
             </div>
-            <div style="padding:3rem; text-align:center; color:var(--text-secondary);">
-                <span class="material-icons-round" style="font-size:3rem; opacity:0.25; display:block; margin-bottom:1rem;">${icon}</span>
-                <h3 style="color:var(--text-primary); margin-bottom:0.5rem;">Em Construção</h3>
-                <p style="font-size:0.85rem;">${desc}</p>
+            <div style="overflow-x:auto;">
+                <table class="data-table">
+                    <thead><tr><th>Ajuste</th><th>SKU</th><th>Endereço</th><th>Qtd Ant.</th><th>Qtd Nova</th><th>Diff</th><th>Motivo</th><th>Status</th></tr></thead>
+                    <tbody>
+                        ${historico.map(a => {
+        const diff = a.qtdNova - a.qtdAnterior;
+        return `<tr>
+                                <td><strong>${a.id}</strong></td>
+                                <td>${a.sku}</td>
+                                <td>${a.endereco}</td>
+                                <td style="text-align:center;">${a.qtdAnterior}</td>
+                                <td style="text-align:center;">${a.qtdNova}</td>
+                                <td style="text-align:center; color:${diff >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:bold;">${diff >= 0 ? '+' : ''}${diff}</td>
+                                <td>${a.motivo}</td>
+                                <td><span class="badge ${a.status === 'aprovado' ? 'badge-success' : 'badge-warning'}">${a.status}</span></td>
+                            </tr>`;
+    }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+window.novoAjuste = function () {
+    const ajustes = JSON.parse(localStorage.getItem('wms_ajustes') || '[]');
+    ajustes.push({ id: 'AJ-' + String(ajustes.length + 3).padStart(3, '0'), sku: 'SKU-0000', descricao: '', endereco: '', qtdAnterior: 0, qtdNova: 0, motivo: 'Recontagem', usuario: 'admin', data: new Date().toLocaleDateString('pt-BR'), status: 'pendente' });
+    localStorage.setItem('wms_ajustes', JSON.stringify(ajustes));
+    alert('✅ Ajuste criado! Edite os detalhes na lista.');
+    renderAjusteEstoque(document.getElementById('view-dynamic'));
+};
+
+// ========================
+// 5. CONTAGEM ROTATIVA
+// ========================
+function renderContagemRotativa(container) {
+    const contagens = [
+        { setor: 'Rua A', enderecos: 45, contados: 38, divergencias: 2, proxima: 'Seg 17/02', status: 'andamento' },
+        { setor: 'Rua B', enderecos: 62, contados: 62, divergencias: 0, proxima: 'Qua 19/02', status: 'concluido' },
+        { setor: 'Rua C', enderecos: 30, contados: 0, divergencias: 0, proxima: 'Sex 21/02', status: 'agendado' },
+        { setor: 'Blocado', enderecos: 18, contados: 12, divergencias: 1, proxima: 'Seg 17/02', status: 'andamento' }
+    ];
+
+    container.innerHTML = `
+        <div class="card">
+            <div class="card-header">
+                <h3 style="font-size:0.95rem; font-weight:600;"><span class="material-icons-round" style="font-size:1.1rem; vertical-align:middle;">pin</span> Contagem Rotativa</h3>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="data-table">
+                    <thead><tr><th>Setor</th><th>Endereços</th><th>Contados</th><th>%</th><th>Diverg.</th><th>Próxima</th><th>Status</th></tr></thead>
+                    <tbody>
+                        ${contagens.map(c => {
+        const pct = c.enderecos > 0 ? Math.round(c.contados / c.enderecos * 100) : 0;
+        return `<tr>
+                                <td><strong>${c.setor}</strong></td>
+                                <td style="text-align:center;">${c.enderecos}</td>
+                                <td style="text-align:center;">${c.contados}</td>
+                                <td>
+                                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                                        <div style="flex:1; height:6px; background:var(--bg-hover); border-radius:3px;"><div style="width:${pct}%; height:100%; background:var(--wms-primary); border-radius:3px;"></div></div>
+                                        <span style="font-size:0.75rem;">${pct}%</span>
+                                    </div>
+                                </td>
+                                <td style="text-align:center; ${c.divergencias > 0 ? 'color:var(--danger); font-weight:bold;' : ''}">${c.divergencias}</td>
+                                <td>${c.proxima}</td>
+                                <td><span class="badge ${c.status === 'concluido' ? 'badge-success' : c.status === 'andamento' ? 'badge-info' : 'badge-secondary'}">${c.status}</span></td>
+                            </tr>`;
+    }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+// ========================
+// 6. DIVERGÊNCIAS
+// ========================
+function renderDivergencias(container) {
+    const divs = [
+        { id: 'DIV-001', data: '12/02', origem: 'Conferência NF', sku: 'SKU-1001', esperado: 100, encontrado: 98, severity: 'baixa', status: 'resolvido' },
+        { id: 'DIV-002', data: '12/02', origem: 'Inventário Cíclico', sku: 'SKU-2015', esperado: 120, encontrado: 125, severity: 'media', status: 'pendente' },
+        { id: 'DIV-003', data: '11/02', origem: 'Separação', sku: 'SKU-3042', esperado: 50, encontrado: 48, severity: 'baixa', status: 'ajustado' },
+        { id: 'DIV-004', data: '11/02', origem: 'Conferência NF', sku: 'SKU-4088', esperado: 200, encontrado: 180, severity: 'alta', status: 'pendente' }
+    ];
+
+    container.innerHTML = `
+        <div class="card">
+            <div class="card-header">
+                <h3 style="font-size:0.95rem; font-weight:600;"><span class="material-icons-round" style="font-size:1.1rem; vertical-align:middle;">difference</span> Divergências</h3>
+                <span class="badge badge-warning">${divs.filter(d => d.status === 'pendente').length} pendentes</span>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="data-table">
+                    <thead><tr><th>ID</th><th>Data</th><th>Origem</th><th>SKU</th><th>Esperado</th><th>Encontrado</th><th>Diff</th><th>Severidade</th><th>Status</th></tr></thead>
+                    <tbody>
+                        ${divs.map(d => {
+        const diff = d.encontrado - d.esperado;
+        const sevColor = d.severity === 'alta' ? 'var(--danger)' : d.severity === 'media' ? 'var(--warning)' : 'var(--success)';
+        return `<tr>
+                                <td><strong>${d.id}</strong></td>
+                                <td>${d.data}</td>
+                                <td>${d.origem}</td>
+                                <td>${d.sku}</td>
+                                <td style="text-align:center;">${d.esperado}</td>
+                                <td style="text-align:center;">${d.encontrado}</td>
+                                <td style="text-align:center; color:${diff >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:bold;">${diff >= 0 ? '+' : ''}${diff}</td>
+                                <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${sevColor};margin-right:4px;"></span>${d.severity}</td>
+                                <td><span class="badge ${d.status === 'resolvido' || d.status === 'ajustado' ? 'badge-success' : 'badge-warning'}">${d.status}</span></td>
+                            </tr>`;
+    }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+// ========================
+// 7. RASTREABILIDADE (KARDEX)
+// ========================
+function renderRastreabilidade(container) {
+    const movs = [
+        { data: '12/02 10:15', tipo: 'Entrada', sku: 'SKU-1001', descricao: 'Parafuso M8x30', de: 'NF 12345', para: 'A-01-01-01', qtd: 500, usuario: 'operador1' },
+        { data: '12/02 11:30', tipo: 'Transferência', sku: 'SKU-1001', descricao: 'Parafuso M8x30', de: 'A-01-01-01', para: 'A-01-02-03', qtd: 100, usuario: 'operador2' },
+        { data: '12/02 14:00', tipo: 'Separação', sku: 'SKU-1001', descricao: 'Parafuso M8x30', de: 'A-01-02-03', para: 'Onda OND-001', qtd: 50, usuario: 'separador1' },
+        { data: '12/02 15:20', tipo: 'Ajuste', sku: 'SKU-2015', descricao: 'Óleo 15W40', de: 'B-02-03-02', para: '-', qtd: -5, usuario: 'supervisor1' },
+        { data: '11/02 16:45', tipo: 'Devolução', sku: 'SKU-3042', descricao: 'Filtro AP-200', de: 'Cliente 1234', para: 'C-03-01-01', qtd: 10, usuario: 'operador3' },
+        { data: '11/02 09:00', tipo: 'Entrada', sku: 'SKU-4088', descricao: 'Correia Dentada', de: 'NF 12340', para: 'D-01-05-01', qtd: 200, usuario: 'operador1' }
+    ];
+
+    const tipoColor = { 'Entrada': 'var(--success)', 'Separação': 'var(--wms-primary)', 'Transferência': '#6366f1', 'Ajuste': 'var(--warning)', 'Devolução': 'var(--danger)' };
+
+    container.innerHTML = `
+        <div class="card">
+            <div class="card-header">
+                <h3 style="font-size:0.95rem; font-weight:600;"><span class="material-icons-round" style="font-size:1.1rem; vertical-align:middle;">history</span> Rastreabilidade (Kardex)</h3>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <input type="text" placeholder="Buscar SKU..." class="form-input" style="width:160px; font-size:0.85rem;">
+                    <button class="btn btn-secondary"><span class="material-icons-round" style="font-size:1rem;">search</span></button>
+                </div>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="data-table">
+                    <thead><tr><th>Data/Hora</th><th>Tipo</th><th>SKU</th><th>Descrição</th><th>Origem</th><th>Destino</th><th>Qtd</th><th>Usuário</th></tr></thead>
+                    <tbody>
+                        ${movs.map(m => `<tr>
+                            <td>${m.data}</td>
+                            <td><span style="display:inline-flex; align-items:center; gap:4px;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${tipoColor[m.tipo] || 'gray'};"></span>${m.tipo}</span></td>
+                            <td><strong>${m.sku}</strong></td>
+                            <td>${m.descricao}</td>
+                            <td>${m.de}</td>
+                            <td>${m.para}</td>
+                            <td style="text-align:center; font-weight:bold; color:${m.qtd >= 0 ? 'var(--success)' : 'var(--danger)'}">${m.qtd >= 0 ? '+' : ''}${m.qtd}</td>
+                            <td>${m.usuario}</td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+// ========================
+// 8. LOG DE OPERAÇÕES
+// ========================
+function renderLogOperacoes(container) {
+    const logs = [
+        { hora: '10:15:23', modulo: 'Recebimento', acao: 'NF 12345 conferida', usuario: 'operador1', ip: '192.168.1.10' },
+        { hora: '10:32:05', modulo: 'Armazenagem', acao: 'Putaway SKU-1001 → A-01-01-01', usuario: 'operador1', ip: '192.168.1.10' },
+        { hora: '11:00:12', modulo: 'Separação', acao: 'Onda OND-003 liberada', usuario: 'supervisor1', ip: '192.168.1.5' },
+        { hora: '11:15:40', modulo: 'Inventário', acao: 'Contagem Rua B iniciada', usuario: 'auditor1', ip: '192.168.1.8' },
+        { hora: '11:30:55', modulo: 'Transferência', acao: 'SKU-1001 movido A-01-01 → A-01-02', usuario: 'operador2', ip: '192.168.1.11' },
+        { hora: '14:00:08', modulo: 'Bloqueio', acao: 'Endereço C-03-01-01 bloqueado', usuario: 'supervisor1', ip: '192.168.1.5' },
+        { hora: '14:35:22', modulo: 'Expedição', acao: 'Carga CRG-002 liberada', usuario: 'supervisor1', ip: '192.168.1.5' },
+        { hora: '15:20:11', modulo: 'Ajuste', acao: 'SKU-2015 ajustado -5un', usuario: 'supervisor1', ip: '192.168.1.5' }
+    ];
+
+    const modColor = { 'Recebimento': '#22c55e', 'Armazenagem': '#3b82f6', 'Separação': '#f59e0b', 'Inventário': '#8b5cf6', 'Transferência': '#6366f1', 'Bloqueio': '#ef4444', 'Expedição': '#06b6d4', 'Ajuste': '#f97316' };
+
+    container.innerHTML = `
+        <div class="card">
+            <div class="card-header">
+                <h3 style="font-size:0.95rem; font-weight:600;"><span class="material-icons-round" style="font-size:1.1rem; vertical-align:middle;">list_alt</span> Log de Operações</h3>
+                <span class="badge badge-info">${new Date().toLocaleDateString('pt-BR')}</span>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="data-table">
+                    <thead><tr><th>Hora</th><th>Módulo</th><th>Ação</th><th>Usuário</th><th>IP</th></tr></thead>
+                    <tbody>
+                        ${logs.map(l => `<tr>
+                            <td style="font-family:monospace; font-size:0.85rem;">${l.hora}</td>
+                            <td><span style="display:inline-flex; align-items:center; gap:4px;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${modColor[l.modulo] || 'gray'};"></span>${l.modulo}</span></td>
+                            <td>${l.acao}</td>
+                            <td>${l.usuario}</td>
+                            <td style="font-family:monospace; font-size:0.8rem; color:var(--text-secondary);">${l.ip}</td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
             </div>
         </div>
     `;

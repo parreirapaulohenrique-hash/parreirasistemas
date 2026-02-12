@@ -184,16 +184,25 @@ function switchView(viewId) {
         } else if (viewId.startsWith('rel-') && window.loadRelatoriosView) {
             window.loadRelatoriosView(viewId);
         } else if (viewId !== 'dashboard' && !VIEW_ALIASES[viewId]) {
-            // Show placeholder for views not yet implemented
-            if (target.id === 'view-dynamic' || target.innerHTML.trim() === '') {
-                const icon = getViewIcon(viewId);
-                target.innerHTML = `
-                    <div class="view-placeholder">
-                        <span class="material-icons-round">${icon}</span>
-                        <h3>${VIEW_TITLES[viewId] || viewId}</h3>
-                        <p style="font-size:0.85rem;">Tela em construção.</p>
-                    </div>
-                `;
+            // Route to specific loaders based on prefix
+            if (viewId.startsWith('cad-') && window.loadCadastroView) {
+                window.loadCadastroView(viewId);
+            } else if (viewId.startsWith('cfg-') && window.loadConfigView) {
+                window.loadConfigView(viewId);
+            } else if ((viewId.startsWith('relm-') || viewId.startsWith('relo-')) && window.loadRelatoriosView) {
+                window.loadRelatoriosView(viewId);
+            } else {
+                // Show placeholder for views not yet implemented
+                if (target.id === 'view-dynamic' || target.innerHTML.trim() === '') {
+                    const icon = getViewIcon(viewId);
+                    target.innerHTML = `
+                        <div class="view-placeholder">
+                            <span class="material-icons-round">${icon}</span>
+                            <h3>${VIEW_TITLES[viewId] || viewId}</h3>
+                            <p style="font-size:0.85rem;">Tela em construção.</p>
+                        </div>
+                    `;
+                }
             }
         }
 
