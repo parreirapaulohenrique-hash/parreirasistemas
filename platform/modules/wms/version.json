@@ -1,8 +1,8 @@
 {
     "module": "module-wms",
     "name": "Parreira WMS",
-    "version": "3.5.0",
+    "version": "3.6.0",
     "date": "2026-02-12",
-    "last_change": "Batch 2: Agendamento Doca + Conferência + Armazenagem Putaway",
-    "build": "20260212.01"
+    "last_change": "Batch 3+4: Ondas/Picking/Conf.Saída + Inventário/Transferência/Bloqueio",
+    "build": "20260212.02"
 }
