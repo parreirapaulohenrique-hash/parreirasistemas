@@ -181,6 +181,8 @@ function switchView(viewId) {
             window.loadSaidaView(viewId);
         } else if ((viewId.startsWith('aud-') || viewId === 'est-transferencia' || viewId === 'est-bloqueio' || viewId === 'est-ajuste') && window.loadControleView) {
             window.loadControleView(viewId);
+        } else if (viewId.startsWith('rel-') && window.loadRelatoriosView) {
+            window.loadRelatoriosView(viewId);
         } else if (viewId !== 'dashboard' && !VIEW_ALIASES[viewId]) {
             // Show placeholder for views not yet implemented
             if (target.id === 'view-dynamic' || target.innerHTML.trim() === '') {
