@@ -625,6 +625,7 @@ body {
     border-radius: 4px;
 }
 
+
 .list-status.pendente {
     background: rgba(245, 158, 11, 0.15);
     color: var(--warning);
@@ -633,6 +634,26 @@ body {
 .list-status.enviado {
     background: rgba(59, 130, 246, 0.15);
     color: var(--info);
+}
+
+.list-status.aguardando {
+    background: rgba(139, 92, 246, 0.15);
+    color: #8b5cf6;
+}
+
+.list-status.separando {
+    background: rgba(59, 130, 246, 0.15);
+    color: var(--info);
+}
+
+.list-status.conferido {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--success);
+}
+
+.list-status.despachado {
+    background: rgba(148, 163, 184, 0.15);
+    color: #cbd5e1;
 }
 
 .list-status.faturado {

@@ -17,9 +17,14 @@
     --scanner-h: 48px;
 }
 
-* { margin:0; padding:0; box-sizing:border-box; }
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-html, body {
+html,
+body {
     font-family: 'Inter', sans-serif;
     background: var(--bg-dark);
     color: var(--text-primary);
@@ -290,7 +295,9 @@ html, body {
     transition: transform 0.1s;
 }
 
-.m-btn:active { transform: scale(0.97); }
+.m-btn:active {
+    transform: scale(0.97);
+}
 
 .m-btn-primary {
     background: var(--primary);
@@ -344,7 +351,9 @@ html, body {
     border-bottom: 1px solid var(--border);
 }
 
-.m-list-item:last-child { border-bottom: none; }
+.m-list-item:last-child {
+    border-bottom: none;
+}
 
 .m-badge {
     display: inline-flex;
@@ -355,10 +364,25 @@ html, body {
     font-weight: 600;
 }
 
-.m-badge-blue { background: rgba(14,165,233,0.15); color: #0ea5e9; }
-.m-badge-green { background: rgba(16,185,129,0.15); color: #10b981; }
-.m-badge-yellow { background: rgba(245,158,11,0.15); color: #f59e0b; }
-.m-badge-red { background: rgba(239,68,68,0.15); color: #ef4444; }
+.m-badge-blue {
+    background: rgba(14, 165, 233, 0.15);
+    color: #0ea5e9;
+}
+
+.m-badge-green {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+}
+
+.m-badge-yellow {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+}
+
+.m-badge-red {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
 
 /* ===== Placeholder Screen ===== */
 .screen-placeholder {
@@ -375,4 +399,86 @@ html, body {
     font-size: 4rem;
     opacity: 0.3;
     margin-bottom: 1rem;
+}
+
+/* ===== Flash Effects & Toasts ===== */
+@keyframes flashSuccess {
+    0% {
+        background-color: rgba(16, 185, 129, 0.4);
+    }
+
+    100% {
+        background-color: transparent;
+    }
+}
+
+@keyframes flashError {
+    0% {
+        background-color: rgba(239, 68, 68, 0.4);
+    }
+
+    100% {
+        background-color: transparent;
+    }
+}
+
+.flash-success {
+    animation: flashSuccess 0.5s ease-out;
+}
+
+.flash-error {
+    animation: flashError 0.5s ease-out;
+}
+
+.toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-card);
+    color: white;
+    padding: 0.75rem 1.25rem;
+    border-radius: 50px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    z-index: 2000;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    white-space: nowrap;
+    animation: toastSlideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@keyframes toastSlideUp {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}
+
+.toast-success {
+    color: var(--success);
+    border-color: var(--success);
+}
+
+.toast-error {
+    color: var(--danger);
+    border-color: var(--danger);
+}
+
+.toast-warning {
+    color: var(--warning);
+    border-color: var(--warning);
+}
+
+.toast-info {
+    color: var(--primary);
+    border-color: var(--primary);
 }

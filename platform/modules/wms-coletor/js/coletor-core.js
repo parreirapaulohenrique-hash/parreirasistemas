@@ -163,3 +163,47 @@ window.wmsData = {
         return locs.find(l => l.id === id);
     }
 };
+
+// ===== Feedback Manager =====
+window.Feedback = {
+    audioCtx: new (window.AudioContext || window.webkitAudioContext)(),
+
+    beep: function (type = 'success') {
+        if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+        const osc = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(this.audioCtx.destination);
+
+        if (type === 'success') {
+            osc.frequency.setValueAtTime(880, this.audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1760, this.audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.1, this.audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.1);
+            osc.start();
+            osc.stop(this.audioCtx.currentTime + 0.1);
+        } else {
+            // Error buzzer
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, this.audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.2, this.audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.3);
+            osc.start();
+            osc.stop(this.audioCtx.currentTime + 0.3);
+        }
+    },
+
+    flash: function (type = 'success') {
+        const div = document.createElement('div');
+        div.className = `flash-${type}`;
+        div.style.position = 'fixed';
+        div.style.top = '0'; div.style.left = '0';
+        div.style.width = '100%'; div.style.height = '100%';
+        div.style.pointerEvents = 'none';
+        div.style.zIndex = '9999';
+        document.body.appendChild(div);
+        setTimeout(() => div.remove(), 500);
+
+        if (navigator.vibrate) navigator.vibrate(type === 'success' ? 50 : 300);
+    }
+};

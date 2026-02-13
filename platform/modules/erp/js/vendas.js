@@ -68,6 +68,24 @@ window.gravarVenda = function () {
     vendas.push({ ...vendaAtual, dataGravacao: new Date().toISOString() });
     localStorage.setItem('erp_vendas', JSON.stringify(vendas));
 
+    // Gerar Contas a Receber (Mock 30 dias)
+    // TODO: Usar Condição de Pagamento real quando implementada
+    const receber = JSON.parse(localStorage.getItem('erp_receber') || '[]');
+    const demissao = new Date();
+    const dvencimento = new Date();
+    dvencimento.setDate(dvencimento.getDate() + 30); // Default 30 dias
+
+    receber.push({
+        id: 'CR-' + vendaAtual.numero,
+        vendaId: vendaAtual.numero,
+        cliente: vendaAtual.cliente.nome || document.getElementById('vendaNomeCliente').value,
+        emissao: demissao.toISOString(),
+        vencimento: dvencimento.toISOString(),
+        valor: vendaAtual.totalGeral,
+        status: 'Aberto'
+    });
+    localStorage.setItem('erp_receber', JSON.stringify(receber));
+
     alert('Venda ' + vendaAtual.numero + ' gravada com sucesso!');
     novaVenda();
 };

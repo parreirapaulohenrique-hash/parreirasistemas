@@ -428,11 +428,36 @@ window.finishConferencia = function () {
 
     rec.status = 'FINALIZADO';
 
+    // --- Allocate Stock (Real WMS Logic) ---
+    if (window.StockManager) {
+        const stockData = window.StockManager.getData();
+
+        rec.items.forEach(item => {
+            if (item.qtyChecked > 0) {
+                // Find first free address (simplified putaway)
+                const freeAddr = stockData.addresses.find(a => a.status === 'LIVRE');
+
+                if (freeAddr) {
+                    window.StockManager.add(item.sku, item.qtyChecked, freeAddr.id || freeAddr.address, item.desc, 'UN');
+                    console.log(`[WMS] Alocado ${item.sku} (${item.qtyChecked}) em ${freeAddr.id}`);
+                } else {
+                    console.warn(`[WMS] Sem endereço livre para ${item.sku}`);
+                    alert(`ATENÇÃO: Sem endereço livre para ${item.sku}. Estoque não alocado.`);
+                }
+            }
+        });
+    }
+
     // Save
     let receipts = JSON.parse(localStorage.getItem('wms_receipts') || '[]');
     const idx = receipts.findIndex(r => r.id === rec.id);
     if (idx >= 0) receipts[idx] = rec;
     localStorage.setItem('wms_receipts', JSON.stringify(receipts));
+
+    // Integration Hook
+    if (window.WmsIntegration) {
+        window.WmsIntegration.push('receipts', rec);
+    }
 
     document.getElementById('modalConferencia').style.display = 'none';
     loadInboundData();

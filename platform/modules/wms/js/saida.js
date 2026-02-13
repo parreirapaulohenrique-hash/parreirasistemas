@@ -220,8 +220,24 @@ window.liberarOnda = function (ondaId) {
     onda.pedidos.forEach(pid => {
         const ped = pedidos.find(p => p.id === pid);
         if (ped) {
+
+            // Validate Stock for Order
+            if (window.StockManager) {
+                const missing = ped.itens.some(item => window.StockManager.getAvailable(item.sku) < item.qtd);
+                if (missing) {
+                    alert(`⚠️ Pedido ${pid} possui itens sem estoque disponível! A onda não será liberada parciais nesta versão.`);
+                    return; // Skip this order? Or abort whole function? Aborting is safer.
+                }
+            }
+
             ped.status = 'SEPARANDO';
             ped.itens.forEach(item => {
+
+                // Reserve Stock
+                if (window.StockManager) {
+                    window.StockManager.reserve(item.sku, item.qtd);
+                }
+
                 picking.push({
                     id: `PICK-${String(seq++).padStart(4, '0')}`,
                     onda: ondaId,
@@ -365,6 +381,12 @@ window.confirmarPicking = function (taskId) {
     const task = tasks.find(t => t.id === taskId);
     if (task) {
         task.status = 'COLETADO';
+
+        // Commit Stock (Decrement)
+        if (window.StockManager) {
+            window.StockManager.commit(task.sku, task.qtd);
+        }
+
         localStorage.setItem('wms_picking', JSON.stringify(tasks));
         renderSeparacao(document.getElementById('view-dynamic'));
     }
@@ -673,6 +695,12 @@ window.liberarExpedicao = function (expId) {
         exp.horaSaida = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     }
     localStorage.setItem('wms_expedicoes', JSON.stringify(exps));
+
+    // Integration Hook
+    if (window.WmsIntegration) {
+        window.WmsIntegration.push('shipments', exp);
+    }
+
     alert(`✅ Expedição ${expId} liberada! Veículo autorizado para saída.`);
     renderExpedicao(document.getElementById('view-dynamic'));
 };

@@ -10,6 +10,7 @@ window.loadControleView = function (viewId) {
 
     switch (viewId) {
         case 'aud-inventario': renderInventarioCiclico(container); break;
+        case 'est-inventario': renderInventarioCiclico(container); break;
         case 'est-transferencia': renderTransferencia(container); break;
         case 'est-bloqueio': renderBloqueio(container); break;
         case 'est-ajuste': renderAjusteEstoque(container); break;
@@ -556,7 +557,12 @@ function renderAjusteEstoque(container) {
                                 <td style="text-align:center;">${a.qtdNova}</td>
                                 <td style="text-align:center; color:${diff >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:bold;">${diff >= 0 ? '+' : ''}${diff}</td>
                                 <td>${a.motivo}</td>
-                                <td><span class="badge ${a.status === 'aprovado' ? 'badge-success' : 'badge-warning'}">${a.status}</span></td>
+                                <td>
+                                    ${a.status === 'pendente'
+                ? `<button onclick="aprovarAjuste('${a.id}')" class="btn btn-sm btn-success" style="padding:0.2rem 0.5rem; font-size:0.75rem;">Aprovar</button>`
+                : `<span class="badge ${a.status === 'aprovado' ? 'badge-success' : 'badge-warning'}">${a.status}</span>`
+            }
+                                </td>
                             </tr>`;
     }).join('')}
                     </tbody>
@@ -568,10 +574,41 @@ function renderAjusteEstoque(container) {
 
 window.novoAjuste = function () {
     const ajustes = JSON.parse(localStorage.getItem('wms_ajustes') || '[]');
-    ajustes.push({ id: 'AJ-' + String(ajustes.length + 3).padStart(3, '0'), sku: 'SKU-0000', descricao: '', endereco: '', qtdAnterior: 0, qtdNova: 0, motivo: 'Recontagem', usuario: 'admin', data: new Date().toLocaleDateString('pt-BR'), status: 'pendente' });
+    // Mocking a new adjustment request (in real app, this would come from a modal)
+    ajustes.push({ id: 'AJ-' + String(ajustes.length + 3).padStart(3, '0'), sku: 'SKU-0001', descricao: 'Parafuso Phillips M6x30', endereco: '01-01-0101', qtdAnterior: 100, qtdNova: 105, motivo: 'Recontagem', usuario: 'admin', data: new Date().toLocaleDateString('pt-BR'), status: 'pendente' });
     localStorage.setItem('wms_ajustes', JSON.stringify(ajustes));
-    alert('✅ Ajuste criado! Edite os detalhes na lista.');
+    alert('✅ Solicitação de Ajuste criada! Aprove na lista para efetivar o estoque.');
     renderAjusteEstoque(document.getElementById('view-dynamic'));
+};
+
+window.aprovarAjuste = function (id) {
+    const ajustes = JSON.parse(localStorage.getItem('wms_ajustes') || '[]');
+    const ajuste = ajustes.find(a => a.id === id);
+
+    if (ajuste && ajuste.status === 'pendente') {
+        const diff = ajuste.qtdNova - ajuste.qtdAnterior;
+
+        if (window.StockManager) {
+            if (diff > 0) {
+                // Add stock
+                window.StockManager.add(ajuste.sku, diff, ajuste.endereco, ajuste.descricao, 'UN');
+            } else if (diff < 0) {
+                // Remove stock
+                window.StockManager.commit(ajuste.sku, Math.abs(diff));
+            }
+        }
+
+        ajuste.status = 'aprovado';
+        localStorage.setItem('wms_ajustes', JSON.stringify(ajustes));
+
+        // Integration Hook
+        if (window.WmsIntegration) {
+            window.WmsIntegration.push('stock-levels', ajuste);
+        }
+
+        alert(`Ajuste ${id} aprovado e estoque atualizado!`);
+        renderAjusteEstoque(document.getElementById('view-dynamic'));
+    }
 };
 
 // ========================
@@ -665,40 +702,73 @@ function renderDivergencias(container) {
 // 7. RASTREABILIDADE (KARDEX)
 // ========================
 function renderRastreabilidade(container) {
-    const movs = [
-        { data: '12/02 10:15', tipo: 'Entrada', sku: 'SKU-1001', descricao: 'Parafuso M8x30', de: 'NF 12345', para: 'A-01-01-01', qtd: 500, usuario: 'operador1' },
-        { data: '12/02 11:30', tipo: 'Transferência', sku: 'SKU-1001', descricao: 'Parafuso M8x30', de: 'A-01-01-01', para: 'A-01-02-03', qtd: 100, usuario: 'operador2' },
-        { data: '12/02 14:00', tipo: 'Separação', sku: 'SKU-1001', descricao: 'Parafuso M8x30', de: 'A-01-02-03', para: 'Onda OND-001', qtd: 50, usuario: 'separador1' },
-        { data: '12/02 15:20', tipo: 'Ajuste', sku: 'SKU-2015', descricao: 'Óleo 15W40', de: 'B-02-03-02', para: '-', qtd: -5, usuario: 'supervisor1' },
-        { data: '11/02 16:45', tipo: 'Devolução', sku: 'SKU-3042', descricao: 'Filtro AP-200', de: 'Cliente 1234', para: 'C-03-01-01', qtd: 10, usuario: 'operador3' },
-        { data: '11/02 09:00', tipo: 'Entrada', sku: 'SKU-4088', descricao: 'Correia Dentada', de: 'NF 12340', para: 'D-01-05-01', qtd: 200, usuario: 'operador1' }
-    ];
+    const movs = JSON.parse(localStorage.getItem('wms_kardex') || '[]');
+    // Mock sample if empty so the UI isn't blank on first load
+    if (movs.length === 0) {
+        movs.push({ id: 'DEMO', data: new Date().toISOString(), tipo: 'SISTEMA', sku: '-', qtd: 0, doc: 'Setup', motivo: 'Inicialização do Log', usuario: 'system' });
+    }
 
-    const tipoColor = { 'Entrada': 'var(--success)', 'Separação': 'var(--wms-primary)', 'Transferência': '#6366f1', 'Ajuste': 'var(--warning)', 'Devolução': 'var(--danger)' };
+    const tipoColor = { 'ENTRADA': 'var(--success)', 'SAIDA': 'var(--wms-primary)', 'AJUSTE': 'var(--warning)', 'SISTEMA': '#6366f1' };
 
     container.innerHTML = `
         <div class="card">
             <div class="card-header">
-                <h3 style="font-size:0.95rem; font-weight:600;"><span class="material-icons-round" style="font-size:1.1rem; vertical-align:middle;">history</span> Rastreabilidade (Kardex)</h3>
-                <div style="display:flex; align-items:center; gap:0.5rem;">
-                    <input type="text" placeholder="Buscar SKU..." class="form-input" style="width:160px; font-size:0.85rem;">
-                    <button class="btn btn-secondary"><span class="material-icons-round" style="font-size:1rem;">search</span></button>
+                <h3 style="font-size:0.95rem; font-weight:600;">
+                    <span class="material-icons-round" style="font-size:1.1rem; vertical-align:middle;">history</span>
+                    Histórico de Movimentação
+                </h3>
+                <div style="display:flex; gap:0.5rem;">
+                    <button class="btn btn-outline btn-sm" onclick="renderRastreabilidade(document.getElementById('view-dynamic'))">
+                        <span class="material-icons-round">refresh</span>
+                    </button>
+                    <button class="btn btn-outline btn-sm">
+                        <span class="material-icons-round">filter_list</span> Filtrar
+                    </button>
+                    <button class="btn btn-primary btn-sm">
+                        <span class="material-icons-round">download</span> Exportar
+                    </button>
                 </div>
             </div>
             <div style="overflow-x:auto;">
                 <table class="data-table">
-                    <thead><tr><th>Data/Hora</th><th>Tipo</th><th>SKU</th><th>Descrição</th><th>Origem</th><th>Destino</th><th>Qtd</th><th>Usuário</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>Data/Hora</th>
+                            <th>Tipo</th>
+                            <th>SKU</th>
+                            <th>Documento</th>
+                            <th>Motivo/Origem</th>
+                            <th style="text-align:right;">Qtd</th>
+                            <th>Usuário</th>
+                        </tr>
+                    </thead>
                     <tbody>
-                        ${movs.map(m => `<tr>
-                            <td>${m.data}</td>
-                            <td><span style="display:inline-flex; align-items:center; gap:4px;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${tipoColor[m.tipo] || 'gray'};"></span>${m.tipo}</span></td>
-                            <td><strong>${m.sku}</strong></td>
-                            <td>${m.descricao}</td>
-                            <td>${m.de}</td>
-                            <td>${m.para}</td>
-                            <td style="text-align:center; font-weight:bold; color:${m.qtd >= 0 ? 'var(--success)' : 'var(--danger)'}">${m.qtd >= 0 ? '+' : ''}${m.qtd}</td>
-                            <td>${m.usuario}</td>
-                        </tr>`).join('')}
+                        ${movs.map(m => {
+        const date = new Date(m.data).toLocaleString('pt-BR');
+        const color = tipoColor[m.tipo] || 'var(--text-secondary)';
+        const bg = color.replace(')', ',0.1)').replace('rgb', 'rgba').replace('#', 'rgba(') + (color.startsWith('#') ? '66,135,245,0.1)' : '');
+        // Hacky hex to rgba conversion or just use light bg
+        const badgeStyle = `background:${color}20; color:${color}; padding:2px 8px; border-radius:12px; font-weight:600; font-size:0.7rem;`;
+
+        return `<tr>
+                                <td style="font-size:0.8rem;">${date}</td>
+                                <td><span style="${badgeStyle}">${m.tipo}</span></td>
+                                <td style="font-family:monospace; font-weight:600;">${m.sku}</td>
+                                <td style="font-size:0.85rem;">${m.doc}</td>
+                                <td style="font-size:0.85rem;">${m.motivo}</td>
+                                <td style="text-align:right; font-weight:600; color:${m.tipo === 'SAIDA' ? 'var(--danger)' : 'var(--success)'};">
+                                    ${m.tipo === 'SAIDA' ? '-' : '+'}${m.qtd}
+                                </td>
+                                <td style="font-size:0.8rem;">
+                                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                                        <div style="width:20px; height:20px; border-radius:50%; background:#e2e8f0; display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:#64748b;">
+                                            ${m.usuario.substring(0, 2).toUpperCase()}
+                                        </div>
+                                        ${m.usuario}
+                                    </div>
+                                </td>
+                            </tr>`;
+    }).join('')}
                     </tbody>
                 </table>
             </div>

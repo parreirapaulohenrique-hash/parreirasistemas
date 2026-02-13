@@ -23,9 +23,15 @@ window.loadDashboardView = function () {
         return d.toLocaleDateString('pt-BR') === today;
     }).length;
 
-    // Mock operational data
-    const separacoesHoje = Math.floor(Math.random() * 15) + 3;
-    const divergenciasPendentes = Math.floor(Math.random() * 5);
+    // Mock operational data -> REAL DATA
+    const ondas = JSON.parse(localStorage.getItem('wms_ondas') || '[]');
+    const separacoesHoje = ondas.filter(o => {
+        const d = new Date(o.created || o.data || new Date().toISOString());
+        return d.toLocaleDateString('pt-BR') === today;
+    }).length;
+
+    const ajustes = JSON.parse(localStorage.getItem('wms_ajustes') || '[]');
+    const divergenciasPendentes = ajustes.filter(a => a.status === 'pendente').length;
 
     // Calculate occupation by street
     const streetOccupation = {};
@@ -33,6 +39,8 @@ window.loadDashboardView = function () {
         const street = a.street || a.rua || (a.id ? a.id.split('-')[0] : 'N/A');
         if (!streetOccupation[street]) streetOccupation[street] = { total: 0, occupied: 0 };
         streetOccupation[street].total++;
+        // Use StockManager data if available for status check, or fallback to address status
+        // Since StockManager.getData() returns addresses with status synced, we can use 'addresses' variable if it came from StockManager
         if (a.status === 'OCUPADO') streetOccupation[street].occupied++;
     });
 

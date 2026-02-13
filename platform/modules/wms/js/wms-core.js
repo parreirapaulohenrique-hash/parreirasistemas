@@ -15,6 +15,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('userName').textContent = user.name || user.login;
     document.getElementById('userTenant').textContent = user.tenantId || 'Tenant';
 
+    // --- WMS Integration Init ---
+    if (window.WmsIntegration) {
+        const intConfig = JSON.parse(localStorage.getItem('wms_integration_config') || '{}');
+        window.WmsIntegration.init(intConfig);
+
+        // Dynamic Branding (Store Name)
+        const wmsConfig = JSON.parse(localStorage.getItem('wms_config') || '{}');
+        const storeName = wmsConfig.geral?.nomeArmazem || 'WMS';
+
+        const titleEl = document.getElementById('wmsTitle');
+        if (titleEl) titleEl.innerText = storeName;
+
+        const pageTitle = document.getElementById('pageTitleTag');
+        if (pageTitle) pageTitle.innerText = `${storeName} | Gestão de Armazém`;
+    }
+
     // Start at dashboard
     switchView('dashboard');
 });
@@ -173,36 +189,54 @@ function switchView(viewId) {
             window.loadLocationsView();
         } else if (resolvedId === 'inbound' && window.loadInboundView) {
             window.loadInboundView();
-        } else if (viewId.startsWith('est-') && window.loadEstoqueView) {
+        }
+        // --- Estoque: only pure stock queries go to estoque.js ---
+        else if ((viewId === 'est-consulta' || viewId === 'est-endereco') && window.loadEstoqueView) {
             window.loadEstoqueView(viewId);
-        } else if (viewId.startsWith('ent-') && viewId !== 'ent-recebimento' && window.loadEntradaView) {
-            window.loadEntradaView(viewId);
-        } else if (viewId.startsWith('sai-') && window.loadSaidaView) {
-            window.loadSaidaView(viewId);
-        } else if ((viewId.startsWith('aud-') || viewId === 'est-transferencia' || viewId === 'est-bloqueio' || viewId === 'est-ajuste') && window.loadControleView) {
+        }
+        // --- Controle/Auditoria: inventário, transferência, bloqueio, ajuste + all aud-* ---
+        else if ((viewId.startsWith('aud-') || viewId === 'est-inventario' || viewId === 'est-transferencia' || viewId === 'est-bloqueio' || viewId === 'est-ajuste') && window.loadControleView) {
             window.loadControleView(viewId);
-        } else if (viewId.startsWith('rel-') && window.loadRelatoriosView) {
+        }
+        // --- Entrada ---
+        else if (viewId.startsWith('ent-') && viewId !== 'ent-recebimento' && window.loadEntradaView) {
+            window.loadEntradaView(viewId);
+        }
+        // --- Saída ---
+        else if (viewId.startsWith('sai-') && window.loadSaidaView) {
+            window.loadSaidaView(viewId);
+        }
+        // --- Relatórios (rel-*) ---
+        else if (viewId.startsWith('rel-') && window.loadRelatoriosView) {
             window.loadRelatoriosView(viewId);
-        } else if (viewId !== 'dashboard' && !VIEW_ALIASES[viewId]) {
-            // Route to specific loaders based on prefix
-            if (viewId.startsWith('cad-') && window.loadCadastroView) {
-                window.loadCadastroView(viewId);
-            } else if (viewId.startsWith('cfg-') && window.loadConfigView) {
-                window.loadConfigView(viewId);
-            } else if ((viewId.startsWith('relm-') || viewId.startsWith('relo-')) && window.loadRelatoriosView) {
-                window.loadRelatoriosView(viewId);
-            } else {
-                // Show placeholder for views not yet implemented
-                if (target.id === 'view-dynamic' || target.innerHTML.trim() === '') {
-                    const icon = getViewIcon(viewId);
-                    target.innerHTML = `
-                        <div class="view-placeholder">
-                            <span class="material-icons-round">${icon}</span>
-                            <h3>${VIEW_TITLES[viewId] || viewId}</h3>
-                            <p style="font-size:0.85rem;">Tela em construção.</p>
-                        </div>
-                    `;
-                }
+        }
+        // --- Etiquetas ---
+        else if (viewId === 'cad-etiquetas' && window.loadEtiquetasView) {
+            window.loadEtiquetasView(viewId);
+        }
+        // --- Cadastros (cad-*) ---
+        else if (viewId.startsWith('cad-') && window.loadCadastroView) {
+            window.loadCadastroView(viewId);
+        }
+        // --- Configurações (cfg-*) ---
+        else if (viewId.startsWith('cfg-') && window.loadConfigView) {
+            window.loadConfigView(viewId);
+        }
+        // --- Relatórios Manutenção & Operação (relm-*, relo-*) ---
+        else if ((viewId.startsWith('relm-') || viewId.startsWith('relo-')) && window.loadRelManutencaoView) {
+            window.loadRelManutencaoView(viewId);
+        }
+        // --- Fallback placeholder ---
+        else if (viewId !== 'dashboard' && !VIEW_ALIASES[viewId]) {
+            if (target.id === 'view-dynamic' || target.innerHTML.trim() === '') {
+                const icon = getViewIcon(viewId);
+                target.innerHTML = `
+                    <div class="view-placeholder">
+                        <span class="material-icons-round">${icon}</span>
+                        <h3>${VIEW_TITLES[viewId] || viewId}</h3>
+                        <p style="font-size:0.85rem;">Tela em construção.</p>
+                    </div>
+                `;
             }
         }
 

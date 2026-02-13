@@ -132,6 +132,9 @@ window.switchView = (viewName) => {
 
     // Cadastros Financeiros/Fiscais
     if (viewName === 'groups' && typeof renderGruposGrid === 'function') renderGruposGrid();
+
+    // Dashboard
+    if (viewName === 'dashboard') renderDashboard();
 };
 
 // --- Product Modal Logic ---
@@ -441,4 +444,34 @@ window.renderEmployees = (filter = '') => {
 window.filterEmployees = () => {
     const term = document.getElementById('employeeSearch').value;
     renderEmployees(term);
+};
+
+// --- Dashboard Logic ---
+window.renderDashboard = function () {
+    // 1. Produtos
+    const prods = JSON.parse(localStorage.getItem('erp_products') || '[]'); // Fallback if mocking used erp_products
+    const kpiProds = document.getElementById('kpiProdutosAtivos');
+    // If erp_products is empty, maybe check products variable from app.js if it was used for mocking
+    // But app.js defined 'let products = [...]' locally (line 179).
+    // We should prefer localStorage if available, or fallback to local var length?
+    // The local var 'products' is used by renderProducts.
+    // Let's use the localStorage 'erp_products' because that's what Vendas uses.
+    if (kpiProds) kpiProds.textContent = prods.length || (typeof products !== 'undefined' ? products.length : 0);
+
+    // 2. Vendas
+    const vendas = JSON.parse(localStorage.getItem('erp_vendas') || '[]');
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const totalMes = vendas.reduce((acc, v) => {
+        const d = new Date(v.data || v.createdAt); // Handle different date fields
+        if (d.getMonth() === currentMonth && d.getFullYear() === currentYear && v.status !== 'cancelado') {
+            return acc + (Number(v.totais?.totalNF || v.total || 0));
+        }
+        return acc;
+    }, 0);
+
+    const kpiVendas = document.getElementById('kpiVendasMes');
+    if (kpiVendas) kpiVendas.textContent = totalMes.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 };

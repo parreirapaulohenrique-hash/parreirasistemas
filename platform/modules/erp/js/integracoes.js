@@ -208,40 +208,100 @@ window.onWmsRecebimento = function (recebimento) {
 /**
  * Listener: Quando ERP grava venda/NF → reserva estoque e notifica WMS
  */
+/**
+ * Listener: Quando ERP grava venda/NF → reserva estoque e notifica WMS
+ */
 window.onErpVendaFaturada = function (pedido) {
     console.log('🔄 ERP→WMS: Venda faturada, reservando estoque', pedido);
 
     const estoqueERP = JSON.parse(localStorage.getItem('erp_estoque') || '{}');
-    const tarefasWMS = JSON.parse(localStorage.getItem('wms_tarefas_separacao') || '[]');
+    const wmsPedidos = JSON.parse(localStorage.getItem('wms_pedidos') || '[]');
+    const wmsStock = JSON.parse(localStorage.getItem('wms_mock_data') || '{"addresses":[]}');
 
+    // 1. Reserva no ERP
     (pedido.itens || []).forEach(item => {
         const key = item.sku;
-        if (estoqueERP[key]) {
-            estoqueERP[key].reservado += Number(item.quantidade || 0);
-            estoqueERP[key].disponivel = estoqueERP[key].estoqueAtual - estoqueERP[key].reservado;
+        if (!estoqueERP[key]) {
+            estoqueERP[key] = { sku: key, descricao: item.descricao || '', estoqueAtual: 0, reservado: 0, disponivel: 0 };
         }
-
-        // Gerar tarefa de separação no WMS
-        tarefasWMS.push({
-            id: 'sep_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-            pedido: pedido.numero,
-            sku: item.sku,
-            descricao: item.descricao,
-            quantidade: item.quantidade,
-            enderecoOrigem: item.endereco || '',
-            status: 'pendente',
-            prioridade: pedido.prioridade || 'normal',
-            createdAt: new Date().toISOString()
-        });
+        estoqueERP[key].reservado += Number(item.quantidade || 0);
+        estoqueERP[key].disponivel = estoqueERP[key].estoqueAtual - estoqueERP[key].reservado;
     });
 
-    localStorage.setItem('erp_estoque', JSON.stringify(estoqueERP));
-    localStorage.setItem('wms_tarefas_separacao', JSON.stringify(tarefasWMS));
+    // 2. Enviar para WMS (wms_pedidos)
+    const exists = wmsPedidos.find(wp => wp.id === `PED-${pedido.numero}`);
+    if (!exists) {
+        const newWmsOrder = {
+            id: `PED-${pedido.numero}`,
+            cliente: pedido.cliente?.razaoSocial || pedido.cliente?.favorito || 'Cliente ' + pedido.cliente?.codigo,
+            prioridade: pedido.prioridade || 'NORMAL',
+            itens: (pedido.itens || []).map(i => ({
+                sku: i.sku,
+                desc: i.descricao || i.nome,
+                qtd: i.quantidade,
+                endereco: 'A-00-00-00'
+            })),
+            status: 'PENDENTE',
+            created: new Date().toISOString()
+        };
+        wmsPedidos.push(newWmsOrder);
 
-    console.log(`✅ ${pedido.itens?.length || 0} tarefas de separação criadas no WMS`);
+        // 3. Reserva WMS (Físico)
+        (pedido.itens || []).forEach(item => {
+            let remaining = item.quantidade;
+            const candidates = wmsStock.addresses.filter(a => a.sku === item.sku && a.status === 'OCUPADO' && (a.qty - (a.reserved || 0)) > 0);
+            for (const addr of candidates) {
+                if (remaining <= 0) break;
+                const available = addr.qty - (addr.reserved || 0);
+                const take = Math.min(available, remaining);
+                addr.reserved = (addr.reserved || 0) + take;
+                remaining -= take;
+            }
+        });
+    }
+
+    localStorage.setItem('erp_estoque', JSON.stringify(estoqueERP));
+    localStorage.setItem('wms_pedidos', JSON.stringify(wmsPedidos));
+    localStorage.setItem('wms_mock_data', JSON.stringify(wmsStock));
+
+    console.log(`✅ Pedido PED-${pedido.numero} enviado ao WMS e estoque reservado.`);
 
     window.dispatchEvent(new CustomEvent('estoque-atualizado', { detail: { origem: 'erp-venda', pedido: pedido.numero } }));
-    window.dispatchEvent(new CustomEvent('wms-separacao-nova', { detail: { pedido: pedido.numero, tarefas: tarefasWMS.length } }));
+};
+
+/**
+ * Entry Point: Receber Pedido do Força de Vendas
+ */
+window.onErpReceberPedidoFV = function (pedidoFV) {
+    // Adapter FV -> ERP Pedido Schema
+    const pedidoERP = {
+        numero: pedidoFV.numero,
+        data: pedidoFV.data,
+        cliente: {
+            codigo: pedidoFV.cliente.codigo,
+            razaoSocial: pedidoFV.cliente.fantasia || pedidoFV.cliente.nome
+        },
+        itens: pedidoFV.itens.map(i => ({
+            sku: i.sku,
+            descricao: i.nome,
+            quantidade: i.qtd,
+            valorUnitario: i.preco || 0,
+            valorTotal: (i.qtd * i.preco) || 0
+        })),
+        totais: { totalNF: pedidoFV.total },
+        status: 'faturado' // Simulating immediate invoicing for sync test
+    };
+
+    // Salvar no ERP Vendas
+    const vendas = JSON.parse(localStorage.getItem('erp_vendas') || '[]');
+    const exists = vendas.find(v => v.numero === pedidoERP.numero);
+    if (!exists) {
+        vendas.push(pedidoERP);
+        localStorage.setItem('erp_vendas', JSON.stringify(vendas));
+    }
+
+    // Trigger Processamento (Faturamento + WMS)
+    window.onErpVendaFaturada(pedidoERP);
 };
 
 /**

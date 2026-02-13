@@ -189,6 +189,14 @@
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">dashboard</span>Visão Geral
                         </a>
+                        <a class="nav-sub-item" onclick="switchView('receber')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">attach_money</span>Contas a Receber
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('pagar')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">money_off</span>Contas a Pagar
+                        </a>
                         <a class="nav-sub-item" onclick="switchView('acertoCaixaLista')">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">point_of_sale</span>Acerto de Caixa
@@ -253,16 +261,22 @@
                                 <h3>Resumo de Cadastros</h3>
                             </div>
                             <div class="card-body" style="padding:2rem; text-align:center;">
-                                <div style="font-size:2rem; font-weight:700;">0</div>
+                                <div id="kpiProdutosAtivos" style="font-size:2rem; font-weight:700;">0</div>
                                 <div style="color:var(--text-secondary);">Produtos Ativos</div>
                             </div>
                         </div>
                         <div class="card">
-                            <div class="card-header">
+                            <div class="card-header"
+                                style="display:flex; justify-content:space-between; align-items:center;">
                                 <h3>Vendas do Mês</h3>
+                                <button class="btn btn-secondary btn-icon" onclick="renderDashboard()"
+                                    title="Atualizar">
+                                    <span class="material-icons-round">refresh</span>
+                                </button>
                             </div>
                             <div class="card-body" style="padding:2rem; text-align:center;">
-                                <div style="font-size:2rem; font-weight:700; color:var(--accent-success);">R$ 0,00</div>
+                                <div id="kpiVendasMes"
+                                    style="font-size:2rem; font-weight:700; color:var(--accent-success);">R$ 0,00</div>
                                 <div style="color:var(--text-secondary);">Faturamento</div>
                             </div>
                         </div>
@@ -4701,6 +4715,107 @@
                                             style="font-size:1.1rem; color:var(--text-secondary); cursor:pointer;">delete</span>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Contas a Receber -->
+                <div id="view-receber" class="page-content" style="display:none;">
+                    <div class="card">
+                        <div class="card-header"
+                            style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3>Contas a Receber</h3>
+                            <button class="btn btn-secondary btn-icon" onclick="renderReceberGrid()" title="Atualizar">
+                                <span class="material-icons-round">refresh</span>
+                            </button>
+                        </div>
+                        <div class="card-body" style="padding:0;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Título</th>
+                                        <th>Cliente</th>
+                                        <th>Vencimento</th>
+                                        <th>Valor</th>
+                                        <th>Status</th>
+                                        <th style="text-align:right;">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="receberTableBody">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Contas a Pagar -->
+                <div id="view-pagar" class="page-content" style="display:none;">
+                    <div class="card">
+                        <div class="card-header"
+                            style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3>Contas a Pagar</h3>
+                            <div style="display:flex; gap:0.5rem;">
+                                <button class="btn btn-primary" onclick="novaDespesa()">
+                                    <span class="material-icons-round" style="font-size:1rem;">add</span> Nova Despesa
+                                </button>
+                                <button class="btn btn-secondary btn-icon" onclick="renderPagarGrid()"
+                                    title="Atualizar">
+                                    <span class="material-icons-round">refresh</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body" style="padding:0;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Descrição</th>
+                                        <th>Vencimento</th>
+                                        <th>Categoria</th>
+                                        <th>Valor</th>
+                                        <th>Status</th>
+                                        <th style="text-align:right;">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pagarTableBody">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal: Nova Despesa -->
+                <div id="finDespesaModal" class="modal-overlay" style="display:none;">
+                    <div class="modal-card"
+                        style="background:var(--bg-card); padding:2rem; border-radius:8px; max-width:500px; width:90%;">
+                        <h3>Nova Despesa</h3>
+                        <div style="margin-top:1rem;">
+                            <label style="display:block; margin-bottom:0.5rem;">Descrição</label>
+                            <input type="text" id="despesaDescricao" class="form-input"
+                                style="width:100%; margin-bottom:1rem;" placeholder="Ex: Aluguel, Luz...">
+
+                            <label style="display:block; margin-bottom:0.5rem;">Valor (R$)</label>
+                            <input type="text" id="despesaValor" class="form-input"
+                                style="width:100%; margin-bottom:1rem;" placeholder="0,00">
+
+                            <label style="display:block; margin-bottom:0.5rem;">Vencimento</label>
+                            <input type="date" id="despesaVencimento" class="form-input"
+                                style="width:100%; margin-bottom:1rem;">
+
+                            <label style="display:block; margin-bottom:0.5rem;">Categoria</label>
+                            <select id="despesaCategoria" class="form-input" style="width:100%; margin-bottom:1rem;">
+                                <option>Operacional</option>
+                                <option>Administrativo</option>
+                                <option>Pessoal</option>
+                                <option>Fornecedores</option>
+                            </select>
+
+                            <div style="display:flex; justify-content:flex-end; gap:1rem;">
+                                <button class="btn btn-secondary"
+                                    onclick="closeModal('finDespesaModal')">Cancelar</button>
+                                <button class="btn btn-primary" onclick="salvarDespesa()">Salvar</button>
                             </div>
                         </div>
                     </div>

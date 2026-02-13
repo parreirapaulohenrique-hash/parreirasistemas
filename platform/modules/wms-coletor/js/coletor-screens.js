@@ -584,24 +584,31 @@ window.cancelCount = function () {
 // ===================================
 
 // Toast notification (mobile-style)
+// Toast notification (mobile-style) with Feedback integration
 function showToast(message, type = 'info') {
+    // 1. Trigger Feedback (Audio/Visual)
+    if (window.Feedback) {
+        if (type === 'success') {
+            window.Feedback.beep('success');
+            window.Feedback.flash('success');
+        } else if (type === 'danger') {
+            window.Feedback.beep('error');
+            window.Feedback.flash('error');
+        } else if (type === 'warning') {
+            window.Feedback.beep('error');
+        }
+    }
+
+    // 2. Show Toast UI
     const existing = document.getElementById('mobileToast');
     if (existing) existing.remove();
 
-    const colors = { success: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)', info: 'var(--primary)' };
     const icons = { success: 'check_circle', warning: 'warning', danger: 'error', info: 'info' };
 
     const toast = document.createElement('div');
     toast.id = 'mobileToast';
-    toast.style.cssText = `
-        position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
-        background:${colors[type]}; color:white; padding:0.65rem 1.25rem;
-        border-radius:10px; font-size:0.85rem; font-weight:600;
-        display:flex; align-items:center; gap:0.5rem; z-index:999;
-        box-shadow:0 4px 16px rgba(0,0,0,0.3); max-width:90%; text-align:center;
-        animation: toastIn 0.2s ease;
-    `;
-    toast.innerHTML = `<span class="material-icons-round" style="font-size:1.1rem;">${icons[type]}</span> ${message}`;
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `<span class="material-icons-round" style="font-size:1.2rem;">${icons[type]}</span> ${message}`;
     document.body.appendChild(toast);
 
     setTimeout(() => toast.remove(), 2500);

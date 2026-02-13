@@ -69,10 +69,23 @@ function renderDashboard() {
                 <button class="btn-outline" onclick="navigateTo('pedidos')">Ver todos</button>
             </div>
             <div class="card-fv-body" style="padding:0;">
-                ${pedidos.slice(-3).reverse().map(p => `
+                ${pedidos.slice(-3).reverse().map(p => {
+        let icon = 'schedule';
+        let color = 'amber';
+        switch (p.status) {
+            case 'faturado': icon = 'check_circle'; color = 'green'; break;
+            case 'conferido': icon = 'done_all'; color = 'green'; break;
+            case 'despachado': icon = 'local_shipping'; color = 'blue'; break;
+            case 'separando': icon = 'shopping_basket'; color = 'blue'; break;
+            case 'aguardando': icon = 'hourglass_empty'; color = 'amber'; break;
+            case 'enviado': icon = 'cloud_upload'; color = 'blue'; break;
+            case 'pendente': icon = 'edit'; color = 'amber'; break;
+            case 'cancelado': icon = 'block'; color = 'red'; break;
+        }
+        return `
                     <div class="list-item" style="padding: 0.85rem 1rem;">
-                        <div class="list-icon ${p.status === 'faturado' ? 'green' : p.status === 'enviado' ? 'blue' : 'amber'}">
-                            <span class="material-icons-round">${p.status === 'faturado' ? 'check_circle' : p.status === 'enviado' ? 'cloud_upload' : 'schedule'}</span>
+                        <div class="list-icon ${color}">
+                            <span class="material-icons-round">${icon}</span>
                         </div>
                         <div class="list-info">
                             <div class="list-title">#${p.numero} - ${p.cliente?.fantasia || '-'}</div>
@@ -83,7 +96,8 @@ function renderDashboard() {
                             <span class="list-status ${p.status}">${p.status}</span>
                         </div>
                     </div>
-                `).join('')}
+                `;
+    }).join('')}
             </div>
         </div>
 
@@ -271,10 +285,25 @@ function renderPedidos(filter = '') {
 
 function renderPedidosList(pedidos) {
     if (!pedidos.length) return `<div class="empty-state"><span class="material-icons-round">receipt_long</span><p>Nenhum pedido encontrado</p></div>`;
-    return pedidos.map(p => `
+    return pedidos.map(p => {
+        let icon = 'schedule';
+        let color = 'amber';
+
+        switch (p.status) {
+            case 'faturado': icon = 'check_circle'; color = 'green'; break;
+            case 'conferido': icon = 'done_all'; color = 'green'; break;
+            case 'despachado': icon = 'local_shipping'; color = 'blue'; break;
+            case 'separando': icon = 'shopping_basket'; color = 'blue'; break;
+            case 'aguardando': icon = 'hourglass_empty'; color = 'amber'; break;
+            case 'enviado': icon = 'cloud_upload'; color = 'blue'; break;
+            case 'pendente': icon = 'edit'; color = 'amber'; break;
+            case 'cancelado': icon = 'block'; color = 'red'; break;
+        }
+
+        return `
         <div class="list-item">
-            <div class="list-icon ${p.status === 'faturado' ? 'green' : p.status === 'enviado' ? 'blue' : 'amber'}">
-                <span class="material-icons-round">${p.status === 'faturado' ? 'check_circle' : p.status === 'enviado' ? 'cloud_upload' : 'schedule'}</span>
+            <div class="list-icon ${color}">
+                <span class="material-icons-round">${icon}</span>
             </div>
             <div class="list-info">
                 <div class="list-title">#${p.numero} - ${p.cliente?.fantasia || '-'}</div>
@@ -285,7 +314,8 @@ function renderPedidosList(pedidos) {
                 <span class="list-status ${p.status}">${p.status}</span>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 window.filterPedidosTab = function (status, btn) {

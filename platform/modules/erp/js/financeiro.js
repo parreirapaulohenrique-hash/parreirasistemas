@@ -471,6 +471,145 @@ window.filterPisCofins = function () {
 window.deletePisCofinsItem = function (id) { if (deleteCadastro('pisCofins', id)) renderPisCofinsGrid(); };
 
 // ===========================================
+// 8. CONTAS A RECEBER
+// ===========================================
+window.renderReceberGrid = function () {
+    const tbody = document.getElementById('receberTableBody');
+    if (!tbody) return;
+    const items = JSON.parse(localStorage.getItem('erp_receber') || '[]');
+
+    if (!items.length) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:2rem; color:var(--text-secondary);"><span class="material-icons-round" style="font-size:2rem; vertical-align:middle;">sentiment_dissatisfied</span> Nenhuma conta a receber</td></tr>`;
+        return;
+    }
+
+    // Sort by vencimento
+    items.sort((a, b) => new Date(a.vencimento) - new Date(b.vencimento));
+
+    tbody.innerHTML = items.map(i => {
+        const venc = new Date(i.vencimento).toLocaleDateString('pt-BR');
+        const est = i.status === 'Pago' ? 'status-shipped' : (new Date(i.vencimento) < new Date() ? 'status-cancelled' : 'status-pending');
+        const valor = parseFloat(i.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+        return `<tr>
+            <td style="font-weight:600;">${i.id}</td>
+            <td>${i.cliente}</td>
+            <td>${venc}</td>
+            <td style="font-weight:700;">${valor}</td>
+            <td><span class="status-badge ${est}">${i.status}</span></td>
+            <td style="text-align:right;">
+                ${i.status !== 'Pago' ?
+                `<button class="btn btn-primary btn-icon" style="padding:0.4rem; background:var(--accent-success);" onclick="baixarContaReceber('${i.id}')" title="Baixar/Receber">
+                    <span class="material-icons-round" style="font-size:1rem;">attach_money</span>
+                </button>` :
+                `<span class="material-icons-round" style="color:var(--accent-success);">check_circle</span>`}
+            </td>
+        </tr>`;
+    }).join('');
+};
+
+window.baixarContaReceber = function (id) {
+    if (!confirm('Confirmar o recebimento desta conta?')) return;
+
+    const items = JSON.parse(localStorage.getItem('erp_receber') || '[]');
+    const item = items.find(i => i.id === id);
+    if (item) {
+        item.status = 'Pago';
+        item.dataPagamento = new Date().toISOString();
+        localStorage.setItem('erp_receber', JSON.stringify(items));
+        renderReceberGrid();
+        alert('Conta recebida com sucesso!');
+    }
+};
+
+// ===========================================
+// 9. CONTAS A PAGAR
+// ===========================================
+window.renderPagarGrid = function () {
+    const tbody = document.getElementById('pagarTableBody');
+    if (!tbody) return;
+    const items = JSON.parse(localStorage.getItem('erp_pagar') || '[]');
+
+    if (!items.length) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:2rem; color:var(--text-secondary);"><span class="material-icons-round" style="font-size:2rem; vertical-align:middle;">sentiment_dissatisfied</span> Nenhuma conta a pagar</td></tr>`;
+        return;
+    }
+
+    // Sort by vencimento
+    items.sort((a, b) => new Date(a.vencimento) - new Date(b.vencimento));
+
+    tbody.innerHTML = items.map(i => {
+        const venc = new Date(i.vencimento).toLocaleDateString('pt-BR');
+        const est = i.status === 'Pago' ? 'status-shipped' : (new Date(i.vencimento) < new Date() ? 'status-cancelled' : 'status-pending');
+        const valor = parseFloat(i.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+        return `<tr>
+            <td style="font-weight:600;">${i.descricao}</td>
+            <td>${venc}</td>
+            <td><span class="status-badge status-pending" style="background:var(--bg-secondary); color:var(--text-primary);">${i.categoria}</span></td>
+            <td style="font-weight:700;">${valor}</td>
+            <td><span class="status-badge ${est}">${i.status}</span></td>
+            <td style="text-align:right;">
+                ${i.status !== 'Pago' ?
+                `<button class="btn btn-primary btn-icon" style="padding:0.4rem; background:var(--accent-primary);" onclick="baixarContaPagar('${i.id}')" title="Baixar/Pagar">
+                    <span class="material-icons-round" style="font-size:1rem;">payment</span>
+                </button>` :
+                `<span class="material-icons-round" style="color:var(--accent-success);">check_circle</span>`}
+            </td>
+        </tr>`;
+    }).join('');
+};
+
+window.novaDespesa = function () {
+    document.getElementById('finDespesaModal').style.display = 'flex';
+    document.getElementById('despesaDescricao').value = '';
+    document.getElementById('despesaValor').value = '';
+    document.getElementById('despesaVencimento').value = new Date().toISOString().split('T')[0];
+};
+
+window.salvarDespesa = function () {
+    const desc = document.getElementById('despesaDescricao').value;
+    const valor = parseFloat(document.getElementById('despesaValor').value.replace(',', '.'));
+    const venc = document.getElementById('despesaVencimento').value;
+    const cat = document.getElementById('despesaCategoria').value;
+
+    if (!desc || isNaN(valor) || !venc) {
+        alert('Preencha os campos obrigatórios!');
+        return;
+    }
+
+    const items = JSON.parse(localStorage.getItem('erp_pagar') || '[]');
+    items.push({
+        id: 'CP-' + Date.now(),
+        descricao: desc,
+        valor: valor,
+        vencimento: venc,
+        categoria: cat,
+        status: 'Aberto',
+        criadoEm: new Date().toISOString()
+    });
+    localStorage.setItem('erp_pagar', JSON.stringify(items));
+
+    alert('Despesa salva com sucesso!');
+    document.getElementById('finDespesaModal').style.display = 'none';
+    renderPagarGrid();
+};
+
+window.baixarContaPagar = function (id) {
+    if (!confirm('Confirmar o pagamento desta conta?')) return;
+
+    const items = JSON.parse(localStorage.getItem('erp_pagar') || '[]');
+    const item = items.find(i => i.id === id);
+    if (item) {
+        item.status = 'Pago';
+        item.dataPagamento = new Date().toISOString();
+        localStorage.setItem('erp_pagar', JSON.stringify(items));
+        renderPagarGrid();
+        alert('Conta paga com sucesso!');
+    }
+};
+
+// ===========================================
 // HOOK INTO SWITCHVIEW — render grids on view change
 // ===========================================
 const _origSwitchView = window.switchView;
@@ -488,6 +627,8 @@ window.switchView = function (viewName) {
         case 'pisCofins': renderPisCofinsGrid(); break;
         case 'cbsIbs': if (typeof renderCbsIbsGrid === 'function') renderCbsIbsGrid(); break;
         case 'pdv': if (typeof renderPdvGrid === 'function') renderPdvGrid(); break;
+        case 'receber': renderReceberGrid(); break;
+        case 'pagar': renderPagarGrid(); break;
     }
 };
 

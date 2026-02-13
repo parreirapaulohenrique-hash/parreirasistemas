@@ -13,49 +13,165 @@ window.loadEstoqueView = function (viewId) {
     }
 };
 
-// --- Mock stock data (generates from addresses + products) ---
-function getMockStock() {
-    const mockData = JSON.parse(localStorage.getItem('wms_mock_data') || '{}');
-    const addresses = mockData.addresses || [];
+// --- Stock Manager (Persistence Layer) ---
+window.StockManager = {
+    getData: () => JSON.parse(localStorage.getItem('wms_mock_data') || '{"addresses":[]}'),
 
-    // If no addresses, return sample data
-    if (addresses.length === 0) {
-        return [
-            { sku: 'SKU-0001', desc: 'Parafuso Phillips M6x30', endereco: '01-01-0101', saldo: 250, unidade: 'UN', status: 'DISPONÍVEL', lote: 'L2026-001', validade: '2027-06-15' },
-            { sku: 'SKU-0002', desc: 'Porca Sextavada M6', endereco: '01-01-0102', saldo: 480, unidade: 'UN', status: 'DISPONÍVEL', lote: 'L2026-002', validade: '2027-12-01' },
-            { sku: 'SKU-0003', desc: 'Arruela Lisa 1/4"', endereco: '01-02-0201', saldo: 1200, unidade: 'UN', status: 'DISPONÍVEL', lote: 'L2026-003', validade: '2028-03-20' },
-            { sku: 'SKU-0004', desc: 'Óleo Lubrificante WD-40 300ml', endereco: '01-03-0101', saldo: 35, unidade: 'UN', status: 'DISPONÍVEL', lote: 'L2026-010', validade: '2027-01-10' },
-            { sku: 'SKU-0005', desc: 'Fita Isolante 3M 20m', endereco: '01-03-0102', saldo: 150, unidade: 'UN', status: 'DISPONÍVEL', lote: 'L2026-011', validade: '2028-08-25' },
-            { sku: 'SKU-0006', desc: 'Chave Allen 5mm Tramontina', endereco: '02-01-0101', saldo: 42, unidade: 'UN', status: 'DISPONÍVEL', lote: 'L2026-020', validade: '' },
-            { sku: 'SKU-0007', desc: 'Broca HSS 8mm Bosch', endereco: '02-01-0201', saldo: 80, unidade: 'UN', status: 'QUARENTENA', lote: 'L2026-021', validade: '' },
-            { sku: 'SKU-0008', desc: 'Lixa d\'água 220 Norton', endereco: '02-02-0101', saldo: 300, unidade: 'UN', status: 'DISPONÍVEL', lote: 'L2026-030', validade: '2027-11-30' },
-            { sku: 'SKU-0009', desc: 'Disco de Corte 7" DeWalt', endereco: '02-02-0301', saldo: 22, unidade: 'UN', status: 'DISPONÍVEL', lote: 'L2026-031', validade: '' },
-            { sku: 'SKU-0010', desc: 'Cimento Cola AC-III 20kg', endereco: '03-01-0101', saldo: 15, unidade: 'SC', status: 'DISPONÍVEL', lote: 'L2026-040', validade: '2026-09-01' },
-            { sku: 'SKU-0011', desc: 'Tinta Acrílica Branca 18L', endereco: '03-01-0201', saldo: 8, unidade: 'BD', status: 'DISPONÍVEL', lote: 'L2026-041', validade: '2027-04-15' },
-            { sku: 'SKU-0012', desc: 'Massa Corrida PVA 25kg', endereco: '03-02-0101', saldo: 5, unidade: 'BD', status: 'BLOQUEADO', lote: 'L2026-042', validade: '2026-07-20' },
-        ];
+    saveData: (data) => localStorage.setItem('wms_mock_data', JSON.stringify(data)),
+
+    // Log Transaction (Kardex)
+    logTransaction: function (type, sku, qty, doc, reason) {
+        const logs = JSON.parse(localStorage.getItem('wms_kardex') || '[]');
+        const user = JSON.parse(localStorage.getItem('logged_user') || '{"login":"system"}');
+        logs.unshift({
+            id: `LOG-${Date.now()}`,
+            data: new Date().toISOString(),
+            tipo: type, // 'ENTRADA', 'SAIDA', 'AJUSTE'
+            sku: sku,
+            qtd: qty,
+            doc: doc || '-',
+            motivo: reason || '-',
+            usuario: user.login || 'system'
+        });
+        // Limit log size to 1000
+        if (logs.length > 1000) logs.pop();
+        localStorage.setItem('wms_kardex', JSON.stringify(logs));
+    },
+
+    // Add stock to a location (Receiving)
+    add: function (sku, qty, locationId, desc = '', unit = 'UN', docRef = '') {
+        const data = this.getData();
+        const addrIndex = data.addresses.findIndex(a => (a.id || a.address) === locationId);
+
+        if (addrIndex >= 0) {
+            const addr = data.addresses[addrIndex];
+            // If already occupied by same SKU, add qty
+            if (addr.status === 'OCUPADO' && addr.sku === sku) {
+                addr.qty = (addr.qty || 0) + qty;
+            } else {
+                // Overwrite or fill empty
+                addr.status = 'OCUPADO';
+                addr.sku = sku;
+                addr.product = desc; // Store description
+                addr.qty = qty;
+                addr.unit = unit;
+                addr.lote = `L${new Date().getFullYear()}-${String(Math.floor(Math.random() * 1000)).padStart(4, '0')}`;
+                addr.validade = '';
+            }
+            this.saveData(data);
+            this.logTransaction('ENTRADA', sku, qty, docRef, `Armazenagem em ${locationId}`);
+            return true;
+        }
+        return false;
+    },
+
+    // Check available stock (Qty - Reserved)
+    getAvailable: function (sku) {
+        const data = this.getData();
+        return data.addresses
+            .filter(a => a.sku === sku && a.status === 'OCUPADO')
+            .reduce((sum, a) => sum + (a.qty - (a.reserved || 0)), 0);
+    },
+
+    // Reserve stock (Picking)
+    reserve: function (sku, qty) {
+        const data = this.getData();
+        let remaining = qty;
+
+        // Find locations with this SKU, sorted by FIFO or Lote (simplified: just list)
+        const candidates = data.addresses.filter(a => a.sku === sku && a.status === 'OCUPADO' && (a.qty - (a.reserved || 0)) > 0);
+
+        for (const addr of candidates) {
+            if (remaining <= 0) break;
+
+            const available = addr.qty - (addr.reserved || 0);
+            const take = Math.min(available, remaining);
+
+            addr.reserved = (addr.reserved || 0) + take;
+            remaining -= take;
+        }
+
+        this.saveData(data);
+        return remaining === 0; // True if fully reserved
+    },
+
+    // Commit stock (Shipment - Decrement)
+    commit: function (sku, qty, docRef = '') {
+        const data = this.getData();
+        let remaining = qty;
+
+        const candidates = data.addresses.filter(a => a.sku === sku && a.status === 'OCUPADO');
+
+        for (const addr of candidates) {
+            if (remaining <= 0) break;
+
+            // Prioritize reserved stock
+            if (addr.reserved > 0) {
+                const take = Math.min(addr.reserved, remaining);
+                addr.reserved -= take;
+                addr.qty -= take;
+                remaining -= take;
+            } else if (addr.qty > 0) {
+                const take = Math.min(addr.qty, remaining);
+                addr.qty -= take;
+                remaining -= take;
+            }
+
+            // Free up address if empty
+            if (addr.qty <= 0) {
+                addr.status = 'LIVRE';
+                delete addr.sku;
+                delete addr.product;
+                delete addr.qty;
+                delete addr.reserved;
+                delete addr.lote;
+            }
+        }
+
+        this.saveData(data);
+        this.logTransaction('SAIDA', sku, qty, docRef || '-', 'Expedição/Picking');
+    },
+
+    // Get aggregated stock for view
+    getStockList: function () {
+        const data = this.getData();
+        const stockMap = {};
+
+        data.addresses.forEach(a => {
+            if (a.status === 'OCUPADO' && a.sku) {
+                // Aggregated view not used by renderConsultaEstoque anymore, 
+                // but useful for API. 
+                // However, renderConsultaEstoque expects a flat list of lots/locations.
+            }
+        });
+
+        // Return flat list of occupied addresses for the table
+        return data.addresses
+            .filter(a => a.status === 'OCUPADO' && a.sku)
+            .map(a => ({
+                sku: a.sku,
+                desc: a.product || 'Produto Sem Nome',
+                endereco: a.id || a.address,
+                saldo: a.qty || 0,
+                unidade: a.unit || 'UN',
+                status: a.blocked ? 'BLOQUEADO' : 'DISPONÍVEL', // Using 'blocked' flag if exists
+                lote: a.lote || '-',
+                validade: a.validade || ''
+            }));
     }
+};
 
-    // Generate stock from occupied addresses
-    const products = [
-        'Parafuso Phillips M6x30', 'Porca Sextavada M6', 'Arruela Lisa 1/4"',
-        'Óleo Lubrificante WD-40', 'Fita Isolante 3M', 'Chave Allen 5mm',
-        'Broca HSS 8mm', 'Lixa d\'água 220', 'Disco de Corte 7"',
-        'Cimento Cola AC-III', 'Tinta Acrílica 18L', 'Massa Corrida PVA'
-    ];
-
-    return addresses
-        .filter(a => a.status === 'OCUPADO')
-        .map((a, i) => ({
-            sku: `SKU-${String(i + 1).padStart(4, '0')}`,
-            desc: products[i % products.length],
-            endereco: a.id || a.address || `${a.street || a.rua}-${a.building || a.predio}-${a.level || a.andar}${a.position || a.posicao}`,
-            saldo: Math.floor(Math.random() * 500) + 10,
-            unidade: 'UN',
-            status: Math.random() > 0.9 ? 'QUARENTENA' : 'DISPONÍVEL',
-            lote: `L2026-${String(Math.floor(Math.random() * 100)).padStart(3, '0')}`,
-            validade: Math.random() > 0.5 ? `2027-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-15` : ''
-        }));
+// --- Mock stock data (Replaced by Real Data) ---
+function getMockStock() {
+    // Seed initial data if empty
+    const stock = window.StockManager.getStockList();
+    if (stock.length === 0) {
+        // Optional: seed some random data one time if needed, 
+        // but better to start clean or let Inbound populate it.
+        // For now, return empty to respect "Real Mode".
+        return [];
+    }
+    return stock;
 }
 
 // --- CONSULTA DE ESTOQUE (by SKU) ---

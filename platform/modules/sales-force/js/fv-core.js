@@ -177,27 +177,101 @@ function updateBadges() {
 }
 
 // ---- Sync ----
+// ---- Sync ----
 window.forceSync = function () {
     const indicator = document.getElementById('syncIndicator');
     indicator.classList.add('syncing');
     indicator.querySelector('.material-icons-round').textContent = 'sync';
 
-    // Simulate sync
     setTimeout(() => {
-        // Mark pending orders as 'enviado'
+        // 1. PUSH: Send 'pendente' orders to WMS (Simulation of ERP integration)
+        // In a real scenario, FV -> ERP -> WMS.
+
+        let pushedCount = 0;
+
         fvData.pedidos.forEach(p => {
             if (p.status === 'pendente') {
-                p.status = 'enviado';
+
+                // 1. ERP DATA UPDATE (Independent)
+                // Deduct from ERP Stock (fvData.produtos)
+                p.itens.forEach(item => {
+                    const prod = fvData.produtos.find(pr => pr.sku === item.sku);
+                    if (prod) {
+                        prod.estoque = (prod.estoque || 0) - item.qtd;
+                    }
+                });
+
+                // 2. SEND TO ERP BACKEND (Integration)
+                if (typeof window.onErpReceberPedidoFV === 'function') {
+                    try {
+                        window.onErpReceberPedidoFV(p);
+                        pushedCount++;
+                        console.log(`[Sync] Sent order ${p.numero} to ERP.`);
+                    } catch (e) {
+                        console.error('[Sync] Error sending to ERP:', e);
+                    }
+                } else {
+                    console.warn('[Sync] ERP Integration module not found. Operating in Standalone mode.');
+                }
+
+                // Update local status
+                p.status = 'enviado'; // Sent to ERP/WMS
                 p.syncedAt = new Date().toISOString();
             }
         });
+
+
+
+        // Save ERP Data (updated stock)
+        saveFVData();
+
+        // 2. PULL: Update status from WMS/ERP
+        // Check wms_pedidos, wms_ondas, wms_expedicoes
+        const ondas = JSON.parse(localStorage.getItem('wms_ondas') || '[]');
+        // We can infer status from wmsPedidos status or if it's in a specific wave
+        // Re-read wmsPedidos in case we didn't push anything but need updates
+        const currentWms = JSON.parse(localStorage.getItem('wms_pedidos') || '[]');
+
+        fvData.pedidos.forEach(p => {
+            if (p.status === 'pendente') return; // Ignore drafts
+
+            const wmsOrder = currentWms.find(wp => wp.id === `PED-${p.numero}`);
+            if (wmsOrder) {
+                // Map WMS Status -> FV Status
+                let newStatus = p.status;
+                const ws = wmsOrder.status; // PENDENTE, EM ONDA, SEPARANDO, CONFERIDO?
+
+                if (ws === 'PENDENTE') newStatus = 'aguardando'; // WMS received
+                else if (ws === 'EM ONDA') newStatus = 'separando';
+                else if (ws === 'SEPARANDO') newStatus = 'separando';
+
+                // Check if Wave is Conferida
+                // In saida.js, orders don't explicitly change to CONFERIDO, but the ONDA does.
+                // We need to find which wave this order belongs to.
+                const onda = ondas.find(o => o.pedidos.includes(wmsOrder.id));
+                if (onda) {
+                    if (onda.status === 'PRONTA' || onda.conferido) newStatus = 'conferido';
+                    else newStatus = 'separando';
+                }
+
+                // Check Expedicao (Despachado)
+                // Need to check wms_expedicoes? not implemented fully in saida.js logic for individual orders logic yet
+                // But let's assume 'conferido' is the milestone for now.
+
+                if (newStatus !== p.status) {
+                    console.log(`[Sync] Order ${p.numero} updated: ${p.status} -> ${newStatus}`);
+                    p.status = newStatus;
+                }
+            }
+        });
+
         saveFVData();
         updateBadges();
 
         indicator.classList.remove('syncing');
         indicator.querySelector('.material-icons-round').textContent = 'cloud_done';
         localStorage.setItem(FV_SYNC_KEY, new Date().toISOString());
-        showToast('Sincronizado com sucesso!');
+        showToast(pushedCount > 0 ? `${pushedCount} pedidos enviados!` : 'Sincronizado com sucesso');
 
         // Re-render current view
         const activeView = document.querySelector('.view.active');
@@ -205,7 +279,7 @@ window.forceSync = function () {
             const viewName = activeView.id.replace('view-', '');
             if (typeof renderScreen === 'function') renderScreen(viewName);
         }
-    }, 1500);
+    }, 1000);
 };
 
 // ---- Online/Offline ----
