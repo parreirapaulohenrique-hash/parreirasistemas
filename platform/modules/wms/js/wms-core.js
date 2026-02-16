@@ -29,6 +29,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const pageTitle = document.getElementById('pageTitleTag');
         if (pageTitle) pageTitle.innerText = `${storeName} | Gestão de Armazém`;
+
+        // Sync Products from ERP Master on startup
+        window.WmsIntegration.sync('products').then(res => {
+            if (res.status === 'ok' && Array.isArray(res.data)) {
+                const cads = JSON.parse(localStorage.getItem('wms_cadastros') || '{}');
+                cads.produtos = res.data;
+                localStorage.setItem('wms_cadastros', JSON.stringify(cads));
+                console.log('📦 Produtos sincronizados do ERP Master:', res.data.length);
+            }
+        });
     }
 
     // Start at dashboard
@@ -182,52 +192,53 @@ function switchView(viewId) {
             if (dashItem) dashItem.classList.add('active');
         }
 
-        // Trigger view-specific loaders
-        if (viewId === 'dashboard' && window.loadDashboardView) {
-            window.loadDashboardView();
-        } else if (resolvedId === 'locations' && window.loadLocationsView) {
-            window.loadLocationsView();
-        } else if (resolvedId === 'inbound' && window.loadInboundView) {
-            window.loadInboundView();
+        // WMS View Registry - Maps view IDs or prefixes to loader functions
+        const VIEW_REGISTRY = [
+            // Exact matches (Higher priority)
+            { id: 'dashboard', loader: () => window.loadDashboardView && window.loadDashboardView() },
+            { id: 'locations', loader: () => window.loadLocationsView && window.loadLocationsView() },
+            { id: 'inbound', loader: () => window.loadInboundView && window.loadInboundView() },
+            { id: 'cad-etiquetas', loader: (v) => window.loadEtiquetasView && window.loadEtiquetasView(v) },
+
+            // Specific overrides for shared loaders
+            { id: 'est-consulta', loader: (v) => window.loadEstoqueView && window.loadEstoqueView(v) },
+            { id: 'est-endereco', loader: (v) => window.loadEstoqueView && window.loadEstoqueView(v) },
+            { id: 'est-inventario', loader: (v) => window.loadControleView && window.loadControleView(v) },
+            { id: 'est-transferencia', loader: (v) => window.loadControleView && window.loadControleView(v) },
+            { id: 'est-bloqueio', loader: (v) => window.loadControleView && window.loadControleView(v) },
+            { id: 'est-ajuste', loader: (v) => window.loadControleView && window.loadControleView(v) },
+
+            // Prefix matches (Lower priority)
+            { prefix: 'aud-', loader: (v) => window.loadControleView && window.loadControleView(v) },
+            { prefix: 'ent-', exclude: ['ent-recebimento'], loader: (v) => window.loadEntradaView && window.loadEntradaView(v) }, // ent-recebimento is aliased to inbound
+            { prefix: 'sai-', loader: (v) => window.loadSaidaView && window.loadSaidaView(v) },
+            { prefix: 'rel-', loader: (v) => window.loadRelatoriosView && window.loadRelatoriosView(v) },
+            { prefix: 'cad-', loader: (v) => window.loadCadastroView && window.loadCadastroView(v) },
+            { prefix: 'cfg-', loader: (v) => window.loadConfigView && window.loadConfigView(v) },
+            { prefix: 'relm-', loader: (v) => window.loadRelManutencaoView && window.loadRelManutencaoView(v) },
+            { prefix: 'relo-', loader: (v) => window.loadRelManutencaoView && window.loadRelManutencaoView(v) }
+        ];
+
+        // Find matching loader
+        let loaded = false;
+
+        // 1. Check exact ID in registry
+        const exactMatch = VIEW_REGISTRY.find(r => r.id === resolvedId);
+        if (exactMatch) {
+            exactMatch.loader(viewId);
+            loaded = true;
         }
-        // --- Estoque: only pure stock queries go to estoque.js ---
-        else if ((viewId === 'est-consulta' || viewId === 'est-endereco') && window.loadEstoqueView) {
-            window.loadEstoqueView(viewId);
+        // 2. Check prefix in registry
+        else {
+            const prefixMatch = VIEW_REGISTRY.find(r => r.prefix && resolvedId.startsWith(r.prefix) && (!r.exclude || !r.exclude.includes(resolvedId)));
+            if (prefixMatch) {
+                prefixMatch.loader(viewId);
+                loaded = true;
+            }
         }
-        // --- Controle/Auditoria: inventário, transferência, bloqueio, ajuste + all aud-* ---
-        else if ((viewId.startsWith('aud-') || viewId === 'est-inventario' || viewId === 'est-transferencia' || viewId === 'est-bloqueio' || viewId === 'est-ajuste') && window.loadControleView) {
-            window.loadControleView(viewId);
-        }
-        // --- Entrada ---
-        else if (viewId.startsWith('ent-') && viewId !== 'ent-recebimento' && window.loadEntradaView) {
-            window.loadEntradaView(viewId);
-        }
-        // --- Saída ---
-        else if (viewId.startsWith('sai-') && window.loadSaidaView) {
-            window.loadSaidaView(viewId);
-        }
-        // --- Relatórios (rel-*) ---
-        else if (viewId.startsWith('rel-') && window.loadRelatoriosView) {
-            window.loadRelatoriosView(viewId);
-        }
-        // --- Etiquetas ---
-        else if (viewId === 'cad-etiquetas' && window.loadEtiquetasView) {
-            window.loadEtiquetasView(viewId);
-        }
-        // --- Cadastros (cad-*) ---
-        else if (viewId.startsWith('cad-') && window.loadCadastroView) {
-            window.loadCadastroView(viewId);
-        }
-        // --- Configurações (cfg-*) ---
-        else if (viewId.startsWith('cfg-') && window.loadConfigView) {
-            window.loadConfigView(viewId);
-        }
-        // --- Relatórios Manutenção & Operação (relm-*, relo-*) ---
-        else if ((viewId.startsWith('relm-') || viewId.startsWith('relo-')) && window.loadRelManutencaoView) {
-            window.loadRelManutencaoView(viewId);
-        }
-        // --- Fallback placeholder ---
-        else if (viewId !== 'dashboard' && !VIEW_ALIASES[viewId]) {
+
+        // 3. Fallback
+        if (!loaded && viewId !== 'dashboard' && !VIEW_ALIASES[viewId]) {
             if (target.id === 'view-dynamic' || target.innerHTML.trim() === '') {
                 const icon = getViewIcon(viewId);
                 target.innerHTML = `

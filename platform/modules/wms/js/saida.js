@@ -458,13 +458,191 @@ function renderConfSaida(container) {
 }
 
 window.conferirOnda = function (ondaId) {
+    // Modo Simplificado (para teste rápido)
+    // const ondas = getOndasMock();
+    // const onda = ondas.find(o => o.id === ondaId);
+    // if (onda) {
+    //     onda.conferido = true;
+    //     onda.status = 'PRONTA';
+    //     localStorage.setItem('wms_ondas', JSON.stringify(ondas));
+    //     renderConfSaida(document.getElementById('view-dynamic'));
+    // }
+
+    // Modo Avançado (Bancada)
+    openConferenceModal(ondaId);
+};
+
+// ========================
+// CONFERENCE STATION (BANCADA)
+// ========================
+let currentConferenceWave = null;
+let currentConferenceItems = [];
+let currentConferenceScanned = {}; // sku: qty
+
+function openConferenceModal(ondaId) {
     const ondas = getOndasMock();
-    const onda = ondas.find(o => o.id === ondaId);
+    const picking = getPickingTasksMock();
+    currentConferenceWave = ondas.find(o => o.id === ondaId);
+
+    // Aggregate items from picking tasks
+    const tasks = picking.filter(t => t.onda === ondaId);
+    currentConferenceItems = [];
+    currentConferenceScanned = {};
+
+    tasks.forEach(t => {
+        const existing = currentConferenceItems.find(i => i.sku === t.sku);
+        if (existing) existing.qtd += t.qtd;
+        else currentConferenceItems.push({ sku: t.sku, desc: t.desc, qtd: t.qtd });
+
+        if (!currentConferenceScanned[t.sku]) currentConferenceScanned[t.sku] = 0;
+    });
+
+    // Render Modal Overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'confModal';
+    overlay.className = 'modal-overlay';
+    overlay.style.display = 'flex';
+    document.body.appendChild(overlay);
+
+    renderConferenceScreen();
+}
+
+function renderConferenceScreen() {
+    const overlay = document.getElementById('confModal');
+    if (!overlay) return;
+
+    const totalQtd = currentConferenceItems.reduce((s, i) => s + i.qtd, 0);
+    const scannedQtd = Object.values(currentConferenceScanned).reduce((s, q) => s + q, 0);
+    const pct = Math.round((scannedQtd / totalQtd) * 100);
+
+    overlay.innerHTML = `
+        <div class="modal-content" style="max-width:90%; width:1000px; height:80vh; display:flex; flex-direction:column;">
+            <div class="modal-header" style="background:var(--bg-card); border-bottom:1px solid var(--border-color); padding:1rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <h2 style="margin:0;">Conferência de Onda: ${currentConferenceWave.id}</h2>
+                        <span style="color:var(--text-secondary);">Bipe os produtos para validar a separação.</span>
+                    </div>
+                    <button class="btn-icon" onclick="closeConferenceModal()"><span class="material-icons-round">close</span></button>
+                </div>
+                <div style="margin-top:1rem; background:rgba(255,255,255,0.05); height:8px; border-radius:4px; overflow:hidden;">
+                    <div style="width:${pct}%; background:var(--success); height:100%; transition:width 0.3s;"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-top:0.5rem; font-size:0.9rem; font-weight:600;">
+                    <span>Progresso: ${pct}%</span>
+                    <span>${scannedQtd} / ${totalQtd} itens</span>
+                </div>
+            </div>
+
+            <div class="modal-body" style="flex:1; display:flex; gap:1rem; padding:1rem; overflow:hidden;">
+                <!-- Left: Scanner & Log -->
+                <div style="flex:1; display:flex; flex-direction:column; gap:1rem;">
+                    <div style="display:flex; gap:0.5rem;">
+                        <input type="text" id="confScanner" class="form-input" placeholder="Bipe o código de barras (EAN/SKU)..." 
+                            style="font-size:1.2rem; padding:1rem;" autofocus onkeydown="handleConfInput(event)">
+                        <button class="btn btn-primary" onclick="simulateConfScan()">
+                            <span class="material-icons-round">qr_code_scanner</span>
+                        </button>
+                    </div>
+                    
+                    <div class="card" style="flex:1; overflow-y:auto; padding:0;">
+                         <table class="data-table">
+                            <thead><tr><th>SKU</th><th>Produto</th><th>Qtd</th><th>Conferido</th><th>Status</th></tr></thead>
+                            <tbody>
+                                ${currentConferenceItems.map(item => {
+        const scanned = currentConferenceScanned[item.sku] || 0;
+        const status = scanned === item.qtd ? 'ok' : scanned > item.qtd ? 'excess' : 'pending';
+        const rowColor = status === 'ok' ? 'rgba(16,185,129,0.1)' : status === 'excess' ? 'rgba(239,68,68,0.1)' : 'transparent';
+        const icon = status === 'ok' ? 'check_circle' : status === 'excess' ? 'warning' : 'radio_button_unchecked';
+        const iconColor = status === 'ok' ? 'var(--success)' : status === 'excess' ? 'var(--danger)' : 'var(--text-secondary)';
+
+        return `<tr style="background:${rowColor}">
+                                        <td style="font-family:monospace; font-weight:600;">${item.sku}</td>
+                                        <td>${item.desc}</td>
+                                        <td style="text-align:center;">${item.qtd}</td>
+                                        <td style="text-align:center; font-weight:bold;">${scanned}</td>
+                                        <td style="text-align:center;"><span class="material-icons-round" style="color:${iconColor}; font-size:1.2rem;">${icon}</span></td>
+                                    </tr>`;
+    }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Right: Actions -->
+                <div style="width:250px; display:flex; flex-direction:column; gap:1rem;">
+                    <div class="card" style="padding:1rem; text-align:center;">
+                        <span class="material-icons-round" style="font-size:3rem; color:var(--wms-primary);">package_2</span>
+                        <h3>Volumes</h3>
+                        <p style="color:var(--text-secondary); font-size:0.9rem;">Gere etiquetas de volume conforme fecha as caixas.</p>
+                        <button class="btn btn-secondary" onclick="window.criarVolume(currentConferenceWave.id)" style="width:100%; margin-top:0.5rem;">
+                            Gerar Etiqueta
+                        </button>
+                    </div>
+
+                    <div style="margin-top:auto;">
+                        <button class="btn btn-success" style="width:100%; padding:1rem;" onclick="finishConference()" ${pct < 100 ? 'disabled' : ''}>
+                            Finalizar Conferência
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    setTimeout(() => document.getElementById('confScanner').focus(), 100);
+}
+
+window.handleConfInput = function (e) {
+    if (e.key === 'Enter') {
+        processConfScan(e.target.value);
+        e.target.value = '';
+    }
+};
+
+window.simulateConfScan = function () {
+    const input = document.getElementById('confScanner');
+    processConfScan(input.value);
+    input.value = '';
+    input.focus();
+};
+
+function processConfScan(code) {
+    if (!code) return;
+
+    // Find item
+    const item = currentConferenceItems.find(i => i.sku === code || code.includes(i.sku)); // Simple match
+
+    if (item) {
+        if (currentConferenceScanned[item.sku] < item.qtd) {
+            currentConferenceScanned[item.sku]++;
+            // Sound Success
+        } else {
+            alert(`⚠️ Item ${item.sku} já foi totalmente conferido! Verifique excesso.`);
+            // Sound Error
+        }
+    } else {
+        alert(`❌ Item ${code} não pertence a esta onda!`);
+        // Sound Error
+    }
+    renderConferenceScreen();
+}
+
+window.closeConferenceModal = function () {
+    const overlay = document.getElementById('confModal');
+    if (overlay) overlay.remove();
+};
+
+window.finishConference = function () {
+    const ondas = getOndasMock();
+    const onda = ondas.find(o => o.id === currentConferenceWave.id);
     if (onda) {
         onda.conferido = true;
-        onda.status = 'PRONTA';
+        onda.status = 'PRONTA'; // Pronta para Expedição/Romaneio
         localStorage.setItem('wms_ondas', JSON.stringify(ondas));
+        closeConferenceModal();
         renderConfSaida(document.getElementById('view-dynamic'));
+        alert('✅ Conferência Finalizada com Sucesso!');
     }
 };
 

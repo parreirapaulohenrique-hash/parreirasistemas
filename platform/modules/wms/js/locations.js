@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // --- Main Entry Point ---
+// --- Main Entry Point ---
 window.loadLocationsView = async function () {
     const container = document.getElementById('view-locations');
 
@@ -31,7 +32,7 @@ window.loadLocationsView = async function () {
                     <h3>Gestão de Endereços</h3>
                     <div style="display:flex; gap:0.5rem;">
                         <button class="btn btn-secondary" onclick="toggleViewMode()" id="btnToggleView" title="Alternar Visualização">
-                            <span class="material-icons-round">table_rows</span>
+                            <span class="material-icons-round">map</span>
                         </button>
                         <button class="btn btn-secondary" onclick="loadLocationsData()">
                             <span class="material-icons-round">refresh</span>
@@ -102,17 +103,23 @@ window.loadLocationsView = async function () {
                             <tbody id="locationsTableBody"></tbody>
                         </table>
                     </div>
+
+                    <!-- Map View (hidden by default) -->
+                    <div id="locationsMap" style="display:none; max-height:55vh; overflow-y:auto;"></div>
+
                 </div>
             </div>
 
-            <!-- Modal Generator -->
+            <!-- Modal Generator (unchanged) -->
             <div id="modalGenerator" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
+                <!-- ... content ... -->
                 <div class="card" style="width:480px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
                     <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
                         <h3>Gerador de Endereços</h3>
                         <span class="material-icons-round" style="cursor:pointer; color:var(--text-secondary);" onclick="document.getElementById('modalGenerator').style.display='none'">close</span>
                     </div>
                     <div class="card-body" style="padding:1.25rem;">
+                        <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:1rem;">Gera um range de endereços (Ex: 01-10-0101 a 01-10-0510).</p>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
                             <div>
                                 <label class="text-secondary" style="font-size:0.8rem; display:block; margin-bottom:0.25rem;">Rua</label>
@@ -147,7 +154,7 @@ window.loadLocationsView = async function () {
             </div>
         `;
 
-        // Listeners for live preview
+        // Listeners for live preview (simplified)
         ['genRua', 'genPredio', 'genNiveis', 'genPosicoes'].forEach(id => {
             document.getElementById(id).addEventListener('input', updateGenPreview);
         });
@@ -156,7 +163,7 @@ window.loadLocationsView = async function () {
     loadLocationsData();
 }
 
-// --- Data Loading ---
+// ... loadLocationsData (unchanged) ...
 window.loadLocationsData = function () {
     const stored = localStorage.getItem('wms_mock_data');
     if (stored) {
@@ -169,20 +176,19 @@ window.loadLocationsData = function () {
 
 // --- View Mode Toggle ---
 window.toggleViewMode = function () {
-    const gridEl = document.getElementById('locationsGrid');
-    const tableEl = document.getElementById('locationsTable');
+    // Cycle: grid -> table -> map
     const btn = document.getElementById('btnToggleView');
 
     if (locationsState.viewMode === 'grid') {
         locationsState.viewMode = 'table';
-        gridEl.style.display = 'none';
-        tableEl.style.display = 'block';
-        btn.innerHTML = '<span class="material-icons-round">grid_view</span>';
+        btn.innerHTML = '<span class="material-icons-round">grid_view</span>'; // Show grid icon (next is grid? no, wait map)
+        btn.innerHTML = '<span class="material-icons-round">map</span>'; // Icon for next: Map
+    } else if (locationsState.viewMode === 'table') {
+        locationsState.viewMode = 'map';
+        btn.innerHTML = '<span class="material-icons-round">grid_view</span>'; // Icon for next: Grid
     } else {
         locationsState.viewMode = 'grid';
-        gridEl.style.display = 'grid';
-        tableEl.style.display = 'none';
-        btn.innerHTML = '<span class="material-icons-round">table_rows</span>';
+        btn.innerHTML = '<span class="material-icons-round">table_rows</span>'; // Icon for next: Table
     }
     filterGrid();
 }
@@ -256,6 +262,7 @@ window.generateLocations = async function () {
 }
 
 // --- Filter & Render ---
+// --- Filter & Render ---
 window.filterGrid = function () {
     const fRua = (document.getElementById('filterRua')?.value || '').trim();
     const fPredio = (document.getElementById('filterPredio')?.value || '').trim();
@@ -276,10 +283,119 @@ window.filterGrid = function () {
     if (countEl) countEl.textContent = filtered.length;
 
     if (locationsState.viewMode === 'grid') {
+        document.getElementById('locationsGrid').style.display = 'grid';
+        document.getElementById('locationsTable').style.display = 'none';
+        document.getElementById('locationsMap').style.display = 'none';
         renderGridView(filtered);
-    } else {
+    } else if (locationsState.viewMode === 'table') {
+        document.getElementById('locationsGrid').style.display = 'none';
+        document.getElementById('locationsTable').style.display = 'block';
+        document.getElementById('locationsMap').style.display = 'none';
         renderTableView(filtered);
+    } else if (locationsState.viewMode === 'map') {
+        document.getElementById('locationsGrid').style.display = 'none';
+        document.getElementById('locationsTable').style.display = 'none';
+        document.getElementById('locationsMap').style.display = 'block';
+        renderMapView(filtered);
     }
+}
+
+// ... (renderGridView and renderTableView remain unchanged) ...
+
+function renderMapView(data) {
+    const container = document.getElementById('locationsMap');
+    container.innerHTML = '';
+
+    if (data.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-secondary);">Nenhum endereço para exibir no mapa.</div>';
+        return;
+    }
+
+    // Group by Rua -> Predio
+    const hierarchy = {};
+    data.forEach(loc => {
+        if (!hierarchy[loc.rua]) hierarchy[loc.rua] = {};
+        if (!hierarchy[loc.rua][loc.predio]) hierarchy[loc.rua][loc.predio] = [];
+        hierarchy[loc.rua][loc.predio].push(loc);
+    });
+
+    // Render Streets
+    Object.keys(hierarchy).sort().forEach(rua => {
+        const ruaDiv = document.createElement('div');
+        ruaDiv.className = 'card';
+        ruaDiv.style.marginBottom = '1.5rem';
+        ruaDiv.style.padding = '1rem';
+
+        ruaDiv.innerHTML = `<h4 style="margin-bottom:1rem; border-bottom:1px solid var(--border-color); padding-bottom:0.5rem;">Rua ${rua}</h4>`;
+
+        const racksContainer = document.createElement('div');
+        racksContainer.style.display = 'flex';
+        racksContainer.style.gap = '1.5rem';
+        racksContainer.style.overflowX = 'auto';
+        racksContainer.style.paddingBottom = '0.5rem';
+
+        Object.keys(hierarchy[rua]).sort().forEach(predio => {
+            const locs = hierarchy[rua][predio];
+            // Find max levels and positions for this rack to build grid
+            const maxNivel = Math.max(...locs.map(l => parseInt(l.nivel)));
+            const maxPos = Math.max(...locs.map(l => parseInt(l.posicao)));
+
+            const rackDiv = document.createElement('div');
+            rackDiv.style.minWidth = 'fit-content';
+            rackDiv.style.border = '1px solid var(--border-color)';
+            rackDiv.style.borderRadius = '8px';
+            rackDiv.style.padding = '0.75rem';
+            rackDiv.style.background = 'var(--bg-body)';
+
+            rackDiv.innerHTML = `<div style="text-align:center; font-weight:600; margin-bottom:0.5rem; font-size:0.85rem;">Prédio ${predio}</div>`;
+
+            const grid = document.createElement('div');
+            grid.style.display = 'grid';
+            // Grid template: rows = levels (reverse), cols = positions
+            grid.style.gridTemplateRows = `repeat(${maxNivel}, 1fr)`;
+            grid.style.gridTemplateColumns = `repeat(${maxPos}, 24px)`;
+            grid.style.gap = '4px';
+
+            // Fill grid
+            // We need to render from Top Level (maxNivel) down to 1
+            for (let n = maxNivel; n >= 1; n--) {
+                for (let p = 1; p <= maxPos; p++) {
+                    const loc = locs.find(l => parseInt(l.nivel) === n && parseInt(l.posicao) === p);
+                    const cell = document.createElement('div');
+                    cell.style.width = '24px';
+                    cell.style.height = '24px';
+                    cell.style.borderRadius = '3px';
+                    cell.style.fontSize = '0.6rem';
+                    cell.style.display = 'flex';
+                    cell.style.alignItems = 'center';
+                    cell.style.justifyContent = 'center';
+                    cell.style.cursor = 'pointer';
+
+                    if (loc) {
+                        const statusColors = {
+                            'LIVRE': '#10b981',
+                            'OCUPADO': '#ef4444',
+                            'BLOQUEADO': '#f59e0b'
+                        };
+                        cell.style.background = statusColors[loc.status] || '#94a3b8';
+                        cell.title = `End: ${loc.id}\nStatus: ${loc.status}`;
+                        cell.onclick = () => showLocationActions(loc.id);
+                        // cell.innerText = n; // Optional: show level number
+                    } else {
+                        cell.style.background = 'transparent';
+                        cell.style.border = '1px dashed var(--border-color)';
+                    }
+                    grid.appendChild(cell);
+                }
+            }
+
+            rackDiv.appendChild(grid);
+            racksContainer.appendChild(rackDiv);
+        });
+
+        ruaDiv.appendChild(racksContainer);
+        container.appendChild(ruaDiv);
+    });
 }
 
 function renderGridView(data) {

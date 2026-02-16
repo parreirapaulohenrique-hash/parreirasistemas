@@ -372,6 +372,10 @@ window.openConferenciaDetalhe = function (confId) {
     const conf = conferencias.find(c => c.id === confId);
     if (!conf) return;
 
+    // Check Blind Mode (Contagem Cega)
+    const wmsConfig = JSON.parse(localStorage.getItem('wms_config') || '{}');
+    const isBlind = wmsConfig.geral?.contagemCega !== false; // Default true
+
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.style.display = 'flex';
@@ -383,6 +387,7 @@ window.openConferenciaDetalhe = function (confId) {
                 <div>
                     <h3 style="font-size:1rem; font-weight:600;">Conferência ${conf.id} — NF ${conf.nf}</h3>
                     <span style="font-size:0.8rem; color:var(--text-secondary);">${conf.fornecedor}</span>
+                    ${isBlind ? '<span class="badge badge-warning" style="margin-left:0.5rem; font-size:0.7rem;">CONFERÊNCIA CEGA</span>' : ''}
                 </div>
                 <span class="material-icons-round" style="cursor:pointer;" onclick="this.closest('.modal-overlay').remove()">close</span>
             </div>
@@ -392,8 +397,8 @@ window.openConferenciaDetalhe = function (confId) {
                         <tr>
                             <th>SKU</th>
                             <th>Descrição</th>
-                            <th style="text-align:right;">Qtd NF</th>
-                            <th style="text-align:right;">Qtd Física</th>
+                            ${!isBlind ? '<th style="text-align:right;">Qtd NF</th>' : ''}
+                            <th style="text-align:right;">Qtd Contada</th>
                             <th>Diferença</th>
                             <th>Status</th>
                         </tr>
@@ -401,14 +406,26 @@ window.openConferenciaDetalhe = function (confId) {
                     <tbody>
                         ${conf.itens.map((item, idx) => {
         const diff = item.qtdFisica !== null ? item.qtdFisica - item.qtdNF : null;
-        const diffStr = diff !== null ? (diff === 0 ? '0' : (diff > 0 ? `+${diff}` : `${diff}`)) : '-';
-        const diffColor = diff === null ? '#94a3b8' : diff === 0 ? '#10b981' : '#ef4444';
+        let diffStr = '-';
+        let diffColor = '#94a3b8';
+
+        if (item.qtdFisica !== null) {
+            if (isBlind) {
+                // In Blind Mode, show only status, not exact difference number
+                diffStr = diff === 0 ? 'OK' : 'DIVERGENTE';
+                diffColor = diff === 0 ? '#10b981' : '#f59e0b';
+            } else {
+                diffStr = diff === 0 ? '0' : (diff > 0 ? `+${diff}` : `${diff}`);
+                diffColor = diff === 0 ? '#10b981' : '#ef4444';
+            }
+        }
+
         const sc = item.status === 'OK' ? '#10b981' : item.status === 'DIVERGENTE' ? '#f59e0b' : '#94a3b8';
 
         return `<tr>
                                 <td style="font-weight:600; font-family:monospace;">${item.sku}</td>
                                 <td>${item.desc}</td>
-                                <td style="text-align:right; font-weight:600;">${item.qtdNF}</td>
+                                ${!isBlind ? `<td style="text-align:right; font-weight:600;">${item.qtdNF}</td>` : ''}
                                 <td style="text-align:right;">
                                     ${item.qtdFisica !== null ? `<span style="font-weight:600;">${item.qtdFisica}</span>` :
                 `<input type="number" min="0" id="conf-qtd-${idx}" placeholder="Qtd"

@@ -256,6 +256,7 @@ function renderizarNotasDanfe(notas) {
                         <span class="material-icons-round" style="font-size:1rem;">more_vert</span>
                     </button>
                     <div class="dropdown-menu">
+                        <a onclick="visualizarXml('${n.id}')"><span class="material-icons-round">code</span> Visualizar XML</a>
                         <a onclick="imprimirDanfe('${n.id}')"><span class="material-icons-round">print</span> Imprimir DANFE</a>
                         <a onclick="downloadXml('${n.id}')"><span class="material-icons-round">download</span> Download XML</a>
                         <a onclick="abrirCartaCorrecao('${n.id}')"><span class="material-icons-round">edit_note</span> Carta de Correção</a>
@@ -460,6 +461,33 @@ window.exportarRelatorioNFe = function () {
     setTimeout(() => {
         showToast('Relatório exportado!', 'success');
     }, 1000);
+};
+
+// =========================================
+// XML VIEWER
+// =========================================
+window.visualizarXml = function (id) {
+    const xml = window.generateNfeXml(id);
+    document.getElementById('xmlContent').value = xml;
+    openModal('xmlModal');
+};
+
+window.copyXml = function () {
+    const content = document.getElementById('xmlContent');
+    content.select();
+    document.execCommand('copy');
+    showToast('XML copiado para a área de transferência!', 'success');
+};
+
+window.downloadXmlFile = function () {
+    const content = document.getElementById('xmlContent').value;
+    const blob = new Blob([content], { type: 'text/xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nfe_${Date.now()}.xml`;
+    a.click();
+    showToast('Download iniciado!', 'success');
 };
 
 // =========================================

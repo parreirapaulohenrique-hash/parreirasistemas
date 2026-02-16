@@ -108,6 +108,9 @@
                         <a class="nav-sub-item" onclick="switchView('relo-produtividade')">Produtividade Operador</a>
                         <a class="nav-sub-item" onclick="switchView('relo-divergencias')">Divergências</a>
                         <a class="nav-sub-item" onclick="switchView('relo-movimentacao')">Movimentação (Kardex)</a>
+                        <a class="nav-sub-item"
+                            onclick="switchView('heatmap'); window.HeatmapManager.render('heatmap-container');">Mapa de
+                            Calor</a>
                     </div>
                 </div>
 
@@ -155,7 +158,10 @@
                             style="font-size:1.2rem; margin-left:auto;">expand_more</span>
                     </a>
                     <div id="sub-saida" class="nav-submenu">
-                        <a class="nav-sub-item" onclick="switchView('sai-ondas')">Formação de Ondas</a>
+                        <a class="nav-sub-item"
+                            onclick="switchView('picking'); window.PickingManager.renderWavesGrid();">Ondas de
+                            Separação</a>
+                        <a class="nav-sub-item" onclick="switchView('sai-ondas')">Formação de Carga (Antigo)</a>
                         <a class="nav-sub-item" onclick="switchView('sai-separacao')">Separação (Picking)</a>
                         <a class="nav-sub-item" onclick="switchView('sai-conferencia')">Conferência de Saída</a>
                         <a class="nav-sub-item" onclick="switchView('sai-embalagem')">Embalagem (Packing)</a>
@@ -233,11 +239,65 @@
                 <!-- Views: Recebimento (used by inbound.js) -->
                 <div id="view-inbound" class="page-content" style="display:none;"></div>
 
+                <!-- View: Picking Waves -->
+                <div id="view-picking" class="page-content" style="display:none;">
+                    <div class="card">
+                        <div class="card-header"
+                            style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3>Gestão de Ondas de Separação</h3>
+                            <button class="btn btn-primary"
+                                onclick="window.PickingManager.createWave(prompt('Digite IDs dos pedidos separados por virgula:').split(','))">
+                                <span class="material-icons-round">add</span> Nova Onda
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Descrição</th>
+                                        <th>Pedidos</th>
+                                        <th>Itens (SKU)</th>
+                                        <th>Status</th>
+                                        <th style="text-align:right;">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="wavesTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Heatmap -->
+                <div id="view-heatmap" class="page-content" style="display:none;">
+                    <button class="btn btn-secondary" style="margin-bottom:1rem;"
+                        onclick="window.HeatmapManager.render('heatmap-container')">
+                        <span class="material-icons-round">refresh</span> Atualizar
+                    </button>
+                    <div id="heatmap-container"></div>
+                </div>
+
                 <!-- Generic dynamic view container -->
                 <div id="view-dynamic" class="page-content" style="display:none;"></div>
             </div>
         </main>
     </div>
+
+    <!-- Footer -->
+    <footer
+        style="padding: 1rem 2rem; border-top: 1px solid var(--border-color); font-size: 0.75rem; color: var(--text-secondary); display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); position: fixed; bottom: 0; width: 100%; z-index: 1000; left: 250px; width: calc(100% - 250px);">
+        <div>
+            <strong>&copy; 2024 ParreiraLog</strong> - Gestão Logística Inteligente
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span class="material-icons-round" style="font-size: 1rem; color: var(--accent-success);">security</span>
+            <span>Ambiente Seguro: Dados processados localmente.</span>
+        </div>
+        <div id="systemVersion" style="font-size: 0.8rem; color: #666; margin-left: auto;">
+            Carregando versão...
+        </div>
+    </footer>
+
 
     <!-- Scripts -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -253,11 +313,27 @@
     <script src="js/estoque.js"></script>
     <script src="js/entrada.js"></script>
     <script src="js/saida.js"></script>
+    <script src="js/picking.js"></script>
+    <script src="js/heatmap.js"></script>
     <script src="js/controle.js"></script>
     <script src="js/relatorios.js"></script>
     <script src="js/cadastros.js"></script>
     <script src="js/configuracoes.js"></script>
     <script src="js/relmanutencao.js"></script>
+
+    <script>
+        // Load Version
+        fetch('version.json')
+            .then(r => r.json())
+            .then(v => {
+                const el = document.getElementById('systemVersion');
+                if (el) {
+                    el.innerHTML = `v${v.version} • ${v.date.split('-').reverse().join('/')}`;
+                    el.title = `Build: ${v.build}\n${v.last_change}`;
+                }
+            })
+            .catch(e => console.error('Erro ao carregar versão:', e));
+    </script>
 </body>
 
 </html>

@@ -629,6 +629,14 @@ window.switchView = function (viewName) {
         case 'pdv': if (typeof renderPdvGrid === 'function') renderPdvGrid(); break;
         case 'receber': renderReceberGrid(); break;
         case 'pagar': renderPagarGrid(); break;
+        case 'relatorios-gerenciais':
+            // Default to ABC
+            renderCurvaABC();
+            document.getElementById('tab-abc').style.display = 'block';
+            document.getElementById('tab-dre').style.display = 'none';
+            break;
+        case 'cad-produtos': if (typeof renderProdutosGrid === 'function') renderProdutosGrid(); break;
+        case 'bank-integration': if (typeof renderBoletoEmissao === 'function') renderBoletoEmissao(); break;
     }
 };
 

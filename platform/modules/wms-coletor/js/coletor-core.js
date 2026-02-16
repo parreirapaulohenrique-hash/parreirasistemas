@@ -64,6 +64,9 @@ function navigateTo(screenId) {
                 if (input) input.focus();
             }, 200);
         }
+
+        // Dispatch Event for modules
+        document.dispatchEvent(new CustomEvent('navigateTo', { detail: { screen: screenId } }));
     }
 }
 

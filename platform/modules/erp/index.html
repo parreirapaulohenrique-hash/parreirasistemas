@@ -8,6 +8,7 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Using new consolidated style -->
     <link rel="stylesheet" href="styles/erp.css?v=2.15.5">
     <style>
@@ -123,6 +124,10 @@
                             style="font-size:1.2rem; margin-left:auto;">expand_more</span>
                     </a>
                     <div id="sub-vendas-op" class="nav-submenu">
+                        <a class="nav-sub-item" onclick="switchView('biVendas')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">insights</span>Inteligência de Vendas
+                        </a>
                         <!-- Group 1: Emissão -->
                         <div class="nav-sublevel-title">Emissão</div>
 
@@ -178,6 +183,20 @@
                     </div>
                 </div>
                 <div class="nav-group">
+                    <a class="nav-item" onclick="toggleSubmenu('sub-cadastros')">
+                        <span class="material-icons-round">folder_open</span>
+                        <span>Cadastros</span>
+                        <span class="material-icons-round ms-auto"
+                            style="font-size:1.2rem; margin-left:auto;">expand_more</span>
+                    </a>
+                    <div id="sub-cadastros" class="nav-submenu">
+                        <a class="nav-sub-item" onclick="switchView('cad-produtos'); renderProdutosGrid();">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">inventory_2</span>Produtos
+                        </a>
+                    </div>
+                </div>
+                <div class="nav-group">
                     <a class="nav-item" onclick="toggleSubmenu('sub-financeiro')">
                         <span class="material-icons-round">payments</span>
                         <span>Financeiro</span>
@@ -185,6 +204,10 @@
                             style="font-size:1.2rem; margin-left:auto;">expand_more</span>
                     </a>
                     <div id="sub-financeiro" class="nav-submenu">
+                        <a class="nav-sub-item" onclick="switchView('biFinanceiro')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">insights</span>Painel Financeiro
+                        </a>
                         <a class="nav-sub-item" onclick="switchView('finance')">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">dashboard</span>Visão Geral
@@ -196,6 +219,18 @@
                         <a class="nav-sub-item" onclick="switchView('pagar')">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">money_off</span>Contas a Pagar
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('relatorios-gerenciais')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">bar_chart</span>Relatórios Gerenciais
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('relatorio-rca')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">trending_up</span>Desempenho RCA
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('bank-integration')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">account_balance</span>Integração Bancária
                         </a>
                         <a class="nav-sub-item" onclick="switchView('acertoCaixaLista')">
                             <span class="material-icons-round"
@@ -278,6 +313,57 @@
                                 <div id="kpiVendasMes"
                                     style="font-size:2rem; font-weight:700; color:var(--accent-success);">R$ 0,00</div>
                                 <div style="color:var(--text-secondary);">Faturamento</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Relatório RCA -->
+                <div id="view-relatorio-rca" class="page-content" style="display:none;">
+                    <div class="card">
+                        <div class="card-header"
+                            style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+                            <h3>Desempenho por RCA</h3>
+                            <div style="display:flex; gap:1rem; align-items:center;">
+                                <div style="display:flex; gap:0.5rem; align-items:center;">
+                                    <input type="date" id="rcaDtIni" class="form-input" style="padding:0.4rem;">
+                                    <span>até</span>
+                                    <input type="date" id="rcaDtFim" class="form-input" style="padding:0.4rem;">
+                                </div>
+                                <button class="btn btn-primary" onclick="renderRelatorioRca()">
+                                    <span class="material-icons-round">filter_list</span> Filtrar
+                                </button>
+                                <button class="btn btn-secondary" onclick="exportRelatorioRcaToExcel()"
+                                    style="color:var(--accent-success); border-color:var(--accent-success);">
+                                    <span class="material-icons-round">table_view</span> Exportar Excel
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body" style="padding:0;">
+                            <div style="overflow-x:auto;">
+                                <table class="data-table" id="rcaTable">
+                                    <thead style="background:var(--bg-secondary);">
+                                        <tr>
+                                            <th>Cód.</th>
+                                            <th style="text-align:left;">Rca</th>
+                                            <th>Dt.Admissão</th>
+                                            <th>Vl.Total Faturado</th>
+                                            <th>Valor por Kilo</th>
+                                            <th>%Margem</th>
+                                            <th>Total de Clientes</th>
+                                            <th>Clientes Positiv.</th>
+                                            <th>%Posit.</th>
+                                            <th>Clientes Bloq.</th>
+                                            <th>Mix</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="rcaTableBody">
+                                        <!-- JS Render -->
+                                    </tbody>
+                                    <tfoot id="rcaTableFooter">
+                                        <!-- JS Render Totals -->
+                                    </tfoot>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -556,6 +642,158 @@
                                     </thead>
                                     <tbody id="itensVendaTableBody"><!-- JS --></tbody>
                                 </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: BI Vendas -->
+                <div id="view-biVendas" class="page-content" style="display:none;">
+                    <div class="card" style="margin-bottom:1.5rem;">
+                        <div class="card-header"
+                            style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3>Inteligência de Vendas</h3>
+                            <button class="btn btn-secondary btn-icon" onclick="renderBiVendas()" title="Atualizar">
+                                <span class="material-icons-round">refresh</span>
+                            </button>
+                        </div>
+                        <div class="grid-4-col"
+                            style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; padding:1.5rem;">
+                            <!-- KPI Cards -->
+                            <div
+                                style="background:var(--bg-secondary); padding:1rem; border-radius:8px; text-align:center;">
+                                <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.5rem;">Total
+                                    Vendas (Mês)</div>
+                                <div id="biVendasTotal"
+                                    style="font-size:1.5rem; font-weight:700; color:var(--accent-success);">R$ 0,00
+                                </div>
+                            </div>
+                            <div
+                                style="background:var(--bg-secondary); padding:1rem; border-radius:8px; text-align:center;">
+                                <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.5rem;">Ticket
+                                    Médio</div>
+                                <div id="biTicketMedio" style="font-size:1.5rem; font-weight:700;">R$ 0,00</div>
+                            </div>
+                            <div
+                                style="background:var(--bg-secondary); padding:1rem; border-radius:8px; text-align:center;">
+                                <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.5rem;">
+                                    Pedidos Emitidos</div>
+                                <div id="biPedidosQtd" style="font-size:1.5rem; font-weight:700;">0</div>
+                            </div>
+                            <div
+                                style="background:var(--bg-secondary); padding:1rem; border-radius:8px; text-align:center;">
+                                <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.5rem;">Margem
+                                    Média</div>
+                                <div id="biMargemMedia"
+                                    style="font-size:1.5rem; font-weight:700; color:var(--accent-info);">0%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid-2-col" style="display:grid; grid-template-columns:2fr 1fr; gap:1.5rem;">
+                        <!-- Chart: Evolução -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Evolução de Vendas (Últimos 6 Meses)</h3>
+                            </div>
+                            <div class="card-body" style="height:300px; padding:1rem;">
+                                <canvas id="chartEvolucaoVendas"></canvas>
+                            </div>
+                        </div>
+                        <!-- Chart: Top Categorias (Mix) -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Mix de Produtos</h3>
+                            </div>
+                            <div class="card-body" style="height:300px; padding:1rem;">
+                                <canvas id="chartMixProdutos"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid-2-col"
+                        style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-top:1.5rem;">
+                        <!-- Chart: Top Clientes -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Top 5 Clientes</h3>
+                            </div>
+                            <div class="card-body" style="height:300px; padding:1rem;">
+                                <canvas id="chartTopClientes"></canvas>
+                            </div>
+                        </div>
+                        <!-- Chart: Top Produtos -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Top 5 Produtos</h3>
+                            </div>
+                            <div class="card-body" style="height:300px; padding:1rem;">
+                                <canvas id="chartTopProdutos"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: BI Financeiro -->
+                <div id="view-biFinanceiro" class="page-content" style="display:none;">
+                    <div class="card" style="margin-bottom:1.5rem;">
+                        <div class="card-header"
+                            style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3>Inteligência Financeira (Mês Atual)</h3>
+                            <button class="btn btn-secondary btn-icon" onclick="renderBiFinanceiro()" title="Atualizar">
+                                <span class="material-icons-round">refresh</span>
+                            </button>
+                        </div>
+                        <div class="grid-4-col"
+                            style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; padding:1.5rem;">
+                            <!-- KPI Cards -->
+                            <div
+                                style="background:var(--bg-secondary); padding:1rem; border-radius:8px; text-align:center;">
+                                <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.5rem;">
+                                    Receita Realizada</div>
+                                <div id="biFinReceita"
+                                    style="font-size:1.5rem; font-weight:700; color:var(--accent-success);">R$ 0,00
+                                </div>
+                            </div>
+                            <div
+                                style="background:var(--bg-secondary); padding:1rem; border-radius:8px; text-align:center;">
+                                <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.5rem;">
+                                    Despesa Realizada</div>
+                                <div id="biFinDespesa" style="font-size:1.5rem; font-weight:700; color:#ef4444;">R$ 0,00
+                                </div>
+                            </div>
+                            <div
+                                style="background:var(--bg-secondary); padding:1rem; border-radius:8px; text-align:center;">
+                                <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.5rem;">
+                                    Resultado (Lucro/Prej)</div>
+                                <div id="biFinLucro" style="font-size:1.5rem; font-weight:700;">R$ 0,00</div>
+                            </div>
+                            <div
+                                style="background:var(--bg-secondary); padding:1rem; border-radius:8px; text-align:center;">
+                                <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.5rem;">Taxa
+                                    Inadimplência</div>
+                                <div id="biFinInadimplencia" style="font-size:1.5rem; font-weight:700;">0%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid-2-col" style="display:grid; grid-template-columns:2fr 1fr; gap:1.5rem;">
+                        <!-- Chart: Fluxo de Caixa -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Fluxo de Caixa (Diário +/- 10 dias)</h3>
+                            </div>
+                            <div class="card-body" style="height:350px; padding:1rem;">
+                                <canvas id="chartFluxoCaixa"></canvas>
+                            </div>
+                        </div>
+                        <!-- Chart: Despesas -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Despesas por Categoria</h3>
+                            </div>
+                            <div class="card-body" style="height:350px; padding:1rem;">
+                                <canvas id="chartDespesasCategoria"></canvas>
                             </div>
                         </div>
                     </div>
@@ -4821,999 +5059,1329 @@
                     </div>
                 </div>
 
-                <!-- View: Acerto de Caixa - Lista -->
-                <div id="view-acertoCaixaLista" class="page-content" style="display:none;">
-                    <!-- Actions Bar -->
-                    <div class="card"
-                        style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
-                        <div class="card-body" style="padding:0.5rem; display:flex; gap:0.5rem;">
-                            <button class="btn"
-                                style="background:#fb923c; color:white; font-weight:bold; border:none;">Buscar</button>
-                            <button class="btn btn-secondary">Desdobrar</button>
-                            <button class="btn btn-secondary">Imprimir <span class="material-icons-round"
-                                    style="font-size:1rem;">expand_more</span></button>
-                            <div style="flex:1;"></div>
-                            <button class="btn btn-secondary">Encerramento</button>
-                            <button class="btn btn-secondary">Sair</button>
+                <!-- View: Relatórios Gerenciais -->
+                <div id="view-relatorios-gerenciais" class="page-content" style="display:none;">
+                    <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+                        <button class="btn btn-primary"
+                            onclick="renderCurvaABC(); document.getElementById('tab-abc').style.display='block'; document.getElementById('tab-dre').style.display='none';">Curva
+                            ABC</button>
+                        <button class="btn btn-secondary"
+                            onclick="renderDRE(); document.getElementById('tab-abc').style.display='none'; document.getElementById('tab-dre').style.display='block';">DRE
+                            Gerencial</button>
+                    </div>
+
+                    <!-- AB A -->
+                    <div id="tab-abc" style="display:block;">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Curva ABC de Produtos (Pareto 80/20)</h3>
+                            </div>
+                            <div class="card-body" style="padding:0;">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Produto</th>
+                                            <th>Qtd Vendida</th>
+                                            <th>Valor Total</th>
+                                            <th>% Acumulado</th>
+                                            <th style="text-align:center;">Classe</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="abcTableBody">
+                                        <!-- JS -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Filters -->
-                    <div class="card"
-                        style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
-                        <div class="card-body" style="padding:0.5rem 0.8rem; font-size:0.75rem;">
-                            <!-- Row 1 -->
-                            <div style="display:flex; gap:1rem; margin-bottom:0.4rem; align-items:flex-end;">
-                                <div style="width:50px;"><label
-                                        style="display:block; color:var(--text-secondary);">Empresa</label><input
-                                        type="text" value="01" class="form-input" style="padding:0.2rem;"></div>
-                                <div style="width:60px;"><label style="display:block; color:var(--text-secondary);">Nº
-                                        Carreg.</label><input type="text" value="0" class="form-input"
-                                        style="padding:0.2rem;"></div>
-                                <div style="width:100px;"><label
-                                        style="display:block; color:var(--text-secondary);">Data Emissão</label><input
-                                        type="date" class="form-input" style="padding:0.2rem;"></div>
-                                <div style="width:100px;"><label
-                                        style="display:block; color:var(--text-secondary);">Cobrança</label><input
-                                        type="text" class="form-input" style="padding:0.2rem;"></div>
-                                <div style="width:250px;"><label
-                                        style="display:block; color:var(--text-secondary);">Cliente</label>
-                                    <div style="display:flex; gap:0.2rem;">
-                                        <input type="text" placeholder="Cód" style="width:50px; padding:0.2rem;"
-                                            class="form-input">
-                                        <input type="text" placeholder="Nome" style="flex:1; padding:0.2rem;"
-                                            class="form-input">
+                    <!-- TAB DRE -->
+                    <div id="tab-dre" style="display:none;">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>DRE Gerencial (Demonstrativo de Resultado)</h3>
+                            </div>
+                            <div class="card-body" style="padding:0;">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Descrição</th>
+                                            <th style="text-align:right;">Valor (R$)</th>
+                                            <th style="text-align:right;">% Rec. Líq.</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dreTableBody">
+                                        <!-- JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- View: Cadastro de Produtos (Master) -->
+            <div id="view-cad-produtos" class="page-content" style="display:none;">
+                <div class="card">
+                    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3>Cadastro de Produtos (Master)</h3>
+                        <button class="btn btn-primary" onclick="newProduto()">
+                            <span class="material-icons-round">add</span> Novo Produto
+                        </button>
+                    </div>
+                    <div class="card-body" style="padding:0;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>SKU</th>
+                                    <th>Descrição</th>
+                                    <th>Unidade</th>
+                                    <th>Grupo</th>
+                                    <th style="text-align:right;">Preço Venda</th>
+                                    <th style="text-align:right;">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="produtosTableBody">
+                                <!-- JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal: XML Viewer -->
+            <div id="xmlModal" class="modal-overlay" style="display:none;">
+                <div class="modal-content" style="max-width:900px;">
+                    <div class="modal-header">
+                        <h3>XML da NF-e</h3>
+                        <button class="btn-icon" onclick="closeModal('xmlModal')"><span
+                                class="material-icons-round">close</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <textarea id="xmlContent" class="form-input" style="height:400px; font-family:monospace;"
+                            readonly></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="closeModal('xmlModal')">Fechar</button>
+                        <button class="btn btn-primary" onclick="copyXml()">Copiar</button>
+                        <button class="btn btn-primary" onclick="downloadXmlFile()">Download .XML</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal: Cadastro Produto -->
+            <div id="cadProdutoModal" class="modal-overlay" style="display:none;">
+                <div class="modal-content" style="max-width:800px;">
+                    <div class="modal-header">
+                        <h3>Produto Master</h3>
+                        <button class="btn-icon" onclick="closeModal('cadProdutoModal')"><span
+                                class="material-icons-round">close</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="formProduto" onsubmit="event.preventDefault(); saveProduto();">
+                            <input type="hidden" id="prodId">
+
+                            <!-- Tabs -->
+                            <div class="tabs"
+                                style="justify-content:flex-start; margin-bottom:1rem; border-bottom:1px solid #ddd;">
+                                <button type="button" class="tab-btn active"
+                                    onclick="openTab(event, 'tab-prod-geral')">Geral</button>
+                                <button type="button" class="tab-btn"
+                                    onclick="openTab(event, 'tab-prod-fiscal')">Fiscal</button>
+                            </div>
+
+                            <!-- Tab Geral -->
+                            <div id="tab-prod-geral" class="tab-content active" style="display:block;">
+                                <div class="form-row">
+                                    <div class="form-group" style="flex:1;">
+                                        <label>SKU / Código</label>
+                                        <input type="text" id="prodSku" class="form-input" required>
+                                    </div>
+                                    <div class="form-group" style="flex:3;">
+                                        <label>Descrição</label>
+                                        <input type="text" id="prodNome" class="form-input" required>
                                     </div>
                                 </div>
-                                <div style="flex:1;"><label style="display:block; color:var(--text-secondary);">Origem
-                                        da Venda</label><select class="form-input" style="padding:0.2rem;">
-                                        <option>[ Todos ]</option>
-                                    </select></div>
-                            </div>
-                            <!-- Row 2 -->
-                            <div style="display:flex; gap:1rem; align-items:flex-end;">
-                                <div style="width:60px;"><label style="display:block; color:var(--text-secondary);">Nº
-                                        Nota</label><input type="text" value="0" class="form-input"
-                                        style="padding:0.2rem;"></div>
-                                <div style="width:80px;"><label
-                                        style="display:block; color:var(--text-secondary);">Valor</label><input
-                                        type="text" value="0,00" class="form-input" style="padding:0.2rem;"></div>
-                                <div style="width:80px;"><label style="display:block; color:var(--text-secondary);">Nº
-                                        Pedido</label><input type="text" value="0" class="form-input"
-                                        style="padding:0.2rem;"></div>
-                                <div style="width:200px;"><label
-                                        style="display:block; color:var(--text-secondary);">Parceiro</label><select
-                                        class="form-input" style="padding:0.2rem;">
-                                        <option>[ Acerto ]</option>
-                                    </select></div>
-                                <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Nº
-                                        Turno</label><select class="form-input" style="padding:0.2rem;">
-                                        <option></option>
-                                    </select></div>
-                                <div style="flex:1;"><label style="display:block; color:var(--text-secondary);">Listar
-                                        movimento</label><select class="form-input"
-                                        style="padding:0.2rem; font-weight:bold;">
-                                        <option>Movimento diário [ Geral ]</option>
-                                    </select></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Grid -->
-                    <div class="card"
-                        style="flex:1; overflow:hidden; background:var(--bg-card); border:1px solid var(--border-color);">
-                        <div class="card-body" style="padding:0; height:calc(100vh - 350px); overflow:auto;">
-                            <table class="data-table" style="font-size:0.75rem; white-space:nowrap; width:100%;">
-                                <thead style="background:var(--bg-secondary); position:sticky; top:0;">
-                                    <tr>
-                                        <th style="width:30px;"></th>
-                                        <th style="width:30px;">Imp.</th>
-                                        <th style="width:30px;">Ac.</th>
-                                        <th>Empresa</th>
-                                        <th>Tp.</th>
-                                        <th>Nº Nota</th>
-                                        <th>Prest.</th>
-                                        <th>Código</th>
-                                        <th>Razão Social</th>
-                                        <th>Nº Pedido</th>
-                                        <th>Dt. Emissão</th>
-                                        <th>Valor</th>
-                                        <th>Vl. Pago</th>
-                                        <th>Vendedor</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr onclick="switchView('acertoCaixaDetalhe')"
-                                        style="cursor:pointer; border-bottom:1px solid var(--border-color);">
-                                        <td>👁️</td>
-                                        <td>🖨️</td>
-                                        <td>✔️</td>
-                                        <td>01</td>
-                                        <td>1</td>
-                                        <td style="color:var(--accent-primary);">49657</td>
-                                        <td>1</td>
-                                        <td>1556</td>
-                                        <td>A C F DE CARVALHO COM. DE PCS</td>
-                                        <td>64341</td>
-                                        <td>05/02/2026</td>
-                                        <td style="color:var(--accent-primary);">101,43</td>
-                                        <td>0,00</td>
-                                        <td>14 MAB</td>
-                                    </tr>
-                                    <tr onclick="switchView('acertoCaixaDetalhe')"
-                                        style="cursor:pointer; border-bottom:1px solid var(--border-color);">
-                                        <td>👁️</td>
-                                        <td>🖨️</td>
-                                        <td></td>
-                                        <td>01</td>
-                                        <td>1</td>
-                                        <td style="color:var(--accent-primary);">49670</td>
-                                        <td>1</td>
-                                        <td>1556</td>
-                                        <td>A C F DE CARVALHO COM. DE PCS</td>
-                                        <td>64368</td>
-                                        <td>05/02/2026</td>
-                                        <td style="color:var(--accent-primary);">130,01</td>
-                                        <td>0,00</td>
-                                        <td>4 EDU</td>
-                                    </tr>
-                                    <tr onclick="switchView('acertoCaixaDetalhe')"
-                                        style="cursor:pointer; border-bottom:1px solid var(--border-color);">
-                                        <td>👁️</td>
-                                        <td>🖨️</td>
-                                        <td>✔️</td>
-                                        <td>01</td>
-                                        <td>1</td>
-                                        <td style="color:var(--accent-primary);">49671</td>
-                                        <td>1</td>
-                                        <td>1556</td>
-                                        <td>A C F DE CARVALHO COM. DE PCS</td>
-                                        <td>64369</td>
-                                        <td>05/02/2026</td>
-                                        <td style="color:var(--accent-primary);">190,00</td>
-                                        <td>0,00</td>
-                                        <td>4 EDU</td>
-                                    </tr>
-                                    <tr onclick="switchView('acertoCaixaDetalhe')"
-                                        style="cursor:pointer; border-bottom:1px solid var(--border-color);">
-                                        <td>👁️</td>
-                                        <td>🖨️</td>
-                                        <td>✔️</td>
-                                        <td>01</td>
-                                        <td>1</td>
-                                        <td style="color:var(--accent-primary);">49688</td>
-                                        <td>1</td>
-                                        <td>1556</td>
-                                        <td>A C F DE CARVALHO COM. DE PCS</td>
-                                        <td>64275</td>
-                                        <td>05/02/2026</td>
-                                        <td style="color:var(--accent-primary);">646,08</td>
-                                        <td>0,00</td>
-                                        <td>29 NIL</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Footer Totals -->
-                    <div class="card"
-                        style="margin-top:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
-                        <div class="card-body"
-                            style="padding:0.4rem; display:flex; gap:1rem; flex-wrap:wrap; font-size:0.75rem; font-weight:bold; color:var(--text-primary);">
-                            <div>Qt. Títulos: <span
-                                    style="background:var(--bg-secondary); border:1px solid var(--border-color); padding:0 0.4rem; border-radius:4px;">150</span>
-                            </div>
-                            <div>Valor Listado: <span
-                                    style="background:var(--bg-secondary); border:1px solid var(--border-color); padding:0 0.4rem; border-radius:4px;">51.454,38</span>
-                            </div>
-                            <div>Vl. Confirmados: <span
-                                    style="background:var(--bg-secondary); border:1px solid var(--border-color); padding:0 0.4rem; border-radius:4px;">37.934,35</span>
-                            </div>
-                            <div>Vl. Abertos: <span
-                                    style="background:var(--bg-secondary); border:1px solid var(--border-color); padding:0 0.4rem; border-radius:4px;">13.520,03</span>
-                            </div>
-                            <div style="margin-left:auto;">Total: <span
-                                    style="background:var(--bg-secondary); border:1px solid var(--border-color); padding:0 0.4rem; border-radius:4px;">51.454,38</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- View: Acerto de Caixa - Detalhe -->
-                <div id="view-acertoCaixaDetalhe" class="page-content" style="display:none;">
-                    <!-- Top Buttons -->
-                    <div class="card"
-                        style="margin-bottom:1rem; background:var(--bg-card); border:1px solid var(--border-color);">
-                        <div class="card-body"
-                            style="padding:0.8rem; display:flex; gap:1rem; justify-content:space-between;">
-                            <div style="display:flex; gap:1rem;">
-                                <button class="btn btn-primary"
-                                    style="min-width:120px; font-weight:bold;">Gravar</button>
-                                <button class="btn"
-                                    style="min-width:150px; background:#fb923c; color:white; font-weight:bold; border:none;">Documentos
-                                    fiscais ▼</button>
-                                <button class="btn btn-secondary" style="min-width:120px; font-weight:bold;">Imprimir
-                                    pedido</button>
-                            </div>
-                            <button class="btn btn-secondary" onclick="switchView('acertoCaixaLista')"
-                                style="min-width:100px; font-weight:bold;">Voltar</button>
-                        </div>
-                    </div>
-
-                    <!-- Form -->
-                    <div class="card" style="background:var(--bg-card); border:1px solid var(--border-color);">
-                        <div class="card-body" style="padding:1.5rem;">
-                            <!-- Row 1 -->
-                            <div style="display:flex; gap:2rem; margin-bottom:1.5rem;">
-                                <div style="width:100px;">
-                                    <label
-                                        style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Empresa</label>
-                                    <input type="text" value="01" class="form-input"
-                                        style="font-size:1rem; padding:0.4rem;">
+                                <div class="form-row">
+                                    <div class="form-group" style="flex:1;">
+                                        <label>Unidade</label>
+                                        <select id="prodUnidade" class="form-input">
+                                            <option value="UN">UN</option>
+                                            <option value="CX">CX</option>
+                                            <option value="KG">KG</option>
+                                            <option value="LT">LT</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="flex:1;">
+                                        <label>Grupo</label>
+                                        <input type="text" id="prodGrupo" class="form-input">
+                                    </div>
+                                    <div class="form-group" style="flex:1;">
+                                        <label>Preço Custo (R$)</label>
+                                        <input type="number" step="0.01" id="prodCusto" class="form-input">
+                                    </div>
+                                    <div class="form-group" style="flex:1;">
+                                        <label>Preço Venda (R$)</label>
+                                        <input type="number" step="0.01" id="prodPreco" class="form-input">
+                                    </div>
                                 </div>
-                                <div style="width:150px;">
-                                    <label
-                                        style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Nº
-                                        Pedido</label>
-                                    <input type="text" value="64368" class="form-input"
-                                        style="font-size:1rem; padding:0.4rem; text-align:right;">
+                                <h4 style="margin-top:1rem; border-bottom:1px solid #ddd;">Logística</h4>
+                                <div class="form-row">
+                                    <div class="form-group"><label>Peso Líq. (kg)</label><input type="number"
+                                            step="0.001" id="prodPesoLiq" class="form-input"></div>
+                                    <div class="form-group"><label>Peso Bruto (kg)</label><input type="number"
+                                            step="0.001" id="prodPesoBruto" class="form-input"></div>
                                 </div>
-                                <div style="width:100px;">
-                                    <label
-                                        style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Prestação</label>
-                                    <input type="text" value="1" class="form-input"
-                                        style="font-size:1rem; padding:0.4rem; text-align:right;">
+                                <div class="form-row">
+                                    <div class="form-group"><label>Largura (cm)</label><input type="number" step="0.1"
+                                            id="prodLargura" class="form-input"></div>
+                                    <div class="form-group"><label>Altura (cm)</label><input type="number" step="0.1"
+                                            id="prodAltura" class="form-input"></div>
+                                    <div class="form-group"><label>Profundidade (cm)</label><input type="number"
+                                            step="0.1" id="prodProfundidade" class="form-input"></div>
                                 </div>
                             </div>
 
-                            <!-- Row 2 -->
-                            <div style="display:flex; gap:2rem; margin-bottom:1.5rem;">
-                                <div style="width:120px;">
-                                    <label
-                                        style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Código</label>
-                                    <input type="text" value="1556" class="form-input"
-                                        style="font-size:1rem; padding:0.4rem; text-align:right;">
+                            <!-- Tab Fiscal -->
+                            <div id="tab-prod-fiscal" class="tab-content" style="display:none;">
+                                <div class="form-row">
+                                    <div class="form-group" style="flex:1;">
+                                        <label>NCM (8 dígitos)</label>
+                                        <input type="text" id="prodNcm" class="form-input" placeholder="0000.00.00">
+                                    </div>
+                                    <div class="form-group" style="flex:1;">
+                                        <label>CEST</label>
+                                        <input type="text" id="prodCest" class="form-input">
+                                    </div>
+                                    <div class="form-group" style="flex:1;">
+                                        <label>EAN / GTIN</label>
+                                        <input type="text" id="prodEan" class="form-input">
+                                    </div>
                                 </div>
-                                <div style="flex:1;">
-                                    <label
-                                        style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Cliente</label>
-                                    <input type="text" value="A C F DE CARVALHO COM. DE PCS E SERVICOS"
-                                        class="form-input" style="font-size:1rem; padding:0.4rem;">
+                                <div class="form-row">
+                                    <div class="form-group" style="flex:1;">
+                                        <label>Origem</label>
+                                        <select id="prodOrigem" class="form-input">
+                                            <option value="0">0 - Nacional</option>
+                                            <option value="1">1 - Estrangeira (Imp. Direta)</option>
+                                            <option value="2">2 - Estrangeira (Adq. no mercado int.)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="flex:1;">
+                                        <label>CFOP Padrão</label>
+                                        <input type="text" id="prodCfop" class="form-input" placeholder="5102">
+                                    </div>
                                 </div>
-                            </div>
-
-                            <!-- Row 3 -->
-                            <div style="display:flex; gap:2rem; margin-bottom:2rem;">
-                                <div style="flex:1;">
-                                    <label
-                                        style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Valor</label>
-                                    <input type="text" value="130,01" class="form-input"
-                                        style="font-size:1rem; padding:0.4rem; text-align:right;">
-                                </div>
-                                <div style="flex:1;">
-                                    <label
-                                        style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Vencimento</label>
-                                    <input type="text" value="07/03/2026" class="form-input"
-                                        style="font-size:1rem; padding:0.4rem;">
-                                </div>
-                                <div style="flex:1;">
-                                    <label
-                                        style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Cobrança</label>
-                                    <select class="form-input" style="font-size:1rem; padding:0.4rem;">
-                                        <option>DUPL</option>
-                                    </select>
-                                </div>
-                                <div style="flex:1;">
-                                    <label
-                                        style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Valor
-                                        Pago</label>
-                                    <input type="text" value="0,00" class="form-input"
-                                        style="font-size:1rem; padding:0.4rem; text-align:right;">
-                                </div>
-                                <div style="flex:1;">
-                                    <label
-                                        style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Troco</label>
-                                    <input type="text" value="0,00" class="form-input"
-                                        style="font-size:1rem; padding:0.4rem; text-align:right;">
+                                <h4 style="margin-top:1rem; border-bottom:1px solid #ddd;">Tributação Padrão (%)</h4>
+                                <div class="form-row">
+                                    <div class="form-group"><label>ICMS (%)</label><input type="number" step="0.01"
+                                            id="prodIcmsRate" class="form-input"></div>
+                                    <div class="form-group"><label>IPI (%)</label><input type="number" step="0.01"
+                                            id="prodIpiRate" class="form-input"></div>
+                                    <div class="form-group"><label>PIS (%)</label><input type="number" step="0.01"
+                                            id="prodPisRate" class="form-input"></div>
+                                    <div class="form-group"><label>COFINS (%)</label><input type="number" step="0.01"
+                                            id="prodCofinsRate" class="form-input"></div>
                                 </div>
                             </div>
 
-                            <!-- Checkboxes -->
-                            <div
-                                style="border:1px solid var(--border-color); background:var(--bg-secondary); padding:0.8rem; margin-bottom:0.5rem; border-radius:4px;">
-                                <label
-                                    style="display:flex; align-items:center; gap:0.5rem; font-weight:600; font-size:0.9rem; color:var(--text-primary);">
-                                    <input type="checkbox"> Acertar todas as parcelas deste pedido
-                                </label>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary"
+                                    onclick="closeModal('cadProdutoModal')">Cancelar</button>
+                                <button type="submit" class="btn btn-primary">Salvar</button>
                             </div>
-                            <div
-                                style="border:1px solid var(--border-color); background:var(--bg-secondary); padding:0.8rem; border-radius:4px;">
-                                <label
-                                    style="display:flex; align-items:center; gap:0.5rem; font-weight:600; font-size:0.9rem; color:var(--text-primary);">
-                                    <input type="checkbox"> Selecionar página na impressão do pedido
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-        </main>
-
-        <!-- View: Devolução - Lista -->
-        <div id="view-devolucaoLista" class="page-content"
-            style="display:none; height:calc(100vh - 110px); flex-direction:column;">
-            <!-- Header Actions -->
-            <div class="card"
-                style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
-                <div class="card-body" style="padding:0.5rem; display:flex; gap:0.5rem;">
-                    <button class="btn btn-primary" onclick="openModal('devolucaoWizard')"
-                        style="min-width:100px;">Novo</button>
-                    <button class="btn btn-secondary" style="min-width:100px;">Gravar</button>
-                    <button class="btn btn-secondary" style="min-width:100px;">Cancelar</button>
-                    <div style="flex:1;"></div>
-                    <button class="btn btn-secondary" style="min-width:100px;">Sair</button>
-                </div>
-            </div>
-
-            <!-- Header Inputs -->
-            <div class="card"
-                style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
-                <div class="card-body" style="padding:0.8rem; font-size:0.8rem;">
-                    <!-- Row 1 -->
-                    <div style="display:flex; gap:1rem; margin-bottom:0.5rem; flex-wrap:wrap;">
-                        <div style="width:150px;"><label style="display:block; color:var(--text-secondary);">Operação de
-                                Entrada</label><select class="form-input" style="padding:0.2rem;">
-                                <option>Dev. simples</option>
-                            </select></div>
-                        <div style="width:80px;"><label
-                                style="display:block; color:var(--text-secondary);">Transação</label><input type="text"
-                                value="9081" class="form-input" style="padding:0.2rem;"></div>
-                        <div style="width:60px;"><label
-                                style="display:block; color:var(--text-secondary);">Empresa</label><input type="number"
-                                value="01" class="form-input" style="padding:0.2rem;"></div>
-                        <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Nº
-                                Nota</label><input type="text" value="9081" class="form-input" style="padding:0.2rem;">
-                        </div>
-                        <div style="width:50px;"><label
-                                style="display:block; color:var(--text-secondary);">Série</label><input type="text"
-                                class="form-input" style="padding:0.2rem;"></div>
-                        <div style="width:50px;"><label
-                                style="display:block; color:var(--text-secondary);">Espécie</label><input type="text"
-                                value="OE" class="form-input" style="padding:0.2rem;"></div>
-                        <div style="width:120px;"><label style="display:block; color:var(--text-secondary);">Data de
-                                Emissão</label><input type="date" value="2026-02-05" class="form-input"
-                                style="padding:0.2rem;"></div>
-                        <div style="width:120px;"><label style="display:block; color:var(--text-secondary);">Data de
-                                Entrada</label><input type="date" value="2026-02-05" class="form-input"
-                                style="padding:0.2rem;"></div>
-                        <div style="flex:1;"><label style="display:block; color:var(--text-secondary);">Motivo da
-                                devolução</label><select class="form-input" style="padding:0.2rem;">
-                                <option></option>
-                            </select></div>
-                    </div>
-                    <!-- Row 2 -->
-                    <div style="display:flex; gap:1rem; flex-wrap:wrap;">
-                        <div style="width:100px;">
-                            <label style="display:block; color:var(--text-secondary);">Código do Cliente</label>
-                            <div style="display:flex;">
-                                <input type="text" class="form-input" style="padding:0.2rem;">
-                                <button class="btn btn-secondary" style="padding:0 0.5rem;">...</button>
-                            </div>
-                        </div>
-                        <div style="flex:2;"><label style="display:block; color:var(--text-secondary);">Razão social do
-                                cliente</label><input type="text" class="form-input" style="padding:0.2rem;"></div>
-                        <div style="width:150px;"><label style="display:block; color:var(--text-secondary);">Nota
-                                emitida pelo cliente?</label><select class="form-input" style="padding:0.2rem;">
-                                <option>Não</option>
-                            </select></div>
-                        <div style="flex:1;"><label style="display:block; color:var(--text-secondary);">Chave de
-                                acesso</label><input type="text" class="form-input" style="padding:0.2rem;"></div>
+                        </form>
                     </div>
                 </div>
             </div>
 
-            <!-- Tabs -->
-            <div style="display:flex; margin-bottom:0;">
-                <button class="btn tab-btn active" onclick="switchTab(this, 'tab-dev-movimento')"
-                    style="background:#dbeafe; border:1px solid var(--border-color); border-bottom:none; border-radius:4px 4px 0 0; padding:0.5rem 1rem; font-weight:bold; color:black;">Movimento
-                    de Venda</button>
-                <button class="btn tab-btn" onclick="switchTab(this, 'tab-dev-itens')"
-                    style="background:var(--bg-card); border:1px solid transparent; padding:0.5rem 1rem; color:var(--text-secondary);">Itens
-                    Lançados</button>
-                <button class="btn tab-btn" onclick="switchTab(this, 'tab-dev-credito')"
-                    style="background:var(--bg-card); border:1px solid transparent; padding:0.5rem 1rem; color:var(--text-secondary);">Crédito
-                    de cliente</button>
-            </div>
+    </div>
 
-            <!-- Tab Content: Movimento -->
-            <div id="tab-dev-movimento" class="card tab-content active"
-                style="border-top-left-radius:0; border:1px solid var(--border-color); background:var(--bg-card); flex:1; display:flex; flex-direction:column; margin-bottom:0.5rem;">
-                <!-- Search Filter inside Tab -->
+    <!-- View: Integração Bancária -->
+    <div id="view-bank-integration" class="page-content" style="display:none;">
+        <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+            <button class="btn btn-primary"
+                onclick="renderBoletoEmissao(); document.getElementById('tab-emissao').style.display='block'; document.getElementById('tab-retorno').style.display='none';">Emissão
+                de Boletos</button>
+            <button class="btn btn-secondary"
+                onclick="document.getElementById('tab-emissao').style.display='none'; document.getElementById('tab-retorno').style.display='block';">Processar
+                Retorno</button>
+        </div>
+
+        <!-- TAB EMISSÃO -->
+        <div id="tab-emissao" style="display:block;">
+            <div class="card">
+                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3>Emissão de Boletos (Carteira de Cobrança)</h3>
+                    <button class="btn btn-primary" onclick="gerarRemessaCNAB()">
+                        <span class="material-icons-round">cloud_download</span> Gerar Remessa
+                    </button>
+                </div>
+                <div class="card-body" style="padding:0;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width:40px;"><input type="checkbox"></th>
+                                <th>Cliente</th>
+                                <th>Descrição</th>
+                                <th>Vencimento</th>
+                                <th>Valor</th>
+                                <th>Status</th>
+                                <th style="text-align:right;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="boletoTableBody">
+                            <!-- JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB RETORNO -->
+        <div id="tab-retorno" style="display:none;">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Processar Arquivo de Retorno (CNAB 400/240)</h3>
+                </div>
+                <div class="card-body" style="padding:1.5rem;">
+                    <div class="form-group">
+                        <label>Simular Conteúdo do Arquivo de Retorno (Cole aqui):</label>
+                        <textarea id="retornoInput" class="form-input" style="height:200px; font-family:monospace;"
+                            placeholder="Cole o conteúdo do arquivo .RET aqui..."></textarea>
+                    </div>
+                    <div style="margin-top:1rem; text-align:right;">
+                        <button class="btn btn-success" onclick="processarRetorno()">
+                            <span class="material-icons-round">check_circle</span> Processar Baixas
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Visualização de Boleto -->
+    <div id="boletoModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content" style="max-width:800px;">
+            <div class="modal-header">
+                <h3>Boleto Bancário</h3>
+                <button class="btn-icon" onclick="closeModal('boletoModal')"><span
+                        class="material-icons-round">close</span></button>
+            </div>
+            <div class="modal-body" id="boletoContent">
+                <!-- JS Generated -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('boletoModal')">Fechar</button>
+                <button class="btn btn-primary" onclick="alert('Boleto enviado para impressão!')">Imprimir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Remessa -->
+    <div id="remessaModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content" style="max-width:800px;">
+            <div class="modal-header">
+                <h3>Arquivo de Remessa Gerado</h3>
+                <button class="btn-icon" onclick="closeModal('remessaModal')"><span
+                        class="material-icons-round">close</span></button>
+            </div>
+            <div class="modal-body">
+                <textarea id="remessaOutput" class="form-input" style="height:300px; font-family:monospace;"
+                    readonly></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('remessaModal')">Fechar</button>
+                <button class="btn btn-primary" onclick="alert('Arquivo baixado!'); closeModal('remessaModal')">Download
+                    .REM</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- View: Acerto de Caixa - Lista -->
+    <div id="view-acertoCaixaLista" class="page-content" style="display:none;">
+        <!-- Actions Bar -->
+        <div class="card"
+            style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
+            <div class="card-body" style="padding:0.5rem; display:flex; gap:0.5rem;">
+                <button class="btn"
+                    style="background:#fb923c; color:white; font-weight:bold; border:none;">Buscar</button>
+                <button class="btn btn-secondary">Desdobrar</button>
+                <button class="btn btn-secondary">Imprimir <span class="material-icons-round"
+                        style="font-size:1rem;">expand_more</span></button>
+                <div style="flex:1;"></div>
+                <button class="btn btn-secondary">Encerramento</button>
+                <button class="btn btn-secondary">Sair</button>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="card"
+            style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
+            <div class="card-body" style="padding:0.5rem 0.8rem; font-size:0.75rem;">
+                <!-- Row 1 -->
+                <div style="display:flex; gap:1rem; margin-bottom:0.4rem; align-items:flex-end;">
+                    <div style="width:50px;"><label
+                            style="display:block; color:var(--text-secondary);">Empresa</label><input type="text"
+                            value="01" class="form-input" style="padding:0.2rem;"></div>
+                    <div style="width:60px;"><label style="display:block; color:var(--text-secondary);">Nº
+                            Carreg.</label><input type="text" value="0" class="form-input" style="padding:0.2rem;">
+                    </div>
+                    <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Data
+                            Emissão</label><input type="date" class="form-input" style="padding:0.2rem;"></div>
+                    <div style="width:100px;"><label
+                            style="display:block; color:var(--text-secondary);">Cobrança</label><input type="text"
+                            class="form-input" style="padding:0.2rem;"></div>
+                    <div style="width:250px;"><label style="display:block; color:var(--text-secondary);">Cliente</label>
+                        <div style="display:flex; gap:0.2rem;">
+                            <input type="text" placeholder="Cód" style="width:50px; padding:0.2rem;" class="form-input">
+                            <input type="text" placeholder="Nome" style="flex:1; padding:0.2rem;" class="form-input">
+                        </div>
+                    </div>
+                    <div style="flex:1;"><label style="display:block; color:var(--text-secondary);">Origem
+                            da Venda</label><select class="form-input" style="padding:0.2rem;">
+                            <option>[ Todos ]</option>
+                        </select></div>
+                </div>
+                <!-- Row 2 -->
+                <div style="display:flex; gap:1rem; align-items:flex-end;">
+                    <div style="width:60px;"><label style="display:block; color:var(--text-secondary);">Nº
+                            Nota</label><input type="text" value="0" class="form-input" style="padding:0.2rem;">
+                    </div>
+                    <div style="width:80px;"><label
+                            style="display:block; color:var(--text-secondary);">Valor</label><input type="text"
+                            value="0,00" class="form-input" style="padding:0.2rem;"></div>
+                    <div style="width:80px;"><label style="display:block; color:var(--text-secondary);">Nº
+                            Pedido</label><input type="text" value="0" class="form-input" style="padding:0.2rem;"></div>
+                    <div style="width:200px;"><label
+                            style="display:block; color:var(--text-secondary);">Parceiro</label><select
+                            class="form-input" style="padding:0.2rem;">
+                            <option>[ Acerto ]</option>
+                        </select></div>
+                    <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Nº
+                            Turno</label><select class="form-input" style="padding:0.2rem;">
+                            <option></option>
+                        </select></div>
+                    <div style="flex:1;"><label style="display:block; color:var(--text-secondary);">Listar
+                            movimento</label><select class="form-input" style="padding:0.2rem; font-weight:bold;">
+                            <option>Movimento diário [ Geral ]</option>
+                        </select></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid -->
+        <div class="card"
+            style="flex:1; overflow:hidden; background:var(--bg-card); border:1px solid var(--border-color);">
+            <div class="card-body" style="padding:0; height:calc(100vh - 350px); overflow:auto;">
+                <table class="data-table" style="font-size:0.75rem; white-space:nowrap; width:100%;">
+                    <thead style="background:var(--bg-secondary); position:sticky; top:0;">
+                        <tr>
+                            <th style="width:30px;"></th>
+                            <th style="width:30px;">Imp.</th>
+                            <th style="width:30px;">Ac.</th>
+                            <th>Empresa</th>
+                            <th>Tp.</th>
+                            <th>Nº Nota</th>
+                            <th>Prest.</th>
+                            <th>Código</th>
+                            <th>Razão Social</th>
+                            <th>Nº Pedido</th>
+                            <th>Dt. Emissão</th>
+                            <th>Valor</th>
+                            <th>Vl. Pago</th>
+                            <th>Vendedor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr onclick="switchView('acertoCaixaDetalhe')"
+                            style="cursor:pointer; border-bottom:1px solid var(--border-color);">
+                            <td>👁️</td>
+                            <td>🖨️</td>
+                            <td>✔️</td>
+                            <td>01</td>
+                            <td>1</td>
+                            <td style="color:var(--accent-primary);">49657</td>
+                            <td>1</td>
+                            <td>1556</td>
+                            <td>A C F DE CARVALHO COM. DE PCS</td>
+                            <td>64341</td>
+                            <td>05/02/2026</td>
+                            <td style="color:var(--accent-primary);">101,43</td>
+                            <td>0,00</td>
+                            <td>14 MAB</td>
+                        </tr>
+                        <tr onclick="switchView('acertoCaixaDetalhe')"
+                            style="cursor:pointer; border-bottom:1px solid var(--border-color);">
+                            <td>👁️</td>
+                            <td>🖨️</td>
+                            <td></td>
+                            <td>01</td>
+                            <td>1</td>
+                            <td style="color:var(--accent-primary);">49670</td>
+                            <td>1</td>
+                            <td>1556</td>
+                            <td>A C F DE CARVALHO COM. DE PCS</td>
+                            <td>64368</td>
+                            <td>05/02/2026</td>
+                            <td style="color:var(--accent-primary);">130,01</td>
+                            <td>0,00</td>
+                            <td>4 EDU</td>
+                        </tr>
+                        <tr onclick="switchView('acertoCaixaDetalhe')"
+                            style="cursor:pointer; border-bottom:1px solid var(--border-color);">
+                            <td>👁️</td>
+                            <td>🖨️</td>
+                            <td>✔️</td>
+                            <td>01</td>
+                            <td>1</td>
+                            <td style="color:var(--accent-primary);">49671</td>
+                            <td>1</td>
+                            <td>1556</td>
+                            <td>A C F DE CARVALHO COM. DE PCS</td>
+                            <td>64369</td>
+                            <td>05/02/2026</td>
+                            <td style="color:var(--accent-primary);">190,00</td>
+                            <td>0,00</td>
+                            <td>4 EDU</td>
+                        </tr>
+                        <tr onclick="switchView('acertoCaixaDetalhe')"
+                            style="cursor:pointer; border-bottom:1px solid var(--border-color);">
+                            <td>👁️</td>
+                            <td>🖨️</td>
+                            <td>✔️</td>
+                            <td>01</td>
+                            <td>1</td>
+                            <td style="color:var(--accent-primary);">49688</td>
+                            <td>1</td>
+                            <td>1556</td>
+                            <td>A C F DE CARVALHO COM. DE PCS</td>
+                            <td>64275</td>
+                            <td>05/02/2026</td>
+                            <td style="color:var(--accent-primary);">646,08</td>
+                            <td>0,00</td>
+                            <td>29 NIL</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Footer Totals -->
+        <div class="card" style="margin-top:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
+            <div class="card-body"
+                style="padding:0.4rem; display:flex; gap:1rem; flex-wrap:wrap; font-size:0.75rem; font-weight:bold; color:var(--text-primary);">
+                <div>Qt. Títulos: <span
+                        style="background:var(--bg-secondary); border:1px solid var(--border-color); padding:0 0.4rem; border-radius:4px;">150</span>
+                </div>
+                <div>Valor Listado: <span
+                        style="background:var(--bg-secondary); border:1px solid var(--border-color); padding:0 0.4rem; border-radius:4px;">51.454,38</span>
+                </div>
+                <div>Vl. Confirmados: <span
+                        style="background:var(--bg-secondary); border:1px solid var(--border-color); padding:0 0.4rem; border-radius:4px;">37.934,35</span>
+                </div>
+                <div>Vl. Abertos: <span
+                        style="background:var(--bg-secondary); border:1px solid var(--border-color); padding:0 0.4rem; border-radius:4px;">13.520,03</span>
+                </div>
+                <div style="margin-left:auto;">Total: <span
+                        style="background:var(--bg-secondary); border:1px solid var(--border-color); padding:0 0.4rem; border-radius:4px;">51.454,38</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View: Acerto de Caixa - Detalhe -->
+    <div id="view-acertoCaixaDetalhe" class="page-content" style="display:none;">
+        <!-- Top Buttons -->
+        <div class="card" style="margin-bottom:1rem; background:var(--bg-card); border:1px solid var(--border-color);">
+            <div class="card-body" style="padding:0.8rem; display:flex; gap:1rem; justify-content:space-between;">
+                <div style="display:flex; gap:1rem;">
+                    <button class="btn btn-primary" style="min-width:120px; font-weight:bold;">Gravar</button>
+                    <button class="btn"
+                        style="min-width:150px; background:#fb923c; color:white; font-weight:bold; border:none;">Documentos
+                        fiscais ▼</button>
+                    <button class="btn btn-secondary" style="min-width:120px; font-weight:bold;">Imprimir
+                        pedido</button>
+                </div>
+                <button class="btn btn-secondary" onclick="switchView('acertoCaixaLista')"
+                    style="min-width:100px; font-weight:bold;">Voltar</button>
+            </div>
+        </div>
+
+        <!-- Form -->
+        <div class="card" style="background:var(--bg-card); border:1px solid var(--border-color);">
+            <div class="card-body" style="padding:1.5rem;">
+                <!-- Row 1 -->
+                <div style="display:flex; gap:2rem; margin-bottom:1.5rem;">
+                    <div style="width:100px;">
+                        <label
+                            style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Empresa</label>
+                        <input type="text" value="01" class="form-input" style="font-size:1rem; padding:0.4rem;">
+                    </div>
+                    <div style="width:150px;">
+                        <label
+                            style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Nº
+                            Pedido</label>
+                        <input type="text" value="64368" class="form-input"
+                            style="font-size:1rem; padding:0.4rem; text-align:right;">
+                    </div>
+                    <div style="width:100px;">
+                        <label
+                            style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Prestação</label>
+                        <input type="text" value="1" class="form-input"
+                            style="font-size:1rem; padding:0.4rem; text-align:right;">
+                    </div>
+                </div>
+
+                <!-- Row 2 -->
+                <div style="display:flex; gap:2rem; margin-bottom:1.5rem;">
+                    <div style="width:120px;">
+                        <label
+                            style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Código</label>
+                        <input type="text" value="1556" class="form-input"
+                            style="font-size:1rem; padding:0.4rem; text-align:right;">
+                    </div>
+                    <div style="flex:1;">
+                        <label
+                            style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Cliente</label>
+                        <input type="text" value="A C F DE CARVALHO COM. DE PCS E SERVICOS" class="form-input"
+                            style="font-size:1rem; padding:0.4rem;">
+                    </div>
+                </div>
+
+                <!-- Row 3 -->
+                <div style="display:flex; gap:2rem; margin-bottom:2rem;">
+                    <div style="flex:1;">
+                        <label
+                            style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Valor</label>
+                        <input type="text" value="130,01" class="form-input"
+                            style="font-size:1rem; padding:0.4rem; text-align:right;">
+                    </div>
+                    <div style="flex:1;">
+                        <label
+                            style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Vencimento</label>
+                        <input type="text" value="07/03/2026" class="form-input"
+                            style="font-size:1rem; padding:0.4rem;">
+                    </div>
+                    <div style="flex:1;">
+                        <label
+                            style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Cobrança</label>
+                        <select class="form-input" style="font-size:1rem; padding:0.4rem;">
+                            <option>DUPL</option>
+                        </select>
+                    </div>
+                    <div style="flex:1;">
+                        <label
+                            style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Valor
+                            Pago</label>
+                        <input type="text" value="0,00" class="form-input"
+                            style="font-size:1rem; padding:0.4rem; text-align:right;">
+                    </div>
+                    <div style="flex:1;">
+                        <label
+                            style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.2rem;">Troco</label>
+                        <input type="text" value="0,00" class="form-input"
+                            style="font-size:1rem; padding:0.4rem; text-align:right;">
+                    </div>
+                </div>
+
+                <!-- Checkboxes -->
                 <div
-                    style="padding:0.5rem; border-bottom:1px solid var(--border-color); display:flex; gap:1rem; align-items:flex-end; font-size:0.8rem; flex-wrap:wrap;">
-                    <div
-                        style="font-weight:bold; color:var(--accent-primary); display:flex; align-items:center; gap:0.5rem;">
-                        <span>▼</span> Pesquisar vendas para o cliente
+                    style="border:1px solid var(--border-color); background:var(--bg-secondary); padding:0.8rem; margin-bottom:0.5rem; border-radius:4px;">
+                    <label
+                        style="display:flex; align-items:center; gap:0.5rem; font-weight:600; font-size:0.9rem; color:var(--text-primary);">
+                        <input type="checkbox"> Acertar todas as parcelas deste pedido
+                    </label>
+                </div>
+                <div
+                    style="border:1px solid var(--border-color); background:var(--bg-secondary); padding:0.8rem; border-radius:4px;">
+                    <label
+                        style="display:flex; align-items:center; gap:0.5rem; font-weight:600; font-size:0.9rem; color:var(--text-primary);">
+                        <input type="checkbox"> Selecionar página na impressão do pedido
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    </main>
+
+    <!-- View: Devolução - Lista -->
+    <div id="view-devolucaoLista" class="page-content"
+        style="display:none; height:calc(100vh - 110px); flex-direction:column;">
+        <!-- Header Actions -->
+        <div class="card"
+            style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
+            <div class="card-body" style="padding:0.5rem; display:flex; gap:0.5rem;">
+                <button class="btn btn-primary" onclick="openModal('devolucaoWizard')"
+                    style="min-width:100px;">Novo</button>
+                <button class="btn btn-secondary" style="min-width:100px;">Gravar</button>
+                <button class="btn btn-secondary" style="min-width:100px;">Cancelar</button>
+                <div style="flex:1;"></div>
+                <button class="btn btn-secondary" style="min-width:100px;">Sair</button>
+            </div>
+        </div>
+
+        <!-- Header Inputs -->
+        <div class="card"
+            style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
+            <div class="card-body" style="padding:0.8rem; font-size:0.8rem;">
+                <!-- Row 1 -->
+                <div style="display:flex; gap:1rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+                    <div style="width:150px;"><label style="display:block; color:var(--text-secondary);">Operação de
+                            Entrada</label><select class="form-input" style="padding:0.2rem;">
+                            <option>Dev. simples</option>
+                        </select></div>
+                    <div style="width:80px;"><label
+                            style="display:block; color:var(--text-secondary);">Transação</label><input type="text"
+                            value="9081" class="form-input" style="padding:0.2rem;"></div>
+                    <div style="width:60px;"><label
+                            style="display:block; color:var(--text-secondary);">Empresa</label><input type="number"
+                            value="01" class="form-input" style="padding:0.2rem;"></div>
+                    <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Nº
+                            Nota</label><input type="text" value="9081" class="form-input" style="padding:0.2rem;">
                     </div>
-                    <div style="margin-left:auto; display:flex; gap:1rem; align-items:flex-end;">
-                        <div><label style="display:block;">Período de emissão</label>
-                            <div style="display:flex; gap:0.2rem;">
-                                <input type="date" value="2026-02-01" class="form-input" style="padding:0.2rem;">
-                                <span>até</span>
-                                <input type="date" value="2026-02-05" class="form-input" style="padding:0.2rem;">
-                            </div>
+                    <div style="width:50px;"><label
+                            style="display:block; color:var(--text-secondary);">Série</label><input type="text"
+                            class="form-input" style="padding:0.2rem;"></div>
+                    <div style="width:50px;"><label
+                            style="display:block; color:var(--text-secondary);">Espécie</label><input type="text"
+                            value="OE" class="form-input" style="padding:0.2rem;"></div>
+                    <div style="width:120px;"><label style="display:block; color:var(--text-secondary);">Data de
+                            Emissão</label><input type="date" value="2026-02-05" class="form-input"
+                            style="padding:0.2rem;"></div>
+                    <div style="width:120px;"><label style="display:block; color:var(--text-secondary);">Data de
+                            Entrada</label><input type="date" value="2026-02-05" class="form-input"
+                            style="padding:0.2rem;"></div>
+                    <div style="flex:1;"><label style="display:block; color:var(--text-secondary);">Motivo da
+                            devolução</label><select class="form-input" style="padding:0.2rem;">
+                            <option></option>
+                        </select></div>
+                </div>
+                <!-- Row 2 -->
+                <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+                    <div style="width:100px;">
+                        <label style="display:block; color:var(--text-secondary);">Código do Cliente</label>
+                        <div style="display:flex;">
+                            <input type="text" class="form-input" style="padding:0.2rem;">
+                            <button class="btn btn-secondary" style="padding:0 0.5rem;">...</button>
                         </div>
-                        <div><label style="display:block;">Nº Nota</label><input type="text" value="0"
-                                class="form-input" style="padding:0.2rem; width:80px; text-align:right;"></div>
-                        <button class="btn btn-secondary" style="font-weight:bold;">Buscar</button>
                     </div>
-                </div>
-
-                <!-- Grid -->
-                <div style="flex:1; background:var(--bg-secondary); overflow:auto; padding:1rem;">
-                    <p style="text-align:center; color:var(--text-secondary);">Nenhum resultado para exibir</p>
-                </div>
-            </div>
-
-            <!-- Tab Content: Itens -->
-            <div id="tab-dev-itens" class="card tab-content"
-                style="display:none; border-top-left-radius:0; border:1px solid var(--border-color); background:var(--bg-card); height:calc(100vh - 400px); padding:1rem;">
-                <p style="text-align:center;">Itens lançados aparecerão aqui.</p>
-            </div>
-
-            <!-- Tab Content: Crédito -->
-            <div id="tab-dev-credito" class="card tab-content"
-                style="display:none; border-top-left-radius:0; border:1px solid var(--border-color); background:var(--bg-card); height:calc(100vh - 400px); padding:1rem;">
-                <p style="text-align:center;">Informações de crédito.</p>
-            </div>
-
-            <!-- Footer Totals -->
-            <div class="card"
-                style="margin-top:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
-                <div class="card-body"
-                    style="padding:0.5rem; display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:1rem; font-size:0.75rem;">
-                    <div><label style="display:block;">Valor Total</label><input type="text" class="form-input"
-                            readonly></div>
-                    <div><label style="display:block;">Valor da Base de ICMS</label><input type="text"
-                            class="form-input" readonly></div>
-                    <div><label style="display:block;">Valor do ICMS</label><input type="text" class="form-input"
-                            readonly></div>
-                    <div><label style="display:block;">Valor da base de ST</label><input type="text" class="form-input"
-                            readonly></div>
-                    <div><label style="display:block;">Valor da ST</label><input type="text" class="form-input"
-                            readonly></div>
-                    <div><label style="display:block;">Valor Líquido</label><input type="text" class="form-input"
-                            readonly></div>
+                    <div style="flex:2;"><label style="display:block; color:var(--text-secondary);">Razão social do
+                            cliente</label><input type="text" class="form-input" style="padding:0.2rem;"></div>
+                    <div style="width:150px;"><label style="display:block; color:var(--text-secondary);">Nota
+                            emitida pelo cliente?</label><select class="form-input" style="padding:0.2rem;">
+                            <option>Não</option>
+                        </select></div>
+                    <div style="flex:1;"><label style="display:block; color:var(--text-secondary);">Chave de
+                            acesso</label><input type="text" class="form-input" style="padding:0.2rem;"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Modal: Devolução Wizard -->
-        <div id="modal-devolucaoWizard" class="modal"
-            style="display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.5);">
-            <div class="modal-content"
-                style="max-width:600px; width:100%; background:#0f172a; color:white; border-radius:8px; overflow:hidden; box-shadow:0 10px 25px rgba(0,0,0,0.5);">
-                <div class="modal-header"
-                    style="background:#1e3a8a; color:white; padding:1rem 1.5rem; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155;">
-                    <h4 style="margin:0; font-weight:600; font-size:1.1rem;">Devolução de cliente</h4>
-                    <button onclick="closeModal('devolucaoWizard')"
-                        style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
-                </div>
-                <div class="modal-body" style="padding:1.5rem 2rem;">
+        <!-- Tabs -->
+        <div style="display:flex; margin-bottom:0;">
+            <button class="btn tab-btn active" onclick="switchTab(this, 'tab-dev-movimento')"
+                style="background:#dbeafe; border:1px solid var(--border-color); border-bottom:none; border-radius:4px 4px 0 0; padding:0.5rem 1rem; font-weight:bold; color:black;">Movimento
+                de Venda</button>
+            <button class="btn tab-btn" onclick="switchTab(this, 'tab-dev-itens')"
+                style="background:var(--bg-card); border:1px solid transparent; padding:0.5rem 1rem; color:var(--text-secondary);">Itens
+                Lançados</button>
+            <button class="btn tab-btn" onclick="switchTab(this, 'tab-dev-credito')"
+                style="background:var(--bg-card); border:1px solid transparent; padding:0.5rem 1rem; color:var(--text-secondary);">Crédito
+                de cliente</button>
+        </div>
 
-                    <!-- Top Navigation Buttons -->
-                    <div
-                        style="margin-bottom:1.5rem; border-bottom:1px solid #334155; padding-bottom:1rem; display:flex; justify-content:space-between; align-items:center;">
-                        <button class="btn"
-                            style="background:transparent; border:1px solid #475569; color:white; border-radius:4px; padding:0.5rem 1rem; display:flex; align-items:center; gap:0.5rem;">
-                            <span class="material-icons-round" style="font-size:1rem;">reply</span> Devolução Manual
-                        </button>
-                        <button class="btn"
-                            style="background:transparent; border:none; color:white; font-weight:bold; font-size:1rem; display:flex; align-items:center; gap:0.5rem; padding:0.5rem 1rem;">
-                            Próximo <span style="font-size:0.8rem;">▶</span>
-                        </button>
+        <!-- Tab Content: Movimento -->
+        <div id="tab-dev-movimento" class="card tab-content active"
+            style="border-top-left-radius:0; border:1px solid var(--border-color); background:var(--bg-card); flex:1; display:flex; flex-direction:column; margin-bottom:0.5rem;">
+            <!-- Search Filter inside Tab -->
+            <div
+                style="padding:0.5rem; border-bottom:1px solid var(--border-color); display:flex; gap:1rem; align-items:flex-end; font-size:0.8rem; flex-wrap:wrap;">
+                <div
+                    style="font-weight:bold; color:var(--accent-primary); display:flex; align-items:center; gap:0.5rem;">
+                    <span>▼</span> Pesquisar vendas para o cliente
+                </div>
+                <div style="margin-left:auto; display:flex; gap:1rem; align-items:flex-end;">
+                    <div><label style="display:block;">Período de emissão</label>
+                        <div style="display:flex; gap:0.2rem;">
+                            <input type="date" value="2026-02-01" class="form-input" style="padding:0.2rem;">
+                            <span>até</span>
+                            <input type="date" value="2026-02-05" class="form-input" style="padding:0.2rem;">
+                        </div>
+                    </div>
+                    <div><label style="display:block;">Nº Nota</label><input type="text" value="0" class="form-input"
+                            style="padding:0.2rem; width:80px; text-align:right;"></div>
+                    <button class="btn btn-secondary" style="font-weight:bold;">Buscar</button>
+                </div>
+            </div>
+
+            <!-- Grid -->
+            <div style="flex:1; background:var(--bg-secondary); overflow:auto; padding:1rem;">
+                <p style="text-align:center; color:var(--text-secondary);">Nenhum resultado para exibir</p>
+            </div>
+        </div>
+
+        <!-- Tab Content: Itens -->
+        <div id="tab-dev-itens" class="card tab-content"
+            style="display:none; border-top-left-radius:0; border:1px solid var(--border-color); background:var(--bg-card); height:calc(100vh - 400px); padding:1rem;">
+            <p style="text-align:center;">Itens lançados aparecerão aqui.</p>
+        </div>
+
+        <!-- Tab Content: Crédito -->
+        <div id="tab-dev-credito" class="card tab-content"
+            style="display:none; border-top-left-radius:0; border:1px solid var(--border-color); background:var(--bg-card); height:calc(100vh - 400px); padding:1rem;">
+            <p style="text-align:center;">Informações de crédito.</p>
+        </div>
+
+        <!-- Footer Totals -->
+        <div class="card" style="margin-top:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
+            <div class="card-body"
+                style="padding:0.5rem; display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:1rem; font-size:0.75rem;">
+                <div><label style="display:block;">Valor Total</label><input type="text" class="form-input" readonly>
+                </div>
+                <div><label style="display:block;">Valor da Base de ICMS</label><input type="text" class="form-input"
+                        readonly></div>
+                <div><label style="display:block;">Valor do ICMS</label><input type="text" class="form-input" readonly>
+                </div>
+                <div><label style="display:block;">Valor da base de ST</label><input type="text" class="form-input"
+                        readonly></div>
+                <div><label style="display:block;">Valor da ST</label><input type="text" class="form-input" readonly>
+                </div>
+                <div><label style="display:block;">Valor Líquido</label><input type="text" class="form-input" readonly>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Devolução Wizard -->
+    <div id="modal-devolucaoWizard" class="modal"
+        style="display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.5);">
+        <div class="modal-content"
+            style="max-width:600px; width:100%; background:#0f172a; color:white; border-radius:8px; overflow:hidden; box-shadow:0 10px 25px rgba(0,0,0,0.5);">
+            <div class="modal-header"
+                style="background:#1e3a8a; color:white; padding:1rem 1.5rem; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155;">
+                <h4 style="margin:0; font-weight:600; font-size:1.1rem;">Devolução de cliente</h4>
+                <button onclick="closeModal('devolucaoWizard')"
+                    style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
+            </div>
+            <div class="modal-body" style="padding:1.5rem 2rem;">
+
+                <!-- Top Navigation Buttons -->
+                <div
+                    style="margin-bottom:1.5rem; border-bottom:1px solid #334155; padding-bottom:1rem; display:flex; justify-content:space-between; align-items:center;">
+                    <button class="btn"
+                        style="background:transparent; border:1px solid #475569; color:white; border-radius:4px; padding:0.5rem 1rem; display:flex; align-items:center; gap:0.5rem;">
+                        <span class="material-icons-round" style="font-size:1rem;">reply</span> Devolução Manual
+                    </button>
+                    <button class="btn"
+                        style="background:transparent; border:none; color:white; font-weight:bold; font-size:1rem; display:flex; align-items:center; gap:0.5rem; padding:0.5rem 1rem;">
+                        Próximo <span style="font-size:0.8rem;">▶</span>
+                    </button>
+                </div>
+
+                <div style="margin-bottom:1.5rem;">
+                    <h5 style="margin:0 0 1rem 0; font-size:1rem; font-weight:600;">Informe os dados abaixo para
+                        iniciar o processo de devolução</h5>
+
+                    <div style="margin-bottom:1rem;">
+                        <label
+                            style="display:block; font-weight:bold; margin-bottom:0.5rem; font-size:1.1rem;">Selecione
+                            o tipo de devolução</label>
+                        <select class="form-input"
+                            style="width:100%; font-size:1rem; padding:0.6rem; background:#1e293b; color:white; border:1px solid #475569; border-radius:4px;">
+                            <option>[ Selecione ]</option>
+                            <option value="normal">Devolução normal (emissão empresa)</option>
+                            <option value="simples">Devolução simples</option>
+                        </select>
                     </div>
 
-                    <div style="margin-bottom:1.5rem;">
-                        <h5 style="margin:0 0 1rem 0; font-size:1rem; font-weight:600;">Informe os dados abaixo para
-                            iniciar o processo de devolução</h5>
-
-                        <div style="margin-bottom:1rem;">
-                            <label
-                                style="display:block; font-weight:bold; margin-bottom:0.5rem; font-size:1.1rem;">Selecione
-                                o tipo de devolução</label>
-                            <select class="form-input"
-                                style="width:100%; font-size:1rem; padding:0.6rem; background:#1e293b; color:white; border:1px solid #475569; border-radius:4px;">
-                                <option>[ Selecione ]</option>
-                                <option value="normal">Devolução normal (emissão empresa)</option>
-                                <option value="simples">Devolução simples</option>
-                            </select>
-                        </div>
-
-                        <div style="margin-bottom:1rem;">
-                            <label style="display:block; color:#94a3b8; margin-bottom:0.3rem;">Motivo da
-                                devolução</label>
-                            <input type="text" class="form-input"
-                                style="width:100%; padding:0.6rem; background:#1e293b; color:white; border:1px solid #475569; border-radius:4px;">
-                        </div>
+                    <div style="margin-bottom:1rem;">
+                        <label style="display:block; color:#94a3b8; margin-bottom:0.3rem;">Motivo da
+                            devolução</label>
+                        <input type="text" class="form-input"
+                            style="width:100%; padding:0.6rem; background:#1e293b; color:white; border:1px solid #475569; border-radius:4px;">
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- View: Consulta Devolução -->
-        <div id="view-consultaDevolucao" class="page-content"
-            style="display:none; height:calc(100vh - 110px); flex-direction:column;">
-            <!-- Actions -->
-            <div class="card"
-                style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
-                <div class="card-body" style="padding:0.5rem; display:flex; gap:0.5rem;">
-                    <button class="btn btn-secondary" style="font-weight:bold; min-width:100px;">Buscar</button>
-                    <div style="position:relative; display:inline-block;">
-                        <button class="btn btn-secondary"
-                            style="min-width:120px; display:flex; align-items:center; justify-content:space-between;">
-                            Imprimir <span class="material-icons-round" style="font-size:1rem;">arrow_drop_down</span>
-                        </button>
-                    </div>
-                    <div style="flex:1;"></div>
-                    <button class="btn btn-secondary" style="min-width:100px;">Sair</button>
+    <!-- View: Consulta Devolução -->
+    <div id="view-consultaDevolucao" class="page-content"
+        style="display:none; height:calc(100vh - 110px); flex-direction:column;">
+        <!-- Actions -->
+        <div class="card"
+            style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
+            <div class="card-body" style="padding:0.5rem; display:flex; gap:0.5rem;">
+                <button class="btn btn-secondary" style="font-weight:bold; min-width:100px;">Buscar</button>
+                <div style="position:relative; display:inline-block;">
+                    <button class="btn btn-secondary"
+                        style="min-width:120px; display:flex; align-items:center; justify-content:space-between;">
+                        Imprimir <span class="material-icons-round" style="font-size:1rem;">arrow_drop_down</span>
+                    </button>
                 </div>
+                <div style="flex:1;"></div>
+                <button class="btn btn-secondary" style="min-width:100px;">Sair</button>
             </div>
-
-            <!-- Filters -->
-            <div class="card"
-                style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
-                <div class="card-body" style="padding:0.8rem; font-size:0.75rem;">
-                    <!-- Row 1 -->
-                    <div style="display:flex; gap:1rem; margin-bottom:0.5rem; flex-wrap:wrap; align-items:flex-end;">
-                        <div style="width:50px;"><label
-                                style="display:block; color:var(--text-secondary);">Empresa</label><input type="number"
-                                value="01" class="form-input" style="padding:0.2rem;"></div>
-
-                        <div><label style="display:block; color:var(--text-secondary);">Período de entrada</label>
-                            <div style="display:flex; gap:0.2rem; align-items:center;">
-                                <input type="date" value="2026-02-06" class="form-input" style="padding:0.2rem;">
-                                <span>até</span>
-                                <input type="date" value="2026-02-06" class="form-input" style="padding:0.2rem;">
-                            </div>
-                        </div>
-
-                        <div><label style="display:block; color:var(--text-secondary);">Nº Nota</label>
-                            <div style="display:flex; gap:0.2rem; align-items:center;">
-                                <input type="text" value="0" class="form-input"
-                                    style="padding:0.2rem; width:60px; text-align:right;">
-                                <span>até</span>
-                                <!-- Implicit range logic from screenshot (single field displayed but implied range? Screenshot shows single inputs for specific nums but ranges for others. I'll stick to screenshot visual) -->
-                                <!-- Actually screenshot shows "No Nota          0" which looks like single field or maybe start/end if wide. Let's assume start/end based on layout -->
-                                <input type="text" class="form-input" value="0"
-                                    style="padding:0.2rem; width:60px; text-align:right; display:none;">
-                                <!-- Hidden for now to match screenshot exact count if needed, but context says "Nota (Início/Fim)". Screenshot shows "No Nota" label then two inputs? No, looks like one wide label "No Nota" and maybe one input. Wait, screenshot text: "No Nota 0". Just one. "No Nota origem 0". Just one. -->
-                                <!-- Wait, screenshot has "Supervisor 0 até 0". "Rca 0 até 0". -->
-                                <!-- "No Nota" and "No Nota Origem" seem to have only ONE input 0 in the screenshot. -->
-                                <!-- I will follow screenshot: No Nota (1 input), No Nota origem (1 input). -->
-                            </div>
-                        </div>
-                        <div style="width:80px;"><label style="display:block; color:var(--text-secondary);">Nº
-                                Nota</label><input type="text" value="0" class="form-input"
-                                style="padding:0.2rem; text-align:right;"></div>
-                        <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Nº Nota
-                                origem</label><input type="text" value="0" class="form-input"
-                                style="padding:0.2rem; text-align:right;"></div>
-
-                        <div style="width:60px;"><label
-                                style="display:block; color:var(--text-secondary);">Código</label><input type="text"
-                                value="0" class="form-input" style="padding:0.2rem; text-align:right;"></div>
-                        <div style="flex:2;"><label
-                                style="display:block; color:var(--text-secondary);">Cliente</label><input type="text"
-                                class="form-input" style="padding:0.2rem;"></div>
-                    </div>
-
-                    <!-- Row 2 -->
-                    <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-end;">
-                        <div><label style="display:block; color:var(--text-secondary);">Supervisor</label>
-                            <div style="display:flex; gap:0.2rem; align-items:center;">
-                                <input type="text" value="0" class="form-input"
-                                    style="padding:0.2rem; width:50px; text-align:right;">
-                                <span>até</span>
-                                <input type="text" value="0" class="form-input"
-                                    style="padding:0.2rem; width:50px; text-align:right;">
-                            </div>
-                        </div>
-                        <div><label style="display:block; color:var(--text-secondary);">Rca</label>
-                            <div style="display:flex; gap:0.2rem; align-items:center;">
-                                <input type="text" value="0" class="form-input"
-                                    style="padding:0.2rem; width:50px; text-align:right;">
-                                <span>até</span>
-                                <input type="text" value="0" class="form-input"
-                                    style="padding:0.2rem; width:50px; text-align:right;">
-                            </div>
-                        </div>
-                        <div><label style="display:block; color:var(--text-secondary);">Transação de Entrada</label>
-                            <div style="display:flex; gap:0.2rem; align-items:center;">
-                                <input type="text" value="0" class="form-input"
-                                    style="padding:0.2rem; width:50px; text-align:right;">
-                                <span>até</span>
-                                <input type="text" value="0" class="form-input"
-                                    style="padding:0.2rem; width:50px; text-align:right;">
-                            </div>
-                        </div>
-                        <div style="flex:2;"><label style="display:block; color:var(--text-secondary);">Motivo da
-                                devolução</label><select class="form-input" style="padding:0.2rem;">
-                                <option></option>
-                            </select></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Master Grid -->
-            <div class="card"
-                style="flex:1; margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color); display:flex; flex-direction:column; min-height:150px;">
-                <div style="overflow:auto; flex:1;">
-                    <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
-                        <thead style="background:var(--bg-secondary); position:sticky; top:0;">
-                            <tr style="text-align:left; color:var(--text-secondary);">
-                                <th style="padding:0.3rem;">Fil.</th>
-                                <th style="padding:0.3rem;">Num.Entrada</th>
-                                <th style="padding:0.3rem;">NF</th>
-                                <th style="padding:0.3rem;">Série</th>
-                                <th style="padding:0.3rem;">Esp.</th>
-                                <th style="padding:0.3rem;">Dt.Entrada</th>
-                                <th style="padding:0.3rem;">Tp.</th>
-                                <th style="padding:0.3rem;">Código</th>
-                                <th style="padding:0.3rem;">Cliente</th>
-                                <th style="padding:0.3rem;">Vl.Total</th>
-                                <th style="padding:0.3rem;">Vl.Frete</th>
-                                <th style="padding:0.3rem;">Vl.Desc.</th>
-                                <th style="padding:0.3rem;">Vl.Outras</th>
-                                <th style="padding:0.3rem;">Vl.ICM</th>
-                                <th style="padding:0.3rem;">Vl.ST</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Empty Row Placeholder -->
-                            <tr>
-                                <td colspan="15" style="text-align:center; padding:1rem; color:var(--text-secondary);">
-                                    Nenhum registro encontrado</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Resize Handle / Splitter (Visual only) -->
-            <div style="height:4px; background:var(--border-color); cursor:ns-resize; margin-bottom:0.5rem;"></div>
-
-            <!-- Detail Grid -->
-            <div class="card"
-                style="flex:1; margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color); display:flex; flex-direction:column; min-height:150px;">
-                <div style="overflow:auto; flex:1;">
-                    <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
-                        <thead style="background:var(--bg-secondary); position:sticky; top:0;">
-                            <tr style="text-align:left; color:var(--text-secondary);">
-                                <th style="padding:0.3rem;">Emp.</th>
-                                <th style="padding:0.3rem;">Seq.</th>
-                                <th style="padding:0.3rem;">Data</th>
-                                <th style="padding:0.3rem;">Código</th>
-                                <th style="padding:0.3rem;">Descrição</th>
-                                <th style="padding:0.3rem;">Embal.</th>
-                                <th style="padding:0.3rem;">UN</th>
-                                <th style="padding:0.3rem;">Oper.</th>
-                                <th style="padding:0.3rem;">Qtde</th>
-                                <th style="padding:0.3rem;">%ICM</th>
-                                <th style="padding:0.3rem;">P.Tabela</th>
-                                <th style="padding:0.3rem;">P.Unitário</th>
-                                <th style="padding:0.3rem;">Sub.Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td colspan="13" style="text-align:center; padding:1rem; color:var(--text-secondary);">
-                                    Nenhum item selecionado</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Footer Totals -->
-            <div class="card" style="margin-top:auto; background:var(--bg-card); border:1px solid var(--border-color);">
-                <div class="card-body" style="padding:0.5rem; display:flex; gap:2rem; font-size:0.8rem;">
-                    <div><label style="display:block; color:var(--text-secondary);">Qtde devoluções</label>
-                        <div style="font-weight:bold; font-size:1.1rem;">0</div>
-                    </div>
-                    <div><label style="display:block; color:var(--text-secondary);">Valor das devoluções</label>
-                        <div style="font-weight:bold; font-size:1.1rem; color:var(--accent-primary);">0,00</div>
-                    </div>
-                </div>
-            </div>
-
         </div>
 
-        <!-- View: Consulta Pedidos -->
-        <div id="view-consultaPedidos" class="page-content"
-            style="display:none; height:calc(100vh - 110px); flex-direction:column;">
-            <!-- Actions -->
-            <div class="card"
-                style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
-                <div class="card-body" style="padding:0.5rem; display:flex; gap:0.5rem;">
-                    <button class="btn btn-primary" style="font-weight:bold; min-width:100px;">Buscar</button>
-                    <div style="position:relative; display:inline-block;">
-                        <button class="btn btn-secondary"
-                            style="min-width:120px; display:flex; align-items:center; justify-content:space-between;">
-                            Imprimir <span class="material-icons-round" style="font-size:1rem;">arrow_drop_down</span>
-                        </button>
+        <!-- Filters -->
+        <div class="card"
+            style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
+            <div class="card-body" style="padding:0.8rem; font-size:0.75rem;">
+                <!-- Row 1 -->
+                <div style="display:flex; gap:1rem; margin-bottom:0.5rem; flex-wrap:wrap; align-items:flex-end;">
+                    <div style="width:50px;"><label
+                            style="display:block; color:var(--text-secondary);">Empresa</label><input type="number"
+                            value="01" class="form-input" style="padding:0.2rem;"></div>
+
+                    <div><label style="display:block; color:var(--text-secondary);">Período de entrada</label>
+                        <div style="display:flex; gap:0.2rem; align-items:center;">
+                            <input type="date" value="2026-02-06" class="form-input" style="padding:0.2rem;">
+                            <span>até</span>
+                            <input type="date" value="2026-02-06" class="form-input" style="padding:0.2rem;">
+                        </div>
                     </div>
-                    <div style="flex:1;"></div>
-                    <button class="btn btn-secondary" style="min-width:100px;">Sair</button>
+
+                    <div><label style="display:block; color:var(--text-secondary);">Nº Nota</label>
+                        <div style="display:flex; gap:0.2rem; align-items:center;">
+                            <input type="text" value="0" class="form-input"
+                                style="padding:0.2rem; width:60px; text-align:right;">
+                            <span>até</span>
+                            <!-- Implicit range logic from screenshot (single field displayed but implied range? Screenshot shows single inputs for specific nums but ranges for others. I'll stick to screenshot visual) -->
+                            <!-- Actually screenshot shows "No Nota          0" which looks like single field or maybe start/end if wide. Let's assume start/end based on layout -->
+                            <!-- Wait, screenshot has "Supervisor 0 até 0". "Rca 0 até 0". -->
+                            <!-- "No Nota" and "No Nota Origem" seem to have only ONE input 0 in the screenshot. -->
+                            <!-- I will follow screenshot: No Nota (1 input), No Nota origem (1 input). -->
+                        </div>
+                    </div>
+                    <div style="width:80px;"><label style="display:block; color:var(--text-secondary);">Nº
+                            Nota</label><input type="text" value="0" class="form-input"
+                            style="padding:0.2rem; text-align:right;"></div>
+                    <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Nº Nota
+                            origem</label><input type="text" value="0" class="form-input"
+                            style="padding:0.2rem; text-align:right;"></div>
+
+                    <div style="width:60px;"><label
+                            style="display:block; color:var(--text-secondary);">Código</label><input type="text"
+                            value="0" class="form-input" style="padding:0.2rem; text-align:right;"></div>
+                    <div style="flex:2;"><label
+                            style="display:block; color:var(--text-secondary);">Cliente</label><input type="text"
+                            class="form-input" style="padding:0.2rem;"></div>
+                </div>
+
+                <!-- Row 2 -->
+                <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-end;">
+                    <div><label style="display:block; color:var(--text-secondary);">Supervisor</label>
+                        <div style="display:flex; gap:0.2rem; align-items:center;">
+                            <input type="text" value="0" class="form-input"
+                                style="padding:0.2rem; width:50px; text-align:right;">
+                            <span>até</span>
+                            <input type="text" value="0" class="form-input"
+                                style="padding:0.2rem; width:50px; text-align:right;">
+                        </div>
+                    </div>
+                    <div><label style="display:block; color:var(--text-secondary);">Rca</label>
+                        <div style="display:flex; gap:0.2rem; align-items:center;">
+                            <input type="text" value="0" class="form-input"
+                                style="padding:0.2rem; width:50px; text-align:right;">
+                            <span>até</span>
+                            <input type="text" value="0" class="form-input"
+                                style="padding:0.2rem; width:50px; text-align:right;">
+                        </div>
+                    </div>
+                    <div><label style="display:block; color:var(--text-secondary);">Transação de Entrada</label>
+                        <div style="display:flex; gap:0.2rem; align-items:center;">
+                            <input type="text" value="0" class="form-input"
+                                style="padding:0.2rem; width:50px; text-align:right;">
+                            <span>até</span>
+                            <input type="text" value="0" class="form-input"
+                                style="padding:0.2rem; width:50px; text-align:right;">
+                        </div>
+                    </div>
+                    <div style="flex:2;"><label style="display:block; color:var(--text-secondary);">Motivo da
+                            devolução</label><select class="form-input" style="padding:0.2rem;">
+                            <option></option>
+                        </select></div>
                 </div>
             </div>
+        </div>
 
-            <!-- Filters -->
-            <div class="card"
-                style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
-                <div class="card-body" style="padding:0.5rem; font-size:0.75rem;">
-                    <!-- Row 1 -->
-                    <div style="display:flex; gap:0.5rem; margin-bottom:0.3rem; align-items:flex-end; flex-wrap:wrap;">
-                        <div style="width:60px;"><label
-                                style="display:block; color:var(--text-secondary);">Empresa</label>
-                            <select class="form-input" style="padding:0.1rem;">
-                                <option>01</option>
-                            </select>
-                        </div>
-                        <div><label style="display:block; color:var(--text-secondary);">Período das vendas</label>
-                            <div style="display:flex; gap:0.2rem; align-items:center;">
-                                <input type="date" value="2026-02-07" class="form-input" style="padding:0.1rem;">
-                                <span>até</span>
-                                <input type="date" value="2026-02-07" class="form-input" style="padding:0.1rem;">
-                            </div>
-                        </div>
-                        <div style="width:60px;"><label
-                                style="display:block; color:var(--text-secondary);">Código</label><input type="text"
-                                value="0" class="form-input" style="padding:0.1rem; text-align:right;"></div>
-                        <div style="flex:1; min-width:200px;"><label
-                                style="display:block; color:var(--text-secondary);">Cliente</label><input type="text"
-                                class="form-input" style="padding:0.1rem;"></div>
-                        <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Tp.
-                                entrega</label>
-                            <select class="form-input" style="padding:0.1rem;">
-                                <option>Todos</option>
-                            </select>
-                        </div>
-                        <div style="width:120px;"><label style="display:block; color:var(--text-secondary);">CPF /
-                                CNPJ</label><input type="text" class="form-input" style="padding:0.1rem;"></div>
-                        <div style="width:60px;"><label style="display:block; color:var(--text-secondary);">Nº
-                                Nota</label><input type="text" value="0" class="form-input"
-                                style="padding:0.1rem; text-align:right;"></div>
+        <!-- Master Grid -->
+        <div class="card"
+            style="flex:1; margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color); display:flex; flex-direction:column; min-height:150px;">
+            <div style="overflow:auto; flex:1;">
+                <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
+                    <thead style="background:var(--bg-secondary); position:sticky; top:0;">
+                        <tr style="text-align:left; color:var(--text-secondary);">
+                            <th style="padding:0.3rem;">Fil.</th>
+                            <th style="padding:0.3rem;">Num.Entrada</th>
+                            <th style="padding:0.3rem;">NF</th>
+                            <th style="padding:0.3rem;">Série</th>
+                            <th style="padding:0.3rem;">Esp.</th>
+                            <th style="padding:0.3rem;">Dt.Entrada</th>
+                            <th style="padding:0.3rem;">Tp.</th>
+                            <th style="padding:0.3rem;">Código</th>
+                            <th style="padding:0.3rem;">Cliente</th>
+                            <th style="padding:0.3rem;">Vl.Total</th>
+                            <th style="padding:0.3rem;">Vl.Frete</th>
+                            <th style="padding:0.3rem;">Vl.Desc.</th>
+                            <th style="padding:0.3rem;">Vl.Outras</th>
+                            <th style="padding:0.3rem;">Vl.ICM</th>
+                            <th style="padding:0.3rem;">Vl.ST</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Empty Row Placeholder -->
+                        <tr>
+                            <td colspan="15" style="text-align:center; padding:1rem; color:var(--text-secondary);">
+                                Nenhum registro encontrado</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Resize Handle / Splitter (Visual only) -->
+        <div style="height:4px; background:var(--border-color); cursor:ns-resize; margin-bottom:0.5rem;"></div>
+
+        <!-- Detail Grid -->
+        <div class="card"
+            style="flex:1; margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color); display:flex; flex-direction:column; min-height:150px;">
+            <div style="overflow:auto; flex:1;">
+                <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
+                    <thead style="background:var(--bg-secondary); position:sticky; top:0;">
+                        <tr style="text-align:left; color:var(--text-secondary);">
+                            <th style="padding:0.3rem;">Emp.</th>
+                            <th style="padding:0.3rem;">Seq.</th>
+                            <th style="padding:0.3rem;">Data</th>
+                            <th style="padding:0.3rem;">Código</th>
+                            <th style="padding:0.3rem;">Descrição</th>
+                            <th style="padding:0.3rem;">Embal.</th>
+                            <th style="padding:0.3rem;">UN</th>
+                            <th style="padding:0.3rem;">Oper.</th>
+                            <th style="padding:0.3rem;">Qtde</th>
+                            <th style="padding:0.3rem;">%ICM</th>
+                            <th style="padding:0.3rem;">P.Tabela</th>
+                            <th style="padding:0.3rem;">P.Unitário</th>
+                            <th style="padding:0.3rem;">Sub.Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="13" style="text-align:center; padding:1rem; color:var(--text-secondary);">
+                                Nenhum item selecionado</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Footer Totals -->
+        <div class="card" style="margin-top:auto; background:var(--bg-card); border:1px solid var(--border-color);">
+            <div class="card-body" style="padding:0.5rem; display:flex; gap:2rem; font-size:0.8rem;">
+                <div><label style="display:block; color:var(--text-secondary);">Qtde devoluções</label>
+                    <div style="font-weight:bold; font-size:1.1rem;">0</div>
+                </div>
+                <div><label style="display:block; color:var(--text-secondary);">Valor das devoluções</label>
+                    <div style="font-weight:bold; font-size:1.1rem; color:var(--accent-primary);">0,00</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- View: Consulta Pedidos -->
+    <div id="view-consultaPedidos" class="page-content"
+        style="display:none; height:calc(100vh - 110px); flex-direction:column;">
+        <!-- Actions -->
+        <div class="card"
+            style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
+            <div class="card-body" style="padding:0.5rem; display:flex; gap:0.5rem;">
+                <button class="btn btn-primary" style="font-weight:bold; min-width:100px;">Buscar</button>
+                <div style="position:relative; display:inline-block;">
+                    <button class="btn btn-secondary"
+                        style="min-width:120px; display:flex; align-items:center; justify-content:space-between;">
+                        Imprimir <span class="material-icons-round" style="font-size:1rem;">arrow_drop_down</span>
+                    </button>
+                </div>
+                <div style="flex:1;"></div>
+                <button class="btn btn-secondary" style="min-width:100px;">Sair</button>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="card"
+            style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
+            <div class="card-body" style="padding:0.5rem; font-size:0.75rem;">
+                <!-- Row 1 -->
+                <div style="display:flex; gap:0.5rem; margin-bottom:0.3rem; align-items:flex-end; flex-wrap:wrap;">
+                    <div style="width:60px;"><label style="display:block; color:var(--text-secondary);">Empresa</label>
+                        <select class="form-input" style="padding:0.1rem;">
+                            <option>01</option>
+                        </select>
                     </div>
-
-                    <!-- Row 2 -->
-                    <div style="display:flex; gap:0.5rem; margin-bottom:0.3rem; align-items:flex-end; flex-wrap:wrap;">
-                        <div style="width:150px;"><label style="display:block; color:var(--text-secondary);">RCA</label>
-                            <div style="display:flex; gap:0.2rem;">
-                                <input type="text" class="form-input" style="padding:0.1rem;">
-                                <button class="btn btn-secondary" style="padding:0 0.5rem;">...</button>
-                            </div>
+                    <div><label style="display:block; color:var(--text-secondary);">Período das vendas</label>
+                        <div style="display:flex; gap:0.2rem; align-items:center;">
+                            <input type="date" value="2026-02-07" class="form-input" style="padding:0.1rem;">
+                            <span>até</span>
+                            <input type="date" value="2026-02-07" class="form-input" style="padding:0.1rem;">
                         </div>
-                        <div style="width:120px;"><label
-                                style="display:block; color:var(--text-secondary);">Cobrança</label>
-                            <div style="display:flex; gap:0.2rem;">
-                                <input type="text" class="form-input" style="padding:0.1rem;">
-                                <button class="btn btn-secondary" style="padding:0 0.5rem;">...</button>
-                            </div>
-                        </div>
-                        <div style="width:60px;"><label
-                                style="display:block; color:var(--text-secondary);">Código</label><input type="text"
-                                value="0" class="form-input" style="padding:0.1rem; text-align:right;"></div>
-                        <div style="flex:1; min-width:200px;"><label
-                                style="display:block; color:var(--text-secondary);">Produto</label><input type="text"
-                                class="form-input" style="padding:0.1rem;"></div>
-                        <div style="width:80px;"><label
-                                style="display:block; color:var(--text-secondary);">Índice</label>
-                            <select class="form-input" style="padding:0.1rem;">
-                                <option>Todos</option>
-                            </select>
-                        </div>
-                        <div style="width:80px;"><label style="display:block; color:var(--text-secondary);">Nº
-                                Pedido</label><input type="text" value="0" class="form-input"
-                                style="padding:0.1rem; text-align:right;"></div>
-                        <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Nº
-                                Carregamento</label><input type="text" value="0" class="form-input"
-                                style="padding:0.1rem; text-align:right;"></div>
                     </div>
+                    <div style="width:60px;"><label
+                            style="display:block; color:var(--text-secondary);">Código</label><input type="text"
+                            value="0" class="form-input" style="padding:0.1rem; text-align:right;"></div>
+                    <div style="flex:1; min-width:200px;"><label
+                            style="display:block; color:var(--text-secondary);">Cliente</label><input type="text"
+                            class="form-input" style="padding:0.1rem;"></div>
+                    <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Tp.
+                            entrega</label>
+                        <select class="form-input" style="padding:0.1rem;">
+                            <option>Todos</option>
+                        </select>
+                    </div>
+                    <div style="width:120px;"><label style="display:block; color:var(--text-secondary);">CPF /
+                            CNPJ</label><input type="text" class="form-input" style="padding:0.1rem;"></div>
+                    <div style="width:60px;"><label style="display:block; color:var(--text-secondary);">Nº
+                            Nota</label><input type="text" value="0" class="form-input"
+                            style="padding:0.1rem; text-align:right;"></div>
+                </div>
 
-                    <!-- Row 3 -->
-                    <div style="display:flex; gap:0.5rem; margin-bottom:0.3rem; align-items:flex-end; flex-wrap:wrap;">
-                        <div style="width:200px;"><label style="display:block; color:var(--text-secondary);">Rotas e
-                                praças</label>
-                            <div style="display:flex; gap:0.2rem;">
-                                <select class="form-input" style="padding:0.1rem;">
-                                    <option>[ Todas as rotas ]</option>
-                                </select>
-                                <button class="btn btn-secondary" style="padding:0 0.5rem;">...</button>
-                            </div>
-                        </div>
-                        <div style="width:120px;"><label style="display:block; color:var(--text-secondary);">Origem da
-                                Venda</label>
-                            <select class="form-input" style="padding:0.1rem;">
-                                <option>[ Todos ]</option>
-                            </select>
-                        </div>
-                        <div style="width:150px;"><label style="display:block; color:var(--text-secondary);">Apenas
-                                vendas</label>
-                            <select class="form-input" style="padding:0.1rem;">
-                                <option>[ Todas ]</option>
-                            </select>
-                        </div>
-                        <div style="width:120px;"><label style="display:block; color:var(--text-secondary);">Ponto de
-                                venda (PDV)</label>
+                <!-- Row 2 -->
+                <div style="display:flex; gap:0.5rem; margin-bottom:0.3rem; align-items:flex-end; flex-wrap:wrap;">
+                    <div style="width:150px;"><label style="display:block; color:var(--text-secondary);">RCA</label>
+                        <div style="display:flex; gap:0.2rem;">
                             <input type="text" class="form-input" style="padding:0.1rem;">
-                        </div>
-                        <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Tipo
-                                cliente</label>
-                            <select class="form-input" style="padding:0.1rem;">
-                                <option>Todos</option>
-                            </select>
-                        </div>
-                        <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Status do
-                                Pedido</label>
-                            <select class="form-input" style="padding:0.1rem;">
-                                <option>[ Todos ]</option>
-                            </select>
-                        </div>
-                        <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Tipo de
-                                Fat.</label>
-                            <select class="form-input" style="padding:0.1rem;">
-                                <option>[ Todos ]</option>
-                            </select>
+                            <button class="btn btn-secondary" style="padding:0 0.5rem;">...</button>
                         </div>
                     </div>
+                    <div style="width:120px;"><label
+                            style="display:block; color:var(--text-secondary);">Cobrança</label>
+                        <div style="display:flex; gap:0.2rem;">
+                            <input type="text" class="form-input" style="padding:0.1rem;">
+                            <button class="btn btn-secondary" style="padding:0 0.5rem;">...</button>
+                        </div>
+                    </div>
+                    <div style="width:60px;"><label
+                            style="display:block; color:var(--text-secondary);">Código</label><input type="text"
+                            value="0" class="form-input" style="padding:0.1rem; text-align:right;"></div>
+                    <div style="flex:1; min-width:200px;"><label
+                            style="display:block; color:var(--text-secondary);">Produto</label><input type="text"
+                            class="form-input" style="padding:0.1rem;"></div>
+                    <div style="width:80px;"><label style="display:block; color:var(--text-secondary);">Índice</label>
+                        <select class="form-input" style="padding:0.1rem;">
+                            <option>Todos</option>
+                        </select>
+                    </div>
+                    <div style="width:80px;"><label style="display:block; color:var(--text-secondary);">Nº
+                            Pedido</label><input type="text" value="0" class="form-input"
+                            style="padding:0.1rem; text-align:right;"></div>
+                    <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Nº
+                            Carregamento</label><input type="text" value="0" class="form-input"
+                            style="padding:0.1rem; text-align:right;"></div>
+                </div>
 
-                    <!-- Row 4 Checkboxes -->
-                    <div
-                        style="display:flex; gap:1rem; padding-top:0.3rem; border-top:1px solid var(--border-color); flex-wrap:wrap;">
-                        <label style="display:flex; align-items:center; gap:0.3rem; font-weight:bold;">
-                            <input type="checkbox"> Listar apenas vendas com troca
-                        </label>
-                        <label style="display:flex; align-items:center; gap:0.3rem; font-weight:bold;">
-                            <input type="checkbox"> Mostrar débito e crédito da venda
-                        </label>
-                        <label style="display:flex; align-items:center; gap:0.3rem; font-weight:bold;">
-                            <input type="checkbox"> Devoluções [ apenas das vendas listadas ]
-                        </label>
+                <!-- Row 3 -->
+                <div style="display:flex; gap:0.5rem; margin-bottom:0.3rem; align-items:flex-end; flex-wrap:wrap;">
+                    <div style="width:200px;"><label style="display:block; color:var(--text-secondary);">Rotas e
+                            praças</label>
+                        <div style="display:flex; gap:0.2rem;">
+                            <select class="form-input" style="padding:0.1rem;">
+                                <option>[ Todas as rotas ]</option>
+                            </select>
+                            <button class="btn btn-secondary" style="padding:0 0.5rem;">...</button>
+                        </div>
+                    </div>
+                    <div style="width:120px;"><label style="display:block; color:var(--text-secondary);">Origem da
+                            Venda</label>
+                        <select class="form-input" style="padding:0.1rem;">
+                            <option>[ Todos ]</option>
+                        </select>
+                    </div>
+                    <div style="width:150px;"><label style="display:block; color:var(--text-secondary);">Apenas
+                            vendas</label>
+                        <select class="form-input" style="padding:0.1rem;">
+                            <option>[ Todas ]</option>
+                        </select>
+                    </div>
+                    <div style="width:120px;"><label style="display:block; color:var(--text-secondary);">Ponto de
+                            venda (PDV)</label>
+                        <input type="text" class="form-input" style="padding:0.1rem;">
+                    </div>
+                    <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Tipo
+                            cliente</label>
+                        <select class="form-input" style="padding:0.1rem;">
+                            <option>Todos</option>
+                        </select>
+                    </div>
+                    <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Status do
+                            Pedido</label>
+                        <select class="form-input" style="padding:0.1rem;">
+                            <option>[ Todos ]</option>
+                        </select>
+                    </div>
+                    <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Tipo de
+                            Fat.</label>
+                        <select class="form-input" style="padding:0.1rem;">
+                            <option>[ Todos ]</option>
+                        </select>
                     </div>
                 </div>
-            </div>
 
-            <!-- Master Grid -->
-            <div class="card"
-                style="flex:1; margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color); display:flex; flex-direction:column; min-height:150px;">
-                <div style="overflow:auto; flex:1;">
-                    <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
-                        <thead style="background:var(--bg-secondary); position:sticky; top:0;">
-                            <tr style="text-align:left; color:var(--text-secondary);">
-                                <th style="padding:0.3rem;">Empresa</th>
-                                <th style="padding:0.3rem;">T.V.</th>
-                                <th style="padding:0.3rem;">Pos.</th>
-                                <th style="padding:0.3rem;">Nº Pedido</th>
-                                <th style="padding:0.3rem;">Nº Nota</th>
-                                <th style="padding:0.3rem;">Nº Carreg.</th>
-                                <th style="padding:0.3rem;">Dt. Retirada</th>
-                                <th style="padding:0.3rem;">Faturado em</th>
-                                <th style="padding:0.3rem;">Impresso</th>
-                                <th style="padding:0.3rem;">Dt.Emissão</th>
-                                <th style="padding:0.3rem;">hh:mm</th>
-                                <th style="padding:0.3rem;">Código</th>
-                                <th style="padding:0.3rem;">Cliente</th>
-                                <th style="padding:0.3rem;">Cobrança</th>
-                                <th style="padding:0.3rem;">Plano de Pagamen...</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Empty Row Placeholder -->
-                            <tr>
-                                <td colspan="15" style="text-align:center; padding:1rem; color:var(--text-secondary);">
-                                    Nenhum pedido encontrado</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Resize Handle / Splitter (Visual only) -->
-            <div style="height:4px; background:var(--border-color); cursor:ns-resize; margin-bottom:0.5rem;"></div>
-
-            <!-- Detail Grid -->
-            <div class="card"
-                style="flex:1; margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color); display:flex; flex-direction:column; min-height:150px;">
-                <div style="overflow:auto; flex:1;">
-                    <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
-                        <thead style="background:var(--bg-secondary); position:sticky; top:0;">
-                            <tr style="text-align:left; color:var(--text-secondary);">
-                                <th style="padding:0.3rem;">Retira</th>
-                                <th style="padding:0.3rem;">Código</th>
-                                <th style="padding:0.3rem;">Item descrição</th>
-                                <th style="padding:0.3rem;">Embalagem</th>
-                                <th style="padding:0.3rem;">Un.</th>
-                                <th style="padding:0.3rem;">Quantidade</th>
-                                <th style="padding:0.3rem;">P.Unitário</th>
-                                <th style="padding:0.3rem;">Subtotal</th>
-                                <th style="padding:0.3rem;">[%] M.</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td colspan="9" style="text-align:center; padding:1rem; color:var(--text-secondary);">
-                                    Nenhum item selecionado</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Footer Totals -->
-            <div class="card" style="margin-top:auto; background:var(--bg-card); border:1px solid var(--border-color);">
-                <div class="card-body"
-                    style="padding:0.5rem; display:flex; gap:1rem; font-size:0.75rem; flex-wrap:wrap;">
-                    <div><label style="display:block; color:var(--text-secondary); font-weight:bold;">Qtde.
-                            pedidos</label>
-                        <input type="text" class="form-input" style="width:80px; text-align:center;" readonly>
-                    </div>
-                    <div><label style="display:block; color:var(--text-secondary); font-weight:bold;">Peso dos
-                            pedidos</label>
-                        <input type="text" class="form-input" style="width:100px; text-align:right;" readonly>
-                    </div>
-                    <div><label style="display:block; color:var(--text-secondary); font-weight:bold;">Valor dos
-                            Pedidos</label>
-                        <input type="text" class="form-input" style="width:100px; text-align:right;" readonly>
-                    </div>
-                    <div><label style="display:block; color:var(--accent-primary); font-weight:bold;">Total do
-                            CMV</label>
-                        <input type="text" value="0,00" class="form-input"
-                            style="width:100px; text-align:right; font-weight:bold;" readonly>
-                    </div>
-                    <div><label style="display:block; color:var(--text-secondary); font-weight:bold;">Total
-                            devoluções</label>
-                        <input type="text" value="0,00" class="form-input"
-                            style="width:100px; text-align:right; font-weight:bold;" readonly>
-                    </div>
-                    <div><label style="display:block; color:var(--text-secondary); font-weight:bold;">Custo
-                            devoluções</label>
-                        <input type="text" value="0,00" class="form-input"
-                            style="width:100px; text-align:right; font-weight:bold;" readonly>
-                    </div>
-                    <div><label style="display:block; color:var(--text-secondary); font-weight:bold;">Valor venda
-                            líquida</label>
-                        <input type="text" value="0,00" class="form-input"
-                            style="width:100px; text-align:right; font-weight:bold;" readonly>
-                    </div>
-                    <div><label style="display:block; color:var(--text-secondary); font-weight:bold;">Total
-                            volumes</label>
-                        <input type="text" value="0" class="form-input"
-                            style="width:80px; text-align:center; font-weight:bold;" readonly>
-                    </div>
-                    <div><label style="display:block; color:var(--text-secondary); font-weight:bold;">Margem [%]</label>
-                        <input type="text" class="form-input" style="width:80px; text-align:center;" readonly>
-                    </div>
+                <!-- Row 4 Checkboxes -->
+                <div
+                    style="display:flex; gap:1rem; padding-top:0.3rem; border-top:1px solid var(--border-color); flex-wrap:wrap;">
+                    <label style="display:flex; align-items:center; gap:0.3rem; font-weight:bold;">
+                        <input type="checkbox"> Listar apenas vendas com troca
+                    </label>
+                    <label style="display:flex; align-items:center; gap:0.3rem; font-weight:bold;">
+                        <input type="checkbox"> Mostrar débito e crédito da venda
+                    </label>
+                    <label style="display:flex; align-items:center; gap:0.3rem; font-weight:bold;">
+                        <input type="checkbox"> Devoluções [ apenas das vendas listadas ]
+                    </label>
                 </div>
             </div>
         </div>
-        </main>
 
-        <!-- Scripts -->
-        <!-- Basic Firebase for Auth -->
-        <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-        <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-        <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-        <script src="../../core/js/firebase-config.js"></script>
+        <!-- Master Grid -->
+        <div class="card"
+            style="flex:1; margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color); display:flex; flex-direction:column; min-height:150px;">
+            <div style="overflow:auto; flex:1;">
+                <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
+                    <thead style="background:var(--bg-secondary); position:sticky; top:0;">
+                        <tr style="text-align:left; color:var(--text-secondary);">
+                            <th style="padding:0.3rem;">Empresa</th>
+                            <th style="padding:0.3rem;">T.V.</th>
+                            <th style="padding:0.3rem;">Pos.</th>
+                            <th style="padding:0.3rem;">Nº Pedido</th>
+                            <th style="padding:0.3rem;">Nº Nota</th>
+                            <th style="padding:0.3rem;">Nº Carreg.</th>
+                            <th style="padding:0.3rem;">Dt. Retirada</th>
+                            <th style="padding:0.3rem;">Faturado em</th>
+                            <th style="padding:0.3rem;">Impresso</th>
+                            <th style="padding:0.3rem;">Dt.Emissão</th>
+                            <th style="padding:0.3rem;">hh:mm</th>
+                            <th style="padding:0.3rem;">Código</th>
+                            <th style="padding:0.3rem;">Cliente</th>
+                            <th style="padding:0.3rem;">Cobrança</th>
+                            <th style="padding:0.3rem;">Plano de Pagamen...</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Empty Row Placeholder -->
+                        <tr>
+                            <td colspan="15" style="text-align:center; padding:1rem; color:var(--text-secondary);">
+                                Nenhum pedido encontrado</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-        <script src="js/cnpj-lookup.js"></script>
-        <script src="js/cadastros.js"></script>
-        <script src="js/financeiro.js"></script>
-        <script src="js/integracoes.js"></script>
-        <script src="js/nfe.js"></script>
-        <script src="js/vendas.js"></script>
-        <script type="module" src="js/app.js?v=2.9.0"></script>
+        <!-- Resize Handle / Splitter (Visual only) -->
+        <div style="height:4px; background:var(--border-color); cursor:ns-resize; margin-bottom:0.5rem;"></div>
+
+        <!-- Detail Grid -->
+        <div class="card"
+            style="flex:1; margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color); display:flex; flex-direction:column; min-height:150px;">
+            <div style="overflow:auto; flex:1;">
+                <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
+                    <thead style="background:var(--bg-secondary); position:sticky; top:0;">
+                        <tr style="text-align:left; color:var(--text-secondary);">
+                            <th style="padding:0.3rem;">Retira</th>
+                            <th style="padding:0.3rem;">Código</th>
+                            <th style="padding:0.3rem;">Item descrição</th>
+                            <th style="padding:0.3rem;">Embalagem</th>
+                            <th style="padding:0.3rem;">Un.</th>
+                            <th style="padding:0.3rem;">Quantidade</th>
+                            <th style="padding:0.3rem;">P.Unitário</th>
+                            <th style="padding:0.3rem;">Subtotal</th>
+                            <th style="padding:0.3rem;">[%] M.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="9" style="text-align:center; padding:1rem; color:var(--text-secondary);">
+                                Nenhum item selecionado</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Footer Totals -->
+        <div class="card" style="margin-top:auto; background:var(--bg-card); border:1px solid var(--border-color);">
+            <div class="card-body" style="padding:0.5rem; display:flex; gap:1rem; font-size:0.75rem; flex-wrap:wrap;">
+                <div><label style="display:block; color:var(--text-secondary); font-weight:bold;">Qtde.
+                        pedidos</label>
+                    <input type="text" class="form-input" style="width:80px; text-align:center;" readonly>
+                </div>
+                <div><label style="display:block; color:var(--text-secondary); font-weight:bold;">Peso dos
+                        pedidos</label>
+                    <input type="text" class="form-input" style="width:100px; text-align:right;" readonly>
+                </div>
+                <div><label style="display:block; color:var(--text-secondary); font-weight:bold;">Valor dos
+                        Pedidos</label>
+                    <input type="text" class="form-input" style="width:100px; text-align:right;" readonly>
+                </div>
+                <div><label style="display:block; color:var(--accent-primary); font-weight:bold;">Total do
+                        CMV</label>
+                    <input type="text" value="0,00" class="form-input"
+                        style="width:100px; text-align:right; font-weight:bold;" readonly>
+                </div>
+                <div><label style="display:block; color:var(--text-secondary); font-weight:bold;">Total
+                        devoluções</label>
+                    <input type="text" value="0,00" class="form-input"
+                        style="width:100px; text-align:right; font-weight:bold;" readonly>
+                </div>
+                <div><label style="display:block; color:var(--text-secondary); font-weight:bold;">Custo
+                        devoluções</label>
+                    <input type="text" value="0,00" class="form-input"
+                        style="width:100px; text-align:right; font-weight:bold;" readonly>
+                </div>
+                <div><label style="display:block; color:var(--text-secondary); font-weight:bold;">Valor venda
+                        líquida</label>
+                    <input type="text" value="0,00" class="form-input"
+                        style="width:100px; text-align:right; font-weight:bold;" readonly>
+                </div>
+                <div><label style="display:block; color:var(--text-secondary); font-weight:bold;">Total
+                        volumes</label>
+                    <input type="text" value="0" class="form-input"
+                        style="width:80px; text-align:center; font-weight:bold;" readonly>
+                </div>
+                <div><label style="display:block; color:var(--text-secondary); font-weight:bold;">Margem [%]</label>
+                    <input type="text" class="form-input" style="width:80px; text-align:center;" readonly>
+                </div>
+            </div>
+        </div>
+    </div>
+    </main>
+
+    <!-- Scripts -->
+    <!-- Basic Firebase for Auth -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="../../core/js/firebase-config.js"></script>
+
+    <script src="js/cnpj-lookup.js"></script>
+    <script src="js/cadastros.js"></script>
+    <script src="js/financeiro.js"></script>
+    <script src="js/produtos.js"></script>
+    <script src="js/bank_integration.js"></script>
+    <script src="js/bi_vendas.js"></script> <!-- New BI Module -->
+    <script src="js/tax_engine.js"></script>
+    <script src="js/nfe_xml.js"></script>
+    <script src="js/relatorios_gerenciais.js"></script>
+
+    <script src="js/bi_financeiro.js"></script> <!-- New BI Financeiro -->
+    <script src="js/nfe.js"></script>
+    <script src="js/vendas.js"></script>
+    <script type="module" src="js/app.js?v=2.9.0"></script>
+    <script src="js/relatorios_rca.js"></script>
 </body>
 
 </html>

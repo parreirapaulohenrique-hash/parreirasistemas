@@ -121,7 +121,9 @@ window.switchView = (viewName) => {
         'frenteCaixa': 'Frente de Caixa',
         'devolucaoLista': 'Devolução de Vendas',
         'consultaDevolucao': 'Consulta Devolução de Cliente',
-        'consultaPedidos': 'Consulta Pedidos de Venda'
+        'consultaPedidos': 'Consulta Pedidos de Venda',
+        'biVendas': 'Inteligência de Vendas',
+        'biFinanceiro': 'Painel Financeiro'
     };
     document.getElementById('pageTitle').textContent = titles[viewName] || 'ERP';
 

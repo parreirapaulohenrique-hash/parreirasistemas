@@ -1,8 +1,8 @@
 {
     "module": "module-wms",
-    "name": "Parreira WMS",
-    "version": "4.0.0",
-    "date": "2026-02-12",
-    "last_change": "WMS 100%: Cadastros (20 entidades), Saída completa, Auditoria completa, Relatórios completos, Configurações (5 telas)",
-    "build": "20260212.03"
+    "name": "WMS - Gestão de Armazém",
+    "version": "1.2.0",
+    "date": "2026-02-14",
+    "last_change": "Implementação de Mapa de Calor e Ondas de Separação",
+    "build": "20260214.01"
 }

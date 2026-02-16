@@ -457,6 +457,7 @@ window.saveCadForm = function (e, viewId, editIdx) {
     }
 
     saveCadastroData(data);
+
     document.getElementById('cadModal').remove();
     loadCadastroView(viewId);
 };
