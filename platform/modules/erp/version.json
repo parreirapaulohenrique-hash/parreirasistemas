@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.17.0",
-    "date": "2026-02-12",
-    "last_change": "Integrações ERP↔WMS (Pedidos/NF-e JSON, stock listeners)",
-    "build": "20260212.02"
+    "version": "2.18.0",
+    "date": "2026-02-16",
+    "last_change": "Módulo de Inteligência de Negócio (BI) - Vendas e Financeiro",
+    "build": "20260216.01"
 }
