@@ -1,8 +1,8 @@
 {
     "module": "module-wms",
     "name": "WMS - Gestão de Armazém",
-    "version": "1.2.0",
-    "date": "2026-02-14",
-    "last_change": "Implementação de Mapa de Calor e Ondas de Separação",
-    "build": "20260214.01"
+    "version": "1.3.0",
+    "date": "2026-02-18",
+    "last_change": "Dashboard Gerencial BI Operacional (Ocupação, Movimentação, Ondas)",
+    "build": "20260218.01"
 }

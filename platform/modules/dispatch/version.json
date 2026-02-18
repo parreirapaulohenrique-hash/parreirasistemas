@@ -1,8 +1,8 @@
 {
   "module": "module-dispatch",
   "name": "Despacho Logístico",
-  "version": "3.4.2",
-  "date": "2026-02-11",
-  "last_change": "Sidebar rolagem padrão ERP (scroll em nav-menu + scrollbar estilizado)",
-  "build": "20260211.01"
+  "version": "3.5.0",
+  "date": "2026-02-18",
+  "last_change": "Dashboard BI Logístico (Indicadores de Frete, SLA e Volumes)",
+  "build": "20260218.01"
 }

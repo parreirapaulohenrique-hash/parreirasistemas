@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link rel="stylesheet" href="styles/wms.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -101,6 +102,10 @@
                             style="font-size:1.2rem; margin-left:auto;">expand_more</span>
                     </a>
                     <div id="sub-rel-operacao" class="nav-submenu">
+                        <a class="nav-sub-item" onclick="switchView('biOperacional'); renderBiOperacional();">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.3rem;">insights</span>Dashboard Gerencial
+                        </a>
                         <a class="nav-sub-item" onclick="switchView('relo-recebimento')">Recebimentos do Dia</a>
                         <a class="nav-sub-item" onclick="switchView('relo-armazenagem')">Armazenagens Pendentes</a>
                         <a class="nav-sub-item" onclick="switchView('relo-separacao')">Separações do Dia</a>
@@ -277,6 +282,84 @@
                     <div id="heatmap-container"></div>
                 </div>
 
+                <!-- View: BI Operacional -->
+                <div id="view-biOperacional" class="page-content" style="display:none;">
+                    <div class="card" style="margin-bottom:1.5rem;">
+                        <div class="card-header"
+                            style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3>Dashboard Gerencial WMS</h3>
+                            <button class="btn btn-secondary" onclick="renderBiOperacional()" title="Atualizar">
+                                <span class="material-icons-round">refresh</span> Atualizar
+                            </button>
+                        </div>
+                        <div
+                            style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; padding:1.5rem;">
+                            <div
+                                style="background:rgba(59,130,246,0.08); padding:1rem; border-radius:8px; text-align:center;">
+                                <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.5rem;">
+                                    Ocupação Geral</div>
+                                <div id="biWmsOcupacao" style="font-size:1.5rem; font-weight:700;">0%</div>
+                                <div id="biWmsOcupacaoDetalhe" style="font-size:0.7rem; color:var(--text-secondary);">0
+                                    / 0 endereços</div>
+                            </div>
+                            <div
+                                style="background:rgba(16,185,129,0.08); padding:1rem; border-radius:8px; text-align:center;">
+                                <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.5rem;">
+                                    Recebimentos Hoje</div>
+                                <div id="biWmsRecebimentos" style="font-size:1.5rem; font-weight:700; color:#10b981;">0
+                                </div>
+                                <div id="biWmsRecebimentosDetalhe"
+                                    style="font-size:0.7rem; color:var(--text-secondary);">0 total</div>
+                            </div>
+                            <div
+                                style="background:rgba(245,158,11,0.08); padding:1rem; border-radius:8px; text-align:center;">
+                                <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.5rem;">
+                                    Separações Hoje</div>
+                                <div id="biWmsSeparacoes" style="font-size:1.5rem; font-weight:700; color:#f59e0b;">0
+                                </div>
+                                <div id="biWmsSeparacoesDetalhe" style="font-size:0.7rem; color:var(--text-secondary);">
+                                    0 total</div>
+                            </div>
+                            <div
+                                style="background:rgba(239,68,68,0.08); padding:1rem; border-radius:8px; text-align:center;">
+                                <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.5rem;">
+                                    Divergências</div>
+                                <div id="biWmsDivergencias" style="font-size:1.5rem; font-weight:700; color:#ef4444;">0
+                                </div>
+                                <div id="biWmsDivergenciasDetalhe"
+                                    style="font-size:0.7rem; color:var(--text-secondary);">0 registros</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:1.5rem;">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Ocupação por Rua</h3>
+                            </div>
+                            <div class="card-body" style="height:350px; padding:1rem;"><canvas
+                                    id="chartBiOcupacaoRua"></canvas></div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Movimentação Semanal</h3>
+                            </div>
+                            <div class="card-body" style="height:350px; padding:1rem;"><canvas
+                                    id="chartBiMovimentacao"></canvas></div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr; gap:1.5rem;">
+                        <div class="card" style="max-width:500px;">
+                            <div class="card-header">
+                                <h3>Status das Ondas de Separação</h3>
+                            </div>
+                            <div class="card-body" style="height:300px; padding:1rem;"><canvas
+                                    id="chartBiProdutividade"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Generic dynamic view container -->
                 <div id="view-dynamic" class="page-content" style="display:none;"></div>
             </div>
@@ -320,6 +403,7 @@
     <script src="js/cadastros.js"></script>
     <script src="js/configuracoes.js"></script>
     <script src="js/relmanutencao.js"></script>
+    <script src="js/bi_operacional.js"></script>
 
     <script>
         // Load Version
