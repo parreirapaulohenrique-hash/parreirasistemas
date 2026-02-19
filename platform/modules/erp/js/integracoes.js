@@ -271,37 +271,143 @@ window.onErpVendaFaturada = function (pedido) {
 
 /**
  * Entry Point: Receber Pedido do Força de Vendas
+ * Adapter completo FV → ERP PedidoSchema (v3.0)
  */
 window.onErpReceberPedidoFV = function (pedidoFV) {
-    // Adapter FV -> ERP Pedido Schema
-    const pedidoERP = {
-        numero: pedidoFV.numero,
-        data: pedidoFV.data,
-        cliente: {
-            codigo: pedidoFV.cliente.codigo,
-            razaoSocial: pedidoFV.cliente.fantasia || pedidoFV.cliente.nome
-        },
-        itens: pedidoFV.itens.map(i => ({
-            sku: i.sku,
-            descricao: i.nome,
-            quantidade: i.qtd,
+    console.log('🔄 FV→ERP: Recebendo pedido', pedidoFV.id || pedidoFV.numero);
+
+    // ─── Montar itens com IPI, desconto e fiscais ────────
+    const itensERP = (pedidoFV.itens || []).map((i, idx) => {
+        const valorBruto = (i.qtd || 0) * (i.preco || 0);
+        const descItem = i.desconto || 0; // % desconto
+        const valorDesc = valorBruto * descItem / 100;
+        const valorLiq = valorBruto - valorDesc;
+        const ipiPerc = i.ipi || i.percIpi || 0;
+        const valorIpi = valorLiq * ipiPerc / 100;
+
+        return {
+            seq: idx + 1,
+            sku: i.sku || '',
+            descricao: i.nome || i.descricao || '',
+            ncm: i.ncm || '00000000',
+            cfop: i.cfop || '5102',
+            unidade: i.unidade || 'UN',
+            quantidade: i.qtd || 0,
             valorUnitario: i.preco || 0,
-            valorTotal: (i.qtd * i.preco) || 0
-        })),
-        totais: { totalNF: pedidoFV.total },
-        status: 'faturado' // Simulating immediate invoicing for sync test
+            desconto: descItem,
+            valorDesconto: valorDesc,
+            valorTotal: valorLiq,
+            ipi: ipiPerc,
+            valorIpi: valorIpi,
+            precoQtde: i.precoQtde || false
+        };
+    });
+
+    const totalProdutos = itensERP.reduce((s, i) => s + i.valorTotal, 0);
+    const totalIpi = itensERP.reduce((s, i) => s + i.valorIpi, 0);
+    const totalDesconto = itensERP.reduce((s, i) => s + i.valorDesconto, 0);
+
+    // ─── Adapter FV → ERP PedidoSchema ───────────────────
+    const pedidoERP = {
+        numero: pedidoFV.id || pedidoFV.numero || ('FV-' + Date.now()),
+        serie: '1',
+        data: pedidoFV.data || new Date().toISOString().slice(0, 10),
+        empresa: pedidoFV.codEmpresa || '01',
+        status: pedidoFV.status || 'aberto',
+        stpPedido: pedidoFV.stpPedido || 'Pre-Venda',
+        origemFV: true,
+
+        // ── Cliente ──
+        cliente: {
+            codigo: pedidoFV.clienteId || pedidoFV.cliente?.codigo || '',
+            razaoSocial: pedidoFV.clienteNome || pedidoFV.cliente?.razaoSocial || pedidoFV.cliente?.nome || '',
+            fantasia: pedidoFV.cliente?.fantasia || pedidoFV.clienteNome || '',
+            cnpjCpf: pedidoFV.clienteCnpjCpf || pedidoFV.cliente?.cnpjCpf || '',
+            ie: pedidoFV.cliente?.inscEstadual || pedidoFV.cliente?.ie || '',
+            endereco: {
+                logradouro: pedidoFV.cliente?.endereco || '',
+                cidade: pedidoFV.cliente?.cidade || '',
+                uf: pedidoFV.cliente?.uf || '',
+                cep: pedidoFV.cliente?.cep || '',
+                bairro: pedidoFV.cliente?.bairro || ''
+            }
+        },
+
+        // ── Vendedor ──
+        vendedor: {
+            codigo: pedidoFV.vendedorCodigo || '32',
+            nome: pedidoFV.vendedorNome || '',
+            comissao: 0
+        },
+
+        // ── Condição de Pagamento ──
+        condicaoPagamento: {
+            codigo: pedidoFV.idFormPg || '',
+            descricao: pedidoFV.planoPagamento || '',
+            parcelas: pedidoFV.parcelas || 1
+        },
+
+        // ── Transporte ──
+        transporte: {
+            modalidadeFrete: 0,
+            transportadora: {
+                codigo: pedidoFV.codfornecTransp || '',
+                razaoSocial: pedidoFV.transportadora || '',
+                cnpj: '',
+                ie: ''
+            },
+            volumes: { quantidade: 0, especie: '', pesoLiquido: 0, pesoBruto: 0 }
+        },
+
+        // ── Itens ──
+        itens: itensERP,
+
+        // ── Totais ──
+        totais: {
+            subtotal: totalProdutos + totalDesconto,
+            desconto: totalDesconto,
+            totalProdutos: totalProdutos,
+            totalNF: pedidoFV.valorTotal || totalProdutos + totalIpi,
+            valorIPI: totalIpi,
+            porDesconto: pedidoFV.porDesconto || 0,
+            frete: 0,
+            seguro: 0,
+            outrasDespesas: 0,
+            baseICMS: 0,
+            valorICMS: 0,
+            valorPIS: 0,
+            valorCOFINS: 0
+        },
+
+        // ── Extras ──
+        observacao: pedidoFV.obs || '',
+        rota: pedidoFV.rota || 0,
+        valorFlex: pedidoFV.valorFlex || 0,
+        sincronizado: pedidoFV.sincronizado || 'N',
+        flagEnvio: pedidoFV.flagEnvio || 'N',
+
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
     };
 
-    // Salvar no ERP Vendas
+    // ─── Salvar no ERP Vendas ────────────────────────────
     const vendas = JSON.parse(localStorage.getItem('erp_vendas') || '[]');
-    const exists = vendas.find(v => v.numero === pedidoERP.numero);
-    if (!exists) {
+    const existIdx = vendas.findIndex(v => v.numero === pedidoERP.numero);
+    if (existIdx > -1) {
+        vendas[existIdx] = pedidoERP;
+        console.log('🔄 Pedido FV atualizado no ERP:', pedidoERP.numero);
+    } else {
         vendas.push(pedidoERP);
-        localStorage.setItem('erp_vendas', JSON.stringify(vendas));
+        console.log('✅ Pedido FV inserido no ERP:', pedidoERP.numero);
+    }
+    localStorage.setItem('erp_vendas', JSON.stringify(vendas));
+
+    // ─── Se status é 'venda' ou 'faturado', processar faturamento ──
+    if (['venda', 'faturado', 'separado', 'despachado'].includes(pedidoERP.status)) {
+        window.onErpVendaFaturada(pedidoERP);
     }
 
-    // Trigger Processamento (Faturamento + WMS)
-    window.onErpVendaFaturada(pedidoERP);
+    return pedidoERP;
 };
 
 /**

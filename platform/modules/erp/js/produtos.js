@@ -57,14 +57,23 @@ window.saveProduto = function () {
         return;
     }
 
+    // Helper to safely read optional fields
+    const getVal = (elId) => { const el = document.getElementById(elId); return el ? el.value : ''; };
+    const getNum = (elId) => { const el = document.getElementById(elId); return el ? (parseFloat(el.value) || 0) : 0; };
+
     const produto = {
         id: id || 'prod_' + Date.now(),
         sku: sku,
         nome: nome,
+        descricaoCompleta: getVal('prodDescCompleta') || nome,
         unidade: document.getElementById('prodUnidade').value,
+        unidadeMaster: getVal('prodUnidadeMaster') || 'UN',
+        qtUnitCx: getNum('prodQtUnitCx') || 1,
         grupo: document.getElementById('prodGrupo').value,
+        idGrup: getVal('prodIdGrup') || '',
         custo: parseFloat(document.getElementById('prodCusto').value) || 0,
         preco: parseFloat(document.getElementById('prodPreco').value) || 0,
+        descontoMaxProd: getNum('prodDescontoMax'),
         // Fiscal
         ncm: document.getElementById('prodNcm').value,
         cest: document.getElementById('prodCest').value,
@@ -81,6 +90,8 @@ window.saveProduto = function () {
         largura: parseFloat(document.getElementById('prodLargura').value) || 0,
         altura: parseFloat(document.getElementById('prodAltura').value) || 0,
         profundidade: parseFloat(document.getElementById('prodProfundidade').value) || 0,
+        // Imagem
+        imagem: getVal('prodImagem') || '',
         updatedAt: new Date().toISOString()
     };
 
@@ -109,6 +120,8 @@ window.editProduto = function (id) {
     const p = produtos.find(i => i.id === id);
     if (!p) return;
 
+    const setVal = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = val; };
+
     document.getElementById('prodId').value = p.id;
     document.getElementById('prodSku').value = p.sku;
     document.getElementById('prodNome').value = p.nome;
@@ -116,6 +129,14 @@ window.editProduto = function (id) {
     document.getElementById('prodGrupo').value = p.grupo || '';
     document.getElementById('prodCusto').value = p.custo || '';
     document.getElementById('prodPreco').value = p.preco || '';
+
+    // FV-aligned fields
+    setVal('prodDescCompleta', p.descricaoCompleta || '');
+    setVal('prodUnidadeMaster', p.unidadeMaster || 'UN');
+    setVal('prodQtUnitCx', p.qtUnitCx || '');
+    setVal('prodIdGrup', p.idGrup || '');
+    setVal('prodDescontoMax', p.descontoMaxProd || '');
+    setVal('prodImagem', p.imagem || '');
 
     // Fiscal
     document.getElementById('prodNcm').value = p.ncm || '';
@@ -150,13 +171,45 @@ window.deleteProduto = function (id) {
 window.newProduto = function () {
     document.getElementById('formProduto').reset();
     document.getElementById('prodId').value = '';
-    document.getElementById('formProduto').reset();
-    document.getElementById('prodId').value = '';
     // Reset tabs
     document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
-    document.getElementById('tab-prod-geral').style.display = 'block';
+    const tabGeral = document.getElementById('tab-prod-geral');
+    if (tabGeral) tabGeral.style.display = 'block';
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    document.querySelector('.tab-btn').classList.add('active'); // First one
+    const firstTab = document.querySelector('.tab-btn');
+    if (firstTab) firstTab.classList.add('active');
 
     openModal('cadProdutoModal');
 };
+
+// ===========================================
+// EXPORTAR PRODUTOS ERP → FV FORMAT
+// ===========================================
+window.exportProdutosParaFV = function () {
+    const produtos = JSON.parse(localStorage.getItem(STORAGE_KEY_PRODUCTS) || '[]');
+    const estoqueERP = JSON.parse(localStorage.getItem('erp_estoque') || '{}');
+
+    return produtos.map(p => {
+        const est = estoqueERP[p.sku] || {};
+        return {
+            sku: p.sku,
+            nome: p.nome,
+            descricaoCompleta: p.descricaoCompleta || p.nome,
+            grupo: p.grupo || '',
+            idGrup: p.idGrup || '',
+            precoBase: p.preco || 0,
+            estoque: est.disponivel || est.estoqueAtual || 0,
+            unidade: p.unidade || 'UN',
+            unidadeMaster: p.unidadeMaster || 'UN',
+            qtUnitCx: p.qtUnitCx || 1,
+            ipi: p.ipiRate || 0,
+            descontoMaxProd: p.descontoMaxProd || 0,
+            ean13: p.ean || '',
+            imagem: p.imagem || '',
+            flagNovo: 'N',
+            flagAlter: 'N'
+        };
+    });
+};
+
+console.log('📦 Módulo de Produtos ERP inicializado');
