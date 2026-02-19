@@ -81,6 +81,8 @@ window.switchView = (viewName) => {
 // --- Global Global Exposure (Immediately) ---
 window.openModal = openModal;
 window.closeModal = closeModal;
+window.editTenant = editTenant;
+window.editUser = editUser;
 
 // Modal Control
 function openModal(modalId) {
@@ -155,7 +157,7 @@ function renderTenants() {
                 <span class="status-badge ${statusClass}">Ativo</span>
             </td>
             <td style="text-align: right;">
-                <button class="action-btn" title="Editar" onclick="alert('Editar: ${tenant.id}')">
+                <button class="action-btn" title="Editar Liberações" onclick="window.editTenant('${tenant.id}')">
                     <span class="material-icons-round">edit</span>
                 </button>
             </td>
@@ -185,7 +187,7 @@ function renderUsers() {
             <td><span class="module-tag" style="background:transparent; border:1px solid var(--border);">${user.tenant}</span></td>
             <td><span class="role-badge ${roleClass}">${formatRole(user.role)}</span></td>
             <td style="text-align: right;">
-                <button class="action-btn" title="Editar">
+                <button class="action-btn" title="Editar" onclick="window.editUser('${user.login}', '${user.tenant}')">
                     <span class="material-icons-round">edit</span>
                 </button>
             </td>
@@ -237,11 +239,6 @@ function setupForms() {
             const pass = document.getElementById('userPass').value;
             const tenant = document.getElementById('userTenant').value;
 
-            if (platformUsers.find(u => u.login === login && u.tenant === tenant)) {
-                alert('Usuário já existe nesta empresa!');
-                return;
-            }
-
             const newUser = {
                 login,
                 pass,
@@ -250,9 +247,31 @@ function setupForms() {
                 role: document.getElementById('userRole').value
             };
 
-            platformUsers.push(newUser);
+            // Check if edit mode
+            const form = document.getElementById('userForm');
+            const isEdit = form.getAttribute('data-edit-mode') === 'true';
+
+            if (isEdit) {
+                const editLogin = form.getAttribute('data-edit-login');
+                const editTenant = form.getAttribute('data-edit-tenant');
+                const idx = platformUsers.findIndex(u => u.login === editLogin && u.tenant === editTenant);
+                if (idx !== -1) {
+                    platformUsers[idx] = { ...platformUsers[idx], ...newUser };
+                }
+                form.removeAttribute('data-edit-mode');
+                form.removeAttribute('data-edit-login');
+                form.removeAttribute('data-edit-tenant');
+                document.getElementById('userLogin').removeAttribute('readonly');
+            } else {
+                if (platformUsers.find(u => u.login === login && u.tenant === tenant)) {
+                    alert('Usuário já existe nesta empresa!');
+                    return;
+                }
+                platformUsers.push(newUser);
+            }
+
             localStorage.setItem('platform_users_registry', JSON.stringify(platformUsers));
-            alert('Usuário cadastrado com sucesso!');
+            alert(isEdit ? 'Usuário atualizado com sucesso!' : 'Usuário cadastrado com sucesso!');
             closeModal('userModal');
             renderUsers();
         });
@@ -268,3 +287,83 @@ function formatRole(role) {
     const roles = { 'admin': 'Administrador', 'supervisor': 'Gerente', 'operacional': 'Operacional' };
     return roles[role] || role;
 }
+
+// --- Edit Tenant (Module Releases) ---
+function editTenant(tenantId) {
+    const allTenants = getAllTenants();
+    const tenant = allTenants.find(t => t.id === tenantId);
+    if (!tenant) {
+        alert('Tenant não encontrado!');
+        return;
+    }
+
+    // Fill display
+    document.getElementById('editTenantDisplay').value = `${tenant.name} (${tenant.id})`;
+    document.getElementById('editTenantIdField').value = tenant.id;
+
+    // Pre-check modules
+    const checkboxes = document.querySelectorAll('input[name="editModules"]');
+    checkboxes.forEach(cb => {
+        cb.checked = (tenant.modules || []).includes(cb.value);
+    });
+
+    openModal('editTenantModal');
+}
+
+// Setup Edit Tenant Form
+const editTenantForm = document.getElementById('editTenantForm');
+if (editTenantForm) {
+    editTenantForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const tenantId = document.getElementById('editTenantIdField').value;
+        const newModules = Array.from(document.querySelectorAll('input[name="editModules"]:checked')).map(cb => cb.value);
+
+        // Find in mockTenants (imported) or dynamicTenants
+        const dynamicTenant = dynamicTenants.find(t => t.id === tenantId);
+        if (dynamicTenant) {
+            dynamicTenant.modules = newModules;
+            localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
+        } else {
+            // For mock tenants, we create a dynamic override
+            const allTenants = getAllTenants();
+            const mockTenant = allTenants.find(t => t.id === tenantId);
+            if (mockTenant) {
+                const override = { ...mockTenant, modules: newModules, isDynamic: true };
+                dynamicTenants.push(override);
+                localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
+            }
+        }
+
+        alert('Liberações atualizadas com sucesso!');
+        closeModal('editTenantModal');
+        renderTenants();
+    });
+}
+
+// --- Edit User ---
+function editUser(login, tenant) {
+    const user = platformUsers.find(u => u.login === login && u.tenant === tenant);
+    if (!user) {
+        alert('Usuário não encontrado!');
+        return;
+    }
+
+    // Fill user modal with existing data
+    populateTenantSelect();
+    document.getElementById('userNameInput').value = user.name || '';
+    document.getElementById('userLogin').value = user.login;
+    document.getElementById('userPass').value = user.pass || '';
+    document.getElementById('userTenant').value = user.tenant;
+    document.getElementById('userRole').value = user.role || 'operacional';
+
+    // Mark login as readonly during edit
+    document.getElementById('userLogin').setAttribute('readonly', true);
+
+    // Set edit mode flag
+    document.getElementById('userForm').setAttribute('data-edit-mode', 'true');
+    document.getElementById('userForm').setAttribute('data-edit-login', login);
+    document.getElementById('userForm').setAttribute('data-edit-tenant', tenant);
+
+    openModal('userModal');
+}
+

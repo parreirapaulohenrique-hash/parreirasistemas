@@ -57,13 +57,13 @@
             </div>
 
             <!-- Sales Force -->
-            <div class="module-card module-sales disabled" onclick="openModule('sales-force')">
+            <div class="module-card module-sales" onclick="openModule('sales-force')">
                 <div class="module-icon">
                     <span class="material-icons-round">phone_android</span>
                 </div>
                 <h3>Força de Vendas</h3>
                 <p>App para vendedores externos com funcionamento offline.</p>
-                <span class="module-status coming">🚧 Em desenvolvimento</span>
+                <span class="module-status active">✅ Disponível</span>
             </div>
 
             <!-- WMS -->
@@ -350,7 +350,7 @@
                     window.open('modules/wms-coletor/index.html', '_blank');
                     break;
                 case 'sales-force':
-                    alert('Módulo em desenvolvimento.');
+                    window.open('modules/sales-force/index.html', '_blank');
                     break;
             }
         }

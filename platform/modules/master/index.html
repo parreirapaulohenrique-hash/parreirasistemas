@@ -222,6 +222,57 @@
             </form>
         </div>
     </div>
+    <!-- Edit Tenant Modal -->
+    <div id="editTenantModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Editar Liberações</h3>
+                <button class="btn-close" onclick="window.closeModal('editTenantModal')">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <form id="editTenantForm">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Empresa</label>
+                        <input type="text" id="editTenantDisplay" class="form-input" readonly>
+                        <input type="hidden" id="editTenantIdField">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Módulos Liberados</label>
+                        <div class="checkbox-group" id="editModulesGroup">
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="editModules" value="dispatch"> Despacho
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="editModules" value="master"> Master (Admin)
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="editModules" value="wms"> WMS
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="editModules" value="erp"> ERP
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="editModules" value="sales-force"> Sales Force
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="editModules" value="wms-coletor"> WMS Coletor
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="window.closeModal('editTenantModal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <span class="material-icons-round">save</span>
+                        Salvar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -230,7 +281,7 @@
     <script src="firebase-config.js"></script>
 
     <!-- Scripts -->
-    <script type="module" src="js/app.js?v=1.0.16"></script>
+    <script type="module" src="js/app.js?v=2.0.0"></script>
 
 </body>
 
