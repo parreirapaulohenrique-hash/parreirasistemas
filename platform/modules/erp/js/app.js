@@ -67,6 +67,9 @@ document.addEventListener('click', function (e) {
     }
 }, true); // Use capture phase to get events before they're blocked
 
+// ─── View Hooks Registry (modules register here) ─────────
+window._viewHooks = window._viewHooks || [];
+
 // Navigation
 window.switchView = (viewName) => {
     // Hide all views
@@ -75,8 +78,6 @@ window.switchView = (viewName) => {
     // Show selected
     const target = document.getElementById(`view-${viewName}`);
     if (target) {
-        // Check if view uses flexbox (inline style or class logic could go here)
-        // Since we set flex-direction inline in HTML for some views, we check that.
         if (target.style.flexDirection || target.classList.contains('flex-view')) {
             target.style.display = 'flex';
         } else {
@@ -86,7 +87,6 @@ window.switchView = (viewName) => {
 
     // Update Sidebar
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-    // Find link with matching onclick (simple heuristic for now)
     const link = Array.from(document.querySelectorAll('.nav-item')).find(el => el.getAttribute('onclick')?.includes(viewName));
     if (link) link.classList.add('active');
 
@@ -123,7 +123,44 @@ window.switchView = (viewName) => {
         'consultaDevolucao': 'Consulta Devolução de Cliente',
         'consultaPedidos': 'Consulta Pedidos de Venda',
         'biVendas': 'Inteligência de Vendas',
-        'biFinanceiro': 'Painel Financeiro'
+        'biFinanceiro': 'Painel Financeiro',
+        // ── Fase 12 — Novos títulos ──
+        'vendedores': 'Vendedores / RCA',
+        'transportadoras': 'Transportadoras',
+        'marcas': 'Marcas',
+        'regioes': 'Regiões / Praças',
+        'rotas': 'Rotas',
+        'tabelasPreco': 'Tabelas de Preço',
+        'sugestaoCompra': 'Sugestão de Compra',
+        'pedidoCompra': 'Pedido de Compra',
+        'cotacao': 'Cotação',
+        'entradaNf': 'Entrada NF / XML',
+        'consultaEntradas': 'Consulta de Entradas',
+        'posicaoEstoque': 'Posição de Estoque',
+        'ajusteEstoque': 'Ajuste de Estoque',
+        'transferenciaEstoque': 'Transferência de Estoque',
+        'inventario': 'Inventário',
+        'giroEstoque': 'Giro / Cobertura de Estoque',
+        'localizacao': 'Localização / WMS',
+        'reclassificacao': 'Reclassificação',
+        'orcamento': 'Orçamento',
+        'faturamento': 'Faturamento / NF-e',
+        'liberacaoCredito': 'Liberação de Crédito',
+        'romaneio': 'Romaneio de Carga',
+        'comissoes': 'Comissões',
+        'fluxoCaixa': 'Fluxo de Caixa',
+        'boletos': 'Boletos',
+        'conciliacao': 'Conciliação Bancária',
+        'inadimplencia': 'Inadimplência',
+        'cte': 'CT-e — Conhec. de Transporte',
+        'apuracaoIcms': 'Apuração ICMS / IPI',
+        'spedFiscal': 'SPED Fiscal',
+        'spedContribuicoes': 'SPED Contribuições',
+        'livrosFiscais': 'Livros Fiscais',
+        'dashboardExecutivo': 'Dashboard Executivo',
+        'curvaAbc': 'Curva ABC',
+        'analiseMargem': 'Análise de Margem',
+        'indicadores': 'Indicadores KPIs'
     };
     document.getElementById('pageTitle').textContent = titles[viewName] || 'ERP';
 
@@ -135,8 +172,17 @@ window.switchView = (viewName) => {
     // Cadastros Financeiros/Fiscais
     if (viewName === 'groups' && typeof renderGruposGrid === 'function') renderGruposGrid();
 
+    // Cadastros Comerciais (Fase 12.1)
+    if (typeof CadComercial !== 'undefined' && CadComercial.renderEntity) {
+        const cadEntities = ['vendedores', 'transportadoras', 'marcas', 'regioes', 'rotas', 'tabelasPreco'];
+        if (cadEntities.includes(viewName)) CadComercial.renderEntity(viewName);
+    }
+
     // Dashboard
     if (viewName === 'dashboard') renderDashboard();
+
+    // ── Fire registered view hooks ──
+    window._viewHooks.forEach(fn => { try { fn(viewName); } catch (e) { console.warn('viewHook error:', e); } });
 };
 
 // --- Product Modal Logic ---

@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "2.18.0",
-    "date": "2026-02-16",
-    "last_change": "Módulo de Inteligência de Negócio (BI) - Vendas e Financeiro",
-    "build": "20260216.01"
+    "version": "3.0.0",
+    "date": "2026-02-19",
+    "last_change": "Fase 12 — Reestruturação Sidebar + Cadastros Comerciais (Modelo Acontec)",
+    "build": "20260219.01"
 }

@@ -36,8 +36,7 @@
                     <span>Visão Geral</span>
                 </a>
 
-
-                <!-- Cadastros - Menu Principal com 3 níveis -->
+                <!-- ═══ CADASTROS ═══ -->
                 <div class="nav-group">
                     <a class="nav-item" onclick="toggleSubmenu('sub-cadastros')">
                         <span class="material-icons-round">folder_shared</span>
@@ -46,8 +45,6 @@
                             style="font-size:1.2rem; margin-left:auto;">expand_more</span>
                     </a>
                     <div id="sub-cadastros" class="nav-submenu">
-
-                        <!-- 2º Nível: Gerais -->
                         <div class="nav-sublevel-title">Gerais</div>
                         <a class="nav-sub-item" onclick="switchView('products')">
                             <span class="material-icons-round"
@@ -66,23 +63,48 @@
                                 style="font-size:1rem; margin-right:0.5rem;">badge</span>Funcionários
                         </a>
 
-                        <!-- 2º Nível: Financeiro -->
-                        <div class="nav-sublevel-title">Financeiro</div>
+                        <div class="nav-sublevel-title">Comercial</div>
+                        <a class="nav-sub-item" onclick="switchView('vendedores')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">support_agent</span>Vendedores / RCA
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('transportadoras')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">airport_shuttle</span>Transportadoras
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('marcas')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">branding_watermark</span>Marcas
+                        </a>
                         <a class="nav-sub-item" onclick="switchView('groups')">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">folder</span>Grupos
                         </a>
+                        <a class="nav-sub-item" onclick="switchView('regioes')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">public</span>Regiões / Praças
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('rotas')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">route</span>Rotas
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('tabelasPreco')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">sell</span>Tabelas de Preço
+                        </a>
+
+                        <div class="nav-sublevel-title">Financeiro</div>
                         <a class="nav-sub-item" onclick="switchView('accountPlans')">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">account_tree</span>Plano de Contas
                         </a>
-                        <a class="nav-sub-item" onclick="switchView('billing')">
-                            <span class="material-icons-round"
-                                style="font-size:1rem; margin-right:0.5rem;">receipt_long</span>Cobrança
-                        </a>
                         <a class="nav-sub-item" onclick="switchView('paymentPlans')">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">calendar_month</span>Planos de Pagto
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('billing')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">receipt_long</span>Cobrança
                         </a>
                         <a class="nav-sub-item" onclick="switchView('banks')">
                             <span class="material-icons-round"
@@ -93,7 +115,6 @@
                                 style="font-size:1rem; margin-right:0.5rem;">point_of_sale</span>PDV
                         </a>
 
-                        <!-- 2º Nível: Fiscal -->
                         <div class="nav-sublevel-title">Fiscal</div>
                         <a class="nav-sub-item" onclick="switchView('cfop')">
                             <span class="material-icons-round"
@@ -116,6 +137,79 @@
 
                 <div class="nav-divider">OPERAÇÕES</div>
 
+                <!-- ═══ COMPRAS ═══ -->
+                <div class="nav-group">
+                    <a class="nav-item" onclick="toggleSubmenu('sub-compras')">
+                        <span class="material-icons-round">storefront</span>
+                        <span>Compras</span>
+                        <span class="material-icons-round ms-auto"
+                            style="font-size:1.2rem; margin-left:auto;">expand_more</span>
+                    </a>
+                    <div id="sub-compras" class="nav-submenu">
+                        <a class="nav-sub-item" onclick="switchView('sugestaoCompra')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">auto_awesome</span>Sugestão de Compra
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('pedidoCompra')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">description</span>Pedido de Compra
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('cotacao')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">compare_arrows</span>Cotação
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('entradaNf')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">move_to_inbox</span>Entrada NF / XML
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('consultaEntradas')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">search</span>Consulta Entradas
+                        </a>
+                    </div>
+                </div>
+
+                <!-- ═══ ESTOQUE ═══ -->
+                <div class="nav-group">
+                    <a class="nav-item" onclick="toggleSubmenu('sub-estoque')">
+                        <span class="material-icons-round">warehouse</span>
+                        <span>Estoque</span>
+                        <span class="material-icons-round ms-auto"
+                            style="font-size:1.2rem; margin-left:auto;">expand_more</span>
+                    </a>
+                    <div id="sub-estoque" class="nav-submenu">
+                        <a class="nav-sub-item" onclick="switchView('posicaoEstoque')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">assessment</span>Posição de Estoque
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('ajusteEstoque')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">tune</span>Ajuste de Estoque
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('transferenciaEstoque')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">swap_horiz</span>Transferência
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('inventario')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">fact_check</span>Inventário
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('giroEstoque')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">autorenew</span>Giro / Cobertura
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('localizacao')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">pin_drop</span>Localização / WMS
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('reclassificacao')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">drive_file_rename_outline</span>Reclassificação
+                        </a>
+                    </div>
+                </div>
+
+                <!-- ═══ VENDAS ═══ -->
                 <div class="nav-group">
                     <a class="nav-item" onclick="toggleSubmenu('sub-vendas-op')">
                         <span class="material-icons-round">shopping_cart</span>
@@ -128,9 +222,11 @@
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">insights</span>Inteligência de Vendas
                         </a>
-                        <!-- Group 1: Emissão -->
                         <div class="nav-sublevel-title">Emissão</div>
-
+                        <a class="nav-sub-item" onclick="switchView('orcamento')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">request_quote</span>Orçamento
+                        </a>
                         <a class="nav-sub-item" onclick="switchView('sales')">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">receipt_long</span>Pedido de Venda
@@ -139,9 +235,16 @@
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">point_of_sale</span>Frente de Caixa
                         </a>
+                        <a class="nav-sub-item" onclick="switchView('faturamento')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">task_alt</span>Faturamento / NF-e
+                        </a>
 
-                        <!-- Group 2: Operações -->
                         <div class="nav-sublevel-title">Operações</div>
+                        <a class="nav-sub-item" onclick="switchView('liberacaoCredito')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">verified</span>Liberação de Crédito
+                        </a>
                         <a class="nav-sub-item" onclick="switchView('cancelamento')">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">cancel</span>Cancelamento
@@ -150,23 +253,31 @@
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">replay</span>Devolução
                         </a>
-
-                        <!-- Group 3: Consultas -->
-                        <div class="nav-sublevel-title">Consultas</div>
-                        <a class="nav-sub-item" onclick="switchView('consultaDevolucao')">
+                        <a class="nav-sub-item" onclick="switchView('romaneio')">
                             <span class="material-icons-round"
-                                style="font-size:1rem; margin-right:0.5rem;">manage_search</span>Consulta Devolução
+                                style="font-size:1rem; margin-right:0.5rem;">local_shipping</span>Romaneio de Carga
                         </a>
+
+                        <div class="nav-sublevel-title">Consultas</div>
                         <a class="nav-sub-item" onclick="switchView('consultaPedidos')">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">list_alt</span>Consulta Pedidos
                         </a>
+                        <a class="nav-sub-item" onclick="switchView('consultaDevolucao')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">manage_search</span>Consulta Devolução
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('comissoes')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">paid</span>Comissões
+                        </a>
                     </div>
                 </div>
 
+                <!-- ═══ LOGÍSTICA ═══ -->
                 <div class="nav-group">
                     <a class="nav-item" onclick="toggleSubmenu('sub-logistica')">
-                        <span class="material-icons-round">local_shipping</span>
+                        <span class="material-icons-round">conveyor_belt</span>
                         <span>Logística</span>
                         <span class="material-icons-round ms-auto"
                             style="font-size:1.2rem; margin-left:auto;">expand_more</span>
@@ -182,20 +293,8 @@
                         </a>
                     </div>
                 </div>
-                <div class="nav-group">
-                    <a class="nav-item" onclick="toggleSubmenu('sub-cadastros')">
-                        <span class="material-icons-round">folder_open</span>
-                        <span>Cadastros</span>
-                        <span class="material-icons-round ms-auto"
-                            style="font-size:1.2rem; margin-left:auto;">expand_more</span>
-                    </a>
-                    <div id="sub-cadastros" class="nav-submenu">
-                        <a class="nav-sub-item" onclick="switchView('cad-produtos'); renderProdutosGrid();">
-                            <span class="material-icons-round"
-                                style="font-size:1rem; margin-right:0.5rem;">inventory_2</span>Produtos
-                        </a>
-                    </div>
-                </div>
+
+                <!-- ═══ FINANCEIRO ═══ -->
                 <div class="nav-group">
                     <a class="nav-item" onclick="toggleSubmenu('sub-financeiro')">
                         <span class="material-icons-round">payments</span>
@@ -212,6 +311,7 @@
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">dashboard</span>Visão Geral
                         </a>
+                        <div class="nav-sublevel-title">Movimentações</div>
                         <a class="nav-sub-item" onclick="switchView('receber')">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">attach_money</span>Contas a Receber
@@ -220,6 +320,33 @@
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">money_off</span>Contas a Pagar
                         </a>
+                        <a class="nav-sub-item" onclick="switchView('fluxoCaixa')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">waterfall_chart</span>Fluxo de Caixa
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('boletos')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">confirmation_number</span>Boletos
+                        </a>
+                        <div class="nav-sublevel-title">Conciliação</div>
+                        <a class="nav-sub-item" onclick="switchView('conciliacao')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">sync_alt</span>Conciliação Bancária
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('bank-integration')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">account_balance</span>Integração Bancária
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('inadimplencia')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">warning</span>Inadimplência
+                        </a>
+                        <div class="nav-sublevel-title">Operações</div>
+                        <a class="nav-sub-item" onclick="switchView('acertoCaixaLista')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">point_of_sale</span>Acerto de Caixa
+                        </a>
+                        <div class="nav-sublevel-title">Relatórios</div>
                         <a class="nav-sub-item" onclick="switchView('relatorios-gerenciais')">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">bar_chart</span>Relatórios Gerenciais
@@ -228,16 +355,10 @@
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">trending_up</span>Desempenho RCA
                         </a>
-                        <a class="nav-sub-item" onclick="switchView('bank-integration')">
-                            <span class="material-icons-round"
-                                style="font-size:1rem; margin-right:0.5rem;">account_balance</span>Integração Bancária
-                        </a>
-                        <a class="nav-sub-item" onclick="switchView('acertoCaixaLista')">
-                            <span class="material-icons-round"
-                                style="font-size:1rem; margin-right:0.5rem;">point_of_sale</span>Acerto de Caixa
-                        </a>
                     </div>
                 </div>
+
+                <!-- ═══ FISCAL ═══ -->
                 <div class="nav-group">
                     <a class="nav-item" onclick="toggleSubmenu('sub-fiscal-op')">
                         <span class="material-icons-round">gavel</span>
@@ -246,16 +367,63 @@
                             style="font-size:1.2rem; margin-left:auto;">expand_more</span>
                     </a>
                     <div id="sub-fiscal-op" class="nav-submenu">
+                        <div class="nav-sublevel-title">NF-e</div>
                         <a class="nav-sub-item" onclick="switchView('nfeTransmissao')">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">send</span>Transmissão NF-e
                         </a>
+                        <a class="nav-sub-item" onclick="switchView('cte')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">local_shipping</span>CT-e
+                        </a>
+                        <div class="nav-sublevel-title">Apuração</div>
+                        <a class="nav-sub-item" onclick="switchView('apuracaoIcms')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">calculate</span>Apuração ICMS/IPI
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('spedFiscal')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">description</span>SPED Fiscal
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('spedContribuicoes')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">description</span>SPED Contribuições
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('livrosFiscais')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">menu_book</span>Livros Fiscais
+                        </a>
                     </div>
                 </div>
-                <a class="nav-item" onclick="switchView('purchases')">
-                    <span class="material-icons-round">storefront</span>
-                    <span>Compras</span>
-                </a>
+
+                <!-- ═══ GERENCIAL ═══ -->
+                <div class="nav-group">
+                    <a class="nav-item" onclick="toggleSubmenu('sub-gerencial')">
+                        <span class="material-icons-round">analytics</span>
+                        <span>Gerencial</span>
+                        <span class="material-icons-round ms-auto"
+                            style="font-size:1.2rem; margin-left:auto;">expand_more</span>
+                    </a>
+                    <div id="sub-gerencial" class="nav-submenu">
+                        <a class="nav-sub-item" onclick="switchView('dashboardExecutivo')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">speed</span>Dashboard Executivo
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('curvaAbc')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">stacked_bar_chart</span>Curva ABC
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('analiseMargem')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">pie_chart</span>Análise de Margem
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('indicadores')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">dashboard_customize</span>Indicadores KPIs
+                        </a>
+                    </div>
+                </div>
+
             </nav>
 
             <div class="sidebar-footer">
@@ -6358,6 +6526,241 @@
             </div>
         </div>
     </div>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- ═══ NOVAS VIEWS — Fase 12 (Modelo Acontec)             ═══ -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+
+    <!-- ─── Cadastros Comerciais ─── -->
+    <div id="view-vendedores" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">support_agent</span>
+            <h2>Vendedores / RCA</h2>
+        </div>
+        <div id="vendedores-container" class="crud-container"></div>
+    </div>
+    <div id="view-transportadoras" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">airport_shuttle</span>
+            <h2>Transportadoras</h2>
+        </div>
+        <div id="transportadoras-container" class="crud-container"></div>
+    </div>
+    <div id="view-marcas" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">branding_watermark</span>
+            <h2>Marcas</h2>
+        </div>
+        <div id="marcas-container" class="crud-container"></div>
+    </div>
+    <div id="view-regioes" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">public</span>
+            <h2>Regiões / Praças</h2>
+        </div>
+        <div id="regioes-container" class="crud-container"></div>
+    </div>
+    <div id="view-rotas" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">route</span>
+            <h2>Rotas</h2>
+        </div>
+        <div id="rotas-container" class="crud-container"></div>
+    </div>
+    <div id="view-tabelasPreco" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">sell</span>
+            <h2>Tabelas de Preço</h2>
+        </div>
+        <div id="tabelasPreco-container" class="crud-container"></div>
+    </div>
+
+    <!-- ─── Compras ─── -->
+    <div id="view-sugestaoCompra" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">auto_awesome</span>
+            <h2>Sugestão de Compra</h2>
+        </div>
+        <div id="sugestaoCompra-container" class="crud-container"></div>
+    </div>
+    <div id="view-pedidoCompra" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">description</span>
+            <h2>Pedido de Compra</h2>
+        </div>
+        <div id="pedidoCompra-container" class="crud-container"></div>
+    </div>
+    <div id="view-cotacao" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">compare_arrows</span>
+            <h2>Cotação</h2>
+        </div>
+        <div id="cotacao-container" class="crud-container"></div>
+    </div>
+    <div id="view-entradaNf" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">move_to_inbox</span>
+            <h2>Entrada NF / XML</h2>
+        </div>
+        <div id="entradaNf-container" class="crud-container"></div>
+    </div>
+    <div id="view-consultaEntradas" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">search</span>
+            <h2>Consulta de Entradas</h2>
+        </div>
+        <div id="consultaEntradas-container" class="crud-container"></div>
+    </div>
+
+    <!-- ─── Estoque ─── -->
+    <div id="view-posicaoEstoque" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">assessment</span>
+            <h2>Posição de Estoque</h2>
+        </div>
+        <div id="posicaoEstoque-container" class="crud-container"></div>
+    </div>
+    <div id="view-ajusteEstoque" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">tune</span>
+            <h2>Ajuste de Estoque</h2>
+        </div>
+        <div id="ajusteEstoque-container" class="crud-container"></div>
+    </div>
+    <div id="view-transferenciaEstoque" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">swap_horiz</span>
+            <h2>Transferência de Estoque</h2>
+        </div>
+        <div id="transferenciaEstoque-container" class="crud-container"></div>
+    </div>
+    <div id="view-inventario" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">fact_check</span>
+            <h2>Inventário</h2>
+        </div>
+        <div id="inventario-container" class="crud-container"></div>
+    </div>
+    <div id="view-giroEstoque" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">autorenew</span>
+            <h2>Giro / Cobertura de Estoque</h2>
+        </div>
+        <div id="giroEstoque-container" class="crud-container"></div>
+    </div>
+    <div id="view-localizacao" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">pin_drop</span>
+            <h2>Localização / WMS</h2>
+        </div>
+        <div id="localizacao-container" class="crud-container"></div>
+    </div>
+    <div id="view-reclassificacao" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">drive_file_rename_outline</span>
+            <h2>Reclassificação</h2>
+        </div>
+        <div id="reclassificacao-container" class="crud-container"></div>
+    </div>
+
+    <!-- ─── Vendas Expandido ─── -->
+    <div id="view-orcamento" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">request_quote</span>
+            <h2>Orçamento</h2>
+        </div>
+        <div id="orcamento-container" class="crud-container"></div>
+    </div>
+    <div id="view-faturamento" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">task_alt</span>
+            <h2>Faturamento / NF-e</h2>
+        </div>
+        <div id="faturamento-container" class="crud-container"></div>
+    </div>
+    <div id="view-liberacaoCredito" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">verified</span>
+            <h2>Liberação de Crédito</h2>
+        </div>
+        <div id="liberacaoCredito-container" class="crud-container"></div>
+    </div>
+    <div id="view-romaneio" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">local_shipping</span>
+            <h2>Romaneio de Carga</h2>
+        </div>
+        <div id="romaneio-container" class="crud-container"></div>
+    </div>
+    <div id="view-comissoes" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">paid</span>
+            <h2>Comissões</h2>
+        </div>
+        <div id="comissoes-container" class="crud-container"></div>
+    </div>
+
+    <!-- ─── Financeiro Expandido ─── -->
+    <div id="view-fluxoCaixa" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">waterfall_chart</span>
+            <h2>Fluxo de Caixa</h2>
+        </div>
+        <div id="fluxoCaixa-container" class="crud-container"></div>
+    </div>
+    <div id="view-boletos" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">confirmation_number</span>
+            <h2>Boletos</h2>
+        </div>
+        <div id="boletos-container" class="crud-container"></div>
+    </div>
+    <div id="view-conciliacao" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">sync_alt</span>
+            <h2>Conciliação Bancária</h2>
+        </div>
+        <div id="conciliacao-container" class="crud-container"></div>
+    </div>
+    <div id="view-inadimplencia" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">warning</span>
+            <h2>Inadimplência</h2>
+        </div>
+        <div id="inadimplencia-container" class="crud-container"></div>
+    </div>
+
+    <!-- ─── Fiscal Expandido ─── -->
+    <div id="view-cte" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">local_shipping</span>
+            <h2>CT-e — Conhec. Transporte</h2>
+        </div>
+        <div id="cte-container" class="crud-container"></div>
+    </div>
+    <div id="view-apuracaoIcms" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">calculate</span>
+            <h2>Apuração ICMS / IPI</h2>
+        </div>
+        <div id="apuracaoIcms-container" class="crud-container"></div>
+    </div>
+    <div id="view-spedFiscal" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">description</span>
+            <h2>SPED Fiscal</h2>
+        </div>
+        <div id="spedFiscal-container" class="crud-container"></div>
+    </div>
+    <div id="view-spedContribuicoes" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">description</span>
+            <h2>SPED Contribuições</h2>
+        </div>
+        <div id="spedContribuicoes-container" class="crud-container"></div>
+    </div>
+    <div id="view-livrosFiscais" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">menu_book</span>
+            <h2>Livros Fiscais</h2>
+        </div>
+        <div id="livrosFiscais-container" class="crud-container"></div>
+    </div>
+
+    <!-- ─── Gerencial ─── -->
+    <div id="view-dashboardExecutivo" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">speed</span>
+            <h2>Dashboard Executivo</h2>
+        </div>
+        <div id="dashboardExecutivo-container" class="crud-container"></div>
+    </div>
+    <div id="view-curvaAbc" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">stacked_bar_chart</span>
+            <h2>Curva ABC</h2>
+        </div>
+        <div id="curvaAbc-container" class="crud-container"></div>
+    </div>
+    <div id="view-analiseMargem" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">pie_chart</span>
+            <h2>Análise de Margem</h2>
+        </div>
+        <div id="analiseMargem-container" class="crud-container"></div>
+    </div>
+    <div id="view-indicadores" class="page-content" style="display:none">
+        <div class="view-header-bar"><span class="material-icons-round">dashboard_customize</span>
+            <h2>Indicadores KPIs</h2>
+        </div>
+        <div id="indicadores-container" class="crud-container"></div>
+    </div>
+
     </main>
 
     <!-- Scripts -->
@@ -6369,18 +6772,25 @@
 
     <script src="js/cnpj-lookup.js"></script>
     <script src="js/cadastros.js"></script>
+    <script src="js/cadastros_comerciais.js"></script>
     <script src="js/financeiro.js"></script>
     <script src="js/produtos.js"></script>
     <script src="js/bank_integration.js"></script>
-    <script src="js/bi_vendas.js"></script> <!-- New BI Module -->
+    <script src="js/bi_vendas.js"></script>
     <script src="js/tax_engine.js"></script>
     <script src="js/nfe_xml.js"></script>
     <script src="js/relatorios_gerenciais.js"></script>
+    <script src="js/compras.js"></script>
+    <script src="js/estoque.js"></script>
+    <script src="js/vendas_avancado.js"></script>
+    <script src="js/financeiro_avancado.js"></script>
+    <script src="js/fiscal_avancado.js"></script>
+    <script src="js/gerencial.js"></script>
 
-    <script src="js/bi_financeiro.js"></script> <!-- New BI Financeiro -->
+    <script src="js/bi_financeiro.js"></script>
     <script src="js/nfe.js"></script>
     <script src="js/vendas.js"></script>
-    <script type="module" src="js/app.js?v=2.9.0"></script>
+    <script type="module" src="js/app.js?v=3.0.0"></script>
     <script src="js/relatorios_rca.js"></script>
 </body>
 
