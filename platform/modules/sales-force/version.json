@@ -1,8 +1,8 @@
 {
     "module": "module-sales-force",
     "name": "Força de Vendas PWA",
-    "version": "1.0.0",
-    "date": "2026-02-12",
-    "last_change": "PWA completo: Login, Dashboard, Clientes, Catálogo, Pedidos, Metas, Roteiro",
-    "build": "20260212.01"
+    "version": "2.0.0",
+    "date": "2026-02-19",
+    "last_change": "FV 2.0: Dashboard CRM 6 KPIs, Pedidos Pipeline 7-status, Clientes Detail 4-tabs, Novo Pedido 3-step, Sync Total/Setorial",
+    "build": "20260219.01"
 }
