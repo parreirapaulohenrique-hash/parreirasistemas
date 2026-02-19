@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fv-v3';
+const CACHE_NAME = 'fv-v4';
 const ASSETS = [
     './',
     './index.html',

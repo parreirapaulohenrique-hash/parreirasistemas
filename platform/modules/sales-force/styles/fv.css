@@ -1,5 +1,5 @@
 /* ===========================================
-   Força de Vendas 2.0 PWA - Stylesheet
+   Força de Vendas 2.1 PWA - Stylesheet
    =========================================== */
 
 :root {
@@ -1513,4 +1513,105 @@ textarea.form-control {
     .card-cliente {
         max-width: 480px;
     }
+}
+
+/* ===========================================
+   v2.1 — Meta Vendedor, Sync Queue, Form Row
+   =========================================== */
+
+/* Meta progress bar */
+.meta-card {
+    border-left: 3px solid var(--primary);
+}
+
+.meta-progress-bar {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.meta-progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+    min-width: 2px;
+}
+
+/* Sync queue badge (dashboard title) */
+.sync-queue-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--warning);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-left: auto;
+    vertical-align: middle;
+    animation: pulse-queue 2s infinite;
+}
+
+@keyframes pulse-queue {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Sync queue count in sync page */
+.sync-queue-count {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    padding: 2px 10px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.sync-queue-count.has-items {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--warning);
+}
+
+/* Sync queue info card */
+.sync-queue-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.sync-queue-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+}
+
+/* Form row (side by side) */
+.form-row {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+/* Alert warning inline */
+.alert-warning {
+    font-size: 0.8rem;
+    color: var(--warning);
 }
