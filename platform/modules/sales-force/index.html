@@ -36,6 +36,9 @@
                     <span class="material-icons-round">login</span> Entrar
                 </button>
                 <div class="login-hint">Vendedor: <strong>32</strong> | Senha: <strong>1234</strong></div>
+                <div id="loginVersion"
+                    style="margin-top:1.5rem; font-size:0.7rem; color:rgba(255,255,255,0.3); text-align:center;">
+                    carregando versão...</div>
             </div>
         </div>
     </div>
@@ -86,6 +89,9 @@
                 <button class="drawer-item" onclick="doLogout()">
                     <span class="material-icons-round">logout</span> Sair
                 </button>
+                <div id="drawerVersion"
+                    style="margin-top:auto; padding:0.75rem 1rem; font-size:0.65rem; color:rgba(255,255,255,0.25); text-align:center; border-top:1px solid rgba(255,255,255,0.05);">
+                    ---</div>
             </div>
         </nav>
 
@@ -149,6 +155,14 @@
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').then(() => console.log('SW registered'));
         }
+        // Load version display
+        fetch('version.json?t=' + Date.now()).then(r => r.json()).then(v => {
+            const txt = `FV v${v.version} • ${v.date}`;
+            const el1 = document.getElementById('loginVersion');
+            const el2 = document.getElementById('drawerVersion');
+            if (el1) el1.textContent = txt;
+            if (el2) { el2.textContent = txt; el2.title = v.description || v.last_change || ''; }
+        }).catch(() => { });
     </script>
 </body>
 
