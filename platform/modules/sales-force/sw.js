@@ -1,8 +1,9 @@
-const CACHE_NAME = 'fv-v2';
+const CACHE_NAME = 'fv-v3';
 const ASSETS = [
     './',
     './index.html',
     './styles/fv.css',
+    './js/fv-db.js',
     './js/fv-core.js',
     './js/fv-screens.js',
     './manifest.json',

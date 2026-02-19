@@ -1,8 +1,17 @@
 {
-    "module": "module-sales-force",
-    "name": "Força de Vendas PWA",
-    "version": "2.0.0",
+    "module": "sales-force",
+    "name": "Força de Vendas",
+    "version": "2.1.0",
     "date": "2026-02-19",
-    "last_change": "FV 2.0: Dashboard CRM 6 KPIs, Pedidos Pipeline 7-status, Clientes Detail 4-tabs, Novo Pedido 3-step, Sync Total/Setorial",
-    "build": "20260219.01"
+    "description": "FV 2.1 — IndexedDB, multi-empresa, IPI, sync queue, Acontec alignment",
+    "changelog": [
+        "IndexedDB substitui localStorage (offline robusto)",
+        "Multi-empresa (codEmpresa em todas entidades)",
+        "IPI por produto e por item do pedido",
+        "Desconto máximo por produto e vendedor",
+        "Fila de sincronização offline (syncQueue)",
+        "Campos expandidos: cliente 29 campos, produto 21 campos",
+        "Meta do vendedor (valorMeta)",
+        "Migração automática localStorage → IndexedDB"
+    ]
 }
