@@ -338,9 +338,9 @@ window.openCNPJSearch = (context = 'client') => {
     });
 };
 
-let entities = [
-    { code: 1355, name: 'SIMAO MEIRELES FURTADO', fantasy: 'SF PECAS', cnpj: '52.352.619/0001-69', city: 'Belém/PA', seller: '32 - ABNAEL', status: 'active' },
-    { code: 1356, name: 'AUTO CENTER PARREIRA', fantasy: 'PARREIRA AUTO', cnpj: '00.000.000/0001-91', city: 'Ananindeua/PA', seller: '1 - INTERNO', status: 'active' }
+let entities = JSON.parse(localStorage.getItem('erp_clientes') || 'null') || [
+    { code: 1355, name: 'SIMAO MEIRELES FURTADO', fantasy: 'SF PECAS', cnpj: '52.352.619/0001-69', ie: '', tipoCliente: 'PJ', cidade: 'Belém', uf: 'PA', bairro: 'CENTRO', cep: '66000-000', endereco: 'Av. Nazaré, 100', telefone: '(91) 3000-0000', celular: '', email: '', comprador: '', seller: '32 - ABNAEL', grupo: 'A', rota: 1, praca: 'BELEM', regiao: 1, codEmpresa: '01', limiteTotal: 15000, limiteDisponivel: 8500, pedidoNaoFaturado: 6500, diasAtraso: 0, ultimaCompra: '2026-02-10', visita: '', bloqueado: false, status: 'ativo' },
+    { code: 1356, name: 'AUTO CENTER PARREIRA', fantasy: 'PARREIRA AUTO', cnpj: '00.000.000/0001-91', ie: '123456789', tipoCliente: 'PJ', cidade: 'Ananindeua', uf: 'PA', bairro: 'CENTRO', cep: '67030-000', endereco: 'Rod. Augusto Montenegro, km 8', telefone: '(91) 3255-0000', celular: '', email: '', comprador: '', seller: '1 - INTERNO', grupo: 'B', rota: 3, praca: 'BELEM', regiao: 3, codEmpresa: '01', limiteTotal: 8000, limiteDisponivel: 5000, pedidoNaoFaturado: 3000, diasAtraso: 0, ultimaCompra: '2026-02-15', visita: '', bloqueado: false, status: 'ativo' }
 ];
 
 window.renderEntities = (filter = '') => {
@@ -350,36 +350,89 @@ window.renderEntities = (filter = '') => {
     tbody.innerHTML = '';
 
     const filtered = entities.filter(e =>
-        e.name.toLowerCase().includes(filter.toLowerCase()) ||
-        e.fantasy.toLowerCase().includes(filter.toLowerCase()) ||
-        e.cnpj.includes(filter)
+        (e.name || '').toLowerCase().includes(filter.toLowerCase()) ||
+        (e.fantasy || '').toLowerCase().includes(filter.toLowerCase()) ||
+        (e.cnpj || '').includes(filter)
     );
 
     if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum cliente encontrado.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhum cliente encontrado.</td></tr>';
         return;
     }
 
     filtered.forEach(e => {
+        const limFmt = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        const statusClass = e.bloqueado ? 'status-overdue' : 'status-shipped';
+        const statusText = e.bloqueado ? 'BLOQUEADO' : (e.status === 'ativo' ? 'ATIVO' : 'INATIVO');
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td style="font-weight:600">${e.code}</td>
             <td>
                 <div style="font-weight:600; color:var(--text-primary)">${e.name}</div>
-                <div style="font-size:0.8rem; color:var(--text-secondary)">${e.fantasy}</div>
+                <div style="font-size:0.8rem; color:var(--text-secondary)">${e.fantasy || ''}</div>
             </td>
-            <td>${e.cnpj}</td>
-            <td>${e.city}</td>
-            <td><span class="status-badge status-pending" style="color:var(--primary-color)">${e.seller}</span></td>
-            <td><span class="status-badge status-shipped">ATIVO</span></td>
+            <td>${e.cnpj || ''}</td>
+            <td>${e.cidade || ''}/${e.uf || ''}</td>
+            <td style="text-align:right">${limFmt(e.limiteDisponivel)}</td>
+            <td><span class="status-badge status-pending" style="color:var(--primary-color)">${e.seller || ''}</span></td>
+            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
             <td style="text-align:right">
-                <button class="btn btn-secondary btn-icon" style="padding:0.4rem;">
+                <button class="btn btn-secondary btn-icon" style="padding:0.4rem;" onclick="editCliente(${e.code})">
                     <span class="material-icons-round" style="font-size:1rem;">edit</span>
                 </button>
             </td>
         `;
         tbody.appendChild(tr);
     });
+};
+
+// Export Clientes ERP → FV Format
+window.exportClientesParaFV = function () {
+    return entities.map(e => ({
+        id: e.code,
+        codigo: String(e.code),
+        cnpjCpf: e.cnpj || '',
+        tipoCliente: e.tipoCliente || 'PJ',
+        razaoSocial: e.name || '',
+        fantasia: e.fantasy || '',
+        nome: e.name || '',
+        nomeFantasia: e.fantasy || '',
+        inscEstadual: e.ie || '',
+        cidade: e.cidade || '',
+        bairro: e.bairro || '',
+        uf: e.uf || '',
+        cep: e.cep || '',
+        endereco: e.endereco || '',
+        telefone: e.telefone || '',
+        celular: e.celular || '',
+        email: e.email || '',
+        comprador: e.comprador || '',
+        rota: e.rota || 0,
+        praca: e.praca || '',
+        grupo: e.grupo || 'C',
+        regiao: e.regiao || 0,
+        status: e.status || 'ativo',
+        bloqueado: e.bloqueado || false,
+        limiteTotal: e.limiteTotal || 0,
+        limiteDisponivel: e.limiteDisponivel || 0,
+        pedidoNaoFaturado: e.pedidoNaoFaturado || 0,
+        diasAtraso: e.diasAtraso || 0,
+        ultimaCompra: e.ultimaCompra || '',
+        codEmpresa: e.codEmpresa || '01',
+        visita: e.visita || '',
+        flagNovo: 'N',
+        flagAlter: 'N',
+        sincronizar: 0
+    }));
+};
+
+// Editar cliente (placeholder — abre modal se existir)
+window.editCliente = function (code) {
+    const c = entities.find(e => e.code === code);
+    if (!c) return;
+    // For now just alert, full modal to be implemented in dedicated clientes.js
+    console.log('📝 Editar cliente:', c.name);
+    alert(`Editar: ${c.name} (${c.cnpj})\nLimite: R$ ${(c.limiteTotal || 0).toLocaleString('pt-BR')}\nDisp.: R$ ${(c.limiteDisponivel || 0).toLocaleString('pt-BR')}`);
 };
 
 // --- Suppliers Logic ---

@@ -487,4 +487,65 @@ window.addEventListener('wms-separacao-nova', (e) => {
 window.PedidoSchema = PedidoSchema;
 window.NFeSchema = NFeSchema;
 
-console.log('🔗 Módulo de Integrações ERP↔WMS inicializado');
+// ===========================================
+// 6. EXPORTAÇÕES ERP → FV (Sync Data)
+// ===========================================
+
+/**
+ * Planos de Pagamento ERP → FV
+ * Se não existir no ERP, usa defaults alinhados com FV
+ */
+window.exportPlanosParaFV = function () {
+    const planos = JSON.parse(localStorage.getItem('erp_planos_pagamento') || 'null') || [
+        { id: 1, nome: '30 dias', descPag: '30 DIAS', codigo: '30', especiePag: 'Cobrança Bancária', parcelas: 1, prazos: [30], precoDesc: 0, precoAcrec: 0, vlVendaMin: 0 },
+        { id: 2, nome: '30/60 dias', descPag: '30/60 DIAS', codigo: '30/60', especiePag: 'Cobrança Bancária', parcelas: 2, prazos: [30, 60], precoDesc: 0, precoAcrec: 0, vlVendaMin: 0 },
+        { id: 3, nome: '30/60/90 dias', descPag: '30/60/90 DIAS', codigo: '30/60/90', especiePag: 'Cobrança Bancária', parcelas: 3, prazos: [30, 60, 90], precoDesc: 0, precoAcrec: 0, vlVendaMin: 0 },
+        { id: 4, nome: 'À Vista', descPag: 'A VISTA', codigo: 'AV', especiePag: 'Dinheiro', parcelas: 1, prazos: [0], precoDesc: 3, precoAcrec: 0, vlVendaMin: 0 },
+        { id: 5, nome: '28 dias', descPag: '28 DIAS', codigo: '28', especiePag: 'Cobrança Bancária', parcelas: 1, prazos: [28], precoDesc: 0, precoAcrec: 0, vlVendaMin: 0 },
+        { id: 6, nome: '30/60/90/120 dias', descPag: '30/60/90/120 DIAS', codigo: '30/60/90/120', especiePag: 'Cobrança Bancária', parcelas: 4, prazos: [30, 60, 90, 120], precoDesc: 0, precoAcrec: 2, vlVendaMin: 500 }
+    ];
+    // Persistir defaults se não existiam
+    if (!localStorage.getItem('erp_planos_pagamento')) {
+        localStorage.setItem('erp_planos_pagamento', JSON.stringify(planos));
+    }
+    return planos;
+};
+
+/**
+ * Estoque ERP → FV (por SKU)
+ */
+window.exportEstoqueParaFV = function () {
+    const estoqueERP = JSON.parse(localStorage.getItem('erp_estoque') || '{}');
+    const produtos = JSON.parse(localStorage.getItem('erp_products') || '[]');
+
+    return produtos.map(p => {
+        const est = estoqueERP[p.sku] || {};
+        return {
+            sku: p.sku,
+            nome: p.nome,
+            estoqueAtual: est.estoqueAtual || 0,
+            reservado: est.reservado || 0,
+            disponivel: est.disponivel || est.estoqueAtual || 0,
+            custoMedio: est.custoMedio || p.custo || 0,
+            unidade: p.unidade || 'UN'
+        };
+    });
+};
+
+/**
+ * Transportadoras ERP → FV
+ */
+window.exportTransportadorasParaFV = function () {
+    const transportadoras = JSON.parse(localStorage.getItem('erp_transportadoras') || 'null') || [
+        { id: 1, nome: 'Transporte Rápido PA', uf: 'PA', tipo: 'TR' },
+        { id: 2, nome: 'Expresso Norte', uf: 'PA', tipo: 'TR' },
+        { id: 3, nome: 'Logística Amazônia', uf: 'PA', tipo: 'TR' },
+        { id: 4, nome: 'Retira (Cliente)', uf: '', tipo: 'CL' }
+    ];
+    if (!localStorage.getItem('erp_transportadoras')) {
+        localStorage.setItem('erp_transportadoras', JSON.stringify(transportadoras));
+    }
+    return transportadoras;
+};
+
+console.log('🔗 Módulo de Integrações ERP↔WMS↔FV inicializado');
