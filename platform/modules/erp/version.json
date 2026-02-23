@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "4.0.0",
+    "version": "5.0.0",
     "date": "2026-02-23",
-    "last_change": "Fase 4 — Vendas Expandido (Integração das Telas)",
-    "build": "20260223.01"
+    "last_change": "Fase 5 — Financeiro Expandido (Fluxo, Boletos, Conciliação, Inadimplência)",
+    "build": "20260223.02"
 }
