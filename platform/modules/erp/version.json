@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "5.0.0",
+    "version": "6.0.0",
     "date": "2026-02-23",
-    "last_change": "Fase 5 — Financeiro Expandido (Fluxo, Boletos, Conciliação, Inadimplência)",
-    "build": "20260223.02"
+    "last_change": "Fase 6 — Fiscal Expandido (CT-e, SPED, Apuração ICMS e Livros)",
+    "build": "20260223.03"
 }
