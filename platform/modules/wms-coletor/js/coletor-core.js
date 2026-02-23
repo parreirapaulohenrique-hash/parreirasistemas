@@ -1,4 +1,4 @@
-// WMS Coletor — Core Logic
+﻿// WMS Coletor — Core Logic
 // Navigation, Auth, Scanner, Shared Data Access
 
 const COLETOR_VERSION = '1.0.0';
@@ -133,7 +133,7 @@ document.addEventListener('keydown', (e) => {
 
 // ===== Home Stats =====
 function updateHomeStats() {
-    const locations = JSON.parse(localStorage.getItem('wms_mock_data') || '[]');
+    const locations = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const receipts = JSON.parse(localStorage.getItem('wms_receipts') || '[]');
 
     // Stats
@@ -157,12 +157,12 @@ function updateHomeStats() {
 
 // ===== Shared Data Helpers =====
 window.wmsData = {
-    getLocations: () => JSON.parse(localStorage.getItem('wms_mock_data') || '[]'),
-    saveLocations: (data) => localStorage.setItem('wms_mock_data', JSON.stringify(data)),
+    getLocations: () => JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]'),
+    saveLocations: (data) => localStorage.setItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(data)),
     getReceipts: () => JSON.parse(localStorage.getItem('wms_receipts') || '[]'),
     saveReceipts: (data) => localStorage.setItem('wms_receipts', JSON.stringify(data)),
     findLocation: (id) => {
-        const locs = JSON.parse(localStorage.getItem('wms_mock_data') || '[]');
+        const locs = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
         return locs.find(l => l.id === id);
     }
 };

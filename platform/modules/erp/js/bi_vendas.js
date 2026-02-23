@@ -1,12 +1,12 @@
-// Módulo de Inteligência de Vendas (BI)
+﻿// Módulo de Inteligência de Vendas (BI)
 // Focado em analisar dados locais de vendas e metas
 
 async function renderBiVendas() {
     console.log("Renderizando BI de Vendas...");
 
     // 1. Carregar Dados
-    const vendas = JSON.parse(localStorage.getItem('erp_vendas')) || [];
-    const produtos = JSON.parse(localStorage.getItem('erp_products')) || [];
+    const vendas = JSON.parse(localStorage.getItem('erp_vendas' + (window.getTenantSuffix ? window.getTenantSuffix() : ''))) || [];
+    const produtos = JSON.parse(localStorage.getItem('erp_products' + (window.getTenantSuffix ? window.getTenantSuffix() : ''))) || [];
     const clientes = JSON.parse(localStorage.getItem('erp_entities')) || [];
 
     // Filtrar apenas vendas concluídas/faturadas se houver status, por enquanto assumimos todas em 'erp_vendas' como válidas ou filtramos canceladas
@@ -115,7 +115,7 @@ function renderChartMix(vendas) {
 
     // Agrupar por Grupo/Categoria (Ex: 'grupo' do produto)
     // Precisamos cruzar com cadastro de produtos se a venda não tiver esse dado
-    const produtos = JSON.parse(localStorage.getItem('erp_products')) || [];
+    const produtos = JSON.parse(localStorage.getItem('erp_products' + (window.getTenantSuffix ? window.getTenantSuffix() : ''))) || [];
     const grupos = {};
 
     vendas.forEach(v => {

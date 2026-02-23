@@ -1,4 +1,4 @@
-// ===========================================
+﻿// ===========================================
 // WMS HEATMAP - MAPA DE CALOR
 // ===========================================
 
@@ -33,7 +33,7 @@ window.HeatmapManager = {
         // Add mock data if empty (to demonstrate)
         if (tasks.length === 0) {
             // Generate some fake "hot spots"
-            const allLocs = JSON.parse(localStorage.getItem('wms_mock_data') || '[]');
+            const allLocs = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
             allLocs.forEach(l => {
                 if (Math.random() > 0.7) {
                     const count = Math.floor(Math.random() * 50);
@@ -51,7 +51,7 @@ window.HeatmapManager = {
         if (!container) return;
 
         const { freq, max } = this.getHeatData();
-        const allLocs = JSON.parse(localStorage.getItem('wms_mock_data') || '[]');
+        const allLocs = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
 
         // Group hierarchy (same as locations.js)
         const hierarchy = {};

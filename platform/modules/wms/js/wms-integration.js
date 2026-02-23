@@ -1,4 +1,4 @@
-// =============================================================
+﻿// =============================================================
 // WMS Integration Layer — Multi-ERP Adapter Pattern
 // Camada de abstração para integração com ERPs externos.
 // O WMS opera de forma autônoma; conectores são opcionais.
@@ -84,7 +84,7 @@
         },
         async testConnection() {
             // Verifica se o ERP está carregado (window.erpModule existe)
-            const erpLoaded = typeof window.erpModule !== 'undefined' || localStorage.getItem('erp_products');
+            const erpLoaded = typeof window.erpModule !== 'undefined' || localStorage.getItem('erp_products' + (window.getTenantSuffix ? window.getTenantSuffix() : ''));
             return {
                 status: erpLoaded ? 'ok' : 'warning',
                 message: erpLoaded ? 'ERP Parreira detectado.' : 'ERP Parreira não detectado na sessão atual.'

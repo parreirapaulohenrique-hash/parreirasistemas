@@ -1,4 +1,4 @@
-// WMS Saída de Produtos - Outbound Flow
+﻿// WMS Saída de Produtos - Outbound Flow
 // sai-ondas: Wave formation
 // sai-separacao: Picking
 // sai-conferencia: Outbound conference
@@ -22,7 +22,7 @@ window.loadSaidaView = function (viewId) {
 // MOCK DATA
 // ========================
 function getPedidosMock() {
-    let pedidos = JSON.parse(localStorage.getItem('wms_pedidos') || 'null');
+    let pedidos = JSON.parse(localStorage.getItem('wms_pedidos' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || 'null');
     if (!pedidos) {
         pedidos = [
             {
@@ -50,7 +50,7 @@ function getPedidosMock() {
                 ], status: 'PENDENTE', created: new Date().toISOString()
             },
         ];
-        localStorage.setItem('wms_pedidos', JSON.stringify(pedidos));
+        localStorage.setItem('wms_pedidos' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(pedidos));
     }
     return pedidos;
 }
@@ -200,7 +200,7 @@ window.formarOnda = function () {
     const ondaId = `ONDA-${String(ondas.length + 1).padStart(3, '0')}`;
     ondas.push({ id: ondaId, pedidos: checked, totalItens, totalQtd, status: 'FORMADA', created: new Date().toISOString() });
 
-    localStorage.setItem('wms_pedidos', JSON.stringify(pedidos));
+    localStorage.setItem('wms_pedidos' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(pedidos));
     localStorage.setItem('wms_ondas', JSON.stringify(ondas));
     renderOndas(document.getElementById('view-dynamic'));
 };
@@ -253,7 +253,7 @@ window.liberarOnda = function (ondaId) {
     });
 
     localStorage.setItem('wms_ondas', JSON.stringify(ondas));
-    localStorage.setItem('wms_pedidos', JSON.stringify(pedidos));
+    localStorage.setItem('wms_pedidos' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(pedidos));
     localStorage.setItem('wms_picking', JSON.stringify(picking));
     renderOndas(document.getElementById('view-dynamic'));
 };

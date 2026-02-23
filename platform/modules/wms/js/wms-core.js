@@ -33,12 +33,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Sync Products from ERP Master on startup
         window.WmsIntegration.sync('products').then(res => {
             if (res.status === 'ok' && Array.isArray(res.data)) {
-                const cads = JSON.parse(localStorage.getItem('wms_cadastros') || '{}');
+                const cads = JSON.parse(localStorage.getItem('wms_cadastros' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
                 cads.produtos = res.data;
-                localStorage.setItem('wms_cadastros', JSON.stringify(cads));
+                localStorage.setItem('wms_cadastros' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(cads));
                 console.log('📦 Produtos sincronizados do ERP Master:', res.data.length);
             }
         });
+
+        // 🟢 Cloud Listener: Iniciar escuta de Novos Pedidos do ERP no Firebase
+        if (typeof firebase !== 'undefined' && user.tenant) {
+            console.log('📡 WMS Cloud Listener ativo para fila de Pedidos (Tenant: ' + user.tenant + ')');
+
+            const db = firebase.firestore();
+            db.collection('tenants').doc(user.tenant).collection('wms_pedidos')
+                .onSnapshot(snapshot => {
+                    let pedidosCloud = [];
+                    snapshot.forEach(doc => {
+                        pedidosCloud.push(doc.data());
+                    });
+
+                    // Atualizar o cache local blindado que alimenta a tela de "Ondas de Separação"
+                    localStorage.setItem('wms_pedidos' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(pedidosCloud));
+
+                    // Se a tela de picking estiver ativa, forçar re-render para mostrar imediato
+                    if (document.getElementById('view-picking') && document.getElementById('view-picking').style.display === 'block') {
+                        if (window.PickingManager && window.PickingManager.renderWavesGrid) {
+                            window.PickingManager.renderWavesGrid();
+                        }
+                    }
+                }, err => {
+                    console.error('Erro na escuta de Pedidos Cloud:', err);
+                });
+        }
     }
 
     // Start at dashboard

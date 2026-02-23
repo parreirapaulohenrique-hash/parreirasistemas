@@ -1,4 +1,4 @@
-// ===========================================
+﻿// ===========================================
 // ERP - GESTÃO DE PRODUTOS (MASTER)
 // ===========================================
 
@@ -187,7 +187,7 @@ window.newProduto = function () {
 // ===========================================
 window.exportProdutosParaFV = function () {
     const produtos = JSON.parse(localStorage.getItem(STORAGE_KEY_PRODUCTS) || '[]');
-    const estoqueERP = JSON.parse(localStorage.getItem('erp_estoque') || '{}');
+    const estoqueERP = JSON.parse(localStorage.getItem('erp_estoque' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
 
     return produtos.map(p => {
         const est = estoqueERP[p.sku] || {};

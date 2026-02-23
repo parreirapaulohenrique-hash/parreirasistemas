@@ -1,4 +1,4 @@
-// ===========================================
+﻿// ===========================================
 // Parreira ERP - Módulo de Integrações
 // Estruturas JSON para Pedidos/Notas Fiscais
 // + Listeners para Estoque WMS <-> ERP
@@ -106,7 +106,7 @@ const NFeSchema = {
  */
 window.pedidoParaNFe = function (pedido) {
     const user = JSON.parse(localStorage.getItem('platform_user_logged') || '{}');
-    const emitente = JSON.parse(localStorage.getItem('erp_empresa') || '{}');
+    const emitente = JSON.parse(localStorage.getItem('erp_empresa' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
 
     return {
         ...JSON.parse(JSON.stringify(NFeSchema)),
@@ -165,7 +165,7 @@ window.pedidoParaNFe = function (pedido) {
 };
 
 function gerarNumeroNFe() {
-    const nfes = JSON.parse(localStorage.getItem('erp_nfes') || '[]');
+    const nfes = JSON.parse(localStorage.getItem('erp_nfes' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     return nfes.length > 0 ? Math.max(...nfes.map(n => n.numero)) + 1 : 1;
 }
 
@@ -179,7 +179,7 @@ function gerarNumeroNFe() {
 window.onWmsRecebimento = function (recebimento) {
     console.log('🔄 WMS→ERP: Recebimento processado', recebimento);
 
-    const estoqueERP = JSON.parse(localStorage.getItem('erp_estoque') || '{}');
+    const estoqueERP = JSON.parse(localStorage.getItem('erp_estoque' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
 
     (recebimento.itens || []).forEach(item => {
         const key = item.sku || item.codigo;
@@ -198,7 +198,7 @@ window.onWmsRecebimento = function (recebimento) {
         }
     });
 
-    localStorage.setItem('erp_estoque', JSON.stringify(estoqueERP));
+    localStorage.setItem('erp_estoque' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(estoqueERP));
     console.log('✅ Estoque ERP atualizado via recebimento WMS');
 
     // Notificar outros módulos
@@ -214,9 +214,9 @@ window.onWmsRecebimento = function (recebimento) {
 window.onErpVendaFaturada = function (pedido) {
     console.log('🔄 ERP→WMS: Venda faturada, reservando estoque', pedido);
 
-    const estoqueERP = JSON.parse(localStorage.getItem('erp_estoque') || '{}');
-    const wmsPedidos = JSON.parse(localStorage.getItem('wms_pedidos') || '[]');
-    const wmsStock = JSON.parse(localStorage.getItem('wms_mock_data') || '{"addresses":[]}');
+    const estoqueERP = JSON.parse(localStorage.getItem('erp_estoque' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
+    const wmsPedidos = JSON.parse(localStorage.getItem('wms_pedidos' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+    const wmsStock = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{"addresses":[]}');
 
     // 1. Reserva no ERP
     (pedido.itens || []).forEach(item => {
@@ -228,45 +228,46 @@ window.onErpVendaFaturada = function (pedido) {
         estoqueERP[key].disponivel = estoqueERP[key].estoqueAtual - estoqueERP[key].reservado;
     });
 
-    // 2. Enviar para WMS (wms_pedidos)
-    const exists = wmsPedidos.find(wp => wp.id === `PED-${pedido.numero}`);
-    if (!exists) {
-        const newWmsOrder = {
-            id: `PED-${pedido.numero}`,
-            cliente: pedido.cliente?.razaoSocial || pedido.cliente?.favorito || 'Cliente ' + pedido.cliente?.codigo,
-            prioridade: pedido.prioridade || 'NORMAL',
-            itens: (pedido.itens || []).map(i => ({
-                sku: i.sku,
-                desc: i.descricao || i.nome,
-                qtd: i.quantidade,
-                endereco: 'A-00-00-00'
-            })),
-            status: 'PENDENTE',
-            created: new Date().toISOString()
-        };
-        wmsPedidos.push(newWmsOrder);
+    localStorage.setItem('erp_estoque' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(estoqueERP));
 
-        // 3. Reserva WMS (Físico)
-        (pedido.itens || []).forEach(item => {
-            let remaining = item.quantidade;
-            const candidates = wmsStock.addresses.filter(a => a.sku === item.sku && a.status === 'OCUPADO' && (a.qty - (a.reserved || 0)) > 0);
-            for (const addr of candidates) {
-                if (remaining <= 0) break;
-                const available = addr.qty - (addr.reserved || 0);
-                const take = Math.min(available, remaining);
-                addr.reserved = (addr.reserved || 0) + take;
-                remaining -= take;
+    // Dispara listener pra tela de vendas atualizar o cache local logo
+    window.dispatchEvent(new CustomEvent('estoque-atualizado', { detail: { origem: 'erp-venda', pedido: pedido.numero } }));
+
+    // 2. Enviar para WMS via Firebase Firestore
+    try {
+        const user = JSON.parse(localStorage.getItem('platform_user_logged'));
+        if (!user || !user.tenant) {
+            console.warn('WMS Integration Bypass: Sem tenant logado para sync cloud.');
+            return;
+        }
+
+        const db = firebase.firestore();
+        const wmsRef = db.collection('tenants').doc(user.tenant).collection('wms_pedidos').doc(`PED-${pedido.numero}`);
+
+        wmsRef.get().then(docSnapshot => {
+            if (!docSnapshot.exists) {
+                const newWmsOrder = {
+                    id: `PED-${pedido.numero}`,
+                    cliente: pedido.cliente?.razaoSocial || pedido.cliente?.favorito || 'Cliente ' + pedido.cliente?.codigo,
+                    prioridade: pedido.prioridade || 'NORMAL',
+                    itens: (pedido.itens || []).map(i => ({
+                        sku: i.sku,
+                        desc: i.descricao || i.nome,
+                        qtd: i.quantidade,
+                        endereco: 'A-00-00-00'
+                    })),
+                    status: 'PENDENTE',
+                    createdAt: new Date().toISOString()
+                };
+
+                wmsRef.set(newWmsOrder).then(() => {
+                    console.log(`✅ [Cloud] Pedido PED-${pedido.numero} enviado ao WMS no Firebase.`);
+                });
             }
         });
+    } catch (e) {
+        console.error('Erro ao enviar para WMS via Firebase:', e);
     }
-
-    localStorage.setItem('erp_estoque', JSON.stringify(estoqueERP));
-    localStorage.setItem('wms_pedidos', JSON.stringify(wmsPedidos));
-    localStorage.setItem('wms_mock_data', JSON.stringify(wmsStock));
-
-    console.log(`✅ Pedido PED-${pedido.numero} enviado ao WMS e estoque reservado.`);
-
-    window.dispatchEvent(new CustomEvent('estoque-atualizado', { detail: { origem: 'erp-venda', pedido: pedido.numero } }));
 };
 
 /**
@@ -391,7 +392,7 @@ window.onErpReceberPedidoFV = function (pedidoFV) {
     };
 
     // ─── Salvar no ERP Vendas ────────────────────────────
-    const vendas = JSON.parse(localStorage.getItem('erp_vendas') || '[]');
+    const vendas = JSON.parse(localStorage.getItem('erp_vendas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const existIdx = vendas.findIndex(v => v.numero === pedidoERP.numero);
     if (existIdx > -1) {
         vendas[existIdx] = pedidoERP;
@@ -400,7 +401,7 @@ window.onErpReceberPedidoFV = function (pedidoFV) {
         vendas.push(pedidoERP);
         console.log('✅ Pedido FV inserido no ERP:', pedidoERP.numero);
     }
-    localStorage.setItem('erp_vendas', JSON.stringify(vendas));
+    localStorage.setItem('erp_vendas' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(vendas));
 
     // ─── Se status é 'venda' ou 'faturado', processar faturamento ──
     if (['venda', 'faturado', 'separado', 'despachado'].includes(pedidoERP.status)) {
@@ -416,7 +417,7 @@ window.onErpReceberPedidoFV = function (pedidoFV) {
 window.onWmsSeparacaoConcluida = function (separacao) {
     console.log('🔄 WMS→ERP: Separação concluída', separacao);
 
-    const estoqueERP = JSON.parse(localStorage.getItem('erp_estoque') || '{}');
+    const estoqueERP = JSON.parse(localStorage.getItem('erp_estoque' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
 
     (separacao.itens || []).forEach(item => {
         const key = item.sku;
@@ -427,7 +428,7 @@ window.onWmsSeparacaoConcluida = function (separacao) {
         }
     });
 
-    localStorage.setItem('erp_estoque', JSON.stringify(estoqueERP));
+    localStorage.setItem('erp_estoque' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(estoqueERP));
     console.log('✅ Estoque ERP baixado após separação WMS');
 
     window.dispatchEvent(new CustomEvent('estoque-atualizado', { detail: { origem: 'wms-separacao', pedido: separacao.pedido } }));
@@ -439,7 +440,7 @@ window.onWmsSeparacaoConcluida = function (separacao) {
 window.onErpDevolucao = function (devolucao) {
     console.log('🔄 ERP: Devolução processada', devolucao);
 
-    const estoqueERP = JSON.parse(localStorage.getItem('erp_estoque') || '{}');
+    const estoqueERP = JSON.parse(localStorage.getItem('erp_estoque' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
 
     (devolucao.itens || []).forEach(item => {
         const key = item.sku;
@@ -450,10 +451,10 @@ window.onErpDevolucao = function (devolucao) {
         estoqueERP[key].disponivel = estoqueERP[key].estoqueAtual - estoqueERP[key].reservado;
     });
 
-    localStorage.setItem('erp_estoque', JSON.stringify(estoqueERP));
+    localStorage.setItem('erp_estoque' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(estoqueERP));
 
     // Gerar tarefa de armazenagem no WMS para itens devolvidos
-    const tarefasPutaway = JSON.parse(localStorage.getItem('wms_tarefas_putaway') || '[]');
+    const tarefasPutaway = JSON.parse(localStorage.getItem('wms_tarefas_putaway' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     (devolucao.itens || []).forEach(item => {
         tarefasPutaway.push({
             id: 'put_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
@@ -466,7 +467,7 @@ window.onErpDevolucao = function (devolucao) {
             createdAt: new Date().toISOString()
         });
     });
-    localStorage.setItem('wms_tarefas_putaway', JSON.stringify(tarefasPutaway));
+    localStorage.setItem('wms_tarefas_putaway' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(tarefasPutaway));
 
     console.log('✅ Estoque estornado e tarefas de putaway criadas para devolução');
     window.dispatchEvent(new CustomEvent('estoque-atualizado', { detail: { origem: 'erp-devolucao' } }));
@@ -496,7 +497,7 @@ window.NFeSchema = NFeSchema;
  * Se não existir no ERP, usa defaults alinhados com FV
  */
 window.exportPlanosParaFV = function () {
-    const planos = JSON.parse(localStorage.getItem('erp_planos_pagamento') || 'null') || [
+    const planos = JSON.parse(localStorage.getItem('erp_planos_pagamento' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || 'null') || [
         { id: 1, nome: '30 dias', descPag: '30 DIAS', codigo: '30', especiePag: 'Cobrança Bancária', parcelas: 1, prazos: [30], precoDesc: 0, precoAcrec: 0, vlVendaMin: 0 },
         { id: 2, nome: '30/60 dias', descPag: '30/60 DIAS', codigo: '30/60', especiePag: 'Cobrança Bancária', parcelas: 2, prazos: [30, 60], precoDesc: 0, precoAcrec: 0, vlVendaMin: 0 },
         { id: 3, nome: '30/60/90 dias', descPag: '30/60/90 DIAS', codigo: '30/60/90', especiePag: 'Cobrança Bancária', parcelas: 3, prazos: [30, 60, 90], precoDesc: 0, precoAcrec: 0, vlVendaMin: 0 },
@@ -505,8 +506,8 @@ window.exportPlanosParaFV = function () {
         { id: 6, nome: '30/60/90/120 dias', descPag: '30/60/90/120 DIAS', codigo: '30/60/90/120', especiePag: 'Cobrança Bancária', parcelas: 4, prazos: [30, 60, 90, 120], precoDesc: 0, precoAcrec: 2, vlVendaMin: 500 }
     ];
     // Persistir defaults se não existiam
-    if (!localStorage.getItem('erp_planos_pagamento')) {
-        localStorage.setItem('erp_planos_pagamento', JSON.stringify(planos));
+    if (!localStorage.getItem('erp_planos_pagamento' + (window.getTenantSuffix ? window.getTenantSuffix() : ''))) {
+        localStorage.setItem('erp_planos_pagamento' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(planos));
     }
     return planos;
 };
@@ -515,8 +516,8 @@ window.exportPlanosParaFV = function () {
  * Estoque ERP → FV (por SKU)
  */
 window.exportEstoqueParaFV = function () {
-    const estoqueERP = JSON.parse(localStorage.getItem('erp_estoque') || '{}');
-    const produtos = JSON.parse(localStorage.getItem('erp_products') || '[]');
+    const estoqueERP = JSON.parse(localStorage.getItem('erp_estoque' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
+    const produtos = JSON.parse(localStorage.getItem('erp_products' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
 
     return produtos.map(p => {
         const est = estoqueERP[p.sku] || {};
@@ -536,14 +537,14 @@ window.exportEstoqueParaFV = function () {
  * Transportadoras ERP → FV
  */
 window.exportTransportadorasParaFV = function () {
-    const transportadoras = JSON.parse(localStorage.getItem('erp_transportadoras') || 'null') || [
+    const transportadoras = JSON.parse(localStorage.getItem('erp_transportadoras' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || 'null') || [
         { id: 1, nome: 'Transporte Rápido PA', uf: 'PA', tipo: 'TR' },
         { id: 2, nome: 'Expresso Norte', uf: 'PA', tipo: 'TR' },
         { id: 3, nome: 'Logística Amazônia', uf: 'PA', tipo: 'TR' },
         { id: 4, nome: 'Retira (Cliente)', uf: '', tipo: 'CL' }
     ];
-    if (!localStorage.getItem('erp_transportadoras')) {
-        localStorage.setItem('erp_transportadoras', JSON.stringify(transportadoras));
+    if (!localStorage.getItem('erp_transportadoras' + (window.getTenantSuffix ? window.getTenantSuffix() : ''))) {
+        localStorage.setItem('erp_transportadoras' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(transportadoras));
     }
     return transportadoras;
 };

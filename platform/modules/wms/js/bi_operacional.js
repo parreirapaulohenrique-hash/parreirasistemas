@@ -1,4 +1,4 @@
-// ===========================================
+﻿// ===========================================
 // WMS - BI OPERACIONAL (Dashboard Gerencial)
 // ===========================================
 // KPIs: Ocupação, Recebimentos, Separações, Divergências
@@ -14,7 +14,7 @@ window.renderBiOperacional = function () {
     // ============================
     // 1. CARREGAR DADOS
     // ============================
-    const mockData = JSON.parse(localStorage.getItem('wms_mock_data') || '{}');
+    const mockData = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
     const receipts = JSON.parse(localStorage.getItem('wms_receipts') || '[]');
     const ondas = JSON.parse(localStorage.getItem('wms_ondas') || '[]');
     const waves = JSON.parse(localStorage.getItem('wms_waves') || '[]');

@@ -1,4 +1,4 @@
-
+﻿
 // Mock localStorage
 const localStorageMock = (function () {
     let store = {};
@@ -14,8 +14,8 @@ global.window = {};
 
 // --- 1. COPY STOCK MANAGER LOGIC (from estoque.js) ---
 window.StockManager = {
-    getData: () => JSON.parse(localStorage.getItem('wms_mock_data') || '{"addresses":[]}'),
-    saveData: (data) => localStorage.setItem('wms_mock_data', JSON.stringify(data)),
+    getData: () => JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{"addresses":[]}'),
+    saveData: (data) => localStorage.setItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(data)),
 
     add: function (sku, qty, locationId, desc = '', unit = 'UN') {
         const data = this.getData();
@@ -94,7 +94,7 @@ const initialData = {
         { id: 'A-02', status: 'LIVRE' }
     ]
 };
-localStorage.setItem('wms_mock_data', JSON.stringify(initialData));
+localStorage.setItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(initialData));
 
 console.log("=== STARTING WMS LOGIC TEST ===");
 

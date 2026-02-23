@@ -1,4 +1,4 @@
-// WMS Controle & Auditoria
+﻿// WMS Controle & Auditoria
 // aud-inventario: Cyclic inventory
 // est-transferencia: Address transfer
 // est-bloqueio: Block/quarantine
@@ -206,7 +206,7 @@ function renderInventarioCiclico(container) {
 }
 
 window.criarInventario = function () {
-    const mockData = JSON.parse(localStorage.getItem('wms_mock_data') || '{}');
+    const mockData = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
     const addresses = mockData.addresses || [];
 
     // Pick random 5 addresses or use defaults

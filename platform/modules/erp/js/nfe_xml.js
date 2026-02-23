@@ -1,4 +1,4 @@
-// ===========================================
+﻿// ===========================================
 // GERADOR DE XML NF-e 4.0
 // ===========================================
 
@@ -8,7 +8,7 @@ window.generateNfeXml = function (notaId) {
     const nota = notas.find(n => n.id === notaId);
     if (!nota) return 'ERRO: Nota não encontrada.';
 
-    const pedidos = JSON.parse(localStorage.getItem('erp_vendas') || '[]');
+    const pedidos = JSON.parse(localStorage.getItem('erp_vendas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const pedido = pedidos.find(p => p.id === nota.pedido || p.numero === nota.pedido); // Support ID or Number
 
     // If no order linked, use mock items
@@ -22,7 +22,7 @@ window.generateNfeXml = function (notaId) {
         ];
     }
 
-    const clientes = JSON.parse(localStorage.getItem('erp_clientes') || '[]');
+    const clientes = JSON.parse(localStorage.getItem('erp_clientes' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     // Mock client search if code exists
     const cliente = clientes.find(c => c.codigo == nota.codCliente) || {
         razaoSocial: nota.cliente,
@@ -47,7 +47,7 @@ window.generateNfeXml = function (notaId) {
     };
 
     // Products Master (for Tax Info)
-    const produtosMaster = JSON.parse(localStorage.getItem('erp_products') || '[]');
+    const produtosMaster = JSON.parse(localStorage.getItem('erp_products' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
 
     // 2. Build XML
     let xml = `<?xml version="1.0" encoding="UTF-8"?>

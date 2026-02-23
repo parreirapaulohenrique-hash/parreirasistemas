@@ -1,4 +1,4 @@
-// ===========================================
+﻿// ===========================================
 // Parreira ERP - Módulo de Vendas
 // ===========================================
 
@@ -64,9 +64,9 @@ window.gravarVenda = function () {
     }
 
     // Salvar no localStorage/Firebase
-    const vendas = JSON.parse(localStorage.getItem('erp_vendas') || '[]');
+    const vendas = JSON.parse(localStorage.getItem('erp_vendas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     vendas.push({ ...vendaAtual, dataGravacao: new Date().toISOString() });
-    localStorage.setItem('erp_vendas', JSON.stringify(vendas));
+    localStorage.setItem('erp_vendas' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(vendas));
 
     // Gerar Contas a Receber (Mock 30 dias)
     // TODO: Usar Condição de Pagamento real quando implementada
@@ -134,7 +134,7 @@ window.buscarProduto = function () {
     }
 
     // Simular busca de produto
-    const produtos = JSON.parse(localStorage.getItem('erp_products') || '[]');
+    const produtos = JSON.parse(localStorage.getItem('erp_products' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const produto = produtos.find(p => p.sku === cod || p.id === cod);
 
     if (produto) {
@@ -257,7 +257,7 @@ window.mostrarParcelas = function () {
 
 // Gerar número de venda
 function gerarNumeroVenda() {
-    const vendas = JSON.parse(localStorage.getItem('erp_vendas') || '[]');
+    const vendas = JSON.parse(localStorage.getItem('erp_vendas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     return vendas.length + 1;
 }
 
@@ -306,7 +306,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // Buscar pedidos para cancelamento
 window.buscarPedidosCancelamento = function () {
-    const vendas = JSON.parse(localStorage.getItem('erp_vendas') || '[]');
+    const vendas = JSON.parse(localStorage.getItem('erp_vendas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
 
     // Mock data para demonstração
     const mockData = [
@@ -409,7 +409,7 @@ window.adicionarItemPdv = function () {
     }
 
     // Buscar produto (mock para demonstração)
-    const produtos = JSON.parse(localStorage.getItem('erp_products') || '[]');
+    const produtos = JSON.parse(localStorage.getItem('erp_products' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     let produto = produtos.find(p => p.sku === codigo || p.codigoBarras === codigo);
 
     // Mock se não encontrar

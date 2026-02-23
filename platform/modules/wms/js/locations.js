@@ -1,4 +1,4 @@
-// WMS Addressing (Locations) Logic
+﻿// WMS Addressing (Locations) Logic
 
 let locationsState = {
     gridData: [],
@@ -7,7 +7,7 @@ let locationsState = {
 
 // --- Dashboard Stats ---
 window.updateDashboardStats = function () {
-    const data = JSON.parse(localStorage.getItem('wms_mock_data') || '[]');
+    const data = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const el = (id) => document.getElementById(id);
     if (el('statTotal')) el('statTotal').textContent = data.length;
     if (el('statLivres')) el('statLivres').textContent = data.filter(x => x.status === 'LIVRE').length;
@@ -165,7 +165,7 @@ window.loadLocationsView = async function () {
 
 // ... loadLocationsData (unchanged) ...
 window.loadLocationsData = function () {
-    const stored = localStorage.getItem('wms_mock_data');
+    const stored = localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : ''));
     if (stored) {
         locationsState.gridData = JSON.parse(stored);
     } else {
@@ -220,7 +220,7 @@ window.generateLocations = async function () {
     const posicoes = parseInt(document.getElementById('genPosicoes').value);
 
     let newLocs = [];
-    let existing = JSON.parse(localStorage.getItem('wms_mock_data') || '[]');
+    let existing = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const existingIds = new Set(existing.map(l => l.id));
     let duplicates = 0;
 
@@ -249,7 +249,7 @@ window.generateLocations = async function () {
     }
 
     existing = [...existing, ...newLocs];
-    localStorage.setItem('wms_mock_data', JSON.stringify(existing));
+    localStorage.setItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(existing));
 
     locationsState.gridData = existing;
     filterGrid();
@@ -488,7 +488,7 @@ window.showLocationActions = function (id) {
 }
 
 window.toggleBlock = function (id) {
-    let data = JSON.parse(localStorage.getItem('wms_mock_data') || '[]');
+    let data = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const loc = data.find(x => x.id === id);
     if (!loc) return;
 
@@ -501,7 +501,7 @@ window.toggleBlock = function (id) {
         return;
     }
 
-    localStorage.setItem('wms_mock_data', JSON.stringify(data));
+    localStorage.setItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(data));
     locationsState.gridData = data;
     filterGrid();
     updateDashboardStats();
@@ -510,9 +510,9 @@ window.toggleBlock = function (id) {
 window.deleteLocation = function (id) {
     if (!confirm(`Excluir endereço ${id}?`)) return;
 
-    let data = JSON.parse(localStorage.getItem('wms_mock_data') || '[]');
+    let data = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     data = data.filter(x => x.id !== id);
-    localStorage.setItem('wms_mock_data', JSON.stringify(data));
+    localStorage.setItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(data));
     locationsState.gridData = data;
     filterGrid();
     updateDashboardStats();

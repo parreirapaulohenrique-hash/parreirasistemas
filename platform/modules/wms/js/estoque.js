@@ -1,4 +1,4 @@
-// WMS Estoque - Stock queries
+﻿// WMS Estoque - Stock queries
 // est-consulta: Search by SKU/description
 // est-endereco: Search by address
 
@@ -15,9 +15,9 @@ window.loadEstoqueView = function (viewId) {
 
 // --- Stock Manager (Persistence Layer) ---
 window.StockManager = {
-    getData: () => JSON.parse(localStorage.getItem('wms_mock_data') || '{"addresses":[]}'),
+    getData: () => JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{"addresses":[]}'),
 
-    saveData: (data) => localStorage.setItem('wms_mock_data', JSON.stringify(data)),
+    saveData: (data) => localStorage.setItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(data)),
 
     // Log Transaction (Kardex)
     logTransaction: function (type, sku, qty, doc, reason) {
@@ -291,7 +291,7 @@ window.filterEstoque = function () {
 
 // --- CONSULTA POR ENDEREÇO ---
 function renderConsultaEndereco(container) {
-    const mockData = JSON.parse(localStorage.getItem('wms_mock_data') || '{}');
+    const mockData = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
     const addresses = mockData.addresses || [];
     const stock = getMockStock();
 

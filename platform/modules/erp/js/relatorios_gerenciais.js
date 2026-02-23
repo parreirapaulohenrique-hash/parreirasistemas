@@ -1,4 +1,4 @@
-// ===========================================
+﻿// ===========================================
 // RELATÓRIOS GERENCIAIS
 // Curva ABC e DRE
 // ===========================================
@@ -10,7 +10,7 @@ window.renderCurvaABC = function () {
     const tbody = document.getElementById('abcTableBody');
     if (!tbody) return;
 
-    const vendas = JSON.parse(localStorage.getItem('erp_vendas') || '[]');
+    const vendas = JSON.parse(localStorage.getItem('erp_vendas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const produtoMap = {};
     let totalGeralVendas = 0;
 
@@ -68,8 +68,8 @@ window.renderDRE = function () {
     const dreBody = document.getElementById('dreTableBody');
     if (!dreBody) return;
 
-    const vendas = JSON.parse(localStorage.getItem('erp_vendas') || '[]');
-    const produtos = JSON.parse(localStorage.getItem('erp_products') || '[]');
+    const vendas = JSON.parse(localStorage.getItem('erp_vendas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+    const produtos = JSON.parse(localStorage.getItem('erp_products' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const despesas = JSON.parse(localStorage.getItem('erp_pagar') || '[]');
 
     // 1. Receita Bruta (Vendas Totais)

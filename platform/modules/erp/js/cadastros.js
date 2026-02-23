@@ -21,14 +21,27 @@ let cadastrosData = {};
 // ===========================================
 
 /**
+ * Retorna o sufixo baseado no tenant do usuário logado
+ */
+function getTenantSuffix() {
+    try {
+        const user = JSON.parse(localStorage.getItem('platform_user_logged'));
+        return user && user.tenant ? '_' + user.tenant : '';
+    } catch (e) {
+        return '';
+    }
+}
+
+/**
  * Inicializa o módulo de cadastros
  */
 window.initCadastros = function () {
     console.log('📋 Módulo de Cadastros inicializado');
 
     // Carregar dados do localStorage para cada coleção
+    const suffix = getTenantSuffix();
     Object.keys(COLLECTIONS).forEach(key => {
-        const stored = localStorage.getItem(`erp_${key}`);
+        const stored = localStorage.getItem(`erp_${key}${suffix}`);
         cadastrosData[key] = stored ? JSON.parse(stored) : [];
     });
 };
@@ -67,7 +80,8 @@ window.saveCadastro = function (collection, data, editId = null) {
     }
 
     // Persistir no localStorage
-    localStorage.setItem(`erp_${collection}`, JSON.stringify(cadastrosData[collection]));
+    const suffix = getTenantSuffix();
+    localStorage.setItem(`erp_${collection}${suffix}`, JSON.stringify(cadastrosData[collection]));
 
     // Tentar salvar no Firebase se disponível
     saveToFirebase(collection, cadastrosData[collection]);
@@ -108,7 +122,8 @@ window.deleteCadastro = function (collection, id) {
     if (!cadastrosData[collection]) return false;
 
     cadastrosData[collection] = cadastrosData[collection].filter(item => item.id !== id);
-    localStorage.setItem(`erp_${collection}`, JSON.stringify(cadastrosData[collection]));
+    const suffix = getTenantSuffix();
+    localStorage.setItem(`erp_${collection}${suffix}`, JSON.stringify(cadastrosData[collection]));
 
     // Tentar excluir do Firebase se disponível
     saveToFirebase(collection, cadastrosData[collection]);

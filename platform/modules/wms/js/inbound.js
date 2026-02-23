@@ -1,4 +1,4 @@
-// WMS Inbound (Recebimento) Logic
+﻿// WMS Inbound (Recebimento) Logic
 
 let inboundState = {
     receipts: [], // All receiving records
@@ -268,7 +268,7 @@ window.saveReceipt = function () {
     localStorage.setItem('wms_receipts', JSON.stringify(receipts));
 
     // Update location status if assigned
-    let locations = JSON.parse(localStorage.getItem('wms_mock_data') || '[]');
+    let locations = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     items.forEach(item => {
         if (item.location) {
             const loc = locations.find(l => l.id === item.location);
@@ -277,7 +277,7 @@ window.saveReceipt = function () {
             }
         }
     });
-    localStorage.setItem('wms_mock_data', JSON.stringify(locations));
+    localStorage.setItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(locations));
 
     closeReceiptModal();
     loadInboundData();

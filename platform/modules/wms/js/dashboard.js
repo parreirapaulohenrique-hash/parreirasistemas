@@ -1,4 +1,4 @@
-// WMS Dashboard - KPIs, Occupation Chart, Recent Movements
+﻿// WMS Dashboard - KPIs, Occupation Chart, Recent Movements
 // Renders into #view-dashboard
 
 window.loadDashboardView = function () {
@@ -6,7 +6,7 @@ window.loadDashboardView = function () {
     if (!container) return;
 
     // Get mock data
-    const mockData = JSON.parse(localStorage.getItem('wms_mock_data') || '{}');
+    const mockData = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
     const receipts = JSON.parse(localStorage.getItem('wms_receipts') || '[]');
     const addresses = mockData.addresses || [];
 

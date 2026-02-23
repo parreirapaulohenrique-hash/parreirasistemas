@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════════════════════
    Estoque — Parreira ERP (Fase 3)
    Posição, Ajuste, Transferência, Inventário, Giro/Cobertura
    ═══════════════════════════════════════════════════════════ */
@@ -14,7 +14,7 @@ const Estoque = (() => {
 
     const fmtMoney = v => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const fmtDate = d => d ? new Date(d).toLocaleDateString('pt-BR') : '-';
-    const getProducts = () => JSON.parse(localStorage.getItem('erp_products') || '[]');
+    const getProducts = () => JSON.parse(localStorage.getItem('erp_products' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const getEstoque = () => JSON.parse(localStorage.getItem(KEYS.estoque) || '{}');
     const saveEstoque = (est) => localStorage.setItem(KEYS.estoque, JSON.stringify(est));
 
@@ -425,7 +425,7 @@ const Estoque = (() => {
 
         const produtos = getProducts();
         const estoque = getEstoque();
-        const vendas = JSON.parse(localStorage.getItem('erp_vendas') || '[]');
+        const vendas = JSON.parse(localStorage.getItem('erp_vendas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
 
         const analise = produtos.map(p => {
             const e = estoque[p.sku] || {};

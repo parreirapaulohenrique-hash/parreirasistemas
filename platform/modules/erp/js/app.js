@@ -1,5 +1,13 @@
 // Parreira ERP Core Logic
 
+window.getTenantSuffix = function () {
+    try {
+        const user = JSON.parse(localStorage.getItem('platform_user_logged'));
+        return user && user.tenant ? '_' + user.tenant : '';
+    } catch (e) {
+        return '';
+    }
+};
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Parreira ERP Inicializado');
 
@@ -338,7 +346,7 @@ window.openCNPJSearch = (context = 'client') => {
     });
 };
 
-let entities = JSON.parse(localStorage.getItem('erp_clientes') || 'null') || [
+let entities = JSON.parse(localStorage.getItem('erp_clientes' + window.getTenantSuffix()) || 'null') || [
     { code: 1355, name: 'SIMAO MEIRELES FURTADO', fantasy: 'SF PECAS', cnpj: '52.352.619/0001-69', ie: '', tipoCliente: 'PJ', cidade: 'Belém', uf: 'PA', bairro: 'CENTRO', cep: '66000-000', endereco: 'Av. Nazaré, 100', telefone: '(91) 3000-0000', celular: '', email: '', comprador: '', seller: '32 - ABNAEL', grupo: 'A', rota: 1, praca: 'BELEM', regiao: 1, codEmpresa: '01', limiteTotal: 15000, limiteDisponivel: 8500, pedidoNaoFaturado: 6500, diasAtraso: 0, ultimaCompra: '2026-02-10', visita: '', bloqueado: false, status: 'ativo' },
     { code: 1356, name: 'AUTO CENTER PARREIRA', fantasy: 'PARREIRA AUTO', cnpj: '00.000.000/0001-91', ie: '123456789', tipoCliente: 'PJ', cidade: 'Ananindeua', uf: 'PA', bairro: 'CENTRO', cep: '67030-000', endereco: 'Rod. Augusto Montenegro, km 8', telefone: '(91) 3255-0000', celular: '', email: '', comprador: '', seller: '1 - INTERNO', grupo: 'B', rota: 3, praca: 'BELEM', regiao: 3, codEmpresa: '01', limiteTotal: 8000, limiteDisponivel: 5000, pedidoNaoFaturado: 3000, diasAtraso: 0, ultimaCompra: '2026-02-15', visita: '', bloqueado: false, status: 'ativo' }
 ];
@@ -550,7 +558,7 @@ window.filterEmployees = () => {
 // --- Dashboard Logic ---
 window.renderDashboard = function () {
     // 1. Produtos
-    const prods = JSON.parse(localStorage.getItem('erp_products') || '[]'); // Fallback if mocking used erp_products
+    const prods = JSON.parse(localStorage.getItem('erp_products' + window.getTenantSuffix()) || '[]'); // Fallback if mocking used erp_products
     const kpiProds = document.getElementById('kpiProdutosAtivos');
     // If erp_products is empty, maybe check products variable from app.js if it was used for mocking
     // But app.js defined 'let products = [...]' locally (line 179).
@@ -560,7 +568,7 @@ window.renderDashboard = function () {
     if (kpiProds) kpiProds.textContent = prods.length || (typeof products !== 'undefined' ? products.length : 0);
 
     // 2. Vendas
-    const vendas = JSON.parse(localStorage.getItem('erp_vendas') || '[]');
+    const vendas = JSON.parse(localStorage.getItem('erp_vendas' + window.getTenantSuffix()) || '[]');
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();

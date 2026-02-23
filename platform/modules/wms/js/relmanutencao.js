@@ -1,4 +1,4 @@
-// WMS Relatórios de Manutenção & Operação
+﻿// WMS Relatórios de Manutenção & Operação
 // relm-*: Maintenance reports
 // relo-*: Operational reports
 
@@ -32,7 +32,7 @@ window.loadRelManutencaoView = function (viewId) {
 
 // --- 1. Endereços Vazios ---
 function renderRelmEnderecoVazio(container) {
-    const mockData = JSON.parse(localStorage.getItem('wms_mock_data') || '{}');
+    const mockData = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
     const addresses = mockData.addresses || [];
     const vazios = addresses.filter(a => a.status === 'LIVRE');
     const mock = vazios.length > 0 ? vazios : [

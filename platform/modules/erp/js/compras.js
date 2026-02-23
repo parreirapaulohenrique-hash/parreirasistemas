@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════════════════════
    Compras — Parreira ERP (Fase 2)
    Sugestão, Pedido, Cotação, Entrada NF/XML, Consulta
    ═══════════════════════════════════════════════════════════ */
@@ -15,7 +15,7 @@ const Compras = (() => {
     // ─── Helpers ─────────────────────────────────────────
     const fmtMoney = v => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const fmtDate = d => d ? new Date(d).toLocaleDateString('pt-BR') : '-';
-    const getProducts = () => JSON.parse(localStorage.getItem('erp_products') || '[]');
+    const getProducts = () => JSON.parse(localStorage.getItem('erp_products' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const getSuppliers = () => {
         const s = JSON.parse(localStorage.getItem('erp_suppliers') || 'null');
         if (s) return s;
@@ -25,7 +25,7 @@ const Compras = (() => {
             { code: 452, name: 'MICHELIN PNEUS S/A', fantasy: 'MICHELIN', cnpj: '00.000.000/0002-00', city: 'São Paulo/SP', type: 'Indústria' }
         ];
     };
-    const getEstoque = () => JSON.parse(localStorage.getItem('erp_estoque') || '{}');
+    const getEstoque = () => JSON.parse(localStorage.getItem('erp_estoque' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
 
     // ═════════════════════════════════════════════════════
     // 1. SUGESTÃO DE COMPRA
@@ -36,7 +36,7 @@ const Compras = (() => {
 
         const produtos = getProducts();
         const estoque = getEstoque();
-        const vendas = JSON.parse(localStorage.getItem('erp_vendas') || '[]');
+        const vendas = JSON.parse(localStorage.getItem('erp_vendas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
 
         // Calcular sugestão por produto
         const sugestoes = produtos.map(p => {
@@ -207,7 +207,7 @@ const Compras = (() => {
 
         // Pré-carregar sugestão
         const estoque = getEstoque();
-        const vendas = JSON.parse(localStorage.getItem('erp_vendas') || '[]');
+        const vendas = JSON.parse(localStorage.getItem('erp_vendas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
         produtos.forEach(p => {
             const est = estoque[p.sku] || {};
             const estoqueAtual = est.estoqueAtual || 0;

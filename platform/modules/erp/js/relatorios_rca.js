@@ -1,4 +1,4 @@
-// ===========================================
+﻿// ===========================================
 // RELATÓRIO DE DESEMPENHO POR RCA
 // ===========================================
 
@@ -13,8 +13,8 @@ window.renderRelatorioRca = function () {
     const dtFim = document.getElementById('rcaDtFim')?.value;
 
     // Load Data
-    const vendas = JSON.parse(localStorage.getItem('erp_vendas') || '[]'); // Sales
-    const produtos = JSON.parse(localStorage.getItem('erp_products') || '[]'); // Products (for Cost/Weight)
+    const vendas = JSON.parse(localStorage.getItem('erp_vendas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]'); // Sales
+    const produtos = JSON.parse(localStorage.getItem('erp_products' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]'); // Products (for Cost/Weight)
     const clientes = JSON.parse(localStorage.getItem('erp_entities') || '[]'); // Clients (for Status/RCA link)
 
     // Mock Sellers/RCAs if not in separate collection, or extract from sales/clients
