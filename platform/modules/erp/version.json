@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "9.0.0",
+    "version": "10.0.0",
     "date": "2026-02-24",
-    "last_change": "Fase 9 — Integração Bidirecional WMS & Importação Excel",
-    "build": "20260224.03"
+    "last_change": "Fase 10 — Módulo CRM Integrado",
+    "build": "20260224.04"
 }
