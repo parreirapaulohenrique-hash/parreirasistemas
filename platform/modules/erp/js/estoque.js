@@ -250,6 +250,11 @@ const Estoque = (() => {
 
         window.dispatchEvent(new CustomEvent('estoque-atualizado', { detail: { origem: 'ajuste-manual', sku } }));
 
+        // INTEGRAÇÃO FASE 9: Notificar WMS sobre o ajuste
+        if (window.onErpAjusteEstoque) {
+            window.onErpAjusteEstoque(sku, tipo, qtd, motivo);
+        }
+
         alert(`✅ Ajuste salvo: ${tipo.toUpperCase()} de ${qtd} un. para ${sku}\nNovo saldo: ${estoque[sku].estoqueAtual}`);
         renderAjusteEstoque();
     }
@@ -410,6 +415,11 @@ const Estoque = (() => {
         const inventarios = JSON.parse(localStorage.getItem(KEYS.inventarios) || '[]');
         inventarios.unshift(inventario);
         localStorage.setItem(KEYS.inventarios, JSON.stringify(inventarios));
+
+        // INTEGRAÇÃO FASE 9: Notificar WMS sobre inventário
+        if (window.onErpInventarioRealizado) {
+            window.onErpInventarioRealizado(itens);
+        }
 
         const divMsg = itens.filter(i => i.diferenca !== 0).map(i => `  ${i.sku}: Sistema=${i.sistema} Contagem=${i.contagem} (${i.diferenca > 0 ? '+' : ''}${i.diferenca})`).join('\n');
         alert(`INVENTÁRIO ${inventario.numero}\nSKUs contados: ${produtos.length}\nDivergências: ${divergencias}\n\n${divMsg ? 'DIVERGÊNCIAS:\n' + divMsg : 'Nenhuma divergência encontrada.'}\n\n✅ Estoque ajustado automaticamente.`);

@@ -389,4 +389,49 @@
     window.WMS_ENTITIES = ENTITIES;
 
     console.log('🔗 WMS Integration Layer carregada — ' + Object.keys(connectors).length + ' conectores disponíveis');
+
+    // =========================================================
+    // FASE 9: LISTENERS GLOBAIS WMS -> ERP via LocalStorage
+    // (Operam como mock direto ao ERP na mesma origem)
+    // =========================================================
+    window.onWmsAjusteEstoque = function (sku, diff, motivo) {
+        const estoqueERP = JSON.parse(localStorage.getItem('erp_estoque' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
+        if (!estoqueERP[sku]) {
+            estoqueERP[sku] = { sku: sku, descricao: '', estoqueAtual: 0, reservado: 0, disponivel: 0, custoMedio: 0 };
+        }
+        estoqueERP[sku].estoqueAtual += Number(diff);
+        estoqueERP[sku].disponivel = estoqueERP[sku].estoqueAtual - (estoqueERP[sku].reservado || 0);
+
+        localStorage.setItem('erp_estoque' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(estoqueERP));
+        window.dispatchEvent(new CustomEvent('wms-data-push', { detail: { entity: 'stock-levels', event: 'ajuste', sku, diff } }));
+        console.log(`✅ [Integração] Ajuste do WMS replicado no ERP. SKU: ${sku}, Diff: ${diff}`);
+    };
+
+    window.onWmsInventarioRealizado = function (inv) {
+        const estoqueERP = JSON.parse(localStorage.getItem('erp_estoque' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
+
+        // Agrupar diff por SKU (pois pode haver o mesmo SKU em vários endereços no mesmo ref_inv)
+        const skuDiffs = {};
+        (inv.enderecos || []).forEach(e => {
+            if (e.contagem !== null && e.saldoSistema !== null) {
+                const diff = e.contagem - e.saldoSistema;
+                if (diff !== 0) {
+                    skuDiffs[e.sku] = (skuDiffs[e.sku] || 0) + diff;
+                }
+            }
+        });
+
+        Object.keys(skuDiffs).forEach(sku => {
+            const diff = skuDiffs[sku];
+            if (!estoqueERP[sku]) {
+                estoqueERP[sku] = { sku: sku, descricao: '', estoqueAtual: 0, reservado: 0, disponivel: 0, custoMedio: 0 };
+            }
+            estoqueERP[sku].estoqueAtual += diff;
+            estoqueERP[sku].disponivel = estoqueERP[sku].estoqueAtual - (estoqueERP[sku].reservado || 0);
+        });
+
+        localStorage.setItem('erp_estoque' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(estoqueERP));
+        console.log(`✅ [Integração] Inventário do WMS replicado no ERP.`);
+    };
+
 })();

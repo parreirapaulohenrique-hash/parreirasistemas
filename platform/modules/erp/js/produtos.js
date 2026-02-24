@@ -212,4 +212,101 @@ window.exportProdutosParaFV = function () {
     });
 };
 
+// ===========================================
+// IMPORTAR PRODUTOS VIA EXCEL
+// ===========================================
+window.handleExcelImport = function (event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+
+            // Generate JSON array from Excel rows
+            const rows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+            if (rows.length === 0) {
+                alert("O arquivo está vazio ou não pôde ser lido.");
+                return;
+            }
+
+            let produtos = JSON.parse(localStorage.getItem(STORAGE_KEY_PRODUCTS) || '[]');
+            let countSuccess = 0;
+            let countSkipped = 0;
+
+            rows.forEach(row => {
+                // Try to map commonly named columns (adjust flexibly based on the headers)
+                // Normalize keys to ignore case and accents
+                const normalize = (key) => key.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+                let sku = "", nome = "", preco = 0, costo = 0, unidade = "UN", grupo = "", ncm = "";
+
+                for (const key in row) {
+                    const normKey = normalize(key);
+                    const val = row[key] || "";
+                    if (normKey === "sku" || normKey === "codigo" || normKey === "ref") sku = String(val).trim();
+                    if (normKey === "nome" || normKey === "descricao" || normKey === "produto") nome = String(val).trim();
+                    if (normKey === "preco" || normKey === "valor" || normKey === "precovenda") preco = parseFloat(String(val).replace(',', '.')) || 0;
+                    if (normKey === "custo" || normKey === "valorcusto") costo = parseFloat(String(val).replace(',', '.')) || 0;
+                    if (normKey === "unidade" || normKey === "un") unidade = String(val).trim();
+                    if (normKey === "grupo" || normKey === "categoria") grupo = String(val).trim();
+                    if (normKey === "ncm") ncm = String(val).trim();
+                }
+
+                if (!sku || !nome) {
+                    // Skip if mandatory fields are missing
+                    countSkipped++;
+                    return;
+                }
+
+                // Append or edit
+                const index = produtos.findIndex(p => p.sku === sku);
+                if (index > -1) {
+                    // Update main fields but preserve original ID and dates
+                    produtos[index].nome = nome || produtos[index].nome;
+                    produtos[index].preco = preco || produtos[index].preco;
+                    produtos[index].custo = costo || produtos[index].custo;
+                    produtos[index].unidade = unidade || produtos[index].unidade;
+                    produtos[index].grupo = grupo || produtos[index].grupo;
+                    produtos[index].ncm = ncm || produtos[index].ncm;
+                    produtos[index].updatedAt = new Date().toISOString();
+                    countSuccess++;
+                } else {
+                    // Create new
+                    produtos.push({
+                        id: 'prod_' + Date.now() + Math.floor(Math.random() * 1000),
+                        sku: sku,
+                        nome: nome,
+                        descricaoCompleta: nome,
+                        unidade: unidade || 'UN',
+                        grupo: grupo,
+                        custo: costo,
+                        preco: preco,
+                        ncm: ncm,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                    });
+                    countSuccess++;
+                }
+            });
+
+            localStorage.setItem(STORAGE_KEY_PRODUCTS, JSON.stringify(produtos));
+            event.target.value = ""; // Reset input
+            renderProdutosGrid();
+
+            alert(`Importação concluída!\n\n${countSuccess} produtos importados/atualizados.\n${countSkipped} linhas ignoradas (SKU ou Nome em branco).`);
+
+        } catch (error) {
+            console.error("Erro na importação:", error);
+            alert("Ocorreu um erro ao processar o arquivo. Verifique se é um arquivo Excel válido.");
+        }
+    };
+    reader.readAsArrayBuffer(file);
+};
+
 console.log('📦 Módulo de Produtos ERP inicializado');

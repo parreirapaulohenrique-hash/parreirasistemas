@@ -121,6 +121,10 @@ window.PickingManager = {
                     <button class="btn btn-sm btn-success" onclick="window.PickingManager.startWave('${w.id}')">
                         <span class="material-icons-round">play_arrow</span> Iniciar
                     </button>` : ''}
+                    ${w.status === 'Em Separação' ? `
+                    <button class="btn btn-sm" style="background:#8b5cf6;color:#fff;" onclick="window.PickingManager.finishWave('${w.id}')">
+                        <span class="material-icons-round">done_all</span> Concluir & Pesar
+                    </button>` : ''}
                 </td>
             </tr>
         `).join('');
@@ -204,6 +208,57 @@ window.PickingManager = {
             this.renderWavesGrid();
             alert('Onda iniciada e enviada para os coletores!');
         }
+    },
+
+    finishWave: function (waveId) {
+        if (!confirm('Finalizar a separação desta onda?\nIsso irá pesar os volumes e liberar os pedidos para Faturamento no ERP.')) return;
+
+        const waves = JSON.parse(localStorage.getItem(STORAGE_KEY_WAVES) || '[]');
+        const wave = waves.find(w => w.id === waveId);
+        if (!wave) return;
+
+        wave.status = 'Finalizada';
+        localStorage.setItem(STORAGE_KEY_WAVES, JSON.stringify(waves));
+
+        // INTEGRAÇÃO FASE 9: Atualizar pedidos no ERP
+        const orders = JSON.parse(localStorage.getItem(STORAGE_KEY_ORDERS) || '[]');
+        let updatedCount = 0;
+
+        wave.orders.forEach(waveOrder => {
+            const erpOrder = orders.find(o => String(o.id) === String(waveOrder.id) || String(o.numero) === String(waveOrder.numero));
+            if (erpOrder) {
+                erpOrder.status = 'conferido_wms';
+
+                // Simula pesagem e cubagem WMS
+                const totalItems = (erpOrder.itens || []).reduce((acc, i) => acc + (i.qtd || i.quantidade || 0), 0);
+                const caixas = Math.ceil(totalItems / 10) || 1; // 10 itens por caixa (mock)
+                const pesoMock = (totalItems * 0.85).toFixed(2); // 0.85kg por item
+
+                if (!erpOrder.transporte) erpOrder.transporte = {};
+                erpOrder.transporte.volumes = {
+                    quantidade: caixas,
+                    especie: 'CAIXA',
+                    pesoBruto: parseFloat(pesoMock),
+                    pesoLiquido: parseFloat(pesoMock) * 0.9
+                };
+
+                updatedCount++;
+            }
+        });
+
+        localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(orders));
+
+        // Notifica ERP para baixar reserva (A separação consumiu a reserva)
+        if (window.onWmsSeparacaoConcluida) {
+            // Em tese, mandamos um evento para cada pedido ou um consolidado
+            wave.orders.forEach(waveOrder => {
+                const erpOrder = orders.find(o => String(o.id) === String(waveOrder.id) || String(o.numero) === String(waveOrder.numero));
+                if (erpOrder) window.onWmsSeparacaoConcluida(erpOrder);
+            });
+        }
+
+        this.renderWavesGrid();
+        alert(`✅ Onda ${waveId} finalizada!\n${updatedCount} pedidos pesados e enviados para o Faturamento Fiscal do ERP.`);
     }
 };
 

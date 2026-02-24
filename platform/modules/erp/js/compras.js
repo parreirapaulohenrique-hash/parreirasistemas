@@ -424,16 +424,33 @@ const Compras = (() => {
         entradas.unshift(entrada);
         localStorage.setItem(KEYS.entradas, JSON.stringify(entradas));
 
-        // Atualizar estoque ERP via integração
-        if (window.onWmsRecebimento) {
-            window.onWmsRecebimento({
-                nf: entrada.nfNumero,
-                fornecedor: entrada.fornecedorNome,
-                itens: itens.map(i => ({ sku: i.sku, descricao: i.nome, quantidade: i.qtd, valorUnitario: i.custo }))
-            });
-        }
+        // INTEGRAÇÃO FASE 9: Enviar para o WMS (Recebimento) em vez de já atualizar estoque
+        let wmsReceipts = JSON.parse(localStorage.getItem('wms_receipts') || '[]');
+        const wmsRec = {
+            id: `REC-${Date.now()}`,
+            nf: entrada.nfNumero,
+            supplier: entrada.fornecedorNome,
+            dock: 'DOCA-01',
+            type: 'COMPRA',
+            items: itens.map(i => ({
+                sku: i.sku,
+                qty: i.qtd,
+                location: '',
+                lpn: `LPN-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
+                checked: false,
+                qtyChecked: 0
+            })),
+            status: 'AGUARDANDO',
+            createdAt: new Date().toISOString(),
+            totalItems: itens.length,
+            totalQty: itens.reduce((s, i) => s + i.qtd, 0)
+        };
+        wmsReceipts.unshift(wmsRec);
+        localStorage.setItem('wms_receipts', JSON.stringify(wmsReceipts));
 
-        alert(`NF ${entrada.nfNumero} lançada!\nFornecedor: ${entrada.fornecedorNome}\nItens: ${itens.length}\nValor: ${fmtMoney(entrada.valorNF)}\n\n✅ Estoque atualizado automaticamente.`);
+        // O estoque só será atualizado quando o WMS finalizar a conferência
+
+        alert(`NF ${entrada.nfNumero} lançada no ERP!\nEnviada para conferência no WMS.\nStatus: PENDENTE.`);
         renderEntradaNf();
     }
 

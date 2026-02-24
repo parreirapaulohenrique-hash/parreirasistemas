@@ -865,8 +865,49 @@ window.liberarExpedicao = function (expId) {
     const exps = JSON.parse(localStorage.getItem('wms_expedicoes') || '[]');
     let exp = exps.find(e => e.id === expId);
     if (!exp) {
-        // default data
-        exp = { id: expId, status: 'liberado', horaSaida: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) };
+        exp = { id: expId, cargaId: document.querySelector(`[onclick="liberarExpedicao('${expId}')"]`)?.closest('.card')?.querySelector('strong')?.innerText || 'CRG-000', status: 'aguardando' };
+    }
+
+    // INTEGRAÇÃO FASE 9: TRAVA FISCAL DE DESPACHO (NF-e)
+    const cargas = JSON.parse(localStorage.getItem('wms_cargas') || '[]');
+    const ondas = JSON.parse(localStorage.getItem('wms_ondas') || '[]');
+    const erpOrders = JSON.parse(localStorage.getItem('erp_vendas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+
+    let carga = cargas.find(c => c.id === exp.cargaId) || { ondas: [] }; // Mock fallback
+
+    // Fallback if we are using the hardcoded mock CRG-001
+    if (exp.cargaId === 'CRG-001' && !cargas.find(c => c.id === 'CRG-001')) {
+        const mockOndas = JSON.parse(localStorage.getItem('wms_ondas') || '[]').filter((o, i) => i < 2).map(o => o.id);
+        carga = { id: 'CRG-001', ondas: mockOndas };
+    } else if (exp.cargaId === 'CRG-002' && !cargas.find(c => c.id === 'CRG-002')) {
+        const mockOndas = JSON.parse(localStorage.getItem('wms_ondas') || '[]').filter((o, i) => i >= 2).map(o => o.id);
+        carga = { id: 'CRG-002', ondas: mockOndas };
+    }
+
+    let missingNFe = [];
+    if (carga && carga.ondas) {
+        carga.ondas.forEach(ondaId => {
+            let onda = ondas.find(o => o.id === ondaId);
+            if (onda && onda.pedidos) {
+                onda.pedidos.forEach(pid => {
+                    let erpOrder = erpOrders.find(eo => String(eo.id) === String(pid) || String(eo.numero) === String(pid));
+                    if (!erpOrder || !erpOrder.chaveNFe) {
+                        missingNFe.push(pid);
+                    }
+                });
+            }
+        });
+    }
+
+    if (missingNFe.length > 0) {
+        alert(`⛔ BLOQUEIO FISCAL DE DESPACHO ⛔\n\nNão é possível liberar a saída do veículo!\n\nOs seguintes pedidos ainda NÃO possuem NF-e faturada no ERP:\n${missingNFe.join(', ')}\n\nAguarde o faturamento ou solicite a emissão das notas na portaria.`);
+        return;
+    }
+
+    // Se chegou aqui, está autorizado.
+    if (!exps.find(e => e.id === expId)) {
+        exp.status = 'liberado';
+        exp.horaSaida = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         exps.push(exp);
     } else {
         exp.status = 'liberado';
@@ -874,11 +915,27 @@ window.liberarExpedicao = function (expId) {
     }
     localStorage.setItem('wms_expedicoes', JSON.stringify(exps));
 
+    // Desconta o volume do ERP e finaliza o status
+    if (carga && carga.ondas) {
+        carga.ondas.forEach(ondaId => {
+            let onda = ondas.find(o => o.id === ondaId);
+            if (onda && onda.pedidos) {
+                onda.pedidos.forEach(pid => {
+                    let erpOrder = erpOrders.find(eo => String(eo.id) === String(pid) || String(eo.numero) === String(pid));
+                    if (erpOrder) {
+                        erpOrder.status = 'despachado';
+                    }
+                });
+            }
+        });
+        localStorage.setItem('erp_vendas' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(erpOrders));
+    }
+
     // Integration Hook
     if (window.WmsIntegration) {
         window.WmsIntegration.push('shipments', exp);
     }
 
-    alert(`✅ Expedição ${expId} liberada! Veículo autorizado para saída.`);
+    alert(`✅ Expedição ${expId} liberada!\nVeículo autorizado para saída.`);
     renderExpedicao(document.getElementById('view-dynamic'));
 };

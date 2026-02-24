@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <!-- Using new consolidated style -->
     <link rel="stylesheet" href="styles/erp.css?v=2.15.5">
     <style>
@@ -5294,9 +5295,17 @@
                 <div class="card">
                     <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
                         <h3>Cadastro de Produtos (Master)</h3>
-                        <button class="btn btn-primary" onclick="newProduto()">
-                            <span class="material-icons-round">add</span> Novo Produto
-                        </button>
+                        <div style="display:flex; gap:0.5rem;">
+                            <input type="file" id="importExcelInput" accept=".xlsx, .xls, .csv" style="display:none;"
+                                onchange="handleExcelImport(event)">
+                            <button class="btn btn-secondary"
+                                onclick="document.getElementById('importExcelInput').click()">
+                                <span class="material-icons-round">upload_file</span> Importar Excel
+                            </button>
+                            <button class="btn btn-primary" onclick="newProduto()">
+                                <span class="material-icons-round">add</span> Novo Produto
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body" style="padding:0;">
                         <table class="data-table">

@@ -206,6 +206,60 @@ window.onWmsRecebimento = function (recebimento) {
 };
 
 /**
+ * Listener: FASE 9 - Quando WMS finaliza a conferência de entrada (com ou sem divergências)
+ */
+window.onWmsConferenciaFinalizada = function (rec) {
+    console.log('🔄 WMS→ERP: Conferência Finalizada', rec);
+
+    const estoqueERP = JSON.parse(localStorage.getItem('erp_estoque' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
+    const entradasERP = JSON.parse(localStorage.getItem('erp_entradas_nf') || '[]');
+
+    // Atualiza status da NF
+    const nfEntry = entradasERP.find(e => e.nfNumero === rec.nf);
+    if (nfEntry) {
+        nfEntry.conferido = true;
+        nfEntry.status = (rec.divergencias && rec.divergencias.length > 0) ? 'divergente' : 'disponivel';
+        localStorage.setItem('erp_entradas_nf', JSON.stringify(entradasERP));
+    }
+
+    // Processar os itens baseando-se no que FOI ESPERADO (da NF) vs CONTADO (WMS)
+    (rec.items || []).forEach(item => {
+        const key = item.sku;
+        if (!estoqueERP[key]) {
+            estoqueERP[key] = { sku: key, descricao: '', estoqueAtual: 0, reservado: 0, disponivel: 0, custoMedio: 0, bloqueado_falta_wms: 0 };
+        }
+
+        const qtdNF = item.qty || 0;
+        const qtdContada = item.qtyChecked || 0;
+
+        // O ERP sempre assume a entrada total fiscal da NF
+        estoqueERP[key].estoqueAtual += qtdNF;
+
+        // Se a conferência registrou falta, o estoque fica bloqueado para não vender "estoque fantasma"
+        if (qtdContada < qtdNF) {
+            const falta = qtdNF - qtdContada;
+            estoqueERP[key].bloqueado_falta_wms = (estoqueERP[key].bloqueado_falta_wms || 0) + falta;
+            console.warn(`[WMS-ERP] Divergência no SKU ${key}: Faltaram ${falta} unidades. Estoque bloqueado preventivamente.`);
+        }
+
+        // Recalcular disponível protegendo a falta
+        estoqueERP[key].disponivel = estoqueERP[key].estoqueAtual - (estoqueERP[key].reservado || 0) - (estoqueERP[key].bloqueado_falta_wms || 0);
+    });
+
+    localStorage.setItem('erp_estoque' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(estoqueERP));
+    console.log('✅ Estoque ERP atualizado após conferência WMS. Itens divergentes travados.');
+
+    // Notificar Interface de Compras/Estoque
+    window.dispatchEvent(new CustomEvent('estoque-atualizado', { detail: { origem: 'wms-conferencia-final', nf: rec.nf } }));
+
+    // Atualiza telas de notas ficais se visível
+    if (window._viewHooks) {
+        window._viewHooks.forEach(fn => { try { fn('entradaNf') } catch (e) { } });
+        window._viewHooks.forEach(fn => { try { fn('consultaEntradas') } catch (e) { } });
+    }
+};
+
+/**
  * Listener: Quando ERP grava venda/NF → reserva estoque e notifica WMS
  */
 /**
@@ -471,6 +525,82 @@ window.onErpDevolucao = function (devolucao) {
 
     console.log('✅ Estoque estornado e tarefas de putaway criadas para devolução');
     window.dispatchEvent(new CustomEvent('estoque-atualizado', { detail: { origem: 'erp-devolucao' } }));
+};
+
+/**
+ * Listener: FASE 9 - Quando ERP realiza ajuste manual, refletir no WMS em endereço de ajuste
+ */
+window.onErpAjusteEstoque = function (sku, tipo, qtd, motivo) {
+    console.log('🔄 ERP→WMS: Ajuste de estoque', sku, tipo, qtd);
+    const wmsStock = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{"addresses":[]}');
+
+    if (!wmsStock.addresses) wmsStock.addresses = [];
+
+    let remaining = qtd;
+    if (tipo === 'entrada' || tipo === 'bonificacao') {
+        let addr = wmsStock.addresses.find(a => a.sku === sku && a.status === 'OCUPADO' && a.id.startsWith('AJUSTE'));
+        if (!addr) {
+            addr = { id: `AJUSTE-${Date.now()}`, address: `A-00-AJUSTE`, status: 'OCUPADO', sku: sku, product: 'Ajuste ERP', qty: 0, unit: 'UN' };
+            wmsStock.addresses.push(addr);
+        }
+        addr.qty = (addr.qty || 0) + qtd;
+    } else {
+        const candidates = wmsStock.addresses.filter(a => a.sku === sku && a.status === 'OCUPADO');
+        for (const addr of candidates) {
+            if (remaining <= 0) break;
+            const take = Math.min(addr.qty, remaining);
+            addr.qty -= take;
+            remaining -= take;
+            if (addr.qty <= 0) {
+                addr.status = 'LIVRE';
+                delete addr.sku;
+                delete addr.product;
+                delete addr.qty;
+            }
+        }
+    }
+    localStorage.setItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(wmsStock));
+    window.dispatchEvent(new CustomEvent('wms-estoque-atualizado'));
+};
+
+/**
+ * Listener: FASE 9 - Quando ERP realiza Inventário, refletir no WMS
+ */
+window.onErpInventarioRealizado = function (itens) {
+    console.log('🔄 ERP→WMS: Inventário realizado', itens);
+    const wmsStock = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{"addresses":[]}');
+    if (!wmsStock.addresses) wmsStock.addresses = [];
+
+    itens.forEach(i => {
+        if (i.diferenca !== 0) {
+            let qtd = Math.abs(i.diferenca);
+            if (i.diferenca > 0) {
+                let addr = wmsStock.addresses.find(a => a.sku === i.sku && a.status === 'OCUPADO' && a.id.startsWith('INV'));
+                if (!addr) {
+                    addr = { id: `INV-${Date.now()}-${Math.floor(Math.random() * 100)}`, address: `A-00-INVENTARIO`, status: 'OCUPADO', sku: i.sku, product: 'Inventário ERP', qty: 0, unit: 'UN' };
+                    wmsStock.addresses.push(addr);
+                }
+                addr.qty = (addr.qty || 0) + qtd;
+            } else {
+                let remaining = qtd;
+                const candidates = wmsStock.addresses.filter(a => a.sku === i.sku && a.status === 'OCUPADO');
+                for (const addr of candidates) {
+                    if (remaining <= 0) break;
+                    const take = Math.min(addr.qty, remaining);
+                    addr.qty -= take;
+                    remaining -= take;
+                    if (addr.qty <= 0) {
+                        addr.status = 'LIVRE';
+                        delete addr.sku;
+                        delete addr.product;
+                        delete addr.qty;
+                    }
+                }
+            }
+        }
+    });
+    localStorage.setItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(wmsStock));
+    window.dispatchEvent(new CustomEvent('wms-estoque-atualizado'));
 };
 
 // ===========================================

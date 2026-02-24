@@ -151,51 +151,87 @@ const VendasAvancado = (() => {
 
         const vendas = getVendas();
         const abertos = vendas.filter(v => v.status === 'aberto');
-        const faturados = vendas.filter(v => ['faturado', 'venda'].includes(v.status));
+        const separando = vendas.filter(v => ['Aprovado', 'Pendente WMS', 'Em Separação'].includes(v.status));
+        const conferidos = vendas.filter(v => v.status === 'conferido_wms');
+        const faturados = vendas.filter(v => ['faturado', 'venda', 'despachado'].includes(v.status));
 
         el.innerHTML = `
         <div class="view-header-bar">
-            <h2><span class="material-icons-round">task_alt</span> Faturamento / NF-e</h2>
+            <h2><span class="material-icons-round">task_alt</span> Aprovação Comercial & Faturamento</h2>
         </div>
         <div style="display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;">
             <div class="card" style="flex:1;min-width:180px;padding:1rem;text-align:center;">
-                <div style="font-size:0.75rem;color:var(--text-secondary)">Aguardando Faturamento</div>
+                <div style="font-size:0.75rem;color:var(--text-secondary)">Aprovação (Caixa Única)</div>
                 <div style="font-size:1.8rem;font-weight:700;color:#f59e0b">${abertos.length}</div>
             </div>
-            <div class="card" style="flex:1;min-width:180px;padding:1rem;text-align:center;">
-                <div style="font-size:0.75rem;color:var(--text-secondary)">Faturados</div>
-                <div style="font-size:1.8rem;font-weight:700;color:var(--success-color)">${faturados.length}</div>
+            <div class="card" style="flex:1;min-width:180px;padding:1rem;text-align:center;border-left:3px solid #3b82f6;">
+                <div style="font-size:0.75rem;color:var(--text-secondary)">No WMS (Separação)</div>
+                <div style="font-size:1.8rem;font-weight:700;color:#3b82f6">${separando.length}</div>
             </div>
-            <div class="card" style="flex:1;min-width:180px;padding:1rem;text-align:center;">
-                <div style="font-size:0.75rem;color:var(--text-secondary)">Valor Pendente</div>
-                <div style="font-size:1.5rem;font-weight:700;">${fmtMoney(abertos.reduce((s, v) => s + (v.totais?.totalNF || 0), 0))}</div>
+            <div class="card" style="flex:1;min-width:180px;padding:1rem;text-align:center;border-left:3px solid #8b5cf6;">
+                <div style="font-size:0.75rem;color:var(--text-secondary)">Pronto p/ Emissão NF</div>
+                <div style="font-size:1.8rem;font-weight:700;color:#8b5cf6">${conferidos.length}</div>
             </div>
         </div>
-        <div class="card" style="overflow-x:auto;">
-            <div style="padding:0.75rem 1rem;border-bottom:1px solid var(--border-color);font-weight:600;font-size:0.9rem;">
-                Pedidos aguardando faturamento
+        
+        <div class="card" style="margin-bottom:1rem;overflow-x:auto;">
+            <div style="padding:0.75rem 1rem;background:rgba(245,158,11,0.05);border-bottom:1px solid var(--border-color);font-weight:600;font-size:0.9rem;color:#f59e0b;display:flex;align-items:center;gap:0.5rem;">
+                <span class="material-icons-round" style="font-size:1.2rem;">shopping_bag</span> 1. Pedidos (Novos)
             </div>
             <table style="width:100%;border-collapse:collapse;">
                 <thead>
                     <tr style="border-bottom:1px solid var(--border-color);">
-                        <th style="padding:0.6rem 0.5rem;font-size:0.75rem;color:var(--text-secondary);text-align:left">Pedido</th>
-                        <th style="padding:0.6rem 0.5rem;font-size:0.75rem;color:var(--text-secondary);text-align:left">Data</th>
+                        <th style="padding:0.6rem 0.5rem;font-size:0.75rem;color:var(--text-secondary);text-align:left">Pedido / Origem</th>
                         <th style="padding:0.6rem 0.5rem;font-size:0.75rem;color:var(--text-secondary);text-align:left">Cliente</th>
                         <th style="padding:0.6rem 0.5rem;font-size:0.75rem;color:var(--text-secondary);text-align:right">Valor</th>
                         <th style="padding:0.6rem 0.5rem;font-size:0.75rem;color:var(--text-secondary);text-align:right">Ação</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${abertos.length === 0 ? '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-secondary)">Nenhum pedido aguardando faturamento.</td></tr>' : ''}
+                    ${abertos.length === 0 ? '<tr><td colspan="4" style="text-align:center;padding:1rem;color:var(--text-secondary)">Nenhuma venda nova na fila.</td></tr>' : ''}
                     ${abertos.map(v => `
                         <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
-                            <td style="padding:0.6rem 0.5rem;font-weight:700;">${v.numero}</td>
-                            <td style="padding:0.6rem 0.5rem;">${fmtDate(v.data)}</td>
-                            <td style="padding:0.6rem 0.5rem;">${v.cliente?.razaoSocial || '-'}</td>
-                            <td style="text-align:right;padding:0.6rem 0.5rem;font-weight:600;">${fmtMoney(v.totais?.totalNF)}</td>
+                            <td style="padding:0.6rem 0.5rem;font-weight:700;">
+                                ${v.numero} <span style="font-size:0.65rem;color:var(--text-secondary);display:block;">${v.origemFV ? 'App Vendas' : 'ERP Local'}</span>
+                            </td>
+                            <td style="padding:0.6rem 0.5rem;">${v.cliente?.razaoSocial || v.clienteNome || '-'}</td>
+                            <td style="text-align:right;padding:0.6rem 0.5rem;font-weight:600;">${fmtMoney(v.totais?.totalNF || v.valorTotal)}</td>
                             <td style="text-align:right;padding:0.6rem 0.5rem;">
-                                <button class="btn btn-sm btn-primary" style="padding:0.3rem 0.6rem;font-size:0.75rem;" onclick="VendasAvancado.faturarPedido('${v.numero}')">
-                                    <span class="material-icons-round" style="font-size:0.85rem;">receipt_long</span> Faturar
+                                <button class="btn btn-sm" style="background:var(--surface-darker);border:1px solid var(--primary-color);color:var(--primary-color);padding:0.3rem 0.6rem;font-size:0.75rem;" onclick="VendasAvancado.enviarWMS('${v.numero}')">
+                                    <span class="material-icons-round" style="font-size:0.85rem;">inventory_2</span> Enviar p/ Separação
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card" style="overflow-x:auto;">
+            <div style="padding:0.75rem 1rem;background:rgba(139,92,246,0.05);border-bottom:1px solid var(--border-color);font-weight:600;font-size:0.9rem;color:#d8b4fe;display:flex;align-items:center;gap:0.5rem;">
+                <span class="material-icons-round" style="font-size:1.2rem;">receipt_long</span> 2. Conferidos WMS (Prontos p/ Faturar NF)
+            </div>
+            <table style="width:100%;border-collapse:collapse;">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--border-color);">
+                        <th style="padding:0.6rem 0.5rem;font-size:0.75rem;color:var(--text-secondary);text-align:left">Pedido</th>
+                        <th style="padding:0.6rem 0.5rem;font-size:0.75rem;color:var(--text-secondary);text-align:left">Volumes (WMS)</th>
+                        <th style="padding:0.6rem 0.5rem;font-size:0.75rem;color:var(--text-secondary);text-align:left">Peso Bruto</th>
+                        <th style="padding:0.6rem 0.5rem;font-size:0.75rem;color:var(--text-secondary);text-align:right">Valor NF</th>
+                        <th style="padding:0.6rem 0.5rem;font-size:0.75rem;color:var(--text-secondary);text-align:right">Ação Fiscal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${conferidos.length === 0 ? '<tr><td colspan="5" style="text-align:center;padding:1rem;color:var(--text-secondary)">Nenhum pedido aguardando emissão fiscal e liberação.</td></tr>' : ''}
+                    ${conferidos.map(v => `
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
+                            <td style="padding:0.6rem 0.5rem;font-weight:700;">${v.numero}</td>
+                            <td style="padding:0.6rem 0.5rem;">${v.transporte?.volumes?.quantidade || '-'} cx</td>
+                            <td style="padding:0.6rem 0.5rem;">${v.transporte?.volumes?.pesoBruto || '-'} kg</td>
+                            <td style="text-align:right;padding:0.6rem 0.5rem;font-weight:600;color:var(--primary-color)">${fmtMoney(v.totais?.totalNF || v.valorTotal)}</td>
+                            <td style="text-align:right;padding:0.6rem 0.5rem;">
+                                <button class="btn btn-sm btn-primary" style="padding:0.3rem 0.6rem;font-size:0.75rem;background:#8b5cf6;" onclick="VendasAvancado.faturarPedido('${v.numero}')">
+                                    <span class="material-icons-round" style="font-size:0.85rem;">receipt</span> Gerar XML & Faturar
                                 </button>
                             </td>
                         </tr>
@@ -205,20 +241,35 @@ const VendasAvancado = (() => {
         </div>`;
     }
 
+    function enviarWMS(numero) {
+        const vendas = getVendas();
+        const venda = vendas.find(v => String(v.numero) === String(numero) || String(v.id) === String(numero));
+        if (!venda) return;
+
+        venda.status = 'Aprovado'; // 'Aprovado' is read by WMS picking.js
+        venda.dataAprovacao = new Date().toISOString();
+        localStorage.setItem(KEYS.vendas, JSON.stringify(vendas));
+
+        alert(`📦 Pedido comercial aprovado.\nEnviado para a Gestão de Ondas do Logístico (WMS) para separação.`);
+        renderFaturamento();
+    }
+
     function faturarPedido(numero) {
         const vendas = getVendas();
-        const venda = vendas.find(v => v.numero === numero);
+        const venda = vendas.find(v => String(v.numero) === String(numero) || String(v.id) === String(numero));
         if (!venda) return;
         if (!confirm(`Faturar pedido ${numero}?\nCliente: ${venda.cliente?.razaoSocial}\nValor: ${fmtMoney(venda.totais?.totalNF)}`)) return;
 
-        venda.status = 'faturado';
+        venda.status = 'faturado'; // Volta pro pool de Romaneio
         venda.nfe = 'NF-' + String(Date.now()).slice(-8);
+        venda.chaveNFe = '352602' + Math.floor(Math.random() * 99999999999999).toString().padStart(14, '0') + '55001000' + venda.nfe.split('-')[1] + '19372911';
         venda.dataFaturamento = new Date().toISOString();
         localStorage.setItem(KEYS.vendas, JSON.stringify(vendas));
 
+        // Atualizar estoque definitivamente & Enviar Chave pra Expedição WMS (Integration)
         if (window.onErpVendaFaturada) window.onErpVendaFaturada(venda);
 
-        alert(`✅ Pedido ${numero} faturado!\nNF-e: ${venda.nfe}`);
+        alert(`✅ Pedido ${numero} autorizado pela SEFAZ!\nNF-e Emitida: ${venda.nfe}\nChave transferida pro Expedidor do WMS.\n\nApto para emissão de Romaneio.`);
         renderFaturamento();
     }
 

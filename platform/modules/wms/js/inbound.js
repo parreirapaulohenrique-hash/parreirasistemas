@@ -422,11 +422,18 @@ window.finishConferencia = function () {
 
         if (counted !== rec.items[idx].qty) {
             allMatch = false;
-            divergences.push(`${rec.items[idx].sku}: Esperado ${rec.items[idx].qty}, Contado ${counted}`);
+            divergences.push({
+                sku: rec.items[idx].sku,
+                esperado: rec.items[idx].qty,
+                contado: counted,
+                diferenca: rec.items[idx].qty - counted,
+                desc: `${rec.items[idx].sku}: Esperado ${rec.items[idx].qty}, Contado ${counted}`
+            });
         }
     });
 
     rec.status = 'FINALIZADO';
+    rec.divergencias = divergences;
 
     // --- Allocate Stock (Real WMS Logic) ---
     if (window.StockManager) {
@@ -459,13 +466,19 @@ window.finishConferencia = function () {
         window.WmsIntegration.push('receipts', rec);
     }
 
+    // INTEGRAÇÃO FASE 9: Avisar ERP que a conferência finalizou (passando as divergências)
+    if (window.onWmsConferenciaFinalizada) {
+        window.onWmsConferenciaFinalizada(rec);
+    }
+
     document.getElementById('modalConferencia').style.display = 'none';
     loadInboundData();
 
     if (allMatch) {
         alert(`Conferência NF ${rec.nf} finalizada!\nTodos os itens conferem.`);
     } else {
-        alert(`Conferência NF ${rec.nf} finalizada com DIVERGÊNCIAS:\n\n${divergences.join('\n')}`);
+        const divMsgs = divergences.map(d => d.desc).join('\n');
+        alert(`Conferência NF ${rec.nf} finalizada com DIVERGÊNCIAS:\n\n${divMsgs}\n\nO ERP foi notificado e o estoque divergente bloqueado.`);
     }
 }
 

@@ -269,8 +269,45 @@ window.finalizarInventario = function (invId) {
     const inv = inventarios.find(i => i.id === invId);
     if (inv) {
         inv.status = 'FINALIZADO';
+
+        // FASE 9: Aplicar o saldo no mock WMS
+        const wmsStock = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{"addresses":[]}');
+        if (!wmsStock.addresses) wmsStock.addresses = [];
+
+        inv.enderecos.forEach(e => {
+            if (e.contagem !== null && e.contagem !== e.saldoSistema) {
+                let addr = wmsStock.addresses.find(a => a.sku === e.sku && (a.address === e.endereco || a.id === e.endereco) && a.status === 'OCUPADO');
+                if (addr) {
+                    addr.qty = e.contagem;
+                    if (addr.qty <= 0) {
+                        addr.status = 'LIVRE';
+                        delete addr.sku;
+                        delete addr.product;
+                        delete addr.qty;
+                    }
+                } else if (e.contagem > 0) {
+                    wmsStock.addresses.push({
+                        id: `INV-${Date.now()}-${Math.floor(Math.random() * 100)}`,
+                        address: e.endereco,
+                        status: 'OCUPADO',
+                        sku: e.sku,
+                        product: e.desc,
+                        qty: e.contagem,
+                        unit: 'UN'
+                    });
+                }
+            }
+        });
+        localStorage.setItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(wmsStock));
+        window.dispatchEvent(new CustomEvent('wms-estoque-atualizado'));
+
         localStorage.setItem('wms_inventarios', JSON.stringify(inventarios));
         renderInventarioCiclico(document.getElementById('view-dynamic'));
+
+        // INTEGRAÇÃO FASE 9: Notificar ERP sobre inv. cíclico WMS
+        if (window.onWmsInventarioRealizado) {
+            window.onWmsInventarioRealizado(inv);
+        }
     }
 };
 
@@ -604,6 +641,11 @@ window.aprovarAjuste = function (id) {
         // Integration Hook
         if (window.WmsIntegration) {
             window.WmsIntegration.push('stock-levels', ajuste);
+        }
+
+        // INTEGRAÇÃO FASE 9: Notificar ERP sobre ajuste do WMS
+        if (window.onWmsAjusteEstoque) {
+            window.onWmsAjusteEstoque(ajuste.sku, diff, ajuste.motivo);
         }
 
         alert(`Ajuste ${id} aprovado e estoque atualizado!`);
