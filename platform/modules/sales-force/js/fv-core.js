@@ -122,12 +122,30 @@ async function initFV() {
         const loaded = await FVDB.loadAllToMemory();
         fvData = { ...fvData, ...loaded };
 
-        // If empty (first run), seed with defaults
-        if (!fvData.clientes.length) {
+        // Integração Fase 8: Puxar do ERP local (Shared localStorage)
+        const tenantSuffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
+        const erpClientes = JSON.parse(localStorage.getItem('erp_clientes' + tenantSuffix) || 'null');
+        let erpProdutos = JSON.parse(localStorage.getItem('erp_products' + tenantSuffix) || 'null');
+
+        if (erpClientes && erpClientes.length > 0) {
+            await FVDB.putMany('clientes', erpClientes);
+            fvData.clientes = erpClientes;
+        } else if (!fvData.clientes.length) {
             await FVDB.putMany('clientes', DEFAULT_CLIENTES);
             fvData.clientes = DEFAULT_CLIENTES;
         }
-        if (!fvData.produtos.length) {
+
+        if (erpProdutos && erpProdutos.length > 0) {
+            // Garantir que os campos vitais existam para o FV
+            erpProdutos = erpProdutos.map(p => ({
+                ...p,
+                sku: p.sku || p.codigo || p.id,
+                nome: p.nome || p.descricao,
+                precoBase: p.precoBase || p.precoVenda || p.preco || 0
+            }));
+            await FVDB.putMany('produtos', erpProdutos);
+            fvData.produtos = erpProdutos;
+        } else if (!fvData.produtos.length) {
             await FVDB.putMany('produtos', DEFAULT_PRODUTOS);
             fvData.produtos = DEFAULT_PRODUTOS;
         }
@@ -197,6 +215,36 @@ async function saveFVData() {
 async function savePedido(pedido) {
     try {
         await FVDB.put('pedidos', pedido);
+
+        // INTEGRAÇÃO FASE 8: Jogar pedido diretamente para o pool do ERP
+        const tenantSuffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
+        const erpVendasKey = 'erp_vendas' + tenantSuffix;
+        let erpVendas = JSON.parse(localStorage.getItem(erpVendasKey) || '[]');
+
+        // Substituir se já existir
+        erpVendas = erpVendas.filter(p => String(p.numero || p.id) !== String(pedido.id));
+
+        // Cast pro formato que o vendas_avancado.js do ERP espera
+        const pedidoToErp = {
+            id: pedido.id,
+            numero: pedido.id, // ERP usa "numero"
+            data: pedido.data,
+            clienteId: pedido.clienteId,
+            clienteNome: pedido.clienteNome,
+            clienteCnpjCpf: pedido.clienteCnpjCpf,
+            valorTotal: pedido.valorTotal,
+            status: pedido.status === 'orcamento' ? 'orcamento' : pedido.status, // Cairá no funil de Orçamentos do ERP
+            itens: pedido.itens.map(i => ({ ...i, precoUnitario: i.preco })), // Normalize
+            transportadoraId: pedido.codfornecTransp,
+            origem: 'Força de Vendas (App)',
+            vendedorId: fvUser ? fvUser.codigo : '32'
+        };
+        erpVendas.push(pedidoToErp);
+        localStorage.setItem(erpVendasKey, JSON.stringify(erpVendas));
+
+        // Sinalizar WMS/ERP
+        window.dispatchEvent(new CustomEvent('wms-data-push', { detail: { entity: 'sales-orders', payload: pedidoToErp } }));
+
         // Also enqueue for sync if new/modified
         if (pedido.sincronizado !== 'E') {
             await FVDB.enqueueSync('pedido', pedido);

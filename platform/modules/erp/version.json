@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "7.0.0",
+    "version": "8.0.0",
     "date": "2026-02-24",
-    "last_change": "Fase 7 — Módulo Gerencial (Dashboard, Curva ABC, KPI e Margem)",
-    "build": "20260224.01"
+    "last_change": "Fase 8 — Integrações multiplataforma (FV, WMS e Dispatch)",
+    "build": "20260224.02"
 }

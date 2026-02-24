@@ -310,7 +310,7 @@ const VendasAvancado = (() => {
         if (!el) return;
 
         const vendas = getVendas();
-        const faturados = vendas.filter(v => v.status === 'faturado' || v.status === 'venda');
+        const faturados = vendas.filter(v => ['faturado', 'venda'].includes(v.status));
 
         // Agrupar por rota
         const porRota = {};
@@ -349,7 +349,10 @@ const VendasAvancado = (() => {
                         <strong>${rota}</strong>
                         <span style="font-size:0.8rem;color:var(--text-secondary);margin-left:0.5rem;">${pedidos.length} pedido(s)</span>
                     </div>
-                    <span style="font-weight:700;color:var(--primary-color);">${fmtMoney(pedidos.reduce((s, v) => s + (v.totais?.totalNF || 0), 0))}</span>
+                    <div style="display:flex;align-items:center;gap:1rem;">
+                        <span style="font-weight:700;color:var(--primary-color);">${fmtMoney(pedidos.reduce((s, v) => s + (v.totais?.totalNF || 0), 0))}</span>
+                        <button class="btn btn-primary btn-sm" onclick="VendasAvancado.despacharRota('${rota}')"><span class="material-icons-round" style="font-size:1rem">local_shipping</span> Embarcar & Integrar Dispatch</button>
+                    </div>
                 </div>
                 <table style="width:100%;border-collapse:collapse;">
                     <tbody>
@@ -366,7 +369,65 @@ const VendasAvancado = (() => {
                     </tbody>
                 </table>
             </div>
-        `).join('')}`;
+        `).join('')}
+        
+        <script>
+            // Expositor the action function
+            window.VendasAvancado = window.VendasAvancado || {};
+            window.VendasAvancado.despacharRota = function(rota) {
+                if(!confirm('Confirma o despacho do Romaneio da ' + rota + '? Isso enviará as NF-es para a tela do transportador na nuvem.')) return;
+                
+                // 1) Mark in ERP
+                const tenantSuffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
+                const vendas = JSON.parse(localStorage.getItem('erp_vendas' + tenantSuffix) || '[]');
+                
+                // 2) Load Dispatches array for the Dispatch app
+                let dispatchAppList = JSON.parse(localStorage.getItem('dispatches') || '[]');
+                
+                let alterados = 0;
+                vendas.forEach(v => {
+                    const vRota = v.rota || v.transporte?.transportadora?.razaoSocial || 'SEM ROTA';
+                    if (vRota === rota && ['faturado', 'venda'].includes(v.status)) {
+                        v.status = 'despachado';
+                        alterados++;
+                        
+                        // INTEGRAÇÃO FASE 8: Construir item suportado pelo Dispatcher e injetar globalmente
+                        const clienteInfo = typeof v.cliente === 'object' ? v.cliente : { razaoSocial: v.clienteNome || 'Consumidor', cidade: 'Cidade Default', bairro: 'Bairro Default' };
+                        
+                        const dispatchObj = {
+                            id: v.numeroOriginalBase || v.numero || v.id || Date.now().toString(),
+                            client: clienteInfo.razaoSocial,
+                            city: clienteInfo.cidade || 'CASTANHAL',
+                            neighborhood: clienteInfo.bairro || 'CENTRO',
+                            value: v.totais?.totalNF || v.valorTotal || 0,
+                            weight: 12.5, // Mocked weight for now
+                            volumes: v.itens?.reduce((acc, it) => acc + (it.qtd || it.quantidade || 0), 0) || 1,
+                            carrier: rota,
+                            status: 'Pendente Despacho', // Status that Dispatch App lists
+                            date: new Date().toISOString(),
+                            createdAt: new Date().toISOString()
+                        };
+                        
+                        // Checa se já não existe na lista do dispatcher
+                        const exists = dispatchAppList.find(d => d.id === dispatchObj.id);
+                        if(!exists) dispatchAppList.push(dispatchObj);
+                    }
+                });
+                
+                if (alterados > 0) {
+                    localStorage.setItem('erp_vendas' + tenantSuffix, JSON.stringify(vendas));
+                    // Salvar pro Dispatch ler nativamente (Sincronizado p/ firebase se cloud ativo)
+                    localStorage.setItem('dispatches', JSON.stringify(dispatchAppList));
+                    
+                    alert('✅ ' + alterados + ' pedidos despachados e integrados com sistema Mobile/Dispatch.');
+                    document.getElementById('view-romaneio').innerHTML = ''; // forcing re-render below
+                    window._viewHooks.forEach(fn => { try { fn('romaneio') } catch(e){} });
+                } else {
+                    alert('Nenhum pedido faturado elegível para esta rota.');
+                }
+            }
+        </script>
+        `;
     }
 
     // ═════════════════════════════════════════════════════
