@@ -132,6 +132,10 @@ window.switchView = (viewName) => {
         'consultaPedidos': 'Consulta Pedidos de Venda',
         'biVendas': 'Inteligência de Vendas',
         'biFinanceiro': 'Painel Financeiro',
+        // ── Fase 10 — CRM ──
+        'crmFunil': 'CRM - Funil de Vendas',
+        'crmLeads': 'CRM - Leads e Contatos',
+        'crmDashboard': 'CRM - Dashboard',
         // ── Fase 12 — Novos títulos ──
         'vendedores': 'Vendedores / RCA',
         'transportadoras': 'Transportadoras',
