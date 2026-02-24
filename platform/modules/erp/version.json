@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "6.0.0",
-    "date": "2026-02-23",
-    "last_change": "Fase 6 — Fiscal Expandido (CT-e, SPED, Apuração ICMS e Livros)",
-    "build": "20260223.03"
+    "version": "7.0.0",
+    "date": "2026-02-24",
+    "last_change": "Fase 7 — Módulo Gerencial (Dashboard, Curva ABC, KPI e Margem)",
+    "build": "20260224.01"
 }
