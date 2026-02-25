@@ -3,7 +3,7 @@
 // ===========================================
 
 // Key for LocalStorage
-const STORAGE_KEY_PRODUCTS = 'erp_products';
+const STORAGE_KEY_PRODUCTS = 'erp_products' + (typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '');
 
 // Initialize
 window.renderProdutosGrid = function () {
