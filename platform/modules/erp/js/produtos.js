@@ -241,21 +241,27 @@ window.handleExcelImport = function (event) {
 
             rows.forEach(row => {
                 // Try to map commonly named columns (adjust flexibly based on the headers)
-                // Normalize keys to ignore case and accents
-                const normalize = (key) => key.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                // Normalize keys to ignore case, accents, and all punctuation/spaces
+                const normalize = (key) => key.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
 
-                let sku = "", nome = "", preco = 0, costo = 0, unidade = "UN", grupo = "", ncm = "";
+                let sku = "", nome = "", preco = 0, costo = 0, unidade = "UN", grupo = "", ncm = "", ean = "", pesoLiq = 0;
 
                 for (const key in row) {
                     const normKey = normalize(key);
-                    const val = row[key] || "";
-                    if (normKey.includes("sku") || normKey.includes("codigo") || normKey.includes("ref") || normKey.includes("cod")) sku = String(val).trim();
-                    if (normKey.includes("nome") || normKey.includes("descricao") || normKey.includes("produto")) nome = String(val).trim();
-                    if (normKey.includes("preco") || normKey.includes("valor") || normKey.includes("venda")) preco = parseFloat(String(val).replace(',', '.')) || 0;
-                    if (normKey.includes("custo")) costo = parseFloat(String(val).replace(',', '.')) || 0;
-                    if (normKey.includes("unidade") || normKey === "un") unidade = String(val).trim();
-                    if (normKey.includes("grupo") || normKey.includes("categoria")) grupo = String(val).trim();
-                    if (normKey.includes("ncm")) ncm = String(val).trim();
+                    const val = String(row[key] || "").trim();
+
+                    if (!val) continue; // Do not overwrite with empty cells
+
+                    // Map fields prioritizing the first found match per row
+                    if (!sku && ["sku", "codigo", "cod", "codigointerno", "codigoerp", "reffabricante", "referencia"].includes(normKey)) sku = val;
+                    if (!nome && ["nome", "produto", "descricao", "descricaodoproduto", "nomedoproduto"].includes(normKey)) nome = val;
+                    if (!preco && ["preco", "precovenda", "valor", "valorvenda", "venda"].includes(normKey)) preco = parseFloat(val.replace(',', '.')) || 0;
+                    if (!costo && ["custo", "precocusto", "valorcusto"].includes(normKey)) costo = parseFloat(val.replace(',', '.')) || 0;
+                    if (["unidade", "un", "und", "medida", "unidadedemedida"].includes(normKey)) unidade = val;
+                    if (["grupo", "categoria", "departamento", "secao"].includes(normKey)) grupo = val;
+                    if (!ncm && ["ncm", "classificacaofiscal"].includes(normKey)) ncm = val;
+                    if (!ean && ["ean", "codigodebarras", "ean13", "gtin", "codigobarras"].includes(normKey)) ean = val;
+                    if (!pesoLiq && ["peso", "pesoliq", "pesoliquido"].includes(normKey)) pesoLiq = parseFloat(val.replace(',', '.')) || 0;
                 }
 
                 if (!sku || !nome) {
@@ -274,6 +280,8 @@ window.handleExcelImport = function (event) {
                     produtos[index].unidade = unidade || produtos[index].unidade;
                     produtos[index].grupo = grupo || produtos[index].grupo;
                     produtos[index].ncm = ncm || produtos[index].ncm;
+                    produtos[index].ean = ean || produtos[index].ean;
+                    produtos[index].pesoLiq = pesoLiq || produtos[index].pesoLiq;
                     produtos[index].updatedAt = new Date().toISOString();
                     countSuccess++;
                 } else {
@@ -288,6 +296,8 @@ window.handleExcelImport = function (event) {
                         custo: costo,
                         preco: preco,
                         ncm: ncm,
+                        ean: ean,
+                        pesoLiq: pesoLiq,
                         createdAt: new Date().toISOString(),
                         updatedAt: new Date().toISOString()
                     });
