@@ -2248,9 +2248,18 @@
                                 <input type="text" id="productSearch" class="form-input"
                                     placeholder="Buscar SKU ou Nome..." onkeyup="filterProducts()">
                             </div>
-                            <button class="btn btn-primary" onclick="openProductModal()">
-                                <span class="material-icons-round">add</span> Novo Produto
-                            </button>
+                            <div style="display:flex; gap:0.5rem;">
+                                <input type="file" id="importExcelInput" accept=".xlsx, .xls, .csv"
+                                    style="display:none;"
+                                    onchange="typeof handleExcelImport === 'function' ? handleExcelImport(event) : alert('Função de importação não carregada.')">
+                                <button class="btn btn-secondary"
+                                    onclick="document.getElementById('importExcelInput').click()">
+                                    <span class="material-icons-round">upload_file</span> Importar Excel
+                                </button>
+                                <button class="btn btn-primary" onclick="openProductModal()">
+                                    <span class="material-icons-round">add</span> Novo Produto
+                                </button>
+                            </div>
                         </div>
                         <div class="card-body">
                             <table class="data-table">
