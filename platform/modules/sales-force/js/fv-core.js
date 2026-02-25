@@ -123,7 +123,9 @@ async function initFV() {
         fvData = { ...fvData, ...loaded };
 
         // Integração Fase 8: Puxar do ERP local (Shared localStorage)
-        const tenantSuffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
+        let tenantSuffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
+        if (!tenantSuffix && localStorage.getItem('erp_products_01')) tenantSuffix = '_01';
+
         const erpClientes = JSON.parse(localStorage.getItem('erp_clientes' + tenantSuffix) || 'null');
         let erpProdutos = JSON.parse(localStorage.getItem('erp_products' + tenantSuffix) || 'null');
 
@@ -217,7 +219,9 @@ async function savePedido(pedido) {
         await FVDB.put('pedidos', pedido);
 
         // INTEGRAÇÃO FASE 8: Jogar pedido diretamente para o pool do ERP
-        const tenantSuffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
+        let tenantSuffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
+        if (!tenantSuffix && localStorage.getItem('erp_products_01')) tenantSuffix = '_01';
+
         const erpVendasKey = 'erp_vendas' + tenantSuffix;
         let erpVendas = JSON.parse(localStorage.getItem(erpVendasKey) || '[]');
 
