@@ -446,11 +446,73 @@ window.exportClientesParaFV = function () {
 window.editCliente = function (code) {
     const c = entities.find(e => e.code === code);
     if (!c) return;
-    // For now just alert, full modal to be implemented in dedicated clientes.js
-    console.log('📝 Editar cliente:', c.name);
-    alert(`Editar: ${c.name} (${c.cnpj})\nLimite: R$ ${(c.limiteTotal || 0).toLocaleString('pt-BR')}\nDisp.: R$ ${(c.limiteDisponivel || 0).toLocaleString('pt-BR')}`);
+
+    // Map existing data to form for editing
+    document.getElementById('cliCode').value = c.code;
+    document.getElementById('cliName').value = c.name || '';
+    document.getElementById('cliFantasy').value = c.fantasy || '';
+    document.getElementById('cliDoc').value = c.cnpj || '';
+    document.getElementById('cliType').value = c.tipoCliente || 'J';
+    document.getElementById('cliZip').value = c.cep || '';
+    document.getElementById('cliStreet').value = c.endereco || '';
+    document.getElementById('cliDistrict').value = c.bairro || '';
+    document.getElementById('cliCity').value = c.cidade || '';
+    document.getElementById('cliState').value = c.uf || '';
+    document.getElementById('cliContact').value = c.telefone || '';
+    document.getElementById('cliEmail').value = c.email || '';
+    document.getElementById('cliSimples').value = c.simples ? 'sim' : 'nao';
+    document.getElementById('cliSeller1').value = (c.seller && c.seller.includes('1')) ? '1' : '32';
+    document.getElementById('cliCreditLimit').value = c.limiteTotal || 0;
+
+    openEntityModal();
 };
 
+window.saveEntity = function (e) {
+    if (e) e.preventDefault();
+
+    const codeEl = document.getElementById('cliCode');
+    const isEdit = codeEl.value && codeEl.value !== 'Auto' && codeEl.value !== '';
+    const code = isEdit ? parseInt(codeEl.value) : Math.floor(Math.random() * 100000) + 2000;
+
+    const newClient = {
+        code: code,
+        name: document.getElementById('cliName').value,
+        fantasy: document.getElementById('cliFantasy').value,
+        cnpj: document.getElementById('cliDoc').value,
+        tipoCliente: document.getElementById('cliType').value,
+        cidade: document.getElementById('cliCity').value,
+        uf: document.getElementById('cliState').value,
+        bairro: document.getElementById('cliDistrict').value,
+        cep: document.getElementById('cliZip').value,
+        endereco: document.getElementById('cliStreet').value,
+        telefone: document.getElementById('cliContact').value,
+        email: document.getElementById('cliEmail').value,
+        simples: document.getElementById('cliSimples').value === 'sim',
+        seller: document.getElementById('cliSeller1').value === '1' ? '1 - INTERNO' : '32 - ABNAEL',
+        limiteTotal: parseFloat(document.getElementById('cliCreditLimit').value) || 0,
+        limiteDisponivel: parseFloat(document.getElementById('cliCreditLimit').value) || 0,
+        bloqueado: document.getElementById('cliBlocked').value === 'sim',
+        status: 'ativo'
+    };
+
+    if (isEdit) {
+        const idx = entities.findIndex(el => el.code === code);
+        if (idx >= 0) entities[idx] = { ...entities[idx], ...newClient };
+    } else {
+        entities.push(newClient);
+    }
+
+    localStorage.setItem('erp_clientes' + window.getTenantSuffix(), JSON.stringify(entities));
+    alert('Cliente salvo com sucesso!');
+    closeEntityModal();
+    renderEntities();
+};
+
+// Listen to the form
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('entityForm');
+    if (form) form.addEventListener('submit', window.saveEntity);
+});
 // --- Suppliers Logic ---
 window.openSupplierModal = () => {
     document.getElementById('supplierModal').style.display = 'flex';
