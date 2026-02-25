@@ -130,6 +130,7 @@ async function initFV() {
         let erpProdutos = JSON.parse(localStorage.getItem('erp_products' + tenantSuffix) || 'null');
 
         if (erpClientes && erpClientes.length > 0) {
+            await FVDB.clear('clientes');
             await FVDB.putMany('clientes', erpClientes);
             fvData.clientes = erpClientes;
         } else if (!fvData.clientes.length) {
@@ -138,6 +139,7 @@ async function initFV() {
         }
 
         if (erpProdutos && erpProdutos.length > 0) {
+            await FVDB.clear('produtos');
             // Garantir que os campos vitais existam para o FV
             erpProdutos = erpProdutos.map(p => ({
                 ...p,

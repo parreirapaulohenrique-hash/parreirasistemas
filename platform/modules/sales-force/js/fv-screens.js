@@ -1056,26 +1056,84 @@ function doSyncTotal() {
     indicator.classList.add('syncing');
     indicator.querySelector('.material-icons-round').textContent = 'sync';
 
-    setTimeout(() => {
-        fvData.lastSync = new Date().toISOString();
-        saveFVData();
-        indicator.classList.remove('syncing');
-        indicator.querySelector('.material-icons-round').textContent = 'cloud_done';
-        showToast('✅ Sincronização completa realizada!');
-        renderSync();
-    }, 2000);
+    setTimeout(async () => {
+        try {
+            let tenantSuffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
+            if (!tenantSuffix && localStorage.getItem('erp_products_01')) tenantSuffix = '_01';
+
+            const erpClientes = JSON.parse(localStorage.getItem('erp_clientes' + tenantSuffix) || 'null');
+            let erpProdutos = JSON.parse(localStorage.getItem('erp_products' + tenantSuffix) || 'null');
+
+            if (erpClientes && erpClientes.length > 0) {
+                await FVDB.clear('clientes');
+                await FVDB.putMany('clientes', erpClientes);
+                fvData.clientes = erpClientes;
+            }
+            if (erpProdutos && erpProdutos.length > 0) {
+                await FVDB.clear('produtos');
+                erpProdutos = erpProdutos.map(p => ({
+                    ...p,
+                    sku: p.sku || p.codigo || p.id,
+                    nome: p.nome || p.descricao,
+                    precoBase: p.precoBase || p.precoVenda || p.preco || 0
+                }));
+                await FVDB.putMany('produtos', erpProdutos);
+                fvData.produtos = erpProdutos;
+            }
+
+            fvData.lastSync = new Date().toISOString();
+            await saveFVData();
+
+            indicator.classList.remove('syncing');
+            indicator.querySelector('.material-icons-round').textContent = 'cloud_done';
+            showToast('✅ Sincronização completa realizada!');
+            renderSync();
+        } catch (e) {
+            console.error('Erro na sincronização', e);
+            indicator.classList.remove('syncing');
+            showToast('Erro ao sincronizar dados', 'error');
+        }
+    }, 500);
 }
 
 function doSyncSetor(setor) {
     const labels = { comercial: 'Comercial', financeiro: 'Financeiro', logistico: 'Logístico', pedidos: 'Pedidos' };
     showToast('Sincronizando ' + labels[setor] + '...');
 
-    setTimeout(() => {
-        fvData.lastSync = new Date().toISOString();
-        saveFVData();
-        showToast('✅ ' + labels[setor] + ' sincronizado!');
-        renderSync();
-    }, 1500);
+    setTimeout(async () => {
+        try {
+            if (setor === 'comercial') {
+                let tenantSuffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
+                if (!tenantSuffix && localStorage.getItem('erp_products_01')) tenantSuffix = '_01';
+
+                const erpClientes = JSON.parse(localStorage.getItem('erp_clientes' + tenantSuffix) || 'null');
+                let erpProdutos = JSON.parse(localStorage.getItem('erp_products' + tenantSuffix) || 'null');
+
+                if (erpClientes && erpClientes.length > 0) {
+                    await FVDB.putMany('clientes', erpClientes);
+                    fvData.clientes = erpClientes;
+                }
+                if (erpProdutos && erpProdutos.length > 0) {
+                    erpProdutos = erpProdutos.map(p => ({
+                        ...p,
+                        sku: p.sku || p.codigo || p.id,
+                        nome: p.nome || p.descricao,
+                        precoBase: p.precoBase || p.precoVenda || p.preco || 0
+                    }));
+                    await FVDB.putMany('produtos', erpProdutos);
+                    fvData.produtos = erpProdutos;
+                }
+            }
+
+            fvData.lastSync = new Date().toISOString();
+            await saveFVData();
+            showToast('✅ ' + labels[setor] + ' sincronizado!');
+            renderSync();
+        } catch (e) {
+            console.error('Erro na sincronização de setor', e);
+            showToast('Erro ao sincronizar setor', 'error');
+        }
+    }, 500);
 }
 
 // ===========================================
