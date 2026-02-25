@@ -14,11 +14,41 @@ const CNPJLookup = {
     },
 
     /**
-     * Valida formato do CNPJ (apenas quantidade de dígitos)
+     * Valida formato e dígitos verificadores do CNPJ
      */
     isValidFormat(cnpj) {
         const cleaned = this.cleanCNPJ(cnpj);
-        return cleaned.length === 14;
+        if (cleaned.length !== 14) return false;
+
+        if (/^(\d)\1+$/.test(cleaned)) return false;
+
+        let tamanho = cleaned.length - 2;
+        let numeros = cleaned.substring(0, tamanho);
+        const digitos = cleaned.substring(tamanho);
+        let soma = 0;
+        let pos = tamanho - 7;
+
+        for (let i = tamanho; i >= 1; i--) {
+            soma += parseInt(numeros.charAt(tamanho - i)) * pos--;
+            if (pos < 2) pos = 9;
+        }
+
+        let resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+        if (resultado !== parseInt(digitos.charAt(0))) return false;
+
+        tamanho = tamanho + 1;
+        numeros = cleaned.substring(0, tamanho);
+        soma = 0;
+        pos = tamanho - 7;
+        for (let i = tamanho; i >= 1; i--) {
+            soma += parseInt(numeros.charAt(tamanho - i)) * pos--;
+            if (pos < 2) pos = 9;
+        }
+
+        resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+        if (resultado !== parseInt(digitos.charAt(1))) return false;
+
+        return true;
     },
 
     /**
@@ -49,7 +79,10 @@ const CNPJLookup = {
                 if (response.status === 404) {
                     throw new Error('CNPJ não encontrado na base da Receita Federal');
                 }
-                throw new Error(`Erro na consulta: ${response.status}`);
+                if (response.status === 400) {
+                    throw new Error('CNPJ considerado inválido pela Receita Federal (Verifique os dígitos)');
+                }
+                throw new Error(`Erro na consulta: ${response.status} - A API pode estar indisponível`);
             }
 
             const data = await response.json();
