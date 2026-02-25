@@ -234,6 +234,30 @@
                     </div>
                 </div>
 
+                <!-- ═══ RECURSOS HUMANOS (RH) ═══ -->
+                <div class="nav-group">
+                    <a class="nav-item" onclick="toggleSubmenu('sub-rh')">
+                        <span class="material-icons-round">badge</span>
+                        <span>Recursos Humanos</span>
+                        <span class="material-icons-round ms-auto"
+                            style="font-size:1.2rem; margin-left:auto;">expand_more</span>
+                    </a>
+                    <div id="sub-rh" class="nav-submenu">
+                        <a class="nav-sub-item" onclick="switchView('rhPonto')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">access_time</span>Controle de Ponto
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('rhFolha')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">payments</span>Folha de Pagamento
+                        </a>
+                        <a class="nav-sub-item" onclick="switchView('rhFerias')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">beach_access</span>Férias e Licenças
+                        </a>
+                    </div>
+                </div>
+
                 <!-- ═══ VENDAS ═══ -->
                 <div class="nav-group">
                     <a class="nav-item" onclick="toggleSubmenu('sub-vendas-op')">
@@ -5441,6 +5465,159 @@
                 </div>
             </div>
 
+            <!-- View: RH Controle de Ponto -->
+            <div id="view-rh-ponto" class="page-content" style="display:none;">
+                <div class="card" style="max-width: 600px; margin: 0 auto; text-align: center; padding: 2rem;">
+                    <h2>Controle de Ponto Eletrônico</h2>
+                    <p class="text-secondary" style="margin-bottom:2rem;">Registre sua entrada, pausas e saída.</p>
+
+                    <div style="font-size: 3rem; font-weight: 700; color: var(--primary-color); margin-bottom: 2rem;"
+                        id="rhRelogio">
+                        00:00:00
+                    </div>
+
+                    <button class="btn btn-primary" style="padding: 1rem 3rem; font-size: 1.25rem; border-radius: 50px;"
+                        onclick="baterPontoRH()">
+                        <span class="material-icons-round"
+                            style="font-size:1.5rem; margin-right:0.5rem;">fingerprint</span> Bater Ponto
+                    </button>
+
+                    <div style="margin-top: 3rem; text-align: left;">
+                        <h4>Registros de Hoje</h4>
+                        <ul id="rhListaPontos"
+                            style="list-style:none; padding:0; margin-top:1rem; border:1px solid var(--border-color); border-radius: var(--radius-md);">
+                            <!-- Inserted by JS -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- View: RH Folha de Pagamento -->
+            <div id="view-rh-folha" class="page-content" style="display:none;">
+                <div class="card">
+                    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3>Folha de Pagamento / Holerites</h3>
+                        <button class="btn btn-primary" onclick="gerarHoleritesLote()">
+                            <span class="material-icons-round">receipt_long</span> Gerar Holerites do Mês
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Funcionário</th>
+                                        <th>Cargo</th>
+                                        <th>Salário Base</th>
+                                        <th>Descontos (INSS/VT)</th>
+                                        <th>Líquido Projetado</th>
+                                        <th style="text-align:right;">Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rhFolhaTableBody">
+                                    <!-- Inserted by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- View: RH Férias e Licenças -->
+            <div id="view-rh-ferias" class="page-content" style="display:none;">
+                <div class="card">
+                    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3>Agenda de Férias e Licenças</h3>
+                        <button class="btn btn-primary" onclick="abrirModalFeriasRH()">
+                            <span class="material-icons-round">event_available</span> Registrar Férias
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Funcionário</th>
+                                        <th>Tipo de Afastamento</th>
+                                        <th>Início</th>
+                                        <th>Término</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rhFeriasTableBody">
+                                    <!-- Inserted by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal: Holerite RH -->
+            <div id="rhHoleriteModal" class="modal-overlay" style="display:none;">
+                <div class="modal-content" style="max-width:600px;">
+                    <div class="modal-header">
+                        <h3>Recibo de Pagamento de Salário (Holerite)</h3>
+                        <button class="btn-icon" onclick="closeModal('rhHoleriteModal')"><span
+                                class="material-icons-round">close</span></button>
+                    </div>
+                    <div class="modal-body" id="rhHoleriteContent"
+                        style="font-family: monospace; background:#f9f9f9; padding:1.5rem; border:1px solid #ccc;">
+                        <!-- Content -->
+                    </div>
+                    <div class="modal-footer" style="justify-content:center;">
+                        <button class="btn btn-primary" onclick="window.print()">
+                            <span class="material-icons-round">print</span> Imprimir RECIBO
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal: Registrar Férias RH -->
+            <div id="rhFeriasModal" class="modal-overlay" style="display:none;">
+                <div class="modal-content" style="max-width:500px;">
+                    <div class="modal-header">
+                        <h3>Registrar Afastamento / Férias</h3>
+                        <button class="btn-icon" onclick="closeModal('rhFeriasModal')"><span
+                                class="material-icons-round">close</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="formRhFerias" onsubmit="event.preventDefault(); salvarFeriasRH();">
+                            <div class="form-group">
+                                <label class="form-label">Funcionário</label>
+                                <select id="rhFeriasFunc" class="form-input" required>
+                                    <!-- Options -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Tipo de Afastamento</label>
+                                <select id="rhFeriasTipo" class="form-input" required>
+                                    <option value="Férias Regulares">Férias Regulares (30 dias)</option>
+                                    <option value="Férias Parciais">Férias Parciais</option>
+                                    <option value="Licença Maternidade/Paternidade">Licença Maternidade/Paternidade
+                                    </option>
+                                    <option value="Atestado Médico">Atestado / Licença Médica</option>
+                                </select>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                                <div class="form-group">
+                                    <label class="form-label">Data Início</label>
+                                    <input type="date" id="rhFeriasInicio" class="form-input" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Data Término</label>
+                                    <input type="date" id="rhFeriasFim" class="form-input" required>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="closeModal('rhFeriasModal')">Cancelar</button>
+                        <button class="btn btn-primary" onclick="salvarFeriasRH()">Salvar Registro</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- View: CRM Leads -->
             <div id="view-crmLeads" class="page-content" style="display:none;">
                 <div class="card">
@@ -7050,8 +7227,9 @@
     <script src="js/gerencial.js"></script>
 
     <script src="js/bi_financeiro.js"></script>
-    <script src="js/nfe.js"></script>
-    <script src="js/vendas.js"></script>
+    <script src="js/gerencial.js"></script>
+    <script src="js/crm.js?v=10.0.0"></script>
+    <script src="js/rh.js?v=11.0.0"></script>
     <script type="module" src="js/app.js?v=3.0.0"></script>
     <script src="js/relatorios_rca.js"></script>
 </body>

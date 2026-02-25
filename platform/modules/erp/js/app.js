@@ -136,6 +136,10 @@ window.switchView = (viewName) => {
         'crmFunil': 'CRM - Funil de Vendas',
         'crmLeads': 'CRM - Leads e Contatos',
         'crmDashboard': 'CRM - Dashboard',
+        // ── Fase 11 — RH ──
+        'rhPonto': 'RH - Controle de Ponto',
+        'rhFolha': 'RH - Folha de Pagamento',
+        'rhFerias': 'RH - Férias e Licenças',
         // ── Fase 12 — Novos títulos ──
         'vendedores': 'Vendedores / RCA',
         'transportadoras': 'Transportadoras',
