@@ -14,41 +14,11 @@ const CNPJLookup = {
     },
 
     /**
-     * Valida formato e dígitos verificadores do CNPJ
+     * Valida formato do CNPJ (apenas quantidade de dígitos)
      */
     isValidFormat(cnpj) {
         const cleaned = this.cleanCNPJ(cnpj);
-        if (cleaned.length !== 14) return false;
-
-        if (/^(\d)\1+$/.test(cleaned)) return false;
-
-        let tamanho = cleaned.length - 2;
-        let numeros = cleaned.substring(0, tamanho);
-        const digitos = cleaned.substring(tamanho);
-        let soma = 0;
-        let pos = tamanho - 7;
-
-        for (let i = tamanho; i >= 1; i--) {
-            soma += parseInt(numeros.charAt(tamanho - i)) * pos--;
-            if (pos < 2) pos = 9;
-        }
-
-        let resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
-        if (resultado !== parseInt(digitos.charAt(0))) return false;
-
-        tamanho = tamanho + 1;
-        numeros = cleaned.substring(0, tamanho);
-        soma = 0;
-        pos = tamanho - 7;
-        for (let i = tamanho; i >= 1; i--) {
-            soma += parseInt(numeros.charAt(tamanho - i)) * pos--;
-            if (pos < 2) pos = 9;
-        }
-
-        resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
-        if (resultado !== parseInt(digitos.charAt(1))) return false;
-
-        return true;
+        return cleaned.length === 14;
     },
 
     /**
