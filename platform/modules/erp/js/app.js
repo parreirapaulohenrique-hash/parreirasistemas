@@ -184,6 +184,8 @@ window.switchView = (viewName) => {
     if (viewName === 'entities') renderEntities();
     if (viewName === 'suppliers') renderSuppliers();
     if (viewName === 'employees') renderEmployees();
+    if (viewName === 'products') renderProducts();
+    if (viewName === 'cad-produtos' && typeof renderProdutosGrid === 'function') renderProdutosGrid();
 
     // Cadastros Financeiros/Fiscais
     if (viewName === 'groups' && typeof renderGruposGrid === 'function') renderGruposGrid();
@@ -242,22 +244,19 @@ window.switchTab = (btn, tabId) => {
     document.getElementById(tabId).classList.add('active');
 };
 
-// --- Product Data Logic ---
-let products = [
-    { sku: 'COD001', name: 'Óleo de Motor 5W30', log: '1kg / 20x10x10', price: 45.00, stock: 120 },
-    { sku: 'COD002', name: 'Filtro de Ar Esportivo', log: '0.5kg / 15x15x15', price: 89.90, stock: 50 },
-    { sku: 'COD003', name: 'Pneu Aro 16 Michellin', log: '8kg / 60x60x20', price: 650.00, stock: 12 }
-];
-
 function renderProducts(filter = '') {
     const tbody = document.getElementById('productsTableBody');
     if (!tbody) return;
 
     tbody.innerHTML = '';
 
-    const filtered = products.filter(p =>
-        p.name.toLowerCase().includes(filter.toLowerCase()) ||
-        p.sku.toLowerCase().includes(filter.toLowerCase())
+    // Load from actual localStorage
+    const tenantSuffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
+    const realProducts = JSON.parse(localStorage.getItem('erp_products' + tenantSuffix) || '[]');
+
+    const filtered = realProducts.filter(p =>
+        (p.nome || '').toLowerCase().includes(filter.toLowerCase()) ||
+        (p.sku || '').toLowerCase().includes(filter.toLowerCase())
     );
 
     if (filtered.length === 0) {
@@ -266,15 +265,21 @@ function renderProducts(filter = '') {
     }
 
     filtered.forEach(p => {
+        const pNome = p.nome || '-';
+        const pSku = p.sku || '-';
+        const pPrice = parseFloat(p.preco || 0);
+        const pStock = parseFloat(p.estoque || 0);
+        const pLog = `${p.pesoLiq || 0}kg / ${p.unidade || 'UN'}`;
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td style="font-weight:600">${p.sku}</td>
-            <td>${p.name}</td>
-            <td style="font-size:0.85rem; color:var(--text-secondary)">${p.log}</td>
-            <td style="font-weight:600; color:var(--accent-success)">R$ ${p.price.toFixed(2)}</td>
-            <td>${p.stock} un</td>
+            <td style="font-weight:600">${pSku}</td>
+            <td>${pNome}</td>
+            <td style="font-size:0.85rem; color:var(--text-secondary)">${pLog}</td>
+            <td style="font-weight:600; color:var(--accent-success)">R$ ${pPrice.toFixed(2)}</td>
+            <td>${pStock} un</td>
             <td style="text-align:right">
-                <button class="btn btn-secondary btn-icon" style="padding:0.4rem;">
+                <button class="btn btn-secondary btn-icon" style="padding:0.4rem;" onclick="typeof editProduto === 'function' ? editProduto('${p.id}') : null">
                     <span class="material-icons-round" style="font-size:1rem;">edit</span>
                 </button>
             </td>
