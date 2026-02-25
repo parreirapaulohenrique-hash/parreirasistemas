@@ -249,13 +249,13 @@ window.handleExcelImport = function (event) {
                 for (const key in row) {
                     const normKey = normalize(key);
                     const val = row[key] || "";
-                    if (normKey === "sku" || normKey === "codigo" || normKey === "ref") sku = String(val).trim();
-                    if (normKey === "nome" || normKey === "descricao" || normKey === "produto") nome = String(val).trim();
-                    if (normKey === "preco" || normKey === "valor" || normKey === "precovenda") preco = parseFloat(String(val).replace(',', '.')) || 0;
-                    if (normKey === "custo" || normKey === "valorcusto") costo = parseFloat(String(val).replace(',', '.')) || 0;
-                    if (normKey === "unidade" || normKey === "un") unidade = String(val).trim();
-                    if (normKey === "grupo" || normKey === "categoria") grupo = String(val).trim();
-                    if (normKey === "ncm") ncm = String(val).trim();
+                    if (normKey.includes("sku") || normKey.includes("codigo") || normKey.includes("ref") || normKey.includes("cod")) sku = String(val).trim();
+                    if (normKey.includes("nome") || normKey.includes("descricao") || normKey.includes("produto")) nome = String(val).trim();
+                    if (normKey.includes("preco") || normKey.includes("valor") || normKey.includes("venda")) preco = parseFloat(String(val).replace(',', '.')) || 0;
+                    if (normKey.includes("custo")) costo = parseFloat(String(val).replace(',', '.')) || 0;
+                    if (normKey.includes("unidade") || normKey === "un") unidade = String(val).trim();
+                    if (normKey.includes("grupo") || normKey.includes("categoria")) grupo = String(val).trim();
+                    if (normKey.includes("ncm")) ncm = String(val).trim();
                 }
 
                 if (!sku || !nome) {
