@@ -1,8 +1,8 @@
 {
-    "module": "module-erp",
-    "name": "Parreira ERP Core",
-    "version": "11.2.0",
+    "module": "erp",
+    "name": "ParreiraLog ERP",
+    "version": "11.3.0",
     "date": "2026-02-26",
-    "last_change": "Fix Cadastros Comerciais: views HTML faltando (vendedores, transportadoras, marcas, regioes, rotas, tabPreco)",
-    "build": "20260226.02"
+    "last_change": "Consulta Pedidos de Venda + views vendas-avancado + tipoFrete/descontoPedido no adapter FV",
+    "build": "20260226.03"
 }

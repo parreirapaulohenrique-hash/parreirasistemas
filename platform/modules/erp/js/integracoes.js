@@ -404,7 +404,8 @@ window.onErpReceberPedidoFV = function (pedidoFV) {
 
         // ── Transporte ──
         transporte: {
-            modalidadeFrete: 0,
+            modalidadeFrete: pedidoFV.tipoFrete === 'FOB' ? 1 : pedidoFV.tipoFrete === 'SEM' ? 9 : 0,
+            tipoFrete: pedidoFV.tipoFrete || 'CIF',
             transportadora: {
                 codigo: pedidoFV.codfornecTransp || '',
                 razaoSocial: pedidoFV.transportadora || '',
@@ -421,6 +422,8 @@ window.onErpReceberPedidoFV = function (pedidoFV) {
         totais: {
             subtotal: totalProdutos + totalDesconto,
             desconto: totalDesconto,
+            descontoPedido: pedidoFV.descontoPedido || 0,
+            descontoPedidoValor: pedidoFV.descontoPedidoValor || 0,
             totalProdutos: totalProdutos,
             totalNF: pedidoFV.valorTotal || totalProdutos + totalIpi,
             valorIPI: totalIpi,

@@ -558,6 +558,106 @@ const VendasAvancado = (() => {
     }
 
     // ═════════════════════════════════════════════════════
+    // 6. CONSULTA PEDIDOS DE VENDA
+    // ═════════════════════════════════════════════════════
+    function renderConsultaPedidos() {
+        const el = document.getElementById('view-consultaPedidos');
+        if (!el) return;
+
+        const vendas = getVendas();
+        const totalValor = vendas.reduce((s, v) => s + (v.totais?.totalNF || v.valorTotal || 0), 0);
+
+        const statusColors = {
+            'aberto': '#f59e0b', 'Aprovado': '#3b82f6', 'Pendente WMS': '#3b82f6',
+            'Em Separação': '#8b5cf6', 'conferido_wms': '#a855f7', 'venda': '#22c55e',
+            'faturado': '#22c55e', 'despachado': '#06b6d4', 'orcamento': '#f59e0b',
+            'cancelado': '#ef4444'
+        };
+
+        el.innerHTML = `
+        <div class="view-header-bar">
+            <h2><span class="material-icons-round">list_alt</span> Consulta Pedidos de Venda</h2>
+            <span style="font-size:0.8rem;color:var(--text-secondary)">${vendas.length} pedido(s) · ${fmtMoney(totalValor)}</span>
+        </div>
+        <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;">
+            <input type="text" id="cpFilterText" placeholder="Buscar por nº, cliente, status..."
+                   style="flex:1;min-width:200px;padding:0.5rem 0.75rem;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-secondary);color:var(--text-primary);font-size:0.85rem"
+                   oninput="VendasAvancado.filterConsultaPedidos()">
+            <select id="cpFilterStatus"
+                    style="padding:0.5rem;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-secondary);color:var(--text-primary);font-size:0.85rem"
+                    onchange="VendasAvancado.filterConsultaPedidos()">
+                <option value="">Todos status</option>
+                <option value="aberto">Aberto</option>
+                <option value="orcamento">Orçamento</option>
+                <option value="venda">Venda</option>
+                <option value="Aprovado">Aprovado</option>
+                <option value="faturado">Faturado</option>
+                <option value="despachado">Despachado</option>
+                <option value="cancelado">Cancelado</option>
+            </select>
+        </div>
+        <div class="card" style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;" id="cpTable">
+                <thead>
+                    <tr style="border-bottom:2px solid var(--border-color);background:var(--bg-secondary);">
+                        <th style="padding:0.6rem 0.5rem;font-size:0.72rem;color:var(--text-secondary);text-align:left">Pedido</th>
+                        <th style="padding:0.6rem 0.5rem;font-size:0.72rem;color:var(--text-secondary);text-align:left">Data</th>
+                        <th style="padding:0.6rem 0.5rem;font-size:0.72rem;color:var(--text-secondary);text-align:left">Cliente</th>
+                        <th style="padding:0.6rem 0.5rem;font-size:0.72rem;color:var(--text-secondary);text-align:center">Origem</th>
+                        <th style="padding:0.6rem 0.5rem;font-size:0.72rem;color:var(--text-secondary);text-align:center">Frete</th>
+                        <th style="padding:0.6rem 0.5rem;font-size:0.72rem;color:var(--text-secondary);text-align:right">Itens</th>
+                        <th style="padding:0.6rem 0.5rem;font-size:0.72rem;color:var(--text-secondary);text-align:right">Desc.</th>
+                        <th style="padding:0.6rem 0.5rem;font-size:0.72rem;color:var(--text-secondary);text-align:right">IPI</th>
+                        <th style="padding:0.6rem 0.5rem;font-size:0.72rem;color:var(--text-secondary);text-align:right">Total NF</th>
+                        <th style="padding:0.6rem 0.5rem;font-size:0.72rem;color:var(--text-secondary);text-align:center">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="cpTableBody">
+                    ${vendas.length === 0 ? '<tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--text-secondary)">Nenhum pedido de venda registrado.</td></tr>' : ''}
+                    ${vendas.map(v => {
+            const clienteNome = v.cliente?.razaoSocial || v.cliente?.fantasia || v.clienteNome || '-';
+            const origem = v.origemFV ? 'FV' : v.origemOrcamento ? 'ORC' : 'ERP';
+            const origemColor = v.origemFV ? '#22c55e' : v.origemOrcamento ? '#f59e0b' : '#3b82f6';
+            const frete = v.transporte?.tipoFrete || v.tipoFrete || '-';
+            const freteColor = frete === 'CIF' ? '#22c55e' : frete === 'FOB' ? '#f59e0b' : 'var(--text-secondary)';
+            const qtdItens = (v.itens || []).reduce((s, i) => s + (i.quantidade || i.qtd || 0), 0);
+            const descTotal = (v.totais?.desconto || 0) + (v.totais?.descontoPedidoValor || 0);
+            const totalIpi = v.totais?.valorIPI || 0;
+            const totalNF = v.totais?.totalNF || v.valorTotal || 0;
+            const status = (v.status || 'aberto');
+            const sColor = statusColors[status] || 'var(--text-secondary)';
+            return `
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.03);" data-search="${(v.numero + ' ' + clienteNome + ' ' + status).toLowerCase()}">
+                            <td style="padding:0.5rem;font-weight:700;font-size:0.8rem;">${v.numero || v.id}</td>
+                            <td style="padding:0.5rem;font-size:0.8rem;">${fmtDate(v.data)}</td>
+                            <td style="padding:0.5rem;font-size:0.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${clienteNome}">${clienteNome}</td>
+                            <td style="text-align:center;padding:0.5rem;"><span style="font-size:0.65rem;font-weight:700;padding:2px 6px;border-radius:4px;background:${origemColor}22;color:${origemColor}">${origem}</span></td>
+                            <td style="text-align:center;padding:0.5rem;"><span style="font-size:0.7rem;font-weight:600;color:${freteColor}">${frete}</span></td>
+                            <td style="text-align:right;padding:0.5rem;font-size:0.8rem;">${qtdItens}</td>
+                            <td style="text-align:right;padding:0.5rem;font-size:0.8rem;color:${descTotal > 0 ? '#22c55e' : 'var(--text-secondary)'}">${descTotal > 0 ? fmtMoney(descTotal) : '-'}</td>
+                            <td style="text-align:right;padding:0.5rem;font-size:0.8rem;color:${totalIpi > 0 ? '#f59e0b' : 'var(--text-secondary)'}">${totalIpi > 0 ? fmtMoney(totalIpi) : '-'}</td>
+                            <td style="text-align:right;padding:0.5rem;font-weight:700;font-size:0.85rem;">${fmtMoney(totalNF)}</td>
+                            <td style="text-align:center;padding:0.5rem;"><span style="font-size:0.65rem;font-weight:700;padding:2px 8px;border-radius:4px;background:${sColor}22;color:${sColor}">${status.toUpperCase()}</span></td>
+                        </tr>`;
+        }).join('')}
+                </tbody>
+            </table>
+        </div>`;
+    }
+
+    function filterConsultaPedidos() {
+        const text = (document.getElementById('cpFilterText')?.value || '').toLowerCase();
+        const status = (document.getElementById('cpFilterStatus')?.value || '').toLowerCase();
+        const rows = document.querySelectorAll('#cpTableBody tr[data-search]');
+        rows.forEach(row => {
+            const search = row.dataset.search || '';
+            const matchText = !text || search.includes(text);
+            const matchStatus = !status || search.includes(status);
+            row.style.display = matchText && matchStatus ? '' : 'none';
+        });
+    }
+
+    // ═════════════════════════════════════════════════════
     // VIEW HOOKS
     // ═════════════════════════════════════════════════════
     const VIEW_MAP = {
@@ -565,7 +665,8 @@ const VendasAvancado = (() => {
         faturamento: renderFaturamento,
         liberacaoCredito: renderLiberacaoCredito,
         romaneio: renderRomaneio,
-        comissoes: renderComissoes
+        comissoes: renderComissoes,
+        consultaPedidos: renderConsultaPedidos
     };
 
     window._viewHooks = window._viewHooks || [];
@@ -573,13 +674,14 @@ const VendasAvancado = (() => {
         if (VIEW_MAP[viewId]) VIEW_MAP[viewId]();
     });
 
-    console.log('🛍️ Módulo de Vendas Avançado inicializado (5 telas)');
+    console.log('🛍️ Módulo de Vendas Avançado inicializado (6 telas)');
 
     return {
         renderOrcamento, novoOrcamento, converterOrcamento,
         renderFaturamento, faturarPedido,
         renderLiberacaoCredito, liberarCredito,
         renderRomaneio,
-        renderComissoes
+        renderComissoes,
+        renderConsultaPedidos, filterConsultaPedidos
     };
 })();
