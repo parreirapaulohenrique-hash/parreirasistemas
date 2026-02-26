@@ -1,8 +1,8 @@
 {
     "module": "erp",
     "name": "ParreiraLog ERP",
-    "version": "11.6.0",
+    "version": "11.6.1",
     "date": "2026-02-26",
-    "last_change": "FIX DEFINITIVO: removido </main> prematuro que fechava o container antes das views de vendas",
-    "build": "20260226.11"
+    "last_change": "FIX: views vendas dentro de content-wrapper para serem visiveis (overflow:hidden fix)",
+    "build": "20260226.12"
 }

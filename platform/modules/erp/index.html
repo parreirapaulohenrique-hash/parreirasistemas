@@ -6325,465 +6325,474 @@
             </div>
         </div>
     </div>
+    <!-- Views que ficam fora do content-wrapper original -->
+    <div class="content-wrapper" id="content-wrapper-vendas">
 
-    <!-- View: Devolução - Lista -->
-    <div id="view-devolucaoLista" class="page-content"
-        style="display:none; height:calc(100vh - 110px); flex-direction:column;">
-        <!-- Header Actions -->
-        <div class="card"
-            style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
-            <div class="card-body" style="padding:0.5rem; display:flex; gap:0.5rem;">
-                <button class="btn btn-primary" onclick="openModal('devolucaoWizard')"
-                    style="min-width:100px;">Novo</button>
-                <button class="btn btn-secondary" style="min-width:100px;">Gravar</button>
-                <button class="btn btn-secondary" style="min-width:100px;">Cancelar</button>
-                <div style="flex:1;"></div>
-                <button class="btn btn-secondary" style="min-width:100px;">Sair</button>
+        <!-- View: Devolução - Lista -->
+        <div id="view-devolucaoLista" class="page-content"
+            style="display:none; height:calc(100vh - 110px); flex-direction:column;">
+            <!-- Header Actions -->
+            <div class="card"
+                style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
+                <div class="card-body" style="padding:0.5rem; display:flex; gap:0.5rem;">
+                    <button class="btn btn-primary" onclick="openModal('devolucaoWizard')"
+                        style="min-width:100px;">Novo</button>
+                    <button class="btn btn-secondary" style="min-width:100px;">Gravar</button>
+                    <button class="btn btn-secondary" style="min-width:100px;">Cancelar</button>
+                    <div style="flex:1;"></div>
+                    <button class="btn btn-secondary" style="min-width:100px;">Sair</button>
+                </div>
+            </div>
+
+            <!-- Header Inputs -->
+            <div class="card"
+                style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
+                <div class="card-body" style="padding:0.8rem; font-size:0.8rem;">
+                    <!-- Row 1 -->
+                    <div style="display:flex; gap:1rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+                        <div style="width:150px;"><label style="display:block; color:var(--text-secondary);">Operação de
+                                Entrada</label><select class="form-input" style="padding:0.2rem;">
+                                <option>Dev. simples</option>
+                            </select></div>
+                        <div style="width:80px;"><label
+                                style="display:block; color:var(--text-secondary);">Transação</label><input type="text"
+                                value="9081" class="form-input" style="padding:0.2rem;"></div>
+                        <div style="width:60px;"><label
+                                style="display:block; color:var(--text-secondary);">Empresa</label><input type="number"
+                                value="01" class="form-input" style="padding:0.2rem;"></div>
+                        <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Nº
+                                Nota</label><input type="text" value="9081" class="form-input" style="padding:0.2rem;">
+                        </div>
+                        <div style="width:50px;"><label
+                                style="display:block; color:var(--text-secondary);">Série</label><input type="text"
+                                class="form-input" style="padding:0.2rem;"></div>
+                        <div style="width:50px;"><label
+                                style="display:block; color:var(--text-secondary);">Espécie</label><input type="text"
+                                value="OE" class="form-input" style="padding:0.2rem;"></div>
+                        <div style="width:120px;"><label style="display:block; color:var(--text-secondary);">Data de
+                                Emissão</label><input type="date" value="2026-02-05" class="form-input"
+                                style="padding:0.2rem;"></div>
+                        <div style="width:120px;"><label style="display:block; color:var(--text-secondary);">Data de
+                                Entrada</label><input type="date" value="2026-02-05" class="form-input"
+                                style="padding:0.2rem;"></div>
+                        <div style="flex:1;"><label style="display:block; color:var(--text-secondary);">Motivo da
+                                devolução</label><select class="form-input" style="padding:0.2rem;">
+                                <option></option>
+                            </select></div>
+                    </div>
+                    <!-- Row 2 -->
+                    <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+                        <div style="width:100px;">
+                            <label style="display:block; color:var(--text-secondary);">Código do Cliente</label>
+                            <div style="display:flex;">
+                                <input type="text" class="form-input" style="padding:0.2rem;">
+                                <button class="btn btn-secondary" style="padding:0 0.5rem;">...</button>
+                            </div>
+                        </div>
+                        <div style="flex:2;"><label style="display:block; color:var(--text-secondary);">Razão social do
+                                cliente</label><input type="text" class="form-input" style="padding:0.2rem;"></div>
+                        <div style="width:150px;"><label style="display:block; color:var(--text-secondary);">Nota
+                                emitida pelo cliente?</label><select class="form-input" style="padding:0.2rem;">
+                                <option>Não</option>
+                            </select></div>
+                        <div style="flex:1;"><label style="display:block; color:var(--text-secondary);">Chave de
+                                acesso</label><input type="text" class="form-input" style="padding:0.2rem;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div style="display:flex; margin-bottom:0;">
+                <button class="btn tab-btn active" onclick="switchTab(this, 'tab-dev-movimento')"
+                    style="background:#dbeafe; border:1px solid var(--border-color); border-bottom:none; border-radius:4px 4px 0 0; padding:0.5rem 1rem; font-weight:bold; color:black;">Movimento
+                    de Venda</button>
+                <button class="btn tab-btn" onclick="switchTab(this, 'tab-dev-itens')"
+                    style="background:var(--bg-card); border:1px solid transparent; padding:0.5rem 1rem; color:var(--text-secondary);">Itens
+                    Lançados</button>
+                <button class="btn tab-btn" onclick="switchTab(this, 'tab-dev-credito')"
+                    style="background:var(--bg-card); border:1px solid transparent; padding:0.5rem 1rem; color:var(--text-secondary);">Crédito
+                    de cliente</button>
+            </div>
+
+            <!-- Tab Content: Movimento -->
+            <div id="tab-dev-movimento" class="card tab-content active"
+                style="border-top-left-radius:0; border:1px solid var(--border-color); background:var(--bg-card); flex:1; display:flex; flex-direction:column; margin-bottom:0.5rem;">
+                <!-- Search Filter inside Tab -->
+                <div
+                    style="padding:0.5rem; border-bottom:1px solid var(--border-color); display:flex; gap:1rem; align-items:flex-end; font-size:0.8rem; flex-wrap:wrap;">
+                    <div
+                        style="font-weight:bold; color:var(--accent-primary); display:flex; align-items:center; gap:0.5rem;">
+                        <span>▼</span> Pesquisar vendas para o cliente
+                    </div>
+                    <div style="margin-left:auto; display:flex; gap:1rem; align-items:flex-end;">
+                        <div><label style="display:block;">Período de emissão</label>
+                            <div style="display:flex; gap:0.2rem;">
+                                <input type="date" value="2026-02-01" class="form-input" style="padding:0.2rem;">
+                                <span>até</span>
+                                <input type="date" value="2026-02-05" class="form-input" style="padding:0.2rem;">
+                            </div>
+                        </div>
+                        <div><label style="display:block;">Nº Nota</label><input type="text" value="0"
+                                class="form-input" style="padding:0.2rem; width:80px; text-align:right;"></div>
+                        <button class="btn btn-secondary" style="font-weight:bold;">Buscar</button>
+                    </div>
+                </div>
+
+                <!-- Grid -->
+                <div style="flex:1; background:var(--bg-secondary); overflow:auto; padding:1rem;">
+                    <p style="text-align:center; color:var(--text-secondary);">Nenhum resultado para exibir</p>
+                </div>
+            </div>
+
+            <!-- Tab Content: Itens -->
+            <div id="tab-dev-itens" class="card tab-content"
+                style="display:none; border-top-left-radius:0; border:1px solid var(--border-color); background:var(--bg-card); height:calc(100vh - 400px); padding:1rem;">
+                <p style="text-align:center;">Itens lançados aparecerão aqui.</p>
+            </div>
+
+            <!-- Tab Content: Crédito -->
+            <div id="tab-dev-credito" class="card tab-content"
+                style="display:none; border-top-left-radius:0; border:1px solid var(--border-color); background:var(--bg-card); height:calc(100vh - 400px); padding:1rem;">
+                <p style="text-align:center;">Informações de crédito.</p>
+            </div>
+
+            <!-- Footer Totals -->
+            <div class="card"
+                style="margin-top:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
+                <div class="card-body"
+                    style="padding:0.5rem; display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:1rem; font-size:0.75rem;">
+                    <div><label style="display:block;">Valor Total</label><input type="text" class="form-input"
+                            readonly>
+                    </div>
+                    <div><label style="display:block;">Valor da Base de ICMS</label><input type="text"
+                            class="form-input" readonly></div>
+                    <div><label style="display:block;">Valor do ICMS</label><input type="text" class="form-input"
+                            readonly>
+                    </div>
+                    <div><label style="display:block;">Valor da base de ST</label><input type="text" class="form-input"
+                            readonly></div>
+                    <div><label style="display:block;">Valor da ST</label><input type="text" class="form-input"
+                            readonly>
+                    </div>
+                    <div><label style="display:block;">Valor Líquido</label><input type="text" class="form-input"
+                            readonly>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Header Inputs -->
-        <div class="card"
-            style="margin-bottom:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
-            <div class="card-body" style="padding:0.8rem; font-size:0.8rem;">
-                <!-- Row 1 -->
-                <div style="display:flex; gap:1rem; margin-bottom:0.5rem; flex-wrap:wrap;">
-                    <div style="width:150px;"><label style="display:block; color:var(--text-secondary);">Operação de
-                            Entrada</label><select class="form-input" style="padding:0.2rem;">
-                            <option>Dev. simples</option>
-                        </select></div>
-                    <div style="width:80px;"><label
-                            style="display:block; color:var(--text-secondary);">Transação</label><input type="text"
-                            value="9081" class="form-input" style="padding:0.2rem;"></div>
-                    <div style="width:60px;"><label
-                            style="display:block; color:var(--text-secondary);">Empresa</label><input type="number"
-                            value="01" class="form-input" style="padding:0.2rem;"></div>
-                    <div style="width:100px;"><label style="display:block; color:var(--text-secondary);">Nº
-                            Nota</label><input type="text" value="9081" class="form-input" style="padding:0.2rem;">
-                    </div>
-                    <div style="width:50px;"><label
-                            style="display:block; color:var(--text-secondary);">Série</label><input type="text"
-                            class="form-input" style="padding:0.2rem;"></div>
-                    <div style="width:50px;"><label
-                            style="display:block; color:var(--text-secondary);">Espécie</label><input type="text"
-                            value="OE" class="form-input" style="padding:0.2rem;"></div>
-                    <div style="width:120px;"><label style="display:block; color:var(--text-secondary);">Data de
-                            Emissão</label><input type="date" value="2026-02-05" class="form-input"
-                            style="padding:0.2rem;"></div>
-                    <div style="width:120px;"><label style="display:block; color:var(--text-secondary);">Data de
-                            Entrada</label><input type="date" value="2026-02-05" class="form-input"
-                            style="padding:0.2rem;"></div>
-                    <div style="flex:1;"><label style="display:block; color:var(--text-secondary);">Motivo da
-                            devolução</label><select class="form-input" style="padding:0.2rem;">
-                            <option></option>
-                        </select></div>
+        <!-- Modal: Devolução Wizard -->
+        <div id="modal-devolucaoWizard" class="modal"
+            style="display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.5);">
+            <div class="modal-content"
+                style="max-width:600px; width:100%; background:#0f172a; color:white; border-radius:8px; overflow:hidden; box-shadow:0 10px 25px rgba(0,0,0,0.5);">
+                <div class="modal-header"
+                    style="background:#1e3a8a; color:white; padding:1rem 1.5rem; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155;">
+                    <h4 style="margin:0; font-weight:600; font-size:1.1rem;">Devolução de cliente</h4>
+                    <button onclick="closeModal('devolucaoWizard')"
+                        style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
                 </div>
-                <!-- Row 2 -->
-                <div style="display:flex; gap:1rem; flex-wrap:wrap;">
-                    <div style="width:100px;">
-                        <label style="display:block; color:var(--text-secondary);">Código do Cliente</label>
-                        <div style="display:flex;">
-                            <input type="text" class="form-input" style="padding:0.2rem;">
-                            <button class="btn btn-secondary" style="padding:0 0.5rem;">...</button>
+                <div class="modal-body" style="padding:1.5rem 2rem;">
+
+                    <!-- Top Navigation Buttons -->
+                    <div
+                        style="margin-bottom:1.5rem; border-bottom:1px solid #334155; padding-bottom:1rem; display:flex; justify-content:space-between; align-items:center;">
+                        <button class="btn"
+                            style="background:transparent; border:1px solid #475569; color:white; border-radius:4px; padding:0.5rem 1rem; display:flex; align-items:center; gap:0.5rem;">
+                            <span class="material-icons-round" style="font-size:1rem;">reply</span> Devolução Manual
+                        </button>
+                        <button class="btn"
+                            style="background:transparent; border:none; color:white; font-weight:bold; font-size:1rem; display:flex; align-items:center; gap:0.5rem; padding:0.5rem 1rem;">
+                            Próximo <span style="font-size:0.8rem;">▶</span>
+                        </button>
+                    </div>
+
+                    <div style="margin-bottom:1.5rem;">
+                        <h5 style="margin:0 0 1rem 0; font-size:1rem; font-weight:600;">Informe os dados abaixo para
+                            iniciar o processo de devolução</h5>
+
+                        <div style="margin-bottom:1rem;">
+                            <label
+                                style="display:block; font-weight:bold; margin-bottom:0.5rem; font-size:1.1rem;">Selecione
+                                o tipo de devolução</label>
+                            <select class="form-input"
+                                style="width:100%; font-size:1rem; padding:0.6rem; background:#1e293b; color:white; border:1px solid #475569; border-radius:4px;">
+                                <option>[ Selecione ]</option>
+                                <option value="normal">Devolução normal (emissão empresa)</option>
+                                <option value="simples">Devolução simples</option>
+                            </select>
+                        </div>
+
+                        <div style="margin-bottom:1rem;">
+                            <label style="display:block; color:#94a3b8; margin-bottom:0.3rem;">Motivo da
+                                devolução</label>
+                            <input type="text" class="form-input"
+                                style="width:100%; padding:0.6rem; background:#1e293b; color:white; border:1px solid #475569; border-radius:4px;">
                         </div>
                     </div>
-                    <div style="flex:2;"><label style="display:block; color:var(--text-secondary);">Razão social do
-                            cliente</label><input type="text" class="form-input" style="padding:0.2rem;"></div>
-                    <div style="width:150px;"><label style="display:block; color:var(--text-secondary);">Nota
-                            emitida pelo cliente?</label><select class="form-input" style="padding:0.2rem;">
-                            <option>Não</option>
-                        </select></div>
-                    <div style="flex:1;"><label style="display:block; color:var(--text-secondary);">Chave de
-                            acesso</label><input type="text" class="form-input" style="padding:0.2rem;"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Tabs -->
-        <div style="display:flex; margin-bottom:0;">
-            <button class="btn tab-btn active" onclick="switchTab(this, 'tab-dev-movimento')"
-                style="background:#dbeafe; border:1px solid var(--border-color); border-bottom:none; border-radius:4px 4px 0 0; padding:0.5rem 1rem; font-weight:bold; color:black;">Movimento
-                de Venda</button>
-            <button class="btn tab-btn" onclick="switchTab(this, 'tab-dev-itens')"
-                style="background:var(--bg-card); border:1px solid transparent; padding:0.5rem 1rem; color:var(--text-secondary);">Itens
-                Lançados</button>
-            <button class="btn tab-btn" onclick="switchTab(this, 'tab-dev-credito')"
-                style="background:var(--bg-card); border:1px solid transparent; padding:0.5rem 1rem; color:var(--text-secondary);">Crédito
-                de cliente</button>
-        </div>
+        <!-- View: Consulta Pedidos (rendered by VendasAvancado.renderConsultaPedidos) -->
+        <div id="view-consultaPedidos" class="page-content" style="display:none"></div>
 
-        <!-- Tab Content: Movimento -->
-        <div id="tab-dev-movimento" class="card tab-content active"
-            style="border-top-left-radius:0; border:1px solid var(--border-color); background:var(--bg-card); flex:1; display:flex; flex-direction:column; margin-bottom:0.5rem;">
-            <!-- Search Filter inside Tab -->
-            <div
-                style="padding:0.5rem; border-bottom:1px solid var(--border-color); display:flex; gap:1rem; align-items:flex-end; font-size:0.8rem; flex-wrap:wrap;">
-                <div
-                    style="font-weight:bold; color:var(--accent-primary); display:flex; align-items:center; gap:0.5rem;">
-                    <span>▼</span> Pesquisar vendas para o cliente
-                </div>
-                <div style="margin-left:auto; display:flex; gap:1rem; align-items:flex-end;">
-                    <div><label style="display:block;">Período de emissão</label>
-                        <div style="display:flex; gap:0.2rem;">
-                            <input type="date" value="2026-02-01" class="form-input" style="padding:0.2rem;">
-                            <span>até</span>
-                            <input type="date" value="2026-02-05" class="form-input" style="padding:0.2rem;">
-                        </div>
-                    </div>
-                    <div><label style="display:block;">Nº Nota</label><input type="text" value="0" class="form-input"
-                            style="padding:0.2rem; width:80px; text-align:right;"></div>
-                    <button class="btn btn-secondary" style="font-weight:bold;">Buscar</button>
-                </div>
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- ═══ NOVAS VIEWS — Fase 12 (Modelo Acontec)             ═══ -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+
+        <!-- ─── Cadastros Comerciais ─── -->
+        <div id="view-vendedores" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">support_agent</span>
+                <h2>Vendedores / RCA</h2>
             </div>
-
-            <!-- Grid -->
-            <div style="flex:1; background:var(--bg-secondary); overflow:auto; padding:1rem;">
-                <p style="text-align:center; color:var(--text-secondary);">Nenhum resultado para exibir</p>
+            <div id="vendedores-container" class="crud-container"></div>
+        </div>
+        <div id="view-transportadoras" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">airport_shuttle</span>
+                <h2>Transportadoras</h2>
             </div>
+            <div id="transportadoras-container" class="crud-container"></div>
         </div>
-
-        <!-- Tab Content: Itens -->
-        <div id="tab-dev-itens" class="card tab-content"
-            style="display:none; border-top-left-radius:0; border:1px solid var(--border-color); background:var(--bg-card); height:calc(100vh - 400px); padding:1rem;">
-            <p style="text-align:center;">Itens lançados aparecerão aqui.</p>
-        </div>
-
-        <!-- Tab Content: Crédito -->
-        <div id="tab-dev-credito" class="card tab-content"
-            style="display:none; border-top-left-radius:0; border:1px solid var(--border-color); background:var(--bg-card); height:calc(100vh - 400px); padding:1rem;">
-            <p style="text-align:center;">Informações de crédito.</p>
-        </div>
-
-        <!-- Footer Totals -->
-        <div class="card" style="margin-top:0.5rem; background:var(--bg-card); border:1px solid var(--border-color);">
-            <div class="card-body"
-                style="padding:0.5rem; display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:1rem; font-size:0.75rem;">
-                <div><label style="display:block;">Valor Total</label><input type="text" class="form-input" readonly>
-                </div>
-                <div><label style="display:block;">Valor da Base de ICMS</label><input type="text" class="form-input"
-                        readonly></div>
-                <div><label style="display:block;">Valor do ICMS</label><input type="text" class="form-input" readonly>
-                </div>
-                <div><label style="display:block;">Valor da base de ST</label><input type="text" class="form-input"
-                        readonly></div>
-                <div><label style="display:block;">Valor da ST</label><input type="text" class="form-input" readonly>
-                </div>
-                <div><label style="display:block;">Valor Líquido</label><input type="text" class="form-input" readonly>
-                </div>
+        <div id="view-marcas" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">branding_watermark</span>
+                <h2>Marcas</h2>
             </div>
+            <div id="marcas-container" class="crud-container"></div>
         </div>
-    </div>
-
-    <!-- Modal: Devolução Wizard -->
-    <div id="modal-devolucaoWizard" class="modal"
-        style="display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.5);">
-        <div class="modal-content"
-            style="max-width:600px; width:100%; background:#0f172a; color:white; border-radius:8px; overflow:hidden; box-shadow:0 10px 25px rgba(0,0,0,0.5);">
-            <div class="modal-header"
-                style="background:#1e3a8a; color:white; padding:1rem 1.5rem; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155;">
-                <h4 style="margin:0; font-weight:600; font-size:1.1rem;">Devolução de cliente</h4>
-                <button onclick="closeModal('devolucaoWizard')"
-                    style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
+        <div id="view-regioes" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">public</span>
+                <h2>Regiões / Praças</h2>
             </div>
-            <div class="modal-body" style="padding:1.5rem 2rem;">
-
-                <!-- Top Navigation Buttons -->
-                <div
-                    style="margin-bottom:1.5rem; border-bottom:1px solid #334155; padding-bottom:1rem; display:flex; justify-content:space-between; align-items:center;">
-                    <button class="btn"
-                        style="background:transparent; border:1px solid #475569; color:white; border-radius:4px; padding:0.5rem 1rem; display:flex; align-items:center; gap:0.5rem;">
-                        <span class="material-icons-round" style="font-size:1rem;">reply</span> Devolução Manual
-                    </button>
-                    <button class="btn"
-                        style="background:transparent; border:none; color:white; font-weight:bold; font-size:1rem; display:flex; align-items:center; gap:0.5rem; padding:0.5rem 1rem;">
-                        Próximo <span style="font-size:0.8rem;">▶</span>
-                    </button>
-                </div>
-
-                <div style="margin-bottom:1.5rem;">
-                    <h5 style="margin:0 0 1rem 0; font-size:1rem; font-weight:600;">Informe os dados abaixo para
-                        iniciar o processo de devolução</h5>
-
-                    <div style="margin-bottom:1rem;">
-                        <label
-                            style="display:block; font-weight:bold; margin-bottom:0.5rem; font-size:1.1rem;">Selecione
-                            o tipo de devolução</label>
-                        <select class="form-input"
-                            style="width:100%; font-size:1rem; padding:0.6rem; background:#1e293b; color:white; border:1px solid #475569; border-radius:4px;">
-                            <option>[ Selecione ]</option>
-                            <option value="normal">Devolução normal (emissão empresa)</option>
-                            <option value="simples">Devolução simples</option>
-                        </select>
-                    </div>
-
-                    <div style="margin-bottom:1rem;">
-                        <label style="display:block; color:#94a3b8; margin-bottom:0.3rem;">Motivo da
-                            devolução</label>
-                        <input type="text" class="form-input"
-                            style="width:100%; padding:0.6rem; background:#1e293b; color:white; border:1px solid #475569; border-radius:4px;">
-                    </div>
-                </div>
+            <div id="regioes-container" class="crud-container"></div>
+        </div>
+        <div id="view-rotas" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">route</span>
+                <h2>Rotas</h2>
             </div>
+            <div id="rotas-container" class="crud-container"></div>
         </div>
-    </div>
+        <div id="view-tabelasPreco" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">sell</span>
+                <h2>Tabelas de Preço</h2>
+            </div>
+            <div id="tabelasPreco-container" class="crud-container"></div>
+        </div>
 
-    <!-- View: Consulta Pedidos (rendered by VendasAvancado.renderConsultaPedidos) -->
-    <div id="view-consultaPedidos" class="page-content" style="display:none"></div>
+        <!-- ─── Compras ─── -->
+        <div id="view-sugestaoCompra" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">auto_awesome</span>
+                <h2>Sugestão de Compra</h2>
+            </div>
+            <div id="sugestaoCompra-container" class="crud-container"></div>
+        </div>
+        <div id="view-pedidoCompra" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">description</span>
+                <h2>Pedido de Compra</h2>
+            </div>
+            <div id="pedidoCompra-container" class="crud-container"></div>
+        </div>
+        <div id="view-cotacao" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">compare_arrows</span>
+                <h2>Cotação</h2>
+            </div>
+            <div id="cotacao-container" class="crud-container"></div>
+        </div>
+        <div id="view-entradaNf" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">move_to_inbox</span>
+                <h2>Entrada NF / XML</h2>
+            </div>
+            <div id="entradaNf-container" class="crud-container"></div>
+        </div>
+        <div id="view-consultaEntradas" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">search</span>
+                <h2>Consulta de Entradas</h2>
+            </div>
+            <div id="consultaEntradas-container" class="crud-container"></div>
+        </div>
 
-    <!-- ═══════════════════════════════════════════════════════════ -->
-    <!-- ═══ NOVAS VIEWS — Fase 12 (Modelo Acontec)             ═══ -->
-    <!-- ═══════════════════════════════════════════════════════════ -->
-
-    <!-- ─── Cadastros Comerciais ─── -->
-    <div id="view-vendedores" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">support_agent</span>
-            <h2>Vendedores / RCA</h2>
+        <!-- ─── Estoque ─── -->
+        <div id="view-posicaoEstoque" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">assessment</span>
+                <h2>Posição de Estoque</h2>
+            </div>
+            <div id="posicaoEstoque-container" class="crud-container"></div>
         </div>
-        <div id="vendedores-container" class="crud-container"></div>
-    </div>
-    <div id="view-transportadoras" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">airport_shuttle</span>
-            <h2>Transportadoras</h2>
+        <div id="view-ajusteEstoque" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">tune</span>
+                <h2>Ajuste de Estoque</h2>
+            </div>
+            <div id="ajusteEstoque-container" class="crud-container"></div>
         </div>
-        <div id="transportadoras-container" class="crud-container"></div>
-    </div>
-    <div id="view-marcas" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">branding_watermark</span>
-            <h2>Marcas</h2>
+        <div id="view-transferenciaEstoque" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">swap_horiz</span>
+                <h2>Transferência de Estoque</h2>
+            </div>
+            <div id="transferenciaEstoque-container" class="crud-container"></div>
         </div>
-        <div id="marcas-container" class="crud-container"></div>
-    </div>
-    <div id="view-regioes" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">public</span>
-            <h2>Regiões / Praças</h2>
+        <div id="view-inventario" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">fact_check</span>
+                <h2>Inventário</h2>
+            </div>
+            <div id="inventario-container" class="crud-container"></div>
         </div>
-        <div id="regioes-container" class="crud-container"></div>
-    </div>
-    <div id="view-rotas" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">route</span>
-            <h2>Rotas</h2>
+        <div id="view-giroEstoque" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">autorenew</span>
+                <h2>Giro / Cobertura de Estoque</h2>
+            </div>
+            <div id="giroEstoque-container" class="crud-container"></div>
         </div>
-        <div id="rotas-container" class="crud-container"></div>
-    </div>
-    <div id="view-tabelasPreco" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">sell</span>
-            <h2>Tabelas de Preço</h2>
+        <div id="view-localizacao" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">pin_drop</span>
+                <h2>Localização / WMS</h2>
+            </div>
+            <div id="localizacao-container" class="crud-container"></div>
         </div>
-        <div id="tabelasPreco-container" class="crud-container"></div>
-    </div>
-
-    <!-- ─── Compras ─── -->
-    <div id="view-sugestaoCompra" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">auto_awesome</span>
-            <h2>Sugestão de Compra</h2>
+        <div id="view-reclassificacao" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">drive_file_rename_outline</span>
+                <h2>Reclassificação</h2>
+            </div>
+            <div id="reclassificacao-container" class="crud-container"></div>
         </div>
-        <div id="sugestaoCompra-container" class="crud-container"></div>
-    </div>
-    <div id="view-pedidoCompra" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">description</span>
-            <h2>Pedido de Compra</h2>
-        </div>
-        <div id="pedidoCompra-container" class="crud-container"></div>
-    </div>
-    <div id="view-cotacao" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">compare_arrows</span>
-            <h2>Cotação</h2>
-        </div>
-        <div id="cotacao-container" class="crud-container"></div>
-    </div>
-    <div id="view-entradaNf" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">move_to_inbox</span>
-            <h2>Entrada NF / XML</h2>
-        </div>
-        <div id="entradaNf-container" class="crud-container"></div>
-    </div>
-    <div id="view-consultaEntradas" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">search</span>
-            <h2>Consulta de Entradas</h2>
-        </div>
-        <div id="consultaEntradas-container" class="crud-container"></div>
-    </div>
-
-    <!-- ─── Estoque ─── -->
-    <div id="view-posicaoEstoque" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">assessment</span>
-            <h2>Posição de Estoque</h2>
-        </div>
-        <div id="posicaoEstoque-container" class="crud-container"></div>
-    </div>
-    <div id="view-ajusteEstoque" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">tune</span>
-            <h2>Ajuste de Estoque</h2>
-        </div>
-        <div id="ajusteEstoque-container" class="crud-container"></div>
-    </div>
-    <div id="view-transferenciaEstoque" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">swap_horiz</span>
-            <h2>Transferência de Estoque</h2>
-        </div>
-        <div id="transferenciaEstoque-container" class="crud-container"></div>
-    </div>
-    <div id="view-inventario" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">fact_check</span>
-            <h2>Inventário</h2>
-        </div>
-        <div id="inventario-container" class="crud-container"></div>
-    </div>
-    <div id="view-giroEstoque" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">autorenew</span>
-            <h2>Giro / Cobertura de Estoque</h2>
-        </div>
-        <div id="giroEstoque-container" class="crud-container"></div>
-    </div>
-    <div id="view-localizacao" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">pin_drop</span>
-            <h2>Localização / WMS</h2>
-        </div>
-        <div id="localizacao-container" class="crud-container"></div>
-    </div>
-    <div id="view-reclassificacao" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">drive_file_rename_outline</span>
-            <h2>Reclassificação</h2>
-        </div>
-        <div id="reclassificacao-container" class="crud-container"></div>
-    </div>
 
 
 
-    <!-- ─── Financeiro Expandido ─── -->
-    <div id="view-fluxoCaixa" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">waterfall_chart</span>
-            <h2>Fluxo de Caixa</h2>
+        <!-- ─── Financeiro Expandido ─── -->
+        <div id="view-fluxoCaixa" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">waterfall_chart</span>
+                <h2>Fluxo de Caixa</h2>
+            </div>
+            <div id="fluxoCaixa-container" class="crud-container"></div>
         </div>
-        <div id="fluxoCaixa-container" class="crud-container"></div>
-    </div>
-    <div id="view-boletos" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">confirmation_number</span>
-            <h2>Boletos</h2>
+        <div id="view-boletos" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">confirmation_number</span>
+                <h2>Boletos</h2>
+            </div>
+            <div id="boletos-container" class="crud-container"></div>
         </div>
-        <div id="boletos-container" class="crud-container"></div>
-    </div>
-    <div id="view-conciliacao" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">sync_alt</span>
-            <h2>Conciliação Bancária</h2>
+        <div id="view-conciliacao" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">sync_alt</span>
+                <h2>Conciliação Bancária</h2>
+            </div>
+            <div id="conciliacao-container" class="crud-container"></div>
         </div>
-        <div id="conciliacao-container" class="crud-container"></div>
-    </div>
-    <div id="view-inadimplencia" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">warning</span>
-            <h2>Inadimplência</h2>
+        <div id="view-inadimplencia" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">warning</span>
+                <h2>Inadimplência</h2>
+            </div>
+            <div id="inadimplencia-container" class="crud-container"></div>
         </div>
-        <div id="inadimplencia-container" class="crud-container"></div>
-    </div>
 
-    <!-- ─── Fiscal Expandido ─── -->
-    <div id="view-cte" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">local_shipping</span>
-            <h2>CT-e — Conhec. Transporte</h2>
+        <!-- ─── Fiscal Expandido ─── -->
+        <div id="view-cte" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">local_shipping</span>
+                <h2>CT-e — Conhec. Transporte</h2>
+            </div>
+            <div id="cte-container" class="crud-container"></div>
         </div>
-        <div id="cte-container" class="crud-container"></div>
-    </div>
-    <div id="view-apuracaoIcms" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">calculate</span>
-            <h2>Apuração ICMS / IPI</h2>
+        <div id="view-apuracaoIcms" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">calculate</span>
+                <h2>Apuração ICMS / IPI</h2>
+            </div>
+            <div id="apuracaoIcms-container" class="crud-container"></div>
         </div>
-        <div id="apuracaoIcms-container" class="crud-container"></div>
-    </div>
-    <div id="view-spedFiscal" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">description</span>
-            <h2>SPED Fiscal</h2>
+        <div id="view-spedFiscal" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">description</span>
+                <h2>SPED Fiscal</h2>
+            </div>
+            <div id="spedFiscal-container" class="crud-container"></div>
         </div>
-        <div id="spedFiscal-container" class="crud-container"></div>
-    </div>
-    <div id="view-spedContribuicoes" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">description</span>
-            <h2>SPED Contribuições</h2>
+        <div id="view-spedContribuicoes" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">description</span>
+                <h2>SPED Contribuições</h2>
+            </div>
+            <div id="spedContribuicoes-container" class="crud-container"></div>
         </div>
-        <div id="spedContribuicoes-container" class="crud-container"></div>
-    </div>
-    <div id="view-livrosFiscais" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">menu_book</span>
-            <h2>Livros Fiscais</h2>
+        <div id="view-livrosFiscais" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">menu_book</span>
+                <h2>Livros Fiscais</h2>
+            </div>
+            <div id="livrosFiscais-container" class="crud-container"></div>
         </div>
-        <div id="livrosFiscais-container" class="crud-container"></div>
-    </div>
 
-    <!-- ─── Gerencial ─── -->
-    <div id="view-dashboardExecutivo" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">speed</span>
-            <h2>Dashboard Executivo</h2>
+        <!-- ─── Gerencial ─── -->
+        <div id="view-dashboardExecutivo" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">speed</span>
+                <h2>Dashboard Executivo</h2>
+            </div>
+            <div id="dashboardExecutivo-container" class="crud-container"></div>
         </div>
-        <div id="dashboardExecutivo-container" class="crud-container"></div>
-    </div>
-    <div id="view-curvaAbc" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">stacked_bar_chart</span>
-            <h2>Curva ABC</h2>
+        <div id="view-curvaAbc" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">stacked_bar_chart</span>
+                <h2>Curva ABC</h2>
+            </div>
+            <div id="curvaAbc-container" class="crud-container"></div>
         </div>
-        <div id="curvaAbc-container" class="crud-container"></div>
-    </div>
-    <div id="view-analiseMargem" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">pie_chart</span>
-            <h2>Análise de Margem</h2>
+        <div id="view-analiseMargem" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">pie_chart</span>
+                <h2>Análise de Margem</h2>
+            </div>
+            <div id="analiseMargem-container" class="crud-container"></div>
         </div>
-        <div id="analiseMargem-container" class="crud-container"></div>
-    </div>
-    <div id="view-indicadores" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">dashboard_customize</span>
-            <h2>Indicadores KPIs</h2>
+        <div id="view-indicadores" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">dashboard_customize</span>
+                <h2>Indicadores KPIs</h2>
+            </div>
+            <div id="indicadores-container" class="crud-container"></div>
         </div>
-        <div id="indicadores-container" class="crud-container"></div>
-    </div>
 
-    <!-- ─── Cadastros Comerciais (Fase 12.1) ─── -->
-    <div id="view-vendedores" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">support_agent</span>
-            <h2>Vendedores / RCA</h2>
+        <!-- ─── Cadastros Comerciais (Fase 12.1) ─── -->
+        <div id="view-vendedores" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">support_agent</span>
+                <h2>Vendedores / RCA</h2>
+            </div>
+            <div id="vendedores-container" class="crud-container"></div>
         </div>
-        <div id="vendedores-container" class="crud-container"></div>
-    </div>
-    <div id="view-transportadoras" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">airport_shuttle</span>
-            <h2>Transportadoras</h2>
+        <div id="view-transportadoras" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">airport_shuttle</span>
+                <h2>Transportadoras</h2>
+            </div>
+            <div id="transportadoras-container" class="crud-container"></div>
         </div>
-        <div id="transportadoras-container" class="crud-container"></div>
-    </div>
-    <div id="view-marcas" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">branding_watermark</span>
-            <h2>Marcas</h2>
+        <div id="view-marcas" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">branding_watermark</span>
+                <h2>Marcas</h2>
+            </div>
+            <div id="marcas-container" class="crud-container"></div>
         </div>
-        <div id="marcas-container" class="crud-container"></div>
-    </div>
-    <div id="view-regioes" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">public</span>
-            <h2>Regiões / Praças</h2>
+        <div id="view-regioes" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">public</span>
+                <h2>Regiões / Praças</h2>
+            </div>
+            <div id="regioes-container" class="crud-container"></div>
         </div>
-        <div id="regioes-container" class="crud-container"></div>
-    </div>
-    <div id="view-rotas" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">route</span>
-            <h2>Rotas</h2>
+        <div id="view-rotas" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">route</span>
+                <h2>Rotas</h2>
+            </div>
+            <div id="rotas-container" class="crud-container"></div>
         </div>
-        <div id="rotas-container" class="crud-container"></div>
-    </div>
-    <div id="view-tabelasPreco" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">sell</span>
-            <h2>Tabelas de Preço</h2>
+        <div id="view-tabelasPreco" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">sell</span>
+                <h2>Tabelas de Preço</h2>
+            </div>
+            <div id="tabelasPreco-container" class="crud-container"></div>
         </div>
-        <div id="tabelasPreco-container" class="crud-container"></div>
-    </div>
 
-    <!-- ─── Vendas Avançado (Fase 4+) ─── -->
-    <div id="view-orcamento" class="page-content" style="display:none"></div>
-    <div id="view-faturamento" class="page-content" style="display:none"></div>
-    <div id="view-liberacaoCredito" class="page-content" style="display:none"></div>
-    <div id="view-consultaDevolucao" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">manage_search</span>
-            <h2>Consulta Devolução de Cliente</h2>
+        <!-- ─── Vendas Avançado (Fase 4+) ─── -->
+        <div id="view-orcamento" class="page-content" style="display:none"></div>
+        <div id="view-faturamento" class="page-content" style="display:none"></div>
+        <div id="view-liberacaoCredito" class="page-content" style="display:none"></div>
+        <div id="view-consultaDevolucao" class="page-content" style="display:none">
+            <div class="view-header-bar"><span class="material-icons-round">manage_search</span>
+                <h2>Consulta Devolução de Cliente</h2>
+            </div>
+            <div id="consultaDevolucao-container" class="crud-container"></div>
         </div>
-        <div id="consultaDevolucao-container" class="crud-container"></div>
-    </div>
-    <div id="view-romaneio" class="page-content" style="display:none"></div>
-    <div id="view-comissoes" class="page-content" style="display:none"></div>
+        <div id="view-romaneio" class="page-content" style="display:none"></div>
+        <div id="view-comissoes" class="page-content" style="display:none"></div>
+
+    </div> <!-- /content-wrapper-vendas -->
 
     </main>
 
