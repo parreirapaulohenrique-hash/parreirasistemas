@@ -1,8 +1,8 @@
 {
     "module": "platform-core",
     "name": "Parreira Platform Portal",
-    "version": "11.7.2",
+    "version": "11.7.3",
     "date": "2026-02-26",
-    "last_change": "ERP 11.5.2: chamada direta VendasAvancado + gerencial duplicado fix",
-    "build": "20260226.10"
+    "last_change": "ERP 11.5.3: VendasAvancado auto-render fix definitivo",
+    "build": "20260226.11"
 }

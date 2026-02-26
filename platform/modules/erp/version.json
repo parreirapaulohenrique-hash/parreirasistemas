@@ -1,8 +1,8 @@
 {
     "module": "erp",
     "name": "ParreiraLog ERP",
-    "version": "11.5.2",
+    "version": "11.5.3",
     "date": "2026-02-26",
-    "last_change": "Fix definitivo: chamada direta VendasAvancado no switchView + gerencial.js duplicado removido",
-    "build": "20260226.08"
+    "last_change": "Fix definitivo: VendasAvancado auto-render via click delegation (independente de app.js module)",
+    "build": "20260226.09"
 }

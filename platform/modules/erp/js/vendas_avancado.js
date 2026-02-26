@@ -687,3 +687,27 @@ const VendasAvancado = (() => {
         renderConsultaPedidos, filterConsultaPedidos
     };
 })();
+
+// ── Expor no window (app.js é module e não enxerga const) ──
+window.VendasAvancado = VendasAvancado;
+
+// ── Auto-render: detecta clique no menu e chama render diretamente ──
+document.addEventListener('click', function (e) {
+    var link = e.target.closest('[onclick]');
+    if (!link) return;
+    var oc = link.getAttribute('onclick') || '';
+    var m = oc.match(/switchView\(['"]([\w]+)['"]\)/);
+    if (!m) return;
+    var view = m[1];
+    var fns = {
+        orcamento: 'renderOrcamento',
+        faturamento: 'renderFaturamento',
+        liberacaoCredito: 'renderLiberacaoCredito',
+        romaneio: 'renderRomaneio',
+        comissoes: 'renderComissoes',
+        consultaPedidos: 'renderConsultaPedidos'
+    };
+    if (fns[view] && window.VendasAvancado && typeof window.VendasAvancado[fns[view]] === 'function') {
+        setTimeout(function () { window.VendasAvancado[fns[view]](); }, 50);
+    }
+});
