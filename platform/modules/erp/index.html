@@ -272,7 +272,8 @@
                                 style="font-size:1rem; margin-right:0.5rem;">insights</span>Inteligência de Vendas
                         </a>
                         <div class="nav-sublevel-title">Emissão</div>
-                        <a class="nav-sub-item" onclick="switchView('orcamento')">
+                        <a class="nav-sub-item"
+                            onclick="switchView('orcamento'); setTimeout(function(){if(window.VendasAvancado)window.VendasAvancado.renderOrcamento()},60)">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">request_quote</span>Orçamento
                         </a>
@@ -284,13 +285,15 @@
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">point_of_sale</span>Frente de Caixa
                         </a>
-                        <a class="nav-sub-item" onclick="switchView('faturamento')">
+                        <a class="nav-sub-item"
+                            onclick="switchView('faturamento'); setTimeout(function(){if(window.VendasAvancado)window.VendasAvancado.renderFaturamento()},60)">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">task_alt</span>Faturamento / NF-e
                         </a>
 
                         <div class="nav-sublevel-title">Operações</div>
-                        <a class="nav-sub-item" onclick="switchView('liberacaoCredito')">
+                        <a class="nav-sub-item"
+                            onclick="switchView('liberacaoCredito'); setTimeout(function(){if(window.VendasAvancado)window.VendasAvancado.renderLiberacaoCredito()},60)">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">verified</span>Liberação de Crédito
                         </a>
@@ -302,13 +305,15 @@
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">replay</span>Devolução
                         </a>
-                        <a class="nav-sub-item" onclick="switchView('romaneio')">
+                        <a class="nav-sub-item"
+                            onclick="switchView('romaneio'); setTimeout(function(){if(window.VendasAvancado)window.VendasAvancado.renderRomaneio()},60)">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">local_shipping</span>Romaneio de Carga
                         </a>
 
                         <div class="nav-sublevel-title">Consultas</div>
-                        <a class="nav-sub-item" onclick="switchView('consultaPedidos')">
+                        <a class="nav-sub-item"
+                            onclick="switchView('consultaPedidos'); setTimeout(function(){if(window.VendasAvancado)window.VendasAvancado.renderConsultaPedidos()},60)">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">list_alt</span>Consulta Pedidos
                         </a>
@@ -316,7 +321,8 @@
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">manage_search</span>Consulta Devolução
                         </a>
-                        <a class="nav-sub-item" onclick="switchView('comissoes')">
+                        <a class="nav-sub-item"
+                            onclick="switchView('comissoes'); setTimeout(function(){if(window.VendasAvancado)window.VendasAvancado.renderComissoes()},60)">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">paid</span>Comissões
                         </a>

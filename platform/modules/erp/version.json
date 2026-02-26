@@ -1,8 +1,8 @@
 {
     "module": "erp",
     "name": "ParreiraLog ERP",
-    "version": "11.5.3",
+    "version": "11.5.4",
     "date": "2026-02-26",
-    "last_change": "Fix definitivo: VendasAvancado auto-render via click delegation (independente de app.js module)",
-    "build": "20260226.09"
+    "last_change": "Fix: render direto no onclick do menu lateral para todas telas vendas avancado",
+    "build": "20260226.10"
 }
