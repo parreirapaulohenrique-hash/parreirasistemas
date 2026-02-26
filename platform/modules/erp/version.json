@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "11.1.0",
+    "version": "11.2.0",
     "date": "2026-02-26",
-    "last_change": "Fix integração FV: exportClientesParaFV() corrigido + adapter sync",
-    "build": "20260226.01"
+    "last_change": "Fix Cadastros Comerciais: views HTML faltando (vendedores, transportadoras, marcas, regioes, rotas, tabPreco)",
+    "build": "20260226.02"
 }
