@@ -1,8 +1,8 @@
 {
     "module": "erp",
     "name": "ParreiraLog ERP",
-    "version": "11.6.2",
+    "version": "11.6.3",
     "date": "2026-02-26",
-    "last_change": "FIX TOTAL: position absolute e z-index 5 para overpor o container problemático nas views de vendas",
-    "build": "20260226.13"
+    "last_change": "Ajuste de left:260px no position absolute para não cobrir a sidebar",
+    "build": "20260226.14"
 }
