@@ -25,7 +25,8 @@ A arquitetura moderna reside na pasta `/platform`. (A antiga subpasta `/web` ain
 *   `platform/modules/`: Onde a mágica acontece. Cada módulo é um "micro-frontend" isolado com seu próprio `index.html`, `css/` e `js/`:
     *   **master**: Gestão global da plataforma (criação de tenants e super-usuários). Acesso exclusivo de administradores globais.
     *   **dispatch**: Módulo de Despacho Logístico (a evolução do sistema legado).
-    *   **erp**: Sistema Integrado de Gestão Empresarial (Faturamento, Vendas, Financeiro).
+    *   **erp**: Sistema Integrado de Gestão Empresarial (Faturamento, Vendas, Financeiro, CRM, RH).
+    *   **sales-force**: Força de Vendas Mobile (PWA para RCA em campo, offline-first com IndexedDB).
     *   **wms**: Warehouse Management System (Gestão de Armazéns).
     *   **wms-coletor**: Versão do WMS estritamente otimizada para coletores móveis (Zebra/Android) utilizados na operação de piso.
 
@@ -33,8 +34,8 @@ A arquitetura moderna reside na pasta `/platform`. (A antiga subpasta `/web` ain
 
 ## 3. Padrões de Integração e Construção
 
-*   **Isolamento Multi-Tenant**: É a **regra de segurança número 1**. Nenhuma query no Firestore deve ser feita sem referenciar o `/tenants/{tenant_id}/...`. O acesso aos dados cruza sempre a validação da sessão do usuário atualização.
-*   **Acoplamento Fraco (Adapter Pattern)**: Os módulos não devem depender criticamente de arquivos uns dos outros. Para integrações, usamos o conceito de adaptadores. Exemplo: O módulo `wms` possui um arquivo `wms-integration.js` que age como tradutor entre o WMS e o ERP (sendo ele o Parreira ERP embutido, ou um provedor externo via API REST).
+*   **Isolamento Multi-Tenant**: É a **regra de segurança número 1**. Nenhuma query no Firestore deve ser feita sem referenciar o `/tenants/{tenant_id}/...`. O acesso aos dados cruza sempre a validação da sessão do usuário.
+*   **Acoplamento Fraco (Adapter Pattern)**: Os módulos não devem depender criticamente de arquivos uns dos outros. Para integrações, usamos o conceito de adaptadores. Exemplo: O módulo `wms` possui um arquivo `wms-integration.js` que age como tradutor entre o WMS e o ERP (sendo ele o Parreira ERP embutido, ou um provedor externo via API REST). O módulo `sales-force` usa os adapters `exportClientesParaFV()`, `exportEstoqueParaFV()` e `onErpReceberPedidoFV()` em `integracoes.js` para trocar dados com o ERP.
 *   **Componentização Visual**: Reutilize classes e variáveis CSS (ex: `var(--primary-color)`) do escopo global. Crie interfaces modernas, intuitivas e responsivas.
 
 ---
@@ -48,10 +49,13 @@ graph TD
     
     C -->|Acesso Global| M[Módulo Master<br>Gestão de Tenants]
     C -->|Operacional| D[Módulo Dispatch<br>Logística & Entregas]
-    C -->|Gestão Empresarial| E[Módulo ERP<br>Vendas, Finanças, Fiscal]
+    C -->|Gestão Empresarial| E[Módulo ERP<br>Vendas, Finanças, Fiscal, CRM, RH]
+    C -->|Vendas Externas| FV[Força de Vendas<br>PWA Offline-First]
     C -->|Gestão de Armazém| W[Módulo WMS<br>Estoque & Mapa]
     C -->|Chão de Fábrica| WC[WMS Coletor<br>Coletores RF/Zebra]
 
+    FV -.->|Adapter: onErpReceberPedidoFV<br>Push Pedidos| E
+    E -.->|Adapter: exportClientesParaFV<br>Pull Cadastros| FV
     E -.->|Adapter Pattern<br>Sincroniza Produtos/Pedidos| W
     W -.->|Adapter Pattern<br>Retorna Status Estoque| E
     E -.->|Gera Faturamento/NF| D
@@ -86,7 +90,7 @@ graph LR
 **POP (Procedimento Operacional Padrão):**
 *   **Importação:** Operador exporta NF de ERP (ou recebe via API) -> Importa arquivo (ex. CSV) -> Mapeia campos (NF, Cliente, Endereço, Volumes) -> Transfere para painel local.
 *   **Roteirização:** Operador seleciona NFs pendentes no dashboard -> Agrupa por região ou rota logística -> Atribui ao veículo/Motorista/Transportadora -> Emite Romaneio de Carga.
-*   **Baixa e Ocorrências:** Motorista informa stauts -> Operador altera status para 'Entregue' (dispara Webhook/Sync) ou registra ocorrência (ex: "Destinatário Ausente", que reabre processo para reentrega).
+*   **Baixa e Ocorrências:** Motorista informa status -> Operador altera status para 'Entregue' (dispara Webhook/Sync) ou registra ocorrência (ex: "Destinatário Ausente", que reabre processo para reentrega).
 
 ### 5.3. Módulo ERP (Gestão Empresarial)
 ```mermaid
@@ -95,15 +99,20 @@ graph TD
     ERP --> Ven[Vendas & Orçamentos]
     ERP --> Fin[Financeiro]
     ERP --> Fisc[Fiscal]
+    ERP --> CRM[CRM]
+    ERP --> RH[Recursos Humanos]
     Cad --> Ven
     Ven -->|Gera Recebíveis| Fin
     Ven -->|Gera NF-e / SPED| Fisc
+    CRM -->|Converte Lead em Pedido| Ven
 ```
 **POP (Procedimento Operacional Padrão):**
 *   **Cadastros Base:** Inserir e atualizar Clientes, Fornecedores, Produtos (SKU, NCM, Preço Base de Custo) e Vendedores/Comissões.
 *   **Vendas & Orçamentos (Fase 4):** Vendedor abre nova tela de Orçamento -> Adiciona Itens (aplicando Tabelas de Preços Regionais) -> Envia ao cliente. Cliente aprovando -> Converte para Pedido de Venda. Se houver limite estourado, cai em "Liberação de Crédito" para o gestor aprovar.
 *   **Financeiro (Fase 5):** Pedido faturado gera título em "Contas a Receber". Compras geram "Contas a Pagar". Executa-se rotina diária de Conciliação Bancária, emissão de boletos e análise de inadimplência (Fluxo de Caixa Projetado).
 *   **Fiscal/Faturamento (Fase 6):** Faturamento libera impressão do DANFE (NF-e) via SEFAZ. Ao fim do período, gera extração do SPED Fiscal e Contribuições. Dashboard (Fase 7) exibe KPIs (Margem, Curva ABC).
+*   **CRM (Fase 10):** Pipeline Kanban de Oportunidades (Prospecção → Qualificação → Proposta → Negociação → Fechamento). Leads ganhos são convertidos automaticamente em Clientes e Orçamentos no ERP.
+*   **RH (Fase 11):** Controle de Ponto Eletrônico, Folha de Pagamento (Holerite com deduções INSS/VT), Gestão de Férias e Licenças.
 
 ### 5.4. Módulo WMS (Warehouse Management System)
 ```mermaid
@@ -136,6 +145,70 @@ graph LR
 ```
 **POP (Procedimento Operacional Padrão):**
 *   **Operação Mobile:** Operador loga com sua credencial no browser do coletor Zebra/Android (interface enxuta XXL) -> Acessa módulo desejado (Guarda, Contagem, Picking) -> Ouve o bip (leitura de código de barras ou manual via teclado) do endereço e produto -> Digita Quantidade -> Confirma. Alerta sonoro de acerto/erro avisa o ritmo da operação em real-time.
+
+### 5.6. Módulo Força de Vendas / Sales Force (Vendas em Campo)
+```mermaid
+graph TD
+    FV[Força de Vendas<br>PWA Mobile] --> Login[Login RCA]
+    FV --> Cli[Clientes / Rotas]
+    FV --> Ped[Pedidos / Orçamentos]
+    FV --> Sync[Sincronização]
+    
+    Login -->|IndexedDB| Cli
+    Cli --> Ped
+    Ped -->|Fila Offline| Sync
+    Sync -.->|exportClientesParaFV| ERP[ERP Parreira]
+    Sync -.->|onErpReceberPedidoFV| ERP
+```
+**POP (Procedimento Operacional Padrão):**
+*   **Login:** RCA acessa o app pelo browser do celular (PWA instalável) -> Digita código e senha -> Sistema carrega dados do vendedor e sincroniza cadastros do ERP (Clientes, Produtos, Tabelas, Transportadoras).
+*   **Vendas em Campo:** RCA seleciona o Cliente da rota -> Escolhe produtos e aplica desconto (limitado pelo máximo do vendedor/produto) -> Define condição de pagamento e transportadora -> Salva Pedido. Pedido entra na fila de sincronização.
+*   **Sincronização:** Ao ficar online, o app transmite os pedidos para o ERP via adapter `onErpReceberPedidoFV()`, que converte o formato FV → ERP, puxa cadastros atualizados via `exportClientesParaFV()`, e atualiza estoque via `exportEstoqueParaFV()`.
+
+### 5.7. Integração Profunda ERP ↔ WMS (Fase 9)
+```mermaid
+graph TD
+    Rec[Recebimento WMS] -->|Conferência OK| EstERP[Estoque ERP Atualizado]
+    Rec -->|Divergência| Bloq[Bloqueio Estoque Fantasma]
+    VendaERP[Venda Faturada ERP] -->|Reserva Estoque| SepWMS[Separação WMS]
+    SepWMS -->|Picking Concluído| BaixaERP[Baixa Estoque ERP]
+    FatERP[Faturamento ERP] -->|Chave NF-e| DesWMS[Despacho WMS - Trava Fiscal]
+    AjusteERP[Ajuste/Inventário ERP] <-->|Bidirecional| AjusteWMS[Ajuste/Inventário WMS]
+    DevERP[Devolução ERP] -->|Gera Putaway| WMS[WMS Armazenagem]
+```
+**POP:**
+*   **Recebimento:** WMS conta mercadorias na doca -> Conferência comparada com NF -> Se OK, atualiza estoque ERP. Se divergente, bloqueia unidades faltantes no ERP (estoque fantasma).
+*   **Separação:** ERP fatura venda -> Reserva estoque -> Gera Ordem de Separação no WMS -> Operador separa -> WMS confirma -> ERP dá baixa efetiva.
+*   **Trava Fiscal:** Veículo só é liberado para despacho no WMS se todos os pedidos vinculados possuírem Chave de NF-e faturada no ERP.
+*   **Ajustes Bidirecionais:** Ajustes manuais e inventários de um sistema refletem automaticamente no outro.
+*   **Devoluções:** Estorno no ERP gera tarefa de `putaway` pendente no WMS.
+
+### 5.8. Módulo CRM — Gestão de Relacionamento (Fase 10)
+```mermaid
+graph LR
+    CRM[CRM] --> Funil[Pipeline Kanban]
+    CRM --> Leads[Gestão de Leads]
+    CRM --> Hist[Histórico de Interações]
+    CRM --> Taref[Tarefas / Lembretes]
+    Funil -->|Oportunidade Ganha| Conv[Conversão Lead → Cliente + Pedido ERP]
+```
+**POP:**
+*   **Pipeline:** Vendedor abre o Funil -> Cria Oportunidade com valor estimado -> Arrasta entre fases (Prospecção → Qualificação → Proposta → Negociação → Fechamento).
+*   **Conversão:** Ao marcar como "Ganho", o CRM cadastra automaticamente o prospect como Cliente no ERP e gera um Orçamento no módulo de Vendas.
+
+### 5.9. Módulo RH — Recursos Humanos (Fase 11)
+```mermaid
+graph LR
+    RH[RH] --> Ponto[Ponto Eletrônico]
+    RH --> Folha[Folha de Pagamento]
+    RH --> Ferias[Férias e Licenças]
+    Ponto --> Folha
+    Folha -->|Holerite| Impressao[Impressão em Lote]
+```
+**POP:**
+*   **Ponto Eletrônico:** Funcionário acessa RH > Ponto -> Clica "Bater Ponto" -> Sistema registra Entrada/Saída com data/hora e geolocalização (mock).
+*   **Folha de Pagamento:** Gestor acessa RH > Holerites -> Visualiza grid de funcionários com Salário Base, deduções (INSS 10%, VT 6%) e Líquido a Receber -> Gera Holeite individual via modal de impressão.
+*   **Férias e Licenças:** RH agenda afastamento -> Define tipo (Férias/Licença) e período -> Status exibido em blocos coloridos (Programado, Em Andamento, Concluído).
 
 ---
 

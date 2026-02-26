@@ -122,49 +122,114 @@ async function initFV() {
         const loaded = await FVDB.loadAllToMemory();
         fvData = { ...fvData, ...loaded };
 
-        // Integração Fase 8: Puxar do ERP local (Shared localStorage)
-        let tenantSuffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
-        if (!tenantSuffix && localStorage.getItem('erp_products_01')) tenantSuffix = '_01';
+        // ════════════════════════════════════════════════════════
+        // INTEGRAÇÃO ERP: Sempre re-sincronizar via Adapters
+        // Usa as funções exportXxxParaFV() que traduzem campos
+        // do formato ERP para o formato esperado pelo FV.
+        // ════════════════════════════════════════════════════════
+        let erpSynced = false;
 
-        const erpClientes = JSON.parse(localStorage.getItem('erp_clientes' + tenantSuffix) || 'null');
-        let erpProdutos = JSON.parse(localStorage.getItem('erp_products' + tenantSuffix) || 'null');
+        // --- Clientes: via exportClientesParaFV() ---
+        try {
+            const erpClientes = typeof window.exportClientesParaFV === 'function'
+                ? window.exportClientesParaFV()
+                : null;
 
-        if (erpClientes && erpClientes.length > 0) {
-            await FVDB.clear('clientes');
-            await FVDB.putMany('clientes', erpClientes);
-            fvData.clientes = erpClientes;
-        } else if (!fvData.clientes.length) {
+            if (erpClientes && erpClientes.length > 0) {
+                await FVDB.clear('clientes');
+                await FVDB.putMany('clientes', erpClientes);
+                fvData.clientes = erpClientes;
+                erpSynced = true;
+                console.log(`[FV] ERP sync: ${erpClientes.length} clientes importados via adapter`);
+            }
+        } catch (e) { console.warn('[FV] Falha ao importar clientes do ERP:', e); }
+
+        if (!fvData.clientes.length) {
             await FVDB.putMany('clientes', DEFAULT_CLIENTES);
             fvData.clientes = DEFAULT_CLIENTES;
         }
 
-        if (erpProdutos && erpProdutos.length > 0) {
-            await FVDB.clear('produtos');
-            // Garantir que os campos vitais existam para o FV
-            erpProdutos = erpProdutos.map(p => ({
-                ...p,
-                sku: p.sku || p.codigo || p.id,
-                nome: p.nome || p.descricao,
-                precoBase: p.precoBase || p.precoVenda || p.preco || 0
-            }));
-            await FVDB.putMany('produtos', erpProdutos);
-            fvData.produtos = erpProdutos;
-        } else if (!fvData.produtos.length) {
+        // --- Produtos: via ERP localStorage + enriquecimento ---
+        try {
+            let tenantSuffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
+            if (!tenantSuffix && localStorage.getItem('erp_products_01')) tenantSuffix = '_01';
+
+            let erpProdutos = JSON.parse(localStorage.getItem('erp_products' + tenantSuffix) || 'null');
+
+            if (erpProdutos && erpProdutos.length > 0) {
+                // Garantir campos vitais para o FV
+                erpProdutos = erpProdutos.map(p => ({
+                    ...p,
+                    sku: p.sku || p.codigo || p.id,
+                    nome: p.nome || p.descricao,
+                    precoBase: p.precoBase || p.precoVenda || p.preco || 0
+                }));
+
+                // Enriquecer com estoque via adapter se disponível
+                if (typeof window.exportEstoqueParaFV === 'function') {
+                    const estoqueERP = window.exportEstoqueParaFV();
+                    erpProdutos = erpProdutos.map(p => {
+                        const est = estoqueERP.find(e => e.sku === p.sku);
+                        return est ? { ...p, estoque: est.disponivel, estoqueAtual: est.estoqueAtual, reservado: est.reservado } : p;
+                    });
+                }
+
+                await FVDB.clear('produtos');
+                await FVDB.putMany('produtos', erpProdutos);
+                fvData.produtos = erpProdutos;
+                erpSynced = true;
+                console.log(`[FV] ERP sync: ${erpProdutos.length} produtos importados`);
+            }
+        } catch (e) { console.warn('[FV] Falha ao importar produtos do ERP:', e); }
+
+        if (!fvData.produtos.length) {
             await FVDB.putMany('produtos', DEFAULT_PRODUTOS);
             fvData.produtos = DEFAULT_PRODUTOS;
         }
-        if (!fvData.pedidos.length) {
-            await FVDB.putMany('pedidos', DEFAULT_PEDIDOS);
-            fvData.pedidos = DEFAULT_PEDIDOS;
-        }
+
+        // --- Planos de Pagamento: via exportPlanosParaFV() ---
+        try {
+            const erpPlanos = typeof window.exportPlanosParaFV === 'function'
+                ? window.exportPlanosParaFV()
+                : null;
+            if (erpPlanos && erpPlanos.length > 0) {
+                await FVDB.clear('formaPag');
+                await FVDB.putMany('formaPag', erpPlanos);
+                fvData.planosPagamento = erpPlanos;
+                console.log(`[FV] ERP sync: ${erpPlanos.length} planos de pagamento importados`);
+            }
+        } catch (e) { console.warn('[FV] Falha ao importar planos:', e); }
+
         if (!fvData.planosPagamento.length) {
             await FVDB.putMany('formaPag', DEFAULT_PLANOS_PAGAMENTO);
             fvData.planosPagamento = DEFAULT_PLANOS_PAGAMENTO;
         }
+
+        // --- Transportadoras: via exportTransportadorasParaFV() ---
+        try {
+            const erpTransp = typeof window.exportTransportadorasParaFV === 'function'
+                ? window.exportTransportadorasParaFV()
+                : null;
+            if (erpTransp && erpTransp.length > 0) {
+                await FVDB.clear('transportadoras');
+                await FVDB.putMany('transportadoras', erpTransp);
+                fvData.transportadoras = erpTransp;
+                console.log(`[FV] ERP sync: ${erpTransp.length} transportadoras importadas`);
+            }
+        } catch (e) { console.warn('[FV] Falha ao importar transportadoras:', e); }
+
         if (!fvData.transportadoras.length) {
             await FVDB.putMany('transportadoras', DEFAULT_TRANSPORTADORAS);
             fvData.transportadoras = DEFAULT_TRANSPORTADORAS;
         }
+
+        // --- Pedidos: Manter existentes, carregar defaults se vazio ---
+        if (!fvData.pedidos.length) {
+            await FVDB.putMany('pedidos', DEFAULT_PEDIDOS);
+            fvData.pedidos = DEFAULT_PEDIDOS;
+        }
+
+        // --- Empresas ---
         if (!fvData.empresas || !fvData.empresas.length) {
             await FVDB.putMany('empresas', DEFAULT_EMPRESAS);
             fvData.empresas = DEFAULT_EMPRESAS;
@@ -220,38 +285,64 @@ async function savePedido(pedido) {
     try {
         await FVDB.put('pedidos', pedido);
 
-        // INTEGRAÇÃO FASE 8: Jogar pedido diretamente para o pool do ERP
-        let tenantSuffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
-        if (!tenantSuffix && localStorage.getItem('erp_products_01')) tenantSuffix = '_01';
+        // ════════════════════════════════════════════════════════
+        // INTEGRAÇÃO FV → ERP: Usar adapter onErpReceberPedidoFV
+        // O adapter faz a tradução completa FV→ERP PedidoSchema,
+        // calcula impostos, persiste em erp_vendas, e dispara
+        // integração com WMS (reserva estoque, ordem separação).
+        // ════════════════════════════════════════════════════════
+        if (typeof window.onErpReceberPedidoFV === 'function') {
+            try {
+                // Enriquecer pedido com dados do cliente para o adapter
+                const cliente = fvData.clientes.find(c =>
+                    c.cnpjCpf === pedido.clienteCnpjCpf ||
+                    String(c.id || c.codigo) === String(pedido.clienteId)
+                );
 
-        const erpVendasKey = 'erp_vendas' + tenantSuffix;
-        let erpVendas = JSON.parse(localStorage.getItem(erpVendasKey) || '[]');
+                const pedidoParaERP = {
+                    ...pedido,
+                    numero: pedido.id,
+                    vendedorCodigo: fvUser ? fvUser.codigo : '32',
+                    vendedorNome: fvUser ? fvUser.nome : 'Vendedor',
+                    cliente: cliente || {
+                        codigo: pedido.clienteId,
+                        razaoSocial: pedido.clienteNome,
+                        cnpjCpf: pedido.clienteCnpjCpf
+                    }
+                };
 
-        // Substituir se já existir
-        erpVendas = erpVendas.filter(p => String(p.numero || p.id) !== String(pedido.id));
+                const resultado = window.onErpReceberPedidoFV(pedidoParaERP);
+                console.log('✅ [FV→ERP] Pedido enviado via adapter:', resultado.numero);
+            } catch (adapterErr) {
+                console.error('[FV] Adapter onErpReceberPedidoFV falhou:', adapterErr);
+            }
+        } else {
+            // Fallback: push direto se adapter não estiver disponível (FV standalone)
+            console.warn('[FV] Adapter ERP não disponível, salvando localmente.');
+            let tenantSuffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
+            if (!tenantSuffix && localStorage.getItem('erp_products_01')) tenantSuffix = '_01';
 
-        // Cast pro formato que o vendas_avancado.js do ERP espera
-        const pedidoToErp = {
-            id: pedido.id,
-            numero: pedido.id, // ERP usa "numero"
-            data: pedido.data,
-            clienteId: pedido.clienteId,
-            clienteNome: pedido.clienteNome,
-            clienteCnpjCpf: pedido.clienteCnpjCpf,
-            valorTotal: pedido.valorTotal,
-            status: pedido.status === 'orcamento' ? 'orcamento' : pedido.status, // Cairá no funil de Orçamentos do ERP
-            itens: pedido.itens.map(i => ({ ...i, precoUnitario: i.preco })), // Normalize
-            transportadoraId: pedido.codfornecTransp,
-            origem: 'Força de Vendas (App)',
-            vendedorId: fvUser ? fvUser.codigo : '32'
-        };
-        erpVendas.push(pedidoToErp);
-        localStorage.setItem(erpVendasKey, JSON.stringify(erpVendas));
+            const erpVendasKey = 'erp_vendas' + tenantSuffix;
+            let erpVendas = JSON.parse(localStorage.getItem(erpVendasKey) || '[]');
+            erpVendas = erpVendas.filter(p => String(p.numero || p.id) !== String(pedido.id));
+            erpVendas.push({
+                id: pedido.id,
+                numero: pedido.id,
+                data: pedido.data,
+                clienteId: pedido.clienteId,
+                clienteNome: pedido.clienteNome,
+                clienteCnpjCpf: pedido.clienteCnpjCpf,
+                valorTotal: pedido.valorTotal,
+                status: pedido.status === 'orcamento' ? 'orcamento' : pedido.status,
+                itens: pedido.itens.map(i => ({ ...i, precoUnitario: i.preco })),
+                transportadoraId: pedido.codfornecTransp,
+                origem: 'Força de Vendas (App)',
+                vendedorId: fvUser ? fvUser.codigo : '32'
+            });
+            localStorage.setItem(erpVendasKey, JSON.stringify(erpVendas));
+        }
 
-        // Sinalizar WMS/ERP
-        window.dispatchEvent(new CustomEvent('wms-data-push', { detail: { entity: 'sales-orders', payload: pedidoToErp } }));
-
-        // Also enqueue for sync if new/modified
+        // Enqueue for cloud sync if new/modified
         if (pedido.sincronizado !== 'E') {
             await FVDB.enqueueSync('pedido', pedido);
             fvData.syncQueueCount = await FVDB.count('syncQueue');
