@@ -123,24 +123,81 @@ async function initFV() {
         fvData = { ...fvData, ...loaded };
 
         // ════════════════════════════════════════════════════════
-        // INTEGRAÇÃO ERP: Sempre re-sincronizar via Adapters
-        // Usa as funções exportXxxParaFV() que traduzem campos
-        // do formato ERP para o formato esperado pelo FV.
+        // INTEGRAÇÃO ERP: Sync via localStorage compartilhado
+        // O FV roda standalone (não carrega scripts do ERP),
+        // então lemos direto do localStorage e traduzimos campos.
         // ════════════════════════════════════════════════════════
         let erpSynced = false;
 
-        // --- Clientes: via exportClientesParaFV() ---
+        // Detectar tenant suffix
+        let tenantSuffix = '';
         try {
-            const erpClientes = typeof window.exportClientesParaFV === 'function'
-                ? window.exportClientesParaFV()
-                : null;
+            const platformUser = JSON.parse(localStorage.getItem('platform_user_logged') || 'null');
+            if (platformUser && platformUser.tenant) {
+                tenantSuffix = '_' + platformUser.tenant;
+            }
+        } catch (e) { }
+        // Fallback: tentar sufixo comum
+        if (!tenantSuffix) {
+            const suffixes = ['', '_01', '_parreira', '_ltdistribuidora'];
+            for (const s of suffixes) {
+                if (localStorage.getItem('erp_clientes' + s) || localStorage.getItem('erp_products' + s)) {
+                    tenantSuffix = s;
+                    break;
+                }
+            }
+        }
+        console.log(`[FV] Tenant suffix detectado: "${tenantSuffix}"`);
 
-            if (erpClientes && erpClientes.length > 0) {
+        // --- Clientes: Ler erp_clientes e traduzir campos ERP → FV ---
+        try {
+            const rawClientes = JSON.parse(localStorage.getItem('erp_clientes' + tenantSuffix) || 'null');
+
+            if (rawClientes && rawClientes.length > 0) {
+                // ERP salva com {code, name, fantasy, cnpj, ...}
+                // FV espera {codigo, razaoSocial, fantasia, cnpjCpf, ...}
+                const clientesFV = rawClientes.map(e => ({
+                    id: e.code || e.id || e.codigo,
+                    codigo: String(e.code || e.codigo || e.id || ''),
+                    cnpjCpf: e.cnpj || e.cnpjCpf || '',
+                    tipoCliente: e.tipoCliente || 'PJ',
+                    razaoSocial: e.name || e.razaoSocial || '',
+                    fantasia: e.fantasy || e.fantasia || e.nomeFantasia || '',
+                    nome: e.name || e.nome || e.razaoSocial || '',
+                    nomeFantasia: e.fantasy || e.fantasia || e.nomeFantasia || '',
+                    inscEstadual: e.ie || e.inscEstadual || '',
+                    cidade: e.cidade || '',
+                    bairro: e.bairro || '',
+                    uf: e.uf || '',
+                    cep: e.cep || '',
+                    endereco: e.endereco || '',
+                    telefone: e.telefone || '',
+                    celular: e.celular || '',
+                    email: e.email || '',
+                    comprador: e.comprador || '',
+                    rota: e.rota || 0,
+                    praca: e.praca || '',
+                    grupo: e.grupo || 'C',
+                    regiao: e.regiao || 0,
+                    status: e.status || 'ativo',
+                    bloqueado: e.bloqueado || false,
+                    limiteTotal: e.limiteTotal || 0,
+                    limiteDisponivel: e.limiteDisponivel || 0,
+                    pedidoNaoFaturado: e.pedidoNaoFaturado || 0,
+                    diasAtraso: e.diasAtraso || 0,
+                    ultimaCompra: e.ultimaCompra || '',
+                    codEmpresa: e.codEmpresa || '01',
+                    visita: e.visita || '',
+                    flagNovo: 'N',
+                    flagAlter: 'N',
+                    sincronizar: 0
+                }));
+
                 await FVDB.clear('clientes');
-                await FVDB.putMany('clientes', erpClientes);
-                fvData.clientes = erpClientes;
+                await FVDB.putMany('clientes', clientesFV);
+                fvData.clientes = clientesFV;
                 erpSynced = true;
-                console.log(`[FV] ERP sync: ${erpClientes.length} clientes importados via adapter`);
+                console.log(`[FV] ✅ ERP sync: ${clientesFV.length} clientes importados (localStorage → tradução inline)`);
             }
         } catch (e) { console.warn('[FV] Falha ao importar clientes do ERP:', e); }
 
@@ -149,11 +206,8 @@ async function initFV() {
             fvData.clientes = DEFAULT_CLIENTES;
         }
 
-        // --- Produtos: via ERP localStorage + enriquecimento ---
+        // --- Produtos: Ler erp_products + erp_estoque ---
         try {
-            let tenantSuffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
-            if (!tenantSuffix && localStorage.getItem('erp_products_01')) tenantSuffix = '_01';
-
             let erpProdutos = JSON.parse(localStorage.getItem('erp_products' + tenantSuffix) || 'null');
 
             if (erpProdutos && erpProdutos.length > 0) {
@@ -165,20 +219,27 @@ async function initFV() {
                     precoBase: p.precoBase || p.precoVenda || p.preco || 0
                 }));
 
-                // Enriquecer com estoque via adapter se disponível
-                if (typeof window.exportEstoqueParaFV === 'function') {
-                    const estoqueERP = window.exportEstoqueParaFV();
-                    erpProdutos = erpProdutos.map(p => {
-                        const est = estoqueERP.find(e => e.sku === p.sku);
-                        return est ? { ...p, estoque: est.disponivel, estoqueAtual: est.estoqueAtual, reservado: est.reservado } : p;
-                    });
-                }
+                // Enriquecer com estoque do ERP (formato objeto keyed por SKU)
+                try {
+                    const estoqueERP = JSON.parse(localStorage.getItem('erp_estoque' + tenantSuffix) || '{}');
+                    if (Object.keys(estoqueERP).length > 0) {
+                        erpProdutos = erpProdutos.map(p => {
+                            const est = estoqueERP[p.sku] || {};
+                            return {
+                                ...p,
+                                estoque: est.disponivel || est.estoqueAtual || p.estoque || 0,
+                                estoqueAtual: est.estoqueAtual || 0,
+                                reservado: est.reservado || 0
+                            };
+                        });
+                    }
+                } catch (e) { }
 
                 await FVDB.clear('produtos');
                 await FVDB.putMany('produtos', erpProdutos);
                 fvData.produtos = erpProdutos;
                 erpSynced = true;
-                console.log(`[FV] ERP sync: ${erpProdutos.length} produtos importados`);
+                console.log(`[FV] ✅ ERP sync: ${erpProdutos.length} produtos importados`);
             }
         } catch (e) { console.warn('[FV] Falha ao importar produtos do ERP:', e); }
 
@@ -187,16 +248,14 @@ async function initFV() {
             fvData.produtos = DEFAULT_PRODUTOS;
         }
 
-        // --- Planos de Pagamento: via exportPlanosParaFV() ---
+        // --- Planos de Pagamento: Ler erp_planos_pagamento ---
         try {
-            const erpPlanos = typeof window.exportPlanosParaFV === 'function'
-                ? window.exportPlanosParaFV()
-                : null;
-            if (erpPlanos && erpPlanos.length > 0) {
+            const rawPlanos = JSON.parse(localStorage.getItem('erp_planos_pagamento' + tenantSuffix) || 'null');
+            if (rawPlanos && rawPlanos.length > 0) {
                 await FVDB.clear('formaPag');
-                await FVDB.putMany('formaPag', erpPlanos);
-                fvData.planosPagamento = erpPlanos;
-                console.log(`[FV] ERP sync: ${erpPlanos.length} planos de pagamento importados`);
+                await FVDB.putMany('formaPag', rawPlanos);
+                fvData.planosPagamento = rawPlanos;
+                console.log(`[FV] ✅ ERP sync: ${rawPlanos.length} planos de pagamento importados`);
             }
         } catch (e) { console.warn('[FV] Falha ao importar planos:', e); }
 
@@ -205,16 +264,14 @@ async function initFV() {
             fvData.planosPagamento = DEFAULT_PLANOS_PAGAMENTO;
         }
 
-        // --- Transportadoras: via exportTransportadorasParaFV() ---
+        // --- Transportadoras: Ler erp_transportadoras ---
         try {
-            const erpTransp = typeof window.exportTransportadorasParaFV === 'function'
-                ? window.exportTransportadorasParaFV()
-                : null;
-            if (erpTransp && erpTransp.length > 0) {
+            const rawTransp = JSON.parse(localStorage.getItem('erp_transportadoras' + tenantSuffix) || 'null');
+            if (rawTransp && rawTransp.length > 0) {
                 await FVDB.clear('transportadoras');
-                await FVDB.putMany('transportadoras', erpTransp);
-                fvData.transportadoras = erpTransp;
-                console.log(`[FV] ERP sync: ${erpTransp.length} transportadoras importadas`);
+                await FVDB.putMany('transportadoras', rawTransp);
+                fvData.transportadoras = rawTransp;
+                console.log(`[FV] ✅ ERP sync: ${rawTransp.length} transportadoras importadas`);
             }
         } catch (e) { console.warn('[FV] Falha ao importar transportadoras:', e); }
 

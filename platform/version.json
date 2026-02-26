@@ -1,8 +1,8 @@
 {
     "module": "platform-core",
     "name": "Parreira Platform Portal",
-    "version": "11.1.0",
+    "version": "11.2.0",
     "date": "2026-02-26",
-    "last_change": "Fix integração Força de Vendas ↔ ERP: adapters de sync corrigidos (clientes, produtos, pedidos)",
-    "build": "20260226.01"
+    "last_change": "Fix Força de Vendas sync standalone: tradução inline campos ERP→FV",
+    "build": "20260226.02"
 }

@@ -1,9 +1,9 @@
 {
     "module": "sales-force",
     "name": "Força de Vendas",
-    "version": "2.2.0",
+    "version": "2.3.0",
     "date": "2026-02-26",
-    "description": "FV 2.2 — Fix sync ERP via adapters, re-sync automático",
+    "description": "FV 2.3 — Sync standalone: tradução inline ERP→FV sem dependência de scripts externos",
     "changelog": [
         "IndexedDB substitui localStorage (offline robusto)",
         "Multi-empresa (codEmpresa em todas entidades)",
@@ -13,9 +13,9 @@
         "Campos expandidos: cliente 29 campos, produto 21 campos",
         "Meta do vendedor (valorMeta)",
         "Migração automática localStorage → IndexedDB",
-        "FIX: Sync clientes via exportClientesParaFV() (campos mapeados)",
-        "FIX: Sync pedidos via onErpReceberPedidoFV() (impostos + WMS)",
-        "FIX: Re-sync automático a cada init (novos cadastros aparecem)",
-        "FIX: Planos e transportadoras via adapters ERP"
+        "FIX v2.2: Sync clientes/produtos/planos/transportadoras via adapters ERP",
+        "FIX v2.3: Tradução de campos inline (FV roda standalone, não carrega ERP scripts)",
+        "FIX v2.3: Detecção automática de tenant suffix via platform_user_logged",
+        "FIX v2.3: Enriquecimento de estoque direto de erp_estoque no localStorage"
     ]
 }
