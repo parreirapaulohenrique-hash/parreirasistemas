@@ -1,8 +1,8 @@
 {
     "module": "erp",
     "name": "ParreiraLog ERP",
-    "version": "11.5.0",
+    "version": "11.5.1",
     "date": "2026-02-26",
-    "last_change": "Fix TODAS telas Vendas Avançado: removidos IDs duplicados de orcamento, faturamento, liberacaoCredito, romaneio, comissoes, consultaDevolucao, cancelamento, consultaPedidos",
-    "build": "20260226.06"
+    "last_change": "Cache-buster + integracoes.js + vendas.js adicionados ao HTML",
+    "build": "20260226.07"
 }
