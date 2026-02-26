@@ -1,8 +1,8 @@
 {
     "module": "platform-core",
     "name": "Parreira Platform Portal",
-    "version": "11.6.0",
+    "version": "11.7.0",
     "date": "2026-02-26",
-    "last_change": "ERP 11.4: Fix Consulta Pedidos - container dinamico + HTML limpo",
-    "build": "20260226.07"
+    "last_change": "ERP 11.5: Fix TODAS telas Vendas Avancado - IDs duplicados removidos",
+    "build": "20260226.08"
 }

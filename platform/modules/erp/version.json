@@ -1,8 +1,8 @@
 {
     "module": "erp",
     "name": "ParreiraLog ERP",
-    "version": "11.4.0",
+    "version": "11.5.0",
     "date": "2026-02-26",
-    "last_change": "Fix Consulta Pedidos: removido HTML estatico duplicado, container dinamico renderConsultaPedidos",
-    "build": "20260226.05"
+    "last_change": "Fix TODAS telas Vendas Avançado: removidos IDs duplicados de orcamento, faturamento, liberacaoCredito, romaneio, comissoes, consultaDevolucao, cancelamento, consultaPedidos",
+    "build": "20260226.06"
 }
