@@ -1,21 +1,19 @@
 {
     "module": "sales-force",
-    "name": "Força de Vendas",
-    "version": "2.3.0",
+    "name": "Forca de Vendas",
+    "version": "2.4.0",
     "date": "2026-02-26",
-    "description": "FV 2.3 — Sync standalone: tradução inline ERP→FV sem dependência de scripts externos",
+    "description": "FV 2.4 — Desconto por item, desconto pedido, frete CIF/FOB, desconto flexivel",
     "changelog": [
-        "IndexedDB substitui localStorage (offline robusto)",
-        "Multi-empresa (codEmpresa em todas entidades)",
+        "Desconto % editavel por item (validado contra descontoMax/flexivel)",
+        "Desconto % no total do pedido (ate 30%)",
+        "Tipo de frete: CIF (pago), FOB (por conta do cliente), SEM (retira)",
+        "Totais detalhados: subtotal bruto, desc itens, desc pedido, IPI, frete",
+        "Dados completos no pedido: tipoFrete, descontoPedido, subtotalBruto",
+        "IndexedDB offline robusto",
+        "Multi-empresa",
         "IPI por produto e por item do pedido",
-        "Desconto máximo por produto e vendedor",
-        "Fila de sincronização offline (syncQueue)",
-        "Campos expandidos: cliente 29 campos, produto 21 campos",
-        "Meta do vendedor (valorMeta)",
-        "Migração automática localStorage → IndexedDB",
-        "FIX v2.2: Sync clientes/produtos/planos/transportadoras via adapters ERP",
-        "FIX v2.3: Tradução de campos inline (FV roda standalone, não carrega ERP scripts)",
-        "FIX v2.3: Detecção automática de tenant suffix via platform_user_logged",
-        "FIX v2.3: Enriquecimento de estoque direto de erp_estoque no localStorage"
+        "Fila de sincronizacao offline (syncQueue)",
+        "Sync standalone via localStorage com traducao inline de campos ERP"
     ]
 }

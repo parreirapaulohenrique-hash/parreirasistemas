@@ -1,8 +1,8 @@
 {
     "module": "platform-core",
     "name": "Parreira Platform Portal",
-    "version": "11.2.0",
+    "version": "11.3.0",
     "date": "2026-02-26",
-    "last_change": "Fix Força de Vendas sync standalone: tradução inline campos ERP→FV",
-    "build": "20260226.02"
+    "last_change": "FV 2.4: Desconto por item + pedido, frete CIF/FOB, flexivel",
+    "build": "20260226.03"
 }

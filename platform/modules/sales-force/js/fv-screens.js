@@ -537,13 +537,13 @@ function showClienteTab(tab, btn) {
 // ===========================================
 function iniciarNovoPedido() {
     const defaultEmpresa = fvData.empresas?.[0]?.codEmpresa || '01';
-    novoPedidoState = { cliente: null, itens: [], obs: '', transportadora: '', planoPagamento: '', codEmpresa: defaultEmpresa, stpPedido: 'Pre-Venda', idFormPg: 0, codfornecTransp: 0, step: 'cabecalho' };
+    novoPedidoState = { cliente: null, itens: [], obs: '', transportadora: '', planoPagamento: '', codEmpresa: defaultEmpresa, stpPedido: 'Pre-Venda', idFormPg: 0, codfornecTransp: 0, tipoFrete: 'CIF', descontoPedido: 0, step: 'cabecalho' };
     navigateTo('novoPedido');
 }
 
 function iniciarPedidoCliente(clienteId) {
     const c = fvData.clientes.find(cl => cl.id === clienteId);
-    novoPedidoState = { cliente: c, itens: [], obs: '', transportadora: '', planoPagamento: '', step: 'cabecalho' };
+    novoPedidoState = { cliente: c, itens: [], obs: '', transportadora: '', planoPagamento: '', tipoFrete: 'CIF', descontoPedido: 0, step: 'cabecalho' };
     navigateTo('novoPedido');
 }
 
@@ -676,8 +676,17 @@ function renderPedidoCabecalho() {
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Observações</label>
-                    <textarea class="form-control" id="npObs" rows="2" placeholder="Observações do pedido..." oninput="novoPedidoState.obs=this.value">${s.obs}</textarea>
+                    <label class="form-label">Tipo de Frete *</label>
+                    <select class="form-control" id="npTipoFrete" onchange="novoPedidoState.tipoFrete=this.value">
+                        <option value="CIF" ${s.tipoFrete === 'CIF' ? 'selected' : ''}>CIF - Frete Pago (por conta do remetente)</option>
+                        <option value="FOB" ${s.tipoFrete === 'FOB' ? 'selected' : ''}>FOB - Frete a Cobrar (por conta do cliente)</option>
+                        <option value="SEM" ${s.tipoFrete === 'SEM' ? 'selected' : ''}>Sem Frete (retira)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Observacoes</label>
+                    <textarea class="form-control" id="npObs" rows="2" placeholder="Observacoes do pedido..." oninput="novoPedidoState.obs=this.value">${s.obs}</textarea>
                 </div>
 
                 ${c.bloqueado ? '<div class="alert-danger"><span class="material-icons-round">warning</span> Cliente bloqueado! Pedido será enviado como orçamento para aprovação.</div>' : ''}
@@ -726,19 +735,27 @@ function renderPedidoItens() {
             ? '<div class="empty-state" style="padding:1.5rem"><span class="material-icons-round">shopping_cart</span><p>Nenhum item adicionado</p></div>'
             : s.itens.map((item, idx) => `
                         <div class="item-pedido">
-                            <div class="item-pedido-info">
+                            <div class="item-pedido-info" style="flex:1;min-width:0">
                                 <div class="list-title">${item.nome}</div>
-                                <div class="list-sub">${item.sku} · ${fmtMoney(item.preco)} / ${item.unidade}${item.ipi ? ' · IPI ' + item.ipi + '%' : ''}${item.descontoMax ? ' · Desc.Max ' + item.descontoMax + '%' : ''}</div>
+                                <div class="list-sub">${item.sku} · ${fmtMoney(item.preco)} / ${item.unidade}${item.ipi ? ' · IPI ' + item.ipi + '%' : ''}${item.descontoMax ? ' · Flex ' + item.descontoMax + '%' : ''}</div>
                             </div>
                             <div class="item-pedido-controls">
-                                <button class="btn-qty" onclick="changeQtdNP(${idx}, -1)">−</button>
+                                <button class="btn-qty" onclick="changeQtdNP(${idx}, -1)">-</button>
                                 <span class="item-qty">${item.qtd}</span>
                                 <button class="btn-qty" onclick="changeQtdNP(${idx}, 1)">+</button>
+                                <div style="display:flex;align-items:center;gap:2px;margin-left:4px" title="Desconto % (max: ${item.descontoMax || 0}%)">
+                                    <span style="font-size:0.65rem;color:var(--text-secondary)">Desc</span>
+                                    <input type="number" min="0" max="${item.descontoMax || 99}" step="0.5" value="${item.desconto || 0}"
+                                        style="width:42px;padding:2px 3px;font-size:0.75rem;text-align:center;border:1px solid var(--border-color);border-radius:4px;background:var(--bg-secondary);color:var(--text-primary)"
+                                        onchange="setDescontoItem(${idx}, this.value)">
+                                    <span style="font-size:0.65rem;color:var(--text-secondary)">%</span>
+                                </div>
                                 <button class="btn-qty danger" onclick="removeItemNP(${idx})"><span class="material-icons-round" style="font-size:1rem">delete</span></button>
                             </div>
-                            <div class="item-pedido-total">
+                            <div class="item-pedido-total" style="text-align:right;min-width:70px">
                                 <div>${fmtMoney(item.qtd * item.preco * (1 - (item.desconto || 0) / 100))}</div>
-                                ${item.valorIpi ? `<div style="font-size:0.65rem;color:var(--text-secondary)">IPI: ${fmtMoney(item.valorIpi)}</div>` : ''}
+                                ${item.desconto > 0 ? `<div style="font-size:0.6rem;color:var(--success)">-${item.desconto}%</div>` : ''}
+                                ${item.valorIpi ? `<div style="font-size:0.6rem;color:var(--text-secondary)">IPI: ${fmtMoney(item.valorIpi)}</div>` : ''}
                             </div>
                         </div>
                     `).join('')
@@ -760,11 +777,17 @@ function renderPedidoItens() {
 function renderPedidoTotais() {
     const s = novoPedidoState;
     const c = s.cliente;
-    const subtotal = s.itens.reduce((sum, item) => sum + (item.qtd * item.preco * (1 - (item.desconto || 0) / 100)), 0);
+    const subtotalBruto = s.itens.reduce((sum, item) => sum + (item.qtd * item.preco), 0);
+    const descontoItens = s.itens.reduce((sum, item) => sum + (item.qtd * item.preco * (item.desconto || 0) / 100), 0);
+    const subtotal = subtotalBruto - descontoItens;
     const totalItens = s.itens.reduce((sum, item) => sum + item.qtd, 0);
     const totalIpi = s.itens.reduce((sum, item) => sum + (item.valorIpi || 0), 0);
-    const totalGeral = subtotal + totalIpi;
+    const descontoPedidoPct = s.descontoPedido || 0;
+    const descontoPedidoValor = +(subtotal * descontoPedidoPct / 100).toFixed(2);
+    const subtotalComDesconto = subtotal - descontoPedidoValor;
+    const totalGeral = subtotalComDesconto + totalIpi;
     const empresaNome = fvData.empresas?.find(e => e.codEmpresa === s.codEmpresa)?.nome || s.codEmpresa;
+    const freteLabel = s.tipoFrete === 'CIF' ? 'CIF (Pago pelo remetente)' : s.tipoFrete === 'FOB' ? 'FOB (Por conta do cliente)' : 'Sem Frete (retira)';
 
     return `
         <div class="card-fv">
@@ -777,23 +800,36 @@ function renderPedidoTotais() {
                     <div class="detail-item"><span class="detail-label">Empresa</span><span class="detail-value">${empresaNome} (${s.codEmpresa})</span></div>
                     <div class="detail-item"><span class="detail-label">Pagamento</span><span class="detail-value">${s.planoPagamento || '-'}</span></div>
                     <div class="detail-item"><span class="detail-label">Transportadora</span><span class="detail-value">${s.transportadora || '-'}</span></div>
+                    <div class="detail-item"><span class="detail-label">Frete</span><span class="detail-value" style="font-weight:600;color:${s.tipoFrete === 'CIF' ? 'var(--success)' : s.tipoFrete === 'FOB' ? 'var(--warning)' : 'var(--text-secondary)'}">${freteLabel}</span></div>
                     <div class="detail-item"><span class="detail-label">Qtd Itens</span><span class="detail-value">${totalItens} un (${s.itens.length} produtos)</span></div>
                 </div>
             </div>
         </div>
 
         <div class="card-fv">
+            <div class="card-fv-header"><h3>Totais</h3></div>
             <div class="card-fv-body">
-                <div class="totalizer-row"><span>Subtotal Produtos</span><span>${fmtMoney(subtotal)}</span></div>
-                ${totalIpi > 0 ? `<div class="totalizer-row"><span>Total IPI</span><span style="color:var(--warning)">${fmtMoney(totalIpi)}</span></div>` : ''}
-                <div class="totalizer-row"><span>Desconto</span><span style="color:var(--success)">R$ 0,00</span></div>
-                <div class="totalizer-row"><span>Frete</span><span>A calcular</span></div>
+                <div class="totalizer-row"><span>Subtotal Bruto</span><span>${fmtMoney(subtotalBruto)}</span></div>
+                ${descontoItens > 0 ? `<div class="totalizer-row"><span>(-) Desc. Itens</span><span style="color:var(--success)">- ${fmtMoney(descontoItens)}</span></div>` : ''}
+                <div class="totalizer-row"><span>Subtotal Liquido</span><span>${fmtMoney(subtotal)}</span></div>
+                ${totalIpi > 0 ? `<div class="totalizer-row"><span>(+) IPI</span><span style="color:var(--warning)">${fmtMoney(totalIpi)}</span></div>` : ''}
+                <div class="totalizer-row" style="display:flex;align-items:center;gap:0.5rem">
+                    <span>(-) Desc. Pedido</span>
+                    <div style="display:flex;align-items:center;gap:4px;margin-left:auto">
+                        <input type="number" min="0" max="30" step="0.5" value="${descontoPedidoPct}"
+                            style="width:50px;padding:3px 4px;font-size:0.8rem;text-align:center;border:1px solid var(--border-color);border-radius:4px;background:var(--bg-secondary);color:var(--text-primary)"
+                            onchange="setDescontoPedido(this.value)">
+                        <span style="font-size:0.8rem;color:var(--text-secondary)">%</span>
+                        <span style="font-size:0.85rem;color:var(--success);font-weight:600;margin-left:8px">- ${fmtMoney(descontoPedidoValor)}</span>
+                    </div>
+                </div>
+                <div class="totalizer-row"><span>Frete</span><span style="color:${s.tipoFrete === 'FOB' ? 'var(--warning)' : 'var(--text-secondary)'}">${s.tipoFrete === 'FOB' ? 'Por conta do cliente' : s.tipoFrete === 'CIF' ? 'Incluso' : 'N/A'}</span></div>
                 <div class="totalizer-divider"></div>
                 <div class="totalizer-row total"><span>TOTAL DO PEDIDO</span><span>${fmtMoney(totalGeral)}</span></div>
             </div>
         </div>
 
-        ${c.bloqueado ? '<div class="alert-danger" style="margin-bottom:1rem"><span class="material-icons-round">warning</span> Pedido será salvo como <strong>Orçamento</strong> (cliente bloqueado)</div>' : ''}
+        ${c.bloqueado ? '<div class="alert-danger" style="margin-bottom:1rem"><span class="material-icons-round">warning</span> Pedido sera salvo como <strong>Orcamento</strong> (cliente bloqueado)</div>' : ''}
 
         <div style="display:flex;gap:0.75rem">
             <button class="btn-outline" style="flex:1" onclick="goToStep('itens')">
@@ -924,10 +960,47 @@ function avancarParaTotais() {
     renderNovoPedido();
 }
 
+function setDescontoItem(idx, valor) {
+    const item = novoPedidoState.itens[idx];
+    if (!item) return;
+    let desc = parseFloat(valor) || 0;
+    const maxDesc = item.descontoMax || 0;
+    if (desc > maxDesc && maxDesc > 0) {
+        desc = maxDesc;
+        showToast('Desconto limitado a ' + maxDesc + '% (flexivel)');
+    }
+    if (desc < 0) desc = 0;
+    if (desc > 99) desc = 99;
+    item.desconto = desc;
+    // Recalculate IPI based on net value
+    if (item.ipi > 0) {
+        const netValue = item.qtd * item.preco * (1 - desc / 100);
+        item.valorIpi = +(netValue * item.ipi / 100).toFixed(2);
+    }
+    renderNovoPedido();
+}
+
+function setDescontoPedido(valor) {
+    let desc = parseFloat(valor) || 0;
+    if (desc < 0) desc = 0;
+    if (desc > 30) {
+        desc = 30;
+        showToast('Desconto do pedido limitado a 30%');
+    }
+    novoPedidoState.descontoPedido = desc;
+    renderNovoPedido();
+}
+
 function finalizarPedido() {
     const s = novoPedidoState;
-    const subtotal = s.itens.reduce((sum, item) => sum + (item.qtd * item.preco * (1 - (item.desconto || 0) / 100)), 0);
+    const subtotalBruto = s.itens.reduce((sum, item) => sum + (item.qtd * item.preco), 0);
+    const descontoItens = s.itens.reduce((sum, item) => sum + (item.qtd * item.preco * (item.desconto || 0) / 100), 0);
+    const subtotal = subtotalBruto - descontoItens;
+    const descontoPedidoPct = s.descontoPedido || 0;
+    const descontoPedidoValor = +(subtotal * descontoPedidoPct / 100).toFixed(2);
+    const subtotalComDesconto = subtotal - descontoPedidoValor;
     const totalIpi = s.itens.reduce((sum, item) => sum + (item.valorIpi || 0), 0);
+    const totalGeral = subtotalComDesconto + totalIpi;
     const empresaNome = fvData.empresas?.find(e => e.codEmpresa === s.codEmpresa)?.nome || fvData.configEmpresa?.nome || s.codEmpresa;
 
     const pedido = {
@@ -944,10 +1017,15 @@ function finalizarPedido() {
         codfornecTransp: s.codfornecTransp,
         planoPagamento: s.planoPagamento,
         idFormPg: s.idFormPg,
+        tipoFrete: s.tipoFrete,
+        descontoPedido: descontoPedidoPct,
+        descontoPedidoValor: descontoPedidoValor,
         status: s.cliente.bloqueado ? 'orcamento' : 'venda',
         itens: [...s.itens],
         obs: s.obs,
-        valorTotal: +subtotal.toFixed(2),
+        subtotalBruto: +subtotalBruto.toFixed(2),
+        descontoItensValor: +descontoItens.toFixed(2),
+        valorTotal: +totalGeral.toFixed(2),
         totalIpi: +totalIpi.toFixed(2),
         sincronizado: 'N'
     };
