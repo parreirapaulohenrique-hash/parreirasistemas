@@ -1,8 +1,8 @@
 {
     "module": "erp",
     "name": "ParreiraLog ERP",
-    "version": "11.5.4",
+    "version": "11.6.0",
     "date": "2026-02-26",
-    "last_change": "Fix: render direto no onclick do menu lateral para todas telas vendas avancado",
-    "build": "20260226.10"
+    "last_change": "FIX DEFINITIVO: removido </main> prematuro que fechava o container antes das views de vendas",
+    "build": "20260226.11"
 }
