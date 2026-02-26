@@ -1,8 +1,8 @@
 {
     "module": "module-erp",
     "name": "Parreira ERP Core",
-    "version": "11.0.0",
-    "date": "2026-02-25",
-    "last_change": "Fase 11 — Recursos Humanos (RH) e Folha",
-    "build": "20260225.01"
+    "version": "11.1.0",
+    "date": "2026-02-26",
+    "last_change": "Fix integração FV: exportClientesParaFV() corrigido + adapter sync",
+    "build": "20260226.01"
 }

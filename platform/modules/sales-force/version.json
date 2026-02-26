@@ -1,9 +1,9 @@
 {
     "module": "sales-force",
     "name": "Força de Vendas",
-    "version": "2.1.0",
-    "date": "2026-02-19",
-    "description": "FV 2.1 — IndexedDB, multi-empresa, IPI, sync queue, Acontec alignment",
+    "version": "2.2.0",
+    "date": "2026-02-26",
+    "description": "FV 2.2 — Fix sync ERP via adapters, re-sync automático",
     "changelog": [
         "IndexedDB substitui localStorage (offline robusto)",
         "Multi-empresa (codEmpresa em todas entidades)",
@@ -12,6 +12,10 @@
         "Fila de sincronização offline (syncQueue)",
         "Campos expandidos: cliente 29 campos, produto 21 campos",
         "Meta do vendedor (valorMeta)",
-        "Migração automática localStorage → IndexedDB"
+        "Migração automática localStorage → IndexedDB",
+        "FIX: Sync clientes via exportClientesParaFV() (campos mapeados)",
+        "FIX: Sync pedidos via onErpReceberPedidoFV() (impostos + WMS)",
+        "FIX: Re-sync automático a cada init (novos cadastros aparecem)",
+        "FIX: Planos e transportadoras via adapters ERP"
     ]
 }
