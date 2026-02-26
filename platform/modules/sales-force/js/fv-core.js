@@ -374,29 +374,193 @@ async function savePedido(pedido) {
                 console.error('[FV] Adapter onErpReceberPedidoFV falhou:', adapterErr);
             }
         } else {
-            // Fallback: push direto se adapter não estiver disponível (FV standalone)
-            console.warn('[FV] Adapter ERP não disponível, salvando localmente.');
+            // ═══════════════════════════════════════════════════════════
+            // STANDALONE: Adapter FV→ERP completo inline + WMS
+            // O FV roda sozinho — precisamos fazer TUDO aqui:
+            //   1. Traduzir para PedidoSchema ERP
+            //   2. Salvar em erp_vendas
+            //   3. Reservar estoque em erp_estoque
+            //   4. Criar ordem no WMS (wms_pedidos + Firebase)
+            // ═══════════════════════════════════════════════════════════
+            console.log('[FV] Standalone: processando pedido completo inline.');
             let tenantSuffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
             if (!tenantSuffix && localStorage.getItem('erp_products_01')) tenantSuffix = '_01';
 
+            // Encontrar dados do cliente
+            const cliente = fvData.clientes.find(c =>
+                c.cnpjCpf === pedido.clienteCnpjCpf ||
+                String(c.id || c.codigo) === String(pedido.clienteId)
+            ) || { codigo: pedido.clienteId, razaoSocial: pedido.clienteNome, cnpjCpf: pedido.clienteCnpjCpf };
+
+            // ─── 1. Traduzir itens FV → ERP ─────────────────────
+            const itensERP = (pedido.itens || []).map((i, idx) => {
+                const valorBruto = (i.qtd || 0) * (i.preco || 0);
+                const descItem = i.desconto || 0;
+                const valorDesc = valorBruto * descItem / 100;
+                const valorLiq = valorBruto - valorDesc;
+                const ipiPerc = i.ipi || 0;
+                const valorIpi = valorLiq * ipiPerc / 100;
+                return {
+                    seq: idx + 1,
+                    sku: i.sku || '',
+                    descricao: i.nome || '',
+                    ncm: i.ncm || '00000000',
+                    cfop: i.cfop || '5102',
+                    unidade: i.unidade || 'UN',
+                    quantidade: i.qtd || 0,
+                    valorUnitario: i.preco || 0,
+                    desconto: descItem,
+                    valorDesconto: valorDesc,
+                    valorTotal: valorLiq,
+                    ipi: ipiPerc,
+                    valorIpi: valorIpi
+                };
+            });
+
+            const totalProdutos = itensERP.reduce((s, i) => s + i.valorTotal, 0);
+            const totalIpi = itensERP.reduce((s, i) => s + i.valorIpi, 0);
+            const totalDesconto = itensERP.reduce((s, i) => s + i.valorDesconto, 0);
+            const descPedidoPct = pedido.descontoPedido || 0;
+            const descPedidoVal = pedido.descontoPedidoValor || +(totalProdutos * descPedidoPct / 100).toFixed(2);
+            const freteMap = { 'CIF': 0, 'FOB': 1, 'SEM': 9 };
+
+            // ─── 2. Montar PedidoSchema ERP completo ────────────
+            const pedidoERP = {
+                numero: pedido.id,
+                serie: '1',
+                data: pedido.data || new Date().toISOString().slice(0, 10),
+                empresa: pedido.codEmpresa || '01',
+                status: pedido.status || 'venda',
+                stpPedido: pedido.stpPedido || 'Pre-Venda',
+                origemFV: true,
+                cliente: {
+                    codigo: cliente.codigo || cliente.id || pedido.clienteId,
+                    razaoSocial: cliente.razaoSocial || cliente.nome || pedido.clienteNome,
+                    fantasia: cliente.fantasia || cliente.nomeFantasia || '',
+                    cnpjCpf: cliente.cnpjCpf || cliente.cpfCnpj || pedido.clienteCnpjCpf,
+                    ie: cliente.inscEstadual || cliente.ie || '',
+                    endereco: {
+                        logradouro: cliente.endereco || '',
+                        cidade: cliente.cidade || '',
+                        uf: cliente.uf || '',
+                        cep: cliente.cep || '',
+                        bairro: cliente.bairro || ''
+                    }
+                },
+                vendedor: {
+                    codigo: fvUser ? fvUser.codigo : '32',
+                    nome: fvUser ? fvUser.nome : 'Vendedor',
+                    comissao: 0
+                },
+                condicaoPagamento: {
+                    codigo: pedido.idFormPg || '',
+                    descricao: pedido.planoPagamento || '',
+                    parcelas: pedido.parcelas || 1
+                },
+                transporte: {
+                    modalidadeFrete: freteMap[pedido.tipoFrete] !== undefined ? freteMap[pedido.tipoFrete] : 0,
+                    tipoFrete: pedido.tipoFrete || 'CIF',
+                    transportadora: {
+                        codigo: pedido.codfornecTransp || '',
+                        razaoSocial: pedido.transportadora || '',
+                        cnpj: '',
+                        ie: ''
+                    },
+                    volumes: { quantidade: 0, especie: '', pesoLiquido: 0, pesoBruto: 0 }
+                },
+                itens: itensERP,
+                totais: {
+                    subtotal: totalProdutos + totalDesconto,
+                    desconto: totalDesconto,
+                    descontoPedido: descPedidoPct,
+                    descontoPedidoValor: descPedidoVal,
+                    totalProdutos: totalProdutos,
+                    totalNF: pedido.valorTotal || (totalProdutos - descPedidoVal + totalIpi),
+                    valorIPI: totalIpi,
+                    frete: 0,
+                    seguro: 0,
+                    outrasDespesas: 0,
+                    baseICMS: 0, valorICMS: 0, valorPIS: 0, valorCOFINS: 0
+                },
+                observacao: pedido.obs || '',
+                sincronizado: 'N',
+                flagEnvio: 'N',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+
+            // ─── 3. Salvar em erp_vendas ────────────────────────
             const erpVendasKey = 'erp_vendas' + tenantSuffix;
             let erpVendas = JSON.parse(localStorage.getItem(erpVendasKey) || '[]');
             erpVendas = erpVendas.filter(p => String(p.numero || p.id) !== String(pedido.id));
-            erpVendas.push({
-                id: pedido.id,
-                numero: pedido.id,
-                data: pedido.data,
-                clienteId: pedido.clienteId,
-                clienteNome: pedido.clienteNome,
-                clienteCnpjCpf: pedido.clienteCnpjCpf,
-                valorTotal: pedido.valorTotal,
-                status: pedido.status === 'orcamento' ? 'orcamento' : pedido.status,
-                itens: pedido.itens.map(i => ({ ...i, precoUnitario: i.preco })),
-                transportadoraId: pedido.codfornecTransp,
-                origem: 'Força de Vendas (App)',
-                vendedorId: fvUser ? fvUser.codigo : '32'
-            });
+            erpVendas.push(pedidoERP);
             localStorage.setItem(erpVendasKey, JSON.stringify(erpVendas));
+            console.log('✅ [FV→ERP] Pedido ' + pedido.id + ' salvo em erp_vendas (PedidoSchema completo)');
+
+            // ─── 4. Reservar estoque no ERP ─────────────────────
+            if (['venda', 'faturado'].includes(pedidoERP.status)) {
+                try {
+                    const estoqueKey = 'erp_estoque' + tenantSuffix;
+                    const estoqueERP = JSON.parse(localStorage.getItem(estoqueKey) || '{}');
+                    itensERP.forEach(item => {
+                        const key = item.sku;
+                        if (!estoqueERP[key]) {
+                            estoqueERP[key] = { sku: key, descricao: item.descricao, estoqueAtual: 0, reservado: 0, disponivel: 0 };
+                        }
+                        estoqueERP[key].reservado += Number(item.quantidade || 0);
+                        estoqueERP[key].disponivel = estoqueERP[key].estoqueAtual - estoqueERP[key].reservado;
+                    });
+                    localStorage.setItem(estoqueKey, JSON.stringify(estoqueERP));
+                    console.log('✅ [FV→ERP] Estoque reservado para pedido ' + pedido.id);
+                } catch (e) { console.error('[FV] Erro ao reservar estoque:', e); }
+
+                // ─── 5. Criar ordem no WMS ──────────────────────
+                try {
+                    const wmsPedidosKey = 'wms_pedidos' + tenantSuffix;
+                    let wmsPedidos = JSON.parse(localStorage.getItem(wmsPedidosKey) || '[]');
+                    const wmsId = 'PED-' + pedido.id;
+                    if (!wmsPedidos.some(w => w.id === wmsId)) {
+                        wmsPedidos.push({
+                            id: wmsId,
+                            cliente: pedidoERP.cliente.razaoSocial || pedidoERP.cliente.fantasia || pedido.clienteNome,
+                            prioridade: 'NORMAL',
+                            tipoFrete: pedido.tipoFrete || 'CIF',
+                            itens: itensERP.map(i => ({
+                                sku: i.sku,
+                                desc: i.descricao,
+                                qtd: i.quantidade,
+                                endereco: 'A-00-00-00'
+                            })),
+                            status: 'PENDENTE',
+                            createdAt: new Date().toISOString()
+                        });
+                        localStorage.setItem(wmsPedidosKey, JSON.stringify(wmsPedidos));
+                        console.log('✅ [FV→WMS] Ordem de separação ' + wmsId + ' criada no WMS');
+                    }
+                } catch (e) { console.error('[FV] Erro ao criar ordem WMS:', e); }
+
+                // ─── 6. Firebase cloud sync (WMS) ───────────────
+                try {
+                    const user = JSON.parse(localStorage.getItem('platform_user_logged'));
+                    if (user && user.tenant && typeof firebase !== 'undefined') {
+                        const db = firebase.firestore();
+                        const wmsRef = db.collection('tenants').doc(user.tenant).collection('wms_pedidos').doc('PED-' + pedido.id);
+                        wmsRef.get().then(snap => {
+                            if (!snap.exists) {
+                                wmsRef.set({
+                                    id: 'PED-' + pedido.id,
+                                    cliente: pedidoERP.cliente.razaoSocial || pedido.clienteNome,
+                                    prioridade: 'NORMAL',
+                                    tipoFrete: pedido.tipoFrete || 'CIF',
+                                    itens: itensERP.map(i => ({ sku: i.sku, desc: i.descricao, qtd: i.quantidade, endereco: 'A-00-00-00' })),
+                                    status: 'PENDENTE',
+                                    createdAt: new Date().toISOString()
+                                }).then(() => console.log('✅ [Cloud] Pedido PED-' + pedido.id + ' enviado ao WMS Firebase.'));
+                            }
+                        });
+                    }
+                } catch (e) { console.warn('[FV] Firebase WMS sync skipped:', e.message); }
+            }
         }
 
         // Enqueue for cloud sync if new/modified

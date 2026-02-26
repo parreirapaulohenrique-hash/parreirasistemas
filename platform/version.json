@@ -1,8 +1,8 @@
 {
     "module": "platform-core",
     "name": "Parreira Platform Portal",
-    "version": "11.3.0",
+    "version": "11.4.0",
     "date": "2026-02-26",
-    "last_change": "FV 2.4: Desconto por item + pedido, frete CIF/FOB, flexivel",
-    "build": "20260226.03"
+    "last_change": "FV 2.5: Pipeline completo FV→ERP→WMS (PedidoSchema + reserva estoque + ordem separacao)",
+    "build": "20260226.04"
 }

@@ -1,19 +1,17 @@
 {
     "module": "sales-force",
     "name": "Forca de Vendas",
-    "version": "2.4.0",
+    "version": "2.5.0",
     "date": "2026-02-26",
-    "description": "FV 2.4 — Desconto por item, desconto pedido, frete CIF/FOB, desconto flexivel",
+    "description": "FV 2.5 — Pipeline completo FV → ERP (PedidoSchema) → WMS (separacao)",
     "changelog": [
+        "savePedido standalone: adapter completo FV → ERP PedidoSchema inline",
+        "Reserva estoque automatica em erp_estoque ao gravar pedido tipo venda",
+        "Criacao automatica de ordem WMS (wms_pedidos) para separacao",
+        "Firebase cloud sync: wms_pedidos enviado ao Firestore",
+        "tipoFrete (CIF/FOB/SEM) incluso no PedidoSchema e ordem WMS",
+        "descontoPedido e descontoPedidoValor no schema de totais",
         "Desconto % editavel por item (validado contra descontoMax/flexivel)",
-        "Desconto % no total do pedido (ate 30%)",
-        "Tipo de frete: CIF (pago), FOB (por conta do cliente), SEM (retira)",
-        "Totais detalhados: subtotal bruto, desc itens, desc pedido, IPI, frete",
-        "Dados completos no pedido: tipoFrete, descontoPedido, subtotalBruto",
-        "IndexedDB offline robusto",
-        "Multi-empresa",
-        "IPI por produto e por item do pedido",
-        "Fila de sincronizacao offline (syncQueue)",
-        "Sync standalone via localStorage com traducao inline de campos ERP"
+        "Multi-empresa e Sync standalone robusto"
     ]
 }
