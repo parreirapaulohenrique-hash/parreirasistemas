@@ -10,11 +10,13 @@ const VendasAvancado = (() => {
         vendas: 'erp_vendas',
         comissoes: 'erp_comissoes'
     };
+    const sfx = () => (typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '') || (localStorage.getItem('erp_products_01') ? '_01' : '');
 
     const fmtMoney = v => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const fmtDate = d => d ? new Date(d).toLocaleDateString('pt-BR') : '-';
-    const getProducts = () => JSON.parse(localStorage.getItem('erp_products' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
-    const getVendas = () => JSON.parse(localStorage.getItem(KEYS.vendas) || '[]');
+    const getProducts = () => JSON.parse(localStorage.getItem('erp_products' + sfx()) || '[]');
+    const getVendas = () => JSON.parse(localStorage.getItem(KEYS.vendas + sfx()) || '[]');
+    const saveVendas = (vendas) => localStorage.setItem(KEYS.vendas + sfx(), JSON.stringify(vendas));
 
     // ═════════════════════════════════════════════════════
     // 1. ORÇAMENTO
