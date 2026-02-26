@@ -199,8 +199,23 @@ window.switchView = (viewName) => {
     // Dashboard
     if (viewName === 'dashboard') renderDashboard();
 
+    // ── Vendas Avançado (chamada direta) ──
+    if (typeof VendasAvancado !== 'undefined') {
+        const vaMap = {
+            orcamento: 'renderOrcamento',
+            faturamento: 'renderFaturamento',
+            liberacaoCredito: 'renderLiberacaoCredito',
+            romaneio: 'renderRomaneio',
+            comissoes: 'renderComissoes',
+            consultaPedidos: 'renderConsultaPedidos'
+        };
+        if (vaMap[viewName] && typeof VendasAvancado[vaMap[viewName]] === 'function') {
+            VendasAvancado[vaMap[viewName]]();
+        }
+    }
+
     // ── Fire registered view hooks ──
-    window._viewHooks.forEach(fn => { try { fn(viewName); } catch (e) { console.warn('viewHook error:', e); } });
+    if (window._viewHooks) window._viewHooks.forEach(fn => { try { fn(viewName); } catch (e) { console.warn('viewHook error:', e); } });
 };
 
 // --- Product Modal Logic ---

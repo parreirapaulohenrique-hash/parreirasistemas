@@ -1,8 +1,8 @@
 {
     "module": "erp",
     "name": "ParreiraLog ERP",
-    "version": "11.5.1",
+    "version": "11.5.2",
     "date": "2026-02-26",
-    "last_change": "Cache-buster + integracoes.js + vendas.js adicionados ao HTML",
-    "build": "20260226.07"
+    "last_change": "Fix definitivo: chamada direta VendasAvancado no switchView + gerencial.js duplicado removido",
+    "build": "20260226.08"
 }
