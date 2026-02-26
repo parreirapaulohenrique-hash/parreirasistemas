@@ -1,8 +1,8 @@
 {
     "module": "platform-core",
     "name": "Parreira Platform Portal",
-    "version": "11.5.1",
+    "version": "11.6.0",
     "date": "2026-02-26",
-    "last_change": "ERP 11.3.1: Fix tenant suffix em getVendas para Consulta Pedidos",
-    "build": "20260226.06"
+    "last_change": "ERP 11.4: Fix Consulta Pedidos - container dinamico + HTML limpo",
+    "build": "20260226.07"
 }

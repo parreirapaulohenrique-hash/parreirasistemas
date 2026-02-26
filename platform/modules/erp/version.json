@@ -1,8 +1,8 @@
 {
     "module": "erp",
     "name": "ParreiraLog ERP",
-    "version": "11.3.1",
+    "version": "11.4.0",
     "date": "2026-02-26",
-    "last_change": "Fix: getVendas com tenant suffix para Consulta Pedidos carregar dados corretamente",
-    "build": "20260226.04"
+    "last_change": "Fix Consulta Pedidos: removido HTML estatico duplicado, container dinamico renderConsultaPedidos",
+    "build": "20260226.05"
 }
