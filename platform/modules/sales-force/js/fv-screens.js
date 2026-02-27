@@ -1131,48 +1131,89 @@ function renderSync() {
 function doSyncTotal() {
     showToast('Sincronizando todos os dados...');
     const indicator = document.getElementById('syncIndicator');
-    indicator.classList.add('syncing');
-    indicator.querySelector('.material-icons-round').textContent = 'sync';
+    if (indicator) {
+        indicator.classList.add('syncing');
+        indicator.querySelector('.material-icons-round').textContent = 'sync';
+    }
 
     setTimeout(async () => {
         try {
-            let tenantSuffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
-            if (!tenantSuffix && localStorage.getItem('erp_products_01')) tenantSuffix = '_01';
+            let firestoreDb = typeof db !== 'undefined' ? db : (window.db || null);
+            if (!firestoreDb && typeof firebase !== 'undefined' && firebase.firestore) {
+                firestoreDb = firebase.firestore();
+            }
 
-            const erpClientes = JSON.parse(localStorage.getItem('erp_clientes' + tenantSuffix) || 'null');
-            let erpProdutos = JSON.parse(localStorage.getItem('erp_products' + tenantSuffix) || 'null');
+            if (!firestoreDb) {
+                throw new Error("Conexão com a nuvem (Firebase) não estabelecida.");
+            }
 
-            if (erpClientes && erpClientes.length > 0) {
+            // A tenant ID é fixa como 01 para o Força de Vendas
+            const tenantId = typeof FV_TENANT !== 'undefined' ? FV_TENANT : '01';
+            const tenantRef = firestoreDb.collection('tenants').doc(tenantId);
+
+            console.log(`[FV] Baixando dados da nuvem para o tenant ${tenantId}...`);
+
+            // --- 1. Sincronizar Clientes ---
+            const clientesSnap = await tenantRef.collection('fv_clientes').get();
+            if (!clientesSnap.empty) {
+                const erpClientes = [];
+                clientesSnap.forEach(doc => erpClientes.push(doc.data()));
                 await FVDB.clear('clientes');
                 await FVDB.putMany('clientes', erpClientes);
                 fvData.clientes = erpClientes;
+                console.log(`[FV] ✅ ${erpClientes.length} clientes baixados.`);
             }
-            if (erpProdutos && erpProdutos.length > 0) {
+
+            // --- 2. Sincronizar Produtos ---
+            const produtosSnap = await tenantRef.collection('fv_produtos').get();
+            if (!produtosSnap.empty) {
+                const erpProdutos = [];
+                produtosSnap.forEach(doc => erpProdutos.push(doc.data()));
                 await FVDB.clear('produtos');
-                erpProdutos = erpProdutos.map(p => ({
-                    ...p,
-                    sku: p.sku || p.codigo || p.id,
-                    nome: p.nome || p.descricao,
-                    precoBase: p.precoBase || p.precoVenda || p.preco || 0
-                }));
                 await FVDB.putMany('produtos', erpProdutos);
                 fvData.produtos = erpProdutos;
+                console.log(`[FV] ✅ ${erpProdutos.length} produtos baixados.`);
+            }
+
+            // --- 3. Sincronizar Planos de Pagamento ---
+            const planosSnap = await tenantRef.collection('fv_planos_pagamento').get();
+            if (!planosSnap.empty) {
+                const erpPlanos = [];
+                planosSnap.forEach(doc => erpPlanos.push(doc.data()));
+                await FVDB.clear('formaPag');
+                await FVDB.putMany('formaPag', erpPlanos);
+                fvData.planosPagamento = erpPlanos;
+                console.log(`[FV] ✅ ${erpPlanos.length} planos de pagamento baixados.`);
+            }
+
+            // --- 4. Sincronizar Transportadoras ---
+            const transpSnap = await tenantRef.collection('fv_transportadoras').get();
+            if (!transpSnap.empty) {
+                const erpTransp = [];
+                transpSnap.forEach(doc => erpTransp.push(doc.data()));
+                await FVDB.clear('transportadoras');
+                await FVDB.putMany('transportadoras', erpTransp);
+                fvData.transportadoras = erpTransp;
+                console.log(`[FV] ✅ ${erpTransp.length} transportadoras baixadas.`);
             }
 
             fvData.lastSync = new Date().toISOString();
             await saveFVData();
 
-            indicator.classList.remove('syncing');
-            indicator.querySelector('.material-icons-round').textContent = 'cloud_done';
+            if (indicator) {
+                indicator.classList.remove('syncing');
+                indicator.querySelector('.material-icons-round').textContent = 'cloud_done';
+            }
             showToast('✅ Sincronização completa realizada!');
             renderSync();
         } catch (e) {
-            console.error('Erro na sincronização', e);
-            indicator.classList.remove('syncing');
-            showToast('Erro ao sincronizar dados', 'error');
+            console.error('Erro na sincronização Firestore', e);
+            if (indicator) indicator.classList.remove('syncing');
+            showToast('Erro ao sincronizar com a nuvem', 'error');
         }
     }, 500);
 }
+
 
 function doSyncSetor(setor) {
     const labels = { comercial: 'Comercial', financeiro: 'Financeiro', logistico: 'Logístico', pedidos: 'Pedidos' };
@@ -1180,26 +1221,53 @@ function doSyncSetor(setor) {
 
     setTimeout(async () => {
         try {
+            let firestoreDb = typeof db !== 'undefined' ? db : (window.db || null);
+            if (!firestoreDb && typeof firebase !== 'undefined' && firebase.firestore) {
+                firestoreDb = firebase.firestore();
+            }
+
+            if (!firestoreDb) {
+                throw new Error("Conexão com a nuvem (Firebase) não estabelecida.");
+            }
+
+            const tenantId = typeof FV_TENANT !== 'undefined' ? FV_TENANT : '01';
+            const tenantRef = firestoreDb.collection('tenants').doc(tenantId);
+
             if (setor === 'comercial') {
-                let tenantSuffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
-                if (!tenantSuffix && localStorage.getItem('erp_products_01')) tenantSuffix = '_01';
-
-                const erpClientes = JSON.parse(localStorage.getItem('erp_clientes' + tenantSuffix) || 'null');
-                let erpProdutos = JSON.parse(localStorage.getItem('erp_products' + tenantSuffix) || 'null');
-
-                if (erpClientes && erpClientes.length > 0) {
+                const clientesSnap = await tenantRef.collection('fv_clientes').get();
+                if (!clientesSnap.empty) {
+                    const erpClientes = [];
+                    clientesSnap.forEach(doc => erpClientes.push(doc.data()));
+                    await FVDB.clear('clientes');
                     await FVDB.putMany('clientes', erpClientes);
                     fvData.clientes = erpClientes;
                 }
-                if (erpProdutos && erpProdutos.length > 0) {
-                    erpProdutos = erpProdutos.map(p => ({
-                        ...p,
-                        sku: p.sku || p.codigo || p.id,
-                        nome: p.nome || p.descricao,
-                        precoBase: p.precoBase || p.precoVenda || p.preco || 0
-                    }));
+
+                const produtosSnap = await tenantRef.collection('fv_produtos').get();
+                if (!produtosSnap.empty) {
+                    const erpProdutos = [];
+                    produtosSnap.forEach(doc => erpProdutos.push(doc.data()));
+                    await FVDB.clear('produtos');
                     await FVDB.putMany('produtos', erpProdutos);
                     fvData.produtos = erpProdutos;
+                }
+            } else if (setor === 'financeiro') {
+                const planosSnap = await tenantRef.collection('fv_planos_pagamento').get();
+                if (!planosSnap.empty) {
+                    const erpPlanos = [];
+                    planosSnap.forEach(doc => erpPlanos.push(doc.data()));
+                    await FVDB.clear('formaPag');
+                    await FVDB.putMany('formaPag', erpPlanos);
+                    fvData.planosPagamento = erpPlanos;
+                }
+            } else if (setor === 'logistico') {
+                const transpSnap = await tenantRef.collection('fv_transportadoras').get();
+                if (!transpSnap.empty) {
+                    const erpTransp = [];
+                    transpSnap.forEach(doc => erpTransp.push(doc.data()));
+                    await FVDB.clear('transportadoras');
+                    await FVDB.putMany('transportadoras', erpTransp);
+                    fvData.transportadoras = erpTransp;
                 }
             }
 
@@ -1208,7 +1276,7 @@ function doSyncSetor(setor) {
             showToast('✅ ' + labels[setor] + ' sincronizado!');
             renderSync();
         } catch (e) {
-            console.error('Erro na sincronização de setor', e);
+            console.error('Erro na sincronização de setor no Firestore', e);
             showToast('Erro ao sincronizar setor', 'error');
         }
     }, 500);

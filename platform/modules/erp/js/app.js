@@ -523,6 +523,12 @@ window.saveEntity = function (e) {
     }
 
     localStorage.setItem('erp_clientes' + window.getTenantSuffix(), JSON.stringify(entities));
+
+    // Dispara sincronização para a nuvem do Força de Vendas
+    if (typeof window.syncERPToFVFirestore === 'function') {
+        window.syncERPToFVFirestore();
+    }
+
     alert('Cliente salvo com sucesso!');
     closeEntityModal();
     renderEntities();

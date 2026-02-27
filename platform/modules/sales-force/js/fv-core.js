@@ -123,159 +123,24 @@ async function initFV() {
         fvData = { ...fvData, ...loaded };
 
         // ════════════════════════════════════════════════════════
-        // INTEGRAÇÃO ERP: Sync via localStorage compartilhado
-        // O FV roda standalone (não carrega scripts do ERP),
-        // então lemos direto do localStorage e traduzimos campos.
+        // DADOS PADRÃO (Fallback caso BD esteja vazio)
         // ════════════════════════════════════════════════════════
-        let erpSynced = false;
-
-        // Detectar tenant suffix
-        let tenantSuffix = '';
-        try {
-            const platformUser = JSON.parse(localStorage.getItem('platform_user_logged') || 'null');
-            if (platformUser && platformUser.tenant) {
-                tenantSuffix = '_' + platformUser.tenant;
-            }
-        } catch (e) { }
-        // Fallback: tentar sufixo comum
-        if (!tenantSuffix) {
-            const suffixes = ['', '_01', '_parreira', '_ltdistribuidora'];
-            for (const s of suffixes) {
-                if (localStorage.getItem('erp_clientes' + s) || localStorage.getItem('erp_products' + s)) {
-                    tenantSuffix = s;
-                    break;
-                }
-            }
-        }
-        console.log(`[FV] Tenant suffix detectado: "${tenantSuffix}"`);
-
-        // --- Clientes: Ler erp_clientes e traduzir campos ERP → FV ---
-        try {
-            const rawClientes = JSON.parse(localStorage.getItem('erp_clientes' + tenantSuffix) || 'null');
-
-            if (rawClientes && rawClientes.length > 0) {
-                // ERP salva com {code, name, fantasy, cnpj, ...}
-                // FV espera {codigo, razaoSocial, fantasia, cnpjCpf, ...}
-                const clientesFV = rawClientes.map(e => ({
-                    id: e.code || e.id || e.codigo,
-                    codigo: String(e.code || e.codigo || e.id || ''),
-                    cnpjCpf: e.cnpj || e.cnpjCpf || '',
-                    tipoCliente: e.tipoCliente || 'PJ',
-                    razaoSocial: e.name || e.razaoSocial || '',
-                    fantasia: e.fantasy || e.fantasia || e.nomeFantasia || '',
-                    nome: e.name || e.nome || e.razaoSocial || '',
-                    nomeFantasia: e.fantasy || e.fantasia || e.nomeFantasia || '',
-                    inscEstadual: e.ie || e.inscEstadual || '',
-                    cidade: e.cidade || '',
-                    bairro: e.bairro || '',
-                    uf: e.uf || '',
-                    cep: e.cep || '',
-                    endereco: e.endereco || '',
-                    telefone: e.telefone || '',
-                    celular: e.celular || '',
-                    email: e.email || '',
-                    comprador: e.comprador || '',
-                    rota: e.rota || 0,
-                    praca: e.praca || '',
-                    grupo: e.grupo || 'C',
-                    regiao: e.regiao || 0,
-                    status: e.status || 'ativo',
-                    bloqueado: e.bloqueado || false,
-                    limiteTotal: e.limiteTotal || 0,
-                    limiteDisponivel: e.limiteDisponivel || 0,
-                    pedidoNaoFaturado: e.pedidoNaoFaturado || 0,
-                    diasAtraso: e.diasAtraso || 0,
-                    ultimaCompra: e.ultimaCompra || '',
-                    codEmpresa: e.codEmpresa || '01',
-                    visita: e.visita || '',
-                    flagNovo: 'N',
-                    flagAlter: 'N',
-                    sincronizar: 0
-                }));
-
-                await FVDB.clear('clientes');
-                await FVDB.putMany('clientes', clientesFV);
-                fvData.clientes = clientesFV;
-                erpSynced = true;
-                console.log(`[FV] ✅ ERP sync: ${clientesFV.length} clientes importados (localStorage → tradução inline)`);
-            }
-        } catch (e) { console.warn('[FV] Falha ao importar clientes do ERP:', e); }
-
-        if (!fvData.clientes.length) {
+        if (!fvData.clientes || !fvData.clientes.length) {
             await FVDB.putMany('clientes', DEFAULT_CLIENTES);
             fvData.clientes = DEFAULT_CLIENTES;
         }
 
-        // --- Produtos: Ler erp_products + erp_estoque ---
-        try {
-            let erpProdutos = JSON.parse(localStorage.getItem('erp_products' + tenantSuffix) || 'null');
-
-            if (erpProdutos && erpProdutos.length > 0) {
-                // Garantir campos vitais para o FV
-                erpProdutos = erpProdutos.map(p => ({
-                    ...p,
-                    sku: p.sku || p.codigo || p.id,
-                    nome: p.nome || p.descricao,
-                    precoBase: p.precoBase || p.precoVenda || p.preco || 0
-                }));
-
-                // Enriquecer com estoque do ERP (formato objeto keyed por SKU)
-                try {
-                    const estoqueERP = JSON.parse(localStorage.getItem('erp_estoque' + tenantSuffix) || '{}');
-                    if (Object.keys(estoqueERP).length > 0) {
-                        erpProdutos = erpProdutos.map(p => {
-                            const est = estoqueERP[p.sku] || {};
-                            return {
-                                ...p,
-                                estoque: est.disponivel || est.estoqueAtual || p.estoque || 0,
-                                estoqueAtual: est.estoqueAtual || 0,
-                                reservado: est.reservado || 0
-                            };
-                        });
-                    }
-                } catch (e) { }
-
-                await FVDB.clear('produtos');
-                await FVDB.putMany('produtos', erpProdutos);
-                fvData.produtos = erpProdutos;
-                erpSynced = true;
-                console.log(`[FV] ✅ ERP sync: ${erpProdutos.length} produtos importados`);
-            }
-        } catch (e) { console.warn('[FV] Falha ao importar produtos do ERP:', e); }
-
-        if (!fvData.produtos.length) {
+        if (!fvData.produtos || !fvData.produtos.length) {
             await FVDB.putMany('produtos', DEFAULT_PRODUTOS);
             fvData.produtos = DEFAULT_PRODUTOS;
         }
 
-        // --- Planos de Pagamento: Ler erp_planos_pagamento ---
-        try {
-            const rawPlanos = JSON.parse(localStorage.getItem('erp_planos_pagamento' + tenantSuffix) || 'null');
-            if (rawPlanos && rawPlanos.length > 0) {
-                await FVDB.clear('formaPag');
-                await FVDB.putMany('formaPag', rawPlanos);
-                fvData.planosPagamento = rawPlanos;
-                console.log(`[FV] ✅ ERP sync: ${rawPlanos.length} planos de pagamento importados`);
-            }
-        } catch (e) { console.warn('[FV] Falha ao importar planos:', e); }
-
-        if (!fvData.planosPagamento.length) {
+        if (!fvData.planosPagamento || !fvData.planosPagamento.length) {
             await FVDB.putMany('formaPag', DEFAULT_PLANOS_PAGAMENTO);
             fvData.planosPagamento = DEFAULT_PLANOS_PAGAMENTO;
         }
 
-        // --- Transportadoras: Ler erp_transportadoras ---
-        try {
-            const rawTransp = JSON.parse(localStorage.getItem('erp_transportadoras' + tenantSuffix) || 'null');
-            if (rawTransp && rawTransp.length > 0) {
-                await FVDB.clear('transportadoras');
-                await FVDB.putMany('transportadoras', rawTransp);
-                fvData.transportadoras = rawTransp;
-                console.log(`[FV] ✅ ERP sync: ${rawTransp.length} transportadoras importadas`);
-            }
-        } catch (e) { console.warn('[FV] Falha ao importar transportadoras:', e); }
-
-        if (!fvData.transportadoras.length) {
+        if (!fvData.transportadoras || !fvData.transportadoras.length) {
             await FVDB.putMany('transportadoras', DEFAULT_TRANSPORTADORAS);
             fvData.transportadoras = DEFAULT_TRANSPORTADORAS;
         }
@@ -789,15 +654,42 @@ async function processSyncQueue() {
         if (!pending.length) return;
 
         console.log(`[FV] Processing ${pending.length} sync queue items...`);
-        // TODO: Implement actual API sync when backend is ready
-        // For now, just mark all as processed
-        for (const item of pending) {
-            // await sendToServer(item); // future
-            await FVDB.markSyncProcessed(item.id);
+
+        if (typeof db === 'undefined' || !db) {
+            console.warn('[FV] Firebase não inicializado. Não é possível enviar itens pendentes.');
+            return;
         }
+
+        const tenantId = typeof FV_TENANT !== 'undefined' ? FV_TENANT : '01';
+        const tenantRef = db.collection('tenants').doc(tenantId);
+
+        let sentCount = 0;
+
+        for (const item of pending) {
+            try {
+                if (item.tipo === 'pedido') {
+                    // Send order to Firebase
+                    const pedido = item.dados;
+                    await tenantRef.collection('fv_pedidos').doc(String(pedido.id)).set({
+                        ...pedido,
+                        sincronizadoERP: false,
+                        dataSincronizacao: new Date().toISOString()
+                    });
+                }
+
+                await FVDB.markSyncProcessed(item.id);
+                sentCount++;
+            } catch (errItem) {
+                console.error(`[FV] Erro ao enviar item ${item.id}:`, errItem);
+                await FVDB.markSyncFailed(item.id);
+            }
+        }
+
         fvData.syncQueueCount = await FVDB.count('syncQueue');
         updateSyncBadge();
-        showToast(`${pending.length} item(s) sincronizado(s)`);
+        if (sentCount > 0) {
+            showToast(`${sentCount} item(s) sincronizado(s) com a nuvem`);
+        }
     } catch (err) {
         console.error('[FV] Sync queue processing error:', err);
     }

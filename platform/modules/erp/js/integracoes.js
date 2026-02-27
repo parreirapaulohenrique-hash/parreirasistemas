@@ -682,4 +682,222 @@ window.exportTransportadorasParaFV = function () {
     return transportadoras;
 };
 
+// ===========================================
+// 7. FIREBASE SYNC: ERP → FIREBASE → FV
+// ===========================================
+window.syncERPToFVFirestore = async function () {
+    if (typeof firebase === 'undefined' || !firebase.firestore) return;
+
+    // Obter qual o tenant logado (assumido '01' como fallback se não houver um logado)
+    let tenantId = '01';
+    try {
+        const platformUser = JSON.parse(localStorage.getItem('platform_user_logged') || 'null');
+        if (platformUser && platformUser.tenant) {
+            tenantId = platformUser.tenant;
+        }
+    } catch (e) { }
+
+    const tenantSuffix = '_' + tenantId;
+    const db = firebase.firestore();
+    const tenantRef = db.collection('tenants').doc(tenantId);
+
+    console.log(`[ERP Sync] Iniciando sincronização do ERP para a nuvem no tenant ${tenantId}...`);
+
+    try {
+        // --- 1. Sincronizar Clientes ---
+        const clientes = JSON.parse(localStorage.getItem('erp_clientes' + tenantSuffix) || '[]');
+        if (clientes.length > 0) {
+            const batch = db.batch();
+            clientes.forEach(c => {
+                const docId = String(c.codigo || c.id);
+                // Prepara dados no mesmo formato esperado pelo FV offline core
+                const clienteFV = {
+                    id: docId,
+                    codigo: docId,
+                    cnpjCpf: c.cnpj || c.cnpjCpf || '',
+                    tipoCliente: c.tipoCliente || 'PJ',
+                    razaoSocial: c.name || c.razaoSocial || '',
+                    fantasia: c.fantasy || c.fantasia || c.nomeFantasia || '',
+                    nome: c.name || c.nome || c.razaoSocial || '',
+                    nomeFantasia: c.fantasy || c.fantasia || c.nomeFantasia || '',
+                    inscEstadual: c.ie || c.inscEstadual || '',
+                    cidade: c.cidade || '',
+                    bairro: c.bairro || '',
+                    uf: c.uf || '',
+                    cep: c.cep || '',
+                    endereco: c.endereco || '',
+                    telefone: c.telefone || '',
+                    celular: c.celular || '',
+                    email: c.email || '',
+                    comprador: c.comprador || '',
+                    rota: c.rota || 0,
+                    praca: c.praca || '',
+                    grupo: c.grupo || 'C',
+                    regiao: c.regiao || 0,
+                    status: c.status || 'ativo',
+                    bloqueado: c.bloqueado || false,
+                    limiteTotal: c.limiteTotal || 0,
+                    limiteDisponivel: c.limiteDisponivel || 0,
+                    pedidoNaoFaturado: c.pedidoNaoFaturado || 0,
+                    diasAtraso: c.diasAtraso || 0,
+                    ultimaCompra: c.ultimaCompra || '',
+                    codEmpresa: c.codEmpresa || '01',
+                    visita: c.visita || '',
+                    flagNovo: 'N',
+                    flagAlter: 'N',
+                    sincronizar: 0
+                };
+                batch.set(tenantRef.collection('fv_clientes').doc(docId), clienteFV);
+            });
+            await batch.commit();
+        }
+
+        // --- 2. Sincronizar Produtos (com estoque) ---
+        const produtos = JSON.parse(localStorage.getItem('erp_products' + tenantSuffix) || '[]');
+        const estoqueERP = JSON.parse(localStorage.getItem('erp_estoque' + tenantSuffix) || '{}');
+
+        if (produtos.length > 0) {
+            const batch = db.batch();
+            produtos.forEach(p => {
+                const sku = String(p.sku || p.codigo || p.id);
+                const est = estoqueERP[sku] || {};
+                const produtoFV = {
+                    ...p,
+                    sku: sku,
+                    nome: p.nome || p.descricao,
+                    precoBase: p.precoBase || p.precoVenda || p.preco || 0,
+                    estoque: est.disponivel || est.estoqueAtual || p.estoque || 0,
+                    estoqueAtual: est.estoqueAtual || 0,
+                    reservado: est.reservado || 0
+                };
+                batch.set(tenantRef.collection('fv_produtos').doc(sku), produtoFV);
+            });
+            await batch.commit();
+        }
+
+        // --- 3. Sincronizar Planos de Pagamento ---
+        const planos = window.exportPlanosParaFV();
+        if (planos.length > 0) {
+            const batch = db.batch();
+            planos.forEach(pl => {
+                batch.set(tenantRef.collection('fv_planos_pagamento').doc(String(pl.id)), pl);
+            });
+            await batch.commit();
+        }
+
+        // --- 4. Sincronizar Transportadoras ---
+        const transp = window.exportTransportadorasParaFV();
+        if (transp.length > 0) {
+            const batch = db.batch();
+            transp.forEach(tr => {
+                batch.set(tenantRef.collection('fv_transportadoras').doc(String(tr.id)), tr);
+            });
+            await batch.commit();
+        }
+
+        console.log('[ERP Sync] ☁️ Dados exportados com sucesso para o Firestore!');
+    } catch (e) {
+        console.error('[ERP Sync] Erro exportando dados para Firebase:', e);
+    }
+};
+
+// ===========================================
+// 8. FIREBASE SYNC: FIREBASE → ERP (Pedidos FV)
+// ===========================================
+window.startFVOrdersListener = function () {
+    if (typeof firebase === 'undefined' || !firebase.firestore) return;
+
+    let tenantId = '01';
+    try {
+        const platformUser = JSON.parse(localStorage.getItem('platform_user_logged') || 'null');
+        if (platformUser && platformUser.tenant) {
+            tenantId = platformUser.tenant;
+        }
+    } catch (e) { }
+
+    const db = firebase.firestore();
+    const fvPedidosRef = db.collection('tenants').doc(tenantId).collection('fv_pedidos');
+
+    console.log(`[ERP Sync] 🎧 Iniciando listener de pedidos do Força de Vendas para o tenant ${tenantId}...`);
+
+    fvPedidosRef.where('sincronizadoERP', '==', false).onSnapshot(snapshot => {
+        if (snapshot.empty) return;
+
+        snapshot.docChanges().forEach(change => {
+            if (change.type === 'added' || change.type === 'modified') {
+                const pedidoFV = change.doc.data();
+                importarPedidoFromFV(pedidoFV, change.doc.ref);
+            }
+        });
+    }, error => {
+        console.error('[ERP Sync] ❌ Erro ao escutar pedidos FV:', error);
+    });
+};
+
+function importarPedidoFromFV(pedidoFV, docRef) {
+    console.log(`[ERP Sync] 📥 Inserindo novo pedido do FV: ${pedidoFV.id}`);
+
+    // 1. Inserir em erp_vendas
+    const tenantSuffix = '_' + (pedidoFV.empresa || '01');
+    const vendas = JSON.parse(localStorage.getItem('erp_vendas' + tenantSuffix) || '[]');
+
+    // Evitar duplicidade caso haja algum erro de flag
+    const existe = vendas.find(v => v.numero === (pedidoFV.numero || pedidoFV.id) && v.origem === 'Força de Vendas');
+    if (!existe) {
+        const novaVenda = {
+            numero: pedidoFV.numero || pedidoFV.id || (vendas.length + 1),
+            data: pedidoFV.dataEmissao || new Date().toISOString().split('T')[0],
+            dataGravacao: new Date().toISOString(),
+            empresa: pedidoFV.empresa || '01',
+            cliente: pedidoFV.cliente,
+            vendedor: pedidoFV.vendedor,
+            itens: pedidoFV.itens || [],
+            totalGeral: pedidoFV.total || 0,
+            origem: 'Força de Vendas'
+        };
+
+        vendas.push(novaVenda);
+        localStorage.setItem('erp_vendas' + tenantSuffix, JSON.stringify(vendas));
+
+        // 2. Inserir Receber (Mock básico)
+        const receber = JSON.parse(localStorage.getItem('erp_receber') || '[]');
+        const dtEmissao = new Date(novaVenda.dataGravacao);
+        const dtVencimento = new Date(dtEmissao);
+        dtVencimento.setDate(dtVencimento.getDate() + 30);
+
+        receber.push({
+            id: 'CR-FV-' + novaVenda.numero,
+            vendaId: novaVenda.numero,
+            cliente: novaVenda.cliente?.nome || novaVenda.cliente?.razaoSocial || 'CLIENTE NÃO INFORMADO',
+            emissao: dtEmissao.toISOString(),
+            vencimento: dtVencimento.toISOString(),
+            valor: novaVenda.totalGeral,
+            status: 'Aberto'
+        });
+        localStorage.setItem('erp_receber', JSON.stringify(receber));
+
+        console.log(`[ERP Sync] ✅ Pedido FV ${novaVenda.numero} importado com sucesso no ERP!`);
+
+        // Mostrar notificação se a função existir na UI
+        if (typeof showToast === 'function') {
+            showToast(`Novo pedido do Força de Vendas recebido: ${novaVenda.numero}`);
+        } else {
+            console.log(`🔔 Novo pedido do Força de Vendas recebido: ${novaVenda.numero}`);
+        }
+    }
+
+    // 3. Marcar como sincronizado no Firebase
+    docRef.update({
+        sincronizadoERP: true,
+        dataSincronizacaoERP: new Date().toISOString()
+    }).catch(err => console.error('[ERP Sync] Erro ao marcar pedido FV como sincronizado:', err));
+}
+
+// Inicializar listener automaticamente se estamos no ERP
+setTimeout(() => {
+    if (typeof window.startFVOrdersListener === 'function' && typeof firebase !== 'undefined') {
+        window.startFVOrdersListener();
+    }
+}, 3000);
+
 console.log('🔗 Módulo de Integrações ERP↔WMS↔FV inicializado');

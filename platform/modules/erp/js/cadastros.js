@@ -86,6 +86,11 @@ window.saveCadastro = function (collection, data, editId = null) {
     // Tentar salvar no Firebase se disponível
     saveToFirebase(collection, cadastrosData[collection]);
 
+    // Dispara sincronização para a nuvem do Força de Vendas
+    if (typeof window.syncERPToFVFirestore === 'function') {
+        window.syncERPToFVFirestore();
+    }
+
     console.log(`✅ Registro salvo em '${collection}'`);
     return true;
 };
@@ -127,6 +132,11 @@ window.deleteCadastro = function (collection, id) {
 
     // Tentar excluir do Firebase se disponível
     saveToFirebase(collection, cadastrosData[collection]);
+
+    // Dispara sincronização para a nuvem do Força de Vendas
+    if (typeof window.syncERPToFVFirestore === 'function') {
+        window.syncERPToFVFirestore();
+    }
 
     console.log(`🗑️ Registro excluído de '${collection}'`);
     return true;
