@@ -194,7 +194,7 @@ const VendasAvancado = (() => {
                     ${abertos.map(v => `
                         <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
                             <td style="padding:0.6rem 0.5rem;font-weight:700;">
-                                ${v.numero} <span style="font-size:0.65rem;color:var(--text-secondary);display:block;">${v.origemFV ? 'App Vendas' : 'ERP Local'}</span>
+                                ${v.numero} <span style="font-size:0.65rem;color:var(--text-secondary);display:block;">${(v.origemFV || v.origem === 'FV') ? 'App Vendas' : 'ERP Local'}</span>
                             </td>
                             <td style="padding:0.6rem 0.5rem;">${v.cliente?.razaoSocial || v.clienteNome || '-'}</td>
                             <td style="text-align:right;padding:0.6rem 0.5rem;font-weight:600;">${fmtMoney(v.totais?.totalNF || v.valorTotal)}</td>
@@ -618,8 +618,9 @@ const VendasAvancado = (() => {
                     ${vendas.length === 0 ? '<tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--text-secondary)">Nenhum pedido de venda registrado.</td></tr>' : ''}
                     ${vendas.map(v => {
             const clienteNome = v.cliente?.razaoSocial || v.cliente?.fantasia || v.clienteNome || '-';
-            const origem = v.origemFV ? 'FV' : v.origemOrcamento ? 'ORC' : 'ERP';
-            const origemColor = v.origemFV ? '#22c55e' : v.origemOrcamento ? '#f59e0b' : '#3b82f6';
+            const isFV = v.origemFV || v.origem === 'FV';
+            const origem = isFV ? 'FV' : v.origemOrcamento ? 'ORC' : 'ERP';
+            const origemColor = isFV ? '#22c55e' : v.origemOrcamento ? '#f59e0b' : '#3b82f6';
             const frete = v.transporte?.tipoFrete || v.tipoFrete || '-';
             const freteColor = frete === 'CIF' ? '#22c55e' : frete === 'FOB' ? '#f59e0b' : 'var(--text-secondary)';
             const qtdItens = (v.itens || []).reduce((s, i) => s + (i.quantidade || i.qtd || 0), 0);
