@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fv-v7';
+const CACHE_NAME = 'fv-v8';
 const ASSETS = [
     './',
     './index.html',
@@ -28,7 +28,26 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+    // Para navegação HTML, tenta rede primeiro, senão cache, senão fallback para index.html
+    if (e.request.mode === 'navigate') {
+        e.respondWith(
+            fetch(e.request).catch(() => caches.match('./index.html'))
+        );
+        return;
+    }
+
+    // Para JS, CSS e outros assets: Network First, fallback to cache
+    // (Garante que o app no celular baixe os arquivos mais novos se a internet estiver ativa)
     e.respondWith(
-        caches.match(e.request).then(r => r || fetch(e.request).catch(() => caches.match('./index.html')))
+        fetch(e.request)
+            .then(response => {
+                // Atualiza o cache silenciosamente
+                if (response && response.status === 200 && response.type === 'basic') {
+                    const responseToCache = response.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(e.request, responseToCache));
+                }
+                return response;
+            })
+            .catch(() => caches.match(e.request))
     );
 });
