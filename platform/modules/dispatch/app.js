@@ -5166,16 +5166,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Filtrar por data
             if (startDate) {
-                const start = new Date(startDate);
-                start.setHours(0, 0, 0, 0);
+                const parts = startDate.split('-');
+                const start = new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0, 0);
                 allDeliveries = allDeliveries.filter(d => {
                     const dDate = new Date(d.deliveryCompletedAt || d.finalizedAt || d.date);
                     return dDate >= start;
                 });
             }
             if (endDate) {
-                const end = new Date(endDate);
-                end.setHours(23, 59, 59, 999);
+                const parts = endDate.split('-');
+                const end = new Date(parts[0], parts[1] - 1, parts[2], 23, 59, 59, 999);
                 allDeliveries = allDeliveries.filter(d => {
                     const dDate = new Date(d.deliveryCompletedAt || d.finalizedAt || d.date);
                     return dDate <= end;
@@ -5236,7 +5236,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     // Lógica de Tempo de Percurso
                     const deliveredTime = new Date(item.deliveryCompletedAt || item.finalizedAt || item.date).getTime();
-                    const dispatchTime = new Date(item.date).getTime(); // Assumindo item.date como hora do despacho
+                    const dispatchTime = new Date(item.deliveryDispatchedAt || item.date).getTime(); // Assumindo item.deliveryDispatchedAt como hora do despacho
 
                     let startTime = dispatchTime;
                     let originLabel = 'Despacho';
@@ -5354,7 +5354,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <tbody>
                                     ${s.items.map(d => {
                     const date = new Date(d.deliveryCompletedAt || d.finalizedAt || d.date);
-                    const dispatchDate = new Date(d.date);
+                    const dispatchDate = new Date(d.deliveryDispatchedAt || d.date);
                     const status = (d.deliveryStatus === 'entregue' || d.result === 'entregue') ? 'Entregue' : 'Devolvida';
                     const statusColor = status === 'Entregue' ? 'var(--accent-success)' : 'var(--accent-danger)';
                     const formatTime = (dateObj) => dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -5401,7 +5401,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ${Object.keys(stats).sort().map(person => {
                 return stats[person].items.map(d => {
                     const date = new Date(d.deliveryCompletedAt || d.finalizedAt || d.date);
-                    const dispatchDate = new Date(d.date);
+                    const dispatchDate = new Date(d.deliveryDispatchedAt || d.date);
                     const status = (d.deliveryStatus === 'entregue' || d.result === 'entregue') ? 'Entregue' : 'Devolvida';
                     const formatTime = (dateObj) => dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 

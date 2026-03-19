@@ -216,26 +216,45 @@ graph LR
 
 Nossa esteira de atualização tem um fluxo cravado em pedra para **evitar perda de dados e assegurar redundância**. Todas as vezes que um novo recurso for finalizado, seja uma correção ou grande fase de projeto, siga obrigatoriamente nesta ordem:
 
-### Passo 1: Atualizar este documento (NOVO_AGENTE.md)
+### Passo 1: Backup Preventivo em Camadas (ANTES de qualquer alteração)
+**OBRIGATÓRIO antes de tocar em qualquer código.** Essa etapa garante que existe uma cópia de segurança íntegra do estado atual caso algo dê errado durante o desenvolvimento.
+
+**Procedimento (rotação em camadas):**
+1.  **Camada 2 ← Camada 1:** Copiar todo o conteúdo de `platform backup 1/` → para `platform backup 2/` (sobrescreve o backup mais antigo).
+2.  **Camada 1 ← Produção:** Copiar todo o conteúdo de `platform/` (código atual/produção) → para `platform backup 1/`.
+
+**Estrutura de pastas envolvidas (raiz do projeto):**
+```
+scratch/
+├── platform/              ← Código atual (produção)
+├── platform backup 1/     ← Backup recente (snapshot pré-alteração)
+└── platform backup 2/     ← Backup mais antigo (segurança extra)
+```
+
+> ⚠️ **Nunca pule esta etapa.** Somente após confirmar que os backups foram concluídos com sucesso, inicie as modificações no código.
+
+### Passo 2: Atualizar este documento (NOVO_AGENTE.md)
 Se a sua implementação introduzir um novo módulo, mudar a arquitetura ou alterar algo base na estrutura, edite **primeiro** este arquivo para manter a "espinha dorsal" atualizada. (Você já fez isso para ver as árvores do sistema acima!).
 
-### Passo 2: Executar e validar Melhorias
+### Passo 3: Executar e validar Melhorias
 Garanta que as modificações foram testadas e estão funcionais localmente no projeto.
 
-### Passo 3: Atualizar a Versão
+### Passo 4: Atualizar a Versão
 Modifique o controle de versão do sistema. Atualize o arquivo `platform/version.json` (ou manifest/json do módulo modificado). Crie uma nova nota de `last_change`, suba o número principal da `version` e atualize a data e a `build`.
 
-### Passo 4: Subir Deploy pelo Script de Backup (`deploy.ps1`)
+### Passo 5: Subir Deploy pelo Script de Backup (`deploy.ps1`)
 Abra o terminal do PowerShell na raiz do projeto (`C:\Users\Paulo H Parreira\.gemini\antigravity\scratch`) e rode o comando:
 ```powershell
 .\deploy.ps1
 ```
 
 **O que o script faz por baixo dos panos?**
-1.  **Backup em Camadas:** Copia a versão antiga de segurança `backup 1` -> para a pasta `backup 2`. 
-2.  Depois copia o código atual de produção `platform/` -> para a pasta de segurança `backup 1`. (Faz o mesmo com o diretório web).
+1.  **Backup em Camadas (redundância adicional):** Copia a versão antiga de segurança `backup 1` → para a pasta `backup 2`.
+2.  Depois copia o código atual de produção `platform/` → para a pasta de segurança `backup 1`. (Faz o mesmo com o diretório web).
 3.  **Controle de Versão Git:** Executa `git add .`, faz um commit com a data/hora exata do deploy, e sobe para o GitHub (`git push origin main`).
 4.  **Deploy em Prod:** O Vercel escuta a master do Github e automaticamente constrói as URLs de produção assim que o script Ps1 termina.
+
+> 💡 **Nota:** O Passo 5 (`deploy.ps1`) executa **seu próprio** backup em camadas internamente. Isso significa que o sistema possui **dupla proteção**: backup preventivo (Passo 1) antes de alterar, e backup de deploy (Passo 5) antes de publicar.
 
 ---
 
