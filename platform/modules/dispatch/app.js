@@ -4642,7 +4642,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     page.style.cssText = 'page-break-inside: avoid; margin-bottom: 40px;'; // Assegura que a segunda via não seja cortada no meio
                     
                     page.innerHTML = `
-            <div class="manifest-header" style="display: grid; grid-template-columns: 1fr 1fr; border: 2px solid #000; padding: 10px; margin-bottom: 15px;">
+            <div class="manifest-header" style="display: grid !important; grid-template-columns: 1fr 1fr !important; border: 2px solid #000; padding: 10px; margin-bottom: 15px;">
                 <div>
                     <h3 style="margin:0; font-size: 1rem;">DESPACHANTE (REMETENTE)</h3>
                     <div style="font-size: 0.9rem; font-weight: bold; margin-top: 5px;">${company.name || 'EMPRESA NÃO CONFIGURADA'}</div>
@@ -4662,61 +4662,51 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div style="font-size: 0.8rem;">Emissão: ${new Date().toLocaleString()} | Via ${i + 1}</div>
             </div>
 
-            <table class="manifest-table" style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-                <thead>
-                    <tr>
-                        <th style="${cellStyle}">Nº NF</th>
-                        <th style="${cellStyle}">PEDFIDO</th>
-                        <th style="${cellStyle}">CLIENTE</th>
-                        <th style="${cellStyle}">TELEFONE</th>
-                        <th style="${cellStyle}">CIDADE</th>
-                        <th style="${cellStyle}">REDESPACHO</th>
-                        <th style="${cellStyle}">PESO</th>
-                        <th style="${cellStyle}">QTDE VOL</th>
-                        <th style="${cellStyle}">VALOR</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${items.map(item => {
-                        const cList = Utils.getStorage('clients') || [];
-                        const norm = (s) => s ? s.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase() : '';
-                        const clientObj = cList.find(c => norm(c.nome) === norm(item.client));
-                        
-                        let rawPhone = clientObj && clientObj.telefone ? clientObj.telefone.replace(/\D/g,'') : '';
-                        let phone = rawPhone ? rawPhone : '';
-                        if (phone && phone.length > 20) phone = phone.substring(0, 20); 
-                        
-                        const redesp = (item.redespacho && item.redespacho !== '-') ? item.redespacho.toUpperCase() : 'NÃO';
-                        
-                        const pesoValue = parseFloat(item.weight) || 0;
-                        const pesoDisplay = pesoValue % 1 === 0 ? pesoValue.toString() : pesoValue.toFixed(2);
-                        
-                        return `
-                        <tr>
-                            <td style="${cellStyle}">${item.invoice}</td>
-                            <td style="${cellStyle}">${item.pedido || ''}</td>
-                            <td style="${cellStyle}">${item.client}</td>
-                            <td style="${cellStyle};">${phone}</td>
-                            <td style="${cellStyle}">${item.city}</td>
-                            <td style="${cellStyle}">${redesp}</td>
-                            <td style="${cellStyle}">${pesoDisplay}</td>
-                            <td style="${cellStyle}">${item.volume || 1}</td>
-                            <td style="${cellStyle};">${item.total > 0 ? item.total.toString() : '0'}</td>
-                        </tr>
-                        `;
-                    }).join('')}
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="6" style="${cellStyle} text-align: right;">TOTAIS:</td>
-                        <td style="${cellStyle}">${totalWeight % 1 === 0 ? totalWeight.toString() : totalWeight.toFixed(2)}</td>
-                        <td style="${cellStyle}">${items.reduce((acc, curr) => acc + (parseInt(curr.volume) || 1), 0)}</td>
-                        <td style="${cellStyle}">${totalFreight > 0 ? totalFreight.toString() : '0'}</td>
-                    </tr>
-                </tfoot>
-            </table>
+            <div style="width: 100%; margin-bottom: 20px; font-family: Arial, sans-serif; font-weight: bold; font-size: 10px; color: #000;">
+                <div style="display: grid !important; grid-template-columns: 50px 55px 1fr 90px 1fr 80px 40px 60px 80px !important; border: 1px solid #000;">
+                    <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">Nº NF</div>
+                    <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">PEDFIDO</div>
+                    <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">CLIENTE</div>
+                    <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">TELEFONE</div>
+                    <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">CIDADE</div>
+                    <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">REDESPACHO</div>
+                    <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">PESO</div>
+                    <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">QTDE VOL</div>
+                    <div style="border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">VALOR</div>
+                </div>
+                ${items.map(item => {
+                    const cList = Utils.getStorage('clients') || [];
+                    const norm = (s) => s ? s.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase() : '';
+                    const clientObj = cList.find(c => norm(c.nome) === norm(item.client));
+                    let rawPhone = clientObj && clientObj.telefone ? clientObj.telefone.replace(/\D/g,'') : '';
+                    let phone = rawPhone || '';
+                    if (phone.length > 20) phone = phone.substring(0, 20);
+                    const redesp = (item.redespacho && item.redespacho !== '-') ? item.redespacho.toUpperCase() : 'NÃO';
+                    const pesoValue = parseFloat(item.weight) || 0;
+                    const pesoDisplay = pesoValue % 1 === 0 ? pesoValue.toString() : pesoValue.toFixed(2);
+                    const valorDisplay = parseFloat(item.total) > 0 ? parseFloat(item.total).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) : 'R$ 0,00';
+                    return `
+                <div style="display: grid !important; grid-template-columns: 50px 55px 1fr 90px 1fr 80px 40px 60px 80px !important; border-left: 1px solid #000; border-right: 1px solid #000;">
+                    <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px;">${item.invoice}</div>
+                    <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px;">${item.pedido || ''}</div>
+                    <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px;">${item.client}</div>
+                    <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px;">${phone}</div>
+                    <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px;">${item.city}</div>
+                    <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px;">${redesp}</div>
+                    <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px;">${pesoDisplay}</div>
+                    <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px;">${item.volume || 1}</div>
+                    <div style="border-bottom: 1px solid #000; padding: 3px;">${valorDisplay}</div>
+                </div>`;
+                }).join('')}
+                <div style="display: grid !important; grid-template-columns: 50px 55px 1fr 90px 1fr 80px 40px 60px 80px !important; border-left: 1px solid #000; border-right: 1px solid #000; border-bottom: 1px solid #000;">
+                    <div style="grid-column: 1 / 7; border-right: 1px solid #000; padding: 3px; text-align: right;">TOTAIS</div>
+                    <div style="border-right: 1px solid #000; padding: 3px;">${totalWeight % 1 === 0 ? totalWeight.toString() : totalWeight.toFixed(2)}</div>
+                    <div style="border-right: 1px solid #000; padding: 3px;">${items.reduce((acc, curr) => acc + (parseInt(curr.volume) || 1), 0)}</div>
+                    <div style="padding: 3px;">${totalFreight > 0 ? totalFreight.toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) : 'R$ 0,00'}</div>
+                </div>
+            </div>
 
-            <div class="signature-row" style="margin-top: 25px; display: grid; grid-template-columns: 1fr 1fr; gap: 50px;">
+            <div style="margin-top: 25px; display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 50px;">
                 <div style="border-top: 1px solid #000; text-align: center; padding-top: 5px; font-size: 0.8rem; font-weight: bold; font-family: Arial, sans-serif;">
                     Responsável Expedição
                 </div>
