@@ -4613,7 +4613,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const cInfo = carrierInfo[cleanName] || { cnpj: '-', address: '-', city: '-' };
                 
                 const printArea = document.getElementById('print-area');
-                printArea.innerHTML = '';
+                printArea.innerHTML = `
+                    <style>
+                        @media print {
+                            .manifest-table { display: table !important; width: 100% !important; }
+                            .manifest-table thead { display: table-header-group !important; }
+                            .manifest-table tbody { display: table-row-group !important; }
+                            .manifest-table tfoot { display: table-footer-group !important; }
+                            .manifest-table tr { display: table-row !important; page-break-inside: avoid !important; }
+                            .manifest-table th, .manifest-table td { 
+                                display: table-cell !important; 
+                            }
+                        }
+                    </style>
+                `;
 
                 const totalWeight = items.reduce((acc, curr) => acc + (parseFloat(curr.weight) || 0), 0);
                 const totalFreight = items.reduce((acc, curr) => acc + (parseFloat(curr.total) || 0), 0);
