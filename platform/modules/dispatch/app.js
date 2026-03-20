@@ -4643,62 +4643,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div style="font-size: 0.8rem;">Emissão: ${new Date().toLocaleString()} | Via ${i + 1}</div>
             </div>
 
-            <table class="manifest-table" style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-                <thead>
-                    <tr style="background: #ddd; font-weight: bold; font-size: 10px;">
-                        <th style="border: 1px solid #777; padding: 4px; width: 60px;">Nº NF</th>
-                        <th style="border: 1px solid #777; padding: 4px; width: 60px;">PEDIDO</th>
-                        <th style="border: 1px solid #777; padding: 4px;">CLIENTE</th>
-                        <th style="border: 1px solid #777; padding: 4px; width: 85px;">TELEFONE</th>
-                        <th style="border: 1px solid #777; padding: 4px;">CIDADE</th>
-                        <th style="border: 1px solid #777; padding: 4px; width: 80px;">REDESPACHO</th>
-                        <th style="border: 1px solid #777; padding: 4px; width: 50px;">PESO</th>
-                        <th style="border: 1px solid #777; padding: 4px; width: 60px;">QTDE VOL</th>
-                        <th style="border: 1px solid #777; padding: 4px; width: 75px;">VALOR</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${items.map(item => {
-                        const cList = Utils.getStorage('clients') || [];
-                        const norm = (s) => s ? s.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase() : '';
-                        const clientObj = cList.find(c => norm(c.nome) === norm(item.client));
-                        let phone = clientObj && clientObj.telefone ? clientObj.telefone : '-';
-                        if (phone && phone.length > 20) phone = phone.substring(0, 20); // Limita tamanho p/ n quebrar layout
-                        const redesp = (item.redespacho && item.redespacho !== '-') ? item.redespacho : '-';
-                        
-                        return `
-                        <tr>
-                            <td style="${cellStyle} text-align: center; font-weight: bold;">${item.invoice}</td>
-                            <td style="${cellStyle} text-align: center;">${item.pedido || '-'}</td>
-                            <td style="${cellStyle}">${item.client}</td>
-                            <td style="${cellStyle} text-align: center; white-space: nowrap;">${phone}</td>
-                            <td style="${cellStyle}">${item.city}</td>
-                            <td style="${cellStyle} text-align: center;">${redesp}</td>
-                            <td style="${cellStyle} text-align: right;">${parseFloat(item.weight).toFixed(2)}</td>
-                            <td style="${cellStyle} text-align: center;">${item.volume || 1}</td>
-                            <td style="${cellStyle} text-align: right; white-space: nowrap;">${Utils.formatCurrency(item.total)}</td>
-                        </tr>
-                        `;
-                    }).join('')}
-                </tbody>
-                <tfoot>
-                    <tr style="font-weight: bold; background: #f9f9f9;">
-                        <td colspan="6" style="${cellStyle} text-align: right;">TOTAIS:</td>
-                        <td style="${cellStyle} text-align: right;">${totalWeight.toFixed(2)}</td>
-                        <td style="${cellStyle} text-align: center;">${items.reduce((acc, curr) => acc + (parseInt(curr.volume) || 1), 0)}</td>
-                        <td style="${cellStyle} text-align: right;">${Utils.formatCurrency(totalFreight)}</td>
-                    </tr>
-                </tfoot>
-            </table>
 
-            <div class="signature-row" style="margin-top: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 50px; padding-bottom: 20px;">
-                <div style="border-top: 1px solid #000; text-align: center; padding-top: 5px; font-size: 0.8rem;">
-                    Responsável Expedição
-                </div>
-                <div style="border-top: 1px solid #000; text-align: center; padding-top: 5px; font-size: 0.8rem;">
-                    Motorista / Conferente
-                </div>
-            </div>
         `;
                     printArea.appendChild(page);
                 }
