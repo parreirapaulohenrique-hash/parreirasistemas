@@ -4616,14 +4616,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const totalWeight = items.reduce((acc, curr) => acc + (parseFloat(curr.weight) || 0), 0);
                 const totalFreight = items.reduce((acc, curr) => acc + (parseFloat(curr.total) || 0), 0);
-                const cellStyle = 'border: 1px solid #777; padding: 3px 4px; font-size: 10px; color: #000;';
+                const cellStyle = 'border: 1px solid #000; padding: 4px; font-size: 11px; color: #000; font-family: Arial, sans-serif; font-weight: bold; text-align: left;';
 
                 // Create 2 copies
                 for (let i = 0; i < 2; i++) {
                     const page = document.createElement('div');
                     page.className = 'manifest-page';
+                    page.style.cssText = 'page-break-inside: avoid; margin-bottom: 40px;'; // Assegura que a segunda via não seja cortada no meio, pulando de página inteira se não couber.
+                    
                     page.innerHTML = `
-            <div class="manifest-header" style="display: grid; grid-template-columns: 1fr 1fr; border: 2px solid #000; padding: 10px; margin-bottom: 20px;">
+            <div class="manifest-header" style="display: grid; grid-template-columns: 1fr 1fr; border: 2px solid #000; padding: 10px; margin-bottom: 15px;">
                 <div>
                     <h3 style="margin:0; font-size: 1rem;">DESPACHANTE (REMETENTE)</h3>
                     <div style="font-size: 0.9rem; font-weight: bold; margin-top: 5px;">${company.name || 'EMPRESA NÃO CONFIGURADA'}</div>
