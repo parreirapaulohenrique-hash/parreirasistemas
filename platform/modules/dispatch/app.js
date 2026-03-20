@@ -4613,23 +4613,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const cInfo = carrierInfo[cleanName] || { cnpj: '-', address: '-', city: '-' };
                 
                 const printArea = document.getElementById('print-area');
-                printArea.innerHTML = `
-                    <style>
-                        @media print {
-                            @page { size: landscape; margin: 10mm; }
-                        }
-                    </style>
-                `;
+                printArea.innerHTML = '';
 
-                const totalWeight = items.reduce((acc, curr) => acc + (parseFloat(curr.weight) || 0), 0);
-                const totalFreight = items.reduce((acc, curr) => acc + (parseFloat(curr.total) || 0), 0);
-                const cellStyle = 'border: 1px solid #000; padding: 4px; font-size: 11px; color: #000; font-family: Arial, sans-serif; font-weight: bold; text-align: left; white-space: nowrap;';
+                // Ajustamos as celulas para caber em Retrato (A4 normal) usando fonte menor e padding restrito, 
+                // para que não falte espaço e não quebre a palavra verticalmente.
+                const cellStyle = 'border: 1px solid #000; padding: 2px; font-size: 10px; color: #000; font-family: Arial, sans-serif; font-weight: bold; text-align: left; white-space: nowrap;';
 
                 // Create 2 copies
                 for (let i = 0; i < 2; i++) {
                     const page = document.createElement('div');
                     page.className = 'manifest-page';
-                    page.style.cssText = 'page-break-inside: avoid; margin-bottom: 40px;'; // Assegura que a segunda via não seja cortada no meio, pulando de página inteira se não couber.
+                    page.style.cssText = 'page-break-inside: avoid; margin-bottom: 40px;'; // Assegura que a segunda via não seja cortada no meio
                     
                     page.innerHTML = `
             <div class="manifest-header" style="display: grid; grid-template-columns: 1fr 1fr; border: 2px solid #000; padding: 10px; margin-bottom: 15px;">
@@ -4656,7 +4650,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <thead>
                     <tr>
                         <th style="${cellStyle}">Nº NF</th>
-                        <th style="${cellStyle}">PEDIDO</th>
+                        <th style="${cellStyle}">PEDFIDO</th>
                         <th style="${cellStyle}">CLIENTE</th>
                         <th style="${cellStyle}">TELEFONE</th>
                         <th style="${cellStyle}">CIDADE</th>
@@ -4686,34 +4680,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <td style="${cellStyle}">${item.invoice}</td>
                             <td style="${cellStyle}">${item.pedido || ''}</td>
                             <td style="${cellStyle}">${item.client}</td>
-                            <td style="${cellStyle}; white-space: nowrap;">${phone}</td>
+                            <td style="${cellStyle};">${phone}</td>
                             <td style="${cellStyle}">${item.city}</td>
                             <td style="${cellStyle}">${redesp}</td>
                             <td style="${cellStyle}">${pesoDisplay}</td>
                             <td style="${cellStyle}">${item.volume || 1}</td>
-                            <td style="${cellStyle}; white-space: nowrap;">${item.total > 0 ? item.total.toString() : '0'}</td>
+                            <td style="${cellStyle};">${item.total > 0 ? item.total.toString() : '0'}</td>
                         </tr>
                         `;
                     }).join('')}
                 </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="6" style="${cellStyle} text-align: right;">TOTAIS:</td>
-                        <td style="${cellStyle}">${totalWeight % 1 === 0 ? totalWeight.toString() : totalWeight.toFixed(2)}</td>
-                        <td style="${cellStyle}">${items.reduce((acc, curr) => acc + (parseInt(curr.volume) || 1), 0)}</td>
-                        <td style="${cellStyle}">${totalFreight > 0 ? totalFreight.toString() : '0'}</td>
-                    </tr>
-                </tfoot>
             </table>
-
-            <div class="signature-row" style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 50px;">
-                <div style="border-top: 1px solid #000; text-align: center; padding-top: 5px; font-size: 0.8rem; font-weight: bold; font-family: Arial, sans-serif;">
-                    Responsável Expedição
-                </div>
-                <div style="border-top: 1px solid #000; text-align: center; padding-top: 5px; font-size: 0.8rem; font-weight: bold; font-family: Arial, sans-serif;">
-                    Motorista / Conferente
-                </div>
-            </div>
         `;
                     printArea.appendChild(page);
                 }
