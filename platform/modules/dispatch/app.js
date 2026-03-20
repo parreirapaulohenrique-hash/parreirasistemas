@@ -3905,86 +3905,100 @@ document.addEventListener('DOMContentLoaded', async () => {
             const file = e.target.files[0];
             if (!file) return;
 
-            // alert('Lendo arquivo...'); // Debug
-
             const reader = new FileReader();
             reader.onload = (evt) => {
-                const text = evt.target.result;
-                const lines = text.split('\n');
+                try {
+                    const data = new Uint8Array(evt.target.result);
+                    // Processa Excel (.xlsx, .xls) e CSV de forma unificada
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    // Transforma em Matriz 2D de linhas/colunas
+                    const lines = XLSX.utils.sheet_to_json(worksheet, {header: 1, raw: false, defval: ''});
 
-                // Auto-detect separator from header (line 0)
-                let separator = ';';
-                if (lines[0] && lines[0].includes(',')) separator = ',';
-                if (lines[0] && lines[0].includes(';')) separator = ';';
-
-                // Detect indices from Header (Line 0)
-                const headers = lines[0].split(separator).map(h => h.trim().toUpperCase());
-                const findIdx = (keywords) => headers.findIndex(h => keywords.some(k => h.includes(k)));
-
-                let idxCode = findIdx(['CODIGO', 'CÓDIGO', 'COD']);
-                let idxName = findIdx(['NOME', 'RAZAO', 'RAZÃO', 'CLIENTE', 'SOCIAL']);
-                let idxPhone = findIdx(['TELEFON', 'CELULAR', 'FONE', 'WHATS', 'TEL']);
-                let idxCity = findIdx(['CIDADE', 'MUNICÍPIO', 'MUNICIPIO', 'MUN']);
-                let idxNeigh = findIdx(['BAIRRO', 'ENDERECO', 'ENDEREÇO', 'BAI']);
-
-                if (idxCode === -1) idxCode = 0;
-                if (idxName === -1) idxName = 1;
-
-
-
-                let count = 0;
-                let errors = 0;
-
-                lines.forEach((line, index) => {
-                    if (index === 0 || !line.trim()) return;
-                    const cols = line.split(separator);
-                    if (cols.length < 2) return;
-
-                    const getVal = (idx) => (idx > -1 && cols[idx]) ? cols[idx].trim().toUpperCase() : '';
-
-                    let phone = getVal(idxPhone).replace(/\D/g, '');
-                    let city = getVal(idxCity) || 'N/I';
-                    let neighborhood = getVal(idxNeigh) || '-';
-
-                    const client = {
-                        codigo: getVal(idxCode),
-                        nome: getVal(idxName),
-                        cidade: city,
-                        bairro: neighborhood,
-                        telefone: phone
-                    };
-                    const lineUpper = line.toUpperCase();
-                    if (client.cidade === 'N/I') {
-                        if (lineUpper.includes('REDENCAO')) client.cidade = 'REDENCAO';
-                        else if (lineUpper.includes('XINGUARA')) client.cidade = 'XINGUARA';
-                        else if (lineUpper.includes('ALTAMIRA')) client.cidade = 'ALTAMIRA';
-                        else if (lineUpper.includes('MARABA')) client.cidade = 'MARABA';
+                    if (lines.length === 0) {
+                        alert('⚠️ Arquivo vazio ou inválido.');
+                        return;
                     }
-                    // Avoid duplicates
-                    const existingIdx = clients.findIndex(c => c.codigo === client.codigo);
-                    if (existingIdx >= 0) clients[existingIdx] = client;
-                    else clients.push(client);
 
-                    count++;
-                });
+                    // Detecta cabeçalhos (Linha 0)
+                    const headers = (lines[0] || []).map(h => String(h).trim().toUpperCase());
+                    const findIdx = (keywords) => headers.findIndex(h => keywords.some(k => String(h).includes(k)));
 
-                // Save locally and suggest sync
-                Utils.saveRaw('clients', JSON.stringify(clients));
+                    let idxCode = findIdx(['CODIGO', 'CÓDIGO', 'COD']);
+                    let idxName = findIdx(['NOME', 'RAZAO', 'RAZÃO', 'CLIENTE', 'SOCIAL']);
+                    let idxPhone = findIdx(['TELEFON', 'CELULAR', 'FONE', 'WHATS', 'TEL']);
+                    let idxCity = findIdx(['CIDADE', 'MUNICÍPIO', 'MUNICIPIO', 'MUN']);
+                    let idxNeigh = findIdx(['BAIRRO', 'ENDERECO', 'ENDEREÇO', 'BAI']);
 
-                if (count > 0) {
-                    const msg = `✅ Sucesso! ${count} clientes importados.\n(Separador: "${separator}")`;
-                    // Try cloud save
-                    if (typeof Utils.Cloud !== 'undefined' && Utils.Cloud.save) {
-                        Utils.Cloud.save('clients', clients);
+                    if (idxCode === -1) idxCode = 0;
+                    if (idxName === -1) idxName = 1;
+
+                    let clients = Utils.getStorage('clients') || [];
+                    const formatType = file.name.endsWith('.csv') ? 'CSV' : 'Excel';
+                    let count = 0;
+
+                    lines.forEach((cols, index) => {
+                        // Ignora cabeçalho e linhas vazias
+                        if (index === 0 || !cols || cols.length < 2) return; 
+
+                        const getVal = (idx) => (idx > -1 && cols[idx]) ? String(cols[idx]).trim().toUpperCase() : '';
+
+                        let phone = getVal(idxPhone).replace(/\D/g, '');
+                        let city = getVal(idxCity) || 'N/I';
+                        let neighborhood = getVal(idxNeigh) || '-';
+                        let code = getVal(idxCode);
+                        let name = getVal(idxName);
+                        
+                        if (!name) return; // Se não tem nome, ignora a linha
+
+                        const client = {
+                            codigo: code,
+                            nome: name,
+                            cidade: city,
+                            bairro: neighborhood,
+                            telefone: phone
+                        };
+
+                        const lineUpper = Object.values(cols).join(' ').toUpperCase();
+                        
+                        if (client.cidade === 'N/I') {
+                            if (lineUpper.includes('REDENCAO')) client.cidade = 'REDENCAO';
+                            else if (lineUpper.includes('XINGUARA')) client.cidade = 'XINGUARA';
+                            else if (lineUpper.includes('ALTAMIRA')) client.cidade = 'ALTAMIRA';
+                            else if (lineUpper.includes('MARABA')) client.cidade = 'MARABA';
+                        }
+
+                        // Evita duplicatas, atualizando existente
+                        const existingIdx = clients.findIndex(c => c.codigo === client.codigo);
+                        if (existingIdx >= 0) clients[existingIdx] = client;
+                        else clients.push(client);
+
+                        count++;
+                    });
+
+                    Utils.saveRaw('clients', JSON.stringify(clients));
+
+                    if (count > 0) {
+                        const msg = `✅ Sucesso! ${count} clientes importados.\n(Formato: ${formatType})`;
+                        if (typeof Utils.Cloud !== 'undefined' && Utils.Cloud.save) {
+                            Utils.Cloud.save('clients', clients);
+                        }
+                        alert(msg);
+                    } else {
+                        alert('⚠️ Nenhum cliente válido encontrado.\nVerifique se a planilha tem as colunas corretas.');
                     }
-                    alert(msg);
-                } else {
-                    alert('⚠️ Nenhum cliente válido encontrado.\nVerifique se o CSV usa ";" ou "," e tem pelo menos Código e Nome.');
+                } catch(error) {
+                    console.error('Erro ao processar arquivo:', error);
+                    alert('❌ Erro crítico ao processar o arquivo. Verifique se o arquivo não está corrompido e é um Excel/CSV válido.');
                 }
-
-                e.target.value = ''; // Reset input
+                
+                e.target.value = ''; // Limpa o input
             };
-            reader.readAsText(file, 'ISO-8859-1');
+            
+            // ArrayBuffer lê o binário do Excel perfeitamente
+            reader.readAsArrayBuffer(file);
         });
 
         const dispatchTab = document.querySelector('a[href="#dispatch"]');
