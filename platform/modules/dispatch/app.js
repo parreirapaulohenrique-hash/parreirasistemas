@@ -4663,9 +4663,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
 
             <div style="width: 100%; margin-bottom: 20px; font-family: Arial, sans-serif; font-weight: bold; font-size: 10px; color: #000;">
-                <div style="display: grid !important; grid-template-columns: 50px 55px 1fr 90px 1fr 80px 40px 60px 80px !important; border: 1px solid #000;">
+                <div style="display: grid !important; grid-template-columns: 45px 45px 1fr 85px auto 35px 42px 28px 68px !important; border: 1px solid #000;">
                     <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">Nº NF</div>
-                    <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">PEDFIDO</div>
+                    <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">PEDIDO</div>
                     <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">CLIENTE</div>
                     <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">TELEFONE</div>
                     <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">CIDADE</div>
@@ -4686,7 +4686,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const pesoDisplay = pesoValue % 1 === 0 ? pesoValue.toString() : pesoValue.toFixed(2);
                     const valorDisplay = parseFloat(item.total) > 0 ? parseFloat(item.total).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) : 'R$ 0,00';
                     return `
-                <div style="display: grid !important; grid-template-columns: 50px 55px 1fr 90px 1fr 80px 40px 60px 80px !important; border-left: 1px solid #000; border-right: 1px solid #000;">
+                <div style="display: grid !important; grid-template-columns: 45px 45px 1fr 85px auto 35px 42px 28px 68px !important; border-left: 1px solid #000; border-right: 1px solid #000;">
                     <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px;">${item.invoice}</div>
                     <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px;">${item.pedido || ''}</div>
                     <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px;">${item.client}</div>
@@ -4698,7 +4698,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div style="border-bottom: 1px solid #000; padding: 3px;">${valorDisplay}</div>
                 </div>`;
                 }).join('')}
-                <div style="display: grid !important; grid-template-columns: 50px 55px 1fr 90px 1fr 80px 40px 60px 80px !important; border-left: 1px solid #000; border-right: 1px solid #000; border-bottom: 1px solid #000;">
+                <div style="display: grid !important; grid-template-columns: 45px 45px 1fr 85px auto 35px 42px 28px 68px !important; border-left: 1px solid #000; border-right: 1px solid #000; border-bottom: 1px solid #000;">
                     <div style="grid-column: 1 / 7; border-right: 1px solid #000; padding: 3px; text-align: right;">TOTAIS</div>
                     <div style="border-right: 1px solid #000; padding: 3px;">${totalWeight % 1 === 0 ? totalWeight.toString() : totalWeight.toFixed(2)}</div>
                     <div style="border-right: 1px solid #000; padding: 3px;">${items.reduce((acc, curr) => acc + (parseInt(curr.volume) || 1), 0)}</div>
