@@ -1,8 +1,8 @@
 {
     "module": "platform-core",
     "name": "Parreira Platform Portal",
-    "version": "11.7.5",
-    "date": "2026-03-19",
-    "last_change": "Correção de bugs no fuso horário do Relatório de Entregas",
-    "build": "20260319.01"
+    "version": "11.7.6",
+    "date": "2026-03-20",
+    "last_change": "Remodelação das colunas do Romaneio de Entrega",
+    "build": "20260320.01"
 }
