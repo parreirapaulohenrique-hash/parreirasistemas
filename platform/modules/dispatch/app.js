@@ -4611,12 +4611,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const company = Utils.getStorage('company_data');
                 const cleanName = String(carrierName || '').trim().toUpperCase();
                 const cInfo = carrierInfo[cleanName] || { cnpj: '-', address: '-', city: '-' };
+                
                 const printArea = document.getElementById('print-area');
-                printArea.innerHTML = '';
+                printArea.innerHTML = `
+                    <style>
+                        @media print {
+                            @page { size: landscape; margin: 10mm; }
+                        }
+                    </style>
+                `;
 
                 const totalWeight = items.reduce((acc, curr) => acc + (parseFloat(curr.weight) || 0), 0);
                 const totalFreight = items.reduce((acc, curr) => acc + (parseFloat(curr.total) || 0), 0);
-                const cellStyle = 'border: 1px solid #000; padding: 4px; font-size: 11px; color: #000; font-family: Arial, sans-serif; font-weight: bold; text-align: left;';
+                const cellStyle = 'border: 1px solid #000; padding: 4px; font-size: 11px; color: #000; font-family: Arial, sans-serif; font-weight: bold; text-align: left; white-space: nowrap;';
 
                 // Create 2 copies
                 for (let i = 0; i < 2; i++) {
