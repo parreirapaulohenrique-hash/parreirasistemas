@@ -4649,13 +4649,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div style="font-size: 0.8rem;">Emissão: ${new Date().toLocaleString()} | Via ${i + 1}</div>
             </div>
 
-            <div style="display: grid !important; grid-template-columns: 45px 45px 1fr 85px 1fr 35px 42px 28px 68px !important; width: 100%; margin-bottom: 20px; font-family: Arial, sans-serif; font-weight: bold; font-size: 10px; color: #000; border: 1px solid #000;">
+            <div style="display: grid !important; grid-template-columns: 45px 45px 1fr 85px 1fr 30px 1fr 42px 28px 68px !important; width: 100%; margin-bottom: 20px; font-family: Arial, sans-serif; font-weight: bold; font-size: 10px; color: #000; border: 1px solid #000;">
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">Nº NF</div>
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">PEDIDO</div>
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">CLIENTE</div>
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">TELEFONE</div>
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">CIDADE</div>
-                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">REDESPACHO</div>
+                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">RED.</div>
+                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">NF REDESP.</div>
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">PESO</div>
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">QTDE VOL</div>
                 <div style="border-bottom: 1px solid #000; padding: 3px; background: #f0f0f0;">VALOR</div>
@@ -4666,7 +4667,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     let rawPhone = clientObj && clientObj.telefone ? clientObj.telefone.replace(/\D/g,'') : '';
                     let phone = rawPhone || '';
                     if (phone.length > 20) phone = phone.substring(0, 20);
-                    const redesp = (item.redespacho && item.redespacho !== '-') ? item.redespacho.toUpperCase() : 'NÃO';
+                    const hasRedesp = item.redespacho && item.redespacho !== '-';
+                    const redespLabel = hasRedesp ? 'SIM' : 'NÃO';
+                    const redespNF = hasRedesp ? item.redespacho.toUpperCase() : '';
                     const pesoValue = parseFloat(item.weight) || 0;
                     const pesoDisplay = pesoValue % 1 === 0 ? pesoValue.toString() : pesoValue.toFixed(2);
                     const valorDisplay = parseFloat(item.total) > 0 ? parseFloat(item.total).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) : 'R$ 0,00';
@@ -4676,12 +4679,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; overflow: hidden; text-overflow: ellipsis;">${item.client}</div>
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px;">${phone}</div>
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; overflow: hidden; text-overflow: ellipsis;">${item.city}</div>
-                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px;">${redesp}</div>
+                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px;">${redespLabel}</div>
+                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px; overflow: hidden; text-overflow: ellipsis;">${redespNF}</div>
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px;">${pesoDisplay}</div>
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 3px;">${item.volume || 1}</div>
                 <div style="border-bottom: 1px solid #000; padding: 3px;">${valorDisplay}</div>`;
                 }).join('')}
-                <div style="grid-column: 1 / 7; border-right: 1px solid #000; padding: 3px; text-align: right;">TOTAIS</div>
+                <div style="grid-column: 1 / 8; border-right: 1px solid #000; padding: 3px; text-align: right;">TOTAIS</div>
                 <div style="border-right: 1px solid #000; padding: 3px;">${totalWeight % 1 === 0 ? totalWeight.toString() : totalWeight.toFixed(2)}</div>
                 <div style="border-right: 1px solid #000; padding: 3px;">${items.reduce((acc, curr) => acc + (parseInt(curr.volume) || 1), 0)}</div>
                 <div style="padding: 3px;">${totalFreight > 0 ? totalFreight.toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) : 'R$ 0,00'}</div>
