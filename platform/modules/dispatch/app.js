@@ -4690,7 +4690,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                         `;
                     }).join('')}
                 </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="6" style="${cellStyle} text-align: right;">TOTAIS:</td>
+                        <td style="${cellStyle}">${totalWeight % 1 === 0 ? totalWeight.toString() : totalWeight.toFixed(2)}</td>
+                        <td style="${cellStyle}">${items.reduce((acc, curr) => acc + (parseInt(curr.volume) || 1), 0)}</td>
+                        <td style="${cellStyle}">${totalFreight > 0 ? totalFreight.toString() : '0'}</td>
+                    </tr>
+                </tfoot>
             </table>
+
+            <div class="signature-row" style="margin-top: 25px; display: grid; grid-template-columns: 1fr 1fr; gap: 50px;">
+                <div style="border-top: 1px solid #000; text-align: center; padding-top: 5px; font-size: 0.8rem; font-weight: bold; font-family: Arial, sans-serif;">
+                    Responsável Expedição
+                </div>
+                <div style="border-top: 1px solid #000; text-align: center; padding-top: 5px; font-size: 0.8rem; font-weight: bold; font-family: Arial, sans-serif;">
+                    Motorista / Conferente
+                </div>
+            </div>
         `;
                     printArea.appendChild(page);
                 }
