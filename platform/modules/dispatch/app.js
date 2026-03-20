@@ -4615,6 +4615,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const printArea = document.getElementById('print-area');
                 printArea.innerHTML = '';
 
+                const totalWeight = items.reduce((acc, curr) => acc + (parseFloat(curr.weight) || 0), 0);
+                const totalFreight = items.reduce((acc, curr) => acc + (parseFloat(curr.total) || 0), 0);
+
                 // Ajustamos as celulas para caber em Retrato (A4 normal) usando fonte menor e padding restrito, 
                 // para que não falte espaço e não quebre a palavra verticalmente.
                 const cellStyle = 'border: 1px solid #000; padding: 2px; font-size: 10px; color: #000; font-family: Arial, sans-serif; font-weight: bold; text-align: left; white-space: nowrap;';
