@@ -4642,30 +4642,30 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             <div style="text-align: center; margin-bottom: 15px;">
                 <h2 style="margin:0; text-decoration: underline;">ROMANEIO DE ENTREGA</h2>
-                <div style="font-size: 0.8rem;">Emissão: \${new Date().toLocaleString()} | Via \${i + 1}</div>
+                <div style="font-size: 0.8rem;">Emissão: ${new Date().toLocaleString()} | Via ${i + 1}</div>
             </div>
 
             <table class="manifest-table" style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
                 <thead>
                     <tr>
-                        <th style="\${cellStyle}">Nº NF</th>
-                        <th style="\${cellStyle}">PEDIDO</th>
-                        <th style="\${cellStyle}">CLIENTE</th>
-                        <th style="\${cellStyle}">TELEFONE</th>
-                        <th style="\${cellStyle}">CIDADE</th>
-                        <th style="\${cellStyle}">REDESPACHO</th>
-                        <th style="\${cellStyle}">PESO</th>
-                        <th style="\${cellStyle}">QTDE VOL</th>
-                        <th style="\${cellStyle}">VALOR</th>
+                        <th style="${cellStyle}">Nº NF</th>
+                        <th style="${cellStyle}">PEDIDO</th>
+                        <th style="${cellStyle}">CLIENTE</th>
+                        <th style="${cellStyle}">TELEFONE</th>
+                        <th style="${cellStyle}">CIDADE</th>
+                        <th style="${cellStyle}">REDESPACHO</th>
+                        <th style="${cellStyle}">PESO</th>
+                        <th style="${cellStyle}">QTDE VOL</th>
+                        <th style="${cellStyle}">VALOR</th>
                     </tr>
                 </thead>
                 <tbody>
-                    \${items.map(item => {
+                    ${items.map(item => {
                         const cList = Utils.getStorage('clients') || [];
-                        const norm = (s) => s ? s.toString().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").trim().toUpperCase() : '';
+                        const norm = (s) => s ? s.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase() : '';
                         const clientObj = cList.find(c => norm(c.nome) === norm(item.client));
                         
-                        let rawPhone = clientObj && clientObj.telefone ? clientObj.telefone.replace(/\\D/g,'') : '';
+                        let rawPhone = clientObj && clientObj.telefone ? clientObj.telefone.replace(/\D/g,'') : '';
                         let phone = rawPhone ? rawPhone : '';
                         if (phone && phone.length > 20) phone = phone.substring(0, 20); 
                         
@@ -4674,27 +4674,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const pesoValue = parseFloat(item.weight) || 0;
                         const pesoDisplay = pesoValue % 1 === 0 ? pesoValue.toString() : pesoValue.toFixed(2);
                         
-                        return \`
+                        return `
                         <tr>
-                            <td style="\${cellStyle}">\${item.invoice}</td>
-                            <td style="\${cellStyle}">\${item.pedido || ''}</td>
-                            <td style="\${cellStyle}">\${item.client}</td>
-                            <td style="\${cellStyle}; white-space: nowrap;">\${phone}</td>
-                            <td style="\${cellStyle}">\${item.city}</td>
-                            <td style="\${cellStyle}">\${redesp}</td>
-                            <td style="\${cellStyle}">\${pesoDisplay}</td>
-                            <td style="\${cellStyle}">\${item.volume || 1}</td>
-                            <td style="\${cellStyle}; white-space: nowrap;">\${item.total > 0 ? item.total.toString() : '0'}</td>
+                            <td style="${cellStyle}">${item.invoice}</td>
+                            <td style="${cellStyle}">${item.pedido || ''}</td>
+                            <td style="${cellStyle}">${item.client}</td>
+                            <td style="${cellStyle}; white-space: nowrap;">${phone}</td>
+                            <td style="${cellStyle}">${item.city}</td>
+                            <td style="${cellStyle}">${redesp}</td>
+                            <td style="${cellStyle}">${pesoDisplay}</td>
+                            <td style="${cellStyle}">${item.volume || 1}</td>
+                            <td style="${cellStyle}; white-space: nowrap;">${item.total > 0 ? item.total.toString() : '0'}</td>
                         </tr>
-                        \`;
+                        `;
                     }).join('')}
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="6" style="\${cellStyle} text-align: right;">TOTAIS:</td>
-                        <td style="\${cellStyle}">\${totalWeight % 1 === 0 ? totalWeight.toString() : totalWeight.toFixed(2)}</td>
-                        <td style="\${cellStyle}">\${items.reduce((acc, curr) => acc + (parseInt(curr.volume) || 1), 0)}</td>
-                        <td style="\${cellStyle}">\${totalFreight > 0 ? totalFreight.toString() : '0'}</td>
+                        <td colspan="6" style="${cellStyle} text-align: right;">TOTAIS:</td>
+                        <td style="${cellStyle}">${totalWeight % 1 === 0 ? totalWeight.toString() : totalWeight.toFixed(2)}</td>
+                        <td style="${cellStyle}">${items.reduce((acc, curr) => acc + (parseInt(curr.volume) || 1), 0)}</td>
+                        <td style="${cellStyle}">${totalFreight > 0 ? totalFreight.toString() : '0'}</td>
                     </tr>
                 </tfoot>
             </table>
@@ -4707,7 +4707,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     Motorista / Conferente
                 </div>
             </div>
-        \`;
+        `;
                     printArea.appendChild(page);
                 }
 
