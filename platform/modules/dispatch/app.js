@@ -5809,7 +5809,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         window.CNPJLookup.lookup(cnpj).then(data => {
                             document.getElementById('newClientName').value = data.nomeFantasia || data.razaoSocial;
                             document.getElementById('newClientCNPJ').value = data.cnpj;
-                            document.getElementById('newClientCity').value = `${data.cidade} - ${data.uf}`;
+                            document.getElementById('newClientCity').value = data.cidade;
                             document.getElementById('newClientNeighborhood').value = data.bairro || '';
                             document.getElementById('newClientAddress').value =
                                 `${data.logradouro}${data.numero ? ', ' + data.numero : ''}`;
@@ -5827,7 +5827,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         window.CNPJLookup.showLookupModal((data) => {
                             document.getElementById('newClientName').value = data.nomeFantasia || data.razaoSocial;
                             document.getElementById('newClientCNPJ').value = data.cnpj;
-                            document.getElementById('newClientCity').value = `${data.cidade} - ${data.uf}`;
+                            document.getElementById('newClientCity').value = data.cidade;
                             document.getElementById('newClientNeighborhood').value = data.bairro || '';
                             document.getElementById('newClientAddress').value =
                                 `${data.logradouro}${data.numero ? ', ' + data.numero : ''}`;
