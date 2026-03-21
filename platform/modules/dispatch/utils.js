@@ -380,12 +380,14 @@ window.renderUserList = function () {
             </td>
             <td style="padding: 0.8rem 0.6rem; text-align: center; vertical-align: middle;">
                 <div style="display: flex; gap: 0.5rem; justify-content: center;">
-                    <button class="btn btn-secondary" onclick="window.openUserEditModal('${u.login}')" title="Editar" style="padding: 4px 8px; min-width: auto; height: 32px;">
+                    <button class="btn btn-secondary" onclick="window.openUserEditModal('${u.login}')" title="Editar Usuário" style="padding: 4px 12px; height: 32px; display: flex; align-items: center; gap: 4px;">
                         <span class="material-icons-round" style="font-size: 1.1rem;">edit</span>
+                        <span style="font-size: 0.8rem; font-weight: 600;">Editar</span>
                     </button>
                     ${u.login === 'admin' ? '' : `
-                    <button class="btn btn-danger" onclick="window.deleteUser('${u.login}')" title="Excluir" style="padding: 4px 8px; min-width: auto; height: 32px; background: rgba(239, 68, 68, 0.1); color: var(--accent-danger); border: none;">
+                    <button class="btn btn-danger" onclick="window.deleteUser('${u.login}')" title="Excluir Usuário" style="padding: 4px 12px; height: 32px; background: rgba(239, 68, 68, 0.1); color: var(--accent-danger); border: none; display: flex; align-items: center; gap: 4px;">
                         <span class="material-icons-round" style="font-size: 1.1rem;">delete</span>
+                        <span style="font-size: 0.8rem; font-weight: 600;">Excluir</span>
                     </button>`}
                 </div>
             </td>
@@ -441,10 +443,12 @@ window.openUserEditModal = function (userLogin) {
     if (form) {
         const btn = form.querySelector('button[type="submit"]');
         if (btn) {
-            btn.innerHTML = '<span class="material-icons-round" style="font-size: 1.2rem; margin-right:5px;">save</span> ATUALIZAR';
+            btn.innerHTML = '<span class="material-icons-round" style="font-size: 1.2rem; margin-right:5px;">save</span> ATUALIZAR USUÁRIO';
             btn.classList.add('btn-warning');
         }
     }
+
+    window.showToast(`✏️ Editando: ${user.name}. Altere os dados no formulário ao lado.`);
 
     if (targetName) targetName.focus();
     

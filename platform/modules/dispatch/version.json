@@ -1,8 +1,8 @@
 {
   "module": "module-dispatch",
   "name": "Despacho Logístico",
-  "version": "3.5.5",
+  "version": "3.5.6",
   "date": "2026-03-21",
-  "last_change": "Exigência de preenchimento de Qtde Volume no formulário de Cotação",
-  "build": "20260321.03"
+  "last_change": "Melhoria visual nos botões e alertas do Cadastro de Usuários",
+  "build": "20260321.04"
 }
