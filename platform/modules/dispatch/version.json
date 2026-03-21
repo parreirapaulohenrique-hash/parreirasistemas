@@ -1,8 +1,8 @@
 {
   "module": "module-dispatch",
   "name": "Despacho Logístico",
-  "version": "3.5.4",
+  "version": "3.5.5",
   "date": "2026-03-21",
-  "last_change": "Ajuste na formatação automática da Cidade no autocomplete CNPJ",
-  "build": "20260321.02"
+  "last_change": "Exigência de preenchimento de Qtde Volume no formulário de Cotação",
+  "build": "20260321.03"
 }

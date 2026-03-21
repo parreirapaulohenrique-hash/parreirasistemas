@@ -711,16 +711,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('inputInvoiceNumber').focus();
         };
 
+        const inputVolume = document.getElementById('inputVolume');
+
         const triggerCalc = () => {
-            if (selectedClient && inputValue.value && inputWeight.value) {
+            if (selectedClient && inputValue.value && inputWeight.value && inputVolume && inputVolume.value) {
                 calculateAndSave(true);
             }
         };
 
         inputValue.addEventListener('input', triggerCalc);
         inputWeight.addEventListener('input', triggerCalc);
-
-        const inputVolume = document.getElementById('inputVolume');
         if (inputVolume) inputVolume.addEventListener('input', triggerCalc);
 
 
