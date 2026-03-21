@@ -834,6 +834,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Atualizar seletor de motoristas dinamicamente
                 if (window.populateDriverSelector) window.populateDriverSelector();
             }
+            if (id === 'baixa') {
+                if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
+            }
             if (id === 'rules') {
                 renderRulesList();
             }
@@ -4491,6 +4494,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 });
                 Utils.saveRaw('dispatches', JSON.stringify(history));
+
+                // ======= SALVAMENTO DA ENTIDADE ROMANEIO =======
+                const romaneios = Utils.getStorage('app_romaneios') || [];
+                const randomId = 'ROM-' + Date.now().toString().slice(-6) + '-' + Math.floor(Math.random() * 100);
+                const novoRomaneio = {
+                    id: randomId,
+                    createdAt: new Date().toISOString(),
+                    createdBy: dispatchedBy,
+                    carrier: currentModalCarrier,
+                    driverName: assignedDriverName || '-',
+                    vehicle: deliveryType, // moto, carro, direto
+                    totalWeight: totalWeight,
+                    totalFreight: totalFreight,
+                    invoiceCount: toDispatch.length,
+                    items: toDispatch.map(d => ({ id: d.id, invoice: d.invoice })), // Apenas IDs e números pra peso leve
+                    status: 'em_rota', // 'em_rota', 'baixado'
+                    baixadoAt: null
+                };
+                romaneios.push(novoRomaneio);
+                Utils.saveRaw('app_romaneios', JSON.stringify(romaneios));
+                // ===============================================
 
                 // Open print manifest
                 window.printSpecificRomaneio(currentModalCarrier, toDispatch);

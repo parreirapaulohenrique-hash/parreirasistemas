@@ -1,8 +1,8 @@
 {
     "module": "platform-core",
     "name": "Parreira Platform Portal",
-    "version": "11.7.13",
+    "version": "11.7.14",
     "date": "2026-03-21",
-    "last_change": "Refinamento do cálculo de atrasos para desconsiderar lançamentos póstumos ao cronograma",
-    "build": "20260321.07"
+    "last_change": "Inclusão da tela de Gestão e Baixa de Romaneios",
+    "build": "20260321.08"
 }

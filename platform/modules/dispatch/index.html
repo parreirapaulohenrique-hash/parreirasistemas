@@ -226,6 +226,10 @@
                     <span class="material-icons-round">directions_car</span>
                     Carro Entrega
                 </a>
+                <a href="#baixa" onclick="window.showSection('baixa')" class="nav-item">
+                    <span class="material-icons-round">fact_check</span>
+                    Baixa Romaneio
+                </a>
                 <a href="#rules" onclick="window.showSection('rules')" class="nav-item">
                     <span class="material-icons-round">table_chart</span>
                     Tabelas de Frete
@@ -1874,6 +1878,63 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- NOVA ABA: BAIXA ROMANEIO -->
+                <div id="view-baixa" class="view-section" style="display: none;">
+                    <div class="welcome-banner">
+                        <h2>Gestão de Romaneios</h2>
+                        <p>Controle o retorno dos romaneios físicos e canhotos de entrega (dar baixa no sistema).</p>
+                    </div>
+
+                    <div class="card" style="margin-top: 1rem;">
+                        <div class="card-header">
+                            <h3><span class="material-icons-round">fact_check</span> Romaneios Pendentes (<span id="countPendentesBaixa">0</span>)</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table" style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr style="border-bottom: 2px solid var(--border-color); color: var(--text-secondary); text-align: left;">
+                                            <th style="padding: 1rem;">Cód. Romaneio</th>
+                                            <th style="padding: 1rem;">Data/Hora Emissão</th>
+                                            <th style="padding: 1rem;">Transportadora/Motorista</th>
+                                            <th style="padding: 1rem; text-align: center;">Qtd NFs</th>
+                                            <th style="padding: 1rem; text-align: center;">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="romaneioBaixaBody">
+                                        <!-- Javascript vai preencher -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card" style="margin-top: 2rem;">
+                        <div class="card-header">
+                            <h3><span class="material-icons-round">inventory_2</span> Romaneios Arquivados</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table" style="width: 100%; border-collapse: collapse; opacity: 0.8;">
+                                    <thead>
+                                        <tr style="border-bottom: 2px solid var(--border-color); color: var(--text-secondary); text-align: left;">
+                                            <th style="padding: 1rem;">Cód. Romaneio</th>
+                                            <th style="padding: 1rem;">Data/Hora Baixa (Arquivamento)</th>
+                                            <th style="padding: 1rem;">Transportadora/Motorista</th>
+                                            <th style="padding: 1rem; text-align: center;">Qtd NFs</th>
+                                            <th style="padding: 1rem; text-align: center;">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="romaneioArquivadoBody">
+                                        <!-- Javascript vai preencher -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div> <!-- End of content-wrapper -->
 
 
