@@ -1,8 +1,8 @@
 {
     "module": "platform-core",
     "name": "Parreira Platform Portal",
-    "version": "11.7.10",
+    "version": "11.7.11",
     "date": "2026-03-21",
-    "last_change": "Melhoria na interface de Edição de Usuários",
-    "build": "20260321.04"
+    "last_change": "Forçando flush de cache no index.html (v=11.7.11) para exibir botões de Editar",
+    "build": "20260321.05"
 }
