@@ -831,14 +831,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             if (id === 'configs') {
                 renderCarrierConfigs();
-                // Pequeno delay para garantir que o container esteja renderizável/visível se houver transições
-                setTimeout(() => {
-                    if (window.renderUserList) window.renderUserList();
-                }, 50);
             }
             if (id === 'system') {
-                // Renderizar clientes quando abrir Configurações
+                // Renderizar atributos assíncronos pequenos delay para transição visível
                 setTimeout(() => {
+                    if (window.renderUserList) window.renderUserList();
                     if (window.renderClientsList) window.renderClientsList();
                 }, 50);
             }

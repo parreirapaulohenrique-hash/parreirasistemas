@@ -475,10 +475,22 @@ window.handleUserFormSubmit = function (e) {
 
     let users = Utils.getStorage('app_users') || [];
 
-    if (window.__editingUserIdx !== undefined && window.__editingUserIdx !== -1) {
-        // Edit
-        users[window.__editingUserIdx] = { name, login, pass, role };
-        window.__editingUserIdx = -1;
+    const editLogin = window.__editingUserLogin;
+    const isEditing = typeof editLogin === 'string' && editLogin.trim() !== '';
+
+    if (isEditing) {
+        // Modo Edição
+        const realIdx = users.findIndex(u => u.login === editLogin);
+        if (realIdx >= 0) {
+            // Check if they tried to change their login to an EXISTING one (other than theirs)
+            if (login !== editLogin && users.some(u => u.login === login)) {
+                alert('Este novo login já está sendo usado por outro usuário.');
+                return;
+            }
+            users[realIdx] = { name, login, pass, role };
+        }
+        window.__editingUserLogin = null;
+        window.__editingUserIdx = -1; // Reset flag
         window.showToast('Usuário atualizado!');
 
         // Reset Button
