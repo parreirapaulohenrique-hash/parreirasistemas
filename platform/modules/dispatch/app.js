@@ -727,41 +727,49 @@ document.addEventListener('DOMContentLoaded', async () => {
         const navItems = document.querySelectorAll('.nav-item');
         const sections = document.querySelectorAll('.view-section');
 
+        window.getDispatchDelayInfo = function(d) {
+            if (d.status !== 'Pendente Despacho') return { isLate: false };
+            if (!d.horarios || d.horarios === '-') return { isLate: false };
+
+            const now = new Date();
+            const launchDate = new Date(d.date);
+            const launchDayStart = new Date(launchDate); launchDayStart.setHours(0, 0, 0, 0);
+            const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
+
+            // 1. Data passada
+            if (launchDayStart < todayStart) {
+                return { isLate: true, reason: 'Atrasado (Data Passada)' };
+            }
+
+            // 2. Mesma data
+            if (launchDayStart.getTime() === todayStart.getTime()) {
+                const matches = Array.from(d.horarios.matchAll(/(\d{2}):(\d{2})/g));
+                if (matches.length > 0) {
+                    const times = matches.map(m => {
+                        const dl = new Date(now);
+                        dl.setHours(parseInt(m[1], 10), parseInt(m[2], 10), 0, 0);
+                        return { dl, label: m[0] };
+                    }).sort((a, b) => a.dl - b.dl);
+                    
+                    // Encontra o PRIMEIRO horário aplicável, ou seja, onde o pacote foi lançado ANTES do horário de saída
+                    const eligibleDeadline = times.find(t => launchDate <= t.dl);
+                    
+                    if (eligibleDeadline) {
+                        // O pacote tinha chance de pegar ESSE carro, confirmamos se o carro já foi embora (now > dl)
+                        if (now > eligibleDeadline.dl) {
+                            return { isLate: true, reason: `Atrasado (Limite: ${eligibleDeadline.label})` };
+                        }
+                    }
+                    // Se não tiver nenhum eligibleDeadline, ele foi postado DEPOIS de todos os despachos do dia.
+                    // Portanto, não está atrasado. Espera o carro do dia seguinte pacificamente.
+                }
+            }
+            return { isLate: false };
+        };
+
         function checkLateDispatchesAndAlert() {
             const history = Utils.getStorage('dispatches');
-            const now = new Date();
-            const hasLate = history.some(d => {
-                if (d.status !== 'Pendente Despacho') return false;
-                // Verifica se tem horário definido
-                if (!d.horarios || d.horarios === '-') {
-                    // Se não tem horário, mas é data passada, consideramos atraso? 
-                    // A lógica anterior só considerava se tivesse horário. Manter consistencia.
-                    // Mas se for data passada, deveria ter despachado. Vamos ser estritos apenas se tiver horário cadastrado por enquanto, ou mudar logica?
-                    // O usuário pediu vinculado aos ícones vermelhos. Na lista, o ícone vermelho aparece se tiver horarios e verificação falhar.
-                    // Na lógica do renderAppHistory (que corrigimos), só entra no IF se tiver horarios.
-                    // Porém, se for data passada, o ideal é alertar.
-                    // Vamos seguir a lógica corrigida: Só entra se d.horarios existe.
-                    return false;
-                }
-
-                const dDateStart = new Date(d.date); dDateStart.setHours(0, 0, 0, 0);
-                const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-
-                // 1. Data passada
-                if (dDateStart < todayStart) return true;
-
-                // 2. Hoje + Horário Limite
-                if (dDateStart.getTime() === todayStart.getTime()) {
-                    const timeMatch = d.horarios.match(/(\d{2}):(\d{2})/);
-                    if (timeMatch) {
-                        const [_, h, m] = timeMatch;
-                        const deadline = new Date();
-                        deadline.setHours(parseInt(h), parseInt(m), 0);
-                        if (now > deadline) return true;
-                    }
-                }
-                return false;
-            });
+            const hasLate = history.some(d => window.getDispatchDelayInfo(d).isLate);
 
             if (hasLate) {
                 const existingModal = document.getElementById('dispatchAlertModal');
@@ -3096,38 +3104,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                                             title = 'Cancelado';
                                         } else if (s === 'Pendente Despacho') {
                                             // Check Time Logic
-                                            // Lógica de Tempo Revisada
-                                            if (d.horarios && d.horarios !== '-') {
-                                                // Expecting format like "14:00" or descriptions containing times
-                                                const now = new Date();
-
-                                                // Check Past Dates FIRST
-                                                const dDateStart = new Date(d.date); dDateStart.setHours(0, 0, 0, 0);
-                                                const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-                                                if (dDateStart < todayStart) {
-                                                    icon = 'alarm_off';
-                                                    cls = 'status-late';
-                                                    title = `Atrasado (Data Passada)`;
-                                                }
-
-                                                const timeMatch = d.horarios.match(/(\d{2}):(\d{2})/);
-                                                if (timeMatch) {
-                                                    const [_, h, m] = timeMatch;
-                                                    const deadline = new Date();
-                                                    deadline.setHours(parseInt(h), parseInt(m), 0);
-
-                                                    // Only consider it "Late" if it's the SAME DAY and NOW > DEADLINE
-                                                    // Assuming dispatch creation date is delivery date logic or similar
-                                                    const dispatchDate = new Date(d.date);
-                                                    const isToday = dispatchDate.toDateString() === now.toDateString();
-
-                                                    if (isToday && now > deadline) {
-                                                        icon = 'alarm_off';
-                                                        cls = 'status-late'; // Will need CSS
-                                                        title = `Atrasado (Limite: ${h}:${m})`;
-                                                        // We don't change d.status in DB, just visual representation
-                                                    }
-                                                }
+                                            const delayInfo = window.getDispatchDelayInfo(d);
+                                            if (delayInfo.isLate) {
+                                                icon = 'alarm_off';
+                                                cls = 'status-late';
+                                                title = delayInfo.reason;
                                             }
                                         }
                                         return `<td style="text-align: center; width: 40px;" title="${title}"><span class="material-icons-round ${cls}" style="font-size: 1.2rem; vertical-align: middle; color: ${cls === 'status-late' ? 'var(--accent-danger)' : ''}">${icon}</span></td>`;

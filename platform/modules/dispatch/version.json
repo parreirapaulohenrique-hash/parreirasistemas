@@ -1,8 +1,8 @@
 {
   "module": "module-dispatch",
   "name": "Despacho Logístico",
-  "version": "3.5.8",
+  "version": "3.5.9",
   "date": "2026-03-21",
-  "last_change": "Invalidação do bloco furtivo renderUserList do app.js",
-  "build": "20260321.06"
+  "last_change": "Validação de atraso de cronograma comparando com data/hora do lançamento real (now > dl && launch <= dl)",
+  "build": "20260321.07"
 }
