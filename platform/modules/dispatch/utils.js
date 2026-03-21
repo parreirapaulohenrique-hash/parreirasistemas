@@ -380,11 +380,11 @@ window.renderUserList = function () {
             </td>
             <td style="padding: 0.8rem 0.6rem; text-align: center; vertical-align: middle;">
                 <div style="display: flex; gap: 0.5rem; justify-content: center;">
-                    <button class="btn btn-secondary" onclick="window.openUserEditModal(${idx})" title="Editar" style="padding: 4px 8px; min-width: auto; height: 32px;">
+                    <button class="btn btn-secondary" onclick="window.openUserEditModal('${u.login}')" title="Editar" style="padding: 4px 8px; min-width: auto; height: 32px;">
                         <span class="material-icons-round" style="font-size: 1.1rem;">edit</span>
                     </button>
                     ${u.login === 'admin' ? '' : `
-                    <button class="btn btn-danger" onclick="window.deleteUser(${idx})" title="Excluir" style="padding: 4px 8px; min-width: auto; height: 32px; background: rgba(239, 68, 68, 0.1); color: var(--accent-danger); border: none;">
+                    <button class="btn btn-danger" onclick="window.deleteUser('${u.login}')" title="Excluir" style="padding: 4px 8px; min-width: auto; height: 32px; background: rgba(239, 68, 68, 0.1); color: var(--accent-danger); border: none;">
                         <span class="material-icons-round" style="font-size: 1.1rem;">delete</span>
                     </button>`}
                 </div>
@@ -394,8 +394,10 @@ window.renderUserList = function () {
     });
 };
 
-window.deleteUser = function (idx) {
+window.deleteUser = function (userLogin) {
     let users = Utils.getStorage('app_users') || [];
+    const idx = users.findIndex(u => u.login === userLogin);
+    if (idx < 0) return;
     const user = users[idx];
     if (user && confirm(`Tem certeza que deseja remover o usuário "${user.name}"?`)) {
         users.splice(idx, 1);
@@ -405,10 +407,11 @@ window.deleteUser = function (idx) {
     }
 };
 
-window.openUserEditModal = function (idx) {
+window.openUserEditModal = function (userLogin) {
     const users = Utils.getStorage('app_users');
+    const idx = users.findIndex(u => u.login === userLogin);
+    if (idx < 0) return;
     const user = users[idx];
-    if (!user) return;
 
     // Supports new IDs
     const nameEl = document.getElementById('newUserName');
@@ -429,7 +432,9 @@ window.openUserEditModal = function (idx) {
     if (targetPass) targetPass.value = user.pass;
     if (targetRole) targetRole.value = user.role;
 
-    window.__editingUserIdx = idx;
+    // Save the original login for reference (as index is frail to re-ordering)
+    window.__editingUserLogin = user.login;
+    window.__editingUserIdx = idx; // Keep for backward compatibility with app.js
 
     // Change button text
     const form = document.getElementById('formNewUser');
@@ -442,6 +447,9 @@ window.openUserEditModal = function (idx) {
     }
 
     if (targetName) targetName.focus();
+    
+    // Smooth scroll to the form so the user sees it (helps UX)
+    form.scrollIntoView({ behavior: 'smooth', block: 'center' });
 };
 
 // Handle Form Submit (Call this from app.js or attach here if possible, but app.js usually handles events)

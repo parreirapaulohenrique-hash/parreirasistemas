@@ -5568,6 +5568,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
         // --- GESTÃO DE USUÁRIOS (Lógica) ---
+        // --- GESTÃO DE USUÁRIOS (Lógica) ---
         window.saveUserAction = () => {
             const name = document.getElementById('regUserName').value.trim();
             const login = document.getElementById('regUserLogin').value.trim();
@@ -5582,12 +5583,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             let users = Utils.getStorage('app_users');
             if (!Array.isArray(users)) users = [];
 
-            const isEditing = typeof window.__editingUserIdx === 'number' && window.__editingUserIdx >= 0;
+            // Edit by login instead of index
+            const editLogin = window.__editingUserLogin;
+            const isEditing = typeof editLogin === 'string' && editLogin.trim() !== '';
 
             if (isEditing) {
                 // Modo Edição
-                users[window.__editingUserIdx] = { name, login, pass, role };
-                window.__editingUserIdx = -1; // Reset flag
+                const realIdx = users.findIndex(u => u.login === editLogin);
+                if (realIdx >= 0) {
+                    // Check if they tried to change their login to an EXISTING one (other than theirs)
+                    if (login !== editLogin && users.some(u => u.login === login)) {
+                        alert('Este novo login já está sendo usado por outro usuário.');
+                        return;
+                    }
+                    users[realIdx] = { name, login, pass, role };
+                }
+                window.__editingUserLogin = null;
+                window.__editingUserIdx = -1; // Reset legacy flag
             } else {
                 // Modo Novo Cadastro
                 // Verificar duplicidade de login
@@ -5610,8 +5622,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.clearUserForm = () => {
             document.getElementById('formNewUser').reset();
             window.__editingUserIdx = -1;
+            window.__editingUserLogin = null;
             const btn = document.getElementById('btnSaveUser');
-            if (btn) btn.innerHTML = '<span class="material-icons-round">save</span> Salvar Usuário';
+            if (btn) {
+                btn.innerHTML = '<span class="material-icons-round">save</span> Salvar Usuário';
+                btn.classList.remove('btn-warning');
+            }
         };
 
         // ========== GERENCIAMENTO DE CLIENTES ==========
