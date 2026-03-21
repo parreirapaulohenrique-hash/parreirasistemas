@@ -1,8 +1,8 @@
 {
     "module": "platform-core",
     "name": "Parreira Platform Portal",
-    "version": "11.7.11",
+    "version": "11.7.12",
     "date": "2026-03-21",
-    "last_change": "Forçando flush de cache no index.html (v=11.7.11) para exibir botões de Editar",
-    "build": "20260321.05"
+    "last_change": "Remoção de gerenciamento duplo de usuários sobreescrevendo botões",
+    "build": "20260321.06"
 }
