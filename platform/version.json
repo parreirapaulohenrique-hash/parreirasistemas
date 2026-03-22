@@ -1,8 +1,8 @@
 {
     "module": "platform-core",
     "name": "Parreira Platform Portal",
-    "version": "11.7.16",
+    "version": "11.7.17",
     "date": "2026-03-22",
-    "last_change": "Injeção corigida das funções de renderização do painel de baixa",
-    "build": "20260322.02"
+    "last_change": "Correção de race-condition no estorno de notas da expedição fechando o modal vazio",
+    "build": "20260322.03"
 }

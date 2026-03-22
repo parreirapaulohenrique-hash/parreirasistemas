@@ -1,8 +1,8 @@
 {
   "module": "module-dispatch",
   "name": "Despacho Logístico",
-  "version": "3.5.12",
+  "version": "3.5.13",
   "date": "2026-03-22",
-  "last_change": "Consertos nas funções de listagem renderBaixaRomaneios e confirmarBaixaRomaneio",
-  "build": "20260322.02"
+  "last_change": "Atraso no reload da página (undoDispatch) para proteger o background sync do Firestore",
+  "build": "20260322.03"
 }

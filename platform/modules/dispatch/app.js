@@ -4412,7 +4412,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     if (remaining.length === 0) {
                         document.getElementById('shipmentModal').style.display = 'none';
-                        location.reload();
+                        setTimeout(() => location.reload(), 800); // Dá tempo do Firebase Sync salvar na nuvem
                     } else {
                         selectedNFIds = selectedNFIds.filter(i => i !== id);
                         renderModalItems(remaining);
