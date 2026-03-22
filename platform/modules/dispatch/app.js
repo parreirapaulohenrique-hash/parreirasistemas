@@ -5833,6 +5833,82 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.renderClientsList();
         }
 
+        // --- FUNÇÕES DE BAIXA DE ROMANEIO ---
+        window.renderBaixaRomaneios = () => {
+            const pendentesBody = document.getElementById('romaneioBaixaBody');
+            const arquivadosBody = document.getElementById('romaneioArquivadoBody');
+            const countPendentes = document.getElementById('countPendentesBaixa');
+            if(!pendentesBody) return;
+
+            let romaneios = Utils.getStorage('app_romaneios') || [];
+            
+            // Separar Pendentes (em_rota) de Arquivados (baixado)
+            const pendentes = romaneios.filter(r => r.status === 'em_rota').sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+            const arquivados = romaneios.filter(r => r.status === 'baixado').sort((a,b) => new Date(b.baixadoAt) - new Date(a.baixadoAt)).slice(0, 50); // Mostra os 50 últimos
+
+            if(countPendentes) countPendentes.innerText = pendentes.length;
+
+            if(pendentes.length === 0) {
+                pendentesBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2rem; color:var(--text-secondary);">Nenhum romaneio pendente de baixa.</td></tr>`;
+            } else {
+                pendentesBody.innerHTML = pendentes.map(r => `
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 1rem; font-weight: 600;">${r.id}</td>
+                        <td style="padding: 1rem;">${new Date(r.createdAt).toLocaleString('pt-BR')}</td>
+                        <td style="padding: 1rem;">
+                            <strong>${r.carrier}</strong>
+                            ${r.driverName && r.driverName !== '-' ? `<br><small style="color:var(--text-secondary);">Motorista: ${r.driverName}</small>` : ''}
+                        </td>
+                        <td style="padding: 1rem; text-align: center;"><span style="background: rgba(59,130,246,0.1); color: var(--primary-color); padding: 4px 10px; border-radius: 12px; font-weight: bold;">${r.invoiceCount} NFs</span></td>
+                        <td style="padding: 1rem; text-align: center;">
+                            <button class="btn btn-primary" onclick="window.confirmarBaixaRomaneio('${r.id}')" style="background: var(--accent-success); border-color: var(--accent-success);">
+                                <span class="material-icons-round">check_circle</span>
+                                Arquivar / Dar Baixa
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            if(arquivados.length === 0) {
+                arquivadosBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2rem; color:var(--text-secondary);">Nenhum histórico recente.</td></tr>`;
+            } else {
+                arquivadosBody.innerHTML = arquivados.map(r => `
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 1rem; font-weight: 600;">${r.id}</td>
+                        <td style="padding: 1rem; color: var(--accent-success); font-weight: 500;">
+                            ${new Date(r.baixadoAt).toLocaleString('pt-BR')}
+                            <br><small style="color:var(--text-secondary);">Emissão: ${new Date(r.createdAt).toLocaleDateString('pt-BR')}</small>
+                        </td>
+                        <td style="padding: 1rem;">
+                            <strong>${r.carrier}</strong>
+                            ${r.driverName && r.driverName !== '-' ? `<br><small style="color:var(--text-secondary);">Motorista: ${r.driverName}</small>` : ''}
+                        </td>
+                        <td style="padding: 1rem; text-align: center;"><span style="background: rgba(107,114,128,0.1); color: var(--text-secondary); padding: 4px 10px; border-radius: 12px; font-weight: bold;">${r.invoiceCount} NFs</span></td>
+                        <td style="padding: 1rem; text-align: center;">
+                            <span style="color: var(--accent-success); display: flex; align-items: center; justify-content: center; gap: 5px; font-weight: 600;">
+                                <span class="material-icons-round" style="font-size: 1.2rem;">done_all</span> Arquivado
+                            </span>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        };
+
+        window.confirmarBaixaRomaneio = (romaneioId) => {
+            if(!confirm(`Tem certeza que o canhoto/romaneio físico do código ${romaneioId} retornou e deseja arquivá-lo no sistema?`)) return;
+
+            let romaneios = Utils.getStorage('app_romaneios') || [];
+            const idx = romaneios.findIndex(r => r.id === romaneioId);
+            if(idx !== -1) {
+                romaneios[idx].status = 'baixado';
+                romaneios[idx].baixadoAt = new Date().toISOString();
+                Utils.saveRaw('app_romaneios', JSON.stringify(romaneios));
+                showToast('✅ Romaneio baixado e arquivado com sucesso!');
+                if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
+            }
+        };
+
     } catch (err) {
         console.error("FATAL ERROR IN APP.JS:", err);
     }

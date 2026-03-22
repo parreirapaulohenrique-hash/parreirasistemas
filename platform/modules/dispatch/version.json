@@ -1,8 +1,8 @@
 {
   "module": "module-dispatch",
   "name": "Despacho Logístico",
-  "version": "3.5.11",
+  "version": "3.5.12",
   "date": "2026-03-22",
-  "last_change": "Injeção da totalização de NF (Peso/Valor) antes do salvamento do extrato do romaneio",
-  "build": "20260322.01"
+  "last_change": "Consertos nas funções de listagem renderBaixaRomaneios e confirmarBaixaRomaneio",
+  "build": "20260322.02"
 }
