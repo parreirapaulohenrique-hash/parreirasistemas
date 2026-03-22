@@ -4438,6 +4438,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
 
+                const totalWeight = toDispatch.reduce((acc, curr) => acc + (parseFloat(curr.weight) || 0), 0);
+                const totalFreight = toDispatch.reduce((acc, curr) => acc + (parseFloat(curr.total) || 0), 0);
+
                 // Get delivery type selection
                 const deliveryTypeEl = document.getElementById('deliveryTypeSelector');
                 let rawType = deliveryTypeEl ? deliveryTypeEl.value : 'direto';

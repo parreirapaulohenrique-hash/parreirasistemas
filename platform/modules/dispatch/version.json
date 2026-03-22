@@ -1,8 +1,8 @@
 {
   "module": "module-dispatch",
   "name": "Despacho Logístico",
-  "version": "3.5.10",
-  "date": "2026-03-21",
-  "last_change": "Novo sistema de arquivamento físico e baixa de romaneios em nova Aba View",
-  "build": "20260321.08"
+  "version": "3.5.11",
+  "date": "2026-03-22",
+  "last_change": "Injeção da totalização de NF (Peso/Valor) antes do salvamento do extrato do romaneio",
+  "build": "20260322.01"
 }
