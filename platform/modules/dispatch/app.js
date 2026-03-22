@@ -4523,14 +4523,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.printSpecificRomaneio(currentModalCarrier, toDispatch);
 
                 // Disparo Automático de WhatsApp
-                let delayWa = 1000;
+                let delayWa = 1500;
                 toDispatch.forEach((d) => {
                     setTimeout(() => {
                         if (window.sendWhatsApp) {
                             window.sendWhatsApp(d.id, true); // Modo silencioso = true
                         }
                     }, delayWa);
-                    delayWa += 1500; // 1.5s entre cada aba
+                    delayWa += 3500; // 3.5s entre cada aba, tempo vital para o WhatsAppWeb logar e carregar a janela
                 });
 
                 // Show appropriate toast
@@ -5456,8 +5456,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const msg = `Olá ${fullName}!\nInformamos que seu pedido NF: ${d.invoice} foi despachado via ${d.carrier}.\nPrevisão de Entrega: D+${rawLead} dias.\nLT Distribuidora agradece!\nQualquer dúvida, estamos à disposição!`;
 
-            // Force WhatsApp Web
-            const url = `https://web.whatsapp.com/send?phone=55${phone}&text=${encodeURIComponent(msg)}`;
+            // Force WhatsApp Web robust URL format
+            const url = `https://web.whatsapp.com/send/?phone=55${phone}&text=${encodeURIComponent(msg)}`;
             window.open(url, '_blank');
 
 
