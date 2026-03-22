@@ -1,8 +1,8 @@
 {
     "module": "platform-core",
     "name": "Parreira Platform Portal",
-    "version": "11.7.17",
+    "version": "11.7.18",
     "date": "2026-03-22",
-    "last_change": "Correção de race-condition no estorno de notas da expedição fechando o modal vazio",
-    "build": "20260322.03"
+    "last_change": "Inclusão do disparo automático enfileirado no fechamento dos romaneios de Whatsapp",
+    "build": "20260322.04"
 }

@@ -4522,6 +4522,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Open print manifest
                 window.printSpecificRomaneio(currentModalCarrier, toDispatch);
 
+                // Disparo Automático de WhatsApp
+                let delayWa = 1000;
+                toDispatch.forEach((d) => {
+                    setTimeout(() => {
+                        if (window.sendWhatsApp) {
+                            window.sendWhatsApp(d.id, true); // Modo silencioso = true
+                        }
+                    }, delayWa);
+                    delayWa += 1500; // 1.5s entre cada aba
+                });
+
                 // Show appropriate toast
                 if (deliveryType === 'moto') {
                     showToast('🏍️ Romaneio gerado! NFs enviadas para Moto Entrega.');
@@ -5404,7 +5415,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.applyRoleRestrictions();
         }
         // --- WHATSAPP FIX (v1.6.3) ---
-        window.sendWhatsApp = (id) => {
+        window.sendWhatsApp = (id, silent = false) => {
             const history = Utils.getStorage('dispatches');
             const d = history.find(item => item.id === id);
             if (!d) return;
@@ -5420,8 +5431,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 phone = clientObj.telefone.replace(/\D/g, '');
             }
 
-            if (!phone) {
-                alert('Telefone do cliente não encontrado para envio do WhatsApp.\nVerifique o cadastro do cliente.');
+            // Ignorar telefones de clientes Genéricos (ex: DIVERSOS)
+            const ignoredNames = ['DIVERSOS', 'CONSUMIDOR FINAL'];
+            if (ignoredNames.includes(norm(d.client))) {
+                if(!silent) alert('Cliente genérico selecionado. Não é possível enviar WhatsApp Automático.');
+                return;
+            }
+
+            if (!phone || phone.length < 10) {
+                if (!silent) {
+                    alert('Telefone do cliente não encontrado para envio do WhatsApp.\nVerifique o cadastro do cliente.');
+                } else {
+                    console.warn(`[WA Auto] Telefone inválido/inexistente para o cliente ${d.client} da NF ${d.invoice}`);
+                }
                 return;
             }
 

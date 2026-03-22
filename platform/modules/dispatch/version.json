@@ -1,8 +1,8 @@
 {
   "module": "module-dispatch",
   "name": "Despacho Logístico",
-  "version": "3.5.13",
+  "version": "3.5.14",
   "date": "2026-03-22",
-  "last_change": "Atraso no reload da página (undoDispatch) para proteger o background sync do Firestore",
-  "build": "20260322.03"
+  "last_change": "Disparo automatizado inteligente de NFs para clientes via popup WhatsApp Web",
+  "build": "20260322.04"
 }
