@@ -1,8 +1,8 @@
 {
     "module": "platform-core",
     "name": "Parreira Platform Portal",
-    "version": "11.7.19",
+    "version": "11.7.20",
     "date": "2026-03-22",
-    "last_change": "Resolução do Race-Condition Interno do WhatsApp Web mitigando a contenção ao aumentar o intervalo de cascata",
-    "build": "20260322.05"
+    "last_change": "Migração do disparo de WA Auto para API wa.me evitando concorrência local de WebWhatsApp",
+    "build": "20260322.06"
 }

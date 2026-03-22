@@ -4530,7 +4530,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             window.sendWhatsApp(d.id, true); // Modo silencioso = true
                         }
                     }, delayWa);
-                    delayWa += 3500; // 3.5s entre cada aba, tempo vital para o WhatsAppWeb logar e carregar a janela
+                    delayWa += 1500; // API aceita 1.5s sem estressar, carrega liso
                 });
 
                 // Show appropriate toast
@@ -5456,8 +5456,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const msg = `Olá ${fullName}!\nInformamos que seu pedido NF: ${d.invoice} foi despachado via ${d.carrier}.\nPrevisão de Entrega: D+${rawLead} dias.\nLT Distribuidora agradece!\nQualquer dúvida, estamos à disposição!`;
 
-            // Force WhatsApp Web robust URL format
-            const url = `https://web.whatsapp.com/send/?phone=55${phone}&text=${encodeURIComponent(msg)}`;
+            // Use api.whatsapp.com (wa.me) proxy page to bypass web concurrency limits
+            const url = `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`;
             window.open(url, '_blank');
 
 
