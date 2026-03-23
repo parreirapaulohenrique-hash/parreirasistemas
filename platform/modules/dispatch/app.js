@@ -4530,7 +4530,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             window.sendWhatsApp(d.id, true); // Modo silencioso = true
                         }
                     }, delayWa);
-                    delayWa += 1500; // API aceita 1.5s sem estressar, carrega liso
+                    delayWa += 7000; // API aguarda longos 7 segundos para permitir o envio humano no App Desktop
                 });
 
                 // Show appropriate toast

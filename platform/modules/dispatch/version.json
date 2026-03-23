@@ -1,8 +1,8 @@
 {
   "module": "module-dispatch",
   "name": "Despacho Logístico",
-  "version": "3.5.16",
+  "version": "3.5.17",
   "date": "2026-03-22",
-  "last_change": "Modificação da URI alvo para proxy leve (wa.me) e aceleração da cachoeira de abas",
-  "build": "20260322.06"
+  "last_change": "Configurado pipeline de automação Wa.me para 7.0s de tolerância humana",
+  "build": "20260322.07"
 }
