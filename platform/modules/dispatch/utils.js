@@ -380,12 +380,12 @@ window.renderUserList = function () {
             </td>
             <td style="padding: 0.8rem 0.6rem; text-align: center; vertical-align: middle;">
                 <div style="display: flex; gap: 0.5rem; justify-content: center;">
-                    <button class="btn btn-secondary" onclick="window.openUserEditModal('${u.login}')" title="Editar Usuário" style="padding: 4px 12px; height: 32px; display: flex; align-items: center; gap: 4px;">
+                    <button class="btn btn-secondary" onclick="window.openUserEditModal('${u.login}')" title="Editar Usuário" style="padding: 4px 8px; height: 32px; display: flex; align-items: center; gap: 4px;">
                         <span class="material-icons-round" style="font-size: 1.1rem;">edit</span>
                         <span style="font-size: 0.8rem; font-weight: 600;">Editar</span>
                     </button>
                     ${u.login === 'admin' ? '' : `
-                    <button class="btn btn-danger" onclick="window.deleteUser('${u.login}')" title="Excluir Usuário" style="padding: 4px 12px; height: 32px; background: rgba(239, 68, 68, 0.1); color: var(--accent-danger); border: none; display: flex; align-items: center; gap: 4px;">
+                    <button class="btn btn-danger" onclick="window.deleteUser('${u.login}')" title="Excluir Usuário" style="padding: 4px 8px; height: 32px; background: rgba(239, 68, 68, 0.1); color: var(--accent-danger); border: none; display: flex; align-items: center; gap: 4px;">
                         <span class="material-icons-round" style="font-size: 1.1rem;">delete</span>
                         <span style="font-size: 0.8rem; font-weight: 600;">Excluir</span>
                     </button>`}

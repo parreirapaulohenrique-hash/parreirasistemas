@@ -1,8 +1,8 @@
 {
     "module": "platform-core",
     "name": "Parreira Platform Portal",
-    "version": "11.7.21",
-    "date": "2026-03-22",
-    "last_change": "Estendido delay inter-abas do WA Automático para 7.0s para sync humano no Desktop App",
-    "build": "20260322.07"
+    "version": "11.7.22",
+    "date": "2026-03-23",
+    "last_change": "Ajuste na tabela de usuários para suportar ambos os botões enfileirados sem esbarrar na scrollbar",
+    "build": "20260323.01"
 }

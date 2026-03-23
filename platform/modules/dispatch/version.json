@@ -1,8 +1,8 @@
 {
   "module": "module-dispatch",
   "name": "Despacho Logístico",
-  "version": "3.5.17",
-  "date": "2026-03-22",
-  "last_change": "Configurado pipeline de automação Wa.me para 7.0s de tolerância humana",
-  "build": "20260322.07"
+  "version": "3.5.18",
+  "date": "2026-03-23",
+  "last_change": "Reparos nas quebras de tela devido ao tamanho fixo da coluna de usuários",
+  "build": "20260323.01"
 }
