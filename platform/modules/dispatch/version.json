@@ -1,5 +1,5 @@
 {
-    "version": "3.7.0",
+    "version": "3.7.1",
     "lastUpdate": "2026-03-24",
-    "change": "Reestruturadas abas (Cadastros vs Configurações) e adicionada parametrização para mensagens automáticas de WhatsApp."
+    "change": "Removido aviso visual de obrigatoriedade e melhorado o fluxo automático do cursor (foco no Vendedor após Cliente)."
 }

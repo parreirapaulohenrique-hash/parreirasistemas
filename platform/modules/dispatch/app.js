@@ -710,6 +710,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
             clientResult.style.display = 'block';
             clientResult.style.borderLeft = borderStyle;
+
+            // Focar no Vendedor após selecionar o cliente (v3.7.1)
+            setTimeout(() => {
+                const sellerEl = document.getElementById('inputSeller');
+                if (sellerEl) sellerEl.focus();
+            }, 100);
         }
 
         window.resetQuote = () => {
@@ -1147,6 +1153,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         document.getElementById('inputInvoiceNumber').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') inputClient.focus();
+        });
+
+        document.getElementById('inputSeller').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('inputValue').focus();
+            }
         });
 
         // Keyboard handling is now centralized in the 'keydown' listener above
