@@ -4581,7 +4581,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Open print manifest
                 window.printSpecificRomaneio(currentModalCarrier, toDispatch);
 
-                // Disparo Automático de WhatsApp
+                /* 
+                // Disparo Automático de WhatsApp (DESATIVADO v3.6.5 por solicitação do usuário)
                 let delayWa = 1500;
                 toDispatch.forEach((d) => {
                     setTimeout(() => {
@@ -4591,6 +4592,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }, delayWa);
                     delayWa += 7000; // API aguarda longos 7 segundos para permitir o envio humano no App Desktop
                 });
+                */
 
                 // Show appropriate toast
                 if (deliveryType === 'moto') {
