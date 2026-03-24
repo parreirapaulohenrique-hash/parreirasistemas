@@ -1,8 +1,8 @@
 {
   "module": "module-dispatch",
   "name": "Despacho Logístico",
-  "version": "3.6.1",
+  "version": "3.6.2",
   "date": "2026-03-24",
-  "last_change": "Hotfix: Restaurado modal de cadastro de vendedores (HTML) e correção do botão de abertura.",
-  "build": "20260324.01"
+  "last_change": "Ajuste no template de mensagem de WhatsApp para Vendedores.",
+  "build": "20260324.02"
 }

@@ -6114,7 +6114,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const phone = d.sellerPhone.replace(/\D/g, '');
-            const msg = `Olá ${d.sellerName}!\nInformamos que seu pedido NF: ${d.invoice} do cliente ${d.client} foi despachado via ${d.carrier}.\nPrevisão de Entrega: D+${d.leadTime} dias.\nBoas vendas! 🚀`;
+            const msg = `Olá ${d.sellerName}!\nInformamos que o pedido do cliente ${d.client}, de NF: ${d.invoice} foi despachado via ${d.carrier}.\nPrevisão de Entrega: ${d.leadTime} dias.\nLT Distribuidora agradece!\nQualquer dúvida, estamos à disposição!`;
 
             const url = `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`;
             window.open(url, '_blank');
