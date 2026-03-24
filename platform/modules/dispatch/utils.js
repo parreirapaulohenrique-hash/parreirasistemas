@@ -127,7 +127,7 @@ const Utils = {
             console.log(`🔄 [Cloud] loadAll() chamado. TenantId: ${this.tenantId}`);
             if (!this.hasTenant()) return false;
 
-            const keys = ['dispatches', 'freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients', 'invoice_history'];
+            const keys = ['dispatches', 'freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients', 'invoice_history', 'app_sellers'];
 
             // --- FIREBASE MODE ---
             if (typeof firebase !== 'undefined' && window.db) {
@@ -276,6 +276,10 @@ const Utils = {
                     if (key === 'app_users' && window.renderUserList) window.renderUserList();
                     if (key === 'clients' && window.renderClientsList) window.renderClientsList();
                     if (key === 'carrier_list' && window.renderCarrierConfigs) window.renderCarrierConfigs();
+                    if (key === 'app_sellers' && window.renderSellersList) {
+                        window.renderSellersList();
+                        if (window.populateSellersSelector) window.populateSellersSelector();
+                    }
                 }
             } else {
                 // Nuvem realmente vazia/nula (menos de 2 chars)
@@ -290,7 +294,7 @@ const Utils = {
             // --- FIREBASE MODE ---
             if (typeof firebase !== 'undefined' && window.db && !window.hasAttachedListeners) {
                 window.hasAttachedListeners = true;
-                const keys = ['dispatches', 'freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients', 'invoice_history'];
+                const keys = ['dispatches', 'freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients', 'invoice_history', 'app_sellers'];
                 console.log(`📡 Iniciando Sync SaaS (Firestore) para: ${this.tenantId}`);
 
                 keys.forEach(key => {
