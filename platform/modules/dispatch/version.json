@@ -1,8 +1,8 @@
 {
   "module": "module-dispatch",
   "name": "Despacho Logístico",
-  "version": "3.5.18",
+  "version": "3.6.0",
   "date": "2026-03-23",
-  "last_change": "Reparos nas quebras de tela devido ao tamanho fixo da coluna de usuários",
-  "build": "20260323.01"
+  "last_change": "Módulo WhatsApp para Vendedores: Cadastro, Notificação Automática no Romaneio e ajuste de layout das tabelas (vendedores e usuários).",
+  "build": "20260323.02"
 }

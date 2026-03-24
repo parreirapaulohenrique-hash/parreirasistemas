@@ -430,6 +430,13 @@
                                 <input type="file" id="fileClient" hidden accept=".csv, .xlsx, .xls">
                             </div>
 
+                            <div class="form-group">
+                                <label class="form-label">Vendedor Responsável</label>
+                                <select id="inputSeller" class="form-input" style="height: 43px;">
+                                    <option value="">-- Selecione o Vendedor --</option>
+                                </select>
+                            </div>
+
                             <div class="form-group" id="clientResult"
                                 style="display:none; background: rgba(255,255,255,0.05); padding: 1rem; border-radius: var(--radius-md);">
                                 <div style="font-weight: 600;" id="resClientName">Name</div>
@@ -1826,6 +1833,37 @@
                                         </table>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cadastro de Vendedores - NOVA SEÇÃO -->
+                    <div id="cardSellerRegistration" class="card" style="margin-bottom: 2rem;">
+                        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3 style="font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem; color: var(--text-primary); margin: 0;">
+                                <span class="material-icons-round" style="color: var(--primary-color);">support_agent</span>
+                                Cadastro de Vendedores
+                            </h3>
+                            <button class="btn btn-primary" onclick="window.openNewSellerModal()" style="display: flex; align-items: center; gap: 5px; height: 35px; border-radius: 8px;">
+                                <span class="material-icons-round" style="font-size: 1.2rem;">person_add</span>
+                                <span style="font-size: 0.85rem; font-weight: 600;">Novo Vendedor</span>
+                            </button>
+                        </div>
+                        <div class="card-body" style="padding: 1.5rem;">
+                            <div style="overflow-y: auto; max-height: 400px; padding-right: 5px;">
+                                <table class="dispatch-table" style="font-size: 0.85rem; width: 100%;">
+                                    <thead style="position: sticky; top: 0; background: var(--bg-secondary); z-index: 10;">
+                                        <tr>
+                                            <th style="text-align: left; padding: 0.6rem;">ID</th>
+                                            <th style="text-align: left; padding: 0.6rem;">Nome do Vendedor</th>
+                                            <th style="text-align: left; padding: 0.6rem;">WhatsApp</th>
+                                            <th style="text-align: center; padding: 0.6rem; width: 220px;">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="sellerListBody">
+                                        <!-- Populated by JS -->
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>

@@ -140,11 +140,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Salvar localmente, mas NÃO enviar para nuvem (para não sobrescrever dados de outras sessões)
                 localStorage.setItem('app_users', JSON.stringify(users));
             }
-        } else {
             // Já existem usuários salvos, usar eles
             users = Utils.getStorage('app_users') || [];
             console.log(`👥 ${users.length} usuários carregados`);
         }
+
+        // Sellers: Load from Storage
+        let sellers = Utils.getStorage('app_sellers') || [];
+        console.log(`👤 ${sellers.length} vendedores carregados`);
+
         let currentUser = null; // Default: Require Login
 
         // --- AUTHENTICATION RECOVERED ---
@@ -692,6 +696,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('inputMainNF').value = '';
             document.getElementById('divMainNF').style.display = 'none';
             document.getElementById('inputClient').value = '';
+            document.getElementById('inputSeller').value = '';
             document.getElementById('inputValue').value = '';
             document.getElementById('inputWeight').value = '';
 
@@ -848,6 +853,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 setTimeout(() => {
                     if (window.renderUserList) window.renderUserList();
                     if (window.renderClientsList) window.renderClientsList();
+                    if (window.renderSellersList) window.renderSellersList();
                 }, 50);
             }
             if (id === 'driver') {
@@ -1537,6 +1543,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             const invoice = document.getElementById('inputInvoiceNumber').value.trim();
             const isComp = document.getElementById('inputIsComplement').value === 'sim';
             const mainInv = isComp ? document.getElementById('inputMainNF').value.trim() : '';
+            const sellerId = document.getElementById('inputSeller').value;
+
+            let sellerName = '-';
+            let sellerPhone = '';
+            
+            if (sellerId) {
+                const sellers = Utils.getStorage('app_sellers') || [];
+                const sObj = sellers.find(s => s.id === sellerId);
+                if (sObj) {
+                    sellerName = sObj.name;
+                    sellerPhone = sObj.phone;
+                }
+            }
 
 
             if (!invoice) {
@@ -1576,6 +1595,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 weight: weight,
                 volume: volume,
                 invoice: invoice || 'S/N',
+                sellerId: sellerId || null,
+                sellerName: sellerName,
+                sellerPhone: sellerPhone,
 
                 isComplement: isComp,
                 mainInvoice: mainInv,
@@ -3139,7 +3161,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                                                 </button>
                                                 <button class="btn btn-secondary btn-return-dashboard" onclick="window.returnToDashboard(${d.id})" title="Voltar para Painel (Estornar)" style="padding: 0.3rem; min-width: auto; color: var(--primary-color); border: 1px solid var(--border-color);">
                                                     <span class="material-icons-round" style="font-size: 1.1rem;">replay</span>
+                                                </button>
+                                                ${d.sellerPhone ? `
+                                                <button class="btn btn-secondary whatsapp-seller-btn" onclick="window.sendWhatsAppVendedor(${d.id}); this.classList.add('sent')" title="Avisar Vendedor" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.2); padding: 0.3rem; min-width: auto;">
+                                                    <span class="material-icons-round" style="font-size: 1.1rem;">support_agent</span>
                                                 </button>` : ''}
+                                                ` : ''}
                                                 <button class="btn btn-secondary btn-delete-dispatch" onclick="window.removeDispatch(${d.id})" style="padding: 0.3rem; min-width: auto; background: rgba(255,0,0,0.1); color: var(--accent-danger); border: none;" title="Excluir Permanentemente">
                                                     <span class="material-icons-round" style="font-size: 1.1rem;">delete_outline</span>
                                                 </button>
@@ -4497,6 +4524,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 });
                 Utils.saveRaw('dispatches', JSON.stringify(history));
+
+                // NOVO: Notificar Vendedores automaticamente (v3.6)
+                const sellersToNotify = {};
+                toDispatch.forEach(d => {
+                    if (d.sellerId && d.sellerPhone) {
+                        if (!sellersToNotify[d.sellerId]) {
+                            sellersToNotify[d.sellerId] = d.id;
+                        }
+                    }
+                });
+
+                Object.values(sellersToNotify).forEach((dispatchId, idx) => {
+                    setTimeout(() => {
+                        if (window.sendWhatsAppVendedor) window.sendWhatsAppVendedor(dispatchId, true);
+                    }, (idx + 1) * 7000); // Delay de 7s para compatibilidade
+                });
 
                 // ======= SALVAMENTO DA ENTIDADE ROMANEIO =======
                 const romaneios = Utils.getStorage('app_romaneios') || [];
@@ -5929,6 +5972,163 @@ document.addEventListener('DOMContentLoaded', async () => {
                 showToast('✅ Romaneio baixado e arquivado com sucesso!');
                 if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
             }
+        };
+
+        // --- FUNÇÕES DE VENDEDORES (v3.6) ---
+        window.renderSellersList = function () {
+            const tbody = document.getElementById('sellerListBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            let sellers = Utils.getStorage('app_sellers') || [];
+            
+            if (sellers.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 1.5rem; color: var(--text-secondary); font-style: italic;">Nenhum vendedor cadastrado.</td></tr>`;
+                return;
+            }
+
+            // Exibir em ordem alfabética
+            sellers.sort((a,b) => a.name.localeCompare(b.name)).forEach((s) => {
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid var(--border-color)';
+                tr.innerHTML = `
+                    <td style="padding: 0.8rem 0.6rem; font-weight: 500; color: var(--text-secondary);">${s.id || '-'}</td>
+                    <td style="padding: 0.8rem 0.6rem; font-weight: 600; color: var(--text-primary); text-transform: uppercase;">${s.name}</td>
+                    <td style="padding: 0.8rem 0.6rem; font-family: monospace; font-size: 0.9rem;">${s.phone}</td>
+                    <td style="padding: 0.8rem 0.6rem; text-align: center; vertical-align: middle;">
+                        <div style="display: flex; gap: 4px; justify-content: center;">
+                            <button class="btn btn-secondary" onclick="window.openEditSellerModal('${s.id}')" title="Editar Vendedor" style="padding: 4px 6px; height: 32px; display: flex; align-items: center; gap: 2px;">
+                                <span class="material-icons-round" style="font-size: 1rem;">edit</span>
+                                <span style="font-size: 0.75rem; font-weight: 600;">Editar</span>
+                            </button>
+                            <button class="btn btn-danger" onclick="window.deleteSeller('${s.id}')" title="Excluir Vendedor" style="padding: 4px 6px; height: 32px; background: rgba(239, 68, 68, 0.1); color: var(--accent-danger); border: none; display: flex; align-items: center; gap: 2px;">
+                                <span class="material-icons-round" style="font-size: 1rem;">delete</span>
+                                <span style="font-size: 0.75rem; font-weight: 600;">Excluir</span>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        };
+
+        window.openNewSellerModal = function () {
+            document.getElementById('sellerModalTitle').innerHTML = '<span class="material-icons-round" style="color: var(--primary-color);">support_agent</span><span>Novo Vendedor</span>';
+            document.getElementById('sellerEditId').value = '';
+            document.getElementById('sellerName').value = '';
+            document.getElementById('sellerPhone').value = '';
+            document.getElementById('sellerModal').style.display = 'flex';
+        };
+
+        window.openEditSellerModal = function (id) {
+            let sellers = Utils.getStorage('app_sellers') || [];
+            const seller = sellers.find(s => s.id === id);
+            if (!seller) return;
+
+            document.getElementById('sellerModalTitle').innerHTML = '<span class="material-icons-round" style="color: var(--primary-color);">edit</span><span>Editar Vendedor</span>';
+            document.getElementById('sellerEditId').value = seller.id;
+            document.getElementById('sellerName').value = seller.name;
+            document.getElementById('sellerPhone').value = seller.phone;
+            document.getElementById('sellerModal').style.display = 'flex';
+        };
+
+        window.saveSellerAction = function () {
+            const idInput = document.getElementById('sellerEditId').value;
+            const name = document.getElementById('sellerName').value.trim().toUpperCase();
+            const phone = document.getElementById('sellerPhone').value.trim().replace(/\D/g, '');
+
+            if (!name || !phone) {
+                window.showToast('❌ Nome e WhatsApp são obrigatórios!');
+                return;
+            }
+            if (phone.length < 10) {
+                window.showToast('❌ O WhatsApp precisa DDD e Número válidos!');
+                return;
+            }
+
+            let sellers = Utils.getStorage('app_sellers') || [];
+
+            if (idInput) {
+                // Modo Edição
+                const idx = sellers.findIndex(s => s.id === idInput);
+                if (idx > -1) {
+                    sellers[idx].name = name;
+                    sellers[idx].phone = phone;
+                    window.showToast('✅ Vendedor atualizado!');
+                }
+            } else {
+                // Modo Criação
+                const newId = 'V' + Date.now().toString().substring(7); // ID Curto
+                sellers.push({ id: newId, name, phone });
+                window.showToast('✅ Novo Vendedor cadastrado!');
+            }
+
+            Utils.setStorage('app_sellers', sellers);
+            document.getElementById('sellerModal').style.display = 'none';
+            if (window.renderSellersList) window.renderSellersList();
+            if (window.populateSellersSelector) window.populateSellersSelector(); // Refresca dropdown da Cotação
+        };
+
+        window.deleteSeller = function (id) {
+            let sellers = Utils.getStorage('app_sellers') || [];
+            const seller = sellers.find(s => s.id === id);
+            if (!seller) return;
+            if (confirm(`Tem certeza que deseja remover o vendedor "${seller.name}"?`)) {
+                sellers = sellers.filter(s => s.id !== id);
+                Utils.setStorage('app_sellers', sellers);
+                if (window.renderSellersList) window.renderSellersList();
+                if (window.populateSellersSelector) window.populateSellersSelector();
+                window.showToast('🗑️ Vendedor removido.');
+            }
+        };
+
+        window.populateSellersSelector = function () {
+            const select = document.getElementById('inputSeller');
+            if (!select) return;
+
+            const sellers = Utils.getStorage('app_sellers') || [];
+            const currentVal = select.value;
+
+            select.innerHTML = '<option value="">-- Selecione o Vendedor --</option>';
+            sellers.sort((a,b) => a.name.localeCompare(b.name)).forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.innerText = s.name;
+                select.appendChild(opt);
+            });
+
+            if (currentVal) select.value = currentVal;
+        };
+
+        window.sendWhatsAppVendedor = function (dispatchId, silent = false) {
+            const history = Utils.getStorage('dispatches');
+            const d = history.find(item => item.id == dispatchId);
+
+            if (!d) {
+                if (!silent) alert('Nota Fiscal não encontrada!');
+                return;
+            }
+
+            if (!d.sellerPhone) {
+                if (!silent) console.log(`Vendedor sem telefone para NF ${d.invoice}`);
+                return;
+            }
+
+            const phone = d.sellerPhone.replace(/\D/g, '');
+            const msg = `Olá ${d.sellerName}!\nInformamos que seu pedido NF: ${d.invoice} do cliente ${d.client} foi despachado via ${d.carrier}.\nPrevisão de Entrega: D+${d.leadTime} dias.\nBoas vendas! 🚀`;
+
+            const url = `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`;
+            window.open(url, '_blank');
+        };
+
+        // Hook para popular seletor no carregamento da seção
+        const originalShowSection = window.showSection;
+        window.showSection = (id) => {
+            if (id === 'system' || id === 'quote') {
+                setTimeout(() => {
+                    if (window.populateSellersSelector) window.populateSellersSelector();
+                }, 100);
+            }
+            if (originalShowSection) originalShowSection(id);
         };
 
     } catch (err) {

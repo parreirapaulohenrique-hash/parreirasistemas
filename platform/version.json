@@ -1,8 +1,8 @@
 {
     "module": "platform-core",
     "name": "Parreira Platform Portal",
-    "version": "11.7.22",
+    "version": "11.7.23",
     "date": "2026-03-23",
-    "last_change": "Ajuste na tabela de usuários para suportar ambos os botões enfileirados sem esbarrar na scrollbar",
-    "build": "20260323.01"
+    "last_change": "Módulo WhatsApp para Vendedores: Cadastro, Notificação Automática no Romaneio e ajuste de layout das tabelas.",
+    "build": "20260323.02"
 }
