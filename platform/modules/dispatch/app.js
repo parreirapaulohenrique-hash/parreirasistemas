@@ -719,7 +719,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const inputVolume = document.getElementById('inputVolume');
 
         const triggerCalc = () => {
-            if (selectedClient && inputValue.value && inputWeight.value && inputVolume && inputVolume.value) {
+            const sellerEl = document.getElementById('inputSeller');
+            if (selectedClient && inputValue.value && inputWeight.value && inputVolume && inputVolume.value && sellerEl && sellerEl.value) {
                 calculateAndSave(true);
             }
         };
@@ -727,6 +728,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         inputValue.addEventListener('input', triggerCalc);
         inputWeight.addEventListener('input', triggerCalc);
         if (inputVolume) inputVolume.addEventListener('input', triggerCalc);
+        document.getElementById('inputSeller').addEventListener('change', triggerCalc);
 
 
         const navItems = document.querySelectorAll('.nav-item');
@@ -1171,6 +1173,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         function calculateAndSave(silent = false) {
+            const sellerId = document.getElementById('inputSeller').value;
+            if (!sellerId) {
+                if (!silent) {
+                    alert('Por favor, selecione o Vendedor Responsável.');
+                } else {
+                    document.getElementById('resultsArea').innerHTML = `
+                        <div style="text-align: center; color: var(--accent-danger); margin-top: 4rem;">
+                            <span class="material-icons-round" style="font-size: 3rem; opacity: 0.5;">support_agent</span>
+                            <p style="font-weight: 600;">Selecione o Vendedor Responsável para calcular.</p>
+                        </div>
+                    `;
+                }
+                return;
+            }
             const norm = Utils.normalizeString;
             if (!selectedClient) {
 
