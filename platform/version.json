@@ -1,8 +1,8 @@
 {
     "module": "platform-core",
     "name": "Parreira Platform Portal",
-    "version": "11.7.23",
-    "date": "2026-03-23",
-    "last_change": "Módulo WhatsApp para Vendedores: Cadastro, Notificação Automática no Romaneio e ajuste de layout das tabelas.",
-    "build": "20260323.02"
+    "version": "11.7.24",
+    "date": "2026-03-24",
+    "last_change": "Hotfix: Restaurado modal de cadastro de vendedores (HTML) e correção do botão de abertura.",
+    "build": "20260324.01"
 }

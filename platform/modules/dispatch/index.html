@@ -2131,6 +2131,41 @@
             });
         }
     </script>
+    <!-- Modal Cadastro/Edição de Vendedor (v3.6) -->
+    <div id="sellerModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:10001; background:rgba(0,0,0,0.6); align-items:center; justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:var(--bg-card); border-radius:12px; width:90%; max-width:450px; padding:2rem; border:1px solid var(--border-color); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                <h3 id="sellerModalTitle" style="font-size:1.1rem; display:flex; align-items:center; gap:0.5rem; margin:0;">
+                    <span class="material-icons-round" style="color:var(--primary-color);">support_agent</span>
+                    <span>Novo Vendedor</span>
+                </h3>
+                <button onclick="document.getElementById('sellerModal').style.display='none'" style="background:none; border:none; cursor:pointer; color:var(--text-secondary); font-size:1.5rem;">&times;</button>
+            </div>
+            
+            <input type="hidden" id="sellerEditId" value="">
+            
+            <div style="display:grid; gap:1.2rem;">
+                <div class="form-group" style="margin:0;">
+                    <label class="form-label">Nome Completo</label>
+                    <input type="text" id="sellerName" class="form-input" placeholder="Ex: PAULO VENDEDOR" style="text-transform: uppercase;">
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label class="form-label">WhatsApp (com DDD)</label>
+                    <input type="text" id="sellerPhone" class="form-input" placeholder="91988887777" maxlength="11">
+                    <small style="color:var(--text-secondary); font-size:0.75rem;">Apenas números, sem espaços ou símbolos.</small>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:1rem; margin-top:2rem;">
+                <button class="btn btn-secondary" onclick="document.getElementById('sellerModal').style.display='none'" style="flex:1;">CANCELAR</button>
+                <button class="btn btn-primary" onclick="window.saveSellerAction()" style="flex:1;">
+                    <span class="material-icons-round" style="font-size:1.1rem;">save</span>
+                    SALVAR
+                </button>
+            </div>
+        </div>
+    </div>
+
 </body>
 
 
