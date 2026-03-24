@@ -4246,7 +4246,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // if (pending.length === 0) { ... }
 
             // All registered carriers
-            const allCarriers = Utils.getStorage('carrier_list');
+            const allCarriers = Utils.getStorage('carrier_list') || [];
 
             // Group pending items by Carrier
             const pendingByCarrier = {};
@@ -4254,6 +4254,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const carrierKey = String(p.carrier || '').trim().toUpperCase();
                 if (!pendingByCarrier[carrierKey]) pendingByCarrier[carrierKey] = [];
                 pendingByCarrier[carrierKey].push(p);
+            });
+
+            // NOVO: Ordenar transportadoras por quantidade de itens pendentes (v3.7.3)
+            allCarriers.sort((a, b) => {
+                const countA = (pendingByCarrier[String(a || '').trim().toUpperCase()] || []).length;
+                const countB = (pendingByCarrier[String(b || '').trim().toUpperCase()] || []).length;
+                if (countA !== countB) return countB - countA; // Quem tem carga sobe
+                return String(a).localeCompare(String(b));     // Ordem alfabética para empate/vazios
             });
 
             // Show all carriers (fixed cards)
