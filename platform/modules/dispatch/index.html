@@ -247,7 +247,11 @@
                     Integração Acontec
                 </a>
                 <a href="#system" onclick="window.showSection('system')" class="nav-item">
-                    <span class="material-icons-round">business</span>
+                    <span class="material-icons-round">app_registration</span>
+                    Cadastros
+                </a>
+                <a href="#app-settings" onclick="window.showSection('app-settings')" class="nav-item">
+                    <span class="material-icons-round">settings</span>
                     Configurações
                 </a>
 
@@ -1571,8 +1575,8 @@
                     <div class="welcome-banner"
                         style="display: flex; justify-content: space-between; align-items: flex-start;">
                         <div>
-                            <h2>Configurações do Sistema</h2>
-                            <p>Gerenciamento de base de dados e informações da empresa.</p>
+                            <h2>Gestão de Cadastros</h2>
+                            <p>Gerenciamento de usuários, clientes e vendedores.</p>
                         </div>
                     </div>
 
@@ -1913,6 +1917,59 @@
                                 </button>
                                 <input type="file" id="fileRestore" hidden accept=".json">
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NOVA ABA: CONFIGURAÇÕES DE PARAMETRIZAÇÃO -->
+                <div id="view-app-settings" class="view-section" style="display: none;">
+                    <div class="welcome-banner">
+                        <h2>Configurações do Sistema</h2>
+                        <p>Parametrização de automações e regras globais de despacho.</p>
+                    </div>
+
+                    <div class="card" style="margin-top: 1rem; max-width: 600px;">
+                        <div class="card-header">
+                            <h3 style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span class="material-icons-round" style="color: var(--accent-success);">whatsapp</span> 
+                                Automação de Mensagens (WhatsApp)
+                            </h3>
+                        </div>
+                        <div class="card-body" style="padding: 1.5rem;">
+                            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
+                                Defina quais notificações devem ser enviadas automaticamente após a geração de um romaneio.
+                            </p>
+                            
+                            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                                <!-- Vendedor -->
+                                <label style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; background: var(--bg-secondary); border-radius: 8px; cursor: pointer;">
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <span class="material-icons-round" style="color: var(--accent-success);">support_agent</span>
+                                        <div>
+                                            <div style="font-weight: 600;">Notificar Vendedor</div>
+                                            <div style="font-size: 0.75rem; color: var(--text-secondary);">Envia informativo de despacho para o vendedor vinculado.</div>
+                                        </div>
+                                    </div>
+                                    <input type="checkbox" id="cfg_wa_auto_seller" style="width: 20px; height: 20px; cursor: pointer;">
+                                </label>
+
+                                <!-- Cliente -->
+                                <label style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; background: var(--bg-secondary); border-radius: 8px; cursor: pointer;">
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <span class="material-icons-round" style="color: var(--accent-primary);">person</span>
+                                        <div>
+                                            <div style="font-weight: 600;">Notificar Cliente</div>
+                                            <div style="font-size: 0.75rem; color: var(--text-secondary);">Envia informativo de despacho para o cliente (NF).</div>
+                                        </div>
+                                    </div>
+                                    <input type="checkbox" id="cfg_wa_auto_client" style="width: 20px; height: 20px; cursor: pointer;">
+                                </label>
+                            </div>
+
+                            <button class="btn btn-primary" onclick="window.saveAppSettings()" style="margin-top: 1.5rem; width: 100%; justify-content: center; height: 45px;">
+                                <span class="material-icons-round">save</span>
+                                SALVAR CONFIGURAÇÕES
+                            </button>
                         </div>
                     </div>
                 </div>

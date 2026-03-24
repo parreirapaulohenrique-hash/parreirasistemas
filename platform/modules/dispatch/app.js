@@ -149,6 +149,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         let sellers = Utils.getStorage('app_sellers') || [];
         console.log(`👤 ${sellers.length} vendedores carregados`);
 
+        // App Settings: Load and Parametrize
+        window.loadAppSettings = function() {
+            const settings = Utils.getStorage('app_settings') || {
+                wa_auto_seller: true,
+                wa_auto_client: false
+            };
+            const chkSeller = document.getElementById('cfg_wa_auto_seller');
+            const chkClient = document.getElementById('cfg_wa_auto_client');
+            if (chkSeller) chkSeller.checked = settings.wa_auto_seller;
+            if (chkClient) chkClient.checked = settings.wa_auto_client;
+            window.app_settings = settings;
+        };
+        window.saveAppSettings = function() {
+            const settings = {
+                wa_auto_seller: document.getElementById('cfg_wa_auto_seller').checked,
+                wa_auto_client: document.getElementById('cfg_wa_auto_client').checked
+            };
+            Utils.setStorage('app_settings', settings);
+            window.app_settings = settings;
+            window.showToast('✅ Configurações salvas com sucesso!');
+        };
+        window.loadAppSettings();
+
         let currentUser = null; // Default: Require Login
 
         // --- AUTHENTICATION RECOVERED ---
@@ -822,7 +845,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     'rules': 'Tabelas de Frete',
                     'reports': 'Relatórios & KPIs',
                     'configs': 'Config. Transportadoras',
-                    'system': 'Configurações'
+                    'system': 'Cadastros',
+                    'app-settings': 'Configurações'
                 };
                 breadLabel.innerText = labels[id] || id;
             }
@@ -4541,21 +4565,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
                 Utils.saveRaw('dispatches', JSON.stringify(history));
 
-                // NOVO: Notificar Vendedores automaticamente (v3.6)
-                const sellersToNotify = {};
-                toDispatch.forEach(d => {
-                    if (d.sellerId && d.sellerPhone) {
-                        if (!sellersToNotify[d.sellerId]) {
-                            sellersToNotify[d.sellerId] = d.id;
+                // NOVO: Notificar Vendedores automaticamente (Parametrizável v3.7)
+                const settings = window.app_settings || { wa_auto_seller: true };
+                if (settings.wa_auto_seller) {
+                    const sellersToNotify = {};
+                    toDispatch.forEach(d => {
+                        if (d.sellerId && d.sellerPhone) {
+                            if (!sellersToNotify[d.sellerId]) {
+                                sellersToNotify[d.sellerId] = d.id;
+                            }
                         }
-                    }
-                });
+                    });
 
-                Object.values(sellersToNotify).forEach((dispatchId, idx) => {
-                    setTimeout(() => {
-                        if (window.sendWhatsAppVendedor) window.sendWhatsAppVendedor(dispatchId, true);
-                    }, (idx + 1) * 7000); // Delay de 7s para compatibilidade
-                });
+                    Object.values(sellersToNotify).forEach((dispatchId, idx) => {
+                        setTimeout(() => {
+                            if (window.sendWhatsAppVendedor) window.sendWhatsAppVendedor(dispatchId, true);
+                        }, (idx + 1) * 7000); 
+                    });
+                }
 
                 // ======= SALVAMENTO DA ENTIDADE ROMANEIO =======
                 const romaneios = Utils.getStorage('app_romaneios') || [];
@@ -4581,18 +4608,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Open print manifest
                 window.printSpecificRomaneio(currentModalCarrier, toDispatch);
 
-                /* 
-                // Disparo Automático de WhatsApp (DESATIVADO v3.6.5 por solicitação do usuário)
-                let delayWa = 1500;
-                toDispatch.forEach((d) => {
-                    setTimeout(() => {
-                        if (window.sendWhatsApp) {
-                            window.sendWhatsApp(d.id, true); // Modo silencioso = true
-                        }
-                    }, delayWa);
-                    delayWa += 7000; // API aguarda longos 7 segundos para permitir o envio humano no App Desktop
-                });
-                */
+                // Disparo Automático de WhatsApp para CLIENTES (Parametrizável v3.7)
+                if (settings.wa_auto_client) {
+                    let delayWa = 1500;
+                    toDispatch.forEach((d) => {
+                        setTimeout(() => {
+                            if (window.sendWhatsApp) {
+                                window.sendWhatsApp(d.id, true); // Modo silencioso = true
+                            }
+                        }, delayWa);
+                        delayWa += 7000;
+                    });
+                }
 
                 // Show appropriate toast
                 if (deliveryType === 'moto') {

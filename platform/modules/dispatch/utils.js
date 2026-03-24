@@ -127,7 +127,7 @@ const Utils = {
             console.log(`🔄 [Cloud] loadAll() chamado. TenantId: ${this.tenantId}`);
             if (!this.hasTenant()) return false;
 
-            const keys = ['dispatches', 'freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients', 'invoice_history', 'app_sellers'];
+            const keys = ['dispatches', 'freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients', 'invoice_history', 'app_sellers', 'app_settings'];
 
             // --- FIREBASE MODE ---
             if (typeof firebase !== 'undefined' && window.db) {
@@ -280,6 +280,7 @@ const Utils = {
                         window.renderSellersList();
                         if (window.populateSellersSelector) window.populateSellersSelector();
                     }
+                    if (key === 'app_settings' && window.loadAppSettings) window.loadAppSettings();
                 }
             } else {
                 // Nuvem realmente vazia/nula (menos de 2 chars)
@@ -294,7 +295,7 @@ const Utils = {
             // --- FIREBASE MODE ---
             if (typeof firebase !== 'undefined' && window.db && !window.hasAttachedListeners) {
                 window.hasAttachedListeners = true;
-                const keys = ['dispatches', 'freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients', 'invoice_history', 'app_sellers'];
+                const keys = ['dispatches', 'freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients', 'invoice_history', 'app_sellers', 'app_settings'];
                 console.log(`📡 Iniciando Sync SaaS (Firestore) para: ${this.tenantId}`);
 
                 keys.forEach(key => {

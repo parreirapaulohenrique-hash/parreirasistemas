@@ -1,5 +1,5 @@
 {
-    "version": "3.6.5",
+    "version": "3.7.0",
     "lastUpdate": "2026-03-24",
-    "change": "Desativado o disparo automático de WhatsApp para clientes. Mantido apenas para vendedores."
+    "change": "Reestruturadas abas (Cadastros vs Configurações) e adicionada parametrização para mensagens automáticas de WhatsApp."
 }
