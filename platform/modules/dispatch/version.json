@@ -1,5 +1,5 @@
 {
-    "version": "3.7.1",
+    "version": "3.7.2",
     "lastUpdate": "2026-03-24",
-    "change": "Removido aviso visual de obrigatoriedade e melhorado o fluxo automático do cursor (foco no Vendedor após Cliente)."
+    "change": "Atualizado template de WhatsApp para vendedores com volumes e valor da NF."
 }
