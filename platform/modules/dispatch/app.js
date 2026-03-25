@@ -4657,6 +4657,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const modal = document.getElementById('shipmentModal');
                 if (modal) modal.style.display = 'none';
 
+                // NOVO: Atualizar o Painel imediatamente após finalizar o despacho (v3.7.6)
+                if (window.renderDashboard) window.renderDashboard();
+
                 // Refresh delivery modules if available
                 if (window.DeliveryModule) {
                     window.DeliveryModule.renderMotoEntregas();

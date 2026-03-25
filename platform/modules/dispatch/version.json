@@ -1,5 +1,5 @@
 {
-    "version": "3.7.5",
+    "version": "3.7.6",
     "lastUpdate": "2026-03-25",
-    "change": "Implementada restrição rigorosa de acesso para perfis Motoboy e Motorista (v3.7.5)."
+    "change": "Corrigida atualização reativa do Painel após finalizar despacho no modal (v3.7.6)."
 }
