@@ -1,4 +1,4 @@
-﻿// WMS Addressing (Locations) Logic
+// WMS Addressing (Locations) Logic
 
 let locationsState = {
     gridData: [],
@@ -110,155 +110,251 @@ window.loadLocationsView = async function () {
                 </div>
             </div>
 
-            <!-- Modal Generator (unchanged) -->
-            <div id="modalGenerator" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
-                <!-- ... content ... -->
-                <div class="card" style="width:480px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+            <!-- Modal Generator (NOVO: Gerador em Massa v1.5) -->
+            <div id="modalGenerator" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1100; align-items:center; justify-content:center;">
+                <div class="card" style="width:100%; max-width:600px; box-shadow: 0 10px 40px rgba(0,0,0,0.7); animation: slideUp 0.3s ease-out;">
                     <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
-                        <h3>Gerador de Endereços</h3>
+                        <h3 style="display:flex; align-items:center; gap:0.5rem;">
+                            <span class="material-icons-round" style="color:var(--primary-color);">grid_view</span>
+                            Gerador de Endereçamento em Massa
+                        </h3>
                         <span class="material-icons-round" style="cursor:pointer; color:var(--text-secondary);" onclick="document.getElementById('modalGenerator').style.display='none'">close</span>
                     </div>
-                    <div class="card-body" style="padding:1.25rem;">
-                        <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:1rem;">Gera um range de endereços (Ex: 01-10-0101 a 01-10-0510).</p>
+                    <div class="card-body" style="padding:1.5rem;">
+                        
+                        <!-- Coluna Dupla: Rua -->
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
                             <div>
-                                <label class="text-secondary" style="font-size:0.8rem; display:block; margin-bottom:0.25rem;">Rua</label>
-                                <input type="text" id="genRua" class="form-input" value="01" maxlength="2">
+                                <label class="text-secondary" style="font-size:0.75rem; display:block; margin-bottom:0.4rem; font-weight:600; text-transform:uppercase;">Rua Inicial</label>
+                                <select id="genRuaIni" class="form-input"></select>
                             </div>
                             <div>
-                                <label class="text-secondary" style="font-size:0.8rem; display:block; margin-bottom:0.25rem;">Prédio</label>
-                                <input type="text" id="genPredio" class="form-input" value="10" maxlength="2">
-                            </div>
-                            <div>
-                                <label class="text-secondary" style="font-size:0.8rem; display:block; margin-bottom:0.25rem;">Níveis (Altura)</label>
-                                <input type="number" id="genNiveis" class="form-input" value="5" min="1" max="20">
-                            </div>
-                            <div>
-                                <label class="text-secondary" style="font-size:0.8rem; display:block; margin-bottom:0.25rem;">Posições (Lateral)</label>
-                                <input type="number" id="genPosicoes" class="form-input" value="10" min="1" max="100">
+                                <label class="text-secondary" style="font-size:0.75rem; display:block; margin-bottom:0.4rem; font-weight:600; text-transform:uppercase;">Rua Final</label>
+                                <select id="genRuaEnd" class="form-input"></select>
                             </div>
                         </div>
-                        <div style="background:rgba(14,165,233,0.1); color:var(--primary-color); padding:0.75rem; border-radius:6px; font-size:0.85rem;">
-                            <span class="material-icons-round" style="font-size:1rem; vertical-align:middle; margin-right:0.25rem;">info</span>
-                            Serão gerados <strong id="genPreviewCount">50</strong> aptos.
-                            Primeiro: <code id="genFirst">01-10-0101</code> | Último: <code id="genLast">01-10-0510</code>
+
+                        <!-- Prédio e Nível -->
+                        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                            <div>
+                                <label class="text-secondary" style="font-size:0.75rem; display:block; margin-bottom:0.4rem; font-weight:600; text-transform:uppercase;">Prédio (Dê/Até)</label>
+                                <div style="display:flex; gap:0.4rem; align-items:center;">
+                                    <input type="number" id="genPredioIni" class="form-input" value="1" min="1" style="text-align:center;">
+                                    <span style="color:var(--text-secondary);">-</span>
+                                    <input type="number" id="genPredioEnd" class="form-input" value="10" min="1" style="text-align:center;">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-secondary" style="font-size:0.75rem; display:block; margin-bottom:0.4rem; font-weight:600; text-transform:uppercase;">Nível (Dê/Até)</label>
+                                <div style="display:flex; gap:0.4rem; align-items:center;">
+                                    <input type="number" id="genNivelIni" class="form-input" value="1" min="1" style="text-align:center;">
+                                    <span style="color:var(--text-secondary);">-</span>
+                                    <input type="number" id="genNivelEnd" class="form-input" value="5" min="1" style="text-align:center;">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-secondary" style="font-size:0.75rem; display:block; margin-bottom:0.4rem; font-weight:600; text-transform:uppercase;">Apto (Dê/Até)</label>
+                                <div style="display:flex; gap:0.4rem; align-items:center;">
+                                    <input type="number" id="genAptoIni" class="form-input" value="1" min="1" style="text-align:center;">
+                                    <span style="color:var(--text-secondary);">-</span>
+                                    <input type="number" id="genAptoEnd" class="form-input" value="1" min="1" style="text-align:center;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Outras Configurações e Filtros (Botões da Imagem) -->
+                        <div style="display:flex; justify-content:space-between; align-items:end; margin-bottom:1rem;">
+                            <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                                 <label class="text-secondary" style="font-size:0.75rem; display:block; font-weight:600; text-transform:uppercase;">Tipo de Endereço</label>
+                                 <label style="display:flex; align-items:center; gap:0.6rem; cursor:pointer; background:var(--bg-body); padding:0.6rem 1rem; border-radius:6px; border:1px solid var(--border-color);">
+                                     <input type="checkbox" id="genPalete" style="width:18px; height:18px; accent-color:var(--primary-color);">
+                                     <span style="font-size:0.85rem; font-weight:500;">Palete</span>
+                                 </label>
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:0.5rem; flex:1; margin-left:2rem;">
+                                <label class="text-secondary" style="font-size:0.75rem; display:block; font-weight:600; text-transform:uppercase;">Sequenciamento (Prédio)</label>
+                                <div class="btn-group" id="genFilterGroup" style="display:flex; border:1px solid var(--border-color); border-radius:8px; overflow:hidden; background:var(--bg-body);">
+                                    <button class="btn-filter active" data-type="par" style="flex:1; padding:0.6rem; border:none; background:none; cursor:pointer; font-size:0.85rem; font-weight:600; color:var(--text-secondary);">Par</button>
+                                    <button class="btn-filter" data-type="todos" style="flex:1; padding:0.6rem; border:none; background:none; cursor:pointer; font-size:0.85rem; font-weight:600; color:var(--text-secondary); border-left:1px solid var(--border-color); border-right:1px solid var(--border-color);">Todos</button>
+                                    <button class="btn-filter" data-type="impar" style="flex:1; padding:0.6rem; border:none; background:none; cursor:pointer; font-size:0.85rem; font-weight:600; color:var(--text-secondary);">Ímpar</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="genPreviewBox" style="background:rgba(14,165,233,0.1); color:var(--primary-color); padding:1rem; border-radius:8px; font-size:0.85rem; border-left:4px solid var(--primary-color);">
+                            <div style="display:flex; justify-content:space-between;">
+                                <span>Serão criados: <strong id="genPreviewCount">0</strong> endereços</span>
+                                <span>Ex: <code id="genPreviewEx">01-01-0101</code></span>
+                            </div>
                         </div>
                     </div>
-                    <div style="padding:1rem; border-top:1px solid var(--border-color); display:flex; justify-content:flex-end; gap:0.5rem;">
+                    <div style="padding:1.25rem; border-top:1px solid var(--border-color); display:flex; justify-content:flex-end; gap:0.75rem; background:rgba(0,0,0,0.1);">
                         <button class="btn btn-secondary" onclick="document.getElementById('modalGenerator').style.display='none'">Cancelar</button>
-                        <button class="btn btn-primary" onclick="generateLocations()">
-                            <span class="material-icons-round" style="font-size:1rem;">check</span> Gerar
+                        <button class="btn btn-primary" onclick="generateLocationsMassive()" style="padding:0 1.5rem;">
+                            <span class="material-icons-round" style="font-size:1.1rem;">auto_fix_high</span> Criar Endereçamentos
                         </button>
                     </div>
                 </div>
             </div>
+
+            <style>
+                .btn-filter.active { background: var(--primary-color) !important; color: white !important; }
+                @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+            </style>
         `;
 
-        // Listeners for live preview (simplified)
-        ['genRua', 'genPredio', 'genNiveis', 'genPosicoes'].forEach(id => {
-            document.getElementById(id).addEventListener('input', updateGenPreview);
+        // Popular selects de Rua
+        const sIni = document.getElementById('genRuaIni');
+        const sEnd = document.getElementById('genRuaEnd');
+        for(let i=1; i<=99; i++) {
+            const val = i.toString().padStart(2, '0');
+            sIni.options.add(new Option('Rua ' + val, val));
+            sEnd.options.add(new Option('Rua ' + val, val));
+        }
+        sEnd.value = '01';
+
+        // Listeners p/ botões de filtro (Par/Impar/Todos)
+        const filterBtns = document.querySelectorAll('.btn-filter');
+        filterBtns.forEach(btn => {
+            btn.onclick = () => {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                updateMassPreview();
+            };
+        });
+
+        // Listeners for live preview
+        ['genRuaIni', 'genRuaEnd', 'genPredioIni', 'genPredioEnd', 'genNivelIni', 'genNivelEnd', 'genAptoIni', 'genAptoEnd', 'genPalete'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateMassPreview);
         });
     }
-
     loadLocationsData();
 }
 
-// ... loadLocationsData (unchanged) ...
-window.loadLocationsData = function () {
-    const stored = localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : ''));
-    if (stored) {
-        locationsState.gridData = JSON.parse(stored);
-    } else {
-        locationsState.gridData = [];
-    }
-    filterGrid();
+// --- Mass Preview & Logic (v1.5) ---
+function updateMassPreview() {
+    try {
+        const rIni = parseInt(document.getElementById('genRuaIni').value);
+        const rEnd = parseInt(document.getElementById('genRuaEnd').value);
+        const pIni = parseInt(document.getElementById('genPredioIni').value);
+        const pEnd = parseInt(document.getElementById('genPredioEnd').value);
+        const nIni = parseInt(document.getElementById('genNivelIni').value);
+        const nEnd = parseInt(document.getElementById('genNivelEnd').value);
+        const aIni = parseInt(document.getElementById('genAptoIni').value);
+        const aEnd = parseInt(document.getElementById('genAptoEnd').value);
+        
+        const filterType = document.querySelector('.btn-filter.active')?.getAttribute('data-type') || 'todos';
+
+        let count = 0;
+        let example = '';
+
+        for (let r = Math.min(rIni, rEnd); r <= Math.max(rIni, rEnd); r++) {
+            for (let p = Math.min(pIni, pEnd); p <= Math.max(pIni, pEnd); p++) {
+                // Filtro Par/Impar no Prédio
+                if (filterType === 'par' && p % 2 !== 0) continue;
+                if (filterType === 'impar' && p % 2 === 0) continue;
+
+                for (let n = Math.min(nIni, nEnd); n <= Math.max(nIni, nEnd); n++) {
+                    for (let a = Math.min(aIni, aEnd); a <= Math.max(aIni, aEnd); a++) {
+                        count++;
+                        if (!example) {
+                            const rs = r.toString().padStart(2, '0');
+                            const ps = p.toString().padStart(2, '0');
+                            const ns = n.toString().padStart(2, '0');
+                            const as = a.toString().padStart(2, '0');
+                            example = `${rs}-${ps}-${ns}${as}`;
+                        }
+                    }
+                }
+            }
+        }
+
+        document.getElementById('genPreviewCount').textContent = count;
+        document.getElementById('genPreviewEx').textContent = example || '---';
+    } catch (e) { console.error(e); }
 }
 
-// --- View Mode Toggle ---
-window.toggleViewMode = function () {
-    // Cycle: grid -> table -> map
-    const btn = document.getElementById('btnToggleView');
-
-    if (locationsState.viewMode === 'grid') {
-        locationsState.viewMode = 'table';
-        btn.innerHTML = '<span class="material-icons-round">grid_view</span>'; // Show grid icon (next is grid? no, wait map)
-        btn.innerHTML = '<span class="material-icons-round">map</span>'; // Icon for next: Map
-    } else if (locationsState.viewMode === 'table') {
-        locationsState.viewMode = 'map';
-        btn.innerHTML = '<span class="material-icons-round">grid_view</span>'; // Icon for next: Grid
-    } else {
-        locationsState.viewMode = 'grid';
-        btn.innerHTML = '<span class="material-icons-round">table_rows</span>'; // Icon for next: Table
-    }
-    filterGrid();
-}
-
-// --- Preview ---
-function updateGenPreview() {
-    const rua = (document.getElementById('genRua').value || '01').padStart(2, '0');
-    const predio = (document.getElementById('genPredio').value || '10').padStart(2, '0');
-    const n = parseInt(document.getElementById('genNiveis').value) || 0;
-    const p = parseInt(document.getElementById('genPosicoes').value) || 0;
-
-    document.getElementById('genPreviewCount').textContent = n * p;
-    document.getElementById('genFirst').textContent = `${rua}-${predio}-0101`;
-    const lastN = n.toString().padStart(2, '0');
-    const lastP = p.toString().padStart(2, '0');
-    document.getElementById('genLast').textContent = `${rua}-${predio}-${lastN}${lastP}`;
-}
-
-// --- Generator ---
 window.openGeneratorModal = function () {
     document.getElementById('modalGenerator').style.display = 'flex';
-    updateGenPreview();
+    updateMassPreview();
 }
 
-window.generateLocations = async function () {
-    const rua = document.getElementById('genRua').value.padStart(2, '0');
-    const predio = document.getElementById('genPredio').value.padStart(2, '0');
-    const niveis = parseInt(document.getElementById('genNiveis').value);
-    const posicoes = parseInt(document.getElementById('genPosicoes').value);
+window.generateLocationsMassive = async function () {
+    try {
+        const rIni = parseInt(document.getElementById('genRuaIni').value);
+        const rEnd = parseInt(document.getElementById('genRuaEnd').value);
+        const pIni = parseInt(document.getElementById('genPredioIni').value);
+        const pEnd = parseInt(document.getElementById('genPredioEnd').value);
+        const nIni = parseInt(document.getElementById('genNivelIni').value);
+        const nEnd = parseInt(document.getElementById('genNivelEnd').value);
+        const aIni = parseInt(document.getElementById('genAptoIni').value);
+        const aEnd = parseInt(document.getElementById('genAptoEnd').value);
+        const isPalete = document.getElementById('genPalete').checked;
+        const filterType = document.querySelector('.btn-filter.active')?.getAttribute('data-type') || 'todos';
 
-    let newLocs = [];
-    let existing = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
-    const existingIds = new Set(existing.map(l => l.id));
-    let duplicates = 0;
+        let newLocs = [];
+        let existing = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+        const existingIds = new Set(existing.map(l => l.id));
+        let duplicates = 0;
 
-    for (let n = 1; n <= niveis; n++) {
-        for (let p = 1; p <= posicoes; p++) {
-            const nivelStr = n.toString().padStart(2, '0');
-            const posStr = p.toString().padStart(2, '0');
-            const apto = `${nivelStr}${posStr}`;
-            const fullId = `${rua}-${predio}-${apto}`;
+        for (let r = Math.min(rIni, rEnd); r <= Math.max(rIni, rEnd); r++) {
+            const rs = r.toString().padStart(2, '0');
 
-            if (existingIds.has(fullId)) {
-                duplicates++;
-                continue;
+            for (let p = Math.min(pIni, pEnd); p <= Math.max(pIni, pEnd); p++) {
+                if (filterType === 'par' && p % 2 !== 0) continue;
+                if (filterType === 'impar' && p % 2 === 0) continue;
+                const ps = p.toString().padStart(2, '0');
+
+                for (let n = Math.min(nIni, nEnd); n <= Math.max(nIni, nEnd); n++) {
+                    const ns = n.toString().padStart(2, '0');
+
+                    for (let a = Math.min(aIni, aEnd); a <= Math.max(aIni, aEnd); a++) {
+                        const as = a.toString().padStart(2, '0');
+                        const apto = `${ns}${as}`;
+                        const fullId = `${rs}-${ps}-${apto}`;
+
+                        if (existingIds.has(fullId)) {
+                            duplicates++;
+                            continue;
+                        }
+
+                        newLocs.push({
+                            id: fullId,
+                            rua: rs,
+                            predio: ps,
+                            nivel: ns,
+                            posicao: as,
+                            apto: apto,
+                            status: 'LIVRE',
+                            tipo: isPalete ? 'Palete' : 'Picking'
+                        });
+                    }
+                }
             }
-
-            newLocs.push({
-                id: fullId,
-                rua: rua,
-                predio: predio,
-                nivel: nivelStr,
-                posicao: posStr,
-                apto: apto,
-                status: 'LIVRE'
-            });
         }
+
+        if (newLocs.length === 0) {
+            alert('Nenhum novo endereço para gerar.');
+            return;
+        }
+
+        existing = [...existing, ...newLocs];
+        localStorage.setItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(existing));
+
+        locationsState.gridData = existing;
+        filterGrid();
+        if (window.updateDashboardStats) window.updateDashboardStats();
+        
+        document.getElementById('modalGenerator').style.display = 'none';
+        
+        let msg = `${newLocs.length} endereços gerados com sucesso!`;
+        if (duplicates > 0) msg += `\n(${duplicates} duplicados ignorados)`;
+        alert(msg);
+
+    } catch (err) {
+        console.error(err);
+        alert('Erro ao gerar endereços: ' + err.message);
     }
-
-    existing = [...existing, ...newLocs];
-    localStorage.setItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(existing));
-
-    locationsState.gridData = existing;
-    filterGrid();
-    updateDashboardStats();
-    document.getElementById('modalGenerator').style.display = 'none';
-
-    let msg = `${newLocs.length} endereços gerados!`;
-    if (duplicates > 0) msg += `\n(${duplicates} duplicados ignorados)`;
-    alert(msg);
 }
 
 // --- Filter & Render ---
