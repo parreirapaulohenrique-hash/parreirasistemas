@@ -2,7 +2,9 @@
 
 let locationsState = {
     gridData: [],
-    viewMode: 'grid' // 'grid' or 'table'
+    viewMode: 'grid', // 'grid', 'table', 'map', or 'lateral'
+    lateralRua: '',
+    lateralLado: 'par'
 };
 
 // --- Dashboard Stats ---
@@ -32,7 +34,10 @@ window.loadLocationsView = async function () {
                     <h3>Gestão de Endereços</h3>
                     <div style="display:flex; gap:0.5rem;">
                         <button class="btn btn-secondary" onclick="toggleViewMode()" id="btnToggleView" title="Alternar Visualização">
-                            <span class="material-icons-round">map</span>
+                            <span class="material-icons-round">view_module</span>
+                        </button>
+                        <button class="btn btn-secondary" id="btnLateralView" onclick="setLateralMode()" title="Visão Lateral 3D">
+                            <span class="material-icons-round" style="color:var(--primary-color);">3d_rotation</span>
                         </button>
                         <button class="btn btn-secondary" onclick="loadLocationsData()">
                             <span class="material-icons-round">refresh</span>
@@ -106,6 +111,28 @@ window.loadLocationsView = async function () {
 
                     <!-- Map View (hidden by default) -->
                     <div id="locationsMap" style="display:none; max-height:55vh; overflow-y:auto;"></div>
+
+                    <!-- Lateral View (NOVO: v1.6) -->
+                    <div id="locationsLateral" style="display:none; height:60vh; overflow:hidden; border-radius:12px; background:var(--bg-dark); border:1px solid var(--border-color); position:relative; perspective:1000px;">
+                        <!-- Controls for Lateral View -->
+                        <div style="position:absolute; top:1rem; left:1rem; z-index:10; display:flex; gap:0.5rem; background:rgba(0,0,0,0.5); padding:0.5rem; border-radius:8px; backdrop-filter:blur(4px);">
+                            <select id="latRua" class="form-input" style="width:100px; padding:0.3rem 0.5rem; height:32px;" onchange="updateLateralView()"></select>
+                            <div class="btn-group" style="display:flex; border-radius:6px; overflow:hidden;">
+                                <button class="btn-lat-lado active" data-lado="par" onclick="setLateralLado('par')" style="padding:0.3rem 0.8rem; border:none; background:rgba(255,255,255,0.1); color:white; cursor:pointer; font-size:0.75rem; font-weight:600;">PAR</button>
+                                <button class="btn-lat-lado" data-lado="impar" onclick="setLateralLado('impar')" style="padding:0.3rem 0.8rem; border:none; background:rgba(255,255,255,0.1); color:white; cursor:pointer; font-size:0.75rem; font-weight:600; border-left:1px solid rgba(255,255,255,0.1);">ÍMPAR</button>
+                            </div>
+                        </div>
+                        <!-- Canvas/Container for Racks -->
+                        <div id="lateralCanvas" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; overflow:auto; padding:2rem;">
+                            <!-- Racks will be injected here -->
+                        </div>
+                        <!-- Legend -->
+                        <div style="position:absolute; bottom:1rem; right:1rem; display:flex; gap:1rem; font-size:0.7rem; color:var(--text-secondary);">
+                            <div style="display:flex; align-items:center; gap:0.3rem;"><div style="width:10px; height:10px; background:#10b981; border-radius:2px;"></div> Livre</div>
+                            <div style="display:flex; align-items:center; gap:0.3rem;"><div style="width:10px; height:10px; background:#3b82f6; border-radius:2px;"></div> Ocupado</div>
+                            <div style="display:flex; align-items:center; gap:0.3rem;"><div style="width:10px; height:10px; background:#f59e0b; border-radius:2px;"></div> Bloqueado</div>
+                        </div>
+                    </div>
 
                 </div>
             </div>
@@ -357,6 +384,172 @@ window.generateLocationsMassive = async function () {
     }
 }
 
+
+window.toggleViewMode = function () {
+    const btn = document.getElementById('btnToggleView');
+    if (locationsState.viewMode === 'grid') {
+        locationsState.viewMode = 'table';
+        btn.innerHTML = '<span class="material-icons-round">grid_view</span>';
+    } else if (locationsState.viewMode === 'table') {
+        locationsState.viewMode = 'map';
+        btn.innerHTML = '<span class="material-icons-round">map</span>';
+    } else {
+        locationsState.viewMode = 'grid';
+        btn.innerHTML = '<span class="material-icons-round">table_rows</span>';
+    }
+    filterGrid();
+}
+
+window.setLateralMode = function() {
+    locationsState.viewMode = 'lateral';
+    
+    // Popular Ruas
+    const data = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+    const streets = [...new Set(data.map(l => l.rua))].sort();
+    const sel = document.getElementById('latRua');
+    if(sel) {
+        sel.innerHTML = '';
+        streets.forEach(s => sel.add(new Option('Rua '+s, s)));
+        if(streets.length > 0 && !locationsState.lateralRua) {
+            locationsState.lateralRua = streets[0];
+            sel.value = streets[0];
+        } else if(locationsState.lateralRua) {
+            sel.value = locationsState.lateralRua;
+        }
+    }
+    filterGrid();
+}
+
+window.setLateralLado = function(lado) {
+    locationsState.lateralLado = lado;
+    document.querySelectorAll('.btn-lat-lado').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-lado') === lado);
+    });
+    updateLateralView();
+}
+
+window.updateLateralView = function() {
+    const canvas = document.getElementById('lateralCanvas');
+    if (!canvas) return;
+    
+    const rua = document.getElementById('latRua')?.value;
+    if(!rua) {
+        canvas.innerHTML = '<div style="color:var(--text-secondary);">Selecione uma rua para visualizar os racks.</div>';
+        return;
+    }
+    locationsState.lateralRua = rua;
+    const lado = locationsState.lateralLado;
+    
+    const data = (locationsState.gridData || []).filter(l => l.rua === rua);
+    
+    let filtered = data.filter(l => {
+        const p = parseInt(l.predio);
+        return lado === 'par' ? p % 2 === 0 : p % 2 !== 0;
+    });
+
+    if (filtered.length === 0) {
+        canvas.innerHTML = `<div style="color:var(--text-secondary); text-align:center;">
+            <span class="material-icons-round" style="font-size:3rem; display:block; margin-bottom:1rem; opacity:0.3;">inventory_2</span>
+            Nenhum endereço encontrado para Rua ${rua} (Lado ${lado === 'par' ? 'Par' : 'Ímpar'}).
+        </div>`;
+        return;
+    }
+
+    const predios = [...new Set(filtered.map(l => l.predio))].sort((a,b) => parseInt(a) - parseInt(b));
+    const niveis = [...new Set(filtered.map(l => l.nivel))].sort((a,b) => parseInt(b) - parseInt(a));
+    
+    let html = `<div style="display:flex; gap:3rem; align-items:flex-end; padding:4rem 2rem; min-width:max-content;">`;
+    
+    predios.forEach(p => {
+        html += `
+        <div style="display:flex; flex-direction:column; align-items:center; gap:0.5rem;">
+            <div style="font-size:0.75rem; font-weight:800; color:var(--primary-color); background:rgba(0,0,0,0.3); padding:2px 8px; border-radius:4px;">P${p}</div>
+            <div style="display:flex; flex-direction:column; gap:8px; background:rgba(255,255,255,0.03); padding:10px; border-radius:4px; border-left:4px solid #475569; border-bottom:8px solid #1e293b; box-shadow: 10px 10px 20px rgba(0,0,0,0.4);">
+        `;
+        
+        niveis.forEach(n => {
+            const loc = filtered.find(l => l.predio === p && l.nivel === n);
+            if (loc) {
+                const isOccupied = loc.status === 'OCUPADO';
+                const color = loc.status === 'LIVRE' ? '#10b981' : isOccupied ? '#3b82f6' : '#f59e0b';
+                const shadow = isOccupied ? 'rgba(59, 130, 246, 0.4)' : 'transparent';
+                
+                html += `
+                <div class="rack-box-3d" onclick="renderLateralDetails('${loc.id}')" title="Endereço: ${loc.id}"
+                     style="width:60px; height:45px; background:${color}; border-radius:3px; cursor:pointer; 
+                            position:relative; transform: skewY(-8deg); transition: all 0.2s;
+                            display:flex; flex-direction:column; align-items:center; justify-content:center;
+                            box-shadow: 6px 6px 0 rgba(0,0,0,0.5), 0 0 15px ${shadow}; border:1px solid rgba(255,255,255,0.1);">
+                    <span style="font-size:0.6rem; opacity:0.8;">NV</span>
+                    <span style="font-size:0.85rem; font-weight:900;">${n}</span>
+                    ${isOccupied ? '<div style="width:6px; height:6px; background:white; border-radius:50%; position:absolute; top:4px; right:4px; box-shadow:0 0 5px white;"></div>' : ''}
+                </div>`;
+            } else {
+                html += `<div style="width:60px; height:45px; border:1px dashed rgba(255,255,255,0.05); transform: skewY(-8deg);"></div>`;
+            }
+        });
+        
+        html += `</div></div>`;
+    });
+    
+    html += `</div>`;
+    canvas.innerHTML = html;
+}
+
+window.renderLateralDetails = function(id) {
+    const loc = (locationsState.gridData || []).find(l => l.id === id);
+    if(!loc) return;
+
+    if(loc.status !== 'OCUPADO') {
+        alert(`Endereço ${id} está LIVRE.`);
+        return;
+    }
+
+    let detailModal = document.getElementById('lateralDetailModal');
+    if(!detailModal) {
+        detailModal = document.createElement('div');
+        detailModal.id = 'lateralDetailModal';
+        detailModal.style.cssText = `position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:2000; display:none; align-items:center; justify-content:center;`;
+        document.body.appendChild(detailModal);
+    }
+
+    detailModal.innerHTML = `
+        <div class="card" style="width:400px; animation: slideUp 0.3s ease-out;">
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <h3><span class="material-icons-round" style="vertical-align:middle; color:#3b82f6;">inventory_2</span> Conteúdo do Endereço</h3>
+                <span class="material-icons-round" style="cursor:pointer;" onclick="this.closest('#lateralDetailModal').style.display='none'">close</span>
+            </div>
+            <div class="card-body" style="padding:1.5rem;">
+                <div style="font-family:monospace; font-size:1.1rem; font-weight:700; color:var(--primary-color); margin-bottom:1rem; border-bottom:1px solid var(--border-color); padding-bottom:0.5rem;">
+                    ${loc.id}
+                </div>
+                <div style="display:flex; flex-direction:column; gap:1rem;">
+                    <div>
+                        <label class="text-secondary" style="font-size:0.75rem; text-transform:uppercase; font-weight:600;">Produto / SKU</label>
+                        <div style="font-size:0.95rem; font-weight:700; color:var(--text-primary); text-transform:uppercase;">${loc.product || 'N/A'}</div>
+                        <div style="font-family:monospace; font-size:0.85rem; color:var(--text-secondary);">${loc.sku || '-'}</div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                        <div>
+                            <label class="text-secondary" style="font-size:0.75rem; text-transform:uppercase; font-weight:600;">Quantidade</label>
+                            <div style="font-size:1.2rem; font-weight:800; color:var(--primary-color);">${loc.qty || 0} ${loc.unit || 'UN'}</div>
+                        </div>
+                        <div>
+                            <label class="text-secondary" style="font-size:0.75rem; text-transform:uppercase; font-weight:600;">Lote</label>
+                            <div style="font-size:0.9rem; font-weight:600;">${loc.lote || '-'}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div style="padding:1rem; border-top:1px solid var(--border-color); text-align:right;">
+                <button class="btn btn-primary" onclick="document.getElementById('lateralDetailModal').style.display='none'">Fechar</button>
+            </div>
+        </div>
+    `;
+
+    detailModal.style.display = 'flex';
+}
+
 // --- Filter & Render ---
 // --- Filter & Render ---
 window.filterGrid = function () {
@@ -392,7 +585,14 @@ window.filterGrid = function () {
         document.getElementById('locationsGrid').style.display = 'none';
         document.getElementById('locationsTable').style.display = 'none';
         document.getElementById('locationsMap').style.display = 'block';
+        document.getElementById('locationsLateral').style.display = 'none';
         renderMapView(filtered);
+    } else if (locationsState.viewMode === 'lateral') {
+        document.getElementById('locationsGrid').style.display = 'none';
+        document.getElementById('locationsTable').style.display = 'none';
+        document.getElementById('locationsMap').style.display = 'none';
+        document.getElementById('locationsLateral').style.display = 'block';
+        updateLateralView();
     }
 }
 

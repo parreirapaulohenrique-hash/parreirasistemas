@@ -1,6 +1,6 @@
 {
-    "version": "1.5.1",
+    "version": "1.6.0",
     "date": "2026-03-25",
-    "build": "20260325-1750",
-    "last_change": "Implementado Gerador de Endereçamento em Massa com filtros de Par/Ímpar (v1.5.1)"
+    "build": "20260325-1815",
+    "last_change": "Implementada Visão Lateral 3D com inspeção de inventário por endereço (v1.6.0)"
 }
