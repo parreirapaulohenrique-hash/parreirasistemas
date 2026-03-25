@@ -258,7 +258,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 reports: document.querySelector('a[href="#reports"]'),
                 configs: document.querySelector('a[href="#configs"]'),
                 acontec: document.querySelector('a[href="#acontec"]'),
-                system: document.querySelector('a[href="#system"]')
+                system: document.querySelector('a[href="#system"]'),
+                appSettings: document.querySelector('a[href="#app-settings"]')
             };
 
             // MOTOBOY: Show ONLY Moto Entrega
@@ -304,6 +305,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // REGULAR USER (Operacional): Hide admin menus, but show moto, carro and system (for client registration)
             if (allNavItems.reports) allNavItems.reports.style.display = 'none';
             if (allNavItems.configs) allNavItems.configs.style.display = 'none';
+            if (allNavItems.appSettings) allNavItems.appSettings.style.display = 'none';
             if (allNavItems.system) allNavItems.system.style.display = 'flex'; // Show system for client registration
             if (allNavItems.acontec) allNavItems.acontec.style.display = 'none';
             // Moto e Carro agora visíveis para Operacional
@@ -6189,6 +6191,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Hook para popular seletor no carregamento da seção
         const originalShowSection = window.showSection;
         window.showSection = (id) => {
+            // Segurança: Bloqueio de acesso via URL/Console para Perfis de Entrega (v3.7.5)
+            const storedUser = Utils.getStorage('logged_user');
+            const userRole = storedUser ? (storedUser.role || '').toLowerCase().trim() : '';
+
+            if (userRole === 'motoboy' && id !== 'moto') {
+                if (originalShowSection) originalShowSection('moto');
+                return;
+            }
+            if (userRole === 'motorista' && id !== 'carro') {
+                if (originalShowSection) originalShowSection('carro');
+                return;
+            }
+
             if (id === 'system' || id === 'quote') {
                 setTimeout(() => {
                     if (window.populateSellersSelector) window.populateSellersSelector();
