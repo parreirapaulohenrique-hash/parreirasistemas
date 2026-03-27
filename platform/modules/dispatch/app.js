@@ -1435,16 +1435,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             let validOptions = options.filter(opt => opt.total > 0);
             
-            // v3.7.8 - Sempre mostrar opção FOB como uma das opções de cotação
-            if (!validOptions.some(opt => opt.carrier.toUpperCase().includes('FOB'))) {
+            // v3.7.9 - Sempre mostrar opção FOB como uma das opções de cotação (última)
+            if (!validOptions.some(opt => opt.carrier === 'FOB')) {
                 validOptions.push({
-                    carrier: 'FOB (Coleta)',
+                    carrier: 'FOB',
                     total: 0,
                     details: {
                         base: 0, excess: 0, volume: 0, fixed: 0, gris: 0, toll: 0, redispatch: 0, icms: 0,
                         ruleUsed: { 
                             percentual: 0, minimo: 0, leadTime: 'Imediato (Coleta)', horarios: 'Qualquer',
-                            transportadora: 'FOB (Coleta)'
+                            transportadora: 'FOB'
                         }
                     }
                 });
@@ -1469,6 +1469,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const leadB = parseInt((b.details.ruleUsed.leadTime || '').replace(/\D/g, '')) || 999;
                 return leadA - leadB;
             });
+
+            // v3.7.9 - Garante que FOB seja sempre a última opção
+            const fobIdx = validOptions.findIndex(o => o.carrier === 'FOB');
+            if (fobIdx !== -1 && validOptions.length > 1) {
+                const fobItem = validOptions.splice(fobIdx, 1)[0];
+                validOptions.push(fobItem);
+            }
 
             renderResults(validOptions);
         }
@@ -1530,6 +1537,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             ` : '';
 
+                // v3.7.9 - Seletor de transportadora para FOB
+                const isFob = opt.carrier === 'FOB';
+                const fobSelectorHtml = isFob ? `
+                <div class="fob-carrier-selector" style="margin-top: 10px; border-top: 1px dashed var(--border-color); padding-top: 8px;" onclick="event.stopPropagation()">
+                    <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Transportadora da Coleta:</label>
+                    <select id="fob-carrier-${index}" class="form-input" style="padding: 4px 8px; font-size: 0.9rem; width: 100%; height: 32px;">
+                        <option value="">-- Selecione --</option>
+                        ${carrierList.sort().map(c => `<option value="${c}">${c}</option>`).join('')}
+                    </select>
+                </div>
+            ` : '';
+
                 // Price Breakdown Logic - EXIBIÇÃO SEPARADA TRANSP + REDESPACHO
                 let priceHtml;
                 if (d.redispatch > 0) {
@@ -1569,6 +1588,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ${timeInfoHtml}
                     ${redispatchHtml}
                     ${vanInputHtml}
+                    ${fobSelectorHtml}
                 </div>
                 <div style="text-align: right; min-width: 120px; display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-start;">
                     ${priceHtml}
@@ -1603,7 +1623,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ? `${Utils.formatCurrency(finalTotal)} (Negociado) \n[Original: ${Utils.formatCurrency(option.total)}]`
                 : `${Utils.formatCurrency(option.total)}`;
 
-            if (!confirm(`Confirmar despacho com ${option.carrier} por ${msgPrice}?`)) return;
+            // v3.7.9 - Validação de transportadora para FOB
+            if (option.carrier === 'FOB') {
+                const fobSelect = document.getElementById(`fob-carrier-${index}`);
+                if (!fobSelect || !fobSelect.value) {
+                    alert('Por favor, selecione a transportadora que realizará a coleta FOB.');
+                    if (fobSelect) fobSelect.focus();
+                    return;
+                }
+                option.selectedFobCarrier = fobSelect.value;
+            }
+
+            if (!confirm(`Confirmar despacho com ${option.carrier} per ${msgPrice}?`)) return;
 
             const clientName = document.getElementById('resClientName').innerText;
             const resCity = document.getElementById('resCity').innerText;
@@ -1658,7 +1689,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 client: clientName !== 'Name' ? clientName : 'Consumidor',
                 city: resCity,
                 neighborhood: resNeighborhood,
-                carrier: String(option.carrier || '').trim().toUpperCase(),
+                carrier: option.selectedFobCarrier ? `FOB - ${option.selectedFobCarrier}` : String(option.carrier || '').trim().toUpperCase(),
                 total: finalTotal, // Use negotiated price if available
                 originalTotal: option.total, // Keep original for records
                 vanDiff: isNegotiated ? vanDiff : 0, // Save difference

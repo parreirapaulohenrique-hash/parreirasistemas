@@ -1,5 +1,5 @@
 {
-    "version": "3.7.8",
+    "version": "3.7.9",
     "lastUpdate": "2026-03-27",
-    "change": "Adicionada opção permanente de cotação FOB (Coleta) no módulo de despacho (v3.7.8)."
+    "change": "Refinado recurso FOB: renomeado, fixado no final e adicionado seletor de transportadora (v3.7.9)."
 }
