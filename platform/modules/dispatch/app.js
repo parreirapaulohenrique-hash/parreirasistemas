@@ -1433,7 +1433,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                 };
             });
 
-            const validOptions = options.filter(opt => opt.total > 0);
+            let validOptions = options.filter(opt => opt.total > 0);
+            
+            // v3.7.8 - Sempre mostrar opção FOB como uma das opções de cotação
+            if (!validOptions.some(opt => opt.carrier.toUpperCase().includes('FOB'))) {
+                validOptions.push({
+                    carrier: 'FOB (Coleta)',
+                    total: 0,
+                    details: {
+                        base: 0, excess: 0, volume: 0, fixed: 0, gris: 0, toll: 0, redispatch: 0, icms: 0,
+                        ruleUsed: { 
+                            percentual: 0, minimo: 0, leadTime: 'Imediato (Coleta)', horarios: 'Qualquer',
+                            transportadora: 'FOB (Coleta)'
+                        }
+                    }
+                });
+            }
+
             validOptions.sort((a, b) => {
                 // 1. Preço (Menor é melhor) - Use epsilon for float comparison
                 if (Math.abs(a.total - b.total) > 0.01) return a.total - b.total;

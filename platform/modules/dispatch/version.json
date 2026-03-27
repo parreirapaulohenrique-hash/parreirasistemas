@@ -1,5 +1,5 @@
 {
-    "version": "3.7.6",
-    "lastUpdate": "2026-03-25",
-    "change": "Corrigida atualização reativa do Painel após finalizar despacho no modal (v3.7.6)."
+    "version": "3.7.8",
+    "lastUpdate": "2026-03-27",
+    "change": "Adicionada opção permanente de cotação FOB (Coleta) no módulo de despacho (v3.7.8)."
 }
