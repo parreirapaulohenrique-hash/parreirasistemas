@@ -1,5 +1,5 @@
 {
-    "version": "3.7.9",
-    "lastUpdate": "2026-03-27",
-    "change": "Refinado recurso FOB: renomeado, fixado no final e adicionado seletor de transportadora (v3.7.9)."
+    "version": "3.8.0",
+    "lastUpdate": "2026-03-28",
+    "change": "Adicionada opção de reimpressão de romaneios na aba Gestão de Romaneios (v3.8.0)."
 }

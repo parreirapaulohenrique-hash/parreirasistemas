@@ -6017,6 +6017,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // --- FUNÇÕES DE BAIXA DE ROMANEIO ---
+        window.reimprimirRomaneio = (romaneioId) => {
+            const romaneios = Utils.getStorage('app_romaneios') || [];
+            const manifest = romaneios.find(r => r.id === romaneioId);
+            if(!manifest) {
+                alert('Romaneio não encontrado.');
+                return;
+            }
+
+            const dispatches = Utils.getStorage('dispatches') || [];
+            const manifestItemIds = manifest.items.map(item => item.id);
+            const fullItems = dispatches.filter(d => manifestItemIds.includes(d.id));
+
+            if(fullItems.length === 0) {
+                alert('Erro: Notas do romaneio não encontradas no histórico para impressão.');
+                return;
+            }
+
+            // Chamar a função de impressão existente
+            if(window.printSpecificRomaneio) {
+                window.printSpecificRomaneio(manifest.carrier, fullItems);
+            } else {
+                alert('Erro: Função de impressão não carregada.');
+            }
+        };
+
         window.renderBaixaRomaneios = () => {
             const pendentesBody = document.getElementById('romaneioBaixaBody');
             const arquivadosBody = document.getElementById('romaneioArquivadoBody');
@@ -6044,10 +6069,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </td>
                         <td style="padding: 1rem; text-align: center;"><span style="background: rgba(59,130,246,0.1); color: var(--primary-color); padding: 4px 10px; border-radius: 12px; font-weight: bold;">${r.invoiceCount} NFs</span></td>
                         <td style="padding: 1rem; text-align: center;">
-                            <button class="btn btn-primary" onclick="window.confirmarBaixaRomaneio('${r.id}')" style="background: var(--accent-success); border-color: var(--accent-success);">
-                                <span class="material-icons-round">check_circle</span>
-                                Arquivar / Dar Baixa
-                            </button>
+                            <div style="display: flex; gap: 8px; justify-content: center;">
+                                <button class="btn btn-secondary" onclick="window.reimprimirRomaneio('${r.id}')" title="Reimprimir Romaneio" style="padding: 6px 10px;">
+                                    <span class="material-icons-round">print</span>
+                                </button>
+                                <button class="btn btn-primary" onclick="window.confirmarBaixaRomaneio('${r.id}')" style="background: var(--accent-success); border-color: var(--accent-success); display: flex; align-items: center; gap: 5px;">
+                                    <span class="material-icons-round">check_circle</span>
+                                    Arquivar / Baixa
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `).join('');
@@ -6072,6 +6102,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <span style="color: var(--accent-success); display: flex; align-items: center; justify-content: center; gap: 5px; font-weight: 600;">
                                 <span class="material-icons-round" style="font-size: 1.2rem;">done_all</span> Arquivado
                             </span>
+                        </td>
+                        <td style="padding: 1rem; text-align: center;">
+                             <button class="btn btn-secondary" onclick="window.reimprimirRomaneio('${r.id}')" title="Reimprimir Romaneio" style="padding: 6px 10px;">
+                                <span class="material-icons-round">print</span> Reimprimir
+                             </button>
                         </td>
                     </tr>
                 `).join('');
