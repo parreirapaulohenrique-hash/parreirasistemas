@@ -6267,7 +6267,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const phone = d.sellerPhone.replace(/\D/g, '');
-            const msg = `Olá ${d.sellerName}!\nInformamos que o pedido do cliente ${d.client}, com nº de NF: ${d.invoice}, com ${d.volume} volumes, no valor de ${Utils.formatCurrency(d.nfValue)}, foi despachado via ${d.carrier}.\nPrevisão de entrega: ${d.leadTime} dias.\nLT Distribuidora agradece!\nQualquer dúvida, estamos à disposição.`;
+            const dispatchDate = new Date(d.dispatchedAt || d.date || new Date()).toLocaleDateString('pt-BR');
+            const msg = `Olá ${d.sellerName}!\nInformamos que o pedido do cliente ${d.client}, com nº de NF: ${d.invoice}, com ${d.volume} volumes, no valor de ${Utils.formatCurrency(d.nfValue)}, foi despachado em ${dispatchDate} via ${d.carrier}.\nPrevisão de entrega: ${d.leadTime} dias.\nLT Distribuidora agradece!\nQualquer dúvida, estamos à disposição.`;
 
             const url = `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`;
             window.open(url, '_blank');
