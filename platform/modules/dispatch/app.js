@@ -4300,7 +4300,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Group pending items by Carrier
             const pendingByCarrier = {};
             pending.forEach(p => {
-                const carrierKey = String(p.carrier || '').trim().toUpperCase();
+                let carrierKey = String(p.carrier || '').trim().toUpperCase();
+                
+                // v3.8.2 - Agrupar itens FOB na transportadora principal para alimentar o card
+                if (carrierKey.startsWith('FOB - ')) {
+                    carrierKey = carrierKey.replace('FOB - ', '').trim();
+                }
+
                 if (!pendingByCarrier[carrierKey]) pendingByCarrier[carrierKey] = [];
                 pendingByCarrier[carrierKey].push(p);
             });
@@ -4413,7 +4419,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const history = Utils.getStorage('dispatches');
                 const items = (Array.isArray(history) ? history : []).filter(d => {
                     const dCarrier = String(d.carrier || '').trim().toUpperCase();
-                    return dCarrier === cleanCarrier && d.status === 'Pendente Despacho';
+                    // v3.8.2 - Incluir itens FOB na listagem da transportadora no modal
+                    const isSameCarrier = dCarrier === cleanCarrier || dCarrier === 'FOB - ' + cleanCarrier;
+                    return isSameCarrier && d.status === 'Pendente Despacho';
                 });
 
                 if (items.length === 0) {

@@ -1,5 +1,5 @@
 {
-    "version": "3.8.1",
+    "version": "3.8.2",
     "lastUpdate": "2026-03-31",
-    "change": "Incluída data do despacho no texto enviado aos vendedores (v3.8.1)."
+    "change": "Corrigida visibilidade de itens FOB nos cards do Painel de Despacho (v3.8.2)."
 }
