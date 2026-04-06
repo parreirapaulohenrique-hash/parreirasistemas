@@ -1537,15 +1537,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             ` : '';
 
-                // v3.7.9 - Seletor de transportadora para FOB
+                // v3.7.9/v3.8.4 - Seletor de transportadora para FOB com consulta automática de horários
                 const isFob = opt.carrier === 'FOB';
                 const fobSelectorHtml = isFob ? `
                 <div class="fob-carrier-selector" style="margin-top: 10px; border-top: 1px dashed var(--border-color); padding-top: 8px;" onclick="event.stopPropagation()">
                     <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Transportadora da Coleta:</label>
-                    <select id="fob-carrier-${index}" class="form-input" style="padding: 4px 8px; font-size: 0.9rem; width: 100%; height: 32px;">
+                    <select id="fob-carrier-${index}" class="form-input" style="padding: 4px 8px; font-size: 0.9rem; width: 100%; height: 32px;" onchange="window.onFobCarrierChange(${index})">
                         <option value="">-- Selecione --</option>
                         ${carrierList.sort().map(c => `<option value="${c}">${c}</option>`).join('')}
                     </select>
+                    <div id="fob-info-${index}" style="margin-top: 6px; font-size: 0.8rem; padding: 6px 10px; background: rgba(59,130,246,0.07); border-radius: 8px; border: 1px solid rgba(59,130,246,0.15); display: none;">
+                        <span id="fob-horario-${index}" style="color: var(--primary-color);"></span>
+                        <span id="fob-prazo-${index}" style="color: var(--text-secondary); margin-left: 12px;"></span>
+                    </div>
                 </div>
             ` : '';
 
@@ -1599,6 +1603,44 @@ document.addEventListener('DOMContentLoaded', async () => {
             }).join('');
             window.currentOptions = options;
         }
+
+        // v3.8.4 - Consulta hor\u00e1rios e prazo da transportadora FOB selecionada
+        window.onFobCarrierChange = (index) => {
+            const select = document.getElementById(`fob-carrier-${index}`);
+            const infoBox = document.getElementById(`fob-info-${index}`);
+            const horarioEl = document.getElementById(`fob-horario-${index}`);
+            const prazoEl = document.getElementById(`fob-prazo-${index}`);
+
+            if (!select || !infoBox) return;
+
+            const selectedCarrier = String(select.value || '').trim().toUpperCase();
+            if (!selectedCarrier) {
+                infoBox.style.display = 'none';
+                return;
+            }
+
+            // Pega a cidade de destino do despacho atual
+            const cityEl = document.getElementById('resCity');
+            const destCity = String(cityEl ? cityEl.innerText : '').trim().toUpperCase();
+
+            // Consulta a tabela de frete
+            const freightRules = Utils.getStorage('freight_tables') || [];
+            const rule = freightRules.find(r =>
+                String(r.transportadora || '').trim().toUpperCase() === selectedCarrier &&
+                String(r.cidade || '').trim().toUpperCase() === destCity
+            );
+
+            infoBox.style.display = 'block';
+            if (rule) {
+                const horario = rule.horarios || rule.horario || '-';
+                const prazo = rule.leadTime || rule.prazo || '-';
+                if (horarioEl) horarioEl.innerHTML = `🚚 Sa\u00edda: <strong>${horario}</strong>`;
+                if (prazoEl) prazoEl.innerHTML = `🕒 Prazo: <strong>${prazo} dias</strong>`;
+            } else {
+                if (horarioEl) horarioEl.innerHTML = `<span style="color:var(--accent-warning);">⚠️ Sem regra cadastrada para ${selectedCarrier} → ${destCity || 'cidade n\u00e3o informada'}</span>`;
+                if (prazoEl) prazoEl.innerHTML = '';
+            }
+        };
 
         window.confirmDispatch = (index) => {
             const option = window.currentOptions[index];
