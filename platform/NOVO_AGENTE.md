@@ -129,7 +129,7 @@ graph TD
     Inv -.->|Ajusta estoque| Arm
 ```
 **POP (Procedimento Operacional Padrão):**
-*   **1. Inbound (Recebimento):** Puxa NF de Compra (integrado com ERP) -> Conta os itens na doca (Conferência Cega) -> Compara com NF. Se OK, dá entrada e aguarda armazenagem.
+*   **1. Inbound (Recebimento):** Operador bipa a **chave NF-e (44 dígitos)** na tela de scanner → sistema chama `proc_buscar_nf_destinada` consultando todos os CNPJs do tenant no ERP. Se localizada, abre **Card de Conferência** auto-preenchido com dados do ERP (fornecedor, itens, volumes, transportadora). O operador preenche campos manuais (doca, placa, motorista, volumes físicos, condição da carga, email do fornecedor). Em caso de divergência → registra tipo, fotos da avaria (até 4 imagens) e envia relatório automaticamente ao fornecedor (`proc_enviar_email_divergencia`). Se NF não encontrada → nega ou libera entrada avulsa via **PIN de supervisor** configurável (Configurações → Integrações → Segurança), com log de auditoria obrigatório.
 *   **2. Armazenagem (Putaway):** Motorista de empilhadeira/operador lê as tarefas. O sistema sugere endereço visual vazio ou onde já tem o SKU -> Operador move -> Confirma operação no app Web.
 *   **3. Picking (Separação):** Gera "Ondas de Separação" agrupadas por prioridade/Rota (integração Dispatch). Operador visualiza caminho otimizado no Mapa Visual -> Vai ao endereço -> Coleta SKU -> Leva à área de `packing`/consolidação.
 *   **4. Outbound (Expedição):** Última conferência na caixa -> Fecha volume -> Imprime etiqueta logística de transporte -> Despacha.
@@ -177,7 +177,7 @@ graph TD
     DevERP[Devolução ERP] -->|Gera Putaway| WMS[WMS Armazenagem]
 ```
 **POP:**
-*   **Recebimento:** WMS conta mercadorias na doca -> Conferência comparada com NF -> Se OK, atualiza estoque ERP. Se divergente, bloqueia unidades faltantes no ERP (estoque fantasma).
+*   **Recebimento:** WMS bipa chave NF-e → `proc_buscar_nf_destinada` (multi-CNPJ) → Conferência física no card → `proc_confirmar_recebimento` atualiza estoque ERP. Se divergente → `proc_registrar_divergencia` bloqueia unidades e `proc_enviar_email_divergencia` notifica o setor de Compras e o fornecedor automaticamente.
 *   **Separação:** ERP fatura venda -> Reserva estoque -> Gera Ordem de Separação no WMS -> Operador separa -> WMS confirma -> ERP dá baixa efetiva.
 *   **Trava Fiscal:** Veículo só é liberado para despacho no WMS se todos os pedidos vinculados possuírem Chave de NF-e faturada no ERP.
 *   **Ajustes Bidirecionais:** Ajustes manuais e inventários de um sistema refletem automaticamente no outro.

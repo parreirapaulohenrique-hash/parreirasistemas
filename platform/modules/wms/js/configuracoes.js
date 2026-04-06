@@ -365,8 +365,134 @@ function renderCfgIntegracao(container) {
                 </div>
             </div>
         </div>
+    `;
 
-        <!-- Entity Mapping & Sync Status -->
+    // ─── Seção Empresas / CNPJs ───────────────────────────────────────────────
+    const cfg = getWmsConfig();
+    const empresas = cfg.empresas || [];
+
+    container.insertAdjacentHTML('beforeend', `
+        <div class="card" style="margin-bottom:1.5rem;" id="card-empresas">
+            <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                <h3 style="font-size:.95rem;font-weight:600;">
+                    <span class="material-icons-round" style="font-size:1.1rem;vertical-align:middle;">business</span>
+                    Empresas / CNPJs Destinatários
+                </h3>
+                <button class="btn btn-primary" onclick="cfgAddEmpresa()" style="font-size:.82rem;">
+                    <span class="material-icons-round" style="font-size:.9rem;">add</span> Adicionar CNPJ
+                </button>
+            </div>
+            <div class="card-body" style="padding:1rem;">
+                <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:1rem;">
+                    Cadastre aqui todos os CNPJs da empresa. O WMS consultará cada um deles ao validar uma NF recebida.
+                    O primeiro marcado como <strong>Principal</strong> é usado como padrão.
+                </p>
+                <div id="cfg-empresas-lista">
+                    ${_renderEmpresasLista(empresas)}
+                </div>
+            </div>
+        </div>
+
+        <!-- PIN Supervisor -->
+        <div class="card" style="margin-bottom:1.5rem;">
+            <div class="card-header">
+                <h3 style="font-size:.95rem;font-weight:600;">
+                    <span class="material-icons-round" style="font-size:1.1rem;vertical-align:middle;">lock</span>
+                    Segurança — PIN de Supervisor
+                </h3>
+            </div>
+            <div class="card-body" style="padding:1.25rem;">
+                <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:1rem;">
+                    Este PIN autoriza <strong>Entradas Avulsas</strong> no recebimento — quando uma NF não é localizada no ERP.
+                    Use 4 a 6 dígitos numéricos. Toda entrada avulsa é registrada no log de auditoria.
+                </p>
+                <div style="display:flex;gap:1rem;align-items:flex-end;max-width:420px;">
+                    <div style="flex:1;">
+                        <label class="form-label">PIN Atual</label>
+                        <input id="cfg-pin-atual" type="password" class="form-input" maxlength="6"
+                            placeholder="Digite o PIN atual (se existir)" autocomplete="off">
+                    </div>
+                    <div style="flex:1;">
+                        <label class="form-label">Novo PIN (4–6 dígitos)</label>
+                        <input id="cfg-pin-novo" type="password" class="form-input" maxlength="6"
+                            placeholder="Novo PIN" autocomplete="new-password">
+                    </div>
+                    <button class="btn btn-primary" onclick="cfgSalvarPin()" style="white-space:nowrap;">
+                        <span class="material-icons-round" style="font-size:1rem;">save</span> Salvar PIN
+                    </button>
+                </div>
+                <div id="cfg-pin-feedback" style="margin-top:.5rem;font-size:.8rem;min-height:1rem;"></div>
+            </div>
+        </div>
+
+        <!-- Email Remetente -->
+        <div class="card" style="margin-bottom:1.5rem;">
+            <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                <h3 style="font-size:.95rem;font-weight:600;">
+                    <span class="material-icons-round" style="font-size:1.1rem;vertical-align:middle;">email</span>
+                    Email — Relatórios de Divergência
+                </h3>
+                <button class="btn btn-primary" onclick="cfgSalvarEmail()">
+                    <span class="material-icons-round" style="font-size:1rem;">save</span> Salvar
+                </button>
+            </div>
+            <div class="card-body" style="padding:1.25rem;">
+                <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:1rem;">
+                    Configure o email da distribuidora para envio automático dos relatórios de divergência ao fornecedor.
+                    Prioridade: <strong>REST API → EmailJS → mailto: (fallback)</strong>.
+                </p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div>
+                        <label class="form-label">Email Remetente (da Distribuidora)</label>
+                        <input id="cfg-email-remetente" type="email" class="form-input"
+                            placeholder="recebimento@empresa.com.br"
+                            value="${(cfg.email?.remetente || '')}">
+                    </div>
+                    <div>
+                        <label class="form-label">Nome do Remetente</label>
+                        <input id="cfg-email-nome" type="text" class="form-input"
+                            placeholder="WMS Parreira / CD Central"
+                            value="${(cfg.email?.nomeRemetente || '')}">
+                    </div>
+                    <div style="grid-column:1/-1;">
+                        <div style="border-top:1px solid var(--border-color);padding-top:1rem;margin-bottom:.5rem;">
+                            <span style="font-size:.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;">
+                                EmailJS (envio automático silencioso — opcional)
+                            </span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="form-label">EmailJS Public Key</label>
+                        <input id="cfg-emailjs-key" type="password" class="form-input"
+                            placeholder="user_xxxxxxxxxxxx"
+                            value="${(cfg.email?.emailjsPublicKey || '')}">
+                    </div>
+                    <div>
+                        <label class="form-label">Service ID</label>
+                        <input id="cfg-emailjs-service" type="text" class="form-input"
+                            placeholder="service_xxxxxxx"
+                            value="${(cfg.email?.emailjsServiceId || '')}">
+                    </div>
+                    <div>
+                        <label class="form-label">Template ID</label>
+                        <input id="cfg-emailjs-template" type="text" class="form-input"
+                            placeholder="template_xxxxxxx"
+                            value="${(cfg.email?.emailjsTemplateId || '')}">
+                    </div>
+                    <div style="display:flex;align-items:flex-end;">
+                        <a href="https://www.emailjs.com" target="_blank"
+                            style="font-size:.78rem;color:var(--primary-color);text-decoration:none;display:flex;align-items:center;gap:.3rem;">
+                            <span class="material-icons-round" style="font-size:.9rem;">open_in_new</span>
+                            Criar conta gratuita no EmailJS
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `);
+
+    // Entity Mapping & Sync Status
+    container.insertAdjacentHTML('beforeend', `
         <div class="card">
             <div class="card-header">
                 <h3 style="font-size:0.95rem; font-weight:600;">Entidades & Log de Sincronização</h3>
@@ -417,7 +543,7 @@ function renderCfgIntegracao(container) {
                 </div>
             </div>
         </div>
-    `;
+    `);
 
     // Inject scripts to handle internal UI updates
     window.renderConnectorFields = function () {
@@ -515,6 +641,116 @@ window.syncAll = async function () {
     }
     alert(`✅ ${count} entidades sincronizadas.`);
     renderCfgIntegracao(document.getElementById('view-dynamic'));
+};
+
+// ─── HELPERS: Empresas / CNPJs ────────────────────────────────────────────────
+
+function _renderEmpresasLista(empresas) {
+    if (empresas.length === 0) {
+        return `<div style="text-align:center;padding:1.5rem;color:var(--text-secondary);font-size:.85rem;">
+            Nenhuma empresa cadastrada. Clique em "Adicionar CNPJ" para começar.
+        </div>`;
+    }
+    return empresas.map((e, i) => `
+        <div style="display:flex;align-items:center;gap:.75rem;padding:.75rem;
+            background:var(--bg-dark);border-radius:8px;margin-bottom:.5rem;">
+            <span class="material-icons-round" style="color:${e.principal?'#10b981':'var(--text-secondary)'};">
+                ${e.principal ? 'star' : 'business'}
+            </span>
+            <div style="flex:1;">
+                <div style="font-weight:600;font-size:.85rem;">${e.razaoSocial}</div>
+                <div style="font-size:.75rem;color:var(--text-secondary);font-family:monospace;">${e.cnpj}</div>
+            </div>
+            ${e.principal ? `<span style="font-size:.7rem;background:rgba(16,185,129,.15);color:#10b981;
+                padding:.15rem .5rem;border-radius:4px;font-weight:600;">PRINCIPAL</span>` :
+            `<button onclick="cfgSetPrincipal(${i})" style="background:none;border:1px solid var(--border-color);
+                border-radius:4px;padding:.2rem .5rem;cursor:pointer;font-size:.72rem;color:var(--text-secondary);">
+                Tornar principal
+            </button>`}
+            <button onclick="cfgRemoverEmpresa(${i})" style="background:none;border:none;cursor:pointer;color:#ef4444;">
+                <span class="material-icons-round" style="font-size:1rem;">delete</span>
+            </button>
+        </div>`).join('');
+}
+
+window.cfgAddEmpresa = function () {
+    const razao = prompt('Razão Social da empresa:');
+    if (!razao) return;
+    const cnpj = prompt('CNPJ (ex: 12.345.678/0001-90):');
+    if (!cnpj) return;
+    const cfg = getWmsConfig();
+    if (!cfg.empresas) cfg.empresas = [];
+    const principal = cfg.empresas.length === 0;
+    cfg.empresas.push({ razaoSocial: razao.trim(), cnpj: cnpj.trim(), principal });
+    saveWmsConfig(cfg);
+    const lista = document.getElementById('cfg-empresas-lista');
+    if (lista) lista.innerHTML = _renderEmpresasLista(cfg.empresas);
+};
+
+window.cfgRemoverEmpresa = function (idx) {
+    if (!confirm('Remover esta empresa?')) return;
+    const cfg = getWmsConfig();
+    cfg.empresas.splice(idx, 1);
+    if (cfg.empresas.length > 0 && !cfg.empresas.some(e => e.principal)) cfg.empresas[0].principal = true;
+    saveWmsConfig(cfg);
+    const lista = document.getElementById('cfg-empresas-lista');
+    if (lista) lista.innerHTML = _renderEmpresasLista(cfg.empresas);
+};
+
+window.cfgSetPrincipal = function (idx) {
+    const cfg = getWmsConfig();
+    cfg.empresas.forEach((e, i) => e.principal = (i === idx));
+    saveWmsConfig(cfg);
+    const lista = document.getElementById('cfg-empresas-lista');
+    if (lista) lista.innerHTML = _renderEmpresasLista(cfg.empresas);
+};
+
+// ─── HELPERS: PIN Supervisor ──────────────────────────────────────────────────
+
+window.cfgSalvarPin = function () {
+    const pinAtual = (document.getElementById('cfg-pin-atual')?.value || '').trim();
+    const pinNovo  = (document.getElementById('cfg-pin-novo')?.value  || '').trim();
+    const feedback = document.getElementById('cfg-pin-feedback');
+
+    if (!pinNovo || pinNovo.length < 4) {
+        if (feedback) { feedback.style.color = '#ef4444'; feedback.textContent = 'O novo PIN deve ter entre 4 e 6 dígitos.'; }
+        return;
+    }
+    if (!/^\d+$/.test(pinNovo)) {
+        if (feedback) { feedback.style.color = '#ef4444'; feedback.textContent = 'O PIN deve conter apenas números.'; }
+        return;
+    }
+
+    const cfg = getWmsConfig();
+    const pinExistente = cfg.seguranca?.pinSupervisor;
+
+    if (pinExistente && pinAtual !== String(pinExistente)) {
+        if (feedback) { feedback.style.color = '#ef4444'; feedback.textContent = 'PIN atual incorreto.'; }
+        return;
+    }
+
+    if (!cfg.seguranca) cfg.seguranca = {};
+    cfg.seguranca.pinSupervisor = pinNovo;
+    saveWmsConfig(cfg);
+
+    if (feedback) { feedback.style.color = '#10b981'; feedback.textContent = '✅ PIN de supervisor salvo com sucesso.'; }
+    document.getElementById('cfg-pin-atual').value = '';
+    document.getElementById('cfg-pin-novo').value = '';
+};
+
+// ─── HELPERS: Email ───────────────────────────────────────────────────────────
+
+window.cfgSalvarEmail = function () {
+    const cfg = getWmsConfig();
+    cfg.email = {
+        remetente:         (document.getElementById('cfg-email-remetente')?.value   || '').trim(),
+        nomeRemetente:     (document.getElementById('cfg-email-nome')?.value        || '').trim(),
+        emailjsPublicKey:  (document.getElementById('cfg-emailjs-key')?.value      || '').trim(),
+        emailjsServiceId:  (document.getElementById('cfg-emailjs-service')?.value  || '').trim(),
+        emailjsTemplateId: (document.getElementById('cfg-emailjs-template')?.value || '').trim()
+    };
+    saveWmsConfig(cfg);
+    alert('✅ Configurações de email salvas!');
 };
 
 console.log('⚙️ WMS Configurações carregadas');

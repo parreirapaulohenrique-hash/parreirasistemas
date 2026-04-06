@@ -1,6 +1,6 @@
 {
-    "version": "1.6.0",
-    "date": "2026-03-25",
-    "build": "20260325-1815",
-    "last_change": "Implementada Visão Lateral 3D com inspeção de inventário por endereço (v1.6.0)"
+    "version": "1.7.0",
+    "date": "2026-04-06",
+    "build": "20260406-1820",
+    "last_change": "Recebimento WMS: novo fluxo com scanner NF-e, validação Multi-ERP, Multi-CNPJ, card de conferência, detecção de divergências, fotos, envio de email ao fornecedor e entrada avulsa com PIN de supervisor configurável (v1.7.0)"
 }
