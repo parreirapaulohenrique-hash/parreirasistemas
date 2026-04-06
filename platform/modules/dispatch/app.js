@@ -5643,13 +5643,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 .then(data => {
                     console.log('✅ SYSTEM VERSION:', data.version);
                     // Formata a data YYYY-MM-DD para DD/MM/YYYY manualmente
-                    const dateParts = data.date.split('-');
-                    const dateFormatted = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
-                    vEl.innerText = `v${data.version} • ${dateFormatted}`;
+                    const rawDate = data.date || data.lastUpdate || '';
+                    let dateFormatted = rawDate;
+                    if (rawDate && rawDate.includes('-')) {
+                        const dateParts = rawDate.split('-');
+                        dateFormatted = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+                    }
+                    vEl.innerText = `v${data.version}${dateFormatted ? ' • ' + dateFormatted : ''}`;
                 })
                 .catch(e => {
                     console.error('Erro ao carregar versão:', e);
-                    vEl.innerText = 'v1.8.x (Error)';
+                    vEl.innerText = 'v? (Erro ao carregar)';
                 });
         }
 

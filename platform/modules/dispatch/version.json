@@ -1,5 +1,5 @@
 {
-    "version": "3.8.2",
-    "lastUpdate": "2026-03-31",
-    "change": "Corrigida visibilidade de itens FOB nos cards do Painel de Despacho (v3.8.2)."
+    "version": "3.8.3",
+    "lastUpdate": "2026-04-06",
+    "change": "Corrigido erro de exibição de versão (v1.8.x Error) causado por campo 'date' inexistente no version.json (v3.8.3)."
 }
