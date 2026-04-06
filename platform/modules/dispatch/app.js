@@ -1443,7 +1443,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     details: {
                         base: 0, excess: 0, volume: 0, fixed: 0, gris: 0, toll: 0, redispatch: 0, icms: 0,
                         ruleUsed: { 
-                            percentual: 0, minimo: 0, leadTime: 'Imediato (Coleta)', horarios: 'Qualquer',
+                            percentual: 0, minimo: 0, leadTime: '', horarios: '',
                             transportadora: 'FOB'
                         }
                     }

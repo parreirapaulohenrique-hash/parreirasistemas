@@ -1,5 +1,5 @@
 {
-    "version": "3.8.4",
+    "version": "3.8.5",
     "lastUpdate": "2026-04-06",
-    "change": "FOB: horário de saída e prazo de entrega auto-preenchidos ao selecionar a transportadora (v3.8.4)."
+    "change": "FOB: removido texto estático fixo de horário/prazo do card (v3.8.5)."
 }
