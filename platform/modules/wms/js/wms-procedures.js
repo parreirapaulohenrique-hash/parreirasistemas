@@ -206,7 +206,9 @@
 
     async function _buscarNf_parreiraErp(chave, cnpjs) {
         const pedidos = JSON.parse(localStorage.getItem('erp_pedidos_compra' + _ts()) || '[]');
-        const matches = pedidos.filter(p => {
+        const mocks = _getMockNfs();
+        const todos = [...pedidos, ...mocks];
+        const matches = todos.filter(p => {
             const pChave = (p.chaveNfe || p.chave_acesso || p.chave || '').replace(/\D/g, '');
             return pChave && (pChave === chave || chave.includes(pChave) || pChave.includes(chave));
         });

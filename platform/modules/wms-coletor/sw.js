@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wms-coletor-v2';
+const CACHE_NAME = 'wms-coletor-v3';
 const ASSETS = [
     './',
     './index.html',

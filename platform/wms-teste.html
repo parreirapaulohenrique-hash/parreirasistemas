@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>WMS — Setup de Teste</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f1117;
+            color: #e2e8f0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card {
+            background: #1a1f2e;
+            border: 1px solid #2d3748;
+            border-radius: 16px;
+            padding: 2.5rem;
+            width: 560px;
+            box-shadow: 0 20px 60px rgba(0,0,0,.5);
+        }
+        h1 { font-size: 1.3rem; margin-bottom: .4rem; color: #fff; }
+        p  { font-size: .85rem; color: #718096; margin-bottom: 1.5rem; }
+        .badge {
+            display: inline-block;
+            background: rgba(14,165,233,.15);
+            color: #0ea5e9;
+            font-size: .7rem;
+            font-weight: 700;
+            padding: .2rem .6rem;
+            border-radius: 20px;
+            margin-bottom: 1rem;
+            letter-spacing: .05em;
+        }
+        .nf-card {
+            background: #0f1117;
+            border: 1px solid #2d3748;
+            border-radius: 10px;
+            padding: 1rem 1.2rem;
+            margin-bottom: .75rem;
+            cursor: pointer;
+            transition: border-color .2s, background .2s;
+        }
+        .nf-card:hover { border-color: #0ea5e9; background: rgba(14,165,233,.05); }
+        .nf-card .nf-num  { font-weight: 700; font-size: .95rem; }
+        .nf-card .nf-forn { font-size: .78rem; color: #718096; margin: .15rem 0; }
+        .nf-card .nf-chave {
+            font-family: monospace;
+            font-size: .68rem;
+            color: #4a5568;
+            word-break: break-all;
+            margin-top: .3rem;
+        }
+        .nf-card .nf-copy {
+            margin-top: .5rem;
+            font-size: .72rem;
+            color: #0ea5e9;
+        }
+        hr { border-color: #2d3748; margin: 1.25rem 0; }
+        .inp {
+            width: 100%;
+            background: #0f1117;
+            border: 1px solid #2d3748;
+            border-radius: 8px;
+            padding: .65rem 1rem;
+            font-size: .85rem;
+            color: #e2e8f0;
+            font-family: monospace;
+            margin-bottom: .75rem;
+            outline: none;
+        }
+        .inp:focus { border-color: #0ea5e9; }
+        .btn {
+            width: 100%;
+            padding: .85rem;
+            background: linear-gradient(135deg, #0ea5e9, #6366f1);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: opacity .2s;
+        }
+        .btn:hover { opacity: .9; }
+        .info {
+            background: rgba(245,158,11,.08);
+            border: 1px solid rgba(245,158,11,.25);
+            border-radius: 8px;
+            padding: .75rem 1rem;
+            font-size: .8rem;
+            color: #f59e0b;
+            margin-bottom: 1.25rem;
+        }
+        .copied { color: #10b981 !important; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="badge">🧪 AMBIENTE DE TESTE — WMS v1.7.0</div>
+    <h1>Setup Rápido de Teste</h1>
+    <p>Clique em uma NF abaixo para copiar a chave, depois acesse o WMS e bipe no campo de scanner.</p>
+
+    <div class="info">
+        ⚠️ Este arquivo injeta um usuário <strong>admin de teste</strong> no localStorage e abre o WMS no modo <strong>Standalone (mock)</strong>.
+        Nenhum dado real é alterado.
+    </div>
+
+    <div style="font-size:.75rem;font-weight:700;color:#718096;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem;">
+        Chaves NF-e disponíveis no mock:
+    </div>
+
+    <div class="nf-card" onclick="copiarChave('35260412345678000190550010000012341000012340', this)">
+        <div class="nf-num">NF 1234 / Série 1</div>
+        <div class="nf-forn">Fornecedor Alpha Ltda — 12.345.678/0001-90 | Valor: R$ 15.840,00</div>
+        <div class="nf-forn">🚚 Transportes Rápidos S.A. | 12 volumes / 450,5 kg | PC: PC-2026-0089</div>
+        <div class="nf-chave">35260412345678000190550010000012341000012340</div>
+        <div class="nf-copy" id="copy-0">👆 Clique para copiar a chave</div>
+    </div>
+
+    <div class="nf-card" onclick="copiarChave('35260412345678000190550010000056781000056780', this)">
+        <div class="nf-num">NF 5678 / Série 1</div>
+        <div class="nf-forn">Distribuidora Beta S.A. — 98.765.432/0001-00 | Valor: R$ 8.290,00</div>
+        <div class="nf-forn">🚚 FOB - Próprio fornecedor | 6 volumes / 180 kg | PC: PC-2026-0092</div>
+        <div class="nf-chave">35260412345678000190550010000056781000056780</div>
+        <div class="nf-copy" id="copy-1">👆 Clique para copiar a chave</div>
+    </div>
+
+    <div class="nf-card" onclick="copiarChave('35260455555555000190550010000099991000099990', this)">
+        <div class="nf-num">NF 9999 / Série 1 — ⚠️ CNPJ diferente (testa multi-CNPJ)</div>
+        <div class="nf-forn">Indústria Gama SA — 55.555.555/0001-90 | Valor: R$ 42.100,00</div>
+        <div class="nf-forn">🚚 Transportadora Omega | 48 volumes / 1.200 kg | PC: PC-2026-0077</div>
+        <div class="nf-chave">35260455555555000190550010000099991000099990</div>
+        <div class="nf-copy" id="copy-2">👆 Clique para copiar a chave</div>
+    </div>
+
+    <hr>
+
+    <div style="font-size:.75rem;font-weight:700;color:#718096;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem;">
+        Ou teste por Número + Série (sem chave completa):
+    </div>
+
+    <div style="display:flex;gap:.5rem;margin-bottom:1.25rem;">
+        <span style="background:#0f1117;border:1px solid #2d3748;border-radius:6px;padding:.35rem .75rem;font-family:monospace;font-size:.85rem;">1234</span>
+        <span style="background:#0f1117;border:1px solid #2d3748;border-radius:6px;padding:.35rem .75rem;font-family:monospace;font-size:.85rem;">5678</span>
+        <span style="background:#0f1117;border:1px solid #2d3748;border-radius:6px;padding:.35rem .75rem;font-family:monospace;font-size:.85rem;">9999</span>
+        <span style="font-size:.8rem;color:#718096;align-self:center;">Na aba "Número + Série"</span>
+    </div>
+
+    <hr>
+
+    <div style="font-size:.75rem;font-weight:700;color:#718096;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem;">
+        Também teste o fluxo de recusa / entrada avulsa:
+    </div>
+    <div style="font-size:.82rem;color:#718096;margin-bottom:1.25rem;">
+        Digite qualquer número inexistente (ex: <code style="background:#0f1117;padding:.1rem .3rem;border-radius:3px;">99999</code>) para testar a tela de <strong style="color:#f59e0b;">Recusa</strong> e a solicitação de <strong style="color:#f59e0b;">PIN de Supervisor</strong>.
+        <br><br>
+        Para configurar o PIN, vá em <strong>Configurações → Integrações → Segurança</strong> e defina um PIN de 4–6 dígitos.
+    </div>
+
+    <button class="btn" onclick="iniciarTeste()">
+        🚀 Injetar Usuário de Teste e Abrir WMS
+    </button>
+
+    <div id="status" style="margin-top:.75rem;text-align:center;font-size:.8rem;color:#718096;"></div>
+</div>
+
+<script>
+    function copiarChave(chave, el) {
+        navigator.clipboard.writeText(chave).then(() => {
+            const copies = document.querySelectorAll('.nf-copy');
+            copies.forEach(c => { c.textContent = '👆 Clique para copiar a chave'; c.classList.remove('copied'); });
+            const copyEl = el.querySelector('.nf-copy');
+            if (copyEl) { copyEl.textContent = '✅ Chave copiada!'; copyEl.classList.add('copied'); }
+        }).catch(() => {
+            // Fallback
+            const ta = document.createElement('textarea');
+            ta.value = chave;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            const copyEl = el.querySelector('.nf-copy');
+            if (copyEl) { copyEl.textContent = '✅ Chave copiada!'; copyEl.classList.add('copied'); }
+        });
+    }
+
+    function iniciarTeste() {
+        // Injeta usuário admin de teste no localStorage
+        const mockUser = {
+            name: 'Admin Teste',
+            login: 'admin',
+            email: 'admin@parreirawms.com',
+            tenantId: 'parreira',
+            tenant: 'parreira',
+            role: 'admin',
+            isAdmin: true,
+            modules: ['wms', 'dispatch', 'erp']
+        };
+        localStorage.setItem('logged_user', JSON.stringify(mockUser));
+
+        // Injeta configuração WMS básica com empresa de teste
+        const wmsConfig = JSON.parse(localStorage.getItem('wms_config') || '{}');
+        if (!wmsConfig.empresas || wmsConfig.empresas.length === 0) {
+            wmsConfig.empresas = [
+                { razaoSocial: 'Parreira Distribuidora Ltda', cnpj: '98.765.432/0001-10', principal: true },
+                { razaoSocial: 'Parreira Filial SP',          cnpj: '98.765.432/0002-91', principal: false },
+                { razaoSocial: 'Parreira CD Gama (CNPJ NF 9999)', cnpj: '11.111.111/0001-55', principal: false }
+            ];
+        }
+        // PIN padrão de teste: 1234
+        if (!wmsConfig.seguranca?.pinSupervisor) {
+            if (!wmsConfig.seguranca) wmsConfig.seguranca = {};
+            wmsConfig.seguranca.pinSupervisor = '1234';
+        }
+        localStorage.setItem('wms_config', JSON.stringify(wmsConfig));
+
+        // Garante modo standalone
+        const intCfg = JSON.parse(localStorage.getItem('wms_integration_config') || '{}');
+        if (!intCfg.connectorId) {
+            localStorage.setItem('wms_integration_config', JSON.stringify({ connectorId: 'standalone', connectorConfig: {} }));
+        }
+
+        document.getElementById('status').innerHTML = '✅ Usuário injetado! Abrindo WMS...';
+        setTimeout(() => {
+            window.location.href = 'modules/wms/index.html';
+        }, 800);
+    }
+</script>
+</body>
+</html>
