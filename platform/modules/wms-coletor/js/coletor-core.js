@@ -1,4 +1,4 @@
-﻿// WMS Coletor — Core Logic
+﻿// WMS Coletor Ã¢â‚¬â€ Core Logic
 // Navigation, Auth, Scanner, Shared Data Access
 
 const COLETOR_VERSION = '1.0.0';
@@ -32,6 +32,10 @@ function navigateTo(screenId) {
         target.classList.add('active');
         currentScreen = screenId;
 
+        // Init custom screens
+        if (screenId === 'checkin' && window.initCheckinScreen) window.initCheckinScreen(target);
+        if (screenId === 'conferir' && window.initConferirScreen) window.initConferirScreen(target);
+
         // Inject placeholder content if screen is empty
         if (target.innerHTML.trim() === '' && screenId !== 'home') {
             injectPlaceholder(screenId, target);
@@ -49,8 +53,8 @@ function navigateTo(screenId) {
             home: 'WMS Coletor',
             recebimento: 'Recebimento',
             armazenar: 'Armazenagem',
-            separar: 'Separação',
-            inventario: 'Inventário'
+            separar: 'SeparaÃƒÂ§ÃƒÂ£o',
+            inventario: 'InventÃƒÂ¡rio'
         };
         document.getElementById('screenTitle').textContent = titles[screenId] || 'WMS Coletor';
 
@@ -81,15 +85,15 @@ function injectPlaceholder(screenId, container) {
     const labels = {
         recebimento: 'Recebimento',
         armazenar: 'Armazenagem',
-        separar: 'Separação',
-        inventario: 'Inventário'
+        separar: 'SeparaÃƒÂ§ÃƒÂ£o',
+        inventario: 'InventÃƒÂ¡rio'
     };
 
     container.innerHTML = `
         <div class="screen-placeholder">
             <span class="material-icons-round">${icons[screenId] || 'info'}</span>
             <h3 style="margin-bottom:0.5rem;">${labels[screenId] || screenId}</h3>
-            <p style="font-size:0.85rem;">Tela em construção.<br>Use o scanner para iniciar.</p>
+            <p style="font-size:0.85rem;">Tela em construÃƒÂ§ÃƒÂ£o.<br>Use o scanner para iniciar.</p>
         </div>
     `;
 }
@@ -104,6 +108,12 @@ function processScan() {
 
     // Dispatch to active screen handler
     switch (currentScreen) {
+        case 'checkin':
+            if (window.handleScanCheckin) window.handleScanCheckin(code);
+            break;
+        case 'conferir':
+            if (window.handleScanConferir) window.handleScanConferir(code);
+            break;
         case 'recebimento':
             if (window.handleScanRecebimento) window.handleScanRecebimento(code);
             break;
@@ -141,6 +151,14 @@ function updateHomeStats() {
     if (el('statEnderecos')) el('statEnderecos').textContent = locations.length;
     if (el('statOcupados')) el('statOcupados').textContent = locations.filter(l => l.status === 'OCUPADO').length;
     if (el('statPendentes')) el('statPendentes').textContent = receipts.filter(r => r.status === 'AGUARDANDO').length;
+
+    // Badges V2
+    const confReceipts = JSON.parse(localStorage.getItem('wms_receipts_v2') || '[]');
+    const confPending = confReceipts.filter(r => r.status === 'AGUARDANDO_CONFERENCIA').length;
+    if (el('badgeConferir')) {
+        el('badgeConferir').textContent = confPending;
+        el('badgeConferir').style.display = confPending > 0 ? 'inline-block' : 'none';
+    }
 
     // Badges
     const pendingReceipts = receipts.filter(r => r.status === 'AGUARDANDO' || r.status === 'CONFERENCIA').length;
@@ -210,5 +228,5 @@ window.Feedback = {
         if (navigator.vibrate) navigator.vibrate(type === 'success' ? 50 : 300);
     }
 };
-/ /   f o r c e   d e p l o y  
- 
+// force deploy
+

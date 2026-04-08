@@ -46,6 +46,15 @@
             <!-- Screen: Home -->
             <div id="screen-home" class="screen active">
                 <div class="home-grid">
+                    <div class="home-card" style="border-left: 3px solid #ec4899;" onclick="navigateTo('checkin')">
+                        <span class="material-icons-round home-card-icon" style="color:#ec4899;">how_to_reg</span>
+                        <span class="home-card-label">Portaria</span>
+                    </div>
+                    <div class="home-card" style="border-left: 3px solid #ec4899;" onclick="navigateTo('conferir')">
+                        <span class="material-icons-round home-card-icon" style="color:#ec4899;">fact_check</span>
+                        <span class="home-card-label">Conferir</span>
+                        <span class="home-card-badge" style="background:#ec4899;color:white;" id="badgeConferir">0</span>
+                    </div>
                     <div class="home-card" onclick="navigateTo('recebimento')">
                         <span class="material-icons-round home-card-icon" style="color:#0ea5e9;">move_to_inbox</span>
                         <span class="home-card-label">Receber</span>
@@ -89,6 +98,12 @@
             <!-- Screen: Recebimento -->
             <div id="screen-recebimento" class="screen"></div>
 
+            <!-- Screen: Checkin (Portaria) -->
+            <div id="screen-checkin" class="screen"></div>
+
+            <!-- Screen: Conferir (Conferência Física) -->
+            <div id="screen-conferir" class="screen"></div>
+
             <!-- Screen: Armazenar -->
             <div id="screen-armazenar" class="screen"></div>
 
@@ -129,6 +144,7 @@
     <script src="js/coletor-core.js"></script>
     <script src="../wms/js/wms-procedures.js"></script>
     <script src="js/coletor-screens.js?v=3"></script>
+    <script src="js/coletor-inbound.js?v=1"></script>
     <script src="js/picking-app.js"></script>
     <script>
         // Register Service Worker
