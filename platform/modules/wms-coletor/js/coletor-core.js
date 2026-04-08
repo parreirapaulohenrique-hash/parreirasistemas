@@ -210,3 +210,5 @@ window.Feedback = {
         if (navigator.vibrate) navigator.vibrate(type === 'success' ? 50 : 300);
     }
 };
+/ /   f o r c e   d e p l o y  
+ 
