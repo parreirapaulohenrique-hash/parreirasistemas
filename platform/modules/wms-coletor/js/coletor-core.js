@@ -1,4 +1,4 @@
-﻿// WMS Coletor Ã¢â‚¬â€ Core Logic
+// WMS Coletor Ã¢â‚¬â€ Core Logic
 // Navigation, Auth, Scanner, Shared Data Access
 
 const COLETOR_VERSION = '1.0.0';
@@ -35,6 +35,8 @@ function navigateTo(screenId) {
         // Init custom screens
         if (screenId === 'checkin' && window.initCheckinScreen) window.initCheckinScreen(target);
         if (screenId === 'conferir' && window.initConferirScreen) window.initConferirScreen(target);
+        if (screenId === 'config' && window.initConfigScreen) window.initConfigScreen(target);
+        if (screenId === 'recebimento' && window.initConferenciaItensScreen) window.initConferenciaItensScreen(target);
 
         // Inject placeholder content if screen is empty
         if (target.innerHTML.trim() === '' && screenId !== 'home') {
@@ -51,10 +53,13 @@ function navigateTo(screenId) {
         // Update top bar title
         const titles = {
             home: 'WMS Coletor',
-            recebimento: 'Recebimento',
+            recebimento: 'Conferência de Produtos',
+            checkin: 'Portaria',
+            conferir: 'Recebimento Docas',
             armazenar: 'Armazenagem',
-            separar: 'SeparaÃƒÂ§ÃƒÂ£o',
-            inventario: 'InventÃƒÂ¡rio'
+            separar: 'Separação',
+            inventario: 'Inventário',
+            config: 'Parâmetros'
         };
         document.getElementById('screenTitle').textContent = titles[screenId] || 'WMS Coletor';
 
@@ -83,17 +88,17 @@ function injectPlaceholder(screenId, container) {
         inventario: 'inventory_2'
     };
     const labels = {
-        recebimento: 'Recebimento',
+        recebimento: 'Conferência de Produtos',
         armazenar: 'Armazenagem',
-        separar: 'SeparaÃƒÂ§ÃƒÂ£o',
-        inventario: 'InventÃƒÂ¡rio'
+        separar: 'Separação',
+        inventario: 'Inventário'
     };
 
     container.innerHTML = `
         <div class="screen-placeholder">
             <span class="material-icons-round">${icons[screenId] || 'info'}</span>
             <h3 style="margin-bottom:0.5rem;">${labels[screenId] || screenId}</h3>
-            <p style="font-size:0.85rem;">Tela em construÃƒÂ§ÃƒÂ£o.<br>Use o scanner para iniciar.</p>
+            <p style="font-size:0.85rem;">Tela vazia (aguardando bip).</p>
         </div>
     `;
 }
@@ -115,7 +120,7 @@ function processScan() {
             if (window.handleScanConferir) window.handleScanConferir(code);
             break;
         case 'recebimento':
-            if (window.handleScanRecebimento) window.handleScanRecebimento(code);
+            if (window.handleScanConferenciaItens) window.handleScanConferenciaItens(code);
             break;
         case 'armazenar':
             if (window.handleScanArmazenar) window.handleScanArmazenar(code);

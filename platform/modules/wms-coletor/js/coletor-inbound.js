@@ -325,8 +325,8 @@ window.salvarConferenciaFisica = async function() {
     
     r.volumesFisicos = volfis;
     r.condicaoCarga = document.getElementById('cconf-condicao').value;
-    r.dataConferencia = new Date().toISOString();
-    r.status = 'AGUARDANDO_PUTAWAY';
+    r.dataConferenciaMacro = new Date().toISOString();
+    r.status = 'CONFERENCIA_ITENS_PENDENTE';
     
     if (r.condicaoCarga !== 'OK') {
         r.divergencia = {
@@ -343,21 +343,12 @@ window.salvarConferenciaFisica = async function() {
     btn.disabled = true; btn.innerHTML = 'Processando...';
 
     try {
-        // Enviar para ERP (aproveitando o backend existente proc_confirmar_recebimento)
-        await WmsProcedures.proc_confirmar_recebimento({
-            ...r._rf,  // dados legados pra ele aceitar
-            nfNumero: r.nfNumero,
-            volumesFisicos: r.volumesFisicos
-        });
-        
-        // Gerar putaway (usando a lógica legada simulada)
-        _gerarPutawayPorConferencia(r);
-        
+        // Apenas avança na esteira local, não notifica ERP ainda (salva para a etapa de Itens)
         receipts[rIndex] = r;
         localStorage.setItem('wms_receipts_v2', JSON.stringify(receipts));
         
         Feedback.beep('success'); Feedback.flash('success');
-        showToast('Conferência confirmada!', 'success');
+        showToast('Volumes confirmados! Aguardando Prod.', 'success');
         if (window.updateHomeStats) updateHomeStats();
         setTimeout(() => navigateTo('home'), 1000);
     } catch(e) {
@@ -366,24 +357,74 @@ window.salvarConferenciaFisica = async function() {
     }
 };
 
-function _gerarPutawayPorConferencia(r) {
-    const putaway = JSON.parse(localStorage.getItem('wms_putaway') || '[]');
-    if (r.itens && r.itens.length > 0) {
-        r.itens.forEach(item => {
-            putaway.push({
-                id: `PUT-${String(putaway.length + 1).padStart(4, '0')}`,
-                nf: r.nfNumero, sku: item.sku, desc: item.descricao,
-                qty: item.quantidade, destino: 'DOCA-TRANSITO', // ou gerar mocado
-                status: 'PENDENTE', created: new Date().toISOString()
-            });
-        });
-    } else {
-        putaway.push({
-            id: `PUT-${String(putaway.length + 1).padStart(4, '0')}`,
-            nf: r.nfNumero, sku: '—', desc: `NF ${r.nfNumero}`,
-            qty: r.volumesFisicos, destino: 'DOCA-RECEPCAO',
-            status: 'PENDENTE', created: new Date().toISOString()
-        });
-    }
-    localStorage.setItem('wms_putaway', JSON.stringify(putaway));
-}
+// ===================================
+// 3. PARÂMETROS / CONFIGURAÇÕES (MOBILE)
+// ===================================
+
+window.initConfigScreen = function(container) {
+    const cfg = JSON.parse(localStorage.getItem('wms_config') || '{}');
+    const geral = cfg.geral || {};
+    const pinSupervisor = cfg.seguranca?.pinSupervisor;
+    
+    container.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+            <strong style="font-size:.95rem;color:var(--primary);">⚙️ Parâmetros do WMS</strong>
+            <button class="m-btn m-btn-outline" onclick="navigateTo('home')" style="font-size:.75rem;padding:.3rem .65rem;">
+                <span class="material-icons-round" style="font-size:.9rem;">arrow_back</span>
+            </button>
+        </div>
+
+        <div id="cfg-auth-container" style="background:#fff;border-radius:8px;padding:1rem;box-shadow:0 1px 3px rgba(0,0,0,.1);margin-bottom:1rem;">
+            <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:.5rem;">Funções restritas. Digite o PIN do supervisor ou clique no botão para desbloquear (se não houver PIN configurado na plataforma).</p>
+            <div style="display:flex;gap:.5rem;">
+                <input id="cfg-pin-input" type="password" class="m-input" placeholder="PIN" style="flex:1;">
+                <button class="m-btn m-btn-primary" onclick="window.unlockConfigMobile()">Desbloquear</button>
+            </div>
+            <div id="cfg-pin-feedback" style="color:#ef4444;font-size:.75rem;margin-top:.5rem;"></div>
+        </div>
+
+        <div id="cfg-panel" style="display:none;background:#fff;border-radius:8px;padding:1rem;box-shadow:0 1px 3px rgba(0,0,0,.1);">
+            <div style="font-weight:600;font-size:.85rem;margin-bottom:.8rem;color:var(--text-primary);display:flex;align-items:center;gap:.3rem;">
+                <span class="material-icons-round" style="font-size:1rem;color:var(--primary);">visibility_off</span>
+                Contagem Cega
+            </div>
+            <p style="font-size:.75rem;color:var(--text-secondary);margin-bottom:1rem;">
+                Se ativado, o operador de conferência não verá a quantidade esperada dos produtos.
+            </p>
+            
+            <label class="switch" style="margin-bottom:1.5rem;display:inline-block;">
+                <input id="cfg-blind-toggle" type="checkbox" ${geral.contagemCega !== false ? 'checked' : ''}>
+                <span class="slider round"></span>
+            </label>
+
+            <button class="m-btn m-btn-success" onclick="window.saveConfigMobile()" style="width:100%;">
+                <span class="material-icons-round">save</span> Salvar Alterações
+            </button>
+        </div>
+    `;
+
+    window.unlockConfigMobile = function() {
+        const pinDigitado = document.getElementById('cfg-pin-input').value.trim();
+        const cfg = JSON.parse(localStorage.getItem('wms_config') || '{}');
+        const pinMaster = cfg.seguranca?.pinSupervisor;
+        
+        if (pinMaster && pinMaster !== pinDigitado) {
+            document.getElementById('cfg-pin-feedback').textContent = 'PIN Incorreto.';
+            return;
+        }
+        
+        document.getElementById('cfg-auth-container').style.display = 'none';
+        document.getElementById('cfg-panel').style.display = 'block';
+    };
+
+    window.saveConfigMobile = function() {
+        const blind = document.getElementById('cfg-blind-toggle').checked;
+        const cfg = JSON.parse(localStorage.getItem('wms_config') || '{}');
+        if (!cfg.geral) cfg.geral = {};
+        cfg.geral.contagemCega = blind;
+        localStorage.setItem('wms_config', JSON.stringify(cfg));
+        
+        showToast('Configurações salvas.', 'success');
+        setTimeout(() => navigateTo('home'), 1000);
+    };
+};

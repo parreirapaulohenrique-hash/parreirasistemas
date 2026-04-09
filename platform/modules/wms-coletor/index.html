@@ -25,8 +25,9 @@
                 <span class="material-icons-round" style="color:var(--primary);">warehouse</span>
                 <span class="top-bar-title" id="screenTitle">WMS Coletor</span>
             </div>
-            <div class="top-bar-right">
-                <span id="userBadge" class="user-badge">OP</span>
+            <div class="top-bar-right" style="display:flex;align-items:center;gap:15px;">
+                <span class="material-icons-round" onclick="navigateTo('config')" style="color:var(--text-secondary);cursor:pointer;">settings</span>
+                <span id="userBadge" class="user-badge" onclick="navigateTo('home')" style="cursor:pointer;">OP</span>
             </div>
         </header>
 
@@ -51,13 +52,13 @@
                         <span class="home-card-label">Portaria</span>
                     </div>
                     <div class="home-card" style="border-left: 3px solid #ec4899;" onclick="navigateTo('conferir')">
-                        <span class="material-icons-round home-card-icon" style="color:#ec4899;">fact_check</span>
-                        <span class="home-card-label">Conferir</span>
+                        <span class="material-icons-round home-card-icon" style="color:#ec4899;">move_to_inbox</span>
+                        <span class="home-card-label">Receber</span>
                         <span class="home-card-badge" style="background:#ec4899;color:white;" id="badgeConferir">0</span>
                     </div>
-                    <div class="home-card" onclick="navigateTo('recebimento')">
-                        <span class="material-icons-round home-card-icon" style="color:#0ea5e9;">move_to_inbox</span>
-                        <span class="home-card-label">Receber</span>
+                    <div class="home-card" style="border-left: 3px solid #0ea5e9;" onclick="navigateTo('recebimento')">
+                        <span class="material-icons-round home-card-icon" style="color:#0ea5e9;">fact_check</span>
+                        <span class="home-card-label">Conferir Itens</span>
                         <span class="home-card-badge" id="badgeReceber">0</span>
                     </div>
                     <div class="home-card" onclick="navigateTo('armazenar')">
@@ -113,6 +114,9 @@
             <!-- Screen: Inventário -->
             <div id="screen-inventario" class="screen"></div>
 
+            <!-- Screen: Configurações (Mobile) -->
+            <div id="screen-config" class="screen"></div>
+
         </main>
 
         <!-- Bottom Navigation -->
@@ -122,8 +126,8 @@
                 <span>Início</span>
             </button>
             <button class="nav-tab" onclick="navigateTo('recebimento')">
-                <span class="material-icons-round">move_to_inbox</span>
-                <span>Receber</span>
+                <span class="material-icons-round">fact_check</span>
+                <span>Conferir NF</span>
             </button>
             <button class="nav-tab" onclick="navigateTo('armazenar')">
                 <span class="material-icons-round">system_update_alt</span>
@@ -145,6 +149,7 @@
     <script src="../wms/js/wms-procedures.js"></script>
     <script src="js/coletor-screens.js?v=3"></script>
     <script src="js/coletor-inbound.js?v=1"></script>
+    <script src="js/coletor-conferencia.js?v=4"></script>
     <script src="js/picking-app.js"></script>
     <script>
         // Register Service Worker

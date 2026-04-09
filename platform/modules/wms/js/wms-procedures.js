@@ -584,6 +584,43 @@ ${emailRemetente ? `<${emailRemetente}>` : ''}
         };
     }
 
+    // ==========================================================================
+    // PROC 8 — CONFIRMAR CONFERÊNCIA DE ITENS (Micro-recebimento / SKUs)
+    // ==========================================================================
+    async function proc_confirmar_conferencia_itens(payload) {
+        // @param {object} payload — { nfNumero, chaveNfe, operador, inicio, fim, itens: [{sku, divergenciaQty, lido, esperado}] }
+        const { connectorId } = window.WmsIntegration.getStatus();
+
+        if (connectorId !== 'standalone') {
+            try {
+                const res = await window.WmsIntegration.sync('product_conference', 'wms→erp', payload);
+                if (res.status === 'error') throw new Error(res.message);
+                _logSync('proc_confirmar_conferencia_itens', 'wms→erp', 'ok', `Conferência Produtos NF ${payload.nfNumero} repassada via ${connectorId}`);
+                return res;
+            } catch (err) {
+                _logSync('proc_confirmar_conferencia_itens', 'wms→erp', 'error', `Falha ao integrar conferência NF ${payload.nfNumero}: ${err.message}`);
+                throw new Error(`Falha na integração: ${err.message}`);
+            }
+        }
+
+        // Mock Standalone / ERP Local
+        try {
+            const confList = JSON.parse(localStorage.getItem('erp_conferencias_itens') || '[]');
+            confList.push({
+                ...payload,
+                integrationStatus: 'MOCK_OK',
+                dataIntegracao: new Date().toISOString()
+            });
+            localStorage.setItem('erp_conferencias_itens', JSON.stringify(confList));
+
+            _logSync('proc_confirmar_conferencia_itens', 'wms→erp', 'ok', `[MOCK] Conferência Itens NF ${payload.nfNumero} salva localmente.`);
+            return { status: 'ok', message: 'Conferência gravada no Mock ERP com sucesso.' };
+        } catch (e) {
+            _logSync('proc_confirmar_conferencia_itens', 'wms→erp', 'error', e.message);
+            throw e;
+        }
+    }
+
     // ─── EXPORT GLOBAL ────────────────────────────────────────────────────────
 
     window.WmsProcedures = {
@@ -594,6 +631,7 @@ ${emailRemetente ? `<${emailRemetente}>` : ''}
         proc_validar_pin_supervisor,
         proc_registrar_entrada_avulsa,
         proc_enviar_email_divergencia,
+        proc_confirmar_conferencia_itens,
         // Utilitários expostos para uso em outros módulos
         _normalizeNf,
         _getMockNfs
