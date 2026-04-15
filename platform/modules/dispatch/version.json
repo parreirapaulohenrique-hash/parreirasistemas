@@ -1,5 +1,5 @@
 {
-    "version": "3.8.5",
-    "lastUpdate": "2026-04-06",
-    "change": "FOB: removido texto estático fixo de horário/prazo do card (v3.8.5)."
+    "version": "3.8.6",
+    "lastUpdate": "2026-04-15",
+    "change": "Conferência Fatura: adicionados filtros por coluna (NF, Cliente, Cidade, Data, Frete) na tabela de NFs disponíveis (v3.8.6)."
 }

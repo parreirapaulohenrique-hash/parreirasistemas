@@ -3453,6 +3453,44 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.updateInvoiceComparison();
         };
 
+        // v3.8.6 - Filtros por coluna na tabela de NFs da Conferência Fatura
+        window.applyInvoiceColumnFilters = () => {
+            const fNf     = (document.getElementById('invF_nf')?.value     || '').toLowerCase();
+            const fClient = (document.getElementById('invF_client')?.value || '').toLowerCase();
+            const fCity   = (document.getElementById('invF_city')?.value   || '').toLowerCase();
+            const fDate   = (document.getElementById('invF_date')?.value   || '').toLowerCase();
+            const fFrete  = (document.getElementById('invF_frete')?.value  || '').toLowerCase();
+
+            const rows = document.querySelectorAll('#invoiceNFsBody tr[data-id]');
+            let visible = 0;
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length < 6) { row.style.display = ''; return; }
+                const nf    = (cells[1].textContent || '').toLowerCase();
+                const cli   = (cells[2].textContent || '').toLowerCase();
+                const city  = (cells[3].textContent || '').toLowerCase();
+                const date  = (cells[4].textContent || '').toLowerCase();
+                const frete = (cells[5].textContent || '').toLowerCase();
+
+                const match =
+                    (!fNf     || nf.includes(fNf))     &&
+                    (!fClient || cli.includes(fClient)) &&
+                    (!fCity   || city.includes(fCity))  &&
+                    (!fDate   || date.includes(fDate))  &&
+                    (!fFrete  || frete.includes(fFrete));
+
+                row.style.display = match ? '' : 'none';
+                if (match) visible++;
+            });
+
+            // Atualiza contador de notas visíveis
+            const countEl = document.getElementById('invoiceNFsCount');
+            if (countEl) {
+                const total = rows.length;
+                countEl.textContent = visible < total ? `${visible} de ${total} notas` : `${total} notas`;
+            }
+        };
+
         // Toggle single NF selection
         window.toggleInvoiceNF = (id, checked, value) => {
             if (checked) {
