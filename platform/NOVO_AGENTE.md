@@ -53,12 +53,14 @@ graph TD
     C -->|Vendas Externas| FV[Força de Vendas<br>PWA Offline-First]
     C -->|Gestão de Armazém| W[Módulo WMS<br>Estoque & Mapa]
     C -->|Chão de Fábrica| WC[WMS Coletor<br>Coletores RF/Zebra]
+    C -->|Análise Financeira| FC[Fluxo de Caixa<br>Projeções e Maxdata]
 
     FV -.->|Adapter: onErpReceberPedidoFV<br>Push Pedidos| E
     E -.->|Adapter: exportClientesParaFV<br>Pull Cadastros| FV
     E -.->|Adapter Pattern<br>Sincroniza Produtos/Pedidos| W
     W -.->|Adapter Pattern<br>Retorna Status Estoque| E
     E -.->|Gera Faturamento/NF| D
+    E -.->|Exporta Relatório 343| FC
 ```
 
 ---
@@ -209,6 +211,22 @@ graph LR
 *   **Ponto Eletrônico:** Funcionário acessa RH > Ponto -> Clica "Bater Ponto" -> Sistema registra Entrada/Saída com data/hora e geolocalização (mock).
 *   **Folha de Pagamento:** Gestor acessa RH > Holerites -> Visualiza grid de funcionários com Salário Base, deduções (INSS 10%, VT 6%) e Líquido a Receber -> Gera Holeite individual via modal de impressão.
 *   **Férias e Licenças:** RH agenda afastamento -> Define tipo (Férias/Licença) e período -> Status exibido em blocos coloridos (Programado, Em Andamento, Concluído).
+
+### 5.10. Módulo Financeiro Fluxo de Caixa (Standalone/PWA)
+```mermaid
+graph LR
+    FC[Fluxo de Caixa] --> Imp[Importação Maxdata 343]
+    FC --> Proj[Motor de Projeções]
+    FC --> Dash[Dashboard Visual]
+    FC --> Exp[Exportação SheetJS]
+    Imp -->|Extração Local| Proj
+    Proj -->|Gera Meses Futuros| Dash
+```
+**POP:**
+*   **Acesso e Seleção (Multi-tenant):** Usuário acessa o módulo (atualmente via localStorage) e seleciona/cria o cliente desejado na tela inicial.
+*   **Importação de Dados Reais:** Usuário arrasta o relatório PDF do ERP Maxdata ("343 - Centro de Custos"). O parser local usa `pdf.js` com regex para extrair valores `A Pagar` e `A Receber`, distribuindo pelo plano de contas.
+*   **Projeções:** Usuário define uma premissa de crescimento (ex: 5% a.m). O sistema replica automaticamente a base dos dados reais para os meses futuros, projetando a variação do caixa.
+*   **Exportação:** Em "Exportar Excel", o módulo consolida todas as abas mensais com saldo e variação, e emite o arquivo original em padrão Contábil.
 
 ---
 

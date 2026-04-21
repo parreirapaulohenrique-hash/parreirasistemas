@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CashFlow Pro | Consultoria</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    
+    <!-- Bibliotecas Externas -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    
+    <!-- Estilos Customizados -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-background"></div>
+
+    <!-- TELA 1: Seleção de Clientes -->
+    <div id="view-clients" class="view-container active">
+        <header class="main-header glass-panel">
+            <div class="logo">
+                <span class="material-icons-round">account_balance_wallet</span>
+                <h1>CashFlow <span>Pro</span></h1>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-primary" onclick="app.showNewClientModal()">
+                    <span class="material-icons-round">add</span> Novo Cliente
+                </button>
+            </div>
+        </header>
+
+        <main class="clients-main">
+            <div class="welcome-text">
+                <h2>Selecione um Cliente</h2>
+                <p>Gerencie o fluxo de caixa e projeções financeiras.</p>
+            </div>
+            
+            <div class="clients-grid" id="clients-grid">
+                <!-- Cards de clientes gerados pelo JS -->
+            </div>
+        </main>
+    </div>
+
+    <!-- TELA 2: Dashboard do Cliente -->
+    <div id="view-dashboard" class="view-container">
+        <!-- Sidebar lateral -->
+        <aside class="sidebar glass-panel">
+            <div class="sidebar-header">
+                <div class="client-logo" id="active-client-initial">C</div>
+                <div class="client-info">
+                    <h3 id="active-client-name">Cliente Nome</h3>
+                    <span id="active-client-cnpj">00.000.000/0000-00</span>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" onclick="app.switchTab('overview')">
+                    <span class="material-icons-round">dashboard</span> Visão Geral
+                </a>
+                <a href="#" class="nav-item" onclick="app.switchTab('import')">
+                    <span class="material-icons-round">upload_file</span> Importar PDF Maxdata
+                </a>
+                <a href="#" class="nav-item" onclick="app.switchTab('projections')">
+                    <span class="material-icons-round">trending_up</span> Projeções Anuais
+                </a>
+                <a href="#" class="nav-item" onclick="app.switchTab('export')">
+                    <span class="material-icons-round">download</span> Exportar Excel
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="btn btn-ghost" onclick="app.backToClients()">
+                    <span class="material-icons-round">arrow_back</span> Trocar Cliente
+                </button>
+            </div>
+        </aside>
+
+        <!-- Conteúdo principal do Dashboard -->
+        <main class="dashboard-content">
+            <header class="dashboard-header glass-panel">
+                <div class="header-filters">
+                    <select id="filter-period-type" class="glass-select">
+                        <option value="monthly">Mensal</option>
+                        <option value="quarterly">Trimestral</option>
+                        <option value="semiannual">Semestral</option>
+                        <option value="annual" selected>Anual</option>
+                    </select>
+                    <select id="filter-period-value" class="glass-select">
+                        <option value="2026">2026</option>
+                        <!-- Gerado via JS -->
+                    </select>
+                </div>
+            </header>
+
+            <div class="tab-content active" id="tab-overview">
+                <div class="kpi-grid">
+                    <div class="kpi-card glass-panel success">
+                        <div class="kpi-icon"><span class="material-icons-round">arrow_upward</span></div>
+                        <div class="kpi-data">
+                            <h4>Total Entradas</h4>
+                            <h2 id="kpi-entradas">R$ 0,00</h2>
+                        </div>
+                    </div>
+                    <div class="kpi-card glass-panel danger">
+                        <div class="kpi-icon"><span class="material-icons-round">arrow_downward</span></div>
+                        <div class="kpi-data">
+                            <h4>Total Saídas</h4>
+                            <h2 id="kpi-saidas">R$ 0,00</h2>
+                        </div>
+                    </div>
+                    <div class="kpi-card glass-panel primary">
+                        <div class="kpi-icon"><span class="material-icons-round">account_balance</span></div>
+                        <div class="kpi-data">
+                            <h4>Saldo Líquido</h4>
+                            <h2 id="kpi-saldo">R$ 0,00</h2>
+                        </div>
+                    </div>
+                    <div class="kpi-card glass-panel info">
+                        <div class="kpi-icon"><span class="material-icons-round">analytics</span></div>
+                        <div class="kpi-data">
+                            <h4>Variação (Proj vs Real)</h4>
+                            <h2 id="kpi-variacao">0%</h2>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-row">
+                    <div class="chart-container glass-panel">
+                        <h3>Fluxo Realizado vs Projetado</h3>
+                        <canvas id="mainChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="table-container glass-panel">
+                    <div class="table-header">
+                        <h3>Detalhamento do Fluxo de Caixa</h3>
+                    </div>
+                    <div class="table-responsive">
+                        <table id="flow-table">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Descrição da Conta</th>
+                                    <th class="text-right">Projetado (R$)</th>
+                                    <th class="text-right">Realizado (R$)</th>
+                                    <th class="text-right">Variação</th>
+                                    <th class="text-right">Análise Vert.</th>
+                                </tr>
+                            </thead>
+                            <tbody id="flow-table-body">
+                                <!-- Preenchido via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-import">
+                <div class="import-container glass-panel">
+                    <h2>Importar Relatório Maxdata</h2>
+                    <p>Faça upload do PDF "343 - Relatório de Centro de Custos / Plano de Contas".</p>
+                    
+                    <div class="drop-zone" id="pdf-drop-zone">
+                        <span class="material-icons-round">cloud_upload</span>
+                        <h3>Arraste o arquivo PDF aqui</h3>
+                        <p>ou</p>
+                        <input type="file" id="pdf-file-input" accept=".pdf" hidden>
+                        <button class="btn btn-secondary" onclick="document.getElementById('pdf-file-input').click()">Procurar Arquivo</button>
+                    </div>
+
+                    <div id="import-preview" class="hidden">
+                        <h3>Preview da Importação</h3>
+                        <p id="import-period">Período detectado: -</p>
+                        <div class="table-responsive">
+                            <table class="preview-table">
+                                <thead>
+                                    <tr>
+                                        <th>Conta</th>
+                                        <th class="text-right">A Receber</th>
+                                        <th class="text-right">A Pagar</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="import-preview-body"></tbody>
+                            </table>
+                        </div>
+                        <div class="import-actions">
+                            <button class="btn btn-ghost" onclick="app.cancelImport()">Cancelar</button>
+                            <button class="btn btn-primary" onclick="app.confirmImport()">Confirmar e Salvar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-projections">
+                <div class="projections-container glass-panel">
+                    <h2>Configurar Regras de Projeção</h2>
+                    <p>Defina as regras automáticas para projetar os meses futuros baseados no histórico.</p>
+
+                    <div class="projection-rules">
+                        <div class="form-group">
+                            <label>Base para cálculo</label>
+                            <select id="proj-base" class="glass-select">
+                                <option value="prev_year">Mesmo mês do ano anterior</option>
+                                <option value="prev_month">Mês imediatamente anterior</option>
+                                <option value="avg_3m">Média dos últimos 3 meses</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Crescimento Esperado / Inflação (%)</label>
+                            <input type="number" id="proj-growth" class="glass-input" value="0" step="0.1">
+                        </div>
+                        <button class="btn btn-primary" onclick="app.applyProjections()">Aplicar Projeção</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-export">
+                <div class="export-container glass-panel">
+                    <h2>Exportar Relatório</h2>
+                    <p>Gere a planilha no formato idêntico ao original, incluindo fórmulas e totalizadores.</p>
+                    
+                    <div class="export-options">
+                        <button class="btn btn-primary btn-large" onclick="app.exportToExcel()">
+                            <span class="material-icons-round">table_view</span> Gerar Excel (.xlsx)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="modal-new-client">
+        <div class="modal glass-panel">
+            <div class="modal-header">
+                <h3>Cadastrar Cliente</h3>
+                <button class="btn-icon" onclick="app.closeModals()"><span class="material-icons-round">close</span></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Nome da Empresa</label>
+                    <input type="text" id="new-client-name" class="glass-input" placeholder="Ex: Central Peças Ltda">
+                </div>
+                <div class="form-group">
+                    <label>CNPJ</label>
+                    <input type="text" id="new-client-cnpj" class="glass-input" placeholder="00.000.000/0000-00">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="app.closeModals()">Cancelar</button>
+                <button class="btn btn-primary" onclick="app.saveNewClient()">Salvar Cliente</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/store.js"></script>
+    <script src="js/pdf-parser.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
