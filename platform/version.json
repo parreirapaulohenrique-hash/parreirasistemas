@@ -1,5 +1,5 @@
 {
-    "version": "11.9.1",
+    "version": "11.9.2",
     "lastUpdate": "2026-04-21",
-    "description": "Logistics Portal v11.9.1 - Módulo Financeiro migrado para Firebase Firestore Sync"
+    "description": "Logistics Portal v11.9.2 - Correção do Parser de PDF (Extrator de Valores)"
 }

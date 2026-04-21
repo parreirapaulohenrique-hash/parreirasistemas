@@ -66,68 +66,54 @@ window.PDFParser = {
 
             if (!isProcessingData) continue;
 
-            // Regex para identificar linhas de conta:
-            // Ex 1: "1.1. RECEITAS COM VENDAS 47.986,72 100,00%"
-            // Ex 2: "3.2.01. SALÁRIO (CLT) 33.411,65 33,92%"
+            // Regex para capturar apenas o código inicial (Ex: "1.1." ou "3.2.01.")
+            const codeMatch = line.match(/^(\d+(?:\.\d+)+)\.?\s+/);
             
-            // Matcher para iniciar com código numérico (ex: "1.1.", "3.2.01.")
-            const accountRegex = /^(\d+(?:\.\d+)+)\.?\s+(.+?)\s+([\d\.,]+)?\s*([\d\.,]+)?\s*([\d\.,]+)%/i;
-            const match = line.match(accountRegex);
-            
-            if (match) {
-                const codigo = match[1];
-                const descricao = match[2].trim();
+            if (codeMatch) {
+                const codigo = codeMatch[1];
+                const restOfLine = line.substring(codeMatch[0].length).trim();
                 
-                // Os valores no Maxdata ficam alinhados à direita.
-                // Como não sabemos exatamente se o valor lido é A Pagar ou A Receber só pelo texto linear,
-                // usamos a natureza da conta (1 = Receita, 3 = Despesa)
+                // O resto da linha pode ser "VENDAS 100,00% 5,46% 47.986,72"
+                // ou "RECEITAS COM VENDAS 47.986,72 100,00% 2,50%"
+                const tokens = restOfLine.split(/\s+/);
                 
                 let valor = 0;
-                // Pega o último número grande antes das porcentagens
-                const rawValMatch = line.match(/([\d\.]+,\d{2})\s+[\d\.,]+%/);
-                if (rawValMatch) {
-                    // Remove pontos de milhar e troca vírgula por ponto
-                    valor = parseFloat(rawValMatch[1].replace(/\./g, '').replace(',', '.'));
-                }
-
-                let a_pagar = 0;
-                let a_receber = 0;
-
-                // Regra de negócio simples para identificar entrada vs saída:
-                if (codigo.startsWith('1.') || codigo.startsWith('4.')) {
-                    a_receber = valor; // Receitas
-                } else {
-                    a_pagar = valor;   // Custos/Despesas (2., 3.)
-                }
-
-                result.contas.push({
-                    codigo,
-                    descricao,
-                    a_receber,
-                    a_pagar
-                });
-            }
-        }
-
-        // Se a regex falhar (formatação do pdfjs muito bagunçada), tentamos uma abordagem de fallback mais agressiva
-        if (result.contas.length === 0) {
-            const fallbackRegex = /^(\d[\d\.]+)\s+([A-ZÀ-Ú\s]+)\s+([\d\.]+,\d{2})/gim;
-            let m;
-            while ((m = fallbackRegex.exec(text)) !== null) {
-                const codigo = m[1];
-                const descricao = m[2].trim();
-                const valor = parseFloat(m[3].replace(/\./g, '').replace(',', '.'));
+                let descriptionTokens = [];
                 
-                let a_pagar = 0;
-                let a_receber = 0;
-
-                if (codigo.startsWith('1.') || codigo.startsWith('4.')) {
-                    a_receber = valor;
-                } else {
-                    a_pagar = valor;
+                for (let token of tokens) {
+                    if (token.includes('%')) {
+                        continue; // Ignora porcentagens da análise vertical
+                    }
+                    
+                    // Verifica se o token é um valor monetário válido (ex: 1.234,56 ou 123,45)
+                    if (/^(\d{1,3}(?:\.\d{3})*|\d+),\d{2}$/.test(token)) {
+                        valor = parseFloat(token.replace(/\./g, '').replace(',', '.'));
+                    } else {
+                        // Se não for valor nem %, faz parte da descrição
+                        descriptionTokens.push(token);
+                    }
                 }
+                
+                const descricao = descriptionTokens.join(' ');
+                
+                if (valor > 0 || descricao.length > 0) {
+                    let a_pagar = 0;
+                    let a_receber = 0;
 
-                result.contas.push({ codigo, descricao, a_receber, a_pagar });
+                    // Regra de negócio simples para identificar entrada vs saída:
+                    if (codigo.startsWith('1.') || codigo.startsWith('4.')) {
+                        a_receber = valor; // Receitas
+                    } else {
+                        a_pagar = valor;   // Custos/Despesas (2., 3.)
+                    }
+
+                    result.contas.push({
+                        codigo,
+                        descricao,
+                        a_receber,
+                        a_pagar
+                    });
+                }
             }
         }
 
