@@ -6,9 +6,8 @@ const app = {
     currentChart: null,
     pendingImport: null,
 
-    init() {
+    async init() {
         this.bindEvents();
-        this.renderClientsList();
         
         // Populate period filter years
         const currentYear = new Date().getFullYear();
@@ -17,6 +16,10 @@ const app = {
         for(let y = currentYear - 1; y <= currentYear + 2; y++) {
             yearSelect.innerHTML += `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`;
         }
+        
+        // Carrega clientes da nuvem
+        document.getElementById('clients-grid').innerHTML = '<p style="text-align:center; color: var(--text-muted);">Sincronizando com a nuvem...</p>';
+        await this.renderClientsList();
         
         const activeClient = store.getActiveClient();
         if (activeClient) {
@@ -59,7 +62,6 @@ const app = {
             });
         }
 
-        // Filters change
         document.getElementById('filter-period-type').addEventListener('change', () => this.refreshDashboard());
         document.getElementById('filter-period-value').addEventListener('change', () => this.refreshDashboard());
     },
@@ -71,7 +73,6 @@ const app = {
 
     switchTab(tabId) {
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        // Find the matching nav item
         const links = document.querySelectorAll('.nav-item');
         for(let link of links) {
             if(link.getAttribute('onclick') && link.getAttribute('onclick').includes(tabId)) {
@@ -87,8 +88,8 @@ const app = {
 
     // --- CLIENTES ---
 
-    renderClientsList() {
-        const clients = store.getClients();
+    async renderClientsList() {
+        const clients = await store.getClients();
         const grid = document.getElementById('clients-grid');
         grid.innerHTML = '';
 
@@ -125,7 +126,7 @@ const app = {
         document.querySelectorAll('.modal-overlay').forEach(el => el.classList.remove('active'));
     },
 
-    saveNewClient() {
+    async saveNewClient() {
         const name = document.getElementById('new-client-name').value.trim();
         const cnpj = document.getElementById('new-client-cnpj').value.trim();
 
@@ -133,11 +134,24 @@ const app = {
             alert('O nome da empresa é obrigatório!');
             return;
         }
+        
+        const btn = document.querySelector('#modal-new-client .btn-primary');
+        const oldText = btn.textContent;
+        btn.textContent = "Salvando...";
+        btn.disabled = true;
 
-        const newClient = store.addClient(name, cnpj);
-        this.closeModals();
-        this.renderClientsList();
-        this.loadDashboard(newClient);
+        const newClient = await store.addClient(name, cnpj);
+        
+        btn.textContent = oldText;
+        btn.disabled = false;
+        
+        if (newClient) {
+            this.closeModals();
+            this.renderClientsList();
+            this.loadDashboard(newClient);
+        } else {
+            alert("Erro ao salvar cliente na nuvem.");
+        }
     },
 
     backToClients() {
@@ -164,23 +178,17 @@ const app = {
         if(!client) return;
 
         const year = document.getElementById('filter-period-value').value;
-        const type = document.getElementById('filter-period-type').value; // annual, monthly, etc
-        
         const yearData = store.getYearData(client.id, year);
         
-        // Consolida dados do ano
         let totalRealizadoEntradas = 0;
         let totalRealizadoSaidas = 0;
         let totalProjetadoEntradas = 0;
         let totalProjetadoSaidas = 0;
         
-        // Arrays mensais (12 posições)
         const monthlyRealizado = new Array(12).fill(0);
         const monthlyProjetado = new Array(12).fill(0);
-        
         const aggregatedAccounts = {};
 
-        // Processa todos os meses que existem no armazenamento
         for(let month = 1; month <= 12; month++) {
             const key = `${year}-${month.toString().padStart(2, '0')}`;
             const mData = yearData[key];
@@ -189,18 +197,10 @@ const app = {
                 mData.realizado.forEach(acc => {
                     totalRealizadoEntradas += acc.a_receber || 0;
                     totalRealizadoSaidas += acc.a_pagar || 0;
-                    
                     const saldoRealizado = (acc.a_receber || 0) - (acc.a_pagar || 0);
                     monthlyRealizado[month-1] += saldoRealizado;
                     
-                    if(!aggregatedAccounts[acc.codigo]) {
-                        aggregatedAccounts[acc.codigo] = { 
-                            codigo: acc.codigo, 
-                            descricao: acc.descricao, 
-                            realizado: 0, 
-                            projetado: 0 
-                        };
-                    }
+                    if(!aggregatedAccounts[acc.codigo]) aggregatedAccounts[acc.codigo] = { codigo: acc.codigo, descricao: acc.descricao, realizado: 0, projetado: 0 };
                     aggregatedAccounts[acc.codigo].realizado += saldoRealizado;
                 });
             }
@@ -209,18 +209,10 @@ const app = {
                 mData.projetado.forEach(acc => {
                     totalProjetadoEntradas += acc.a_receber || 0;
                     totalProjetadoSaidas += acc.a_pagar || 0;
-                    
                     const saldoProjetado = (acc.a_receber || 0) - (acc.a_pagar || 0);
                     monthlyProjetado[month-1] += saldoProjetado;
                     
-                    if(!aggregatedAccounts[acc.codigo]) {
-                        aggregatedAccounts[acc.codigo] = { 
-                            codigo: acc.codigo, 
-                            descricao: acc.descricao, 
-                            realizado: 0, 
-                            projetado: 0 
-                        };
-                    }
+                    if(!aggregatedAccounts[acc.codigo]) aggregatedAccounts[acc.codigo] = { codigo: acc.codigo, descricao: acc.descricao, realizado: 0, projetado: 0 };
                     aggregatedAccounts[acc.codigo].projetado += saldoProjetado;
                 });
             }
@@ -228,70 +220,38 @@ const app = {
 
         const saldoRealizadoLiq = totalRealizadoEntradas - totalRealizadoSaidas;
         const saldoProjetadoLiq = totalProjetadoEntradas - totalProjetadoSaidas;
-        
         let variacao = 0;
-        if(saldoProjetadoLiq !== 0) {
-            variacao = ((saldoRealizadoLiq - saldoProjetadoLiq) / Math.abs(saldoProjetadoLiq)) * 100;
-        }
+        if(saldoProjetadoLiq !== 0) variacao = ((saldoRealizadoLiq - saldoProjetadoLiq) / Math.abs(saldoProjetadoLiq)) * 100;
 
-        // Atualiza KPIs
         document.getElementById('kpi-entradas').textContent = this.formatCurrency(totalRealizadoEntradas);
         document.getElementById('kpi-saidas').textContent = this.formatCurrency(totalRealizadoSaidas);
         document.getElementById('kpi-saldo').textContent = this.formatCurrency(saldoRealizadoLiq);
         document.getElementById('kpi-variacao').textContent = variacao.toFixed(2) + '%';
         
-        // Atualiza Gráfico
         this.renderCharts(monthlyRealizado, monthlyProjetado);
-        
-        // Atualiza Tabela
         this.renderFlowTable(aggregatedAccounts, totalRealizadoEntradas);
     },
 
     renderCharts(realizadoData, projetadoData) {
         const ctx = document.getElementById('mainChart').getContext('2d');
-        
-        if(this.currentChart) {
-            this.currentChart.destroy();
-        }
+        if(this.currentChart) this.currentChart.destroy();
 
         this.currentChart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
                 datasets: [
-                    {
-                        label: 'Realizado (Saldo Lívquido)',
-                        data: realizadoData,
-                        backgroundColor: 'rgba(59, 130, 246, 0.8)',
-                        borderRadius: 4
-                    },
-                    {
-                        label: 'Projetado (Saldo Líquido)',
-                        data: projetadoData,
-                        type: 'line',
-                        borderColor: '#10b981',
-                        borderWidth: 2,
-                        fill: false,
-                        tension: 0.3
-                    }
+                    { label: 'Realizado (Saldo Lívquido)', data: realizadoData, backgroundColor: 'rgba(59, 130, 246, 0.8)', borderRadius: 4 },
+                    { label: 'Projetado (Saldo Líquido)', data: projetadoData, type: 'line', borderColor: '#10b981', borderWidth: 2, fill: false, tension: 0.3 }
                 ]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
+                responsive: true, maintainAspectRatio: false,
                 scales: {
-                    y: {
-                        grid: { color: 'rgba(255,255,255,0.05)' },
-                        ticks: { color: '#94a3b8' }
-                    },
-                    x: {
-                        grid: { display: false },
-                        ticks: { color: '#94a3b8' }
-                    }
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+                    x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
                 },
-                plugins: {
-                    legend: { labels: { color: '#f8fafc' } }
-                }
+                plugins: { legend: { labels: { color: '#f8fafc' } } }
             }
         });
     },
@@ -301,7 +261,6 @@ const app = {
         tbody.innerHTML = '';
         
         const accounts = Object.values(accountsMap).sort((a,b) => a.codigo.localeCompare(b.codigo));
-        
         if(accounts.length === 0) {
             tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Nenhum dado encontrado para o período selecionado.</td></tr>';
             return;
@@ -309,16 +268,11 @@ const app = {
 
         accounts.forEach(acc => {
             const tr = document.createElement('tr');
-            
             let variacao = 0;
-            if(acc.projetado !== 0) {
-                variacao = ((acc.realizado - acc.projetado) / Math.abs(acc.projetado)) * 100;
-            }
+            if(acc.projetado !== 0) variacao = ((acc.realizado - acc.projetado) / Math.abs(acc.projetado)) * 100;
             
             let vertical = 0;
-            if(totalEntradas > 0) {
-                vertical = (Math.abs(acc.realizado) / totalEntradas) * 100;
-            }
+            if(totalEntradas > 0) vertical = (Math.abs(acc.realizado) / totalEntradas) * 100;
 
             const isEntrada = acc.codigo.startsWith('1.') || acc.codigo.startsWith('4.');
             const valClass = isEntrada ? 'positive' : 'negative';
@@ -344,24 +298,17 @@ const app = {
     // --- IMPORTAÇÃO DE PDF ---
     
     handlePDFUpload(file) {
-        if (!file || file.type !== 'application/pdf') {
-            alert('Por favor, selecione um arquivo PDF válido.');
-            return;
-        }
-
+        if (!file || file.type !== 'application/pdf') return alert('Por favor, selecione um arquivo PDF válido.');
         document.getElementById('import-period').textContent = 'Analisando...';
         
         const reader = new FileReader();
         reader.onload = function(e) {
             const typedarray = new Uint8Array(e.target.result);
-            
             if(window.PDFParser) {
                 window.PDFParser.parseMaxdataPDF(typedarray)
                     .then(result => app.showImportPreview(result))
                     .catch(err => alert('Erro ao processar PDF: ' + err.message));
-            } else {
-                alert('Módulo PDF não carregado.');
-            }
+            } else { alert('Módulo PDF não carregado.'); }
         };
         reader.readAsArrayBuffer(file);
     },
@@ -369,7 +316,6 @@ const app = {
     showImportPreview(result) {
         document.getElementById('pdf-drop-zone').classList.add('hidden');
         document.getElementById('import-preview').classList.remove('hidden');
-        
         document.getElementById('import-period').textContent = 'Período detectado: ' + result.periodo;
         
         const tbody = document.getElementById('import-preview-body');
@@ -395,22 +341,34 @@ const app = {
         document.getElementById('pdf-file-input').value = '';
     },
 
-    confirmImport() {
+    async confirmImport() {
         if(!this.pendingImport) return;
+        
+        const btn = document.querySelector('.import-actions .btn-primary');
+        const oldText = btn.textContent;
+        btn.textContent = "Sincronizando com a Nuvem...";
+        btn.disabled = true;
         
         const client = store.getActiveClient();
         const [mes, ano] = this.pendingImport.periodo.split('/');
         const periodKey = `${ano}-${mes}`;
         
-        store.savePeriodData(client.id, periodKey, 'realizado', this.pendingImport.contas);
+        const success = await store.savePeriodData(client.id, periodKey, 'realizado', this.pendingImport.contas);
         
-        alert('Dados importados com sucesso!');
-        this.cancelImport();
-        this.switchTab('overview');
+        btn.textContent = oldText;
+        btn.disabled = false;
+        
+        if (success) {
+            alert('Dados importados com sucesso!');
+            this.cancelImport();
+            this.switchTab('overview');
+        } else {
+            alert("Erro ao enviar dados para a nuvem.");
+        }
     },
 
     // --- PROJEÇÕES ---
-    applyProjections() {
+    async applyProjections() {
         const growth = parseFloat(document.getElementById('proj-growth').value) || 0;
         const multiplier = 1 + (growth / 100);
         
@@ -420,7 +378,6 @@ const app = {
         const currentYear = new Date().getFullYear().toString();
         const yearData = store.getYearData(client.id, currentYear);
         
-        // Verifica o último mês que tem realizado
         let lastRealizadoMonth = 0;
         let baseContas = [];
         
@@ -434,15 +391,17 @@ const app = {
         }
         
         if (lastRealizadoMonth === 0 || lastRealizadoMonth === 12) {
-            alert('Não há dados realizados para basear a projeção ou o ano já está fechado.');
-            return;
+            return alert('Não há dados realizados para basear a projeção ou o ano já está fechado.');
         }
 
-        // Projeta para os meses restantes
+        const btn = document.querySelector('.projection-rules .btn-primary');
+        const oldText = btn.textContent;
+        btn.textContent = "Projetando na Nuvem...";
+        btn.disabled = true;
+
         let projCount = 0;
         for(let m = lastRealizadoMonth + 1; m <= 12; m++) {
             const key = `${currentYear}-${m.toString().padStart(2,'0')}`;
-            
             const projectedAccounts = baseContas.map(acc => {
                 return {
                     codigo: acc.codigo,
@@ -451,22 +410,20 @@ const app = {
                     a_pagar: acc.a_pagar * multiplier
                 }
             });
-            
-            store.savePeriodData(client.id, key, 'projetado', projectedAccounts);
+            await store.savePeriodData(client.id, key, 'projetado', projectedAccounts);
             projCount++;
         }
         
+        btn.textContent = oldText;
+        btn.disabled = false;
+
         alert(`Projeções aplicadas com sucesso para ${projCount} meses com taxa de ${growth}% baseados no mês ${lastRealizadoMonth}/${currentYear}.`);
         this.switchTab('overview');
     },
 
     // --- EXPORTAÇÃO EXCEL ---
     exportToExcel() {
-        if(typeof XLSX === 'undefined') {
-            alert('Biblioteca de exportação não carregada.');
-            return;
-        }
-
+        if(typeof XLSX === 'undefined') return alert('Biblioteca de exportação não carregada.');
         const client = store.getActiveClient();
         if(!client) return;
 
@@ -476,28 +433,23 @@ const app = {
         const wb = XLSX.utils.book_new();
         const months = ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'];
 
-        // Extrai todas as contas únicas
         const allAccounts = {};
         for(let m=1; m<=12; m++) {
             const key = `${year}-${m.toString().padStart(2,'0')}`;
             if(yearData[key]) {
                 const arr = (yearData[key].realizado || []).concat(yearData[key].projetado || []);
-                arr.forEach(a => {
-                    allAccounts[a.codigo] = a.descricao;
-                });
+                arr.forEach(a => { allAccounts[a.codigo] = a.descricao; });
             }
         }
 
         const orderedKeys = Object.keys(allAccounts).sort();
 
-        // Cria uma aba por mês (imitando a estrutura que vimos no script python)
         months.forEach((monthName, idx) => {
             const monthNum = (idx + 1).toString().padStart(2, '0');
             const key = `${year}-${monthNum}`;
             const mData = yearData[key] || { realizado: [], projetado: [] };
             
             const sheetData = [];
-            // Cabeçalho
             sheetData.push(["", `Fluxo de Caixa ${year} CTR`, monthName, `% ACUMULADO ${monthName.substring(0,3)}/${year}`]);
             sheetData.push(["Disponíveis Nas Contas Movimento"]);
             
@@ -513,14 +465,10 @@ const app = {
             });
 
             const ws = XLSX.utils.aoa_to_sheet(sheetData);
-            
-            // Larguras das colunas
             ws['!cols'] = [{wch: 5}, {wch: 45}, {wch: 15}, {wch: 20}];
-            
             XLSX.utils.book_append_sheet(wb, ws, monthName);
         });
 
-        // Aba Consolidada Anual
         const annualData = [];
         annualData.push(["CÓDIGO", "CONTA", "SALDO TOTAL DO ANO"]);
         orderedKeys.forEach(code => {
@@ -530,7 +478,6 @@ const app = {
                 if(yearData[key]) {
                     const rAcc = yearData[key].realizado ? yearData[key].realizado.find(a=>a.codigo===code) : null;
                     const pAcc = yearData[key].projetado ? yearData[key].projetado.find(a=>a.codigo===code) : null;
-                    
                     if(rAcc) totalSaldo += (rAcc.a_receber || 0) - (rAcc.a_pagar || 0);
                     else if(pAcc) totalSaldo += (pAcc.a_receber || 0) - (pAcc.a_pagar || 0);
                 }
@@ -546,5 +493,8 @@ const app = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    app.init();
+    // Delay leve para garantir que o firebase inicializou caso seja remoto
+    setTimeout(() => {
+        app.init();
+    }, 500);
 });

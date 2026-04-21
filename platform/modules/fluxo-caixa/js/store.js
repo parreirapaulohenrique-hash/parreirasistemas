@@ -1,91 +1,103 @@
 /**
- * Classe responsável por gerenciar o armazenamento local (localStorage)
- * Suporta o modelo Multi-Tenant e armazenamento de períodos do fluxo de caixa.
+ * Classe responsável por gerenciar o armazenamento em Nuvem (Firebase)
+ * Suporta o modelo Multi-Tenant.
  */
 class Store {
     constructor() {
-        this.STORAGE_KEY = 'cashflow_pro_data';
-        this.data = this.loadData();
+        this.tenantId = localStorage.getItem('app_tenant_id') || 'parreira'; // Fallback
+        this.activeClientId = null;
+        this.clientsCache = [];
+        this.yearDataCache = {};
     }
 
-    loadData() {
-        const raw = localStorage.getItem(this.STORAGE_KEY);
-        if (raw) {
-            return JSON.parse(raw);
-        }
-        return {
-            clients: [],
-            activeClientId: null
-        };
-    }
-
-    save() {
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.data));
+    get db() {
+        if (!window.db) throw new Error("Firebase não está inicializado.");
+        return window.db;
     }
 
     // --- CLIENTES ---
 
-    getClients() {
-        return this.data.clients || [];
+    async getClients() {
+        try {
+            const snapshot = await this.db.collection('tenants').doc(this.tenantId)
+                                       .collection('fluxo_caixa_clientes')
+                                       .get();
+            
+            this.clientsCache = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                data.id = doc.id;
+                this.clientsCache.push(data);
+            });
+            return this.clientsCache;
+        } catch (error) {
+            console.error("Erro ao buscar clientes:", error);
+            return [];
+        }
     }
 
-    addClient(name, cnpj) {
-        const id = 'client_' + Date.now();
-        const newClient = {
-            id,
-            name,
-            cnpj,
-            createdAt: new Date().toISOString(),
-            periods: {} // Ex: "2026-03": { realizado: {}, projetado: {} }
-        };
-        
-        if (!this.data.clients) this.data.clients = [];
-        this.data.clients.push(newClient);
-        this.save();
-        return newClient;
+    async addClient(name, cnpj) {
+        try {
+            const newClient = {
+                name,
+                cnpj,
+                createdAt: new Date().toISOString(),
+                periods: {} 
+            };
+            
+            const docRef = await this.db.collection('tenants').doc(this.tenantId)
+                                        .collection('fluxo_caixa_clientes')
+                                        .add(newClient);
+            
+            newClient.id = docRef.id;
+            this.clientsCache.push(newClient);
+            return newClient;
+        } catch (error) {
+            console.error("Erro ao criar cliente:", error);
+            return null;
+        }
     }
 
     setActiveClient(id) {
-        this.data.activeClientId = id;
-        this.save();
+        this.activeClientId = id;
     }
 
     getActiveClient() {
-        if (!this.data.activeClientId) return null;
-        return this.data.clients.find(c => c.id === this.data.activeClientId) || null;
+        if (!this.activeClientId) return null;
+        return this.clientsCache.find(c => c.id === this.activeClientId) || null;
     }
 
     // --- FLUXO DE CAIXA ---
 
-    savePeriodData(clientId, periodKey, type, accountData) {
-        // periodKey: "YYYY-MM"
-        // type: "realizado" ou "projetado"
-        // accountData: array de objetos { codigo, descricao, a_pagar, a_receber }
-        
-        const client = this.data.clients.find(c => c.id === clientId);
-        if (!client) return false;
-
-        if (!client.periods) client.periods = {};
-        if (!client.periods[periodKey]) {
-            client.periods[periodKey] = { realizado: [], projetado: [] };
+    async savePeriodData(clientId, periodKey, type, accountData) {
+        try {
+            const clientRef = this.db.collection('tenants').doc(this.tenantId)
+                                     .collection('fluxo_caixa_clientes').doc(clientId);
+            
+            // Usando set com merge para atualizar apenas o período específico
+            const updateObj = {};
+            updateObj[`periods.${periodKey}.${type}`] = accountData;
+            
+            await clientRef.set(updateObj, { merge: true });
+            
+            // Atualiza cache local
+            const client = this.clientsCache.find(c => c.id === clientId);
+            if (client) {
+                if(!client.periods) client.periods = {};
+                if(!client.periods[periodKey]) client.periods[periodKey] = {};
+                client.periods[periodKey][type] = accountData;
+            }
+            
+            return true;
+        } catch (error) {
+            console.error("Erro ao salvar período:", error);
+            return false;
         }
-
-        client.periods[periodKey][type] = accountData;
-        this.save();
-        return true;
-    }
-
-    getPeriodData(clientId, periodKey) {
-        const client = this.data.clients.find(c => c.id === clientId);
-        if (!client || !client.periods || !client.periods[periodKey]) {
-            return { realizado: [], projetado: [] };
-        }
-        return client.periods[periodKey];
     }
     
     // Retorna todos os dados de um ano específico para cálculo e consolidação
     getYearData(clientId, year) {
-        const client = this.data.clients.find(c => c.id === clientId);
+        const client = this.clientsCache.find(c => c.id === clientId);
         if (!client || !client.periods) return {};
         
         const result = {};

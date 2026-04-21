@@ -1,5 +1,5 @@
 {
-    "version": "11.9.0",
+    "version": "11.9.1",
     "lastUpdate": "2026-04-21",
-    "description": "Logistics Portal v11.9.0 - Módulo Financeiro Fluxo de Caixa Multi-Tenant Adicionado"
+    "description": "Logistics Portal v11.9.1 - Módulo Financeiro migrado para Firebase Firestore Sync"
 }
