@@ -6119,7 +6119,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const dispatches = Utils.getStorage('dispatches') || [];
             const manifestItemIds = manifest.items.map(item => item.id);
-            const fullItems = dispatches.filter(d => manifestItemIds.includes(d.id));
+            let fullItems = dispatches.filter(d => manifestItemIds.includes(d.id));
+
+            // FALLBACK: Se não achar em dispatches (dados migraram sem vínculo),
+            // usa os dados que já estão dentro do próprio objeto romaneio.items
+            if(fullItems.length === 0 && manifest.items && manifest.items.length > 0) {
+                console.warn(`[Reimprimir] Despachos não encontrados pelo ID. Usando dados internos do romaneio ${romaneioId}.`);
+                fullItems = manifest.items;
+            }
 
             if(fullItems.length === 0) {
                 alert('Erro: Notas do romaneio não encontradas no histórico para impressão.');
@@ -6133,6 +6140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 alert('Erro: Função de impressão não carregada.');
             }
         };
+
 
         window.renderBaixaRomaneios = () => {
             const pendentesBody = document.getElementById('romaneioBaixaBody');
