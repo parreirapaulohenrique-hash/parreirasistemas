@@ -1,159 +1,121 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Diagnóstico Firebase - ParreiraLog</title>
+    <title>Diagnóstico Firebase - ParreiraLog Despacho</title>
     <style>
-        body {
-            font-family: monospace;
-            background: #1a1a1a;
-            color: #fff;
-            padding: 20px;
-        }
-
-        .log {
-            padding: 10px;
-            margin: 5px 0;
-            border-radius: 4px;
-            border-left: 5px solid #555;
-            background: #333;
-        }
-
-        .success {
-            border-left-color: #0f0;
-            background: #1a331a;
-        }
-
-        .error {
-            border-left-color: #f00;
-            background: #331a1a;
-        }
-
-        .info {
-            border-left-color: #00f;
-            background: #1a1a33;
-        }
-
-        h1 {
-            color: #ccc;
-        }
+        body { font-family: monospace; background: #1a1a1a; color: #eee; padding: 20px; }
+        .log { padding: 10px; margin: 5px 0; border-radius: 4px; border-left: 5px solid #555; background: #333; }
+        .success { border-left-color: #0f0; background: #1a331a; }
+        .error { border-left-color: #f00; background: #331a1a; }
+        .info { border-left-color: #00aaff; background: #1a1a33; }
+        .warn { border-left-color: #ffaa00; background: #332a1a; }
+        h1 { color: #ccc; }
+        button { background: #3b82f6; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 1rem; margin: 5px; }
+        input { background: #333; color: #fff; border: 1px solid #555; padding: 8px 12px; border-radius: 6px; font-size: 1rem; width: 300px; }
+        label { color: #aaa; display: block; margin-bottom: 4px; }
     </style>
 
-    <!-- Firebase SDKs -->
+    <!-- Firebase SDK v8 compat -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 </head>
-
 <body>
-    <h1>🛠️ Diagnóstico de Conexão Firebase</h1>
+    <h1>🛠️ Diagnóstico Firebase - Módulo Despacho</h1>
+
+    <div style="background:#222; padding:15px; border-radius:8px; margin-bottom:15px;">
+        <label>Tenant ID (ID da Empresa que quer verificar):</label>
+        <input type="text" id="tenantInput" value="ltdistribuidora" placeholder="ex: ltdistribuidora" />
+        <br><br>
+        <button onclick="runTests()">🔍 Executar Diagnóstico</button>
+        <button onclick="document.getElementById('logs').innerHTML=''">🧹 Limpar</button>
+    </div>
+
     <div id="logs"></div>
 
-    <script src="firebase-config.js"></script>
     <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDzatCQ8zmH4aQftznf7Y5wdYPwFYSiARc",
+            authDomain: "parreiralog-91904.firebaseapp.com",
+            projectId: "parreiralog-91904",
+            messagingSenderId: "527633267616",
+            appId: "1:527633267616:web:3567e883b31f7fa02882c5"
+        };
+
         const logDiv = document.getElementById('logs');
         function log(msg, type = 'info') {
             const el = document.createElement('div');
             el.className = `log ${type}`;
             el.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${msg}`;
-            logDiv.appendChild(el);
-            console.log(msg);
+            logDiv.prepend(el);
         }
 
         async function runTests() {
-            log("Iniciando bateria de testes...", 'info');
+            const tenantId = document.getElementById('tenantInput').value.trim();
+            if (!tenantId) { log('❌ Informe o Tenant ID!', 'error'); return; }
 
-            // 1. Check Config
-            if (typeof firebaseConfig === 'undefined') {
-                log("❌ ERRO CRÍTICO: firebase-config.js não carregou ou está vazio.", 'error');
+            log(`--- INICIANDO DIAGNÓSTICO PARA TENANT: "${tenantId}" ---`, 'warn');
+
+            // 1. Init Firebase
+            let db;
+            try {
+                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                log('✅ Firebase inicializado.', 'success');
+            } catch(e) {
+                log(`❌ Erro ao inicializar Firebase: ${e.message}`, 'error');
                 return;
             }
-            log("✅ Configuração detectada.", 'success');
 
-            // 2. Initialized?
-            if (!firebase.apps.length) {
-                log("❌ Firebase App não inicializado automaticamente pelo config.", 'error');
-                // Try force init
+            // 2. Auth
+            try {
+                const cred = await firebase.auth().signInAnonymously();
+                log(`✅ Autenticado. UID: ${cred.user.uid.substr(0,8)}...`, 'success');
+            } catch(e) {
+                log(`❌ Falha na autenticação anônima: ${e.message}`, 'error');
+                return;
+            }
+
+            // 3. Verificar coleção correta com tenantId
+            const keys = ['dispatches', 'freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'clients', 'app_romaneios'];
+            log(`🔍 Verificando coleção: tenants/${tenantId}/legacy_store/`, 'info');
+
+            for (const key of keys) {
                 try {
-                    firebase.initializeApp(firebaseConfig);
-                    log("⚠️ Firebase inicializado manualmente.", 'info');
-                } catch (e) {
-                    log(`❌ Falha ao inicializar: ${e.message}`, 'error');
-                    return;
+                    const doc = await db.collection('tenants').doc(tenantId).collection('legacy_store').doc(key).get();
+                    if (doc.exists) {
+                        const data = doc.data();
+                        const size = data.content ? data.content.length : 0;
+                        const preview = data.content ? data.content.substring(0, 80) + '...' : '(sem conteúdo)';
+                        const updatedAt = data.updatedAt ? data.updatedAt.toDate().toLocaleString('pt-BR') : 'sem data';
+                        log(`✅ <b>${key}</b>: ${size} chars | Última atualização: ${updatedAt}<br><small style="color:#aaa">${preview}</small>`, 'success');
+                    } else {
+                        log(`⚠️ <b>${key}</b>: NÃO ENCONTRADO no Firebase para tenant "${tenantId}"`, 'warn');
+                    }
+                } catch(e) {
+                    log(`❌ <b>${key}</b>: Erro - ${e.message}`, 'error');
                 }
-            } else {
-                log("✅ Firebase App inicializado corretamente.", 'success');
             }
 
-            // 3. Auth
-            log("🔐 Tentando Autenticação Anônima...", 'info');
+            // 4. Verificar também no tenant "parreiralog" (legado)
+            log(`🔍 Verificando também no tenant legado: "parreiralog"`, 'info');
             try {
-                const userCred = await firebase.auth().signInAnonymously();
-                log(`✅ Autenticado com sucesso! UID: ${userCred.user.uid}`, 'success');
-            } catch (e) {
-                log(`❌ Falha na Autenticação: ${e.message} (Code: ${e.code})`, 'error');
-                log("👉 Verifique se 'Anonymous Auth' está ATIVADO no Console do Firebase.", 'info');
-                return;
-            }
-
-            // 4. Firestore Connection
-            log("🔥 Conectando ao Firestore...", 'info');
-            const db = firebase.firestore();
-
-            // 5. Write Test
-            log("📝 Tentando ESCREVER documento de teste...", 'info');
-            try {
-                await db.collection('diagnosis_test').doc('ping').set({
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    device: navigator.userAgent,
-                    message: "Teste de Diagnóstico"
-                });
-                log("✅ Escrita realizada com sucesso! (Permissões de escrita OK)", 'success');
-            } catch (e) {
-                log(`❌ Falha na Escrita: ${e.message}`, 'error');
-                if (e.code === 'permission-denied') {
-                    log("👉 Suas Regras de Segurança estão bloqueando. Mude para 'allow write: if true;'", 'info');
-                }
-                return;
-            }
-
-            // 6. Read Test
-            log("📖 Tentando LER documento de teste...", 'info');
-            try {
-                const doc = await db.collection('diagnosis_test').doc('ping').get();
-                if (doc.exists) {
-                    log("✅ Leitura realizada com sucesso! Dados: " + JSON.stringify(doc.data()), 'success');
+                const legacyDoc = await db.collection('tenants').doc('parreiralog').collection('legacy_store').doc('dispatches').get();
+                if (legacyDoc.exists) {
+                    const d = legacyDoc.data();
+                    const updatedAt = d.updatedAt ? d.updatedAt.toDate().toLocaleString('pt-BR') : 'sem data';
+                    log(`⚠️ "dispatches" ENCONTRADO em "parreiralog" (tenant legado)! ${d.content ? d.content.length : 0} chars | ${updatedAt}`, 'warn');
                 } else {
-                    log("⚠️ Leitura funcionou, mas documento não foi encontrado (estranho, pois acabamos de criar).", 'error');
+                    log(`ℹ️ "dispatches" não existe em "parreiralog" também.`, 'info');
                 }
-            } catch (e) {
-                log(`❌ Falha na Leitura: ${e.message}`, 'error');
+            } catch(e) {
+                log(`❌ Erro ao checar tenant legado: ${e.message}`, 'error');
             }
 
-            // 7. Check Legacy Store (Real Data)
-            log("📦 Verificando coleção 'legacy_store' (Seus dados reais)...", 'info');
-            try {
-                const snapshot = await db.collection('legacy_store').get();
-                log(`✅ Acesso à coleção 'legacy_store' OK. Documentos encontrados: ${snapshot.size}`, 'success');
-                if (snapshot.size === 0) {
-                    log("⚠️ A coleção 'legacy_store' está VAZIA na nuvem. Isso explica por que a sincronização não puxa nada.", 'error');
-                } else {
-                    snapshot.forEach(doc => {
-                        log(`📄 Documento encontrado: ${doc.id} (Tamanho: ${doc.data().content ? doc.data().content.length : 0} chars)`, 'info');
-                    });
-                }
-            } catch (e) {
-                log(`❌ Falha ao ler 'legacy_store': ${e.message}`, 'error');
-            }
-
-            log("🏁 Diagnóstico Finalizado.", 'info');
+            log('--- DIAGNÓSTICO FINALIZADO ---', 'warn');
         }
-
-        // Run
-        setTimeout(runTests, 1000);
     </script>
 </body>
-
 </html>

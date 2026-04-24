@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Migração de Dados - ParreiraLog</title>
+    <style>
+        body { font-family: monospace; background: #1a1a1a; color: #eee; padding: 20px; }
+        .log { padding: 10px; margin: 5px 0; border-radius: 4px; border-left: 5px solid #555; background: #333; }
+        .success { border-left-color: #0f0; background: #1a331a; }
+        .error { border-left-color: #f00; background: #331a1a; }
+        .info { border-left-color: #00aaff; background: #1a1a33; }
+        .warn { border-left-color: #ffaa00; background: #332a1a; }
+        h1 { color: #ffaa00; }
+        button { background: #f59e0b; color: #000; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: bold; margin: 5px; }
+        button:disabled { background: #555; color: #999; cursor: not-allowed; }
+        input { background: #333; color: #fff; border: 1px solid #555; padding: 8px 12px; border-radius: 6px; font-size: 1rem; width: 300px; }
+        label { color: #aaa; display: block; margin-bottom: 4px; }
+        .box { background:#222; padding:15px; border-radius:8px; margin-bottom:15px; border: 1px solid #444; }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+</head>
+<body>
+    <h1>⚠️ Migração de Dados Firebase</h1>
+    <p style="color:#aaa">Copia os dados do caminho antigo (<code>legacy_store/</code>) para o caminho correto (<code>tenants/{tenantId}/legacy_store/</code>).</p>
+
+    <div class="box">
+        <label>Tenant ID de DESTINO (empresa que vai receber os dados):</label>
+        <input type="text" id="tenantInput" value="ltdistribuidora" />
+        <br><br>
+        <button id="btnMigrar" onclick="migrar()">🚀 INICIAR MIGRAÇÃO</button>
+        <button onclick="document.getElementById('logs').innerHTML=''">🧹 Limpar Log</button>
+    </div>
+
+    <div id="logs"></div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDzatCQ8zmH4aQftznf7Y5wdYPwFYSiARc",
+            authDomain: "parreiralog-91904.firebaseapp.com",
+            projectId: "parreiralog-91904",
+            messagingSenderId: "527633267616",
+            appId: "1:527633267616:web:3567e883b31f7fa02882c5"
+        };
+
+        const KEYS = ['dispatches', 'freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients', 'invoice_history', 'app_sellers', 'app_settings', 'app_romaneios', 'logged_user'];
+
+        const logDiv = document.getElementById('logs');
+        function log(msg, type = 'info') {
+            const el = document.createElement('div');
+            el.className = `log ${type}`;
+            el.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${msg}`;
+            logDiv.prepend(el);
+        }
+
+        async function migrar() {
+            const tenantId = document.getElementById('tenantInput').value.trim();
+            if (!tenantId) { log('❌ Informe o Tenant ID!', 'error'); return; }
+
+            document.getElementById('btnMigrar').disabled = true;
+            log(`🚀 Iniciando migração para tenant: "${tenantId}"`, 'warn');
+
+            let db;
+            try {
+                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                await firebase.auth().signInAnonymously();
+                log('✅ Conectado ao Firebase.', 'success');
+            } catch(e) {
+                log(`❌ Erro de conexão: ${e.message}`, 'error');
+                document.getElementById('btnMigrar').disabled = false;
+                return;
+            }
+
+            let migrados = 0;
+            let naoEncontrados = 0;
+            let jaExistia = 0;
+
+            for (const key of KEYS) {
+                try {
+                    // 1. Ler do caminho ANTIGO (raiz)
+                    const oldDoc = await db.collection('legacy_store').doc(key).get();
+
+                    if (!oldDoc.exists) {
+                        log(`⚪ <b>${key}</b>: não existe no caminho antigo. Pulando.`, 'info');
+                        naoEncontrados++;
+                        continue;
+                    }
+
+                    const oldData = oldDoc.data();
+                    const size = oldData.content ? oldData.content.length : 0;
+
+                    // 2. Verificar se já existe no caminho NOVO
+                    const newDoc = await db.collection('tenants').doc(tenantId).collection('legacy_store').doc(key).get();
+                    
+                    if (newDoc.exists) {
+                        const newData = newDoc.data();
+                        const newSize = newData.content ? newData.content.length : 0;
+                        // Se o novo tem mais dados que o antigo, não sobrescreve
+                        if (newSize >= size) {
+                            log(`🔵 <b>${key}</b>: já existe no destino (${newSize} chars ≥ ${size} chars). Mantendo o mais recente.`, 'warn');
+                            jaExistia++;
+                            continue;
+                        }
+                    }
+
+                    // 3. Copiar para o caminho NOVO
+                    await db.collection('tenants').doc(tenantId).collection('legacy_store').doc(key).set({
+                        ...oldData,
+                        migratedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        migratedFrom: 'legacy_store_root'
+                    });
+
+                    log(`✅ <b>${key}</b>: migrado com sucesso! (${size} chars)`, 'success');
+                    migrados++;
+
+                } catch(e) {
+                    log(`❌ <b>${key}</b>: ERRO - ${e.message}`, 'error');
+                }
+            }
+
+            log(`<br>📊 <b>RESULTADO FINAL:</b> ${migrados} migrados | ${jaExistia} já existiam | ${naoEncontrados} não encontrados`, 'warn');
+            
+            if (migrados > 0) {
+                log('🎉 Migração concluída! Agora abra o módulo de Despacho e pressione Ctrl+Shift+R para recarregar os dados.', 'success');
+            }
+
+            document.getElementById('btnMigrar').disabled = false;
+        }
+    </script>
+</body>
+</html>
