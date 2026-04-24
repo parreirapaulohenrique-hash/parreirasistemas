@@ -4178,9 +4178,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (count > 0) {
                         const msg = `✅ Sucesso! ${count} clientes importados.\n(Formato: ${formatType})`;
                         if (typeof Utils.Cloud !== 'undefined' && Utils.Cloud.save) {
-                            Utils.Cloud.save('clients', clients);
+                            Utils.Cloud.save('clients', clients).then(success => {
+                                if(success) {
+                                    alert(msg + "\n\n✅ Sincronizado com a nuvem com sucesso!");
+                                } else {
+                                    alert(msg + "\n\n⚠️ Atenção: Falha ao subir para a nuvem. Verifique o limite de 1MB.");
+                                }
+                            });
+                        } else {
+                            alert(msg);
                         }
-                        alert(msg);
                     } else {
                         alert('⚠️ Nenhum cliente válido encontrado.\nVerifique se a planilha tem as colunas corretas.');
                     }

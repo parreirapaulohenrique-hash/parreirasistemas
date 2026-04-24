@@ -97,17 +97,30 @@ const Utils = {
             if (typeof firebase !== 'undefined' && window.db) {
                 try {
                     const jsonContent = JSON.stringify(data);
-                    if (jsonContent.length < 800000) {
+                    const size = jsonContent.length;
+                    
+                    if (size < 1000000) { // Limite de 1MB do Firestore
+                        console.log(`[Cloud] Salvando ${key} (${size} bytes)...`);
                         await window.db.collection('tenants').doc(this.tenantId).collection('legacy_store').doc(key).set({
                             content: jsonContent,
                             updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
                             isChunked: false
                         });
-                        return;
+                        console.log(`[Cloud] ${key} salvo com sucesso.`);
+                        return true;
+                    } else {
+                        const errorMsg = `[Cloud] Erro: O arquivo de ${key} é muito grande (${(size/1024).toFixed(1)}KB) e excede o limite do banco de dados.`;
+                        console.error(errorMsg);
+                        alert(errorMsg);
+                        return false;
                     }
-                    console.log(`📦 Payload grande ignorado.`);
-                } catch (e) { console.error("Cloud Save Error", e); }
-                return;
+                } catch (e) { 
+                    console.error("Cloud Save Error", e);
+                    if (key === 'clients' || key === 'freight_tables') {
+                        alert(`Erro ao sincronizar ${key} com a nuvem: ` + e.message);
+                    }
+                    return false;
+                }
             }
 
             // --- LOCAL SIMULATION MODE ---
