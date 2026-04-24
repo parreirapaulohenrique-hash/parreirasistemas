@@ -87,7 +87,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Clients: Load from Storage (Cloud)
         let clients = Utils.getStorage('clients') || [];
 
-        // Tabelas de Frete
+        // Fallback: se os clientes sumirem (localStorage limpo), restaura do backup do data.js
+        if (clients.length === 0 && typeof window.initialClientes !== 'undefined') {
+            console.log("Restaurando clientes do backup estático...");
+            clients = window.initialClientes;
+            Utils.setStorage('clients', clients);
+        }
         let rules = Utils.getStorage('freight_tables') || [];
 
         // Removido inicialização automática de dados de exemplo para evitar sobrescrever dados do usuário
