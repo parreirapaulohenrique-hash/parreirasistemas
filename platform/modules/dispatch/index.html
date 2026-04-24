@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ParreiraLog | CotaÃ§Ã£o de Fretes</title>
+    <title>ParreiraLog | Cotação de Fretes</title>
 
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#3b82f6">
@@ -104,7 +104,7 @@
         }
 
         .result-card.best-option::before {
-            content: 'MELHOR OPÃ‡ÃƒO';
+            content: 'MELHOR OPÇÃO';
             position: absolute;
             top: 0;
             right: 0;
@@ -167,7 +167,7 @@
                     <span class="material-icons-round" style="font-size: 2rem; color: white;">local_shipping</span>
                 </div>
                 <h1 style="font-size: 1.5rem; color: var(--text-primary); margin-bottom: 0.5rem;">ParreiraLog</h1>
-                <p style="color: var(--text-secondary);">FaÃ§a login para continuar</p>
+                <p style="color: var(--text-secondary);">Faça login para continuar</p>
             </div>
 
             <div class="form-group">
@@ -177,7 +177,7 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">UsuÃ¡rio</label>
+                <label class="form-label">Usuário</label>
                 <select id="loginUserSelect" class="form-input" style="height: 48px;">
                     <option value="admin">Administrador (admin)</option>
                     <!-- Populated by JS -->
@@ -208,7 +208,7 @@
                 </a>
                 <a href="#quote" onclick="window.showSection('quote')" class="nav-item">
                     <span class="material-icons-round">request_quote</span>
-                    CotaÃ§Ã£o RÃ¡pida
+                    Cotação Rápida
                 </a>
                 <a href="#dispatch" onclick="window.showSection('dispatch')" class="nav-item">
                     <span class="material-icons-round">local_shipping</span>
@@ -216,7 +216,7 @@
                 </a>
                 <a href="#invoice" onclick="window.showSection('invoice')" class="nav-item">
                     <span class="material-icons-round">receipt_long</span>
-                    ConferÃªncia Fatura
+                    Conferência Fatura
                 </a>
                 <a href="#moto" onclick="window.showSection('moto')" class="nav-item">
                     <span class="material-icons-round">two_wheeler</span>
@@ -236,7 +236,7 @@
                 </a>
                 <a href="#reports" onclick="window.showSection('reports')" class="nav-item">
                     <span class="material-icons-round">analytics</span>
-                    RelatÃ³rios & KPIs
+                    Relatórios & KPIs
                 </a>
                 <a href="#configs" onclick="window.showSection('configs')" class="nav-item">
                     <span class="material-icons-round">settings</span>
@@ -244,7 +244,7 @@
                 </a>
                 <a href="#acontec" onclick="window.showSection('acontec')" class="nav-item">
                     <span class="material-icons-round">sync</span>
-                    IntegraÃ§Ã£o Acontec
+                    Integração Acontec
                 </a>
                 <a href="#system" onclick="window.showSection('system')" class="nav-item">
                     <span class="material-icons-round">app_registration</span>
@@ -252,7 +252,7 @@
                 </a>
                 <a href="#app-settings" onclick="window.showSection('app-settings')" class="nav-item">
                     <span class="material-icons-round">settings</span>
-                    ConfiguraÃ§Ãµes
+                    Configurações
                 </a>
 
                 <a href="#" onclick="window.logoutUser()" class="nav-item"
@@ -267,7 +267,7 @@
         <main class="main-content">
             <header class="top-bar">
                 <div class="breadcrumb">
-                    <span class="text-muted">Transportadora</span> / <span class="current">CotaÃ§Ã£o</span>
+                    <span class="text-muted">Transportadora</span> / <span class="current">Cotação</span>
                 </div>
             </header>
 
@@ -336,7 +336,7 @@
                                         <th>Cidade</th>
                                         <th>Peso (kg)</th>
                                         <th>Frete</th>
-                                        <th style="text-align: right;">AÃ§Ã£o</th>
+                                        <th style="text-align: right;">Ação</th>
                                     </tr>
                                 </thead>
                                 <tbody id="shipmentModalBody">
@@ -354,13 +354,13 @@
 
                             <!-- NOVO: Seletor de tipo de despacho -->
                             <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                <label style="font-size: 0.85rem; color: var(--text-secondary);">Levar atÃ©
+                                <label style="font-size: 0.85rem; color: var(--text-secondary);">Levar até
                                     transp.:</label>
                                 <select id="deliveryTypeSelector" class="form-input"
                                     style="padding: 0.4rem 0.75rem; font-size: 0.85rem; min-width: 150px;">
-                                    <option value="direto">ðŸ“¦ Direto (PrÃ³prio)</option>
-                                    <option value="moto">ðŸï¸ Moto Entrega</option>
-                                    <option value="carro">ðŸš— Carro Entrega</option>
+                                    <option value="direto">📦 Direto (Próprio)</option>
+                                    <option value="moto">🏍️ Moto Entrega</option>
+                                    <option value="carro">🚗 Carro Entrega</option>
                                 </select>
                             </div>
 
@@ -381,7 +381,7 @@
                 <div id="view-quote" class="view-section" style="display: none;">
                     <div class="welcome-banner">
 
-                        <h2>Nova CotaÃ§Ã£o</h2>
+                        <h2>Nova Cotação</h2>
                         <p>Preencha os dados da Nota Fiscal para encontrar a melhor transportadora.</p>
                     </div>
 
@@ -395,14 +395,14 @@
                                 <button type="button" onclick="window.resetQuote()" class="btn btn-secondary"
                                     style="font-size: 0.75rem; padding: 0.4rem 0.8rem; gap: 0.4rem; border-color: rgba(255,0,0,0.1); color: var(--accent-danger);">
                                     <span class="material-icons-round" style="font-size: 1rem;">restart_alt</span>
-                                    NOVO CÃLCULO
+                                    NOVO CÁLCULO
                                 </button>
                             </div>
 
                             <div class="form-group"
                                 style="display: grid; grid-template-columns: 1fr 0.8fr 1fr; gap: 0.8rem; align-items: start;">
                                 <div>
-                                    <label class="form-label">NÃºmero da NF</label>
+                                    <label class="form-label">Número da NF</label>
                                     <input type="text" id="inputInvoiceNumber" class="form-input"
                                         placeholder="Ex: 10520"
                                         oninput="this.value = this.value.replace(/[^0-9]/g, '');">
@@ -410,7 +410,7 @@
                                 <div>
                                     <label class="form-label">Complemento?</label>
                                     <select id="inputIsComplement" class="form-input" style="height: 43px;">
-                                        <option value="nao">NÃ£o</option>
+                                        <option value="nao">Não</option>
                                         <option value="sim">Sim</option>
                                     </select>
                                 </div>
@@ -422,7 +422,7 @@
                             </div>
 
                             <div class="form-group">
-                                <label class="form-label">Cliente (CÃ³digo ou Nome)</label>
+                                <label class="form-label">Cliente (Código ou Nome)</label>
                                 <div style="display: flex; gap: 0.5rem;">
                                     <input type="text" id="inputClient" class="form-input"
                                         placeholder="Ex: 1721 ou JOSIEL...">
@@ -435,7 +435,7 @@
                             </div>
 
                             <div class="form-group">
-                                <label class="form-label">Vendedor ResponsÃ¡vel</label>
+                                <label class="form-label">Vendedor Responsável</label>
                                 <select id="inputSeller" class="form-input" style="height: 43px;">
                                     <option value="">-- Selecione o Vendedor --</option>
                                 </select>
@@ -475,7 +475,7 @@
                             <div style="text-align: center; color: var(--text-secondary); margin-top: 4rem;">
                                 <span class="material-icons-round"
                                     style="font-size: 3rem; opacity: 0.3;">calculate</span>
-                                <p>Aguardando cÃ¡lculo...</p>
+                                <p>Aguardando cálculo...</p>
                             </div>
                         </div>
                     </div>
@@ -488,7 +488,7 @@
                     <div class="welcome-banner" style="margin-bottom: 1.5rem;">
                         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                             <div>
-                                <h2 style="color: #f59e0b;">ðŸï¸ Moto Entrega</h2>
+                                <h2 style="color: #f59e0b;">🏍️ Moto Entrega</h2>
                                 <p>Gerencie suas entregas por moto.</p>
                             </div>
                             <div id="motoStats"
@@ -526,12 +526,12 @@
                         </div>
                         <div class="card-body" style="padding: 1rem;">
                             <div id="motoEntregasContainer">
-                                <!-- Cards de entregas serÃ£o renderizados aqui -->
+                                <!-- Cards de entregas serão renderizados aqui -->
                                 <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
                                     <span class="material-icons-round"
                                         style="font-size: 4rem; opacity: 0.3;">two_wheeler</span>
                                     <h3 style="margin: 1rem 0 0.5rem;">Nenhuma entrega pendente</h3>
-                                    <p style="margin: 0;">As NFs despachadas para Moto Entrega aparecerÃ£o aqui.</p>
+                                    <p style="margin: 0;">As NFs despachadas para Moto Entrega aparecerão aqui.</p>
                                 </div>
                             </div>
                         </div>
@@ -543,7 +543,7 @@
                     <div class="welcome-banner" style="margin-bottom: 1.5rem;">
                         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                             <div>
-                                <h2 style="color: #10b981;">ðŸš— Carro Entrega</h2>
+                                <h2 style="color: #10b981;">🚗 Carro Entrega</h2>
                                 <p>Gerencie suas entregas por carro.</p>
                             </div>
                             <div id="carroStats"
@@ -581,12 +581,12 @@
                         </div>
                         <div class="card-body" style="padding: 1rem;">
                             <div id="carroEntregasContainer">
-                                <!-- Cards de entregas serÃ£o renderizados aqui -->
+                                <!-- Cards de entregas serão renderizados aqui -->
                                 <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
                                     <span class="material-icons-round"
                                         style="font-size: 4rem; opacity: 0.3;">directions_car</span>
                                     <h3 style="margin: 1rem 0 0.5rem;">Nenhuma entrega pendente</h3>
-                                    <p style="margin: 0;">As NFs despachadas para Carro Entrega aparecerÃ£o aqui.</p>
+                                    <p style="margin: 0;">As NFs despachadas para Carro Entrega aparecerão aqui.</p>
                                 </div>
                             </div>
                         </div>
@@ -597,7 +597,7 @@
                 <div id="view-rules" class="view-section" style="display: none;">
                     <div class="welcome-banner">
                         <h2>Tabelas de Frete</h2>
-                        <p>Cadastre e gerencie as condiÃ§Ãµes de frete por transportadora e cidade.</p>
+                        <p>Cadastre e gerencie as condições de frete por transportadora e cidade.</p>
                     </div>
 
                     <div class="card" style="margin-bottom: 2rem;">
@@ -620,7 +620,7 @@
                                         style="font-size: 0.75rem; color: var(--accent-danger); margin-top: 4px; display: none; font-weight: 500;">
                                         <span class="material-icons-round"
                                             style="font-size: 0.8rem; vertical-align: middle;">error_outline</span>
-                                        Transportadora nÃ£o cadastrada. <br>Cadastre-a na aba 'Tabelas e Taxas'
+                                        Transportadora não cadastrada. <br>Cadastre-a na aba 'Tabelas e Taxas'
                                         antes.
                                     </div>
                                 </div>
@@ -640,7 +640,7 @@
                                         placeholder="0.00" required>
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Frete MÃ­nimo (R$)</label>
+                                    <label class="form-label">Frete Mínimo (R$)</label>
                                     <input type="number" step="0.01" id="ruleMin" class="form-input" placeholder="0.00"
                                         required>
                                 </div>
@@ -689,7 +689,7 @@
                                     <input type="number" id="ruleLeadTime" class="form-input" placeholder="Ex: 1">
                                 </div>
                                 <div class="form-group" style="grid-column: span 2;">
-                                    <label class="form-label">HorÃ¡rios de Despacho</label>
+                                    <label class="form-label">Horários de Despacho</label>
                                     <div style="display: flex; gap: 0.5rem;">
                                         <input type="text" id="ruleHour1" class="form-input" placeholder="10:00"
                                             style="flex: 1;">
@@ -731,7 +731,7 @@
                                         <label style="display: block; padding: 4px;"><input type="checkbox" checked
                                                 onchange="window.toggleCol(3, this.checked)"> %</label>
                                         <label style="display: block; padding: 4px;"><input type="checkbox" checked
-                                                onchange="window.toggleCol(4, this.checked)"> MÃ­nimo</label>
+                                                onchange="window.toggleCol(4, this.checked)"> Mínimo</label>
                                         <label style="display: block; padding: 4px;"><input type="checkbox" checked
                                                 onchange="window.toggleCol(5, this.checked)"> Lim. Peso</label>
                                         <label style="display: block; padding: 4px;"><input type="checkbox" checked
@@ -749,7 +749,7 @@
                                         <label style="display: block; padding: 4px;"><input type="checkbox" checked
                                                 onchange="window.toggleCol(12, this.checked)"> Prazo</label>
                                         <label style="display: block; padding: 4px;"><input type="checkbox" checked
-                                                onchange="window.toggleCol(13, this.checked)"> HorÃ¡rios</label>
+                                                onchange="window.toggleCol(13, this.checked)"> Horários</label>
                                     </div>
                                 </div>
                                 <button id="btnExportTables" class="btn btn-secondary"
@@ -775,16 +775,16 @@
                                     <tr>
                                         <th style="width: 140px; min-width: 100px;">
                                             <div style="margin-bottom: 4px;">Cidade</div>
-                                            <input type="text" class="filter-input" placeholder="ðŸ”Ž"
+                                            <input type="text" class="filter-input" placeholder="🔎"
                                                 onkeyup="window.updateRuleFilter('cidade', this.value)">
                                         </th>
                                         <th style="width: 45px;">%</th>
-                                        <th style="width: 70px;">MÃ­nimo</th>
+                                        <th style="width: 70px;">Mínimo</th>
                                         <th style="width: 65px;">Lim. Peso</th>
                                         <th style="width: 65px;">Vlr Exc.</th>
                                         <th style="width: 130px; min-width: 100px;">
                                             <div style="margin-bottom: 4px;">Cidade Redesp.</div>
-                                            <input type="text" class="filter-input" placeholder="ðŸ”Ž"
+                                            <input type="text" class="filter-input" placeholder="🔎"
                                                 onkeyup="window.updateRuleFilter('cidadeRedespacho', this.value)">
                                         </th>
                                         <th style="width: 110px; min-width: 90px;">Transp. Red.</th>
@@ -792,8 +792,8 @@
                                         <th style="width: 65px;">Min. Red.</th>
                                         <th style="width: 60px;">Taxa</th>
                                         <th style="width: 50px;">Prazo</th>
-                                        <th style="width: 75px;">HorÃ¡rios</th>
-                                        <th style="text-align: right; width: 60px;">AÃ§Ãµes</th>
+                                        <th style="width: 75px;">Horários</th>
+                                        <th style="text-align: right; width: 60px;">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody id="rulesListBody">
@@ -804,13 +804,13 @@
                     </div>
                 </div>
 
-                <!-- VIEW: RELATÃ“RIOS -->
+                <!-- VIEW: RELATÓRIOS -->
                 <div id="view-reports" class="view-section" style="display: none;">
                     <div class="welcome-banner">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                             <div>
-                                <h2>RelatÃ³rios Gerenciais</h2>
-                                <p>Visualize indicadores de desempenho e economia do setor logÃ­stico.</p>
+                                <h2>Relatórios Gerenciais</h2>
+                                <p>Visualize indicadores de desempenho e economia do setor logístico.</p>
                             </div>
                         </div>
                     </div>
@@ -828,7 +828,7 @@
                                         VAN</h3>
                                 </div>
                                 <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0;">
-                                    Acompanhe a economia gerada pelas negociaÃ§Ãµes diretas com VANs em comparaÃ§Ã£o ao
+                                    Acompanhe a economia gerada pelas negociações diretas com VANs em comparação ao
                                     frete tabela.
                                 </p>
                             </div>
@@ -846,10 +846,10 @@
                                     <span class="material-icons-round"
                                         style="color: var(--accent-danger); font-size: 2rem;">alarm_off</span>
                                     <h3 style="margin: 0; font-size: 1.1rem; color: var(--text-primary);">Atrasos de
-                                        HorÃ¡rio</h3>
+                                        Horário</h3>
                                 </div>
                                 <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0;">
-                                    Monitore notas fiscais pendentes que excederam o horÃ¡rio limite de saÃ­da da
+                                    Monitore notas fiscais pendentes que excederam o horário limite de saída da
                                     transportadora.
                                 </p>
                             </div>
@@ -866,11 +866,11 @@
                                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
                                     <span class="material-icons-round"
                                         style="color: #f59e0b; font-size: 2rem;">two_wheeler</span>
-                                    <h3 style="margin: 0; font-size: 1.1rem; color: var(--text-primary);">RelatÃ³rio de
+                                    <h3 style="margin: 0; font-size: 1.1rem; color: var(--text-primary);">Relatório de
                                         Entregas</h3>
                                 </div>
                                 <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0;">
-                                    Acompanhe entregas realizadas por Motoboy e Motorista com filtros por perÃ­odo e
+                                    Acompanhe entregas realizadas por Motoboy e Motorista com filtros por período e
                                     entregador.
                                 </p>
                             </div>
@@ -885,7 +885,7 @@
                     <div id="report-detail-container" style="display: none; width: 100%; margin-top: 1rem;">
                         <button class="btn btn-secondary" onclick="window.closeReportDetail()"
                             style="margin-bottom: 1rem;">
-                            <span class="material-icons-round">arrow_back</span> Voltar aos RelatÃ³rios
+                            <span class="material-icons-round">arrow_back</span> Voltar aos Relatórios
                         </button>
 
                         <div id="report-content-area">
@@ -894,11 +894,11 @@
                     </div>
                 </div>
 
-                <!-- VIEW: CONFIGURAÃ‡Ã•ES DE CÃLCULO -->
+                <!-- VIEW: CONFIGURAÇÕES DE CÁLCULO -->
                 <div id="view-configs" class="view-section" style="display: none;">
                     <div class="welcome-banner">
-                        <h2>ConfiguraÃ§Ãµes do Sistema</h2>
-                        <p>Gerencie as transportadoras cadastradas e seus parÃ¢metros globais de cÃ¡lculo.</p>
+                        <h2>Configurações do Sistema</h2>
+                        <p>Gerencie as transportadoras cadastradas e seus parâmetros globais de cálculo.</p>
                     </div>
 
                     <div class="card" style="margin-bottom: 1.5rem;">
@@ -926,24 +926,24 @@
                                         <button type="button" id="btnSearchCarrierCNPJ" class="btn btn-secondary"
                                             style="padding: 0.5rem 1rem; white-space: nowrap;"
                                             title="Buscar dados pelo CNPJ">
-                                            ðŸ” Buscar
+                                            🔍 Buscar
                                         </button>
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">InscriÃ§Ã£o Estadual</label>
+                                    <label class="form-label">Inscrição Estadual</label>
                                     <input type="text" id="newCarrierIE" class="form-input"
                                         placeholder="000.000.000.000">
                                 </div>
                                 <div class="form-group" style="grid-column: span 2;">
-                                    <label class="form-label">EndereÃ§o Completo</label>
+                                    <label class="form-label">Endereço Completo</label>
                                     <input type="text" id="newCarrierAddress" class="form-input"
-                                        placeholder="Rua, NÃºmero, Bairro">
+                                        placeholder="Rua, Número, Bairro">
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Cidade/UF</label>
                                     <input type="text" id="newCarrierCity" class="form-input"
-                                        placeholder="Ex: MarabÃ¡ - PA">
+                                        placeholder="Ex: Marabá - PA">
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Confiabilidade</label>
@@ -951,7 +951,7 @@
                                         <option value="4">4 - Excelente</option>
                                         <option value="3" selected>3 - Boa</option>
                                         <option value="2">2 - Ruim</option>
-                                        <option value="1">1 - PÃ©ssima</option>
+                                        <option value="1">1 - Péssima</option>
                                     </select>
                                 </div>
 
@@ -960,7 +960,7 @@
                                         style="width: 18px; height: 18px;">
                                     <label for="newCarrierIsRedespacho" class="form-label"
                                         style="margin: 0; cursor: pointer;">
-                                        Ã‰ Transportadora de Redespacho?
+                                        É Transportadora de Redespacho?
                                     </label>
                                 </div>
                                 <div style="display: flex; align-items: flex-end; gap: 0.5rem;">
@@ -980,7 +980,7 @@
                         <div class="card-header">
                             <h3 style="font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;">
                                 <span class="material-icons-round">settings_suggest</span>
-                                ParÃ¢metros de CÃ¡lculo por Transportadora
+                                Parâmetros de Cálculo por Transportadora
                             </h3>
                         </div>
                         <div class="card-body" style="padding: 0; overflow-x: auto;">
@@ -992,7 +992,7 @@
                                         <th>GRIS (%)</th>
                                         <th>ICMS (%)</th>
                                         <th>Vlr/Volume (R$)</th>
-                                        <th style="text-align: right;">AÃ§Ãµes</th>
+                                        <th style="text-align: right;">Ações</th>
                                     </tr>
 
                                 </thead>
@@ -1011,20 +1011,20 @@
                                 <div
                                     style="font-weight: 600; color: var(--primary-color); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
                                     <span class="material-icons-round" style="font-size: 1.2rem;">info</span>
-                                    Como funciona o cÃ¡lculo:
+                                    Como funciona o cálculo:
                                 </div>
-                                Para cada opÃ§Ã£o, o sistema faz: <br>
-                                <strong>1. Base:</strong> Maior valor entre (Valor NF Ã— % Frete da Cidade) e Valor
-                                MÃ­nimo da
+                                Para cada opção, o sistema faz: <br>
+                                <strong>1. Base:</strong> Maior valor entre (Valor NF × % Frete da Cidade) e Valor
+                                Mínimo da
                                 Cidade. <br>
-                                <strong>2. Adicionais:</strong> Soma a Taxa Fixa + PedÃ¡gio + (Valor NF Ã— % GRIS).
+                                <strong>2. Adicionais:</strong> Soma a Taxa Fixa + Pedágio + (Valor NF × % GRIS).
                                 <br>
-                                <strong>3. Excedente:</strong> Soma o (Peso Excedente Ã— Valor Kg Excedente) se
+                                <strong>3. Excedente:</strong> Soma o (Peso Excedente × Valor Kg Excedente) se
                                 houver.
                                 <br>
-                                <strong>4. Imposto:</strong> O total acumulativo Ã© dividido por (1 - % ICMS/100)
+                                <strong>4. Imposto:</strong> O total acumulativo é dividido por (1 - % ICMS/100)
                                 para
-                                aplicar o cÃ¡lculo "por dentro".
+                                aplicar o cálculo "por dentro".
                             </div>
                         </div>
 
@@ -1039,7 +1039,7 @@
                         style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <h2>Montagem Carga</h2>
-                            <p>HistÃ³rico completo de fretes despachados.</p>
+                            <p>Histórico completo de fretes despachados.</p>
                         </div>
 
                         <div style="display: flex; gap: 0.5rem; position: relative;">
@@ -1080,11 +1080,11 @@
                                     <label class="check-label"><input type="checkbox" data-col="percentual"> %
                                         Frete</label>
                                     <label class="check-label"><input type="checkbox" data-col="minimo"> Frete
-                                        MÃ­n.</label>
+                                        Mín.</label>
                                     <label class="check-label"><input type="checkbox" data-col="redespacho">
                                         Redespacho</label>
                                     <label class="check-label"><input type="checkbox" data-col="horarios">
-                                        HorÃ¡rio</label>
+                                        Horário</label>
                                     <label class="check-label"><input type="checkbox" checked data-col="leadTime">
                                         Prazo</label>
                                     <label class="check-label"><input type="checkbox" data-col="nfValue"> Valor
@@ -1107,7 +1107,7 @@
                                         Hr
                                         Desp.</label>
                                     <label class="check-label"><input type="checkbox" checked data-col="actions">
-                                        AÃ§Ãµes</label>
+                                        Ações</label>
                                 </div>
                             </div>
                         </div>
@@ -1121,19 +1121,19 @@
                     </div>
                 </div>
 
-                <!-- VIEW: CONFERÃŠNCIA DE FATURA -->
+                <!-- VIEW: CONFERÊNCIA DE FATURA -->
                 <div id="view-invoice" class="view-section" style="display: none;">
                     <div class="welcome-banner"
                         style="display: flex; justify-content: space-between; align-items: flex-start;">
                         <div>
-                            <h2>ðŸ§¾ ConferÃªncia de Fatura</h2>
+                            <h2>🧾 Conferência de Fatura</h2>
                             <p>Compare faturas de transportadoras com as NFs despachadas e confirme o pagamento.</p>
                         </div>
                         <div style="display: flex; gap: 0.5rem;">
                             <button id="btnInvoiceHistory" class="btn btn-secondary"
                                 onclick="window.showInvoiceHistory()" style="padding: 0.5rem 1rem; gap: 0.5rem;">
                                 <span class="material-icons-round">history</span>
-                                HistÃ³rico
+                                Histórico
                             </button>
                         </div>
                     </div>
@@ -1159,14 +1159,14 @@
                                         oninput="window.updateInvoiceComparison()">
                                 </div>
 
-                                <!-- ReferÃªncia da Fatura -->
+                                <!-- Referência da Fatura -->
                                 <div class="form-group" style="margin-bottom: 0;">
-                                    <label class="form-label">NÂº da Fatura (Ref.)</label>
+                                    <label class="form-label">Nº da Fatura (Ref.)</label>
                                     <input type="text" id="invoiceRef" class="form-input"
                                         placeholder="Ex: FAT-2026-001">
                                 </div>
 
-                                <!-- BotÃ£o Selecionar Todos -->
+                                <!-- Botão Selecionar Todos -->
                                 <div style="display: flex; gap: 0.5rem;">
                                     <button class="btn btn-secondary" onclick="window.selectAllInvoiceNFs(true)"
                                         style="flex: 1; padding: 0.6rem;">
@@ -1222,7 +1222,7 @@
                             <div class="card-body" style="padding: 1rem; text-align: center;">
                                 <div
                                     style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase;">
-                                    DiferenÃ§a</div>
+                                    Diferença</div>
                                 <div id="invoiceDifference" style="font-size: 1.5rem; font-weight: 700;">R$ 0,00</div>
                             </div>
                         </div>
@@ -1234,7 +1234,7 @@
                             style="display: flex; justify-content: space-between; align-items: center;">
                             <h3 style="font-size: 1rem; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
                                 <span class="material-icons-round">list_alt</span>
-                                NFs Despachadas DisponÃ­veis
+                                NFs Despachadas Disponíveis
                             </h3>
                             <span id="invoiceNFsCount" style="font-size: 0.8rem; color: var(--text-secondary);">0
                                 notas</span>
@@ -1254,18 +1254,18 @@
                                     </tr>
                                     <tr id="invoiceFilterRow">
                                         <th style="padding: 4px 6px;"></th>
-                                        <th style="padding: 4px 6px;"><input type="text" id="invF_nf" class="form-input" placeholder="ðŸ”" style="padding:3px 6px;font-size:0.78rem;height:28px;width:100%;" oninput="window.applyInvoiceColumnFilters()"></th>
-                                        <th style="padding: 4px 6px;"><input type="text" id="invF_client" class="form-input" placeholder="ðŸ”" style="padding:3px 6px;font-size:0.78rem;height:28px;width:100%;" oninput="window.applyInvoiceColumnFilters()"></th>
-                                        <th style="padding: 4px 6px;"><input type="text" id="invF_city" class="form-input" placeholder="ðŸ”" style="padding:3px 6px;font-size:0.78rem;height:28px;width:100%;" oninput="window.applyInvoiceColumnFilters()"></th>
-                                        <th style="padding: 4px 6px;"><input type="text" id="invF_date" class="form-input" placeholder="ðŸ”" style="padding:3px 6px;font-size:0.78rem;height:28px;width:100%;" oninput="window.applyInvoiceColumnFilters()"></th>
-                                        <th style="padding: 4px 6px;"><input type="text" id="invF_frete" class="form-input" placeholder="ðŸ”" style="padding:3px 6px;font-size:0.78rem;height:28px;width:100%;" oninput="window.applyInvoiceColumnFilters()"></th>
+                                        <th style="padding: 4px 6px;"><input type="text" id="invF_nf" class="form-input" placeholder="🔍" style="padding:3px 6px;font-size:0.78rem;height:28px;width:100%;" oninput="window.applyInvoiceColumnFilters()"></th>
+                                        <th style="padding: 4px 6px;"><input type="text" id="invF_client" class="form-input" placeholder="🔍" style="padding:3px 6px;font-size:0.78rem;height:28px;width:100%;" oninput="window.applyInvoiceColumnFilters()"></th>
+                                        <th style="padding: 4px 6px;"><input type="text" id="invF_city" class="form-input" placeholder="🔍" style="padding:3px 6px;font-size:0.78rem;height:28px;width:100%;" oninput="window.applyInvoiceColumnFilters()"></th>
+                                        <th style="padding: 4px 6px;"><input type="text" id="invF_date" class="form-input" placeholder="🔍" style="padding:3px 6px;font-size:0.78rem;height:28px;width:100%;" oninput="window.applyInvoiceColumnFilters()"></th>
+                                        <th style="padding: 4px 6px;"><input type="text" id="invF_frete" class="form-input" placeholder="🔍" style="padding:3px 6px;font-size:0.78rem;height:28px;width:100%;" oninput="window.applyInvoiceColumnFilters()"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="invoiceNFsBody">
                                     <tr>
                                         <td colspan="6"
                                             style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                                            Selecione uma transportadora para ver as NFs disponÃ­veis.
+                                            Selecione uma transportadora para ver as NFs disponíveis.
                                         </td>
                                     </tr>
                                 </tbody>
@@ -1273,7 +1273,7 @@
                         </div>
                     </div>
 
-                    <!-- BotÃµes de AÃ§Ã£o -->
+                    <!-- Botões de Ação -->
                     <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
                         <button id="btnClearInvoice" class="btn btn-secondary" onclick="window.clearInvoiceForm()"
                             style="padding: 0.75rem 1.5rem;">
@@ -1288,12 +1288,12 @@
                     </div>
                 </div>
 
-                <!-- Modal HistÃ³rico de Faturas -->
+                <!-- Modal Histórico de Faturas -->
                 <div id="invoiceHistoryModal" class="login-overlay" style="display: none;">
                     <div class="login-card" style="max-width: 900px; width: 95%;">
                         <div
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                            <h3 style="margin: 0;">ðŸ“‹ HistÃ³rico de Faturas Conferidas</h3>
+                            <h3 style="margin: 0;">📋 Histórico de Faturas Conferidas</h3>
                             <button onclick="document.getElementById('invoiceHistoryModal').style.display='none'"
                                 class="btn btn-secondary" style="padding: 0.4rem; min-width: auto; border: none;">
                                 <span class="material-icons-round">close</span>
@@ -1330,15 +1330,15 @@
                         <div style="text-align: center; margin-bottom: 1.5rem;">
                             <span class="material-icons-round"
                                 style="font-size: 3rem; color: var(--accent-warning);">warning</span>
-                            <h3 style="margin: 0.5rem 0;">DiferenÃ§a Detectada</h3>
+                            <h3 style="margin: 0.5rem 0;">Diferença Detectada</h3>
                             <p style="color: var(--text-secondary); font-size: 0.9rem;">
-                                O valor calculado nÃ£o confere com a fatura.<br>
+                                O valor calculado não confere com a fatura.<br>
                                 Para continuar, informe a senha de um Supervisor.
                             </p>
                         </div>
                         <div id="invoiceDiffDetails"
                             style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; text-align: center;">
-                            <!-- Detalhes da diferenÃ§a -->
+                            <!-- Detalhes da diferença -->
                         </div>
                         <div class="form-group">
                             <label class="form-label">Senha do Supervisor</label>
@@ -1348,7 +1348,7 @@
                         <div class="form-group">
                             <label class="form-label">Justificativa</label>
                             <input type="text" id="invoiceJustification" class="form-input"
-                                placeholder="Motivo da diferenÃ§a" required>
+                                placeholder="Motivo da diferença" required>
                         </div>
                         <div style="display: flex; gap: 1rem; margin-top: 1rem;">
                             <button class="btn btn-secondary"
@@ -1362,23 +1362,23 @@
 
 
 
-                <!-- VIEW: INTEGRAÃ‡ÃƒO ACONTEC -->
+                <!-- VIEW: INTEGRAÇÃO ACONTEC -->
                 <div id="view-acontec" class="view-section" style="display: none;">
 
                     <div class="welcome-banner" style="margin-bottom: 2rem;">
                         <div>
-                            <h2>ðŸ”Œ IntegraÃ§Ã£o Acontec</h2>
-                            <p>Configure e gerencie a sincronizaÃ§Ã£o automÃ¡tica de clientes com o sistema Acontec ERP.
+                            <h2>🔌 Integração Acontec</h2>
+                            <p>Configure e gerencie a sincronização automática de clientes com o sistema Acontec ERP.
                             </p>
                         </div>
                     </div>
 
-                    <!-- CARD: CONFIGURAÃ‡ÃƒO API -->
+                    <!-- CARD: CONFIGURAÇÃO API -->
                     <div class="card" style="margin-bottom: 2rem;">
                         <div class="card-header">
                             <h3 style="font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;">
                                 <span class="material-icons-round">api</span>
-                                ConfiguraÃ§Ã£o da API
+                                Configuração da API
                             </h3>
                         </div>
                         <div class="card-body" style="padding: 1.5rem;">
@@ -1393,54 +1393,54 @@
                                 </div>
 
                                 <div class="form-group">
-                                    <label class="form-label">Token de AutenticaÃ§Ã£o (Bearer Token)</label>
+                                    <label class="form-label">Token de Autenticação (Bearer Token)</label>
                                     <input type="password" id="acontecApiToken" class="form-input"
-                                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" style="font-family: monospace;">
+                                        placeholder="••••••••••••••••••••" style="font-family: monospace;">
                                     <small style="color: var(--text-secondary); font-size: 0.75rem;">
-                                        Token de acesso fornecido pela Acontec. SerÃ¡ armazenado de forma segura.
+                                        Token de acesso fornecido pela Acontec. Será armazenado de forma segura.
                                     </small>
                                 </div>
 
                                 <div class="form-group">
-                                    <label class="form-label">SincronizaÃ§Ã£o AutomÃ¡tica</label>
+                                    <label class="form-label">Sincronização Automática</label>
                                     <div style="display: flex; align-items: center; gap: 1rem;">
                                         <label
                                             style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                                             <input type="checkbox" id="acontecAutoSync" style="width: auto;">
-                                            <span>Ativar sincronizaÃ§Ã£o automÃ¡tica</span>
+                                            <span>Ativar sincronização automática</span>
                                         </label>
                                     </div>
                                 </div>
 
                                 <div class="form-group" id="acontecSyncIntervalGroup" style="display: none;">
-                                    <label class="form-label">Intervalo de SincronizaÃ§Ã£o (minutos)</label>
+                                    <label class="form-label">Intervalo de Sincronização (minutos)</label>
                                     <input type="number" id="acontecSyncInterval" class="form-input" min="5" max="1440"
                                         value="60" placeholder="60">
                                     <small style="color: var(--text-secondary); font-size: 0.75rem;">
-                                        Intervalo entre sincronizaÃ§Ãµes automÃ¡ticas (mÃ­nimo: 5 min, mÃ¡ximo: 24h)
+                                        Intervalo entre sincronizações automáticas (mínimo: 5 min, máximo: 24h)
                                     </small>
                                 </div>
 
                                 <div style="display: flex; gap: 1rem; justify-content: flex-end;">
                                     <button type="button" id="btnTestAcontecConnection" class="btn btn-secondary">
                                         <span class="material-icons-round" style="font-size: 1rem;">wifi_find</span>
-                                        Testar ConexÃ£o
+                                        Testar Conexão
                                     </button>
                                     <button type="submit" class="btn btn-primary">
                                         <span class="material-icons-round" style="font-size: 1rem;">save</span>
-                                        Salvar ConfiguraÃ§Ãµes
+                                        Salvar Configurações
                                     </button>
                                 </div>
                             </form>
                         </div>
                     </div>
 
-                    <!-- CARD: SINCRONIZAÃ‡ÃƒO MANUAL -->
+                    <!-- CARD: SINCRONIZAÇÃO MANUAL -->
                     <div class="card" style="margin-bottom: 2rem;">
                         <div class="card-header">
                             <h3 style="font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;">
                                 <span class="material-icons-round">sync</span>
-                                SincronizaÃ§Ã£o de Clientes
+                                Sincronização de Clientes
                             </h3>
                         </div>
                         <div class="card-body" style="padding: 1.5rem;">
@@ -1448,12 +1448,12 @@
                                 style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                                 <div>
                                     <p style="margin: 0; color: var(--text-secondary);">
-                                        Execute uma sincronizaÃ§Ã£o manual para buscar os clientes mais recentes da
+                                        Execute uma sincronização manual para buscar os clientes mais recentes da
                                         Acontec.
                                     </p>
                                     <p id="acontecLastSyncInfo"
                                         style="margin: 0; margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-secondary);">
-                                        Ãšltima sincronizaÃ§Ã£o: Nunca
+                                        Última sincronização: Nunca
                                     </p>
                                 </div>
                                 <button id="btnSyncAcontec" class="btn btn-primary" style="min-width: 200px;">
@@ -1480,12 +1480,12 @@
                         </div>
                     </div>
 
-                    <!-- CARD: ESTATÃSTICAS -->
+                    <!-- CARD: ESTATÍSTICAS -->
                     <div class="card" style="margin-bottom: 2rem;">
                         <div class="card-header">
                             <h3 style="font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;">
                                 <span class="material-icons-round">analytics</span>
-                                EstatÃ­sticas de SincronizaÃ§Ã£o
+                                Estatísticas de Sincronização
                             </h3>
                         </div>
                         <div class="card-body" style="padding: 1.5rem;">
@@ -1544,7 +1544,7 @@
                                 <button id="btnResetAcontecStats" class="btn btn-secondary"
                                     style="padding: 0.5rem 1.5rem;">
                                     <span class="material-icons-round" style="font-size: 1rem;">refresh</span>
-                                    Resetar EstatÃ­sticas
+                                    Resetar Estatísticas
                                 </button>
                             </div>
                         </div>
@@ -1556,7 +1556,7 @@
                             style="display: flex; justify-content: space-between; align-items: center;">
                             <h3 style="font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;">
                                 <span class="material-icons-round">history</span>
-                                Logs de SincronizaÃ§Ã£o
+                                Logs de Sincronização
                             </h3>
                             <button id="btnClearAcontecLogs" class="btn btn-secondary"
                                 style="padding: 0.5rem 1rem; font-size: 0.85rem;">
@@ -1569,7 +1569,7 @@
                                 <div style="padding: 2rem; text-align: center; color: var(--text-secondary);">
                                     <span class="material-icons-round"
                                         style="font-size: 3rem; opacity: 0.3;">history</span>
-                                    <p>Nenhum log disponÃ­vel</p>
+                                    <p>Nenhum log disponível</p>
                                 </div>
                             </div>
                         </div>
@@ -1583,8 +1583,8 @@
                     <div class="welcome-banner"
                         style="display: flex; justify-content: space-between; align-items: flex-start;">
                         <div>
-                            <h2>GestÃ£o de Cadastros</h2>
-                            <p>Gerenciamento de usuÃ¡rios, clientes e vendedores.</p>
+                            <h2>Gestão de Cadastros</h2>
+                            <p>Gerenciamento de usuários, clientes e vendedores.</p>
                         </div>
                     </div>
 
@@ -1592,14 +1592,14 @@
                         <div class="card-header">
                             <h3 style="font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;">
                                 <span class="material-icons-round">business</span>
-                                Dados da Empresa Despachante (CabeÃ§alho do Romaneio)
+                                Dados da Empresa Despachante (Cabeçalho do Romaneio)
                             </h3>
                         </div>
                         <div class="card-body" style="padding: 1.5rem;">
                             <form id="formCompanyData"
                                 style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
                                 <div class="form-group">
-                                    <label class="form-label">Nome Fantasia / RazÃ£o Social</label>
+                                    <label class="form-label">Nome Fantasia / Razão Social</label>
                                     <input type="text" id="compName" class="form-input" placeholder="Minha Loja Ltda">
                                 </div>
                                 <div class="form-group">
@@ -1608,7 +1608,7 @@
                                         placeholder="00.000.000/0000-00">
                                 </div>
                                 <div class="form-group" style="grid-column: span 2;">
-                                    <label class="form-label">EndereÃ§o Completo</label>
+                                    <label class="form-label">Endereço Completo</label>
                                     <input type="text" id="compAddress" class="form-input"
                                         placeholder="Av. Principal, 123 - Centro">
                                 </div>
@@ -1632,24 +1632,24 @@
                         </div>
                     </div>
 
-                    <!-- GestÃ£o de FuncionÃ¡rios - LARGURA TOTAL -->
+                    <!-- Gestão de Funcionários - LARGURA TOTAL -->
                     <div id="cardUserManagement" class="card admin-only" style="margin-bottom: 2rem;">
                         <div class="card-header">
                             <h3 style="font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;">
                                 <span class="material-icons-round">groups</span>
-                                GestÃ£o de FuncionÃ¡rios e PermissÃµes
+                                Gestão de Funcionários e Permissões
                             </h3>
                         </div>
                         <div class="card-body" style="padding: 1.5rem;">
-                            <!-- Grid 2 colunas: Cadastro Ã  esquerda | Lista Ã  direita -->
+                            <!-- Grid 2 colunas: Cadastro à esquerda | Lista à direita -->
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
 
-                                <!-- COLUNA ESQUERDA: FormulÃ¡rio de Cadastro -->
+                                <!-- COLUNA ESQUERDA: Formulário de Cadastro -->
                                 <div style="border-right: 1px solid var(--border-color); padding-right: 2rem;">
                                     <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; color: var(--text-primary);">
                                         <span class="material-icons-round"
                                             style="font-size: 1.1rem; color: var(--primary-color); vertical-align: middle;">person_add</span>
-                                        Novo FuncionÃ¡rio
+                                        Novo Funcionário
                                     </h4>
 
                                     <form id="formNewUser" style="display: flex; flex-direction: column; gap: 1rem;"
@@ -1657,10 +1657,10 @@
                                         <div class="form-group" style="margin-bottom: 0;">
                                             <label class="form-label">Nome Completo</label>
                                             <input type="text" id="newUserName" class="form-input"
-                                                placeholder="JoÃ£o Silva" required>
+                                                placeholder="João Silva" required>
                                         </div>
                                         <div class="form-group" style="margin-bottom: 0;">
-                                            <label class="form-label">UsuÃ¡rio (Login)</label>
+                                            <label class="form-label">Usuário (Login)</label>
                                             <input type="text" id="newUserLogin" class="form-input"
                                                 placeholder="joao.silva" required>
                                         </div>
@@ -1670,12 +1670,12 @@
                                                 placeholder="****" required>
                                         </div>
                                         <div class="form-group" style="margin-bottom: 0;">
-                                            <label class="form-label">NÃ­vel</label>
+                                            <label class="form-label">Nível</label>
                                             <select id="newUserRole" class="form-input" required>
                                                 <option value="user">Operacional</option>
                                                 <option value="supervisor">Supervisor</option>
-                                                <option value="motoboy">ðŸï¸ Motoboy</option>
-                                                <option value="motorista">ðŸš— Motorista</option>
+                                                <option value="motoboy">🏍️ Motoboy</option>
+                                                <option value="motorista">🚗 Motorista</option>
                                             </select>
                                         </div>
                                         <button type="submit" class="btn btn-primary"
@@ -1689,20 +1689,20 @@
                                     <!-- Dica compacta -->
                                     <div
                                         style="margin-top: 1.5rem; padding: 0.75rem; background: rgba(59, 130, 246, 0.08); border-radius: 8px; font-size: 0.8rem; color: var(--text-secondary);">
-                                        <strong style="color: var(--primary-color);">â„¹ï¸ NÃ­veis:</strong><br>
-                                        <strong>Operacional:</strong> CotaÃ§Ã£o/carga<br>
+                                        <strong style="color: var(--primary-color);">ℹ️ Níveis:</strong><br>
+                                        <strong>Operacional:</strong> Cotação/carga<br>
                                         <strong>Supervisor:</strong> Acesso total<br>
-                                        <strong>ðŸï¸ Motoboy:</strong> Moto Entrega<br>
-                                        <strong>ðŸš— Motorista:</strong> Carro Entrega
+                                        <strong>🏍️ Motoboy:</strong> Moto Entrega<br>
+                                        <strong>🚗 Motorista:</strong> Carro Entrega
                                     </div>
                                 </div>
 
-                                <!-- COLUNA DIREITA: Lista de UsuÃ¡rios -->
+                                <!-- COLUNA DIREITA: Lista de Usuários -->
                                 <div>
                                     <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; color: var(--text-primary);">
                                         <span class="material-icons-round"
                                             style="font-size: 1.1rem; color: var(--accent-success); vertical-align: middle;">people</span>
-                                        UsuÃ¡rios Cadastrados
+                                        Usuários Cadastrados
                                     </h4>
 
                                     <div style="overflow-y: auto; max-height: 350px; padding-right: 5px;">
@@ -1710,8 +1710,8 @@
                                             <thead>
                                                 <tr>
                                                     <th style="text-align: left; padding: 0.6rem;">Nome</th>
-                                                    <th style="text-align: left; padding: 0.6rem;">NÃ­vel</th>
-                                                    <th style="text-align: center; padding: 0.6rem; width: 220px;">AÃ§Ã£o
+                                                    <th style="text-align: left; padding: 0.6rem;">Nível</th>
+                                                    <th style="text-align: center; padding: 0.6rem; width: 220px;">Ação
                                                     </th>
                                                 </tr>
                                             </thead>
@@ -1725,7 +1725,7 @@
                         </div>
                     </div>
 
-                    <!-- Cadastro de Clientes - NOVA SEÃ‡ÃƒO -->
+                    <!-- Cadastro de Clientes - NOVA SEÇÃO -->
                     <div id="cardClientRegistration" class="card" style="margin-bottom: 2rem;">
                         <div class="card-header">
                             <h3 style="font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;">
@@ -1734,10 +1734,10 @@
                             </h3>
                         </div>
                         <div class="card-body" style="padding: 1.5rem;">
-                            <!-- Grid 2 colunas: Cadastro Ã  esquerda | Lista Ã  direita -->
+                            <!-- Grid 2 colunas: Cadastro à esquerda | Lista à direita -->
                             <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
 
-                                <!-- COLUNA ESQUERDA: FormulÃ¡rio de Cadastro -->
+                                <!-- COLUNA ESQUERDA: Formulário de Cadastro -->
                                 <div style="border-right: 1px solid var(--border-color); padding-right: 2rem;">
                                     <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; color: var(--text-primary);">
                                         <span class="material-icons-round"
@@ -1754,19 +1754,19 @@
                                                 <button type="button" id="btnSearchClientCNPJ" class="btn btn-secondary"
                                                     style="padding: 0.5rem 1rem; white-space: nowrap;"
                                                     title="Buscar dados pelo CNPJ">
-                                                    ðŸ”
+                                                    🔍
                                                 </button>
                                             </div>
                                         </div>
                                         <div class="form-group" style="margin-bottom: 0;">
-                                            <label class="form-label">Nome/RazÃ£o Social</label>
+                                            <label class="form-label">Nome/Razão Social</label>
                                             <input type="text" id="newClientName" class="form-input"
                                                 placeholder="Nome da Empresa" required>
                                         </div>
                                         <div class="form-group" style="margin-bottom: 0;">
-                                            <label class="form-label">CÃ³digo</label>
+                                            <label class="form-label">Código</label>
                                             <input type="text" id="newClientCode" class="form-input"
-                                                placeholder="CÃ³digo interno (opcional)">
+                                                placeholder="Código interno (opcional)">
                                         </div>
                                         <div class="form-group" style="margin-bottom: 0;">
                                             <label class="form-label">Cidade/UF</label>
@@ -1779,9 +1779,9 @@
                                                 placeholder="Bairro">
                                         </div>
                                         <div class="form-group" style="margin-bottom: 0;">
-                                            <label class="form-label">EndereÃ§o</label>
+                                            <label class="form-label">Endereço</label>
                                             <input type="text" id="newClientAddress" class="form-input"
-                                                placeholder="Rua, NÃºmero">
+                                                placeholder="Rua, Número">
                                         </div>
                                         <div class="form-group" style="margin-bottom: 0;">
                                             <label class="form-label">Telefone</label>
@@ -1820,10 +1820,10 @@
                                             <label class="check-label" style="color: var(--accent-danger);">
                                                 <input type="checkbox" id="filterNoCoverage"
                                                     onchange="window.renderClientsList()">
-                                                âš ï¸ Sem Cobertura
+                                                ⚠️ Sem Cobertura
                                             </label>
                                             <input type="text" id="searchClientInput" class="form-input"
-                                                placeholder="ðŸ” Buscar cliente..."
+                                                placeholder="🔍 Buscar cliente..."
                                                 style="max-width: 250px; padding: 0.5rem;">
                                         </div>
                                     </div>
@@ -1832,10 +1832,10 @@
                                         <table class="dispatch-table" style="font-size: 0.85rem; width: 100%;">
                                             <thead style="position: sticky; top: 0; background: var(--bg-secondary);">
                                                 <tr>
-                                                    <th style="text-align: left; padding: 0.6rem;">CÃ³digo</th>
+                                                    <th style="text-align: left; padding: 0.6rem;">Código</th>
                                                     <th style="text-align: left; padding: 0.6rem;">Nome</th>
                                                     <th style="text-align: left; padding: 0.6rem;">Cidade</th>
-                                                    <th style="text-align: center; padding: 0.6rem; width: 80px;">AÃ§Ãµes
+                                                    <th style="text-align: center; padding: 0.6rem; width: 80px;">Ações
                                                     </th>
                                                 </tr>
                                             </thead>
@@ -1849,7 +1849,7 @@
                         </div>
                     </div>
 
-                    <!-- Cadastro de Vendedores - NOVA SEÃ‡ÃƒO -->
+                    <!-- Cadastro de Vendedores - NOVA SEÇÃO -->
                     <div id="cardSellerRegistration" class="card" style="margin-bottom: 2rem;">
                         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                             <h3 style="font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem; color: var(--text-primary); margin: 0;">
@@ -1869,7 +1869,7 @@
                                             <th style="text-align: left; padding: 0.6rem;">ID</th>
                                             <th style="text-align: left; padding: 0.6rem;">Nome do Vendedor</th>
                                             <th style="text-align: left; padding: 0.6rem;">WhatsApp</th>
-                                            <th style="text-align: center; padding: 0.6rem; width: 220px;">AÃ§Ãµes</th>
+                                            <th style="text-align: center; padding: 0.6rem; width: 220px;">Ações</th>
                                         </tr>
                                     </thead>
                                     <tbody id="sellerListBody">
@@ -1887,13 +1887,13 @@
                             <div class="card-header">
                                 <h3 style="font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;">
                                     <span class="material-icons-round">cloud_download</span>
-                                    Backup de SeguranÃ§a
+                                    Backup de Segurança
                                 </h3>
                             </div>
                             <div class="card-body" style="padding: 1.5rem;">
                                 <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem;">
-                                    Baixe todos os seus dados (Despachos e Tabelas Manuais) em um Ãºnico arquivo de
-                                    seguranÃ§a.
+                                    Baixe todos os seus dados (Despachos e Tabelas Manuais) em um único arquivo de
+                                    segurança.
                                     Recomendamos fazer isso semanalmente.
                                 </p>
                                 <button id="btnDownloadBackup" class="btn btn-primary"
@@ -1914,7 +1914,7 @@
                             </div>
                             <div class="card-body" style="padding: 1.5rem;">
                                 <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem;">
-                                    Se vocÃª trocou de computador ou limpou o navegador, pode subir seu arquivo de
+                                    Se você trocou de computador ou limpou o navegador, pode subir seu arquivo de
                                     backup
                                     aqui para recuperar tudo.
                                 </p>
@@ -1929,23 +1929,23 @@
                     </div>
                 </div>
 
-                <!-- NOVA ABA: CONFIGURAÃ‡Ã•ES DE PARAMETRIZAÃ‡ÃƒO -->
+                <!-- NOVA ABA: CONFIGURAÇÕES DE PARAMETRIZAÇÃO -->
                 <div id="view-app-settings" class="view-section" style="display: none;">
                     <div class="welcome-banner">
-                        <h2>ConfiguraÃ§Ãµes do Sistema</h2>
-                        <p>ParametrizaÃ§Ã£o de automaÃ§Ãµes e regras globais de despacho.</p>
+                        <h2>Configurações do Sistema</h2>
+                        <p>Parametrização de automações e regras globais de despacho.</p>
                     </div>
 
                     <div class="card" style="margin-top: 1rem; max-width: 600px;">
                         <div class="card-header">
                             <h3 style="display: flex; align-items: center; gap: 0.5rem;">
                                 <span class="material-icons-round" style="color: var(--accent-success);">whatsapp</span> 
-                                AutomaÃ§Ã£o de Mensagens (WhatsApp)
+                                Automação de Mensagens (WhatsApp)
                             </h3>
                         </div>
                         <div class="card-body" style="padding: 1.5rem;">
                             <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
-                                Defina quais notificaÃ§Ãµes devem ser enviadas automaticamente apÃ³s a geraÃ§Ã£o de um romaneio.
+                                Defina quais notificações devem ser enviadas automaticamente após a geração de um romaneio.
                             </p>
                             
                             <div style="display: flex; flex-direction: column; gap: 1rem;">
@@ -1976,7 +1976,7 @@
 
                             <button class="btn btn-primary" onclick="window.saveAppSettings()" style="margin-top: 1.5rem; width: 100%; justify-content: center; height: 45px;">
                                 <span class="material-icons-round">save</span>
-                                SALVAR CONFIGURAÃ‡Ã•ES
+                                SALVAR CONFIGURAÇÕES
                             </button>
                         </div>
                     </div>
@@ -1985,8 +1985,8 @@
                 <!-- NOVA ABA: BAIXA ROMANEIO -->
                 <div id="view-baixa" class="view-section" style="display: none;">
                     <div class="welcome-banner">
-                        <h2>GestÃ£o de Romaneios</h2>
-                        <p>Controle o retorno dos romaneios fÃ­sicos e canhotos de entrega (dar baixa no sistema).</p>
+                        <h2>Gestão de Romaneios</h2>
+                        <p>Controle o retorno dos romaneios físicos e canhotos de entrega (dar baixa no sistema).</p>
                     </div>
 
                     <div class="card" style="margin-top: 1rem;">
@@ -1998,11 +1998,11 @@
                                 <table class="table" style="width: 100%; border-collapse: collapse;">
                                     <thead>
                                         <tr style="border-bottom: 2px solid var(--border-color); color: var(--text-secondary); text-align: left;">
-                                            <th style="padding: 1rem;">CÃ³d. Romaneio</th>
-                                            <th style="padding: 1rem;">Data/Hora EmissÃ£o</th>
+                                            <th style="padding: 1rem;">Cód. Romaneio</th>
+                                            <th style="padding: 1rem;">Data/Hora Emissão</th>
                                             <th style="padding: 1rem;">Transportadora/Motorista</th>
                                             <th style="padding: 1rem; text-align: center;">Qtd NFs</th>
-                                            <th style="padding: 1rem; text-align: center;">AÃ§Ãµes</th>
+                                            <th style="padding: 1rem; text-align: center;">Ações</th>
                                         </tr>
                                     </thead>
                                     <tbody id="romaneioBaixaBody">
@@ -2022,12 +2022,12 @@
                                 <table class="table" style="width: 100%; border-collapse: collapse; opacity: 0.8;">
                                     <thead>
                                         <tr style="border-bottom: 2px solid var(--border-color); color: var(--text-secondary); text-align: left;">
-                                            <th style="padding: 1rem;">CÃ³d. Romaneio</th>
+                                            <th style="padding: 1rem;">Cód. Romaneio</th>
                                             <th style="padding: 1rem;">Data/Hora Baixa (Arquivamento)</th>
                                             <th style="padding: 1rem;">Transportadora/Motorista</th>
                                             <th style="padding: 1rem; text-align: center;">Qtd NFs</th>
                                             <th style="padding: 1rem; text-align: center;">Status</th>
-                                            <th style="padding: 1rem; text-align: center;">AÃ§Ãµes</th>
+                                            <th style="padding: 1rem; text-align: center;">Ações</th>
                                         </tr>
                                     </thead>
                                     <tbody id="romaneioArquivadoBody">
@@ -2046,7 +2046,7 @@
             <footer
                 style="padding: 1rem 2rem; border-top: 1px solid var(--border-color); font-size: 0.75rem; color: var(--text-secondary); display: flex; justify-content: space-between; align-items: center; background: var(--bg-card);">
                 <div>
-                    <strong>&copy; 2024 ParreiraLog</strong> - GestÃ£o LogÃ­stica Inteligente
+                    <strong>&copy; 2024 ParreiraLog</strong> - Gestão Logística Inteligente
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <span class="material-icons-round"
@@ -2054,7 +2054,7 @@
                     <span>Ambiente Seguro: Dados processados localmente em conformidade com a LGPD.</span>
                 </div>
                 <div id="systemVersion" style="font-size: 0.8rem; color: #666; margin-left: auto;">
-                    Carregando versÃ£o...
+                    Carregando versão...
                 </div>
             </footer>
         </main>
@@ -2071,17 +2071,17 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 
-    <script src="firebase-config.js?v=11.9.2"></script>
-    <script src="utils.js?v=11.9.2"></script>
-    <script src="data.js?v=11.9.2"></script>
-    <script src="acontec-integration.js?v=11.9.2"></script>
-    <script src="app.js?v=11.9.2"></script>
-    <script src="acontec-ui.js?v=11.9.2"></script>
-    <script src="delivery-module.js?v=11.9.2"></script>
-    <script src="cnpj-lookup.js?v=11.9.2"></script>
-    <script src="bi_logistica.js?v=11.9.2"></script>
+    <script src="firebase-config.js?v=11.9.3"></script>
+    <script src="utils.js?v=11.9.3"></script>
+    <script src="data.js?v=11.9.3"></script>
+    <script src="acontec-integration.js?v=11.9.3"></script>
+    <script src="app.js?v=11.9.3"></script>
+    <script src="acontec-ui.js?v=11.9.3"></script>
+    <script src="delivery-module.js?v=11.9.3"></script>
+    <script src="cnpj-lookup.js?v=11.9.3"></script>
+    <script src="bi_logistica.js?v=11.9.3"></script>
 
-    <!-- BI LogÃ­stico: Floating Action Button + Modal -->
+    <!-- BI Logístico: Floating Action Button + Modal -->
     <button id="fabBiLogistica"
         onclick="document.getElementById('modalBiLogistica').style.display='flex'; renderBiLogistica();" style="
         position:fixed; bottom:80px; right:30px; z-index:9999;
@@ -2091,7 +2091,7 @@
         box-shadow:0 4px 12px rgba(59,130,246,0.4);
         display:flex; align-items:center; justify-content:center;
         transition:transform 0.2s;
-    " title="Indicadores LogÃ­sticos" onmouseover="this.style.transform='scale(1.1)'"
+    " title="Indicadores Logísticos" onmouseover="this.style.transform='scale(1.1)'"
         onmouseout="this.style.transform='scale(1)'">
         <span class="material-icons-round" style="font-size:1.5rem;">insights</span>
     </button>
@@ -2108,7 +2108,7 @@
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
                 <h2 style="font-size:1.2rem; font-weight:700; color:var(--text-primary,#f1f5f9);">
                     <span class="material-icons-round"
-                        style="vertical-align:middle; margin-right:0.5rem;">insights</span>Indicadores LogÃ­sticos
+                        style="vertical-align:middle; margin-right:0.5rem;">insights</span>Indicadores Logísticos
                 </h2>
                 <button onclick="document.getElementById('modalBiLogistica').style.display='none'" style="
                     background:none; border:none; cursor:pointer; color:var(--text-secondary,#94a3b8);
@@ -2121,17 +2121,17 @@
                 style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
                 <div style="background:rgba(59,130,246,0.08); padding:1rem; border-radius:8px; text-align:center;">
                     <div style="font-size:0.8rem; color:var(--text-secondary,#94a3b8); margin-bottom:0.5rem;">Despachos
-                        (MÃªs)</div>
+                        (Mês)</div>
                     <div id="biDispDespachos" style="font-size:1.5rem; font-weight:700; color:#3b82f6;">0</div>
                     <div id="biDispDespachosDetalhe" style="font-size:0.7rem; color:var(--text-secondary,#94a3b8);">0
                         total</div>
                 </div>
                 <div style="background:rgba(16,185,129,0.08); padding:1rem; border-radius:8px; text-align:center;">
                     <div style="font-size:0.8rem; color:var(--text-secondary,#94a3b8); margin-bottom:0.5rem;">Custo
-                        MÃ©dio Frete</div>
+                        Médio Frete</div>
                     <div id="biDispCustoMedio" style="font-size:1.5rem; font-weight:700; color:#10b981;">R$ 0,00</div>
                     <div id="biDispCustoMedioDetalhe" style="font-size:0.7rem; color:var(--text-secondary,#94a3b8);">0
-                        cotaÃ§Ãµes</div>
+                        cotações</div>
                 </div>
                 <div style="background:rgba(245,158,11,0.08); padding:1rem; border-radius:8px; text-align:center;">
                     <div style="font-size:0.8rem; color:var(--text-secondary,#94a3b8); margin-bottom:0.5rem;">SLA
@@ -2142,7 +2142,7 @@
                 </div>
                 <div style="background:rgba(239,68,68,0.08); padding:1rem; border-radius:8px; text-align:center;">
                     <div style="font-size:0.8rem; color:var(--text-secondary,#94a3b8); margin-bottom:0.5rem;">
-                        OcorrÃªncias</div>
+                        Ocorrências</div>
                     <div id="biDispOcorrencias" style="font-size:1.5rem; font-weight:700; color:#ef4444;">0</div>
                     <div id="biDispOcorrenciasDetalhe" style="font-size:0.7rem; color:var(--text-secondary,#94a3b8);">de
                         0 total</div>
@@ -2153,13 +2153,13 @@
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:1.5rem;">
                 <div
                     style="background:rgba(255,255,255,0.03); border-radius:8px; padding:1rem; border:1px solid var(--border-color,#334155);">
-                    <h4 style="font-size:0.85rem; margin-bottom:0.75rem; color:var(--text-primary,#f1f5f9);">Custo MÃ©dio
+                    <h4 style="font-size:0.85rem; margin-bottom:0.75rem; color:var(--text-primary,#f1f5f9);">Custo Médio
                         por Transportadora</h4>
                     <div style="height:280px;"><canvas id="chartBiFreteTransp"></canvas></div>
                 </div>
                 <div
                     style="background:rgba(255,255,255,0.03); border-radius:8px; padding:1rem; border:1px solid var(--border-color,#334155);">
-                    <h4 style="font-size:0.85rem; margin-bottom:0.75rem; color:var(--text-primary,#f1f5f9);">EvoluÃ§Ã£o de
+                    <h4 style="font-size:0.85rem; margin-bottom:0.75rem; color:var(--text-primary,#f1f5f9);">Evolução de
                         Volumes (6 meses)</h4>
                     <div style="height:280px;"><canvas id="chartBiVolumes"></canvas></div>
                 </div>
@@ -2182,8 +2182,8 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
-                    .then((reg) => console.log('âœ… SW registered:', reg.scope))
-                    .catch((err) => console.log('âŒ SW failed:', err));
+                    .then((reg) => console.log('✅ SW registered:', reg.scope))
+                    .catch((err) => console.log('❌ SW failed:', err));
             });
         }
         */
@@ -2192,12 +2192,12 @@
             navigator.serviceWorker.getRegistrations().then(function (registrations) {
                 for (let registration of registrations) {
                     registration.unregister();
-                    console.log('ðŸ§¹ SW Unregistered to force update');
+                    console.log('🧹 SW Unregistered to force update');
                 }
             });
         }
     </script>
-    <!-- Modal Cadastro/EdiÃ§Ã£o de Vendedor (v3.6) -->
+    <!-- Modal Cadastro/Edição de Vendedor (v3.6) -->
     <div id="sellerModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:10001; background:rgba(0,0,0,0.6); align-items:center; justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
         <div style="background:var(--bg-card); border-radius:12px; width:90%; max-width:450px; padding:2rem; border:1px solid var(--border-color); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
@@ -2218,7 +2218,7 @@
                 <div class="form-group" style="margin:0;">
                     <label class="form-label">WhatsApp (com DDD)</label>
                     <input type="text" id="sellerPhone" class="form-input" placeholder="91988887777" maxlength="11">
-                    <small style="color:var(--text-secondary); font-size:0.75rem;">Apenas nÃºmeros, sem espaÃ§os ou sÃ­mbolos.</small>
+                    <small style="color:var(--text-secondary); font-size:0.75rem;">Apenas números, sem espaços ou símbolos.</small>
                 </div>
             </div>
 
