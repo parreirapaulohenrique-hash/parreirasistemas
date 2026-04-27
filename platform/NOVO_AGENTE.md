@@ -53,7 +53,7 @@ graph TD
     C -->|Vendas Externas| FV[Força de Vendas<br>PWA Offline-First]
     C -->|Gestão de Armazém| W[Módulo WMS<br>Estoque & Mapa]
     C -->|Chão de Fábrica| WC[WMS Coletor<br>Coletores RF/Zebra]
-    C -->|Análise Financeira| FC[Fluxo de Caixa<br>Projeções e Maxdata]
+    C -->|Análise Financeira| FC[ERP Consultoria<br>Projeções e Maxdata]
 
     FV -.->|Adapter: onErpReceberPedidoFV<br>Push Pedidos| E
     E -.->|Adapter: exportClientesParaFV<br>Pull Cadastros| FV
@@ -111,7 +111,7 @@ graph TD
 **POP (Procedimento Operacional Padrão):**
 *   **Cadastros Base:** Inserir e atualizar Clientes, Fornecedores, Produtos (SKU, NCM, Preço Base de Custo) e Vendedores/Comissões.
 *   **Vendas & Orçamentos (Fase 4):** Vendedor abre nova tela de Orçamento -> Adiciona Itens (aplicando Tabelas de Preços Regionais) -> Envia ao cliente. Cliente aprovando -> Converte para Pedido de Venda. Se houver limite estourado, cai em "Liberação de Crédito" para o gestor aprovar.
-*   **Financeiro (Fase 5):** Pedido faturado gera título em "Contas a Receber". Compras geram "Contas a Pagar". Executa-se rotina diária de Conciliação Bancária, emissão de boletos e análise de inadimplência (Fluxo de Caixa Projetado).
+*   **Financeiro (Fase 5):** Pedido faturado gera título em "Contas a Receber". Compras geram "Contas a Pagar". Executa-se rotina diária de Conciliação Bancária, emissão de boletos e análise de inadimplência (ERP Consultoria Projetado).
 *   **Fiscal/Faturamento (Fase 6):** Faturamento libera impressão do DANFE (NF-e) via SEFAZ. Ao fim do período, gera extração do SPED Fiscal e Contribuições. Dashboard (Fase 7) exibe KPIs (Margem, Curva ABC).
 *   **CRM (Fase 10):** Pipeline Kanban de Oportunidades (Prospecção → Qualificação → Proposta → Negociação → Fechamento). Leads ganhos são convertidos automaticamente em Clientes e Orçamentos no ERP.
 *   **RH (Fase 11):** Controle de Ponto Eletrônico, Folha de Pagamento (Holerite com deduções INSS/VT), Gestão de Férias e Licenças.
@@ -212,10 +212,10 @@ graph LR
 *   **Folha de Pagamento:** Gestor acessa RH > Holerites -> Visualiza grid de funcionários com Salário Base, deduções (INSS 10%, VT 6%) e Líquido a Receber -> Gera Holeite individual via modal de impressão.
 *   **Férias e Licenças:** RH agenda afastamento -> Define tipo (Férias/Licença) e período -> Status exibido em blocos coloridos (Programado, Em Andamento, Concluído).
 
-### 5.10. Módulo Financeiro Fluxo de Caixa (Standalone/PWA)
+### 5.10. Módulo Financeiro ERP Consultoria (Standalone/PWA)
 ```mermaid
 graph LR
-    FC[Fluxo de Caixa] --> Imp[Importação Maxdata 343]
+    FC[ERP Consultoria] --> Imp[Importação Maxdata 343]
     FC --> Proj[Motor de Projeções]
     FC --> Dash[Dashboard Visual]
     FC --> Exp[Exportação SheetJS]
