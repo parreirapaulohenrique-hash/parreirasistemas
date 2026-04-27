@@ -326,15 +326,19 @@ const app = {
 
             Object.values(consolidated).sort((a,b) => a.codigo.localeCompare(b.codigo)).forEach(acc => {
                 const tr = document.createElement('tr');
+                if (acc.unmapped) tr.className = 'row-unmapped'; // CSS class to highlight
+
                 const isEntrada = acc.codigo.startsWith('1.') || acc.codigo.startsWith('4.');
                 const valClass = acc.total >= 0 ? 'positive' : 'negative';
                 
                 let vertical = 0;
                 if(totalEntradas > 0) vertical = (Math.abs(acc.total) / totalEntradas) * 100;
 
+                const descText = acc.unmapped ? `⚠️ [NÃO MAPEADO] ${acc.descricao}` : acc.descricao;
+
                 tr.innerHTML = `
                     <td><strong>${acc.codigo}</strong></td>
-                    <td>${acc.descricao}</td>
+                    <td>${descText}</td>
                     <td class="text-right">-</td>
                     <td class="text-right ${valClass}">${this.formatCurrency(acc.total)}</td>
                     <td class="text-right">-</td>

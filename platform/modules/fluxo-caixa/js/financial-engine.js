@@ -1,14 +1,14 @@
 /**
- * Motor de Inteligência Financeira
- * Responsável por agrupar contas e calcular indicadores baseados no padrão da planilha do usuário.
+ * Motor de Inteligência Financeira (V2 - Strict Spreadsheet Mode)
+ * Responsável por agrupar contas e calcular indicadores baseados RIGOROSAMENTE na planilha.
  */
 
 window.FinancialEngine = {
-    // Definição dos Grupos e seus prefixos de código
+    // Definição dos Grupos Principais (Conforme Planilha)
     GROUPS: [
         {
             id: 'disponibilidade',
-            label: 'Disponíveis nas Contas Movimento',
+            label: 'Disponíveis Nas Contas Movimento inicial',
             color: 'var(--color-disponiveis)',
             prefixes: ['1.0', '1.1', '1.2', '1.3', '1.4', '1.5', '1.9', '2.1', '2.4', '2.9', '4.0', '4.1', '4.4', '4.9', '91.']
         },
@@ -20,13 +20,13 @@ window.FinancialEngine = {
         },
         {
             id: 'custos_impostos',
-            label: 'Total dos Custos (Aquisição/Impostos)',
+            label: 'Total dos Custos',
             color: 'var(--color-custos)',
             prefixes: ['2.1.', '2.2.', '2.3.']
         },
         {
             id: 'despesas_operacionais',
-            label: 'Total das Despesas Operacionais',
+            label: '300. Despesas Operac. Fixas e Variáveis',
             color: 'var(--color-despesas)',
             prefixes: ['3.1.', '3.2.', '3.3.', '3.4.', '3.5.', '3.6.']
         },
@@ -37,6 +37,22 @@ window.FinancialEngine = {
             prefixes: ['4.1.', '4.2.', '4.3.']
         }
     ],
+
+    /**
+     * Tenta encontrar a descrição oficial da planilha para um código
+     */
+    getMasterDescription(code) {
+        if (!window.MASTER_ACCOUNTS) return null;
+        
+        // Busca exata
+        const match = window.MASTER_ACCOUNTS.find(acc => acc.codigo === code);
+        if (match) return match.descricao;
+        
+        // Busca aproximada (remove pontos extras no final)
+        const cleanCode = code.endsWith('.') ? code.slice(0, -1) : code;
+        const match2 = window.MASTER_ACCOUNTS.find(acc => acc.codigo === cleanCode);
+        return match2 ? match2.descricao : null;
+    },
 
     /**
      * Agrupa uma lista de contas em categorias
@@ -51,18 +67,22 @@ window.FinancialEngine = {
             };
         });
 
-        // Contas que não encaixam em nenhum grupo (fallback)
         grouped['outros'] = {
-            config: { id: 'outros', label: 'Outras Contas', color: '#64748b' },
+            config: { id: 'outros', label: 'Não Encontrados na Planilha (Vincular Manualmente)', color: '#64748b' },
             items: [],
             total: 0
         };
 
         accounts.forEach(acc => {
+            // Sincroniza a descrição com a planilha se disponível
+            const officialDesc = this.getMasterDescription(acc.codigo);
+            if (officialDesc) {
+                acc.descricao = officialDesc;
+            }
+
             let matched = false;
-            
-            // Tenta encontrar o grupo pelo prefixo do código
             for (const group of this.GROUPS) {
+                // Regra de prefixo: Se o código começa com o prefixo do grupo
                 if (group.prefixes.some(p => acc.codigo.startsWith(p))) {
                     grouped[group.id].items.push(acc);
                     const val = (acc.a_receber || 0) - (acc.a_pagar || 0);
@@ -76,6 +96,7 @@ window.FinancialEngine = {
                 grouped['outros'].items.push(acc);
                 const val = (acc.a_receber || 0) - (acc.a_pagar || 0);
                 grouped['outros'].total += val;
+                acc.unmapped = true; // Marca como não mapeado
             }
         });
 
@@ -83,7 +104,7 @@ window.FinancialEngine = {
     },
 
     /**
-     * Calcula os totais consolidados para a Barra de Resumo
+     * Calcula os totais consolidados
      */
     calculateTotals(grouped) {
         const recOp = grouped['receitas_operacionais'].total;
@@ -92,16 +113,15 @@ window.FinancialEngine = {
         
         const saldoLiquidoFinal = recOp + recNaoOp + despesas;
         
-        // Simulação de Saldo Ajustado (conforme planilha, parece ser saldo + disponibilidade inicial)
-        const disponibilidadeInicial = grouped['disponibilidade'].total; // Simplificação
-        const saldoAjustado = saldoLiquidoFinal + 0; // Na planilha o ajuste é específico, vamos manter saldo por enquanto
+        // O Saldo Inicial vem do grupo 'disponibilidade'
+        const saldoInicial = grouped['disponibilidade'].total;
 
         return {
-            saldoInicial: disponibilidadeInicial,
+            saldoInicial: saldoInicial,
             totalReceitas: recOp + recNaoOp,
             totalDespesas: despesas,
             saldoLiquido: saldoLiquidoFinal,
-            saldoAjustado: saldoLiquidoFinal // Por enquanto igual ao líquido até entendermos a regra de ajuste
+            saldoAjustado: saldoLiquidoFinal + saldoInicial // Simulação do ajustado
         };
     }
 };

@@ -284,6 +284,12 @@ h1, h2, h3, h4 { font-weight: 600; }
 .table-group-header.group-despesas td { border-left-color: var(--color-despesas); }
 .table-group-header.group-nao-op td { border-left-color: var(--color-receitas-nao-op); }
 
+.row-unmapped td {
+    background: rgba(234, 179, 8, 0.1) !important;
+    color: #fde047 !important;
+    font-style: italic;
+}
+
 /* KPIs */
 .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 20px; }
 .kpi-card { padding: 24px; display: flex; align-items: flex-start; gap: 16px; }
