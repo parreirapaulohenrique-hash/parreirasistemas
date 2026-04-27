@@ -5,6 +5,7 @@
 const app = {
     currentChart: null,
     pendingImport: null,
+    manualEntries: {}, // { "1.1.01-Desc": 100.00 }
 
     async init() {
         this.bindEvents();
@@ -239,66 +240,120 @@ const app = {
         let variacao = 0;
         if(saldoProjetadoLiq !== 0) variacao = ((saldoRealizadoLiq - saldoProjetadoLiq) / Math.abs(saldoProjetadoLiq)) * 100;
 
+        // IDs atualizados conforme novo HTML/Logic
         document.getElementById('kpi-entradas').textContent = this.formatCurrency(totalRealizadoEntradas);
         document.getElementById('kpi-saidas').textContent = this.formatCurrency(totalRealizadoSaidas);
-        document.getElementById('kpi-saldo').textContent = this.formatCurrency(saldoRealizadoLiq);
+        document.getElementById('kpi-saldo-geral').textContent = this.formatCurrency(saldoRealizadoLiq);
         document.getElementById('kpi-variacao').textContent = variacao.toFixed(2) + '%';
         
         this.renderCharts(monthlyRealizado, monthlyProjetado);
         
-        // --- NOVO: Lógica Baseada em Template de Planilha ---
+        // --- NOVO: Lógica Baseada em Template de Planilha com Conferência ---
         const allAccountsInYear = [];
         for(let m = 1; m <= 12; m++) {
             const key = `${year}-${m.toString().padStart(2, '0')}`;
             const mData = yearData[key];
-            if(mData) {
-                if(mData.realizado) allAccountsInYear.push(...mData.realizado);
-                if(mData.projetado) allAccountsInYear.push(...mData.projetado);
+            if(mData && mData.realizado) {
+                allAccountsInYear.push(...mData.realizado);
             }
         }
         
-        const result = FinancialEngine.processData(allAccountsInYear);
+        const result = FinancialEngine.processData(allAccountsInYear, this.manualEntries);
         
         this.renderSummaryBar(result.totals);
-        this.renderFlowTableStrict(result.rows, totalRealizadoEntradas);
+        this.renderFlowTableStrict(result.rows, totalRealizadoEntradas, result.pdfTotalReceitas);
     },
 
-    renderFlowTableStrict(rows, totalEntradas) {
+    renderFlowTableStrict(rows, totalEntradas, pdfTotalReceitas) {
         const tbody = document.getElementById('flow-table-body');
         tbody.innerHTML = '';
         
+        let manualSum = 0;
+
         rows.forEach(row => {
             const tr = document.createElement('tr');
+            tr.className = `level-${row.level}`;
             
             if (row.type === 'header') {
-                tr.className = `table-group-header ${row.style.class}`;
+                tr.classList.add('table-group-header', row.style.class);
+                const val = row.valorCalculado !== undefined ? this.formatCurrency(row.valorCalculado) : '-';
                 tr.innerHTML = `
-                    <td colspan="6">${row.descricao}</td>
+                    <td colspan="3">${row.descricao}</td>
+                    <td class="text-right">${val}</td>
+                    <td colspan="2"></td>
                 `;
+
+                // Se for o grupo de Receitas, adiciona a barra de conferência logo abaixo
+                if (row.descricao === 'Total Receitas Operacionais / Vendas') {
+                    tbody.appendChild(tr);
+                    this.renderValidationRow(tbody, pdfTotalReceitas);
+                    return;
+                }
             } else {
-                if (row.unmapped) tr.className = 'row-unmapped';
-                
+                if (row.unmapped) tr.className += ' row-unmapped';
+                if (row.isManual) manualSum += (row.valor || 0);
+
                 const valClass = row.valor >= 0 ? 'positive' : 'negative';
                 let vertical = 0;
                 if(totalEntradas > 0) vertical = (Math.abs(row.valor) / totalEntradas) * 100;
 
                 const descText = row.unmapped ? `⚠️ [VINCULAR] ${row.descricao}` : row.descricao;
 
+                let valorHtml = this.formatCurrency(row.valor);
+                if (row.isManual) {
+                    const key = `${row.codigo}-${row.descricao}`;
+                    valorHtml = `<input type="number" step="0.01" class="manual-input" value="${row.valor || ''}" 
+                                  onchange="app.updateManualEntry('${key}', this.value)" placeholder="0.00">`;
+                }
+
                 tr.innerHTML = `
-                    <td><strong>${row.codigo}</strong></td>
-                    <td>${descText}</td>
+                    <td class="col-code"><strong>${row.codigo}</strong></td>
+                    <td class="col-desc">${descText}</td>
                     <td class="text-right">-</td>
-                    <td class="text-right ${valClass}">${this.formatCurrency(row.valor)}</td>
+                    <td class="text-right ${valClass} col-val">${valorHtml}</td>
                     <td class="text-right">-</td>
-                    <td class="text-right">${vertical.toFixed(2)}%</td>
+                    <td class="text-right col-perc">${vertical.toFixed(2)}%</td>
                 `;
             }
             tbody.appendChild(tr);
         });
+
+        this.updateValidationStatus(manualSum, pdfTotalReceitas);
     },
 
-    renderFlowTableGrouped(grouped, totalEntradas) {
-        // Obsoleto
+    renderValidationRow(tbody, pdfTotal) {
+        const tr = document.createElement('tr');
+        tr.className = 'validation-row';
+        tr.innerHTML = `
+            <td colspan="2" class="text-right"><strong>CONFERÊNCIA RECEITAS:</strong></td>
+            <td class="text-right">PDF: ${this.formatCurrency(pdfTotal)}</td>
+            <td class="text-right" id="manual-sum-display">Manual: R$ 0,00</td>
+            <td colspan="2" id="validation-msg" class="text-center">Aguardando Lançamentos...</td>
+        `;
+        tbody.appendChild(tr);
+    },
+
+    updateManualEntry(key, value) {
+        this.manualEntries[key] = parseFloat(value) || 0;
+        this.refreshDashboard(); 
+    },
+
+    updateValidationStatus(manualSum, pdfTotal) {
+        const display = document.getElementById('manual-sum-display');
+        const msg = document.getElementById('validation-msg');
+        if (!display || !msg) return;
+
+        display.textContent = `Manual: ${this.formatCurrency(manualSum)}`;
+        const diff = Math.abs(manualSum - pdfTotal);
+
+        if (diff < 0.01) {
+            msg.innerHTML = '<span class="status-ok">✅ CONFERIDO</span>';
+            msg.style.color = '#10b981';
+        } else {
+            const remaining = pdfTotal - manualSum;
+            msg.innerHTML = `<span class="status-error">❌ DIFERENÇA: ${this.formatCurrency(remaining)}</span>`;
+            msg.style.color = '#ef4444';
+        }
     },
 
     renderCharts(realizadoData, projetadoData) {

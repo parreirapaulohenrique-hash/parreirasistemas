@@ -285,6 +285,35 @@ h1, h2, h3, h4 { font-weight: 600; }
 .table-group-header.group-nao-op td { border-left-color: var(--color-receitas-nao-op); background: rgba(77, 124, 15, 0.15) !important; }
 .table-group-header.group-other td { border-left-color: #64748b; background: rgba(100, 116, 139, 0.1) !important; }
 
+/* Triple Hierarchy Indentation */
+.level-1 td { font-size: 1.1rem; }
+.level-2 td.col-desc { padding-left: 30px !important; color: #f8fafc; font-weight: 600; }
+.level-3 td.col-desc { padding-left: 60px !important; color: var(--text-muted); font-size: 0.9rem; }
+
+/* Manual Inputs */
+.manual-input {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 4px;
+    color: var(--success);
+    padding: 4px 8px;
+    width: 120px;
+    text-align: right;
+    font-weight: 600;
+    outline: none;
+}
+.manual-input:focus { border-color: var(--success); background: rgba(16, 185, 129, 0.1); }
+
+/* Validation Row */
+.validation-row td {
+    background: rgba(0,0,0,0.2) !important;
+    padding: 12px 24px;
+    border-bottom: 2px solid rgba(255,255,255,0.05);
+}
+.status-ok { font-weight: 800; animation: pulse 2s infinite; }
+.status-error { font-weight: 800; }
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
 .row-unmapped td {
     background: rgba(234, 179, 8, 0.1) !important;
     color: #fde047 !important;

@@ -1,102 +1,132 @@
 /**
- * Motor de Inteligência Financeira (V3 - Template Spreadsheet Mode)
- * Monta a estrutura baseada na planilha e preenche com os dados do PDF.
+ * Motor de Inteligência Financeira (V4 - Triple Hierarchy & Validation)
+ * Suporta 3 níveis de profundidade e lógica de conferência manual.
  */
 
 window.FinancialEngine = {
-    // Cores oficiais dos grupos (conforme ordem das imagens enviadas)
     GROUP_STYLES: {
         'Disponíveis Nas Contas Movimento inicial': { color: 'var(--color-disponiveis)', class: 'group-disponiveis' },
-        'Total Receitas Operacionais / Vendas': { color: 'var(--color-receitas)', class: 'group-receitas' },
+        'Total Receitas Operacionais / Vendas': { color: 'var(--color-receitas)', class: 'group-receitas', allowManual: true },
         'Total dos Custos': { color: 'var(--color-custos)', class: 'group-custos' },
         '300. Despesas Operac. Fixas e Variáveis': { color: 'var(--color-despesas)', class: 'group-despesas' },
         'Receitas Não Operacionais Totais': { color: 'var(--color-receitas-nao-op)', class: 'group-nao-op' }
     },
 
     /**
-     * Processa as contas do PDF e mapeia para a estrutura da planilha
+     * Determina o nível da conta pelo código
      */
-    processData(pdfAccounts) {
-        if (!window.MASTER_ACCOUNTS) {
-            console.error("MASTER_ACCOUNTS não carregado.");
-            return { rows: [], totals: {} };
-        }
+    getLevel(codigo) {
+        if (codigo === 'HEADER') return 1;
+        const dots = (codigo.match(/\./g) || []).length;
+        if (dots === 0) return 2; // Ex: 300
+        if (dots === 1) return 2; // Ex: 1.1, 3.2
+        return 3; // Ex: 1.1.01
+    },
 
-        // 1. Criar um mapa das contas do PDF para busca rápida por código
+    processData(pdfAccounts, manualEntries = {}) {
+        if (!window.MASTER_ACCOUNTS) return { rows: [], totals: {} };
+
         const pdfMap = {};
         pdfAccounts.forEach(acc => {
-            if (!pdfMap[acc.codigo]) pdfMap[acc.codigo] = { total: 0, items: [] };
+            if (!pdfMap[acc.codigo]) pdfMap[acc.codigo] = { total: 0 };
             pdfMap[acc.codigo].total += (acc.a_receber || 0) - (acc.a_pagar || 0);
-            pdfMap[acc.codigo].items.push(acc);
         });
 
-        // 2. Construir as linhas da tabela seguindo fielmente a MASTER_ACCOUNTS
         const tableRows = [];
         let currentGroup = null;
         const groupTotals = {};
+        const subgroupTotals = {};
 
         window.MASTER_ACCOUNTS.forEach(master => {
-            // Se for um cabeçalho de grupo
             if (master.codigo === 'HEADER') {
                 currentGroup = master.descricao;
-                if (!groupTotals[currentGroup]) groupTotals[currentGroup] = 0;
-                
+                groupTotals[currentGroup] = 0;
                 tableRows.push({
                     type: 'header',
+                    level: 1,
                     descricao: master.descricao,
                     style: this.GROUP_STYLES[master.descricao] || { color: '#64748b', class: 'group-other' }
                 });
+                
+                // Caso especial: Receita Operacional Bruta
+                if (master.descricao === 'Receita Operacional Bruta') {
+                    const r1 = groupTotals['Total Receitas Operacionais / Vendas'] || 0;
+                    const r2 = groupTotals['Total dos Custos'] || 0;
+                    tableRows[tableRows.length-1].valorCalculado = r1 + r2; // Custos costumam ser negativos
+                }
                 return;
             }
 
-            // Se for uma conta normal
-            const pdfData = pdfMap[master.codigo];
-            const valor = pdfData ? pdfData.total : 0;
-            
+            const level = this.getLevel(master.codigo);
+            let valor = 0;
+
+            // Lógica de Preenchimento Manual para Receitas
+            if (currentGroup === 'Total Receitas Operacionais / Vendas' && level === 3) {
+                // Se houver valor manual salvo, usa ele, senão 0
+                const manualKey = `${master.codigo}-${master.descricao}`;
+                valor = manualEntries[manualKey] || 0;
+            } else {
+                valor = pdfMap[master.codigo] ? pdfMap[master.codigo].total : 0;
+            }
+
+            // Acumula Totais
             if (currentGroup) groupTotals[currentGroup] += valor;
+            if (level === 2) subgroupTotals[master.codigo] = 0;
+            
+            // Tenta somar no subgrupo pai (simplificado: pega os primeiros caracteres até o último ponto)
+            if (level === 3) {
+                const parentCode = master.codigo.substring(0, master.codigo.lastIndexOf('.'));
+                if (subgroupTotals[parentCode] !== undefined) subgroupTotals[parentCode] += valor;
+            }
 
             tableRows.push({
                 type: 'account',
+                level: level,
                 codigo: master.codigo,
                 descricao: master.descricao,
                 valor: valor,
-                group: currentGroup
+                group: currentGroup,
+                isManual: (currentGroup === 'Total Receitas Operacionais / Vendas' && level === 3)
             });
 
-            // Se usamos essa conta do PDF, removemos do mapa para saber o que sobrou
-            if (pdfData) delete pdfMap[master.codigo];
+            if (pdfMap[master.codigo]) delete pdfMap[master.codigo];
         });
 
-        // 3. Adicionar contas do PDF que NÃO foram encontradas na planilha (Unmapped)
-        const unmappedRows = [];
-        Object.entries(pdfMap).forEach(([codigo, data]) => {
-            unmappedRows.push({
-                type: 'account',
-                codigo: codigo,
-                descricao: data.items[0].descricao, // Usa a descrição que veio no PDF
-                valor: data.total,
-                unmapped: true
-            });
-        });
+        // Adicionar Unmapped
+        const unmapped = Object.entries(pdfMap).map(([c, d]) => ({
+            type: 'account',
+            level: 3,
+            codigo: c,
+            descricao: d.descricao || 'Desconhecida',
+            valor: d.total,
+            unmapped: true
+        }));
 
-        if (unmappedRows.length > 0) {
-            tableRows.push({
-                type: 'header',
-                descricao: 'CONTAS NÃO ENCONTRADAS NA PLANILHA (Vincular Manualmente)',
-                style: { color: '#64748b', class: 'group-other' }
-            });
-            tableRows.push(...unmappedRows);
+        if (unmapped.length > 0) {
+            tableRows.push({ type: 'header', level: 1, descricao: 'CONTAS PARA VINCULAR', style: { class: 'group-other' } });
+            tableRows.push(...unmapped);
         }
 
-        // 4. Calcular totais para a barra de resumo
-        const totals = {
-            saldoInicial: groupTotals['Disponíveis Nas Contas Movimento inicial'] || 0,
-            totalReceitas: (groupTotals['Total Receitas Operacionais / Vendas'] || 0) + (groupTotals['Receitas Não Operacionais Totais'] || 0),
-            totalDespesas: (groupTotals['Total dos Custos'] || 0) + (groupTotals['300. Despesas Operac. Fixas e Variáveis'] || 0),
+        return { 
+            rows: tableRows, 
+            totals: this.calculateBarTotals(groupTotals),
+            pdfTotalReceitas: pdfAccounts.filter(a => a.codigo.startsWith('1.1') || a.codigo.startsWith('1.5')).reduce((s, a) => s + (a.a_receber - a.a_pagar), 0)
         };
-        totals.saldoLiquido = totals.totalReceitas + totals.totalDespesas; // Despesas já costumam vir negativas no PDF
-        totals.saldoAjustado = totals.saldoLiquido + totals.saldoInicial;
+    },
 
-        return { rows: tableRows, totals };
+    calculateBarTotals(groups) {
+        const rOp = groups['Total Receitas Operacionais / Vendas'] || 0;
+        const rNOp = groups['Receitas Não Operacionais Totais'] || 0;
+        const custos = groups['Total dos Custos'] || 0;
+        const despesas = groups['300. Despesas Operac. Fixas e Variáveis'] || 0;
+        const inicial = groups['Disponíveis Nas Contas Movimento inicial'] || 0;
+
+        return {
+            saldoInicial: inicial,
+            totalReceitas: rOp + rNOp,
+            totalDespesas: custos + despesas,
+            saldoLiquido: rOp + rNOp + custos + despesas,
+            saldoAjustado: rOp + rNOp + custos + despesas + inicial
+        };
     }
 };
