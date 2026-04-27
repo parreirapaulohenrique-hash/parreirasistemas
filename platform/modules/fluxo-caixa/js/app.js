@@ -245,7 +245,23 @@ const app = {
         document.getElementById('kpi-variacao').textContent = variacao.toFixed(2) + '%';
         
         this.renderCharts(monthlyRealizado, monthlyProjetado);
-        this.renderFlowTable(aggregatedAccounts, totalRealizadoEntradas);
+        
+        // --- NOVO: Agrupamentos e Totais Estilo Planilha ---
+        const allAccountsInYear = [];
+        for(let m = 1; m <= 12; m++) {
+            const key = `${year}-${m.toString().padStart(2, '0')}`;
+            const mData = yearData[key];
+            if(mData) {
+                if(mData.realizado) allAccountsInYear.push(...mData.realizado);
+                if(mData.projetado) allAccountsInYear.push(...mData.projetado);
+            }
+        }
+        
+        const grouped = FinancialEngine.groupAccounts(allAccountsInYear);
+        const totals = FinancialEngine.calculateTotals(grouped);
+        
+        this.renderSummaryBar(totals);
+        this.renderFlowTableGrouped(grouped, totalRealizadoEntradas);
     },
 
     renderCharts(realizadoData, projetadoData) {
@@ -257,7 +273,7 @@ const app = {
             data: {
                 labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
                 datasets: [
-                    { label: 'Realizado (Saldo Lívquido)', data: realizadoData, backgroundColor: 'rgba(59, 130, 246, 0.8)', borderRadius: 4 },
+                    { label: 'Realizado (Saldo Líquido)', data: realizadoData, backgroundColor: 'rgba(59, 130, 246, 0.8)', borderRadius: 4 },
                     { label: 'Projetado (Saldo Líquido)', data: projetadoData, type: 'line', borderColor: '#10b981', borderWidth: 2, fill: false, tension: 0.3 }
                 ]
             },
@@ -271,39 +287,66 @@ const app = {
             }
         });
     },
-    
-    renderFlowTable(accountsMap, totalEntradas) {
+
+    renderSummaryBar(totals) {
+        document.querySelector('#sum-saldo-inicial .sum-value').textContent = this.formatCurrency(totals.saldoInicial);
+        document.querySelector('#sum-total-receitas .sum-value').textContent = this.formatCurrency(totals.totalReceitas);
+        document.querySelector('#sum-total-despesas .sum-value').textContent = this.formatCurrency(totals.totalDespesas);
+        document.querySelector('#sum-saldo-liquido .sum-value').textContent = this.formatCurrency(totals.saldoLiquido);
+        document.querySelector('#sum-saldo-ajustado .sum-value').textContent = this.formatCurrency(totals.saldoAjustado);
+    },
+
+    renderFlowTableGrouped(grouped, totalEntradas) {
         const tbody = document.getElementById('flow-table-body');
         tbody.innerHTML = '';
         
-        const accounts = Object.values(accountsMap).sort((a,b) => a.codigo.localeCompare(b.codigo));
-        if(accounts.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Nenhum dado encontrado para o período selecionado.</td></tr>';
-            return;
-        }
+        const groupOrder = ['disponibilidade', 'receitas_operacionais', 'custos_impostos', 'despesas_operacionais', 'receitas_nao_operacionais', 'outros'];
+        
+        groupOrder.forEach(groupId => {
+            const group = grouped[groupId];
+            if (group.items.length === 0) return;
 
-        accounts.forEach(acc => {
-            const tr = document.createElement('tr');
-            let variacao = 0;
-            if(acc.projetado !== 0) variacao = ((acc.realizado - acc.projetado) / Math.abs(acc.projetado)) * 100;
-            
-            let vertical = 0;
-            if(totalEntradas > 0) vertical = (Math.abs(acc.realizado) / totalEntradas) * 100;
-
-            const isEntrada = acc.codigo.startsWith('1.') || acc.codigo.startsWith('4.');
-            const valClass = isEntrada ? 'positive' : 'negative';
-            const valSign = acc.realizado >= 0 ? '' : '-';
-
-            tr.innerHTML = `
-                <td><strong>${acc.codigo}</strong></td>
-                <td>${acc.descricao}</td>
-                <td class="text-right">R$ ${acc.projetado.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                <td class="text-right ${valClass}">${valSign}R$ ${Math.abs(acc.realizado).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                <td class="text-right ${variacao < 0 && !isEntrada ? 'positive' : (variacao < 0 ? 'negative' : 'positive')}">${variacao.toFixed(2)}%</td>
-                <td class="text-right">${vertical.toFixed(2)}%</td>
+            // Header do Grupo
+            const headerTr = document.createElement('tr');
+            headerTr.className = `table-group-header group-${groupId.replace('_','-')}`;
+            headerTr.innerHTML = `
+                <td colspan="2">${group.config.label}</td>
+                <td class="text-right">-</td>
+                <td class="text-right">${this.formatCurrency(group.total)}</td>
+                <td colspan="2"></td>
             `;
-            tbody.appendChild(tr);
+            tbody.appendChild(headerTr);
+
+            // Itens do Grupo (consolidados por código para não repetir)
+            const consolidated = {};
+            group.items.forEach(acc => {
+                if(!consolidated[acc.codigo]) consolidated[acc.codigo] = { ...acc, total: 0 };
+                consolidated[acc.codigo].total += (acc.a_receber || 0) - (acc.a_pagar || 0);
+            });
+
+            Object.values(consolidated).sort((a,b) => a.codigo.localeCompare(b.codigo)).forEach(acc => {
+                const tr = document.createElement('tr');
+                const isEntrada = acc.codigo.startsWith('1.') || acc.codigo.startsWith('4.');
+                const valClass = acc.total >= 0 ? 'positive' : 'negative';
+                
+                let vertical = 0;
+                if(totalEntradas > 0) vertical = (Math.abs(acc.total) / totalEntradas) * 100;
+
+                tr.innerHTML = `
+                    <td><strong>${acc.codigo}</strong></td>
+                    <td>${acc.descricao}</td>
+                    <td class="text-right">-</td>
+                    <td class="text-right ${valClass}">${this.formatCurrency(acc.total)}</td>
+                    <td class="text-right">-</td>
+                    <td class="text-right">${vertical.toFixed(2)}%</td>
+                `;
+                tbody.appendChild(tr);
+            });
         });
+    },
+
+    renderFlowTable(accountsMap, totalEntradas) {
+        // Esta função foi substituída pela renderFlowTableGrouped
     },
 
     formatCurrency(val) {

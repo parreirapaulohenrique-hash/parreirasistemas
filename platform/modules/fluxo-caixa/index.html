@@ -107,7 +107,33 @@
                 </div>
             </header>
 
-            <div class="tab-content active" id="tab-overview">
+            <!-- Tab: Overview -->
+            <div id="tab-overview" class="tab-content active">
+                
+                <!-- Barra de Resumo (Estilo Planilha) -->
+                <div class="summary-bar-container">
+                    <div class="summary-item item-orange" id="sum-saldo-inicial">
+                        <span class="sum-label">Saldo Inicial Conta Movimento</span>
+                        <span class="sum-value">R$ 0,00</span>
+                    </div>
+                    <div class="summary-item item-green" id="sum-total-receitas">
+                        <span class="sum-label">Total Receitas Operac. e Não Operac.</span>
+                        <span class="sum-value">R$ 0,00</span>
+                    </div>
+                    <div class="summary-item item-red" id="sum-total-despesas">
+                        <span class="sum-label">Total Despesas Operac. e Não Operac.</span>
+                        <span class="sum-value">R$ 0,00</span>
+                    </div>
+                    <div class="summary-item item-blue-dark" id="sum-saldo-liquido">
+                        <span class="sum-label">Saldo Líquido Final</span>
+                        <span class="sum-value">R$ 0,00</span>
+                    </div>
+                    <div class="summary-item item-yellow" id="sum-saldo-ajustado">
+                        <span class="sum-label">Saldo Líquido Ajustado</span>
+                        <span class="sum-value">R$ 0,00</span>
+                    </div>
+                </div>
+
                 <div class="kpi-grid">
                     <div class="kpi-card glass-panel success">
                         <div class="kpi-icon"><span class="material-icons-round">arrow_upward</span></div>
@@ -268,8 +294,10 @@
         </div>
     </div>
 
+    <script src="js/firebase-config.js"></script>
     <script src="js/store.js"></script>
     <script src="js/pdf-parser.js"></script>
+    <script src="js/financial-engine.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
