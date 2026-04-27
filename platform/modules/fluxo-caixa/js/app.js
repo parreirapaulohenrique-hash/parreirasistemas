@@ -111,6 +111,9 @@ const app = {
                     <h3>${client.name}</h3>
                     <p>CNPJ: ${client.cnpj || 'Não informado'}</p>
                 </div>
+                <button class="btn-delete-client" onclick="event.stopPropagation(); app.deleteClient('${client.id}', '${client.name}')">
+                    <span class="material-icons-round">delete_outline</span>
+                </button>
             `;
             grid.appendChild(card);
         });
@@ -151,6 +154,19 @@ const app = {
             this.loadDashboard(newClient);
         } else {
             alert("Erro ao salvar cliente na nuvem.");
+        }
+    },
+
+    async deleteClient(id, name) {
+        if (!confirm(`Tem certeza que deseja excluir o cliente "${name}"?\nTodos os dados de fluxo de caixa vinculados a ele serão perdidos permanentemente.`)) {
+            return;
+        }
+
+        const success = await store.deleteClient(id);
+        if (success) {
+            this.renderClientsList();
+        } else {
+            alert("Erro ao excluir cliente da nuvem.");
         }
     },
 

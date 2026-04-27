@@ -164,6 +164,26 @@ h1, h2, h3, h4 { font-weight: 600; }
 .client-card-info h3 { font-size: 1.2rem; margin-bottom: 4px; }
 .client-card-info p { color: var(--text-muted); font-size: 0.9rem; }
 
+.btn-delete-client {
+    margin-left: auto;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+.btn-delete-client:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+}
+.btn-delete-client span { font-size: 20px; }
+
 /* ---- TELA 2: Dashboard ---- */
 #view-dashboard.active { flex-direction: row; }
 

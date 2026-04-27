@@ -58,6 +58,20 @@ class Store {
         }
     }
 
+    async deleteClient(id) {
+        try {
+            await this.db.collection('tenants').doc(this.tenantId)
+                         .collection('fluxo_caixa_clientes').doc(id)
+                         .delete();
+            
+            this.clientsCache = this.clientsCache.filter(c => c.id !== id);
+            return true;
+        } catch (error) {
+            console.error("Erro ao excluir cliente:", error);
+            return false;
+        }
+    }
+
     setActiveClient(id) {
         this.activeClientId = id;
     }
