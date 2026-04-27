@@ -281,8 +281,9 @@ h1, h2, h3, h4 { font-weight: 600; }
 .table-group-header.group-disponiveis td { border-left-color: var(--color-disponiveis); }
 .table-group-header.group-receitas td { border-left-color: var(--color-receitas); }
 .table-group-header.group-custos td { border-left-color: var(--color-custos); }
-.table-group-header.group-despesas td { border-left-color: var(--color-despesas); }
-.table-group-header.group-nao-op td { border-left-color: var(--color-receitas-nao-op); }
+.table-group-header.group-despesas td { border-left-color: var(--color-despesas); background: rgba(37, 99, 235, 0.15) !important; }
+.table-group-header.group-nao-op td { border-left-color: var(--color-receitas-nao-op); background: rgba(77, 124, 15, 0.15) !important; }
+.table-group-header.group-other td { border-left-color: #64748b; background: rgba(100, 116, 139, 0.1) !important; }
 
 .row-unmapped td {
     background: rgba(234, 179, 8, 0.1) !important;

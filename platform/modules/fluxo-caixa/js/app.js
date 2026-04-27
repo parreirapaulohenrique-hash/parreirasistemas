@@ -246,7 +246,7 @@ const app = {
         
         this.renderCharts(monthlyRealizado, monthlyProjetado);
         
-        // --- NOVO: Agrupamentos e Totais Estilo Planilha ---
+        // --- NOVO: Lógica Baseada em Template de Planilha ---
         const allAccountsInYear = [];
         for(let m = 1; m <= 12; m++) {
             const key = `${year}-${m.toString().padStart(2, '0')}`;
@@ -257,11 +257,48 @@ const app = {
             }
         }
         
-        const grouped = FinancialEngine.groupAccounts(allAccountsInYear);
-        const totals = FinancialEngine.calculateTotals(grouped);
+        const result = FinancialEngine.processData(allAccountsInYear);
         
-        this.renderSummaryBar(totals);
-        this.renderFlowTableGrouped(grouped, totalRealizadoEntradas);
+        this.renderSummaryBar(result.totals);
+        this.renderFlowTableStrict(result.rows, totalRealizadoEntradas);
+    },
+
+    renderFlowTableStrict(rows, totalEntradas) {
+        const tbody = document.getElementById('flow-table-body');
+        tbody.innerHTML = '';
+        
+        rows.forEach(row => {
+            const tr = document.createElement('tr');
+            
+            if (row.type === 'header') {
+                tr.className = `table-group-header ${row.style.class}`;
+                tr.innerHTML = `
+                    <td colspan="6">${row.descricao}</td>
+                `;
+            } else {
+                if (row.unmapped) tr.className = 'row-unmapped';
+                
+                const valClass = row.valor >= 0 ? 'positive' : 'negative';
+                let vertical = 0;
+                if(totalEntradas > 0) vertical = (Math.abs(row.valor) / totalEntradas) * 100;
+
+                const descText = row.unmapped ? `⚠️ [VINCULAR] ${row.descricao}` : row.descricao;
+
+                tr.innerHTML = `
+                    <td><strong>${row.codigo}</strong></td>
+                    <td>${descText}</td>
+                    <td class="text-right">-</td>
+                    <td class="text-right ${valClass}">${this.formatCurrency(row.valor)}</td>
+                    <td class="text-right">-</td>
+                    <td class="text-right">${vertical.toFixed(2)}%</td>
+                `;
+            }
+            tbody.appendChild(tr);
+        });
+    },
+
+    renderFlowTableGrouped(grouped, totalEntradas) {
+        // Obsoleto
     },
 
     renderCharts(realizadoData, projetadoData) {

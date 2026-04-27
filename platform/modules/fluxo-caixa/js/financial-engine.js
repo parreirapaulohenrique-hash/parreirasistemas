@@ -1,127 +1,102 @@
 /**
- * Motor de Inteligência Financeira (V2 - Strict Spreadsheet Mode)
- * Responsável por agrupar contas e calcular indicadores baseados RIGOROSAMENTE na planilha.
+ * Motor de Inteligência Financeira (V3 - Template Spreadsheet Mode)
+ * Monta a estrutura baseada na planilha e preenche com os dados do PDF.
  */
 
 window.FinancialEngine = {
-    // Definição dos Grupos Principais (Conforme Planilha)
-    GROUPS: [
-        {
-            id: 'disponibilidade',
-            label: 'Disponíveis Nas Contas Movimento inicial',
-            color: 'var(--color-disponiveis)',
-            prefixes: ['1.0', '1.1', '1.2', '1.3', '1.4', '1.5', '1.9', '2.1', '2.4', '2.9', '4.0', '4.1', '4.4', '4.9', '91.']
-        },
-        {
-            id: 'receitas_operacionais',
-            label: 'Total Receitas Operacionais / Vendas',
-            color: 'var(--color-receitas)',
-            prefixes: ['1.1.', '1.2.', '1.5.']
-        },
-        {
-            id: 'custos_impostos',
-            label: 'Total dos Custos',
-            color: 'var(--color-custos)',
-            prefixes: ['2.1.', '2.2.', '2.3.']
-        },
-        {
-            id: 'despesas_operacionais',
-            label: '300. Despesas Operac. Fixas e Variáveis',
-            color: 'var(--color-despesas)',
-            prefixes: ['3.1.', '3.2.', '3.3.', '3.4.', '3.5.', '3.6.']
-        },
-        {
-            id: 'receitas_nao_operacionais',
-            label: 'Receitas Não Operacionais Totais',
-            color: 'var(--color-receitas-nao-op)',
-            prefixes: ['4.1.', '4.2.', '4.3.']
+    // Cores oficiais dos grupos (conforme ordem das imagens enviadas)
+    GROUP_STYLES: {
+        'Disponíveis Nas Contas Movimento inicial': { color: 'var(--color-disponiveis)', class: 'group-disponiveis' },
+        'Total Receitas Operacionais / Vendas': { color: 'var(--color-receitas)', class: 'group-receitas' },
+        'Total dos Custos': { color: 'var(--color-custos)', class: 'group-custos' },
+        '300. Despesas Operac. Fixas e Variáveis': { color: 'var(--color-despesas)', class: 'group-despesas' },
+        'Receitas Não Operacionais Totais': { color: 'var(--color-receitas-nao-op)', class: 'group-nao-op' }
+    },
+
+    /**
+     * Processa as contas do PDF e mapeia para a estrutura da planilha
+     */
+    processData(pdfAccounts) {
+        if (!window.MASTER_ACCOUNTS) {
+            console.error("MASTER_ACCOUNTS não carregado.");
+            return { rows: [], totals: {} };
         }
-    ],
 
-    /**
-     * Tenta encontrar a descrição oficial da planilha para um código
-     */
-    getMasterDescription(code) {
-        if (!window.MASTER_ACCOUNTS) return null;
-        
-        // Busca exata
-        const match = window.MASTER_ACCOUNTS.find(acc => acc.codigo === code);
-        if (match) return match.descricao;
-        
-        // Busca aproximada (remove pontos extras no final)
-        const cleanCode = code.endsWith('.') ? code.slice(0, -1) : code;
-        const match2 = window.MASTER_ACCOUNTS.find(acc => acc.codigo === cleanCode);
-        return match2 ? match2.descricao : null;
-    },
-
-    /**
-     * Agrupa uma lista de contas em categorias
-     */
-    groupAccounts(accounts) {
-        const grouped = {};
-        this.GROUPS.forEach(g => {
-            grouped[g.id] = {
-                config: g,
-                items: [],
-                total: 0
-            };
+        // 1. Criar um mapa das contas do PDF para busca rápida por código
+        const pdfMap = {};
+        pdfAccounts.forEach(acc => {
+            if (!pdfMap[acc.codigo]) pdfMap[acc.codigo] = { total: 0, items: [] };
+            pdfMap[acc.codigo].total += (acc.a_receber || 0) - (acc.a_pagar || 0);
+            pdfMap[acc.codigo].items.push(acc);
         });
 
-        grouped['outros'] = {
-            config: { id: 'outros', label: 'Não Encontrados na Planilha (Vincular Manualmente)', color: '#64748b' },
-            items: [],
-            total: 0
-        };
+        // 2. Construir as linhas da tabela seguindo fielmente a MASTER_ACCOUNTS
+        const tableRows = [];
+        let currentGroup = null;
+        const groupTotals = {};
 
-        accounts.forEach(acc => {
-            // Sincroniza a descrição com a planilha se disponível
-            const officialDesc = this.getMasterDescription(acc.codigo);
-            if (officialDesc) {
-                acc.descricao = officialDesc;
+        window.MASTER_ACCOUNTS.forEach(master => {
+            // Se for um cabeçalho de grupo
+            if (master.codigo === 'HEADER') {
+                currentGroup = master.descricao;
+                if (!groupTotals[currentGroup]) groupTotals[currentGroup] = 0;
+                
+                tableRows.push({
+                    type: 'header',
+                    descricao: master.descricao,
+                    style: this.GROUP_STYLES[master.descricao] || { color: '#64748b', class: 'group-other' }
+                });
+                return;
             }
 
-            let matched = false;
-            for (const group of this.GROUPS) {
-                // Regra de prefixo: Se o código começa com o prefixo do grupo
-                if (group.prefixes.some(p => acc.codigo.startsWith(p))) {
-                    grouped[group.id].items.push(acc);
-                    const val = (acc.a_receber || 0) - (acc.a_pagar || 0);
-                    grouped[group.id].total += val;
-                    matched = true;
-                    break;
-                }
-            }
+            // Se for uma conta normal
+            const pdfData = pdfMap[master.codigo];
+            const valor = pdfData ? pdfData.total : 0;
+            
+            if (currentGroup) groupTotals[currentGroup] += valor;
 
-            if (!matched) {
-                grouped['outros'].items.push(acc);
-                const val = (acc.a_receber || 0) - (acc.a_pagar || 0);
-                grouped['outros'].total += val;
-                acc.unmapped = true; // Marca como não mapeado
-            }
+            tableRows.push({
+                type: 'account',
+                codigo: master.codigo,
+                descricao: master.descricao,
+                valor: valor,
+                group: currentGroup
+            });
+
+            // Se usamos essa conta do PDF, removemos do mapa para saber o que sobrou
+            if (pdfData) delete pdfMap[master.codigo];
         });
 
-        return grouped;
-    },
+        // 3. Adicionar contas do PDF que NÃO foram encontradas na planilha (Unmapped)
+        const unmappedRows = [];
+        Object.entries(pdfMap).forEach(([codigo, data]) => {
+            unmappedRows.push({
+                type: 'account',
+                codigo: codigo,
+                descricao: data.items[0].descricao, // Usa a descrição que veio no PDF
+                valor: data.total,
+                unmapped: true
+            });
+        });
 
-    /**
-     * Calcula os totais consolidados
-     */
-    calculateTotals(grouped) {
-        const recOp = grouped['receitas_operacionais'].total;
-        const recNaoOp = grouped['receitas_nao_operacionais'].total;
-        const despesas = grouped['despesas_operacionais'].total + grouped['custos_impostos'].total;
-        
-        const saldoLiquidoFinal = recOp + recNaoOp + despesas;
-        
-        // O Saldo Inicial vem do grupo 'disponibilidade'
-        const saldoInicial = grouped['disponibilidade'].total;
+        if (unmappedRows.length > 0) {
+            tableRows.push({
+                type: 'header',
+                descricao: 'CONTAS NÃO ENCONTRADAS NA PLANILHA (Vincular Manualmente)',
+                style: { color: '#64748b', class: 'group-other' }
+            });
+            tableRows.push(...unmappedRows);
+        }
 
-        return {
-            saldoInicial: saldoInicial,
-            totalReceitas: recOp + recNaoOp,
-            totalDespesas: despesas,
-            saldoLiquido: saldoLiquidoFinal,
-            saldoAjustado: saldoLiquidoFinal + saldoInicial // Simulação do ajustado
+        // 4. Calcular totais para a barra de resumo
+        const totals = {
+            saldoInicial: groupTotals['Disponíveis Nas Contas Movimento inicial'] || 0,
+            totalReceitas: (groupTotals['Total Receitas Operacionais / Vendas'] || 0) + (groupTotals['Receitas Não Operacionais Totais'] || 0),
+            totalDespesas: (groupTotals['Total dos Custos'] || 0) + (groupTotals['300. Despesas Operac. Fixas e Variáveis'] || 0),
         };
+        totals.saldoLiquido = totals.totalReceitas + totals.totalDespesas; // Despesas já costumam vir negativas no PDF
+        totals.saldoAjustado = totals.saldoLiquido + totals.saldoInicial;
+
+        return { rows: tableRows, totals };
     }
 };
