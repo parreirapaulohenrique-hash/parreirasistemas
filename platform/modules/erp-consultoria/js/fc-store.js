@@ -36,7 +36,7 @@ class Store {
 
             this.clientsCache = [];
             
-            // Cria a lista mesclando os clientes do ERP com os períodos do Firebase
+            // Cria a lista usando EXCLUSIVAMENTE os clientes do ERP, combinando com os períodos do Firebase
             if (erpClients && erpClients.length > 0) {
                 erpClients.forEach(c => {
                     const idStr = String(c.code);
@@ -46,13 +46,6 @@ class Store {
                         cnpj: c.cnpj,
                         periods: firebaseData[idStr] ? firebaseData[idStr].periods : {}
                     });
-                });
-            } else {
-                // Fallback caso o ERP não tenha clientes ainda
-                Object.keys(firebaseData).forEach(id => {
-                    const data = firebaseData[id];
-                    data.id = id;
-                    this.clientsCache.push(data);
                 });
             }
             
