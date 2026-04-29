@@ -148,23 +148,28 @@
                             style="font-size:1.2rem; margin-left:auto;">expand_more</span>
                     </a>
                     <div id="sub-analise-financeira" class="nav-submenu">
-                        <div class="nav-sublevel-title">Fluxo de Caixa</div>
-                        <a class="nav-sub-item" onclick="fcApp.requireClient('fc-overview')">
+                        <a class="nav-sub-item" onclick="fcApp.openClientSelection()">
                             <span class="material-icons-round"
-                                style="font-size:1rem; margin-right:0.5rem;">dashboard</span>Visão Geral
+                                style="font-size:1rem; margin-right:0.5rem;">account_balance_wallet</span>Fluxo de Caixa
                         </a>
-                        <a class="nav-sub-item" onclick="fcApp.requireClient('fc-import')">
-                            <span class="material-icons-round"
-                                style="font-size:1rem; margin-right:0.5rem;">upload_file</span>Importar PDF
-                        </a>
-                        <a class="nav-sub-item" onclick="fcApp.requireClient('fc-projections')">
-                            <span class="material-icons-round"
-                                style="font-size:1rem; margin-right:0.5rem;">trending_up</span>Projeções Anuais
-                        </a>
-                        <a class="nav-sub-item" onclick="fcApp.requireClient('fc-export')">
-                            <span class="material-icons-round"
-                                style="font-size:1rem; margin-right:0.5rem;">download</span>Exportar Excel
-                        </a>
+                        <div id="fc-functions" style="display:none; padding-left: 15px; border-left: 1px solid rgba(255,255,255,0.1); margin-left: 10px; margin-top: 5px;">
+                            <a class="nav-sub-item" onclick="fcApp.requireClient('fc-overview')">
+                                <span class="material-icons-round"
+                                    style="font-size:1rem; margin-right:0.5rem;">dashboard</span>Visão Geral
+                            </a>
+                            <a class="nav-sub-item" onclick="fcApp.requireClient('fc-import')">
+                                <span class="material-icons-round"
+                                    style="font-size:1rem; margin-right:0.5rem;">upload_file</span>Importar PDF
+                            </a>
+                            <a class="nav-sub-item" onclick="fcApp.requireClient('fc-projections')">
+                                <span class="material-icons-round"
+                                    style="font-size:1rem; margin-right:0.5rem;">trending_up</span>Projeções Anuais
+                            </a>
+                            <a class="nav-sub-item" onclick="fcApp.requireClient('fc-export')">
+                                <span class="material-icons-round"
+                                    style="font-size:1rem; margin-right:0.5rem;">download</span>Exportar Excel
+                            </a>
+                        </div>
                     </div>
                 </div>
 

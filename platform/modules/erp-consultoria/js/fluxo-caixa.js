@@ -69,6 +69,15 @@ window.fcApp = {
         if(fpv) fpv.addEventListener('change', () => this.refreshDashboard());
     },
 
+    openClientSelection() {
+        store.setActiveClient(null);
+        const fcFunctions = document.getElementById('fc-functions');
+        if (fcFunctions) {
+            fcFunctions.style.display = 'none';
+        }
+        window.switchView('fc-clients');
+    },
+
     /**
      * Verifica se o cliente está selecionado. 
      * Se sim, vai para a view, senão, vai para a seleção de clientes.
@@ -76,10 +85,16 @@ window.fcApp = {
     requireClient(viewId) {
         const activeClient = store.getActiveClient();
         if (!activeClient) {
-            window.switchView('fc-clients');
+            this.openClientSelection();
             alert('Por favor, selecione um cliente primeiro para visualizar a Análise Financeira.');
             return;
         }
+        
+        const fcFunctions = document.getElementById('fc-functions');
+        if (fcFunctions) {
+            fcFunctions.style.display = 'block';
+        }
+
         window.switchView(viewId);
         
         // Se for a tela de overview, atualiza
@@ -180,9 +195,8 @@ window.fcApp = {
     },
 
     backToClients() {
-        store.setActiveClient(null);
+        this.openClientSelection();
         this.renderClientsList();
-        window.switchView('fc-clients');
     },
 
     // --- DASHBOARD ---
