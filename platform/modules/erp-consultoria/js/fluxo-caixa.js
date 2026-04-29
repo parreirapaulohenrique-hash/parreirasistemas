@@ -71,11 +71,22 @@ window.fcApp = {
 
     openClientSelection() {
         store.setActiveClient(null);
+
+        // Esconde submenus de funções (Fluxo de Caixa, DRE etc.)
         const fcFunctions = document.getElementById('fc-functions');
         if (fcFunctions) {
             fcFunctions.style.display = 'none';
         }
+
+        // Mostra a tela de seleção de clientes
         window.switchView('fc-clients');
+
+        // Carrega os clientes da nuvem agora que o grid está visível
+        const grid = document.getElementById('fc-clients-grid');
+        if (grid) {
+            grid.innerHTML = '<p style="text-align:center; color:var(--text-muted); grid-column:1/-1; padding:2rem;">Buscando clientes na nuvem...</p>';
+        }
+        this.renderClientsList();
     },
 
     /**
