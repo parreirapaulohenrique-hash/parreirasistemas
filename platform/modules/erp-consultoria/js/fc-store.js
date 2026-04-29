@@ -19,16 +19,42 @@ class Store {
 
     async getClients() {
         try {
+            // Unificação: Busca a base de clientes do ERP principal
+            const suffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
+            const erpClients = JSON.parse(localStorage.getItem('erp_clientes' + suffix)) || [];
+            
+            // Busca também se há dados salvos no Firebase para combinar
             const snapshot = await this.db.collection('tenants').doc(this.tenantId)
                                        .collection('fluxo_caixa_clientes')
                                        .get();
             
-            this.clientsCache = [];
+            const firebaseData = {};
             snapshot.forEach(doc => {
-                const data = doc.data();
-                data.id = doc.id;
-                this.clientsCache.push(data);
+                firebaseData[doc.id] = doc.data();
             });
+
+            this.clientsCache = [];
+            
+            // Cria a lista mesclando os clientes do ERP com os períodos do Firebase
+            if (erpClients && erpClients.length > 0) {
+                erpClients.forEach(c => {
+                    const idStr = String(c.code);
+                    this.clientsCache.push({
+                        id: idStr,
+                        name: c.name,
+                        cnpj: c.cnpj,
+                        periods: firebaseData[idStr] ? firebaseData[idStr].periods : {}
+                    });
+                });
+            } else {
+                // Fallback caso o ERP não tenha clientes ainda
+                Object.keys(firebaseData).forEach(id => {
+                    const data = firebaseData[id];
+                    data.id = id;
+                    this.clientsCache.push(data);
+                });
+            }
+            
             return this.clientsCache;
         } catch (error) {
             console.error("Erro ao buscar clientes:", error);
