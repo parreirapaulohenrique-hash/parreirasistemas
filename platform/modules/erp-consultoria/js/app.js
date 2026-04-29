@@ -545,9 +545,7 @@ window.closeSupplierModal = () => {
     document.getElementById('supplierModal').style.display = 'none';
 };
 
-let suppliers = [
-    { code: 451, name: 'LUBRIFICANTES DO BRASIL LTDA', fantasy: 'LUBRAX', cnpj: '33.000.167/0001-01', city: 'Rio de Janeiro/RJ', type: 'Revenda' },
-    { code: 452, name: 'MICHELIN PNEUS S/A', fantasy: 'MICHELIN', cnpj: '00.000.000/0002-00', city: 'São Paulo/SP', type: 'Indústria' }
+window.suppliers = [
 ];
 
 window.renderSuppliers = (filter = '') => {
@@ -603,8 +601,6 @@ window.closeEmployeeModal = () => {
 };
 
 let employees = [
-    { code: 62, name: 'PAULO HENRIQUE PARREIRA', role: 'Diretor', sector: 'Administrativo', cpf: '000.000.000-00', status: 'Ativo' },
-    { code: 63, name: 'VENDEDOR INTERNO', role: 'Vendedor', sector: 'Comercial', cpf: '111.111.111-11', status: 'Ativo' }
 ];
 
 window.renderEmployees = (filter = '') => {
