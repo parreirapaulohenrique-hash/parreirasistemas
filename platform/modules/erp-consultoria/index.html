@@ -141,33 +141,32 @@
 
                 <!-- ═══ ANÁLISE FINANCEIRA ═══ -->
                 <div class="nav-group">
-                    <a class="nav-item" onclick="toggleSubmenu('sub-analise-financeira')">
+                    <a class="nav-item" onclick="fcApp.openClientSelection(); toggleSubmenu('sub-analise-financeira')">
                         <span class="material-icons-round">analytics</span>
                         <span>Análise Financeira</span>
                         <span class="material-icons-round ms-auto"
                             style="font-size:1.2rem; margin-left:auto;">expand_more</span>
                     </a>
                     <div id="sub-analise-financeira" class="nav-submenu">
-                        <a class="nav-sub-item" onclick="fcApp.openClientSelection()">
-                            <span class="material-icons-round"
-                                style="font-size:1rem; margin-right:0.5rem;">account_balance_wallet</span>Fluxo de Caixa
-                        </a>
-                        <div id="fc-functions" style="display:none; padding-left: 15px; border-left: 1px solid rgba(255,255,255,0.1); margin-left: 10px; margin-top: 5px;">
-                            <a class="nav-sub-item" onclick="fcApp.requireClient('fc-overview')">
-                                <span class="material-icons-round"
-                                    style="font-size:1rem; margin-right:0.5rem;">dashboard</span>Visão Geral
+                        <div id="fc-functions" style="display:none;">
+                            <div class="nav-sublevel-title" id="fc-client-name-display" style="color: var(--primary); margin-bottom: 5px;"></div>
+                            
+                            <a class="nav-sub-item" onclick="toggleSubmenu('sub-fluxo-caixa')">
+                                <span class="material-icons-round" style="font-size:1rem; margin-right:0.5rem;">account_balance_wallet</span>Fluxo de Caixa
+                                <span class="material-icons-round ms-auto" style="font-size:1rem; margin-left:auto;">expand_more</span>
                             </a>
-                            <a class="nav-sub-item" onclick="fcApp.requireClient('fc-import')">
-                                <span class="material-icons-round"
-                                    style="font-size:1rem; margin-right:0.5rem;">upload_file</span>Importar PDF
+                            <div id="sub-fluxo-caixa" class="nav-submenu" style="display:none; padding-left: 15px; border-left: 1px solid rgba(255,255,255,0.1); margin-left: 10px; margin-top: 5px; margin-bottom: 5px;">
+                                <a class="nav-sub-item" onclick="fcApp.requireClient('fc-overview')">Visão Geral</a>
+                                <a class="nav-sub-item" onclick="fcApp.requireClient('fc-import')">Importar PDF</a>
+                                <a class="nav-sub-item" onclick="fcApp.requireClient('fc-projections')">Projeções Anuais</a>
+                                <a class="nav-sub-item" onclick="fcApp.requireClient('fc-export')">Exportar Excel</a>
+                            </div>
+
+                            <a class="nav-sub-item" onclick="alert('DRE em breve')">
+                                <span class="material-icons-round" style="font-size:1rem; margin-right:0.5rem;">request_quote</span>DRE
                             </a>
-                            <a class="nav-sub-item" onclick="fcApp.requireClient('fc-projections')">
-                                <span class="material-icons-round"
-                                    style="font-size:1rem; margin-right:0.5rem;">trending_up</span>Projeções Anuais
-                            </a>
-                            <a class="nav-sub-item" onclick="fcApp.requireClient('fc-export')">
-                                <span class="material-icons-round"
-                                    style="font-size:1rem; margin-right:0.5rem;">download</span>Exportar Excel
+                            <a class="nav-sub-item" onclick="alert('Módulo ERP em breve')">
+                                <span class="material-icons-round" style="font-size:1rem; margin-right:0.5rem;">insights</span>Módulo ERP
                             </a>
                         </div>
                     </div>

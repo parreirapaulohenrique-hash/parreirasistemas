@@ -209,6 +209,22 @@ window.fcApp = {
         if (titleEl) {
             titleEl.textContent = `Análise Financeira: ${client.name}`;
         }
+
+        const fcFunctions = document.getElementById('fc-functions');
+        if (fcFunctions) {
+            fcFunctions.style.display = 'block';
+        }
+        
+        const clientNameDisplay = document.getElementById('fc-client-name-display');
+        if (clientNameDisplay) {
+            clientNameDisplay.textContent = client.name;
+        }
+
+        // Auto expandir Fluxo de Caixa
+        const subFluxoCaixa = document.getElementById('sub-fluxo-caixa');
+        if (subFluxoCaixa) {
+            subFluxoCaixa.style.display = 'block';
+        }
         
         this.requireClient('fc-overview');
     },
