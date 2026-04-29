@@ -164,7 +164,7 @@ window.switchView = (viewName) => {
         'liberacaoCredito': 'Liberação de Crédito',
         'romaneio': 'Romaneio de Carga',
         'comissoes': 'Comissões',
-        'fluxoCaixa': 'ERP Consultoria',
+        'fluxoCaixa': 'Consultoria',
         'boletos': 'Boletos',
         'conciliacao': 'Conciliação Bancária',
         'inadimplencia': 'Inadimplência',
