@@ -24,8 +24,10 @@ class Store {
     }
 
     get db() {
-        if (!window.db) throw new Error('Firebase não está inicializado.');
-        return window.db;
+        if (typeof firebase === 'undefined' || !firebase.firestore) {
+            throw new Error('Firebase não está inicializado.');
+        }
+        return firebase.firestore();
     }
 
     // --- CLIENTES ---
