@@ -374,10 +374,7 @@ window.openCNPJSearch = (context = 'client') => {
     });
 };
 
-window.entities = JSON.parse(localStorage.getItem('erp_clientes' + window.getTenantSuffix()) || 'null') || [
-    { code: 1355, name: 'SIMAO MEIRELES FURTADO', fantasy: 'SF PECAS', cnpj: '52.352.619/0001-69', ie: '', tipoCliente: 'PJ', cidade: 'Belém', uf: 'PA', bairro: 'CENTRO', cep: '66000-000', endereco: 'Av. Nazaré, 100', telefone: '(91) 3000-0000', celular: '', email: '', comprador: '', seller: '32 - ABNAEL', grupo: 'A', rota: 1, praca: 'BELEM', regiao: 1, codEmpresa: '01', limiteTotal: 15000, limiteDisponivel: 8500, pedidoNaoFaturado: 6500, diasAtraso: 0, ultimaCompra: '2026-02-10', visita: '', bloqueado: false, status: 'ativo' },
-    { code: 1356, name: 'AUTO CENTER PARREIRA', fantasy: 'PARREIRA AUTO', cnpj: '00.000.000/0001-91', ie: '123456789', tipoCliente: 'PJ', cidade: 'Ananindeua', uf: 'PA', bairro: 'CENTRO', cep: '67030-000', endereco: 'Rod. Augusto Montenegro, km 8', telefone: '(91) 3255-0000', celular: '', email: '', comprador: '', seller: '1 - INTERNO', grupo: 'B', rota: 3, praca: 'BELEM', regiao: 3, codEmpresa: '01', limiteTotal: 8000, limiteDisponivel: 5000, pedidoNaoFaturado: 3000, diasAtraso: 0, ultimaCompra: '2026-02-15', visita: '', bloqueado: false, status: 'ativo' }
-];
+window.entities = JSON.parse(localStorage.getItem('erp_clientes' + window.getTenantSuffix()) || 'null') || [];
 
 window.renderEntities = (filter = '') => {
     const tbody = document.getElementById('entitiesTableBody');
