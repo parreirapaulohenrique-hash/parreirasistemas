@@ -1,57 +1,85 @@
 /**
- * Classe responsável por gerenciar o armazenamento em Nuvem (Firebase)
- * Suporta o modelo Multi-Tenant.
+ * Store de Fluxo de Caixa (ERP Consultoria)
+ * Fonte de verdade: Firebase Firestore (Multi-Tenant).
+ * Estrutura: tenants/{tenantId}/fv_clientes  (lista de clientes do ERP)
+ *            tenants/{tenantId}/fluxo_caixa_clientes (dados de períodos)
  */
 class Store {
     constructor() {
-        this.tenantId = localStorage.getItem('app_tenant_id') || 'parreira'; // Fallback
         this.activeClientId = null;
         this.clientsCache = [];
         this.yearDataCache = {};
     }
 
+    /**
+     * TenantId dinâmico: lido do usuário logado na plataforma.
+     */
+    get tenantId() {
+        try {
+            const user = JSON.parse(localStorage.getItem('platform_user_logged'));
+            return (user && user.tenant) ? user.tenant : 'parreira';
+        } catch (e) {
+            return 'parreira';
+        }
+    }
+
     get db() {
-        if (!window.db) throw new Error("Firebase não está inicializado.");
+        if (!window.db) throw new Error('Firebase não está inicializado.');
         return window.db;
     }
 
     // --- CLIENTES ---
 
+    /**
+     * Busca clientes do Firebase.
+     * Fonte primária: fv_clientes (sincronizado pelo ERP ao salvar cliente).
+     * Combina com períodos de fluxo_caixa_clientes.
+     */
     async getClients() {
         try {
-            // Unificação: Busca a base de clientes do ERP principal
-            const suffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
-            const storedErpClients = JSON.parse(localStorage.getItem('erp_clientes' + suffix));
-            const erpClients = storedErpClients || window.entities || [];
-            
-            // Busca também se há dados salvos no Firebase para combinar
-            const snapshot = await this.db.collection('tenants').doc(this.tenantId)
-                                       .collection('fluxo_caixa_clientes')
-                                       .get();
-            
-            const firebaseData = {};
-            snapshot.forEach(doc => {
-                firebaseData[doc.id] = doc.data();
+            const tenantRef = this.db.collection('tenants').doc(this.tenantId);
+
+            // 1. Clientes do ERP (fonte de verdade)
+            const clientsSnap = await tenantRef.collection('fv_clientes').get();
+
+            // 2. Dados de períodos do Fluxo de Caixa
+            const periodsSnap = await tenantRef.collection('fluxo_caixa_clientes').get();
+            const periodsData = {};
+            periodsSnap.forEach(doc => {
+                periodsData[doc.id] = doc.data();
             });
 
             this.clientsCache = [];
-            
-            // Cria a lista usando EXCLUSIVAMENTE os clientes do ERP, combinando com os períodos do Firebase
-            if (erpClients && erpClients.length > 0) {
-                erpClients.forEach(c => {
-                    const idStr = String(c.code);
+
+            if (!clientsSnap.empty) {
+                clientsSnap.forEach(doc => {
+                    const data = doc.data();
+                    this.clientsCache.push({
+                        id: doc.id,
+                        name: data.razaoSocial || data.nome || data.name || doc.id,
+                        cnpj: data.cnpjCpf || data.cnpj || '',
+                        periods: periodsData[doc.id] ? (periodsData[doc.id].periods || {}) : {}
+                    });
+                });
+            } else {
+                // Fallback: lê do localStorage caso o sync ainda não tenha rodado
+                const suffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
+                const localClients = JSON.parse(localStorage.getItem('erp_clientes' + suffix)) || window.entities || [];
+                localClients.forEach(c => {
+                    const idStr = String(c.code || c.id);
                     this.clientsCache.push({
                         id: idStr,
-                        name: c.name,
-                        cnpj: c.cnpj,
-                        periods: firebaseData[idStr] ? firebaseData[idStr].periods : {}
+                        name: c.name || c.razaoSocial || '',
+                        cnpj: c.cnpj || c.cnpjCpf || '',
+                        periods: periodsData[idStr] ? (periodsData[idStr].periods || {}) : {}
                     });
                 });
             }
-            
+
+            console.log(`[fc-store] ${this.clientsCache.length} cliente(s) carregado(s) para tenant: ${this.tenantId}`);
             return this.clientsCache;
         } catch (error) {
-            console.error("Erro ao buscar clientes:", error);
+            console.error('[fc-store] Erro ao buscar clientes:', error);
             return [];
         }
     }
@@ -62,18 +90,18 @@ class Store {
                 name,
                 cnpj,
                 createdAt: new Date().toISOString(),
-                periods: {} 
+                periods: {}
             };
-            
+
             const docRef = await this.db.collection('tenants').doc(this.tenantId)
                                         .collection('fluxo_caixa_clientes')
                                         .add(newClient);
-            
+
             newClient.id = docRef.id;
             this.clientsCache.push(newClient);
             return newClient;
         } catch (error) {
-            console.error("Erro ao criar cliente:", error);
+            console.error('[fc-store] Erro ao criar cliente:', error);
             return null;
         }
     }
@@ -83,11 +111,11 @@ class Store {
             await this.db.collection('tenants').doc(this.tenantId)
                          .collection('fluxo_caixa_clientes').doc(id)
                          .delete();
-            
+
             this.clientsCache = this.clientsCache.filter(c => c.id !== id);
             return true;
         } catch (error) {
-            console.error("Erro ao excluir cliente:", error);
+            console.error('[fc-store] Erro ao excluir cliente:', error);
             return false;
         }
     }
@@ -107,33 +135,30 @@ class Store {
         try {
             const clientRef = this.db.collection('tenants').doc(this.tenantId)
                                      .collection('fluxo_caixa_clientes').doc(clientId);
-            
-            // Usando set com merge para atualizar apenas o período específico
+
             const updateObj = {};
             updateObj[`periods.${periodKey}.${type}`] = accountData;
-            
+
             await clientRef.set(updateObj, { merge: true });
-            
-            // Atualiza cache local
+
             const client = this.clientsCache.find(c => c.id === clientId);
             if (client) {
-                if(!client.periods) client.periods = {};
-                if(!client.periods[periodKey]) client.periods[periodKey] = {};
+                if (!client.periods) client.periods = {};
+                if (!client.periods[periodKey]) client.periods[periodKey] = {};
                 client.periods[periodKey][type] = accountData;
             }
-            
+
             return true;
         } catch (error) {
-            console.error("Erro ao salvar período:", error);
+            console.error('[fc-store] Erro ao salvar período:', error);
             return false;
         }
     }
-    
-    // Retorna todos os dados de um ano específico para cálculo e consolidação
+
     getYearData(clientId, year) {
         const client = this.clientsCache.find(c => c.id === clientId);
         if (!client || !client.periods) return {};
-        
+
         const result = {};
         Object.keys(client.periods).forEach(key => {
             if (key.startsWith(year)) {

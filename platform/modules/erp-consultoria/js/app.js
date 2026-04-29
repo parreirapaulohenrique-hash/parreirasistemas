@@ -521,7 +521,48 @@ window.saveEntity = function (e) {
 
     localStorage.setItem('erp_clientes' + window.getTenantSuffix(), JSON.stringify(entities));
 
-    // Dispara sincronização para a nuvem do Força de Vendas
+    // ─── Sincronizar IMEDIATAMENTE com Firebase (fv_clientes) ───────────────
+    try {
+        const user = JSON.parse(localStorage.getItem('platform_user_logged') || '{}');
+        const tenantId = user && user.tenant ? user.tenant : 'parreira';
+        if (typeof firebase !== 'undefined' && firebase.firestore) {
+            const docId = String(newClient.code);
+            const clienteFV = {
+                id: docId,
+                codigo: docId,
+                cnpjCpf: newClient.cnpj || '',
+                tipoCliente: newClient.tipoCliente || 'PJ',
+                razaoSocial: newClient.name || '',
+                fantasia: newClient.fantasy || '',
+                nome: newClient.name || '',
+                nomeFantasia: newClient.fantasy || '',
+                cidade: newClient.cidade || '',
+                bairro: newClient.bairro || '',
+                uf: newClient.uf || '',
+                cep: newClient.cep || '',
+                endereco: newClient.endereco || '',
+                telefone: newClient.telefone || '',
+                email: newClient.email || '',
+                status: newClient.status || 'ativo',
+                bloqueado: newClient.bloqueado || false,
+                limiteTotal: newClient.limiteTotal || 0,
+                limiteDisponivel: newClient.limiteDisponivel || 0,
+                codEmpresa: '01',
+                updatedAt: new Date().toISOString()
+            };
+            firebase.firestore()
+                .collection('tenants').doc(tenantId)
+                .collection('fv_clientes').doc(docId)
+                .set(clienteFV, { merge: true })
+                .then(() => console.log(`✅ [ERP] Cliente ${newClient.name} sincronizado com Firebase (tenant: ${tenantId})`))
+                .catch(err => console.warn('[ERP] Erro ao sincronizar cliente com Firebase:', err));
+        }
+    } catch (syncErr) {
+        console.warn('[ERP] Erro na sincronização Firebase:', syncErr);
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
+    // Dispara sincronização completa para o Força de Vendas
     if (typeof window.syncERPToFVFirestore === 'function') {
         window.syncERPToFVFirestore();
     }
