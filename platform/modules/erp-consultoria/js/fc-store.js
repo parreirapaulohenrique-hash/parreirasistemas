@@ -21,7 +21,8 @@ class Store {
         try {
             // Unificação: Busca a base de clientes do ERP principal
             const suffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
-            const erpClients = JSON.parse(localStorage.getItem('erp_clientes' + suffix)) || [];
+            const storedErpClients = JSON.parse(localStorage.getItem('erp_clientes' + suffix));
+            const erpClients = storedErpClients || window.entities || [];
             
             // Busca também se há dados salvos no Firebase para combinar
             const snapshot = await this.db.collection('tenants').doc(this.tenantId)
