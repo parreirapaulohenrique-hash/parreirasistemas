@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Fluxograma POP Vendas</title>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'base',
+            flowchart: {
+                curve: 'basis',
+                padding: 20
+            }
+        });
+    </script>
+    <style>
+        body {
+            background-color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px;
+        }
+
+        /* Title styling matching the user example */
+        .title-box {
+            background-color: #ff0000;
+            border: 3px solid #ffff00;
+            color: black;
+            font-weight: bold;
+            padding: 10px 40px;
+            margin-bottom: 40px;
+            border-radius: 10px;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+            font-size: 18px;
+            text-transform: uppercase;
+        }
+
+        /* Container for the diagram */
+        #diagram-container {
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Force override mermaid styles */
+        .mermaid .node rect,
+        .mermaid .node polygon,
+        .mermaid .node circle,
+        .mermaid .node ellipse,
+        .mermaid .node path {
+            fill: #ff0000 !important;
+            stroke: #ffff00 !important;
+            stroke-width: 3px !important;
+        }
+
+        .mermaid .node .label {
+            color: black !important;
+            font-weight: bold !important;
+            font-family: Arial, sans-serif !important;
+        }
+
+        .mermaid .edgeLabel {
+            background-color: white !important;
+            color: black !important;
+            font-weight: bold !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="title-box">
+        POP - PROCEDIMENTO DE VENDA (RETAGUARDA)
+    </div>
+
+    <button onclick="window.print()"
+        style="margin-bottom: 20px; padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #333; color: white; border: none; border-radius: 5px;">
+        🖨️ Salvar como PDF / Imprimir
+    </button>
+
+    <div id="diagram-container" class="mermaid">
+        %%{init: {'theme': 'base', 'themeVariables': { 'lineColor': '#e6b800'}}}%%
+        flowchart TD
+        classDef default fill:#ff0000,stroke:#ffff00,stroke-width:3px,color:black,font-weight:bold;
+        classDef endNode fill:#ff0000,stroke:#ffff00,stroke-width:3px,color:black,font-weight:bold,rx:20,ry:20;
+
+        Inicio([Início])
+        NovaVenda[F1 - Iniciar Nova Venda]
+        IdentificarCliente{Identificar Cliente?}
+        BuscarCliente[Buscar e Selecionar Cliente]
+        DadosManuais[Preencher Dados Manualmente]
+        AdicionarItens[Adicionar Itens ao Pedido]
+
+        BuscarProduto[Buscar Produto]
+        QtdPreco[Definir Qtd e Preço]
+        Inserir[Inserir Item]
+        MaisItens{Mais Itens?}
+
+        Revisao[Revisar Totais]
+        Gravar{Gravar Venda? (F2)}
+        Validar{Validar Dados}
+        Corrigir[Corrigir Pendências]
+        Salvar[Salvar Pedido]
+        Fim([Fim]):::endNode
+
+        Cancelar{Cancelar? (F4)}
+        ConfirmarCancel[Confirmar Cancelamento]
+        FimCancel([Fim]):::endNode
+
+        Inicio --> NovaVenda
+        NovaVenda --> IdentificarCliente
+        IdentificarCliente -- Sim --> BuscarCliente
+        IdentificarCliente -- Não --> DadosManuais
+
+        BuscarCliente --> AdicionarItens
+        DadosManuais --> AdicionarItens
+
+        AdicionarItens --> BuscarProduto
+        BuscarProduto --> QtdPreco
+        QtdPreco --> Inserir
+        Inserir --> MaisItens
+        MaisItens -- Sim --> BuscarProduto
+        MaisItens -- Não --> Revisao
+
+        Revisao --> Gravar
+        Gravar -- Sim --> Validar
+        Validar -- Erro --> Corrigir
+        Corrigir --> Gravar
+        Validar -- OK --> Salvar
+        Salvar --> Fim
+
+        Revisao --> Cancelar
+        Cancelar -- Sim --> ConfirmarCancel
+        ConfirmarCancel --> FimCancel
+
+        linkStyle 0 stroke:#e6b800,stroke-width:2px;
+        linkStyle 1 stroke:#e6b800,stroke-width:2px;
+        linkStyle 2 stroke:green,stroke-width:2px;
+        linkStyle 3 stroke:red,stroke-width:2px;
+        linkStyle 4 stroke:#e6b800,stroke-width:2px;
+        linkStyle 5 stroke:#e6b800,stroke-width:2px;
+        linkStyle 6 stroke:#e6b800,stroke-width:2px;
+        linkStyle 7 stroke:#e6b800,stroke-width:2px;
+        linkStyle 8 stroke:#e6b800,stroke-width:2px;
+        linkStyle 9 stroke:#e6b800,stroke-width:2px;
+        linkStyle 10 stroke:green,stroke-width:2px;
+        linkStyle 11 stroke:red,stroke-width:2px;
+        linkStyle 12 stroke:#e6b800,stroke-width:2px;
+        linkStyle 13 stroke:green,stroke-width:2px;
+        linkStyle 14 stroke:red,stroke-width:2px;
+        linkStyle 15 stroke:#e6b800,stroke-width:2px;
+        linkStyle 16 stroke:green,stroke-width:2px;
+        linkStyle 17 stroke:#e6b800,stroke-width:2px;
+        linkStyle 18 stroke:#e6b800,stroke-width:2px;
+        linkStyle 19 stroke:green,stroke-width:2px;
+        linkStyle 20 stroke:#e6b800,stroke-width:2px;
+    </div>
+
+</body>
+
+</html>

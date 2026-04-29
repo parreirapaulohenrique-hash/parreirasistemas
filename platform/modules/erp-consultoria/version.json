@@ -1,0 +1,8 @@
+{
+    "module": "erp",
+    "name": "ParreiraLog ERP",
+    "version": "11.6.4",
+    "date": "2026-02-26",
+    "last_change": "FIX: Exibição correta da origem FV no Consulta Pedidos checando v.origemFV e v.origem === 'FV'",
+    "build": "20260226.15"
+}

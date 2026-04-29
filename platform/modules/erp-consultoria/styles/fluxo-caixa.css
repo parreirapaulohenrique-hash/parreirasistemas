@@ -1,0 +1,113 @@
+/* Cores de Agrupamento */
+:root {
+    --color-disponiveis: #d97706;
+    --color-receitas: #65a30d;
+    --color-custos: #dc2626;
+    --color-despesas: #2563eb;
+    --color-receitas-nao-op: #4d7c0f;
+    --color-ajustado: #eab308;
+    --color-blue-dark: #1d4ed8;
+}
+
+/* Summary Bar */
+.summary-bar-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    color: white;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+.summary-item .sum-label { font-size: 1rem; }
+.summary-item .sum-value { font-size: 1.2rem; }
+
+.item-orange { background: var(--color-disponiveis); }
+.item-green { background: var(--color-receitas); }
+.item-red { background: var(--color-custos); }
+.item-blue-dark { background: var(--color-blue-dark); }
+.item-yellow { background: var(--color-ajustado); color: #0f172a; }
+
+/* Table Grouping */
+.table-group-header td {
+    background: rgba(255,255,255,0.08) !important;
+    font-weight: 700;
+    font-size: 1rem;
+    color: white;
+    padding: 12px 16px;
+    border-left: 8px solid transparent;
+}
+.table-group-header.group-disponiveis td { border-left-color: var(--color-disponiveis); }
+.table-group-header.group-receitas td { border-left-color: var(--color-receitas); }
+.table-group-header.group-custos td { border-left-color: var(--color-custos); }
+.table-group-header.group-despesas td { border-left-color: var(--color-despesas); background: rgba(37, 99, 235, 0.15) !important; }
+.table-group-header.group-nao-op td { border-left-color: var(--color-receitas-nao-op); background: rgba(77, 124, 15, 0.15) !important; }
+.table-group-header.group-other td { border-left-color: #64748b; background: rgba(100, 116, 139, 0.1) !important; }
+
+/* Triple Hierarchy Indentation */
+.level-1 td { font-size: 1.1rem; }
+.level-2 td.col-desc { padding-left: 30px !important; color: #f8fafc; font-weight: 600; }
+.level-3 td.col-desc { padding-left: 60px !important; color: #94a3b8; font-size: 0.9rem; }
+
+/* Manual Inputs */
+.manual-input {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 4px;
+    color: #10b981;
+    padding: 4px 8px;
+    width: 120px;
+    text-align: right;
+    font-weight: 600;
+    outline: none;
+}
+.manual-input:focus { border-color: #10b981; background: rgba(16, 185, 129, 0.1); }
+
+/* Validation Row */
+.validation-row td {
+    background: rgba(0,0,0,0.2) !important;
+    padding: 12px 24px;
+    border-bottom: 2px solid rgba(255,255,255,0.05);
+}
+.status-ok { font-weight: 800; animation: pulse 2s infinite; }
+.status-error { font-weight: 800; }
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
+.row-unmapped td {
+    background: rgba(234, 179, 8, 0.1) !important;
+    color: #fde047 !important;
+    font-style: italic;
+}
+
+/* Modals */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+    display: none; align-items: center; justify-content: center;
+    z-index: 1000;
+}
+.modal-overlay.active { display: flex; }
+.modal-content {
+    background: rgba(30,41,59,0.95);
+    padding: 30px; border-radius: 16px;
+    width: 90%; max-width: 400px;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+.modal-content h2 { margin-bottom: 20px; font-size: 1.5rem; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; margin-bottom: 8px; color: #cbd5e1; }
+.form-group input {
+    width: 100%; padding: 12px;
+    background: rgba(15,23,42,0.6);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; color: white;
+}
+.modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
