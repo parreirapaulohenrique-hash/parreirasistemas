@@ -1,8 +1,8 @@
 {
     "module": "erp-consultoria",
     "name": "Consultoria ParreiraLog",
-    "version": "11.7.0",
+    "version": "11.7.1",
     "date": "2026-04-29",
-    "last_change": "FEAT: Integração Firebase completa para módulo Consultoria — Firebase SDK adicionado ao index.html, fc-store.js refatorado para ler clientes de fv_clientes (multi-tenant), saveEntity sincroniza imediatamente com Firebase ao salvar cliente, renomeação de ERP Consultoria para Consultoria em toda a UI",
-    "build": "20260429.01"
+    "last_change": "FIX CRÍTICO: Adicionadas as views view-fc-clients, view-fc-overview, view-fc-import, view-fc-projections e view-fc-export no HTML — eram inexistentes, causando tela em branco ao clicar em Análise Financeira",
+    "build": "20260429.02"
 }
