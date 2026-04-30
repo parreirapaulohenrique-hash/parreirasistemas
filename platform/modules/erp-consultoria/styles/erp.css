@@ -64,7 +64,47 @@ body {
     padding: 2rem;
     padding-bottom: 5rem;
     /* Space for fixed footer */
+    scroll-behavior: smooth;
 }
+
+/* Scrollbar estilizada para o content-wrapper */
+.content-wrapper::-webkit-scrollbar {
+    width: 6px;
+}
+
+.content-wrapper::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.content-wrapper::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 3px;
+}
+
+.content-wrapper::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+}
+
+/* Cards de cliente da Análise Financeira */
+.client-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.client-card:hover {
+    border-color: var(--primary-color);
+    background: rgba(14, 165, 233, 0.08);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(14, 165, 233, 0.15);
+}
+
 
 /* --- Footer --- */
 .app-footer {

@@ -1,8 +1,8 @@
 {
     "module": "erp-consultoria",
     "name": "Consultoria ParreiraLog",
-    "version": "11.7.5",
+    "version": "11.7.6",
     "date": "2026-04-30",
-    "last_change": "FIX CRÍTICO: Views view-fc-clients, view-fc-overview, view-fc-import, view-fc-projections e view-fc-export movidas para dentro do content-wrapper — estavam fora do container visível da página, por isso renderizavam em área invisível",
-    "build": "20260430.03"
+    "last_change": "UX: Scroll-to-top ao trocar de view, barra de rolagem estilizada no content-wrapper, cards de cliente com classe CSS client-card (hover animado, design premium)",
+    "build": "20260430.04"
 }

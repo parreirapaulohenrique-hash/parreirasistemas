@@ -91,6 +91,10 @@ window.switchView = (viewName) => {
         } else {
             target.style.display = 'block';
         }
+        // Rola o container de conteúdo para o topo ao trocar de view
+        const wrapper = document.querySelector('.content-wrapper');
+        if (wrapper) wrapper.scrollTop = 0;
+        target.scrollTop = 0;
     }
 
     // Update Sidebar
@@ -176,7 +180,13 @@ window.switchView = (viewName) => {
         'dashboardExecutivo': 'Dashboard Executivo',
         'curvaAbc': 'Curva ABC',
         'analiseMargem': 'Análise de Margem',
-        'indicadores': 'Indicadores KPIs'
+        'indicadores': 'Indicadores KPIs',
+        // ── Fluxo de Caixa / Consultoria ──
+        'fc-clients': 'Análise Financeira — Selecionar Cliente',
+        'fc-overview': 'Fluxo de Caixa — Visão Geral',
+        'fc-import': 'Importar PDF (Maxdata 343)',
+        'fc-projections': 'Projeções Anuais',
+        'fc-export': 'Exportar Excel'
     };
     document.getElementById('pageTitle').textContent = titles[viewName] || 'ERP';
 

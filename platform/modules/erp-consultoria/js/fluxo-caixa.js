@@ -129,22 +129,19 @@ window.fcApp = {
 
         clients.forEach(client => {
             const card = document.createElement('div');
-            card.className = 'client-card glass-panel';
-            card.style.cssText = "padding: 20px; border-radius: 12px; cursor: pointer; transition: 0.3s; border: 1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:16px; background: rgba(30,41,59,0.5);";
-            card.onmouseover = () => card.style.background = 'rgba(59, 130, 246, 0.1)';
-            card.onmouseout = () => card.style.background = 'rgba(30,41,59,0.5)';
+            card.className = 'client-card';
             card.onclick = () => this.loadDashboard(client);
-            
+
             const initial = client.name.charAt(0).toUpperCase();
-            
+
             card.innerHTML = `
-                <div class="client-avatar" style="width:48px;height:48px;border-radius:12px;background:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:20px;">${initial}</div>
-                <div class="client-card-info" style="flex:1;">
-                    <h3 style="margin:0; font-size:1.1rem;">${client.name}</h3>
-                    <p style="margin:0; font-size:0.8rem; color:var(--text-muted);">CNPJ: ${client.cnpj || 'Não informado'}</p>
+                <div style="width:48px;height:48px;border-radius:12px;background:var(--primary-color);display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:1.25rem;color:#fff;flex-shrink:0;">${initial}</div>
+                <div style="flex:1;min-width:0;">
+                    <h3 style="margin:0;font-size:1rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${client.name}</h3>
+                    <p style="margin:0.2rem 0 0;font-size:0.8rem;color:var(--text-secondary);">CNPJ: ${client.cnpj || 'Não informado'}</p>
                 </div>
-                <button class="btn-icon" style="color:#ef4444;" onclick="event.stopPropagation(); fcApp.deleteClient('${client.id}', '${client.name}')">
-                    <span class="material-icons-round">delete_outline</span>
+                <button class="btn-icon btn-danger" onclick="event.stopPropagation(); fcApp.deleteClient('${client.id}', '${client.name}')" title="Excluir cliente">
+                    <span class="material-icons-round" style="font-size:1.1rem;">delete_outline</span>
                 </button>
             `;
             grid.appendChild(card);
