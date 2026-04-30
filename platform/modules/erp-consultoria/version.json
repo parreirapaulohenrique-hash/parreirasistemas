@@ -1,8 +1,8 @@
 {
     "module": "erp-consultoria",
     "name": "Consultoria ParreiraLog",
-    "version": "11.7.6",
+    "version": "11.7.7",
     "date": "2026-04-30",
-    "last_change": "UX: Scroll-to-top ao trocar de view, barra de rolagem estilizada no content-wrapper, cards de cliente com classe CSS client-card (hover animado, design premium)",
-    "build": "20260430.04"
+    "last_change": "FIX: Cache-busters atualizados (app.js e erp.css para v11.7.6+). Scroll-to-top adicionado diretamente no fluxo-caixa.js em openClientSelection() e requireClient() sem depender do app.js cache",
+    "build": "20260430.05"
 }

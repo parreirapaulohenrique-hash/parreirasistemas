@@ -74,18 +74,16 @@ window.fcApp = {
 
         // Esconde submenus de funções (Fluxo de Caixa, DRE etc.)
         const fcFunctions = document.getElementById('fc-functions');
-        if (fcFunctions) {
-            fcFunctions.style.display = 'none';
-        }
+        if (fcFunctions) fcFunctions.style.display = 'none';
 
-        // Mostra a tela de seleção de clientes
+        // Mostra a tela de seleção de clientes e rola para o topo
         window.switchView('fc-clients');
+        const wrapper = document.querySelector('.content-wrapper');
+        if (wrapper) wrapper.scrollTop = 0;
 
         // Carrega os clientes da nuvem agora que o grid está visível
         const grid = document.getElementById('fc-clients-grid');
-        if (grid) {
-            grid.innerHTML = '<p style="text-align:center; color:var(--text-muted); grid-column:1/-1; padding:2rem;">Buscando clientes na nuvem...</p>';
-        }
+        if (grid) grid.innerHTML = '<p style="text-align:center; color:var(--text-secondary); grid-column:1/-1; padding:2rem;">Buscando clientes na nuvem...</p>';
         this.renderClientsList();
     },
 
@@ -102,16 +100,15 @@ window.fcApp = {
         }
         
         const fcFunctions = document.getElementById('fc-functions');
-        if (fcFunctions) {
-            fcFunctions.style.display = 'block';
-        }
+        if (fcFunctions) fcFunctions.style.display = 'block';
 
         window.switchView(viewId);
+        // Garante que rola para o topo ao trocar de view
+        const wrapper = document.querySelector('.content-wrapper');
+        if (wrapper) wrapper.scrollTop = 0;
         
         // Se for a tela de overview, atualiza
-        if (viewId === 'fc-overview') {
-            this.refreshDashboard();
-        }
+        if (viewId === 'fc-overview') this.refreshDashboard();
     },
 
     // --- CLIENTES ---
