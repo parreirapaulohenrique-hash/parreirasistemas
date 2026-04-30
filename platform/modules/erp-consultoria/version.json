@@ -1,8 +1,8 @@
 {
     "module": "erp-consultoria",
     "name": "Consultoria ParreiraLog",
-    "version": "11.8.0",
+    "version": "11.8.1",
     "date": "2026-04-30",
-    "last_change": "FIX DEFINITIVO: consolidateFCViews() move automaticamente as views FC para dentro do content-wrapper ao inicializar, removendo duplicatas e garantindo scroll correto. Cache-buster atualizado para ?v=11.8.0",
-    "build": "20260430.08"
+    "last_change": "FIX: confirmImport() corrigido — querySelector('.import-actions .btn-primary') retornava null (classe não existe no HTML), causando crash silencioso. Agora usa '#import-preview .btn-primary' com try/catch e validação de cliente",
+    "build": "20260430.09"
 }

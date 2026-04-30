@@ -526,26 +526,37 @@ window.fcApp = {
     async confirmImport() {
         if (!this.pendingImport) return;
 
-        const btn = document.querySelector('.import-actions .btn-primary');
-        const oldText = btn.textContent;
-        btn.textContent = 'Salvando na Nuvem...';
-        btn.disabled = true;
-
         const client = store.getActiveClient();
-        const success = await store.saveMonthData(client.id, this.pendingImport.period, this.pendingImport.accounts);
+        if (!client) {
+            alert('Nenhum cliente selecionado. Por favor, volte e selecione um cliente.');
+            return;
+        }
 
-        btn.textContent = oldText;
-        btn.disabled = false;
+        // Busca o botão de confirmar (sem depender de classe que pode não existir)
+        const btn = document.querySelector('#import-preview .btn-primary');
+        const originalText = btn ? btn.textContent : '';
+        if (btn) { btn.textContent = 'Salvando na Nuvem...'; btn.disabled = true; }
 
-        if (success) {
-            alert('Dados importados com sucesso!');
-            this.pendingImport = null;
-            this.resetDropZone();
-            this.requireClient('fc-overview');
-        } else {
-            alert('Erro ao salvar no banco de dados.');
+        try {
+            const success = await store.saveMonthData(client.id, this.pendingImport.period, this.pendingImport.accounts);
+
+            if (btn) { btn.textContent = originalText; btn.disabled = false; }
+
+            if (success) {
+                alert(`✅ Dados de ${this.pendingImport.period} importados com sucesso!`);
+                this.pendingImport = null;
+                this.resetDropZone();
+                this.requireClient('fc-overview');
+            } else {
+                alert('❌ Erro ao salvar no banco de dados. Tente novamente.');
+            }
+        } catch (err) {
+            if (btn) { btn.textContent = originalText; btn.disabled = false; }
+            console.error('Erro ao confirmar importação:', err);
+            alert('❌ Erro ao salvar: ' + err.message);
         }
     },
+
 
     cancelImport() {
         this.pendingImport = null;
