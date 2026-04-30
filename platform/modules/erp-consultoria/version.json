@@ -1,8 +1,8 @@
 {
     "module": "erp-consultoria",
     "name": "Consultoria ParreiraLog",
-    "version": "11.7.4",
+    "version": "11.7.5",
     "date": "2026-04-30",
-    "last_change": "FIX CRÍTICO: Removido bloco Firebase SDK duplicado do index.html que conflitava com o já carregado pelo sales-force/firebase-config.js — erro 'firebaseConfig already declared' e 'No Firebase App DEFAULT' resolvidos",
-    "build": "20260430.02"
+    "last_change": "FIX CRÍTICO: Views view-fc-clients, view-fc-overview, view-fc-import, view-fc-projections e view-fc-export movidas para dentro do content-wrapper — estavam fora do container visível da página, por isso renderizavam em área invisível",
+    "build": "20260430.03"
 }

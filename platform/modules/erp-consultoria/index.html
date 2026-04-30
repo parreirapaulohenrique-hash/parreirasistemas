@@ -5389,6 +5389,136 @@
 
             </div>
 
+                <!-- ─── Financeiro Expandido ─── -->
+                <div id="view-fluxoCaixa" class="page-content" style="display:none">
+                    <div class="view-header-bar"><span class="material-icons-round">waterfall_chart</span>
+                        <h2>Consultoria</h2>
+                    </div>
+                    <div id="fluxoCaixa-container" class="crud-container"></div>
+                </div>
+
+                <!-- ─── FLUXO DE CAIXA: Seleção de Cliente ─── -->
+                <div id="view-fc-clients" class="page-content" style="display:none">
+                    <div class="view-header-bar">
+                        <span class="material-icons-round">analytics</span>
+                        <h2>Análise Financeira — Selecionar Cliente</h2>
+                    </div>
+                    <div style="padding: 2rem;">
+                        <div style="margin-bottom: 1.5rem;">
+                            <p style="color: var(--text-secondary); margin-bottom: 1rem;">Escolha o cliente para visualizar o fluxo de caixa e projeções.</p>
+                            <button class="btn btn-primary" onclick="window.switchView('entities')">
+                                <span class="material-icons-round">manage_accounts</span> Ir para Gestão de Clientes
+                            </button>
+                        </div>
+                        <div id="fc-clients-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
+                            <p style="color: var(--text-secondary); grid-column: 1/-1; text-align: center;">Sincronizando clientes...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ─── FLUXO DE CAIXA: Overview / Dashboard ─── -->
+                <div id="view-fc-overview" class="page-content" style="display:none">
+                    <div class="view-header-bar">
+                        <span class="material-icons-round">dashboard</span>
+                        <h2>Fluxo de Caixa — Visão Geral</h2>
+                        <button class="btn btn-secondary btn-icon" onclick="fcApp.backToClients()" style="margin-left:auto;" title="Trocar cliente">
+                            <span class="material-icons-round">swap_horiz</span>
+                        </button>
+                    </div>
+                    <div style="padding:1.5rem;" id="fc-overview-body"></div>
+                </div>
+
+                <!-- ─── FLUXO DE CAIXA: Importar PDF ─── -->
+                <div id="view-fc-import" class="page-content" style="display:none">
+                    <div class="view-header-bar">
+                        <span class="material-icons-round">upload_file</span>
+                        <h2>Importar PDF (Maxdata 343)</h2>
+                        <button class="btn btn-secondary btn-icon" onclick="fcApp.backToClients()" style="margin-left:auto;" title="Trocar cliente">
+                            <span class="material-icons-round">swap_horiz</span>
+                        </button>
+                    </div>
+                    <div style="padding:1.5rem;">
+                        <div class="card">
+                            <div class="card-body" style="padding:2rem;">
+                                <div id="pdf-drop-zone" style="border:2px dashed var(--primary); border-radius:12px; padding:3rem; text-align:center; cursor:pointer;">
+                                    <span class="material-icons-round" style="font-size:3rem; color:var(--primary);">cloud_upload</span>
+                                    <h3 style="margin:1rem 0 0.5rem;">Arraste o arquivo PDF aqui</h3>
+                                    <p style="color:var(--text-secondary);">Relatório "343 - Centro de Custos" do ERP Maxdata</p>
+                                    <input type="file" id="pdf-file-input" accept=".pdf" hidden>
+                                    <button class="btn btn-secondary" style="margin-top:1rem;" onclick="document.getElementById('pdf-file-input').click()">Procurar Arquivo</button>
+                                </div>
+                                <div id="import-preview" style="display:none;">
+                                    <div id="import-period" style="margin-bottom:1rem; font-weight:600; color:var(--primary);"></div>
+                                    <table class="data-table" style="width:100%;">
+                                        <thead><tr><th>Conta</th><th>A Receber</th><th>A Pagar</th></tr></thead>
+                                        <tbody id="import-preview-body"></tbody>
+                                    </table>
+                                    <div style="display:flex; gap:1rem; margin-top:1.5rem; justify-content:flex-end;">
+                                        <button class="btn btn-secondary" onclick="fcApp.cancelImport()">Cancelar</button>
+                                        <button class="btn btn-primary" onclick="fcApp.confirmImport()">Confirmar Importação</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ─── FLUXO DE CAIXA: Projeções ─── -->
+                <div id="view-fc-projections" class="page-content" style="display:none">
+                    <div class="view-header-bar">
+                        <span class="material-icons-round">trending_up</span>
+                        <h2>Projeções Anuais</h2>
+                        <button class="btn btn-secondary btn-icon" onclick="fcApp.backToClients()" style="margin-left:auto;">
+                            <span class="material-icons-round">swap_horiz</span>
+                        </button>
+                    </div>
+                    <div style="padding:1.5rem;">
+                        <div class="card">
+                            <div class="card-header"><h3>Configurar Projeções</h3></div>
+                            <div class="card-body" style="padding:1.5rem;">
+                                <div class="form-group">
+                                    <label class="form-label">Taxa de Crescimento Mensal (%)</label>
+                                    <input type="number" id="proj-growth-rate" class="form-input" value="5" step="0.1" style="max-width:200px;">
+                                </div>
+                                <div class="form-group" style="margin-top:1rem;">
+                                    <label class="form-label">Meses a Projetar</label>
+                                    <select id="proj-months" class="form-input" style="max-width:200px;">
+                                        <option value="3">3 meses</option>
+                                        <option value="6">6 meses</option>
+                                        <option value="12" selected>12 meses</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-primary" style="margin-top:1.5rem;" onclick="fcApp.applyProjections()">
+                                    <span class="material-icons-round">play_arrow</span> Aplicar Projeção
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ─── FLUXO DE CAIXA: Exportar Excel ─── -->
+                <div id="view-fc-export" class="page-content" style="display:none">
+                    <div class="view-header-bar">
+                        <span class="material-icons-round">table_view</span>
+                        <h2>Exportar Excel</h2>
+                        <button class="btn btn-secondary btn-icon" onclick="fcApp.backToClients()" style="margin-left:auto;">
+                            <span class="material-icons-round">swap_horiz</span>
+                        </button>
+                    </div>
+                    <div style="padding:1.5rem;">
+                        <div class="card">
+                            <div class="card-body" style="padding:2rem; text-align:center;">
+                                <span class="material-icons-round" style="font-size:4rem; color:var(--accent-success); display:block; margin-bottom:1rem;">file_download</span>
+                                <h3 style="margin-bottom:0.5rem;">Exportar Fluxo de Caixa</h3>
+                                <p style="color:var(--text-secondary); margin-bottom:1.5rem;">Gera um arquivo Excel com todos os dados do ano selecionado.</p>
+                                <button class="btn btn-primary" onclick="fcApp.exportToExcel()">
+                                    <span class="material-icons-round">download</span> Baixar Excel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             <!-- View: CRM Funil (Kanban) -->
             <div id="view-crm-funil" class="page-content" style="display:none;">
                 <div class="card"
@@ -6687,15 +6817,6 @@
         <div id="reclassificacao-container" class="crud-container"></div>
     </div>
 
-
-
-    <!-- ─── Financeiro Expandido ─── -->
-    <div id="view-fluxoCaixa" class="page-content" style="display:none">
-        <div class="view-header-bar"><span class="material-icons-round">waterfall_chart</span>
-            <h2>Consultoria</h2>
-        </div>
-        <div id="fluxoCaixa-container" class="crud-container"></div>
-    </div>
 
     <!-- ─── FLUXO DE CAIXA: Seleção de Cliente ─── -->
     <div id="view-fc-clients" class="page-content" style="display:none">
