@@ -157,6 +157,15 @@ class Store {
         }
     }
 
+    /**
+     * Salva os dados de um mês completo (contas importadas do PDF).
+     * Wrapper conveniente sobre savePeriodData.
+     */
+    async saveMonthData(clientId, periodKey, accounts) {
+        return this.savePeriodData(clientId, periodKey, 'contas', accounts);
+    }
+
+
     getYearData(clientId, year) {
         const client = this.clientsCache.find(c => c.id === clientId);
         if (!client || !client.periods) return {};

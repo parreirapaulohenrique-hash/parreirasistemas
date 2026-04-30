@@ -1,8 +1,8 @@
 {
     "module": "erp-consultoria",
     "name": "Consultoria ParreiraLog",
-    "version": "11.8.1",
+    "version": "11.8.2",
     "date": "2026-04-30",
-    "last_change": "FIX: confirmImport() corrigido — querySelector('.import-actions .btn-primary') retornava null (classe não existe no HTML), causando crash silencioso. Agora usa '#import-preview .btn-primary' com try/catch e validação de cliente",
-    "build": "20260430.09"
+    "last_change": "FIX: saveMonthData() adicionado ao fc-store.js como wrapper de savePeriodData(). Resolve erro 'store.saveMonthData is not a function' ao confirmar importação do PDF",
+    "build": "20260430.10"
 }
