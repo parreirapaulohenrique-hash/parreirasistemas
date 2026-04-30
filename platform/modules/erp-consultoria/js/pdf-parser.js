@@ -3,8 +3,19 @@
  * Extrai contas e valores do Relatório 343 (Centro de Custos / Plano de Contas)
  */
 
+// Configura o worker do PDF.js (necessário para processamento)
+if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
 window.PDFParser = {
     async parseMaxdataPDF(typedarray) {
+        // Garante que o worker está configurado
+        if (typeof pdfjsLib === 'undefined') {
+            throw new Error('PDF.js não carregado. Verifique a conexão e recarregue a página.');
+        }
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
         // Inicializa o PDF.js
         const loadingTask = pdfjsLib.getDocument(typedarray);
         const pdf = await loadingTask.promise;

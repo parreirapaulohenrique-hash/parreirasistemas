@@ -438,14 +438,25 @@ window.fcApp = {
         }
 
         const dropZone = document.getElementById('pdf-drop-zone');
-        if(dropZone) dropZone.innerHTML = '<div class="loader"></div><p style="margin-top:20px;">Lendo e extraindo dados do PDF...</p>';
+        if (dropZone) dropZone.innerHTML = '<div style="text-align:center;padding:2rem;"><span class="material-icons-round" style="font-size:3rem;color:var(--primary-color);animation:spin 1s linear infinite;">sync</span><p style="margin-top:1rem;color:var(--text-secondary);">Lendo e extraindo dados do PDF...</p></div>';
 
         try {
-            const text = await parsePDF(file);
-            const { period, accounts } = extractData(text);
+            // Verifica se PDFParser está disponível
+            if (typeof window.PDFParser === 'undefined') {
+                throw new Error('Biblioteca PDF não carregada. Aguarde e tente novamente.');
+            }
+
+            // Lê o arquivo como ArrayBuffer para o PDF.js
+            const arrayBuffer = await file.arrayBuffer();
+
+            // Usa o PDFParser do módulo (pdf-parser.js)
+            const result = await window.PDFParser.parseMaxdataPDF({ data: arrayBuffer });
+
+            const period = result.periodo;
+            const accounts = result.contas;
 
             if (!period || accounts.length === 0) {
-                alert('Não foi possível extrair dados válidos. Certifique-se que o PDF é o "Relatório de Centro de Custos" da Maxdata.');
+                alert('Não foi possível extrair dados válidos. Certifique-se que o PDF é o "Relatório de Centro de Custos" da Maxdata (Rel. 343).');
                 this.resetDropZone();
                 return;
             }
@@ -454,11 +465,12 @@ window.fcApp = {
             this.showImportPreview(period, accounts);
 
         } catch (error) {
-            console.error('Erro na extração:', error);
-            alert('Erro ao processar o arquivo PDF.');
+            console.error('Erro na extração PDF:', error);
+            alert('Erro ao processar o arquivo PDF.\n\nDetalhe: ' + error.message);
             this.resetDropZone();
         }
     },
+
 
     showImportPreview(period, accounts) {
         const dropZone = document.getElementById('pdf-drop-zone');

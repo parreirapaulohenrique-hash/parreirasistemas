@@ -1,8 +1,8 @@
 {
     "module": "erp-consultoria",
     "name": "Consultoria ParreiraLog",
-    "version": "11.7.7",
+    "version": "11.7.8",
     "date": "2026-04-30",
-    "last_change": "FIX: Cache-busters atualizados (app.js e erp.css para v11.7.6+). Scroll-to-top adicionado diretamente no fluxo-caixa.js em openClientSelection() e requireClient() sem depender do app.js cache",
-    "build": "20260430.05"
+    "last_change": "FIX: Importação PDF corrigida — handlePDFUpload agora usa window.PDFParser.parseMaxdataPDF() ao invés de parsePDF/extractData (funções inexistentes). PDF.js worker configurado em pdf-parser.js. Erro detalhado no alert.",
+    "build": "20260430.06"
 }
