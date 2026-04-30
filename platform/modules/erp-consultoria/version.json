@@ -1,8 +1,8 @@
 {
     "module": "erp-consultoria",
     "name": "Consultoria ParreiraLog",
-    "version": "11.7.9",
+    "version": "11.8.0",
     "date": "2026-04-30",
-    "last_change": "FIX CRÍTICO: Cache-busters ?v=11.7.9 adicionados a TODOS os scripts FC (fluxo-caixa.js, fc-store.js, pdf-parser.js, etc). CSS: scroll-behavior mudado de smooth para auto. JS: scrollBehavior forçado para auto antes de reset ao topo",
-    "build": "20260430.07"
+    "last_change": "FIX DEFINITIVO: consolidateFCViews() move automaticamente as views FC para dentro do content-wrapper ao inicializar, removendo duplicatas e garantindo scroll correto. Cache-buster atualizado para ?v=11.8.0",
+    "build": "20260430.08"
 }

@@ -6,25 +6,54 @@
 window.fcApp = {
     currentChart: null,
     pendingImport: null,
-    manualEntries: {}, 
+    manualEntries: {},
+
+    /**
+     * Garante que as views FC estejam DENTRO do content-wrapper.
+     * Resolve o problema de IDs duplicados e views fora da área scrollável.
+     */
+    consolidateFCViews() {
+        const wrapper = document.querySelector('.content-wrapper');
+        if (!wrapper) return;
+
+        const viewIds = ['view-fc-clients', 'view-fc-overview', 'view-fc-import', 'view-fc-projections', 'view-fc-export'];
+
+        viewIds.forEach(id => {
+            const allMatches = Array.from(document.querySelectorAll('#' + id));
+            if (allMatches.length === 0) return;
+
+            // Prefere o que já tem view-header-bar (mais completo); senão pega o primeiro
+            const best = allMatches.find(el => el.querySelector('.view-header-bar')) || allMatches[0];
+
+            // Remove todos os outros duplicados
+            allMatches.forEach(el => { if (el !== best) el.remove(); });
+
+            // Move o melhor para dentro do content-wrapper se não estiver lá
+            if (best.parentElement !== wrapper) {
+                best.style.display = 'none';
+                wrapper.appendChild(best);
+            }
+        });
+    },
 
     init() {
+        this.consolidateFCViews();
         this.bindEvents();
-        
+
         // Populate period filter years
         const currentYear = new Date().getFullYear();
         const yearSelect = document.getElementById('filter-period-value');
         if (yearSelect) {
             yearSelect.innerHTML = '';
-            for(let y = currentYear - 1; y <= currentYear + 2; y++) {
+            for (let y = currentYear - 1; y <= currentYear + 2; y++) {
                 yearSelect.innerHTML += `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`;
             }
         }
-        
+
         // Carrega clientes da nuvem
         const grid = document.getElementById('fc-clients-grid');
-        if(grid) grid.innerHTML = '<p style="text-align:center; color: var(--text-muted); grid-column:1/-1;">Sincronizando clientes com a nuvem...</p>';
-        
+        if (grid) grid.innerHTML = '<p style="text-align:center; color:var(--text-secondary); grid-column:1/-1;">Sincronizando clientes com a nuvem...</p>';
+
         this.renderClientsList();
     },
 
