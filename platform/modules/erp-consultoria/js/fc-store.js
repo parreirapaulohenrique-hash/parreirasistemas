@@ -171,5 +171,6 @@ class Store {
     }
 }
 
-// Inicializa o Store globalmente
-const store = new Store();
+// Inicializa o Store como variável global (window.store)
+window.store = new Store();
+const store = window.store; // alias para compatibilidade com scripts internos

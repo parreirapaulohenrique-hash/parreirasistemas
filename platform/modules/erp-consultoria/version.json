@@ -1,8 +1,8 @@
 {
     "module": "erp-consultoria",
     "name": "Consultoria ParreiraLog",
-    "version": "11.7.2",
-    "date": "2026-04-29",
-    "last_change": "FIX: openClientSelection agora dispara renderClientsList ao abrir tela de seleção, garantindo carregamento dos cards de cliente do Firebase no momento certo",
-    "build": "20260429.03"
+    "version": "11.7.3",
+    "date": "2026-04-30",
+    "last_change": "FIX: store exposto como window.store no fc-store.js — const não era acessível globalmente, impedindo fluxo-caixa.js de chamar store.getClients()",
+    "build": "20260430.01"
 }
