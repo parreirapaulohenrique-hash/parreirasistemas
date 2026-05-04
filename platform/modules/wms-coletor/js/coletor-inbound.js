@@ -46,6 +46,28 @@ function _mostrarFeedbackCheckin(tipo, html) {
 
 async function _consultarEIniciarCheckin(chave) {
     _mostrarFeedbackCheckin('loading', 'Consultando ERP...');
+
+    // ── Bloqueia entrada duplicada da mesma chave NF-e ──────────────────────
+    const receipts = JSON.parse(localStorage.getItem('wms_receipts_v2') || '[]');
+    const jaExiste = receipts.find(r => (r.chaveNfe || '').replace(/\D/g, '') === chave);
+    if (jaExiste) {
+        const statusLabel = {
+            'AGUARDANDO_CONFERENCIA':    '⏳ Aguardando Conferência Física',
+            'CONFERENCIA_ITENS_PENDENTE':'🔍 Conferência de Itens Pendente',
+            'RECEBIDO':                  '✅ Já Recebida e Conferida',
+            'CANCELADO':                 '🚫 Cancelada',
+        }[jaExiste.status] || jaExiste.status;
+
+        _mostrarFeedbackCheckin('warning',
+            `🚫 NF <strong>${jaExiste.nfNumero}</strong> já foi registrada nesta unidade.<br>
+             Status atual: <strong>${statusLabel}</strong><br>
+             <small>Chave: ${chave.substring(0,20)}...${chave.slice(-4)}</small>`
+        );
+        Feedback.beep('error'); Feedback.flash('error');
+        return;
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
     try {
         const res = await WmsProcedures.proc_buscar_nf_destinada(chave);
         if (res.found) {
