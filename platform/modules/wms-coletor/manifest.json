@@ -1,4 +1,5 @@
 {
+    "id": "br.com.parreirasistemas.wmscoletor",
     "name": "ParreiraLog WMS",
     "short_name": "WMS Coletor",
     "description": "Coletor WMS para operações de recebimento, armazenagem e separação",
