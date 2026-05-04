@@ -141,7 +141,7 @@ function _renderTelaConferencia(r) {
 
     container.innerHTML = `
         <!-- Header -->
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;">
             <div>
                 <strong style="font-size:.95rem;color:#0ea5e9;">📋 NF ${r.nfNumero}</strong>
                 ${temDiv ? `<span style="font-size:.7rem;background:rgba(245,158,11,.2);color:#f59e0b;padding:.15rem .4rem;border-radius:4px;margin-left:.4rem;">⚠️ ${r.condicaoCarga}</span>` : ''}
@@ -152,45 +152,46 @@ function _renderTelaConferencia(r) {
             </button>
         </div>
 
-        <!-- Barra de progresso -->
-        <div style="background:rgba(14,165,233,.07);border:1px solid rgba(14,165,233,.2);border-radius:8px;padding:.7rem;margin-bottom:.9rem;">
-            <div style="display:flex;justify-content:space-between;font-size:.75rem;margin-bottom:.4rem;">
-                <span style="color:#0ea5e9;font-weight:600;">Progresso da Conferência</span>
-                <span id="conf-pct-label" style="color:var(--text-secondary);">${itensConferidos}/${totalItens} SKUs · ${pct}%</span>
+        <!-- Progresso compacto -->
+        <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem;">
+            <div style="flex:1;height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;">
+                <div id="conf-progress-bar" style="height:100%;width:${pct}%;background:#0ea5e9;border-radius:3px;transition:width .4s;"></div>
             </div>
-            <div style="height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;">
-                <div id="conf-progress-bar" style="height:100%;width:${pct}%;background:#0ea5e9;border-radius:3px;transition:width .3s;"></div>
-            </div>
+            <span id="conf-pct-label" style="font-size:.72rem;color:var(--text-secondary);white-space:nowrap;">${itensConferidos}/${totalItens} · ${pct}%</span>
+            <span style="font-size:.72rem;padding:.1rem .4rem;border-radius:4px;background:${isCega ? 'rgba(245,158,11,.15)' : 'rgba(16,185,129,.15)'};color:${isCega ? '#f59e0b' : '#10b981'}">
+                ${isCega ? '👁‍🗨 Cega' : '👁 Aberta'}
+            </span>
         </div>
 
-        <!-- Badge modo contagem -->
-        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem;padding:.5rem .75rem;background:rgba(255,255,255,.04);border-radius:6px;border:1px solid rgba(255,255,255,.06);">
-            <span class="material-icons-round" style="font-size:1rem;color:${isCega ? '#f59e0b' : '#10b981'};">${isCega ? 'visibility_off' : 'visibility'}</span>
-            <span style="font-size:.78rem;font-weight:600;color:${isCega ? '#f59e0b' : '#10b981'};">${isCega ? 'Contagem Cega' : 'Contagem Aberta'}</span>
-            <span style="font-size:.72rem;color:var(--text-secondary);">${isCega ? '— qtde. esperada oculta' : '— qtde. esperada visível'}</span>
+        <!-- PAINEL ÚLTIMO LIDO (scanner feedback) -->
+        <div id="conf-ultimo-lido" style="border-radius:10px;padding:.75rem;margin-bottom:.75rem;
+            background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.1);
+            min-height:62px;display:flex;align-items:center;gap:.75rem;">
+            <span class="material-icons-round" style="font-size:2rem;color:rgba(255,255,255,.15);">qr_code_scanner</span>
+            <div style="font-size:.8rem;color:var(--text-secondary);">Bipe o código de barras do produto…</div>
         </div>
 
         <!-- Lista de SKUs -->
-        <div id="conf-itens-lista" style="display:flex;flex-direction:column;gap:.45rem;margin-bottom:5rem;">
+        <div id="conf-itens-lista" style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:5rem;">
             ${_renderItensHtml(r, isCega)}
         </div>
 
-        <!-- Botão Finalizar fixo no rodapé -->
+        <!-- Botão Finalizar fixo -->
         <div style="position:fixed;bottom:75px;left:0;width:100%;padding:0 1rem;box-sizing:border-box;">
-            <button class="m-btn m-btn-primary" id="conf-btn-finalizar" onclick="finalizarConferencia()" style="width:100%;font-size:.95rem;box-shadow:0 4px 20px rgba(14,165,233,.3);">
+            <button class="m-btn m-btn-primary" id="conf-btn-finalizar" onclick="finalizarConferencia()"
+                style="width:100%;font-size:.95rem;box-shadow:0 4px 20px rgba(14,165,233,.3);">
                 <span class="material-icons-round">done_all</span> Finalizar Conferência
             </button>
         </div>
     `;
 }
 
-// ─── RENDERIZA LISTA DE ITENS (HTML) ──────────────────────────────────────────
+// ─── RENDERIZA LISTA DE ITENS — compacto, scanner-first ──────────────────────
 function _renderItensHtml(r, isCega) {
     if (!r.itens || r.itens.length === 0) {
         return `<div style="text-align:center;padding:2rem;color:var(--text-secondary);font-size:.82rem;">
             <span class="material-icons-round" style="font-size:2.5rem;opacity:.3;">inventory_2</span>
-            <p style="margin-top:.5rem;">Esta NF não possui itens declarados no XML para conferência.<br>
-            <small>Você pode finalizar a conferência diretamente.</small></p>
+            <p style="margin-top:.5rem;">NF sem itens declarados. Finalize diretamente.</p>
         </div>`;
     }
 
@@ -202,66 +203,25 @@ function _renderItensHtml(r, isCega) {
         const excesso  = lido > esperado;
         const zerado   = lido === 0;
 
-        // Cores e ícones
-        let borderColor = 'rgba(255,255,255,.08)';
-        let bg          = 'rgba(255,255,255,.03)';
+        let borderColor = 'rgba(255,255,255,.07)';
+        let bg          = 'rgba(255,255,255,.02)';
         let icone       = 'radio_button_unchecked';
-        let iconeColor  = 'var(--text-secondary)';
+        let iconeColor  = 'rgba(255,255,255,.25)';
+        if (excesso)      { borderColor='rgba(245,158,11,.4)'; bg='rgba(245,158,11,.06)'; icone='warning';               iconeColor='#f59e0b'; }
+        else if (ok)      { borderColor='rgba(16,185,129,.4)';  bg='rgba(16,185,129,.06)';  icone='check_circle';          iconeColor='#10b981'; }
+        else if (!zerado) { borderColor='rgba(14,165,233,.35)'; bg='rgba(14,165,233,.05)';  icone='pending';               iconeColor='#0ea5e9'; }
 
-        if (zerado) {
-            // Não bipado ainda
-        } else if (excesso) {
-            borderColor = 'rgba(245,158,11,.4)'; bg = 'rgba(245,158,11,.06)';
-            icone = 'warning'; iconeColor = '#f59e0b';
-        } else if (ok) {
-            borderColor = 'rgba(16,185,129,.4)'; bg = 'rgba(16,185,129,.06)';
-            icone = 'check_circle'; iconeColor = '#10b981';
-        } else {
-            // Parcialmente bipado
-            borderColor = 'rgba(14,165,233,.3)'; bg = 'rgba(14,165,233,.04)';
-            icone = 'pending'; iconeColor = '#0ea5e9';
-        }
-
-        // Coluna da direita — depende do modo contagem
-        const colunaDir = isCega
-            ? `<div style="text-align:right;">
-                   <div style="font-size:1.15rem;font-weight:700;color:${zerado ? 'var(--text-secondary)' : iconeColor};">${lido}</div>
-                   <div style="font-size:.65rem;color:var(--text-secondary);">LIDOS</div>
-               </div>`
-            : `<div style="text-align:right;">
-                   <div style="font-size:.68rem;color:var(--text-secondary);">ESP: <strong>${esperado}</strong></div>
-                   <div style="font-size:1rem;font-weight:700;color:${zerado ? 'var(--text-secondary)' : iconeColor};">
-                       LID: ${lido}${diff > 0 ? ` <span style="font-size:.72rem;color:#f59e0b;">+${diff}</span>` : diff < 0 ? ` <span style="font-size:.72rem;color:#ef4444;">${diff}</span>` : ''}
-                   </div>
+        const qtyRight = isCega
+            ? `<div style="font-size:1.4rem;font-weight:800;color:${zerado?'rgba(255,255,255,.2)':iconeColor};min-width:2.5rem;text-align:center;">${lido}</div>`
+            : `<div style="text-align:center;min-width:3.5rem;">
+                 <div style="font-size:.62rem;color:var(--text-secondary);">ESP</div>
+                 <div style="font-size:.85rem;font-weight:700;color:var(--text-secondary);">${esperado}</div>
+                 <div style="font-size:.6rem;color:var(--text-secondary);margin:.1rem 0;">LID</div>
+                 <div style="font-size:1.2rem;font-weight:800;color:${zerado?'rgba(255,255,255,.2)':iconeColor};">${lido}${diff>0?`<span style='font-size:.6rem;'>+${diff}</span>`:diff<0?`<span style='font-size:.6rem;'>${diff}</span>`:''}</div>
                </div>`;
 
+        const skuId = it.sku.replace(/[^a-z0-9]/gi,'_');
         return `
-        <div style="background:${bg};border:1px solid ${borderColor};border-radius:8px;padding:.65rem;">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-                <div style="display:flex;align-items:flex-start;gap:.5rem;flex:1;">
-                    <span class="material-icons-round" style="color:${iconeColor};font-size:1.1rem;margin-top:.1rem;">${icone}</span>
-                    <div style="flex:1;">
-                        <div style="font-family:monospace;font-size:.68rem;color:var(--text-secondary);">${it.sku}</div>
-                        <div style="font-size:.82rem;font-weight:600;line-height:1.3;margin-top:.1rem;">
-                            ${it.descricao.length > 40 ? it.descricao.substring(0,40) + '…' : it.descricao}
-                        </div>
-                        <div style="font-size:.7rem;color:var(--text-secondary);margin-top:.2rem;">${it.unidade || 'UN'}</div>
-                    </div>
-                </div>
-                <div style="margin-left:.75rem;">${colunaDir}</div>
-            </div>
-            <!-- Input manual de quantidade (toque no card) -->
-            <div style="margin-top:.5rem;display:flex;gap:.4rem;">
-                <input type="number" min="0"
-                    id="manual-${it.sku.replace(/[^a-z0-9]/gi,'_')}"
-                    class="m-input" placeholder="Qtde. lida"
-                    style="flex:1;height:32px;font-size:.82rem;"
-                    value="${lido > 0 ? lido : ''}"
-                    onchange="registrarManualConf('${it.sku}', this.value)">
-                <button class="m-btn" style="height:32px;padding:0 .6rem;background:rgba(14,165,233,.15);color:#0ea5e9;border:1px solid rgba(14,165,233,.3);border-radius:6px;"
-                    onclick="registrarManualConf('${it.sku}', document.getElementById('manual-${it.sku.replace(/[^a-z0-9]/gi,'_')}').value)">
-                    <span class="material-icons-round" style="font-size:.9rem;">check</span>
-                </button>
             </div>
         </div>`;
     }).join('');
@@ -279,25 +239,65 @@ function _registrarBipagem(code) {
 
     if (!item) {
         Feedback.beep('error');
-        showToast('SKU não pertence a esta NF.', 'danger');
+        _atualizarUltimoLido(null, cln, 'notfound');
         return;
     }
 
     r._leituras[item.sku] = (r._leituras[item.sku] || 0) + 1;
     const lido     = r._leituras[item.sku];
     const esperado = Number(item.quantidade);
+    const status   = lido > esperado ? 'excesso' : lido === esperado ? 'ok' : 'parcial';
 
-    if (lido > esperado) {
-        Feedback.beep('error');
-        showToast(`⚠️ Excesso: ${item.sku} — ${lido} bipado(s) vs ${esperado} esperado(s)`, 'warning');
-    } else {
-        Feedback.beep('success');
-        if (lido === esperado) showToast(`✅ ${item.sku} completo!`, 'success');
-    }
+    if (status === 'excesso') Feedback.beep('error');
+    else Feedback.beep('success');
 
     receipts[rIdx] = r;
     localStorage.setItem('wms_receipts_v2', JSON.stringify(receipts));
+
+    _atualizarUltimoLido(item, lido, status, esperado);
     _atualizarUiConferencia(r);
+
+    // Scroll para o item e re-foco no scanner
+    setTimeout(() => {
+        const card = document.getElementById('item-card-' + item.sku.replace(/[^a-z0-9]/gi,'_'));
+        if (card) card.scrollIntoView({ behavior:'smooth', block:'nearest' });
+        const inp = document.getElementById('scannerInput');
+        if (inp) inp.focus();
+    }, 120);
+}
+
+// ─── PAINEL ÚLTIMO LIDO ───────────────────────────────────────────────────────
+function _atualizarUltimoLido(item, lido, status, esperado) {
+    const panel = document.getElementById('conf-ultimo-lido');
+    if (!panel) return;
+
+    if (status === 'notfound') {
+        panel.style.background = 'rgba(239,68,68,.1)';
+        panel.style.borderColor = 'rgba(239,68,68,.4)';
+        panel.innerHTML = `
+            <span class="material-icons-round" style="font-size:2rem;color:#ef4444;">error_outline</span>
+            <div><div style="font-size:.82rem;font-weight:700;color:#ef4444;">Código não encontrado nesta NF</div>
+            <div style="font-size:.72rem;color:var(--text-secondary);font-family:monospace;">${lido}</div></div>`;
+        return;
+    }
+
+    const colors = { ok:'#10b981', excesso:'#f59e0b', parcial:'#0ea5e9' };
+    const icons  = { ok:'check_circle', excesso:'warning', parcial:'pending' };
+    const msgs   = { ok:'✅ Completo!', excesso:`⚠️ Excesso! (esp: ${esperado})`, parcial:`${lido}/${esperado}` };
+    const c = colors[status]; const ico = icons[status];
+
+    panel.style.background   = `rgba(${status==='ok'?'16,185,129':status==='excesso'?'245,158,11':'14,165,233'},.08)`;
+    panel.style.borderColor  = `rgba(${status==='ok'?'16,185,129':status==='excesso'?'245,158,11':'14,165,233'},.4)`;
+    panel.innerHTML = `
+        <span class="material-icons-round" style="font-size:2.2rem;color:${c};flex-shrink:0;">${ico}</span>
+        <div style="flex:1;min-width:0;">
+            <div style="font-size:.68rem;color:var(--text-secondary);font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.sku}</div>
+            <div style="font-size:.88rem;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.descricao}</div>
+        </div>
+        <div style="text-align:center;flex-shrink:0;">
+            <div style="font-size:2rem;font-weight:900;color:${c};line-height:1;">${lido}</div>
+            <div style="font-size:.68rem;color:${c};font-weight:600;">${msgs[status]}</div>
+        </div>`;
 }
 
 // ─── REGISTRAR QTD MANUAL ─────────────────────────────────────────────────────
