@@ -252,13 +252,15 @@ window.iniciarConferenciaFisica = function(id) {
             <div style="display:flex;gap:.5rem;">
                 <div style="flex:1;">
                     <label style="font-size:.72rem;color:var(--text-secondary);display:block;margin-bottom:.25rem;">Vol. NF</label>
-                    <input type="number" class="m-input" value="${r.volumesNF || 0}" readonly style="background:rgba(0,0,0,.1);">
+                    <input type="number" id="cconf-vol-nf" class="m-input" value="${r.volumesNF || 0}" readonly style="background:rgba(0,0,0,.1);">
                 </div>
                 <div style="flex:1;">
                     <label style="font-size:.72rem;color:var(--text-secondary);display:block;margin-bottom:.25rem;">Vol. Físico *</label>
-                    <input id="cconf-vol-fis" type="number" class="m-input" min="0">
+                    <input id="cconf-vol-fis" type="number" class="m-input" min="0" placeholder="0" oninput="checkVolumeDivergencia(${r.volumesNF || 0})">
                 </div>
             </div>
+            <!-- Indicador de comparação de volumes -->
+            <div id="cconf-vol-indicator" style="display:none;padding:.5rem .75rem;border-radius:8px;font-size:.82rem;font-weight:600;text-align:center;"></div>
             <div>
                 <label style="font-size:.72rem;color:var(--text-secondary);display:block;margin-bottom:.25rem;">Condição da Carga *</label>
                 <select id="cconf-condicao" class="m-input" onchange="toggleDivConf()">
@@ -298,6 +300,62 @@ window.iniciarConferenciaFisica = function(id) {
 window.toggleDivConf = function() {
     const cond = document.getElementById('cconf-condicao')?.value;
     document.getElementById('cconf-div-bloco').style.display = cond !== 'OK' ? 'block' : 'none';
+};
+
+// v1.1 — Detecção automática de divergência por volume
+window.checkVolumeDivergencia = function(volNF) {
+    const input = document.getElementById('cconf-vol-fis');
+    const indicator = document.getElementById('cconf-vol-indicator');
+    const condicao = document.getElementById('cconf-condicao');
+    if (!input || !indicator || !condicao) return;
+
+    const volFis = parseInt(input.value);
+    if (isNaN(volFis) || input.value === '') {
+        indicator.style.display = 'none';
+        return;
+    }
+
+    const diff = volFis - volNF;
+    indicator.style.display = 'block';
+
+    if (diff === 0) {
+        // Volumes conferem
+        indicator.style.background = 'rgba(16,185,129,.12)';
+        indicator.style.color = '#10b981';
+        indicator.style.border = '1px solid rgba(16,185,129,.3)';
+        indicator.textContent = `✅ Volumes OK — ${volFis} vol. conferido(s) conforme NF`;
+        condicao.value = 'OK';
+        document.getElementById('cconf-div-bloco').style.display = 'none';
+
+    } else if (diff < 0) {
+        // Falta volumes
+        const faltam = Math.abs(diff);
+        indicator.style.background = 'rgba(239,68,68,.1)';
+        indicator.style.color = '#ef4444';
+        indicator.style.border = '1px solid rgba(239,68,68,.3)';
+        indicator.textContent = `⚠️ FALTA — ${volFis} recebido(s) vs ${volNF} esperado(s) · Diferença: -${faltam} vol.`;
+        condicao.value = 'FALTA';
+        document.getElementById('cconf-div-bloco').style.display = 'block';
+        // Pré-preenche campo Faltantes
+        const fEl = document.getElementById('cconf-faltantes');
+        if (fEl) fEl.value = faltam;
+        const eEl = document.getElementById('cconf-excesso');
+        if (eEl) eEl.value = 0;
+
+    } else {
+        // Excesso de volumes
+        indicator.style.background = 'rgba(245,158,11,.1)';
+        indicator.style.color = '#f59e0b';
+        indicator.style.border = '1px solid rgba(245,158,11,.3)';
+        indicator.textContent = `📦 EXCESSO — ${volFis} recebido(s) vs ${volNF} esperado(s) · Excesso: +${diff} vol.`;
+        condicao.value = 'EXCESSO';
+        document.getElementById('cconf-div-bloco').style.display = 'block';
+        // Pré-preenche campo Excesso
+        const eEl = document.getElementById('cconf-excesso');
+        if (eEl) eEl.value = diff;
+        const fEl = document.getElementById('cconf-faltantes');
+        if (fEl) fEl.value = 0;
+    }
 };
 
 window.addFotoConf = function(input) {
