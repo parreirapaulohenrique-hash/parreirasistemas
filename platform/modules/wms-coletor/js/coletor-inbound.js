@@ -321,7 +321,45 @@ window.iniciarConferenciaFisica = function(id) {
 
 window.toggleDivConf = function() {
     const cond = document.getElementById('cconf-condicao')?.value;
-    document.getElementById('cconf-div-bloco').style.display = cond !== 'OK' ? 'block' : 'none';
+    const blocoDiv = document.getElementById('cconf-div-bloco');
+
+    // Mostra/oculta o bloco de divergência
+    blocoDiv.style.display = cond !== 'OK' ? 'block' : 'none';
+
+    // Redistribuição inteligente de valores entre os campos
+    const elFaltantes = document.getElementById('cconf-faltantes');
+    const elAvariados = document.getElementById('cconf-avariados');
+    const elExcesso   = document.getElementById('cconf-excesso');
+    if (!elFaltantes || !elAvariados) return;
+
+    const faltantes = parseInt(elFaltantes.value) || 0;
+    const avariados = parseInt(elAvariados.value) || 0;
+
+    if (cond === 'AVARIA_PARCIAL' || cond === 'AVARIA_TOTAL') {
+        // Veio de FALTA? Migra faltantes → avariados
+        if (faltantes > 0 && avariados === 0) {
+            elAvariados.value = faltantes;
+            elFaltantes.value = 0;
+        }
+        // Avaria total: zera excesso (semanticamente não faz sentido)
+        if (cond === 'AVARIA_TOTAL' && elExcesso) elExcesso.value = 0;
+
+    } else if (cond === 'FALTA') {
+        // Veio de AVARIA? Migra avariados → faltantes
+        if (avariados > 0 && faltantes === 0) {
+            elFaltantes.value = avariados;
+            elAvariados.value = 0;
+        }
+        if (elExcesso) elExcesso.value = 0;
+
+    } else if (cond === 'EXCESSO') {
+        // Excesso: zera faltantes e avariados
+        elFaltantes.value = 0;
+        elAvariados.value = 0;
+
+    } else if (cond === 'LACRE_ROMPIDO') {
+        // Lacre rompido: mantém os valores já preenchidos, não altera nada
+    }
 };
 
 // v1.1 — Detecção automática de divergência por volume
