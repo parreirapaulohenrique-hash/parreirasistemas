@@ -1188,7 +1188,8 @@ const _originalNavigateTo = window.navigateTo || navigateTo;
         // Replace placeholder with real screen if available
         switch (screenId) {
             case 'recebimento':
-                if (!window._recebimentoNF) initRecebimentoScreen(container);
+                // Rota para a nova tela Conferir (coletor-conferencia.js)
+                if (window.initConferenciaItensScreen) initConferenciaItensScreen(container);
                 break;
             case 'armazenar':
                 initArmazenarScreen(container);
