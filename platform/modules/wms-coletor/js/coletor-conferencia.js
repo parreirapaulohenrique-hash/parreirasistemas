@@ -1,292 +1,439 @@
-// WMS Coletor — Inbound V3
-// Conferência de Itens (SKUs)
-// Etapa final do fluxo: Portaria -> Doca -> CONFERÊNCIA DE ITENS
+// =============================================================================
+// WMS Coletor — Tela "Conferir" (Conferência de Recebimento)
+// Etapa final do fluxo: Portaria → Doca → CONFERIR
+// Parâmetros configuráveis via WMS > Configurações (para uso futuro):
+//   - contagemCega: oculta qtde esperada durante bipagem
+//   - conferenciaPorVolume: confirma por volume (não por SKU)
+//   - alertaExcesso: toca alerta quando SKU ultrapassa qtde esperada
+// =============================================================================
 
+// ─── ESTADO GLOBAL DA SESSÃO ─────────────────────────────────────────────────
+window._confSessao = {
+    nfId:    null,   // ID do recibo ativo
+    inicio:  null,   // Timestamp de início da conferência
+    ativo:   false,  // Se há conferência em andamento
+};
+
+// ─── TELA INICIAL — LISTA DE NFs AGUARDANDO CONFERÊNCIA ──────────────────────
 window.initConferenciaItensScreen = function(container) {
-    const key = 'wms_receipts_v2';
-    const receipts = JSON.parse(localStorage.getItem(key) || '[]');
-    // Pegar as notas que já passaram da Doca
-    const pending = receipts.filter(r => r.status === 'CONFERENCIA_ITENS_PENDENTE').reverse();
+    window._confSessao.ativo = false;
+    window._confSessao.nfId  = null;
+
+    const receipts = JSON.parse(localStorage.getItem('wms_receipts_v2') || '[]');
+    const pending  = receipts
+        .filter(r => r.status === 'CONFERENCIA_ITENS_PENDENTE')
+        .sort((a, b) => new Date(a.dataCheckin) - new Date(b.dataCheckin)); // FIFO
 
     container.innerHTML = `
+        <!-- Instrução de bipagem -->
         <div class="m-card" style="border-left:3px solid #0ea5e9;margin-bottom:1rem;">
-            <div style="font-weight:600;font-size:.9rem;display:flex;align-items:center;gap:.5rem;color:#0ea5e9;">
-                <span class="material-icons-round">qr_code_scanner</span>
-                Bipe a NF ou Selecione Abaixo para Conferir Produtos
+            <div style="display:flex;align-items:center;gap:.6rem;">
+                <span class="material-icons-round" style="color:#0ea5e9;font-size:1.4rem;">qr_code_scanner</span>
+                <div>
+                    <div style="font-weight:600;font-size:.9rem;color:#0ea5e9;">Bipe a chave NF-e ou selecione abaixo</div>
+                    <div style="font-size:.75rem;color:var(--text-secondary);">Inicia a conferência de produtos da carga recebida</div>
+                </div>
             </div>
         </div>
 
-        <div style="font-size:.85rem;font-weight:600;color:var(--text-secondary);margin-bottom:.75rem;">
-            Aguardando Conferência Cega/Aberta (${pending.length})
+        <!-- Contador -->
+        <div style="font-size:.82rem;font-weight:600;color:var(--text-secondary);margin-bottom:.65rem;display:flex;justify-content:space-between;align-items:center;">
+            <span>Cargas Aguardando Conferência</span>
+            <span style="background:rgba(14,165,233,.15);color:#0ea5e9;padding:.2rem .55rem;border-radius:999px;font-size:.75rem;">${pending.length}</span>
         </div>
 
-        ${pending.length > 0 ? pending.map(r => `
-            <div class="m-card" style="padding:.85rem;cursor:pointer;" onclick="iniciarConferenciaItens('${r.id}')">
-                <div style="display:flex;justify-content:space-between;align-items:start;">
+        <!-- Lista de NFs -->
+        ${pending.length > 0 ? pending.map(r => {
+            const totalItens  = (r.itens || []).length;
+            const itensBipados = (r.itens || []).filter(it => (r._leituras?.[it.sku] || 0) > 0).length;
+            const pct = totalItens > 0 ? Math.round((itensBipados / totalItens) * 100) : 0;
+            const temDiv = r.condicaoCarga && r.condicaoCarga !== 'OK';
+            const dtCheckin = r.dataCheckin ? new Date(r.dataCheckin).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+
+            return `
+            <div class="m-card" style="padding:.85rem;cursor:pointer;margin-bottom:.6rem;" onclick="iniciarConferirItens('${r.id}')">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.5rem;">
                     <div>
-                        <strong style="font-size:.9rem;">NF: ${r.nfNumero}</strong><br>
+                        <strong style="font-size:.92rem;">NF ${r.nfNumero}</strong>
+                        ${temDiv ? `<span style="font-size:.68rem;background:rgba(245,158,11,.2);color:#f59e0b;padding:.1rem .4rem;border-radius:4px;margin-left:.4rem;">⚠️ ${r.condicaoCarga}</span>` : ''}
+                        <br>
                         <span style="font-size:.75rem;color:var(--text-secondary);">${r.fornecedor}</span>
                     </div>
-                    <span class="m-badge" style="background:rgba(14,165,233,.15);color:#0ea5e9;">PRODUTOS</span>
+                    <span class="m-badge" style="background:rgba(14,165,233,.15);color:#0ea5e9;white-space:nowrap;">
+                        <span class="material-icons-round" style="font-size:.75rem;vertical-align:middle;">fact_check</span> CONFERIR
+                    </span>
                 </div>
-                <div style="margin-top:.5rem;font-size:.75rem;color:var(--text-secondary);display:flex;gap:1rem;">
-                    <span><span class="material-icons-round" style="font-size:.8rem;vertical-align:middle;">local_shipping</span> ${r.doca}</span>
-                    <span><span class="material-icons-round" style="font-size:.8rem;vertical-align:middle;">widgets</span> Itens: ${r.itens?.length || 0}</span>
+                <div style="font-size:.73rem;color:var(--text-secondary);display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.55rem;">
+                    <span><span class="material-icons-round" style="font-size:.78rem;vertical-align:middle;">local_shipping</span> ${r.doca}</span>
+                    <span><span class="material-icons-round" style="font-size:.78rem;vertical-align:middle;">widgets</span> ${totalItens} SKU(s)</span>
+                    <span><span class="material-icons-round" style="font-size:.78rem;vertical-align:middle;">schedule</span> ${dtCheckin}</span>
                 </div>
-            </div>
-        `).join('') : `
-            <div style="text-align:center;padding:2rem 1rem;color:var(--text-secondary);">
-                <span class="material-icons-round" style="font-size:3rem;opacity:.3;">inventory_2</span>
-                <p style="margin-top:.5rem;">Nenhuma carga aguardando conferência de itens no piso.</p>
+                ${totalItens > 0 ? `
+                <div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;">
+                    <div style="height:100%;width:${pct}%;background:#0ea5e9;border-radius:2px;transition:width .3s;"></div>
+                </div>
+                <div style="font-size:.68rem;color:var(--text-secondary);margin-top:.2rem;">${itensBipados}/${totalItens} SKUs iniciados · ${pct}%</div>
+                ` : ''}
+            </div>`;
+        }).join('') : `
+            <div style="text-align:center;padding:3rem 1rem;color:var(--text-secondary);">
+                <span class="material-icons-round" style="font-size:3.5rem;opacity:.25;">inventory_2</span>
+                <p style="margin-top:.75rem;font-size:.85rem;">Nenhuma carga aguardando conferência.</p>
+                <p style="font-size:.75rem;opacity:.7;">Após o Check-in e Recebimento na Doca, as NFs aparecerão aqui.</p>
             </div>
         `}
     `;
 };
 
+// ─── SCAN na tela inicial ──────────────────────────────────────────────────────
 window.handleScanConferenciaItens = function(code) {
-    if (window._skuConfAtiva) {
-        _biparProdutoConferencia(code);
+    // Se já está com conferência ativa, bipa produto
+    if (window._confSessao.ativo) {
+        _registrarBipagem(code);
         return;
     }
 
-    const clean = code.replace(/\D/g, '');
-    const key = 'wms_receipts_v2';
-    const receipts = JSON.parse(localStorage.getItem(key) || '[]');
-    const target = receipts.find(r => r.status === 'CONFERENCIA_ITENS_PENDENTE' && 
-                                     ((clean.length === 44 && r.chaveNfe === clean) || (clean.length < 44 && r.nfNumero == clean)));
+    const clean    = code.replace(/\D/g, '');
+    const receipts = JSON.parse(localStorage.getItem('wms_receipts_v2') || '[]');
+    const target   = receipts.find(r =>
+        r.status === 'CONFERENCIA_ITENS_PENDENTE' &&
+        ((clean.length === 44 && (r.chaveNfe || '').replace(/\D/g, '') === clean) ||
+         (clean.length < 44 && String(r.nfNumero) === clean))
+    );
+
     if (target) {
-        iniciarConferenciaItens(target.id);
+        iniciarConferirItens(target.id);
     } else {
-        Feedback.beep('error'); showToast('NF não encontrada para conferência de produtos.', 'danger');
+        Feedback.beep('error');
+        showToast('NF não encontrada na fila de conferência.', 'danger');
     }
 };
 
-window.iniciarConferenciaItens = function(id) {
+// ─── INICIAR CONFERÊNCIA DE UMA NF ───────────────────────────────────────────
+window.iniciarConferirItens = function(id) {
     const receipts = JSON.parse(localStorage.getItem('wms_receipts_v2') || '[]');
     const r = receipts.find(x => x.id === id);
     if (!r) return;
 
-    window._skuConfAtiva = true;
-    window._confNfId = id;
-
-    // Inicializar estado de contagem
+    // Inicializa leituras zeradas se ainda não existir
     if (!r._leituras) {
         r._leituras = {};
-        (r.itens || []).forEach(it => {
-            r._leituras[it.sku] = 0;
-        });
+        (r.itens || []).forEach(it => { r._leituras[it.sku] = 0; });
+        const idx = receipts.findIndex(x => x.id === id);
+        receipts[idx] = r;
+        localStorage.setItem('wms_receipts_v2', JSON.stringify(receipts));
     }
 
-    _renderBaseConferencia(r);
+    window._confSessao = { nfId: id, inicio: new Date().toISOString(), ativo: true };
+    _renderTelaConferencia(r);
 };
 
-function _renderBaseConferencia(r) {
-    const cfg = JSON.parse(localStorage.getItem('wms_config') || '{}');
-    const isCega = cfg.geral?.contagemCega !== false;
-    const container = document.getElementById('screen-recebimento'); // the placeholder used by router
+// ─── RENDERIZA TELA DE CONFERÊNCIA ───────────────────────────────────────────
+function _renderTelaConferencia(r) {
+    const container = document.getElementById('screen-recebimento');
+    const cfg       = JSON.parse(localStorage.getItem('wms_config') || '{}');
+    const isCega    = cfg.geral?.contagemCega !== false; // default: cega ativa
 
-    // Render header
+    const totalItens     = (r.itens || []).length;
+    const itensConferidos = (r.itens || []).filter(it => (r._leituras?.[it.sku] || 0) >= it.quantidade).length;
+    const pct = totalItens > 0 ? Math.round((itensConferidos / totalItens) * 100) : 0;
+    const temDiv = r.condicaoCarga && r.condicaoCarga !== 'OK';
+
     container.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-            <strong style="font-size:.95rem;color:#0ea5e9;">🏷️ Bipar Produtos: NF ${r.nfNumero}</strong>
-            <button class="m-btn m-btn-outline" onclick="fecharConferenciaItens()"
-                style="font-size:.75rem;padding:.3rem .65rem;">
-                <span class="material-icons-round" style="font-size:.9rem;">close</span>
+        <!-- Header -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+            <div>
+                <strong style="font-size:.95rem;color:#0ea5e9;">📋 NF ${r.nfNumero}</strong>
+                ${temDiv ? `<span style="font-size:.7rem;background:rgba(245,158,11,.2);color:#f59e0b;padding:.15rem .4rem;border-radius:4px;margin-left:.4rem;">⚠️ ${r.condicaoCarga}</span>` : ''}
+                <div style="font-size:.72rem;color:var(--text-secondary);margin-top:.1rem;">${r.fornecedor}</div>
+            </div>
+            <button class="m-btn m-btn-outline" onclick="fecharConferenciaItens()" style="font-size:.75rem;padding:.3rem .65rem;">
+                <span class="material-icons-round" style="font-size:.9rem;">arrow_back</span>
             </button>
         </div>
-        
-        <div style="background:rgba(14,165,233,.07);border:1px solid rgba(14,165,233,.2);border-radius:8px;padding:.65rem;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;">
-            <span class="material-icons-round" style="color:#0ea5e9;font-size:1.2rem;">${isCega ? 'visibility_off' : 'visibility'}</span>
-            <div style="font-size:.78rem;">
-                <div style="font-weight:600;color:#0ea5e9;">${isCega ? 'Contagem Cega' : 'Contagem Aberta'}</div>
-                <div style="color:var(--text-secondary);">${isCega ? 'Quantidades esperadas ocultas.' : 'Você pode ver o esperado.'}</div>
+
+        <!-- Barra de progresso -->
+        <div style="background:rgba(14,165,233,.07);border:1px solid rgba(14,165,233,.2);border-radius:8px;padding:.7rem;margin-bottom:.9rem;">
+            <div style="display:flex;justify-content:space-between;font-size:.75rem;margin-bottom:.4rem;">
+                <span style="color:#0ea5e9;font-weight:600;">Progresso da Conferência</span>
+                <span id="conf-pct-label" style="color:var(--text-secondary);">${itensConferidos}/${totalItens} SKUs · ${pct}%</span>
+            </div>
+            <div style="height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;">
+                <div id="conf-progress-bar" style="height:100%;width:${pct}%;background:#0ea5e9;border-radius:3px;transition:width .3s;"></div>
             </div>
         </div>
 
-        <div id="c-itens-lista" style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:5rem;"></div>
+        <!-- Badge modo contagem -->
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem;padding:.5rem .75rem;background:rgba(255,255,255,.04);border-radius:6px;border:1px solid rgba(255,255,255,.06);">
+            <span class="material-icons-round" style="font-size:1rem;color:${isCega ? '#f59e0b' : '#10b981'};">${isCega ? 'visibility_off' : 'visibility'}</span>
+            <span style="font-size:.78rem;font-weight:600;color:${isCega ? '#f59e0b' : '#10b981'};">${isCega ? 'Contagem Cega' : 'Contagem Aberta'}</span>
+            <span style="font-size:.72rem;color:var(--text-secondary);">${isCega ? '— qtde. esperada oculta' : '— qtde. esperada visível'}</span>
+        </div>
 
-        <div style="position:fixed;bottom:75px;left:0;width:100%;padding:0 1rem;">
-            <button class="m-btn m-btn-primary" onclick="finalizarConferenciaItens()" style="width:100%;box-shadow:0 4px 6px rgba(0,0,0,.2);">
-                <span class="material-icons-round">done_all</span> Finalizar Contagem
+        <!-- Lista de SKUs -->
+        <div id="conf-itens-lista" style="display:flex;flex-direction:column;gap:.45rem;margin-bottom:5rem;">
+            ${_renderItensHtml(r, isCega)}
+        </div>
+
+        <!-- Botão Finalizar fixo no rodapé -->
+        <div style="position:fixed;bottom:75px;left:0;width:100%;padding:0 1rem;box-sizing:border-box;">
+            <button class="m-btn m-btn-primary" id="conf-btn-finalizar" onclick="finalizarConferencia()" style="width:100%;font-size:.95rem;box-shadow:0 4px 20px rgba(14,165,233,.3);">
+                <span class="material-icons-round">done_all</span> Finalizar Conferência
             </button>
         </div>
     `;
-
-    _renderItensConferencia(r, isCega);
 }
 
-function _renderItensConferencia(r, isCega) {
-    const lista = document.getElementById('c-itens-lista');
-    if (!lista) return;
-
+// ─── RENDERIZA LISTA DE ITENS (HTML) ──────────────────────────────────────────
+function _renderItensHtml(r, isCega) {
     if (!r.itens || r.itens.length === 0) {
-        lista.innerHTML = `<div style="text-align:center;padding:1rem;color:var(--text-secondary);font-size:.8rem;">Esta NF não possui itens declarados no XML para bipagem.</div>`;
-        return;
+        return `<div style="text-align:center;padding:2rem;color:var(--text-secondary);font-size:.82rem;">
+            <span class="material-icons-round" style="font-size:2.5rem;opacity:.3;">inventory_2</span>
+            <p style="margin-top:.5rem;">Esta NF não possui itens declarados no XML para conferência.<br>
+            <small>Você pode finalizar a conferência diretamente.</small></p>
+        </div>`;
     }
 
-    let html = '';
-    r.itens.forEach(it => {
-        const leu = r._leituras[it.sku] || 0;
-        const esperado = it.quantidade;
-        let cardStyle = "background:#fff;border:1px solid var(--border);";
-        let qtyDisplay = '';
+    return r.itens.map(it => {
+        const lido     = r._leituras?.[it.sku] || 0;
+        const esperado = Number(it.quantidade);
+        const diff     = lido - esperado;
+        const ok       = lido >= esperado && esperado > 0;
+        const excesso  = lido > esperado;
+        const zerado   = lido === 0;
 
-        if (isCega) {
-            qtyDisplay = `<strong style="font-size:1.1rem;color:var(--primary);">${leu}</strong> <span style="font-size:.7rem;color:var(--text-secondary);">LIDOS</span>`;
-            if (leu > 0) cardStyle = "background:rgba(16,185,129,.05);border-color:#10b981;";
+        // Cores e ícones
+        let borderColor = 'rgba(255,255,255,.08)';
+        let bg          = 'rgba(255,255,255,.03)';
+        let icone       = 'radio_button_unchecked';
+        let iconeColor  = 'var(--text-secondary)';
+
+        if (zerado) {
+            // Não bipado ainda
+        } else if (excesso) {
+            borderColor = 'rgba(245,158,11,.4)'; bg = 'rgba(245,158,11,.06)';
+            icone = 'warning'; iconeColor = '#f59e0b';
+        } else if (ok) {
+            borderColor = 'rgba(16,185,129,.4)'; bg = 'rgba(16,185,129,.06)';
+            icone = 'check_circle'; iconeColor = '#10b981';
         } else {
-            const finished = leu >= esperado;
-            const excess = leu > esperado;
-            if (excess) cardStyle = "background:rgba(245,158,11,.1);border-color:#f59e0b;";
-            else if (finished) cardStyle = "background:rgba(16,185,129,.1);border-color:#10b981;";
-
-            qtyDisplay = `
-                <div style="display:flex;flex-direction:column;align-items:flex-end;">
-                    <div style="font-size:.7rem;color:var(--text-secondary);">ESP: <strong>${esperado}</strong></div>
-                    <div style="font-size:.9rem;color:${finished ? (excess ? '#f59e0b' : '#10b981') : 'var(--text-primary)'};">
-                        LIDO: <strong>${leu}</strong>
-                    </div>
-                </div>
-            `;
+            // Parcialmente bipado
+            borderColor = 'rgba(14,165,233,.3)'; bg = 'rgba(14,165,233,.04)';
+            icone = 'pending'; iconeColor = '#0ea5e9';
         }
 
-        html += `
-            <div class="m-card" style="padding:.65rem;border-radius:6px;${cardStyle}">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
+        // Coluna da direita — depende do modo contagem
+        const colunaDir = isCega
+            ? `<div style="text-align:right;">
+                   <div style="font-size:1.15rem;font-weight:700;color:${zerado ? 'var(--text-secondary)' : iconeColor};">${lido}</div>
+                   <div style="font-size:.65rem;color:var(--text-secondary);">LIDOS</div>
+               </div>`
+            : `<div style="text-align:right;">
+                   <div style="font-size:.68rem;color:var(--text-secondary);">ESP: <strong>${esperado}</strong></div>
+                   <div style="font-size:1rem;font-weight:700;color:${zerado ? 'var(--text-secondary)' : iconeColor};">
+                       LID: ${lido}${diff > 0 ? ` <span style="font-size:.72rem;color:#f59e0b;">+${diff}</span>` : diff < 0 ? ` <span style="font-size:.72rem;color:#ef4444;">${diff}</span>` : ''}
+                   </div>
+               </div>`;
+
+        return `
+        <div style="background:${bg};border:1px solid ${borderColor};border-radius:8px;padding:.65rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="display:flex;align-items:flex-start;gap:.5rem;flex:1;">
+                    <span class="material-icons-round" style="color:${iconeColor};font-size:1.1rem;margin-top:.1rem;">${icone}</span>
                     <div style="flex:1;">
-                        <div style="font-family:monospace;font-size:.7rem;color:var(--text-secondary);">${it.sku}</div>
-                        <div style="font-size:.8rem;font-weight:600;margin-top:.1rem;line-height:1.2;">
-                            ${it.descricao.length > 35 ? it.descricao.substring(0,35)+'...' : it.descricao}
+                        <div style="font-family:monospace;font-size:.68rem;color:var(--text-secondary);">${it.sku}</div>
+                        <div style="font-size:.82rem;font-weight:600;line-height:1.3;margin-top:.1rem;">
+                            ${it.descricao.length > 40 ? it.descricao.substring(0,40) + '…' : it.descricao}
                         </div>
-                    </div>
-                    <div style="margin-left:1rem;text-align:right;">
-                        ${qtyDisplay}
+                        <div style="font-size:.7rem;color:var(--text-secondary);margin-top:.2rem;">${it.unidade || 'UN'}</div>
                     </div>
                 </div>
+                <div style="margin-left:.75rem;">${colunaDir}</div>
             </div>
-        `;
-    });
-
-    lista.innerHTML = html;
+            <!-- Input manual de quantidade (toque no card) -->
+            <div style="margin-top:.5rem;display:flex;gap:.4rem;">
+                <input type="number" min="0"
+                    id="manual-${it.sku.replace(/[^a-z0-9]/gi,'_')}"
+                    class="m-input" placeholder="Qtde. lida"
+                    style="flex:1;height:32px;font-size:.82rem;"
+                    value="${lido > 0 ? lido : ''}"
+                    onchange="registrarManualConf('${it.sku}', this.value)">
+                <button class="m-btn" style="height:32px;padding:0 .6rem;background:rgba(14,165,233,.15);color:#0ea5e9;border:1px solid rgba(14,165,233,.3);border-radius:6px;"
+                    onclick="registrarManualConf('${it.sku}', document.getElementById('manual-${it.sku.replace(/[^a-z0-9]/gi,'_')}').value)">
+                    <span class="material-icons-round" style="font-size:.9rem;">check</span>
+                </button>
+            </div>
+        </div>`;
+    }).join('');
 }
 
-window._biparProdutoConferencia = function(code) {
+// ─── REGISTRAR BIPAGEM (SCANNER) ─────────────────────────────────────────────
+function _registrarBipagem(code) {
     const receipts = JSON.parse(localStorage.getItem('wms_receipts_v2') || '[]');
-    const rIndex = receipts.findIndex(x => x.id === window._confNfId);
-    if(rIndex === -1) return;
-    const r = receipts[rIndex];
+    const rIdx     = receipts.findIndex(x => x.id === window._confSessao.nfId);
+    if (rIdx === -1) return;
+    const r = receipts[rIdx];
 
-    const cln = code.trim();
-    // Procura por SKU e, de preferência, Cód Barras no futuro:
-    const itemEncontrado = r.itens.find(it => it.sku === cln || it.codigoBarras === cln);
-    if (!itemEncontrado) {
+    const cln  = code.trim();
+    const item = (r.itens || []).find(it => it.sku === cln || it.codigoBarras === cln);
+
+    if (!item) {
         Feedback.beep('error');
-        showToast('Produto não pertence a esta NF.', 'danger');
+        showToast('SKU não pertence a esta NF.', 'danger');
         return;
     }
 
-    r._leituras[itemEncontrado.sku] = (r._leituras[itemEncontrado.sku] || 0) + 1;
-    
-    // Check if limits exceeded (warn user but keep incrementing)
-    if (r._leituras[itemEncontrado.sku] > itemEncontrado.quantidade) {
-        Feedback.beep('warning');
-        showToast(`Atenção: Passou da qtde da NF!`, 'warning');
+    r._leituras[item.sku] = (r._leituras[item.sku] || 0) + 1;
+    const lido     = r._leituras[item.sku];
+    const esperado = Number(item.quantidade);
+
+    if (lido > esperado) {
+        Feedback.beep('error');
+        showToast(`⚠️ Excesso: ${item.sku} — ${lido} bipado(s) vs ${esperado} esperado(s)`, 'warning');
     } else {
         Feedback.beep('success');
+        if (lido === esperado) showToast(`✅ ${item.sku} completo!`, 'success');
     }
 
-    receipts[rIndex] = r;
+    receipts[rIdx] = r;
+    localStorage.setItem('wms_receipts_v2', JSON.stringify(receipts));
+    _atualizarUiConferencia(r);
+}
+
+// ─── REGISTRAR QTD MANUAL ─────────────────────────────────────────────────────
+window.registrarManualConf = function(sku, valor) {
+    const qty = parseInt(valor);
+    if (isNaN(qty) || qty < 0) return;
+
+    const receipts = JSON.parse(localStorage.getItem('wms_receipts_v2') || '[]');
+    const rIdx     = receipts.findIndex(x => x.id === window._confSessao.nfId);
+    if (rIdx === -1) return;
+    const r = receipts[rIdx];
+
+    r._leituras[sku] = qty;
+    receipts[rIdx] = r;
     localStorage.setItem('wms_receipts_v2', JSON.stringify(receipts));
 
-    const cfg = JSON.parse(localStorage.getItem('wms_config') || '{}');
-    _renderItensConferencia(r, cfg.geral?.contagemCega !== false);
+    Feedback.beep('success');
+    _atualizarUiConferencia(r);
 };
 
+// ─── ATUALIZA UI SEM RE-RENDERIZAR TUDO ──────────────────────────────────────
+function _atualizarUiConferencia(r) {
+    const cfg    = JSON.parse(localStorage.getItem('wms_config') || '{}');
+    const isCega = cfg.geral?.contagemCega !== false;
+
+    // Atualiza barra de progresso
+    const totalItens      = (r.itens || []).length;
+    const itensConferidos = (r.itens || []).filter(it => (r._leituras?.[it.sku] || 0) >= it.quantidade).length;
+    const pct = totalItens > 0 ? Math.round((itensConferidos / totalItens) * 100) : 0;
+
+    const bar   = document.getElementById('conf-progress-bar');
+    const label = document.getElementById('conf-pct-label');
+    if (bar)   bar.style.width = pct + '%';
+    if (label) label.textContent = `${itensConferidos}/${totalItens} SKUs · ${pct}%`;
+
+    // Re-renderiza lista de itens
+    const lista = document.getElementById('conf-itens-lista');
+    if (lista) lista.innerHTML = _renderItensHtml(r, isCega);
+}
+
+// ─── VOLTAR PARA LISTA ────────────────────────────────────────────────────────
 window.fecharConferenciaItens = function() {
-    window._skuConfAtiva = false;
-    window._confNfId = null;
+    window._confSessao = { nfId: null, inicio: null, ativo: false };
     initConferenciaItensScreen(document.getElementById('screen-recebimento'));
 };
 
-window.finalizarConferenciaItens = async function() {
+// ─── FINALIZAR CONFERÊNCIA ────────────────────────────────────────────────────
+window.finalizarConferencia = async function() {
     const receipts = JSON.parse(localStorage.getItem('wms_receipts_v2') || '[]');
-    const rIndex = receipts.findIndex(x => x.id === window._confNfId);
-    if(rIndex === -1) return;
-    const r = receipts[rIndex];
+    const rIdx     = receipts.findIndex(x => x.id === window._confSessao.nfId);
+    if (rIdx === -1) return;
+    const r = receipts[rIdx];
 
-    // Verificar se sobrou e faltou
+    // Monta payload de itens com divergências
     const itensPayload = [];
-    let msgDivergencia = '';
     let hasDivergencia = false;
+    let itensSemBipagem = 0;
 
-    r.itens.forEach(it => {
-        const lido = r._leituras[it.sku] || 0;
+    (r.itens || []).forEach(it => {
+        const lido     = r._leituras?.[it.sku] || 0;
         const esperado = Number(it.quantidade);
-        const divQty = lido - esperado;
-
-        if (divQty !== 0) hasDivergencia = true;
-        
-        itensPayload.push({
-            sku: it.sku,
-            lido: lido,
-            esperado: esperado,
-            divergenciaQty: divQty // Positivo=Sobra, Negativo=Falta
-        });
+        const div      = lido - esperado;
+        if (div !== 0) hasDivergencia = true;
+        if (lido === 0) itensSemBipagem++;
+        itensPayload.push({ sku: it.sku, descricao: it.descricao, lido, esperado, divergencia: div });
     });
 
-    if (hasDivergencia) {
-        const confirmar = confirm("Existem diferenças entre a NF e o que foi bipado! Deseja finalizar com divergência?");
-        if (!confirmar) return;
+    // Alerta se houver itens não bipados
+    if (itensSemBipagem > 0 && r.itens?.length > 0) {
+        const ok = confirm(`⚠️ ${itensSemBipagem} SKU(s) com zero leituras!\n\nDeseja finalizar mesmo assim?`);
+        if (!ok) return;
+    } else if (hasDivergencia) {
+        const ok = confirm('⚠️ Existem diferenças de quantidade entre a NF e o conferido.\n\nDeseja finalizar com divergência?');
+        if (!ok) return;
     }
+
+    const btn = document.getElementById('conf-btn-finalizar');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-icons-round">hourglass_top</span> Finalizando...'; }
 
     try {
         const user = JSON.parse(localStorage.getItem('logged_user') || '{}');
         const payload = {
-            id: r.id,
-            nfNumero: r.nfNumero,
-            chaveNfe: r.chaveNfe || '',
-            operador: user.name || user.login || 'Operador',
-            inicio: r.dataConferenciaMacro,
-            fim: new Date().toISOString(),
+            id:         r.id,
+            nfNumero:   r.nfNumero,
+            chaveNfe:   r.chaveNfe || '',
+            fornecedor: r.fornecedor,
+            operador:   user.name || user.login || 'Operador',
+            inicio:     window._confSessao.inicio,
+            fim:        new Date().toISOString(),
+            hasDivergencia,
             itens: itensPayload
         };
 
-        // Envia para o ERP
         await WmsProcedures.proc_confirmar_conferencia_itens(payload);
 
-        // Gera o Putaway
-        _gerarPutawayFinal(r);
+        // Gera tarefas de Putaway
+        _gerarPutaway(r);
 
-        // Limpa da tela e encerra fluxo
-        r.status = 'FINALIZADO';
-        receipts[rIndex] = r;
+        // Atualiza status do recibo
+        receipts[rIdx].status = hasDivergencia ? 'FINALIZADO_COM_DIV' : 'FINALIZADO';
+        receipts[rIdx]._conferenciaFim = new Date().toISOString();
         localStorage.setItem('wms_receipts_v2', JSON.stringify(receipts));
 
-        window._skuConfAtiva = false;
+        window._confSessao = { nfId: null, inicio: null, ativo: false };
         Feedback.beep('success'); Feedback.flash('success');
-        showToast('Conferência Finalizada! Tarefas de Putaway geradas.', 'success');
+        showToast(hasDivergencia
+            ? '⚠️ Conferência finalizada com divergência. Putaway gerado.'
+            : '✅ Conferência finalizada! Putaway gerado.',
+            hasDivergencia ? 'warning' : 'success');
+
         if (window.updateHomeStats) updateHomeStats();
         setTimeout(() => navigateTo('home'), 1500);
 
     } catch (e) {
-        showToast('Erro ao enviar ERP: ' + e.message, 'danger');
+        showToast('Erro ao finalizar: ' + e.message, 'danger');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons-round">done_all</span> Finalizar Conferência'; }
     }
 };
 
-function _gerarPutawayFinal(r) {
+// ─── GERAR PUTAWAY ────────────────────────────────────────────────────────────
+function _gerarPutaway(r) {
     const putaway = JSON.parse(localStorage.getItem('wms_putaway') || '[]');
-    if (r.itens && r.itens.length > 0) {
-        r.itens.forEach(item => {
-            const lido = r._leituras[item.sku] || 0;
-            if (lido > 0) {
-                putaway.push({
-                    id: `PUT-${String(putaway.length + 1).padStart(4, '0')}`,
-                    nf: r.nfNumero, sku: item.sku, desc: item.descricao,
-                    qty: lido, destino: 'PISO-DOCA',
-                    status: 'PENDENTE', created: new Date().toISOString()
-                });
-            }
-        });
-    }
+    (r.itens || []).forEach(item => {
+        const lido = r._leituras?.[item.sku] || 0;
+        if (lido > 0) {
+            putaway.push({
+                id:      `PUT-${String(putaway.length + 1).padStart(4, '0')}`,
+                nf:      r.nfNumero,
+                sku:     item.sku,
+                desc:    item.descricao,
+                qty:     lido,
+                destino: 'PISO-DOCA',
+                status:  'PENDENTE',
+                created: new Date().toISOString()
+            });
+        }
+    });
     localStorage.setItem('wms_putaway', JSON.stringify(putaway));
 }

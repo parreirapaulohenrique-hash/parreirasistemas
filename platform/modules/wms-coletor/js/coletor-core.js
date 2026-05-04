@@ -57,7 +57,7 @@ function navigateTo(screenId) {
         // Update top bar title
         const titles = {
             home: 'WMS Coletor',
-            recebimento: 'Conferência de Produtos',
+            recebimento: 'Conferir',
             checkin: 'Portaria',
             conferir: 'Recebimento Docas',
             armazenar: 'Armazenagem',
