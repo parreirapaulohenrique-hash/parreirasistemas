@@ -23,5 +23,21 @@
             "type": "image/png",
             "purpose": "any maskable"
         }
+    ],
+    "screenshots": [
+        {
+            "src": "screenshots/screen-home.png",
+            "sizes": "1024x1024",
+            "type": "image/png",
+            "form_factor": "narrow",
+            "label": "Tela inicial — Módulos do WMS"
+        },
+        {
+            "src": "screenshots/screen-conferir.png",
+            "sizes": "1024x1024",
+            "type": "image/png",
+            "form_factor": "narrow",
+            "label": "Conferência de recebimento com scanner"
+        }
     ]
 }
