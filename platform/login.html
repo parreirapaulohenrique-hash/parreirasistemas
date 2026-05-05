@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ParreiraLog — Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:       #0f172a;
+            --bg-card:  #1e293b;
+            --border:   rgba(255,255,255,.08);
+            --primary:  #0ea5e9;
+            --text:     #f1f5f9;
+            --text-sec: #94a3b8;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        /* Fundo animado */
+        body::before {
+            content: '';
+            position: fixed; inset: 0; z-index: 0;
+            background:
+                radial-gradient(ellipse at 20% 50%, rgba(14,165,233,.12) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(168,85,247,.08) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .login-wrapper {
+            position: relative; z-index: 1;
+            width: 100%; max-width: 420px;
+        }
+
+        .login-brand {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .login-brand-icon {
+            width: 64px; height: 64px; border-radius: 16px;
+            background: linear-gradient(135deg, #0ea5e9, #2563eb);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 1rem;
+            box-shadow: 0 8px 24px rgba(14,165,233,.35);
+        }
+        .login-brand-icon .material-icons-round { font-size: 2rem; color: #fff; }
+        .login-brand h1 { font-size: 1.4rem; font-weight: 700; }
+        .login-brand p  { font-size: .82rem; color: var(--text-sec); margin-top: .25rem; }
+
+        .login-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 20px 60px rgba(0,0,0,.4);
+        }
+
+        .login-card h2 {
+            font-size: 1.1rem; font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+
+        .field { margin-bottom: 1rem; }
+        .field label {
+            display: block; font-size: .78rem;
+            font-weight: 500; color: var(--text-sec);
+            margin-bottom: .4rem;
+        }
+        .field-inner {
+            position: relative;
+            display: flex; align-items: center;
+        }
+        .field-inner .material-icons-round {
+            position: absolute; left: .75rem;
+            font-size: 1.1rem; color: var(--text-sec);
+            pointer-events: none;
+        }
+        .field input {
+            width: 100%;
+            background: rgba(255,255,255,.05);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: .9rem;
+            padding: .7rem .75rem .7rem 2.6rem;
+            transition: border-color .2s;
+            outline: none;
+        }
+        .field input:focus { border-color: var(--primary); }
+        .field input::placeholder { color: rgba(255,255,255,.2); }
+
+        .btn-login {
+            width: 100%;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: .95rem;
+            font-weight: 600;
+            padding: .8rem;
+            cursor: pointer;
+            margin-top: .5rem;
+            display: flex; align-items: center; justify-content: center; gap: .5rem;
+            transition: background .2s, transform .1s, box-shadow .2s;
+            box-shadow: 0 4px 16px rgba(14,165,233,.3);
+        }
+        .btn-login:hover  { background: #0284c7; box-shadow: 0 6px 20px rgba(14,165,233,.4); }
+        .btn-login:active { transform: scale(.99); }
+        .btn-login:disabled { opacity: .6; cursor: not-allowed; }
+
+        .erro-box {
+            display: none;
+            background: rgba(239,68,68,.1);
+            border: 1px solid rgba(239,68,68,.3);
+            color: #f87171;
+            border-radius: 8px;
+            padding: .65rem .85rem;
+            font-size: .82rem;
+            margin-bottom: 1rem;
+            display: flex; align-items: center; gap: .5rem;
+        }
+        .erro-box.visible { display: flex; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spin { animation: spin .8s linear infinite; }
+
+        .login-footer {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: .72rem;
+            color: var(--text-sec);
+        }
+    </style>
+</head>
+<body>
+    <div class="login-wrapper">
+        <!-- Marca -->
+        <div class="login-brand">
+            <div class="login-brand-icon">
+                <span class="material-icons-round">hub</span>
+            </div>
+            <h1>ParreiraLog</h1>
+            <p>Enterprise Platform</p>
+        </div>
+
+        <!-- Card -->
+        <div class="login-card">
+            <h2>Entrar na plataforma</h2>
+
+            <div id="erro-login" class="erro-box">
+                <span class="material-icons-round" style="font-size:1rem;flex-shrink:0;">error_outline</span>
+                <span id="erro-msg"></span>
+            </div>
+
+            <div class="field">
+                <label for="inp-email">E-mail</label>
+                <div class="field-inner">
+                    <span class="material-icons-round">email</span>
+                    <input type="email" id="inp-email" placeholder="seu@email.com.br"
+                        autocomplete="email" onkeydown="if(event.key==='Enter')_doLogin()">
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="inp-senha">Senha</label>
+                <div class="field-inner">
+                    <span class="material-icons-round">lock</span>
+                    <input type="password" id="inp-senha" placeholder="••••••••"
+                        autocomplete="current-password" onkeydown="if(event.key==='Enter')_doLogin()">
+                </div>
+            </div>
+
+            <button class="btn-login" id="btn-entrar" onclick="_doLogin()">
+                <span class="material-icons-round">login</span>
+                Entrar
+            </button>
+        </div>
+
+        <div class="login-footer">
+            © 2025 Parreira Sistemas · Todos os direitos reservados
+        </div>
+    </div>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="core/js/auth.js"></script>
+
+    <script>
+        // Se já logado, redireciona direto
+        if (ParreiraAuth.isLogado()) {
+            const s = ParreiraAuth.getSessao();
+            window.location.href = 'modules/wms/index.html';
+        }
+
+        async function _doLogin() {
+            const email = document.getElementById('inp-email').value.trim();
+            const senha = document.getElementById('inp-senha').value;
+            const btn   = document.getElementById('btn-entrar');
+            const erroBox = document.getElementById('erro-login');
+            const erroMsg = document.getElementById('erro-msg');
+
+            erroBox.classList.remove('visible');
+
+            if (!email || !senha) {
+                erroMsg.textContent = 'Preencha e-mail e senha.';
+                erroBox.classList.add('visible'); return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="material-icons-round spin">sync</span> Entrando...';
+
+            try {
+                const sessao = await ParreiraAuth.login(email, senha);
+                // Redireciona para o módulo WMS (ponto de entrada padrão)
+                window.location.href = 'modules/wms/index.html';
+            } catch (e) {
+                let msg = e.message || 'Erro ao fazer login.';
+                if (msg.includes('wrong-password') || msg.includes('user-not-found') || msg.includes('invalid-credential'))
+                    msg = 'E-mail ou senha inválidos.';
+                if (msg.includes('too-many-requests'))
+                    msg = 'Muitas tentativas. Aguarde alguns minutos.';
+                erroMsg.textContent = msg;
+                erroBox.classList.add('visible');
+                btn.disabled = false;
+                btn.innerHTML = '<span class="material-icons-round">login</span> Entrar';
+            }
+        }
+    </script>
+</body>
+</html>

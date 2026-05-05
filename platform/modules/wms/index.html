@@ -218,7 +218,7 @@
                         <span id="userTenant" style="font-size:0.7rem; color:var(--text-secondary)">Tenant</span>
                     </div>
                 </div>
-                <a href="../../index.html" style="color:var(--accent-danger); text-decoration:none;" title="Sair">
+                <a href="#" onclick="ParreiraAuth.logout();return false;" style="color:var(--accent-danger); text-decoration:none;" title="Sair">
                     <span class="material-icons-round">logout</span>
                 </a>
             </div>
@@ -382,12 +382,13 @@
     </footer>
 
 
-    <!-- Scripts -->
+    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 
-    <script src="../../shared/logout.js"></script>
+    <!-- Auth Central -->
+    <script src="../../core/js/auth.js"></script>
     <script src="js/wms-integration.js"></script>
     <script src="js/wms-core.js"></script>
     <script src="js/dashboard.js"></script>
@@ -406,8 +407,22 @@
     <script src="js/configuracoes.js"></script>
     <script src="js/relmanutencao.js"></script>
     <script src="js/bi_operacional.js"></script>
+    <script src="js/wms-usuarios.js"></script>
 
     <script>
+        // Session Guard
+        (function() {
+            if (!window.ParreiraAuth || !ParreiraAuth.isLogado()) {
+                window.location.href = '../../login.html';
+                return;
+            }
+            const s = ParreiraAuth.getSessao();
+            const nEl = document.getElementById('userName');
+            const tEl = document.getElementById('userTenant');
+            if (nEl) nEl.textContent = s.nome;
+            if (tEl) tEl.textContent = s.tenantNome + ' · ' + ({operator:'Operador',supervisor:'Supervisor',admin:'Admin',master:'Master'}[s.role]||s.role);
+        })();
+
         // Load Version
         fetch('version.json')
             .then(r => r.json())

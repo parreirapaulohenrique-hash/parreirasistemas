@@ -271,13 +271,20 @@ const CAD_CONFIG = {
 // MAIN LOADER (called from wms-core.js)
 // ===========================================
 window.loadCadastroView = function (viewId) {
-    const config = CAD_CONFIG[viewId];
-    if (!config) return;
-
     const container = document.getElementById('view-dynamic');
     if (!container) return;
     container.innerHTML = '';
     container.setAttribute('data-view', viewId);
+
+    // Usuários: gerenciado via Firebase Auth + Firestore (WmsUsuarios)
+    if (viewId === 'cad-usuarios') {
+        if (window.WmsUsuarios) WmsUsuarios.renderView('view-dynamic');
+        else container.innerHTML = '<p style="padding:2rem;color:var(--text-secondary);">Módulo de usuários não carregado.</p>';
+        return;
+    }
+
+    const config = CAD_CONFIG[viewId];
+    if (!config) return;
 
     const data = getCadastroData();
     if (!data[config.key]) data[config.key] = [];
@@ -285,6 +292,7 @@ window.loadCadastroView = function (viewId) {
 
     renderCadGrid(container, config, items, viewId);
 };
+
 
 // ===========================================
 // GRID RENDERER
