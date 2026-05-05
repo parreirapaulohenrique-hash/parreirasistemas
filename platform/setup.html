@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Inicial — ParreiraLog</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a; color: #f1f5f9;
+            min-height: 100vh; display: flex; align-items: center;
+            justify-content: center; padding: 1rem;
+        }
+        .card {
+            background: #1e293b; border: 1px solid rgba(255,255,255,.08);
+            border-radius: 16px; padding: 2rem; width: min(520px, 100%);
+            box-shadow: 0 20px 60px rgba(0,0,0,.4);
+        }
+        h1 { font-size: 1.2rem; margin-bottom: .25rem; }
+        .sub { font-size: .82rem; color: #94a3b8; margin-bottom: 1.5rem; }
+        .step {
+            display: flex; align-items: flex-start; gap: .75rem;
+            padding: .65rem .85rem; border-radius: 8px; margin-bottom: .5rem;
+            background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06);
+            font-size: .85rem;
+        }
+        .step .ico { font-size: 1.1rem; flex-shrink: 0; margin-top: .1rem; }
+        .step.wait   { color: #94a3b8; }
+        .step.running{ background:rgba(14,165,233,.07);border-color:rgba(14,165,233,.25);color:#0ea5e9; }
+        .step.ok     { background:rgba(16,185,129,.07);border-color:rgba(16,185,129,.25);color:#10b981; }
+        .step.err    { background:rgba(239,68,68,.07); border-color:rgba(239,68,68,.25); color:#ef4444; }
+        .btn {
+            width: 100%; background: #0ea5e9; color: #fff; border: none;
+            border-radius: 8px; font-family: inherit; font-size: .95rem;
+            font-weight: 600; padding: .8rem; cursor: pointer; margin-top: 1.25rem;
+            display: flex; align-items: center; justify-content: center; gap: .5rem;
+            transition: background .2s;
+        }
+        .btn:hover { background: #0284c7; }
+        .btn:disabled { opacity: .5; cursor: not-allowed; }
+        .credbox {
+            margin-top: 1.25rem; padding: 1rem 1.25rem;
+            background: rgba(16,185,129,.08); border: 1px solid rgba(16,185,129,.3);
+            border-radius: 8px; display: none;
+        }
+        .credbox h3 { font-size: .85rem; color: #10b981; margin-bottom: .5rem; }
+        .credbox p  { font-size: .82rem; margin-bottom: .25rem; }
+        .credbox code { background:rgba(255,255,255,.08); padding:.1rem .4rem; border-radius:4px; font-size:.85rem; }
+        .credbox a  { display:inline-block;margin-top:.75rem;background:#10b981;color:#fff;padding:.55rem 1rem;border-radius:6px;text-decoration:none;font-size:.85rem;font-weight:600; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .spin { animation: spin .8s linear infinite; display:inline-block; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>🚀 Setup Inicial — ParreiraLog</h1>
+    <p class="sub">Cria o tenant padrão e o usuário administrador no Firebase.</p>
+
+    <div id="step1" class="step wait">
+        <span class="material-icons-round ico">hub</span>
+        <div><strong>Criar Tenant:</strong> ParreiraLog</div>
+    </div>
+    <div id="step2" class="step wait">
+        <span class="material-icons-round ico">person_add</span>
+        <div><strong>Criar usuário:</strong> parreirapaulohenrique@gmail.com</div>
+    </div>
+    <div id="step3" class="step wait">
+        <span class="material-icons-round ico">storage</span>
+        <div><strong>Salvar perfil no Firestore</strong></div>
+    </div>
+    <div id="step4" class="step wait">
+        <span class="material-icons-round ico">link</span>
+        <div><strong>Indexar usuário → tenant</strong></div>
+    </div>
+
+    <button class="btn" id="btnSetup" onclick="runSetup()">
+        <span class="material-icons-round">play_arrow</span>
+        Executar Setup
+    </button>
+
+    <div class="credbox" id="credbox">
+        <h3>✅ Setup concluído! Credenciais de acesso:</h3>
+        <p>🔑 <strong>E-mail:</strong> <code>parreirapaulohenrique@gmail.com</code></p>
+        <p>🔑 <strong>Senha:</strong> <code>admin1</code></p>
+        <p>🏢 <strong>Tenant:</strong> <code>ParreiraLog</code></p>
+        <p>👤 <strong>Perfil:</strong> <code>Administrador</code></p>
+        <a href="login.html">→ Ir para o Login</a>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script>
+const firebaseConfig = {
+    apiKey:            "AIzaSyDzatCQ8zmH4aQftznf7Y5wdYPwFYSiARc",
+    authDomain:        "parreiralog-91904.firebaseapp.com",
+    projectId:         "parreiralog-91904",
+    messagingSenderId: "527633267616",
+    appId:             "1:527633267616:web:3567e883b31f7fa02882c5"
+};
+firebase.initializeApp(firebaseConfig);
+const db   = firebase.firestore();
+const auth = firebase.auth();
+
+const TENANT_ID = 'parreiralog';
+const EMAIL     = 'parreirapaulohenrique@gmail.com';
+const SENHA     = 'admin1';
+
+function setStep(id, estado, msg) {
+    const el = document.getElementById(id);
+    el.className = 'step ' + estado;
+    const ico = el.querySelector('.ico');
+    const icons = { wait:'hourglass_empty', running:'sync', ok:'check_circle', err:'error' };
+    ico.className = 'material-icons-round ico' + (estado === 'running' ? ' spin' : '');
+    ico.textContent = icons[estado] || 'circle';
+    if (msg) el.querySelector('div').innerHTML = msg;
+}
+
+async function runSetup() {
+    const btn = document.getElementById('btnSetup');
+    btn.disabled = true;
+
+    try {
+        // STEP 1 — Tenant
+        setStep('step1', 'running', '<strong>Criando tenant…</strong>');
+        await db.collection('tenants').doc(TENANT_ID).set({
+            nome:     'ParreiraLog',
+            cnpj:     '',
+            modulos:  ['wms', 'wms-coletor', 'dispatch', 'erp'],
+            ativo:    true,
+            criadoEm: new Date().toISOString()
+        }, { merge: true });
+        setStep('step1', 'ok', '✅ <strong>Tenant criado:</strong> ParreiraLog');
+
+        // STEP 2 — Firebase Auth
+        setStep('step2', 'running', '<strong>Criando usuário no Firebase Auth…</strong>');
+        let uid;
+        try {
+            const cred = await auth.createUserWithEmailAndPassword(EMAIL, SENHA);
+            uid = cred.user.uid;
+        } catch (e) {
+            if (e.code === 'auth/email-already-in-use') {
+                // Usuário já existe — busca o uid
+                const methods = await auth.fetchSignInMethodsForEmail(EMAIL);
+                if (methods.length) {
+                    // Loga para pegar o uid
+                    const c2 = await auth.signInWithEmailAndPassword(EMAIL, SENHA);
+                    uid = c2.user.uid;
+                } else throw e;
+            } else throw e;
+        }
+        setStep('step2', 'ok', `✅ <strong>Usuário criado:</strong> ${EMAIL} <small style="color:#94a3b8">(uid: ${uid.substring(0,8)}…)</small>`);
+
+        // STEP 3 — Perfil no Firestore
+        setStep('step3', 'running', '<strong>Salvando perfil no Firestore…</strong>');
+        await db.collection('tenants').doc(TENANT_ID).collection('users').doc(uid).set({
+            nome:     'Administrador',
+            email:    EMAIL,
+            role:     'admin',
+            pin:      '1234',
+            ativo:    true,
+            criadoEm: new Date().toISOString()
+        }, { merge: true });
+        setStep('step3', 'ok', '✅ <strong>Perfil salvo no Firestore</strong>');
+
+        // STEP 4 — Índice global
+        setStep('step4', 'running', '<strong>Indexando usuário → tenant…</strong>');
+        await db.collection('users_index').doc(uid).set({
+            tenantId: TENANT_ID,
+            role:     'admin'
+        }, { merge: true });
+        setStep('step4', 'ok', '✅ <strong>Índice criado com sucesso</strong>');
+
+        // Desloga (para não manter sessão do setup)
+        await auth.signOut();
+
+        document.getElementById('credbox').style.display = 'block';
+
+    } catch (e) {
+        const steps = ['step1','step2','step3','step4'];
+        const atual = steps.find(s => document.getElementById(s).className.includes('running'));
+        if (atual) setStep(atual, 'err', `❌ Erro: ${e.message}`);
+        btn.disabled = false;
+        console.error(e);
+    }
+}
+</script>
+</body>
+</html>
