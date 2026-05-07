@@ -5,23 +5,32 @@ const COLETOR_VERSION = '1.0.0';
 
 // ===== Auth Check =====
 document.addEventListener('DOMContentLoaded', () => {
-    let savedUser = localStorage.getItem('logged_user');
 
-    // DEV/TEST: Se não houver sessão, injeta usuário de teste para não bloquear o fluxo
-    if (!savedUser) {
-        const testUser = { name: 'Operador Teste', login: 'teste', role: 'operador' };
-        localStorage.setItem('logged_user', JSON.stringify(testUser));
-        savedUser = JSON.stringify(testUser);
-        console.warn('[WMS Coletor] Sessão não encontrada. Usuário de teste injetado automaticamente.');
+    // Usa sessão real do ParreiraAuth (compartilhada com o WMS)
+    if (typeof ParreiraAuth === 'undefined' || !ParreiraAuth.isLogado()) {
+        window.location.href = '../../login.html';
+        return;
     }
 
-    const user = JSON.parse(savedUser);
-    const initials = (user.name || user.login || 'OP').substring(0, 2).toUpperCase();
-    document.getElementById('userBadge').textContent = initials;
+    const sessao   = ParreiraAuth.getSessao();
+    const nome     = sessao.nome || sessao.login || 'OP';
+    const initials = nome.substring(0, 2).toUpperCase();
 
-    // Load home stats
+    const badge = document.getElementById('userBadge');
+    if (badge) badge.textContent = initials;
+
+    // Mantém compatibilidade com código legado que lê logged_user
+    localStorage.setItem('logged_user', JSON.stringify({
+        name:     sessao.nome,
+        login:    sessao.login,
+        role:     sessao.role,
+        pin:      sessao.pin || '',
+        tenantId: sessao.tenantId
+    }));
+
     updateHomeStats();
 });
+
 
 // ===== Navigation =====
 let currentScreen = 'home';
