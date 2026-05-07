@@ -54,6 +54,16 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 <script src="core/js/auth.js"></script>
 <script>
+const _fbCfg = {
+    apiKey:            "AIzaSyDzatCQ8zmH4aQftznf7Y5wdYPwFYSiARc",
+    authDomain:        "parreiralog-91904.firebaseapp.com",
+    projectId:         "parreiralog-91904",
+    messagingSenderId: "527633267616",
+    appId:             "1:527633267616:web:3567e883b31f7fa02882c5"
+};
+if (!firebase.apps.length) firebase.initializeApp(_fbCfg);
+const _setupDB = firebase.firestore();
+
 const TENANT_ID = 'parreiralog';
 const LOGIN     = 'admin';
 const SENHA     = 'admin1';
@@ -72,13 +82,11 @@ async function runSetup() {
     const btn = document.getElementById('btnSetup');
     btn.disabled = true;
 
-    // Inicializa Firebase (auth.js já faz isso, mas garantimos o db)
-    const db = firebase.firestore();
 
     try {
         // STEP 1 — Tenant
         setStep('s1','running','<strong>Criando tenant…</strong>');
-        await db.collection('tenants').doc(TENANT_ID).set({
+        await _setupDB.collection('tenants').doc(TENANT_ID).set({
             nome:'ParreiraLog', cnpj:'',
             modulos:['wms','wms-coletor','dispatch','erp'],
             ativo:true, criadoEm:new Date().toISOString()
@@ -92,7 +100,7 @@ async function runSetup() {
 
         // STEP 3 — Perfil no Firestore
         setStep('s3','running','<strong>Salvando perfil no Firestore…</strong>');
-        await db.collection('tenants').doc(TENANT_ID).collection('users').doc(LOGIN).set({
+        await _setupDB.collection('tenants').doc(TENANT_ID).collection('users').doc(LOGIN).set({
             nome:'Administrador', login:LOGIN, senhaHash,
             role:'admin', pin:'1234', ativo:true,
             criadoEm:new Date().toISOString()
@@ -101,7 +109,7 @@ async function runSetup() {
 
         // STEP 4 — Índice
         setStep('s4','running','<strong>Indexando usuário → tenant…</strong>');
-        await db.collection('users_index').doc(LOGIN).set({ tenantId:TENANT_ID },{ merge:true });
+        await _setupDB.collection('users_index').doc(LOGIN).set({ tenantId:TENANT_ID },{ merge:true });
         setStep('s4','ok','✅ <strong>Índice criado</strong>');
 
         document.getElementById('cred').style.display='block';
