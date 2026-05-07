@@ -9,128 +9,84 @@
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
-            --bg:      #0f172a;
-            --card:    #1e293b;
-            --border:  rgba(255,255,255,.09);
-            --primary: #0ea5e9;
-            --text:    #f1f5f9;
-            --sec:     #94a3b8;
-            --danger:  #ef4444;
+            --bg: #0f172a; --card: #1e293b; --border: rgba(255,255,255,.09);
+            --primary: #0ea5e9; --text: #f1f5f9; --sec: #94a3b8;
         }
         html, body {
             height: 100%; font-family: 'Inter', sans-serif;
             background: var(--bg); color: var(--text);
-            overflow: hidden;
         }
         body {
             display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            padding: 1rem;
+            align-items: center; justify-content: center; padding: 1.5rem;
             background:
                 radial-gradient(ellipse at 30% 30%, rgba(14,165,233,.1) 0%, transparent 55%),
                 var(--bg);
         }
 
-        /* ── Brand ── */
-        .brand { text-align: center; margin-bottom: 1.5rem; }
+        .brand { text-align: center; margin-bottom: 2rem; }
         .brand-icon {
-            width: 56px; height: 56px; border-radius: 14px;
+            width: 64px; height: 64px; border-radius: 16px;
             background: linear-gradient(135deg, #0ea5e9, #2563eb);
             display: flex; align-items: center; justify-content: center;
-            margin: 0 auto .75rem;
+            margin: 0 auto .85rem;
             box-shadow: 0 6px 20px rgba(14,165,233,.35);
         }
-        .brand-icon .material-icons-round { font-size: 1.75rem; color: #fff; }
-        .brand h1 { font-size: 1.1rem; font-weight: 700; }
-        .brand p  { font-size: .75rem; color: var(--sec); }
+        .brand-icon .material-icons-round { font-size: 2rem; color: #fff; }
+        .brand h1 { font-size: 1.2rem; font-weight: 700; }
+        .brand p  { font-size: .78rem; color: var(--sec); }
 
-        /* ── Card ── */
         .card {
             background: var(--card); border: 1px solid var(--border);
-            border-radius: 20px; padding: 1.5rem;
-            width: 100%; max-width: 340px;
+            border-radius: 20px; padding: 1.75rem;
+            width: 100%; max-width: 360px;
             box-shadow: 0 16px 48px rgba(0,0,0,.5);
         }
+        .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1.25rem; }
 
-        /* ── Usuario field ── */
-        .user-field { margin-bottom: 1.25rem; }
-        .user-field label { display: block; font-size: .75rem; color: var(--sec); font-weight: 500; margin-bottom: .4rem; }
-        .user-input-wrap { position: relative; display: flex; align-items: center; }
-        .user-input-wrap .material-icons-round {
-            position: absolute; left: .75rem; font-size: 1.1rem; color: var(--sec); pointer-events: none;
+        /* Campo */
+        .field { margin-bottom: 1rem; }
+        .field label { display: block; font-size: .78rem; color: var(--sec); font-weight: 500; margin-bottom: .4rem; }
+        .fi { position: relative; display: flex; align-items: center; }
+        .fi .material-icons-round {
+            position: absolute; left: .85rem; font-size: 1.15rem;
+            color: var(--sec); pointer-events: none;
         }
-        .user-input-wrap input {
-            width: 100%; background: rgba(255,255,255,.05); border: 1px solid var(--border);
-            border-radius: 10px; color: var(--text); font-family: inherit;
-            font-size: 1rem; font-weight: 600; padding: .75rem .75rem .75rem 2.6rem;
+        .fi input {
+            width: 100%; background: rgba(255,255,255,.05);
+            border: 1px solid var(--border); border-radius: 12px;
+            color: var(--text); font-family: inherit;
+            font-size: 1.05rem; font-weight: 500;
+            padding: .85rem .85rem .85rem 2.8rem;
             outline: none; transition: border-color .2s;
-            autocomplete: off; autocorrect: off; autocapitalize: off;
         }
-        .user-input-wrap input:focus { border-color: var(--primary); }
-        .user-input-wrap input::placeholder { color: rgba(255,255,255,.2); font-weight: 400; }
+        .fi input:focus { border-color: var(--primary); }
+        .fi input::placeholder { color: rgba(255,255,255,.2); font-weight: 400; }
 
-        /* ── PIN display ── */
-        .pin-label { font-size: .75rem; color: var(--sec); font-weight: 500; margin-bottom: .5rem; }
-        .pin-dots {
-            display: flex; gap: .5rem; justify-content: center;
-            margin-bottom: 1.25rem;
-        }
-        .pin-dot {
-            width: 14px; height: 14px; border-radius: 50%;
-            border: 2px solid var(--sec);
-            background: transparent;
-            transition: background .15s, border-color .15s, transform .1s;
-        }
-        .pin-dot.filled {
-            background: var(--primary); border-color: var(--primary);
-            transform: scale(1.15);
-        }
-
-        /* ── Numpad ── */
-        .numpad {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem;
-        }
-        .num-btn {
-            background: rgba(255,255,255,.06); border: 1px solid var(--border);
-            border-radius: 12px; color: var(--text); font-family: inherit;
-            font-size: 1.4rem; font-weight: 600; padding: 1rem .5rem;
-            cursor: pointer; transition: background .12s, transform .08s;
-            user-select: none; -webkit-tap-highlight-color: transparent;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .num-btn:active { background: rgba(255,255,255,.14); transform: scale(.94); }
-        .num-btn.zero   { grid-column: 2; }
-        .num-btn.del    { background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.25); }
-        .num-btn.del:active { background: rgba(239,68,68,.2); }
-        .num-btn.del .material-icons-round { font-size: 1.3rem; color: var(--danger); }
-
-        /* ── Botão entrar ── */
+        /* Botão entrar */
         .btn-enter {
             width: 100%; background: var(--primary); color: #fff; border: none;
-            border-radius: 12px; font-family: inherit; font-size: 1rem;
-            font-weight: 700; padding: 1rem; cursor: pointer; margin-top: .75rem;
+            border-radius: 12px; font-family: inherit; font-size: 1.05rem;
+            font-weight: 700; padding: 1rem; cursor: pointer; margin-top: .5rem;
             display: flex; align-items: center; justify-content: center; gap: .5rem;
             transition: background .2s; box-shadow: 0 4px 16px rgba(14,165,233,.3);
+            touch-action: manipulation;
         }
-        .btn-enter:hover  { background: #0284c7; }
+        .btn-enter:hover { background: #0284c7; }
         .btn-enter:active { transform: scale(.98); }
         .btn-enter:disabled { opacity: .5; cursor: not-allowed; }
 
-        /* ── Erro ── */
+        /* Erro */
         .erro {
-            display: none; background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3);
-            color: #f87171; border-radius: 10px; padding: .6rem .85rem;
-            font-size: .8rem; margin-bottom: .85rem;
+            display: none; background: rgba(239,68,68,.1);
+            border: 1px solid rgba(239,68,68,.3); color: #f87171;
+            border-radius: 10px; padding: .6rem .85rem;
+            font-size: .82rem; margin-bottom: 1rem;
             align-items: flex-start; gap: .5rem;
         }
         .erro.on { display: flex; }
 
-        /* ── Shake animation on wrong PIN ── */
-        @keyframes shake {
-            0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 60%{transform:translateX(8px)}
-        }
-        .shake { animation: shake .3s ease; }
-        @keyframes spin { to{transform:rotate(360deg)} }
+        @keyframes spin { to { transform: rotate(360deg); } }
         .spin { animation: spin .8s linear infinite; }
     </style>
 </head>
@@ -139,52 +95,35 @@
     <div class="brand">
         <div class="brand-icon"><span class="material-icons-round">warehouse</span></div>
         <h1>WMS Coletor</h1>
-        <p>ParreiraLog</p>
+        <p>ParreiraLog — Enterprise Platform</p>
     </div>
 
     <div class="card">
-        <!-- Erro -->
+        <h2>Entrar no coletor</h2>
+
         <div class="erro" id="erro">
             <span class="material-icons-round" style="font-size:1rem;flex-shrink:0;">error_outline</span>
             <span id="erroMsg"></span>
         </div>
 
-        <!-- Usuário -->
-        <div class="user-field">
+        <div class="field">
             <label for="inpUser">Usuário</label>
-            <div class="user-input-wrap">
+            <div class="fi">
                 <span class="material-icons-round">person</span>
                 <input type="text" id="inpUser" placeholder="seu.login"
-                    autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+                    autocomplete="username" autocorrect="off" autocapitalize="off" spellcheck="false"
+                    onkeydown="if(event.key==='Enter')doLogin()">
             </div>
         </div>
 
-        <!-- PIN -->
-        <div class="pin-label">PIN</div>
-        <div class="pin-dots" id="pinDots">
-            <div class="pin-dot" id="d0"></div>
-            <div class="pin-dot" id="d1"></div>
-            <div class="pin-dot" id="d2"></div>
-            <div class="pin-dot" id="d3"></div>
-            <div class="pin-dot" id="d4"></div>
-            <div class="pin-dot" id="d5"></div>
-        </div>
-
-        <!-- Numpad -->
-        <div class="numpad">
-            <button class="num-btn" onclick="addDigit('1')">1</button>
-            <button class="num-btn" onclick="addDigit('2')">2</button>
-            <button class="num-btn" onclick="addDigit('3')">3</button>
-            <button class="num-btn" onclick="addDigit('4')">4</button>
-            <button class="num-btn" onclick="addDigit('5')">5</button>
-            <button class="num-btn" onclick="addDigit('6')">6</button>
-            <button class="num-btn" onclick="addDigit('7')">7</button>
-            <button class="num-btn" onclick="addDigit('8')">8</button>
-            <button class="num-btn" onclick="addDigit('9')">9</button>
-            <button class="num-btn zero" onclick="addDigit('0')">0</button>
-            <button class="num-btn del" onclick="delDigit()">
-                <span class="material-icons-round">backspace</span>
-            </button>
+        <div class="field">
+            <label for="inpSenha">Senha</label>
+            <div class="fi">
+                <span class="material-icons-round">lock</span>
+                <input type="password" id="inpSenha" placeholder="••••••••"
+                    autocomplete="current-password"
+                    onkeydown="if(event.key==='Enter')doLogin()">
+            </div>
         </div>
 
         <button class="btn-enter" id="btnEntrar" onclick="doLogin()">
@@ -192,81 +131,36 @@
         </button>
     </div>
 
-    <!-- Scripts -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="../../core/js/session-manager.js"></script>
     <script src="../../core/js/auth.js"></script>
     <script>
-        // Se já tem sessão de coletor, vai direto
         if (ParreiraAuth.isLogado()) window.location.href = 'index.html';
-
-        let _pin = '';
-        const MAX_PIN = 6;
-
-        function _updateDots() {
-            for (let i = 0; i < MAX_PIN; i++) {
-                document.getElementById('d' + i).classList.toggle('filled', i < _pin.length);
-            }
-        }
-
-        function addDigit(d) {
-            if (_pin.length >= MAX_PIN) return;
-            _pin += d;
-            _updateDots();
-            document.getElementById('erro').classList.remove('on');
-            // Auto-submit quando atingir o máximo
-            if (_pin.length === MAX_PIN) setTimeout(doLogin, 150);
-        }
-
-        function delDigit() {
-            _pin = _pin.slice(0, -1);
-            _updateDots();
-        }
-
-        // Suporte a teclado físico (coletor com teclado)
-        document.addEventListener('keydown', e => {
-            if (e.key >= '0' && e.key <= '9') addDigit(e.key);
-            else if (e.key === 'Backspace') delDigit();
-            else if (e.key === 'Enter') doLogin();
-        });
 
         async function doLogin() {
             const usuario = document.getElementById('inpUser').value.trim();
+            const senha   = document.getElementById('inpSenha').value;
             const btn     = document.getElementById('btnEntrar');
             const erroEl  = document.getElementById('erro');
             const erroMsg = document.getElementById('erroMsg');
 
             erroEl.classList.remove('on');
 
-            if (!usuario) {
-                erroMsg.textContent = 'Informe o usuário.';
-                erroEl.classList.add('on');
-                document.getElementById('inpUser').focus();
-                return;
-            }
-            if (_pin.length < 4) {
-                erroMsg.textContent = 'Digite o PIN (mínimo 4 dígitos).';
-                erroEl.classList.add('on');
-                document.getElementById('pinDots').classList.add('shake');
-                setTimeout(() => document.getElementById('pinDots').classList.remove('shake'), 400);
-                return;
+            if (!usuario || !senha) {
+                erroMsg.textContent = 'Preencha usuário e senha.';
+                erroEl.classList.add('on'); return;
             }
 
             btn.disabled = true;
-            btn.innerHTML = '<span class="material-icons-round spin">sync</span> Validando...';
+            btn.innerHTML = '<span class="material-icons-round spin">sync</span> Entrando...';
 
             try {
-                // Login do coletor usa PIN como senha
-                await ParreiraAuth.login(usuario, _pin, 'wms-coletor');
+                await ParreiraAuth.login(usuario, senha, 'wms-coletor');
                 window.location.href = 'index.html';
             } catch(e) {
-                _pin = '';
-                _updateDots();
-                erroMsg.textContent = e.message || 'Usuário ou PIN inválidos.';
+                erroMsg.textContent = e.message || 'Usuário ou senha inválidos.';
                 erroEl.classList.add('on');
-                document.getElementById('pinDots').classList.add('shake');
-                setTimeout(() => document.getElementById('pinDots').classList.remove('shake'), 400);
                 btn.disabled = false;
                 btn.innerHTML = '<span class="material-icons-round">login</span> Entrar';
             }
