@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Usa sessão real do ParreiraAuth (compartilhada com o WMS)
     if (typeof ParreiraAuth === 'undefined' || !ParreiraAuth.isLogado()) {
-        window.location.href = '../../login.html';
+        window.location.href = 'login.html'; // login PIN do coletor
         return;
     }
 

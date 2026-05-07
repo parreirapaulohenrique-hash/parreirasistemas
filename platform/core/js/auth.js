@@ -34,9 +34,11 @@ window.ParreiraAuth = (function () {
     }
 
     // ─── LOGIN ────────────────────────────────────────────────────────────────
-    async function login(loginStr, senha) {
+    // modulo: qual módulo está fazendo o login ('wms', 'wms-coletor', etc.)
+    async function login(loginStr, senha, modulo) {
         const db       = _initDB();
         const loginKey = loginStr.trim().toLowerCase();
+        modulo = modulo || 'wms';
 
         // 1. Localiza tenant via índice
         const idxDoc = await db.collection('users_index').doc(loginKey).get();
@@ -60,7 +62,15 @@ window.ParreiraAuth = (function () {
         const tenant = tenantDoc.data();
         if (!tenant.ativo) throw new Error('Empresa inativa no sistema.');
 
-        // 5. Salva sessão
+        // 5. Verifica licença e registra sessão (lança erro se limite atingido)
+        if (window.SessionManager) {
+            await SessionManager.registrar(db, tenantId, modulo, {
+                login: loginKey, nome: perfil.nome, role: perfil.role
+            });
+            SessionManager.iniciarHeartbeat(db, tenantId);
+        }
+
+        // 6. Salva sessão
         const sessao = {
             login:      loginKey,
             nome:       perfil.nome,
@@ -69,6 +79,7 @@ window.ParreiraAuth = (function () {
             tenantId,
             tenantNome: tenant.nome,
             modulos:    tenant.modulos || [],
+            moduloAtivo: modulo,
             ts:         Date.now()
         };
         sessionStorage.setItem('parreira_session', JSON.stringify(sessao));
@@ -79,7 +90,14 @@ window.ParreiraAuth = (function () {
     }
 
     // ─── LOGOUT ───────────────────────────────────────────────────────────────
-    function logout() {
+    async function logout() {
+        const s = getSessao();
+        if (s && window.SessionManager) {
+            try {
+                const db = _initDB();
+                await SessionManager.encerrarSessao(db, s.tenantId);
+            } catch(e) {}
+        }
         sessionStorage.removeItem('parreira_session');
         localStorage.removeItem('logged_user');
         const path = window.location.pathname;
