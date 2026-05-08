@@ -109,16 +109,64 @@ window.WmsStore = (function () {
 
     // ─── LISTENER TEMPO REAL (WMS dashboard) ─────────────────────────────────
 
-    /**
-     * Escuta mudanças nos recebimentos em tempo real.
-     * Retorna a função de cancelamento (unsubscribe).
-     */
     function ouvirRecebimentos(callback, filtros = {}) {
         let q = _receiptsCol(_tid()).orderBy('criadoEm', 'desc');
         if (filtros.status) q = q.where('status', '==', filtros.status);
-        return q.onSnapshot(snap => {
-            callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        return q.onSnapshot(snap =>
+            callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+        );
+    }
+
+    // ─── DIVERGÊNCIAS ─────────────────────────────────────────────────────────
+
+    function _divCol(tid) {
+        return _db().collection('tenants').doc(tid).collection('divergencias');
+    }
+
+    /** Cria um registro de divergência originado de uma conferência. */
+    async function criarDivergencia(dados) {
+        const tid = _tid();
+        const id  = dados.id || ('DIV-' + Date.now());
+        await _divCol(tid).doc(id).set({
+            ...dados, id, tenantId: tid,
+            criadoEm: TS(), atualizadoEm: TS()
         });
+        return id;
+    }
+
+    /** Lista divergências com filtros opcionais (status, recebimentoId). */
+    async function listarDivergencias(filtros = {}) {
+        let q = _divCol(_tid()).orderBy('criadoEm', 'desc');
+        if (filtros.status)        q = q.where('status', '==', filtros.status);
+        if (filtros.recebimentoId) q = q.where('recebimentoId', '==', filtros.recebimentoId);
+        if (filtros.limite)        q = q.limit(filtros.limite);
+        const snap = await q.get();
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+
+    /** Atualiza campos de uma divergência (status, tratativas, etc.). */
+    async function atualizarDivergencia(id, update) {
+        await _divCol(_tid()).doc(id).update({ ...update, atualizadoEm: TS() });
+    }
+
+    /** Adiciona uma nova tratativa ao array de tratativas da divergência. */
+    async function adicionarTratativa(id, tratativa) {
+        await _divCol(_tid()).doc(id).update({
+            tratativas:   firebase.firestore.FieldValue.arrayUnion({
+                ...tratativa,
+                dataHora: new Date().toISOString()
+            }),
+            atualizadoEm: TS()
+        });
+    }
+
+    /** Listener em tempo real das divergências. */
+    function ouvirDivergencias(callback, filtros = {}) {
+        let q = _divCol(_tid()).orderBy('criadoEm', 'desc');
+        if (filtros.status) q = q.where('status', '==', filtros.status);
+        return q.onSnapshot(snap =>
+            callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+        );
     }
 
     // ─── UTIL ─────────────────────────────────────────────────────────────────
@@ -147,6 +195,12 @@ window.WmsStore = (function () {
         finalizarConferencia,
         criarPutaway,
         ouvirRecebimentos,
+        // Divergências
+        criarDivergencia,
+        listarDivergencias,
+        atualizarDivergencia,
+        adicionarTratativa,
+        ouvirDivergencias,
         toDate, fmtData
     };
 })();

@@ -127,6 +127,7 @@ const VIEW_TITLES = {
     'ent-conferencia': 'Conferência',
     'ent-armazenagem': 'Armazenagem (Putaway)',
     'ent-devolucao': 'Devolução de Cliente',
+    'divergencias': 'Controle de Divergências',
     // Estoque
     'est-consulta': 'Consulta de Estoque',
     'est-endereco': 'Consulta por Endereço',
@@ -162,6 +163,7 @@ Object.keys(VIEW_TITLES).forEach(k => {
     else if (k.startsWith('relm-')) VIEW_PARENTS[k] = 'Rel. Manutenção';
     else if (k.startsWith('relo-')) VIEW_PARENTS[k] = 'Rel. Operação';
     else if (k.startsWith('ent-')) VIEW_PARENTS[k] = 'Entrada de Produtos';
+    else if (k === 'divergencias')  VIEW_PARENTS[k] = 'Entrada de Produtos';
     else if (k.startsWith('est-')) VIEW_PARENTS[k] = 'Estoque';
     else if (k.startsWith('sai-')) VIEW_PARENTS[k] = 'Saída de Produtos';
     else if (k.startsWith('aud-')) VIEW_PARENTS[k] = 'Auditoria';
@@ -221,9 +223,10 @@ function switchView(viewId) {
         // WMS View Registry - Maps view IDs or prefixes to loader functions
         const VIEW_REGISTRY = [
             // Exact matches (Higher priority)
-            { id: 'dashboard', loader: () => window.loadDashboardView && window.loadDashboardView() },
-            { id: 'locations', loader: () => window.loadLocationsView && window.loadLocationsView() },
-            { id: 'inbound', loader: () => window.loadInboundView && window.loadInboundView() },
+            { id: 'dashboard',     loader: () => window.loadDashboardView && window.loadDashboardView() },
+            { id: 'locations',     loader: () => window.loadLocationsView && window.loadLocationsView() },
+            { id: 'inbound',       loader: () => window.loadInboundView && window.loadInboundView() },
+            { id: 'divergencias',  loader: () => window.DivergenciasManager && window.DivergenciasManager.load(document.getElementById('view-divergencias')) },
             { id: 'cad-etiquetas', loader: (v) => window.loadEtiquetasView && window.loadEtiquetasView(v) },
 
             // Specific overrides for shared loaders

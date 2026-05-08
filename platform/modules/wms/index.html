@@ -133,6 +133,15 @@
                         <a class="nav-sub-item" onclick="switchView('ent-conferencia')">Conferência</a>
                         <a class="nav-sub-item" onclick="switchView('ent-armazenagem')">Armazenagem (Putaway)</a>
                         <a class="nav-sub-item" onclick="switchView('ent-devolucao')">Devolução de Cliente</a>
+                        <a class="nav-sub-item" id="nav-divergencias"
+                           onclick="switchView('divergencias')"
+                           style="color:#ef4444;display:flex;align-items:center;gap:.4rem;">
+                            <span class="material-icons-round" style="font-size:1rem;">report_problem</span>
+                            Controle de Divergências
+                            <span id="nav-div-badge" style="display:none;background:#ef4444;color:#fff;
+                                border-radius:20px;font-size:.62rem;font-weight:700;
+                                padding:.05rem .4rem;margin-left:auto;">0</span>
+                        </a>
                     </div>
                 </div>
 
@@ -360,6 +369,9 @@
                     </div>
                 </div>
 
+                <!-- View: Divergências de Recebimento -->
+                <div id="view-divergencias" class="page-content" style="display:none;"></div>
+
                 <!-- Generic dynamic view container -->
                 <div id="view-dynamic" class="page-content" style="display:none;"></div>
             </div>
@@ -409,6 +421,7 @@
     <script src="js/relmanutencao.js"></script>
     <script src="js/bi_operacional.js"></script>
     <script src="js/wms-usuarios.js"></script>
+    <script src="js/divergencias.js"></script>
 
     <script>
         // Session Guard

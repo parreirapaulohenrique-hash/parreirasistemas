@@ -691,6 +691,81 @@ ${emailRemetente ? `<${emailRemetente}>` : ''}
         return { found: true, pedidoCompra: nfMatch.pedidoCompra, itens: itensComCodInterno };
     }
 
+    // ==========================================================================
+    // PROC: ENVIAR CONFERÊNCIA — MAXDATA
+    // Envia o resumo da conferência de recebimento para o ERP Maxdata.
+    // O payload contém todos os dados; na integração real será decidido
+    // se manda quantidade total conferida ou apenas as divergências.
+    //
+    // @param {object} payload
+    //   {
+    //     recebimentoId, nfNumero, chaveNfe, fornecedor, pedidoCompra,
+    //     operador, inicio, fim, hasDivergencia,
+    //     itens: [{ sku, codigoInterno, descricao, esperado, lido, divergencia }]
+    //   }
+    // ==========================================================================
+    async function proc_enviar_conferencia_maxdata(payload) {
+        const { id: connId, cfg } = _getConnector();
+
+        // ── REST API genérica (Maxdata ou outro ERP via REST) ─────────────────
+        if (connId === 'rest-api' && cfg.baseUrl) {
+            try {
+                const url = `${cfg.baseUrl.replace(/\/$/, '')}/conferencia/recebimento`;
+                const body = {
+                    // Identificação
+                    nfNumero:      payload.nfNumero,
+                    chaveNfe:      payload.chaveNfe,
+                    pedidoCompra:  payload.pedidoCompra || '',
+                    fornecedor:    payload.fornecedor,
+                    operador:      payload.operador,
+                    // Datas
+                    dataInicio:    payload.inicio,
+                    dataFim:       payload.fim,
+                    // Status geral
+                    comDivergencia: payload.hasDivergencia,
+                    // Itens — manda tudo; o ERP decide o que usar
+                    itens: (payload.itens || []).map(it => ({
+                        codigoInterno: it.codigoInterno || it.sku,
+                        sku:           it.sku,
+                        descricao:     it.descricao,
+                        quantidadeNF:  it.esperado,
+                        quantidadeConferida: it.lido,
+                        divergencia:   it.divergencia  // negativo=falta, positivo=excesso
+                    }))
+                };
+                const resp = await fetch(url, {
+                    method: 'POST',
+                    headers: { ..._getRestHeaders(cfg), 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                    signal: AbortSignal.timeout(15000)
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json();
+                _logSync('proc_enviar_conferencia_maxdata', 'wms→erp', 'ok',
+                    `NF ${payload.nfNumero} enviada ao Maxdata. Protocolo: ${data.protocolo || '—'}`);
+                return { ok: true, protocolo: data.protocolo };
+            } catch(e) {
+                _logSync('proc_enviar_conferencia_maxdata', 'wms→erp', 'error', e.message);
+                throw e;
+            }
+        }
+
+        // ── Maxdata direct (futuro endpoint nativo) ────────────────────────────
+        if (connId === 'maxdata') {
+            // TODO: implementar autenticação e endpoint nativo Maxdata
+            _logSync('proc_enviar_conferencia_maxdata', 'wms→erp', 'pending',
+                'Endpoint nativo Maxdata pendente de implementação.');
+            return { ok: false, mensagem: 'Integração Maxdata pendente.' };
+        }
+
+        // ── MOCK ──────────────────────────────────────────────────────────────
+        await new Promise(r => setTimeout(r, 600));
+        _logSync('proc_enviar_conferencia_maxdata', 'wms→erp', 'ok',
+            `[MOCK] NF ${payload.nfNumero} enviada | ${payload.itens?.length || 0} itens | Diverg: ${payload.hasDivergencia}`);
+        console.log('[MOCK] Payload Maxdata:', JSON.stringify(payload, null, 2));
+        return { ok: true, protocolo: 'MOCK-' + Date.now() };
+    }
+
     // ─── EXPORT GLOBAL ────────────────────────────────────────────────────────
 
     window.WmsProcedures = {
@@ -703,6 +778,7 @@ ${emailRemetente ? `<${emailRemetente}>` : ''}
         proc_registrar_entrada_avulsa,
         proc_enviar_email_divergencia,
         proc_confirmar_conferencia_itens,
+        proc_enviar_conferencia_maxdata,
         _normalizeNf,
         _getMockNfs
     };

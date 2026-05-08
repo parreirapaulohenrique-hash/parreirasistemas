@@ -414,14 +414,26 @@ window.finalizarConferencia = async function() {
         const sessao = window.ParreiraAuth?.getSessao?.() || {};
         const fim    = new Date().toISOString();
 
-        await WmsProcedures.proc_confirmar_conferencia_itens({
-            id: r.id, nfNumero: r.nfNumero, chaveNfe: r.chaveNfe || '',
-            fornecedor: r.fornecedor,
-            operador: sessao.nome || sessao.login || 'Operador',
-            inicio: window._confSessao.inicio, fim, hasDivergencia,
-            itens: itensPayload
-        });
+        const maxdataPayload = {
+            recebimentoId: r.id,
+            nfNumero:      r.nfNumero,
+            chaveNfe:      r.chaveNfe || '',
+            fornecedor:    r.fornecedor,
+            pedidoCompra:  r.pedidoCompra || '',
+            operador:      sessao.nome || sessao.login || 'Operador',
+            inicio:        window._confSessao.inicio, fim,
+            hasDivergencia,
+            itens:         itensPayload
+        };
 
+        // 1. Envia resumo ao ERP Maxdata (não bloqueia em caso de falha)
+        WmsProcedures.proc_enviar_conferencia_maxdata(maxdataPayload)
+            .catch(e => console.warn('[Maxdata] Falha no envio (será retentado):', e.message));
+
+        // 2. Notifica ERP (procedure original)
+        await WmsProcedures.proc_confirmar_conferencia_itens(maxdataPayload);
+
+        // 3. Finaliza no Firestore
         await WmsStore.finalizarConferencia(r.id, {
             status:          hasDivergencia ? 'FINALIZADO_COM_DIV' : 'FINALIZADO',
             itensConferidos: itensPayload,
@@ -429,6 +441,30 @@ window.finalizarConferencia = async function() {
             inicio:          window._confSessao.inicio, fim
         });
 
+        // 4. Cria registro de divergência para controle no WMS PC
+        if (hasDivergencia) {
+            const itensDivergentes = itensPayload.filter(it => it.divergencia !== 0);
+            await WmsStore.criarDivergencia({
+                id:             `DIV-${r.id}`,
+                recebimentoId:  r.id,
+                nfNumero:       r.nfNumero,
+                chaveNfe:       r.chaveNfe || '',
+                fornecedor:     r.fornecedor,
+                cnpjFornecedor: r.cnpjFornecedor || '',
+                pedidoCompra:   r.pedidoCompra || '',
+                doca:           r.doca || '',
+                dataConferencia: fim,
+                operadorConferencia: sessao.nome || sessao.login || 'Operador',
+                itensDivergentes,
+                totalItens:     itensPayload.length,
+                totalDivergentes: itensDivergentes.length,
+                status:         'ABERTA',   // ABERTA → EM_ANALISE → NOTIFICADO → RESOLVIDO / BAIXADO
+                tratativas:     [],
+                protocoloMaxdata: ''        // preenchido após integração real
+            }).catch(e => console.warn('[Divergência] Falha ao criar registro:', e.message));
+        }
+
+        // 5. Gera putaway
         await _gerarPutaway(r);
 
         window._recAtivo   = null;
