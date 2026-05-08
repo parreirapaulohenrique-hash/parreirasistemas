@@ -199,35 +199,87 @@
 
         const badge = _badge(r);
 
-        const itensHtml = (r.itensConferidos || r.itens || []).length > 0 ? `
-            <div style="margin-top:1rem;">
-                <h4 style="font-size:0.82rem; color:var(--text-secondary); text-transform:uppercase; margin-bottom:0.5rem;">
-                    ${r.itensConferidos ? 'Itens Conferidos' : 'Itens da NF'}
-                </h4>
-                <div style="max-height:220px; overflow-y:auto; border:1px solid var(--border-color); border-radius:6px;">
-                    <table style="width:100%; border-collapse:collapse; font-size:0.8rem; text-align:left;">
-                        <thead style="background:var(--bg-dark); position:sticky; top:0;">
-                            <tr>
-                                <th style="padding:0.5rem;">SKU</th>
-                                <th style="padding:0.5rem;">Descrição</th>
-                                ${r.itensConferidos ? '<th style="padding:0.5rem;text-align:center;">Esp.</th><th style="padding:0.5rem;text-align:center;">Conf.</th><th style="padding:0.5rem;text-align:center;">Div.</th>' : '<th style="padding:0.5rem;text-align:center;">Qtd</th>'}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${(r.itensConferidos || r.itens || []).map(i => `
-                            <tr style="border-top:1px solid var(--border-color);">
-                                <td style="padding:0.4rem 0.5rem; font-family:monospace;">${i.sku}</td>
-                                <td style="padding:0.4rem 0.5rem;">${i.descricao}</td>
-                                ${r.itensConferidos
-                                    ? `<td style="padding:0.4rem;text-align:center;">${i.esperado}</td>
-                                       <td style="padding:0.4rem;text-align:center;font-weight:700;">${i.lido}</td>
-                                       <td style="padding:0.4rem;text-align:center;color:${i.divergencia!==0?'#ef4444':'#10b981'};font-weight:700;">${i.divergencia > 0 ? '+'+i.divergencia : i.divergencia}</td>`
-                                    : `<td style="padding:0.4rem;text-align:center;">${i.quantidade}</td>`
-                                }
-                            </tr>`).join('')}
-                        </tbody>
-                    </table>
+        // ─── Itens: conferência concluída ou em progresso ─────────────────────────
+        let itensHtml = '';
+        const todosItens   = r.itensConferidos || r.itens || [];
+        const leituras     = r._leituras || {};
+        const emConferencia= r.status === 'CONFERENCIA_ITENS_PENDENTE';
+
+        if (todosItens.length > 0) {
+            const headers = r.itensConferidos
+                ? '<th style="padding:0.5rem;text-align:center;">Esp.</th><th style="padding:0.5rem;text-align:center;">Conf.</th><th style="padding:0.5rem;text-align:center;">Div.</th>'
+                : emConferencia
+                    ? '<th style="padding:0.5rem;text-align:center;">Esp.</th><th style="padding:0.5rem;text-align:center;">Bipado</th><th style="padding:0.5rem;text-align:center;">%</th>'
+                    : '<th style="padding:0.5rem;text-align:center;">Qtd</th>';
+
+            const rows = todosItens.map(i => {
+                if (r.itensConferidos) {
+                    const divColor = i.divergencia !== 0 ? '#ef4444' : '#10b981';
+                    return `<tr style="border-top:1px solid var(--border-color);">
+                        <td style="padding:0.4rem 0.5rem;font-family:monospace;">${i.sku}</td>
+                        <td style="padding:0.4rem 0.5rem;">${i.descricao}</td>
+                        <td style="padding:0.4rem;text-align:center;">${i.esperado}</td>
+                        <td style="padding:0.4rem;text-align:center;font-weight:700;">${i.lido}</td>
+                        <td style="padding:0.4rem;text-align:center;color:${divColor};font-weight:700;">${i.divergencia>0?'+'+i.divergencia:i.divergencia}</td>
+                    </tr>`;
+                } else if (emConferencia) {
+                    const lido = leituras[i.sku] || 0;
+                    const esp  = Number(i.quantidade);
+                    const pct  = esp > 0 ? Math.min(100, Math.round((lido/esp)*100)) : 0;
+                    const cor  = lido >= esp && esp > 0 ? '#10b981' : lido > 0 ? '#0ea5e9' : 'rgba(255,255,255,.3)';
+                    return `<tr style="border-top:1px solid var(--border-color);">
+                        <td style="padding:0.4rem 0.5rem;font-family:monospace;">${i.sku}</td>
+                        <td style="padding:0.4rem 0.5rem;">${i.descricao}</td>
+                        <td style="padding:0.4rem;text-align:center;">${esp}</td>
+                        <td style="padding:0.4rem;text-align:center;font-weight:700;color:${cor};">${lido}</td>
+                        <td style="padding:0.4rem;text-align:center;">
+                            <div style="background:rgba(255,255,255,.08);border-radius:3px;height:6px;width:50px;margin:auto;">
+                                <div style="height:100%;width:${pct}%;background:${cor};border-radius:3px;"></div>
+                            </div>
+                        </td>
+                    </tr>`;
+                } else {
+                    return `<tr style="border-top:1px solid var(--border-color);">
+                        <td style="padding:0.4rem 0.5rem;font-family:monospace;">${i.sku}</td>
+                        <td style="padding:0.4rem 0.5rem;">${i.descricao}</td>
+                        <td style="padding:0.4rem;text-align:center;">${i.quantidade}</td>
+                    </tr>`;
+                }
+            }).join('');
+
+            itensHtml = `
+                <div style="margin-top:1rem;">
+                    <h4 style="font-size:0.82rem;color:var(--text-secondary);text-transform:uppercase;margin-bottom:0.5rem;display:flex;align-items:center;gap:.4rem;">
+                        ${emConferencia ? '<span class="material-icons-round" style="font-size:1rem;color:#0ea5e9;">radar</span> Progresso em Tempo Real' : r.itensConferidos ? 'Itens Conferidos' : 'Itens da NF'}
+                    </h4>
+                    <div style="max-height:220px;overflow-y:auto;border:1px solid var(--border-color);border-radius:6px;">
+                        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;text-align:left;">
+                            <thead style="background:var(--bg-dark);position:sticky;top:0;">
+                                <tr>
+                                    <th style="padding:0.5rem;">SKU</th>
+                                    <th style="padding:0.5rem;">Descrição</th>
+                                    ${headers}
+                                </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>
+                </div>`;
+        }
+
+        // ─── Divergência de Doca ─────────────────────────────────────────────────
+        const docaDiv = r.divergenciaMacro && r.divergenciaMacro.tipo !== 'OK' ? `
+            <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:.85rem;margin:.85rem 0;">
+                <div style="font-weight:700;font-size:.8rem;color:#f59e0b;margin-bottom:.4rem;">
+                    <span class="material-icons-round" style="font-size:1rem;vertical-align:middle;">warning</span>
+                    Divergência Macro — ${r.divergenciaMacro.tipo}
                 </div>
+                <div style="font-size:.8rem;display:flex;gap:1.5rem;">
+                    ${r.divergenciaMacro.avariados>0?`<span>Avariados: <strong>${r.divergenciaMacro.avariados}</strong></span>`:''}
+                    ${r.divergenciaMacro.faltantes>0?`<span>Faltantes: <strong>${r.divergenciaMacro.faltantes}</strong></span>`:''}
+                    ${r.divergenciaMacro.excesso>0?`<span>Excesso: <strong>${r.divergenciaMacro.excesso}</strong></span>`:''}
+                </div>
+                ${r.divergenciaMacro.desc?`<div style="font-size:.78rem;color:var(--text-secondary);margin-top:.4rem;">${r.divergenciaMacro.desc}</div>`:''}
             </div>` : '';
 
         $('modal-inb-detalhe-body').innerHTML = `

@@ -177,10 +177,13 @@ window.salvarCheckin = async function() {
 // 2. CONFERÊNCIA FÍSICA
 // ===================================
 
-window.initConferirScreen = function(container) {
-    const key = 'wms_receipts_v2';
-    const receipts = JSON.parse(localStorage.getItem(key) || '[]');
-    const pending = receipts.filter(r => r.status === 'AGUARDANDO_CONFERENCIA').reverse();
+window.initConferirScreen = async function(container) {
+    container.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-secondary);">
+        <span class="material-icons-round" style="font-size:2rem;display:block;opacity:.3;margin-bottom:.4rem;">sync</span>
+        <span style="font-size:.82rem;">Carregando...</span></div>`;
+
+    const pending = await WmsStore.listarRecebimentos({ status: 'AGUARDANDO_CONFERENCIA' }).catch(() => []);
+    pending.sort((a, b) => new Date(a.dataCheckin||0) - new Date(b.dataCheckin||0));
 
     container.innerHTML = `
         <div class="m-card" style="border-left:3px solid #ec4899;margin-bottom:1rem;">
@@ -217,26 +220,26 @@ window.initConferirScreen = function(container) {
     `;
 };
 
-window.handleScanConferir = function(code) {
+window.handleScanConferir = async function(code) {
     const clean = code.replace(/\D/g, '');
-    const key = 'wms_receipts_v2';
-    const receipts = JSON.parse(localStorage.getItem(key) || '[]');
-    const target = receipts.find(r => r.status === 'AGUARDANDO_CONFERENCIA' && 
-                                     ((clean.length === 44 && r.chaveNfe === clean) || (clean.length < 44 && r.nfNumero == clean)));
-    if (target) {
-        iniciarConferenciaFisica(target.id);
-    } else {
-        Feedback.beep('error'); showToast('NF não encontrada na fila de Doca.', 'danger');
-    }
+    try {
+        const lista = await WmsStore.listarRecebimentos({ status: 'AGUARDANDO_CONFERENCIA' });
+        const target = lista.find(r =>
+            (clean.length === 44 && (r.chaveNfe||'').replace(/\D/g,'') === clean) ||
+            (clean.length < 44  && String(r.nfNumero) === clean)
+        );
+        if (target) iniciarConferenciaFisica(target.id);
+        else { Feedback.beep('error'); showToast('NF não encontrada na fila de Doca.', 'danger'); }
+    } catch(e) { showToast('Erro: ' + e.message, 'danger'); }
 };
 
-window.iniciarConferenciaFisica = function(id) {
-    window._confAtivoId = id;
+window.iniciarConferenciaFisica = async function(id) {
+    window._confAtivoId    = id;
     window._confFotosBuffer = [];
-    const receipts = JSON.parse(localStorage.getItem('wms_receipts_v2') || '[]');
-    const r = receipts.find(x => x.id === id);
-    if (!r) return;
-    
+    const r = await WmsStore.buscarRecebimento(id).catch(() => null);
+    if (!r) { showToast('Recebimento não encontrado.', 'danger'); return; }
+    window._confFisicoRec = r; // cache em memória para o formulário
+
     const container = document.getElementById('screen-conferir');
 
     const maxH = r.itens && r.itens.length > 3 ? '150px' : 'auto';
@@ -433,24 +436,21 @@ window.salvarConferenciaFisica = async function() {
     const volfis = parseInt(document.getElementById('cconf-vol-fis').value);
     if (isNaN(volfis)) { showToast('Informe os volumes físicos!', 'warning'); return; }
 
-    const receipts = JSON.parse(localStorage.getItem('wms_receipts_v2') || '[]');
-    const rIndex = receipts.findIndex(x => x.id === window._confAtivoId);
-    if(rIndex === -1) return;
-    const r = receipts[rIndex];
-    
-    r.volumesFisicos = volfis;
-    r.condicaoCarga = document.getElementById('cconf-condicao').value;
-    r.dataConferenciaMacro = new Date().toISOString();
-    r.status = 'CONFERENCIA_ITENS_PENDENTE';
-    
-    if (r.condicaoCarga !== 'OK') {
-        r.divergencia = {
-            tipo: r.condicaoCarga,
-            avariados: parseInt(document.getElementById('cconf-avariados').value)||0,
-            faltantes: parseInt(document.getElementById('cconf-faltantes').value)||0,
-            excesso: parseInt(document.getElementById('cconf-excesso').value)||0,
-            desc: document.getElementById('cconf-desc').value,
-            fotos: window._confFotosBuffer
+    const update = {
+        volumesFisicos:       volfis,
+        condicaoCarga:        document.getElementById('cconf-condicao').value,
+        dataConferenciaMacro: new Date().toISOString(),
+        status:               'CONFERENCIA_ITENS_PENDENTE'
+    };
+
+    if (update.condicaoCarga !== 'OK') {
+        update.divergenciaMacro = {
+            tipo:     update.condicaoCarga,
+            avariados:parseInt(document.getElementById('cconf-avariados').value)||0,
+            faltantes:parseInt(document.getElementById('cconf-faltantes').value)||0,
+            excesso:  parseInt(document.getElementById('cconf-excesso').value)||0,
+            desc:     document.getElementById('cconf-desc').value,
+            fotos:    window._confFotosBuffer
         };
     }
 
@@ -458,12 +458,9 @@ window.salvarConferenciaFisica = async function() {
     btn.disabled = true; btn.innerHTML = 'Processando...';
 
     try {
-        // Apenas avança na esteira local, não notifica ERP ainda (salva para a etapa de Itens)
-        receipts[rIndex] = r;
-        localStorage.setItem('wms_receipts_v2', JSON.stringify(receipts));
-        
+        await WmsStore.atualizarRecebimento(window._confAtivoId, update);
         Feedback.beep('success'); Feedback.flash('success');
-        showToast('Volumes confirmados! Aguardando Prod.', 'success');
+        showToast('Volumes confirmados! Iniciando conferência de itens.', 'success');
         if (window.updateHomeStats) updateHomeStats();
         setTimeout(() => navigateTo('home'), 1000);
     } catch(e) {
