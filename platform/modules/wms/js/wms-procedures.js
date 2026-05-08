@@ -7,12 +7,14 @@
 // Nunca acesse o ERP diretamente de outros módulos — passe sempre por uma procedure.
 //
 // FLUXO DE RECEBIMENTO:
-//   proc_buscar_nf_destinada   → ERP → WMS  (consulta NF na fila de pedidos)
-//   proc_buscar_nf_por_numero  → ERP → WMS  (fallback por número+série)
-//   proc_confirmar_recebimento → WMS → ERP  (push de recebimento confirmado)
-//   proc_registrar_divergencia → WMS → ERP  (push de divergência de volumes)
-//   proc_validar_pin_supervisor → local     (valida PIN configurável de supervisor)
+//   proc_buscar_nf_destinada      → ERP → WMS  (consulta NF na fila de pedidos)
+//   proc_buscar_nf_por_numero     → ERP → WMS  (fallback por número+série)
+//   proc_verificar_pre_entrada    → ERP → WMS  (verifica pré-entrada e retorna itens com cód. interno)
+//   proc_confirmar_recebimento    → WMS → ERP  (push de recebimento confirmado)
+//   proc_registrar_divergencia    → WMS → ERP  (push de divergência de volumes)
+//   proc_validar_pin_supervisor   → local     (valida PIN configurável de supervisor)
 //   proc_registrar_entrada_avulsa → WMS log (auditoria de entradas sem NF)
+//   proc_confirmar_conferencia_itens → WMS → ERP (push conferência de itens)
 // =============================================================================
 
 (function () {
@@ -620,23 +622,91 @@ ${emailRemetente ? `<${emailRemetente}>` : ''}
             throw e;
         }
     }
+    // ==========================================================================
+    // PROC: VERIFICAR PRÉ-ENTRADA
+    // Consulta o ERP se existe uma pré-entrada (pedido de compra) vinculada
+    // à NF informada. Se sim, retorna os itens com código interno do cadastro
+    // de produtos do ERP (codigoInterno), que é o que permite a conferência.
+    // Se não, a NF fica com status AGUARDANDO_PRE_ENTRADA.
+    //
+    // @param {string} chaveNfe  — Chave NF-e de 44 dígitos (sem máscara)
+    // @returns {object} { found, pedidoCompra?, itens?, mensagem? }
+    //   itens = [{ sku, codigoInterno, codigoBarras, descricao, quantidade, unidade }]
+    // ==========================================================================
+    async function proc_verificar_pre_entrada(chaveNfe) {
+        const { id, cfg } = _getConnector();
+        const chave = (chaveNfe || '').replace(/\D/g, '');
+
+        // ── REST API genérica ──────────────────────────────────────────────────
+        if (id === 'rest-api' && cfg.baseUrl) {
+            try {
+                const url = `${cfg.baseUrl.replace(/\/$/, '')}/pre-entrada?chave=${encodeURIComponent(chave)}`;
+                const resp = await fetch(url, { method: 'GET', headers: _getRestHeaders(cfg), signal: AbortSignal.timeout(12000) });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json();
+                _logSync('proc_verificar_pre_entrada', 'erp→wms', data.found ? 'ok' : 'not_found',
+                    data.found ? `Pré-entrada: PC ${data.pedidoCompra}` : 'Sem pré-entrada');
+                return data;
+            } catch(e) {
+                _logSync('proc_verificar_pre_entrada', 'erp→wms', 'error', e.message);
+                throw e;
+            }
+        }
+
+        // ── Parreira ERP ───────────────────────────────────────────────────────
+        if (id === 'parreira-erp') {
+            // TODO: implementar endpoint quando disponível
+            _logSync('proc_verificar_pre_entrada', 'erp→wms', 'pending', 'Endpoint Parreira ERP pendente');
+            return { found: false, mensagem: 'Integração Parreira ERP pendente.' };
+        }
+
+        // ── MOCK Standalone ────────────────────────────────────────────────────
+        // NF 9999 simula ausência de pré-entrada para testes
+        await new Promise(r => setTimeout(r, 800));
+        const mockNfs = _getMockNfs();
+        const nfMatch = mockNfs.find(n => n.chaveNfe.replace(/\D/g,'') === chave);
+
+        if (!nfMatch || !nfMatch.pedidoCompra || nfMatch.numero === '9999') {
+            _logSync('proc_verificar_pre_entrada', 'erp→wms', 'not_found',
+                `[MOCK] Sem pré-entrada para chave ...${chave.slice(-6)}`);
+            return { found: false, mensagem: 'Pré-entrada não localizada para esta NF no ERP.' };
+        }
+
+        // Monta itens com código interno (simula mapeamento do cadastro do ERP)
+        const itensComCodInterno = nfMatch.itens.map((it, idx) => ({
+            sku:           it.sku,
+            codigoInterno: `INT-${String(10000 + idx + Number(nfMatch.numero)).padStart(5,'0')}`,
+            codigoBarras:  it.codigoBarras || it.sku,
+            descricao:     it.descricao,
+            quantidade:    it.quantidade,
+            unidade:       it.unidade || 'UN',
+            valorUnitario: it.valorUnitario || 0,
+            ncm:           it.ncm || '',
+            lote:          it.lote || ''
+        }));
+
+        _logSync('proc_verificar_pre_entrada', 'erp→wms', 'ok',
+            `[MOCK] Pré-entrada OK: ${nfMatch.pedidoCompra} — ${itensComCodInterno.length} item(ns)`);
+
+        return { found: true, pedidoCompra: nfMatch.pedidoCompra, itens: itensComCodInterno };
+    }
 
     // ─── EXPORT GLOBAL ────────────────────────────────────────────────────────
 
     window.WmsProcedures = {
         proc_buscar_nf_destinada,
         proc_buscar_nf_por_numero,
+        proc_verificar_pre_entrada,
         proc_confirmar_recebimento,
         proc_registrar_divergencia,
         proc_validar_pin_supervisor,
         proc_registrar_entrada_avulsa,
         proc_enviar_email_divergencia,
         proc_confirmar_conferencia_itens,
-        // Utilitários expostos para uso em outros módulos
         _normalizeNf,
         _getMockNfs
     };
 
-    console.log('📋 WMS Procedures carregadas (v1.0.0) — 7 procedures Multi-ERP disponíveis');
+    console.log('📋 WMS Procedures carregadas (v2.0.0) — 8 procedures Multi-ERP disponíveis');
 
 })();

@@ -10,8 +10,9 @@
 
     function $(id) { return document.getElementById(id); }
 
-    let _unsubscribe = null; // cancela o listener ao sair da view
-    let _cache       = [];   // snapshot local dos recebimentos (para o modal)
+    let _unsubscribe = null;
+    let _cache       = [];
+    let _pollTimer   = null; // polling automático para NFs sem pré-entrada
 
     // ─── ENTRADA PRINCIPAL ────────────────────────────────────────────────────
     window.loadInboundView = function () {
@@ -32,11 +33,12 @@
             </div>
 
             <!-- KPIs -->
-            <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:1.5rem;">
-                ${_kpi('inb-kpi-checkin',     'Check-ins Hoje',       'how_to_reg',    '#ec4899')}
-                ${_kpi('inb-kpi-conferindo',  'Em Conferência',       'fact_check',    '#f59e0b')}
-                ${_kpi('inb-kpi-divergencias','Com Divergências',     'warning',       '#ef4444')}
-                ${_kpi('inb-kpi-ok',          'Finalizados (Hoje)',   'check_circle',  '#10b981')}
+            <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:.85rem; margin-bottom:1.5rem;">
+                ${_kpi('inb-kpi-checkin',       'Check-ins Hoje',        'how_to_reg',    '#ec4899')}
+                ${_kpi('inb-kpi-pre-entrada',   'Aguard. Pré-Entrada',   'hourglass_top', '#f97316')}
+                ${_kpi('inb-kpi-conferindo',    'Em Conferência',        'fact_check',    '#f59e0b')}
+                ${_kpi('inb-kpi-divergencias',  'Com Divergências',      'warning',       '#ef4444')}
+                ${_kpi('inb-kpi-ok',            'Finalizados (Hoje)',    'check_circle',  '#10b981')}
             </div>
 
             <!-- Tabela -->
@@ -99,6 +101,7 @@
                 _cache = receipts;
                 _renderTable(receipts);
                 _atualizarKpis(receipts);
+                _agendarPollPreEntrada(receipts); // polling para NFs bloqueadas
                 const upd = $('inb-last-update');
                 if (upd) upd.textContent = 'Atualizado: ' + new Date().toLocaleTimeString('pt-BR');
             });
@@ -107,6 +110,30 @@
             if (body) body.innerHTML = `<tr><td colspan="7" style="padding:2rem;text-align:center;color:#ef4444;">
                 Erro ao conectar: ${e.message}</td></tr>`;
         }
+    }
+
+    // ─── POLLING AUTOMÁTICO PRÉ-ENTRADA ────────────────────────────────────────────────
+    function _agendarPollPreEntrada(receipts) {
+        clearInterval(_pollTimer);
+        const bloqueadas = receipts.filter(r => r.status === 'AGUARDANDO_PRE_ENTRADA');
+        if (bloqueadas.length === 0) return;
+
+        _pollTimer = setInterval(async () => {
+            for (const r of bloqueadas) {
+                try {
+                    const res = await WmsProcedures.proc_verificar_pre_entrada(r.chaveNfe);
+                    if (res.found) {
+                        await WmsStore.atualizarRecebimento(r.id, {
+                            status:       'AGUARDANDO_CONFERENCIA',
+                            itens:        res.itens,
+                            pedidoCompra: res.pedidoCompra || ''
+                        });
+                        // onSnapshot atualizará o dashboard automaticamente
+                        if (window.showToast) showToast(`✅ Pré-Entrada localizada! NF ${r.nfNumero} liberada.`, 'success');
+                    }
+                } catch(e) { /* falha silenciosa no poll */ }
+            }
+        }, 60000); // verifica a cada 60 segundos
     }
 
     // ─── KPIs ─────────────────────────────────────────────────────────────────
@@ -132,6 +159,7 @@
 
         const set = (id, val) => { const el = $(id); if (el) el.textContent = val; };
         set('inb-kpi-checkin',     hojeRec.length);
+        set('inb-kpi-pre-entrada', receipts.filter(r => r.status === 'AGUARDANDO_PRE_ENTRADA').length);
         set('inb-kpi-conferindo',  receipts.filter(r => r.status === 'CONFERENCIA_ITENS_PENDENTE').length);
         set('inb-kpi-divergencias',receipts.filter(r => r.status === 'FINALIZADO_COM_DIV').length);
         set('inb-kpi-ok',          receipts.filter(r => {
@@ -193,11 +221,49 @@
 
     // ─── MODAL DE DETALHE ─────────────────────────────────────────────────────
     window.inbVerDetalhe = function (id) {
-        // Usa o cache em memória — sem read extra no Firestore
         const r = _cache.find(x => x.id === id);
         if (!r) return;
 
-        const badge = _badge(r);
+        const badge        = _badge(r);
+        const aguardPreEnt = r.status === 'AGUARDANDO_PRE_ENTRADA';
+
+        // Bloco informativo de pré-entrada bloqueada
+        const preEntradaHtml = aguardPreEnt ? `
+            <div style="background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.3);border-radius:10px;padding:1rem;margin:.85rem 0;text-align:center;">
+                <span class="material-icons-round" style="font-size:2.2rem;color:#f97316;display:block;margin-bottom:.4rem;">hourglass_top</span>
+                <div style="font-weight:700;color:#f97316;font-size:.9rem;margin-bottom:.25rem;">Aguardando Pré-Entrada no ERP</div>
+                <div style="font-size:.78rem;color:var(--text-secondary);margin-bottom:.75rem;">
+                    Os itens desta NF ainda não foram vinculados ao cadastro interno.<br>
+                    O sistema verificará automaticamente a cada 60 segundos.
+                </div>
+                <button class="btn btn-secondary btn-icon" onclick="inbVerificarPreEntrada('${r.id}','${r.chaveNfe}')" style="font-size:.78rem;padding:.4rem .9rem;">
+                    <span class="material-icons-round" style="font-size:1rem;">refresh</span> Verificar Agora
+                </button>
+            </div>` : '';
+
+        // Expor função de retry
+        window.inbVerificarPreEntrada = async function(recId, chaveNfe) {
+            const btn = document.querySelector('[onclick^="inbVerificarPreEntrada"]');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-icons-round" style="font-size:1rem;">sync</span> Verificando...'; }
+            try {
+                const res = await WmsProcedures.proc_verificar_pre_entrada(chaveNfe);
+                if (res.found) {
+                    await WmsStore.atualizarRecebimento(recId, {
+                        status: 'AGUARDANDO_CONFERENCIA',
+                        itens:  res.itens,
+                        pedidoCompra: res.pedidoCompra || ''
+                    });
+                    $('modal-inb-detalhe').style.display = 'none';
+                    showToast('✅ Pré-Entrada encontrada! NF liberada para conferência.', 'success');
+                } else {
+                    showToast('⏳ Ainda sem pré-entrada no ERP.', 'warning');
+                    if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons-round" style="font-size:1rem;">refresh</span> Verificar Agora'; }
+                }
+            } catch(e) {
+                showToast('Erro: ' + e.message, 'danger');
+                if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons-round" style="font-size:1rem;">refresh</span> Verificar Agora'; }
+            }
+        };
 
         // ─── Itens: conferência concluída ou em progresso ─────────────────────────
         let itensHtml = '';
@@ -286,6 +352,7 @@
             <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--border-color);">
                 <span style="background:${badge.bg};color:${badge.color};padding:.25rem .65rem;border-radius:6px;font-size:.72rem;font-weight:700;">${badge.label}</span>
                 <span style="font-size:.8rem;color:var(--text-secondary);">NF ${r.nfNumero || '—'} · ${r.fornecedor || '—'}</span>
+                ${emConferencia ? '<span style="font-size:.72rem;color:#0ea5e9;background:rgba(14,165,233,.1);padding:.2rem .5rem;border-radius:4px;">🔴 AO VIVO</span>' : ''}
             </div>
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:.85rem 2rem; font-size:0.85rem; margin-bottom:1rem;">
@@ -297,10 +364,14 @@
                 ${_ro('Doca',        r.doca || '—')}
                 ${_ro('Placa',       r.placa || '—')}
                 ${_ro('Motorista',   r.motorista || '—')}
+                ${r.pedidoCompra    ? _ro('Pedido de Compra', r.pedidoCompra) : ''}
+                ${r.volumesFisicos != null ? _ro('Vol. NF / Físico', `${r.volumesNF ?? '?'} / <strong>${r.volumesFisicos}</strong>`) : ''}
                 ${r.operadorConferencia ? _ro('Conferente', r.operadorConferencia) : ''}
                 ${r.conferenciaFim ? _ro('Fim Conferência', WmsStore.fmtData(r.conferenciaFim)) : ''}
             </div>
 
+            ${preEntradaHtml}
+            ${docaDiv}
             ${itensHtml}
         `;
 
@@ -314,9 +385,10 @@
         </div>`;
     }
 
-    // Cancela o listener quando a view é desmontada
+    // Cancela o listener e o poll quando a view é desmontada
     window._inboundUnsubscribe = function() {
         if (_unsubscribe) { _unsubscribe(); _unsubscribe = null; }
+        clearInterval(_pollTimer); _pollTimer = null;
     };
 
 })();

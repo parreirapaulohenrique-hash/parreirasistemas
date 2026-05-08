@@ -140,7 +140,10 @@ window.salvarCheckin = async function() {
     const nf     = window._recNFDados;
     const emp    = window._recEmpresa;
     const sessao = window.ParreiraAuth?.getSessao?.() || {};
+    const btn    = document.querySelector('button.m-btn-success');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-icons-round">hourglass_top</span> Salvando...'; }
 
+    // 1. Salva o check-in com status AGUARDANDO_PRE_ENTRADA (bloqueado até o ERP responder)
     const payload = {
         id:            `CHK-${Date.now()}`,
         chaveNfe:      nf.chaveNfe || '',
@@ -154,9 +157,9 @@ window.salvarCheckin = async function() {
         placa,
         motorista:     document.getElementById('rcheck-motorista')?.value?.trim() || '',
         volumesNF:     nf.volumes || 0,
-        itens:         nf.itens || [],
+        itens:         [],      // será preenchido pelo ERP via pré-entrada
         _leituras:     {},
-        status:        'AGUARDANDO_CONFERENCIA',
+        status:        'AGUARDANDO_PRE_ENTRADA',
         dataCheckin:   new Date().toISOString(),
         operadorLogin: sessao.login || '',
         operadorNome:  sessao.nome  || 'Operador'
@@ -164,14 +167,34 @@ window.salvarCheckin = async function() {
 
     try {
         await WmsStore.criarRecebimento(payload);
-        Feedback.beep('success'); Feedback.flash('success');
-        showToast('Check-in Concluído!', 'success');
+
+        // 2. Consulta imediata ao ERP se existe pré-entrada
+        if (btn) btn.innerHTML = '<span class="material-icons-round">search</span> Verificando ERP...';
+        const preEntrada = await WmsProcedures.proc_verificar_pre_entrada(payload.chaveNfe);
+
+        if (preEntrada.found) {
+            // 3a. Pré-entrada encontrada → libera para conferência com itens do ERP
+            await WmsStore.atualizarRecebimento(payload.id, {
+                status:        'AGUARDANDO_CONFERENCIA',
+                itens:         preEntrada.itens,
+                pedidoCompra:  preEntrada.pedidoCompra || ''
+            });
+            Feedback.beep('success'); Feedback.flash('success');
+            showToast('✅ Pré-Entrada confirmada! NF liberada para conferência.', 'success');
+        } else {
+            // 3b. Sem pré-entrada → fica bloqueada, o ERP será recontactado automaticamente
+            Feedback.beep('warning');
+            showToast('⏳ Sem Pré-Entrada no ERP. NF aguardando liberação automática.', 'warning');
+        }
+
         if (window.updateHomeStats) updateHomeStats();
-        setTimeout(() => navigateTo('home'), 1000);
+        setTimeout(() => navigateTo('home'), 1500);
     } catch(e) {
         showToast('Erro ao salvar: ' + e.message, 'danger');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons-round">how_to_reg</span> Confirmar Check-in'; }
     }
 };
+
 
 // ===================================
 // 2. CONFERÊNCIA FÍSICA
