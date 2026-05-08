@@ -302,11 +302,15 @@
         }
 
         function renderUserInfo(user) {
-            document.getElementById('userName').textContent = user.name || user.login;
-            document.getElementById('userRole').textContent = user.role === 'supervisor' || user.role === 'admin' ? 'Supervisor' : 'Operacional';
+            document.getElementById('userName').textContent = user.name || user.nome || user.login;
+            const roleLabel = { admin:'Admin', master:'Master', supervisor:'Supervisor', gerente:'Gerente' };
+            document.getElementById('userRole').textContent = roleLabel[user.role] || 'Operacional';
 
-            // Enable master panel ONLY for admin and parreira tenants or users with role 'admin'
-            const isMaster = user.tenant === 'parreira' || user.role === 'admin' || user.login === 'admin';
+            // Acesso ao Painel Admin: admin / master / tenant parreira / login paulo
+            const isMaster = ['admin','master'].includes(user.role)
+                || user.tenant    === 'parreira'
+                || user.tenantId  === 'parreira'
+                || user.login     === 'paulo';
 
             const masterCard = document.querySelector('.module-master');
             if (masterCard) {
