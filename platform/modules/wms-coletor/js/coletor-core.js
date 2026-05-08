@@ -46,10 +46,11 @@ function navigateTo(screenId) {
         currentScreen = screenId;
 
         // Init custom screens
-        if (screenId === 'checkin' && window.initCheckinScreen) window.initCheckinScreen(target);
-        if (screenId === 'conferir' && window.initConferirScreen) window.initConferirScreen(target);
-        if (screenId === 'config' && window.initConfigScreen) window.initConfigScreen(target);
-        if (screenId === 'recebimento' && window.initConferenciaItensScreen) window.initConferenciaItensScreen(target);
+        if (screenId === 'checkin'     && window.initCheckinScreen)           window.initCheckinScreen(target);
+        if (screenId === 'conferir'    && window.initConferirScreen)          window.initConferirScreen(target);
+        if (screenId === 'config'      && window.initConfigScreen)            window.initConfigScreen(target);
+        if (screenId === 'recebimento' && window.initConferenciaItensScreen)  window.initConferenciaItensScreen(target);
+        if (screenId === 'armazenar'   && window.initArmazenagemScreen)       window.initArmazenagemScreen(target);
 
         // Inject placeholder content if screen is empty
         if (target.innerHTML.trim() === '' && screenId !== 'home') {

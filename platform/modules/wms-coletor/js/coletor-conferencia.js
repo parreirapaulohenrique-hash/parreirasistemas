@@ -486,21 +486,50 @@ window.finalizarConferencia = async function() {
 
 // ─── GERAR PUTAWAY ────────────────────────────────────────────────────────────
 async function _gerarPutaway(r) {
+    const cfgRaw = JSON.parse(localStorage.getItem('wms_config') || '{}');
+    const cfgPut = cfgRaw.putaway || { modo: 'PICKING_DIRETO', tipoEnderec: 'FLUTUANTE' };
+    const setores = cfgPut.setores || { A:'PICK-A', B:'PICK-B', C:'PULMAO', D:'FUNDO' };
+    const efCfg  = cfgRaw.enderecoFixo || {};
+
     const tasks = [];
-    (r.itens || []).forEach((item, i) => {
+    for (let i = 0; i < (r.itens || []).length; i++) {
+        const item = r.itens[i];
         const lido = r._leituras?.[item.sku] || 0;
-        if (lido > 0) {
-            tasks.push({
-                id:      `PUT-${Date.now()}-${i}`,
-                nf:      r.nfNumero,
-                sku:     item.sku,
-                desc:    item.descricao,
-                qty:     lido,
-                destino: 'PISO-DOCA',
-                status:  'PENDENTE',
-                created: new Date().toISOString()
-            });
+        if (lido <= 0) continue;
+
+        // Busca curva ABCD do SKU (Firestore → fallback D)
+        let curva = 'D';
+        let enderecoSugerido = setores['D'] || 'PULMAO';
+        try {
+            curva = await WmsStore.buscarCurvaSku(item.sku);
+        } catch(_) {}
+
+        // Endereço sugerido
+        if (cfgPut.tipoEnderec === 'FIXO') {
+            enderecoSugerido = efCfg[item.sku]?.endereco || setores[curva] || 'PISO-DOCA';
+        } else {
+            enderecoSugerido = setores[curva] || 'PISO-DOCA';
         }
-    });
+
+        tasks.push({
+            id:               `PUT-${Date.now()}-${i}`,
+            nf:               r.nfNumero,
+            sku:              item.sku,
+            desc:             item.descricao,
+            qty:              lido,
+            curva,
+            enderecoSugerido,
+            modo:             cfgPut.modo || 'PICKING_DIRETO',
+            tipoEnderec:      cfgPut.tipoEnderec || 'FLUTUANTE',
+            status:           'PENDENTE',
+            tipoDestino:      null,
+            enderecoEfetivo:  null,
+            operador:         null,
+            iniciadoEm:       null,
+            concluidoEm:      null,
+            created:          new Date().toISOString()
+        });
+    }
     if (tasks.length > 0) await WmsStore.criarPutaway(tasks);
+    return tasks.length;
 }

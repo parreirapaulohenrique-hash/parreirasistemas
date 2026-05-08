@@ -107,81 +107,285 @@ window.salvarCfgGeral = function () {
 };
 
 // ========================
-// 2. REGRAS DE ARMAZENAGEM
+// 2. PARÂMETROS DE ARMAZENAGEM (PUTAWAY)
 // ========================
 function renderCfgArmazenagem(container) {
     const cfg = getWmsConfig();
-    const regras = cfg.armazenagem || [];
+    const p   = cfg.putaway || {};
+    const ef  = cfg.enderecoFixo || {};
+
+    const modoAtivo   = p.modo           || 'PICKING_DIRETO';
+    const tipoEnd     = p.tipoEnderec    || 'FLUTUANTE';
+    const periodo     = p.periodoAnalise || 30;
+    const cortes      = p.cortesABC      || { a: 10, b: 30, c: 70 };
+    const setores     = p.setores        || { A: 'PICK-A', B: 'PICK-B', C: 'PULMAO', D: 'FUNDO' };
+
+    const _radio = (name, val, cur, label, desc) => `
+        <label style="display:flex;align-items:flex-start;gap:.75rem;padding:.85rem;border-radius:10px;cursor:pointer;
+            border:2px solid ${cur===val?'var(--wms-primary)':'var(--border-color)'};
+            background:${cur===val?'rgba(99,102,241,.08)':'transparent'};transition:all .2s;">
+            <input type="radio" name="${name}" value="${val}" ${cur===val?'checked':''} style="margin-top:.2rem;accent-color:var(--wms-primary);">
+            <div>
+                <div style="font-weight:600;font-size:.87rem;">${label}</div>
+                <div style="font-size:.75rem;color:var(--text-secondary);margin-top:.2rem;">${desc}</div>
+            </div>
+        </label>`;
+
+    const efRows = Object.entries(ef).map(([sku, v], i) => `
+        <tr>
+            <td><code style="font-size:.8rem;">${sku}</code></td>
+            <td><input class="form-input ef-end" data-sku="${sku}" style="width:100%;padding:.3rem .5rem;font-size:.8rem;" value="${v.endereco||''}"></td>
+            <td><input class="form-input ef-cap" data-sku="${sku}" type="number" style="width:80px;padding:.3rem .5rem;font-size:.8rem;" value="${v.capacidade||0}"></td>
+            <td><input class="form-input ef-rep" data-sku="${sku}" type="number" style="width:80px;padding:.3rem .5rem;font-size:.8rem;" value="${v.pontoReposicao||0}"></td>
+            <td><button onclick="cfgRemoverEndFixo('${sku}')" style="background:none;border:none;cursor:pointer;color:#ef4444;">
+                <span class="material-icons-round" style="font-size:1rem;">delete</span></button></td>
+        </tr>`).join('');
 
     container.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:1.25rem;">
+
+        <!-- Seção 1: Modo de Armazenagem -->
         <div class="card">
             <div class="card-header">
-                <h3 style="font-size:0.95rem; font-weight:600;">
-                    <span class="material-icons-round" style="font-size:1.1rem; vertical-align:middle;">shelves</span>
-                    Regras de Armazenagem
+                <h3 style="font-size:.95rem;font-weight:600;">
+                    <span class="material-icons-round" style="font-size:1.1rem;vertical-align:middle;">shelves</span>
+                    Modo de Armazenagem
                 </h3>
-                <button class="btn btn-primary" onclick="addRegraArm()">
-                    <span class="material-icons-round" style="font-size:1rem;">add</span> Nova Regra
+                <button class="btn btn-primary" onclick="salvarCfgArmazenagem()">
+                    <span class="material-icons-round" style="font-size:1rem;">save</span> Salvar
                 </button>
             </div>
-            <div style="overflow-x:auto;">
-                <table class="data-table">
+            <div style="padding:1.25rem;display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+                ${_radio('cfgModoArm','PICKING_DIRETO',modoAtivo,
+                    '⚡ Picking Direto',
+                    'Armazena direto no picking, ignorando FIFO/FEFO. Operador confirma ou ajusta o endereço sugerido.')}
+                ${_radio('cfgModoArm','PULMAO',modoAtivo,
+                    '🏭 Picking + Pulmão',
+                    'Operador escolhe: ir para o picking ou para o pulmão (buffer). Sistema sugere o endereço conforme a escolha.')}
+            </div>
+        </div>
+
+        <!-- Seção 2: Tipo de Endereçamento -->
+        <div class="card">
+            <div class="card-header">
+                <h3 style="font-size:.95rem;font-weight:600;">
+                    <span class="material-icons-round" style="font-size:1.1rem;vertical-align:middle;">location_on</span>
+                    Tipo de Endereçamento
+                </h3>
+            </div>
+            <div style="padding:1.25rem;display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+                ${_radio('cfgTipoEnd','FLUTUANTE',tipoEnd,
+                    '🌊 Endereço Flutuante (Curva ABCD)',
+                    'Produto ocupa endereços do setor da sua curva. Curva calculada por frequência de acessos de picking.')}
+                ${_radio('cfgTipoEnd','FIXO',tipoEnd,
+                    '📌 Endereço Fixo por Produto',
+                    'Cada produto tem endereço, capacidade e ponto de reposição fixos. Gera tarefa de abastecimento automático.')}
+            </div>
+        </div>
+
+        <!-- Seção 3: Curva ABCD (visível sempre, mais relevante no modo FLUTUANTE) -->
+        <div class="card">
+            <div class="card-header">
+                <h3 style="font-size:.95rem;font-weight:600;">
+                    <span class="material-icons-round" style="font-size:1.1rem;vertical-align:middle;">bar_chart</span>
+                    Configuração da Curva ABCD
+                </h3>
+                <button class="btn btn-secondary" onclick="cfgRecalcularCurva()">
+                    <span class="material-icons-round" style="font-size:.9rem;">refresh</span> Recalcular Curva
+                </button>
+            </div>
+            <div style="padding:1.25rem;display:flex;flex-direction:column;gap:1rem;">
+
+                <p style="font-size:.8rem;color:var(--text-secondary);margin:0;">
+                    A curva é calculada pela <strong>frequência de visitas de picking</strong> (nº de vezes que o operador
+                    foi ao endereço buscar o produto, independentemente da quantidade coletada).
+                </p>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div>
+                        <label style="font-size:.75rem;color:var(--text-secondary);display:block;margin-bottom:.3rem;">Período de Análise (dias)</label>
+                        <input type="number" id="cfgPeriodo" class="form-input" style="width:100%;" value="${periodo}" min="7" max="365">
+                    </div>
+                </div>
+
+                <div>
+                    <label style="font-size:.8rem;font-weight:600;display:block;margin-bottom:.6rem;">Cortes por % de SKUs (do total)</label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem;">
+                        ${[['A','cfgCorteA',cortes.a,'#10b981'],['B','cfgCorteB',cortes.b,'#0ea5e9'],['C','cfgCorteC',cortes.c,'#f59e0b']].map(([l,id,v,cor])=>`
+                        <div>
+                            <label style="font-size:.75rem;color:${cor};font-weight:600;display:block;margin-bottom:.3rem;">
+                                Curva ${l} — Top ${v}%
+                            </label>
+                            <input type="number" id="${id}" class="form-input" style="width:100%;border-color:${cor}44;"
+                                value="${v}" min="1" max="90" onchange="cfgAtualizarCortes()">
+                        </div>`).join('')}
+                    </div>
+                    <div id="corte-preview" style="margin-top:.65rem;font-size:.75rem;color:var(--text-secondary);"></div>
+                </div>
+
+                <div>
+                    <label style="font-size:.8rem;font-weight:600;display:block;margin-bottom:.6rem;">Setor Destino por Curva</label>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;">
+                        ${[['A','#10b981'],['B','#0ea5e9'],['C','#f59e0b'],['D','#64748b']].map(([c,cor])=>`
+                        <div>
+                            <label style="font-size:.75rem;color:${cor};font-weight:600;display:block;margin-bottom:.3rem;">Curva ${c}</label>
+                            <input type="text" id="cfgSetor${c}" class="form-input" style="width:100%;border-color:${cor}44;"
+                                value="${setores[c]||''}" placeholder="ex: PICK-${c}">
+                        </div>`).join('')}
+                    </div>
+                </div>
+
+                <!-- Visualização atual da curva -->
+                <div id="curva-atual" style="margin-top:.5rem;"></div>
+            </div>
+        </div>
+
+        <!-- Seção 4: Endereço Fixo por Produto (visível sempre mas mais usada no modo FIXO) -->
+        <div class="card">
+            <div class="card-header">
+                <h3 style="font-size:.95rem;font-weight:600;">
+                    <span class="material-icons-round" style="font-size:1.1rem;vertical-align:middle;">inventory_2</span>
+                    Endereços Fixos por Produto
+                </h3>
+                <button class="btn btn-primary" onclick="cfgAddEndFixo()">
+                    <span class="material-icons-round" style="font-size:1rem;">add</span> Adicionar SKU
+                </button>
+            </div>
+            <div style="overflow-x:auto;padding:0 1rem 1rem;">
+                <table class="data-table" id="ef-table">
                     <thead><tr>
-                        <th>Prioridade</th><th>Critério</th><th>Condição</th><th>Ação</th><th>Destino</th><th>Ações</th>
+                        <th>SKU</th><th>Endereço</th><th>Capacidade</th><th>Ponto Repos.</th><th></th>
                     </tr></thead>
-                    <tbody>
-                        ${regras.length === 0 ? '<tr><td colspan="6" style="text-align:center; padding:2rem; color:var(--text-secondary);">Nenhuma regra configurada — usando FIFO padrão</td></tr>' :
-            regras.map((r, i) => `
-                            <tr>
-                                <td style="text-align:center;">${r.prioridade || (i + 1)}</td>
-                                <td>${r.criterio || '-'}</td>
-                                <td>${r.condicao || '-'}</td>
-                                <td>${r.acao || '-'}</td>
-                                <td><strong>${r.destino || '-'}</strong></td>
-                                <td style="text-align:center;">
-                                    <button class="btn btn-secondary btn-icon" onclick="removeRegraArm(${i})" style="padding:0.3rem;">
-                                        <span class="material-icons-round" style="font-size:1rem; color:var(--danger);">delete</span>
-                                    </button>
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
+                    <tbody id="ef-tbody">${efRows || '<tr><td colspan="5" style="text-align:center;padding:1.5rem;color:var(--text-secondary);">Nenhum endereço fixo configurado.</td></tr>'}</tbody>
                 </table>
+                <button class="btn btn-secondary" style="margin-top:.75rem;" onclick="cfgSalvarEndFixos()">
+                    <span class="material-icons-round" style="font-size:.9rem;">save</span> Salvar Endereços
+                </button>
             </div>
         </div>
-        <div class="card" style="margin-top:1rem;">
-            <div class="card-header"><h3 style="font-size:0.9rem;">Estratégias Ativas</h3></div>
-            <div style="padding:1rem; display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.75rem;">
-                ${['FIFO (Primeiro a Entrar)', 'Proximidade (Next Empty)', 'Curva ABC (A→Piso, C→Pulmão)', 'Peso (Pesado→Baixo)', 'Volume (Grande→Blocado)', 'Grupo (Mesma Família)'].map((s, i) => `
-                    <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.85rem; cursor:pointer;">
-                        <input type="checkbox" ${i < 3 ? 'checked' : ''} style="accent-color:var(--wms-primary);">
-                        ${s}
-                    </label>
-                `).join('')}
-            </div>
-        </div>
-    `;
+    </div>`;
+
+    cfgAtualizarCortes();
+    cfgCarregarCurvaAtual();
 }
 
-window.addRegraArm = function () {
+window.salvarCfgArmazenagem = function () {
     const cfg = getWmsConfig();
-    if (!cfg.armazenagem) cfg.armazenagem = [];
-    cfg.armazenagem.push({
-        prioridade: cfg.armazenagem.length + 1,
-        criterio: 'Grupo de Produto',
-        condicao: 'Igual a "Lubrificantes"',
-        acao: 'Direcionar',
-        destino: 'Rua A, Piso'
-    });
+    cfg.putaway = {
+        modo:          document.querySelector('[name="cfgModoArm"]:checked')?.value || 'PICKING_DIRETO',
+        tipoEnderec:   document.querySelector('[name="cfgTipoEnd"]:checked')?.value || 'FLUTUANTE',
+        periodoAnalise: Number(document.getElementById('cfgPeriodo')?.value || 30),
+        cortesABC: {
+            a: Number(document.getElementById('cfgCorteA')?.value || 10),
+            b: Number(document.getElementById('cfgCorteB')?.value || 30),
+            c: Number(document.getElementById('cfgCorteC')?.value || 70),
+        },
+        setores: {
+            A: document.getElementById('cfgSetorA')?.value || 'PICK-A',
+            B: document.getElementById('cfgSetorB')?.value || 'PICK-B',
+            C: document.getElementById('cfgSetorC')?.value || 'PULMAO',
+            D: document.getElementById('cfgSetorD')?.value || 'FUNDO',
+        }
+    };
+    saveWmsConfig(cfg);
+    alert('✅ Parâmetros de armazenagem salvos!');
+};
+
+window.cfgAtualizarCortes = function () {
+    const a = Number(document.getElementById('cfgCorteA')?.value || 10);
+    const b = Number(document.getElementById('cfgCorteB')?.value || 30);
+    const c = Number(document.getElementById('cfgCorteC')?.value || 70);
+    const d = Math.max(0, 100 - a - b - c);
+    const el = document.getElementById('corte-preview');
+    if (!el) return;
+    el.innerHTML = `
+        <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+            ${[['A',a,'#10b981'],['B',b,'#0ea5e9'],['C',c,'#f59e0b'],['D',d,'#64748b']].map(([l,v,c])=>`
+            <span style="background:${c}22;color:${c};border:1px solid ${c}44;border-radius:4px;padding:.15rem .5rem;font-size:.72rem;font-weight:700;">
+                ${l}: ${v}% SKUs
+            </span>`).join('')}
+            ${a+b+c > 100 ? '<span style="color:#ef4444;font-size:.72rem;">⚠️ Soma ultrapassa 100%</span>' : ''}
+        </div>`;
+};
+
+window.cfgRecalcularCurva = async function () {
+    const btn = event.currentTarget;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="material-icons-round" style="font-size:.9rem;animation:spin 1s infinite linear;">sync</span> Calculando...';
+    try {
+        if (!window.WmsStore) throw new Error('WmsStore não disponível');
+        const result = await WmsStore.calcularEPersistirCurva();
+        alert(`✅ Curva recalculada! ${result.length} SKUs classificados.`);
+        cfgCarregarCurvaAtual();
+    } catch(e) {
+        alert('❌ Erro ao recalcular: ' + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-icons-round" style="font-size:.9rem;">refresh</span> Recalcular Curva';
+    }
+};
+
+window.cfgCarregarCurvaAtual = async function () {
+    const el = document.getElementById('curva-atual');
+    if (!el) return;
+    el.innerHTML = '<div style="font-size:.75rem;color:var(--text-secondary);">Carregando curva atual...</div>';
+    try {
+        if (!window.WmsStore) { el.innerHTML = ''; return; }
+        const acessos = await WmsStore.listarAcessosPicking();
+        if (!acessos.length) { el.innerHTML = '<div style="font-size:.75rem;color:var(--text-secondary);">Sem dados de picking ainda.</div>'; return; }
+        const contagem = { A:0, B:0, C:0, D:0 };
+        acessos.forEach(a => contagem[a.curva || 'D']++);
+        el.innerHTML = `
+            <div style="font-size:.8rem;font-weight:600;margin-bottom:.5rem;">Classificação Atual (${acessos.length} SKUs)</div>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+                ${[['A','#10b981'],['B','#0ea5e9'],['C','#f59e0b'],['D','#64748b']].map(([c,cor])=>`
+                <div style="background:${cor}18;border:1px solid ${cor}33;border-radius:8px;padding:.5rem .85rem;text-align:center;">
+                    <div style="color:${cor};font-weight:700;font-size:1.1rem;">${contagem[c]}</div>
+                    <div style="font-size:.65rem;color:var(--text-secondary);">Curva ${c}</div>
+                </div>`).join('')}
+            </div>`;
+    } catch(e) { el.innerHTML = ''; }
+};
+
+// Endereços Fixos CRUD
+window.cfgAddEndFixo = function () {
+    const sku = prompt('SKU do produto:')?.trim().toUpperCase();
+    if (!sku) return;
+    const cfg = getWmsConfig();
+    if (!cfg.enderecoFixo) cfg.enderecoFixo = {};
+    if (!cfg.enderecoFixo[sku]) cfg.enderecoFixo[sku] = { endereco:'', capacidade:0, pontoReposicao:0 };
     saveWmsConfig(cfg);
     renderCfgArmazenagem(document.getElementById('view-dynamic'));
 };
 
-window.removeRegraArm = function (idx) {
+window.cfgRemoverEndFixo = function (sku) {
+    if (!confirm(`Remover endereço fixo do SKU ${sku}?`)) return;
     const cfg = getWmsConfig();
-    cfg.armazenagem.splice(idx, 1);
+    delete (cfg.enderecoFixo || {})[sku];
     saveWmsConfig(cfg);
     renderCfgArmazenagem(document.getElementById('view-dynamic'));
+};
+
+window.cfgSalvarEndFixos = function () {
+    const cfg = getWmsConfig();
+    if (!cfg.enderecoFixo) cfg.enderecoFixo = {};
+    document.querySelectorAll('.ef-end').forEach(inp => {
+        const sku = inp.dataset.sku;
+        if (!cfg.enderecoFixo[sku]) cfg.enderecoFixo[sku] = {};
+        cfg.enderecoFixo[sku].endereco = inp.value.trim().toUpperCase();
+    });
+    document.querySelectorAll('.ef-cap').forEach(inp => {
+        const sku = inp.dataset.sku;
+        if (!cfg.enderecoFixo[sku]) cfg.enderecoFixo[sku] = {};
+        cfg.enderecoFixo[sku].capacidade = Number(inp.value) || 0;
+    });
+    document.querySelectorAll('.ef-rep').forEach(inp => {
+        const sku = inp.dataset.sku;
+        if (!cfg.enderecoFixo[sku]) cfg.enderecoFixo[sku] = {};
+        cfg.enderecoFixo[sku].pontoReposicao = Number(inp.value) || 0;
+    });
+    saveWmsConfig(cfg);
+    alert('✅ Endereços fixos salvos!');
 };
 
 // ========================

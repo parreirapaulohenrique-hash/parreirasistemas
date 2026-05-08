@@ -107,6 +107,93 @@ window.WmsStore = (function () {
         await batch.commit();
     }
 
+    /** Lista tarefas de putaway com filtros opcionais. */
+    async function listarPutaway(filtros = {}) {
+        let q = _putawayCol(_tid()).orderBy('criadoEm', 'asc');
+        if (filtros.status) q = q.where('status', '==', filtros.status);
+        if (filtros.sku)    q = q.where('sku',    '==', filtros.sku);
+        if (filtros.limite) q = q.limit(filtros.limite);
+        const snap = await q.get();
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+
+    /** Atualiza campos de uma tarefa de putaway. */
+    async function atualizarPutaway(id, update) {
+        await _putawayCol(_tid()).doc(id).update({ ...update, atualizadoEm: TS() });
+    }
+
+    /** Listener em tempo real das tarefas de putaway. */
+    function ouvirPutaway(callback, filtros = {}) {
+        let q = _putawayCol(_tid()).orderBy('criadoEm', 'asc');
+        if (filtros.status) q = q.where('status', '==', filtros.status);
+        return q.onSnapshot(snap =>
+            callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+        );
+    }
+
+    // ─── ACESSOS DE PICKING (base da Curva ABCD) ─────────────────────────────
+
+    function _acessosCol(tid) {
+        return _db().collection('tenants').doc(tid).collection('pickingAcessos');
+    }
+
+    /**
+     * Registra um acesso de picking para um SKU.
+     * Chamado toda vez que o operador conclui uma coleta — independente da qtd.
+     */
+    async function registrarAcessoPicking(sku) {
+        const tid = _tid();
+        const ref = _acessosCol(tid).doc(sku);
+        await ref.set({
+            sku,
+            totalAcessos: firebase.firestore.FieldValue.increment(1),
+            ultimoAcesso: new Date().toISOString(),
+            tenantId: tid
+        }, { merge: true });
+    }
+
+    /** Retorna todos os acessos de picking, ordenados por totalAcessos DESC. */
+    async function listarAcessosPicking() {
+        const snap = await _acessosCol(_tid()).orderBy('totalAcessos', 'desc').get();
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+
+    /**
+     * Calcula a curva ABCD de todos os SKUs com acessos registrados
+     * e persiste a classificação de volta em cada documento.
+     * Cortes definidos em wms_config.putaway.cortesABC (% do total de SKUs).
+     * Retorna array classificado.
+     */
+    async function calcularEPersistirCurva() {
+        const cfg       = JSON.parse(localStorage.getItem('wms_config') || '{}');
+        const cortes    = cfg.putaway?.cortesABC || { a: 10, b: 30, c: 70 };
+        const acessos   = await listarAcessosPicking();
+        const total     = acessos.length;
+
+        const tid   = _tid();
+        const batch = _db().batch();
+
+        acessos.forEach((item, idx) => {
+            const pct  = total > 0 ? ((idx + 1) / total) * 100 : 100;
+            let curva = 'D';
+            if (pct <= cortes.a)                        curva = 'A';
+            else if (pct <= cortes.a + cortes.b)        curva = 'B';
+            else if (pct <= cortes.a + cortes.b + cortes.c) curva = 'C';
+
+            const ref = _acessosCol(tid).doc(item.sku);
+            batch.update(ref, { curva, atualizadoEm: TS() });
+        });
+
+        await batch.commit();
+        return acessos;
+    }
+
+    /** Retorna a curva atual de um SKU (A/B/C/D). Retorna 'D' se não classificado. */
+    async function buscarCurvaSku(sku) {
+        const doc = await _acessosCol(_tid()).doc(sku).get();
+        return doc.exists ? (doc.data().curva || 'D') : 'D';
+    }
+
     // ─── LISTENER TEMPO REAL (WMS dashboard) ─────────────────────────────────
 
     function ouvirRecebimentos(callback, filtros = {}) {
@@ -193,7 +280,17 @@ window.WmsStore = (function () {
         atualizarRecebimento,
         salvarLeituras,
         finalizarConferencia,
+        // Putaway
         criarPutaway,
+        listarPutaway,
+        atualizarPutaway,
+        ouvirPutaway,
+        // Curva ABCD
+        registrarAcessoPicking,
+        listarAcessosPicking,
+        calcularEPersistirCurva,
+        buscarCurvaSku,
+        // Recebimentos listener
         ouvirRecebimentos,
         // Divergências
         criarDivergencia,
