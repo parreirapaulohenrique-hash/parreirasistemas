@@ -16,6 +16,13 @@
             ]
         }
     ],
+    "redirects": [
+        {
+            "source": "/apk",
+            "destination": "/platform/download/wms-coletor.html",
+            "permanent": false
+        }
+    ],
     "rewrites": [
         {
             "source": "/.well-known/(.*)",
