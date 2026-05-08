@@ -4,6 +4,14 @@ import { mockTenants } from './data.js';
 let dynamicTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
 let platformUsers = JSON.parse(localStorage.getItem('platform_users_registry') || '[]');
 
+// Deduplica dynamicTenants — remove entradas repetidas mantendo a última
+;(function() {
+    const seen = new Map();
+    dynamicTenants.forEach(t => seen.set(t.id, t));
+    dynamicTenants = [...seen.values()];
+    localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
+})();
+
 // --- SECURITY UPDATE (Ensure Owner Access, Remove Generic Admin) ---
 const SECURITY_KEY = 'sec_v1_paulo_only';
 if (!localStorage.getItem(SECURITY_KEY)) {
@@ -119,7 +127,10 @@ function closeModal(modalId) {
 }
 
 function getAllTenants() {
-    return [...mockTenants, ...dynamicTenants];
+    // Dynamic entries override mock entries with the same ID
+    const dynamicIds = new Set(dynamicTenants.map(t => t.id));
+    const uniqueMocks = mockTenants.filter(m => !dynamicIds.has(m.id));
+    return [...uniqueMocks, ...dynamicTenants];
 }
 
 function populateTenantSelect() {
@@ -329,21 +340,16 @@ if (editTenantForm) {
         const tenantId = document.getElementById('editTenantIdField').value;
         const newModules = Array.from(document.querySelectorAll('input[name="editModules"]:checked')).map(cb => cb.value);
 
-        // Find in mockTenants (imported) or dynamicTenants
-        const dynamicTenant = dynamicTenants.find(t => t.id === tenantId);
-        if (dynamicTenant) {
-            dynamicTenant.modules = newModules;
-            localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
+        // Find in mockTenants (imported) or dynamicTenants — UPSERT (nunca push duplo)
+        const existingIdx = dynamicTenants.findIndex(t => t.id === tenantId);
+        if (existingIdx >= 0) {
+            dynamicTenants[existingIdx] = { ...dynamicTenants[existingIdx], modules: newModules };
         } else {
-            // For mock tenants, we create a dynamic override
-            const allTenants = getAllTenants();
-            const mockTenant = allTenants.find(t => t.id === tenantId);
-            if (mockTenant) {
-                const override = { ...mockTenant, modules: newModules, isDynamic: true };
-                dynamicTenants.push(override);
-                localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
-            }
+            // Mock tenant: cria override dinâmico
+            const base = getAllTenants().find(t => t.id === tenantId);
+            if (base) dynamicTenants.push({ ...base, modules: newModules, isDynamic: true });
         }
+        localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
 
         alert('Liberações atualizadas com sucesso!');
         closeModal('editTenantModal');
