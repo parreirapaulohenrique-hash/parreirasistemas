@@ -15,6 +15,14 @@
             "destination": "/.well-known/$1"
         },
         {
+            "source": "/download/wms-coletor",
+            "destination": "/platform/download/wms-coletor.html"
+        },
+        {
+            "source": "/download/apk",
+            "destination": "/platform/Instala%C3%A7%C3%A3o%20WMS%20COLETOR/ParreiraLog%20WMS.apk"
+        },
+        {
             "source": "/",
             "destination": "/platform/index.html"
         },

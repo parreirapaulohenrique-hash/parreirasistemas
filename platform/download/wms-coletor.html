@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0f172a">
+    <title>Download — ParreiraLog WMS Coletor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background-image:
+                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(14,165,233,.18) 0%, transparent 70%);
+        }
+
+        .card {
+            background: rgba(30,41,59,.85);
+            border: 1px solid rgba(14,165,233,.15);
+            border-radius: 20px;
+            padding: 2.5rem 2rem;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 25px 60px rgba(0,0,0,.5);
+            text-align: center;
+        }
+
+        .app-icon {
+            width: 88px;
+            height: 88px;
+            border-radius: 22px;
+            background: linear-gradient(135deg, #0ea5e9, #6366f1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.25rem;
+            box-shadow: 0 8px 24px rgba(14,165,233,.35);
+        }
+        .app-icon span { font-size: 2.5rem; color: #fff; }
+
+        .app-name {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #e2e8f0, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: .25rem;
+        }
+
+        .app-sub {
+            font-size: .85rem;
+            color: #64748b;
+            margin-bottom: 1.5rem;
+        }
+
+        .badges {
+            display: flex;
+            justify-content: center;
+            gap: .5rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        .badge {
+            font-size: .7rem;
+            font-weight: 600;
+            padding: .25rem .65rem;
+            border-radius: 20px;
+            letter-spacing: .02em;
+        }
+        .badge-blue  { background: rgba(14,165,233,.12); color: #38bdf8; border: 1px solid rgba(14,165,233,.25); }
+        .badge-green { background: rgba(16,185,129,.12); color: #34d399; border: 1px solid rgba(16,185,129,.25); }
+        .badge-gray  { background: rgba(100,116,139,.12); color: #94a3b8; border: 1px solid rgba(100,116,139,.2); }
+
+        .btn-download {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .65rem;
+            width: 100%;
+            padding: 1rem 1.5rem;
+            background: linear-gradient(135deg, #0ea5e9, #0284c7);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 14px;
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: .01em;
+            box-shadow: 0 6px 20px rgba(14,165,233,.4);
+            transition: transform .15s, box-shadow .15s, opacity .15s;
+            margin-bottom: 1rem;
+        }
+        .btn-download:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(14,165,233,.5); }
+        .btn-download:active { transform: translateY(0); opacity: .9; }
+        .btn-download .material-icons-round { font-size: 1.4rem; }
+
+        .btn-browser {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+            width: 100%;
+            padding: .75rem 1.25rem;
+            background: transparent;
+            color: #94a3b8;
+            text-decoration: none;
+            border: 1px solid rgba(100,116,139,.25);
+            border-radius: 12px;
+            font-size: .85rem;
+            font-weight: 500;
+            transition: border-color .15s, color .15s;
+            margin-bottom: 2rem;
+        }
+        .btn-browser:hover { border-color: rgba(14,165,233,.4); color: #38bdf8; }
+        .btn-browser .material-icons-round { font-size: 1.1rem; }
+
+        .steps {
+            text-align: left;
+            border-top: 1px solid rgba(100,116,139,.2);
+            padding-top: 1.5rem;
+        }
+        .steps-title {
+            font-size: .72rem;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            margin-bottom: 1rem;
+        }
+        .step {
+            display: flex;
+            gap: .75rem;
+            align-items: flex-start;
+            margin-bottom: .85rem;
+        }
+        .step-num {
+            min-width: 24px;
+            height: 24px;
+            background: rgba(14,165,233,.12);
+            border: 1px solid rgba(14,165,233,.25);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .7rem;
+            font-weight: 700;
+            color: #38bdf8;
+            margin-top: .1rem;
+        }
+        .step-text {
+            font-size: .82rem;
+            color: #94a3b8;
+            line-height: 1.5;
+        }
+        .step-text strong { color: #cbd5e1; }
+
+        .footer {
+            margin-top: 1.75rem;
+            font-size: .72rem;
+            color: #334155;
+        }
+        .footer a { color: #475569; text-decoration: none; }
+        .footer a:hover { color: #0ea5e9; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <!-- Ícone do App -->
+        <div class="app-icon">
+            <span class="material-icons-round">hub</span>
+        </div>
+
+        <!-- Nome -->
+        <div class="app-name">ParreiraLog WMS</div>
+        <div class="app-sub">Coletor de Operações · Recebimento, Conferência &amp; Armazenagem</div>
+
+        <!-- Badges -->
+        <div class="badges">
+            <span class="badge badge-blue">v1.1.0</span>
+            <span class="badge badge-green">Android</span>
+            <span class="badge badge-gray">Build 20260212</span>
+        </div>
+
+        <!-- Botão APK -->
+        <a href="/platform/Instala%C3%A7%C3%A3o%20WMS%20COLETOR/ParreiraLog%20WMS.apk"
+           download="ParreiraLog-WMS-Coletor.apk"
+           class="btn-download"
+           id="btn-apk">
+            <span class="material-icons-round">download</span>
+            Baixar APK (Android)
+        </a>
+
+        <!-- Botão abrir no navegador (PWA) -->
+        <a href="https://parreiraistemas.vercel.app/platform/modules/wms-coletor/index.html"
+           class="btn-browser"
+           id="btn-browser">
+            <span class="material-icons-round">open_in_browser</span>
+            Abrir como Web App (sem instalar)
+        </a>
+
+        <!-- Passos de instalação -->
+        <div class="steps">
+            <div class="steps-title">Como instalar</div>
+
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-text">
+                    Toque em <strong>Baixar APK</strong> acima e aguarde o download concluir.
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-text">
+                    Se pedido, vá em <strong>Configurações → Segurança → Fontes desconhecidas</strong>
+                    e habilite a instalação de apps externos.
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-text">
+                    Abra o arquivo <strong>ParreiraLog-WMS-Coletor.apk</strong> na notificação de download e toque em <strong>Instalar</strong>.
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-text">
+                    Abra o app e faça login com suas credenciais do <strong>ParreiraLog</strong>.
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            ParreiraLog Sistemas ·
+            <a href="https://parreiraistemas.vercel.app">parreiraistemas.vercel.app</a>
+        </div>
+    </div>
+</body>
+</html>
