@@ -7,20 +7,19 @@
                 { "key": "Access-Control-Allow-Origin", "value": "*" },
                 { "key": "Cache-Control",               "value": "public, max-age=3600" }
             ]
+        },
+        {
+            "source": "/platform/download/(.*).apk",
+            "headers": [
+                { "key": "Content-Type",        "value": "application/vnd.android.package-archive" },
+                { "key": "Content-Disposition", "value": "attachment; filename=\"ParreiraLog-WMS-Coletor.apk\"" }
+            ]
         }
     ],
     "rewrites": [
         {
             "source": "/.well-known/(.*)",
             "destination": "/.well-known/$1"
-        },
-        {
-            "source": "/download/wms-coletor",
-            "destination": "/platform/download/wms-coletor.html"
-        },
-        {
-            "source": "/download/apk",
-            "destination": "/platform/download/wms-coletor.apk"
         },
         {
             "source": "/",
