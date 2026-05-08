@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Master Panel | Parreira Sistemas</title>
+    <title>Painel Admin | Parreira Sistemas</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link rel="stylesheet" href="../../core/styles/portal.css">
@@ -16,7 +16,7 @@
         <aside class="sidebar">
             <a href="#" class="sidebar-header sidebar-logo">
                 <span class="material-icons-round">admin_panel_settings</span>
-                <span>Master Panel</span>
+                <span>Painel Admin</span>
             </a>
 
             <nav class="sidebar-nav">
@@ -27,6 +27,10 @@
                 <a href="#" class="nav-item" onclick="switchView('users')">
                     <span class="material-icons-round">people</span>
                     Usuários do Sistema
+                </a>
+                <a href="#" class="nav-item" onclick="switchView('licencas')">
+                    <span class="material-icons-round">verified</span>
+                    Controle de Licenças
                 </a>
                 <a href="#" class="nav-item">
                     <span class="material-icons-round">settings</span>
@@ -97,6 +101,22 @@
             <button class="fab-add" onclick="window.openModal('userModal')">
                 <span class="material-icons-round">person_add</span>
             </button>
+        </main>
+
+        <!-- View: Controle de Licenças -->
+        <main class="main-content" id="view-licencas" style="display: none;">
+            <header class="header">
+                <div>
+                    <h2>Controle de Licenças</h2>
+                    <p>Gerencie o status, validade e módulos contratados por cada cliente.</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="LicencasManager.abrirNovaLicenca()">
+                        <span class="material-icons-round">add</span> Nova Licença
+                    </button>
+                </div>
+            </header>
+            <div class="content-body" id="licencas-container"></div>
         </main>
     </div>
 
@@ -282,6 +302,7 @@
     <script src="../shared/logout.js"></script>
     <!-- Master App Scripts -->
     <script src="js/data.js"></script>
+    <script src="js/licencas.js"></script>
 
     <!-- Scripts -->
     <script type="module" src="js/app.js?v=2.0.0"></script>

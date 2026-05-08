@@ -70,11 +70,18 @@ window.switchView = (viewName) => {
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
 
     // Show chosen
-    document.getElementById(`view-${viewName}`).style.display = 'block';
+    const viewEl = document.getElementById(`view-${viewName}`);
+    if (viewEl) viewEl.style.display = 'block';
 
     // Active Nav Item
-    const navIndex = viewName === 'tenants' ? 0 : 1;
-    document.querySelectorAll('.nav-item')[navIndex].classList.add('active');
+    const navIndex = { tenants: 0, users: 1, licencas: 2 }[viewName] ?? 0;
+    const navItems = document.querySelectorAll('.nav-item');
+    if (navItems[navIndex]) navItems[navIndex].classList.add('active');
+
+    // Loaders
+    if (viewName === 'licencas' && window.LicencasManager) {
+        window.LicencasManager.renderView();
+    }
 };
 
 // Modal Control
