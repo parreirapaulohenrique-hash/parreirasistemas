@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="pageTitleTag">WMS | Gestão de Armazém</title>
+    <title id="pageTitleTag">WMS | GestÃ£o de ArmazÃ©m</title>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
@@ -25,7 +25,7 @@
                 <!-- Dashboard -->
                 <a class="nav-item active" onclick="switchView('dashboard')">
                     <span class="material-icons-round">dashboard</span>
-                    <span>Visão Geral</span>
+                    <span>VisÃ£o Geral</span>
                 </a>
 
                 <!-- 1. CADASTROS -->
@@ -38,7 +38,7 @@
                     </a>
                     <div id="sub-cadastros" class="nav-submenu">
                         <div class="nav-sublevel-title">Gerais</div>
-                        <a class="nav-sub-item" onclick="switchView('cad-usuarios')">Usuário</a>
+                        <a class="nav-sub-item" onclick="switchView('cad-usuarios')">UsuÃ¡rio</a>
                         <a class="nav-sub-item" onclick="switchView('cad-perfil-senha')">Perfil de Seg. de Senha</a>
                         <a class="nav-sub-item" onclick="switchView('cad-tipo-empresa')">Tipo de Empresa</a>
                         <a class="nav-sub-item" onclick="switchView('cad-filial')">Filial</a>
@@ -47,57 +47,57 @@
                         <a class="nav-sub-item" onclick="switchView('cad-setor')">Setor Executante</a>
                         <a class="nav-sub-item" onclick="switchView('cad-contato')">Contato</a>
                         <a class="nav-sub-item" onclick="switchView('cad-etiquetas')">Etiquetas</a>
-                        <a class="nav-sub-item" onclick="switchView('cad-motivo-transf')">Motivo de Transferência</a>
+                        <a class="nav-sub-item" onclick="switchView('cad-motivo-transf')">Motivo de TransferÃªncia</a>
 
                         <div class="nav-sublevel-title">Produtos</div>
                         <a class="nav-sub-item" onclick="switchView('cad-prod-grupo')">Grupo</a>
                         <a class="nav-sub-item" onclick="switchView('cad-prod-subgrupo')">Sub-Grupo</a>
-                        <a class="nav-sub-item" onclick="switchView('cad-prod-familia')">Família</a>
+                        <a class="nav-sub-item" onclick="switchView('cad-prod-familia')">FamÃ­lia</a>
                         <a class="nav-sub-item" onclick="switchView('cad-prod-cadastro')">Cadastro de Produto</a>
 
-                        <div class="nav-sublevel-title">Endereços</div>
-                        <a class="nav-sub-item" onclick="switchView('cad-end-tipo')">Tipo de Endereço</a>
-                        <a class="nav-sub-item" onclick="switchView('cad-end-cadastro')">Endereçamento</a>
+                        <div class="nav-sublevel-title">EndereÃ§os</div>
+                        <a class="nav-sub-item" onclick="switchView('cad-end-tipo')">Tipo de EndereÃ§o</a>
+                        <a class="nav-sub-item" onclick="switchView('cad-end-cadastro')">EndereÃ§amento</a>
 
-                        <div class="nav-sublevel-title">Recepção</div>
+                        <div class="nav-sublevel-title">RecepÃ§Ã£o</div>
                         <a class="nav-sub-item" onclick="switchView('cad-rec-tipo-nf')">Tipo de NF</a>
                         <a class="nav-sub-item" onclick="switchView('cad-rec-regras')">Regras de Recebimento</a>
 
-                        <div class="nav-sublevel-title">Expedição</div>
+                        <div class="nav-sublevel-title">ExpediÃ§Ã£o</div>
                         <a class="nav-sub-item" onclick="switchView('cad-exp-doca')">Docas</a>
                         <a class="nav-sub-item" onclick="switchView('cad-exp-transportadora')">Transportadora</a>
 
-                        <div class="nav-sublevel-title">Ordem de Serviço</div>
+                        <div class="nav-sublevel-title">Ordem de ServiÃ§o</div>
                         <a class="nav-sub-item" onclick="switchView('cad-os-tipo')">Tipo de OS</a>
                         <a class="nav-sub-item" onclick="switchView('cad-os-prioridade')">Prioridade</a>
                     </div>
                 </div>
 
-                <!-- 2. RELATÓRIOS MANUTENÇÃO -->
+                <!-- 2. RELATÃ“RIOS MANUTENÃ‡ÃƒO -->
                 <div class="nav-group">
                     <a class="nav-item" onclick="toggleSubmenu('sub-rel-manutencao')">
                         <span class="material-icons-round">build</span>
-                        <span>Rel. Manutenção</span>
+                        <span>Rel. ManutenÃ§Ã£o</span>
                         <span class="material-icons-round"
                             style="font-size:1.2rem; margin-left:auto;">expand_more</span>
                     </a>
                     <div id="sub-rel-manutencao" class="nav-submenu">
-                        <a class="nav-sub-item" onclick="switchView('relm-endereco-vazio')">Endereços Vazios</a>
-                        <a class="nav-sub-item" onclick="switchView('relm-endereco-bloqueado')">Endereços Bloqueados</a>
-                        <a class="nav-sub-item" onclick="switchView('relm-produto-sem-end')">Produtos sem Endereço</a>
+                        <a class="nav-sub-item" onclick="switchView('relm-endereco-vazio')">EndereÃ§os Vazios</a>
+                        <a class="nav-sub-item" onclick="switchView('relm-endereco-bloqueado')">EndereÃ§os Bloqueados</a>
+                        <a class="nav-sub-item" onclick="switchView('relm-produto-sem-end')">Produtos sem EndereÃ§o</a>
                         <a class="nav-sub-item" onclick="switchView('relm-curva-abc')">Curva ABC</a>
-                        <a class="nav-sub-item" onclick="switchView('relm-ocupacao')">Ocupação por Rua</a>
-                        <a class="nav-sub-item" onclick="switchView('relm-parametros')">Parâmetros de Armazenagem</a>
+                        <a class="nav-sub-item" onclick="switchView('relm-ocupacao')">OcupaÃ§Ã£o por Rua</a>
+                        <a class="nav-sub-item" onclick="switchView('relm-parametros')">ParÃ¢metros de Armazenagem</a>
                         <a class="nav-sub-item" onclick="switchView('relm-auditoria-cadastro')">Auditoria de
                             Cadastros</a>
                     </div>
                 </div>
 
-                <!-- 3. RELATÓRIOS OPERAÇÃO -->
+                <!-- 3. RELATÃ“RIOS OPERAÃ‡ÃƒO -->
                 <div class="nav-group">
                     <a class="nav-item" onclick="toggleSubmenu('sub-rel-operacao')">
                         <span class="material-icons-round">assessment</span>
-                        <span>Rel. Operação</span>
+                        <span>Rel. OperaÃ§Ã£o</span>
                         <span class="material-icons-round"
                             style="font-size:1.2rem; margin-left:auto;">expand_more</span>
                     </a>
@@ -108,11 +108,11 @@
                         </a>
                         <a class="nav-sub-item" onclick="switchView('relo-recebimento')">Recebimentos do Dia</a>
                         <a class="nav-sub-item" onclick="switchView('relo-armazenagem')">Armazenagens Pendentes</a>
-                        <a class="nav-sub-item" onclick="switchView('relo-separacao')">Separações do Dia</a>
-                        <a class="nav-sub-item" onclick="switchView('relo-expedicao')">Expedições do Dia</a>
+                        <a class="nav-sub-item" onclick="switchView('relo-separacao')">SeparaÃ§Ãµes do Dia</a>
+                        <a class="nav-sub-item" onclick="switchView('relo-expedicao')">ExpediÃ§Ãµes do Dia</a>
                         <a class="nav-sub-item" onclick="switchView('relo-produtividade')">Produtividade Operador</a>
-                        <a class="nav-sub-item" onclick="switchView('relo-divergencias')">Divergências</a>
-                        <a class="nav-sub-item" onclick="switchView('relo-movimentacao')">Movimentação (Kardex)</a>
+                        <a class="nav-sub-item" onclick="switchView('relo-divergencias')">DivergÃªncias</a>
+                        <a class="nav-sub-item" onclick="switchView('relo-movimentacao')">MovimentaÃ§Ã£o (Kardex)</a>
                         <a class="nav-sub-item"
                             onclick="switchView('heatmap'); window.HeatmapManager.render('heatmap-container');">Mapa de
                             Calor</a>
@@ -130,14 +130,14 @@
                     <div id="sub-entrada" class="nav-submenu">
                         <a class="nav-sub-item" onclick="switchView('ent-agendamento')">Agendamento de Doca</a>
                         <a class="nav-sub-item" onclick="switchView('ent-recebimento')">Recebimento de NF</a>
-                        <a class="nav-sub-item" onclick="switchView('ent-conferencia')">Conferência</a>
+                        <a class="nav-sub-item" onclick="switchView('ent-conferencia')">ConferÃªncia</a>
                         <a class="nav-sub-item" onclick="switchView('ent-armazenagem')">Armazenagem (Putaway)</a>
-                        <a class="nav-sub-item" onclick="switchView('ent-devolucao')">Devolução de Cliente</a>
+                        <a class="nav-sub-item" onclick="switchView('ent-devolucao')">DevoluÃ§Ã£o de Cliente</a>
                         <a class="nav-sub-item" id="nav-divergencias"
                            onclick="switchView('divergencias')"
                            style="color:#ef4444;display:flex;align-items:center;gap:.4rem;">
                             <span class="material-icons-round" style="font-size:1rem;">report_problem</span>
-                            Controle de Divergências
+                            Controle de DivergÃªncias
                             <span id="nav-div-badge" style="display:none;background:#ef4444;color:#fff;
                                 border-radius:20px;font-size:.62rem;font-weight:700;
                                 padding:.05rem .4rem;margin-left:auto;">0</span>
@@ -155,32 +155,32 @@
                     </a>
                     <div id="sub-estoque" class="nav-submenu">
                         <a class="nav-sub-item" onclick="switchView('est-consulta')">Consulta de Estoque</a>
-                        <a class="nav-sub-item" onclick="switchView('est-endereco')">Consulta por Endereço</a>
-                        <a class="nav-sub-item" onclick="switchView('est-transferencia')">Transferência de Endereço</a>
+                        <a class="nav-sub-item" onclick="switchView('est-endereco')">Consulta por EndereÃ§o</a>
+                        <a class="nav-sub-item" onclick="switchView('est-transferencia')">TransferÃªncia de EndereÃ§o</a>
                         <a class="nav-sub-item" onclick="switchView('est-bloqueio')">Bloqueio / Quarentena</a>
-                        <a class="nav-sub-item" onclick="switchView('est-inventario')">Inventário</a>
+                        <a class="nav-sub-item" onclick="switchView('est-inventario')">InventÃ¡rio</a>
                         <a class="nav-sub-item" onclick="switchView('est-ajuste')">Ajuste de Estoque</a>
                     </div>
                 </div>
 
-                <!-- 6. SAÍDA DE PRODUTOS -->
+                <!-- 6. SAÃDA DE PRODUTOS -->
                 <div class="nav-group">
                     <a class="nav-item" onclick="toggleSubmenu('sub-saida')">
                         <span class="material-icons-round">local_shipping</span>
-                        <span>Saída de Produtos</span>
+                        <span>SaÃ­da de Produtos</span>
                         <span class="material-icons-round"
                             style="font-size:1.2rem; margin-left:auto;">expand_more</span>
                     </a>
                     <div id="sub-saida" class="nav-submenu">
                         <a class="nav-sub-item"
                             onclick="switchView('picking'); window.PickingManager.renderWavesGrid();">Ondas de
-                            Separação</a>
-                        <a class="nav-sub-item" onclick="switchView('sai-ondas')">Formação de Carga (Antigo)</a>
-                        <a class="nav-sub-item" onclick="switchView('sai-separacao')">Separação (Picking)</a>
-                        <a class="nav-sub-item" onclick="switchView('sai-conferencia')">Conferência de Saída</a>
+                            SeparaÃ§Ã£o</a>
+                        <a class="nav-sub-item" onclick="switchView('sai-ondas')">FormaÃ§Ã£o de Carga (Antigo)</a>
+                        <a class="nav-sub-item" onclick="switchView('sai-separacao')">SeparaÃ§Ã£o (Picking)</a>
+                        <a class="nav-sub-item" onclick="switchView('sai-conferencia')">ConferÃªncia de SaÃ­da</a>
                         <a class="nav-sub-item" onclick="switchView('sai-embalagem')">Embalagem (Packing)</a>
                         <a class="nav-sub-item" onclick="switchView('sai-romaneio')">Romaneio</a>
-                        <a class="nav-sub-item" onclick="switchView('sai-expedicao')">Expedição</a>
+                        <a class="nav-sub-item" onclick="switchView('sai-expedicao')">ExpediÃ§Ã£o</a>
                     </div>
                 </div>
 
@@ -193,28 +193,28 @@
                             style="font-size:1.2rem; margin-left:auto;">expand_more</span>
                     </a>
                     <div id="sub-auditoria" class="nav-submenu">
-                        <a class="nav-sub-item" onclick="switchView('aud-inventario')">Inventário Cíclico</a>
+                        <a class="nav-sub-item" onclick="switchView('aud-inventario')">InventÃ¡rio CÃ­clico</a>
                         <a class="nav-sub-item" onclick="switchView('aud-contagem')">Contagem Rotativa</a>
-                        <a class="nav-sub-item" onclick="switchView('aud-divergencias')">Divergências</a>
+                        <a class="nav-sub-item" onclick="switchView('aud-divergencias')">DivergÃªncias</a>
                         <a class="nav-sub-item" onclick="switchView('aud-rastreio')">Rastreabilidade (Kardex)</a>
-                        <a class="nav-sub-item" onclick="switchView('aud-log')">Log de Operações</a>
+                        <a class="nav-sub-item" onclick="switchView('aud-log')">Log de OperaÃ§Ãµes</a>
                     </div>
                 </div>
 
-                <!-- 8. CONFIGURAÇÕES -->
+                <!-- 8. CONFIGURAÃ‡Ã•ES -->
                 <div class="nav-group">
                     <a class="nav-item" onclick="toggleSubmenu('sub-config')">
                         <span class="material-icons-round">settings</span>
-                        <span>Configurações</span>
+                        <span>ConfiguraÃ§Ãµes</span>
                         <span class="material-icons-round"
                             style="font-size:1.2rem; margin-left:auto;">expand_more</span>
                     </a>
                     <div id="sub-config" class="nav-submenu">
                         <a class="nav-sub-item" onclick="switchView('cfg-geral')">Gerais</a>
                         <a class="nav-sub-item" onclick="switchView('cfg-armazenagem')">Regras de Armazenagem</a>
-                        <a class="nav-sub-item" onclick="switchView('cfg-separacao')">Regras de Separação</a>
+                        <a class="nav-sub-item" onclick="switchView('cfg-separacao')">Regras de SeparaÃ§Ã£o</a>
                         <a class="nav-sub-item" onclick="switchView('cfg-etiqueta')">Layout de Etiqueta</a>
-                        <a class="nav-sub-item" onclick="switchView('cfg-integracao')">Integrações</a>
+                        <a class="nav-sub-item" onclick="switchView('cfg-integracao')">IntegraÃ§Ãµes</a>
                     </div>
                 </div>
             </nav>
@@ -223,7 +223,7 @@
                 <div style="display:flex; align-items:center; gap:0.5rem;">
                     <span class="material-icons-round" style="color:var(--text-secondary)">person</span>
                     <div style="display:flex; flex-direction:column;">
-                        <span id="userName" style="font-size:0.85rem; font-weight:600;">Usuário</span>
+                        <span id="userName" style="font-size:0.85rem; font-weight:600;">UsuÃ¡rio</span>
                         <span id="userTenant" style="font-size:0.7rem; color:var(--text-secondary)">Tenant</span>
                     </div>
                 </div>
@@ -239,7 +239,7 @@
             <header class="top-bar">
                 <div class="breadcrumb">
                     <span class="text-secondary" id="breadParent">WMS</span> / <span class="current"
-                        id="pageTitle">Visão Geral</span>
+                        id="pageTitle">VisÃ£o Geral</span>
                 </div>
             </header>
 
@@ -247,7 +247,7 @@
                 <!-- View: Dashboard -->
                 <div id="view-dashboard" class="page-content"></div>
 
-                <!-- Views: Endereçamento (used by locations.js) -->
+                <!-- Views: EndereÃ§amento (used by locations.js) -->
                 <div id="view-locations" class="page-content" style="display:none;"></div>
 
                 <!-- Views: Recebimento (used by inbound.js) -->
@@ -258,7 +258,7 @@
                     <div class="card">
                         <div class="card-header"
                             style="display:flex; justify-content:space-between; align-items:center;">
-                            <h3>Gestão de Ondas de Separação</h3>
+                            <h3>GestÃ£o de Ondas de SeparaÃ§Ã£o</h3>
                             <button class="btn btn-primary"
                                 onclick="window.PickingManager.createWave(prompt('Digite IDs dos pedidos separados por virgula:').split(','))">
                                 <span class="material-icons-round">add</span> Nova Onda
@@ -269,11 +269,11 @@
                                 <thead>
                                     <tr>
                                         <th>ID</th>
-                                        <th>Descrição</th>
+                                        <th>DescriÃ§Ã£o</th>
                                         <th>Pedidos</th>
                                         <th>Itens (SKU)</th>
                                         <th>Status</th>
-                                        <th style="text-align:right;">Ações</th>
+                                        <th style="text-align:right;">AÃ§Ãµes</th>
                                     </tr>
                                 </thead>
                                 <tbody id="wavesTableBody"></tbody>
@@ -306,10 +306,10 @@
                             <div
                                 style="background:rgba(59,130,246,0.08); padding:1rem; border-radius:8px; text-align:center;">
                                 <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.5rem;">
-                                    Ocupação Geral</div>
+                                    OcupaÃ§Ã£o Geral</div>
                                 <div id="biWmsOcupacao" style="font-size:1.5rem; font-weight:700;">0%</div>
                                 <div id="biWmsOcupacaoDetalhe" style="font-size:0.7rem; color:var(--text-secondary);">0
-                                    / 0 endereços</div>
+                                    / 0 endereÃ§os</div>
                             </div>
                             <div
                                 style="background:rgba(16,185,129,0.08); padding:1rem; border-radius:8px; text-align:center;">
@@ -323,7 +323,7 @@
                             <div
                                 style="background:rgba(245,158,11,0.08); padding:1rem; border-radius:8px; text-align:center;">
                                 <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.5rem;">
-                                    Separações Hoje</div>
+                                    SeparaÃ§Ãµes Hoje</div>
                                 <div id="biWmsSeparacoes" style="font-size:1.5rem; font-weight:700; color:#f59e0b;">0
                                 </div>
                                 <div id="biWmsSeparacoesDetalhe" style="font-size:0.7rem; color:var(--text-secondary);">
@@ -332,7 +332,7 @@
                             <div
                                 style="background:rgba(239,68,68,0.08); padding:1rem; border-radius:8px; text-align:center;">
                                 <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.5rem;">
-                                    Divergências</div>
+                                    DivergÃªncias</div>
                                 <div id="biWmsDivergencias" style="font-size:1.5rem; font-weight:700; color:#ef4444;">0
                                 </div>
                                 <div id="biWmsDivergenciasDetalhe"
@@ -344,14 +344,14 @@
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:1.5rem;">
                         <div class="card">
                             <div class="card-header">
-                                <h3>Ocupação por Rua</h3>
+                                <h3>OcupaÃ§Ã£o por Rua</h3>
                             </div>
                             <div class="card-body" style="height:350px; padding:1rem;"><canvas
                                     id="chartBiOcupacaoRua"></canvas></div>
                         </div>
                         <div class="card">
                             <div class="card-header">
-                                <h3>Movimentação Semanal</h3>
+                                <h3>MovimentaÃ§Ã£o Semanal</h3>
                             </div>
                             <div class="card-body" style="height:350px; padding:1rem;"><canvas
                                     id="chartBiMovimentacao"></canvas></div>
@@ -361,7 +361,7 @@
                     <div style="display:grid; grid-template-columns:1fr; gap:1.5rem;">
                         <div class="card" style="max-width:500px;">
                             <div class="card-header">
-                                <h3>Status das Ondas de Separação</h3>
+                                <h3>Status das Ondas de SeparaÃ§Ã£o</h3>
                             </div>
                             <div class="card-body" style="height:300px; padding:1rem;"><canvas
                                     id="chartBiProdutividade"></canvas></div>
@@ -369,7 +369,7 @@
                     </div>
                 </div>
 
-                <!-- View: Divergências de Recebimento -->
+                <!-- View: DivergÃªncias de Recebimento -->
                 <div id="view-divergencias" class="page-content" style="display:none;"></div>
 
                 <!-- Generic dynamic view container -->
@@ -382,14 +382,14 @@
     <footer
         style="padding: 1rem 2rem; border-top: 1px solid var(--border-color); font-size: 0.75rem; color: var(--text-secondary); display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); position: fixed; bottom: 0; width: 100%; z-index: 1000; left: 250px; width: calc(100% - 250px);">
         <div>
-            <strong>&copy; 2024 ParreiraLog</strong> - Gestão Logística Inteligente
+            <strong>&copy; 2024 ParreiraLog</strong> - GestÃ£o LogÃ­stica Inteligente
         </div>
         <div style="display: flex; align-items: center; gap: 0.5rem;">
             <span class="material-icons-round" style="font-size: 1rem; color: var(--accent-success);">security</span>
             <span>Ambiente Seguro: Dados processados localmente.</span>
         </div>
         <div id="systemVersion" style="font-size: 0.8rem; color: #666; margin-left: auto;">
-            Carregando versão...
+            Carregando versÃ£o...
         </div>
     </footer>
 
@@ -402,6 +402,10 @@
     <!-- Auth Central -->
     <script src="../../core/js/auth.js"></script>
     <script src="js/wms-integration.js"></script>
+    <!-- Three.js 3D -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.134/examples/js/controls/OrbitControls.js"></script>
+    <script src="js/wms-3d.js"></script>
     <script src="js/wms-core.js"></script>
     <script src="js/dashboard.js"></script>
     <script src="js/locations.js"></script>
@@ -434,7 +438,7 @@
             const nEl = document.getElementById('userName');
             const tEl = document.getElementById('userTenant');
             if (nEl) nEl.textContent = s.nome;
-            if (tEl) tEl.textContent = s.tenantNome + ' · ' + ({operator:'Operador',supervisor:'Supervisor',admin:'Admin',master:'Master'}[s.role]||s.role);
+            if (tEl) tEl.textContent = s.tenantNome + ' Â· ' + ({operator:'Operador',supervisor:'Supervisor',admin:'Admin',master:'Master'}[s.role]||s.role);
         })();
 
         // Load Version
@@ -443,11 +447,11 @@
             .then(v => {
                 const el = document.getElementById('systemVersion');
                 if (el) {
-                    el.innerHTML = `v${v.version} • ${v.date.split('-').reverse().join('/')}`;
+                    el.innerHTML = `v${v.version} â€¢ ${v.date.split('-').reverse().join('/')}`;
                     el.title = `Build: ${v.build}\n${v.last_change}`;
                 }
             })
-            .catch(e => console.error('Erro ao carregar versão:', e));
+            .catch(e => console.error('Erro ao carregar versÃ£o:', e));
     </script>
 </body>
 
