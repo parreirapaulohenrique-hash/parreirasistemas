@@ -1,4 +1,4 @@
-export const mockTenants = [
+window.mockTenants = [
     {
         id: 'parreira',
         name: 'Parreira Sistemas',

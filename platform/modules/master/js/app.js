@@ -1,4 +1,7 @@
-import { mockTenants } from './data.js';
+// app.js — Painel Admin | Parreira Sistemas
+// (usa window.mockTenants definido em data.js)
+const mockTenants = window.mockTenants || [];
+
 
 // State
 let dynamicTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
@@ -58,14 +61,41 @@ if (platformUsers.length === 0) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Basic init
+    // Expor globais para onclick inline no HTML
+    window.openModal  = openModal;
+    window.closeModal = closeModal;
+    window.editTenant = editTenant;
+    window.editUser   = editUser;
+    window.switchView = switchView;
+
     renderTenants();
     renderUsers();
     setupForms();
     loadVersion();
 
-    // NOTE: Modal events are handled via inline onclick="window.openModal(...)" 
-    // for maximum reliability after module loading issues.
+    // Listener do form de editar liberações de módulos
+    const editTenantForm = document.getElementById('editTenantForm');
+    if (editTenantForm) {
+        editTenantForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const tenantId  = document.getElementById('editTenantIdField').value;
+            const newModules = Array.from(
+                document.querySelectorAll('input[name="editModules"]:checked')
+            ).map(cb => cb.value);
+
+            const existingIdx = dynamicTenants.findIndex(t => t.id === tenantId);
+            if (existingIdx >= 0) {
+                dynamicTenants[existingIdx] = { ...dynamicTenants[existingIdx], modules: newModules };
+            } else {
+                const base = getAllTenants().find(t => t.id === tenantId);
+                if (base) dynamicTenants.push({ ...base, modules: newModules, isDynamic: true });
+            }
+            localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
+            alert('Libeções atualizadas com sucesso!');
+            closeModal('editTenantModal');
+            renderTenants();
+        });
+    }
 });
 
 function loadVersion() {
@@ -98,13 +128,6 @@ window.switchView = (viewName) => {
         window.LicencasManager.renderView();
     }
 };
-
-// Modal Control
-// --- Global Global Exposure (Immediately) ---
-window.openModal = openModal;
-window.closeModal = closeModal;
-window.editTenant = editTenant;
-window.editUser = editUser;
 
 // Modal Control
 function openModal(modalId) {
@@ -337,30 +360,7 @@ function editTenant(tenantId) {
     openModal('editTenantModal');
 }
 
-// Setup Edit Tenant Form
-const editTenantForm = document.getElementById('editTenantForm');
-if (editTenantForm) {
-    editTenantForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const tenantId = document.getElementById('editTenantIdField').value;
-        const newModules = Array.from(document.querySelectorAll('input[name="editModules"]:checked')).map(cb => cb.value);
-
-        // Find in mockTenants (imported) or dynamicTenants — UPSERT (nunca push duplo)
-        const existingIdx = dynamicTenants.findIndex(t => t.id === tenantId);
-        if (existingIdx >= 0) {
-            dynamicTenants[existingIdx] = { ...dynamicTenants[existingIdx], modules: newModules };
-        } else {
-            // Mock tenant: cria override dinâmico
-            const base = getAllTenants().find(t => t.id === tenantId);
-            if (base) dynamicTenants.push({ ...base, modules: newModules, isDynamic: true });
-        }
-        localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
-
-        alert('Liberações atualizadas com sucesso!');
-        closeModal('editTenantModal');
-        renderTenants();
-    });
-}
+// (editTenantForm listener moved to DOMContentLoaded above)
 
 // --- Edit User ---
 function editUser(login, tenant) {
