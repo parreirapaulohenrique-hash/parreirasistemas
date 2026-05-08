@@ -1,5 +1,19 @@
 {
+    "headers": [
+        {
+            "source": "/.well-known/assetlinks.json",
+            "headers": [
+                { "key": "Content-Type",                "value": "application/json" },
+                { "key": "Access-Control-Allow-Origin", "value": "*" },
+                { "key": "Cache-Control",               "value": "public, max-age=3600" }
+            ]
+        }
+    ],
     "rewrites": [
+        {
+            "source": "/.well-known/(.*)",
+            "destination": "/.well-known/$1"
+        },
         {
             "source": "/",
             "destination": "/platform/index.html"
