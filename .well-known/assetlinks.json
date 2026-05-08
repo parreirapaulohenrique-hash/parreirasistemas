@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "br.com.parreirasistemas.wms",
+      "sha256_cert_fingerprints": [
+        "03:10:B1:43:BB:6F:AC:CF:E1:48:6E:EE:FF:A7:8C:DD:07:A9:49:0E:BE:B9:1B:E9:82:ED:9B:DC:C8:39:3C:41"
+      ]
+    }
+  }
+]

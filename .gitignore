@@ -6,6 +6,10 @@
 !/platform/**
 !/vercel.json
 
+# Arquivo de verificação TWA (Digital Asset Links)
+!/.well-known
+!/.well-known/**
+
 # Permitir ferramentas de deploy e documentação básica
 !/deploy.ps1
 !/.gitignore
