@@ -201,26 +201,65 @@ function _renderItensHtml(r, isCega) {
         const excesso  = lido > esperado;
         const zerado   = lido === 0;
 
-        let borderColor = 'rgba(255,255,255,.07)';
+        let borderColor = 'rgba(255,255,255,.08)';
         let bg          = 'rgba(255,255,255,.02)';
         let icone       = 'radio_button_unchecked';
-        let iconeColor  = 'rgba(255,255,255,.25)';
-        if (excesso)      { borderColor='rgba(245,158,11,.4)'; bg='rgba(245,158,11,.06)'; icone='warning';               iconeColor='#f59e0b'; }
-        else if (ok)      { borderColor='rgba(16,185,129,.4)';  bg='rgba(16,185,129,.06)';  icone='check_circle';          iconeColor='#10b981'; }
-        else if (!zerado) { borderColor='rgba(14,165,233,.35)'; bg='rgba(14,165,233,.05)';  icone='pending';               iconeColor='#0ea5e9'; }
+        let iconeColor  = 'rgba(255,255,255,.2)';
+        let statusLabel = '';
 
-        const qtyRight = isCega
-            ? `<div style="font-size:1.4rem;font-weight:800;color:${zerado?'rgba(255,255,255,.2)':iconeColor};min-width:2.5rem;text-align:center;">${lido}</div>`
-            : `<div style="text-align:center;min-width:3.5rem;">
-                 <div style="font-size:.62rem;color:var(--text-secondary);">ESP</div>
-                 <div style="font-size:.85rem;font-weight:700;color:var(--text-secondary);">${esperado}</div>
-                 <div style="font-size:.6rem;color:var(--text-secondary);margin:.1rem 0;">LID</div>
-                 <div style="font-size:1.2rem;font-weight:800;color:${zerado?'rgba(255,255,255,.2)':iconeColor};">${lido}${diff>0?`<span style='font-size:.6rem;'>+${diff}</span>`:diff<0?`<span style='font-size:.6rem;'>${diff}</span>`:''}</div>
-               </div>`;
+        if (excesso)      { borderColor='rgba(245,158,11,.4)';  bg='rgba(245,158,11,.05)';  icone='warning';      iconeColor='#f59e0b'; statusLabel='EXCESSO'; }
+        else if (ok)      { borderColor='rgba(16,185,129,.4)';  bg='rgba(16,185,129,.05)';  icone='check_circle'; iconeColor='#10b981'; statusLabel='OK'; }
+        else if (!zerado) { borderColor='rgba(14,165,233,.35)'; bg='rgba(14,165,233,.04)';  icone='pending';      iconeColor='#0ea5e9'; statusLabel='PARCIAL'; }
 
         const skuId = it.sku.replace(/[^a-z0-9]/gi,'_');
+
+        // Bloco de quantidade — cega: só mostra lido; aberta: mostra esp vs lido
+        const qtyBlock = isCega
+            ? `<div style="text-align:center;min-width:2.8rem;">
+                   <div style="font-size:1.6rem;font-weight:900;color:${zerado?'rgba(255,255,255,.15)':iconeColor};line-height:1;">${lido}</div>
+                   <div style="font-size:.58rem;color:var(--text-secondary);">LIDO</div>
+               </div>`
+            : `<div style="text-align:center;min-width:4rem;">
+                   <div style="font-size:.58rem;color:var(--text-secondary);">ESP / LID</div>
+                   <div style="font-size:1.3rem;font-weight:900;color:${zerado?'rgba(255,255,255,.15)':iconeColor};line-height:1.1;">
+                       ${esperado}<span style="font-size:.7rem;opacity:.6;">/</span>${lido}
+                   </div>
+                   ${diff !== 0 ? `<div style="font-size:.6rem;color:${diff>0?'#f59e0b':'#ef4444'};font-weight:700;">${diff>0?'+':''}${diff}</div>` : ''}
+               </div>`;
+
         return `
+        <div id="item-card-${skuId}"
+             style="background:${bg};border:1px solid ${borderColor};border-radius:10px;padding:.7rem .85rem;
+                    display:flex;align-items:center;gap:.7rem;transition:background .2s,border-color .2s;">
+            <!-- Ícone status -->
+            <span class="material-icons-round" style="font-size:1.6rem;color:${iconeColor};flex-shrink:0;">${icone}</span>
+
+            <!-- Info produto -->
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:.78rem;font-weight:700;color:var(--text-primary);
+                            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${it.descricao || '—'}</div>
+                <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.15rem;">
+                    ${it.codigoInterno ? `<span style="font-size:.62rem;background:rgba(99,102,241,.15);color:#818cf8;
+                        padding:.05rem .35rem;border-radius:4px;font-family:monospace;">${it.codigoInterno}</span>` : ''}
+                    <span style="font-size:.62rem;color:var(--text-secondary);font-family:monospace;">${it.sku}</span>
+                    ${it.unidade ? `<span style="font-size:.62rem;color:var(--text-secondary);">${it.unidade}</span>` : ''}
+                </div>
+                <!-- Entrada manual -->
+                <div style="margin-top:.4rem;display:flex;align-items:center;gap:.4rem;">
+                    <input type="number" min="0" value="${lido}"
+                        id="manual-${skuId}"
+                        style="width:60px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+                               border-radius:5px;color:var(--text-primary);font-size:.78rem;padding:.2rem .35rem;text-align:center;"
+                        onchange="registrarManualConf('${it.sku}', this.value)"
+                        onclick="this.select()">
+                    <span style="font-size:.65rem;color:var(--text-secondary);">qtd manual</span>
+                    ${statusLabel ? `<span style="font-size:.6rem;font-weight:700;padding:.1rem .3rem;border-radius:3px;
+                        background:${iconeColor}22;color:${iconeColor};">${statusLabel}</span>` : ''}
+                </div>
             </div>
+
+            <!-- Qtd lida -->
+            ${qtyBlock}
         </div>`;
     }).join('');
 }
@@ -230,8 +269,13 @@ function _registrarBipagem(code) {
     const r = window._recAtivo;
     if (!r) return;
 
-    const cln  = code.trim();
-    const item = (r.itens || []).find(it => it.sku === cln || it.codigoBarras === cln);
+    const cln = code.trim();
+    // Resolve o item por barcode, SKU ou código interno do ERP
+    const item = (r.itens || []).find(it =>
+        it.sku          === cln ||
+        it.codigoBarras === cln ||
+        it.codigoInterno=== cln
+    );
 
     if (!item) {
         Feedback.beep('error');
@@ -247,17 +291,20 @@ function _registrarBipagem(code) {
     if (status === 'excesso') Feedback.beep('error');
     else Feedback.beep('success');
 
-    _salvarLeiturasDebounced(); // Firestore sync após 3s sem bipagem
+    // Atualiza campo manual se visível
+    const skuId = item.sku.replace(/[^a-z0-9]/gi,'_');
+    const inp = document.getElementById('manual-' + skuId);
+    if (inp) inp.value = lido;
 
+    _salvarLeiturasDebounced();
     _atualizarUltimoLido(item, lido, status, esperado);
     _atualizarUiConferencia(r);
 
-    // Scroll para o item e re-foco no scanner
     setTimeout(() => {
-        const card = document.getElementById('item-card-' + item.sku.replace(/[^a-z0-9]/gi,'_'));
+        const card = document.getElementById('item-card-' + skuId);
         if (card) card.scrollIntoView({ behavior:'smooth', block:'nearest' });
-        const inp = document.getElementById('scannerInput');
-        if (inp) inp.focus();
+        const scanInput = document.getElementById('scannerInput');
+        if (scanInput) scanInput.focus();
     }, 120);
 }
 
