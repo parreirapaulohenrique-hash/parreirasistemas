@@ -210,11 +210,12 @@
     // ─── STATUS BADGE ─────────────────────────────────────────────────────────
     function _badge(r) {
         const map = {
-            'AGUARDANDO_CONFERENCIA':    { label: 'CHECK-IN',        bg: 'rgba(236,72,153,.15)', color: '#ec4899' },
-            'CONFERENCIA_ITENS_PENDENTE':{ label: 'CONFERINDO',      bg: 'rgba(245,158,11,.15)', color: '#f59e0b' },
-            'FINALIZADO':                { label: 'FINALIZADO',      bg: 'rgba(16,185,129,.15)', color: '#10b981' },
-            'FINALIZADO_COM_DIV':        { label: 'DIVERGÊNCIA',     bg: 'rgba(239,68,68,.15)',  color: '#ef4444' },
-            'CANCELADO':                 { label: 'CANCELADO',       bg: 'rgba(100,100,100,.15)',color: '#aaa'    },
+            'AGUARDANDO_PRE_ENTRADA':    { label: 'AGU. PRÉ-ENTRADA',  bg: 'rgba(249,115,22,.15)', color: '#f97316' },
+            'AGUARDANDO_CONFERENCIA':    { label: 'CHECK-IN',           bg: 'rgba(236,72,153,.15)', color: '#ec4899' },
+            'CONFERENCIA_ITENS_PENDENTE':{ label: 'CONFERINDO',         bg: 'rgba(245,158,11,.15)', color: '#f59e0b' },
+            'FINALIZADO':                { label: 'FINALIZADO',         bg: 'rgba(16,185,129,.15)', color: '#10b981' },
+            'FINALIZADO_COM_DIV':        { label: 'DIVERGÊNCIA',        bg: 'rgba(239,68,68,.15)',  color: '#ef4444' },
+            'CANCELADO':                 { label: 'CANCELADO',          bg: 'rgba(100,100,100,.15)',color: '#aaa'    },
         };
         return map[r.status] || { label: r.status || '?', bg: 'rgba(100,100,100,.15)', color: '#aaa' };
     }
