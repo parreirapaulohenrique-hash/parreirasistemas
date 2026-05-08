@@ -20,7 +20,7 @@
         },
         {
             "source": "/download/apk",
-            "destination": "/platform/Instala%C3%A7%C3%A3o%20WMS%20COLETOR/ParreiraLog%20WMS.apk"
+            "destination": "/platform/download/wms-coletor.apk"
         },
         {
             "source": "/",
