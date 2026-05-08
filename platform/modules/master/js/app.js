@@ -230,8 +230,12 @@ function setupForms() {
             dynamicTenants.push(newTenant);
             localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
 
-            // Success Feedback
-            alert('Cliente cadastrado com sucesso!');
+            // Cria entrada de licença automaticamente
+            if (window.LicencasManager) {
+                window.LicencasManager.registrarTenant(newTenant.id, newTenant.name);
+            }
+
+            alert('Cliente cadastrado com sucesso! A licença foi criada em "Controle de Licenças".');
             closeModal('tenantModal'); // Revert to Modal Close
             renderTenants(); // Refresh Table
         });
