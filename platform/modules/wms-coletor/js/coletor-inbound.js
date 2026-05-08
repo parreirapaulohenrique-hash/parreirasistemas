@@ -45,11 +45,9 @@ function _mostrarFeedbackCheckin(tipo, html) {
 }
 
 async function _consultarEIniciarCheckin(chave) {
-    _mostrarFeedbackCheckin('loading', 'Consultando ERP...');
-
-    // ── Bloqueia entrada duplicada da mesma chave NF-e ──────────────────────
-    const receipts = JSON.parse(localStorage.getItem('wms_receipts_v2') || '[]');
-    const jaExiste = receipts.find(r => (r.chaveNfe || '').replace(/\D/g, '') === chave);
+    // ── Bloqueia entrada duplicada via Firestore ──────────────────────────────────────
+    _mostrarFeedbackCheckin('loading', 'Verificando registros...');
+    const jaExiste = await WmsStore.verificarNfDuplicada(chave).catch(() => null);
     if (jaExiste) {
         const statusLabel = {
             'AGUARDANDO_CONFERENCIA':    '⏳ Aguardando Conferência Física',
@@ -57,16 +55,15 @@ async function _consultarEIniciarCheckin(chave) {
             'RECEBIDO':                  '✅ Já Recebida e Conferida',
             'CANCELADO':                 '🚫 Cancelada',
         }[jaExiste.status] || jaExiste.status;
-
         _mostrarFeedbackCheckin('warning',
-            `🚫 NF <strong>${jaExiste.nfNumero}</strong> já foi registrada nesta unidade.<br>
+            `🚫 NF <strong>${jaExiste.nfNumero}</strong> já foi registrada.<br>
              Status atual: <strong>${statusLabel}</strong><br>
              <small>Chave: ${chave.substring(0,20)}...${chave.slice(-4)}</small>`
         );
         Feedback.beep('error'); Feedback.flash('error');
         return;
     }
-    // ────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
 
     try {
         const res = await WmsProcedures.proc_buscar_nf_destinada(chave);
@@ -134,46 +131,46 @@ function _docasHtml() {
     return docas.map(d => `<option value="${d}">${d}</option>`).join('');
 }
 
-window.salvarCheckin = function() {
-    const doca = document.getElementById('rcheck-doca')?.value;
+window.salvarCheckin = async function() {
+    const doca  = document.getElementById('rcheck-doca')?.value;
     const placa = document.getElementById('rcheck-placa')?.value?.trim();
-    if (!doca) { showToast('Selecione a Doca', 'warning'); return; }
+    if (!doca)  { showToast('Selecione a Doca', 'warning'); return; }
     if (!placa) { showToast('Informe a placa do veículo', 'warning'); return; }
 
-    const nf = window._recNFDados;
-    const emp = window._recEmpresa;
-    const user = JSON.parse(localStorage.getItem('logged_user') || '{}');
+    const nf     = window._recNFDados;
+    const emp    = window._recEmpresa;
+    const sessao = window.ParreiraAuth?.getSessao?.() || {};
 
     const payload = {
-        id: `CHK-${Date.now()}`,
-        chaveNfe: nf.chaveNfe || '',
-        nfNumero: nf.numero,
-        nfSerie: nf.serie,
-        fornecedor: nf.razaoSocialEmitente,
-        cnpjFornecedor: nf.cnpjEmitente,
-        empresaDestino: emp ? emp.razaoSocial : '',
-        cnpjDestino: emp ? emp.cnpj : nf.cnpjDestinatario,
-        doca: doca,
-        placa: placa,
-        motorista: document.getElementById('rcheck-motorista')?.value?.trim() || '',
-        volumesNF: nf.volumes || 0,
-        emailFornecedor: nf._raw?.emailFornecedor || '',
-        itens: nf.itens || [],
-        status: 'AGUARDANDO_CONFERENCIA',
-        dataCheckin: new Date().toISOString(),
-        operadorCheckin: user.name || user.login || 'Operador',
-        _rf: window._recNFDados
+        id:            `CHK-${Date.now()}`,
+        chaveNfe:      nf.chaveNfe || '',
+        nfNumero:      nf.numero,
+        nfSerie:       nf.serie,
+        fornecedor:    nf.razaoSocialEmitente,
+        cnpjFornecedor:nf.cnpjEmitente,
+        empresaDestino:emp ? emp.razaoSocial : '',
+        cnpjDestino:   emp ? emp.cnpj : nf.cnpjDestinatario,
+        doca,
+        placa,
+        motorista:     document.getElementById('rcheck-motorista')?.value?.trim() || '',
+        volumesNF:     nf.volumes || 0,
+        itens:         nf.itens || [],
+        _leituras:     {},
+        status:        'AGUARDANDO_CONFERENCIA',
+        dataCheckin:   new Date().toISOString(),
+        operadorLogin: sessao.login || '',
+        operadorNome:  sessao.nome  || 'Operador'
     };
 
-    const key = 'wms_receipts_v2';
-    const arr = JSON.parse(localStorage.getItem(key) || '[]');
-    arr.push(payload);
-    localStorage.setItem(key, JSON.stringify(arr));
-
-    Feedback.beep('success'); Feedback.flash('success');
-    showToast('Check-in Concluído!', 'success');
-    if (window.updateHomeStats) updateHomeStats();
-    setTimeout(() => navigateTo('home'), 1000);
+    try {
+        await WmsStore.criarRecebimento(payload);
+        Feedback.beep('success'); Feedback.flash('success');
+        showToast('Check-in Concluído!', 'success');
+        if (window.updateHomeStats) updateHomeStats();
+        setTimeout(() => navigateTo('home'), 1000);
+    } catch(e) {
+        showToast('Erro ao salvar: ' + e.message, 'danger');
+    }
 };
 
 // ===================================

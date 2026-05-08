@@ -9,20 +9,34 @@
 
 // ─── ESTADO GLOBAL DA SESSÃO ─────────────────────────────────────────────────
 window._confSessao = {
-    nfId:    null,   // ID do recibo ativo
-    inicio:  null,   // Timestamp de início da conferência
-    ativo:   false,  // Se há conferência em andamento
+    nfId:   null,
+    inicio: null,
+    ativo:  false,
 };
+window._recAtivo = null; // receipt em memória (evita reads durante bipagem)
+let _saveTimer   = null; // debounce para salvar leituras no Firestore
+
+function _salvarLeiturasDebounced() {
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(async () => {
+        if (window._recAtivo) {
+            await WmsStore.salvarLeituras(window._recAtivo.id, window._recAtivo._leituras || {}).catch(() => {});
+        }
+    }, 3000);
+}
 
 // ─── TELA INICIAL — LISTA DE NFs AGUARDANDO CONFERÊNCIA ──────────────────────
-window.initConferenciaItensScreen = function(container) {
+window.initConferenciaItensScreen = async function(container) {
     window._confSessao.ativo = false;
     window._confSessao.nfId  = null;
+    window._recAtivo         = null;
 
-    const receipts = JSON.parse(localStorage.getItem('wms_receipts_v2') || '[]');
-    const pending  = receipts
-        .filter(r => r.status === 'CONFERENCIA_ITENS_PENDENTE')
-        .sort((a, b) => new Date(a.dataCheckin) - new Date(b.dataCheckin)); // FIFO
+    container.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-secondary);">
+        <span class="material-icons-round" style="font-size:2rem;display:block;margin-bottom:.5rem;opacity:.4;">sync</span>
+        <span style="font-size:.82rem;">Carregando cargas...</span></div>`;
+
+    const pending = await WmsStore.listarRecebimentos({ status: 'CONFERENCIA_ITENS_PENDENTE' }).catch(() => []);
+    pending.sort((a, b) => new Date(a.dataCheckin||0) - new Date(b.dataCheckin||0)); // FIFO
 
     container.innerHTML = `
         <!-- Instrução de bipagem -->
@@ -86,44 +100,28 @@ window.initConferenciaItensScreen = function(container) {
 };
 
 // ─── SCAN na tela inicial ──────────────────────────────────────────────────────
-window.handleScanConferenciaItens = function(code) {
-    // Se já está com conferência ativa, bipa produto
-    if (window._confSessao.ativo) {
-        _registrarBipagem(code);
-        return;
-    }
+window.handleScanConferenciaItens = async function(code) {
+    if (window._confSessao.ativo) { _registrarBipagem(code); return; }
 
-    const clean    = code.replace(/\D/g, '');
-    const receipts = JSON.parse(localStorage.getItem('wms_receipts_v2') || '[]');
-    const target   = receipts.find(r =>
-        r.status === 'CONFERENCIA_ITENS_PENDENTE' &&
-        ((clean.length === 44 && (r.chaveNfe || '').replace(/\D/g, '') === clean) ||
-         (clean.length < 44 && String(r.nfNumero) === clean))
-    );
-
-    if (target) {
-        iniciarConferirItens(target.id);
-    } else {
-        Feedback.beep('error');
-        showToast('NF não encontrada na fila de conferência.', 'danger');
-    }
+    const clean = code.replace(/\D/g, '');
+    try {
+        const lista = await WmsStore.listarRecebimentos({ status: 'CONFERENCIA_ITENS_PENDENTE' });
+        const target = lista.find(r =>
+            (clean.length === 44 && (r.chaveNfe || '').replace(/\D/g, '') === clean) ||
+            (clean.length < 44  && String(r.nfNumero) === clean)
+        );
+        if (target) iniciarConferirItens(target.id);
+        else { Feedback.beep('error'); showToast('NF não encontrada na fila de conferência.', 'danger'); }
+    } catch(e) { showToast('Erro: ' + e.message, 'danger'); }
 };
 
 // ─── INICIAR CONFERÊNCIA DE UMA NF ───────────────────────────────────────────
-window.iniciarConferirItens = function(id) {
-    const receipts = JSON.parse(localStorage.getItem('wms_receipts_v2') || '[]');
-    const r = receipts.find(x => x.id === id);
-    if (!r) return;
+window.iniciarConferirItens = async function(id) {
+    const r = await WmsStore.buscarRecebimento(id).catch(() => null);
+    if (!r) { showToast('Recebimento não encontrado.', 'danger'); return; }
+    if (!r._leituras) r._leituras = {};
 
-    // Inicializa leituras zeradas se ainda não existir
-    if (!r._leituras) {
-        r._leituras = {};
-        (r.itens || []).forEach(it => { r._leituras[it.sku] = 0; });
-        const idx = receipts.findIndex(x => x.id === id);
-        receipts[idx] = r;
-        localStorage.setItem('wms_receipts_v2', JSON.stringify(receipts));
-    }
-
+    window._recAtivo   = r;
     window._confSessao = { nfId: id, inicio: new Date().toISOString(), ativo: true };
     _renderTelaConferencia(r);
 };
@@ -229,10 +227,8 @@ function _renderItensHtml(r, isCega) {
 
 // ─── REGISTRAR BIPAGEM (SCANNER) ─────────────────────────────────────────────
 function _registrarBipagem(code) {
-    const receipts = JSON.parse(localStorage.getItem('wms_receipts_v2') || '[]');
-    const rIdx     = receipts.findIndex(x => x.id === window._confSessao.nfId);
-    if (rIdx === -1) return;
-    const r = receipts[rIdx];
+    const r = window._recAtivo;
+    if (!r) return;
 
     const cln  = code.trim();
     const item = (r.itens || []).find(it => it.sku === cln || it.codigoBarras === cln);
@@ -251,8 +247,7 @@ function _registrarBipagem(code) {
     if (status === 'excesso') Feedback.beep('error');
     else Feedback.beep('success');
 
-    receipts[rIdx] = r;
-    localStorage.setItem('wms_receipts_v2', JSON.stringify(receipts));
+    _salvarLeiturasDebounced(); // Firestore sync após 3s sem bipagem
 
     _atualizarUltimoLido(item, lido, status, esperado);
     _atualizarUiConferencia(r);
@@ -304,16 +299,10 @@ function _atualizarUltimoLido(item, lido, status, esperado) {
 window.registrarManualConf = function(sku, valor) {
     const qty = parseInt(valor);
     if (isNaN(qty) || qty < 0) return;
-
-    const receipts = JSON.parse(localStorage.getItem('wms_receipts_v2') || '[]');
-    const rIdx     = receipts.findIndex(x => x.id === window._confSessao.nfId);
-    if (rIdx === -1) return;
-    const r = receipts[rIdx];
-
+    const r = window._recAtivo;
+    if (!r) return;
     r._leituras[sku] = qty;
-    receipts[rIdx] = r;
-    localStorage.setItem('wms_receipts_v2', JSON.stringify(receipts));
-
+    _salvarLeiturasDebounced();
     Feedback.beep('success');
     _atualizarUiConferencia(r);
 };
@@ -346,14 +335,11 @@ window.fecharConferenciaItens = function() {
 
 // ─── FINALIZAR CONFERÊNCIA ────────────────────────────────────────────────────
 window.finalizarConferencia = async function() {
-    const receipts = JSON.parse(localStorage.getItem('wms_receipts_v2') || '[]');
-    const rIdx     = receipts.findIndex(x => x.id === window._confSessao.nfId);
-    if (rIdx === -1) return;
-    const r = receipts[rIdx];
+    const r = window._recAtivo;
+    if (!r) return;
 
-    // Monta payload de itens com divergências
-    const itensPayload = [];
-    let hasDivergencia = false;
+    const itensPayload  = [];
+    let hasDivergencia  = false;
     let itensSemBipagem = 0;
 
     (r.itens || []).forEach(it => {
@@ -365,7 +351,6 @@ window.finalizarConferencia = async function() {
         itensPayload.push({ sku: it.sku, descricao: it.descricao, lido, esperado, divergencia: div });
     });
 
-    // Alerta se houver itens não bipados
     if (itensSemBipagem > 0 && r.itens?.length > 0) {
         const ok = confirm(`⚠️ ${itensSemBipagem} SKU(s) com zero leituras!\n\nDeseja finalizar mesmo assim?`);
         if (!ok) return;
@@ -378,53 +363,52 @@ window.finalizarConferencia = async function() {
     if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-icons-round">hourglass_top</span> Finalizando...'; }
 
     try {
-        const user = JSON.parse(localStorage.getItem('logged_user') || '{}');
-        const payload = {
-            id:         r.id,
-            nfNumero:   r.nfNumero,
-            chaveNfe:   r.chaveNfe || '',
+        clearTimeout(_saveTimer);
+        const sessao = window.ParreiraAuth?.getSessao?.() || {};
+        const fim    = new Date().toISOString();
+
+        await WmsProcedures.proc_confirmar_conferencia_itens({
+            id: r.id, nfNumero: r.nfNumero, chaveNfe: r.chaveNfe || '',
             fornecedor: r.fornecedor,
-            operador:   user.name || user.login || 'Operador',
-            inicio:     window._confSessao.inicio,
-            fim:        new Date().toISOString(),
-            hasDivergencia,
+            operador: sessao.nome || sessao.login || 'Operador',
+            inicio: window._confSessao.inicio, fim, hasDivergencia,
             itens: itensPayload
-        };
+        });
 
-        await WmsProcedures.proc_confirmar_conferencia_itens(payload);
+        await WmsStore.finalizarConferencia(r.id, {
+            status:          hasDivergencia ? 'FINALIZADO_COM_DIV' : 'FINALIZADO',
+            itensConferidos: itensPayload,
+            operador:        sessao.nome || sessao.login || 'Operador',
+            inicio:          window._confSessao.inicio, fim
+        });
 
-        // Gera tarefas de Putaway
-        _gerarPutaway(r);
+        await _gerarPutaway(r);
 
-        // Atualiza status do recibo
-        receipts[rIdx].status = hasDivergencia ? 'FINALIZADO_COM_DIV' : 'FINALIZADO';
-        receipts[rIdx]._conferenciaFim = new Date().toISOString();
-        localStorage.setItem('wms_receipts_v2', JSON.stringify(receipts));
-
+        window._recAtivo   = null;
         window._confSessao = { nfId: null, inicio: null, ativo: false };
         Feedback.beep('success'); Feedback.flash('success');
         showToast(hasDivergencia
             ? '⚠️ Conferência finalizada com divergência. Putaway gerado.'
             : '✅ Conferência finalizada! Putaway gerado.',
             hasDivergencia ? 'warning' : 'success');
-
         if (window.updateHomeStats) updateHomeStats();
         setTimeout(() => navigateTo('home'), 1500);
 
-    } catch (e) {
+    } catch(e) {
         showToast('Erro ao finalizar: ' + e.message, 'danger');
         if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons-round">done_all</span> Finalizar Conferência'; }
     }
 };
 
+
 // ─── GERAR PUTAWAY ────────────────────────────────────────────────────────────
-function _gerarPutaway(r) {
-    const putaway = JSON.parse(localStorage.getItem('wms_putaway') || '[]');
-    (r.itens || []).forEach(item => {
+async function _gerarPutaway(r) {
+    const tasks = [];
+    (r.itens || []).forEach((item, i) => {
         const lido = r._leituras?.[item.sku] || 0;
         if (lido > 0) {
-            putaway.push({
-                id:      `PUT-${String(putaway.length + 1).padStart(4, '0')}`,
+            tasks.push({
+                id:      `PUT-${Date.now()}-${i}`,
                 nf:      r.nfNumero,
                 sku:     item.sku,
                 desc:    item.descricao,
@@ -435,5 +419,5 @@ function _gerarPutaway(r) {
             });
         }
     });
-    localStorage.setItem('wms_putaway', JSON.stringify(putaway));
+    if (tasks.length > 0) await WmsStore.criarPutaway(tasks);
 }
