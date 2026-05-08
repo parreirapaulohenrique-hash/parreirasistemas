@@ -2,10 +2,17 @@ import { mockTenants } from './data.js';
 
 // State
 let dynamicTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
-let platformUsers = JSON.parse(localStorage.getItem('platform_users_registry') || '[]');
+let platformUsers  = JSON.parse(localStorage.getItem('platform_users_registry')  || '[]');
 
-// Deduplica dynamicTenants — remove entradas repetidas mantendo a última
-;(function() {
+// SEED: garante que os tenants base do sistema existam em dynamicTenants (source of truth única)
+;(function seedAndDedup() {
+    // Seed mockTenants que ainda não existem em dynamicTenants
+    mockTenants.forEach(mock => {
+        if (!dynamicTenants.find(t => t.id === mock.id)) {
+            dynamicTenants.push({ ...mock, isDynamic: false });
+        }
+    });
+    // Dedup: mantém a última entrada de cada ID
     const seen = new Map();
     dynamicTenants.forEach(t => seen.set(t.id, t));
     dynamicTenants = [...seen.values()];
@@ -126,11 +133,9 @@ function closeModal(modalId) {
     }
 }
 
+// Única fonte de verdade — tudo está em dynamicTenants
 function getAllTenants() {
-    // Dynamic entries override mock entries with the same ID
-    const dynamicIds = new Set(dynamicTenants.map(t => t.id));
-    const uniqueMocks = mockTenants.filter(m => !dynamicIds.has(m.id));
-    return [...uniqueMocks, ...dynamicTenants];
+    return dynamicTenants;
 }
 
 function populateTenantSelect() {
