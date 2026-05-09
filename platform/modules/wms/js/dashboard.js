@@ -25,7 +25,7 @@ window.loadDashboardView = function () {
                     <span>🟢 Livre</span><span>🔵 Ocupado</span><span>🟡 Bloqueado</span>
                 </div>
                 <button class="btn btn-secondary" style="font-size:.78rem;padding:.3rem .7rem;"
-                    onclick="document.getElementById('wms3d-cfg-panel').style.display='block'">
+                    onclick="(function(){var p=document.getElementById('wms3d-cfg-panel');p.style.display='block';if(window.wms3dRenderConfig)wms3dRenderConfig(p);})()">
                     <span class="material-icons-round" style="font-size:.9rem;vertical-align:middle;">tune</span>
                     Configurar Armazém
                 </button>
@@ -42,49 +42,10 @@ window.loadDashboardView = function () {
             <span>Clique numa posição para ver detalhes</span>
         </div>
 
-        <!-- Config Panel (slide-in overlay) -->
-        <div id="wms3d-cfg-panel" style="display:none;position:absolute;top:0;right:0;width:360px;height:100%;
+        <!-- Config Panel — rendered by wms3dRenderConfig() -->
+        <div id="wms3d-cfg-panel" style="display:none;position:absolute;top:0;right:0;width:400px;height:100%;
             background:var(--bg-card);border-left:1px solid var(--border-color);z-index:20;padding:1.25rem;
-            overflow-y:auto;box-shadow:-8px 0 24px rgba(0,0,0,.4);">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-                <strong style="font-size:.9rem;">⚙️ Configuração do Armazém</strong>
-                <span class="material-icons-round" style="cursor:pointer;color:var(--text-secondary);"
-                    onclick="document.getElementById('wms3d-cfg-panel').style.display='none'">close</span>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:.85rem;font-size:.82rem;">
-                <div>
-                    <label style="color:var(--text-secondary);display:block;margin-bottom:.3rem;font-weight:600;">Nome do Armazém / CD</label>
-                    <input id="wms3d-cfg-nome" class="form-input" style="width:100%;" value="${cfg3d.nomeArmazem||'CD Parreira'}">
-                </div>
-                <hr style="border-color:var(--border-color);">
-                <div style="font-size:.72rem;font-weight:700;color:#818cf8;text-transform:uppercase;letter-spacing:.05em;">Dimensões Físicas do Galpão</div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:.65rem;">
-                    ${[['wms3d-cfg-comp','Comprimento (m)', cfg3d.comprimento||0],
-                       ['wms3d-cfg-lt',  'Largura (m)',     cfg3d.larguraTotal||0],
-                       ['wms3d-cfg-pe',  'Pé Direito (m)',  cfg3d.peDir||0]].map(([id,lbl,val])=>`
-                    <div>
-                        <label style="color:var(--text-secondary);display:block;margin-bottom:.2rem;">${lbl}</label>
-                        <input id="${id}" type="number" class="form-input" style="width:100%;" value="${val}" step="0.5">
-                    </div>`).join('')}
-                </div>
-                <hr style="border-color:var(--border-color);">
-                <div style="font-size:.72rem;font-weight:700;color:#818cf8;text-transform:uppercase;letter-spacing:.05em;">Dimensões das Vagas (3D)</div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:.65rem;">
-                    ${[['wms3d-cfg-pw','Largura da Vaga (m)',  cfg3d.posLargura||1.2],
-                       ['wms3d-cfg-ph','Altura por Nível (m)', cfg3d.posAltura||2.0],
-                       ['wms3d-cfg-rd','Profundidade Rack (m)',cfg3d.profundidade||0.8],
-                       ['wms3d-cfg-cw','Largura Corredor (m)', cfg3d.corridorWidth||2.5]].map(([id,lbl,val])=>`
-                    <div>
-                        <label style="color:var(--text-secondary);display:block;margin-bottom:.2rem;">${lbl}</label>
-                        <input id="${id}" type="number" class="form-input" style="width:100%;" value="${val}" step="0.1">
-                    </div>`).join('')}
-                </div>
-                <button class="btn btn-primary" style="width:100%;margin-top:.5rem;" onclick="wms3dSaveConfig()">
-                    <span class="material-icons-round" style="font-size:1rem;vertical-align:middle;">save</span>
-                    Salvar e Recarregar 3D
-                </button>
-            </div>
-        </div>
+            overflow-y:auto;box-shadow:-8px 0 32px rgba(0,0,0,.5);"></div>
 
         <!-- Canvas container -->
         <div id="wms3d-canvas-wrap" style="height:520px;position:relative;background:#0f172a;border-radius:0 0 12px 12px;overflow:hidden;"></div>
@@ -276,3 +237,4 @@ window.loadDashboardView = function () {
         if (wrap && window.WMS3D) WMS3D.init(wrap);
     });
 };
+

@@ -317,22 +317,251 @@ window.wms3dShowDetail = function(loc) {
     modal.style.display = 'flex';
 };
 
-// ── Config Save ─────────────────────────────────────────────────────────────
+
+// ── Config Panel Renderer ────────────────────────────────────────────────────
+
+function _corrRow(c) {
+    return `<tr style="border-top:1px solid var(--border-color)44;">
+        <td style="padding:.3rem .4rem"><input class="form-input corr-id" style="width:48px;padding:.25rem .35rem;font-size:.74rem;font-weight:700;text-transform:uppercase;" value="${c.id||''}"></td>
+        <td style="padding:.3rem .4rem"><input class="form-input corr-nome" style="width:100%;padding:.25rem .35rem;font-size:.74rem;" value="${c.nome||''}"></td>
+        <td style="padding:.3rem .4rem"><input class="form-input corr-larg" type="number" step="0.1" style="width:60px;padding:.25rem .35rem;font-size:.74rem;" value="${c.largura||2.5}"></td>
+        <td style="padding:.3rem .4rem"><input class="form-input corr-comp" type="number" step="1" style="width:60px;padding:.25rem .35rem;font-size:.74rem;" value="${c.comprimento||0}"></td>
+        <td style="padding:.3rem .2rem;text-align:center"><button onclick="this.closest('tr').remove()" style="background:none;border:none;cursor:pointer;color:#ef4444;padding:0"><span class="material-icons-round" style="font-size:.95rem">delete</span></button></td>
+    </tr>`;
+}
+
+function _tipoRow(t) {
+    return `<tr style="border-top:1px solid var(--border-color)44;">
+        <td style="padding:.3rem .4rem"><input class="form-input tipo-cod" style="width:52px;padding:.25rem .35rem;font-size:.74rem;font-weight:700;text-transform:uppercase;" value="${t.codigo||''}"></td>
+        <td style="padding:.3rem .4rem"><input class="form-input tipo-desc" style="width:100%;padding:.25rem .35rem;font-size:.74rem;" value="${t.descricao||''}"></td>
+        <td style="padding:.3rem .4rem"><input class="form-input tipo-larg" type="number" step="0.1" style="width:52px;padding:.25rem .35rem;font-size:.74rem;" value="${t.largura||1.2}"></td>
+        <td style="padding:.3rem .4rem"><input class="form-input tipo-prof" type="number" step="0.1" style="width:52px;padding:.25rem .35rem;font-size:.74rem;" value="${t.profundidade||0.8}"></td>
+        <td style="padding:.3rem .4rem"><input class="form-input tipo-alt" type="number" step="0.1" style="width:52px;padding:.25rem .35rem;font-size:.74rem;" value="${t.alturaProxNivel||2.0}"></td>
+        <td style="padding:.3rem .4rem"><input class="form-input tipo-cap" type="number" step="50" style="width:58px;padding:.25rem .35rem;font-size:.74rem;" value="${t.capacidadeKg||500}"></td>
+        <td style="padding:.3rem .2rem;text-align:center"><button onclick="this.closest('tr').remove()" style="background:none;border:none;cursor:pointer;color:#ef4444;padding:0"><span class="material-icons-round" style="font-size:.95rem">delete</span></button></td>
+    </tr>`;
+}
+
+function _thStyle() { return 'padding:.3rem .4rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:600;white-space:nowrap;border-bottom:1px solid var(--border-color);'; }
+
+window.wms3dRenderConfig = function(panel) {
+    if (!panel) return;
+    const cfg      = JSON.parse(localStorage.getItem('wms_armazem_config') || '{}');
+    const corredores = cfg.corredores || [];
+    const tipos    = cfg.tiposEndereco || [];
+    const ordem    = cfg.ordemCorredores || 'esquerda_direita';
+
+    if (!document.getElementById('_wms3d-cfg-css')) {
+        const s = document.createElement('style'); s.id = '_wms3d-cfg-css';
+        s.textContent = '.cfg-sec{font-size:.7rem;font-weight:700;color:#818cf8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem;display:flex;justify-content:space-between;align-items:center;}.cfg-lbl{font-size:.7rem;color:var(--text-secondary);display:block;margin-bottom:.2rem;}';
+        document.head.appendChild(s);
+    }
+
+    panel.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem;">
+        <strong style="font-size:.88rem;display:flex;align-items:center;gap:.4rem;">
+            <span class="material-icons-round" style="font-size:1rem;color:#818cf8;">tune</span>
+            Configuração do Armazém
+        </strong>
+        <span class="material-icons-round" style="cursor:pointer;color:var(--text-secondary);"
+            onclick="document.getElementById('wms3d-cfg-panel').style.display='none'">close</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:1rem;font-size:.82rem;">
+
+        <!-- 1. Identificação -->
+        <div>
+            <div class="cfg-sec">🏷️ Identificação</div>
+            <label class="cfg-lbl">Nome do Armazém / CD</label>
+            <input id="wms3d-cfg-nome" class="form-input" style="width:100%;" value="${cfg.nomeArmazem||''}">
+        </div>
+
+        <!-- 2. Galpão -->
+        <div>
+            <div class="cfg-sec">📐 Dimensões do Galpão</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem;">
+                <div><label class="cfg-lbl">Comprimento (m)</label>
+                    <input id="wms3d-cfg-comp" type="number" class="form-input" style="width:100%;" value="${cfg.comprimento||0}" step="1"></div>
+                <div><label class="cfg-lbl">Largura Total (m)</label>
+                    <input id="wms3d-cfg-lt" type="number" class="form-input" style="width:100%;" value="${cfg.larguraTotal||0}" step="1"></div>
+                <div><label class="cfg-lbl">Pé Direito (m)</label>
+                    <input id="wms3d-cfg-pe" type="number" class="form-input" style="width:100%;" value="${cfg.peDir||0}" step="0.5"></div>
+            </div>
+        </div>
+
+        <!-- 3. Corredores -->
+        <div>
+            <div class="cfg-sec">
+                <span>🚶 Corredores</span>
+                <button class="btn btn-secondary" style="font-size:.7rem;padding:.2rem .5rem;"
+                    onclick="wms3dAddCorredor()">
+                    <span class="material-icons-round" style="font-size:.8rem;">add</span> Adicionar
+                </button>
+            </div>
+
+            <!-- Ordem -->
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;flex-wrap:wrap;">
+                <span style="font-size:.7rem;color:var(--text-secondary);">Ordem:</span>
+                <button id="btn-ordem-ed" onclick="wms3dSetOrdem('esquerda_direita')"
+                    class="btn ${ordem==='esquerda_direita'?'btn-primary':'btn-secondary'}"
+                    style="font-size:.7rem;padding:.22rem .5rem;">⬅ Esquerda → Direita</button>
+                <button id="btn-ordem-de" onclick="wms3dSetOrdem('direita_esquerda')"
+                    class="btn ${ordem==='direita_esquerda'?'btn-primary':'btn-secondary'}"
+                    style="font-size:.7rem;padding:.22rem .5rem;">➡ Direita → Esquerda</button>
+            </div>
+
+            <div style="overflow-x:auto;border:1px solid var(--border-color);border-radius:8px;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead><tr style="background:var(--bg-dark);">
+                        <th style="${_thStyle()}">ID</th>
+                        <th style="${_thStyle()}">Nome/Rua</th>
+                        <th style="${_thStyle()}">Larg.(m)</th>
+                        <th style="${_thStyle()}">Comp.(m)</th>
+                        <th style="${_thStyle()}width:24px;"></th>
+                    </tr></thead>
+                    <tbody id="wms3d-corredores-tbody">
+                        ${corredores.map(_corrRow).join('')}
+                        ${corredores.length===0?'<tr><td colspan="5" style="text-align:center;padding:.75rem;color:var(--text-secondary);font-size:.75rem;">Nenhum corredor. Clique em Adicionar.</td></tr>':''}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 4. Tipos de Endereço -->
+        <div>
+            <div class="cfg-sec">
+                <span>📦 Tipos de Endereço</span>
+                <button class="btn btn-secondary" style="font-size:.7rem;padding:.2rem .5rem;"
+                    onclick="wms3dAddTipoEndereco()">
+                    <span class="material-icons-round" style="font-size:.8rem;">add</span> Adicionar
+                </button>
+            </div>
+            <div style="overflow-x:auto;border:1px solid var(--border-color);border-radius:8px;">
+                <table style="width:100%;border-collapse:collapse;min-width:460px;">
+                    <thead><tr style="background:var(--bg-dark);">
+                        <th style="${_thStyle()}">Cód.</th>
+                        <th style="${_thStyle()}">Descrição</th>
+                        <th style="${_thStyle()}">Larg.(m)</th>
+                        <th style="${_thStyle()}">Prof.(m)</th>
+                        <th style="${_thStyle()}">Alt.Nív.(m)</th>
+                        <th style="${_thStyle()}">Cap.(kg)</th>
+                        <th style="${_thStyle()}width:24px;"></th>
+                    </tr></thead>
+                    <tbody id="wms3d-tipos-tbody">
+                        ${tipos.map(_tipoRow).join('')}
+                        ${tipos.length===0?'<tr><td colspan="7" style="text-align:center;padding:.75rem;color:var(--text-secondary);font-size:.75rem;">Nenhum tipo cadastrado.</td></tr>':''}
+                    </tbody>
+                </table>
+            </div>
+            <div style="font-size:.68rem;color:var(--text-secondary);margin-top:.35rem;">
+                💡 Os tipos serão selecionáveis no cadastro de endereços e no gerador em massa.
+            </div>
+        </div>
+
+        <!-- 5. Dimensões 3D (fallback) -->
+        <div>
+            <div class="cfg-sec">🎨 Dimensões Padrão 3D (fallback)</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;">
+                <div><label class="cfg-lbl">Largura Vaga (m)</label>
+                    <input id="wms3d-cfg-pw" type="number" class="form-input" style="width:100%;" value="${cfg.posLargura||1.2}" step="0.1"></div>
+                <div><label class="cfg-lbl">Altura por Nível (m)</label>
+                    <input id="wms3d-cfg-ph" type="number" class="form-input" style="width:100%;" value="${cfg.posAltura||2.0}" step="0.1"></div>
+                <div><label class="cfg-lbl">Profundidade Rack (m)</label>
+                    <input id="wms3d-cfg-rd" type="number" class="form-input" style="width:100%;" value="${cfg.profundidade||0.8}" step="0.1"></div>
+                <div><label class="cfg-lbl">Largura Corredor (m)</label>
+                    <input id="wms3d-cfg-cw" type="number" class="form-input" style="width:100%;" value="${cfg.corridorWidth||2.5}" step="0.1"></div>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" style="width:100%;" onclick="wms3dSaveConfig()">
+            <span class="material-icons-round" style="font-size:1rem;vertical-align:middle;">save</span>
+            Salvar e Recarregar 3D
+        </button>
+    </div>`;
+};
+
+window.wms3dAddCorredor = function() {
+    const tbody = document.getElementById('wms3d-corredores-tbody');
+    if (!tbody) return;
+    const n = tbody.querySelectorAll('tr').length + 1;
+    // Remove empty state row if present
+    if (tbody.querySelector('td[colspan]')) tbody.innerHTML = '';
+    tbody.insertAdjacentHTML('beforeend', _corrRow({ id: `C${n}`, nome: `Corredor ${n}`, largura: 2.5, comprimento: 0 }));
+};
+
+window.wms3dAddTipoEndereco = function() {
+    const tbody = document.getElementById('wms3d-tipos-tbody');
+    if (!tbody) return;
+    if (tbody.querySelector('td[colspan]')) tbody.innerHTML = '';
+    tbody.insertAdjacentHTML('beforeend', _tipoRow({ codigo: 'TIPO', descricao: 'Novo Tipo', largura: 1.2, profundidade: 0.8, alturaProxNivel: 2.0, capacidadeKg: 500 }));
+};
+
+window.wms3dSetOrdem = function(ordem) {
+    const ed = document.getElementById('btn-ordem-ed');
+    const de = document.getElementById('btn-ordem-de');
+    if (!ed || !de) return;
+    ed.className = 'btn ' + (ordem === 'esquerda_direita' ? 'btn-primary' : 'btn-secondary');
+    de.className = 'btn ' + (ordem === 'direita_esquerda' ? 'btn-primary' : 'btn-secondary');
+    ed.style.cssText = 'font-size:.7rem;padding:.22rem .5rem;';
+    de.style.cssText = 'font-size:.7rem;padding:.22rem .5rem;';
+};
+
 window.wms3dSaveConfig = function() {
+    // Corredores
+    const corredores = [];
+    document.querySelectorAll('#wms3d-corredores-tbody tr').forEach(tr => {
+        const id = tr.querySelector('.corr-id')?.value?.trim().toUpperCase();
+        if (!id) return;
+        corredores.push({
+            id, nome: tr.querySelector('.corr-nome')?.value?.trim() || id,
+            largura:     +(tr.querySelector('.corr-larg')?.value) || 2.5,
+            comprimento: +(tr.querySelector('.corr-comp')?.value) || 0,
+        });
+    });
+
+    // Tipos
+    const tiposEndereco = [];
+    document.querySelectorAll('#wms3d-tipos-tbody tr').forEach(tr => {
+        const codigo = tr.querySelector('.tipo-cod')?.value?.trim().toUpperCase();
+        if (!codigo) return;
+        tiposEndereco.push({
+            codigo, descricao: tr.querySelector('.tipo-desc')?.value?.trim() || codigo,
+            largura:         +(tr.querySelector('.tipo-larg')?.value) || 1.2,
+            profundidade:    +(tr.querySelector('.tipo-prof')?.value) || 0.8,
+            alturaProxNivel: +(tr.querySelector('.tipo-alt')?.value)  || 2.0,
+            capacidadeKg:    +(tr.querySelector('.tipo-cap')?.value)  || 500,
+        });
+    });
+
+    const ordemBtn = document.getElementById('btn-ordem-ed');
+    const ordem = ordemBtn?.classList.contains('btn-primary') ? 'esquerda_direita' : 'direita_esquerda';
+
     const cfg = {
-        posLargura:    +document.getElementById('wms3d-cfg-pw').value || 1.2,
-        posAltura:     +document.getElementById('wms3d-cfg-ph').value || 2.0,
-        profundidade:  +document.getElementById('wms3d-cfg-rd').value || 0.8,
-        corridorWidth: +document.getElementById('wms3d-cfg-cw').value || 2.5,
-        nomeArmazem:   document.getElementById('wms3d-cfg-nome').value || 'CD',
-        larguraTotal:  +document.getElementById('wms3d-cfg-lt').value || 0,
-        comprimento:   +document.getElementById('wms3d-cfg-comp').value || 0,
-        peDir:         +document.getElementById('wms3d-cfg-pe').value || 0,
+        nomeArmazem:    document.getElementById('wms3d-cfg-nome')?.value  || 'CD',
+        comprimento:   +document.getElementById('wms3d-cfg-comp')?.value  || 0,
+        larguraTotal:  +document.getElementById('wms3d-cfg-lt')?.value    || 0,
+        peDir:         +document.getElementById('wms3d-cfg-pe')?.value    || 0,
+        posLargura:    +document.getElementById('wms3d-cfg-pw')?.value    || 1.2,
+        posAltura:     +document.getElementById('wms3d-cfg-ph')?.value    || 2.0,
+        profundidade:  +document.getElementById('wms3d-cfg-rd')?.value    || 0.8,
+        corridorWidth: +document.getElementById('wms3d-cfg-cw')?.value    || 2.5,
+        ordemCorredores: ordem,
+        corredores,
+        tiposEndereco,
     };
+
     localStorage.setItem('wms_armazem_config', JSON.stringify(cfg));
-    const container = document.getElementById('wms3d-canvas-wrap');
-    if (container) { container.innerHTML = ''; WMS3D.init(container); }
+
+    const wrap = document.getElementById('wms3d-canvas-wrap');
+    if (wrap && window.WMS3D) { wrap.innerHTML = ''; WMS3D.init(wrap); }
     document.getElementById('wms3d-cfg-panel').style.display = 'none';
+    alert(`✅ Configuração salva!\n${corredores.length} corredor(es) · ${tiposEndereco.length} tipo(s) de endereço`);
+};
+
+// Export tipos helper (used by locations.js)
+window.wms3dGetTiposEndereco = function() {
+    const cfg = JSON.parse(localStorage.getItem('wms_armazem_config') || '{}');
+    return cfg.tiposEndereco || [];
 };
 
 console.log('📦 WMS 3D Viewer carregado');

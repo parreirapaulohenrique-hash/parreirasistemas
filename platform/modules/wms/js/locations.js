@@ -275,10 +275,10 @@ window.loadLocationsView = async function () {
                         <div style="display:flex; justify-content:space-between; align-items:end; margin-bottom:1rem;">
                             <div style="display:flex; flex-direction:column; gap:0.5rem;">
                                  <label class="text-secondary" style="font-size:0.75rem; display:block; font-weight:600; text-transform:uppercase;">Tipo de Endereço</label>
-                                 <label style="display:flex; align-items:center; gap:0.6rem; cursor:pointer; background:var(--bg-body); padding:0.6rem 1rem; border-radius:6px; border:1px solid var(--border-color);">
-                                     <input type="checkbox" id="genPalete" style="width:18px; height:18px; accent-color:var(--primary-color);">
-                                     <span style="font-size:0.85rem; font-weight:500;">Palete</span>
-                                 </label>
+                                 <select id="genTipoEndereco" class="form-input" style="min-width:160px;">
+                                    <option value="Picking">Picking</option>
+                                    <option value="Palete">Palete</option>
+                                 </select>
                             </div>
                             <div style="display:flex; flex-direction:column; gap:0.5rem; flex:1; margin-left:2rem;">
                                 <label class="text-secondary" style="font-size:0.75rem; display:block; font-weight:600; text-transform:uppercase;">Sequenciamento (Prédio)</label>
@@ -322,6 +322,17 @@ window.loadLocationsView = async function () {
         }
         sEnd.value = '01';
 
+        // Popular select de Tipo com os tipos configurados
+        const tipoSel = document.getElementById('genTipoEndereco');
+        if (tipoSel && window.wms3dGetTiposEndereco) {
+            const tipos = wms3dGetTiposEndereco();
+            if (tipos.length > 0) {
+                tipoSel.innerHTML = tipos.map(t =>
+                    `<option value="${t.codigo}">${t.codigo} — ${t.descricao}</option>`
+                ).join('');
+            }
+        }
+
         // Listeners p/ botões de filtro (Par/Impar/Todos)
         const filterBtns = document.querySelectorAll('.btn-filter');
         filterBtns.forEach(btn => {
@@ -333,8 +344,9 @@ window.loadLocationsView = async function () {
         });
 
         // Listeners for live preview
-        ['genRuaIni', 'genRuaEnd', 'genPredioIni', 'genPredioEnd', 'genNivelIni', 'genNivelEnd', 'genAptoIni', 'genAptoEnd', 'genPalete'].forEach(id => {
-            document.getElementById(id).addEventListener('input', updateMassPreview);
+        ['genRuaIni', 'genRuaEnd', 'genPredioIni', 'genPredioEnd', 'genNivelIni', 'genNivelEnd', 'genAptoIni', 'genAptoEnd', 'genTipoEndereco'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('input', updateMassPreview);
         });
     }
     loadLocationsData();
@@ -398,7 +410,10 @@ window.generateLocationsMassive = async function () {
         const nEnd = parseInt(document.getElementById('genNivelEnd').value);
         const aIni = parseInt(document.getElementById('genAptoIni').value);
         const aEnd = parseInt(document.getElementById('genAptoEnd').value);
-        const isPalete = document.getElementById('genPalete').checked;
+        const tipoSelecionado = document.getElementById('genTipoEndereco')?.value || 'Picking';
+        // Get tipo dimensions from config
+        const allTipos = (window.wms3dGetTiposEndereco ? wms3dGetTiposEndereco() : []);
+        const tipoDim = allTipos.find(t => t.codigo === tipoSelecionado) || null;
         const filterType = document.querySelector('.btn-filter.active')?.getAttribute('data-type') || 'todos';
 
         let newLocs = [];
@@ -435,7 +450,14 @@ window.generateLocationsMassive = async function () {
                             posicao: as,
                             apto: apto,
                             status: 'LIVRE',
-                            tipo: isPalete ? 'Palete' : 'Picking'
+                            tipo: tipoSelecionado,
+                            // Attach tipo dimensions if configured
+                            ...(tipoDim ? {
+                                largura: tipoDim.largura,
+                                profundidade: tipoDim.profundidade,
+                                alturaProxNivel: tipoDim.alturaProxNivel,
+                                capacidadeKg: tipoDim.capacidadeKg,
+                            } : {})
                         });
                     }
                 }
