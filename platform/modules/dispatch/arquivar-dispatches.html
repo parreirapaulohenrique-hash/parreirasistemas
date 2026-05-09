@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ Arquivar Despachos — ParreiraLog</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #f8fafc; padding: 2rem; min-height: 100vh; }
+        h1 { font-size: 1.4rem; margin-bottom: .35rem; display: flex; align-items: center; gap: .5rem; }
+        .sub { font-size: .85rem; color: #94a3b8; margin-bottom: 1.5rem; }
+        .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; }
+        .card-title { font-size: .75rem; font-weight: 700; color: #818cf8; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .75rem; }
+        .row { display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; margin-bottom: 1rem; }
+        label { font-size: .78rem; color: #94a3b8; display: block; margin-bottom: .3rem; }
+        input, select { background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: .5rem .75rem; border-radius: 8px; font-size: .9rem; }
+        input:focus, select:focus { outline: none; border-color: #6366f1; }
+        .btn { padding: .65rem 1.25rem; border: none; border-radius: 8px; cursor: pointer; font-size: .9rem; font-weight: 700; font-family: inherit; display: inline-flex; align-items: center; gap: .4rem; }
+        .btn-primary { background: #6366f1; color: #fff; }
+        .btn-danger  { background: #dc2626; color: #fff; }
+        .btn-success { background: #059669; color: #fff; }
+        .btn:hover { opacity: .9; }
+        .btn:disabled { opacity: .4; cursor: not-allowed; }
+        .meter { background: #0f172a; border-radius: 99px; height: 12px; overflow: hidden; margin: .5rem 0; }
+        .meter-bar { height: 100%; border-radius: 99px; transition: width .5s; }
+        .stat { background: #0f172a; border-radius: 8px; padding: .65rem 1rem; text-align: center; flex: 1; min-width: 120px; }
+        .stat-val { font-size: 1.4rem; font-weight: 800; }
+        .stat-lbl { font-size: .68rem; color: #64748b; margin-top: .1rem; }
+        #log { background: #0f172a; border-radius: 8px; padding: .75rem 1rem; font-size: .78rem; font-family: monospace; color: #64748b; max-height: 280px; overflow-y: auto; line-height: 1.8; }
+        .log-ok   { color: #10b981; }
+        .log-warn { color: #f59e0b; }
+        .log-err  { color: #ef4444; }
+        .log-info { color: #60a5fa; }
+        .critical { background: rgba(220,38,38,.12); border: 1px solid rgba(220,38,38,.4); border-radius: 8px; padding: .75rem 1rem; margin-bottom: 1rem; font-size: .82rem; }
+    </style>
+</head>
+<body>
+<h1>⚡ Arquivador de Despachos</h1>
+<p class="sub">Ferramenta emergencial para liberar espaço no banco de dados do módulo de Despacho.</p>
+
+<div id="criticalBanner" class="critical" style="display:none;">
+    ⚠️ <strong>ATENÇÃO:</strong> O documento <code>dispatches</code> está próximo/acima do limite de 1MB do Firebase. 
+    Novos lançamentos do Jeferson estão sendo <strong>rejeitados silenciosamente</strong>. Arquive imediatamente.
+</div>
+
+<div class="card">
+    <div class="card-title">🔧 Configuração</div>
+    <div class="row">
+        <div>
+            <label>Tenant ID</label>
+            <input id="tenantId" value="ltdistribuidora" style="width:200px;">
+        </div>
+        <button class="btn btn-primary" onclick="loadInfo()">🔍 Analisar</button>
+    </div>
+
+    <div id="statsRow" style="display:none;">
+        <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:.75rem;">
+            <div class="stat"><div class="stat-val" id="statTotal">-</div><div class="stat-lbl">Total de despachos</div></div>
+            <div class="stat"><div class="stat-val" id="statSize">-</div><div class="stat-lbl">Tamanho atual</div></div>
+            <div class="stat"><div class="stat-val" id="statOld">-</div><div class="stat-lbl">Elegíveis p/ arquivo</div></div>
+            <div class="stat"><div class="stat-val" id="statNew">-</div><div class="stat-lbl">Registros recentes</div></div>
+        </div>
+        <label>Ocupação do limite (1MB):</label>
+        <div class="meter"><div class="meter-bar" id="meterBar"></div></div>
+        <div style="font-size:.72rem;color:#64748b;" id="meterLabel"></div>
+    </div>
+</div>
+
+<div class="card" id="archiveCard" style="display:none;">
+    <div class="card-title">📦 Opções de Arquivamento</div>
+    <div class="row">
+        <div>
+            <label>Manter despachos dos últimos (dias)</label>
+            <input id="keepDays" type="number" value="60" min="7" max="365" style="width:100px;">
+        </div>
+        <div>
+            <label>Manter status</label>
+            <select id="keepStatus" style="width:200px;">
+                <option value="active">Apenas ativos (Pendente/Em Entrega)</option>
+                <option value="all_recent">Todos os recentes pelo prazo acima</option>
+            </select>
+        </div>
+    </div>
+    <div style="font-size:.8rem;color:#94a3b8;margin-bottom:1rem;">
+        📋 Despachos arquivados ficam salvos em <code>dispatches_arquivo_AAAAMM</code> no Firebase — não são deletados, apenas movidos.
+    </div>
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+        <button class="btn btn-danger" id="btnArquivar" onclick="arquivar()" disabled>
+            📦 Arquivar Agora
+        </button>
+        <button class="btn btn-success" id="btnDownload" onclick="downloadBackup()" disabled>
+            💾 Baixar Backup JSON
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-title">📋 Log de Execução</div>
+    <div id="log">Aguardando análise...</div>
+</div>
+
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyDzatCQ8zmH4aQftznf7Y5wdYPwFYSiARc",
+    authDomain: "parreiralog-91904.firebaseapp.com",
+    projectId: "parreiralog-91904",
+    messagingSenderId: "527633267616",
+    appId: "1:527633267616:web:3567e883b31f7fa02882c5"
+};
+
+let db, allDispatches = [], tenantId = '';
+
+function log(msg, type = 'info') {
+    const el = document.getElementById('log');
+    const time = new Date().toLocaleTimeString('pt-BR');
+    el.innerHTML += `<div class="log-${type}">[${time}] ${msg}</div>`;
+    el.scrollTop = el.scrollHeight;
+}
+
+async function initFirebase() {
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    await firebase.auth().signInAnonymously();
+}
+
+async function loadInfo() {
+    tenantId = document.getElementById('tenantId').value.trim();
+    if (!tenantId) { alert('Informe o Tenant ID'); return; }
+
+    document.getElementById('log').innerHTML = '';
+    document.getElementById('statsRow').style.display = 'none';
+    document.getElementById('archiveCard').style.display = 'none';
+
+    log('Conectando ao Firebase...', 'info');
+    try {
+        await initFirebase();
+        log('✅ Firebase conectado!', 'ok');
+    } catch(e) {
+        log('❌ Erro: ' + e.message, 'err');
+        return;
+    }
+
+    log(`Buscando dispatches do tenant: ${tenantId}...`, 'info');
+    try {
+        const doc = await db.collection('tenants').doc(tenantId).collection('legacy_store').doc('dispatches').get();
+        if (!doc.exists) {
+            log('⚠️ Documento "dispatches" não encontrado!', 'warn');
+            return;
+        }
+
+        const data = doc.data();
+        const sizeBytes = (data.content || '').length;
+        const sizeKB = (sizeBytes / 1024).toFixed(1);
+        const sizePercent = ((sizeBytes / 1000000) * 100).toFixed(1);
+        const updatedAt = data.updatedAt ? data.updatedAt.toDate().toLocaleString('pt-BR') : 'desconhecido';
+
+        allDispatches = JSON.parse(data.content || '[]');
+        log(`📊 Tamanho atual: ${sizeKB}KB (${sizePercent}% do limite de 1MB)`, sizePercent > 80 ? 'warn' : 'ok');
+        log(`📅 Última atualização no Firebase: ${updatedAt}`, 'info');
+        log(`📦 Total de registros: ${allDispatches.length}`, 'info');
+
+        // Show critical banner
+        if (sizePercent > 90) {
+            document.getElementById('criticalBanner').style.display = 'block';
+        }
+
+        // Stats
+        const cutoff60 = new Date(); cutoff60.setDate(cutoff60.getDate() - 60);
+        const active = allDispatches.filter(d => d.status === 'Pendente Despacho' || (d.deliveryStatus && d.deliveryStatus !== 'entregue'));
+        const old = allDispatches.filter(d => {
+            const dt = new Date(d.date || d.createdAt || 0);
+            return dt < cutoff60;
+        });
+
+        document.getElementById('statTotal').textContent = allDispatches.length;
+        document.getElementById('statSize').textContent = sizeKB + 'KB';
+        document.getElementById('statOld').textContent = old.length;
+        document.getElementById('statNew').textContent = allDispatches.length - old.length;
+
+        const bar = document.getElementById('meterBar');
+        bar.style.width = Math.min(100, sizePercent) + '%';
+        bar.style.background = sizePercent > 90 ? '#dc2626' : sizePercent > 75 ? '#f59e0b' : '#10b981';
+        document.getElementById('meterLabel').textContent = `${sizeKB}KB de ~1000KB (${sizePercent}%)`;
+
+        document.getElementById('statsRow').style.display = 'block';
+        document.getElementById('archiveCard').style.display = 'block';
+        document.getElementById('btnArquivar').disabled = false;
+        document.getElementById('btnDownload').disabled = false;
+
+        if (old.length === 0) {
+            log('⚠️ Nenhum registro antigo para arquivar. Considere reduzir o prazo de dias.', 'warn');
+        } else {
+            log(`✅ ${old.length} registros elegíveis para arquivamento (mais de 60 dias).`, 'ok');
+        }
+
+    } catch(e) {
+        log('❌ Erro ao ler dispatches: ' + e.message, 'err');
+    }
+}
+
+function downloadBackup() {
+    const blob = new Blob([JSON.stringify(allDispatches, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `dispatches_backup_${tenantId}_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    log('💾 Backup JSON baixado!', 'ok');
+}
+
+async function arquivar() {
+    const keepDays = parseInt(document.getElementById('keepDays').value) || 60;
+    const keepStatus = document.getElementById('keepStatus').value;
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - keepDays);
+
+    log(`\n--- INICIANDO ARQUIVAMENTO (manter últimos ${keepDays} dias) ---`, 'warn');
+
+    // Separar registros
+    const toArchive = [];
+    const toKeep = [];
+
+    allDispatches.forEach(d => {
+        const dt = new Date(d.date || d.createdAt || 0);
+        const isOld = dt < cutoff;
+        const isActive = d.status === 'Pendente Despacho' || (d.deliveryStatus && d.deliveryStatus !== 'entregue');
+
+        if (isOld && !isActive) {
+            toArchive.push(d);
+        } else {
+            toKeep.push(d);
+        }
+    });
+
+    log(`📦 Para arquivar: ${toArchive.length} registros`, 'info');
+    log(`✅ Para manter: ${toKeep.length} registros`, 'info');
+
+    if (toArchive.length === 0) {
+        log('⚠️ Nenhum registro para arquivar com os critérios atuais.', 'warn');
+        return;
+    }
+
+    const newSizeEstimate = JSON.stringify(toKeep).length;
+    const newSizeKB = (newSizeEstimate / 1024).toFixed(1);
+    log(`📊 Tamanho estimado após arquivamento: ${newSizeKB}KB`, 'info');
+
+    if (!confirm(`Confirma o arquivamento de ${toArchive.length} registros antigos?\n\nIrá manter ${toKeep.length} registros.\nNovo tamanho estimado: ${newSizeKB}KB.\n\nOs dados arquivados ficam salvos no Firebase e podem ser recuperados.`)) {
+        log('❌ Arquivamento cancelado pelo usuário.', 'warn');
+        return;
+    }
+
+    document.getElementById('btnArquivar').disabled = true;
+    const btn = document.getElementById('btnArquivar');
+    btn.innerHTML = '⏳ Arquivando...';
+
+    try {
+        // 1. Salvar arquivo no Firebase
+        const archiveKey = `dispatches_arquivo_${new Date().toISOString().slice(0,7).replace('-','')}`;
+        log(`Salvando ${toArchive.length} registros em "${archiveKey}"...`, 'info');
+
+        // Dividir em chunks se necessário (cada chunk < 900KB)
+        const archiveStr = JSON.stringify(toArchive);
+        if (archiveStr.length < 900000) {
+            await db.collection('tenants').doc(tenantId).collection('legacy_store').doc(archiveKey).set({
+                content: archiveStr,
+                archivedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                count: toArchive.length,
+                isArchive: true
+            });
+            log(`✅ Arquivo salvo: ${archiveKey} (${(archiveStr.length/1024).toFixed(1)}KB)`, 'ok');
+        } else {
+            // Dividir em 2 partes
+            const half = Math.floor(toArchive.length / 2);
+            for (let part = 0; part < 2; part++) {
+                const chunk = part === 0 ? toArchive.slice(0, half) : toArchive.slice(half);
+                const chunkKey = `${archiveKey}_p${part+1}`;
+                await db.collection('tenants').doc(tenantId).collection('legacy_store').doc(chunkKey).set({
+                    content: JSON.stringify(chunk),
+                    archivedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    count: chunk.length,
+                    isArchive: true
+                });
+                log(`✅ Parte ${part+1} salva: ${chunkKey}`, 'ok');
+            }
+        }
+
+        // 2. Atualizar dispatches com apenas os registros recentes
+        log(`Atualizando "dispatches" com ${toKeep.length} registros recentes...`, 'info');
+        const keepStr = JSON.stringify(toKeep);
+        await db.collection('tenants').doc(tenantId).collection('legacy_store').doc('dispatches').set({
+            content: keepStr,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            isChunked: false
+        });
+        log(`✅ "dispatches" atualizado! Novo tamanho: ${(keepStr.length/1024).toFixed(1)}KB`, 'ok');
+
+        allDispatches = toKeep;
+        document.getElementById('statTotal').textContent = toKeep.length;
+        document.getElementById('statSize').textContent = (keepStr.length/1024).toFixed(1) + 'KB';
+        document.getElementById('statOld').textContent = 0;
+
+        const newPct = ((keepStr.length / 1000000) * 100).toFixed(1);
+        const bar = document.getElementById('meterBar');
+        bar.style.width = newPct + '%';
+        bar.style.background = '#10b981';
+        document.getElementById('meterLabel').textContent = `${(keepStr.length/1024).toFixed(1)}KB de ~1000KB (${newPct}%)`;
+
+        document.getElementById('criticalBanner').style.display = 'none';
+
+        log(`\n🎉 ARQUIVAMENTO CONCLUÍDO COM SUCESSO!`, 'ok');
+        log(`📊 Antes: ~975KB | Depois: ${(keepStr.length/1024).toFixed(1)}KB`, 'ok');
+        log(`✅ Jeferson pode agora lançar normalmente para o Leonardo.`, 'ok');
+        log(`⚠️ Peça ao Jeferson para RECARREGAR o sistema (F5) para sincronizar os dados mais recentes.`, 'warn');
+
+        btn.innerHTML = '✅ Arquivado!';
+        btn.style.background = '#059669';
+
+    } catch(e) {
+        log('❌ ERRO no arquivamento: ' + e.message, 'err');
+        btn.innerHTML = '⚠️ Tentar Novamente';
+        btn.disabled = false;
+    }
+}
+</script>
+</body>
+</html>
