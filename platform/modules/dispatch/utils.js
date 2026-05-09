@@ -42,9 +42,17 @@ const Utils = {
                 if (Array.isArray(data) && data.length === 0) {
                     console.warn(`⚠️ [Proteção] saveRaw: Não enviando array vazio para nuvem: ${key}`);
                 } else {
-                    Utils.Cloud.save(key, data);
+                    // Se Firebase indisponível, enfileira para sync posterior
+                    if (!window.db || typeof firebase === 'undefined') {
+                        Utils._pendingSync = Utils._pendingSync || {};
+                        Utils._pendingSync[key] = data;
+                        Utils.Cloud._showOfflineBadge();
+                        console.warn(`⚠️ [saveRaw] Firebase indisponível. ${key} enfileirado para sync.`);
+                    } else {
+                        Utils.Cloud.save(key, data);
+                    }
                 }
-            } catch (e) { }
+            } catch (e) { console.error('[saveRaw] Erro:', e); }
         }
     },
 
@@ -98,7 +106,7 @@ const Utils = {
                 try {
                     const jsonContent = JSON.stringify(data);
                     const size = jsonContent.length;
-                    
+
                     if (size < 1000000) { // Limite de 1MB do Firestore
                         console.log(`[Cloud] Salvando ${key} (${size} bytes)...`);
                         await window.db.collection('tenants').doc(this.tenantId).collection('legacy_store').doc(key).set({
@@ -106,34 +114,117 @@ const Utils = {
                             updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
                             isChunked: false
                         });
-                        console.log(`[Cloud] ${key} salvo com sucesso.`);
+                        console.log(`✅ [Cloud] ${key} salvo com sucesso.`);
+                        // Remove da fila pendente se estava lá
+                        if (Utils._pendingSync && Utils._pendingSync[key]) {
+                            delete Utils._pendingSync[key];
+                        }
+                        this._hideOfflineBadge();
                         return true;
                     } else {
-                        const errorMsg = `[Cloud] Erro: O arquivo de ${key} é muito grande (${(size/1024).toFixed(1)}KB) e excede o limite do banco de dados.`;
-                        console.error(errorMsg);
-                        alert(errorMsg);
+                        const kb = (size/1024).toFixed(1);
+                        const msg = `⚠️ SYNC BLOQUEADO\n\nO registro "${key}" está grande demais (${kb}KB > 1000KB) e não foi salvo no banco.\n\nContate o suporte para arquivar os dados históricos.`;
+                        console.error('[Cloud]', msg);
+                        alert(msg);
                         return false;
                     }
-                } catch (e) { 
-                    console.error("Cloud Save Error", e);
-                    if (key === 'clients' || key === 'freight_tables') {
-                        alert(`Erro ao sincronizar ${key} com a nuvem: ` + e.message);
+                } catch (e) {
+                    console.error('❌ [Cloud] Erro ao salvar no Firestore:', key, e);
+                    // CORRIGIDO: Mostrar alerta para QUALQUER chave crítica, não só clients/freight_tables
+                    const chavesCriticas = ['dispatches', 'delivery_history', 'clients', 'freight_tables', 'invoice_history'];
+                    if (chavesCriticas.includes(key)) {
+                        const userMsg = `❌ ERRO DE SINCRONIZAÇÃO\n\nNão foi possível salvar "${key}" no banco de dados.\n\nErro: ${e.message}\n\nOs dados foram salvos localmente. Avise o suporte ou recarregue o sistema.`;
+                        console.error(userMsg);
+                        // Enfileira para retry
+                        Utils._pendingSync = Utils._pendingSync || {};
+                        Utils._pendingSync[key] = data;
+                        this._showOfflineBadge('ERRO SYNC');
+                        // Não usar alert() para não travar o operador — usa toast se disponível
+                        if (window.showToast) {
+                            window.showToast(`❌ Falha ao sincronizar "${key}" com o banco. Dados salvos localmente.`);
+                        } else {
+                            alert(userMsg);
+                        }
                     }
                     return false;
                 }
             }
 
-            // --- LOCAL SIMULATION MODE ---
+            // --- LOCAL SIMULATION MODE (Firebase não disponível) ---
+            this._showOfflineBadge();
             if (this.hasTenant()) {
                 const simKey = `tenant_${this.tenantId}_${key}`;
                 try {
                     localStorage.setItem(simKey, JSON.stringify(data));
-                    console.log(`💾 [SimCloud] Salvo localmente: ${simKey}`);
+                    console.warn(`⚠️ [OFFLINE] Salvo localmente (Firebase off): ${simKey}`);
+                    // Marca como pendente
+                    Utils._pendingSync = Utils._pendingSync || {};
+                    Utils._pendingSync[key] = data;
                 } catch (e) {
                     console.error('❌ [SimCloud] Erro ao salvar:', e);
                 }
             }
         },
+
+        // Mostra badge de OFFLINE no topo da tela
+        _offlineBadgeVisible: false,
+        _showOfflineBadge(label) {
+            label = label || 'OFFLINE - Dados NÃO sincronizados';
+            if (!document.getElementById('_cloudStatusBadge')) {
+                const badge = document.createElement('div');
+                badge.id = '_cloudStatusBadge';
+                badge.style.cssText = 'position:fixed;top:0;left:0;width:100%;background:#dc2626;color:#fff;text-align:center;font-size:0.8rem;font-weight:700;padding:6px 12px;z-index:99999;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,0.4);';
+                badge.innerHTML = `
+                    <span>⚠️ ${label} — Firebase não conectado na máquina de <strong>${localStorage.getItem('app_tenant_id')||'?'}</strong></span>
+                    <button onclick="Utils.Cloud.forceSyncPending()" style="background:#fff;color:#dc2626;border:none;border-radius:4px;padding:2px 10px;cursor:pointer;font-weight:700;font-size:0.75rem;">🔄 Tentar Sincronizar</button>
+                `;
+                document.body.insertBefore(badge, document.body.firstChild);
+                // Ajusta o body para não sobrepor conteúdo
+                document.body.style.paddingTop = ((parseFloat(document.body.style.paddingTop)||0) + 36) + 'px';
+            } else {
+                const lbl = document.getElementById('_cloudStatusBadge')?.querySelector('span');
+                if (lbl) lbl.innerHTML = `⚠️ ${label} — Firebase não conectado`;
+            }
+            this._offlineBadgeVisible = true;
+        },
+
+        _hideOfflineBadge() {
+            const badge = document.getElementById('_cloudStatusBadge');
+            if (badge) {
+                badge.style.background = '#059669';
+                badge.innerHTML = '✅ Sincronizado com sucesso! Conectado ao banco de dados.';
+                setTimeout(() => { badge.remove(); document.body.style.paddingTop = ''; }, 3000);
+            }
+            this._offlineBadgeVisible = false;
+        },
+
+        // Tenta sincronizar todos os itens pendentes com o Firebase
+        async forceSyncPending() {
+            const pending = Utils._pendingSync || {};
+            const keys = Object.keys(pending);
+            if (keys.length === 0) {
+                if (window.showToast) window.showToast('✅ Nenhum dado pendente de sincronização.');
+                return;
+            }
+
+            if (!window.db || typeof firebase === 'undefined') {
+                alert('❌ Firebase ainda não está disponível.\n\nVerifique a conexão com a internet e recarregue a página.');
+                return;
+            }
+
+            if (window.showToast) window.showToast(`🔄 Sincronizando ${keys.length} item(ns) pendente(s)...`);
+            let ok = 0, fail = 0;
+            for (const key of keys) {
+                const result = await this.save(key, pending[key]);
+                if (result) ok++; else fail++;
+            }
+
+            const msg = `Sincronização concluída: ${ok} ok, ${fail} falhou(aram).`;
+            if (window.showToast) window.showToast(msg);
+            else alert(msg);
+            console.log('[ForceSyncPending]', msg);
+        },
+
 
         // --- LOAD WITH AUTO-MIGRATION (Copy-On-Read) ---
         async loadAll() {

@@ -67,6 +67,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (loadingOverlay.parentNode) loadingOverlay.parentNode.removeChild(loadingOverlay);
         }
 
+        // ── VERIFICAÇÃO DE CONECTIVIDADE FIREBASE ───────────────────────────
+        // Se Firebase não inicializou, avisa imediatamente
+        setTimeout(() => {
+            if (!window.db || typeof firebase === 'undefined') {
+                console.error('❌ [App] Firebase NÃO inicializou! Modo offline ativo.');
+                if (Utils.Cloud && Utils.Cloud._showOfflineBadge) {
+                    Utils.Cloud._showOfflineBadge('FIREBASE NÃO CONECTADO — Dados ficando apenas locais!');
+                }
+            } else {
+                // Firebase OK — verifica tamanho dos dispatches
+                const dispatchesRaw = localStorage.getItem('dispatches') || '[]';
+                const dispSize = dispatchesRaw.length;
+                if (dispSize > 800000) { // 80% do limite — alerta preventivo
+                    const kb = (dispSize/1024).toFixed(0);
+                    const msg = `⚠️ ATENÇÃO: Histórico de despachos está grande (${kb}KB de máximo 1000KB).\n\nRecomenda-se arquivar os registros antigos em Relatórios antes de atingir o limite e bloquear o sincronismo.`;
+                    console.warn(msg);
+                    if (window.showToast) window.showToast(`⚠️ Histórico de despachos grande: ${kb}KB. Arquive os dados antigos.`);
+                }
+                console.log(`✅ [App] Firebase conectado. Dispatches: ${(dispSize/1024).toFixed(1)}KB`);
+            }
+        }, 1500);
+
         // --- DATA MIGRATION ---
         // State
         const migrateData = () => {
