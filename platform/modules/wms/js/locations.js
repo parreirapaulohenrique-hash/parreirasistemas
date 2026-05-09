@@ -42,11 +42,93 @@ window.loadLocationsView = async function () {
                         <button class="btn btn-secondary" onclick="loadLocationsData()">
                             <span class="material-icons-round">refresh</span>
                         </button>
+                        <button class="btn btn-secondary" onclick="openXlsImport()" title="Importar do Excel">
+                            <span class="material-icons-round" style="color:#10b981;">table_view</span> Importar Excel
+                        </button>
                         <button class="btn btn-primary" onclick="openGeneratorModal()">
                             <span class="material-icons-round">add_circle</span> Gerar Endereços
                         </button>
                     </div>
                 </div>
+
+            <!-- ═══════════════════════════════════════════════════════════
+                 MODAL: IMPORTAR DO EXCEL
+                 ═══════════════════════════════════════════════════════════ -->
+            <div id="modalXlsImport" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+                background:rgba(0,0,0,.8);z-index:1200;align-items:center;justify-content:center;">
+                <div class="card" style="width:100%;max-width:780px;max-height:90vh;display:flex;flex-direction:column;
+                    box-shadow:0 20px 60px rgba(0,0,0,.8);animation:slideUp .3s ease;">
+
+                    <!-- Header -->
+                    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+                        <h3 style="display:flex;align-items:center;gap:.5rem;">
+                            <span class="material-icons-round" style="color:#10b981;">table_view</span>
+                            Importar Endereços do Excel
+                        </h3>
+                        <span class="material-icons-round" style="cursor:pointer;color:var(--text-secondary);"
+                            onclick="closeXlsImport()">close</span>
+                    </div>
+
+                    <!-- Body (scrollable) -->
+                    <div style="overflow-y:auto;padding:1.5rem;display:flex;flex-direction:column;gap:1.25rem;">
+
+                        <!-- Step 1: Drop zone -->
+                        <div id="xls-step1">
+                            <div style="font-size:.8rem;font-weight:600;color:var(--text-secondary);
+                                text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem;">
+                                Passo 1 — Selecione o arquivo
+                            </div>
+                            <div id="xls-drop" onclick="document.getElementById('xls-file-input').click()"
+                                style="border:2px dashed var(--border-color);border-radius:12px;padding:2.5rem;
+                                text-align:center;cursor:pointer;transition:all .2s;color:var(--text-secondary);"
+                                ondragover="event.preventDefault();this.style.borderColor='#10b981';this.style.background='rgba(16,185,129,.06)';"
+                                ondragleave="this.style.borderColor='';this.style.background='';"
+                                ondrop="xlsDrop(event)">
+                                <span class="material-icons-round" style="font-size:3rem;display:block;margin-bottom:.5rem;color:#10b981;opacity:.7;">upload_file</span>
+                                <div style="font-size:.9rem;font-weight:600;">Arraste o arquivo aqui ou clique para selecionar</div>
+                                <div style="font-size:.75rem;margin-top:.35rem;opacity:.6;">.xlsx · .xls · .csv</div>
+                                <input id="xls-file-input" type="file" accept=".xlsx,.xls,.csv" style="display:none;"
+                                    onchange="xlsLoadFile(this.files[0])">
+                            </div>
+                            <div style="font-size:.78rem;color:var(--text-secondary);margin-top:.75rem;background:rgba(16,185,129,.06);
+                                border-left:3px solid #10b981;padding:.65rem .85rem;border-radius:6px;">
+                                <strong>Colunas aceitas:</strong> A planilha pode ter uma coluna <code>Endereço</code>
+                                com o ID completo (ex: <code>01-02-0101</code>), ou colunas separadas para
+                                <code>Rua</code>, <code>Prédio</code>, <code>Nível</code>, <code>Posição</code>.
+                                Colunas opcionais: <code>Status</code>, <code>Tipo</code>.
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Column mapping + preview (hidden until file loaded) -->
+                        <div id="xls-step2" style="display:none;">
+                            <div style="font-size:.8rem;font-weight:600;color:var(--text-secondary);
+                                text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem;">
+                                Passo 2 — Mapeamento de Colunas
+                            </div>
+                            <div id="xls-mapping" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.65rem;margin-bottom:1rem;"></div>
+
+                            <div style="font-size:.8rem;font-weight:600;color:var(--text-secondary);
+                                text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;">
+                                Preview (primeiras 8 linhas)
+                            </div>
+                            <div id="xls-preview" style="overflow-x:auto;border:1px solid var(--border-color);border-radius:8px;max-height:240px;overflow-y:auto;"></div>
+
+                            <div id="xls-summary" style="margin-top:.75rem;font-size:.82rem;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div style="padding:1rem 1.5rem;border-top:1px solid var(--border-color);display:flex;
+                        justify-content:space-between;align-items:center;flex-shrink:0;">
+                        <button class="btn btn-secondary" onclick="closeXlsImport()">Cancelar</button>
+                        <button id="xls-btn-import" class="btn btn-primary" style="display:none;" onclick="xlsConfirmImport()">
+                            <span class="material-icons-round" style="font-size:1rem;">download_done</span>
+                            Importar Endereços
+                        </button>
+                    </div>
+                </div>
+            </div>
+
                 <div class="card-body" style="padding:1rem;">
                     <!-- Filters -->
                     <div style="display:flex; gap:1rem; margin-bottom:1rem; align-items:end; flex-wrap:wrap;">
@@ -813,3 +895,264 @@ window.deleteLocation = function (id) {
     filterGrid();
     updateDashboardStats();
 }
+
+// =============================================================================
+// IMPORTAR EXCEL — SheetJS
+// =============================================================================
+
+let _xlsRows   = [];   // raw rows parsed from file
+let _xlsCols   = [];   // column headers
+
+const _XLS_FIELD_LABELS = {
+    endereco: 'Endereço (ID completo)',
+    rua:      'Rua',
+    predio:   'Prédio',
+    nivel:    'Nível',
+    posicao:  'Posição',
+    status:   'Status',
+    tipo:     'Tipo',
+};
+
+const _XLS_SYNONYMS = {
+    endereco: ['endereço','endereco','address','id','end','código','codigo'],
+    rua:      ['rua','corredor','aisle','street'],
+    predio:   ['prédio','predio','coluna','bay','bloco','blk','column'],
+    nivel:    ['nível','nivel','level','andar','altura','floor'],
+    posicao:  ['posição','posicao','pos','position','apart','apto'],
+    status:   ['status','situação','situacao','state'],
+    tipo:     ['tipo','type','categoria','category'],
+};
+
+function _xlsAutoDetect(headers) {
+    const map = {};
+    headers.forEach(h => {
+        const hn = h.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+        for (const [field, synonyms] of Object.entries(_XLS_SYNONYMS)) {
+            if (!map[field] && synonyms.some(s => hn.includes(s))) {
+                map[field] = h;
+            }
+        }
+    });
+    return map;
+}
+
+window.openXlsImport = function() {
+    // Ensure SheetJS is loaded
+    if (!window.XLSX) {
+        const sc = document.createElement('script');
+        sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        sc.onload = () => { console.log('SheetJS carregado'); };
+        document.head.appendChild(sc);
+    }
+    _xlsRows = []; _xlsCols = [];
+    document.getElementById('xls-step2').style.display = 'none';
+    document.getElementById('xls-btn-import').style.display = 'none';
+    document.getElementById('xls-file-input').value = '';
+    const drop = document.getElementById('xls-drop');
+    if (drop) { drop.style.borderColor = ''; drop.style.background = ''; }
+    document.getElementById('modalXlsImport').style.display = 'flex';
+};
+
+window.closeXlsImport = function() {
+    document.getElementById('modalXlsImport').style.display = 'none';
+};
+
+window.xlsDrop = function(e) {
+    e.preventDefault();
+    const drop = document.getElementById('xls-drop');
+    if (drop) { drop.style.borderColor = ''; drop.style.background = ''; }
+    const file = e.dataTransfer?.files?.[0];
+    if (file) xlsLoadFile(file);
+};
+
+window.xlsLoadFile = function(file) {
+    if (!file) return;
+    if (!window.XLSX) {
+        alert('SheetJS ainda carregando, aguarde 2 segundos e tente novamente.');
+        return;
+    }
+    const drop = document.getElementById('xls-drop');
+    if (drop) {
+        drop.style.borderColor = '#10b981';
+        drop.innerHTML = `<span class="material-icons-round" style="font-size:2rem;display:block;margin-bottom:.4rem;color:#10b981;">check_circle</span>
+            <div style="font-weight:600;color:#10b981;">${file.name}</div>
+            <div style="font-size:.75rem;color:var(--text-secondary);margin-top:.2rem;">Lendo arquivo...</div>`;
+    }
+
+    const reader = new FileReader();
+    reader.onload = e => {
+        try {
+            const wb = XLSX.read(e.target.result, { type: 'array' });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+            if (!data || data.length === 0) {
+                alert('Planilha vazia ou sem dados reconhecíveis.');
+                return;
+            }
+
+            _xlsRows = data;
+            _xlsCols = Object.keys(data[0]);
+            _xlsRenderMapping(_xlsAutoDetect(_xlsCols));
+
+        } catch(err) {
+            alert('Erro ao ler o arquivo: ' + err.message);
+        }
+    };
+    reader.readAsArrayBuffer(file);
+};
+
+function _xlsRenderMapping(autoMap) {
+    const step2 = document.getElementById('xls-step2');
+    const mapDiv = document.getElementById('xls-mapping');
+
+    const opts = `<option value="">(ignorar)</option>` +
+        _xlsCols.map(c => `<option value="${c}">${c}</option>`).join('');
+
+    mapDiv.innerHTML = Object.entries(_XLS_FIELD_LABELS).map(([field, label]) => {
+        const sel = autoMap[field] || '';
+        return `
+        <div>
+            <label style="font-size:.73rem;color:var(--text-secondary);display:block;margin-bottom:.25rem;
+                font-weight:600;">${label}</label>
+            <select id="xls-map-${field}" class="form-input" style="width:100%;font-size:.82rem;"
+                onchange="_xlsUpdatePreview()">
+                ${opts.replace(`value="${sel}"`, `value="${sel}" selected`)}
+            </select>
+        </div>`;
+    }).join('');
+
+    step2.style.display = 'block';
+    _xlsUpdatePreview();
+}
+
+window._xlsUpdatePreview = function() {
+    const rows = _xlsRows.slice(0, 8);
+    const parsed = rows.map(_xlsParseRow).filter(Boolean);
+
+    const preview = document.getElementById('xls-preview');
+    const summary = document.getElementById('xls-summary');
+
+    if (parsed.length === 0) {
+        preview.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--text-secondary);font-size:.82rem;">Nenhum dado válido com o mapeamento atual.</div>';
+        document.getElementById('xls-btn-import').style.display = 'none';
+        return;
+    }
+
+    preview.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:.78rem;">
+        <thead>
+            <tr style="background:var(--bg-dark);position:sticky;top:0;">
+                ${['Endereço','Rua','Prédio','Nível','Posição','Status','Tipo'].map(h=>
+                    `<th style="padding:.4rem .6rem;text-align:left;border-bottom:1px solid var(--border-color);color:var(--text-secondary);white-space:nowrap;">${h}</th>`
+                ).join('')}
+            </tr>
+        </thead>
+        <tbody>
+            ${parsed.map(r => `
+            <tr style="border-bottom:1px solid var(--border-color)44;">
+                <td style="padding:.35rem .6rem;font-family:monospace;font-weight:700;color:#818cf8;">${r.id}</td>
+                <td style="padding:.35rem .6rem;">${r.rua}</td>
+                <td style="padding:.35rem .6rem;">${r.predio}</td>
+                <td style="padding:.35rem .6rem;">${r.nivel}</td>
+                <td style="padding:.35rem .6rem;">${r.posicao}</td>
+                <td style="padding:.35rem .6rem;">
+                    <span style="background:${{LIVRE:'#10b98122',OCUPADO:'#3b82f622',BLOQUEADO:'#f59e0b22'}[r.status]||'#94a3b822'};
+                        color:${{LIVRE:'#10b981',OCUPADO:'#3b82f6',BLOQUEADO:'#f59e0b'}[r.status]||'#94a3b8'};
+                        border-radius:4px;padding:.1rem .4rem;font-size:.7rem;font-weight:600;">${r.status}</span>
+                </td>
+                <td style="padding:.35rem .6rem;">${r.tipo}</td>
+            </tr>`).join('')}
+        </tbody>
+    </table>`;
+
+    const totalAll = _xlsRows.map(_xlsParseRow).filter(Boolean).length;
+    const existing = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+    const existingIds = new Set(existing.map(l => l.id));
+    const newCount = _xlsRows.map(_xlsParseRow).filter(r => r && !existingIds.has(r.id)).length;
+    const dupCount = totalAll - newCount;
+
+    summary.innerHTML = `
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+        <span style="background:rgba(16,185,129,.1);color:#10b981;border-radius:6px;padding:.3rem .7rem;">
+            ✅ ${totalAll} endereços válidos
+        </span>
+        <span style="background:rgba(59,130,246,.1);color:#3b82f6;border-radius:6px;padding:.3rem .7rem;">
+            🆕 ${newCount} novos
+        </span>
+        ${dupCount > 0 ? `<span style="background:rgba(245,158,11,.1);color:#f59e0b;border-radius:6px;padding:.3rem .7rem;">
+            ⚠️ ${dupCount} duplicados (serão ignorados)</span>` : ''}
+        <span style="font-size:.75rem;color:var(--text-secondary);align-self:center;">
+            Total na planilha: ${_xlsRows.length} linhas
+        </span>
+    </div>`;
+
+    document.getElementById('xls-btn-import').style.display = totalAll > 0 ? 'flex' : 'none';
+};
+
+function _xlsParseRow(row) {
+    const g = id => {
+        const sel = document.getElementById(`xls-map-${id}`);
+        return sel?.value ? String(row[sel.value] || '').trim() : '';
+    };
+
+    let rua='', predio='', nivel='', posicao='';
+
+    const endId = g('endereco');
+    if (endId) {
+        // Auto-parse "01-02-0101" or "01-02-01-01"
+        const parts = endId.split('-');
+        if (parts.length >= 3) {
+            rua    = parts[0].padStart(2,'0');
+            predio = parts[1].padStart(2,'0');
+            const rest = parts.slice(2).join('');
+            nivel    = rest.slice(0,2).padStart(2,'0');
+            posicao  = (rest.slice(2) || '01').padStart(2,'0');
+        } else {
+            return null;
+        }
+    } else {
+        rua    = g('rua').padStart(2,'0')    || '00';
+        predio = g('predio').padStart(2,'0') || '00';
+        nivel  = g('nivel').padStart(2,'0')  || '01';
+        posicao= g('posicao').padStart(2,'0')|| '01';
+        if (rua === '00' && predio === '00') return null;
+    }
+
+    const apto = nivel + posicao;
+    const id   = `${rua}-${predio}-${apto}`;
+
+    const rawStatus = g('status').toUpperCase();
+    const status = ['LIVRE','OCUPADO','BLOQUEADO'].includes(rawStatus) ? rawStatus : 'LIVRE';
+
+    const rawTipo = g('tipo');
+    const tipo = rawTipo || 'Picking';
+
+    return { id, rua, predio, nivel, posicao, apto, status, tipo };
+}
+
+window.xlsConfirmImport = function() {
+    const parsed = _xlsRows.map(_xlsParseRow).filter(Boolean);
+    if (parsed.length === 0) { alert('Nenhum dado válido para importar.'); return; }
+
+    const key = 'wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '');
+    const existing = JSON.parse(localStorage.getItem(key) || '[]');
+    const existingIds = new Set(existing.map(l => l.id));
+
+    const newLocs = parsed.filter(r => !existingIds.has(r.id));
+    const dupes   = parsed.length - newLocs.length;
+
+    const merged = [...existing, ...newLocs];
+    localStorage.setItem(key, JSON.stringify(merged));
+    locationsState.gridData = merged;
+    filterGrid();
+    if (window.updateDashboardStats) updateDashboardStats();
+    closeXlsImport();
+
+    const msg = `✅ ${newLocs.length} endereços importados com sucesso!${dupes > 0 ? `\n⚠️ ${dupes} duplicados ignorados.` : ''}`;
+    alert(msg);
+
+    // Reload 3D if visible
+    const wrap3d = document.getElementById('wms3d-canvas-wrap');
+    if (wrap3d && window.WMS3D) { wrap3d.innerHTML = ''; WMS3D.init(wrap3d); }
+};
