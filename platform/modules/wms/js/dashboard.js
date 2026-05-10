@@ -5,10 +5,14 @@ window.loadDashboardView = function () {
     const container = document.getElementById('view-dashboard');
     if (!container) return;
 
-    // Get mock data
-    const mockData = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
-    const receipts = JSON.parse(localStorage.getItem('wms_receipts') || '[]');
-    const addresses = mockData.addresses || [];
+    // Data
+    const suf      = window.getTenantSuffix ? window.getTenantSuffix() : '';
+    const receipts  = JSON.parse(localStorage.getItem('wms_receipts') || '[]');
+    const addresses = JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
+    const estoque   = JSON.parse(localStorage.getItem('wms_estoque'  + suf) || '[]');
+    const tarefas   = JSON.parse(localStorage.getItem('wms_tarefas'  + suf) || '[]');
+    const stockMap  = {}; estoque.forEach(s => stockMap[s.enderecoId] = s);
+    const taskSet   = new Set(tarefas.filter(t => t.status==='pendente').map(t => t.enderecoId));
 
     // ── 3D Section ────────────────────────────────────────────────────────
     const st = (window.WMS3D && WMS3D.getStats) ? WMS3D.getStats() : {};
@@ -72,13 +76,6 @@ window.loadDashboardView = function () {
     // ──────────────────────────────────────────────────────────────────────
 
     // KPIs from merged status
-    const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
-    const addresses = JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
-    const estoque   = JSON.parse(localStorage.getItem('wms_estoque' + suf) || '[]');
-    const tarefas   = JSON.parse(localStorage.getItem('wms_tarefas' + suf) || '[]');
-    const stockMap  = {}; estoque.forEach(s => stockMap[s.enderecoId] = s);
-    const taskSet   = new Set(tarefas.filter(t => t.status==='pendente').map(t => t.enderecoId));
-
     const totalAddresses   = addresses.length;
     const occupiedAddresses  = addresses.filter(a => stockMap[a.id] && !taskSet.has(a.id)).length;
     const blockedAddresses   = addresses.filter(a => a.status === 'BLOQUEADO').length;
