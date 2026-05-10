@@ -10,55 +10,80 @@ window.loadDashboardView = function () {
     const receipts = JSON.parse(localStorage.getItem('wms_receipts') || '[]');
     const addresses = mockData.addresses || [];
 
-    // ── 3D Section (inject first, init after render) ──────────────────────
-    const cfg3d = JSON.parse(localStorage.getItem('wms_armazem_config') || '{}');
-
+    // ── 3D Section ────────────────────────────────────────────────────────
+    const st = (window.WMS3D && WMS3D.getStats) ? WMS3D.getStats() : {};
     const viewer3dHTML = `
     <div class="card" style="margin-bottom:1.5rem;overflow:hidden;">
         <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
             <h3 style="font-size:.95rem;font-weight:600;display:flex;align-items:center;gap:.5rem;">
                 <span class="material-icons-round" style="font-size:1.1rem;color:#818cf8;">view_in_ar</span>
-                Visualização 3D do Armazém
+                Visualização 3D do Armázém
             </h3>
             <div style="display:flex;gap:.5rem;align-items:center;">
-                <div style="font-size:.72rem;color:var(--text-secondary);display:flex;gap:1rem;align-items:center;">
-                    <span>🟢 Livre</span><span>🔵 Ocupado</span><span>🟡 Bloqueado</span>
-                </div>
                 <button class="btn btn-secondary" style="font-size:.78rem;padding:.3rem .7rem;"
                     onclick="(function(){var p=document.getElementById('wms3d-cfg-panel');p.style.display='block';if(window.wms3dRenderConfig)wms3dRenderConfig(p);})()">
                     <span class="material-icons-round" style="font-size:.9rem;vertical-align:middle;">tune</span>
-                    Configurar Armazém
+                    Configurar Armázém
                 </button>
-                <button class="btn btn-secondary" style="padding:.3rem .5rem;" title="Recarregar 3D"
-                    onclick="const w=document.getElementById('wms3d-canvas-wrap');if(w){w.innerHTML='';WMS3D.init(w);}">
+                <button class="btn btn-secondary" style="padding:.3rem .5rem;" title="Atualizar 3D"
+                    onclick="const w=document.getElementById('wms3d-canvas-wrap');if(w)WMS3D.init(w);">
                     <span class="material-icons-round" style="font-size:1rem;">refresh</span>
                 </button>
             </div>
         </div>
-        <div style="font-size:.72rem;color:var(--text-secondary);padding:.35rem 1rem .35rem;background:rgba(99,102,241,.06);
-            display:flex;gap:1.5rem;border-bottom:1px solid var(--border-color);">
-            <span>🖱️ Clique e arraste para rotacionar</span>
-            <span>🔍 Scroll para zoom</span>
-            <span>Clique numa posição para ver detalhes</span>
+        <!-- Stats bar -->
+        <div style="display:flex;gap:0;border-bottom:1px solid var(--border-color);">
+            ${[
+              {lbl:'Total', val: st.total||0, icon:'warehouse', c:'#818cf8'},
+              {lbl:'Livre',  val: st.LIVRE||0, icon:'check_circle', c:'#10b981'},
+              {lbl:'Ocupado',val: st.OCUPADO||0, icon:'inventory_2', c:'#3b82f6'},
+              {lbl:'Desabastecido',val: st.DESABASTECIDO||0, icon:'warning', c:'#ef4444'},
+              {lbl:'Tarefas', val: st.TAREFA||0, icon:'assignment', c:'#f59e0b'},
+              {lbl:'Bloqueado',val: st.BLOQUEADO||0, icon:'block', c:'#6b7280'},
+            ].map(s => `<div style="flex:1;text-align:center;padding:.4rem .25rem;border-right:1px solid var(--border-color);">
+              <div style="font-size:1rem;font-weight:800;color:${s.c}">${s.val.toLocaleString('pt-BR')}</div>
+              <div style="font-size:.62rem;color:var(--text-secondary);line-height:1.2">${s.lbl}</div>
+            </div>`).join('')}
         </div>
-
-        <!-- Config Panel — rendered by wms3dRenderConfig() -->
+        <div style="font-size:.72rem;color:var(--text-secondary);padding:.3rem 1rem;background:rgba(99,102,241,.05);
+            display:flex;gap:1.5rem;border-bottom:1px solid var(--border-color);">
+            <span>🖥️ Clique e arraste para rotacionar</span>
+            <span>🔍 Scroll para zoom</span>
+            <span>Passe o mouse em uma vaga para ver detalhes</span>
+        </div>
+        <!-- Config Panel -->
         <div id="wms3d-cfg-panel" style="display:none;position:absolute;top:0;right:0;width:400px;height:100%;
             background:var(--bg-card);border-left:1px solid var(--border-color);z-index:20;padding:1.25rem;
             overflow-y:auto;box-shadow:-8px 0 32px rgba(0,0,0,.5);"></div>
-
-        <!-- Canvas container -->
-        <div id="wms3d-canvas-wrap" style="height:520px;position:relative;background:#0f172a;border-radius:0 0 12px 12px;overflow:hidden;"></div>
+        <!-- Canvas -->
+        <div id="wms3d-canvas-wrap" style="height:520px;position:relative;background:#0f172a;border-radius:0 0 12px 12px;overflow:hidden;">
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:1rem;">
+                <span class="material-icons-round" style="font-size:3.5rem;color:#1e3a5f;">warehouse</span>
+                <div style="color:#64748b;font-size:.85rem;">Visualização 3D não carregada</div>
+                <div style="font-size:.75rem;color:#475569;">Clique para carregar o armazém em 3D com ${(st.total||0).toLocaleString('pt-BR')} endereços</div>
+                <button class="btn btn-primary" onclick="WMS3D.init(document.getElementById('wms3d-canvas-wrap'))" style="display:flex;align-items:center;gap:.4rem;">
+                    <span class="material-icons-round" style="font-size:1.1rem;">view_in_ar</span>
+                    Carregar Visualização 3D
+                </button>
+            </div>
+        </div>
     </div>`;
 
     // ──────────────────────────────────────────────────────────────────────
 
-    // Calculate KPIs
-    const totalAddresses = addresses.length;
-    const occupiedAddresses = addresses.filter(a => a.status === 'OCUPADO').length;
-    const blockedAddresses = addresses.filter(a => a.status === 'BLOQUEADO').length;
-    const emptyAddresses = totalAddresses - occupiedAddresses - blockedAddresses;
-    const occupationPct = totalAddresses > 0 ? Math.round((occupiedAddresses / totalAddresses) * 100) : 0;
+    // KPIs from merged status
+    const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+    const addresses = JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
+    const estoque   = JSON.parse(localStorage.getItem('wms_estoque' + suf) || '[]');
+    const tarefas   = JSON.parse(localStorage.getItem('wms_tarefas' + suf) || '[]');
+    const stockMap  = {}; estoque.forEach(s => stockMap[s.enderecoId] = s);
+    const taskSet   = new Set(tarefas.filter(t => t.status==='pendente').map(t => t.enderecoId));
+
+    const totalAddresses   = addresses.length;
+    const occupiedAddresses  = addresses.filter(a => stockMap[a.id] && !taskSet.has(a.id)).length;
+    const blockedAddresses   = addresses.filter(a => a.status === 'BLOQUEADO').length;
+    const emptyAddresses     = totalAddresses - occupiedAddresses - blockedAddresses;
+    const occupationPct      = totalAddresses > 0 ? Math.round((occupiedAddresses / totalAddresses) * 100) : 0;
 
     const today = new Date().toLocaleDateString('pt-BR');
     const receiptsToday = receipts.filter(r => {

@@ -23,11 +23,50 @@ window.WMS3D = (function () {
     }
 
     function _addresses() {
-        const key = 'wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '');
-        return JSON.parse(localStorage.getItem(key) || '[]');
+        const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+        return JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
+    }
+
+    // Merge addresses with stock and task data to produce display status
+    function _mergeStatus(addrs) {
+        const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+        const estoque = JSON.parse(localStorage.getItem('wms_estoque' + suf) || '[]');
+        const tarefas = JSON.parse(localStorage.getItem('wms_tarefas' + suf) || '[]');
+        const stockMap = {};
+        estoque.forEach(s => stockMap[s.enderecoId] = s);
+        const taskSet = new Set(tarefas.filter(t => t.status === 'pendente').map(t => t.enderecoId));
+
+        return addrs.map(a => {
+            let st = a.status || 'LIVRE';
+            const s = stockMap[a.id];
+            if (st === 'BLOQUEADO') return { ...a, _status: 'BLOQUEADO', _stock: s };
+            if (taskSet.has(a.id))  return { ...a, _status: 'TAREFA',    _stock: s };
+            if (s) {
+                if (s.qtdMin > 0 && s.qtd < s.qtdMin) return { ...a, _status: 'DESABASTECIDO', _stock: s };
+                return { ...a, _status: 'OCUPADO', _stock: s };
+            }
+            return { ...a, _status: 'LIVRE', _stock: null };
+        });
+    }
+
+    // Status colors
+    const SC = {
+        LIVRE:         new THREE.Color(0x10b981).multiplyScalar(0.35),
+        OCUPADO:       new THREE.Color(0x3b82f6),
+        DESABASTECIDO: new THREE.Color(0xef4444),
+        TAREFA:        new THREE.Color(0xf59e0b),
+        BLOQUEADO:     new THREE.Color(0x6b7280),
+    };
+
+    function getStats() {
+        const merged = _mergeStatus(_addresses());
+        const r = { total: merged.length, LIVRE:0, OCUPADO:0, DESABASTECIDO:0, TAREFA:0, BLOQUEADO:0 };
+        merged.forEach(a => r[a._status] = (r[a._status]||0) + 1);
+        return r;
     }
 
     function destroy() {
+
         if (_animId) cancelAnimationFrame(_animId);
         if (_resizeObs) _resizeObs.disconnect();
         if (_renderer) { _renderer.dispose(); if (_renderer.domElement.parentNode) _renderer.domElement.remove(); }
@@ -38,146 +77,136 @@ window.WMS3D = (function () {
 
     function init(container) {
         destroy();
-        const cfg      = _cfg();
-        const addrs    = _addresses();
-        const PW       = cfg.posLargura;
-        const PH       = cfg.posAltura;
-        const RD       = cfg.profundidade;
-        const CW       = cfg.corridorWidth;
-        const ZONE_W   = RD * 2 + CW;
+        container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;gap:.75rem;color:#64748b;font-size:.9rem;"><span class="material-icons-round" style="animation:spin 1s linear infinite;font-size:1.5rem">refresh</span>Carregando 3D...</div>';
+        setTimeout(() => _build(container), 60);
+    }
 
-        // ── Scene ──────────────────────────────────────────────────────────
+    let _cellInstMesh = null;   // InstancedMesh for cells (raycasting target)
+    let _addrList     = [];     // parallel array: addrList[i] = merged addr for cell instance i
+
+    function _build(container) {
+        container.innerHTML = '';
+        const cfg   = _cfg();
+        const raw   = _addresses();
+        const addrs = _mergeStatus(raw);
+        const PW = cfg.posLargura, PH = cfg.posAltura, RD = cfg.profundidade, CW = cfg.corridorWidth;
+        const ZONE_W = RD * 2 + CW;
+
         _scene = new THREE.Scene();
         _scene.background = new THREE.Color(0x0f172a);
-        _scene.fog = new THREE.FogExp2(0x0f172a, 0.012);
+        _scene.fog = new THREE.FogExp2(0x0f172a, 0.008);
 
-        // ── Camera ─────────────────────────────────────────────────────────
-        const W = container.clientWidth  || 800;
-        const H = container.clientHeight || 500;
-        _camera = new THREE.PerspectiveCamera(50, W / H, 0.1, 600);
+        const W = container.clientWidth || 800, H = container.clientHeight || 500;
+        _camera = new THREE.PerspectiveCamera(50, W/H, 0.1, 800);
 
-        // ── Renderer ───────────────────────────────────────────────────────
         const canvas = document.createElement('canvas');
-        canvas.style.cssText = 'width:100%;height:100%;display:block;border-radius:12px;';
+        canvas.style.cssText = 'width:100%;height:100%;display:block;';
         container.appendChild(canvas);
         _renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
         _renderer.setSize(W, H);
-        _renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        _renderer.shadowMap.enabled = true;
+        _renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 
-        // ── Lights ─────────────────────────────────────────────────────────
-        _scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-        const sun = new THREE.DirectionalLight(0xffffff, 0.9);
-        sun.position.set(30, 60, 30); sun.castShadow = true;
+        _scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+        const sun = new THREE.DirectionalLight(0xffffff, 0.8);
+        sun.position.set(40, 80, 40);
         _scene.add(sun);
-        const fill = new THREE.DirectionalLight(0x6366f1, 0.4);
-        fill.position.set(-15, 20, -15);
-        _scene.add(fill);
 
-        // ── Empty state ────────────────────────────────────────────────────
         if (addrs.length === 0) {
             _scene.add(new THREE.GridHelper(40, 20, 0x1e293b, 0x1e293b));
-            _camera.position.set(0, 20, 30); _camera.lookAt(0, 0, 0);
-            _setupControls(canvas);
-            _animate();
-            const msg = document.createElement('div');
-            msg.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:#64748b;pointer-events:none;';
-            msg.innerHTML = '<span class="material-icons-round" style="font-size:2.5rem;display:block;opacity:.3;">warehouse</span><div style="font-size:.9rem;margin-top:.5rem;">Nenhum endereço cadastrado</div>';
-            container.appendChild(msg);
+            _camera.position.set(0, 20, 30); _camera.lookAt(0,0,0);
+            _setupControls(canvas); _animate();
+            const m = document.createElement('div');
+            m.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:#64748b;pointer-events:none;';
+            m.innerHTML = '<span class="material-icons-round" style="font-size:2.5rem;opacity:.3">warehouse</span><div style="font-size:.9rem;margin-top:.5rem">Nenhum endereço cadastrado</div>';
+            container.appendChild(m);
             return;
         }
 
-        // ── Build world ────────────────────────────────────────────────────
         const ruas = [...new Set(addrs.map(a => a.rua))].sort();
-        const allPredios = [...new Set(addrs.map(a => a.predio))].sort((a, b) => +a - +b);
+        const allPredios = [...new Set(addrs.map(a => a.predio))].sort((a,b) => +a - +b);
         const maxNiv = Math.max(...addrs.map(a => +a.nivel));
-
         const WW = ruas.length * ZONE_W;
-        const WL = allPredios.length * (PW + 0.12);
+        const WL = allPredios.length * (PW + 0.14);
 
-        // Floor
-        const floorMesh = new THREE.Mesh(
-            new THREE.PlaneGeometry(WW + 10, WL + 10),
-            new THREE.MeshLambertMaterial({ color: C.FLOOR })
-        );
-        floorMesh.rotation.x = -Math.PI / 2;
-        floorMesh.position.set(WW / 2, 0, WL / 2);
-        floorMesh.receiveShadow = true;
-        _scene.add(floorMesh);
+        // Floor + grid
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(WW+12, WL+12), new THREE.MeshLambertMaterial({ color: 0x0a1122 }));
+        floor.rotation.x = -Math.PI/2; floor.position.set(WW/2, 0, WL/2);
+        _scene.add(floor);
+        const grid = new THREE.GridHelper(Math.max(WW,WL)+14, 28, 0x1e293b, 0x1e293b);
+        grid.position.set(WW/2, 0.01, WL/2); _scene.add(grid);
 
-        const grid = new THREE.GridHelper(Math.max(WW, WL) + 12, 24, 0x1e293b, 0x1e293b);
-        grid.position.set(WW / 2, 0.01, WL / 2);
-        _scene.add(grid);
-
-        // Aisle markers
+        // Aisle stripes
         ruas.forEach((_, ri) => {
-            const cx = ri * ZONE_W + ZONE_W / 2;
-            const aisleGeo = new THREE.PlaneGeometry(CW - 0.1, WL);
-            const aisleMat = new THREE.MeshLambertMaterial({ color: 0x1e3a5f, opacity: 0.6, transparent: true });
-            const aisle = new THREE.Mesh(aisleGeo, aisleMat);
-            aisle.rotation.x = -Math.PI / 2;
-            aisle.position.set(cx, 0.02, WL / 2);
-            _scene.add(aisle);
+            const m = new THREE.Mesh(new THREE.PlaneGeometry(CW-0.1, WL), new THREE.MeshLambertMaterial({ color:0x1e3a5f, transparent:true, opacity:0.5 }));
+            m.rotation.x = -Math.PI/2; m.position.set(ri*ZONE_W + ZONE_W/2, 0.02, WL/2);
+            _scene.add(m);
         });
 
-        // Rack cells
+        // ── InstancedMesh: CELLS ─────────────────────────────────────────────
+        const cellGeo  = new THREE.BoxGeometry(PW-0.14, PH-0.18, RD-0.12);
+        const cellMat  = new THREE.MeshLambertMaterial();
+        _cellInstMesh  = new THREE.InstancedMesh(cellGeo, cellMat, addrs.length);
+        _cellInstMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        _addrList = [];
+
+        // ── InstancedMesh: RAILS ────────────────────────────────────────────
+        const railGeo = new THREE.BoxGeometry(PW, 0.06, RD);
+        const railMat = new THREE.MeshLambertMaterial({ color: 0x475569 });
+        const railMesh = new THREE.InstancedMesh(railGeo, railMat, addrs.length);
+
+        // ── InstancedMesh: BEAMS (uprights) 4 per predio ────────────────────
+        const uniquePredios = [];
+        ruas.forEach((rua, ri) => {
+            const rp = [...new Set(addrs.filter(a=>a.rua===rua).map(a=>a.predio))].sort((a,b)=>+a-+b);
+            rp.forEach((p, pi) => uniquePredios.push({ rua, predio: p, ruaIdx: ri, predioIdx: pi }));
+        });
+        const beamGeo = new THREE.BoxGeometry(0.07, maxNiv*PH, 0.07);
+        const beamMat = new THREE.MeshLambertMaterial({ color: 0x334155 });
+        const beamMesh = new THREE.InstancedMesh(beamGeo, beamMat, uniquePredios.length * 4);
+
+        const dummy = new THREE.Object3D();
+        let iCell = 0, iRail = 0, iBeam = 0;
+
         ruas.forEach((rua, ruaIdx) => {
-            const ruaAddrs = addrs.filter(a => a.rua === rua);
-            const ruaPredios = [...new Set(ruaAddrs.map(a => a.predio))].sort((a, b) => +a - +b);
+            const ruaA = addrs.filter(a => a.rua === rua);
+            const rp = [...new Set(ruaA.map(a => a.predio))].sort((a,b)=>+a-+b);
 
-            ruaPredios.forEach((predio, pi) => {
-                const pa = ruaAddrs.filter(a => a.predio === predio);
+            rp.forEach((predio, pi) => {
+                const pa = ruaA.filter(a => a.predio === predio);
                 const isEven = +predio % 2 === 0;
-                const sideX = ruaIdx * ZONE_W + (isEven ? RD / 2 + CW / 2 : -(RD / 2 + CW / 2) + ZONE_W);
-                const posZ = pi * (PW + 0.12) + PW / 2;
-                const maxPNiv = Math.max(...pa.map(a => +a.nivel));
+                const sX = ruaIdx * ZONE_W + (isEven ? RD/2 + CW/2 : ZONE_W - RD/2 - CW/2);
+                const posZ = pi * (PW + 0.14) + PW/2;
 
-                // Uprights
-                const beamGeo = new THREE.BoxGeometry(0.07, maxPNiv * PH, 0.07);
-                const beamMat = new THREE.MeshLambertMaterial({ color: C.BEAM });
-                [[-PW / 2 + 0.04, -RD / 2 + 0.04], [-PW / 2 + 0.04, RD / 2 - 0.04],
-                 [PW / 2 - 0.04, -RD / 2 + 0.04],  [PW / 2 - 0.04, RD / 2 - 0.04]].forEach(([dx, dz]) => {
-                    const b = new THREE.Mesh(beamGeo, beamMat);
-                    b.position.set(sideX + dx, maxPNiv * PH / 2, posZ + dz);
-                    b.castShadow = true; _scene.add(b);
+                // 4 uprights per predio
+                [[-PW/2+0.04,-RD/2+0.04],[-PW/2+0.04,RD/2-0.04],[PW/2-0.04,-RD/2+0.04],[PW/2-0.04,RD/2-0.04]].forEach(([dx,dz]) => {
+                    dummy.position.set(sX+dx, maxNiv*PH/2, posZ+dz);
+                    dummy.updateMatrix(); beamMesh.setMatrixAt(iBeam++, dummy.matrix);
                 });
 
-                // Rails & cells
                 pa.forEach(loc => {
                     const nv = +loc.nivel;
-                    const railY = nv * PH;
-                    const rail = new THREE.Mesh(
-                        new THREE.BoxGeometry(PW, 0.06, RD),
-                        new THREE.MeshLambertMaterial({ color: C.RAIL })
-                    );
-                    rail.position.set(sideX, railY, posZ);
-                    _scene.add(rail);
-
-                    const col = new THREE.Color(C[loc.status] || C.LIVRE);
-                    if (loc.status === 'LIVRE') col.multiplyScalar(0.55);
-                    const cellMat = new THREE.MeshLambertMaterial({
-                        color: col,
-                        transparent: loc.status === 'LIVRE',
-                        opacity: loc.status === 'LIVRE' ? 0.65 : 1.0,
-                    });
-                    if (loc.status === 'OCUPADO') cellMat.emissive = new THREE.Color(0x0d2040);
-
-                    const cell = new THREE.Mesh(
-                        new THREE.BoxGeometry(PW - 0.14, PH - 0.18, RD - 0.12),
-                        cellMat
-                    );
-                    cell.position.set(sideX, (nv - 0.5) * PH + 0.07, posZ);
-                    cell.castShadow = true;
-                    cell.userData = { loc };
-                    _scene.add(cell);
-                    _objects.push(cell);
+                    // Rail
+                    dummy.position.set(sX, nv*PH, posZ);
+                    dummy.updateMatrix(); railMesh.setMatrixAt(iRail++, dummy.matrix);
+                    // Cell
+                    dummy.position.set(sX, (nv-0.5)*PH+0.07, posZ);
+                    dummy.updateMatrix(); _cellInstMesh.setMatrixAt(iCell, dummy.matrix);
+                    const col = SC[loc._status] || SC.LIVRE;
+                    _cellInstMesh.setColorAt(iCell, col);
+                    _addrList[iCell] = loc;
+                    iCell++;
                 });
             });
         });
 
-        // Camera initial position
-        _camera.position.set(WW / 2, maxNiv * PH * 1.4, WL * 1.8);
-        _camera.lookAt(WW / 2, (maxNiv * PH) / 2, WL / 2);
+        _cellInstMesh.instanceMatrix.needsUpdate = true;
+        _cellInstMesh.instanceColor.needsUpdate = true;
+        railMesh.instanceMatrix.needsUpdate = true;
+        beamMesh.instanceMatrix.needsUpdate = true;
+        _scene.add(_cellInstMesh); _scene.add(railMesh); _scene.add(beamMesh);
+
+        _camera.position.set(WW/2, maxNiv*PH*1.4, WL*1.8);
+        _camera.lookAt(WW/2, (maxNiv*PH)/2, WL/2);
 
         _setupControls(canvas);
         _setupRaycaster(canvas, container);
@@ -224,41 +253,44 @@ window.WMS3D = (function () {
             mouse.x =  ((e.clientX - rect.left) / rect.width)  * 2 - 1;
             mouse.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
             rc.setFromCamera(mouse, _camera);
-            const hits = rc.intersectObjects(_objects);
+            const hits = _cellInstMesh ? rc.intersectObject(_cellInstMesh) : [];
             if (hits.length > 0) {
-                const obj = hits[0].object;
-                if (hov !== obj) {
-                    if (hov) hov.material.emissive && hov.material.emissive.set(0x000000);
-                    hov = obj;
-                    obj.material.emissive && obj.material.emissive.set(0x223355);
-                }
-                const { loc } = obj.userData;
-                const badge = { LIVRE:'🟢', OCUPADO:'🔵', BLOQUEADO:'🟡' }[loc.status] || '⚪';
+                const iid = hits[0].instanceId;
+                const loc = _addrList[iid];
+                if (!loc) return;
+                const badge = { LIVRE:'🟢', OCUPADO:'🔵', DESABASTECIDO:'🔴', TAREFA:'🟡', BLOQUEADO:'⛔' }[loc._status] || '⚪';
+                const s = loc._stock;
                 tip.innerHTML = `<div style="font-weight:700;font-family:monospace;color:#818cf8">${loc.id}</div>
                     <div>Rua <b>${loc.rua}</b> · Prédio <b>${loc.predio}</b> · Nível <b>${loc.nivel}</b></div>
-                    <div>${badge} <b>${loc.status}</b>${loc.tipo ? ' · ' + loc.tipo : ''}</div>
-                    ${loc.product ? `<div style="color:#94a3b8;font-size:.7rem">${loc.product}</div>` : ''}`;
+                    <div>${badge} <b>${loc._status}</b>${loc.tipo ? ' · ' + loc.tipo : ''}</div>
+                    ${s ? `<div style="color:#94a3b8;font-size:.72rem;margin-top:2px">${s.produto||s.sku||''} · Qtd: <b>${s.qtd}</b>${s.qtdMin?` / Mín: ${s.qtdMin}`:''}</div>` : ''}`;
                 const cRect = container.getBoundingClientRect();
                 tip.style.left = (e.clientX - cRect.left + 14) + 'px';
                 tip.style.top  = (e.clientY - cRect.top  - 10) + 'px';
                 tip.style.display = 'block';
                 canvas.style.cursor = 'pointer';
             } else {
-                if (hov) { hov.material.emissive && hov.material.emissive.set(0x000000); hov = null; }
                 tip.style.display = 'none';
                 canvas.style.cursor = 'grab';
             }
         });
 
         canvas.addEventListener('mouseleave', () => {
-            if (hov) { hov.material.emissive && hov.material.emissive.set(0x000000); hov = null; }
             tip.style.display = 'none';
         });
 
         canvas.addEventListener('click', e => {
-            rc.setFromCamera(mouse, _camera);
-            const hits = rc.intersectObjects(_objects);
-            if (hits.length > 0) wms3dShowDetail(hits[0].object.userData.loc);
+            const rect = canvas.getBoundingClientRect();
+            const m = new THREE.Vector2(
+                ((e.clientX - rect.left) / rect.width)  * 2 - 1,
+               -((e.clientY - rect.top)  / rect.height) * 2 + 1
+            );
+            rc.setFromCamera(m, _camera);
+            const hits = _cellInstMesh ? rc.intersectObject(_cellInstMesh) : [];
+            if (hits.length > 0) {
+                const loc = _addrList[hits[0].instanceId];
+                if (loc && window.wms3dShowDetail) wms3dShowDetail(loc);
+            }
         });
     }
 
@@ -268,8 +300,17 @@ window.WMS3D = (function () {
         _renderer.render(_scene, _camera);
     }
 
-    return { init, destroy };
+    return { init, destroy, getStats };
 })();
+
+// Spin animation for loading indicator
+if (!document.getElementById('wms3d-spin-style')) {
+    const s = document.createElement('style');
+    s.id = 'wms3d-spin-style';
+    s.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+    document.head.appendChild(s);
+}
+
 
 // ── Detail Popup ────────────────────────────────────────────────────────────
 window.wms3dShowDetail = function(loc) {
