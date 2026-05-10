@@ -100,9 +100,19 @@ async function startImport() {
         document.getElementById('statusMsg').style.display = 'block';
         btn.innerHTML = '⚙️ Importando...';
 
-        // Get current data
-        const key = 'wms_mock_data';
+        // Usa o mesmo sufixo de tenant que o WMS usa
+        function getTenantSuffix() {
+            try {
+                const u = JSON.parse(localStorage.getItem('platform_user_logged'));
+                return u && u.tenant ? '_' + u.tenant : '';
+            } catch(e) { return ''; }
+        }
+        const suf = getTenantSuffix();
+        const key = 'wms_mock_data' + suf;
+        if (suf) log(`🔑 Tenant detectado: ${suf} → salvando em "${key}"`);
+        else      log(`⚠️ Sem tenant detectado → salvando em "wms_mock_data" (sem sufixo)`);
         const existing = JSON.parse(localStorage.getItem(key) || '[]');
+
         const existingIds = new Set(existing.map(l => l.id));
         log(`📂 Já existem ${existing.length} endereços no sistema.`);
 

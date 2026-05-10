@@ -67,6 +67,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // --- Migração automática: move wms_mock_data → wms_mock_data_<tenant> se necessário ---
+    (function migrateWmsData() {
+        try {
+            const suf = (window.getTenantSuffix ? window.getTenantSuffix() : '');
+            if (!suf) return; // sem suffix, nada a migrar
+            const keyOld = 'wms_mock_data';
+            const keyNew = 'wms_mock_data' + suf;
+            const newVal = localStorage.getItem(keyNew);
+            const oldVal = localStorage.getItem(keyOld);
+            if (!newVal && oldVal) {
+                // Migrar
+                const oldData = JSON.parse(oldVal);
+                if (Array.isArray(oldData) && oldData.length > 0) {
+                    localStorage.setItem(keyNew, oldVal);
+                    console.warn(`🔄 [WMS Migration] ${oldData.length} endereços migrados de "${keyOld}" para "${keyNew}"`);
+                }
+            }
+        } catch(e) { console.warn('[WMS Migration] Erro:', e); }
+    })();
+
     // Start at dashboard
     switchView('dashboard');
 });
