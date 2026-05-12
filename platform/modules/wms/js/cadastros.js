@@ -187,13 +187,17 @@ const CAD_CONFIG = {
     'cad-end-tipo': {
         key: 'enderecoTipo', label: 'Tipos de Endereço', icon: 'grid_view',
         fields: [
-            { name: 'codigo', label: 'Código', type: 'text', required: true },
-            { name: 'descricao', label: 'Descrição', type: 'text', required: true },
-            { name: 'tipo', label: 'Tipo', type: 'select', options: ['Picking', 'Pulmão', 'Blocado', 'Doca', 'Expedição', 'Cross-Dock', 'Quarentena', 'Reservado'] },
-            { name: 'capacidadeKg', label: 'Capacidade (kg)', type: 'number' },
-            { name: 'capacidadeVol', label: 'Capacidade (volumes)', type: 'number' }
+            { name: 'codigo',            label: 'Código',                   type: 'text',   required: true },
+            { name: 'nome',              label: 'Nome (ex: Picking)',        type: 'text',   required: true },
+            { name: 'categoria',         label: 'Categoria',                type: 'select', options: ['Picking', 'Pulmão', 'Blocado', 'Doca', 'Expedição', 'Cross-Dock', 'Quarentena', 'Reservado'] },
+            { name: 'larguraCelula',     label: 'Largura Célula (m)',       type: 'number', default: 1.2 },
+            { name: 'alturaCelula',      label: 'Altura Célula (m)',        type: 'number', default: 2.0 },
+            { name: 'profundidadeCelula',label: 'Profundidade Célula (m)',  type: 'number', default: 0.8 },
+            { name: 'capacidadeKg',      label: 'Capacidade (kg)',          type: 'number' },
+            { name: 'capacidadeVol',     label: 'Capacidade (volumes)',     type: 'number' },
+            { name: 'ativo',             label: 'Ativo',                    type: 'checkbox', default: true }
         ],
-        columns: ['codigo', 'descricao', 'tipo', 'capacidadeKg']
+        columns: ['codigo', 'nome', 'categoria', 'larguraCelula', 'alturaCelula', 'profundidadeCelula', 'capacidadeKg']
     },
     'cad-rec-tipo-nf': {
         key: 'tipoNF', label: 'Tipos de NF', icon: 'receipt',

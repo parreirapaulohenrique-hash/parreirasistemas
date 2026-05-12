@@ -162,8 +162,25 @@ window.WMS3D = (function () {
             _scene.add(m);
         });
 
-        // ── InstancedMesh: CELLS ─────────────────────────────────────────────
-        const cellGeo  = new THREE.BoxGeometry(PW-0.14, PH-0.18, RD-0.12);
+        // ── Tipos de Endereço → dimensões por tipo ──────────────────────────
+        const cadSuf   = window.getTenantSuffix ? window.getTenantSuffix() : '';
+        const cadData  = JSON.parse(localStorage.getItem('wms_cadastros' + cadSuf) || '{}');
+        const tiposCad = cadData.enderecoTipo || [];
+        // Normalize (remove accents, uppercase) for matching addr.tipo strings
+        const _norm = s => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
+        const tipoMap = {};
+        tiposCad.forEach(t => {
+            const key = _norm(t.nome || t.categoria || t.codigo);
+            tipoMap[key] = {
+                PW: +(t.larguraCelula   || cfg.posLargura),
+                PH: +(t.alturaCelula    || cfg.posAltura),
+                RD: +(t.profundidadeCelula || cfg.profundidade),
+            };
+        });
+        const getDims = (addr) => tipoMap[_norm(addr.tipo)] || { PW, PH, RD };
+
+        // ── InstancedMesh: CELLS (unit cube — scaled per instance) ────────────
+        const cellGeo  = new THREE.BoxGeometry(1, 1, 1);
         const cellMat  = new THREE.MeshLambertMaterial();
         _cellInstMesh  = new THREE.InstancedMesh(cellGeo, cellMat, addrs.length);
         _cellInstMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -208,14 +225,18 @@ window.WMS3D = (function () {
                 });
 
                 pa.forEach(loc => {
-                    const nv  = +loc.nivel;
-                    const cz  = cellZ(predio, loc.posicao);
+                    const nv   = +loc.nivel;
+                    const cz   = cellZ(predio, loc.posicao);
+                    const dims = getDims(loc);
                     // Rail
-                    dummy.position.set(sX, nv*PH, cz);
+                    dummy.scale.set(dims.PW, 1, dims.RD);
+                    dummy.position.set(sX, nv*dims.PH, cz);
                     dummy.updateMatrix(); railMesh.setMatrixAt(iRail++, dummy.matrix);
-                    // Cell
-                    dummy.position.set(sX, (nv-0.5)*PH+0.07, cz);
+                    // Cell — scaled by tipo dimensions
+                    dummy.scale.set(dims.PW - 0.14, dims.PH - 0.18, dims.RD - 0.12);
+                    dummy.position.set(sX, (nv-0.5)*dims.PH + 0.07, cz);
                     dummy.updateMatrix(); _cellInstMesh.setMatrixAt(iCell, dummy.matrix);
+                    dummy.scale.set(1, 1, 1); // reset for beams
                     _cellInstMesh.setColorAt(iCell, SC[loc._status] || SC.LIVRE);
                     _addrList[iCell] = loc;
                     iCell++;
