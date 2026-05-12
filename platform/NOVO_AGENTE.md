@@ -124,11 +124,13 @@ graph TD
     WMS --> Pick[3. Picking<br>Separação]
     WMS --> Out[4. Outbound<br>Expedição]
     WMS --> Inv[5. Inventário<br>Controle]
+    WMS --> Vis[6. Visão 3D<br>Dashboard]
     
     In --> Arm
     Arm --> Pick
     Pick --> Out
     Inv -.->|Ajusta estoque| Arm
+    Vis -.->|Lê wms_mock_data + wms_estoque + wms_tarefas| Arm
 ```
 **POP (Procedimento Operacional Padrão):**
 *   **1. Inbound (Recebimento):** Operador bipa a **chave NF-e (44 dígitos)** na tela de scanner → sistema chama `proc_buscar_nf_destinada` consultando todos os CNPJs do tenant no ERP. Se localizada, abre **Card de Conferência** auto-preenchido com dados do ERP (fornecedor, itens, volumes, transportadora). O operador preenche campos manuais (doca, placa, motorista, volumes físicos, condição da carga, email do fornecedor). Em caso de divergência → registra tipo, fotos da avaria (até 4 imagens) e envia relatório automaticamente ao fornecedor (`proc_enviar_email_divergencia`). Se NF não encontrada → nega ou libera entrada avulsa via **PIN de supervisor** configurável (Configurações → Integrações → Segurança), com log de auditoria obrigatório.
@@ -136,6 +138,16 @@ graph TD
 *   **3. Picking (Separação):** Gera "Ondas de Separação" agrupadas por prioridade/Rota (integração Dispatch). Operador visualiza caminho otimizado no Mapa Visual -> Vai ao endereço -> Coleta SKU -> Leva à área de `packing`/consolidação.
 *   **4. Outbound (Expedição):** Última conferência na caixa -> Fecha volume -> Imprime etiqueta logística de transporte -> Despacha.
 *   **5. Inventário:** Supervisor agenda bloqueio contábil parcial ou total -> Operadores bipam endereços e atualizam as contagens -> Supervisor aprova distorções -> Sistema consolida estoque novo no ERP parceiro.
+*   **6. Visão 3D (Dashboard):** Tela principal com visualizador Three.js usando **InstancedMesh** para renderizar até 12.349+ endereços em 3 draw calls. Layout: predios ímpares à esquerda do corredor, pares à direita. Cada `posicao` ocupa um slot Z independente. Células coloridas por status (verde=livre, azul=ocupado, vermelho=desabastecido, amarelo=tarefa, cinza=bloqueado). Carregamento **manual** via botão para não travar a UI. Requer import de endereços em `/modules/wms/import-enderecos.html`.
+
+**Armazenamento WMS:**
+- `wms_mock_data_<tenant>`: Array de endereços (estrutura: `{id, rua, predio, nivel, posicao, apto, tipo, status}`)
+- `wms_estoque_<tenant>`: Saldo de estoque por endereço
+- `wms_tarefas_<tenant>`: Tarefas de movimentação pendentes
+- `wms_armazem_config`: Config física global (corridorWidth, profundidade, posLargura, posAltura)
+- `wms_cadastros_<tenant>`: Cadastros gerais incluindo `enderecoTipo` (tipos com dimensões físicas)
+
+**Atenção:** A chave `wms_mock_data` (sem sufixo) é migrada automaticamente para `wms_mock_data_<tenant>` no startup do WMS (`wms-core.js`) para corrigir importações antigas.
 
 ### 5.5. Módulo WMS Coletor (Chão de Fábrica)
 ```mermaid
@@ -277,3 +289,16 @@ Abra o terminal do PowerShell na raiz do projeto (`C:\Users\Paulo H Parreira\.ge
 ---
 
 Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy em camadas, e vamos juntos evoluir a plataforma.
+
+---
+
+## 7. Histórico de Versões Relevantes
+
+| Versão | Data | Mudanças Principais |
+|---|---|---|
+| **11.10.0** | 2026-05-12 | WMS 3D com InstancedMesh, tipos de endereço com dimensões físicas, migração automática de tenant, dashboard corrigido |
+| **11.9.2** | 2026-04-21 | Correção do parser de PDF (ERP Consultoria/Maxdata) |
+| **11.9.x** | 2026-04 | Módulo WMS: inbound com conferência em 3 etapas (Portaria, Receber, Conferência), contagem cega com PIN |
+| **11.8.x** | 2026-03 | Dispatch: ferramenta de arquivamento, faixa de status offline/Firebase, sync pendente |
+
+> ✅ **Compromisso do agente:** A partir da v11.10.0, este documento é atualizado a cada deploy junto com o `version.json`.

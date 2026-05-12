@@ -1,5 +1,19 @@
 {
-    "version": "11.9.2",
-    "lastUpdate": "2026-04-21",
-    "description": "Logistics Portal v11.9.2 - Correção do Parser de PDF (Extrator de Valores)"
+    "version": "11.10.0",
+    "build": "20260512",
+    "lastUpdate": "2026-05-12",
+    "description": "WMS 3D Viewer - InstancedMesh, layout correto (ímpar=esquerda, par=direita), tipos de endereço com dimensões físicas, migração automática de tenant, correção dashboard",
+    "changelog": [
+        "WMS: 3D refatorado para InstancedMesh (3 draw calls para 12k+ endereços)",
+        "WMS: Layout 3D corrigido - predios ímpares à esquerda, pares à direita",
+        "WMS: Posições (posicao) cada uma com slot Z próprio no 3D",
+        "WMS: Tipos de endereço com campos de dimensão física (largura/altura/profundidade)",
+        "WMS: 3D usa dimensões do tipo de endereço cadastrado por célula",
+        "WMS: Migração automática wms_mock_data → wms_mock_data_<tenant> no startup",
+        "WMS: Importador corrigido para usar chave com tenant suffix",
+        "WMS: Dashboard corrigido (SyntaxError por variável duplicada)",
+        "WMS: Stats bar na visão geral (Total/Livre/Ocupado/Desabastecido/Tarefas/Bloqueado)",
+        "WMS: Botão manual 'Carregar 3D' em vez de auto-init",
+        "Dispatch: Ferramenta de arquivamento de dispatches antigos (>60 dias)"
+    ]
 }
