@@ -174,6 +174,7 @@ const VIEW_TITLES = {
     'cfg-separacao': 'Regras de Separação',
     'cfg-etiqueta': 'Layout de Etiqueta',
     'cfg-integracao': 'Integrações',
+    'cfg-galpao': 'Configuração Física do Galpão',
 };
 
 // Map view IDs to parent categories for breadcrumb

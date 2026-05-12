@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
@@ -189,32 +189,33 @@
                     <a class="nav-item" onclick="toggleSubmenu('sub-auditoria')">
                         <span class="material-icons-round">policy</span>
                         <span>Auditoria</span>
-                        <span class="material-icons-round"
-                            style="font-size:1.2rem; margin-left:auto;">expand_more</span>
+                        <span class="material-icons-round" style="font-size:1.2rem; margin-left:auto;">expand_more</span>
                     </a>
                     <div id="sub-auditoria" class="nav-submenu">
-                        <a class="nav-sub-item" onclick="switchView('aud-inventario')">InventÃ¡rio CÃ­clico</a>
+                        <a class="nav-sub-item" onclick="switchView('aud-inventario')">Invent&aacute;rio C&iacute;clico</a>
                         <a class="nav-sub-item" onclick="switchView('aud-contagem')">Contagem Rotativa</a>
-                        <a class="nav-sub-item" onclick="switchView('aud-divergencias')">DivergÃªncias</a>
+                        <a class="nav-sub-item" onclick="switchView('aud-divergencias')">Diverg&ecirc;ncias</a>
                         <a class="nav-sub-item" onclick="switchView('aud-rastreio')">Rastreabilidade (Kardex)</a>
-                        <a class="nav-sub-item" onclick="switchView('aud-log')">Log de OperaÃ§Ãµes</a>
+                        <a class="nav-sub-item" onclick="switchView('aud-log')">Log de Opera&ccedil;&otilde;es</a>
                     </div>
                 </div>
 
-                <!-- 8. CONFIGURAÃ‡Ã•ES -->
+                <!-- 8. CONFIGURACOES -->
                 <div class="nav-group">
                     <a class="nav-item" onclick="toggleSubmenu('sub-config')">
                         <span class="material-icons-round">settings</span>
-                        <span>ConfiguraÃ§Ãµes</span>
-                        <span class="material-icons-round"
-                            style="font-size:1.2rem; margin-left:auto;">expand_more</span>
+                        <span>Configura&ccedil;&otilde;es</span>
+                        <span class="material-icons-round" style="font-size:1.2rem; margin-left:auto;">expand_more</span>
                     </a>
                     <div id="sub-config" class="nav-submenu">
+                        <a class="nav-sub-item" onclick="switchView('cfg-galpao')" style="color:var(--wms-primary);font-weight:600;display:flex;align-items:center;gap:.35rem;">
+                            <span class="material-icons-round" style="font-size:1rem;">warehouse</span> Layout do Galp&atilde;o
+                        </a>
                         <a class="nav-sub-item" onclick="switchView('cfg-geral')">Gerais</a>
                         <a class="nav-sub-item" onclick="switchView('cfg-armazenagem')">Regras de Armazenagem</a>
-                        <a class="nav-sub-item" onclick="switchView('cfg-separacao')">Regras de SeparaÃ§Ã£o</a>
+                        <a class="nav-sub-item" onclick="switchView('cfg-separacao')">Regras de Separa&ccedil;&atilde;o</a>
                         <a class="nav-sub-item" onclick="switchView('cfg-etiqueta')">Layout de Etiqueta</a>
-                        <a class="nav-sub-item" onclick="switchView('cfg-integracao')">IntegraÃ§Ãµes</a>
+                        <a class="nav-sub-item" onclick="switchView('cfg-integracao')">Integra&ccedil;&otilde;es</a>
                     </div>
                 </div>
             </nav>
@@ -223,7 +224,7 @@
                 <div style="display:flex; align-items:center; gap:0.5rem;">
                     <span class="material-icons-round" style="color:var(--text-secondary)">person</span>
                     <div style="display:flex; flex-direction:column;">
-                        <span id="userName" style="font-size:0.85rem; font-weight:600;">UsuÃ¡rio</span>
+                        <span id="userName" style="font-size:0.85rem; font-weight:600;">Usu&aacute;rio</span>
                         <span id="userTenant" style="font-size:0.7rem; color:var(--text-secondary)">Tenant</span>
                     </div>
                 </div>
@@ -238,8 +239,7 @@
             <!-- Top Bar -->
             <header class="top-bar">
                 <div class="breadcrumb">
-                    <span class="text-secondary" id="breadParent">WMS</span> / <span class="current"
-                        id="pageTitle">VisÃ£o Geral</span>
+                    <span class="text-secondary" id="breadParent">WMS</span> / <span class="current" id="pageTitle">Vis&atilde;o Geral</span>
                 </div>
             </header>
 

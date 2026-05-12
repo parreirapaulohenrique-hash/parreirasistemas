@@ -14,6 +14,7 @@ window.loadConfigView = function (viewId) {
         case 'cfg-separacao': renderCfgSeparacao(container); break;
         case 'cfg-etiqueta': renderCfgEtiqueta(container); break;
         case 'cfg-integracao': renderCfgIntegracao(container); break;
+        case 'cfg-galpao': renderCfgGalpao(container); break;
     }
 };
 
@@ -958,3 +959,283 @@ window.cfgSalvarEmail = function () {
 };
 
 console.log('⚙️ WMS Configurações carregadas');
+
+// ============================================================
+// CONFIGURAÇÃO FÍSICA DO GALPÃO
+// Gerencia dimensões das células e corredor que alimentam o 3D
+// ============================================================
+function renderCfgGalpao(container) {
+    const ac = JSON.parse(localStorage.getItem('wms_armazem_config') || '{}');
+    const ts = window.getTenantSuffix ? window.getTenantSuffix() : '';
+    const cadData = JSON.parse(localStorage.getItem('wms_cadastros' + ts) || '{}');
+    const tiposCad = cadData.enderecoTipo || [];
+
+    const PW = +(ac.posLargura   || 1.2);
+    const PH = +(ac.posAltura    || 2.0);
+    const RD = +(ac.profundidade || 0.8);
+    const CW = +(ac.corridorWidth|| 2.5);
+
+    container.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:1.25rem;">
+
+        <!-- Card 1: Dimensões Físicas Globais -->
+        <div class="card">
+            <div class="card-header">
+                <h3 style="font-size:.95rem;font-weight:600;">
+                    <span class="material-icons-round" style="font-size:1.1rem;vertical-align:middle;">straighten</span>
+                    Dimensões Físicas Globais do Armazém
+                </h3>
+                <button class="btn btn-primary" id="btn-salvar-galpao" onclick="salvarCfgGalpao()">
+                    <span class="material-icons-round" style="font-size:1rem;">save</span> Salvar e Aplicar ao 3D
+                </button>
+            </div>
+            <div style="padding:1.25rem;">
+                <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:1.25rem;line-height:1.6;">
+                    Estas dimensões são o <strong>padrão global</strong> aplicado a todos os endereços
+                    que não possuem um <strong>Tipo de Endereço</strong> com medidas personalizadas.
+                    Alterar aqui atualiza imediatamente a renderização 3D.
+                </p>
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;">
+                    <div>
+                        <label style="font-size:.72rem;color:#6366f1;font-weight:700;display:block;margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.05em;">
+                            ↔ Largura da Posição
+                        </label>
+                        <div style="display:flex;align-items:center;gap:.4rem;">
+                            <input type="number" id="cfgGalPW" class="form-input" style="width:100%;" value="${PW}" step="0.1" min="0.5" max="5">
+                            <span style="font-size:.75rem;color:var(--text-secondary);white-space:nowrap;">m/pos</span>
+                        </div>
+                        <div style="font-size:.7rem;color:var(--text-secondary);margin-top:.3rem;">Espaço lateral de cada slot</div>
+                    </div>
+                    <div>
+                        <label style="font-size:.72rem;color:#10b981;font-weight:700;display:block;margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.05em;">
+                            ↕ Altura do Nível
+                        </label>
+                        <div style="display:flex;align-items:center;gap:.4rem;">
+                            <input type="number" id="cfgGalPH" class="form-input" style="width:100%;" value="${PH}" step="0.1" min="0.5" max="10">
+                            <span style="font-size:.75rem;color:var(--text-secondary);white-space:nowrap;">m/nível</span>
+                        </div>
+                        <div style="font-size:.7rem;color:var(--text-secondary);margin-top:.3rem;">Altura entre andares</div>
+                    </div>
+                    <div>
+                        <label style="font-size:.72rem;color:#f59e0b;font-weight:700;display:block;margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.05em;">
+                            ↔ Profundidade
+                        </label>
+                        <div style="display:flex;align-items:center;gap:.4rem;">
+                            <input type="number" id="cfgGalRD" class="form-input" style="width:100%;" value="${RD}" step="0.1" min="0.3" max="5">
+                            <span style="font-size:.75rem;color:var(--text-secondary);white-space:nowrap;">m</span>
+                        </div>
+                        <div style="font-size:.7rem;color:var(--text-secondary);margin-top:.3rem;">Profundidade da prateleira</div>
+                    </div>
+                    <div>
+                        <label style="font-size:.72rem;color:#ef4444;font-weight:700;display:block;margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.05em;">
+                            ↔ Largura do Corredor
+                        </label>
+                        <div style="display:flex;align-items:center;gap:.4rem;">
+                            <input type="number" id="cfgGalCW" class="form-input" style="width:100%;" value="${CW}" step="0.1" min="1" max="10">
+                            <span style="font-size:.75rem;color:var(--text-secondary);white-space:nowrap;">m</span>
+                        </div>
+                        <div style="font-size:.7rem;color:var(--text-secondary);margin-top:.3rem;">Espaço para movimentação</div>
+                    </div>
+                </div>
+
+                <!-- Preview Canvas -->
+                <div>
+                    <div style="font-size:.8rem;font-weight:600;margin-bottom:.65rem;display:flex;align-items:center;gap:.5rem;">
+                        <span class="material-icons-round" style="font-size:1rem;color:var(--wms-primary);">view_in_ar</span>
+                        Prévia do Corredor (Vista Superior)
+                    </div>
+                    <canvas id="cfgGalpaoPreview" width="700" height="130"
+                        style="width:100%;height:auto;border-radius:10px;background:#0f172a;display:block;"></canvas>
+                    <div style="font-size:.7rem;color:var(--text-secondary);margin-top:.4rem;text-align:center;">
+                        🟣 Prédio ímpar (esquerda) &nbsp;|&nbsp; Corredor central &nbsp;|&nbsp; 🟢 Prédio par (direita)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: Tipos de Endereço cadastrados -->
+        <div class="card">
+            <div class="card-header">
+                <h3 style="font-size:.95rem;font-weight:600;">
+                    <span class="material-icons-round" style="font-size:1.1rem;vertical-align:middle;">grid_view</span>
+                    Tipos de Endereço — Dimensões Personalizadas
+                </h3>
+                <button class="btn btn-secondary" onclick="switchView('cad-end-tipo')" style="font-size:.82rem;">
+                    <span class="material-icons-round" style="font-size:.9rem;">edit</span> Gerenciar Tipos
+                </button>
+            </div>
+            <div style="padding:1rem;">
+                <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:1rem;line-height:1.5;">
+                    Tipos cadastrados sobrescrevem as dimensões globais acima para endereços do respectivo tipo,
+                    permitindo misturar prateleiras padrão, flow-rack, paletes, etc. no mesmo armazém.
+                </p>
+                ${tiposCad.length === 0 ? `
+                    <div style="text-align:center;padding:1.5rem;color:var(--text-secondary);">
+                        <span class="material-icons-round" style="font-size:2rem;opacity:.3;display:block;margin-bottom:.5rem;">grid_off</span>
+                        Nenhum tipo cadastrado.
+                        <a href="#" onclick="switchView('cad-end-tipo')" style="color:var(--wms-primary);">Cadastrar tipos de endereço →</a>
+                    </div>
+                ` : `
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:.75rem;">
+                        ${tiposCad.map(t => `
+                            <div style="background:var(--bg-hover);border-radius:8px;padding:.9rem;border-left:3px solid var(--wms-primary);">
+                                <div style="font-weight:600;font-size:.87rem;margin-bottom:.45rem;">${t.nome || t.codigo}</div>
+                                <div style="font-size:.73rem;color:var(--text-secondary);display:flex;flex-direction:column;gap:.2rem;">
+                                    <span>📐 ${t.larguraCelula || PW}m × ${t.alturaCelula || PH}m × ${t.profundidadeCelula || RD}m</span>
+                                    <span>🏷️ ${t.categoria || t.tipo || '—'}</span>
+                                    ${t.capacidadeKg ? `<span>⚖️ ${t.capacidadeKg} kg cap.</span>` : ''}
+                                    <span style="font-style:italic;opacity:.7;">Sobrescreve dimensões globais</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `}
+            </div>
+        </div>
+    </div>`;
+
+    // Draw preview
+    _desenharPreviewGalpao(PW, PH, RD, CW);
+
+    // Live preview on input change
+    ['cfgGalPW','cfgGalPH','cfgGalRD','cfgGalCW'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('input', () => {
+            _desenharPreviewGalpao(
+                +(document.getElementById('cfgGalPW')?.value || 1.2),
+                +(document.getElementById('cfgGalPH')?.value || 2.0),
+                +(document.getElementById('cfgGalRD')?.value || 0.8),
+                +(document.getElementById('cfgGalCW')?.value || 2.5)
+            );
+        });
+    });
+}
+
+function _desenharPreviewGalpao(PW, PH, RD, CW) {
+    const canvas = document.getElementById('cfgGalpaoPreview');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    // Background
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, W, H);
+
+    // Scale: fit the layout within the canvas
+    const nPos = 5; // number of positions to draw
+    const maxW = W - 120;  // reserve space for labels
+    const maxH = H - 30;
+    const scale = Math.min(maxW / (RD * 2 + CW), maxH / (nPos * PW));
+    const rdPx = Math.max(RD * scale, 20);
+    const cwPx = Math.max(CW * scale, 30);
+    const posPx = Math.max(PW * scale, 10);
+    const totalH = nPos * posPx;
+    const startX = 60;
+    const startY = (H - totalH) / 2;
+
+    // Grid lines (positions)
+    for (let i = 0; i <= nPos; i++) {
+        const y = startY + i * posPx;
+        ctx.beginPath();
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 1;
+        ctx.moveTo(startX, y);
+        ctx.lineTo(startX + rdPx * 2 + cwPx, y);
+        ctx.stroke();
+    }
+
+    // Left predio (impar) - purple
+    for (let i = 0; i < nPos; i++) {
+        const y = startY + i * posPx;
+        ctx.fillStyle = (i % 2 === 0) ? 'rgba(99,102,241,0.28)' : 'rgba(99,102,241,0.18)';
+        ctx.fillRect(startX, y + 1, rdPx - 1, posPx - 2);
+    }
+    ctx.strokeStyle = '#6366f1';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(startX, startY, rdPx, totalH);
+
+    // Aisle
+    ctx.fillStyle = 'rgba(14,165,233,0.06)';
+    ctx.fillRect(startX + rdPx, startY, cwPx, totalH);
+    ctx.strokeStyle = '#0ea5e933';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(startX + rdPx + cwPx / 2, startY);
+    ctx.lineTo(startX + rdPx + cwPx / 2, startY + totalH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Right predio (par) - green
+    for (let i = 0; i < nPos; i++) {
+        const y = startY + i * posPx;
+        ctx.fillStyle = (i % 2 === 0) ? 'rgba(16,185,129,0.28)' : 'rgba(16,185,129,0.18)';
+        ctx.fillRect(startX + rdPx + cwPx + 1, y + 1, rdPx - 1, posPx - 2);
+    }
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(startX + rdPx + cwPx, startY, rdPx, totalH);
+
+    // Labels
+    ctx.font = 'bold 11px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#6366f1';
+    ctx.fillText('Prédio Ímpar', startX + rdPx / 2, startY - 6);
+    ctx.fillStyle = '#10b981';
+    ctx.fillText('Prédio Par', startX + rdPx + cwPx + rdPx / 2, startY - 6);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '10px Inter, sans-serif';
+    ctx.fillText('CORREDOR', startX + rdPx + cwPx / 2, startY + totalH / 2 + 4);
+
+    // Dimension annotations
+    ctx.fillStyle = '#f59e0b';
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${RD}m`, startX + rdPx / 2, startY + totalH + 14);
+    ctx.fillStyle = '#ef4444';
+    ctx.fillText(`${CW}m`, startX + rdPx + cwPx / 2, startY + totalH + 14);
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillText(`${RD}m`, startX + rdPx + cwPx + rdPx / 2, startY + totalH + 14);
+
+    // Position width annotation on left
+    ctx.fillStyle = '#6366f1';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${PW}m`, startX - 6, startY + posPx / 2 + 4);
+    ctx.beginPath();
+    ctx.strokeStyle = '#6366f155';
+    ctx.lineWidth = 1;
+    ctx.moveTo(startX - 4, startY);
+    ctx.lineTo(startX - 4, startY + posPx);
+    ctx.stroke();
+}
+
+window.salvarCfgGalpao = function() {
+    const ac = {
+        posLargura:    +(document.getElementById('cfgGalPW')?.value || 1.2),
+        posAltura:     +(document.getElementById('cfgGalPH')?.value || 2.0),
+        profundidade:  +(document.getElementById('cfgGalRD')?.value || 0.8),
+        corridorWidth: +(document.getElementById('cfgGalCW')?.value || 2.5),
+    };
+    // Merge with existing config (preserve corridors and tiposEndereco)
+    const existing = JSON.parse(localStorage.getItem('wms_armazem_config') || '{}');
+    localStorage.setItem('wms_armazem_config', JSON.stringify({ ...existing, ...ac }));
+
+    // Trigger 3D refresh if viewer is active
+    const wrap = document.querySelector('#view-dashboard [data-wms3d-wrap]') ||
+                 document.querySelector('[data-wms3d-wrap]');
+    if (wrap && window.WMS3D) {
+        window.WMS3D.destroy();
+        window.WMS3D.init(wrap);
+    }
+
+    // Visual feedback on button
+    const btn = document.getElementById('btn-salvar-galpao');
+    if (btn) {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<span class="material-icons-round" style="font-size:1rem;">check_circle</span> Salvo! 3D atualizado.';
+        btn.style.background = '#10b981';
+        setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; }, 2500);
+    }
+};

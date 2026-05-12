@@ -1,19 +1,17 @@
 {
-    "version": "11.10.0",
+    "version": "11.11.0",
     "build": "20260512",
     "lastUpdate": "2026-05-12",
-    "description": "WMS 3D Viewer - InstancedMesh, layout correto (ímpar=esquerda, par=direita), tipos de endereço com dimensões físicas, migração automática de tenant, correção dashboard",
+    "description": "WMS: Configuração Física do Galpão (cfg-galpao) com preview canvas do corredor, tipos de endereço vinculados ao 3D",
     "changelog": [
-        "WMS: 3D refatorado para InstancedMesh (3 draw calls para 12k+ endereços)",
-        "WMS: Layout 3D corrigido - predios ímpares à esquerda, pares à direita",
-        "WMS: Posições (posicao) cada uma com slot Z próprio no 3D",
-        "WMS: Tipos de endereço com campos de dimensão física (largura/altura/profundidade)",
-        "WMS: 3D usa dimensões do tipo de endereço cadastrado por célula",
-        "WMS: Migração automática wms_mock_data → wms_mock_data_<tenant> no startup",
-        "WMS: Importador corrigido para usar chave com tenant suffix",
-        "WMS: Dashboard corrigido (SyntaxError por variável duplicada)",
-        "WMS: Stats bar na visão geral (Total/Livre/Ocupado/Desabastecido/Tarefas/Bloqueado)",
-        "WMS: Botão manual 'Carregar 3D' em vez de auto-init",
-        "Dispatch: Ferramenta de arquivamento de dispatches antigos (>60 dias)"
+        "WMS: Nova tela cfg-galpao - Configuração Física do Galpão",
+        "WMS: Preview Canvas interativo do corredor (vista superior) com dimensões em tempo real",
+        "WMS: cfg-galpao integrado ao 3D via wms_armazem_config (posLargura, posAltura, profundidade, corridorWidth)",
+        "WMS: Botão Salvar e Aplicar ao 3D atualiza a visualização sem sair da tela",
+        "WMS: Card de Tipos de Endereço na cfg-galpao mostra quais tipos sobrescrevem as dimensões globais",
+        "WMS: reload() adicionado ao WMS3D public API",
+        "WMS: nav-item Layout do Galpão adicionado ao submenu Configurações",
+        "WMS: VIEW_TITLES atualizado com cfg-galpao",
+        "NOVO_AGENTE.md: Seção WMS e histórico de versões atualizados"
     ]
 }

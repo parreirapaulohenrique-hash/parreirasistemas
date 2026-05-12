@@ -351,7 +351,13 @@ window.WMS3D = (function () {
         _renderer.render(_scene, _camera);
     }
 
-    return { init, destroy, getStats };
+    function reload() {
+        // Rebuild the 3D scene in-place if a container is already visible
+        const wrap = document.querySelector('#view-dashboard [data-wms3d-wrap]');
+        if (wrap) { destroy(); init(wrap); }
+    }
+
+    return { init, destroy, getStats, reload };
 })();
 
 // Spin animation for loading indicator
