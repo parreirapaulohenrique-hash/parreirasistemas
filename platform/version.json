@@ -1,17 +1,14 @@
 {
-    "version": "11.11.0",
+    "version": "11.12.0",
     "build": "20260512",
     "lastUpdate": "2026-05-12",
-    "description": "WMS: Configuração Física do Galpão (cfg-galpao) com preview canvas do corredor, tipos de endereço vinculados ao 3D",
+    "description": "WMS: Firebase Sync de Endereços — Firestore como fonte da verdade, localStorage como cache, write-through em tempo real",
     "changelog": [
-        "WMS: Nova tela cfg-galpao - Configuração Física do Galpão",
-        "WMS: Preview Canvas interativo do corredor (vista superior) com dimensões em tempo real",
-        "WMS: cfg-galpao integrado ao 3D via wms_armazem_config (posLargura, posAltura, profundidade, corridorWidth)",
-        "WMS: Botão Salvar e Aplicar ao 3D atualiza a visualização sem sair da tela",
-        "WMS: Card de Tipos de Endereço na cfg-galpao mostra quais tipos sobrescrevem as dimensões globais",
-        "WMS: reload() adicionado ao WMS3D public API",
-        "WMS: nav-item Layout do Galpão adicionado ao submenu Configurações",
-        "WMS: VIEW_TITLES atualizado com cfg-galpao",
-        "NOVO_AGENTE.md: Seção WMS e histórico de versões atualizados"
+        "WMS: WmsStore — collection enderecos no Firestore (salvarEnderecosBatch, atualizarEndereco, excluirEndereco, listarEnderecos, ouvirEnderecos, sincronizarEnderecos, migrarEnderecos)",
+        "WMS: wms-core.js — sync automático Firestore↔localStorage na inicialização + listener em tempo real",
+        "WMS: wms-core.js — migração automática: se Firestore vazio, sobe os endereços do localStorage",
+        "WMS: locations.js — write-through em 4 pontos: gerar endereços, toggleBlock, deleteLocation, xlsConfirmImport",
+        "WMS: Badge de status Cloud Sync no top bar (syncing/ok/warn/error com ícone Material)",
+        "WMS: cfg-galpao v11.11.0 mantida estável"
     ]
 }

@@ -472,6 +472,9 @@ window.generateLocationsMassive = async function () {
         existing = [...existing, ...newLocs];
         localStorage.setItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(existing));
 
+        // ☁️ Write-through: enviar novos endereços ao Firestore (assíncrono, sem bloquear UI)
+        if (window.WmsStore) WmsStore.salvarEnderecosBatch(newLocs).catch(e => console.warn('[Sync]', e));
+
         locationsState.gridData = existing;
         filterGrid();
         if (window.updateDashboardStats) window.updateDashboardStats();
@@ -902,6 +905,8 @@ window.toggleBlock = function (id) {
     }
 
     localStorage.setItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(data));
+    // ☁️ Write-through: sincronizar status do endereço no Firestore
+    if (window.WmsStore) WmsStore.atualizarEndereco(loc.id, { status: loc.status }).catch(e => console.warn('[Sync]', e));
     locationsState.gridData = data;
     filterGrid();
     updateDashboardStats();
@@ -913,6 +918,8 @@ window.deleteLocation = function (id) {
     let data = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     data = data.filter(x => x.id !== id);
     localStorage.setItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(data));
+    // ☁️ Write-through: remover endereço do Firestore
+    if (window.WmsStore) WmsStore.excluirEndereco(id).catch(e => console.warn('[Sync]', e));
     locationsState.gridData = data;
     filterGrid();
     updateDashboardStats();
@@ -1166,6 +1173,8 @@ window.xlsConfirmImport = function() {
 
     const merged = [...existing, ...newLocs];
     localStorage.setItem(key, JSON.stringify(merged));
+    // ☁️ Write-through: enviar endereços importados ao Firestore (assíncrono)
+    if (window.WmsStore && newLocs.length > 0) WmsStore.salvarEnderecosBatch(newLocs).catch(e => console.warn('[Sync]', e));
     locationsState.gridData = merged;
     filterGrid();
     if (window.updateDashboardStats) updateDashboardStats();

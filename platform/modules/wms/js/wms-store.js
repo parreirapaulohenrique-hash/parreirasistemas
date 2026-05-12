@@ -256,6 +256,119 @@ window.WmsStore = (function () {
         );
     }
 
+    // ─── ENDEREÇOS (Estrutura Física do Armazém) ────────────────────────────────────────
+
+    function _enderecosCol(tid) {
+        return _db().collection('tenants').doc(tid).collection('enderecos');
+    }
+
+    /**
+     * Grava um array de endereços no Firestore em batches de 400.
+     * Retorna o total de documentos gravados.
+     */
+    async function salvarEnderecosBatch(addrs) {
+        const tid = _tid();
+        const col = _enderecosCol(tid);
+        const db  = _db();
+        const BATCH_SIZE = 400;
+        let total = 0;
+        for (let i = 0; i < addrs.length; i += BATCH_SIZE) {
+            const chunk = addrs.slice(i, i + BATCH_SIZE);
+            const batch = db.batch();
+            chunk.forEach(a => {
+                const ref = col.doc(String(a.id));
+                batch.set(ref, { ...a, tenantId: tid, atualizadoEm: TS() }, { merge: true });
+            });
+            await batch.commit();
+            total += chunk.length;
+        }
+        return total;
+    }
+
+    /** Atualiza (merge) um único endereço no Firestore. Falha silenciosamente. */
+    async function atualizarEndereco(id, update) {
+        try {
+            await _enderecosCol(_tid()).doc(String(id)).set(
+                { ...update, atualizadoEm: TS() },
+                { merge: true }
+            );
+        } catch(e) {
+            console.warn('[WmsStore] atualizarEndereco falhou:', e);
+        }
+    }
+
+    /** Remove um endereço do Firestore. Falha silenciosamente. */
+    async function excluirEndereco(id) {
+        try {
+            await _enderecosCol(_tid()).doc(String(id)).delete();
+        } catch(e) {
+            console.warn('[WmsStore] excluirEndereco falhou:', e);
+        }
+    }
+
+    /** Retorna todos os endereços do Firestore para o tenant. */
+    async function listarEnderecos() {
+        const snap = await _enderecosCol(_tid()).get();
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+
+    /**
+     * Listener em tempo real dos endereços.
+     * Retorna função unsubscribe.
+     */
+    function ouvirEnderecos(callback) {
+        try {
+            const tid = _tid();
+            return _enderecosCol(tid).onSnapshot(
+                snap => callback(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+                err  => console.warn('[WmsStore] ouvirEnderecos erro:', err)
+            );
+        } catch(e) {
+            console.warn('[WmsStore] ouvirEnderecos init falhou:', e);
+            return () => {};
+        }
+    }
+
+    /**
+     * Sincroniza Firestore → localStorage.
+     * Retorna: N > 0 (N end. sincronizados) | 0 (Firestore vazio) | -1 (erro).
+     */
+    async function sincronizarEnderecos() {
+        try {
+            const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+            const key = 'wms_mock_data' + suf;
+            const snap = await _enderecosCol(_tid()).get();
+            if (snap.empty) return 0;
+            const addrs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            localStorage.setItem(key, JSON.stringify(addrs));
+            console.log(`📡 [WmsStore] ${addrs.length} endereços sincronizados do Firestore`);
+            return addrs.length;
+        } catch(e) {
+            console.warn('[WmsStore] sincronizarEnderecos falhou:', e);
+            return -1;
+        }
+    }
+
+    /**
+     * Migração única: envia endereços do localStorage ao Firestore,
+     * somente se o Firestore ainda estiver vazio para o tenant.
+     */
+    async function migrarEnderecos() {
+        try {
+            const check = await _enderecosCol(_tid()).limit(1).get();
+            if (!check.empty) return { status: 'skip', message: 'Firestore já tem dados.' };
+            const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+            const localAddrs = JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
+            if (localAddrs.length === 0) return { status: 'empty', message: 'localStorage sem endereços.' };
+            const count = await salvarEnderecosBatch(localAddrs);
+            console.log(`🔼 [WmsStore] Migração: ${count} endereços enviados ao Firestore`);
+            return { status: 'ok', count };
+        } catch(e) {
+            console.warn('[WmsStore] migrarEnderecos falhou:', e);
+            return { status: 'error', message: e.message };
+        }
+    }
+
     // ─── UTIL ─────────────────────────────────────────────────────────────────
 
     /** Converte timestamp Firestore ou string ISO para Date. */
@@ -298,6 +411,14 @@ window.WmsStore = (function () {
         atualizarDivergencia,
         adicionarTratativa,
         ouvirDivergencias,
+        // Endereços (Estrutura Física)
+        salvarEnderecosBatch,
+        atualizarEndereco,
+        excluirEndereco,
+        listarEnderecos,
+        ouvirEnderecos,
+        sincronizarEnderecos,
+        migrarEnderecos,
         toDate, fmtData
     };
 })();

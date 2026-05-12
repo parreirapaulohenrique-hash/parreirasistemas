@@ -87,6 +87,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch(e) { console.warn('[WMS Migration] Erro:', e); }
     })();
 
+    // --- Firebase Endereços Sync ---
+    if (window.WmsStore && typeof firebase !== 'undefined') {
+        (async () => {
+            try {
+                _updateSyncStatus('syncing');
+                const count = await WmsStore.sincronizarEnderecos();
+                if (count === 0) {
+                    // Firestore vazio: migrar do localStorage
+                    const res = await WmsStore.migrarEnderecos();
+                    if (res.status === 'ok') {
+                        _updateSyncStatus('ok', `${res.count} end. enviados`);
+                    } else {
+                        _updateSyncStatus('ok', 'offline mode');
+                    }
+                } else if (count > 0) {
+                    _updateSyncStatus('ok', `${count} end.`);
+                } else {
+                    _updateSyncStatus('warn');
+                }
+
+                // Listener tempo real: Firestore → localStorage
+                let _syncDebounce = null;
+                const unsub = WmsStore.ouvirEnderecos(addrs => {
+                    clearTimeout(_syncDebounce);
+                    _syncDebounce = setTimeout(() => {
+                        const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+                        localStorage.setItem('wms_mock_data' + suf, JSON.stringify(addrs));
+                        if (window.updateDashboardStats) updateDashboardStats();
+                    }, 600);
+                });
+                window.wmsEnderecosSyncUnsubscribe = unsub;
+            } catch(e) {
+                console.warn('[WMS Cloud Sync] Endereços:', e);
+                _updateSyncStatus('error');
+            }
+        })();
+    }
+
     // Start at dashboard
     switchView('dashboard');
 });
@@ -315,3 +353,21 @@ function getViewIcon(viewId) {
     const prefix = viewId.split('-')[0];
     return icons[prefix] || 'info';
 }
+
+// --- Firebase Sync Status Badge ---
+function _updateSyncStatus(status, info) {
+    const el = document.getElementById('wms-sync-status');
+    if (!el) return;
+    const STATES = {
+        syncing: { icon: 'sync',         color: '#f59e0b', text: 'Sincronizando...' },
+        ok:      { icon: 'cloud_done',   color: '#10b981', text: info || 'Cloud Sync OK' },
+        warn:    { icon: 'cloud_off',    color: '#f59e0b', text: 'Sem dados cloud' },
+        error:   { icon: 'cloud_off',    color: '#ef4444', text: 'Erro de sync' },
+    };
+    const s = STATES[status] || STATES.ok;
+    const spinning = status === 'syncing' ? 'style="animation:spin 1s linear infinite;display:inline-block;"' : '';
+    el.innerHTML = `
+        <span class="material-icons-round" ${spinning} style="font-size:.9rem;color:${s.color};vertical-align:middle;">${s.icon}</span>
+        <span style="color:${s.color};">${s.text}</span>`;
+}
+window._updateSyncStatus = _updateSyncStatus;
