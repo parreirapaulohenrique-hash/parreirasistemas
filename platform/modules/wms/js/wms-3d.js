@@ -97,7 +97,8 @@ window.WMS3D = (function () {
         _scene.fog = new THREE.FogExp2(0x0f172a, 0.008);
 
         const W = container.clientWidth || 800, H = container.clientHeight || 500;
-        _camera = new THREE.PerspectiveCamera(50, W/H, 0.1, 800);
+        // Camera far plane will be updated after WL is computed
+        _camera = new THREE.PerspectiveCamera(50, W/H, 0.1, 2000);
 
         const canvas = document.createElement('canvas');
         canvas.style.cssText = 'width:100%;height:100%;display:block;';
@@ -126,7 +127,8 @@ window.WMS3D = (function () {
         // Odd predios = LEFT side, Even predios = RIGHT side
         const ruas = [...new Set(addrs.map(a => a.rua))].sort();
         // Paired predios (1&2, 3&4, 5&6...) face each other at the same Z
-        const maxPos    = Math.max(...addrs.map(a => +a.posicao), 1);
+        // Clamp posicao to avoid anomalous values (e.g. posicao:701 in raw data)
+        const maxPos    = Math.min(Math.max(...addrs.map(a => +a.posicao).filter(v => v > 0 && v <= 99), 1), 50);
         const maxPredioN= Math.max(...addrs.map(a => +a.predio), 1);
         const numPairs  = Math.ceil(maxPredioN / 2);
         const pairSlotZ = maxPos * PW + 0.3;   // Z span per pair + gap
@@ -226,6 +228,11 @@ window.WMS3D = (function () {
         railMesh.instanceMatrix.needsUpdate      = true;
         beamMesh.instanceMatrix.needsUpdate      = true;
         _scene.add(_cellInstMesh); _scene.add(railMesh); _scene.add(beamMesh);
+
+        // Dynamic far plane based on scene diagonal
+        const sceneDiag = Math.sqrt(WW*WW + WL*WL + (maxNiv*PH)*(maxNiv*PH));
+        _camera.far = Math.max(2000, sceneDiag * 3);
+        _camera.updateProjectionMatrix();
 
         _camera.position.set(WW/2, maxNiv*PH*1.5, WL*1.6);
         _camera.lookAt(WW/2, (maxNiv*PH)/2, WL/2);
