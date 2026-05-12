@@ -1,4 +1,4 @@
-// =============================================================================
+﻿// =============================================================================
 // WMS Coletor — Tela "Conferir" (Conferência de Recebimento)
 // Etapa final do fluxo: Portaria → Doca → CONFERIR
 // Parâmetros configuráveis via WMS > Configurações (para uso futuro):
@@ -490,6 +490,29 @@ async function _gerarPutaway(r) {
     const cfgPut = cfgRaw.putaway || { modo: 'PICKING_DIRETO', tipoEnderec: 'FLUTUANTE' };
     const setores = cfgPut.setores || { A:'PICK-A', B:'PICK-B', C:'PULMAO', D:'FUNDO' };
     const efCfg  = cfgRaw.enderecoFixo || {};
+    const suf    = window.getTenantSuffix ? window.getTenantSuffix() : '';
+
+    // Sugestão de endereço real pela curva ABC (lê wms_mock_data em cache)
+    function _sugerirEndRealPut(curvaABC, tipo) {
+        const enderecos = JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
+        let cands = enderecos.filter(e => e.status === 'LIVRE');
+        if (cands.length === 0) return null;
+        if (tipo && tipo !== 'Picking') {
+            const pt = cands.filter(e => e.tipo === tipo);
+            if (pt.length > 0) cands = pt;
+        }
+        const score = e => (parseInt(e.rua)||0)*10000+(parseInt(e.predio)||0)*1000+(parseInt(e.nivel)||0)*10+(parseInt(e.posicao||'0')||0);
+        cands.sort((a,b) => score(a)-score(b));
+        const total = cands.length;
+        let slice;
+        if      (curvaABC==='A') slice = cands.slice(0, Math.ceil(total*0.15));
+        else if (curvaABC==='B') slice = cands.slice(Math.ceil(total*0.05), Math.ceil(total*0.35));
+        else if (curvaABC==='D') { cands.reverse(); slice = cands; }
+        else                      slice = cands.slice(Math.floor(total*0.35), Math.floor(total*0.70));
+        return (slice.length>0?slice:cands)[0]?.id || null;
+    }
+
+    const prioMap = { A:'ALTA', B:'ALTA', C:'NORMAL', D:'BAIXA' };
 
     const tasks = [];
     for (let i = 0; i < (r.itens || []).length; i++) {
@@ -499,16 +522,14 @@ async function _gerarPutaway(r) {
 
         // Busca curva ABCD do SKU (Firestore → fallback D)
         let curva = 'D';
-        let enderecoSugerido = setores['D'] || 'PULMAO';
-        try {
-            curva = await WmsStore.buscarCurvaSku(item.sku);
-        } catch(_) {}
+        try { curva = await WmsStore.buscarCurvaSku(item.sku); } catch(_) {}
 
-        // Endereço sugerido
+        // Endereço sugerido: real por curva ou fixo
+        let enderecoSugerido;
         if (cfgPut.tipoEnderec === 'FIXO') {
-            enderecoSugerido = efCfg[item.sku]?.endereco || setores[curva] || 'PISO-DOCA';
+            enderecoSugerido = (efCfg[item.sku]?.endereco) || setores[curva] || 'PISO-DOCA';
         } else {
-            enderecoSugerido = setores[curva] || 'PISO-DOCA';
+            enderecoSugerido = _sugerirEndRealPut(curva, item.tipo) || setores[curva] || 'PISO-DOCA';
         }
 
         tasks.push({
@@ -516,7 +537,10 @@ async function _gerarPutaway(r) {
             nf:               r.nfNumero,
             sku:              item.sku,
             desc:             item.descricao,
-            qty:              lido,
+            qtd:              lido,        // ✔ campo padrão (desktop usa qtd)
+            qty:              lido,        // compat. c/ versões antigas
+            lote:             item.lote || item.numLote || '',
+            prioridade:       prioMap[curva] || 'NORMAL',
             curva,
             enderecoSugerido,
             modo:             cfgPut.modo || 'PICKING_DIRETO',
@@ -533,3 +557,4 @@ async function _gerarPutaway(r) {
     if (tasks.length > 0) await WmsStore.criarPutaway(tasks);
     return tasks.length;
 }
+

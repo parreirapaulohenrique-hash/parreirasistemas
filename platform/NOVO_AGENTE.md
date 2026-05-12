@@ -296,6 +296,7 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
+| **11.14.0** | 2026-05-12 | WMS Coletor: Conferência integrada — endereço real ABC, sync Firestore, atualização de estoque e status de endereço no putaway |
 | **11.13.0** | 2026-05-12 | WMS: Motor de Armazenagem (Putaway) — algoritmo ABC/Curva, sugestão inteligente de endereços, integração Firestore |
 | **11.12.0** | 2026-05-12 | WMS: Firebase Sync de Endereços — Firestore fonte da verdade, localStorage cache, write-through, badge Cloud Sync |
 | **11.11.0** | 2026-05-12 | WMS: cfg-galpao — Configuração Física do Galpão com preview Canvas interativo |

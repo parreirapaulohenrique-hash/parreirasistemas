@@ -1,14 +1,13 @@
 {
-    "version": "11.13.0",
+    "version": "11.14.0",
     "build": "20260512",
     "lastUpdate": "2026-05-12",
-    "description": "WMS: Motor Inteligente de Armazenagem (Putaway) — algoritmo ABC/Curva, sugestão de endereços, integração Firestore, atualização de estoque",
+    "description": "WMS Coletor: Conferência e Putaway integrados com Firebase — sugestão real de endereços, sync de cache, atualização de estoque e status de endereço",
     "changelog": [
-        "WMS: _sugerirEnderecoPutaway() — algoritmo ABC/ABCD que roteia SKUs por zona (A/B=entrada, C=meio, D=fundo)",
-        "WMS: renderArmazenagem() — assíncrona, carrega tasks do Firestore com fallback localStorage",
-        "WMS: openPutawayModal() — modal com top-5 endereços sugeridos + opção de digitar endereço manual",
-        "WMS: confirmarPutaway() — atualiza endereço (OCUPADO), task (ARMAZENADO), wms_estoque e curva ABC no Firestore",
-        "WMS: Curva ABC exibida em cada tarefa (🔴 A, 🟠 B, 🟡 C, ⚪ D) com tooltip explicativo",
-        "WMS: Cards de tarefa com prioridade, lote, NF e endereço sugerido em destaque"
+        "Coletor: _gerarPutaway() — adiciona campos qtd (padrão), lote, prioridade; usa algoritmo real de endereço ABC (wms_mock_data cache) em vez de labels genéricos",
+        "Coletor: initArmazenagemScreen() — sincroniza endereços do Firestore antes de mostrar tarefas",
+        "Coletor: put_confirmarEndereco() — atualiza status do endereço para OCUPADO (localStorage + Firestore); atualiza wms_estoque; corrigido ID da tela armazenar",
+        "Coletor: _sugerirEndResolvidoColetor() — algoritmo ABC real no coletor (prioriza endereço salvo na task se for ID válido)",
+        "Desktop: renderArmazenagem() — lê corretamente qtd de tasks criadas pelo coletor (v11.13)"
     ]
 }

@@ -27,12 +27,38 @@ function _curvaCor(curva) {
     return { A:'#10b981', B:'#0ea5e9', C:'#f59e0b', D:'#64748b' }[curva] || '#64748b';
 }
 
+/** Sugestão de endereço real usando cache wms_mock_data + curva ABC */
+function _sugerirEndResolvidoColetor(curva, tipo) {
+    const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+    const enderecos = JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
+    let cands = enderecos.filter(e => e.status === 'LIVRE');
+    if (cands.length === 0) return null;
+    if (tipo && tipo !== 'Picking') {
+        const pt = cands.filter(e => e.tipo === tipo);
+        if (pt.length > 0) cands = pt;
+    }
+    const score = e => (parseInt(e.rua)||0)*10000+(parseInt(e.predio)||0)*1000+(parseInt(e.nivel)||0)*10+(parseInt(e.posicao||'0')||0);
+    cands.sort((a,b) => score(a)-score(b));
+    const total = cands.length;
+    let slice;
+    if      (curva==='A') slice = cands.slice(0, Math.ceil(total*0.15));
+    else if (curva==='B') slice = cands.slice(Math.ceil(total*0.05), Math.ceil(total*0.35));
+    else if (curva==='D') { cands.reverse(); slice = cands; }
+    else                   slice = cands.slice(Math.floor(total*0.35), Math.floor(total*0.70));
+    return (slice.length>0?slice:cands)[0]?.id || null;
+}
+
 function _sugerirEndereco(task, cfgPut) {
+    // Usa endereço já armazenado na task se for um ID real
+    if (task.enderecoSugerido && /^\d+/.test(task.enderecoSugerido)) return task.enderecoSugerido;
+    // Tenta pelo algoritmo real
+    const real = _sugerirEndResolvidoColetor(task.curva || 'D', task.tipo);
+    if (real) return real;
+    // Fallback para setores
     if (cfgPut.tipoEnderec === 'FIXO') {
         const ef = _getEnderecoFixo(task.sku);
         if (ef?.endereco) return ef.endereco;
     }
-    // Flutuante: usa setor da curva
     const curva   = task.curva || 'D';
     const setores  = cfgPut.setores || { A:'PICK-A', B:'PICK-B', C:'PULMAO', D:'FUNDO' };
     return setores[curva] || 'PULMAO';
@@ -46,6 +72,11 @@ window.initArmazenagemScreen = async function(container) {
             <span class="material-icons-round" style="font-size:2rem;display:block;margin-bottom:.5rem;opacity:.4;">sync</span>
             <span style="font-size:.82rem;">Carregando tarefas...</span>
         </div>`;
+
+    // Sync de endereços do Firestore para cache local (garante sugestões atualizadas)
+    if (window.WmsStore) {
+        try { await WmsStore.sincronizarEnderecos(); } catch(e) {}
+    }
 
     let tasks = [];
     try {
@@ -290,14 +321,39 @@ window.put_confirmarEndereco = async function(taskId, sku) {
     try {
         const sessao = window.ParreiraAuth?.getSessao?.() || {};
         const fim    = new Date().toISOString();
+        const suf    = window.getTenantSuffix ? window.getTenantSuffix() : '';
 
+        // 1. Atualiza task no Firestore
         await WmsStore.atualizarPutaway(taskId, {
-            status:         'CONCLUIDO',
-            tipoDestino:    window._putDestinoAtivo || 'PICKING',
+            status:          'CONCLUIDO',
+            tipoDestino:     window._putDestinoAtivo || 'PICKING',
             enderecoEfetivo: endereco,
-            operador:       sessao.nome || sessao.login || 'Operador',
-            concluidoEm:    fim
+            enderecoConfirmado: endereco,
+            operador:        sessao.nome || sessao.login || 'Operador',
+            concluidoEm:     fim
         });
+
+        // 2. Marca endereço como OCUPADO (localStorage + Firestore)
+        try {
+            const addrs = JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
+            const addr  = addrs.find(e => e.id === endereco);
+            if (addr) { addr.status = 'OCUPADO'; localStorage.setItem('wms_mock_data' + suf, JSON.stringify(addrs)); }
+            if (window.WmsStore) await WmsStore.atualizarEndereco(endereco, { status: 'OCUPADO' });
+        } catch(e) { console.warn('[Putaway Coletor] updateAddress:', e); }
+
+        // 3. Atualiza wms_estoque
+        try {
+            const allTasks = await WmsStore.listarPutaway({});
+            const task = allTasks.find(t => t.id === taskId);
+            if (task) {
+                const estoque = JSON.parse(localStorage.getItem('wms_estoque' + suf) || '[]');
+                const qtd = task.qtd || task.qty || 0;
+                const existing = estoque.find(e => e.sku === task.sku && e.endereco === endereco);
+                if (existing) { existing.qtd = (existing.qtd||0) + qtd; }
+                else { estoque.push({ sku: task.sku, desc: task.desc, endereco, qtd, lote: task.lote||'', status:'NORMAL' }); }
+                localStorage.setItem('wms_estoque' + suf, JSON.stringify(estoque));
+            }
+        } catch(e) { console.warn('[Putaway Coletor] updateEstoque:', e); }
 
         Feedback.beep('success');
         Feedback.flash('success');
@@ -306,7 +362,7 @@ window.put_confirmarEndereco = async function(taskId, sku) {
         window._putDestinoAtivo = null;
 
         setTimeout(() => {
-            initArmazenagemScreen(document.getElementById('screen-armazenagem'));
+            initArmazenagemScreen(document.getElementById('screen-armazenar'));
         }, 1200);
 
     } catch(e) {
