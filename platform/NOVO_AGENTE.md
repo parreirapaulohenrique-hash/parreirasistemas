@@ -296,7 +296,8 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
-| **11.12.0** | 2026-05-12 | WMS: Firebase Sync de Endereços — Firestore fonte da verdade, localStorage cache, write-through, migração automática, badge Cloud Sync |
+| **11.13.0** | 2026-05-12 | WMS: Motor de Armazenagem (Putaway) — algoritmo ABC/Curva, sugestão inteligente de endereços, integração Firestore |
+| **11.12.0** | 2026-05-12 | WMS: Firebase Sync de Endereços — Firestore fonte da verdade, localStorage cache, write-through, badge Cloud Sync |
 | **11.11.0** | 2026-05-12 | WMS: cfg-galpao — Configuração Física do Galpão com preview Canvas interativo |
 | **11.10.0** | 2026-05-12 | WMS 3D com InstancedMesh, tipos de endereço com dimensões físicas, migração automática de tenant, dashboard corrigido |
 | **11.9.2** | 2026-04-21 | Correção do parser de PDF (ERP Consultoria/Maxdata) |

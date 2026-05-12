@@ -1,4 +1,4 @@
-// WMS Entrada de Produtos - Inbound Flow
+﻿// WMS Entrada de Produtos - Inbound Flow
 // ent-agendamento: Dock scheduling
 // ent-conferencia: Goods receiving conference
 // ent-armazenagem: Putaway assignment
@@ -482,138 +482,292 @@ window.confirmarConferencia = function (confId) {
 };
 
 // ========================
-// 3. ARMAZENAGEM (PUTAWAY)
+// 3. ARMAZENAGEM (PUTAWAY) — Motor Inteligente v11.13
 // ========================
-function renderArmazenagem(container) {
-    const tasks = getPutawayTasksMock();
-    const pendentes = tasks.filter(t => t.status === 'PENDENTE');
-    const armazenados = tasks.filter(t => t.status === 'ARMAZENADO');
 
-    container.innerHTML = `
-        <!-- Summary -->
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
-            <div class="card" style="padding:1.25rem; display:flex; align-items:center; gap:1rem;">
-                <div style="width:40px; height:40px; border-radius:10px; background:linear-gradient(135deg,#f59e0b,#d97706);
-                    display:flex; align-items:center; justify-content:center;">
-                    <span class="material-icons-round" style="color:white; font-size:1.2rem;">pending_actions</span>
-                </div>
-                <div>
-                    <div style="font-size:0.75rem; color:var(--text-secondary);">Pendentes</div>
-                    <div style="font-size:1.3rem; font-weight:700;">${pendentes.length}</div>
-                </div>
-            </div>
-            <div class="card" style="padding:1.25rem; display:flex; align-items:center; gap:1rem;">
-                <div style="width:40px; height:40px; border-radius:10px; background:linear-gradient(135deg,#10b981,#059669);
-                    display:flex; align-items:center; justify-content:center;">
-                    <span class="material-icons-round" style="color:white; font-size:1.2rem;">check_circle</span>
-                </div>
-                <div>
-                    <div style="font-size:0.75rem; color:var(--text-secondary);">Armazenados</div>
-                    <div style="font-size:1.3rem; font-weight:700;">${armazenados.length}</div>
-                </div>
-            </div>
-            <div class="card" style="padding:1.25rem; display:flex; align-items:center; gap:1rem;">
-                <div style="width:40px; height:40px; border-radius:10px; background:linear-gradient(135deg,#3b82f6,#2563eb);
-                    display:flex; align-items:center; justify-content:center;">
-                    <span class="material-icons-round" style="color:white; font-size:1.2rem;">inventory</span>
-                </div>
-                <div>
-                    <div style="font-size:0.75rem; color:var(--text-secondary);">Total Qtd</div>
-                    <div style="font-size:1.3rem; font-weight:700;">${tasks.reduce((s, t) => s + t.qtd, 0).toLocaleString('pt-BR')}</div>
-                </div>
-            </div>
-        </div>
+/**
+ * Algoritmo de sugestão de endereço baseado na Curva ABCD.
+ * A/B → ruas menores, andares baixos (perto da entrada)
+ * C   → ruas medianas
+ * D   → ruas maiores, andares altos (fundo do armazém)
+ */
+function _sugerirEnderecoPutaway(sku, curvaABC, tipo) {
+    const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+    const enderecos = JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
+    let candidatos = enderecos.filter(e => e.status === 'LIVRE');
+    if (candidatos.length === 0) return [];
 
-        <!-- Pending Tasks -->
-        <div class="card" style="margin-bottom:1.5rem;">
-            <div class="card-header">
-                <h3 style="font-size:0.95rem; font-weight:600;">
-                    <span class="material-icons-round" style="font-size:1.1rem; vertical-align:middle;">system_update_alt</span>
-                    Tarefas de Armazenagem Pendentes
-                </h3>
-            </div>
-            ${pendentes.length > 0 ? `
-            <div style="overflow-x:auto;">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Tarefa</th>
-                            <th>SKU</th>
-                            <th>Descrição</th>
-                            <th style="text-align:right;">Qtd</th>
-                            <th>Lote</th>
-                            <th>NF</th>
-                            <th>Endereço Sugerido</th>
-                            <th>Prioridade</th>
-                            <th>Ação</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${pendentes.map(t => {
-        const pc = t.prioridade === 'ALTA' ? '#ef4444' : t.prioridade === 'NORMAL' ? '#3b82f6' : '#94a3b8';
-        return `<tr>
-                                <td style="font-weight:600; font-family:monospace;">${t.id}</td>
-                                <td style="font-family:monospace;">${t.sku}</td>
-                                <td>${t.desc}</td>
-                                <td style="text-align:right; font-weight:600;">${t.qtd.toLocaleString('pt-BR')}</td>
-                                <td style="font-size:0.8rem;">${t.lote}</td>
-                                <td style="font-family:monospace; font-size:0.8rem;">${t.nf}</td>
-                                <td style="font-weight:700; font-family:monospace; color:var(--primary-color);">${t.enderecoSugerido}</td>
-                                <td><span style="padding:2px 8px; border-radius:12px; font-size:0.65rem; font-weight:600;
-                                    background:${pc}18; color:${pc};">${t.prioridade}</span></td>
-                                <td>
-                                    <button onclick="confirmarPutaway('${t.id}')" class="btn btn-primary" style="padding:0.3rem 0.8rem; font-size:0.75rem;">
-                                        <span class="material-icons-round" style="font-size:0.9rem;">check</span> Armazenar
-                                    </button>
-                                </td>
-                            </tr>`;
-    }).join('')}
-                    </tbody>
-                </table>
-            </div>` : `
-            <div style="padding:3rem; text-align:center; color:var(--text-secondary);">
-                <span class="material-icons-round" style="font-size:2rem; opacity:0.3; display:block; margin-bottom:0.5rem;">done_all</span>
-                Todas as tarefas de armazenagem foram concluídas!
-            </div>`}
-        </div>
+    // Filter by tipo compatibility
+    if (tipo && tipo !== 'Picking' && tipo !== 'todos') {
+        const porTipo = candidatos.filter(e => e.tipo === tipo);
+        if (porTipo.length > 0) candidatos = porTipo;
+    }
 
-        <!-- Completed Tasks -->
-        ${armazenados.length > 0 ? `
-        <div class="card">
-            <div class="card-header">
-                <h3 style="font-size:0.95rem; font-weight:600;">Armazenados Recentes</h3>
-            </div>
-            <div style="overflow-x:auto;">
-                <table class="data-table">
-                    <thead>
-                        <tr><th>Tarefa</th><th>SKU</th><th>Descrição</th><th style="text-align:right;">Qtd</th><th>Endereço</th><th>Status</th></tr>
-                    </thead>
-                    <tbody>
-                        ${armazenados.map(t => `<tr style="opacity:0.7;">
-                            <td style="font-family:monospace;">${t.id}</td>
-                            <td style="font-family:monospace;">${t.sku}</td>
-                            <td>${t.desc}</td>
-                            <td style="text-align:right;">${t.qtd.toLocaleString('pt-BR')}</td>
-                            <td style="font-family:monospace;">${t.enderecoSugerido}</td>
-                            <td><span style="padding:2px 8px; border-radius:12px; font-size:0.7rem; font-weight:600;
-                                background:rgba(16,185,129,0.12); color:#10b981;">ARMAZENADO</span></td>
-                        </tr>`).join('')}
-                    </tbody>
-                </table>
-            </div>
-        </div>` : ''}
-    `;
+    // Score = rua * 10000 + predio * 1000 + nivel * 10 + posicao
+    const score = e => {
+        const r = parseInt(e.rua)    || 0;
+        const p = parseInt(e.predio) || 0;
+        const n = parseInt(e.nivel)  || 0;
+        const a = parseInt(e.posicao || (e.apto || '01').slice(2)) || 0;
+        return r * 10000 + p * 1000 + n * 10 + a;
+    };
+
+    candidatos.sort((a, b) => score(a) - score(b));
+    const total = candidatos.length;
+
+    let slice;
+    if      (curvaABC === 'A') slice = candidatos.slice(0, Math.ceil(total * 0.15));
+    else if (curvaABC === 'B') slice = candidatos.slice(Math.ceil(total * 0.05), Math.ceil(total * 0.35));
+    else if (curvaABC === 'D') { candidatos.reverse(); slice = candidatos; }
+    else                        slice = candidatos.slice(Math.floor(total * 0.35), Math.floor(total * 0.70));
+
+    return (slice.length > 0 ? slice : candidatos).slice(0, 5);
 }
 
-window.confirmarPutaway = function (taskId) {
-    const tasks = getPutawayTasksMock();
-    const task = tasks.find(t => t.id === taskId);
-    if (task) {
-        task.status = 'ARMAZENADO';
-        localStorage.setItem('wms_putaway', JSON.stringify(tasks));
-        renderArmazenagem(document.getElementById('view-dynamic'));
-    }
+function _curvaLabel(c) {
+    return { A:'🔴 A', B:'🟠 B', C:'🟡 C', D:'⚪ D' }[c] || '⚪ ?';
+}
+function _curvaTip(c) {
+    return { A:'Alta rotatividade — perto da entrada', B:'Boa rotatividade — acesso rápido',
+             C:'Média rotatividade — zona central', D:'Baixa rotatividade — fundo do armazém' }[c]
+        || 'Curva não calculada';
+}
+
+async function renderArmazenagem(container) {
+    container.innerHTML = `<div style="padding:2.5rem;text-align:center;color:var(--text-secondary);">
+        <span class="material-icons-round" style="font-size:2rem;display:block;margin-bottom:.5rem;animation:spin 1s linear infinite;">sync</span>
+        Carregando tarefas de armazenagem...
+    </div>`;
+
+    // Load tasks (Firestore first, localStorage fallback)
+    let tasks = [];
+    try {
+        if (window.WmsStore) tasks = await WmsStore.listarPutaway();
+    } catch(e) { console.warn('[Putaway] Firestore:', e); }
+    if (tasks.length === 0) tasks = getPutawayTasksMock();
+
+    // Load ABC curves
+    const curvaBySku = {};
+    try {
+        if (window.WmsStore) {
+            const ac = await WmsStore.listarAcessosPicking();
+            ac.forEach(a => { curvaBySku[a.sku] = a.curva || 'C'; });
+        }
+    } catch(e) {}
+
+    const pendentes   = tasks.filter(t => t.status === 'PENDENTE');
+    const armazenados = tasks.filter(t => t.status === 'ARMAZENADO');
+    const prio = { 'ALTA':0, 'NORMAL':1, 'BAIXA':2 };
+    pendentes.sort((a,b) => (prio[a.prioridade]||1) - (prio[b.prioridade]||1));
+
+    const pc = p => p==='ALTA'?'#ef4444': p==='NORMAL'?'#3b82f6':'#94a3b8';
+
+    container.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:1.5rem;">
+        ${[['#f59e0b','pending_actions','Pendentes',pendentes.length],
+           ['#10b981','check_circle','Armazenados',armazenados.length],
+           ['#6366f1','inventory','Total Itens',tasks.reduce((s,t)=>s+(t.qtd||0),0).toLocaleString('pt-BR')]
+          ].map(([c,ic,lb,v])=>`
+        <div class="card" style="padding:1.1rem;display:flex;align-items:center;gap:.9rem;">
+            <div style="width:38px;height:38px;border-radius:9px;background:linear-gradient(135deg,${c},${c}aa);display:flex;align-items:center;justify-content:center;">
+                <span class="material-icons-round" style="color:#fff;font-size:1.15rem;">${ic}</span>
+            </div>
+            <div><div style="font-size:.72rem;color:var(--text-secondary);">${lb}</div>
+            <div style="font-size:1.3rem;font-weight:700;">${v}</div></div>
+        </div>`).join('')}
+    </div>
+
+    <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-header">
+            <h3 style="font-size:.95rem;font-weight:600;">
+                <span class="material-icons-round" style="font-size:1.1rem;vertical-align:middle;">system_update_alt</span>
+                Tarefas Pendentes de Armazenagem
+            </h3>
+            <button class="btn btn-secondary" style="font-size:.8rem;" onclick="renderArmazenagem(document.getElementById('view-dynamic'))">
+                <span class="material-icons-round" style="font-size:.9rem;">refresh</span> Atualizar
+            </button>
+        </div>
+        ${pendentes.length > 0 ? `
+        <div style="display:flex;flex-direction:column;gap:0;">
+            ${pendentes.map(t => {
+                const curva = curvaBySku[t.sku] || 'C';
+                const sugs  = _sugerirEnderecoPutaway(t.sku, curva, t.tipo);
+                const top   = sugs[0]?.id || t.enderecoSugerido || '—';
+                const allIds = JSON.stringify(sugs.map(s=>s.id));
+                return `
+            <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border-color);display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+                <div style="min-width:90px;">
+                    <div style="font-family:monospace;font-weight:700;font-size:.85rem;">${t.id}</div>
+                    <div style="font-size:.7rem;color:var(--text-secondary);">NF ${t.nf || '—'}</div>
+                </div>
+                <div style="flex:1;min-width:180px;">
+                    <div style="font-weight:600;font-size:.87rem;">${t.desc || t.sku}</div>
+                    <div style="font-size:.73rem;color:var(--text-secondary);">SKU: ${t.sku} &nbsp;•&nbsp; Lote: ${t.lote||'—'} &nbsp;•&nbsp; Qtd: <strong>${(t.qtd||0).toLocaleString('pt-BR')}</strong></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:.5rem;">
+                    <span style="font-size:.72rem;background:rgba(99,102,241,.12);color:#6366f1;padding:.2rem .55rem;border-radius:20px;font-weight:600;">${_curvaLabel(curva)}</span>
+                    <span style="font-size:.7rem;color:var(--text-secondary);" title="${_curvaTip(curva)}">${_curvaTip(curva)}</span>
+                </div>
+                <div style="min-width:130px;">
+                    <div style="font-size:.7rem;color:var(--text-secondary);margin-bottom:.2rem;">Endereço Sugerido</div>
+                    <div style="font-family:monospace;font-weight:700;color:#6366f1;font-size:.95rem;">${top}</div>
+                    ${sugs.length>1 ? `<div style="font-size:.68rem;color:var(--text-secondary);">+${sugs.length-1} alternativas</div>` : ''}
+                </div>
+                <div style="display:flex;align-items:center;gap:.4rem;">
+                    <span style="padding:2px 8px;border-radius:12px;font-size:.65rem;font-weight:600;
+                        background:${pc(t.prioridade)}18;color:${pc(t.prioridade)};">${t.prioridade||'NORMAL'}</span>
+                    <button class="btn btn-primary" style="padding:.3rem .85rem;font-size:.78rem;"
+                        onclick="openPutawayModal('${t.id}','${top}',${allIds})">
+                        <span class="material-icons-round" style="font-size:.9rem;">system_update_alt</span> Armazenar
+                    </button>
+                </div>
+            </div>`;
+            }).join('')}
+        </div>` : `
+        <div style="padding:3rem;text-align:center;color:var(--text-secondary);">
+            <span class="material-icons-round" style="font-size:2.5rem;opacity:.25;display:block;margin-bottom:.75rem;">done_all</span>
+            Todas as tarefas foram concluídas!
+        </div>`}
+    </div>
+
+    ${armazenados.length > 0 ? `
+    <div class="card">
+        <div class="card-header"><h3 style="font-size:.9rem;font-weight:600;">Armazenados Recentes</h3></div>
+        <div style="overflow-x:auto;">
+            <table class="data-table"><thead><tr>
+                <th>Tarefa</th><th>SKU</th><th>Descrição</th><th style="text-align:right;">Qtd</th>
+                <th>Endereço</th><th>Curva</th><th>Status</th>
+            </tr></thead><tbody>
+            ${armazenados.map(t=>`<tr style="opacity:.75;">
+                <td style="font-family:monospace;">${t.id}</td>
+                <td style="font-family:monospace;">${t.sku}</td>
+                <td>${t.desc||''}</td>
+                <td style="text-align:right;">${(t.qtd||0).toLocaleString('pt-BR')}</td>
+                <td style="font-family:monospace;color:#6366f1;font-weight:600;">${t.enderecoConfirmado||t.enderecoSugerido||'—'}</td>
+                <td><span style="font-size:.7rem;">${_curvaLabel(curvaBySku[t.sku]||'C')}</span></td>
+                <td><span style="padding:2px 8px;border-radius:12px;font-size:.7rem;font-weight:600;
+                    background:rgba(16,185,129,.12);color:#10b981;">ARMAZENADO</span></td>
+            </tr>`).join('')}
+            </tbody></table>
+        </div>
+    </div>` : ''}`;
+}
+
+window.openPutawayModal = function(taskId, topEnd, alternativas) {
+    const alt = Array.isArray(alternativas) ? alternativas : [];
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.style.display = 'flex';
+    overlay.id = 'modal-putaway';
+
+    overlay.innerHTML = `
+    <div class="modal-card" style="width:520px;">
+        <div class="modal-header">
+            <div>
+                <h3 style="font-size:1rem;font-weight:600;">Confirmar Armazenagem</h3>
+                <span style="font-size:.8rem;color:var(--text-secondary);">Tarefa ${taskId}</span>
+            </div>
+            <span class="material-icons-round" style="cursor:pointer;" onclick="document.getElementById('modal-putaway').remove()">close</span>
+        </div>
+        <div class="modal-body">
+            <div style="margin-bottom:1.25rem;">
+                <label style="font-size:.75rem;color:#6366f1;font-weight:700;display:block;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em;">
+                    Endereço de Destino
+                </label>
+                <select id="putaway-end-select" class="form-input" style="font-family:monospace;font-size:1rem;font-weight:700;">
+                    ${alt.length > 0 
+                        ? alt.map((e,i)=>`<option value="${e}" ${i===0?'selected':''}>${e}${i===0?' ★ Sugerido':''}</option>`).join('')
+                        : `<option value="${topEnd}">${topEnd}</option>`}
+                    <option value="_outro">📝 Digitar outro endereço...</option>
+                </select>
+            </div>
+            <div id="putaway-custom-wrap" style="display:none;margin-bottom:1rem;">
+                <label style="font-size:.75rem;color:var(--text-secondary);display:block;margin-bottom:.35rem;">Endereço manual</label>
+                <input id="putaway-custom-end" class="form-input" placeholder="ex: 02-03-0401" style="font-family:monospace;">
+            </div>
+            <div style="background:rgba(99,102,241,.08);border-radius:8px;padding:.85rem;font-size:.8rem;color:var(--text-secondary);line-height:1.6;">
+                <span class="material-icons-round" style="font-size:.95rem;vertical-align:middle;color:#6366f1;">info</span>
+                O endereço será marcado como <strong>OCUPADO</strong> e o estoque atualizado automaticamente.
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="document.getElementById('modal-putaway').remove()">Cancelar</button>
+            <button class="btn btn-primary" onclick="confirmarPutaway('${taskId}')">
+                <span class="material-icons-round" style="font-size:1rem;">check_circle</span> Confirmar Armazenagem
+            </button>
+        </div>
+    </div>`;
+
+    // Toggle custom input
+    overlay.querySelector('#putaway-end-select').addEventListener('change', function() {
+        overlay.querySelector('#putaway-custom-wrap').style.display = this.value === '_outro' ? 'block' : 'none';
+    });
+
+    document.body.appendChild(overlay);
 };
+
+window.confirmarPutaway = async function(taskId) {
+    const sel = document.getElementById('putaway-end-select');
+    let enderecoId = sel?.value;
+    if (enderecoId === '_outro') {
+        enderecoId = (document.getElementById('putaway-custom-end')?.value || '').trim();
+    }
+    if (!enderecoId) { alert('Selecione um endereço de destino.'); return; }
+
+    const btn = document.querySelector('#modal-putaway .btn-primary');
+    if (btn) { btn.disabled = true; btn.textContent = 'Processando...'; }
+
+    const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+
+    // 1. Update address status → OCUPADO in localStorage + Firestore
+    try {
+        const addrs = JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
+        const addr  = addrs.find(e => e.id === enderecoId);
+        if (addr) {
+            addr.status = 'OCUPADO';
+            localStorage.setItem('wms_mock_data' + suf, JSON.stringify(addrs));
+        }
+        if (window.WmsStore) await WmsStore.atualizarEndereco(enderecoId, { status: 'OCUPADO' });
+    } catch(e) { console.warn('[Putaway] updateAddress:', e); }
+
+    // 2. Update task status in Firestore + localStorage fallback
+    try {
+        if (window.WmsStore) {
+            await WmsStore.atualizarPutaway(taskId, { status: 'ARMAZENADO', enderecoConfirmado: enderecoId, armazenadoEm: new Date().toISOString() });
+        }
+        // Also update localStorage mock
+        const tasks = JSON.parse(localStorage.getItem('wms_putaway') || '[]');
+        const t = tasks.find(x => x.id === taskId);
+        if (t) { t.status = 'ARMAZENADO'; t.enderecoConfirmado = enderecoId; localStorage.setItem('wms_putaway', JSON.stringify(tasks)); }
+    } catch(e) { console.warn('[Putaway] updateTask:', e); }
+
+    // 3. Update wms_estoque
+    try {
+        const tasks = JSON.parse(localStorage.getItem('wms_putaway') || '[]');
+        const task  = tasks.find(x => x.id === taskId);
+        if (task) {
+            const estoque = JSON.parse(localStorage.getItem('wms_estoque' + suf) || '[]');
+            const existing = estoque.find(e => e.sku === task.sku && e.endereco === enderecoId);
+            if (existing) { existing.qtd = (existing.qtd || 0) + task.qtd; }
+            else { estoque.push({ sku: task.sku, desc: task.desc, endereco: enderecoId, qtd: task.qtd, lote: task.lote, status: 'NORMAL' }); }
+            localStorage.setItem('wms_estoque' + suf, JSON.stringify(estoque));
+        }
+    } catch(e) { console.warn('[Putaway] updateEstoque:', e); }
+
+    // 4. Register picking access for ABC curve
+    try {
+        const tasks2 = JSON.parse(localStorage.getItem('wms_putaway') || '[]');
+        const t2 = tasks2.find(x => x.id === taskId);
+        if (t2 && window.WmsStore) await WmsStore.registrarAcessoPicking(t2.sku);
+    } catch(e) {}
+
+    document.getElementById('modal-putaway')?.remove();
+    if (window.updateDashboardStats) updateDashboardStats();
+    renderArmazenagem(document.getElementById('view-dynamic'));
+};
+
+
+
 
 // ========================
 // 4. DEVOLUÇÃO (placeholder enriched)
