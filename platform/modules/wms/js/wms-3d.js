@@ -122,11 +122,28 @@ window.WMS3D = (function () {
             return;
         }
 
+        // ── Layout helpers ──────────────────────────────────────────────────
+        // Odd predios = LEFT side, Even predios = RIGHT side
         const ruas = [...new Set(addrs.map(a => a.rua))].sort();
-        const allPredios = [...new Set(addrs.map(a => a.predio))].sort((a,b) => +a - +b);
-        const maxNiv = Math.max(...addrs.map(a => +a.nivel));
+        // Paired predios (1&2, 3&4, 5&6...) face each other at the same Z
+        const maxPos    = Math.max(...addrs.map(a => +a.posicao), 1);
+        const maxPredioN= Math.max(...addrs.map(a => +a.predio), 1);
+        const numPairs  = Math.ceil(maxPredioN / 2);
+        const pairSlotZ = maxPos * PW + 0.3;   // Z span per pair + gap
         const WW = ruas.length * ZONE_W;
-        const WL = allPredios.length * (PW + 0.14);
+        const WL = numPairs * pairSlotZ;
+
+        // X helpers: odd=left, even=right
+        const xLeft  = (ri) => ri * ZONE_W + RD / 2;
+        const xRight = (ri) => ri * ZONE_W + RD + CW + RD / 2;
+
+        // Z helper: pairIdx * pairSlotZ + (posicao-1)*PW + PW/2
+        const cellZ = (predioNum, posicao) => {
+            const pairIdx = Math.floor((+predioNum - 1) / 2);
+            return pairIdx * pairSlotZ + (+posicao - 1) * PW + PW / 2;
+        };
+
+        const maxNiv = Math.max(...addrs.map(a => +a.nivel));
 
         // Floor + grid
         const floor = new THREE.Mesh(new THREE.PlaneGeometry(WW+12, WL+12), new THREE.MeshLambertMaterial({ color: 0x0a1122 }));
@@ -135,10 +152,11 @@ window.WMS3D = (function () {
         const grid = new THREE.GridHelper(Math.max(WW,WL)+14, 28, 0x1e293b, 0x1e293b);
         grid.position.set(WW/2, 0.01, WL/2); _scene.add(grid);
 
-        // Aisle stripes
+        // Aisle stripes — run full WL length, centered on aisle X
         ruas.forEach((_, ri) => {
+            const aisleX = ri * ZONE_W + RD + CW / 2;
             const m = new THREE.Mesh(new THREE.PlaneGeometry(CW-0.1, WL), new THREE.MeshLambertMaterial({ color:0x1e3a5f, transparent:true, opacity:0.5 }));
-            m.rotation.x = -Math.PI/2; m.position.set(ri*ZONE_W + ZONE_W/2, 0.02, WL/2);
+            m.rotation.x = -Math.PI/2; m.position.set(aisleX, 0.02, WL/2);
             _scene.add(m);
         });
 
@@ -154,15 +172,15 @@ window.WMS3D = (function () {
         const railMat = new THREE.MeshLambertMaterial({ color: 0x475569 });
         const railMesh = new THREE.InstancedMesh(railGeo, railMat, addrs.length);
 
-        // ── InstancedMesh: BEAMS (uprights) 4 per predio ────────────────────
-        const uniquePredios = [];
+        // ── InstancedMesh: BEAMS — 2 per predio (start and end of Z span) ──
+        const predioList = [];
         ruas.forEach((rua, ri) => {
             const rp = [...new Set(addrs.filter(a=>a.rua===rua).map(a=>a.predio))].sort((a,b)=>+a-+b);
-            rp.forEach((p, pi) => uniquePredios.push({ rua, predio: p, ruaIdx: ri, predioIdx: pi }));
+            rp.forEach(p => predioList.push({ rua, predio: p, ri }));
         });
         const beamGeo = new THREE.BoxGeometry(0.07, maxNiv*PH, 0.07);
         const beamMat = new THREE.MeshLambertMaterial({ color: 0x334155 });
-        const beamMesh = new THREE.InstancedMesh(beamGeo, beamMat, uniquePredios.length * 4);
+        const beamMesh = new THREE.InstancedMesh(beamGeo, beamMat, predioList.length * 4);
 
         const dummy = new THREE.Object3D();
         let iCell = 0, iRail = 0, iBeam = 0;
@@ -171,28 +189,32 @@ window.WMS3D = (function () {
             const ruaA = addrs.filter(a => a.rua === rua);
             const rp = [...new Set(ruaA.map(a => a.predio))].sort((a,b)=>+a-+b);
 
-            rp.forEach((predio, pi) => {
+            rp.forEach(predio => {
                 const pa = ruaA.filter(a => a.predio === predio);
                 const isEven = +predio % 2 === 0;
-                const sX = ruaIdx * ZONE_W + (isEven ? RD/2 + CW/2 : ZONE_W - RD/2 - CW/2);
-                const posZ = pi * (PW + 0.14) + PW/2;
 
-                // 4 uprights per predio
-                [[-PW/2+0.04,-RD/2+0.04],[-PW/2+0.04,RD/2-0.04],[PW/2-0.04,-RD/2+0.04],[PW/2-0.04,RD/2-0.04]].forEach(([dx,dz]) => {
-                    dummy.position.set(sX+dx, maxNiv*PH/2, posZ+dz);
+                // ── X: odd=left, even=right ─────────────────────────────────
+                const sX = isEven ? xRight(ruaIdx) : xLeft(ruaIdx);
+
+                // ── Uprights at start & end of this predio's Z span ─────────
+                const maxPosH = Math.max(...pa.map(a => +a.posicao), 1);
+                const zStart  = cellZ(predio, 1) - PW/2;
+                const zEnd    = cellZ(predio, maxPosH) + PW/2;
+                [[zStart,-RD/2+0.04],[zStart,RD/2-0.04],[zEnd,-RD/2+0.04],[zEnd,RD/2-0.04]].forEach(([bz,dz]) => {
+                    dummy.position.set(sX, maxNiv*PH/2, bz+dz);
                     dummy.updateMatrix(); beamMesh.setMatrixAt(iBeam++, dummy.matrix);
                 });
 
                 pa.forEach(loc => {
-                    const nv = +loc.nivel;
+                    const nv  = +loc.nivel;
+                    const cz  = cellZ(predio, loc.posicao);
                     // Rail
-                    dummy.position.set(sX, nv*PH, posZ);
+                    dummy.position.set(sX, nv*PH, cz);
                     dummy.updateMatrix(); railMesh.setMatrixAt(iRail++, dummy.matrix);
                     // Cell
-                    dummy.position.set(sX, (nv-0.5)*PH+0.07, posZ);
+                    dummy.position.set(sX, (nv-0.5)*PH+0.07, cz);
                     dummy.updateMatrix(); _cellInstMesh.setMatrixAt(iCell, dummy.matrix);
-                    const col = SC[loc._status] || SC.LIVRE;
-                    _cellInstMesh.setColorAt(iCell, col);
+                    _cellInstMesh.setColorAt(iCell, SC[loc._status] || SC.LIVRE);
                     _addrList[iCell] = loc;
                     iCell++;
                 });
@@ -200,13 +222,14 @@ window.WMS3D = (function () {
         });
 
         _cellInstMesh.instanceMatrix.needsUpdate = true;
-        _cellInstMesh.instanceColor.needsUpdate = true;
-        railMesh.instanceMatrix.needsUpdate = true;
-        beamMesh.instanceMatrix.needsUpdate = true;
+        _cellInstMesh.instanceColor.needsUpdate  = true;
+        railMesh.instanceMatrix.needsUpdate      = true;
+        beamMesh.instanceMatrix.needsUpdate      = true;
         _scene.add(_cellInstMesh); _scene.add(railMesh); _scene.add(beamMesh);
 
-        _camera.position.set(WW/2, maxNiv*PH*1.4, WL*1.8);
+        _camera.position.set(WW/2, maxNiv*PH*1.5, WL*1.6);
         _camera.lookAt(WW/2, (maxNiv*PH)/2, WL/2);
+
 
         _setupControls(canvas);
         _setupRaycaster(canvas, container);
