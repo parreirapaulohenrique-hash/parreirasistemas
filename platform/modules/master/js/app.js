@@ -1,4 +1,4 @@
-// app.js — Painel Admin | Parreira Sistemas
+﻿// app.js â€” Painel Admin | Parreira Sistemas
 // (usa window.mockTenants definido em data.js)
 const mockTenants = window.mockTenants || [];
 
@@ -7,15 +7,15 @@ const mockTenants = window.mockTenants || [];
 let dynamicTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
 let platformUsers  = JSON.parse(localStorage.getItem('platform_users_registry')  || '[]');
 
-// SEED: garante que os tenants base do sistema existam em dynamicTenants (source of truth única)
+// SEED: garante que os tenants base do sistema existam em dynamicTenants (source of truth Ãºnica)
 ;(function seedAndDedup() {
-    // Seed mockTenants que ainda não existem em dynamicTenants
+    // Seed mockTenants que ainda nÃ£o existem em dynamicTenants
     mockTenants.forEach(mock => {
         if (!dynamicTenants.find(t => t.id === mock.id)) {
             dynamicTenants.push({ ...mock, isDynamic: false });
         }
     });
-    // Dedup: mantém a última entrada de cada ID
+    // Dedup: mantÃ©m a Ãºltima entrada de cada ID
     const seen = new Map();
     dynamicTenants.forEach(t => seen.set(t.id, t));
     dynamicTenants = [...seen.values()];
@@ -25,7 +25,7 @@ let platformUsers  = JSON.parse(localStorage.getItem('platform_users_registry') 
 // --- SECURITY UPDATE (Ensure Owner Access, Remove Generic Admin) ---
 const SECURITY_KEY = 'sec_v1_paulo_only';
 if (!localStorage.getItem(SECURITY_KEY)) {
-    console.log('🔒 Aplicando atualização de segurança...');
+    console.log('ðŸ”’ Aplicando atualizaÃ§Ã£o de seguranÃ§a...');
 
     // 1. Remove insecure 'admin'
     platformUsers = platformUsers.filter(u => u.login !== 'admin');
@@ -47,7 +47,7 @@ if (!localStorage.getItem(SECURITY_KEY)) {
 
     localStorage.setItem('platform_users_registry', JSON.stringify(platformUsers));
     localStorage.setItem(SECURITY_KEY, 'true');
-    console.log('🔒 Usuário Admin configurado: paulo / master@2026');
+    console.log('ðŸ”’ UsuÃ¡rio Admin configurado: paulo / master@2026');
 }
 
 // --- Fallback Seeds ---
@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupForms();
     loadVersion();
 
-    // Listener do form de editar liberações de módulos
+    // Listener do form de editar liberaÃ§Ãµes de mÃ³dulos
     const editTenantForm = document.getElementById('editTenantForm');
     if (editTenantForm) {
         editTenantForm.addEventListener('submit', (e) => {
@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (base) dynamicTenants.push({ ...base, modules: newModules, isDynamic: true });
             }
             localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
-            alert('Libeções atualizadas com sucesso!');
+            alert('LibeÃ§Ãµes atualizadas com sucesso!');
             closeModal('editTenantModal');
             renderTenants();
         });
@@ -156,7 +156,7 @@ function closeModal(modalId) {
     }
 }
 
-// Única fonte de verdade — tudo está em dynamicTenants
+// Ãšnica fonte de verdade â€” tudo estÃ¡ em dynamicTenants
 function getAllTenants() {
     return dynamicTenants;
 }
@@ -203,7 +203,7 @@ function renderTenants() {
                 <span class="status-badge ${statusClass}">Ativo</span>
             </td>
             <td style="text-align: right; display:flex; gap:.5rem; justify-content:flex-end;">
-                <button class="action-btn" title="Editar Liberações" onclick="window.editTenant('${tenant.id}')">
+                <button class="action-btn" title="Editar LiberaÃ§Ãµes" onclick="window.editTenant('${tenant.id}')">
                     <span class="material-icons-round">edit</span>
                 </button>
                 ${(tenant.modules || []).includes('wms') ? `
@@ -258,7 +258,7 @@ function setupForms() {
             const id = idInput.value.trim().toLowerCase();
 
             if (getAllTenants().find(t => t.id === id)) {
-                alert('ID já existe!');
+                alert('ID jÃ¡ existe!');
                 return;
             }
 
@@ -275,12 +275,12 @@ function setupForms() {
             dynamicTenants.push(newTenant);
             localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
 
-            // Cria entrada de licença automaticamente
+            // Cria entrada de licenÃ§a automaticamente
             if (window.LicencasManager) {
                 window.LicencasManager.registrarTenant(newTenant.id, newTenant.name);
             }
 
-            alert('Cliente cadastrado com sucesso! A licença foi criada em "Controle de Licenças".');
+            alert('Cliente cadastrado com sucesso! A licenÃ§a foi criada em "Controle de LicenÃ§as".');
             closeModal('tenantModal'); // Revert to Modal Close
             renderTenants(); // Refresh Table
         });
@@ -320,14 +320,14 @@ function setupForms() {
                 document.getElementById('userLogin').removeAttribute('readonly');
             } else {
                 if (platformUsers.find(u => u.login === login && u.tenant === tenant)) {
-                    alert('Usuário já existe nesta empresa!');
+                    alert('UsuÃ¡rio jÃ¡ existe nesta empresa!');
                     return;
                 }
                 platformUsers.push(newUser);
             }
 
             localStorage.setItem('platform_users_registry', JSON.stringify(platformUsers));
-            alert(isEdit ? 'Usuário atualizado com sucesso!' : 'Usuário cadastrado com sucesso!');
+            alert(isEdit ? 'UsuÃ¡rio atualizado com sucesso!' : 'UsuÃ¡rio cadastrado com sucesso!');
             closeModal('userModal');
             renderUsers();
         });
@@ -349,7 +349,7 @@ function editTenant(tenantId) {
     const allTenants = getAllTenants();
     const tenant = allTenants.find(t => t.id === tenantId);
     if (!tenant) {
-        alert('Tenant não encontrado!');
+        alert('Tenant nÃ£o encontrado!');
         return;
     }
 
@@ -372,7 +372,7 @@ function editTenant(tenantId) {
 function editUser(login, tenant) {
     const user = platformUsers.find(u => u.login === login && u.tenant === tenant);
     if (!user) {
-        alert('Usuário não encontrado!');
+        alert('UsuÃ¡rio nÃ£o encontrado!');
         return;
     }
 
@@ -395,338 +395,321 @@ function editUser(login, tenant) {
     openModal('userModal');
 }
 
-// =============================================================
-// WMS PROVISIONING — Admin Master configura WMS de cada tenant
-// =============================================================
+// ============================================================
+// PROVISIONING â€” Admin Master provisiona cada tenant
+// Duas seÃ§Ãµes independentes:
+//   1) ConfiguraÃ§Ã£o WMS (Maxdata + CNPJs)
+//   2) Acesso do Tenant (1 usuÃ¡rio admin para todos os mÃ³dulos)
+// ============================================================
 
 window.abrirWmsConfig = async function (tenantId) {
-    // Remove painel anterior se existir
-    const old = document.getElementById('wms-provisioning-panel');
+    const old = document.getElementById('prov-panel');
     if (old) old.remove();
 
     const tenant = getAllTenants().find(t => t.id === tenantId);
-    if (!tenant) { alert('Tenant não encontrado.'); return; }
+    if (!tenant) { alert('Tenant nÃ£o encontrado.'); return; }
 
-    // Carrega config existente do Firestore
-    let wmsInt = {}, wmsCfg = {};
+    // MÃ³dulos habilitados com nome amigÃ¡vel
+    const modNames = { wms:'WMS', dispatch:'Despacho', erp:'ERP', 'sales-force':'Vendas', master:'Master' };
+    const enabledMods = (tenant.modules || []).map(m => modNames[m] || m);
+
+    // Carrega configs existentes do Firestore
+    let wmsInt = {}, wmsCfg = {}, tenantAdmin = null;
     try {
         if (typeof firebase !== 'undefined') {
             const db = firebase.firestore();
-            const [intSnap, cfgSnap] = await Promise.all([
+            const [intSnap, cfgSnap, usersSnap] = await Promise.all([
                 db.collection('tenants').doc(tenantId).collection('wms_config').doc('integration').get(),
-                db.collection('tenants').doc(tenantId).collection('wms_config').doc('config').get()
+                db.collection('tenants').doc(tenantId).collection('wms_config').doc('config').get(),
+                db.collection('tenants').doc(tenantId).collection('users').where('role','==','admin').limit(1).get()
             ]);
-            if (intSnap.exists) wmsInt = intSnap.data();
-            if (cfgSnap.exists) wmsCfg = cfgSnap.data();
+            if (intSnap.exists)  wmsInt    = intSnap.data();
+            if (cfgSnap.exists)  wmsCfg    = cfgSnap.data();
+            if (!usersSnap.empty) tenantAdmin = usersSnap.docs[0].data();
         }
-    } catch(e) { console.warn('Firestore read:', e.message); }
+    } catch(e) { console.warn('[Prov] Firestore read:', e.message); }
 
-    // Cria painel lateral
+    // Procura admin local se nÃ£o achou no Firestore
+    if (!tenantAdmin) {
+        tenantAdmin = platformUsers.find(u => u.tenant === tenantId && u.role === 'admin') || null;
+    }
+
+    const hasWms = (tenant.modules || []).includes('wms');
+
+    // â”€â”€ painel lateral â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const panel = document.createElement('div');
-    panel.id = 'wms-provisioning-panel';
-    panel.style.cssText = `position:fixed;top:0;right:0;width:480px;height:100vh;background:var(--bg-card,#1e293b);
-        border-left:1px solid var(--border,#334155);z-index:9999;overflow-y:auto;padding:2rem;
-        box-shadow:-8px 0 32px rgba(0,0,0,.4);display:flex;flex-direction:column;gap:1.5rem;`;
+    panel.id = 'prov-panel';
+    panel.style.cssText = [
+        'position:fixed;top:0;right:0;width:500px;height:100vh',
+        'background:var(--bg-card,#1e293b)',
+        'border-left:1px solid var(--border,#334155)',
+        'z-index:9999;overflow-y:auto;padding:0',
+        'box-shadow:-8px 0 40px rgba(0,0,0,.5)',
+        'display:flex;flex-direction:column'
+    ].join(';');
 
     panel.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;">
+    <!-- Header -->
+    <div style="padding:1.5rem 1.75rem 1rem;border-bottom:1px solid var(--border,#334155);
+        background:var(--bg-dark,#0f172a);position:sticky;top:0;z-index:10;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
             <div>
-                <div style="display:flex;align-items:center;gap:.75rem;">
-                    <span class="material-icons-round" style="color:#6366f1;font-size:1.5rem;">warehouse</span>
-                    <h2 style="font-size:1.1rem;font-weight:700;margin:0;">Configurar WMS</h2>
+                <h2 style="font-size:1.05rem;font-weight:700;margin:0 0 .25rem;">
+                    ${tenant.name}
+                </h2>
+                <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.4rem;">
+                    ${enabledMods.map(m => `
+                        <span style="font-size:.68rem;padding:.15rem .5rem;border-radius:4px;
+                            background:rgba(99,102,241,.18);color:#a5b4fc;font-weight:600;">${m}</span>
+                    `).join('')}
                 </div>
-                <p style="font-size:.78rem;color:var(--text-secondary,#94a3b8);margin:.25rem 0 0 2.3rem;">${tenant.name} (${tenantId})</p>
             </div>
-            <button onclick="document.getElementById('wms-provisioning-panel').remove()"
-                style="background:none;border:none;cursor:pointer;color:var(--text-secondary,#94a3b8);">
-                <span class="material-icons-round" style="font-size:1.5rem;">close</span>
+            <button onclick="document.getElementById('prov-panel').remove()"
+                style="background:none;border:none;cursor:pointer;color:var(--text-secondary,#94a3b8);margin-top:-.25rem;">
+                <span class="material-icons-round" style="font-size:1.4rem;">close</span>
             </button>
         </div>
+    </div>
 
-        <!-- Maxdata Integration -->
-        <div style="background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:1.25rem;">
-            <h3 style="font-size:.85rem;font-weight:700;margin:0 0 1rem;color:#6366f1;
-                display:flex;align-items:center;gap:.5rem;">
-                <span class="material-icons-round" style="font-size:1rem;">integration_instructions</span>
-                Integração Maxdata ERP
-            </h3>
-            <div style="display:flex;flex-direction:column;gap:.75rem;">
+    <!-- Corpo rolÃ¡vel -->
+    <div style="padding:1.5rem 1.75rem;display:flex;flex-direction:column;gap:1.75rem;flex:1;">
+
+        <!-- â•â•â• SEÃ‡ÃƒO 1: ACESSO DO TENANT â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+        <section>
+            <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.9rem;">
+                <span class="material-icons-round" style="font-size:1.2rem;color:#f59e0b;">admin_panel_settings</span>
                 <div>
-                    <label style="font-size:.72rem;color:var(--text-secondary,#94a3b8);font-weight:600;display:block;margin-bottom:.3rem;text-transform:uppercase;">URL Base da API</label>
-                    <input id="wms-baseUrl" type="text" value="${wmsInt.baseUrl || ''}"
-                        placeholder="http://servidor:porta/v2"
-                        style="width:100%;padding:.6rem .8rem;background:var(--bg-dark,#0f172a);border:1px solid var(--border,#334155);border-radius:6px;color:inherit;font-size:.85rem;box-sizing:border-box;">
+                    <h3 style="font-size:.9rem;font-weight:700;margin:0;">Acesso do Tenant</h3>
+                    <p style="font-size:.72rem;color:var(--text-secondary,#94a3b8);margin:.1rem 0 0;">
+                        1 usuÃ¡rio administrador â€” acessa todos os mÃ³dulos liberados
+                    </p>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
-                    <div>
-                        <label style="font-size:.72rem;color:var(--text-secondary,#94a3b8);font-weight:600;display:block;margin-bottom:.3rem;text-transform:uppercase;">Empresa (empId)</label>
-                        <input id="wms-empId" type="number" value="${wmsInt.empId || ''}" placeholder="1"
-                            style="width:100%;padding:.6rem .8rem;background:var(--bg-dark,#0f172a);border:1px solid var(--border,#334155);border-radius:6px;color:inherit;font-size:.85rem;box-sizing:border-box;">
+            </div>
+
+            ${tenantAdmin ? `
+            <!-- Admin jÃ¡ existe -->
+            <div style="background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.2);
+                border-radius:10px;padding:1rem;margin-bottom:1rem;">
+                <div style="display:flex;align-items:center;gap:.75rem;">
+                    <span class="material-icons-round" style="color:#10b981;font-size:1.6rem;">verified_user</span>
+                    <div style="flex:1;">
+                        <div style="font-weight:700;font-size:.9rem;">${tenantAdmin.name}</div>
+                        <div style="font-size:.75rem;color:var(--text-secondary,#94a3b8);font-family:monospace;">@${tenantAdmin.login}</div>
                     </div>
-                    <div>
-                        <label style="font-size:.72rem;color:var(--text-secondary,#94a3b8);font-weight:600;display:block;margin-bottom:.3rem;text-transform:uppercase;">Conector</label>
-                        <select id="wms-connector" style="width:100%;padding:.6rem .8rem;background:var(--bg-dark,#0f172a);border:1px solid var(--border,#334155);border-radius:6px;color:inherit;font-size:.85rem;box-sizing:border-box;">
-                            <option value="maxdata" ${(wmsInt.connectorId||'maxdata')==='maxdata'?'selected':''}>Maxdata ERP</option>
-                            <option value="rest-api" ${wmsInt.connectorId==='rest-api'?'selected':''}>REST API Genérica</option>
-                            <option value="standalone" ${wmsInt.connectorId==='standalone'?'selected':''}>Standalone</option>
-                        </select>
-                    </div>
-                </div>
-                <div>
-                    <label style="font-size:.72rem;color:var(--text-secondary,#94a3b8);font-weight:600;display:block;margin-bottom:.3rem;text-transform:uppercase;">Terminal (código)</label>
-                    <input id="wms-terminal" type="text" value="${wmsInt.terminal || ''}"
-                        placeholder="Código do terminal cadastrado no Maxdata Manager"
-                        style="width:100%;padding:.6rem .8rem;background:var(--bg-dark,#0f172a);border:1px solid var(--border,#334155);border-radius:6px;color:inherit;font-size:.85rem;box-sizing:border-box;">
-                </div>
-                <div style="display:flex;gap:.5rem;align-items:center;">
-                    <button onclick="window.testarWmsConexao('${tenantId}')"
-                        style="padding:.5rem 1rem;background:none;border:1px solid #6366f1;color:#6366f1;border-radius:6px;cursor:pointer;font-size:.82rem;display:flex;align-items:center;gap:.4rem;">
-                        <span class="material-icons-round" style="font-size:1rem;">wifi</span> Testar Conexão
+                    <button onclick="window._provEditarAdmin('${tenantId}')"
+                        style="background:none;border:1px solid var(--border,#334155);border-radius:6px;
+                            padding:.35rem .7rem;cursor:pointer;color:var(--text-secondary,#94a3b8);font-size:.78rem;">
+                        Editar
                     </button>
-                    <span id="wms-test-result" style="font-size:.78rem;"></span>
+                </div>
+                <div style="margin-top:.6rem;padding-top:.6rem;border-top:1px solid rgba(255,255,255,.06);
+                    font-size:.72rem;color:var(--text-secondary,#94a3b8);">
+                    âœ“ Acesso habilitado para: <strong>${enabledMods.join(', ')}</strong>
                 </div>
             </div>
-        </div>
-
-        <!-- CNPJs -->
-        <div style="background:rgba(255,255,255,.03);border:1px solid var(--border,#334155);border-radius:10px;padding:1.25rem;">
-            <h3 style="font-size:.85rem;font-weight:700;margin:0 0 1rem;display:flex;align-items:center;gap:.5rem;">
-                <span class="material-icons-round" style="font-size:1rem;">business</span>
-                CNPJs Destinatários
-            </h3>
-            <div style="margin-bottom:.75rem;">
-                <input id="wms-cnpj-input" type="text" placeholder="CNPJ — ex: 12.345.678/0001-90"
-                    style="width:calc(100% - 90px);padding:.6rem .8rem;background:var(--bg-dark,#0f172a);border:1px solid var(--border,#334155);border-radius:6px 0 0 6px;color:inherit;font-size:.85rem;box-sizing:border-box;">
-                <button onclick="window._wmsAddCnpj()"
-                    style="width:82px;padding:.6rem;background:#6366f1;border:none;color:white;border-radius:0 6px 6px 0;cursor:pointer;font-size:.82rem;">
-                    + Adicionar
-                </button>
-            </div>
-            <div id="wms-cnpjs-list" style="display:flex;flex-direction:column;gap:.4rem;min-height:40px;"></div>
-        </div>
-
-        <!-- Usuários WMS -->
-        <div style="background:rgba(255,255,255,.03);border:1px solid var(--border,#334155);border-radius:10px;padding:1.25rem;">
-            <h3 style="font-size:.85rem;font-weight:700;margin:0 0 1rem;display:flex;align-items:center;gap:.5rem;">
-                <span class="material-icons-round" style="font-size:1rem;">group</span>
-                Usuários do WMS
-            </h3>
-            <!-- Lista de usuários existentes -->
-            <div id="wms-users-list" style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:1rem;min-height:32px;"></div>
-            <!-- Formulário de novo usuário -->
-            <details style="border:1px solid var(--border,#334155);border-radius:8px;overflow:hidden;">
-                <summary style="padding:.6rem .75rem;cursor:pointer;font-size:.82rem;font-weight:600;
-                    background:rgba(255,255,255,.03);list-style:none;display:flex;align-items:center;gap:.4rem;">
-                    <span class="material-icons-round" style="font-size:1rem;color:#6366f1;">person_add</span>
-                    Adicionar novo usuário
-                </summary>
-                <div style="padding:.9rem;display:flex;flex-direction:column;gap:.6rem;">
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;">
+            <div id="prov-admin-form" style="display:none;">` : `
+            <!-- Admin nÃ£o existe ainda -->
+            <div id="prov-admin-form">`}
+                <div style="background:rgba(255,255,255,.03);border:1px solid var(--border,#334155);
+                    border-radius:10px;padding:1rem;display:flex;flex-direction:column;gap:.7rem;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;">
                         <div>
-                            <label style="font-size:.68rem;color:var(--text-secondary,#94a3b8);font-weight:600;display:block;margin-bottom:.25rem;text-transform:uppercase;">Nome completo</label>
-                            <input id="wms-user-name" type="text" placeholder="Ex: João Silva"
-                                style="width:100%;padding:.5rem .7rem;background:var(--bg-dark,#0f172a);border:1px solid var(--border,#334155);border-radius:6px;color:inherit;font-size:.82rem;box-sizing:border-box;">
+                            <label class="prov-label">Nome completo</label>
+                            <input id="prov-admin-name" type="text"
+                                value="${tenantAdmin?.name || ''}" placeholder="Ex: JoÃ£o Silva"
+                                class="prov-input">
                         </div>
                         <div>
-                            <label style="font-size:.68rem;color:var(--text-secondary,#94a3b8);font-weight:600;display:block;margin-bottom:.25rem;text-transform:uppercase;">Login</label>
-                            <input id="wms-user-login" type="text" placeholder="Ex: joao.silva"
-                                style="width:100%;padding:.5rem .7rem;background:var(--bg-dark,#0f172a);border:1px solid var(--border,#334155);border-radius:6px;color:inherit;font-size:.82rem;box-sizing:border-box;">
+                            <label class="prov-label">Login</label>
+                            <input id="prov-admin-login" type="text"
+                                value="${tenantAdmin?.login || ''}" placeholder="Ex: joao.silva"
+                                ${tenantAdmin ? 'readonly style="opacity:.6;"' : ''}
+                                class="prov-input">
                         </div>
                     </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;">
+                    <div>
+                        <label class="prov-label">Senha</label>
+                        <input id="prov-admin-pass" type="text"
+                            value="${tenantAdmin?.pass || ''}" placeholder="Senha de acesso"
+                            class="prov-input" style="width:100%;box-sizing:border-box;">
+                    </div>
+                    <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);
+                        border-radius:6px;padding:.6rem .75rem;font-size:.75rem;color:#fbbf24;
+                        display:flex;align-items:center;gap:.4rem;">
+                        <span class="material-icons-round" style="font-size:.95rem;">info</span>
+                        Demais usuÃ¡rios (operadores, supervisores) sÃ£o gerenciados dentro do mÃ³dulo.
+                    </div>
+                    <button onclick="window._provSalvarAdmin('${tenantId}')"
+                        style="padding:.6rem 1rem;background:#f59e0b;border:none;color:#0f172a;
+                            border-radius:7px;cursor:pointer;font-weight:700;font-size:.85rem;
+                            display:flex;align-items:center;justify-content:center;gap:.4rem;align-self:flex-start;">
+                        <span class="material-icons-round" style="font-size:1rem;">save</span>
+                        Salvar Acesso
+                    </button>
+                    <div id="prov-admin-feedback" style="font-size:.78rem;min-height:1rem;"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- â•â•â• SEÃ‡ÃƒO 2: CONFIGURAÃ‡ÃƒO WMS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+        ${hasWms ? `
+        <section>
+            <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.9rem;">
+                <span class="material-icons-round" style="font-size:1.2rem;color:#6366f1;">integration_instructions</span>
+                <div>
+                    <h3 style="font-size:.9rem;font-weight:700;margin:0;">ConfiguraÃ§Ã£o WMS</h3>
+                    <p style="font-size:.72rem;color:var(--text-secondary,#94a3b8);margin:.1rem 0 0;">
+                        IntegraÃ§Ã£o Maxdata ERP e CNPJs destinatÃ¡rios
+                    </p>
+                </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:1rem;">
+
+                <!-- Maxdata -->
+                <div style="background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.2);
+                    border-radius:10px;padding:1rem;display:flex;flex-direction:column;gap:.7rem;">
+                    <div style="font-size:.78rem;font-weight:700;color:#a5b4fc;text-transform:uppercase;letter-spacing:.05em;">
+                        Maxdata ERP
+                    </div>
+                    <div>
+                        <label class="prov-label">URL Base da API</label>
+                        <input id="wms-baseUrl" type="text" value="${wmsInt.baseUrl || ''}"
+                            placeholder="http://servidor:porta/v2" class="prov-input"
+                            style="width:100%;box-sizing:border-box;">
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;">
                         <div>
-                            <label style="font-size:.68rem;color:var(--text-secondary,#94a3b8);font-weight:600;display:block;margin-bottom:.25rem;text-transform:uppercase;">Senha inicial</label>
-                            <input id="wms-user-pass" type="text" placeholder="Senha"
-                                style="width:100%;padding:.5rem .7rem;background:var(--bg-dark,#0f172a);border:1px solid var(--border,#334155);border-radius:6px;color:inherit;font-size:.82rem;box-sizing:border-box;">
+                            <label class="prov-label">Empresa (empId)</label>
+                            <input id="wms-empId" type="number" value="${wmsInt.empId || ''}"
+                                placeholder="1" class="prov-input">
                         </div>
                         <div>
-                            <label style="font-size:.68rem;color:var(--text-secondary,#94a3b8);font-weight:600;display:block;margin-bottom:.25rem;text-transform:uppercase;">Perfil</label>
-                            <select id="wms-user-role"
-                                style="width:100%;padding:.5rem .7rem;background:var(--bg-dark,#0f172a);border:1px solid var(--border,#334155);border-radius:6px;color:inherit;font-size:.82rem;box-sizing:border-box;">
-                                <option value="admin">Admin WMS</option>
-                                <option value="supervisor">Supervisor</option>
-                                <option value="operacional" selected>Operacional</option>
+                            <label class="prov-label">Conector</label>
+                            <select id="wms-connector" class="prov-input">
+                                <option value="maxdata" ${(wmsInt.connectorId||'maxdata')==='maxdata'?'selected':''}>Maxdata ERP</option>
+                                <option value="rest-api" ${wmsInt.connectorId==='rest-api'?'selected':''}>REST API GenÃ©rica</option>
+                                <option value="standalone" ${wmsInt.connectorId==='standalone'?'selected':''}>Standalone</option>
                             </select>
                         </div>
                     </div>
-                    <button onclick="window._wmsAdicionarUsuario('${tenantId}')"
-                        style="padding:.5rem 1rem;background:#6366f1;border:none;color:white;border-radius:6px;cursor:pointer;font-size:.82rem;font-weight:600;align-self:flex-start;">
-                        + Criar Usuário
-                    </button>
-                    <div id="wms-user-feedback" style="font-size:.75rem;min-height:1rem;"></div>
+                    <div>
+                        <label class="prov-label">Terminal</label>
+                        <input id="wms-terminal" type="text" value="${wmsInt.terminal || ''}"
+                            placeholder="CÃ³digo do terminal no Maxdata Manager"
+                            class="prov-input" style="width:100%;box-sizing:border-box;">
+                    </div>
+                    <div style="display:flex;align-items:center;gap:.6rem;">
+                        <button onclick="window.testarWmsConexao('${tenantId}')"
+                            style="padding:.45rem .9rem;background:none;border:1px solid #6366f1;color:#6366f1;
+                                border-radius:6px;cursor:pointer;font-size:.8rem;display:flex;align-items:center;gap:.35rem;">
+                            <span class="material-icons-round" style="font-size:.95rem;">wifi</span>Testar ConexÃ£o
+                        </button>
+                        <span id="wms-test-result" style="font-size:.78rem;"></span>
+                    </div>
                 </div>
-            </details>
-        </div>
 
-        <!-- Ações -->
-        <div style="display:flex;gap:.75rem;margin-top:auto;">
-            <button onclick="window.salvarWmsConfig('${tenantId}')"
-                style="flex:1;padding:.75rem;background:#6366f1;border:none;color:white;border-radius:8px;cursor:pointer;font-weight:600;font-size:.9rem;display:flex;align-items:center;justify-content:center;gap:.5rem;">
-                <span class="material-icons-round" style="font-size:1rem;">save</span> Salvar Integração
-            </button>
-            <button onclick="document.getElementById('wms-provisioning-panel').remove()"
-                style="padding:.75rem 1.25rem;background:none;border:1px solid var(--border,#334155);color:var(--text-secondary,#94a3b8);border-radius:8px;cursor:pointer;font-size:.9rem;">
-                Fechar
-            </button>
+                <!-- CNPJs -->
+                <div style="background:rgba(255,255,255,.03);border:1px solid var(--border,#334155);
+                    border-radius:10px;padding:1rem;display:flex;flex-direction:column;gap:.6rem;">
+                    <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">
+                        CNPJs DestinatÃ¡rios
+                    </div>
+                    <div style="display:flex;">
+                        <input id="wms-cnpj-input" type="text" placeholder="CNPJ â€” ex: 12.345.678/0001-90"
+                            style="flex:1;padding:.55rem .75rem;background:var(--bg-dark,#0f172a);
+                                border:1px solid var(--border,#334155);border-radius:6px 0 0 6px;
+                                color:inherit;font-size:.82rem;">
+                        <button onclick="window._wmsAddCnpj()"
+                            style="padding:.55rem .9rem;background:#6366f1;border:none;color:white;
+                                border-radius:0 6px 6px 0;cursor:pointer;font-size:.82rem;white-space:nowrap;">
+                            + Adicionar
+                        </button>
+                    </div>
+                    <div id="wms-cnpjs-list" style="display:flex;flex-direction:column;gap:.35rem;min-height:36px;"></div>
+                </div>
+
+                <!-- BotÃ£o salvar WMS -->
+                <button onclick="window.salvarWmsConfig('${tenantId}')"
+                    style="padding:.7rem 1rem;background:#6366f1;border:none;color:white;border-radius:8px;
+                        cursor:pointer;font-weight:700;font-size:.88rem;display:flex;align-items:center;
+                        justify-content:center;gap:.4rem;">
+                    <span class="material-icons-round" style="font-size:1rem;">save</span>Salvar ConfiguraÃ§Ã£o WMS
+                </button>
+                <div id="wms-save-feedback" style="font-size:.78rem;min-height:1rem;text-align:center;"></div>
+            </div>
+        </section>
+        ` : `
+        <div style="background:rgba(255,255,255,.03);border:1px dashed var(--border,#334155);
+            border-radius:10px;padding:1.25rem;text-align:center;color:var(--text-secondary,#94a3b8);font-size:.82rem;">
+            <span class="material-icons-round" style="font-size:1.5rem;display:block;margin-bottom:.4rem;">warehouse</span>
+            MÃ³dulo WMS nÃ£o estÃ¡ habilitado para este tenant.<br>
+            <a onclick="window.editTenant('${tenantId}')" style="color:#6366f1;cursor:pointer;font-size:.78rem;">
+                Clique aqui para habilitar â†’
+            </a>
         </div>
-        <div id="wms-save-feedback" style="font-size:.8rem;min-height:1rem;text-align:center;"></div>
+        `}
+
+    </div><!-- fim corpo -->
+
+    <style>
+        .prov-label {
+            font-size:.68rem;color:var(--text-secondary,#94a3b8);font-weight:600;
+            display:block;margin-bottom:.25rem;text-transform:uppercase;letter-spacing:.04em;
+        }
+        .prov-input {
+            width:100%;padding:.55rem .75rem;background:var(--bg-dark,#0f172a);
+            border:1px solid var(--border,#334155);border-radius:6px;
+            color:inherit;font-size:.83rem;box-sizing:border-box;
+        }
+        .prov-input:focus { outline:none;border-color:#6366f1; }
+    </style>
     `;
 
     document.body.appendChild(panel);
 
-    // Carrega CNPJs existentes
+    // â”€â”€ Inicializa CNPJs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const cnpjs = wmsCfg.cnpjs || [];
     _wmsCnpjs = [...cnpjs];
     _renderWmsCnpjs();
-
-    // Carrega usuários existentes do tenant
-    _renderWmsUsuarios(tenantId);
 };
 
-let _wmsCnpjs = [];
-function _renderWmsCnpjs() {
-    const el = document.getElementById('wms-cnpjs-list');
-    if (!el) return;
-    if (_wmsCnpjs.length === 0) {
-        el.innerHTML = '<span style="font-size:.78rem;color:var(--text-secondary,#94a3b8);">Nenhum CNPJ cadastrado.</span>';
-        return;
-    }
-    el.innerHTML = _wmsCnpjs.map((c, i) => `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;
-            background:var(--bg-dark,#0f172a);border-radius:6px;font-size:.82rem;">
-            <span style="font-family:monospace;">${c.cnpj}</span>
-            <span style="color:var(--text-secondary,#94a3b8);font-size:.75rem;flex:1;margin-left:.75rem;">${c.razaoSocial || ''}</span>
-            ${c.principal ? '<span style="background:rgba(16,185,129,.15);color:#10b981;font-size:.7rem;padding:.1rem .4rem;border-radius:4px;">PRINCIPAL</span>' : ''}
-            <button onclick="_wmsCnpjs.splice(${i},1);_renderWmsCnpjs()"
-                style="background:none;border:none;cursor:pointer;color:#ef4444;margin-left:.5rem;padding:0;">
-                <span class="material-icons-round" style="font-size:1rem;">delete</span>
-            </button>
-        </div>
-    `).join('');
-}
-
-window._wmsAddCnpj = function() {
-    const input = document.getElementById('wms-cnpj-input');
-    const val = input.value.trim();
-    if (!val) return;
-    const razao = prompt('Razão Social (opcional):') || '';
-    const principal = _wmsCnpjs.length === 0;
-    _wmsCnpjs.push({ cnpj: val, razaoSocial: razao, principal });
-    input.value = '';
-    _renderWmsCnpjs();
+// Mostra o form de ediÃ§Ã£o quando o admin jÃ¡ existe
+window._provEditarAdmin = function(tenantId) {
+    const form = document.getElementById('prov-admin-form');
+    if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
 };
 
-window.testarWmsConexao = async function(tenantId) {
-    const result = document.getElementById('wms-test-result');
-    const baseUrl  = (document.getElementById('wms-baseUrl')?.value  || '').trim();
-    const empId    = Number(document.getElementById('wms-empId')?.value  || 0);
-    const terminal = (document.getElementById('wms-terminal')?.value || '').trim();
-    if (!baseUrl || !empId || !terminal) {
-        if (result) { result.style.color='#ef4444'; result.textContent='❌ Preencha URL, empId e Terminal.'; } return;
-    }
-    if (result) { result.style.color='#94a3b8'; result.textContent='Testando...'; }
-    try {
-        const resp = await fetch(`${baseUrl.replace(/\/$/, '')}/auth`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ empId, terminal }),
-            signal: AbortSignal.timeout(10000)
-        });
-        const data = resp.ok ? await resp.json() : null;
-        if (data?.token) {
-            if (result) { result.style.color='#10b981'; result.textContent='✅ Autenticação Maxdata OK!'; }
-        } else {
-            if (result) { result.style.color='#ef4444'; result.textContent=`❌ HTTP ${resp.status}`; }
-        }
-    } catch(e) {
-        if (result) { result.style.color='#ef4444'; result.textContent=`❌ ${e.message}`; }
-    }
-};
-
-window.salvarWmsConfig = async function(tenantId) {
-    const feedback = document.getElementById('wms-save-feedback');
-    const baseUrl   = (document.getElementById('wms-baseUrl')?.value   || '').trim();
-    const empId     = Number(document.getElementById('wms-empId')?.value  || 0);
-    const terminal  = (document.getElementById('wms-terminal')?.value  || '').trim();
-    const connector = document.getElementById('wms-connector')?.value  || 'maxdata';
-
-    const integrationData = { connectorId: connector, baseUrl, empId, terminal, updatedAt: new Date().toISOString() };
-    const configData      = { cnpjs: _wmsCnpjs, updatedAt: new Date().toISOString() };
-
-    if (feedback) { feedback.style.color='#94a3b8'; feedback.textContent='Salvando...'; }
-
-    try {
-        if (typeof firebase !== 'undefined') {
-            const db = firebase.firestore();
-            await Promise.all([
-                db.collection('tenants').doc(tenantId).collection('wms_config').doc('integration').set(integrationData),
-                db.collection('tenants').doc(tenantId).collection('wms_config').doc('config').set(configData)
-            ]);
-            if (feedback) { feedback.style.color='#10b981'; feedback.textContent='✅ Salvo no Firestore com sucesso!'; }
-        } else {
-            // Fallback localStorage (dev sem Firebase)
-            const ts = `_${tenantId}`;
-            localStorage.setItem('wms_integration_config' + ts, JSON.stringify({ connectorId: connector, connectorConfig: { baseUrl, empId, terminal } }));
-            if (feedback) { feedback.style.color='#f59e0b'; feedback.textContent='⚠️ Salvo localmente (Firebase indisponível).'; }
-        }
-    } catch(e) {
-        if (feedback) { feedback.style.color='#ef4444'; feedback.textContent=`❌ Erro: ${e.message}`; }
-    }
-};
-
-// ─── Usuários WMS por tenant ─────────────────────────────────────────────────
-
-function _renderWmsUsuarios(tenantId) {
-    const el = document.getElementById('wms-users-list');
-    if (!el) return;
-
-    // Filtra usuários do platformUsers para este tenant
-    const tenantUsers = platformUsers.filter(u => u.tenant === tenantId);
-
-    if (tenantUsers.length === 0) {
-        el.innerHTML = `<span style="font-size:.78rem;color:var(--text-secondary,#94a3b8);">
-            Nenhum usuário cadastrado para este tenant.</span>`;
-        return;
-    }
-
-    const roleLabel = { admin: 'Admin WMS', supervisor: 'Supervisor', operacional: 'Operacional' };
-    const roleColor = { admin: '#6366f1', supervisor: '#f59e0b', operacional: '#10b981' };
-
-    el.innerHTML = tenantUsers.map(u => `
-        <div style="display:flex;justify-content:space-between;align-items:center;
-            padding:.5rem .75rem;background:var(--bg-dark,#0f172a);border-radius:6px;">
-            <div style="display:flex;flex-direction:column;gap:.1rem;">
-                <span style="font-size:.82rem;font-weight:600;">${u.name}</span>
-                <span style="font-size:.72rem;color:var(--text-secondary,#94a3b8);font-family:monospace;">@${u.login}</span>
-            </div>
-            <span style="font-size:.72rem;padding:.15rem .5rem;border-radius:4px;
-                background:rgba(99,102,241,.12);color:${roleColor[u.role] || '#94a3b8'};">
-                ${roleLabel[u.role] || u.role}
-            </span>
-        </div>
-    `).join('');
-}
-
-window._wmsAdicionarUsuario = async function(tenantId) {
-    const feedback = document.getElementById('wms-user-feedback');
-    const name  = (document.getElementById('wms-user-name')?.value  || '').trim();
-    const login = (document.getElementById('wms-user-login')?.value || '').trim().toLowerCase();
-    const pass  = (document.getElementById('wms-user-pass')?.value  || '').trim();
-    const role  = document.getElementById('wms-user-role')?.value   || 'operacional';
+// Salva o admin do tenant (1 acesso para todos os mÃ³dulos liberados)
+window._provSalvarAdmin = async function(tenantId) {
+    const feedback = document.getElementById('prov-admin-feedback');
+    const name  = (document.getElementById('prov-admin-name')?.value  || '').trim();
+    const login = (document.getElementById('prov-admin-login')?.value || '').trim().toLowerCase();
+    const pass  = (document.getElementById('prov-admin-pass')?.value  || '').trim();
 
     if (!name || !login || !pass) {
-        if (feedback) { feedback.style.color='#ef4444'; feedback.textContent='❌ Preencha nome, login e senha.'; }
-        return;
-    }
-    if (platformUsers.find(u => u.login === login && u.tenant === tenantId)) {
-        if (feedback) { feedback.style.color='#ef4444'; feedback.textContent=`❌ Login "@${login}" já existe neste tenant.`; }
+        if (feedback) { feedback.style.color='#ef4444'; feedback.textContent='âŒ Preencha nome, login e senha.'; }
         return;
     }
 
-    const novoUsuario = { login, pass, name, tenant: tenantId, role, modulo: 'wms', criadoEm: new Date().toISOString() };
+    const tenant  = getAllTenants().find(t => t.id === tenantId);
+    const modules = tenant?.modules || [];
 
-    // 1. Salva em platformUsers (localStorage)
-    platformUsers.push(novoUsuario);
+    const userData = { login, pass, name, tenant: tenantId, role: 'admin', modules, criadoEm: new Date().toISOString() };
+
+    // 1. Atualiza/cria em platformUsers (localStorage)
+    const idx = platformUsers.findIndex(u => u.login === login && u.tenant === tenantId);
+    if (idx >= 0) {
+        platformUsers[idx] = { ...platformUsers[idx], ...userData };
+    } else {
+        // Verifica se jÃ¡ existe outro admin para este tenant
+        const outroAdmin = platformUsers.find(u => u.tenant === tenantId && u.role === 'admin');
+        if (outroAdmin && outroAdmin.login !== login) {
+            if (!confirm(`JÃ¡ existe um admin "@${outroAdmin.login}" para este tenant. Substituir?`)) return;
+            platformUsers.splice(platformUsers.indexOf(outroAdmin), 1);
+        }
+        platformUsers.push(userData);
+    }
     localStorage.setItem('platform_users_registry', JSON.stringify(platformUsers));
 
     // 2. Salva no Firestore: tenants/{tenantId}/users/{login}
@@ -735,20 +718,107 @@ window._wmsAdicionarUsuario = async function(tenantId) {
             await firebase.firestore()
                 .collection('tenants').doc(tenantId)
                 .collection('users').doc(login)
-                .set({ ...novoUsuario, criadoEm: firebase.firestore.FieldValue.serverTimestamp() });
+                .set({ ...userData, criadoEm: firebase.firestore.FieldValue.serverTimestamp() });
         }
+        if (feedback) { feedback.style.color='#10b981'; feedback.textContent=`âœ… Acesso de @${login} salvo com sucesso!`; }
     } catch(e) {
-        console.warn('[WMS] Firestore user save:', e.message);
+        if (feedback) { feedback.style.color='#f59e0b'; feedback.textContent=`âš ï¸ Salvo localmente. Firestore: ${e.message}`; }
     }
 
-    if (feedback) { feedback.style.color='#10b981'; feedback.textContent=`✅ Usuário @${login} criado com sucesso!`; }
-
-    // Limpa o formulário e atualiza a lista
-    document.getElementById('wms-user-name').value  = '';
-    document.getElementById('wms-user-login').value = '';
-    document.getElementById('wms-user-pass').value  = '';
-    setTimeout(() => { if (feedback) feedback.textContent = ''; }, 3000);
-
-    _renderWmsUsuarios(tenantId);
-    renderUsers(); // atualiza a tabela principal de usuários do master admin
+    renderUsers();
+    setTimeout(() => { if (feedback) feedback.textContent = ''; }, 4000);
 };
+
+// â”€â”€â”€ Helpers CNPJs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+let _wmsCnpjs = [];
+function _renderWmsCnpjs() {
+    const el = document.getElementById('wms-cnpjs-list');
+    if (!el) return;
+    if (_wmsCnpjs.length === 0) {
+        el.innerHTML = '<span style="font-size:.76rem;color:var(--text-secondary,#94a3b8);">Nenhum CNPJ cadastrado.</span>';
+        return;
+    }
+    el.innerHTML = _wmsCnpjs.map((c, i) => `
+        <div style="display:flex;justify-content:space-between;align-items:center;
+            padding:.45rem .7rem;background:var(--bg-dark,#0f172a);border-radius:6px;font-size:.8rem;">
+            <span style="font-family:monospace;">${c.cnpj}</span>
+            <span style="color:var(--text-secondary,#94a3b8);font-size:.73rem;flex:1;margin:0 .6rem;">${c.razaoSocial || ''}</span>
+            ${c.principal ? '<span style="background:rgba(16,185,129,.15);color:#10b981;font-size:.68rem;padding:.1rem .4rem;border-radius:4px;">PRINCIPAL</span>' : ''}
+            <button onclick="_wmsCnpjs.splice(${i},1);_renderWmsCnpjs()"
+                style="background:none;border:none;cursor:pointer;color:#ef4444;margin-left:.4rem;padding:0;">
+                <span class="material-icons-round" style="font-size:.95rem;">delete</span>
+            </button>
+        </div>
+    `).join('');
+}
+
+window._wmsAddCnpj = function() {
+    const input = document.getElementById('wms-cnpj-input');
+    const val = (input?.value || '').trim();
+    if (!val) return;
+    const razao    = prompt('RazÃ£o Social (opcional):') || '';
+    const principal = _wmsCnpjs.length === 0;
+    _wmsCnpjs.push({ cnpj: val, razaoSocial: razao, principal });
+    input.value = '';
+    _renderWmsCnpjs();
+};
+
+// â”€â”€â”€ Testar conexÃ£o Maxdata â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+window.testarWmsConexao = async function() {
+    const result  = document.getElementById('wms-test-result');
+    const baseUrl = (document.getElementById('wms-baseUrl')?.value  || '').trim();
+    const empId   = Number(document.getElementById('wms-empId')?.value || 0);
+    const terminal= (document.getElementById('wms-terminal')?.value || '').trim();
+    if (!baseUrl || !empId || !terminal) {
+        if (result) { result.style.color='#ef4444'; result.textContent='âŒ Preencha URL, empId e Terminal.'; } return;
+    }
+    if (result) { result.style.color='#94a3b8'; result.textContent='Testandoâ€¦'; }
+    try {
+        const resp = await fetch(`${baseUrl.replace(/\/$/, '')}/auth`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ empId, terminal }),
+            signal: AbortSignal.timeout(10000)
+        });
+        const data = resp.ok ? await resp.json() : null;
+        if (result) {
+            result.style.color = data?.token ? '#10b981' : '#ef4444';
+            result.textContent = data?.token ? 'âœ… AutenticaÃ§Ã£o OK!' : `âŒ HTTP ${resp.status}`;
+        }
+    } catch(e) {
+        if (result) { result.style.color='#ef4444'; result.textContent=`âŒ ${e.message}`; }
+    }
+};
+
+// â”€â”€â”€ Salvar configuraÃ§Ã£o WMS (integraÃ§Ã£o + CNPJs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+window.salvarWmsConfig = async function(tenantId) {
+    const feedback  = document.getElementById('wms-save-feedback');
+    const baseUrl   = (document.getElementById('wms-baseUrl')?.value   || '').trim();
+    const empId     = Number(document.getElementById('wms-empId')?.value || 0);
+    const terminal  = (document.getElementById('wms-terminal')?.value  || '').trim();
+    const connector = document.getElementById('wms-connector')?.value  || 'maxdata';
+
+    const integrationData = { connectorId: connector, baseUrl, empId, terminal, updatedAt: new Date().toISOString() };
+    const configData      = { cnpjs: _wmsCnpjs, updatedAt: new Date().toISOString() };
+
+    if (feedback) { feedback.style.color='#94a3b8'; feedback.textContent='Salvandoâ€¦'; }
+    try {
+        if (typeof firebase !== 'undefined') {
+            const db = firebase.firestore();
+            await Promise.all([
+                db.collection('tenants').doc(tenantId).collection('wms_config').doc('integration').set(integrationData),
+                db.collection('tenants').doc(tenantId).collection('wms_config').doc('config').set(configData)
+            ]);
+            if (feedback) { feedback.style.color='#10b981'; feedback.textContent='âœ… ConfiguraÃ§Ã£o WMS salva no Firestore!'; }
+        } else {
+            const ts = `_${tenantId}`;
+            localStorage.setItem('wms_integration_config' + ts, JSON.stringify({ connectorId: connector, connectorConfig: { baseUrl, empId, terminal } }));
+            if (feedback) { feedback.style.color='#f59e0b'; feedback.textContent='âš ï¸ Salvo localmente (Firebase indisponÃ­vel).'; }
+        }
+    } catch(e) {
+        if (feedback) { feedback.style.color='#ef4444'; feedback.textContent=`âŒ Erro: ${e.message}`; }
+    }
+};
+
