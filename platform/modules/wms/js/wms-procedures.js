@@ -391,32 +391,13 @@
             } catch (err) {
                 result = { status: 'warning', message: `ERP inacessível. Dados salvos localmente. (${err.message})` };
             }
-        } else if (id === 'maxdata') {
-            try {
-                const token = await _maxdataGetToken();
-                const cfg2  = _maxdataCfg();
-                const base  = cfg2.baseUrl.replace(/\/$/, '');
-                const body  = {
-                    entryId:          payload._maxdataId || payload._maxdataEntryId || null,
-                    nfNumero:         payload.nfNumero,
-                    operador:         payload.operador,
-                    dataRecebimento:  payload.dataConferencia || new Date().toISOString(),
-                    volumesRecebidos: payload.volumesFisicos || payload.volumes || 0,
-                    status:           'RECEBIDO'
-                };
-                const resp = await fetch(`${base}/entry/markaschecked`, {
-                    method: 'PUT', headers: _maxdataHdrs(token),
-                    body: JSON.stringify(body), signal: AbortSignal.timeout(15000)
-                });
-                result = resp.ok
-                    ? { status: 'ok', message: 'Recebimento confirmado no Maxdata.' }
-                    : { status: 'warning', message: `Maxdata HTTP ${resp.status}. Dados salvos localmente.` };
-            } catch (err) {
-                result = { status: 'warning', message: `Maxdata inacessível. Dados salvos localmente. (${err.message})` };
-            }
         } else {
-            result = { status: 'ok', message: 'Recebimento salvo localmente (modo standalone).' };
+            // Maxdata + Standalone: recebimento de volumes é validação INTERNA do WMS.
+            // O Maxdata NÃO consome esse evento — apenas a conferência item a item
+            // (proc_enviar_conferencia_maxdata → PUT /entry/markaschecked) vai ao ERP.
+            result = { status: 'ok', message: 'Recebimento de volumes registrado localmente. Aguardando conferência de itens para integração com Maxdata.' };
         }
+
 
         _logSync('proc_confirmar_recebimento', 'wms→erp', result.status, result.message);
 
