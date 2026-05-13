@@ -1,4 +1,4 @@
-// ===========================================
+﻿// ===========================================
 // WMS Configurações
 // cfg-geral, cfg-armazenagem, cfg-separacao,
 // cfg-etiqueta, cfg-integracao
@@ -574,7 +574,7 @@ function renderCfgIntegracao(container) {
 
     // ─── Painel: Sync em Tempo Real (só para conector Maxdata) ───────────────
     if (status.connectorId === 'maxdata') {
-        const ic       = JSON.parse(localStorage.getItem('wms_integration_config') || '{}');
+        const ic       = JSON.parse(localStorage.getItem('wms_integration_config' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
         const polAtivo = !!ic.pollingAtivo;
         const lastSync = ic.pollingLastSync ? new Date(ic.pollingLastSync).toLocaleTimeString('pt-BR') : '—';
         const nfCount  = ic.pollingNfCount != null ? `${ic.pollingNfCount} NF(s) no Maxdata` : '—';

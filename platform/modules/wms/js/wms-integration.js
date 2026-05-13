@@ -1,4 +1,4 @@
-// =============================================================
+﻿// =============================================================
 // WMS Integration Layer — Multi-ERP Adapter Pattern
 // Camada de abstração para integração com ERPs externos.
 // O WMS opera de forma autônoma; conectores são opcionais.
@@ -7,8 +7,12 @@
 (function () {
     'use strict';
 
-    // ─── CONFIG KEY ──────────────────────────────────────────
-    const INTEGRATION_KEY = 'wms_integration_config';
+    // ─── CONFIG KEY (tenant-aware) ──────────────────────────
+    // Cada tenant tem sua própria configuração de integração:
+    // wms_integration_config_<tenantId>
+    function _iKey() {
+        return 'wms_integration_config' + (window.getTenantSuffix ? window.getTenantSuffix() : '');
+    }
     const SYNC_LOG_KEY = 'wms_sync_log';
 
     // ─── ENTIDADES SINCRONIZÁVEIS ────────────────────────────
@@ -240,9 +244,9 @@
         description: 'Integração nativa bidirecional com Maxdata via API REST JWT. Recebimento, conferência e estoque.',
         icon: 'integration_instructions',
         configFields: [
-            { key: 'baseUrl',   label: 'URL Base da API',     type: 'text',     placeholder: 'http://rds.skytins.com.br:8720/v2', required: true, value: 'http://rds.skytins.com.br:8720/v2' },
-            { key: 'empId',     label: 'Empresa (empId)',      type: 'number',   placeholder: '1',   required: true,  value: '1' },
-            { key: 'terminal',  label: 'Terminal (código)',    type: 'text',     placeholder: '364F64E6539974C1D75C8A46C14B2D3D', required: true },
+            { key: 'baseUrl',   label: 'URL Base da API (Maxdata)',  type: 'text',   placeholder: 'http://servidor:porta/v2',           required: true  },
+            { key: 'empId',     label: 'Empresa (empId)',             type: 'number', placeholder: 'Ex: 1',                             required: true  },
+            { key: 'terminal',  label: 'Terminal (código)',          type: 'text',   placeholder: 'Código do terminal no Manager',   required: true  },
         ],
 
         // ── Token JWT: busca cached ou faz novo POST /auth ────
@@ -262,12 +266,12 @@
             const data = await resp.json();
             if (!data.token) throw new Error('Token não retornado pelo Maxdata.');
             // Persiste token no connectorConfig para reutilização
-            const saved = JSON.parse(localStorage.getItem(INTEGRATION_KEY) || '{}');
+            const saved = JSON.parse(localStorage.getItem(_iKey()) || '{}');
             if (!saved.connectorConfig) saved.connectorConfig = {};
             const tokenCache = { value: data.token, expiresAt: data.expiration };
             saved.connectorConfig._maxdataToken = tokenCache;
             config._maxdataToken = tokenCache;
-            localStorage.setItem(INTEGRATION_KEY, JSON.stringify(saved));
+            localStorage.setItem(_iKey(), JSON.stringify(saved));
             return data.token;
         },
 
@@ -381,7 +385,7 @@
             this._connectorId = connectorId;
             this._config = config || {};
             const saved = { connectorId, connectorConfig: this._config, updatedAt: new Date().toISOString() };
-            localStorage.setItem(INTEGRATION_KEY, JSON.stringify(saved));
+            localStorage.setItem(_iKey(), JSON.stringify(saved));
             const connector = connectors[connectorId];
             if (connector.init) connector.init(this._config);
             this._emit('connector-changed', { connectorId, name: connector.name });
@@ -548,15 +552,15 @@ window.WmsMaxdataPoller = (function () {
     'use strict';
 
     const POLL_MS  = 30000;  // 30 segundos
-    const KNOWN_KEY = 'wms_maxdata_known_entries';
-    const IC_KEY    = 'wms_integration_config';
+    const IC_KEY    = () => 'wms_integration_config' + (window.getTenantSuffix ? window.getTenantSuffix() : '');
+    const KNOWN_KEY = () => 'wms_maxdata_known_entries' + (window.getTenantSuffix ? window.getTenantSuffix() : '');
 
     let _intervalId  = null;
     let _isActive    = false;
 
     // ── Auth helper (copia _getToken do conector) ─────────────
     async function _token() {
-        const ic  = JSON.parse(localStorage.getItem(IC_KEY) || '{}');
+        const ic  = JSON.parse(localStorage.getItem(IC_KEY()) || '{}');
         const cfg = ic.connectorConfig || {};
         const cached = cfg._maxdataToken;
         if (cached?.value && new Date(cached.expiresAt) > new Date(Date.now() + 60000))
@@ -578,14 +582,14 @@ window.WmsMaxdataPoller = (function () {
 
         if (!ic.connectorConfig) ic.connectorConfig = {};
         ic.connectorConfig._maxdataToken = { value: data.token, expiresAt: data.expiration };
-        localStorage.setItem(IC_KEY, JSON.stringify(ic));
+        localStorage.setItem(IC_KEY(), JSON.stringify(ic));
         return { token: data.token, ic, cfg: ic.connectorConfig };
     }
 
     // ── Um ciclo de polling ───────────────────────────────────
     async function _poll() {
         try {
-            const ic = JSON.parse(localStorage.getItem(IC_KEY) || '{}');
+            const ic = JSON.parse(localStorage.getItem(IC_KEY()) || '{}');
             if (ic.connectorId !== 'maxdata') return;
 
             const { token, cfg } = await _token();
@@ -601,11 +605,11 @@ window.WmsMaxdataPoller = (function () {
             const entries = Array.isArray(raw) ? raw : (raw.data || raw.results || []);
 
             // Detectar NFs novas
-            const knownIds  = new Set(JSON.parse(localStorage.getItem(KNOWN_KEY) || '[]'));
+            const knownIds  = new Set(JSON.parse(localStorage.getItem(KNOWN_KEY()) || '[]'));
             const newEntries = entries.filter(e => !knownIds.has(String(e.id)));
 
             if (newEntries.length > 0) {
-                localStorage.setItem(KNOWN_KEY, JSON.stringify(entries.map(e => String(e.id))));
+                localStorage.setItem(KNOWN_KEY(), JSON.stringify(entries.map(e => String(e.id))));
                 window.dispatchEvent(new CustomEvent('maxdata-novas-nfs', { detail: { entries: newEntries } }));
                 if (window.WmsIntegration) {
                     window.WmsIntegration._emit?.('maxdata-novas-nfs', { count: newEntries.length });
@@ -614,10 +618,10 @@ window.WmsMaxdataPoller = (function () {
             }
 
             // Persiste última sync
-            const icUpd = JSON.parse(localStorage.getItem(IC_KEY) || '{}');
+            const icUpd = JSON.parse(localStorage.getItem(IC_KEY()) || '{}');
             icUpd.pollingLastSync = new Date().toISOString();
             icUpd.pollingNfCount  = entries.length;
-            localStorage.setItem(IC_KEY, JSON.stringify(icUpd));
+            localStorage.setItem(IC_KEY(), JSON.stringify(icUpd));
 
             // Atualiza badge na UI se visível
             const badge   = document.getElementById('maxdata-poll-badge');
@@ -640,9 +644,9 @@ window.WmsMaxdataPoller = (function () {
             if (_isActive) return;
             _isActive = true;
             // Persiste estado
-            const ic = JSON.parse(localStorage.getItem(IC_KEY) || '{}');
+            const ic = JSON.parse(localStorage.getItem(IC_KEY()) || '{}');
             ic.pollingAtivo = true;
-            localStorage.setItem(IC_KEY, JSON.stringify(ic));
+            localStorage.setItem(IC_KEY(), JSON.stringify(ic));
             // Poll imediato + intervalo
             await _poll();
             _intervalId = setInterval(_poll, POLL_MS);
@@ -652,9 +656,9 @@ window.WmsMaxdataPoller = (function () {
         stop() {
             if (_intervalId) { clearInterval(_intervalId); _intervalId = null; }
             _isActive = false;
-            const ic = JSON.parse(localStorage.getItem(IC_KEY) || '{}');
+            const ic = JSON.parse(localStorage.getItem(IC_KEY()) || '{}');
             ic.pollingAtivo = false;
-            localStorage.setItem(IC_KEY, JSON.stringify(ic));
+            localStorage.setItem(IC_KEY(), JSON.stringify(ic));
             console.log('🔴 [WmsMaxdataPoller] Desativado.');
         },
 
@@ -665,7 +669,7 @@ window.WmsMaxdataPoller = (function () {
 
         // Chamado no DOMContentLoaded para retomar se estava ativo
         restore() {
-            const ic = JSON.parse(localStorage.getItem(IC_KEY) || '{}');
+            const ic = JSON.parse(localStorage.getItem(IC_KEY()) || '{}');
             if (ic.connectorId === 'maxdata' && ic.pollingAtivo) {
                 console.log('♻️ [WmsMaxdataPoller] Retomando sessão anterior...');
                 this.start();

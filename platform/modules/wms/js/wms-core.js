@@ -1,4 +1,4 @@
-// WMS Core Logic
+﻿// WMS Core Logic
 // Navigation, Auth, Submenu Control, Dynamic View Loading
 
 const WMS_VERSION = '3.4.0';
@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- WMS Integration Init ---
     if (window.WmsIntegration) {
-        const intConfig = JSON.parse(localStorage.getItem('wms_integration_config') || '{}');
+        const intConfig = JSON.parse(localStorage.getItem('wms_integration_config' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
         window.WmsIntegration.init(intConfig);
 
         // Dynamic Branding (Store Name)

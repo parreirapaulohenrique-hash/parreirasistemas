@@ -1,4 +1,4 @@
-// =============================================================================
+﻿// =============================================================================
 // WMS Procedures — Camada de Integração Multi-ERP
 // Versão: 1.0.0 | WMS v1.7.0
 //
@@ -27,7 +27,7 @@
     }
 
     function _getConnector() {
-        const saved = JSON.parse(localStorage.getItem('wms_integration_config') || '{}');
+        const saved = JSON.parse(localStorage.getItem('wms_integration_config' + _ts()) || '{}');
         return {
             id: saved.connectorId || 'standalone',
             cfg: saved.connectorConfig || {}
@@ -519,7 +519,7 @@
     // ─── MAXDATA HELPERS ─────────────────────────────────────────────────────
 
     function _maxdataCfg() {
-        const ic = JSON.parse(localStorage.getItem('wms_integration_config') || '{}');
+        const ic = JSON.parse(localStorage.getItem('wms_integration_config' + _ts()) || '{}');
         return ic.connectorConfig || {};
     }
 
@@ -539,10 +539,10 @@
         if (!resp.ok) throw new Error(`Maxdata Auth HTTP ${resp.status}`);
         const data = await resp.json();
         if (!data.token) throw new Error('Token não retornado pelo Maxdata.');
-        const ic = JSON.parse(localStorage.getItem('wms_integration_config') || '{}');
+        const ic = JSON.parse(localStorage.getItem('wms_integration_config' + _ts()) || '{}');
         if (!ic.connectorConfig) ic.connectorConfig = {};
         ic.connectorConfig._maxdataToken = { value: data.token, expiresAt: data.expiration };
-        localStorage.setItem('wms_integration_config', JSON.stringify(ic));
+        localStorage.setItem('wms_integration_config' + _ts(), JSON.stringify(ic));
         return data.token;
     }
 

@@ -1,14 +1,13 @@
 {
-    "version": "11.16.0",
+    "version": "11.17.0",
     "build": "20260513",
     "lastUpdate": "2026-05-13",
-    "description": "WMS: Maxdata Sync em Tempo Real — toggle ativar/desativar com polling automático a cada 30s, detecção de novas NFs e atualização ao vivo da UI",
+    "description": "WMS: Isolamento multi-tenant da integração Maxdata — cada tenant tem sua própria configuração de credenciais, token JWT e estado de polling completamente isolados",
     "changelog": [
-        "Integration: WmsMaxdataPoller singleton — polling GET /entry a cada 30s, detecta novas NFs e emite CustomEvent 'maxdata-novas-nfs'",
-        "Integration: Auto-restore do estado ativo ao recarregar a página",
-        "Integration: Token JWT reutilizado e renovado automaticamente dentro do poller",
-        "Config UI: Painel 'Sync em Tempo Real' com dot pulsante AO VIVO, badge última sync, contador de NFs",
-        "Config UI: Botão toggle Ativar/Desativar com atualização visual imediata (verde/vermelho)",
-        "Config UI: Painel só aparece quando conector Maxdata está selecionado"
+        "Multi-tenant: wms_integration_config agora usa sufixo de tenant (wms_integration_config_<tenantId>) em todos os arquivos",
+        "Multi-tenant: WmsMaxdataPoller.IC_KEY e KNOWN_KEY passaram a ser funções dinâmicas com sufixo de tenant",
+        "Multi-tenant: wms-procedures.js, wms-core.js e configuracoes.js todos corrigidos",
+        "Segurança: Removidos defaults hardcoded (URL/empId) do conector Maxdata — cada tenant configura suas próprias credenciais",
+        "Arquitetura: Token JWT Maxdata, estado de polling e lista de NFs conhecidas são completamente isolados por tenant"
     ]
 }
