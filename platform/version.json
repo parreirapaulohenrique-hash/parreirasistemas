@@ -1,13 +1,15 @@
 {
-    "version": "11.14.0",
-    "build": "20260512",
-    "lastUpdate": "2026-05-12",
-    "description": "WMS Coletor: Conferência e Putaway integrados com Firebase — sugestão real de endereços, sync de cache, atualização de estoque e status de endereço",
+    "version": "11.15.0",
+    "build": "20260513",
+    "lastUpdate": "2026-05-13",
+    "description": "WMS: Integração Maxdata ERP nativa — conector JWT bidirecional com autenticação automática, token cache, e procedures completas de recebimento e conferência",
     "changelog": [
-        "Coletor: _gerarPutaway() — adiciona campos qtd (padrão), lote, prioridade; usa algoritmo real de endereço ABC (wms_mock_data cache) em vez de labels genéricos",
-        "Coletor: initArmazenagemScreen() — sincroniza endereços do Firestore antes de mostrar tarefas",
-        "Coletor: put_confirmarEndereco() — atualiza status do endereço para OCUPADO (localStorage + Firestore); atualiza wms_estoque; corrigido ID da tela armazenar",
-        "Coletor: _sugerirEndResolvidoColetor() — algoritmo ABC real no coletor (prioriza endereço salvo na task se for ID válido)",
-        "Desktop: renderArmazenagem() — lê corretamente qtd de tasks criadas pelo coletor (v11.13)"
+        "Integration: Conector 'maxdata' adicionado com JWT auth (POST /auth), token cache em localStorage, auto-renew 1min antes da expiração",
+        "Procedures: proc_buscar_nf_destinada() — branch maxdata via GET /entry com match por chave ou número",
+        "Procedures: proc_buscar_nf_por_numero() — branch maxdata via GET /entry com match por número",
+        "Procedures: proc_verificar_pre_entrada() — branch maxdata via GET /entry + GET /entry/{id}/items",
+        "Procedures: proc_confirmar_recebimento() — branch maxdata via PUT /entry/markaschecked (recebimento de volumes)",
+        "Procedures: proc_enviar_conferencia_maxdata() — implementado com PUT /entry/markaschecked (conferência item a item)",
+        "Helpers: _maxdataGetToken(), _maxdataHdrs(), _maxdataCfg(), _maxdataNorm(), _maxdataGetEntries() centralizados"
     ]
 }

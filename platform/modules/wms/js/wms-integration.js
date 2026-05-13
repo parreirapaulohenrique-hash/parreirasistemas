@@ -1,4 +1,4 @@
-﻿// =============================================================
+// =============================================================
 // WMS Integration Layer — Multi-ERP Adapter Pattern
 // Camada de abstração para integração com ERPs externos.
 // O WMS opera de forma autônoma; conectores são opcionais.
@@ -233,7 +233,110 @@
         },
     });
 
+    // ─── 5. MAXDATA ERP (Nativo JWT) ─────────────────────────
+    registerConnector('maxdata', {
+        id: 'maxdata',
+        name: 'Maxdata ERP',
+        description: 'Integração nativa bidirecional com Maxdata via API REST JWT. Recebimento, conferência e estoque.',
+        icon: 'integration_instructions',
+        configFields: [
+            { key: 'baseUrl',   label: 'URL Base da API',     type: 'text',     placeholder: 'http://rds.skytins.com.br:8720/v2', required: true, value: 'http://rds.skytins.com.br:8720/v2' },
+            { key: 'empId',     label: 'Empresa (empId)',      type: 'number',   placeholder: '1',   required: true,  value: '1' },
+            { key: 'terminal',  label: 'Terminal (código)',    type: 'text',     placeholder: '364F64E6539974C1D75C8A46C14B2D3D', required: true },
+        ],
+
+        // ── Token JWT: busca cached ou faz novo POST /auth ────
+        async _getToken(config) {
+            const cached = config._maxdataToken;
+            if (cached?.value && new Date(cached.expiresAt) > new Date(Date.now() + 60000)) {
+                return cached.value; // válido por mais de 1 min
+            }
+            const base = (config.baseUrl || '').replace(/\/$/, '');
+            const resp = await fetch(`${base}/auth`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ empId: Number(config.empId), terminal: config.terminal }),
+                signal: AbortSignal.timeout(10000)
+            });
+            if (!resp.ok) throw new Error(`Maxdata Auth: HTTP ${resp.status}`);
+            const data = await resp.json();
+            if (!data.token) throw new Error('Token não retornado pelo Maxdata.');
+            // Persiste token no connectorConfig para reutilização
+            const saved = JSON.parse(localStorage.getItem(INTEGRATION_KEY) || '{}');
+            if (!saved.connectorConfig) saved.connectorConfig = {};
+            const tokenCache = { value: data.token, expiresAt: data.expiration };
+            saved.connectorConfig._maxdataToken = tokenCache;
+            config._maxdataToken = tokenCache;
+            localStorage.setItem(INTEGRATION_KEY, JSON.stringify(saved));
+            return data.token;
+        },
+
+        _hdrs(token) {
+            return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+        },
+
+        async init(config) {
+            if (!config.baseUrl || !config.empId || !config.terminal)
+                return { status: 'error', message: 'URL Base, empId e Terminal são obrigatórios.' };
+            return { status: 'ok', message: `Maxdata ERP configurado (empId: ${config.empId}).` };
+        },
+
+        async sync(entity, config) {
+            try {
+                const token = await this._getToken(config);
+                const base  = config.baseUrl.replace(/\/$/, '');
+                const map   = { 'purchase-orders': `${base}/entry`, 'products': `${base}/product` };
+                const url   = map[entity];
+                if (!url) return { status: 'skip', message: `"${entity}" não suportado no pull Maxdata.` };
+                const resp = await fetch(url, { method: 'GET', headers: this._hdrs(token), signal: AbortSignal.timeout(15000) });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data    = await resp.json();
+                const records = Array.isArray(data) ? data : (data.data || data.results || []);
+                _addSyncLog(entity, 'erp→wms', 'ok', `${records.length} registros do Maxdata`);
+                return { status: 'ok', data: records, message: `${records.length} registros.` };
+            } catch (err) {
+                _addSyncLog(entity, 'erp→wms', 'error', err.message);
+                return { status: 'error', message: err.message };
+            }
+        },
+
+        async push(entity, payload, config) {
+            try {
+                const token = await this._getToken(config);
+                const base  = config.baseUrl.replace(/\/$/, '');
+                const map   = {
+                    'receipts':     { url: `${base}/entry/markaschecked`, method: 'PUT'  },
+                    'stock-levels': { url: `${base}/adjustmentstock`,     method: 'POST' },
+                };
+                const ep = map[entity];
+                if (!ep) return { status: 'skip', message: `Push de "${entity}" não suportado no Maxdata.` };
+                const resp = await fetch(ep.url, {
+                    method: ep.method, headers: this._hdrs(token),
+                    body: JSON.stringify(payload), signal: AbortSignal.timeout(15000)
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                _addSyncLog(entity, 'wms→erp', 'ok', `Maxdata push: ${entity}`);
+                return { status: 'ok', message: 'Enviado ao Maxdata.' };
+            } catch (err) {
+                _addSyncLog(entity, 'wms→erp', 'error', err.message);
+                return { status: 'error', message: err.message };
+            }
+        },
+
+        async testConnection(config) {
+            if (!config.baseUrl || !config.empId || !config.terminal)
+                return { status: 'error', message: 'Configure URL Base, empId e Terminal.' };
+            try {
+                await this._getToken(config);
+                return { status: 'ok', message: `✅ Autenticação Maxdata OK. Token ativo.` };
+            } catch (err) {
+                return { status: 'error', message: `Falha: ${err.message}` };
+            }
+        },
+    });
+
     // ─── SYNC LOG ────────────────────────────────────────────
+
     function _addSyncLog(entity, direction, status, message) {
         const logs = JSON.parse(localStorage.getItem(SYNC_LOG_KEY) || '[]');
         logs.unshift({

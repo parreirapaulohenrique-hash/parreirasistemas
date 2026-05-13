@@ -161,6 +161,8 @@
             result = await _buscarNf_restApi(chaveClean, cnpjs, cfg);
         } else if (id === 'parreira-erp') {
             result = await _buscarNf_parreiraErp(chaveClean, cnpjs);
+        } else if (id === 'maxdata') {
+            result = await _buscarNf_maxdata(chaveClean, cnpjs);
         } else {
             result = await _buscarNf_standalone(chaveClean, cnpjs);
         }
@@ -169,6 +171,24 @@
             result.found ? `NF ${result.nf.numero} encontrada` : 'NF não localizada');
 
         return result;
+    }
+
+    async function _buscarNf_maxdata(chave, cnpjs) {
+        try {
+            const token   = await _maxdataGetToken();
+            const entries = await _maxdataGetEntries(token);
+            const match   = entries.find(e => {
+                const eChave = (e.chaveNfe || e.accessKey || e.chave || '').replace(/\D/g,'');
+                const eNum   = String(e.nfNumero || e.numero || e.number || e.id || '');
+                return (eChave && eChave === chave) || eNum === chave || chave.endsWith(eNum);
+            });
+            if (!match) return { found: false, nf: null, empresa: null, empresas: [], source: 'maxdata' };
+            const nf      = _maxdataNorm(match);
+            const empresa = cnpjs.find(c => _cleanCnpj(c.cnpj) === _cleanCnpj(nf.cnpjDestinatario)) || cnpjs[0] || null;
+            return { found: true, nf, empresa, empresas: empresa ? [empresa] : [], source: 'maxdata' };
+        } catch (err) {
+            return { found: false, nf: null, empresa: null, empresas: [], source: 'maxdata', error: err.message };
+        }
     }
 
     async function _buscarNf_restApi(chave, cnpjs, cfg) {
@@ -278,10 +298,26 @@
                     const empresa = cnpjs.find(c => _cleanCnpj(c.cnpj) === _cleanCnpj(nf.cnpjDestinatario)) || cnpjs[0] || null;
                     result = { found: true, nf, empresa, empresas: empresa ? [empresa] : [], source: 'rest-api' };
                 } else {
+
                     result = { found: false, nf: null, empresa: null, empresas: [], source: 'rest-api' };
                 }
             } catch (err) {
                 result = { found: false, nf: null, empresa: null, empresas: [], source: 'rest-api', error: err.message };
+            }
+        } else if (id === 'maxdata') {
+            try {
+                const token   = await _maxdataGetToken();
+                const entries = await _maxdataGetEntries(token);
+                const match   = entries.find(e => String(e.nfNumero || e.numero || e.number || e.id) === String(numero));
+                if (match) {
+                    const nf = _maxdataNorm(match);
+                    const empresa = cnpjs.find(c => _cleanCnpj(c.cnpj) === _cleanCnpj(nf.cnpjDestinatario)) || cnpjs[0] || null;
+                    result = { found: true, nf, empresa, empresas: empresa ? [empresa] : [], source: 'maxdata' };
+                } else {
+                    result = { found: false, nf: null, empresa: null, empresas: [], source: 'maxdata' };
+                }
+            } catch (err) {
+                result = { found: false, nf: null, empresa: null, empresas: [], source: 'maxdata', error: err.message };
             }
         } else {
             // Parreira ERP + Standalone: busca nos mocks e no localStorage
@@ -298,6 +334,7 @@
                 result = { found: false, nf: null, empresa: null, empresas: [], source: id };
             }
         }
+
 
         _logSync('proc_buscar_nf_por_numero', 'erp→wms', result.found ? 'ok' : 'not_found',
             result.found ? `NF ${numero} encontrada` : `NF ${numero} não localizada`);
@@ -353,6 +390,29 @@
                     : { status: 'warning', message: `ERP retornou HTTP ${resp.status}. Dados salvos localmente.` };
             } catch (err) {
                 result = { status: 'warning', message: `ERP inacessível. Dados salvos localmente. (${err.message})` };
+            }
+        } else if (id === 'maxdata') {
+            try {
+                const token = await _maxdataGetToken();
+                const cfg2  = _maxdataCfg();
+                const base  = cfg2.baseUrl.replace(/\/$/, '');
+                const body  = {
+                    entryId:          payload._maxdataId || payload._maxdataEntryId || null,
+                    nfNumero:         payload.nfNumero,
+                    operador:         payload.operador,
+                    dataRecebimento:  payload.dataConferencia || new Date().toISOString(),
+                    volumesRecebidos: payload.volumesFisicos || payload.volumes || 0,
+                    status:           'RECEBIDO'
+                };
+                const resp = await fetch(`${base}/entry/markaschecked`, {
+                    method: 'PUT', headers: _maxdataHdrs(token),
+                    body: JSON.stringify(body), signal: AbortSignal.timeout(15000)
+                });
+                result = resp.ok
+                    ? { status: 'ok', message: 'Recebimento confirmado no Maxdata.' }
+                    : { status: 'warning', message: `Maxdata HTTP ${resp.status}. Dados salvos localmente.` };
+            } catch (err) {
+                result = { status: 'warning', message: `Maxdata inacessível. Dados salvos localmente. (${err.message})` };
             }
         } else {
             result = { status: 'ok', message: 'Recebimento salvo localmente (modo standalone).' };
@@ -474,6 +534,71 @@
     function _cleanCnpj(cnpj) {
         return String(cnpj || '').replace(/\D/g, '');
     }
+
+    // ─── MAXDATA HELPERS ─────────────────────────────────────────────────────
+
+    function _maxdataCfg() {
+        const ic = JSON.parse(localStorage.getItem('wms_integration_config') || '{}');
+        return ic.connectorConfig || {};
+    }
+
+    async function _maxdataGetToken() {
+        const cfg  = _maxdataCfg();
+        const cached = cfg._maxdataToken;
+        if (cached?.value && new Date(cached.expiresAt) > new Date(Date.now() + 60000)) return cached.value;
+        const base = (cfg.baseUrl || '').replace(/\/$/, '');
+        if (!base || !cfg.empId || !cfg.terminal)
+            throw new Error('Maxdata não configurado. Acesse Configurações → Integração.');
+        const resp = await fetch(`${base}/auth`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ empId: Number(cfg.empId), terminal: cfg.terminal }),
+            signal: AbortSignal.timeout(10000)
+        });
+        if (!resp.ok) throw new Error(`Maxdata Auth HTTP ${resp.status}`);
+        const data = await resp.json();
+        if (!data.token) throw new Error('Token não retornado pelo Maxdata.');
+        const ic = JSON.parse(localStorage.getItem('wms_integration_config') || '{}');
+        if (!ic.connectorConfig) ic.connectorConfig = {};
+        ic.connectorConfig._maxdataToken = { value: data.token, expiresAt: data.expiration };
+        localStorage.setItem('wms_integration_config', JSON.stringify(ic));
+        return data.token;
+    }
+
+    function _maxdataHdrs(token) {
+        return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+    }
+
+    // Normaliza entry Maxdata → schema NF interno
+    function _maxdataNorm(e) {
+        return _normalizeNf({
+            chaveNfe:            e.chaveNfe || e.accessKey || e.chave || '',
+            numero:              e.nfNumero || e.numero || e.number || String(e.id || ''),
+            serie:               e.serie || '1',
+            dataEmissao:         e.dataEmissao || e.issueDate || '',
+            valorTotal:          e.valorTotal || e.total || 0,
+            cnpjEmitente:        e.cnpjEmitente || e.fornecedorCnpj || '',
+            razaoSocialEmitente: e.fornecedor || e.supplier || e.supplierName || '',
+            cnpjDestinatario:    e.cnpjDestinatario || e.recipientCnpj || '',
+            pedidoCompra:        e.pedidoCompra || e.purchaseOrder || '',
+            volumes:             e.volumes || e.qtdVolumes || null,
+            itens:               e.itens || e.items || [],
+            _maxdataId:          e.id   // guardado para markaschecked
+        });
+    }
+
+    // GET /entry e retorna lista de entradas
+    async function _maxdataGetEntries(token) {
+        const cfg  = _maxdataCfg();
+        const base = cfg.baseUrl.replace(/\/$/, '');
+        const resp = await fetch(`${base}/entry`, {
+            method: 'GET', headers: _maxdataHdrs(token), signal: AbortSignal.timeout(12000)
+        });
+        if (!resp.ok) throw new Error(`Maxdata GET /entry HTTP ${resp.status}`);
+        const data = await resp.json();
+        return Array.isArray(data) ? data : (data.data || data.results || []);
+    }
+
 
     // ==========================================================================
     // PROC 7 — ENVIAR EMAIL DE DIVERGÊNCIA AO FORNECEDOR
@@ -655,9 +780,54 @@ ${emailRemetente ? `<${emailRemetente}>` : ''}
 
         // ── Parreira ERP ───────────────────────────────────────────────────────
         if (id === 'parreira-erp') {
-            // TODO: implementar endpoint quando disponível
             _logSync('proc_verificar_pre_entrada', 'erp→wms', 'pending', 'Endpoint Parreira ERP pendente');
             return { found: false, mensagem: 'Integração Parreira ERP pendente.' };
+        }
+
+        // ── Maxdata ────────────────────────────────────────────────────────────
+        if (id === 'maxdata') {
+            try {
+                const token   = await _maxdataGetToken();
+                const entries = await _maxdataGetEntries(token);
+                const entry   = entries.find(e => {
+                    const eChave = (e.chaveNfe || e.accessKey || e.chave || '').replace(/\D/g,'');
+                    return eChave === chave || String(e.nfNumero || e.id) === chave;
+                });
+                if (!entry) {
+                    _logSync('proc_verificar_pre_entrada', 'erp→wms', 'not_found', 'Maxdata: NF não encontrada');
+                    return { found: false, mensagem: 'NF não localizada no Maxdata.' };
+                }
+                const cfg2 = _maxdataCfg();
+                const base = cfg2.baseUrl.replace(/\/$/, '');
+                const itemsResp = await fetch(`${base}/entry/${entry.id}/items`, {
+                    method: 'GET', headers: _maxdataHdrs(token), signal: AbortSignal.timeout(12000)
+                });
+                if (!itemsResp.ok) throw new Error(`Maxdata /items HTTP ${itemsResp.status}`);
+                const itemsData = await itemsResp.json();
+                const rawItems  = Array.isArray(itemsData) ? itemsData : (itemsData.data || itemsData.items || []);
+                const itens = rawItems.map(it => ({
+                    sku:           it.sku || it.codigo || it.code || String(it.id || ''),
+                    codigoInterno: it.codigoInterno || it.internalCode || String(it.id || ''),
+                    codigoBarras:  it.codigoBarras || it.ean || it.barcode || it.sku || '',
+                    descricao:     it.descricao || it.description || it.nome || '',
+                    quantidade:    Number(it.quantidade || it.qty || it.qtd || it.quantity || 0),
+                    unidade:       it.unidade || it.unit || 'UN',
+                    valorUnitario: Number(it.valorUnitario || it.preco || it.price || 0),
+                    ncm:           it.ncm || '',
+                    lote:          it.lote || it.batch || ''
+                }));
+                _logSync('proc_verificar_pre_entrada', 'erp→wms', 'ok',
+                    `Maxdata: ${itens.length} item(ns) para NF ${entry.nfNumero || entry.id}`);
+                return {
+                    found:           true,
+                    pedidoCompra:    entry.pedidoCompra || entry.purchaseOrder || '',
+                    itens,
+                    _maxdataEntryId: entry.id  // usado no markaschecked
+                };
+            } catch (e) {
+                _logSync('proc_verificar_pre_entrada', 'erp→wms', 'error', e.message);
+                return { found: false, mensagem: `Erro Maxdata: ${e.message}` };
+            }
         }
 
         // ── MOCK Standalone ────────────────────────────────────────────────────
@@ -750,12 +920,41 @@ ${emailRemetente ? `<${emailRemetente}>` : ''}
             }
         }
 
-        // ── Maxdata direct (futuro endpoint nativo) ────────────────────────────
+        // ── Maxdata: PUT /entry/markaschecked (com itens conferidos) ─────────
         if (connId === 'maxdata') {
-            // TODO: implementar autenticação e endpoint nativo Maxdata
-            _logSync('proc_enviar_conferencia_maxdata', 'wms→erp', 'pending',
-                'Endpoint nativo Maxdata pendente de implementação.');
-            return { ok: false, mensagem: 'Integração Maxdata pendente.' };
+            try {
+                const token = await _maxdataGetToken();
+                const cfg2  = _maxdataCfg();
+                const base  = cfg2.baseUrl.replace(/\/$/, '');
+                const body  = {
+                    entryId:        payload._maxdataEntryId || payload._maxdataId || null,
+                    nfNumero:       payload.nfNumero,
+                    chaveNfe:       payload.chaveNfe,
+                    operador:       payload.operador,
+                    dataConferencia: payload.fim,
+                    comDivergencia:  payload.hasDivergencia,
+                    itens: (payload.itens || []).map(it => ({
+                        codigoInterno:       it.codigoInterno || it.sku,
+                        sku:                 it.sku,
+                        descricao:           it.descricao,
+                        quantidadeNF:        it.esperado,
+                        quantidadeConferida: it.lido,
+                        divergencia:         it.divergencia
+                    }))
+                };
+                const resp = await fetch(`${base}/entry/markaschecked`, {
+                    method: 'PUT', headers: _maxdataHdrs(token),
+                    body: JSON.stringify(body), signal: AbortSignal.timeout(15000)
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json().catch(() => ({}));
+                _logSync('proc_enviar_conferencia_maxdata', 'wms→erp', 'ok',
+                    `Maxdata: NF ${payload.nfNumero} conferida. Protocolo: ${data.protocolo || data.id || '—'}`);
+                return { ok: true, protocolo: data.protocolo || data.id || '' };
+            } catch (e) {
+                _logSync('proc_enviar_conferencia_maxdata', 'wms→erp', 'error', e.message);
+                throw e;
+            }
         }
 
         // ── MOCK ──────────────────────────────────────────────────────────────
