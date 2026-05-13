@@ -505,15 +505,68 @@ window.abrirWmsConfig = async function (tenantId) {
             <div id="wms-cnpjs-list" style="display:flex;flex-direction:column;gap:.4rem;min-height:40px;"></div>
         </div>
 
+        <!-- Usuários WMS -->
+        <div style="background:rgba(255,255,255,.03);border:1px solid var(--border,#334155);border-radius:10px;padding:1.25rem;">
+            <h3 style="font-size:.85rem;font-weight:700;margin:0 0 1rem;display:flex;align-items:center;gap:.5rem;">
+                <span class="material-icons-round" style="font-size:1rem;">group</span>
+                Usuários do WMS
+            </h3>
+            <!-- Lista de usuários existentes -->
+            <div id="wms-users-list" style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:1rem;min-height:32px;"></div>
+            <!-- Formulário de novo usuário -->
+            <details style="border:1px solid var(--border,#334155);border-radius:8px;overflow:hidden;">
+                <summary style="padding:.6rem .75rem;cursor:pointer;font-size:.82rem;font-weight:600;
+                    background:rgba(255,255,255,.03);list-style:none;display:flex;align-items:center;gap:.4rem;">
+                    <span class="material-icons-round" style="font-size:1rem;color:#6366f1;">person_add</span>
+                    Adicionar novo usuário
+                </summary>
+                <div style="padding:.9rem;display:flex;flex-direction:column;gap:.6rem;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;">
+                        <div>
+                            <label style="font-size:.68rem;color:var(--text-secondary,#94a3b8);font-weight:600;display:block;margin-bottom:.25rem;text-transform:uppercase;">Nome completo</label>
+                            <input id="wms-user-name" type="text" placeholder="Ex: João Silva"
+                                style="width:100%;padding:.5rem .7rem;background:var(--bg-dark,#0f172a);border:1px solid var(--border,#334155);border-radius:6px;color:inherit;font-size:.82rem;box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="font-size:.68rem;color:var(--text-secondary,#94a3b8);font-weight:600;display:block;margin-bottom:.25rem;text-transform:uppercase;">Login</label>
+                            <input id="wms-user-login" type="text" placeholder="Ex: joao.silva"
+                                style="width:100%;padding:.5rem .7rem;background:var(--bg-dark,#0f172a);border:1px solid var(--border,#334155);border-radius:6px;color:inherit;font-size:.82rem;box-sizing:border-box;">
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;">
+                        <div>
+                            <label style="font-size:.68rem;color:var(--text-secondary,#94a3b8);font-weight:600;display:block;margin-bottom:.25rem;text-transform:uppercase;">Senha inicial</label>
+                            <input id="wms-user-pass" type="text" placeholder="Senha"
+                                style="width:100%;padding:.5rem .7rem;background:var(--bg-dark,#0f172a);border:1px solid var(--border,#334155);border-radius:6px;color:inherit;font-size:.82rem;box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="font-size:.68rem;color:var(--text-secondary,#94a3b8);font-weight:600;display:block;margin-bottom:.25rem;text-transform:uppercase;">Perfil</label>
+                            <select id="wms-user-role"
+                                style="width:100%;padding:.5rem .7rem;background:var(--bg-dark,#0f172a);border:1px solid var(--border,#334155);border-radius:6px;color:inherit;font-size:.82rem;box-sizing:border-box;">
+                                <option value="admin">Admin WMS</option>
+                                <option value="supervisor">Supervisor</option>
+                                <option value="operacional" selected>Operacional</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button onclick="window._wmsAdicionarUsuario('${tenantId}')"
+                        style="padding:.5rem 1rem;background:#6366f1;border:none;color:white;border-radius:6px;cursor:pointer;font-size:.82rem;font-weight:600;align-self:flex-start;">
+                        + Criar Usuário
+                    </button>
+                    <div id="wms-user-feedback" style="font-size:.75rem;min-height:1rem;"></div>
+                </div>
+            </details>
+        </div>
+
         <!-- Ações -->
         <div style="display:flex;gap:.75rem;margin-top:auto;">
             <button onclick="window.salvarWmsConfig('${tenantId}')"
                 style="flex:1;padding:.75rem;background:#6366f1;border:none;color:white;border-radius:8px;cursor:pointer;font-weight:600;font-size:.9rem;display:flex;align-items:center;justify-content:center;gap:.5rem;">
-                <span class="material-icons-round" style="font-size:1rem;">save</span> Salvar e Provisionar
+                <span class="material-icons-round" style="font-size:1rem;">save</span> Salvar Integração
             </button>
             <button onclick="document.getElementById('wms-provisioning-panel').remove()"
                 style="padding:.75rem 1.25rem;background:none;border:1px solid var(--border,#334155);color:var(--text-secondary,#94a3b8);border-radius:8px;cursor:pointer;font-size:.9rem;">
-                Cancelar
+                Fechar
             </button>
         </div>
         <div id="wms-save-feedback" style="font-size:.8rem;min-height:1rem;text-align:center;"></div>
@@ -525,6 +578,9 @@ window.abrirWmsConfig = async function (tenantId) {
     const cnpjs = wmsCfg.cnpjs || [];
     _wmsCnpjs = [...cnpjs];
     _renderWmsCnpjs();
+
+    // Carrega usuários existentes do tenant
+    _renderWmsUsuarios(tenantId);
 };
 
 let _wmsCnpjs = [];
@@ -616,4 +672,83 @@ window.salvarWmsConfig = async function(tenantId) {
     } catch(e) {
         if (feedback) { feedback.style.color='#ef4444'; feedback.textContent=`❌ Erro: ${e.message}`; }
     }
+};
+
+// ─── Usuários WMS por tenant ─────────────────────────────────────────────────
+
+function _renderWmsUsuarios(tenantId) {
+    const el = document.getElementById('wms-users-list');
+    if (!el) return;
+
+    // Filtra usuários do platformUsers para este tenant
+    const tenantUsers = platformUsers.filter(u => u.tenant === tenantId);
+
+    if (tenantUsers.length === 0) {
+        el.innerHTML = `<span style="font-size:.78rem;color:var(--text-secondary,#94a3b8);">
+            Nenhum usuário cadastrado para este tenant.</span>`;
+        return;
+    }
+
+    const roleLabel = { admin: 'Admin WMS', supervisor: 'Supervisor', operacional: 'Operacional' };
+    const roleColor = { admin: '#6366f1', supervisor: '#f59e0b', operacional: '#10b981' };
+
+    el.innerHTML = tenantUsers.map(u => `
+        <div style="display:flex;justify-content:space-between;align-items:center;
+            padding:.5rem .75rem;background:var(--bg-dark,#0f172a);border-radius:6px;">
+            <div style="display:flex;flex-direction:column;gap:.1rem;">
+                <span style="font-size:.82rem;font-weight:600;">${u.name}</span>
+                <span style="font-size:.72rem;color:var(--text-secondary,#94a3b8);font-family:monospace;">@${u.login}</span>
+            </div>
+            <span style="font-size:.72rem;padding:.15rem .5rem;border-radius:4px;
+                background:rgba(99,102,241,.12);color:${roleColor[u.role] || '#94a3b8'};">
+                ${roleLabel[u.role] || u.role}
+            </span>
+        </div>
+    `).join('');
+}
+
+window._wmsAdicionarUsuario = async function(tenantId) {
+    const feedback = document.getElementById('wms-user-feedback');
+    const name  = (document.getElementById('wms-user-name')?.value  || '').trim();
+    const login = (document.getElementById('wms-user-login')?.value || '').trim().toLowerCase();
+    const pass  = (document.getElementById('wms-user-pass')?.value  || '').trim();
+    const role  = document.getElementById('wms-user-role')?.value   || 'operacional';
+
+    if (!name || !login || !pass) {
+        if (feedback) { feedback.style.color='#ef4444'; feedback.textContent='❌ Preencha nome, login e senha.'; }
+        return;
+    }
+    if (platformUsers.find(u => u.login === login && u.tenant === tenantId)) {
+        if (feedback) { feedback.style.color='#ef4444'; feedback.textContent=`❌ Login "@${login}" já existe neste tenant.`; }
+        return;
+    }
+
+    const novoUsuario = { login, pass, name, tenant: tenantId, role, modulo: 'wms', criadoEm: new Date().toISOString() };
+
+    // 1. Salva em platformUsers (localStorage)
+    platformUsers.push(novoUsuario);
+    localStorage.setItem('platform_users_registry', JSON.stringify(platformUsers));
+
+    // 2. Salva no Firestore: tenants/{tenantId}/users/{login}
+    try {
+        if (typeof firebase !== 'undefined') {
+            await firebase.firestore()
+                .collection('tenants').doc(tenantId)
+                .collection('users').doc(login)
+                .set({ ...novoUsuario, criadoEm: firebase.firestore.FieldValue.serverTimestamp() });
+        }
+    } catch(e) {
+        console.warn('[WMS] Firestore user save:', e.message);
+    }
+
+    if (feedback) { feedback.style.color='#10b981'; feedback.textContent=`✅ Usuário @${login} criado com sucesso!`; }
+
+    // Limpa o formulário e atualiza a lista
+    document.getElementById('wms-user-name').value  = '';
+    document.getElementById('wms-user-login').value = '';
+    document.getElementById('wms-user-pass').value  = '';
+    setTimeout(() => { if (feedback) feedback.textContent = ''; }, 3000);
+
+    _renderWmsUsuarios(tenantId);
+    renderUsers(); // atualiza a tabela principal de usuários do master admin
 };
