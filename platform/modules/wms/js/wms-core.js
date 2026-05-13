@@ -101,6 +101,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // ─── Ativa WmsSync: espelha localStorage ↔ Firestore em tempo real ─────────
+    if (window.WmsSync) {
+        WmsSync.init().then(() => {
+            const syncBadge = document.getElementById('wms-sync-status');
+            if (syncBadge) {
+                syncBadge.innerHTML = `
+                    <span class="material-icons-round" style="font-size:.9rem;color:#10b981;">cloud_done</span>
+                    <span style="color:#10b981;font-size:.72rem;">Cloud Sync Ativo</span>`;
+            }
+        }).catch(e => console.warn('[WmsSync] init:', e.message));
+    }
+
     // 🟢 Cloud Listener: Iniciar escuta de Novos Pedidos do ERP no Firebase
         if (typeof firebase !== 'undefined' && user.tenant) {
             console.log('📡 WMS Cloud Listener ativo para fila de Pedidos (Tenant: ' + user.tenant + ')');

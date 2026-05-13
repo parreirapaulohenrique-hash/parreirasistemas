@@ -1,15 +1,17 @@
 {
-    "version": "11.18.0",
+    "version": "11.19.0",
     "build": "20260513",
     "lastUpdate": "2026-05-13",
-    "description": "WMS Multi-Tenant completo — Fase 1 (isolamento localStorage), Fase 2 (onboarding admin master), Fase 3 (sync Firestore no login)",
+    "description": "WMS Cloud Sync — todos os dados operacionais espelhados no Firestore em tempo real",
     "changelog": [
-        "Multi-tenant Fase 1: TODOS os 50+ localStorage keys do WMS agora usam sufixo _<tenantId> — zero dados compartilhados entre tenants",
-        "Multi-tenant Fase 1: Arquivos corrigidos: controle.js, bi_operacional.js, dashboard.js, entrada.js, estoque.js, relatorios.js, relmanutencao.js, saida.js, wms-3d.js, wms-procedures.js, wms-store.js, heatmap.js, wms-integration.js, wms-core.js",
-        "Multi-tenant Fase 2: Painel master recebe botão 'Configurar WMS' em cada tenant com módulo wms ativo",
-        "Multi-tenant Fase 2: Drawer lateral com formulário Maxdata (URL, empId, terminal), teste de conexão e CNPJs destinatários",
-        "Multi-tenant Fase 2: salvarWmsConfig() grava credenciais em tenants/{tenantId}/wms_config/integration e wms_config/config no Firestore",
-        "Multi-tenant Fase 3: wms-core.js carrega configs do Firestore no login do tenant e popula localStorage automaticamente",
-        "Multi-tenant Fase 3: Credenciais Maxdata provisionadas pelo admin são aplicadas automaticamente em qualquer dispositivo do tenant"
+        "NOVO: wms-sync.js — interceptor universal que espelha TODOS os localStorage wms_* no Firestore automaticamente",
+        "NOVO: Coleções Firestore: docas, agendamentos, conferencias, inventarios, transferencias, bloqueios, ajustes, kardex, ondas, picking, volumes, cargas, expedicoes, tarefas, estoque",
+        "NOVO: Hidratação automática no login — Firestore popula localStorage de todos os dispositivos do tenant",
+        "NOVO: Listener onSnapshot em tempo real — mudanças de qualquer dispositivo propagam para todos sem reload",
+        "NOVO: Evento 'wms-data-updated' permite que cada tela se atualize quando outro dispositivo modificar os dados",
+        "NOVO: Indicador 'Cloud Sync Ativo' (verde) na top-bar do WMS quando sincronização estiver operacional",
+        "NOVO: Botão 'Configurar WMS' no painel master admin para tenants com módulo WMS",
+        "NOVO: Drawer de provisionamento WMS com campos Maxdata, teste de conexão e CNPJs",
+        "FIX: 50+ chaves localStorage agora com sufixo _<tenantId> — isolamento total multi-tenant"
     ]
 }
