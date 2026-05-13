@@ -1034,7 +1034,7 @@ console.log('⚙️ WMS Configurações carregadas');
 // Gerencia dimensões das células e corredor que alimentam o 3D
 // ============================================================
 function renderCfgGalpao(container) {
-    const ac = JSON.parse(localStorage.getItem('wms_armazem_config') || '{}');
+    const ac = JSON.parse(localStorage.getItem('wms_armazem_config' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
     const ts = window.getTenantSuffix ? window.getTenantSuffix() : '';
     const cadData = JSON.parse(localStorage.getItem('wms_cadastros' + ts) || '{}');
     const tiposCad = cadData.enderecoTipo || [];
@@ -1288,8 +1288,8 @@ window.salvarCfgGalpao = function() {
         corridorWidth: +(document.getElementById('cfgGalCW')?.value || 2.5),
     };
     // Merge with existing config (preserve corridors and tiposEndereco)
-    const existing = JSON.parse(localStorage.getItem('wms_armazem_config') || '{}');
-    localStorage.setItem('wms_armazem_config', JSON.stringify({ ...existing, ...ac }));
+    const existing = JSON.parse(localStorage.getItem('wms_armazem_config' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
+    localStorage.setItem('wms_armazem_config' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify({ ...existing, ...ac }));
 
     // Trigger 3D refresh if viewer is active
     const wrap = document.querySelector('#view-dashboard [data-wms3d-wrap]') ||
@@ -1308,3 +1308,4 @@ window.salvarCfgGalpao = function() {
         setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; }, 2500);
     }
 };
+

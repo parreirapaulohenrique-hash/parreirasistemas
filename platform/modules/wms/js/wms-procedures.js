@@ -35,7 +35,7 @@
     }
 
     function _getCnpjs() {
-        const wmsConfig = JSON.parse(localStorage.getItem('wms_config') || '{}');
+        const wmsConfig = JSON.parse(localStorage.getItem('wms_config' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
         return (wmsConfig.empresas || []);
     }
 
@@ -46,10 +46,10 @@
     }
 
     function _logSync(proc, direction, status, message) {
-        const logs = JSON.parse(localStorage.getItem('wms_sync_log') || '[]');
+        const logs = JSON.parse(localStorage.getItem('wms_sync_log' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
         logs.unshift({ proc, direction, status, message, timestamp: new Date().toISOString() });
         if (logs.length > 100) logs.length = 100;
-        localStorage.setItem('wms_sync_log', JSON.stringify(logs));
+        localStorage.setItem('wms_sync_log' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(logs));
     }
 
     // ─── NORMALIZAÇÃO DE NF ───────────────────────────────────────────────────
@@ -470,7 +470,7 @@
     // @returns {object} { valid: bool, message: string }
     // ==========================================================================
     async function proc_validar_pin_supervisor(pinDigitado) {
-        const wmsConfig = JSON.parse(localStorage.getItem('wms_config') || '{}');
+        const wmsConfig = JSON.parse(localStorage.getItem('wms_config' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
         const pinConfig = wmsConfig.seguranca?.pinSupervisor;
 
         if (!pinConfig) {
@@ -595,7 +595,7 @@
     // @returns {object} { status, method, message }
     // ==========================================================================
     async function proc_enviar_email_divergencia(divPayload) {
-        const wmsConfig = JSON.parse(localStorage.getItem('wms_config') || '{}');
+        const wmsConfig = JSON.parse(localStorage.getItem('wms_config' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
         const emailRemetente  = wmsConfig.email?.remetente || '';
         const nomeRemetente   = wmsConfig.email?.nomeRemetente || 'WMS ParreiraLog';
         const emailjsKey      = wmsConfig.email?.emailjsPublicKey || '';
@@ -966,3 +966,4 @@ ${emailRemetente ? `<${emailRemetente}>` : ''}
     console.log('📋 WMS Procedures carregadas (v2.0.0) — 8 procedures Multi-ERP disponíveis');
 
 })();
+

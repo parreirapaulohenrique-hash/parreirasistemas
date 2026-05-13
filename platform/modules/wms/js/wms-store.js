@@ -1,4 +1,4 @@
-// =============================================================================
+﻿// =============================================================================
 // wms-store.js — Camada de Dados Firestore para o WMS
 // Parreira Sistemas
 // =============================================================================
@@ -165,7 +165,7 @@ window.WmsStore = (function () {
      * Retorna array classificado.
      */
     async function calcularEPersistirCurva() {
-        const cfg       = JSON.parse(localStorage.getItem('wms_config') || '{}');
+        const cfg       = JSON.parse(localStorage.getItem('wms_config' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
         const cortes    = cfg.putaway?.cortesABC || { a: 10, b: 30, c: 70 };
         const acessos   = await listarAcessosPicking();
         const total     = acessos.length;
@@ -422,3 +422,4 @@ window.WmsStore = (function () {
         toDate, fmtData
     };
 })();
+

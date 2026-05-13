@@ -202,15 +202,21 @@ function renderTenants() {
             <td>
                 <span class="status-badge ${statusClass}">Ativo</span>
             </td>
-            <td style="text-align: right;">
+            <td style="text-align: right; display:flex; gap:.5rem; justify-content:flex-end;">
                 <button class="action-btn" title="Editar Liberações" onclick="window.editTenant('${tenant.id}')">
                     <span class="material-icons-round">edit</span>
                 </button>
+                ${(tenant.modules || []).includes('wms') ? `
+                <button class="action-btn" title="Configurar WMS" onclick="window.abrirWmsConfig('${tenant.id}')"
+                    style="background:rgba(99,102,241,.15);color:#6366f1;">
+                    <span class="material-icons-round">warehouse</span>
+                </button>` : ''}
             </td>
         `;
         tableBody.appendChild(tr);
     });
 }
+
 
 // --- Users Logic ---
 
@@ -389,3 +395,225 @@ function editUser(login, tenant) {
     openModal('userModal');
 }
 
+// =============================================================
+// WMS PROVISIONING — Admin Master configura WMS de cada tenant
+// =============================================================
+
+window.abrirWmsConfig = async function (tenantId) {
+    // Remove painel anterior se existir
+    const old = document.getElementById('wms-provisioning-panel');
+    if (old) old.remove();
+
+    const tenant = getAllTenants().find(t => t.id === tenantId);
+    if (!tenant) { alert('Tenant não encontrado.'); return; }
+
+    // Carrega config existente do Firestore
+    let wmsInt = {}, wmsCfg = {};
+    try {
+        if (typeof firebase !== 'undefined') {
+            const db = firebase.firestore();
+            const [intSnap, cfgSnap] = await Promise.all([
+                db.collection('tenants').doc(tenantId).collection('wms_config').doc('integration').get(),
+                db.collection('tenants').doc(tenantId).collection('wms_config').doc('config').get()
+            ]);
+            if (intSnap.exists) wmsInt = intSnap.data();
+            if (cfgSnap.exists) wmsCfg = cfgSnap.data();
+        }
+    } catch(e) { console.warn('Firestore read:', e.message); }
+
+    // Cria painel lateral
+    const panel = document.createElement('div');
+    panel.id = 'wms-provisioning-panel';
+    panel.style.cssText = `position:fixed;top:0;right:0;width:480px;height:100vh;background:var(--bg-card,#1e293b);
+        border-left:1px solid var(--border,#334155);z-index:9999;overflow-y:auto;padding:2rem;
+        box-shadow:-8px 0 32px rgba(0,0,0,.4);display:flex;flex-direction:column;gap:1.5rem;`;
+
+    panel.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+                <div style="display:flex;align-items:center;gap:.75rem;">
+                    <span class="material-icons-round" style="color:#6366f1;font-size:1.5rem;">warehouse</span>
+                    <h2 style="font-size:1.1rem;font-weight:700;margin:0;">Configurar WMS</h2>
+                </div>
+                <p style="font-size:.78rem;color:var(--text-secondary,#94a3b8);margin:.25rem 0 0 2.3rem;">${tenant.name} (${tenantId})</p>
+            </div>
+            <button onclick="document.getElementById('wms-provisioning-panel').remove()"
+                style="background:none;border:none;cursor:pointer;color:var(--text-secondary,#94a3b8);">
+                <span class="material-icons-round" style="font-size:1.5rem;">close</span>
+            </button>
+        </div>
+
+        <!-- Maxdata Integration -->
+        <div style="background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:1.25rem;">
+            <h3 style="font-size:.85rem;font-weight:700;margin:0 0 1rem;color:#6366f1;
+                display:flex;align-items:center;gap:.5rem;">
+                <span class="material-icons-round" style="font-size:1rem;">integration_instructions</span>
+                Integração Maxdata ERP
+            </h3>
+            <div style="display:flex;flex-direction:column;gap:.75rem;">
+                <div>
+                    <label style="font-size:.72rem;color:var(--text-secondary,#94a3b8);font-weight:600;display:block;margin-bottom:.3rem;text-transform:uppercase;">URL Base da API</label>
+                    <input id="wms-baseUrl" type="text" value="${wmsInt.baseUrl || ''}"
+                        placeholder="http://servidor:porta/v2"
+                        style="width:100%;padding:.6rem .8rem;background:var(--bg-dark,#0f172a);border:1px solid var(--border,#334155);border-radius:6px;color:inherit;font-size:.85rem;box-sizing:border-box;">
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+                    <div>
+                        <label style="font-size:.72rem;color:var(--text-secondary,#94a3b8);font-weight:600;display:block;margin-bottom:.3rem;text-transform:uppercase;">Empresa (empId)</label>
+                        <input id="wms-empId" type="number" value="${wmsInt.empId || ''}" placeholder="1"
+                            style="width:100%;padding:.6rem .8rem;background:var(--bg-dark,#0f172a);border:1px solid var(--border,#334155);border-radius:6px;color:inherit;font-size:.85rem;box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="font-size:.72rem;color:var(--text-secondary,#94a3b8);font-weight:600;display:block;margin-bottom:.3rem;text-transform:uppercase;">Conector</label>
+                        <select id="wms-connector" style="width:100%;padding:.6rem .8rem;background:var(--bg-dark,#0f172a);border:1px solid var(--border,#334155);border-radius:6px;color:inherit;font-size:.85rem;box-sizing:border-box;">
+                            <option value="maxdata" ${(wmsInt.connectorId||'maxdata')==='maxdata'?'selected':''}>Maxdata ERP</option>
+                            <option value="rest-api" ${wmsInt.connectorId==='rest-api'?'selected':''}>REST API Genérica</option>
+                            <option value="standalone" ${wmsInt.connectorId==='standalone'?'selected':''}>Standalone</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label style="font-size:.72rem;color:var(--text-secondary,#94a3b8);font-weight:600;display:block;margin-bottom:.3rem;text-transform:uppercase;">Terminal (código)</label>
+                    <input id="wms-terminal" type="text" value="${wmsInt.terminal || ''}"
+                        placeholder="Código do terminal cadastrado no Maxdata Manager"
+                        style="width:100%;padding:.6rem .8rem;background:var(--bg-dark,#0f172a);border:1px solid var(--border,#334155);border-radius:6px;color:inherit;font-size:.85rem;box-sizing:border-box;">
+                </div>
+                <div style="display:flex;gap:.5rem;align-items:center;">
+                    <button onclick="window.testarWmsConexao('${tenantId}')"
+                        style="padding:.5rem 1rem;background:none;border:1px solid #6366f1;color:#6366f1;border-radius:6px;cursor:pointer;font-size:.82rem;display:flex;align-items:center;gap:.4rem;">
+                        <span class="material-icons-round" style="font-size:1rem;">wifi</span> Testar Conexão
+                    </button>
+                    <span id="wms-test-result" style="font-size:.78rem;"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- CNPJs -->
+        <div style="background:rgba(255,255,255,.03);border:1px solid var(--border,#334155);border-radius:10px;padding:1.25rem;">
+            <h3 style="font-size:.85rem;font-weight:700;margin:0 0 1rem;display:flex;align-items:center;gap:.5rem;">
+                <span class="material-icons-round" style="font-size:1rem;">business</span>
+                CNPJs Destinatários
+            </h3>
+            <div style="margin-bottom:.75rem;">
+                <input id="wms-cnpj-input" type="text" placeholder="CNPJ — ex: 12.345.678/0001-90"
+                    style="width:calc(100% - 90px);padding:.6rem .8rem;background:var(--bg-dark,#0f172a);border:1px solid var(--border,#334155);border-radius:6px 0 0 6px;color:inherit;font-size:.85rem;box-sizing:border-box;">
+                <button onclick="window._wmsAddCnpj()"
+                    style="width:82px;padding:.6rem;background:#6366f1;border:none;color:white;border-radius:0 6px 6px 0;cursor:pointer;font-size:.82rem;">
+                    + Adicionar
+                </button>
+            </div>
+            <div id="wms-cnpjs-list" style="display:flex;flex-direction:column;gap:.4rem;min-height:40px;"></div>
+        </div>
+
+        <!-- Ações -->
+        <div style="display:flex;gap:.75rem;margin-top:auto;">
+            <button onclick="window.salvarWmsConfig('${tenantId}')"
+                style="flex:1;padding:.75rem;background:#6366f1;border:none;color:white;border-radius:8px;cursor:pointer;font-weight:600;font-size:.9rem;display:flex;align-items:center;justify-content:center;gap:.5rem;">
+                <span class="material-icons-round" style="font-size:1rem;">save</span> Salvar e Provisionar
+            </button>
+            <button onclick="document.getElementById('wms-provisioning-panel').remove()"
+                style="padding:.75rem 1.25rem;background:none;border:1px solid var(--border,#334155);color:var(--text-secondary,#94a3b8);border-radius:8px;cursor:pointer;font-size:.9rem;">
+                Cancelar
+            </button>
+        </div>
+        <div id="wms-save-feedback" style="font-size:.8rem;min-height:1rem;text-align:center;"></div>
+    `;
+
+    document.body.appendChild(panel);
+
+    // Carrega CNPJs existentes
+    const cnpjs = wmsCfg.cnpjs || [];
+    _wmsCnpjs = [...cnpjs];
+    _renderWmsCnpjs();
+};
+
+let _wmsCnpjs = [];
+function _renderWmsCnpjs() {
+    const el = document.getElementById('wms-cnpjs-list');
+    if (!el) return;
+    if (_wmsCnpjs.length === 0) {
+        el.innerHTML = '<span style="font-size:.78rem;color:var(--text-secondary,#94a3b8);">Nenhum CNPJ cadastrado.</span>';
+        return;
+    }
+    el.innerHTML = _wmsCnpjs.map((c, i) => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;
+            background:var(--bg-dark,#0f172a);border-radius:6px;font-size:.82rem;">
+            <span style="font-family:monospace;">${c.cnpj}</span>
+            <span style="color:var(--text-secondary,#94a3b8);font-size:.75rem;flex:1;margin-left:.75rem;">${c.razaoSocial || ''}</span>
+            ${c.principal ? '<span style="background:rgba(16,185,129,.15);color:#10b981;font-size:.7rem;padding:.1rem .4rem;border-radius:4px;">PRINCIPAL</span>' : ''}
+            <button onclick="_wmsCnpjs.splice(${i},1);_renderWmsCnpjs()"
+                style="background:none;border:none;cursor:pointer;color:#ef4444;margin-left:.5rem;padding:0;">
+                <span class="material-icons-round" style="font-size:1rem;">delete</span>
+            </button>
+        </div>
+    `).join('');
+}
+
+window._wmsAddCnpj = function() {
+    const input = document.getElementById('wms-cnpj-input');
+    const val = input.value.trim();
+    if (!val) return;
+    const razao = prompt('Razão Social (opcional):') || '';
+    const principal = _wmsCnpjs.length === 0;
+    _wmsCnpjs.push({ cnpj: val, razaoSocial: razao, principal });
+    input.value = '';
+    _renderWmsCnpjs();
+};
+
+window.testarWmsConexao = async function(tenantId) {
+    const result = document.getElementById('wms-test-result');
+    const baseUrl  = (document.getElementById('wms-baseUrl')?.value  || '').trim();
+    const empId    = Number(document.getElementById('wms-empId')?.value  || 0);
+    const terminal = (document.getElementById('wms-terminal')?.value || '').trim();
+    if (!baseUrl || !empId || !terminal) {
+        if (result) { result.style.color='#ef4444'; result.textContent='❌ Preencha URL, empId e Terminal.'; } return;
+    }
+    if (result) { result.style.color='#94a3b8'; result.textContent='Testando...'; }
+    try {
+        const resp = await fetch(`${baseUrl.replace(/\/$/, '')}/auth`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ empId, terminal }),
+            signal: AbortSignal.timeout(10000)
+        });
+        const data = resp.ok ? await resp.json() : null;
+        if (data?.token) {
+            if (result) { result.style.color='#10b981'; result.textContent='✅ Autenticação Maxdata OK!'; }
+        } else {
+            if (result) { result.style.color='#ef4444'; result.textContent=`❌ HTTP ${resp.status}`; }
+        }
+    } catch(e) {
+        if (result) { result.style.color='#ef4444'; result.textContent=`❌ ${e.message}`; }
+    }
+};
+
+window.salvarWmsConfig = async function(tenantId) {
+    const feedback = document.getElementById('wms-save-feedback');
+    const baseUrl   = (document.getElementById('wms-baseUrl')?.value   || '').trim();
+    const empId     = Number(document.getElementById('wms-empId')?.value  || 0);
+    const terminal  = (document.getElementById('wms-terminal')?.value  || '').trim();
+    const connector = document.getElementById('wms-connector')?.value  || 'maxdata';
+
+    const integrationData = { connectorId: connector, baseUrl, empId, terminal, updatedAt: new Date().toISOString() };
+    const configData      = { cnpjs: _wmsCnpjs, updatedAt: new Date().toISOString() };
+
+    if (feedback) { feedback.style.color='#94a3b8'; feedback.textContent='Salvando...'; }
+
+    try {
+        if (typeof firebase !== 'undefined') {
+            const db = firebase.firestore();
+            await Promise.all([
+                db.collection('tenants').doc(tenantId).collection('wms_config').doc('integration').set(integrationData),
+                db.collection('tenants').doc(tenantId).collection('wms_config').doc('config').set(configData)
+            ]);
+            if (feedback) { feedback.style.color='#10b981'; feedback.textContent='✅ Salvo no Firestore com sucesso!'; }
+        } else {
+            // Fallback localStorage (dev sem Firebase)
+            const ts = `_${tenantId}`;
+            localStorage.setItem('wms_integration_config' + ts, JSON.stringify({ connectorId: connector, connectorConfig: { baseUrl, empId, terminal } }));
+            if (feedback) { feedback.style.color='#f59e0b'; feedback.textContent='⚠️ Salvo localmente (Firebase indisponível).'; }
+        }
+    } catch(e) {
+        if (feedback) { feedback.style.color='#ef4444'; feedback.textContent=`❌ Erro: ${e.message}`; }
+    }
+};

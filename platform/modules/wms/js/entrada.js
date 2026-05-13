@@ -20,7 +20,7 @@ window.loadEntradaView = function (viewId) {
 // MOCK DATA HELPERS
 // ========================
 function getDocasMock() {
-    let docas = JSON.parse(localStorage.getItem('wms_docas') || 'null');
+    let docas = JSON.parse(localStorage.getItem('wms_docas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || 'null');
     if (!docas) {
         docas = [
             { id: 'DOCA-01', name: 'Doca 01 - Recebimento', type: 'RECEBIMENTO', status: 'LIVRE' },
@@ -28,13 +28,13 @@ function getDocasMock() {
             { id: 'DOCA-03', name: 'Doca 03 - Expedição', type: 'EXPEDIÇÃO', status: 'LIVRE' },
             { id: 'DOCA-04', name: 'Doca 04 - Mista', type: 'MISTA', status: 'LIVRE' },
         ];
-        localStorage.setItem('wms_docas', JSON.stringify(docas));
+        localStorage.setItem('wms_docas' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(docas));
     }
     return docas;
 }
 
 function getAgendamentosMock() {
-    let agendamentos = JSON.parse(localStorage.getItem('wms_agendamentos') || 'null');
+    let agendamentos = JSON.parse(localStorage.getItem('wms_agendamentos' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || 'null');
     if (!agendamentos) {
         const today = new Date().toISOString().split('T')[0];
         const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
@@ -46,13 +46,13 @@ function getAgendamentosMock() {
             { id: 'AG-005', doca: 'DOCA-02', fornecedor: 'Insumos Industriais ME', nf: '44556', data: tomorrow, hora: '08:00', status: 'PENDENTE', itens: 30, tipo: 'RECEBIMENTO' },
             { id: 'AG-006', doca: 'DOCA-04', fornecedor: 'Auto Peças Rápido', nf: '77889', data: tomorrow, hora: '11:00', status: 'PENDENTE', itens: 12, tipo: 'RECEBIMENTO' },
         ];
-        localStorage.setItem('wms_agendamentos', JSON.stringify(agendamentos));
+        localStorage.setItem('wms_agendamentos' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(agendamentos));
     }
     return agendamentos;
 }
 
 function getConferenciasMock() {
-    let conferencias = JSON.parse(localStorage.getItem('wms_conferencias') || 'null');
+    let conferencias = JSON.parse(localStorage.getItem('wms_conferencias' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || 'null');
     if (!conferencias) {
         conferencias = [
             {
@@ -82,13 +82,13 @@ function getConferenciasMock() {
                 ]
             }
         ];
-        localStorage.setItem('wms_conferencias', JSON.stringify(conferencias));
+        localStorage.setItem('wms_conferencias' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(conferencias));
     }
     return conferencias;
 }
 
 function getPutawayTasksMock() {
-    let tasks = JSON.parse(localStorage.getItem('wms_putaway') || 'null');
+    let tasks = JSON.parse(localStorage.getItem('wms_putaway' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || 'null');
     if (!tasks) {
         tasks = [
             { id: 'PUT-001', sku: 'SKU-0001', desc: 'Parafuso Phillips M6x30', qtd: 500, lote: 'L2026-050', nf: '12345', enderecoSugerido: '01-01-0101', status: 'PENDENTE', prioridade: 'ALTA' },
@@ -97,7 +97,7 @@ function getPutawayTasksMock() {
             { id: 'PUT-004', sku: 'SKU-0007', desc: 'Broca HSS 8mm Bosch', qtd: 100, lote: 'L2026-053', nf: '67890', enderecoSugerido: '02-01-0201', status: 'ARMAZENADO', prioridade: 'NORMAL' },
             { id: 'PUT-005', sku: 'SKU-0010', desc: 'Cimento Cola AC-III 20kg', qtd: 40, lote: 'L2026-060', nf: '44556', enderecoSugerido: '03-01-0101', status: 'PENDENTE', prioridade: 'BAIXA' },
         ];
-        localStorage.setItem('wms_putaway', JSON.stringify(tasks));
+        localStorage.setItem('wms_putaway' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(tasks));
     }
     return tasks;
 }
@@ -291,7 +291,7 @@ window.salvarAgendamento = function () {
 
     const agendamentos = getAgendamentosMock();
     agendamentos.push(ag);
-    localStorage.setItem('wms_agendamentos', JSON.stringify(agendamentos));
+    localStorage.setItem('wms_agendamentos' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(agendamentos));
 
     document.querySelector('.modal-overlay').remove();
     renderAgendamentoDoca(document.getElementById('view-dynamic'));
@@ -373,7 +373,7 @@ window.openConferenciaDetalhe = function (confId) {
     if (!conf) return;
 
     // Check Blind Mode (Contagem Cega)
-    const wmsConfig = JSON.parse(localStorage.getItem('wms_config') || '{}');
+    const wmsConfig = JSON.parse(localStorage.getItem('wms_config' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
     const isBlind = wmsConfig.geral?.contagemCega !== false; // Default true
 
     const overlay = document.createElement('div');
@@ -475,7 +475,7 @@ window.confirmarConferencia = function (confId) {
         if (allDone) conf.status = 'CONCLUÍDA';
         else conf.status = 'EM CONFERÊNCIA';
 
-        localStorage.setItem('wms_conferencias', JSON.stringify(conferencias));
+        localStorage.setItem('wms_conferencias' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(conferencias));
         document.getElementById('modal-conferencia')?.remove();
         renderConferencia(document.getElementById('view-dynamic'));
     }
@@ -736,14 +736,14 @@ window.confirmarPutaway = async function(taskId) {
             await WmsStore.atualizarPutaway(taskId, { status: 'ARMAZENADO', enderecoConfirmado: enderecoId, armazenadoEm: new Date().toISOString() });
         }
         // Also update localStorage mock
-        const tasks = JSON.parse(localStorage.getItem('wms_putaway') || '[]');
+        const tasks = JSON.parse(localStorage.getItem('wms_putaway' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
         const t = tasks.find(x => x.id === taskId);
-        if (t) { t.status = 'ARMAZENADO'; t.enderecoConfirmado = enderecoId; localStorage.setItem('wms_putaway', JSON.stringify(tasks)); }
+        if (t) { t.status = 'ARMAZENADO'; t.enderecoConfirmado = enderecoId; localStorage.setItem('wms_putaway' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(tasks)); }
     } catch(e) { console.warn('[Putaway] updateTask:', e); }
 
     // 3. Update wms_estoque
     try {
-        const tasks = JSON.parse(localStorage.getItem('wms_putaway') || '[]');
+        const tasks = JSON.parse(localStorage.getItem('wms_putaway' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
         const task  = tasks.find(x => x.id === taskId);
         if (task) {
             const estoque = JSON.parse(localStorage.getItem('wms_estoque' + suf) || '[]');
@@ -756,7 +756,7 @@ window.confirmarPutaway = async function(taskId) {
 
     // 4. Register picking access for ABC curve
     try {
-        const tasks2 = JSON.parse(localStorage.getItem('wms_putaway') || '[]');
+        const tasks2 = JSON.parse(localStorage.getItem('wms_putaway' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
         const t2 = tasks2.find(x => x.id === taskId);
         if (t2 && window.WmsStore) await WmsStore.registrarAcessoPicking(t2.sku);
     } catch(e) {}
@@ -789,3 +789,4 @@ function renderDevolucao(container) {
         </div>
     `;
 }
+

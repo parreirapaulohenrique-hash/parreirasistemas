@@ -25,7 +25,7 @@ window.loadControleView = function (viewId) {
 // MOCK DATA
 // ========================
 function getInventariosMock() {
-    let inv = JSON.parse(localStorage.getItem('wms_inventarios') || 'null');
+    let inv = JSON.parse(localStorage.getItem('wms_inventarios' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || 'null');
     if (!inv) {
         inv = [
             {
@@ -44,7 +44,7 @@ function getInventariosMock() {
                 ]
             }
         ];
-        localStorage.setItem('wms_inventarios', JSON.stringify(inv));
+        localStorage.setItem('wms_inventarios' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(inv));
     }
     return inv;
 }
@@ -237,7 +237,7 @@ window.criarInventario = function () {
     };
 
     inventarios.push(newInv);
-    localStorage.setItem('wms_inventarios', JSON.stringify(inventarios));
+    localStorage.setItem('wms_inventarios' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(inventarios));
     renderInventarioCiclico(document.getElementById('view-dynamic'));
 };
 
@@ -259,7 +259,7 @@ window.salvarContagem = function (invId) {
     });
 
     if (updated) {
-        localStorage.setItem('wms_inventarios', JSON.stringify(inventarios));
+        localStorage.setItem('wms_inventarios' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(inventarios));
         renderInventarioCiclico(document.getElementById('view-dynamic'));
     }
 };
@@ -301,7 +301,7 @@ window.finalizarInventario = function (invId) {
         localStorage.setItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(wmsStock));
         window.dispatchEvent(new CustomEvent('wms-estoque-atualizado'));
 
-        localStorage.setItem('wms_inventarios', JSON.stringify(inventarios));
+        localStorage.setItem('wms_inventarios' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(inventarios));
         renderInventarioCiclico(document.getElementById('view-dynamic'));
 
         // INTEGRAÇÃO FASE 9: Notificar ERP sobre inv. cíclico WMS
@@ -315,13 +315,13 @@ window.finalizarInventario = function (invId) {
 // 2. TRANSFERÊNCIA DE ENDEREÇO
 // ========================
 function renderTransferencia(container) {
-    let transferencias = JSON.parse(localStorage.getItem('wms_transferencias') || 'null');
+    let transferencias = JSON.parse(localStorage.getItem('wms_transferencias' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || 'null');
     if (!transferencias) {
         transferencias = [
             { id: 'TRF-001', sku: 'SKU-0001', desc: 'Parafuso Phillips M6x30', qtd: 100, origem: '01-01-0101', destino: '01-02-0101', motivo: 'Reorganização', status: 'CONCLUÍDA', data: new Date(Date.now() - 86400000).toISOString() },
             { id: 'TRF-002', sku: 'SKU-0008', desc: 'Lixa d\'água 220', qtd: 50, origem: '02-02-0101', destino: '02-03-0101', motivo: 'Otimização ABC', status: 'CONCLUÍDA', data: new Date(Date.now() - 86400000 * 2).toISOString() },
         ];
-        localStorage.setItem('wms_transferencias', JSON.stringify(transferencias));
+        localStorage.setItem('wms_transferencias' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(transferencias));
     }
 
     container.innerHTML = `
@@ -408,14 +408,14 @@ window.salvarTransferencia = function () {
     const destino = document.getElementById('trf-destino').value || '00-00-0000';
     const motivo = document.getElementById('trf-motivo').value;
 
-    const transferencias = JSON.parse(localStorage.getItem('wms_transferencias') || '[]');
+    const transferencias = JSON.parse(localStorage.getItem('wms_transferencias' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     transferencias.push({
         id: `TRF-${String(transferencias.length + 1).padStart(3, '0')}`,
         sku, desc: `Produto ${sku}`, qtd, origem, destino, motivo,
         status: 'CONCLUÍDA', data: new Date().toISOString()
     });
 
-    localStorage.setItem('wms_transferencias', JSON.stringify(transferencias));
+    localStorage.setItem('wms_transferencias' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(transferencias));
     renderTransferencia(document.getElementById('view-dynamic'));
 };
 
@@ -423,13 +423,13 @@ window.salvarTransferencia = function () {
 // 3. BLOQUEIO / QUARENTENA
 // ========================
 function renderBloqueio(container) {
-    let bloqueios = JSON.parse(localStorage.getItem('wms_bloqueios') || 'null');
+    let bloqueios = JSON.parse(localStorage.getItem('wms_bloqueios' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || 'null');
     if (!bloqueios) {
         bloqueios = [
             { id: 'BLQ-001', tipo: 'ENDEREÇO', ref: '02-01-0201', desc: 'Broca HSS 8mm Bosch', motivo: 'Conferência pendente', status: 'BLOQUEADO', data: new Date().toISOString() },
             { id: 'BLQ-002', tipo: 'SKU', ref: 'SKU-0012', desc: 'Massa Corrida PVA 25kg', motivo: 'Produto vencido', status: 'QUARENTENA', data: new Date(Date.now() - 86400000).toISOString() },
         ];
-        localStorage.setItem('wms_bloqueios', JSON.stringify(bloqueios));
+        localStorage.setItem('wms_bloqueios' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(bloqueios));
     }
 
     const ativos = bloqueios.filter(b => b.status !== 'LIBERADO');
@@ -543,23 +543,23 @@ window.salvarBloqueio = function () {
     const status = document.getElementById('blq-status').value;
     const motivo = document.getElementById('blq-motivo').value || 'Sem motivo informado';
 
-    const bloqueios = JSON.parse(localStorage.getItem('wms_bloqueios') || '[]');
+    const bloqueios = JSON.parse(localStorage.getItem('wms_bloqueios' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     bloqueios.push({
         id: `BLQ-${String(bloqueios.length + 1).padStart(3, '0')}`,
         tipo, ref, desc: `Ref. ${ref}`, motivo, status,
         data: new Date().toISOString()
     });
 
-    localStorage.setItem('wms_bloqueios', JSON.stringify(bloqueios));
+    localStorage.setItem('wms_bloqueios' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(bloqueios));
     renderBloqueio(document.getElementById('view-dynamic'));
 };
 
 window.liberarBloqueio = function (blqId) {
-    const bloqueios = JSON.parse(localStorage.getItem('wms_bloqueios') || '[]');
+    const bloqueios = JSON.parse(localStorage.getItem('wms_bloqueios' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const blq = bloqueios.find(b => b.id === blqId);
     if (blq) {
         blq.status = 'LIBERADO';
-        localStorage.setItem('wms_bloqueios', JSON.stringify(bloqueios));
+        localStorage.setItem('wms_bloqueios' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(bloqueios));
         renderBloqueio(document.getElementById('view-dynamic'));
     }
 };
@@ -568,7 +568,7 @@ window.liberarBloqueio = function (blqId) {
 // 4. AJUSTE DE ESTOQUE
 // ========================
 function renderAjusteEstoque(container) {
-    const ajustes = JSON.parse(localStorage.getItem('wms_ajustes') || '[]');
+    const ajustes = JSON.parse(localStorage.getItem('wms_ajustes' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const historico = ajustes.length > 0 ? ajustes : [
         { id: 'AJ-001', sku: 'SKU-1001', descricao: 'Parafuso M8x30', endereco: 'A-01-01-01', qtdAnterior: 500, qtdNova: 490, motivo: 'Avaria', usuario: 'supervisor1', data: new Date().toLocaleDateString('pt-BR'), status: 'aprovado' },
         { id: 'AJ-002', sku: 'SKU-2015', descricao: 'Óleo 15W40', endereco: 'B-02-03-02', qtdAnterior: 120, qtdNova: 125, motivo: 'Recontagem', usuario: 'operador3', data: new Date().toLocaleDateString('pt-BR'), status: 'pendente' }
@@ -610,16 +610,16 @@ function renderAjusteEstoque(container) {
 }
 
 window.novoAjuste = function () {
-    const ajustes = JSON.parse(localStorage.getItem('wms_ajustes') || '[]');
+    const ajustes = JSON.parse(localStorage.getItem('wms_ajustes' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     // Mocking a new adjustment request (in real app, this would come from a modal)
     ajustes.push({ id: 'AJ-' + String(ajustes.length + 3).padStart(3, '0'), sku: 'SKU-0001', descricao: 'Parafuso Phillips M6x30', endereco: '01-01-0101', qtdAnterior: 100, qtdNova: 105, motivo: 'Recontagem', usuario: 'admin', data: new Date().toLocaleDateString('pt-BR'), status: 'pendente' });
-    localStorage.setItem('wms_ajustes', JSON.stringify(ajustes));
+    localStorage.setItem('wms_ajustes' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(ajustes));
     alert('✅ Solicitação de Ajuste criada! Aprove na lista para efetivar o estoque.');
     renderAjusteEstoque(document.getElementById('view-dynamic'));
 };
 
 window.aprovarAjuste = function (id) {
-    const ajustes = JSON.parse(localStorage.getItem('wms_ajustes') || '[]');
+    const ajustes = JSON.parse(localStorage.getItem('wms_ajustes' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const ajuste = ajustes.find(a => a.id === id);
 
     if (ajuste && ajuste.status === 'pendente') {
@@ -636,7 +636,7 @@ window.aprovarAjuste = function (id) {
         }
 
         ajuste.status = 'aprovado';
-        localStorage.setItem('wms_ajustes', JSON.stringify(ajustes));
+        localStorage.setItem('wms_ajustes' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(ajustes));
 
         // Integration Hook
         if (window.WmsIntegration) {
@@ -744,7 +744,7 @@ function renderDivergencias(container) {
 // 7. RASTREABILIDADE (KARDEX)
 // ========================
 function renderRastreabilidade(container) {
-    const movs = JSON.parse(localStorage.getItem('wms_kardex') || '[]');
+    const movs = JSON.parse(localStorage.getItem('wms_kardex' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     // Mock sample if empty so the UI isn't blank on first load
     if (movs.length === 0) {
         movs.push({ id: 'DEMO', data: new Date().toISOString(), tipo: 'SISTEMA', sku: '-', qtd: 0, doc: 'Setup', motivo: 'Inicialização do Log', usuario: 'system' });
@@ -858,3 +858,4 @@ function renderLogOperacoes(container) {
         </div>
     `;
 }
+

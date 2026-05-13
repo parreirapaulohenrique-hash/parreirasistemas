@@ -1,13 +1,15 @@
 {
-    "version": "11.17.0",
+    "version": "11.18.0",
     "build": "20260513",
     "lastUpdate": "2026-05-13",
-    "description": "WMS: Isolamento multi-tenant da integração Maxdata — cada tenant tem sua própria configuração de credenciais, token JWT e estado de polling completamente isolados",
+    "description": "WMS Multi-Tenant completo — Fase 1 (isolamento localStorage), Fase 2 (onboarding admin master), Fase 3 (sync Firestore no login)",
     "changelog": [
-        "Multi-tenant: wms_integration_config agora usa sufixo de tenant (wms_integration_config_<tenantId>) em todos os arquivos",
-        "Multi-tenant: WmsMaxdataPoller.IC_KEY e KNOWN_KEY passaram a ser funções dinâmicas com sufixo de tenant",
-        "Multi-tenant: wms-procedures.js, wms-core.js e configuracoes.js todos corrigidos",
-        "Segurança: Removidos defaults hardcoded (URL/empId) do conector Maxdata — cada tenant configura suas próprias credenciais",
-        "Arquitetura: Token JWT Maxdata, estado de polling e lista de NFs conhecidas são completamente isolados por tenant"
+        "Multi-tenant Fase 1: TODOS os 50+ localStorage keys do WMS agora usam sufixo _<tenantId> — zero dados compartilhados entre tenants",
+        "Multi-tenant Fase 1: Arquivos corrigidos: controle.js, bi_operacional.js, dashboard.js, entrada.js, estoque.js, relatorios.js, relmanutencao.js, saida.js, wms-3d.js, wms-procedures.js, wms-store.js, heatmap.js, wms-integration.js, wms-core.js",
+        "Multi-tenant Fase 2: Painel master recebe botão 'Configurar WMS' em cada tenant com módulo wms ativo",
+        "Multi-tenant Fase 2: Drawer lateral com formulário Maxdata (URL, empId, terminal), teste de conexão e CNPJs destinatários",
+        "Multi-tenant Fase 2: salvarWmsConfig() grava credenciais em tenants/{tenantId}/wms_config/integration e wms_config/config no Firestore",
+        "Multi-tenant Fase 3: wms-core.js carrega configs do Firestore no login do tenant e popula localStorage automaticamente",
+        "Multi-tenant Fase 3: Credenciais Maxdata provisionadas pelo admin são aplicadas automaticamente em qualquer dispositivo do tenant"
     ]
 }

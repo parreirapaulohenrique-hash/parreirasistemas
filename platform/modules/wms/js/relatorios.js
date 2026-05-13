@@ -22,7 +22,7 @@ window.loadRelatoriosView = function (viewId) {
 // 1. RELATÓRIO DE RECEBIMENTO
 // ========================
 function renderRelRecebimento(container) {
-    const receipts = JSON.parse(localStorage.getItem('wms_receipts') || '[]');
+    const receipts = JSON.parse(localStorage.getItem('wms_receipts' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const today = new Date().toISOString().split('T')[0];
     const todayReceipts = receipts.filter(r => r.createdAt?.startsWith(today));
     const conferidos = receipts.filter(r => r.status === 'FINALIZADO');
@@ -97,10 +97,10 @@ function renderRelRecebimento(container) {
 // 2. RELATÓRIO DE PRODUTIVIDADE
 // ========================
 function renderRelProdutividade(container) {
-    const picking = JSON.parse(localStorage.getItem('wms_picking') || '[]');
-    const putaway = JSON.parse(localStorage.getItem('wms_putaway') || '[]');
-    const transferencias = JSON.parse(localStorage.getItem('wms_transferencias') || '[]');
-    const inventarios = JSON.parse(localStorage.getItem('wms_inventarios') || '[]');
+    const picking = JSON.parse(localStorage.getItem('wms_picking' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+    const putaway = JSON.parse(localStorage.getItem('wms_putaway' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+    const transferencias = JSON.parse(localStorage.getItem('wms_transferencias' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+    const inventarios = JSON.parse(localStorage.getItem('wms_inventarios' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
 
     const pickDone = picking.filter(t => t.status === 'COLETADO').length;
     const pickPend = picking.filter(t => t.status === 'PENDENTE').length;
@@ -396,3 +396,4 @@ function renderRelIndicadores(container) {
         </div>
     `;
 }
+

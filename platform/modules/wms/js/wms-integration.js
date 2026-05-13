@@ -13,7 +13,7 @@
     function _iKey() {
         return 'wms_integration_config' + (window.getTenantSuffix ? window.getTenantSuffix() : '');
     }
-    const SYNC_LOG_KEY = 'wms_sync_log';
+    const SYNC_LOG_KEY = 'wms_sync_log' + (window.getTenantSuffix ? window.getTenantSuffix() : '');
 
     // ─── ENTIDADES SINCRONIZÁVEIS ────────────────────────────
     const ENTITIES = {
@@ -684,4 +684,5 @@ if (document.readyState === 'loading') {
 } else {
     window.WmsMaxdataPoller.restore();
 }
+
 

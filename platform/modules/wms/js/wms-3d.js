@@ -1,4 +1,4 @@
-// =============================================================================
+﻿// =============================================================================
 // WMS 3D Warehouse Viewer — Three.js
 // Lê endereços de wms_mock_data + config de wms_armazem_config
 // =============================================================================
@@ -19,7 +19,7 @@ window.WMS3D = (function () {
 
     function _cfg() {
         const d = { posLargura:1.2, posAltura:2.0, profundidade:0.8, corridorWidth:2.5 };
-        return Object.assign(d, JSON.parse(localStorage.getItem('wms_armazem_config') || '{}'));
+        return Object.assign(d, JSON.parse(localStorage.getItem('wms_armazem_config' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}'));
     }
 
     function _addresses() {
@@ -444,7 +444,7 @@ function _thStyle() { return 'padding:.3rem .4rem;text-align:left;color:var(--te
 
 window.wms3dRenderConfig = function(panel) {
     if (!panel) return;
-    const cfg      = JSON.parse(localStorage.getItem('wms_armazem_config') || '{}');
+    const cfg      = JSON.parse(localStorage.getItem('wms_armazem_config' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
     const corredores = cfg.corredores || [];
     const tipos    = cfg.tiposEndereco || [];
     const ordem    = cfg.ordemCorredores || 'esquerda_direita';
@@ -648,7 +648,7 @@ window.wms3dSaveConfig = function() {
         tiposEndereco,
     };
 
-    localStorage.setItem('wms_armazem_config', JSON.stringify(cfg));
+    localStorage.setItem('wms_armazem_config' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(cfg));
 
     const wrap = document.getElementById('wms3d-canvas-wrap');
     if (wrap && window.WMS3D) { wrap.innerHTML = ''; WMS3D.init(wrap); }
@@ -658,8 +658,9 @@ window.wms3dSaveConfig = function() {
 
 // Export tipos helper (used by locations.js)
 window.wms3dGetTiposEndereco = function() {
-    const cfg = JSON.parse(localStorage.getItem('wms_armazem_config') || '{}');
+    const cfg = JSON.parse(localStorage.getItem('wms_armazem_config' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
     return cfg.tiposEndereco || [];
 };
 
 console.log('📦 WMS 3D Viewer carregado');
+

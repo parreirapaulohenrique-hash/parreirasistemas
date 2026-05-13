@@ -56,11 +56,11 @@ function getPedidosMock() {
 }
 
 function getOndasMock() {
-    return JSON.parse(localStorage.getItem('wms_ondas') || '[]');
+    return JSON.parse(localStorage.getItem('wms_ondas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
 }
 
 function getPickingTasksMock() {
-    return JSON.parse(localStorage.getItem('wms_picking') || '[]');
+    return JSON.parse(localStorage.getItem('wms_picking' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
 }
 
 // ========================
@@ -201,7 +201,7 @@ window.formarOnda = function () {
     ondas.push({ id: ondaId, pedidos: checked, totalItens, totalQtd, status: 'FORMADA', created: new Date().toISOString() });
 
     localStorage.setItem('wms_pedidos' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(pedidos));
-    localStorage.setItem('wms_ondas', JSON.stringify(ondas));
+    localStorage.setItem('wms_ondas' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(ondas));
     renderOndas(document.getElementById('view-dynamic'));
 };
 
@@ -252,9 +252,9 @@ window.liberarOnda = function (ondaId) {
         }
     });
 
-    localStorage.setItem('wms_ondas', JSON.stringify(ondas));
+    localStorage.setItem('wms_ondas' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(ondas));
     localStorage.setItem('wms_pedidos' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(pedidos));
-    localStorage.setItem('wms_picking', JSON.stringify(picking));
+    localStorage.setItem('wms_picking' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(picking));
     renderOndas(document.getElementById('view-dynamic'));
 };
 
@@ -387,7 +387,7 @@ window.confirmarPicking = function (taskId) {
             window.StockManager.commit(task.sku, task.qtd);
         }
 
-        localStorage.setItem('wms_picking', JSON.stringify(tasks));
+        localStorage.setItem('wms_picking' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(tasks));
         renderSeparacao(document.getElementById('view-dynamic'));
     }
 };
@@ -464,7 +464,7 @@ window.conferirOnda = function (ondaId) {
     // if (onda) {
     //     onda.conferido = true;
     //     onda.status = 'PRONTA';
-    //     localStorage.setItem('wms_ondas', JSON.stringify(ondas));
+    //     localStorage.setItem('wms_ondas' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(ondas));
     //     renderConfSaida(document.getElementById('view-dynamic'));
     // }
 
@@ -639,7 +639,7 @@ window.finishConference = function () {
     if (onda) {
         onda.conferido = true;
         onda.status = 'PRONTA'; // Pronta para Expedição/Romaneio
-        localStorage.setItem('wms_ondas', JSON.stringify(ondas));
+        localStorage.setItem('wms_ondas' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(ondas));
         closeConferenceModal();
         renderConfSaida(document.getElementById('view-dynamic'));
         alert('✅ Conferência Finalizada com Sucesso!');
@@ -651,7 +651,7 @@ window.finishConference = function () {
 // ========================
 function renderEmbalagem(container) {
     const ondas = getOndasMock().filter(o => o.status === 'separada' || o.status === 'conferida');
-    const volumes = JSON.parse(localStorage.getItem('wms_volumes') || '[]');
+    const volumes = JSON.parse(localStorage.getItem('wms_volumes' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
 
     container.innerHTML = `
         <div class="card">
@@ -700,7 +700,7 @@ function renderEmbalagem(container) {
 }
 
 window.criarVolume = function (ondaId) {
-    const volumes = JSON.parse(localStorage.getItem('wms_volumes') || '[]');
+    const volumes = JSON.parse(localStorage.getItem('wms_volumes' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const nextNum = volumes.filter(v => v.ondaId === ondaId).length + 1;
     volumes.push({
         id: 'vol_' + Date.now(),
@@ -712,14 +712,14 @@ window.criarVolume = function (ondaId) {
         status: 'aberto',
         createdAt: new Date().toISOString()
     });
-    localStorage.setItem('wms_volumes', JSON.stringify(volumes));
+    localStorage.setItem('wms_volumes' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(volumes));
     renderEmbalagem(document.getElementById('view-dynamic'));
 };
 
 window.finalizarEmbalagem = function (ondaId) {
-    const volumes = JSON.parse(localStorage.getItem('wms_volumes') || '[]');
+    const volumes = JSON.parse(localStorage.getItem('wms_volumes' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     volumes.filter(v => v.ondaId === ondaId).forEach(v => v.status = 'fechado');
-    localStorage.setItem('wms_volumes', JSON.stringify(volumes));
+    localStorage.setItem('wms_volumes' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(volumes));
     alert('✅ Embalagem finalizada! Volumes lacrados.');
     renderEmbalagem(document.getElementById('view-dynamic'));
 };
@@ -729,8 +729,8 @@ window.finalizarEmbalagem = function (ondaId) {
 // ========================
 function renderRomaneio(container) {
     const ondas = getOndasMock();
-    const volumes = JSON.parse(localStorage.getItem('wms_volumes') || '[]');
-    const cargas = JSON.parse(localStorage.getItem('wms_cargas') || '[]');
+    const volumes = JSON.parse(localStorage.getItem('wms_volumes' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+    const cargas = JSON.parse(localStorage.getItem('wms_cargas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const romaneios = cargas.length > 0 ? cargas : [
         { id: 'CRG-001', data: new Date().toISOString().split('T')[0], transportadora: 'Trans. São Paulo Express', placa: 'ABC-1234', ondas: ondas.slice(0, 2).map(o => o.id), totalVolumes: 8, pesoTotal: 145.5, status: 'gerado' },
         { id: 'CRG-002', data: new Date().toISOString().split('T')[0], transportadora: 'Log Norte LTDA', placa: 'DEF-5678', ondas: ondas.slice(2).map(o => o.id), totalVolumes: 4, pesoTotal: 72.3, status: 'conferido' }
@@ -781,7 +781,7 @@ function renderRomaneio(container) {
 }
 
 window.gerarRomaneio = function () {
-    const cargas = JSON.parse(localStorage.getItem('wms_cargas') || '[]');
+    const cargas = JSON.parse(localStorage.getItem('wms_cargas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const novo = {
         id: 'CRG-' + String(cargas.length + 3).padStart(3, '0'),
         data: new Date().toISOString().split('T')[0],
@@ -793,7 +793,7 @@ window.gerarRomaneio = function () {
         status: 'gerado'
     };
     cargas.push(novo);
-    localStorage.setItem('wms_cargas', JSON.stringify(cargas));
+    localStorage.setItem('wms_cargas' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(cargas));
     alert(`✅ Romaneio ${novo.id} gerado!`);
     renderRomaneio(document.getElementById('view-dynamic'));
 };
@@ -803,9 +803,9 @@ window.imprimirRomaneio = function (id) {
 };
 
 window.conferirRomaneio = function (id) {
-    const cargas = JSON.parse(localStorage.getItem('wms_cargas') || '[]');
+    const cargas = JSON.parse(localStorage.getItem('wms_cargas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const c = cargas.find(c => c.id === id);
-    if (c) { c.status = 'conferido'; localStorage.setItem('wms_cargas', JSON.stringify(cargas)); }
+    if (c) { c.status = 'conferido'; localStorage.setItem('wms_cargas' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(cargas)); }
     renderRomaneio(document.getElementById('view-dynamic'));
 };
 
@@ -813,8 +813,8 @@ window.conferirRomaneio = function (id) {
 // 6. EXPEDIÇÃO
 // ========================
 function renderExpedicao(container) {
-    const cargas = JSON.parse(localStorage.getItem('wms_cargas') || '[]');
-    const expedições = JSON.parse(localStorage.getItem('wms_expedicoes') || '[]');
+    const cargas = JSON.parse(localStorage.getItem('wms_cargas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+    const expedições = JSON.parse(localStorage.getItem('wms_expedicoes' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const todas = expedições.length > 0 ? expedições : [
         { id: 'EXP-001', cargaId: 'CRG-001', doca: 'Doca 03', motorista: 'José da Silva', cpfMotorista: '123.456.789-00', placa: 'ABC-1234', horaSaida: '', status: 'aguardando' },
         { id: 'EXP-002', cargaId: 'CRG-002', doca: 'Doca 01', motorista: 'Carlos Oliveira', cpfMotorista: '987.654.321-00', placa: 'DEF-5678', horaSaida: '14:35', status: 'liberado' }
@@ -862,25 +862,25 @@ function renderExpedicao(container) {
 }
 
 window.liberarExpedicao = function (expId) {
-    const exps = JSON.parse(localStorage.getItem('wms_expedicoes') || '[]');
+    const exps = JSON.parse(localStorage.getItem('wms_expedicoes' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     let exp = exps.find(e => e.id === expId);
     if (!exp) {
         exp = { id: expId, cargaId: document.querySelector(`[onclick="liberarExpedicao('${expId}')"]`)?.closest('.card')?.querySelector('strong')?.innerText || 'CRG-000', status: 'aguardando' };
     }
 
     // INTEGRAÇÃO FASE 9: TRAVA FISCAL DE DESPACHO (NF-e)
-    const cargas = JSON.parse(localStorage.getItem('wms_cargas') || '[]');
-    const ondas = JSON.parse(localStorage.getItem('wms_ondas') || '[]');
+    const cargas = JSON.parse(localStorage.getItem('wms_cargas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+    const ondas = JSON.parse(localStorage.getItem('wms_ondas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const erpOrders = JSON.parse(localStorage.getItem('erp_vendas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
 
     let carga = cargas.find(c => c.id === exp.cargaId) || { ondas: [] }; // Mock fallback
 
     // Fallback if we are using the hardcoded mock CRG-001
     if (exp.cargaId === 'CRG-001' && !cargas.find(c => c.id === 'CRG-001')) {
-        const mockOndas = JSON.parse(localStorage.getItem('wms_ondas') || '[]').filter((o, i) => i < 2).map(o => o.id);
+        const mockOndas = JSON.parse(localStorage.getItem('wms_ondas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]').filter((o, i) => i < 2).map(o => o.id);
         carga = { id: 'CRG-001', ondas: mockOndas };
     } else if (exp.cargaId === 'CRG-002' && !cargas.find(c => c.id === 'CRG-002')) {
-        const mockOndas = JSON.parse(localStorage.getItem('wms_ondas') || '[]').filter((o, i) => i >= 2).map(o => o.id);
+        const mockOndas = JSON.parse(localStorage.getItem('wms_ondas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]').filter((o, i) => i >= 2).map(o => o.id);
         carga = { id: 'CRG-002', ondas: mockOndas };
     }
 
@@ -913,7 +913,7 @@ window.liberarExpedicao = function (expId) {
         exp.status = 'liberado';
         exp.horaSaida = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     }
-    localStorage.setItem('wms_expedicoes', JSON.stringify(exps));
+    localStorage.setItem('wms_expedicoes' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(exps));
 
     // Desconta o volume do ERP e finaliza o status
     if (carga && carga.ondas) {
@@ -939,3 +939,4 @@ window.liberarExpedicao = function (expId) {
     alert(`✅ Expedição ${expId} liberada!\nVeículo autorizado para saída.`);
     renderExpedicao(document.getElementById('view-dynamic'));
 };
+

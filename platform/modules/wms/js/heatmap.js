@@ -13,7 +13,7 @@ window.HeatmapManager = {
     },
 
     getHeatData: function () {
-        const tasks = JSON.parse(localStorage.getItem('wms_picking') || '[]');
+        const tasks = JSON.parse(localStorage.getItem('wms_picking' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
         const locs = [];
 
         // Count frequency per location
@@ -118,3 +118,4 @@ window.HeatmapManager = {
         container.innerHTML = html;
     }
 };
+

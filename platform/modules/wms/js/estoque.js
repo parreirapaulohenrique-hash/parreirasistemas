@@ -21,7 +21,7 @@ window.StockManager = {
 
     // Log Transaction (Kardex)
     logTransaction: function (type, sku, qty, doc, reason) {
-        const logs = JSON.parse(localStorage.getItem('wms_kardex') || '[]');
+        const logs = JSON.parse(localStorage.getItem('wms_kardex' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
         const user = JSON.parse(localStorage.getItem('logged_user') || '{"login":"system"}');
         logs.unshift({
             id: `LOG-${Date.now()}`,
@@ -35,7 +35,7 @@ window.StockManager = {
         });
         // Limit log size to 1000
         if (logs.length > 1000) logs.pop();
-        localStorage.setItem('wms_kardex', JSON.stringify(logs));
+        localStorage.setItem('wms_kardex' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(logs));
     },
 
     // Add stock to a location (Receiving)
@@ -416,3 +416,4 @@ window.filterEnderecos = function () {
         tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--text-secondary);">Nenhum endereço encontrado.</td></tr>`;
     }
 };
+

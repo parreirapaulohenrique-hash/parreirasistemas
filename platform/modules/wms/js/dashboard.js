@@ -1,4 +1,4 @@
-// WMS Dashboard - KPIs, Occupation Chart, Recent Movements
+﻿// WMS Dashboard - KPIs, Occupation Chart, Recent Movements
 // Renders into #view-dashboard
 
 window.loadDashboardView = function () {
@@ -7,7 +7,7 @@ window.loadDashboardView = function () {
 
     // Data
     const suf      = window.getTenantSuffix ? window.getTenantSuffix() : '';
-    const receipts  = JSON.parse(localStorage.getItem('wms_receipts') || '[]');
+    const receipts  = JSON.parse(localStorage.getItem('wms_receipts' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const addresses = JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
     const estoque   = JSON.parse(localStorage.getItem('wms_estoque'  + suf) || '[]');
     const tarefas   = JSON.parse(localStorage.getItem('wms_tarefas'  + suf) || '[]');
@@ -89,13 +89,13 @@ window.loadDashboardView = function () {
     }).length;
 
     // Mock operational data -> REAL DATA
-    const ondas = JSON.parse(localStorage.getItem('wms_ondas') || '[]');
+    const ondas = JSON.parse(localStorage.getItem('wms_ondas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const separacoesHoje = ondas.filter(o => {
         const d = new Date(o.created || o.data || new Date().toISOString());
         return d.toLocaleDateString('pt-BR') === today;
     }).length;
 
-    const ajustes = JSON.parse(localStorage.getItem('wms_ajustes') || '[]');
+    const ajustes = JSON.parse(localStorage.getItem('wms_ajustes' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const divergenciasPendentes = ajustes.filter(a => a.status === 'pendente').length;
 
     // Calculate occupation by street
@@ -259,4 +259,5 @@ window.loadDashboardView = function () {
         if (wrap && window.WMS3D) WMS3D.init(wrap);
     });
 };
+
 

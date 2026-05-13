@@ -1,4 +1,4 @@
-﻿// WMS Core Logic
+// WMS Core Logic
 // Navigation, Auth, Submenu Control, Dynamic View Loading
 
 const WMS_VERSION = '3.4.0';
@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.WmsIntegration.init(intConfig);
 
         // Dynamic Branding (Store Name)
-        const wmsConfig = JSON.parse(localStorage.getItem('wms_config') || '{}');
+        const wmsConfig = JSON.parse(localStorage.getItem('wms_config' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
         const storeName = wmsConfig.geral?.nomeArmazem || 'WMS';
 
         const titleEl = document.getElementById('wmsTitle');
@@ -39,8 +39,69 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.log('📦 Produtos sincronizados do ERP Master:', res.data.length);
             }
         });
+    }
 
-        // 🟢 Cloud Listener: Iniciar escuta de Novos Pedidos do ERP no Firebase
+    // ─── Firestore: carregar configs WMS do tenant (provisionadas pelo Admin Master) ──
+    // Garante que as configurações sobrevivam limpeza de cache e troca de dispositivo.
+    const sess = JSON.parse(sessionStorage.getItem('parreira_session') || 'null');
+    const tenantId = sess?.tenantId || user.tenantId || null;
+    if (tenantId && typeof firebase !== 'undefined') {
+        const _ts = (window.getTenantSuffix ? window.getTenantSuffix() : `_${tenantId}`);
+        try {
+            const db = firebase.firestore();
+            const [intSnap, cfgSnap, armSnap] = await Promise.all([
+                db.collection('tenants').doc(tenantId).collection('wms_config').doc('integration').get(),
+                db.collection('tenants').doc(tenantId).collection('wms_config').doc('config').get(),
+                db.collection('tenants').doc(tenantId).collection('wms_config').doc('armazem').get()
+            ]);
+
+            // Integração Maxdata: preenche localStorage com as credenciais do tenant
+            if (intSnap.exists) {
+                const intData = intSnap.data();
+                const existingInt = JSON.parse(localStorage.getItem('wms_integration_config' + _ts) || '{}');
+                // Só sobrescreve se o Firestore tiver dados mais recentes ou localStorage estiver vazio
+                if (!existingInt.connectorId || new Date(intData.updatedAt) > new Date(existingInt.updatedAt || 0)) {
+                    localStorage.setItem('wms_integration_config' + _ts, JSON.stringify({
+                        connectorId:     intData.connectorId || 'maxdata',
+                        connectorConfig: { baseUrl: intData.baseUrl, empId: intData.empId, terminal: intData.terminal },
+                        updatedAt:       intData.updatedAt
+                    }));
+                    // Re-inicializa a integração com as credenciais corretas do tenant
+                    if (window.WmsIntegration) {
+                        const newCfg = JSON.parse(localStorage.getItem('wms_integration_config' + _ts) || '{}');
+                        window.WmsIntegration.init(newCfg);
+                        if (window.WmsMaxdataPoller) window.WmsMaxdataPoller.restore();
+                    }
+                    console.log(`🔐 [WMS] Configuração Maxdata carregada do Firestore para tenant: ${tenantId}`);
+                }
+            }
+
+            // Config geral (CNPJs, etc.)
+            if (cfgSnap.exists) {
+                const cfgData = cfgSnap.data();
+                const existingCfg = JSON.parse(localStorage.getItem('wms_config' + _ts) || '{}');
+                if (!existingCfg.cnpjs && cfgData.cnpjs) {
+                    existingCfg.cnpjs = cfgData.cnpjs;
+                    localStorage.setItem('wms_config' + _ts, JSON.stringify(existingCfg));
+                    console.log(`📋 [WMS] CNPJs carregados do Firestore: ${cfgData.cnpjs.length} empresa(s)`);
+                }
+            }
+
+            // Config do armazém
+            if (armSnap.exists) {
+                const armData = armSnap.data();
+                const existingArm = JSON.parse(localStorage.getItem('wms_armazem_config' + _ts) || '{}');
+                if (!Object.keys(existingArm).length) {
+                    localStorage.setItem('wms_armazem_config' + _ts, JSON.stringify(armData));
+                    console.log(`🏭 [WMS] Config do armazém carregada do Firestore`);
+                }
+            }
+        } catch(e) {
+            console.warn('[WMS] Firestore config sync falhou (modo offline?):', e.message);
+        }
+    }
+
+    // 🟢 Cloud Listener: Iniciar escuta de Novos Pedidos do ERP no Firebase
         if (typeof firebase !== 'undefined' && user.tenant) {
             console.log('📡 WMS Cloud Listener ativo para fila de Pedidos (Tenant: ' + user.tenant + ')');
 
@@ -371,3 +432,4 @@ function _updateSyncStatus(status, info) {
         <span style="color:${s.color};">${s.text}</span>`;
 }
 window._updateSyncStatus = _updateSyncStatus;
+

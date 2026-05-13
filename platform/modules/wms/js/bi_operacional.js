@@ -15,12 +15,12 @@ window.renderBiOperacional = function () {
     // 1. CARREGAR DADOS
     // ============================
     const mockData = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
-    const receipts = JSON.parse(localStorage.getItem('wms_receipts') || '[]');
-    const ondas = JSON.parse(localStorage.getItem('wms_ondas') || '[]');
-    const waves = JSON.parse(localStorage.getItem('wms_waves') || '[]');
-    const ajustes = JSON.parse(localStorage.getItem('wms_ajustes') || '[]');
+    const receipts = JSON.parse(localStorage.getItem('wms_receipts' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+    const ondas = JSON.parse(localStorage.getItem('wms_ondas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+    const waves = JSON.parse(localStorage.getItem('wms_waves' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+    const ajustes = JSON.parse(localStorage.getItem('wms_ajustes' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const addresses = mockData.addresses || [];
-    const stock = JSON.parse(localStorage.getItem('wms_stock') || '[]');
+    const stock = JSON.parse(localStorage.getItem('wms_stock' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
 
     const hoje = new Date();
     const todayStr = hoje.toLocaleDateString('pt-BR');
@@ -241,3 +241,4 @@ function renderChartProdutividade(waves) {
         }
     });
 }
+

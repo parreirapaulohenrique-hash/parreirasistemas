@@ -70,7 +70,7 @@ function renderRelmEnderecoVazio(container) {
 
 // --- 2. Endereços Bloqueados ---
 function renderRelmEnderecoBloqueado(container) {
-    const bloqueios = JSON.parse(localStorage.getItem('wms_bloqueios') || '[]');
+    const bloqueios = JSON.parse(localStorage.getItem('wms_bloqueios' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const ativos = bloqueios.filter(b => b.status !== 'LIBERADO');
     const mock = ativos.length > 0 ? ativos : [
         { id: 'BLQ-001', ref: '02-01-0201', tipo: 'ENDEREÇO', motivo: 'Conferência pendente', status: 'BLOQUEADO', data: new Date().toISOString() },
@@ -281,7 +281,7 @@ function renderRelmAuditoriaCadastro(container) {
 
 // --- 1. Recebimentos do Dia ---
 function renderReloRecebimento(container) {
-    const receipts = JSON.parse(localStorage.getItem('wms_receipts') || '[]');
+    const receipts = JSON.parse(localStorage.getItem('wms_receipts' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const today = new Date().toISOString().split('T')[0];
     const todayR = receipts.filter(r => r.createdAt?.startsWith(today));
     const data = todayR.length > 0 ? todayR : [
@@ -320,7 +320,7 @@ function renderReloRecebimento(container) {
 
 // --- 2. Armazenagens Pendentes ---
 function renderReloArmazenagem(container) {
-    const tasks = JSON.parse(localStorage.getItem('wms_putaway') || '[]');
+    const tasks = JSON.parse(localStorage.getItem('wms_putaway' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const pendentes = tasks.filter(t => t.status === 'PENDENTE');
     const data = pendentes.length > 0 ? pendentes : [
         { id: 'PUT-001', sku: 'SKU-1001', desc: 'Parafuso M8x30', qtd: 500, destino: 'A-01-01-01', prioridade: 'Alta' },
@@ -353,7 +353,7 @@ function renderReloArmazenagem(container) {
 
 // --- 3. Separações do Dia ---
 function renderReloSeparacao(container) {
-    const picking = JSON.parse(localStorage.getItem('wms_picking') || '[]');
+    const picking = JSON.parse(localStorage.getItem('wms_picking' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const today = new Date().toISOString().split('T')[0];
     const data = picking.length > 0 ? picking : [
         { onda: 'OND-003', pedidos: 5, itens: 18, status: 'EM SEPARAÇÃO', operador: 'separador1', inicio: '10:30' },
@@ -531,3 +531,4 @@ function renderReloMovimentacao(container) {
         </div>
     `;
 }
+
