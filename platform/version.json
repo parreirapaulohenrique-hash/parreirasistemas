@@ -1,15 +1,14 @@
 {
-    "version": "11.15.0",
+    "version": "11.16.0",
     "build": "20260513",
     "lastUpdate": "2026-05-13",
-    "description": "WMS: Integração Maxdata ERP nativa — conector JWT bidirecional com autenticação automática, token cache, e procedures completas de recebimento e conferência",
+    "description": "WMS: Maxdata Sync em Tempo Real — toggle ativar/desativar com polling automático a cada 30s, detecção de novas NFs e atualização ao vivo da UI",
     "changelog": [
-        "Integration: Conector 'maxdata' adicionado com JWT auth (POST /auth), token cache em localStorage, auto-renew 1min antes da expiração",
-        "Procedures: proc_buscar_nf_destinada() — branch maxdata via GET /entry com match por chave ou número",
-        "Procedures: proc_buscar_nf_por_numero() — branch maxdata via GET /entry com match por número",
-        "Procedures: proc_verificar_pre_entrada() — branch maxdata via GET /entry + GET /entry/{id}/items",
-        "Procedures: proc_confirmar_recebimento() — branch maxdata via PUT /entry/markaschecked (recebimento de volumes)",
-        "Procedures: proc_enviar_conferencia_maxdata() — implementado com PUT /entry/markaschecked (conferência item a item)",
-        "Helpers: _maxdataGetToken(), _maxdataHdrs(), _maxdataCfg(), _maxdataNorm(), _maxdataGetEntries() centralizados"
+        "Integration: WmsMaxdataPoller singleton — polling GET /entry a cada 30s, detecta novas NFs e emite CustomEvent 'maxdata-novas-nfs'",
+        "Integration: Auto-restore do estado ativo ao recarregar a página",
+        "Integration: Token JWT reutilizado e renovado automaticamente dentro do poller",
+        "Config UI: Painel 'Sync em Tempo Real' com dot pulsante AO VIVO, badge última sync, contador de NFs",
+        "Config UI: Botão toggle Ativar/Desativar com atualização visual imediata (verde/vermelho)",
+        "Config UI: Painel só aparece quando conector Maxdata está selecionado"
     ]
 }

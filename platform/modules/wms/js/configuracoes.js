@@ -572,9 +572,64 @@ function renderCfgIntegracao(container) {
         </div>
     `;
 
+    // ─── Painel: Sync em Tempo Real (só para conector Maxdata) ───────────────
+    if (status.connectorId === 'maxdata') {
+        const ic       = JSON.parse(localStorage.getItem('wms_integration_config') || '{}');
+        const polAtivo = !!ic.pollingAtivo;
+        const lastSync = ic.pollingLastSync ? new Date(ic.pollingLastSync).toLocaleTimeString('pt-BR') : '—';
+        const nfCount  = ic.pollingNfCount != null ? `${ic.pollingNfCount} NF(s) no Maxdata` : '—';
+
+        container.insertAdjacentHTML('beforeend', `
+        <div class="card" style="margin-bottom:1.5rem;border:1px solid ${polAtivo ? '#10b981' : 'var(--border-color)'};
+             box-shadow:${polAtivo ? '0 0 0 3px rgba(16,185,129,.1)' : 'none'};transition:all .3s;">
+            <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="display:flex;align-items:center;gap:.75rem;">
+                    <span class="material-icons-round" style="color:${polAtivo ? '#10b981' : 'var(--text-secondary)'};">${polAtivo ? 'wifi' : 'wifi_off'}</span>
+                    <h3 style="font-size:.95rem;font-weight:600;margin:0;">Sync em Tempo Real — Maxdata</h3>
+                    ${polAtivo ? `
+                    <span style="display:inline-flex;align-items:center;gap:.4rem;
+                        background:rgba(16,185,129,.12);color:#10b981;font-size:.72rem;
+                        font-weight:700;padding:.15rem .6rem;border-radius:999px;">
+                        <span style="width:7px;height:7px;border-radius:50%;background:#10b981;
+                            animation:pulse-dot 1.5s infinite;"></span> AO VIVO
+                    </span>` : `
+                    <span style="font-size:.72rem;color:var(--text-secondary);
+                        background:var(--bg-hover);padding:.15rem .6rem;border-radius:999px;">PAUSADO</span>`}
+                </div>
+                <button id="btn-toggle-maxdata-poll" class="btn ${polAtivo ? 'btn-danger' : 'btn-success'}"
+                    onclick="toggleMaxdataPoller()" style="min-width:180px;">
+                    <span class="material-icons-round" style="font-size:1rem;">${polAtivo ? 'stop_circle' : 'play_circle'}</span>
+                    ${polAtivo ? 'Desativar Sync' : 'Ativar Sync em Tempo Real'}
+                </button>
+            </div>
+            <div style="padding:1rem 1.5rem;display:flex;align-items:center;gap:2rem;flex-wrap:wrap;">
+                <div style="display:flex;flex-direction:column;gap:.2rem;">
+                    <span style="font-size:.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;">Última Verificação</span>
+                    <span id="maxdata-poll-badge" style="font-size:.83rem;font-weight:600;">${polAtivo ? `Última sync: ${lastSync}` : '—'}</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:.2rem;">
+                    <span style="font-size:.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;">NFs no ERP</span>
+                    <span id="maxdata-poll-count" style="font-size:.83rem;font-weight:600;">${nfCount}</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:.2rem;">
+                    <span style="font-size:.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;">Intervalo</span>
+                    <span style="font-size:.83rem;font-weight:600;">30 segundos</span>
+                </div>
+                <div style="flex:1;font-size:.78rem;color:var(--text-secondary);line-height:1.5;">
+                    ${polAtivo
+                        ? 'O WMS está monitorando o Maxdata. Novas NFs são detectadas automaticamente e aparecem na fila de Recebimento do Coletor.'
+                        : 'Ative o sync para que o WMS monitore o Maxdata a cada 30s e detecte novas NFs automaticamente.'}
+                </div>
+            </div>
+        </div>
+        <style>@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.5)}}</style>
+        `);
+    }
+
     // ─── Seção Empresas / CNPJs ───────────────────────────────────────────────
     const cfg = getWmsConfig();
     const empresas = cfg.empresas || [];
+
 
     container.insertAdjacentHTML('beforeend', `
         <div class="card" style="margin-bottom:1.5rem;" id="card-empresas">
@@ -847,6 +902,20 @@ window.syncAll = async function () {
     alert(`✅ ${count} entidades sincronizadas.`);
     renderCfgIntegracao(document.getElementById('view-dynamic'));
 };
+
+window.toggleMaxdataPoller = async function () {
+    const btn = document.getElementById('btn-toggle-maxdata-poll');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-icons-round" style="font-size:1rem;animation:spin 1s linear infinite;">sync</span> Aguarde...'; }
+    try {
+        const ativo = await window.WmsMaxdataPoller.toggle();
+        // Re-renderiza a seção de integração para refletir o novo estado
+        setTimeout(() => renderCfgIntegracao(document.getElementById('view-dynamic')), 300);
+    } catch (e) {
+        alert(`❌ Erro ao ${window.WmsMaxdataPoller.isActive() ? 'desativar' : 'ativar'} sync: ${e.message}`);
+        if (btn) { btn.disabled = false; }
+    }
+};
+
 
 // ─── HELPERS: Empresas / CNPJs ────────────────────────────────────────────────
 

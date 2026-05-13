@@ -538,3 +538,146 @@
     };
 
 })();
+
+// =============================================================
+// WmsMaxdataPoller — Sync em Tempo Real com Maxdata
+// Polling de GET /entry a cada 30s. Detecta novas NFs e emite
+// o CustomEvent 'maxdata-novas-nfs' para o WMS reagir.
+// =============================================================
+window.WmsMaxdataPoller = (function () {
+    'use strict';
+
+    const POLL_MS  = 30000;  // 30 segundos
+    const KNOWN_KEY = 'wms_maxdata_known_entries';
+    const IC_KEY    = 'wms_integration_config';
+
+    let _intervalId  = null;
+    let _isActive    = false;
+
+    // ── Auth helper (copia _getToken do conector) ─────────────
+    async function _token() {
+        const ic  = JSON.parse(localStorage.getItem(IC_KEY) || '{}');
+        const cfg = ic.connectorConfig || {};
+        const cached = cfg._maxdataToken;
+        if (cached?.value && new Date(cached.expiresAt) > new Date(Date.now() + 60000))
+            return { token: cached.value, ic, cfg };
+
+        const base = (cfg.baseUrl || '').replace(/\/$/, '');
+        if (!base || !cfg.empId || !cfg.terminal)
+            throw new Error('Maxdata não configurado.');
+
+        const resp = await fetch(`${base}/auth`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ empId: Number(cfg.empId), terminal: cfg.terminal }),
+            signal: AbortSignal.timeout(10000)
+        });
+        if (!resp.ok) throw new Error(`Auth HTTP ${resp.status}`);
+        const data = await resp.json();
+        if (!data.token) throw new Error('Token vazio.');
+
+        if (!ic.connectorConfig) ic.connectorConfig = {};
+        ic.connectorConfig._maxdataToken = { value: data.token, expiresAt: data.expiration };
+        localStorage.setItem(IC_KEY, JSON.stringify(ic));
+        return { token: data.token, ic, cfg: ic.connectorConfig };
+    }
+
+    // ── Um ciclo de polling ───────────────────────────────────
+    async function _poll() {
+        try {
+            const ic = JSON.parse(localStorage.getItem(IC_KEY) || '{}');
+            if (ic.connectorId !== 'maxdata') return;
+
+            const { token, cfg } = await _token();
+            const base = cfg.baseUrl.replace(/\/$/, '');
+
+            const resp = await fetch(`${base}/entry`, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                signal: AbortSignal.timeout(12000)
+            });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const raw = await resp.json();
+            const entries = Array.isArray(raw) ? raw : (raw.data || raw.results || []);
+
+            // Detectar NFs novas
+            const knownIds  = new Set(JSON.parse(localStorage.getItem(KNOWN_KEY) || '[]'));
+            const newEntries = entries.filter(e => !knownIds.has(String(e.id)));
+
+            if (newEntries.length > 0) {
+                localStorage.setItem(KNOWN_KEY, JSON.stringify(entries.map(e => String(e.id))));
+                window.dispatchEvent(new CustomEvent('maxdata-novas-nfs', { detail: { entries: newEntries } }));
+                if (window.WmsIntegration) {
+                    window.WmsIntegration._emit?.('maxdata-novas-nfs', { count: newEntries.length });
+                }
+                console.log(`📥 [Maxdata Poller] ${newEntries.length} nova(s) NF(s) detectada(s).`);
+            }
+
+            // Persiste última sync
+            const icUpd = JSON.parse(localStorage.getItem(IC_KEY) || '{}');
+            icUpd.pollingLastSync = new Date().toISOString();
+            icUpd.pollingNfCount  = entries.length;
+            localStorage.setItem(IC_KEY, JSON.stringify(icUpd));
+
+            // Atualiza badge na UI se visível
+            const badge   = document.getElementById('maxdata-poll-badge');
+            const counter = document.getElementById('maxdata-poll-count');
+            if (badge)   badge.textContent = `Última sync: ${new Date().toLocaleTimeString('pt-BR')}`;
+            if (counter) counter.textContent = `${entries.length} NF(s) no Maxdata`;
+
+        } catch (err) {
+            console.warn('[WmsMaxdataPoller] Erro no poll:', err.message);
+            const badge = document.getElementById('maxdata-poll-badge');
+            if (badge) badge.textContent = `Erro: ${err.message}`;
+        }
+    }
+
+    // ── API pública ───────────────────────────────────────────
+    return {
+        isActive() { return _isActive; },
+
+        async start() {
+            if (_isActive) return;
+            _isActive = true;
+            // Persiste estado
+            const ic = JSON.parse(localStorage.getItem(IC_KEY) || '{}');
+            ic.pollingAtivo = true;
+            localStorage.setItem(IC_KEY, JSON.stringify(ic));
+            // Poll imediato + intervalo
+            await _poll();
+            _intervalId = setInterval(_poll, POLL_MS);
+            console.log(`🟢 [WmsMaxdataPoller] Ativo — intervalo ${POLL_MS / 1000}s`);
+        },
+
+        stop() {
+            if (_intervalId) { clearInterval(_intervalId); _intervalId = null; }
+            _isActive = false;
+            const ic = JSON.parse(localStorage.getItem(IC_KEY) || '{}');
+            ic.pollingAtivo = false;
+            localStorage.setItem(IC_KEY, JSON.stringify(ic));
+            console.log('🔴 [WmsMaxdataPoller] Desativado.');
+        },
+
+        async toggle() {
+            if (_isActive) { this.stop(); return false; }
+            await this.start(); return true;
+        },
+
+        // Chamado no DOMContentLoaded para retomar se estava ativo
+        restore() {
+            const ic = JSON.parse(localStorage.getItem(IC_KEY) || '{}');
+            if (ic.connectorId === 'maxdata' && ic.pollingAtivo) {
+                console.log('♻️ [WmsMaxdataPoller] Retomando sessão anterior...');
+                this.start();
+            }
+        }
+    };
+})();
+
+// Auto-restore quando página carregar
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => window.WmsMaxdataPoller.restore());
+} else {
+    window.WmsMaxdataPoller.restore();
+}
+
