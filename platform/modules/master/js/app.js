@@ -7,15 +7,15 @@ const mockTenants = window.mockTenants || [];
 let dynamicTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
 let platformUsers  = JSON.parse(localStorage.getItem('platform_users_registry')  || '[]');
 
-// SEED: garante que os tenants base do sistema existam em dynamicTenants (source of truth Ãºnica)
+// SEED: garante que os tenants base do sistema existam em dynamicTenants (source of truth única)
 ;(function seedAndDedup() {
-    // Seed mockTenants que ainda nÃ£o existem em dynamicTenants
+    // Seed mockTenants que ainda não existem em dynamicTenants
     mockTenants.forEach(mock => {
         if (!dynamicTenants.find(t => t.id === mock.id)) {
             dynamicTenants.push({ ...mock, isDynamic: false });
         }
     });
-    // Dedup: mantÃ©m a Ãºltima entrada de cada ID
+    // Dedup: mantém a última entrada de cada ID
     const seen = new Map();
     dynamicTenants.forEach(t => seen.set(t.id, t));
     dynamicTenants = [...seen.values()];
@@ -25,7 +25,7 @@ let platformUsers  = JSON.parse(localStorage.getItem('platform_users_registry') 
 // --- SECURITY UPDATE (Ensure Owner Access, Remove Generic Admin) ---
 const SECURITY_KEY = 'sec_v1_paulo_only';
 if (!localStorage.getItem(SECURITY_KEY)) {
-    console.log('ðŸ”’ Aplicando atualizaÃ§Ã£o de seguranÃ§a...');
+    console.log('ðŸ”’ Aplicando atualização de segurança...');
 
     // 1. Remove insecure 'admin'
     platformUsers = platformUsers.filter(u => u.login !== 'admin');
@@ -47,7 +47,7 @@ if (!localStorage.getItem(SECURITY_KEY)) {
 
     localStorage.setItem('platform_users_registry', JSON.stringify(platformUsers));
     localStorage.setItem(SECURITY_KEY, 'true');
-    console.log('ðŸ”’ UsuÃ¡rio Admin configurado: paulo / master@2026');
+    console.log('ðŸ”’ Usuário Admin configurado: paulo / master@2026');
 }
 
 // --- Fallback Seeds ---
@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupForms();
     loadVersion();
 
-    // Listener do form de editar liberaÃ§Ãµes de mÃ³dulos
+    // Listener do form de editar liberações de módulos
     const editTenantForm = document.getElementById('editTenantForm');
     if (editTenantForm) {
         editTenantForm.addEventListener('submit', (e) => {
@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (base) dynamicTenants.push({ ...base, modules: newModules, isDynamic: true });
             }
             localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
-            alert('LibeÃ§Ãµes atualizadas com sucesso!');
+            alert('Libeções atualizadas com sucesso!');
             closeModal('editTenantModal');
             renderTenants();
         });
@@ -156,7 +156,7 @@ function closeModal(modalId) {
     }
 }
 
-// Ãšnica fonte de verdade â€” tudo estÃ¡ em dynamicTenants
+// Ãšnica fonte de verdade â€” tudo está em dynamicTenants
 function getAllTenants() {
     return dynamicTenants;
 }
@@ -203,7 +203,7 @@ function renderTenants() {
                 <span class="status-badge ${statusClass}">Ativo</span>
             </td>
             <td style="text-align: right; display:flex; gap:.5rem; justify-content:flex-end;">
-                <button class="action-btn" title="Editar LiberaÃ§Ãµes" onclick="window.editTenant('${tenant.id}')">
+                <button class="action-btn" title="Editar Liberações" onclick="window.editTenant('${tenant.id}')">
                     <span class="material-icons-round">edit</span>
                 </button>
                 ${(tenant.modules || []).includes('wms') ? `
@@ -258,7 +258,7 @@ function setupForms() {
             const id = idInput.value.trim().toLowerCase();
 
             if (getAllTenants().find(t => t.id === id)) {
-                alert('ID jÃ¡ existe!');
+                alert('ID já existe!');
                 return;
             }
 
@@ -275,12 +275,12 @@ function setupForms() {
             dynamicTenants.push(newTenant);
             localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
 
-            // Cria entrada de licenÃ§a automaticamente
+            // Cria entrada de licença automaticamente
             if (window.LicencasManager) {
                 window.LicencasManager.registrarTenant(newTenant.id, newTenant.name);
             }
 
-            alert('Cliente cadastrado com sucesso! A licenÃ§a foi criada em "Controle de LicenÃ§as".');
+            alert('Cliente cadastrado com sucesso! A licença foi criada em "Controle de Licenças".');
             closeModal('tenantModal'); // Revert to Modal Close
             renderTenants(); // Refresh Table
         });
@@ -320,14 +320,14 @@ function setupForms() {
                 document.getElementById('userLogin').removeAttribute('readonly');
             } else {
                 if (platformUsers.find(u => u.login === login && u.tenant === tenant)) {
-                    alert('UsuÃ¡rio jÃ¡ existe nesta empresa!');
+                    alert('Usuário já existe nesta empresa!');
                     return;
                 }
                 platformUsers.push(newUser);
             }
 
             localStorage.setItem('platform_users_registry', JSON.stringify(platformUsers));
-            alert(isEdit ? 'UsuÃ¡rio atualizado com sucesso!' : 'UsuÃ¡rio cadastrado com sucesso!');
+            alert(isEdit ? 'Usuário atualizado com sucesso!' : 'Usuário cadastrado com sucesso!');
             closeModal('userModal');
             renderUsers();
         });
@@ -349,7 +349,7 @@ function editTenant(tenantId) {
     const allTenants = getAllTenants();
     const tenant = allTenants.find(t => t.id === tenantId);
     if (!tenant) {
-        alert('Tenant nÃ£o encontrado!');
+        alert('Tenant não encontrado!');
         return;
     }
 
@@ -372,7 +372,7 @@ function editTenant(tenantId) {
 function editUser(login, tenant) {
     const user = platformUsers.find(u => u.login === login && u.tenant === tenant);
     if (!user) {
-        alert('UsuÃ¡rio nÃ£o encontrado!');
+        alert('Usuário não encontrado!');
         return;
     }
 
@@ -397,9 +397,9 @@ function editUser(login, tenant) {
 
 // ============================================================
 // PROVISIONING â€” Admin Master provisiona cada tenant
-// Duas seÃ§Ãµes independentes:
-//   1) ConfiguraÃ§Ã£o WMS (Maxdata + CNPJs)
-//   2) Acesso do Tenant (1 usuÃ¡rio admin para todos os mÃ³dulos)
+// Duas seções independentes:
+//   1) Configuração WMS (Maxdata + CNPJs)
+//   2) Acesso do Tenant (1 usuário admin para todos os módulos)
 // ============================================================
 
 window.abrirWmsConfig = async function (tenantId) {
@@ -407,9 +407,9 @@ window.abrirWmsConfig = async function (tenantId) {
     if (old) old.remove();
 
     const tenant = getAllTenants().find(t => t.id === tenantId);
-    if (!tenant) { alert('Tenant nÃ£o encontrado.'); return; }
+    if (!tenant) { alert('Tenant não encontrado.'); return; }
 
-    // MÃ³dulos habilitados com nome amigÃ¡vel
+    // Módulos habilitados com nome amigável
     const modNames = { wms:'WMS', dispatch:'Despacho', erp:'ERP', 'sales-force':'Vendas', master:'Master' };
     const enabledMods = (tenant.modules || []).map(m => modNames[m] || m);
 
@@ -429,7 +429,7 @@ window.abrirWmsConfig = async function (tenantId) {
         }
     } catch(e) { console.warn('[Prov] Firestore read:', e.message); }
 
-    // Procura admin local se nÃ£o achou no Firestore
+    // Procura admin local se não achou no Firestore
     if (!tenantAdmin) {
         tenantAdmin = platformUsers.find(u => u.tenant === tenantId && u.role === 'admin') || null;
     }
@@ -471,23 +471,23 @@ window.abrirWmsConfig = async function (tenantId) {
         </div>
     </div>
 
-    <!-- Corpo rolÃ¡vel -->
+    <!-- Corpo rolável -->
     <div style="padding:1.5rem 1.75rem;display:flex;flex-direction:column;gap:1.75rem;flex:1;">
 
-        <!-- â•â•â• SEÃ‡ÃƒO 1: ACESSO DO TENANT â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+        <!-- â•â•â• SEÇÃƒO 1: ACESSO DO TENANT â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
         <section>
             <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.9rem;">
                 <span class="material-icons-round" style="font-size:1.2rem;color:#f59e0b;">admin_panel_settings</span>
                 <div>
                     <h3 style="font-size:.9rem;font-weight:700;margin:0;">Acesso do Tenant</h3>
                     <p style="font-size:.72rem;color:var(--text-secondary,#94a3b8);margin:.1rem 0 0;">
-                        1 usuÃ¡rio administrador â€” acessa todos os mÃ³dulos liberados
+                        1 usuário administrador â€” acessa todos os módulos liberados
                     </p>
                 </div>
             </div>
 
             ${tenantAdmin ? `
-            <!-- Admin jÃ¡ existe -->
+            <!-- Admin já existe -->
             <div style="background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.2);
                 border-radius:10px;padding:1rem;margin-bottom:1rem;">
                 <div style="display:flex;align-items:center;gap:.75rem;">
@@ -508,7 +508,7 @@ window.abrirWmsConfig = async function (tenantId) {
                 </div>
             </div>
             <div id="prov-admin-form" style="display:none;">` : `
-            <!-- Admin nÃ£o existe ainda -->
+            <!-- Admin não existe ainda -->
             <div id="prov-admin-form">`}
                 <div style="background:rgba(255,255,255,.03);border:1px solid var(--border,#334155);
                     border-radius:10px;padding:1rem;display:flex;flex-direction:column;gap:.7rem;">
@@ -516,7 +516,7 @@ window.abrirWmsConfig = async function (tenantId) {
                         <div>
                             <label class="prov-label">Nome completo</label>
                             <input id="prov-admin-name" type="text"
-                                value="${tenantAdmin?.name || ''}" placeholder="Ex: JoÃ£o Silva"
+                                value="${tenantAdmin?.name || ''}" placeholder="Ex: João Silva"
                                 class="prov-input">
                         </div>
                         <div>
@@ -537,7 +537,7 @@ window.abrirWmsConfig = async function (tenantId) {
                         border-radius:6px;padding:.6rem .75rem;font-size:.75rem;color:#fbbf24;
                         display:flex;align-items:center;gap:.4rem;">
                         <span class="material-icons-round" style="font-size:.95rem;">info</span>
-                        Demais usuÃ¡rios (operadores, supervisores) sÃ£o gerenciados dentro do mÃ³dulo.
+                        Demais usuários (operadores, supervisores) são gerenciados dentro do módulo.
                     </div>
                     <button onclick="window._provSalvarAdmin('${tenantId}')"
                         style="padding:.6rem 1rem;background:#f59e0b;border:none;color:#0f172a;
@@ -551,15 +551,15 @@ window.abrirWmsConfig = async function (tenantId) {
             </div>
         </section>
 
-        <!-- â•â•â• SEÃ‡ÃƒO 2: CONFIGURAÃ‡ÃƒO WMS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+        <!-- â•â•â• SEÇÃƒO 2: CONFIGURAÇÃƒO WMS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
         ${hasWms ? `
         <section>
             <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.9rem;">
                 <span class="material-icons-round" style="font-size:1.2rem;color:#6366f1;">integration_instructions</span>
                 <div>
-                    <h3 style="font-size:.9rem;font-weight:700;margin:0;">ConfiguraÃ§Ã£o WMS</h3>
+                    <h3 style="font-size:.9rem;font-weight:700;margin:0;">Configuração WMS</h3>
                     <p style="font-size:.72rem;color:var(--text-secondary,#94a3b8);margin:.1rem 0 0;">
-                        IntegraÃ§Ã£o Maxdata ERP e CNPJs destinatÃ¡rios
+                        Integração Maxdata ERP e CNPJs destinatários
                     </p>
                 </div>
             </div>
@@ -588,7 +588,7 @@ window.abrirWmsConfig = async function (tenantId) {
                             <label class="prov-label">Conector</label>
                             <select id="wms-connector" class="prov-input">
                                 <option value="maxdata" ${(wmsInt.connectorId||'maxdata')==='maxdata'?'selected':''}>Maxdata ERP</option>
-                                <option value="rest-api" ${wmsInt.connectorId==='rest-api'?'selected':''}>REST API GenÃ©rica</option>
+                                <option value="rest-api" ${wmsInt.connectorId==='rest-api'?'selected':''}>REST API Genérica</option>
                                 <option value="standalone" ${wmsInt.connectorId==='standalone'?'selected':''}>Standalone</option>
                             </select>
                         </div>
@@ -596,14 +596,14 @@ window.abrirWmsConfig = async function (tenantId) {
                     <div>
                         <label class="prov-label">Terminal</label>
                         <input id="wms-terminal" type="text" value="${wmsInt.terminal || ''}"
-                            placeholder="CÃ³digo do terminal no Maxdata Manager"
+                            placeholder="Código do terminal no Maxdata Manager"
                             class="prov-input" style="width:100%;box-sizing:border-box;">
                     </div>
                     <div style="display:flex;align-items:center;gap:.6rem;">
                         <button onclick="window.testarWmsConexao('${tenantId}')"
                             style="padding:.45rem .9rem;background:none;border:1px solid #6366f1;color:#6366f1;
                                 border-radius:6px;cursor:pointer;font-size:.8rem;display:flex;align-items:center;gap:.35rem;">
-                            <span class="material-icons-round" style="font-size:.95rem;">wifi</span>Testar ConexÃ£o
+                            <span class="material-icons-round" style="font-size:.95rem;">wifi</span>Testar Conexão
                         </button>
                         <span id="wms-test-result" style="font-size:.78rem;"></span>
                     </div>
@@ -613,7 +613,7 @@ window.abrirWmsConfig = async function (tenantId) {
                 <div style="background:rgba(255,255,255,.03);border:1px solid var(--border,#334155);
                     border-radius:10px;padding:1rem;display:flex;flex-direction:column;gap:.6rem;">
                     <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">
-                        CNPJs DestinatÃ¡rios
+                        CNPJs Destinatários
                     </div>
                     <div style="display:flex;">
                         <input id="wms-cnpj-input" type="text" placeholder="CNPJ â€” ex: 12.345.678/0001-90"
@@ -629,12 +629,12 @@ window.abrirWmsConfig = async function (tenantId) {
                     <div id="wms-cnpjs-list" style="display:flex;flex-direction:column;gap:.35rem;min-height:36px;"></div>
                 </div>
 
-                <!-- BotÃ£o salvar WMS -->
+                <!-- Botão salvar WMS -->
                 <button onclick="window.salvarWmsConfig('${tenantId}')"
                     style="padding:.7rem 1rem;background:#6366f1;border:none;color:white;border-radius:8px;
                         cursor:pointer;font-weight:700;font-size:.88rem;display:flex;align-items:center;
                         justify-content:center;gap:.4rem;">
-                    <span class="material-icons-round" style="font-size:1rem;">save</span>Salvar ConfiguraÃ§Ã£o WMS
+                    <span class="material-icons-round" style="font-size:1rem;">save</span>Salvar Configuração WMS
                 </button>
                 <div id="wms-save-feedback" style="font-size:.78rem;min-height:1rem;text-align:center;"></div>
             </div>
@@ -643,7 +643,7 @@ window.abrirWmsConfig = async function (tenantId) {
         <div style="background:rgba(255,255,255,.03);border:1px dashed var(--border,#334155);
             border-radius:10px;padding:1.25rem;text-align:center;color:var(--text-secondary,#94a3b8);font-size:.82rem;">
             <span class="material-icons-round" style="font-size:1.5rem;display:block;margin-bottom:.4rem;">warehouse</span>
-            MÃ³dulo WMS nÃ£o estÃ¡ habilitado para este tenant.<br>
+            Módulo WMS não está habilitado para este tenant.<br>
             <a onclick="window.editTenant('${tenantId}')" style="color:#6366f1;cursor:pointer;font-size:.78rem;">
                 Clique aqui para habilitar â†’
             </a>
@@ -674,13 +674,14 @@ window.abrirWmsConfig = async function (tenantId) {
     _renderWmsCnpjs();
 };
 
-// Mostra o form de ediÃ§Ã£o quando o admin jÃ¡ existe
+// Mostra o form de edição quando o admin já existe
 window._provEditarAdmin = function(tenantId) {
     const form = document.getElementById('prov-admin-form');
     if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
 };
 
 // Salva o admin do tenant via ParreiraAuth (SHA-256 + users_index + ativo:true)
+// Usa ParreiraAuth internamente para inicializar Firebase corretamente
 window._provSalvarAdmin = async function(tenantId) {
     const feedback = document.getElementById('prov-admin-feedback');
     const nome  = (document.getElementById('prov-admin-name')?.value  || '').trim();
@@ -694,24 +695,18 @@ window._provSalvarAdmin = async function(tenantId) {
     if (feedback) { feedback.style.color='#94a3b8'; feedback.textContent='Salvando...'; }
 
     try {
-        const db = firebase.firestore();
-        const idxDoc = await db.collection('users_index').doc(login).get();
-
-        if (!idxDoc.exists) {
-            // Novo usuario: cria com hash correto + users_index + ativo:true
+        // Tenta criar; se login ja existe, atualiza
+        try {
             await ParreiraAuth.criarUsuario(tenantId, { nome, login, senha, role: 'admin', pin: '' });
             if (feedback) { feedback.style.color='#10b981'; feedback.textContent='Usuario @' + login + ' criado com sucesso!'; }
-        } else {
-            const existingTenant = idxDoc.data()?.tenantId;
-            if (existingTenant !== tenantId) {
-                if (feedback) { feedback.style.color='#ef4444'; feedback.textContent='Login @' + login + ' ja esta em uso por outro tenant.'; }
-                return;
+        } catch (createErr) {
+            if (createErr.message && createErr.message.includes('em uso')) {
+                await ParreiraAuth.atualizarUsuario(tenantId, login, { nome, senha, role: 'admin' });
+                if (feedback) { feedback.style.color='#10b981'; feedback.textContent='Acesso de @' + login + ' atualizado!'; }
+            } else {
+                throw createErr;
             }
-            // Atualiza nome + senha (re-hasheia automaticamente)
-            await ParreiraAuth.atualizarUsuario(tenantId, login, { nome, senha, role: 'admin' });
-            if (feedback) { feedback.style.color='#10b981'; feedback.textContent='Acesso de @' + login + ' atualizado!'; }
         }
-
         renderUsers();
         setTimeout(() => { if (feedback) feedback.textContent = ''; }, 4000);
     } catch(e) {
@@ -748,14 +743,14 @@ window._wmsAddCnpj = function() {
     const input = document.getElementById('wms-cnpj-input');
     const val = (input?.value || '').trim();
     if (!val) return;
-    const razao    = prompt('RazÃ£o Social (opcional):') || '';
+    const razao    = prompt('Razão Social (opcional):') || '';
     const principal = _wmsCnpjs.length === 0;
     _wmsCnpjs.push({ cnpj: val, razaoSocial: razao, principal });
     input.value = '';
     _renderWmsCnpjs();
 };
 
-// â”€â”€â”€ Testar conexÃ£o Maxdata â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€â”€ Testar conexão Maxdata â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 window.testarWmsConexao = async function() {
     const result  = document.getElementById('wms-test-result');
@@ -775,14 +770,14 @@ window.testarWmsConexao = async function() {
         const data = resp.ok ? await resp.json() : null;
         if (result) {
             result.style.color = data?.token ? '#10b981' : '#ef4444';
-            result.textContent = data?.token ? 'âœ… AutenticaÃ§Ã£o OK!' : `âŒ HTTP ${resp.status}`;
+            result.textContent = data?.token ? 'âœ… Autenticação OK!' : `âŒ HTTP ${resp.status}`;
         }
     } catch(e) {
         if (result) { result.style.color='#ef4444'; result.textContent=`âŒ ${e.message}`; }
     }
 };
 
-// â”€â”€â”€ Salvar configuraÃ§Ã£o WMS (integraÃ§Ã£o + CNPJs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€â”€ Salvar configuração WMS (integração + CNPJs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 window.salvarWmsConfig = async function(tenantId) {
     const feedback  = document.getElementById('wms-save-feedback');
@@ -802,11 +797,11 @@ window.salvarWmsConfig = async function(tenantId) {
                 db.collection('tenants').doc(tenantId).collection('wms_config').doc('integration').set(integrationData),
                 db.collection('tenants').doc(tenantId).collection('wms_config').doc('config').set(configData)
             ]);
-            if (feedback) { feedback.style.color='#10b981'; feedback.textContent='âœ… ConfiguraÃ§Ã£o WMS salva no Firestore!'; }
+            if (feedback) { feedback.style.color='#10b981'; feedback.textContent='âœ… Configuração WMS salva no Firestore!'; }
         } else {
             const ts = `_${tenantId}`;
             localStorage.setItem('wms_integration_config' + ts, JSON.stringify({ connectorId: connector, connectorConfig: { baseUrl, empId, terminal } }));
-            if (feedback) { feedback.style.color='#f59e0b'; feedback.textContent='âš ï¸ Salvo localmente (Firebase indisponÃ­vel).'; }
+            if (feedback) { feedback.style.color='#f59e0b'; feedback.textContent='âš ï¸ Salvo localmente (Firebase indisponível).'; }
         }
     } catch(e) {
         if (feedback) { feedback.style.color='#ef4444'; feedback.textContent=`âŒ Erro: ${e.message}`; }
