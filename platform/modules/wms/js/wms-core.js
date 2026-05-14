@@ -7,7 +7,7 @@ const WMS_VERSION = '3.4.0';
 document.addEventListener('DOMContentLoaded', async () => {
     const savedUser = localStorage.getItem('logged_user');
     if (!savedUser) {
-        window.location.href = '../../index.html';
+        window.location.href = '../../login.html';
         return;
     }
 
@@ -102,16 +102,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ─── Ativa WmsSync: espelha localStorage ↔ Firestore em tempo real ─────────
-    if (window.WmsSync) {
-        WmsSync.init().then(() => {
-            const syncBadge = document.getElementById('wms-sync-status');
-            if (syncBadge) {
-                syncBadge.innerHTML = `
-                    <span class="material-icons-round" style="font-size:.9rem;color:#10b981;">cloud_done</span>
-                    <span style="color:#10b981;font-size:.72rem;">Cloud Sync Ativo</span>`;
-            }
-        }).catch(e => console.warn('[WmsSync] init:', e.message));
-    }
+    try {
+        if (window.WmsSync) {
+            WmsSync.init().then(() => {
+                const syncBadge = document.getElementById('wms-sync-status');
+                if (syncBadge) {
+                    syncBadge.innerHTML = `<span class="material-icons-round" style="font-size:.9rem;color:#10b981;">cloud_done</span>
+                        <span style="color:#10b981;font-size:.72rem;">Cloud Sync Ativo</span>`;
+                }
+            }).catch(e => console.warn('[WmsSync] init:', e.message));
+        }
+    } catch(e) { console.warn('[WmsSync] falhou silenciosamente:', e.message); }
 
     // 🟢 Cloud Listener: Iniciar escuta de Novos Pedidos do ERP no Firebase
         if (typeof firebase !== 'undefined' && user.tenant) {
@@ -181,13 +182,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 // Listener tempo real: Firestore → localStorage
+                // NUNCA sobrescreve localStorage com array vazio (evita race com migração)
                 let _syncDebounce = null;
                 const unsub = WmsStore.ouvirEnderecos(addrs => {
+                    if (!Array.isArray(addrs) || addrs.length === 0) return;
                     clearTimeout(_syncDebounce);
                     _syncDebounce = setTimeout(() => {
                         const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
-                        localStorage.setItem('wms_mock_data' + suf, JSON.stringify(addrs));
-                        if (window.updateDashboardStats) updateDashboardStats();
+                        const localNow = JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
+                        if (addrs.length >= localNow.length) {
+                            localStorage.setItem('wms_mock_data' + suf, JSON.stringify(addrs));
+                            if (window.updateDashboardStats) updateDashboardStats();
+                        }
                     }, 600);
                 });
                 window.wmsEnderecosSyncUnsubscribe = unsub;
