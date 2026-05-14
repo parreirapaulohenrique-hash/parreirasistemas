@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ParreiraLog — Login</title>
+    <title id="pageTitleTag">Login | Parreira Sistemas</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <style>
@@ -116,7 +116,17 @@
 <script src="core/js/session-manager.js"></script>
 <script src="core/js/auth.js"></script>
 <script>
-    if (ParreiraAuth.isLogado()) window.location.href = 'modules/wms/index.html';
+    // Lê parâmetros de URL: ?redirect=modules/wms/index.html&module=wms
+    const _params   = new URLSearchParams(window.location.search);
+    const _redirect = _params.get('redirect') || 'index.html';
+    const _module   = _params.get('module')   || 'wms';
+
+    // Título dinâmico
+    const _modLabels = { wms:'WMS', dispatch:'Despacho', master:'Admin', erp:'ERP', 'sales-force':'Vendas' };
+    document.getElementById('pageTitleTag').textContent = (_modLabels[_module] || _module) + ' — Login | Parreira Sistemas';
+
+    // Se já logado, redireciona direto
+    if (ParreiraAuth.isLogado()) window.location.href = _redirect;
 
     async function doLogin() {
         const login = document.getElementById('inpLogin').value.trim();
@@ -132,8 +142,8 @@
         btn.innerHTML = '<span class="material-icons-round spin">sync</span> Entrando...';
 
         try {
-            await ParreiraAuth.login(login, senha, 'wms');
-            window.location.href = 'modules/wms/index.html';
+            await ParreiraAuth.login(login, senha, _module);
+            window.location.href = _redirect;
         } catch(e) {
             msg.textContent = e.message || 'Erro ao fazer login.';
             erro.classList.add('on');

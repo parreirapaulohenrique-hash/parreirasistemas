@@ -436,14 +436,14 @@
         // Session Guard
         (function() {
             if (!window.ParreiraAuth || !ParreiraAuth.isLogado()) {
-                window.location.href = '../../login.html';
+                window.location.href = '../../login.html?redirect=modules/wms/index.html&module=wms';
                 return;
             }
             const s = ParreiraAuth.getSessao();
             const nEl = document.getElementById('userName');
             const tEl = document.getElementById('userTenant');
             if (nEl) nEl.textContent = s.nome;
-            if (tEl) tEl.textContent = s.tenantNome + ' Â· ' + ({operator:'Operador',supervisor:'Supervisor',admin:'Admin',master:'Master'}[s.role]||s.role);
+            if (tEl) tEl.textContent = s.tenantNome + ' · ' + ({operator:'Operador',supervisor:'Supervisor',admin:'Admin',master:'Master'}[s.role]||s.role);
         })();
 
         // Load Version
