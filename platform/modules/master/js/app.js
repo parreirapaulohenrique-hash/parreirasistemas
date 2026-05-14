@@ -78,20 +78,30 @@ document.addEventListener('DOMContentLoaded', () => {
     if (editTenantForm) {
         editTenantForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const tenantId  = document.getElementById('editTenantIdField').value;
-            const newModules = Array.from(
-                document.querySelectorAll('input[name="editModules"]:checked')
-            ).map(cb => cb.value);
+            const id      = document.getElementById('editTenantIdField').value;
+            const modules = Array.from(document.querySelectorAll('input[name="editModules"]:checked')).map(cb => cb.value);
 
-            const existingIdx = dynamicTenants.findIndex(t => t.id === tenantId);
-            if (existingIdx >= 0) {
-                dynamicTenants[existingIdx] = { ...dynamicTenants[existingIdx], modules: newModules };
+            // Atualiza localStorage
+            const idx = dynamicTenants.findIndex(t => t.id === id);
+            if (idx >= 0) {
+                dynamicTenants[idx].modules = modules;
             } else {
-                const base = getAllTenants().find(t => t.id === tenantId);
-                if (base) dynamicTenants.push({ ...base, modules: newModules, isDynamic: true });
+                const base = getAllTenants().find(t => t.id === id);
+                if (base) dynamicTenants.push({ ...base, modules, isDynamic: true });
             }
             localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
-            alert('Libeções atualizadas com sucesso!');
+
+            // Atualiza Firestore: modulos do tenant (para auth.js refletir modulos corretos no login)
+            try {
+                const tenant = getAllTenants().find(t => t.id === id);
+                const db = ParreiraAuth.getDB();
+                db.collection('tenants').doc(id).set({
+                    nome:    tenant?.name || id,
+                    modulos: modules,
+                    ativo:   true
+                }, { merge: true }).catch(e => console.warn('[Master] Firestore edit tenant:', e.message));
+            } catch(e) { console.warn('[Master] Firebase nao disponivel:', e.message); }
+
             closeModal('editTenantModal');
             renderTenants();
         });
@@ -275,14 +285,29 @@ function setupForms() {
             dynamicTenants.push(newTenant);
             localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
 
-            // Cria entrada de licença automaticamente
+            // Provisiona no Firestore: tenants/{id} (necessario para auth.js no login)
+            try {
+                const db = ParreiraAuth.getDB();
+                db.collection('tenants').doc(id).set({
+                    nome:      newTenant.name,
+                    modulos:   newTenant.modules || [],
+                    cnpj:      newTenant.cnpj    || '',
+                    email:     newTenant.adminEmail || '',
+                    ativo:     true,
+                    criadoEm:  new Date().toISOString()
+                }, { merge: true }).then(() => {
+                    console.log('[Master] Tenant provisionado no Firestore:', id);
+                }).catch(e => console.warn('[Master] Firestore tenant:', e.message));
+            } catch(e) { console.warn('[Master] Firebase nao disponivel:', e.message); }
+
+            // Cria entrada de licenca automaticamente
             if (window.LicencasManager) {
                 window.LicencasManager.registrarTenant(newTenant.id, newTenant.name);
             }
 
-            alert('Cliente cadastrado com sucesso! A licença foi criada em "Controle de Licenças".');
-            closeModal('tenantModal'); // Revert to Modal Close
-            renderTenants(); // Refresh Table
+            alert('Cliente cadastrado com sucesso! A licenca foi criada em "Controle de Licencas".');
+            closeModal('tenantModal');
+            renderTenants();
         });
     }
 
@@ -680,7 +705,7 @@ window._provEditarAdmin = function(tenantId) {
     if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
 };
 
-// Salva o admin do tenant - upsert robusto com ParreiraAuth.getDB()
+// Salva o admin do tenant - provisiona tenant no Firestore + cria usuario admin
 window._provSalvarAdmin = async function(tenantId) {
     const feedback = document.getElementById('prov-admin-feedback');
     const nome  = (document.getElementById('prov-admin-name')?.value  || '').trim();
@@ -691,14 +716,24 @@ window._provSalvarAdmin = async function(tenantId) {
         if (feedback) { feedback.style.color='#ef4444'; feedback.textContent='Preencha nome, login e senha.'; }
         return;
     }
-    if (feedback) { feedback.style.color='#94a3b8'; feedback.textContent='Salvando...'; }
+    if (feedback) { feedback.style.color='#94a3b8'; feedback.textContent='Provisionando...'; }
 
     try {
-        // getDB() inicializa Firebase se necessario e retorna o Firestore instance
         const db        = ParreiraAuth.getDB();
         const senhaHash = await ParreiraAuth._hash(senha);
+        const tenant    = getAllTenants().find(t => t.id === tenantId);
 
-        // Upsert atomico com .set() - cria OU sobrescreve sem precisar de documento pre-existente
+        // 1. Garante que o documento tenants/{tenantId} existe no Firestore
+        //    (auth.js le este doc durante o login para validar empresa + modulos)
+        await db.collection('tenants').doc(tenantId).set({
+            nome:      tenant?.name || tenantId,
+            modulos:   tenant?.modules || [],
+            cnpj:      tenant?.cnpj   || '',
+            ativo:     true,
+            provisionadoEm: new Date().toISOString()
+        }, { merge: true });
+
+        // 2. Cria/atualiza users_index e o usuario admin com .set() atomico
         const batch = db.batch();
         batch.set(db.collection('users_index').doc(login), { tenantId });
         batch.set(db.collection('tenants').doc(tenantId).collection('users').doc(login), {
@@ -707,7 +742,7 @@ window._provSalvarAdmin = async function(tenantId) {
         });
         await batch.commit();
 
-        if (feedback) { feedback.style.color='#10b981'; feedback.textContent='Acesso de @' + login + ' salvo!'; }
+        if (feedback) { feedback.style.color='#10b981'; feedback.textContent='Acesso de @' + login + ' provisionado!'; }
         renderUsers();
         setTimeout(() => { if (feedback) feedback.textContent = ''; }, 4000);
     } catch(e) {
