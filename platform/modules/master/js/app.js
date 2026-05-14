@@ -680,53 +680,44 @@ window._provEditarAdmin = function(tenantId) {
     if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
 };
 
-// Salva o admin do tenant (1 acesso para todos os mÃ³dulos liberados)
+// Salva o admin do tenant via ParreiraAuth (SHA-256 + users_index + ativo:true)
 window._provSalvarAdmin = async function(tenantId) {
     const feedback = document.getElementById('prov-admin-feedback');
-    const name  = (document.getElementById('prov-admin-name')?.value  || '').trim();
+    const nome  = (document.getElementById('prov-admin-name')?.value  || '').trim();
     const login = (document.getElementById('prov-admin-login')?.value || '').trim().toLowerCase();
-    const pass  = (document.getElementById('prov-admin-pass')?.value  || '').trim();
+    const senha = (document.getElementById('prov-admin-pass')?.value  || '').trim();
 
-    if (!name || !login || !pass) {
-        if (feedback) { feedback.style.color='#ef4444'; feedback.textContent='âŒ Preencha nome, login e senha.'; }
+    if (!nome || !login || !senha) {
+        if (feedback) { feedback.style.color='#ef4444'; feedback.textContent='Preencha nome, login e senha.'; }
         return;
     }
+    if (feedback) { feedback.style.color='#94a3b8'; feedback.textContent='Salvando...'; }
 
-    const tenant  = getAllTenants().find(t => t.id === tenantId);
-    const modules = tenant?.modules || [];
-
-    const userData = { login, pass, name, tenant: tenantId, role: 'admin', modules, criadoEm: new Date().toISOString() };
-
-    // 1. Atualiza/cria em platformUsers (localStorage)
-    const idx = platformUsers.findIndex(u => u.login === login && u.tenant === tenantId);
-    if (idx >= 0) {
-        platformUsers[idx] = { ...platformUsers[idx], ...userData };
-    } else {
-        // Verifica se jÃ¡ existe outro admin para este tenant
-        const outroAdmin = platformUsers.find(u => u.tenant === tenantId && u.role === 'admin');
-        if (outroAdmin && outroAdmin.login !== login) {
-            if (!confirm(`JÃ¡ existe um admin "@${outroAdmin.login}" para este tenant. Substituir?`)) return;
-            platformUsers.splice(platformUsers.indexOf(outroAdmin), 1);
-        }
-        platformUsers.push(userData);
-    }
-    localStorage.setItem('platform_users_registry', JSON.stringify(platformUsers));
-
-    // 2. Salva no Firestore: tenants/{tenantId}/users/{login}
     try {
-        if (typeof firebase !== 'undefined') {
-            await firebase.firestore()
-                .collection('tenants').doc(tenantId)
-                .collection('users').doc(login)
-                .set({ ...userData, criadoEm: firebase.firestore.FieldValue.serverTimestamp() });
-        }
-        if (feedback) { feedback.style.color='#10b981'; feedback.textContent=`âœ… Acesso de @${login} salvo com sucesso!`; }
-    } catch(e) {
-        if (feedback) { feedback.style.color='#f59e0b'; feedback.textContent=`âš ï¸ Salvo localmente. Firestore: ${e.message}`; }
-    }
+        const db = firebase.firestore();
+        const idxDoc = await db.collection('users_index').doc(login).get();
 
-    renderUsers();
-    setTimeout(() => { if (feedback) feedback.textContent = ''; }, 4000);
+        if (!idxDoc.exists) {
+            // Novo usuario: cria com hash correto + users_index + ativo:true
+            await ParreiraAuth.criarUsuario(tenantId, { nome, login, senha, role: 'admin', pin: '' });
+            if (feedback) { feedback.style.color='#10b981'; feedback.textContent='Usuario @' + login + ' criado com sucesso!'; }
+        } else {
+            const existingTenant = idxDoc.data()?.tenantId;
+            if (existingTenant !== tenantId) {
+                if (feedback) { feedback.style.color='#ef4444'; feedback.textContent='Login @' + login + ' ja esta em uso por outro tenant.'; }
+                return;
+            }
+            // Atualiza nome + senha (re-hasheia automaticamente)
+            await ParreiraAuth.atualizarUsuario(tenantId, login, { nome, senha, role: 'admin' });
+            if (feedback) { feedback.style.color='#10b981'; feedback.textContent='Acesso de @' + login + ' atualizado!'; }
+        }
+
+        renderUsers();
+        setTimeout(() => { if (feedback) feedback.textContent = ''; }, 4000);
+    } catch(e) {
+        if (feedback) { feedback.style.color='#ef4444'; feedback.textContent='Erro: ' + e.message; }
+        console.error('[Prov] salvarAdmin:', e);
+    }
 };
 
 // â”€â”€â”€ Helpers CNPJs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
