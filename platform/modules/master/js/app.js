@@ -680,8 +680,7 @@ window._provEditarAdmin = function(tenantId) {
     if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
 };
 
-// Salva o admin do tenant via ParreiraAuth (SHA-256 + users_index + ativo:true)
-// Usa ParreiraAuth internamente para inicializar Firebase corretamente
+// Salva o admin do tenant - upsert robusto com ParreiraAuth.getDB()
 window._provSalvarAdmin = async function(tenantId) {
     const feedback = document.getElementById('prov-admin-feedback');
     const nome  = (document.getElementById('prov-admin-name')?.value  || '').trim();
@@ -695,18 +694,20 @@ window._provSalvarAdmin = async function(tenantId) {
     if (feedback) { feedback.style.color='#94a3b8'; feedback.textContent='Salvando...'; }
 
     try {
-        // Tenta criar; se login ja existe, atualiza
-        try {
-            await ParreiraAuth.criarUsuario(tenantId, { nome, login, senha, role: 'admin', pin: '' });
-            if (feedback) { feedback.style.color='#10b981'; feedback.textContent='Usuario @' + login + ' criado com sucesso!'; }
-        } catch (createErr) {
-            if (createErr.message && createErr.message.includes('em uso')) {
-                await ParreiraAuth.atualizarUsuario(tenantId, login, { nome, senha, role: 'admin' });
-                if (feedback) { feedback.style.color='#10b981'; feedback.textContent='Acesso de @' + login + ' atualizado!'; }
-            } else {
-                throw createErr;
-            }
-        }
+        // getDB() inicializa Firebase se necessario e retorna o Firestore instance
+        const db        = ParreiraAuth.getDB();
+        const senhaHash = await ParreiraAuth._hash(senha);
+
+        // Upsert atomico com .set() - cria OU sobrescreve sem precisar de documento pre-existente
+        const batch = db.batch();
+        batch.set(db.collection('users_index').doc(login), { tenantId });
+        batch.set(db.collection('tenants').doc(tenantId).collection('users').doc(login), {
+            nome, login, senhaHash, role: 'admin', pin: '', ativo: true,
+            atualizadoEm: new Date().toISOString()
+        });
+        await batch.commit();
+
+        if (feedback) { feedback.style.color='#10b981'; feedback.textContent='Acesso de @' + login + ' salvo!'; }
         renderUsers();
         setTimeout(() => { if (feedback) feedback.textContent = ''; }, 4000);
     } catch(e) {

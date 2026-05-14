@@ -201,6 +201,7 @@ window.ParreiraAuth = (function () {
         getUser, getTenant, getRole, getNome, getTenantId, getPin,
         hasModulo, hasRole, hasRoleMinimo, dataKey, requireAuth,
         criarUsuario, listarUsuarios, atualizarUsuario, desativarUsuario,
-        _hash // exposto para o setup
+        _hash,      // exposto para o setup
+        getDB: _initDB  // exposto para provisioning (inicializa Firebase se necessário)
     };
 })();
