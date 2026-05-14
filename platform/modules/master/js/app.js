@@ -1,4 +1,4 @@
-﻿// app.js â€” Painel Admin | Parreira Sistemas
+// app.js â€” Painel Admin | Parreira Sistemas
 // (usa window.mockTenants definido em data.js)
 const mockTenants = window.mockTenants || [];
 
