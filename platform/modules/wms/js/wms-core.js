@@ -16,6 +16,15 @@ window.getTenantSuffix = function () {
     } catch (e) { return ''; }
 };
 
+// --- Submenu Toggle e SwitchView definidos ANTES do DOMContentLoaded ---
+// Garante disponibilidade mesmo que haja erro em codigo posterior
+window.toggleSubmenu = function (id) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.style.display = (el.style.display === 'flex' || el.style.display === 'block') ? 'none' : 'flex';
+    }
+};
+
 // --- Auth & Tenant Check ---
 document.addEventListener('DOMContentLoaded', async () => {
     const savedUser = localStorage.getItem('logged_user');
@@ -235,13 +244,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     switchView('dashboard');
 });
 
-// --- Submenu Toggle (ERP Pattern - ID based) ---
-window.toggleSubmenu = function (id) {
-    const el = document.getElementById(id);
-    if (el) {
-        el.style.display = (el.style.display === 'flex' || el.style.display === 'block') ? 'none' : 'flex';
-    }
-};
+// --- Submenu Toggle (mantido aqui para referencia, definido no topo) ---
+// window.toggleSubmenu ja foi definido acima
 
 // --- View title mapping ---
 const VIEW_TITLES = {
