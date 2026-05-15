@@ -1,4 +1,4 @@
-﻿// =============================================================================
+// =============================================================================
 // WMS 3D Warehouse Viewer — Three.js
 // Lê endereços de wms_mock_data + config de wms_armazem_config
 // =============================================================================
@@ -139,9 +139,13 @@ window.WMS3D = (function () {
         const xLeft  = (ri) => ri * ZONE_W + RD / 2;
         const xRight = (ri) => ri * ZONE_W + RD + CW + RD / 2;
 
+        // Sentido dos prédios: 'descendente' = prédio N na frente (Z=0), prédio 1 no fundo
+        const descPredios = (cfg.ordemPredios === 'descendente');
+
         // Z helper: pairIdx * pairSlotZ + (posicao-1)*PW + PW/2
         const cellZ = (predioNum, posicao) => {
-            const pairIdx = Math.floor((+predioNum - 1) / 2);
+            const naturalPairIdx = Math.floor((+predioNum - 1) / 2);
+            const pairIdx = descPredios ? (numPairs - 1 - naturalPairIdx) : naturalPairIdx;
             return pairIdx * pairSlotZ + (+posicao - 1) * PW + PW / 2;
         };
 
@@ -497,15 +501,25 @@ window.wms3dRenderConfig = function(panel) {
                 </button>
             </div>
 
-            <!-- Ordem -->
-            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;flex-wrap:wrap;">
-                <span style="font-size:.7rem;color:var(--text-secondary);">Ordem:</span>
+            <!-- Ordem Corredores -->
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;flex-wrap:wrap;">
+                <span style="font-size:.7rem;color:var(--text-secondary);">Corredores:</span>
                 <button id="btn-ordem-ed" onclick="wms3dSetOrdem('esquerda_direita')"
                     class="btn ${ordem==='esquerda_direita'?'btn-primary':'btn-secondary'}"
-                    style="font-size:.7rem;padding:.22rem .5rem;">⬅ Esquerda → Direita</button>
+                    style="font-size:.7rem;padding:.22rem .5rem;">&#8678; Esq &rarr; Dir</button>
                 <button id="btn-ordem-de" onclick="wms3dSetOrdem('direita_esquerda')"
                     class="btn ${ordem==='direita_esquerda'?'btn-primary':'btn-secondary'}"
-                    style="font-size:.7rem;padding:.22rem .5rem;">➡ Direita → Esquerda</button>
+                    style="font-size:.7rem;padding:.22rem .5rem;">&#8680; Dir &rarr; Esq</button>
+            </div>
+            <!-- Ordem Prédios -->
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;flex-wrap:wrap;">
+                <span style="font-size:.7rem;color:var(--text-secondary);">Prédios:</span>
+                <button id="btn-predio-asc" onclick="wms3dSetOrdemPredios('ascendente')"
+                    class="btn ${(cfg.ordemPredios||'ascendente')==='ascendente'?'btn-primary':'btn-secondary'}"
+                    style="font-size:.7rem;padding:.22rem .5rem;">&#8593; Asc (1&rarr;N frente)</button>
+                <button id="btn-predio-desc" onclick="wms3dSetOrdemPredios('descendente')"
+                    class="btn ${cfg.ordemPredios==='descendente'?'btn-primary':'btn-secondary'}"
+                    style="font-size:.7rem;padding:.22rem .5rem;">&#8595; Desc (N&rarr;1 frente)</button>
             </div>
 
             <div style="overflow-x:auto;border:1px solid var(--border-color);border-radius:8px;">
@@ -604,6 +618,16 @@ window.wms3dSetOrdem = function(ordem) {
     de.style.cssText = 'font-size:.7rem;padding:.22rem .5rem;';
 };
 
+window.wms3dSetOrdemPredios = function(ordem) {
+    const asc  = document.getElementById('btn-predio-asc');
+    const desc = document.getElementById('btn-predio-desc');
+    if (!asc || !desc) return;
+    asc.className  = 'btn ' + (ordem === 'ascendente'  ? 'btn-primary' : 'btn-secondary');
+    desc.className = 'btn ' + (ordem === 'descendente' ? 'btn-primary' : 'btn-secondary');
+    asc.style.cssText  = 'font-size:.7rem;padding:.22rem .5rem;';
+    desc.style.cssText = 'font-size:.7rem;padding:.22rem .5rem;';
+};
+
 window.wms3dSaveConfig = function() {
     // Corredores
     const corredores = [];
@@ -631,8 +655,10 @@ window.wms3dSaveConfig = function() {
         });
     });
 
-    const ordemBtn = document.getElementById('btn-ordem-ed');
-    const ordem = ordemBtn?.classList.contains('btn-primary') ? 'esquerda_direita' : 'direita_esquerda';
+    const ordemBtn    = document.getElementById('btn-ordem-ed');
+    const ordem        = ordemBtn?.classList.contains('btn-primary') ? 'esquerda_direita' : 'direita_esquerda';
+    const predioAscBtn = document.getElementById('btn-predio-asc');
+    const ordemPredios = predioAscBtn?.classList.contains('btn-primary') ? 'ascendente' : 'descendente';
 
     const cfg = {
         nomeArmazem:    document.getElementById('wms3d-cfg-nome')?.value  || 'CD',
@@ -644,6 +670,7 @@ window.wms3dSaveConfig = function() {
         profundidade:  +document.getElementById('wms3d-cfg-rd')?.value    || 0.8,
         corridorWidth: +document.getElementById('wms3d-cfg-cw')?.value    || 2.5,
         ordemCorredores: ordem,
+        ordemPredios,
         corredores,
         tiposEndereco,
     };
