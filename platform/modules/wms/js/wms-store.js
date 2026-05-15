@@ -343,11 +343,17 @@ window.WmsStore = (function () {
             // So sobrescreve localStorage se Firestore tiver >= dados que o local
             // Evita apagar 12k enderecos locais com batch parcial do Firestore
             const localLen = JSON.parse(localStorage.getItem(key) || '[]').length;
-            if (addrs.length >= localLen) {
-                localStorage.setItem(key, JSON.stringify(addrs));
-                console.log('[WmsStore] ' + addrs.length + ' enderecos sincronizados do Firestore');
+            // Só sobrescreve se Firestore tem MAIS endereços que o local
+            // (evita QuotaExceededError ao tentar regravar dados identicos)
+            if (addrs.length > localLen) {
+                try {
+                    localStorage.setItem(key, JSON.stringify(addrs));
+                    console.log('[WmsStore] ' + addrs.length + ' enderecos sincronizados do Firestore');
+                } catch(qe) {
+                    console.warn('[WmsStore] localStorage cheio, dados mantidos do local (' + localLen + ' end.)');
+                }
             } else {
-                console.log('[WmsStore] Local (' + localLen + ') > Firestore (' + addrs.length + '), mantendo local');
+                console.log('[WmsStore] Firestore (' + addrs.length + ') <= local (' + localLen + '), mantendo local.');
             }
             return addrs.length;
         } catch(e) {
