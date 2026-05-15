@@ -481,20 +481,13 @@ window.wms3dRenderConfig = function(panel) {
         <!-- 2. Galpão -->
         <div>
             <div class="cfg-sec">📐 Dimensões do Galpão</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:.4rem;">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem;">
                 <div><label class="cfg-lbl">Comprimento (m)</label>
                     <input id="wms3d-cfg-comp" type="number" class="form-input" style="width:100%;" value="${cfg.comprimento||0}" step="1"></div>
                 <div><label class="cfg-lbl">Largura Total (m)</label>
                     <input id="wms3d-cfg-lt" type="number" class="form-input" style="width:100%;" value="${cfg.larguraTotal||0}" step="1"></div>
                 <div><label class="cfg-lbl">Pé Direito (m)</label>
                     <input id="wms3d-cfg-pe" type="number" class="form-input" style="width:100%;" value="${cfg.peDir||0}" step="0.5"></div>
-                <div>
-                    <label class="cfg-lbl" style="color:#818cf8;font-weight:700;">📏 Largura do Prédio (m)</label>
-                    <input id="wms3d-cfg-predio-larg" type="number" class="form-input" style="width:100%;border-color:#818cf844;" value="${cfg.predioLargura||0}" step="0.5" placeholder="Ex: 25">
-                </div>
-            </div>
-            <div style="font-size:.67rem;color:var(--text-secondary);margin-top:.3rem;">
-                💡 Informe a Largura do Prédio para habilitar o <strong>Auto-detectar Tipos</strong> abaixo.
             </div>
         </div>
 
@@ -559,6 +552,24 @@ window.wms3dRenderConfig = function(panel) {
                         onclick="wms3dAddTipoEndereco()">
                         <span class="material-icons-round" style="font-size:.8rem;">add</span> Adicionar
                     </button>
+                </div>
+            </div>
+            <!-- Largura do Prédio (rack) -->
+            <div style="display:flex;align-items:center;gap:.65rem;margin-bottom:.65rem;
+                background:rgba(129,140,248,.07);border:1px solid #818cf822;border-radius:8px;padding:.5rem .75rem;">
+                <span class="material-icons-round" style="color:#818cf8;font-size:1.1rem;">straighten</span>
+                <div style="flex:1;">
+                    <label style="font-size:.7rem;font-weight:700;color:#818cf8;display:block;margin-bottom:.2rem;">
+                        Largura do Prédio / Rack (m)
+                        <span style="font-weight:400;color:var(--text-secondary);"> — usado pelo Auto-detectar</span>
+                    </label>
+                    <div style="font-size:.67rem;color:var(--text-secondary);margin-bottom:.3rem;">
+                        Ex: endereço <code style="background:rgba(255,255,255,.07);padding:.1rem .3rem;border-radius:3px;">02-04-502</code>
+                        → Rua 02 · Prédio 04 · Nível 05 · Posição 02. Informe a largura física desse prédio.
+                    </div>
+                    <input id="wms3d-cfg-predio-larg" type="number" class="form-input"
+                        style="width:140px;border-color:#818cf844;"
+                        value="${cfg.predioLargura||0}" step="0.1" placeholder="Ex: 5.0">
                 </div>
             </div>
             <div style="overflow-x:auto;border:1px solid var(--border-color);border-radius:8px;">
