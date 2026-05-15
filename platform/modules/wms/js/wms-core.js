@@ -37,6 +37,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('userName').textContent = user.name || user.login;
     document.getElementById('userTenant').textContent = user.tenantId || 'Tenant';
 
+    // ── Abre o dashboard IMEDIATAMENTE (antes de qualquer await ou Firestore) ──
+    // Garante que a UI carregue mesmo que algum código posterior lance erro.
+    try { switchView('dashboard'); } catch(e) {}
+
     // --- WMS Integration Init ---
     if (window.WmsIntegration) {
         const intConfig = JSON.parse(localStorage.getItem('wms_integration_config' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
@@ -240,8 +244,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         })();
     }
 
-    // Start at dashboard
-    switchView('dashboard');
+    // switchView('dashboard') ja foi chamado no inicio do DOMContentLoaded
 });
 
 // --- Submenu Toggle (mantido aqui para referencia, definido no topo) ---
