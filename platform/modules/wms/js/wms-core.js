@@ -165,7 +165,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     console.error('Erro na escuta de Pedidos Cloud:', err);
                 });
         }
-    }
 
     // --- Migração automática ampla: recupera endereços de QUALQUER chave wms_mock_data* ---
     (function migrateWmsData() {
