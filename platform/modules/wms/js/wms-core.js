@@ -3,6 +3,19 @@
 
 const WMS_VERSION = '3.4.0';
 
+// =============================================================================
+// getTenantSuffix — definida no nivel do modulo para estar disponivel
+// sincronamente para TODOS os scripts WMS antes do DOMContentLoaded.
+// Retorna '_centralpecas' para o tenant 'centralpecas', '' se sem tenant.
+// =============================================================================
+window.getTenantSuffix = function () {
+    try {
+        const sess = JSON.parse(sessionStorage.getItem('parreira_session') || 'null');
+        const tid  = sess?.tenantId || '';
+        return tid ? '_' + tid : '';
+    } catch (e) { return ''; }
+};
+
 // --- Auth & Tenant Check ---
 document.addEventListener('DOMContentLoaded', async () => {
     const savedUser = localStorage.getItem('logged_user');
