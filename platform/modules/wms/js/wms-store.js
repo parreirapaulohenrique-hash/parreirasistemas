@@ -1,4 +1,4 @@
-﻿// =============================================================================
+// =============================================================================
 // wms-store.js — Camada de Dados Firestore para o WMS
 // Parreira Sistemas
 // =============================================================================
@@ -340,8 +340,15 @@ window.WmsStore = (function () {
             const snap = await _enderecosCol(_tid()).get();
             if (snap.empty) return 0;
             const addrs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            localStorage.setItem(key, JSON.stringify(addrs));
-            console.log(`📡 [WmsStore] ${addrs.length} endereços sincronizados do Firestore`);
+            // So sobrescreve localStorage se Firestore tiver >= dados que o local
+            // Evita apagar 12k enderecos locais com batch parcial do Firestore
+            const localLen = JSON.parse(localStorage.getItem(key) || '[]').length;
+            if (addrs.length >= localLen) {
+                localStorage.setItem(key, JSON.stringify(addrs));
+                console.log('[WmsStore] ' + addrs.length + ' enderecos sincronizados do Firestore');
+            } else {
+                console.log('[WmsStore] Local (' + localLen + ') > Firestore (' + addrs.length + '), mantendo local');
+            }
             return addrs.length;
         } catch(e) {
             console.warn('[WmsStore] sincronizarEnderecos falhou:', e);
