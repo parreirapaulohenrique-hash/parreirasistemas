@@ -543,33 +543,39 @@ window.wms3dRenderConfig = function(panel) {
         <div>
             <div class="cfg-sec">
                 <span>📦 Tipos de Endereço</span>
-                <div style="display:flex;gap:.35rem;">
-                    <button class="btn btn-secondary" style="font-size:.7rem;padding:.2rem .5rem;background:rgba(129,140,248,.15);border-color:#818cf844;color:#818cf8;"
-                        onclick="wms3dAutoDetectTipos()">
-                        <span class="material-icons-round" style="font-size:.8rem;">auto_fix_high</span> Auto-detectar
-                    </button>
-                    <button class="btn btn-secondary" style="font-size:.7rem;padding:.2rem .5rem;"
-                        onclick="wms3dAddTipoEndereco()">
-                        <span class="material-icons-round" style="font-size:.8rem;">add</span> Adicionar
-                    </button>
-                </div>
+                <button class="btn btn-secondary" style="font-size:.7rem;padding:.2rem .5rem;"
+                    onclick="wms3dAddTipoEndereco()">
+                    <span class="material-icons-round" style="font-size:.8rem;">add</span> Adicionar Manualmente
+                </button>
             </div>
-            <!-- Parâmetros do Auto-detectar -->
-            <div style="background:rgba(129,140,248,.07);border:1px solid #818cf822;border-radius:8px;padding:.5rem .75rem;margin-bottom:.65rem;">
-                <div style="display:flex;align-items:center;gap:.65rem;margin-bottom:.5rem;">
-                    <span class="material-icons-round" style="color:#818cf8;font-size:1.1rem;">straighten</span>
+
+            <!-- Ferramenta de Auto-detectar -->
+            <div style="background:rgba(129,140,248,.07);border:1px solid rgba(129,140,248,.3);border-radius:8px;padding:.85rem;margin-bottom:1rem;">
+                <div style="display:flex;align-items:center;gap:.65rem;margin-bottom:.75rem;">
+                    <div style="background:rgba(129,140,248,.15);border-radius:8px;padding:.4rem;display:flex;">
+                        <span class="material-icons-round" style="color:#818cf8;font-size:1.4rem;">auto_fix_high</span>
+                    </div>
                     <div>
-                        <label style="font-size:.7rem;font-weight:700;color:#818cf8;display:block;">
-                            Parâmetros para Auto-detectar
+                        <label style="font-size:.8rem;font-weight:700;color:#818cf8;display:block;">
+                            Gerador Automático de Tipos de Endereço
                         </label>
-                        <div style="font-size:.67rem;color:var(--text-secondary);">
-                            Informe a largura física do prédio e, se necessário, limite a detecção a um intervalo.
+                        <div style="font-size:.7rem;color:var(--text-secondary);margin-top:.1rem;line-height:1.4;">
+                            Informe a largura física do prédio para calcular a largura de cada posição (célula).<br>
+                            Se houver prédios com tamanhos diferentes, use os campos opcionais abaixo para focar em uma área específica.
                         </div>
                     </div>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:.5rem;">
-                    <div><label class="cfg-lbl">Largura Prédio (m)</label>
-                        <input id="wms3d-cfg-predio-larg" type="number" class="form-input" style="width:100%;border-color:#818cf844;" value="${cfg.predioLargura||0}" step="0.1" placeholder="Ex: 5.0"></div>
+
+                <div style="margin-bottom:.75rem;">
+                    <label class="cfg-lbl" style="font-weight:700;color:#e2e8f0;font-size:.75rem;margin-bottom:.3rem;">
+                        📏 Largura do Prédio / Rack Inteiro (m) <span style="color:#ef4444">*</span>
+                    </label>
+                    <input id="wms3d-cfg-predio-larg" type="number" class="form-input" 
+                        style="width:100%;border:1px solid #818cf8;background:rgba(15,23,42,.6);font-size:.9rem;padding:.5rem;" 
+                        value="${cfg.predioLargura||''}" step="0.1" placeholder="Ex: 5.0 (Obrigatório)">
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:.5rem;margin-bottom:.85rem;">
                     <div><label class="cfg-lbl">Rua Inicial</label>
                         <input id="wms3d-cfg-rua-ini" type="number" class="form-input" style="width:100%;" placeholder="Opcional"></div>
                     <div><label class="cfg-lbl">Rua Final</label>
@@ -579,6 +585,12 @@ window.wms3dRenderConfig = function(panel) {
                     <div><label class="cfg-lbl">Prédio Final</label>
                         <input id="wms3d-cfg-pre-fim" type="number" class="form-input" style="width:100%;" placeholder="Opcional"></div>
                 </div>
+
+                <button class="btn btn-primary" style="width:100%;padding:.5rem;background:#4f46e5;border:none;font-weight:600;font-size:.8rem;justify-content:center;" 
+                    onclick="wms3dAutoDetectTipos()">
+                    <span class="material-icons-round" style="font-size:1.1rem;margin-right:.3rem;">bolt</span>
+                    Lançar Auto-detecção e Gerar Tipos
+                </button>
             </div>
             <div style="overflow-x:auto;border:1px solid var(--border-color);border-radius:8px;">
                 <table style="width:100%;border-collapse:collapse;min-width:460px;">
