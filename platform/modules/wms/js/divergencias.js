@@ -221,12 +221,12 @@ window.DivergenciasManager = (function () {
     // ── Filtros ─────────────────────────────────────────────────────────────
     function _bindFiltros() {}
 
-    window.DivergenciasManager.filtrar = function() {
+    function filtrar() {
         _renderTabela(_cache);
-    };
+    }
 
     // ── Modal de detalhe ────────────────────────────────────────────────────
-    window.DivergenciasManager.abrirModal = function(id) {
+    function abrirModal(id) {
         const d = _cache.find(x => x.id === id);
         if (!d) return;
         const modal   = document.getElementById('modal-div-detalhe');
@@ -335,13 +335,13 @@ window.DivergenciasManager = (function () {
         modal.style.display = 'block';
     };
 
-    window.DivergenciasManager.fecharModal = function() {
+    function fecharModal() {
         const m = document.getElementById('modal-div-detalhe');
         if (m) m.style.display = 'none';
     };
 
     // ── Salvar tratativa ────────────────────────────────────────────────────
-    window.DivergenciasManager.salvarTratativa = async function(id) {
+    async function salvarTratativa(id) {
         const desc      = document.getElementById('div-trat-desc')?.value?.trim();
         const novoStatus= document.getElementById('div-novo-status')?.value;
         if (!desc) { alert('Informe a descrição da tratativa.'); return; }
@@ -369,5 +369,5 @@ window.DivergenciasManager = (function () {
         _cache = [];
     }
 
-    return { load, unload, filtrar: () => _renderTabela(_cache), abrirModal: () => {}, fecharModal: () => {}, salvarTratativa: () => {} };
+    return { load, unload, filtrar, abrirModal, fecharModal, salvarTratativa };
 })();

@@ -35,7 +35,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const user = JSON.parse(savedUser);
     document.getElementById('userName').textContent = user.name || user.login;
-    document.getElementById('userTenant').textContent = user.tenantId || 'Tenant';
+    document.getElementById('userTenant').textContent = user.tenantId || (window.ParreiraAuth?.getSessao?.()?.tenantNome) || 'Tenant';
+
+    // ── Garante que Firebase esteja inicializado (auth.js tem lazy init) ──────
+    // Sem isso, wms-store e wms-sync recebem "No Firebase App [DEFAULT]" error
+    try { if (window.ParreiraAuth?.getDB) window.ParreiraAuth.getDB(); } catch(e) {}
 
     // ── Abre o dashboard IMEDIATAMENTE (antes de qualquer await ou Firestore) ──
     // Garante que a UI carregue mesmo que algum código posterior lance erro.
