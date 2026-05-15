@@ -1176,21 +1176,49 @@ window.xlsConfirmImport = function() {
 
     const key = 'wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '');
     const existing = JSON.parse(localStorage.getItem(key) || '[]');
-    const existingIds = new Set(existing.map(l => l.id));
+    
+    // Map existing locations by ID for quick lookup and update
+    const existingMap = new Map();
+    existing.forEach(loc => existingMap.set(loc.id, loc));
 
-    const newLocs = parsed.filter(r => !existingIds.has(r.id));
-    const dupes   = parsed.length - newLocs.length;
+    let newCount = 0;
+    let updatedCount = 0;
+    const toSync = [];
 
-    const merged = [...existing, ...newLocs];
+    parsed.forEach(r => {
+        if (existingMap.has(r.id)) {
+            // Update existing
+            const loc = existingMap.get(r.id);
+            let changed = false;
+            if (r.tipo && loc.tipo !== r.tipo) { loc.tipo = r.tipo; changed = true; }
+            if (r.status && loc.status !== r.status) { loc.status = r.status; changed = true; }
+            
+            if (changed) {
+                updatedCount++;
+                toSync.push(loc);
+            }
+        } else {
+            // Insert new
+            existingMap.set(r.id, r);
+            newCount++;
+            toSync.push(r);
+        }
+    });
+
+    const merged = Array.from(existingMap.values());
+
     localStorage.setItem(key, JSON.stringify(merged));
-    // ☁️ Write-through: enviar endereços importados ao Firestore (assíncrono)
-    if (window.WmsStore && newLocs.length > 0) WmsStore.salvarEnderecosBatch(newLocs).catch(e => console.warn('[Sync]', e));
+    // ☁️ Write-through: enviar endereços importados/atualizados ao Firestore (assíncrono)
+    if (window.WmsStore && toSync.length > 0) {
+        WmsStore.salvarEnderecosBatch(toSync).catch(e => console.warn('[Sync]', e));
+    }
+    
     locationsState.gridData = merged;
     filterGrid();
     if (window.updateDashboardStats) updateDashboardStats();
     closeXlsImport();
 
-    const msg = `✅ ${newLocs.length} endereços importados com sucesso!${dupes > 0 ? `\n⚠️ ${dupes} duplicados ignorados.` : ''}`;
+    const msg = `✅ Importação concluída!\n\n🆕 ${newCount} novos endereços inseridos.\n🔄 ${updatedCount} endereços existentes atualizados.`;
     alert(msg);
 
     // Reload 3D if visible
