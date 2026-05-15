@@ -672,11 +672,10 @@ window.wms3dSetOrdemPredios = function(ordem) {
     desc.style.cssText = 'font-size:.7rem;padding:.22rem .5rem;';
 };
 
-// ── Auto-detectar Tipos de Endereço ──────────────────────────────────────────
-// Lê os endereços cadastrados, descobre os tipos únicos, conta quantos de cada
-// tipo existem por nível em cada prédio (= posições lado a lado) e calcula:
-//   largura_celula = largura_predio / max_enderecos_do_tipo_por_nivel
-// O usuário só precisa informar altura e profundidade de cada tipo.
+// ── Auto-detectar Tipos de Endereço (INTELIGÊNCIA FÍSICA) ───────────────────
+// Lê os endereços cadastrados e agrupa por Prédio e Nível para descobrir
+// a quantidade real de posições (apartamentos) lado a lado.
+// Cria os tipos dinamicamente (ex: RACK-8-POS) e sugere atualizar o banco.
 window.wms3dAutoDetectTipos = function() {
     const predioLarg = +(document.getElementById('wms3d-cfg-predio-larg')?.value) || 0;
     const ruaIni = parseInt(document.getElementById('wms3d-cfg-rua-ini')?.value);
@@ -692,42 +691,44 @@ window.wms3dAutoDetectTipos = function() {
     const suf   = window.getTenantSuffix ? window.getTenantSuffix() : '';
     const addrs = JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
 
-    // Filtra endereços e aplica range se houver
-    let comTipo = addrs.filter(a => a.tipo && a.tipo.toString().trim() !== '');
+    let filtrados = addrs;
+    if (!isNaN(ruaIni)) filtrados = filtrados.filter(a => parseInt(a.rua) >= ruaIni);
+    if (!isNaN(ruaFim)) filtrados = filtrados.filter(a => parseInt(a.rua) <= ruaFim);
+    if (!isNaN(preIni)) filtrados = filtrados.filter(a => parseInt(a.predio) >= preIni);
+    if (!isNaN(preFim)) filtrados = filtrados.filter(a => parseInt(a.predio) <= preFim);
 
-    if (!isNaN(ruaIni)) comTipo = comTipo.filter(a => parseInt(a.rua) >= ruaIni);
-    if (!isNaN(ruaFim)) comTipo = comTipo.filter(a => parseInt(a.rua) <= ruaFim);
-    if (!isNaN(preIni)) comTipo = comTipo.filter(a => parseInt(a.predio) >= preIni);
-    if (!isNaN(preFim)) comTipo = comTipo.filter(a => parseInt(a.predio) <= preFim);
-
-    if (comTipo.length === 0) {
-        alert('⚠️ Nenhum endereço com campo "tipo" foi encontrado para este intervalo.\n\nVerifique os dados cadastrados ou os filtros informados.');
+    if (filtrados.length === 0) {
+        alert('⚠️ Nenhum endereço foi encontrado para este intervalo.');
         return;
     }
 
-    // Descobre tipos únicos
-    const tiposUnicos = [...new Set(comTipo.map(a => a.tipo.toString().trim().toUpperCase()))].sort();
-
-    const resultado = {};
-    tiposUnicos.forEach(tipo => {
-        const tipoAddrs = comTipo.filter(a => a.tipo.toString().trim().toUpperCase() === tipo);
-        const grupos = {};
-        tipoAddrs.forEach(a => {
-            const chave = `${a.rua}_${a.predio}_${a.nivel}`;
-            grupos[chave] = (grupos[chave] || 0) + 1;
-        });
-
-        const maxLateral = Math.max(...Object.values(grupos), 1);
-        const largCalc   = Math.round((predioLarg / maxLateral) * 100) / 100;
-
-        resultado[tipo] = { maxLateral, largura: largCalc, total: tipoAddrs.length };
+    // Agrupa por Rua_Prédio_Nivel
+    const gruposNivel = {};
+    filtrados.forEach(a => {
+        const chave = `${a.rua}_${a.predio}_${a.nivel}`;
+        if (!gruposNivel[chave]) gruposNivel[chave] = [];
+        gruposNivel[chave].push(a);
     });
 
-    // Pega os inputs atuais da tabela para atualizar ou adicionar sem limpar o resto
+    // Conta quantas vezes cada configuração (QTD de posições) aparece
+    const confFisicas = {}; 
+    Object.values(gruposNivel).forEach(listaAddrs => {
+        const qtd = listaAddrs.length;
+        if (!confFisicas[qtd]) {
+            confFisicas[qtd] = { totalNiveis: 0, totalEnderecos: 0, enderecos: [] };
+        }
+        confFisicas[qtd].totalNiveis++;
+        confFisicas[qtd].totalEnderecos += qtd;
+        confFisicas[qtd].enderecos.push(...listaAddrs);
+    });
+
     const tbody = document.getElementById('wms3d-tipos-tbody');
     if (!tbody) return;
+    if (tbody.querySelector('td[colspan]')) tbody.innerHTML = ''; 
 
-    if (tbody.querySelector('td[colspan]')) tbody.innerHTML = ''; // Limpa empty state
+    const cfgAtual = JSON.parse(localStorage.getItem('wms_armazem_config' + suf) || '{}');
+    const tiposCfg = {};
+    (cfgAtual.tiposEndereco || []).forEach(t => { tiposCfg[t.codigo] = t; });
 
     const linhasExistentes = Array.from(tbody.querySelectorAll('tr'));
     const rowsMap = {};
@@ -736,33 +737,61 @@ window.wms3dAutoDetectTipos = function() {
         if (cod) rowsMap[cod] = tr;
     });
 
-    const cfgAtual = JSON.parse(localStorage.getItem('wms_armazem_config' + suf) || '{}');
-    const tiposCfg = {};
-    (cfgAtual.tiposEndereco || []).forEach(t => { tiposCfg[t.codigo] = t; });
-
     let msg = [];
-    Object.entries(resultado).forEach(([tipo, data]) => {
-        msg.push(`• ${tipo}: ${data.total} end. | ${data.maxLateral} p/ nível → larg. ${data.largura}m`);
+    Object.entries(confFisicas).forEach(([qtd, data]) => {
+        const q = parseInt(qtd);
+        const nomeTipo = `RACK-${q}-POS`;
+        const largCalc = Math.round((predioLarg / q) * 100) / 100;
         
-        if (rowsMap[tipo]) {
-            // Atualiza apenas a largura do input existente
-            const inputLarg = rowsMap[tipo].querySelector('.tipo-larg');
-            if (inputLarg) inputLarg.value = data.largura;
+        msg.push(`• ${nomeTipo}: ${data.totalEnderecos} end. em ${data.totalNiveis} níveis → larg. ${largCalc}m`);
+
+        if (rowsMap[nomeTipo]) {
+            const inputLarg = rowsMap[nomeTipo].querySelector('.tipo-larg');
+            if (inputLarg) inputLarg.value = largCalc;
         } else {
-            // Cria nova linha
-            const existente = tiposCfg[tipo] || {};
+            const cfg = tiposCfg[nomeTipo] || { alturaProxNivel: 2.0, profundidade: 0.8, capacidadeKg: 500 };
             tbody.insertAdjacentHTML('beforeend', _tipoRow({
-                codigo:          tipo,
-                descricao:       existente.descricao || tipo,
-                largura:         data.largura,
-                profundidade:    existente.profundidade    || 0.8,
-                alturaProxNivel: existente.alturaProxNivel || 2.0,
-                capacidadeKg:    existente.capacidadeKg    || 500,
+                codigo: nomeTipo,
+                descricao: `Rack detectado com ${q} posições`,
+                largura: largCalc,
+                profundidade: cfg.profundidade,
+                alturaProxNivel: cfg.alturaProxNivel,
+                capacidadeKg: cfg.capacidadeKg
             }));
         }
     });
 
-    alert(`✅ ${tiposUnicos.length} tipo(s) detectado(s) neste intervalo!\n\n${msg.join('\n')}\n\n👉 A tabela foi atualizada sem perder os outros tipos. Ajuste se necessário e clique em Salvar.`);
+    const confirmAtualizar = confirm(
+        `🕵️ Auto-detecção Física Concluída!\n\nForam encontradas as seguintes estruturas:\n${msg.join('\n')}\n\n` +
+        `⚠️ IMPORTANTE: Para que o 3D renderize essas metragens corretamente, os endereços no sistema precisam ter o campo "Tipo" igual a esses novos nomes.\n\n` +
+        `Deseja que o sistema ATUALIZE AUTOMATICAMENTE o campo 'Tipo' de todos os ${filtrados.length} endereços analisados para esses novos nomes sugeridos?`
+    );
+
+    if (confirmAtualizar) {
+        let changed = 0;
+        const updateMap = {};
+        Object.entries(confFisicas).forEach(([qtd, data]) => {
+            const nomeTipo = `RACK-${parseInt(qtd)}-POS`;
+            data.enderecos.forEach(a => { updateMap[a.id] = nomeTipo; });
+        });
+
+        addrs.forEach(a => {
+            if (updateMap[a.id] && a.tipo !== updateMap[a.id]) {
+                a.tipo = updateMap[a.id];
+                changed++;
+            }
+        });
+
+        if (changed > 0) {
+            localStorage.setItem('wms_mock_data' + suf, JSON.stringify(addrs));
+            if (window.WmsStore) WmsStore.salvarEnderecosBatch(addrs.filter(a => updateMap[a.id])).catch(e => console.warn(e));
+            alert(`✅ Sucesso! O campo 'Tipo' de ${changed} endereços foi atualizado.`);
+        } else {
+            alert('Nenhum endereço precisou ser atualizado (já estavam com os tipos corretos).');
+        }
+    }
+    
+    alert(`Os tipos foram adicionados/atualizados na tabela abaixo.\n\nPreencha as alturas e profundidades se necessário e clique em "Salvar e Recarregar 3D".`);
 };
 
 window.wms3dSaveConfig = function() {

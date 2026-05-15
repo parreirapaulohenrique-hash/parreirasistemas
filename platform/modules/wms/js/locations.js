@@ -491,6 +491,16 @@ window.generateLocationsMassive = async function () {
     }
 }
 
+window.loadLocationsData = async function () {
+    try {
+        const data = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+        locationsState.gridData = data;
+        filterGrid();
+        if (window.updateDashboardStats) window.updateDashboardStats();
+    } catch (e) {
+        console.error("Erro ao carregar endereços:", e);
+    }
+}
 
 window.toggleViewMode = function () {
     const btn = document.getElementById('btnToggleView');
