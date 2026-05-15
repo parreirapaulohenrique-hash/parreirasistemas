@@ -481,13 +481,20 @@ window.wms3dRenderConfig = function(panel) {
         <!-- 2. Galpão -->
         <div>
             <div class="cfg-sec">📐 Dimensões do Galpão</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem;">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:.4rem;">
                 <div><label class="cfg-lbl">Comprimento (m)</label>
                     <input id="wms3d-cfg-comp" type="number" class="form-input" style="width:100%;" value="${cfg.comprimento||0}" step="1"></div>
                 <div><label class="cfg-lbl">Largura Total (m)</label>
                     <input id="wms3d-cfg-lt" type="number" class="form-input" style="width:100%;" value="${cfg.larguraTotal||0}" step="1"></div>
                 <div><label class="cfg-lbl">Pé Direito (m)</label>
                     <input id="wms3d-cfg-pe" type="number" class="form-input" style="width:100%;" value="${cfg.peDir||0}" step="0.5"></div>
+                <div>
+                    <label class="cfg-lbl" style="color:#818cf8;font-weight:700;">📏 Largura do Prédio (m)</label>
+                    <input id="wms3d-cfg-predio-larg" type="number" class="form-input" style="width:100%;border-color:#818cf844;" value="${cfg.predioLargura||0}" step="0.5" placeholder="Ex: 25">
+                </div>
+            </div>
+            <div style="font-size:.67rem;color:var(--text-secondary);margin-top:.3rem;">
+                💡 Informe a Largura do Prédio para habilitar o <strong>Auto-detectar Tipos</strong> abaixo.
             </div>
         </div>
 
@@ -543,10 +550,16 @@ window.wms3dRenderConfig = function(panel) {
         <div>
             <div class="cfg-sec">
                 <span>📦 Tipos de Endereço</span>
-                <button class="btn btn-secondary" style="font-size:.7rem;padding:.2rem .5rem;"
-                    onclick="wms3dAddTipoEndereco()">
-                    <span class="material-icons-round" style="font-size:.8rem;">add</span> Adicionar
-                </button>
+                <div style="display:flex;gap:.35rem;">
+                    <button class="btn btn-secondary" style="font-size:.7rem;padding:.2rem .5rem;background:rgba(129,140,248,.15);border-color:#818cf844;color:#818cf8;"
+                        onclick="wms3dAutoDetectTipos()">
+                        <span class="material-icons-round" style="font-size:.8rem;">auto_fix_high</span> Auto-detectar
+                    </button>
+                    <button class="btn btn-secondary" style="font-size:.7rem;padding:.2rem .5rem;"
+                        onclick="wms3dAddTipoEndereco()">
+                        <span class="material-icons-round" style="font-size:.8rem;">add</span> Adicionar
+                    </button>
+                </div>
             </div>
             <div style="overflow-x:auto;border:1px solid var(--border-color);border-radius:8px;">
                 <table style="width:100%;border-collapse:collapse;min-width:460px;">
@@ -628,6 +641,84 @@ window.wms3dSetOrdemPredios = function(ordem) {
     desc.style.cssText = 'font-size:.7rem;padding:.22rem .5rem;';
 };
 
+// ── Auto-detectar Tipos de Endereço ──────────────────────────────────────────
+// Lê os endereços cadastrados, descobre os tipos únicos, conta quantos de cada
+// tipo existem por nível em cada prédio (= posições lado a lado) e calcula:
+//   largura_celula = largura_predio / max_enderecos_do_tipo_por_nivel
+// O usuário só precisa informar altura e profundidade de cada tipo.
+window.wms3dAutoDetectTipos = function() {
+    const predioLarg = +(document.getElementById('wms3d-cfg-predio-larg')?.value) || 0;
+    if (predioLarg <= 0) {
+        alert('⚠️ Informe primeiro a Largura do Prédio (m) no campo acima.');
+        return;
+    }
+
+    const suf   = window.getTenantSuffix ? window.getTenantSuffix() : '';
+    const addrs = JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
+
+    // Filtra apenas endereços que têm campo "tipo" preenchido
+    const comTipo = addrs.filter(a => a.tipo && a.tipo.toString().trim() !== '');
+    if (comTipo.length === 0) {
+        alert('⚠️ Nenhum endereço com campo "tipo" foi encontrado nos dados.\n\nVerifique se os endereços cadastrados possuem o campo tipo preenchido.');
+        return;
+    }
+
+    // Descobre tipos únicos
+    const tiposUnicos = [...new Set(comTipo.map(a => a.tipo.toString().trim().toUpperCase()))].sort();
+
+    // Para cada tipo: conta o máximo de endereços por (prédio × nível)
+    // Esse máximo representa quantas posições desse tipo existem lado a lado → define a largura
+    const resultado = {};
+    tiposUnicos.forEach(tipo => {
+        const tipoAddrs = comTipo.filter(a => a.tipo.toString().trim().toUpperCase() === tipo);
+
+        // Agrupa por prédio + nível e conta posições
+        const grupos = {};
+        tipoAddrs.forEach(a => {
+            const chave = `${a.rua}_${a.predio}_${a.nivel}`;
+            grupos[chave] = (grupos[chave] || 0) + 1;
+        });
+
+        // Máximo de posições lado a lado para esse tipo
+        const maxLateral = Math.max(...Object.values(grupos), 1);
+        const largCalc   = Math.round((predioLarg / maxLateral) * 100) / 100;
+
+        resultado[tipo] = {
+            maxLateral,
+            largura: largCalc,
+            total: tipoAddrs.length
+        };
+    });
+
+    // Pega a config existente para manter altura/prof já cadastrados
+    const cfgAtual = JSON.parse(localStorage.getItem('wms_armazem_config' + suf) || '{}');
+    const tiposExist = {};
+    (cfgAtual.tiposEndereco || []).forEach(t => { tiposExist[t.codigo] = t; });
+
+    // Preenche a tabela
+    const tbody = document.getElementById('wms3d-tipos-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    Object.entries(resultado).forEach(([tipo, data]) => {
+        const existente = tiposExist[tipo] || {};
+        tbody.insertAdjacentHTML('beforeend', _tipoRow({
+            codigo:          tipo,
+            descricao:       existente.descricao || tipo,
+            largura:         data.largura,                              // calculada
+            profundidade:    existente.profundidade    || 0.8,          // manter ou padrão
+            alturaProxNivel: existente.alturaProxNivel || 2.0,          // manter ou padrão
+            capacidadeKg:    existente.capacidadeKg    || 500,
+        }));
+    });
+
+    const resumo = Object.entries(resultado).map(([t, d]) =>
+        `• ${t}: ${d.total} end. | ${d.maxLateral} por nível → largura ${d.largura}m`
+    ).join('\n');
+
+    alert(`✅ ${tiposUnicos.length} tipo(s) detectado(s) automaticamente!\n\n${resumo}\n\n👉 Revise e ajuste Altura e Profundidade de cada tipo abaixo.`);
+};
+
 window.wms3dSaveConfig = function() {
     // Corredores
     const corredores = [];
@@ -665,6 +756,7 @@ window.wms3dSaveConfig = function() {
         comprimento:   +document.getElementById('wms3d-cfg-comp')?.value  || 0,
         larguraTotal:  +document.getElementById('wms3d-cfg-lt')?.value    || 0,
         peDir:         +document.getElementById('wms3d-cfg-pe')?.value    || 0,
+        predioLargura: +document.getElementById('wms3d-cfg-predio-larg')?.value || 0,
         posLargura:    +document.getElementById('wms3d-cfg-pw')?.value    || 1.2,
         posAltura:     +document.getElementById('wms3d-cfg-ph')?.value    || 2.0,
         profundidade:  +document.getElementById('wms3d-cfg-rd')?.value    || 0.8,
