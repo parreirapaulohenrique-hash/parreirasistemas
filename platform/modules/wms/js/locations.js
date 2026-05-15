@@ -2,7 +2,7 @@
 
 let locationsState = {
     gridData: [],
-    viewMode: 'grid', // 'grid', 'table', 'map', or 'lateral'
+    viewMode: 'table', // 'grid', 'table', 'map', or 'lateral'
     lateralRua: '',
     lateralLado: 'par'
 };
