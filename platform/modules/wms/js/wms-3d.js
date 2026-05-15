@@ -126,45 +126,32 @@ window.WMS3D = (function () {
         // ── Layout helpers ──────────────────────────────────────────────────
         // Odd predios = LEFT side, Even predios = RIGHT side
         const ruas = [...new Set(addrs.map(a => a.rua))].sort();
-        // Paired predios (1&2, 3&4, 5&6...) face each other at the same Z
-        // Clamp posicao to avoid anomalous values (e.g. posicao:701 in raw data)
-        const maxPos    = Math.min(Math.max(...addrs.map(a => +a.posicao).filter(v => v > 0 && v <= 99), 1), 50);
-        const maxPredioN= Math.max(...addrs.map(a => +a.predio), 1);
-        const numPairs  = Math.ceil(maxPredioN / 2);
-        const pairSlotZ = maxPos * PW + 0.3;   // Z span per pair + gap
-        const WW = ruas.length * ZONE_W;
-        const WL = numPairs * pairSlotZ;
-
-        // X helpers: odd=left, even=right
-        const xLeft  = (ri) => ri * ZONE_W + RD / 2;
-        const xRight = (ri) => ri * ZONE_W + RD + CW + RD / 2;
-
-        // Sentido dos prédios: 'descendente' = prédio N na frente (Z=0), prédio 1 no fundo
+        
+        // Sentido dos prédios
         const descPredios = (cfg.ordemPredios === 'descendente');
 
-        // Z helper: pairIdx * pairSlotZ + (posicao-1)*PW + PW/2
-        const cellZ = (predioNum, posicao) => {
-            const naturalPairIdx = Math.floor((+predioNum - 1) / 2);
-            const pairIdx = descPredios ? (numPairs - 1 - naturalPairIdx) : naturalPairIdx;
-            return pairIdx * pairSlotZ + (+posicao - 1) * PW + PW / 2;
+        // Mapear largura configurada dos corredores
+        const cwCfg = cfg.corredores || [];
+        const getCW = (ruaNome) => {
+            const c = cwCfg.find(x => x.nome === ruaNome || x.id === ruaNome || x.nome.includes(ruaNome) || x.id.includes(ruaNome));
+            return c && c.largura ? +c.largura : CW;
         };
 
-        const maxNiv = Math.max(...addrs.map(a => +a.nivel));
-
-        // Floor + grid
-        const floor = new THREE.Mesh(new THREE.PlaneGeometry(WW+12, WL+12), new THREE.MeshLambertMaterial({ color: 0x0a1122 }));
-        floor.rotation.x = -Math.PI/2; floor.position.set(WW/2, 0, WL/2);
-        _scene.add(floor);
-        const grid = new THREE.GridHelper(Math.max(WW,WL)+14, 28, 0x1e293b, 0x1e293b);
-        grid.position.set(WW/2, 0.01, WL/2); _scene.add(grid);
-
-        // Aisle stripes — run full WL length, centered on aisle X
-        ruas.forEach((_, ri) => {
-            const aisleX = ri * ZONE_W + RD + CW / 2;
-            const m = new THREE.Mesh(new THREE.PlaneGeometry(CW-0.1, WL), new THREE.MeshLambertMaterial({ color:0x1e3a5f, transparent:true, opacity:0.5 }));
-            m.rotation.x = -Math.PI/2; m.position.set(aisleX, 0.02, WL/2);
-            _scene.add(m);
+        // Acumular X baseando-se nas larguras individuais de cada rua
+        const ruaXLeft = {};
+        const ruaXRight = {};
+        const ruaAisleX = {}; // Center of the aisle for floor stripes
+        let currentX = 0;
+        
+        ruas.forEach((rua) => {
+            const ruaCW = getCW(rua);
+            // Each aisle zone is Rack Left + Corridor + Rack Right
+            ruaXLeft[rua] = currentX + RD / 2;
+            ruaAisleX[rua] = currentX + RD + ruaCW / 2;
+            ruaXRight[rua] = currentX + RD + ruaCW + RD / 2;
+            currentX += (RD * 2 + ruaCW);
         });
+        const WW = currentX;
 
         // ── Tipos de Endereço → dimensões por tipo ──────────────────────────
         const cadSuf   = window.getTenantSuffix ? window.getTenantSuffix() : '';
@@ -183,6 +170,70 @@ window.WMS3D = (function () {
         });
         const getDims = (addr) => tipoMap[_norm(addr.tipo)] || { PW, PH, RD };
 
+        // Calcular Z e limites
+        let maxWL = 0;
+        const predioList = [];
+        const predioZStarts = {}; // To store the computed Z start for each pair
+        
+        ruas.forEach((rua, ri) => {
+            const ruaA = addrs.filter(a => a.rua === rua);
+            const rp = [...new Set(ruaA.map(a => a.predio))].sort((a,b)=>+a-+b);
+            const pares = [...new Set(rp.map(p => Math.floor((+p - 1) / 2)))].sort((a,b)=>a-b);
+            
+            // Calculate physical width of each pair based on its cells
+            const pairWidths = {};
+            pares.forEach(pairVal => {
+                const prediosInPair = rp.filter(p => Math.floor((+p - 1) / 2) === pairVal);
+                let maxW = 0;
+                prediosInPair.forEach(p => {
+                    const pa = ruaA.filter(a => a.predio === p);
+                    predioList.push({ rua, predio: p, ri });
+                    
+                    const niveis = [...new Set(pa.map(a => a.nivel))];
+                    niveis.forEach(nv => {
+                        const paNiv = pa.filter(a => a.nivel === nv);
+                        const maxPos = Math.max(...paNiv.map(a => +a.posicao));
+                        const dims = getDims(paNiv[0]);
+                        const w = maxPos * dims.PW;
+                        if (w > maxW) maxW = w;
+                    });
+                });
+                pairWidths[pairVal] = maxW > 0 ? maxW : PW; // fallback
+            });
+
+            // Accumulate Z starts for this rua (removes recessed gaps)
+            const orderedPares = descPredios ? [...pares].reverse() : pares;
+            let currentZ = 0;
+            
+            if (!predioZStarts[rua]) predioZStarts[rua] = {};
+            
+            orderedPares.forEach(pairVal => {
+                predioZStarts[rua][pairVal] = currentZ;
+                currentZ += pairWidths[pairVal] + 0.3; // Width + Gap
+            });
+            
+            if (currentZ > maxWL) maxWL = currentZ;
+        });
+
+        const WL = maxWL > 0 ? maxWL : 20; // Fallback if no addrs
+        const maxNiv = Math.max(...addrs.map(a => +a.nivel), 1);
+
+        // Floor + grid
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(WW+12, WL+12), new THREE.MeshLambertMaterial({ color: 0x0a1122 }));
+        floor.rotation.x = -Math.PI/2; floor.position.set(WW/2, 0, WL/2);
+        _scene.add(floor);
+        const grid = new THREE.GridHelper(Math.max(WW,WL)+14, 28, 0x1e293b, 0x1e293b);
+        grid.position.set(WW/2, 0.01, WL/2); _scene.add(grid);
+
+        // Aisle stripes — using the precise aisle center mapped earlier
+        ruas.forEach((rua) => {
+            const aisleX = ruaAisleX[rua];
+            const ruaCW = getCW(rua);
+            const m = new THREE.Mesh(new THREE.PlaneGeometry(ruaCW-0.1, WL), new THREE.MeshLambertMaterial({ color:0x1e3a5f, transparent:true, opacity:0.5 }));
+            m.rotation.x = -Math.PI/2; m.position.set(aisleX, 0.02, WL/2);
+            _scene.add(m);
+        });
+
         // ── InstancedMesh: CELLS (unit cube — scaled per instance) ────────────
         const cellGeo  = new THREE.BoxGeometry(1, 1, 1);
         const cellMat  = new THREE.MeshLambertMaterial();
@@ -191,16 +242,11 @@ window.WMS3D = (function () {
         _addrList = [];
 
         // ── InstancedMesh: RAILS ────────────────────────────────────────────
-        const railGeo = new THREE.BoxGeometry(PW, 0.06, RD);
+        const railGeo = new THREE.BoxGeometry(1, 0.06, 1);
         const railMat = new THREE.MeshLambertMaterial({ color: 0x475569 });
         const railMesh = new THREE.InstancedMesh(railGeo, railMat, addrs.length);
 
         // ── InstancedMesh: BEAMS — 2 per predio (start and end of Z span) ──
-        const predioList = [];
-        ruas.forEach((rua, ri) => {
-            const rp = [...new Set(addrs.filter(a=>a.rua===rua).map(a=>a.predio))].sort((a,b)=>+a-+b);
-            rp.forEach(p => predioList.push({ rua, predio: p, ri }));
-        });
         const beamGeo = new THREE.BoxGeometry(0.07, maxNiv*PH, 0.07);
         const beamMat = new THREE.MeshLambertMaterial({ color: 0x334155 });
         const beamMesh = new THREE.InstancedMesh(beamGeo, beamMat, predioList.length * 4);
@@ -208,7 +254,7 @@ window.WMS3D = (function () {
         const dummy = new THREE.Object3D();
         let iCell = 0, iRail = 0, iBeam = 0;
 
-        ruas.forEach((rua, ruaIdx) => {
+        ruas.forEach((rua) => {
             const ruaA = addrs.filter(a => a.rua === rua);
             const rp = [...new Set(ruaA.map(a => a.predio))].sort((a,b)=>+a-+b);
 
@@ -217,12 +263,24 @@ window.WMS3D = (function () {
                 const isEven = +predio % 2 === 0;
 
                 // ── X: odd=left, even=right ─────────────────────────────────
-                const sX = isEven ? xRight(ruaIdx) : xLeft(ruaIdx);
+                const sX = isEven ? ruaXRight[rua] : ruaXLeft[rua];
+
+                // ── Base Z for this Predio ──────────────────────────────────
+                const pairVal = Math.floor((+predio - 1) / 2);
+                const zBase = predioZStarts[rua][pairVal];
+
+                // Determine the maximum Z span of this predio for placing beams
+                let predioZMaxSpan = 0;
+                pa.forEach(loc => {
+                    const dims = getDims(loc);
+                    const posSpan = (+loc.posicao) * dims.PW;
+                    if (posSpan > predioZMaxSpan) predioZMaxSpan = posSpan;
+                });
 
                 // ── Uprights at start & end of this predio's Z span ─────────
-                const maxPosH = Math.max(...pa.map(a => +a.posicao), 1);
-                const zStart  = cellZ(predio, 1) - PW/2;
-                const zEnd    = cellZ(predio, maxPosH) + PW/2;
+                const zStart = zBase;
+                const zEnd = zBase + predioZMaxSpan;
+                
                 [[zStart,-RD/2+0.04],[zStart,RD/2-0.04],[zEnd,-RD/2+0.04],[zEnd,RD/2-0.04]].forEach(([bz,dz]) => {
                     dummy.position.set(sX, maxNiv*PH/2, bz+dz);
                     dummy.updateMatrix(); beamMesh.setMatrixAt(iBeam++, dummy.matrix);
@@ -230,16 +288,22 @@ window.WMS3D = (function () {
 
                 pa.forEach(loc => {
                     const nv   = +loc.nivel;
-                    const cz   = cellZ(predio, loc.posicao);
+                    const pos  = +loc.posicao;
                     const dims = getDims(loc);
+                    
+                    // Center Z of this specific cell block
+                    const cz = zBase + (pos - 1) * dims.PW + dims.PW / 2;
+                    
                     // Rail
                     dummy.scale.set(dims.PW, 1, dims.RD);
                     dummy.position.set(sX, nv*dims.PH, cz);
                     dummy.updateMatrix(); railMesh.setMatrixAt(iRail++, dummy.matrix);
+                    
                     // Cell — scaled by tipo dimensions
                     dummy.scale.set(dims.PW - 0.14, dims.PH - 0.18, dims.RD - 0.12);
                     dummy.position.set(sX, (nv-0.5)*dims.PH + 0.07, cz);
                     dummy.updateMatrix(); _cellInstMesh.setMatrixAt(iCell, dummy.matrix);
+                    
                     dummy.scale.set(1, 1, 1); // reset for beams
                     _cellInstMesh.setColorAt(iCell, SC[loc._status] || SC.LIVRE);
                     _addrList[iCell] = loc;
