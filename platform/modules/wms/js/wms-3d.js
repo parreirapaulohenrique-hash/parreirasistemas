@@ -170,49 +170,61 @@ window.WMS3D = (function () {
         });
         const getDims = (addr) => tipoMap[_norm(addr.tipo)] || { PW, PH, RD };
 
-        // Calcular Z e limites
-        let maxWL = 0;
+        // Calcular limites globais de pares para alinhar corredores
+        const maxPredioN = Math.max(...addrs.map(a => +a.predio), 1);
+        const numPairs = Math.ceil(maxPredioN / 2);
+
+        // Calculate physical width of each GLOBAL pair based on its largest cell configuration anywhere in the warehouse
+        const globalPairWidths = [];
+        for (let pairVal = 0; pairVal < numPairs; pairVal++) {
+            let maxW = 0;
+            // The predios in this pair are (pairVal*2 + 1) and (pairVal*2 + 2)
+            const p1 = String(pairVal * 2 + 1).padStart(2, '0');
+            const p2 = String(pairVal * 2 + 2).padStart(2, '0');
+            const addrsInPair = addrs.filter(a => a.predio === p1 || a.predio === p2);
+            
+            if (addrsInPair.length > 0) {
+                const ruasInPair = [...new Set(addrsInPair.map(a => a.rua))];
+                ruasInPair.forEach(r => {
+                    [p1, p2].forEach(p => {
+                        const pa = addrsInPair.filter(a => a.rua === r && a.predio === p);
+                        if (pa.length === 0) return;
+                        
+                        const niveis = [...new Set(pa.map(a => a.nivel))];
+                        niveis.forEach(nv => {
+                            const paNiv = pa.filter(a => a.nivel === nv);
+                            const maxPos = Math.max(...paNiv.map(a => +a.posicao));
+                            const dims = getDims(paNiv[0]);
+                            const w = maxPos * dims.PW;
+                            if (w > maxW) maxW = w;
+                        });
+                    });
+                });
+            }
+            globalPairWidths[pairVal] = maxW > 0 ? maxW : PW; // fallback
+        }
+
+        // Compute Z start for each global pair
+        const globalPairZStarts = [];
+        let currentZ = 0;
+        if (descPredios) {
+            for (let pairVal = numPairs - 1; pairVal >= 0; pairVal--) {
+                globalPairZStarts[pairVal] = currentZ;
+                currentZ += globalPairWidths[pairVal] + 0.3; // + gap
+            }
+        } else {
+            for (let pairVal = 0; pairVal < numPairs; pairVal++) {
+                globalPairZStarts[pairVal] = currentZ;
+                currentZ += globalPairWidths[pairVal] + 0.3; // + gap
+            }
+        }
+        const maxWL = currentZ;
+
         const predioList = [];
-        const predioZStarts = {}; // To store the computed Z start for each pair
-        
         ruas.forEach((rua, ri) => {
             const ruaA = addrs.filter(a => a.rua === rua);
             const rp = [...new Set(ruaA.map(a => a.predio))].sort((a,b)=>+a-+b);
-            const pares = [...new Set(rp.map(p => Math.floor((+p - 1) / 2)))].sort((a,b)=>a-b);
-            
-            // Calculate physical width of each pair based on its cells
-            const pairWidths = {};
-            pares.forEach(pairVal => {
-                const prediosInPair = rp.filter(p => Math.floor((+p - 1) / 2) === pairVal);
-                let maxW = 0;
-                prediosInPair.forEach(p => {
-                    const pa = ruaA.filter(a => a.predio === p);
-                    predioList.push({ rua, predio: p, ri });
-                    
-                    const niveis = [...new Set(pa.map(a => a.nivel))];
-                    niveis.forEach(nv => {
-                        const paNiv = pa.filter(a => a.nivel === nv);
-                        const maxPos = Math.max(...paNiv.map(a => +a.posicao));
-                        const dims = getDims(paNiv[0]);
-                        const w = maxPos * dims.PW;
-                        if (w > maxW) maxW = w;
-                    });
-                });
-                pairWidths[pairVal] = maxW > 0 ? maxW : PW; // fallback
-            });
-
-            // Accumulate Z starts for this rua (removes recessed gaps)
-            const orderedPares = descPredios ? [...pares].reverse() : pares;
-            let currentZ = 0;
-            
-            if (!predioZStarts[rua]) predioZStarts[rua] = {};
-            
-            orderedPares.forEach(pairVal => {
-                predioZStarts[rua][pairVal] = currentZ;
-                currentZ += pairWidths[pairVal] + 0.3; // Width + Gap
-            });
-            
-            if (currentZ > maxWL) maxWL = currentZ;
+            rp.forEach(p => predioList.push({ rua, predio: p, ri }));
         });
 
         const WL = maxWL > 0 ? maxWL : 20; // Fallback if no addrs
@@ -267,7 +279,7 @@ window.WMS3D = (function () {
 
                 // ── Base Z for this Predio ──────────────────────────────────
                 const pairVal = Math.floor((+predio - 1) / 2);
-                const zBase = predioZStarts[rua][pairVal];
+                const zBase = globalPairZStarts[pairVal];
 
                 // Determine the maximum Z span of this predio for placing beams
                 let predioZMaxSpan = 0;
