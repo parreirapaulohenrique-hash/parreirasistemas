@@ -141,22 +141,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- Migração automática: move wms_mock_data → wms_mock_data_<tenant> se necessário ---
+    // --- Migração automática ampla: recupera endereços de QUALQUER chave wms_mock_data* ---
     (function migrateWmsData() {
         try {
-            const suf = (window.getTenantSuffix ? window.getTenantSuffix() : '');
-            if (!suf) return; // sem suffix, nada a migrar
-            const keyOld = 'wms_mock_data';
+            const suf    = (window.getTenantSuffix ? window.getTenantSuffix() : '');
+            if (!suf) return;
             const keyNew = 'wms_mock_data' + suf;
-            const newVal = localStorage.getItem(keyNew);
-            const oldVal = localStorage.getItem(keyOld);
-            if (!newVal && oldVal) {
-                // Migrar
-                const oldData = JSON.parse(oldVal);
-                if (Array.isArray(oldData) && oldData.length > 0) {
-                    localStorage.setItem(keyNew, oldVal);
-                    console.warn(`🔄 [WMS Migration] ${oldData.length} endereços migrados de "${keyOld}" para "${keyNew}"`);
-                }
+
+            // Se o tenant atual já tem dados, não faz nada
+            const existing = JSON.parse(localStorage.getItem(keyNew) || '[]');
+            if (Array.isArray(existing) && existing.length > 0) return;
+
+            // Varre TODAS as chaves wms_mock_data* e escolhe a que tem mais endereços
+            let bestKey  = null;
+            let bestData = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (!k || !k.startsWith('wms_mock_data')) continue;
+                if (k === keyNew) continue; // ignora destino
+                try {
+                    const d = JSON.parse(localStorage.getItem(k) || '[]');
+                    if (Array.isArray(d) && d.length > bestData.length) {
+                        bestData = d;
+                        bestKey  = k;
+                    }
+                } catch(e) {}
+            }
+
+            if (bestData.length > 0) {
+                localStorage.setItem(keyNew, JSON.stringify(bestData));
+                console.warn('[WMS Migration] ' + bestData.length + ' enderecos migrados de "' + bestKey + '" para "' + keyNew + '"');
             }
         } catch(e) { console.warn('[WMS Migration] Erro:', e); }
     })();
