@@ -542,7 +542,30 @@ window.generateLocationsMassive = async function () {
 
 window.loadLocationsData = async function () {
     try {
-        const data = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+        const key = 'wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '');
+        let data = JSON.parse(localStorage.getItem(key) || '[]');
+
+        // Se localStorage vazio mas temos dados em memória, usa memória (pós-importação)
+        if (data.length === 0 && locationsState.gridData && locationsState.gridData.length > 0) {
+            data = locationsState.gridData;
+            console.log('[WMS] loadLocationsData: usando dados em memória (' + data.length + ' end.)');
+        }
+
+        // Se ainda vazio, tenta buscar do Firestore
+        if (data.length === 0 && window.WmsStore) {
+            _showToast('Carregando endereços do banco...', 'info');
+            try {
+                data = await WmsStore.listarEnderecos();
+                // Tenta salvar no localStorage para próximas visitas
+                if (data.length > 0) {
+                    try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) {}
+                    console.log('[WMS] loadLocationsData: ' + data.length + ' end. carregados do Firestore.');
+                }
+            } catch(fe) {
+                console.warn('[WMS] Firestore fallback falhou:', fe);
+            }
+        }
+
         locationsState.gridData = data;
         filterGrid();
         if (window.updateDashboardStats) window.updateDashboardStats();
@@ -568,9 +591,9 @@ window.toggleViewMode = function () {
 
 window.setLateralMode = function() {
     locationsState.viewMode = 'lateral';
-    
-    // Popular Ruas
-    const data = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+
+    // Usa dados em memória (não relê localStorage)
+    const data = locationsState.gridData || [];
     const streets = [...new Set(data.map(l => l.rua))].sort();
     const sel = document.getElementById('latRua');
     if(sel) {
@@ -1595,9 +1618,16 @@ window.xlsConfirmImport = function() {
 
             console.log('[WMS Import] Salvo no Firestore: ' + merged.length + ' endereços.');
 
-            // Reload 3D if visible
+            // Reload 3D sempre (está na memória e pode estar visível)
             const wrap3d = document.getElementById('wms3d-canvas-wrap');
-            if (wrap3d && window.WMS3D) { wrap3d.innerHTML = ''; WMS3D.init(wrap3d); }
+            if (wrap3d && window.WMS3D) {
+                wrap3d.innerHTML = '';
+                WMS3D.init(wrap3d);
+                console.log('[WMS] 3D atualizado após importação.');
+            }
+            // Flag para forçar reinit ao navegar para 3D
+            window._wms3dNeedsReload = true;
+
 
         } catch(e) {
             console.error('[Import] Erro:', e);
