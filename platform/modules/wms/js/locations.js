@@ -17,67 +17,11 @@ window.updateDashboardStats = function () {
     if (el('statBloqueados')) el('statBloqueados').textContent = data.filter(x => x.status === 'BLOQUEADO').length;
 }
 
-// Call stats on page load + inject XLS import modal into body
+// Call stats on page load
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(updateDashboardStats, 200);
-
-    // Inject the XLS import modal directly into body so it's always available
-    // regardless of which view is active — fixes the 'button does nothing' bug
-    if (!document.getElementById('modalXlsImport')) {
-        const m = document.createElement('div');
-        m.innerHTML = `
-        <div id="modalXlsImport" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
-            background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center;">
-            <div class="card" style="width:100%;max-width:780px;max-height:90vh;display:flex;flex-direction:column;
-                box-shadow:0 20px 60px rgba(0,0,0,.9);">
-                <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
-                    <h3 style="display:flex;align-items:center;gap:.5rem;">
-                        <span class="material-icons-round" style="color:#10b981;">table_view</span>
-                        Importar Endere&ccedil;os do Excel
-                    </h3>
-                    <span class="material-icons-round" style="cursor:pointer;color:var(--text-secondary);" onclick="closeXlsImport()">close</span>
-                </div>
-                <div style="overflow-y:auto;padding:1.5rem;display:flex;flex-direction:column;gap:1.25rem;">
-                    <div id="xls-step1">
-                        <div style="font-size:.8rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem;">Passo 1 &mdash; Selecione o arquivo</div>
-                        <div id="xls-drop" onclick="document.getElementById('xls-file-input').click()"
-                            style="border:2px dashed var(--border-color);border-radius:12px;padding:2.5rem;text-align:center;cursor:pointer;transition:all .2s;color:var(--text-secondary);"
-                            ondragover="event.preventDefault();this.style.borderColor='#10b981';this.style.background='rgba(16,185,129,.06)';"
-                            ondragleave="this.style.borderColor='';this.style.background='';"
-                            ondrop="xlsDrop(event)">
-                            <span class="material-icons-round" style="font-size:3rem;display:block;margin-bottom:.5rem;color:#10b981;opacity:.7;">upload_file</span>
-                            <div style="font-size:.9rem;font-weight:600;">Arraste o arquivo aqui ou clique para selecionar</div>
-                            <div style="font-size:.75rem;margin-top:.35rem;opacity:.6;">.xlsx &middot; .xls &middot; .csv</div>
-                            <input id="xls-file-input" type="file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="xlsLoadFile(this.files[0])">
-                        </div>
-                        <div style="font-size:.78rem;color:var(--text-secondary);margin-top:.75rem;background:rgba(16,185,129,.06);border-left:3px solid #10b981;padding:.65rem .85rem;border-radius:6px;">
-                            <strong>Colunas esperadas:</strong>
-                            <code>DEPOSITO</code>, <code>AREA</code>, <code>RUA</code>, <code>PREDIO</code>, <code>NIVEL</code>,
-                            <code>APTO</code>, <code>ENDERE&Ccedil;O</code>, <code>TIPO</code>, <code>EQUIPAMENTO</code>,
-                            <code>OPERA&Ccedil;&Atilde;O</code>, <code>PRODUTO VINCULADO</code>, <code>CAPACIDADE</code>.
-                            Status &eacute; calculado automaticamente: produto preenchido = OCUPADO, vazio = LIVRE.
-                        </div>
-                    </div>
-                    <div id="xls-step2" style="display:none;">
-                        <div style="font-size:.8rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem;">Passo 2 &mdash; Mapeamento de Colunas</div>
-                        <div id="xls-mapping" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.65rem;margin-bottom:1rem;"></div>
-                        <div style="font-size:.8rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;">Preview (primeiras 8 linhas)</div>
-                        <div id="xls-preview" style="overflow-x:auto;border:1px solid var(--border-color);border-radius:8px;max-height:240px;overflow-y:auto;"></div>
-                        <div id="xls-summary" style="margin-top:.75rem;font-size:.82rem;"></div>
-                    </div>
-                </div>
-                <div style="padding:1rem 1.5rem;border-top:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
-                    <button class="btn btn-secondary" onclick="closeXlsImport()">Cancelar</button>
-                    <button id="xls-btn-import" class="btn btn-primary" style="display:none;" onclick="xlsConfirmImport()">
-                        <span class="material-icons-round" style="font-size:1rem;">download_done</span>
-                        Importar Endere&ccedil;os
-                    </button>
-                </div>
-            </div>
-        </div>`;
-        document.body.appendChild(m.firstElementChild);
-    }
 });
+
 
 // --- Main Entry Point ---
 // --- Main Entry Point ---
@@ -1129,28 +1073,69 @@ window.openXlsImport = function() {
 
     _xlsRows = []; _xlsCols = [];
 
-    const modal   = document.getElementById('modalXlsImport');
-    const step2   = document.getElementById('xls-step2');
-    const btnImp  = document.getElementById('xls-btn-import');
-    const drop    = document.getElementById('xls-drop');
+    // Create modal on-demand if it doesn't exist in DOM yet
+    if (!document.getElementById('modalXlsImport')) {
+        const wrapper = document.createElement('div');
+        wrapper.id = 'modalXlsImport';
+        wrapper.style.cssText = 'display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center;';
+        wrapper.innerHTML = [
+            '<div class="card" style="width:100%;max-width:780px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.9);">',
+              '<div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">',
+                '<h3 style="display:flex;align-items:center;gap:.5rem;"><span class="material-icons-round" style="color:#10b981;">table_view</span>Importar Endere\u00e7os do Excel</h3>',
+                '<span class="material-icons-round" style="cursor:pointer;color:var(--text-secondary);" onclick="closeXlsImport()">close</span>',
+              '</div>',
+              '<div style="overflow-y:auto;padding:1.5rem;display:flex;flex-direction:column;gap:1.25rem;">',
+                '<div id="xls-step1">',
+                  '<div style="font-size:.8rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem;">Passo 1 \u2014 Selecione o arquivo</div>',
+                  '<div id="xls-drop" onclick="document.getElementById(\'xls-file-input\').click()" style="border:2px dashed var(--border-color);border-radius:12px;padding:2.5rem;text-align:center;cursor:pointer;transition:all .2s;color:var(--text-secondary);" ondragover="event.preventDefault();this.style.borderColor=\'#10b981\';this.style.background=\'rgba(16,185,129,.06)\';" ondragleave="this.style.borderColor=\'\';this.style.background=\'\';" ondrop="xlsDrop(event)">',
+                    '<span class="material-icons-round" style="font-size:3rem;display:block;margin-bottom:.5rem;color:#10b981;opacity:.7;">upload_file</span>',
+                    '<div style="font-size:.9rem;font-weight:600;">Arraste o arquivo aqui ou clique para selecionar</div>',
+                    '<div style="font-size:.75rem;margin-top:.35rem;opacity:.6;">.xlsx &middot; .xls &middot; .csv</div>',
+                    '<input id="xls-file-input" type="file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="xlsLoadFile(this.files[0])">',
+                  '</div>',
+                  '<div style="font-size:.78rem;color:var(--text-secondary);margin-top:.75rem;background:rgba(16,185,129,.06);border-left:3px solid #10b981;padding:.65rem .85rem;border-radius:6px;">',
+                    '<strong>Colunas esperadas:</strong> <code>DEPOSITO</code>, <code>AREA</code>, <code>RUA</code>, <code>PREDIO</code>, <code>NIVEL</code>, <code>APTO</code>, <code>ENDERE\u00c7O</code>, <code>TIPO</code>, <code>EQUIPAMENTO</code>, <code>OPERA\u00c7\u00c3O</code>, <code>PRODUTO VINCULADO</code>, <code>CAPACIDADE</code>. Status calculado automaticamente pelo produto vinculado.',
+                  '</div>',
+                '</div>',
+                '<div id="xls-step2" style="display:none;">',
+                  '<div style="font-size:.8rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem;">Passo 2 \u2014 Mapeamento de Colunas</div>',
+                  '<div id="xls-mapping" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.65rem;margin-bottom:1rem;"></div>',
+                  '<div style="font-size:.8rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;">Preview (primeiras 8 linhas)</div>',
+                  '<div id="xls-preview" style="overflow-x:auto;border:1px solid var(--border-color);border-radius:8px;max-height:240px;overflow-y:auto;"></div>',
+                  '<div id="xls-summary" style="margin-top:.75rem;font-size:.82rem;"></div>',
+                '</div>',
+              '</div>',
+              '<div style="padding:1rem 1.5rem;border-top:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">',
+                '<button class="btn btn-secondary" onclick="closeXlsImport()">Cancelar</button>',
+                '<button id="xls-btn-import" class="btn btn-primary" style="display:none;" onclick="xlsConfirmImport()">',
+                  '<span class="material-icons-round" style="font-size:1rem;">download_done</span> Importar Endere\u00e7os',
+                '</button>',
+              '</div>',
+            '</div>'
+        ].join('');
+        document.body.appendChild(wrapper);
+    }
 
-    if (!modal) { alert('Modal de importação não encontrado. Recarregue a página.'); return; }
-
+    // Reset state
+    const step2  = document.getElementById('xls-step2');
+    const btnImp = document.getElementById('xls-btn-import');
+    const drop   = document.getElementById('xls-drop');
     if (step2)  step2.style.display  = 'none';
     if (btnImp) btnImp.style.display = 'none';
 
-    // Restore drop zone
+    // Restore drop zone to original state
     if (drop) {
         drop.style.borderColor = '';
         drop.style.background  = '';
-        drop.innerHTML = `
-            <span class="material-icons-round" style="font-size:3rem;display:block;margin-bottom:.5rem;color:#10b981;opacity:.7;">upload_file</span>
-            <div style="font-size:.9rem;font-weight:600;">Arraste o arquivo aqui ou clique para selecionar</div>
-            <div style="font-size:.75rem;margin-top:.35rem;opacity:.6;">.xlsx &middot; .xls &middot; .csv</div>
-            <input id="xls-file-input" type="file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="xlsLoadFile(this.files[0])">`;
+        drop.innerHTML = [
+            '<span class="material-icons-round" style="font-size:3rem;display:block;margin-bottom:.5rem;color:#10b981;opacity:.7;">upload_file</span>',
+            '<div style="font-size:.9rem;font-weight:600;">Arraste o arquivo aqui ou clique para selecionar</div>',
+            '<div style="font-size:.75rem;margin-top:.35rem;opacity:.6;">.xlsx &middot; .xls &middot; .csv</div>',
+            '<input id="xls-file-input" type="file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="xlsLoadFile(this.files[0])">'
+        ].join('');
     }
 
-    modal.style.display = 'flex';
+    document.getElementById('modalXlsImport').style.display = 'flex';
 };
 
 window.closeXlsImport = function() {
