@@ -1519,60 +1519,93 @@ function _xlsParseRow(row) {
 
 window.xlsConfirmImport = function() {
     const parsed = _xlsRows.map(_xlsParseRow).filter(Boolean);
-    if (parsed.length === 0) { alert('Nenhum dado válido para importar.'); return; }
+    if (parsed.length === 0) {
+        _showToast('Nenhum dado válido para importar.', 'warn');
+        return;
+    }
 
-    const key = 'wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '');
-    const existing = JSON.parse(localStorage.getItem(key) || '[]');
-    
-    // Map existing locations by ID for quick lookup and update
-    const existingMap = new Map();
-    existing.forEach(loc => existingMap.set(loc.id, loc));
+    // ── Feedback imediato no botão ──────────────────────────────────────────
+    const btn = document.getElementById('xls-btn-import');
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.style.background = '#10b981';
+        btn.style.color = '#fff';
+        btn.style.opacity = '0.9';
+        btn.innerHTML = '<span class="material-icons-round" style="font-size:1rem;animation:spin .8s linear infinite;display:inline-block;">autorenew</span> Processando ' + parsed.length.toLocaleString('pt-BR') + ' endereços...';
+    }
+    _showToast('Processando ' + parsed.length.toLocaleString('pt-BR') + ' endereços...', 'info');
+    // ────────────────────────────────────────────────────────────────────────
 
-    let newCount = 0;
-    let updatedCount = 0;
-    const toSync = [];
+    // Use setTimeout to allow the UI to repaint before heavy processing
+    setTimeout(() => {
+        try {
+            const key = 'wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '');
+            const existing = JSON.parse(localStorage.getItem(key) || '[]');
 
-    parsed.forEach(r => {
-        if (existingMap.has(r.id)) {
-            // UPSERT: update ALL fields from the spreadsheet
-            const loc = existingMap.get(r.id);
-            let changed = false;
-            const fields = ['tipo','status','deposito','area','equipamento','operacao','produto_vinculado','capacidade'];
-            fields.forEach(f => {
-                if (r[f] !== undefined && r[f] !== '' && loc[f] !== r[f]) {
-                    loc[f] = r[f];
-                    changed = true;
+            // Map existing locations by ID for quick lookup and update
+            const existingMap = new Map();
+            existing.forEach(loc => existingMap.set(loc.id, loc));
+
+            let newCount = 0;
+            let updatedCount = 0;
+            const toSync = [];
+
+            parsed.forEach(r => {
+                if (existingMap.has(r.id)) {
+                    // UPSERT: update ALL fields from the spreadsheet
+                    const loc = existingMap.get(r.id);
+                    let changed = false;
+                    const fields = ['tipo','status','deposito','area','equipamento','operacao','produto_vinculado','capacidade'];
+                    fields.forEach(f => {
+                        if (r[f] !== undefined && r[f] !== '' && loc[f] !== r[f]) {
+                            loc[f] = r[f];
+                            changed = true;
+                        }
+                    });
+                    if (changed) { updatedCount++; toSync.push(loc); }
+                } else {
+                    existingMap.set(r.id, r);
+                    newCount++;
+                    toSync.push(r);
                 }
             });
-            if (changed) {
-                updatedCount++;
-                toSync.push(loc);
+
+            const merged = Array.from(existingMap.values());
+            localStorage.setItem(key, JSON.stringify(merged));
+
+            // ☁️ Write-through: enviar ao Firestore (assíncrono)
+            if (window.WmsStore && toSync.length > 0) {
+                WmsStore.salvarEnderecosBatch(toSync).catch(e => console.warn('[Sync]', e));
             }
-        } else {
-            // Insert new
-            existingMap.set(r.id, r);
-            newCount++;
-            toSync.push(r);
+
+            locationsState.gridData = merged;
+            filterGrid();
+            if (window.updateDashboardStats) updateDashboardStats();
+            closeXlsImport();
+
+            // ── Feedback de conclusão ──────────────────────────────────────
+            _showToast(
+                newCount + ' novos &bull; ' + updatedCount + ' atualizados &bull; ' + merged.length.toLocaleString('pt-BR') + ' total',
+                'success'
+            );
+
+            // Reload 3D if visible
+            const wrap3d = document.getElementById('wms3d-canvas-wrap');
+            if (wrap3d && window.WMS3D) { wrap3d.innerHTML = ''; WMS3D.init(wrap3d); }
+
+        } catch(e) {
+            console.error('[Import] Erro:', e);
+            _showToast('Erro na importação: ' + e.message, 'error');
+            // Restore button
+            if (btn) {
+                btn.disabled = false;
+                btn.style.background = '';
+                btn.style.color = '';
+                btn.style.opacity = '';
+                btn.innerHTML = origHtml;
+            }
         }
-    });
-
-    const merged = Array.from(existingMap.values());
-
-    localStorage.setItem(key, JSON.stringify(merged));
-    // ☁️ Write-through: enviar endereços importados/atualizados ao Firestore (assíncrono)
-    if (window.WmsStore && toSync.length > 0) {
-        WmsStore.salvarEnderecosBatch(toSync).catch(e => console.warn('[Sync]', e));
-    }
-    
-    locationsState.gridData = merged;
-    filterGrid();
-    if (window.updateDashboardStats) updateDashboardStats();
-    closeXlsImport();
-
-    const msg = `✅ Importação concluída!\n\n🆕 ${newCount} novos endereços inseridos.\n🔄 ${updatedCount} endereços existentes atualizados.`;
-    alert(msg);
-
-    // Reload 3D if visible
-    const wrap3d = document.getElementById('wms3d-canvas-wrap');
-    if (wrap3d && window.WMS3D) { wrap3d.innerHTML = ''; WMS3D.init(wrap3d); }
+    }, 60); // 60ms delay so UI repaints first
 };
+
