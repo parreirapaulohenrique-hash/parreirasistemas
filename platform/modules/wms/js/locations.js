@@ -1537,93 +1537,63 @@ window.xlsConfirmImport = function() {
     _showToast('Processando ' + parsed.length.toLocaleString('pt-BR') + ' endereços...', 'info');
     // ────────────────────────────────────────────────────────────────────────
 
-    // Use setTimeout to allow the UI to repaint before heavy processing
-    setTimeout(() => {
+    // ── Processar de forma assíncrona para UI não travar ─────────────────────
+    setTimeout(async () => {
         try {
-            const key = 'wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '');
-            const existing = JSON.parse(localStorage.getItem(key) || '[]');
-
-            // Map existing locations by ID for quick lookup and update
+            // Merge com estado em memória (não depende de localStorage)
             const existingMap = new Map();
-            existing.forEach(loc => existingMap.set(loc.id, loc));
+            (locationsState.gridData || []).forEach(loc => existingMap.set(loc.id, loc));
 
             let newCount = 0;
             let updatedCount = 0;
-            const toSync = [];
 
             parsed.forEach(r => {
                 if (existingMap.has(r.id)) {
-                    // UPSERT: update ALL fields from the spreadsheet
                     const loc = existingMap.get(r.id);
-                    let changed = false;
                     const fields = ['tipo','status','deposito','area','equipamento','operacao','produto_vinculado','capacidade'];
+                    let changed = false;
                     fields.forEach(f => {
                         if (r[f] !== undefined && r[f] !== '' && loc[f] !== r[f]) {
-                            loc[f] = r[f];
-                            changed = true;
+                            loc[f] = r[f]; changed = true;
                         }
                     });
-                    if (changed) { updatedCount++; toSync.push(loc); }
+                    if (changed) updatedCount++;
                 } else {
                     existingMap.set(r.id, r);
                     newCount++;
-                    toSync.push(r);
                 }
             });
 
             const merged = Array.from(existingMap.values());
 
-            // ── Salvar no localStorage com tratamento de quota ────────────────
-            // 1. Liberar o espaço do dado antigo ANTES de gravar o novo
-            // 2. Remover campos vazios para reduzir o tamanho do JSON
-            const compact = merged.map(loc => {
-                const o = {};
-                Object.keys(loc).forEach(k => {
-                    if (loc[k] !== '' && loc[k] !== null && loc[k] !== undefined) o[k] = loc[k];
-                });
-                return o;
-            });
-
-            try {
-                localStorage.removeItem(key);          // libera espaço do valor antigo
-                localStorage.setItem(key, JSON.stringify(compact));
-            } catch(qe) {
-                // Se ainda não couber, tenta com nomes de campo curtos
-                try {
-                    const FIELD_MAP = {id:'i',rua:'r',predio:'p',nivel:'n',posicao:'po',apto:'a',
-                        status:'s',tipo:'t',deposito:'de',area:'ar',equipamento:'eq',
-                        operacao:'op',produto_vinculado:'pv',capacidade:'c'};
-                    const mini = compact.map(loc => {
-                        const o = {};
-                        Object.keys(loc).forEach(k => { o[FIELD_MAP[k]||k] = loc[k]; });
-                        return o;
-                    });
-                    localStorage.setItem(key + '_fmt', 'v2'); // flag para expansão na leitura
-                    localStorage.setItem(key, JSON.stringify(mini));
-                    console.warn('[WMS] Dados salvos em formato compacto (v2) devido ao limite do localStorage.');
-                } catch(qe2) {
-                    console.error('[WMS] localStorage cheio mesmo após compactação:', qe2);
-                    throw new Error('Armazenamento local cheio. Limpe o cache do navegador (F12 → Application → Storage → Clear) e tente novamente.');
-                }
-            }
-            // ─────────────────────────────────────────────────────────────────
-
-
-            // ☁️ Write-through: enviar ao Firestore (assíncrono)
-            if (window.WmsStore && toSync.length > 0) {
-                WmsStore.salvarEnderecosBatch(toSync).catch(e => console.warn('[Sync]', e));
-            }
-
+            // ── 1. Atualizar UI imediatamente (memória) ───────────────────────
             locationsState.gridData = merged;
             filterGrid();
             if (window.updateDashboardStats) updateDashboardStats();
             closeXlsImport();
 
-            // ── Feedback de conclusão ──────────────────────────────────────
+            _showToast('Salvando ' + merged.length.toLocaleString('pt-BR') + ' endereços no banco...', 'info');
+
+            // ── 2. Salvar direto no Firestore (fonte primária) ────────────────
+            if (!window.WmsStore) {
+                throw new Error('WmsStore não disponível. Verifique a conexão com o Firebase.');
+            }
+
+            await WmsStore.salvarEnderecosBatch(merged);
+
+            // ── 3. Limpar localStorage (já está no Firestore) ─────────────────
+            try {
+                const key = 'wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '');
+                localStorage.removeItem(key);
+            } catch(e) { /* ignora */ }
+
+            // ── 4. Toast de conclusão ─────────────────────────────────────────
             _showToast(
-                newCount + ' novos &bull; ' + updatedCount + ' atualizados &bull; ' + merged.length.toLocaleString('pt-BR') + ' total',
+                '✅ ' + newCount + ' novos · ' + updatedCount + ' atualizados · ' + merged.length.toLocaleString('pt-BR') + ' total',
                 'success'
             );
+
+            console.log('[WMS Import] Salvo no Firestore: ' + merged.length + ' endereços.');
 
             // Reload 3D if visible
             const wrap3d = document.getElementById('wms3d-canvas-wrap');
@@ -1631,8 +1601,7 @@ window.xlsConfirmImport = function() {
 
         } catch(e) {
             console.error('[Import] Erro:', e);
-            _showToast('Erro na importação: ' + e.message, 'error');
-            // Restore button
+            _showToast('Erro: ' + e.message, 'error');
             if (btn) {
                 btn.disabled = false;
                 btn.style.background = '';
@@ -1641,6 +1610,6 @@ window.xlsConfirmImport = function() {
                 btn.innerHTML = origHtml;
             }
         }
-    }, 60); // 60ms delay so UI repaints first
+    }, 60);
 };
 
