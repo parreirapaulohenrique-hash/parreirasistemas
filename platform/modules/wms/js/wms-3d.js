@@ -48,6 +48,9 @@ window.WMS3D = (function () {
                 if (s.qtdMin > 0 && s.qtd < s.qtdMin) return { ...a, _status: 'DESABASTECIDO', _stock: s };
                 return { ...a, _status: 'OCUPADO', _stock: s };
             }
+            // Se o endereço foi importado como OCUPADO (ex: tem produto_vinculado) mas ainda não tem estoque
+            if (st === 'OCUPADO') return { ...a, _status: 'OCUPADO', _stock: null };
+            
             return { ...a, _status: 'LIVRE', _stock: null };
         });
     }
