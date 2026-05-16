@@ -1373,8 +1373,6 @@ function _xlsParseRow(row) {
     const apto = nivelN + posicaoN; // e.g. "101" for nivel=1, posicao=01
     const id = `${ruaN}-${predioN}-${apto}`; // "1-1-101"
 
-    const rawStatus = getOrFallback('status', 'STATUS', 'SITUACAO', 'SITUAÇÃO').toUpperCase();
-    const status = ['LIVRE','OCUPADO','BLOQUEADO'].includes(rawStatus) ? rawStatus : 'LIVRE';
 
     const tipo = getOrFallback('tipo', 'TIPO', 'TYPE') || 'Picking';
     const deposito = getOrFallback('deposito', 'DEPOSITO', 'DEPÓSITO');
@@ -1384,9 +1382,9 @@ function _xlsParseRow(row) {
     const produto_vinculado = getOrFallback('produto_vinculado', 'PRODUTO VINCULADO', 'PRODUTO', 'SKU', 'ITEM', 'MATERIAL');
     const capacidade = getOrFallback('capacidade', 'CAPACIDADE', 'CAPACITY', 'KG', 'PESO');
 
-    // Status: automatically derived from produto_vinculado
-    // filled (and not zero) = OCUPADO, empty = LIVRE
-    // Unless the spreadsheet explicitly has a STATUS column with BLOQUEADO
+    // Status: auto-calculado por produto_vinculado
+    // Se PRODUTO VINCULADO preenchido → OCUPADO, vazio → LIVRE
+    // STATUS=BLOQUEADO na planilha é preservado
     const rawStatus = getOrFallback('status', 'STATUS', 'SITUACAO', 'SITUAÇÃO').toUpperCase();
     let status;
     if (rawStatus === 'BLOQUEADO') {
