@@ -4,7 +4,12 @@ let locationsState = {
     gridData: [],
     viewMode: 'table', // 'grid', 'table', 'map', or 'lateral'
     lateralRua: '',
-    lateralLado: 'par'
+    lateralLado: 'par',
+    tablePage: 0,
+    gridPage: 0,
+    PAGE_SIZE_TABLE: 100,
+    PAGE_SIZE_GRID: 200,
+    _filteredCache: []
 };
 
 // --- Dashboard Stats ---
@@ -208,7 +213,8 @@ window.loadLocationsView = async function () {
                     "></div>
 
                     <!-- Table View (hidden by default) -->
-                    <div id="locationsTable" style="display:none; max-height:55vh; overflow:auto; border:1px solid var(--border-color); border-radius:8px;">
+                    <div id="locationsTable" style="display:none; border:1px solid var(--border-color); border-radius:8px;">
+                        <div style="max-height:50vh; overflow:auto;">
                         <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
                             <thead style="position:sticky; top:0; background:var(--bg-card); z-index:1;">
                                 <tr>
@@ -230,6 +236,8 @@ window.loadLocationsView = async function () {
                             </thead>
                             <tbody id="locationsTableBody"></tbody>
                         </table>
+                        </div>
+                        <div id="locationsTablePagination" style="display:flex;align-items:center;justify-content:center;gap:.75rem;padding:.6rem 1rem;border-top:1px solid var(--border-color);"></div>
                     </div>
 
                     <!-- Map View (hidden by default) -->
@@ -752,6 +760,8 @@ window.filterGrid = function () {
         document.getElementById('locationsGrid').style.display = 'none';
         document.getElementById('locationsTable').style.display = 'block';
         document.getElementById('locationsMap').style.display = 'none';
+        locationsState.tablePage = 0;
+        locationsState._filteredCache = filtered;
         renderTableView(filtered);
     } else if (locationsState.viewMode === 'map') {
         document.getElementById('locationsGrid').style.display = 'none';
@@ -883,36 +893,49 @@ function renderGridView(data) {
     grid.innerHTML = '';
 
     if (data.length === 0) {
-        grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:var(--text-secondary); padding:2rem;">Nenhum endereço encontrado.</div>';
+        grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:var(--text-secondary); padding:2rem;">Nenhum endere&ccedil;o encontrado.</div>';
         return;
     }
 
-    data.forEach(loc => {
+    const ps = locationsState.PAGE_SIZE_GRID;
+    const page = locationsState.gridPage;
+    const totalPages = Math.ceil(data.length / ps);
+    const slice = data.slice(page * ps, (page + 1) * ps);
+
+    slice.forEach(loc => {
         const card = document.createElement('div');
         card.className = 'location-card';
 
         const colors = {
-            'LIVRE': { bg: 'rgba(16, 185, 129, 0.1)', border: '#10b981', text: '#10b981' },
-            'OCUPADO': { bg: 'rgba(239, 68, 68, 0.1)', border: '#ef4444', text: '#ef4444' },
-            'BLOQUEADO': { bg: 'rgba(245, 158, 11, 0.1)', border: '#f59e0b', text: '#f59e0b' }
+            'LIVRE':    { bg: 'rgba(16, 185, 129, 0.1)', border: '#10b981', text: '#10b981' },
+            'OCUPADO':  { bg: 'rgba(239, 68, 68, 0.1)',   border: '#ef4444', text: '#ef4444' },
+            'BLOQUEADO':{ bg: 'rgba(245, 158, 11, 0.1)',  border: '#f59e0b', text: '#f59e0b' }
         };
         const c = colors[loc.status] || colors['LIVRE'];
 
-        card.style.cssText = `
-            background:${c.bg}; border:1px solid ${c.border}; border-radius:6px;
-            padding:0.6rem; text-align:center; cursor:pointer; transition:transform 0.15s;
-        `;
+        card.style.cssText = `background:${c.bg};border:1px solid ${c.border};border-radius:6px;padding:0.6rem;text-align:center;cursor:pointer;transition:transform 0.15s;`;
         card.onmouseenter = () => card.style.transform = 'scale(1.05)';
         card.onmouseleave = () => card.style.transform = 'scale(1)';
         card.onclick = () => showLocationActions(loc.id);
-
         card.innerHTML = `
-            <div style="font-size:0.65rem; color:var(--text-secondary);">R${loc.rua} P${loc.predio}</div>
-            <div style="font-weight:700; font-size:1rem; margin:0.15rem 0; letter-spacing:0.5px;">${loc.apto}</div>
-            <div style="font-size:0.6rem; font-weight:600; color:${c.text};">${loc.status}</div>
-        `;
+            <div style="font-size:0.65rem;color:var(--text-secondary);">R${loc.rua} P${loc.predio}</div>
+            <div style="font-weight:700;font-size:1rem;margin:0.15rem 0;letter-spacing:0.5px;">${loc.apto}</div>
+            <div style="font-size:0.6rem;font-weight:600;color:${c.text};">${loc.status}</div>`;
         grid.appendChild(card);
     });
+
+    // Pagination bar
+    if (totalPages > 1) {
+        const bar = document.createElement('div');
+        bar.style.cssText = 'grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.75rem 0;';
+        bar.innerHTML = `
+            <button class="btn btn-secondary" style="padding:.3rem .7rem;font-size:.8rem;" ${ page === 0 ? 'disabled' : '' }
+                onclick="locationsState.gridPage=${page-1};renderGridView(locationsState._filteredCache)">&laquo; Ant</button>
+            <span style="font-size:.8rem;color:var(--text-secondary);">P&aacute;g ${page+1} / ${totalPages} &bull; ${data.length} end.</span>
+            <button class="btn btn-secondary" style="padding:.3rem .7rem;font-size:.8rem;" ${ page >= totalPages-1 ? 'disabled' : '' }
+                onclick="locationsState.gridPage=${page+1};renderGridView(locationsState._filteredCache)">Prox &raquo;</button>`;
+        grid.appendChild(bar);
+    }
 }
 
 function renderTableView(data) {
@@ -920,45 +943,66 @@ function renderTableView(data) {
     tbody.innerHTML = '';
 
     if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:2rem; color:var(--text-secondary);">Nenhum endereço encontrado.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:2rem;color:var(--text-secondary);">Nenhum endere&ccedil;o encontrado.</td></tr>';
         return;
     }
 
-    data.forEach(loc => {
+    const ps = locationsState.PAGE_SIZE_TABLE;
+    const page = locationsState.tablePage;
+    const totalPages = Math.ceil(data.length / ps);
+    const slice = data.slice(page * ps, (page + 1) * ps);
+
+    const fragment = document.createDocumentFragment();
+    slice.forEach(loc => {
         const colors = { 'LIVRE': '#10b981', 'OCUPADO': '#ef4444', 'BLOQUEADO': '#f59e0b' };
         const color = colors[loc.status] || '#94a3b8';
 
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid var(--border-color)';
         tr.innerHTML = `
-            <td style="padding:0.5rem 0.6rem; font-weight:600;">${loc.id}</td>
-            <td style="padding:0.5rem; text-align:center;">${loc.deposito || '-'}</td>
-            <td style="padding:0.5rem; text-align:center;">${loc.area || '-'}</td>
-            <td style="padding:0.5rem; text-align:center;">${loc.rua}</td>
-            <td style="padding:0.5rem; text-align:center;">${loc.predio}</td>
-            <td style="padding:0.5rem; text-align:center;">${loc.nivel}</td>
-            <td style="padding:0.5rem; text-align:center;">${loc.posicao || loc.apto}</td>
-            <td style="padding:0.5rem; text-align:center;"><span style="background:var(--bg-lighter); padding:2px 6px; border-radius:4px; font-size:0.7rem;">${loc.tipo || 'Padrão'}</span></td>
-            <td style="padding:0.5rem; text-align:center; font-size:0.75rem; color:var(--text-secondary);">${loc.equipamento || '-'}</td>
-            <td style="padding:0.5rem; text-align:center; font-size:0.75rem; color:var(--text-secondary);">${loc.operacao || '-'}</td>
-            <td style="padding:0.5rem; text-align:center; font-size:0.75rem; color:var(--text-secondary);">${loc.produto_vinculado || '-'}</td>
-            <td style="padding:0.5rem; text-align:center; font-size:0.75rem; color:var(--text-secondary);">${loc.capacidade || '-'}</td>
-            <td style="padding:0.5rem; text-align:center;">
-                <span style="background:${color}22; color:${color}; padding:0.2rem 0.5rem; border-radius:4px; font-size:0.75rem; font-weight:600;">
-                    ${loc.status}
-                </span>
+            <td style="padding:0.5rem 0.6rem;font-weight:600;">${loc.id}</td>
+            <td style="padding:0.5rem;text-align:center;">${loc.deposito || '-'}</td>
+            <td style="padding:0.5rem;text-align:center;">${loc.area || '-'}</td>
+            <td style="padding:0.5rem;text-align:center;">${loc.rua}</td>
+            <td style="padding:0.5rem;text-align:center;">${loc.predio}</td>
+            <td style="padding:0.5rem;text-align:center;">${loc.nivel}</td>
+            <td style="padding:0.5rem;text-align:center;">${loc.posicao || loc.apto}</td>
+            <td style="padding:0.5rem;text-align:center;"><span style="background:var(--bg-lighter);padding:2px 6px;border-radius:4px;font-size:0.7rem;">${loc.tipo || 'Padr&atilde;o'}</span></td>
+            <td style="padding:0.5rem;text-align:center;font-size:0.75rem;color:var(--text-secondary);">${loc.equipamento || '-'}</td>
+            <td style="padding:0.5rem;text-align:center;font-size:0.75rem;color:var(--text-secondary);">${loc.operacao || '-'}</td>
+            <td style="padding:0.5rem;text-align:center;font-size:0.75rem;color:var(--text-secondary);">${loc.produto_vinculado || '-'}</td>
+            <td style="padding:0.5rem;text-align:center;font-size:0.75rem;color:var(--text-secondary);">${loc.capacidade || '-'}</td>
+            <td style="padding:0.5rem;text-align:center;">
+                <span style="background:${color}22;color:${color};padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem;font-weight:600;">${loc.status}</span>
             </td>
-            <td style="padding:0.5rem; text-align:center;">
-                <button onclick="toggleBlock('${loc.id}')" style="background:none; border:none; cursor:pointer; color:${loc.status === 'BLOQUEADO' ? '#10b981' : '#f59e0b'};" title="${loc.status === 'BLOQUEADO' ? 'Desbloquear' : 'Bloquear'}">
-                    <span class="material-icons-round" style="font-size:1.1rem;">${loc.status === 'BLOQUEADO' ? 'lock_open' : 'lock'}</span>
+            <td style="padding:0.5rem;text-align:center;">
+                <button onclick="toggleBlock('${loc.id}')" style="background:none;border:none;cursor:pointer;color:${loc.status==='BLOQUEADO'?'#10b981':'#f59e0b'};" title="${loc.status==='BLOQUEADO'?'Desbloquear':'Bloquear'}">
+                    <span class="material-icons-round" style="font-size:1.1rem;">${loc.status==='BLOQUEADO'?'lock_open':'lock'}</span>
                 </button>
-                <button onclick="deleteLocation('${loc.id}')" style="background:none; border:none; cursor:pointer; color:#ef4444;" title="Excluir">
+                <button onclick="deleteLocation('${loc.id}')" style="background:none;border:none;cursor:pointer;color:#ef4444;" title="Excluir">
                     <span class="material-icons-round" style="font-size:1.1rem;">delete</span>
                 </button>
-            </td>
-        `;
-        tbody.appendChild(tr);
+            </td>`;
+        fragment.appendChild(tr);
     });
+    tbody.appendChild(fragment);
+
+    // Pagination bar below table
+    const paginationEl = document.getElementById('locationsTablePagination');
+    if (paginationEl) {
+        if (totalPages > 1) {
+            paginationEl.innerHTML = `
+                <button class="btn btn-secondary" style="padding:.3rem .7rem;font-size:.8rem;" ${ page===0?'disabled':'' }
+                    onclick="locationsState.tablePage=${page-1};renderTableView(locationsState._filteredCache)">&laquo; Anterior</button>
+                <span style="font-size:.82rem;color:var(--text-secondary);">
+                    P&aacute;g <strong>${page+1}</strong> de ${totalPages} &bull; ${data.length.toLocaleString('pt-BR')} endere&ccedil;os
+                </span>
+                <button class="btn btn-secondary" style="padding:.3rem .7rem;font-size:.8rem;" ${ page>=totalPages-1?'disabled':'' }
+                    onclick="locationsState.tablePage=${page+1};renderTableView(locationsState._filteredCache)">Pr&oacute;xima &raquo;</button>`;
+        } else {
+            paginationEl.innerHTML = `<span style="font-size:.82rem;color:var(--text-secondary);">${data.length.toLocaleString('pt-BR')} endere&ccedil;os</span>`;
+        }
+    }
 }
 
 // --- Actions ---
