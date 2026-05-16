@@ -23,6 +23,9 @@ window.WMS3D = (function () {
     }
 
     function _addresses() {
+        if (window.locationsState && window.locationsState.gridData && window.locationsState.gridData.length > 0) {
+            return window.locationsState.gridData;
+        }
         const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
         return JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
     }
@@ -765,7 +768,12 @@ window.wms3dAutoDetectTipos = function() {
     }
 
     const suf   = window.getTenantSuffix ? window.getTenantSuffix() : '';
-    const addrs = JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
+    let addrs = [];
+    if (window.locationsState && window.locationsState.gridData && window.locationsState.gridData.length > 0) {
+        addrs = window.locationsState.gridData;
+    } else {
+        addrs = JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
+    }
 
     let filtrados = addrs;
     if (!isNaN(ruaIni)) filtrados = filtrados.filter(a => parseInt(a.rua) >= ruaIni);
@@ -859,7 +867,8 @@ window.wms3dAutoDetectTipos = function() {
         });
 
         if (changed > 0) {
-            localStorage.setItem('wms_mock_data' + suf, JSON.stringify(addrs));
+            if (window.locationsState) window.locationsState.gridData = addrs;
+            try { localStorage.setItem('wms_mock_data' + suf, JSON.stringify(addrs)); } catch(e) {}
             if (window.WmsStore) WmsStore.salvarEnderecosBatch(addrs.filter(a => updateMap[a.id])).catch(e => console.warn(e));
             alert(`✅ Sucesso! O campo 'Tipo' de ${changed} endereços foi atualizado.`);
         } else {
