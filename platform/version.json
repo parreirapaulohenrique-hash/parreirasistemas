@@ -1,17 +1,15 @@
 {
-    "version": "11.19.0",
-    "build": "20260513",
-    "lastUpdate": "2026-05-13",
-    "description": "WMS Cloud Sync — todos os dados operacionais espelhados no Firestore em tempo real",
+    "version": "11.20.0",
+    "build": "20260516",
+    "lastUpdate": "2026-05-16",
+    "description": "WMS — Campos de endereço atualizados (DEPOSITO, AREA, EQUIPAMENTO, OPERACAO, PRODUTO VINCULADO, CAPACIDADE)",
     "changelog": [
-        "NOVO: wms-sync.js — interceptor universal que espelha TODOS os localStorage wms_* no Firestore automaticamente",
-        "NOVO: Coleções Firestore: docas, agendamentos, conferencias, inventarios, transferencias, bloqueios, ajustes, kardex, ondas, picking, volumes, cargas, expedicoes, tarefas, estoque",
-        "NOVO: Hidratação automática no login — Firestore popula localStorage de todos os dispositivos do tenant",
-        "NOVO: Listener onSnapshot em tempo real — mudanças de qualquer dispositivo propagam para todos sem reload",
-        "NOVO: Evento 'wms-data-updated' permite que cada tela se atualize quando outro dispositivo modificar os dados",
-        "NOVO: Indicador 'Cloud Sync Ativo' (verde) na top-bar do WMS quando sincronização estiver operacional",
-        "NOVO: Botão 'Configurar WMS' no painel master admin para tenants com módulo WMS",
-        "NOVO: Drawer de provisionamento WMS com campos Maxdata, teste de conexão e CNPJs",
-        "FIX: 50+ chaves localStorage agora com sufixo _<tenantId> — isolamento total multi-tenant"
+        "FIX: xlsLoadFile — corrigido travamento em 'Lendo arquivo...' ao selecionar planilha",
+        "NOVO: Importador agora detecta automaticamente as 12 colunas do padrão de endereços (DEPOSITO, AREA, RUA, PREDIO, NIVEL, APTO, ENDERECO, TIPO, EQUIPAMENTO, OPERACAO, PRODUTO VINCULADO, CAPACIDADE)",
+        "NOVO: Filtros da tela de Gestão de Endereços — Área, Tipo, Equipamento com valores reais do galpão",
+        "NOVO: Botão Limpar Filtros na barra de filtros",
+        "FIX: Ordenação dos endereços agora é numérica (1,2,3...9,10) em vez de alfabética",
+        "FIX: SheetJS agora é carregado automaticamente se necessário, sem exigir reload do usuário",
+        "FIX: Tabela de endereços exibe todas as colunas: Depósito, Área, Rua, Prédio, Nível, Apto, Tipo, Equipamento, Operação, Produto Vinculado, Capacidade, Status"
     ]
 }

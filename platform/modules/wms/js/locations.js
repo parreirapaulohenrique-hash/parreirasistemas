@@ -92,10 +92,11 @@ window.loadLocationsView = async function () {
                             </div>
                             <div style="font-size:.78rem;color:var(--text-secondary);margin-top:.75rem;background:rgba(16,185,129,.06);
                                 border-left:3px solid #10b981;padding:.65rem .85rem;border-radius:6px;">
-                                <strong>Colunas aceitas:</strong> A planilha pode ter uma coluna <code>Endereço</code>
-                                com o ID completo (ex: <code>01-02-0101</code>), ou colunas separadas para
-                                <code>Rua</code>, <code>Prédio</code>, <code>Nível</code>, <code>Posição</code>.
-                                Colunas opcionais: <code>Status</code>, <code>Tipo</code>.
+                                <strong>Formato esperado:</strong> A planilha deve ter as colunas:
+                                <code>DEPOSITO</code>, <code>AREA</code>, <code>RUA</code>, <code>PREDIO</code>,
+                                <code>NIVEL</code>, <code>APTO</code>, <code>ENDEREÇO</code>, <code>TIPO</code>,
+                                <code>EQUIPAMENTO</code>, <code>OPERAÇÃO</code>, <code>PRODUTO VINCULADO</code>,
+                                <code>CAPACIDADE</code>. Status é opcional (padrão: LIVRE).
                             </div>
                         </div>
 
@@ -131,18 +132,45 @@ window.loadLocationsView = async function () {
 
                 <div class="card-body" style="padding:1rem;">
                     <!-- Filters -->
-                    <div style="display:flex; gap:1rem; margin-bottom:1rem; align-items:end; flex-wrap:wrap;">
-                        <div style="width:80px;">
+                    <div style="display:flex; gap:0.75rem; margin-bottom:1rem; align-items:end; flex-wrap:wrap;">
+                        <div style="width:130px;">
+                            <label class="text-secondary" style="font-size:0.75rem; display:block;">Área</label>
+                            <select id="filterArea" class="form-input" style="font-size:0.85rem;">
+                                <option value="ALL">Todas</option>
+                                <option value="GERAL">GERAL</option>
+                                <option value="FRACIONADOS">FRACIONADOS</option>
+                                <option value="CARENAGENS">CARENAGENS</option>
+                                <option value="ESCAPAMENTOS">ESCAPAMENTOS</option>
+                                <option value="PNEUS">PNEUS</option>
+                            </select>
+                        </div>
+                        <div style="width:70px;">
                             <label class="text-secondary" style="font-size:0.75rem; display:block;">Rua</label>
                             <input type="text" id="filterRua" class="form-input" placeholder="Todas" style="font-size:0.85rem;">
                         </div>
-                        <div style="width:80px;">
+                        <div style="width:70px;">
                             <label class="text-secondary" style="font-size:0.75rem; display:block;">Prédio</label>
                             <input type="text" id="filterPredio" class="form-input" placeholder="Todos" style="font-size:0.85rem;">
                         </div>
-                        <div style="width:100px;">
+                        <div style="width:70px;">
                             <label class="text-secondary" style="font-size:0.75rem; display:block;">Nível</label>
                             <input type="text" id="filterNivel" class="form-input" placeholder="Todos" style="font-size:0.85rem;">
+                        </div>
+                        <div style="width:120px;">
+                            <label class="text-secondary" style="font-size:0.75rem; display:block;">Tipo</label>
+                            <select id="filterTipo" class="form-input" style="font-size:0.85rem;">
+                                <option value="ALL">Todos</option>
+                                <option value="Picking">Picking</option>
+                                <option value="Pulmão">Pulmão</option>
+                            </select>
+                        </div>
+                        <div style="width:140px;">
+                            <label class="text-secondary" style="font-size:0.75rem; display:block;">Equipamento</label>
+                            <select id="filterEquipamento" class="form-input" style="font-size:0.85rem;">
+                                <option value="ALL">Todos</option>
+                                <option value="Prateleira">Prateleira</option>
+                                <option value="Porta-Palete">Porta-Palete</option>
+                            </select>
                         </div>
                         <div style="width:120px;">
                             <label class="text-secondary" style="font-size:0.75rem; display:block;">Status</label>
@@ -153,9 +181,14 @@ window.loadLocationsView = async function () {
                                 <option value="BLOQUEADO">Bloqueados</option>
                             </select>
                         </div>
-                        <button class="btn btn-secondary" onclick="filterGrid()" style="height:34px;">
-                            <span class="material-icons-round" style="font-size:1rem;">filter_list</span> Filtrar
-                        </button>
+                        <div style="display:flex; gap:0.5rem; align-items:flex-end;">
+                            <button class="btn btn-secondary" onclick="filterGrid()" style="height:34px;">
+                                <span class="material-icons-round" style="font-size:1rem;">filter_list</span> Filtrar
+                            </button>
+                            <button class="btn btn-secondary" onclick="clearFilters()" style="height:34px;" title="Limpar filtros">
+                                <span class="material-icons-round" style="font-size:1rem;">clear_all</span>
+                            </button>
+                        </div>
                         <div style="margin-left:auto; font-size:0.85rem; color:var(--text-secondary);">
                             Exibindo: <strong id="filterCount" style="color:var(--text-primary);">0</strong> endereços
                         </div>
@@ -179,10 +212,17 @@ window.loadLocationsView = async function () {
                             <thead style="position:sticky; top:0; background:var(--bg-card); z-index:1;">
                                 <tr>
                                     <th style="padding:0.6rem; text-align:left; border-bottom:1px solid var(--border-color);">Endereço</th>
+                                    <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Depósito</th>
+                                    <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Área</th>
                                     <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Rua</th>
                                     <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Prédio</th>
                                     <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Nível</th>
-                                    <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Posição</th>
+                                    <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Apto</th>
+                                    <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Tipo</th>
+                                    <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Equipamento</th>
+                                    <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Operação</th>
+                                    <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Produto V.</th>
+                                    <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Capacidade</th>
                                     <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color);">Status</th>
                                     <th style="padding:0.6rem; text-align:center; border-bottom:1px solid var(--border-color); width:120px;">Ações</th>
                                 </tr>
@@ -670,20 +710,34 @@ window.renderLateralDetails = function(id) {
 // --- Filter & Render ---
 // --- Filter & Render ---
 window.filterGrid = function () {
+    const fArea = document.getElementById('filterArea')?.value || 'ALL';
     const fRua = (document.getElementById('filterRua')?.value || '').trim();
     const fPredio = (document.getElementById('filterPredio')?.value || '').trim();
     const fNivel = (document.getElementById('filterNivel')?.value || '').trim();
+    const fTipo = document.getElementById('filterTipo')?.value || 'ALL';
+    const fEquipamento = document.getElementById('filterEquipamento')?.value || 'ALL';
     const fStatus = document.getElementById('filterStatus')?.value || 'ALL';
 
     let filtered = [...locationsState.gridData];
 
-    if (fRua) filtered = filtered.filter(x => x.rua === fRua.padStart(2, '0'));
-    if (fPredio) filtered = filtered.filter(x => x.predio === fPredio.padStart(2, '0'));
-    if (fNivel) filtered = filtered.filter(x => x.nivel === fNivel.padStart(2, '0'));
+    if (fArea !== 'ALL') filtered = filtered.filter(x => (x.area || '').toUpperCase() === fArea);
+    if (fRua) filtered = filtered.filter(x => String(parseInt(x.rua)) === String(parseInt(fRua)));
+    if (fPredio) filtered = filtered.filter(x => String(parseInt(x.predio)) === String(parseInt(fPredio)));
+    if (fNivel) filtered = filtered.filter(x => String(parseInt(x.nivel)) === String(parseInt(fNivel)));
+    if (fTipo !== 'ALL') filtered = filtered.filter(x => x.tipo === fTipo);
+    if (fEquipamento !== 'ALL') filtered = filtered.filter(x => x.equipamento === fEquipamento);
     if (fStatus !== 'ALL') filtered = filtered.filter(x => x.status === fStatus);
 
-    // Sort: Rua > Prédio > Nível > Posição
-    filtered.sort((a, b) => a.id.localeCompare(b.id));
+    // Sort: Rua > Prédio > Nível > Posição (numericamente)
+    filtered.sort((a, b) => {
+        const rDiff = parseInt(a.rua) - parseInt(b.rua);
+        if (rDiff !== 0) return rDiff;
+        const pDiff = parseInt(a.predio) - parseInt(b.predio);
+        if (pDiff !== 0) return pDiff;
+        const nDiff = parseInt(a.nivel) - parseInt(b.nivel);
+        if (nDiff !== 0) return nDiff;
+        return String(a.posicao).localeCompare(String(b.posicao));
+    });
 
     const countEl = document.getElementById('filterCount');
     if (countEl) countEl.textContent = filtered.length;
@@ -712,6 +766,18 @@ window.filterGrid = function () {
         updateLateralView();
     }
 }
+
+window.clearFilters = function () {
+    const el = id => document.getElementById(id);
+    if (el('filterArea')) el('filterArea').value = 'ALL';
+    if (el('filterRua')) el('filterRua').value = '';
+    if (el('filterPredio')) el('filterPredio').value = '';
+    if (el('filterNivel')) el('filterNivel').value = '';
+    if (el('filterTipo')) el('filterTipo').value = 'ALL';
+    if (el('filterEquipamento')) el('filterEquipamento').value = 'ALL';
+    if (el('filterStatus')) el('filterStatus').value = 'ALL';
+    filterGrid();
+};
 
 // ... (renderGridView and renderTableView remain unchanged) ...
 
@@ -865,10 +931,17 @@ function renderTableView(data) {
         tr.style.borderBottom = '1px solid var(--border-color)';
         tr.innerHTML = `
             <td style="padding:0.5rem 0.6rem; font-weight:600;">${loc.id}</td>
+            <td style="padding:0.5rem; text-align:center;">${loc.deposito || '-'}</td>
+            <td style="padding:0.5rem; text-align:center;">${loc.area || '-'}</td>
             <td style="padding:0.5rem; text-align:center;">${loc.rua}</td>
             <td style="padding:0.5rem; text-align:center;">${loc.predio}</td>
             <td style="padding:0.5rem; text-align:center;">${loc.nivel}</td>
-            <td style="padding:0.5rem; text-align:center;">${loc.posicao}</td>
+            <td style="padding:0.5rem; text-align:center;">${loc.posicao || loc.apto}</td>
+            <td style="padding:0.5rem; text-align:center;"><span style="background:var(--bg-lighter); padding:2px 6px; border-radius:4px; font-size:0.7rem;">${loc.tipo || 'Padrão'}</span></td>
+            <td style="padding:0.5rem; text-align:center; font-size:0.75rem; color:var(--text-secondary);">${loc.equipamento || '-'}</td>
+            <td style="padding:0.5rem; text-align:center; font-size:0.75rem; color:var(--text-secondary);">${loc.operacao || '-'}</td>
+            <td style="padding:0.5rem; text-align:center; font-size:0.75rem; color:var(--text-secondary);">${loc.produto_vinculado || '-'}</td>
+            <td style="padding:0.5rem; text-align:center; font-size:0.75rem; color:var(--text-secondary);">${loc.capacidade || '-'}</td>
             <td style="padding:0.5rem; text-align:center;">
                 <span style="background:${color}22; color:${color}; padding:0.2rem 0.5rem; border-radius:4px; font-size:0.75rem; font-weight:600;">
                     ${loc.status}
@@ -943,23 +1016,35 @@ let _xlsRows   = [];   // raw rows parsed from file
 let _xlsCols   = [];   // column headers
 
 const _XLS_FIELD_LABELS = {
-    endereco: 'Endereço (ID completo)',
+    deposito: 'Depósito',
+    area:     'Área',
     rua:      'Rua',
     predio:   'Prédio',
     nivel:    'Nível',
-    posicao:  'Posição',
-    status:   'Status',
+    posicao:  'Apto / Posição',
+    endereco: 'Endereço Completo',
     tipo:     'Tipo',
+    equipamento: 'Equipamento',
+    operacao: 'Operação',
+    produto_vinculado: 'Produto Vinculado',
+    capacidade: 'Capacidade',
+    status:   'Status',
 };
 
 const _XLS_SYNONYMS = {
-    endereco: ['endereço','endereco','address','id','end','código','codigo'],
+    deposito: ['deposito', 'depósito', 'warehouse', 'armazém', 'filial'],
+    area:     ['area', 'área', 'zona', 'zone', 'setor'],
     rua:      ['rua','corredor','aisle','street'],
     predio:   ['prédio','predio','coluna','bay','bloco','blk','column'],
     nivel:    ['nível','nivel','level','andar','altura','floor'],
-    posicao:  ['posição','posicao','pos','position','apart','apto'],
-    status:   ['status','situação','situacao','state'],
+    posicao:  ['posição','posicao','pos','position','apart','apto','apartamento'],
+    endereco: ['endereço','endereco','address','id','end','código','codigo'],
     tipo:     ['tipo','type','categoria','category'],
+    equipamento: ['equipamento', 'equip', 'empilhadeira', 'resource', 'maquina'],
+    operacao: ['operação', 'operacao', 'operation', 'fluxo', 'atividade'],
+    produto_vinculado: ['produto', 'produto vinculado', 'item', 'sku', 'material', 'codigo de barras'],
+    capacidade: ['capacidade', 'capacity', 'peso maximo', 'kg', 'volume', 'peso'],
+    status:   ['status','situação','situacao','state'],
 };
 
 function _xlsAutoDetect(headers) {
@@ -976,24 +1061,49 @@ function _xlsAutoDetect(headers) {
 }
 
 window.openXlsImport = function() {
-    // Ensure SheetJS is loaded
-    if (!window.XLSX) {
+    // Load SheetJS if not already available
+    if (!window.XLSX && !document.querySelector('script[data-sheetjs]')) {
         const sc = document.createElement('script');
+        sc.setAttribute('data-sheetjs', '1');
         sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-        sc.onload = () => { console.log('SheetJS carregado'); };
+        sc.onload = () => console.log('SheetJS carregado');
         document.head.appendChild(sc);
     }
+
     _xlsRows = []; _xlsCols = [];
-    document.getElementById('xls-step2').style.display = 'none';
-    document.getElementById('xls-btn-import').style.display = 'none';
-    document.getElementById('xls-file-input').value = '';
+
+    // Move modal to body to avoid stacking context issues
+    let modal = document.getElementById('modalXlsImport');
+    if (!modal) { console.error('Modal importação não encontrado no DOM.'); return; }
+    if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+    }
+
+    // Reset state
+    const step2 = document.getElementById('xls-step2');
+    const btnImport = document.getElementById('xls-btn-import');
+    if (step2) step2.style.display = 'none';
+    if (btnImport) btnImport.style.display = 'none';
+
+    // Restore drop zone to original clickable state
     const drop = document.getElementById('xls-drop');
-    if (drop) { drop.style.borderColor = ''; drop.style.background = ''; }
-    document.getElementById('modalXlsImport').style.display = 'flex';
+    if (drop) {
+        drop.style.borderColor = '';
+        drop.style.background = '';
+        drop.innerHTML = `
+            <span class="material-icons-round" style="font-size:3rem;display:block;margin-bottom:.5rem;color:#10b981;opacity:.7;">upload_file</span>
+            <div style="font-size:.9rem;font-weight:600;">Arraste o arquivo aqui ou clique para selecionar</div>
+            <div style="font-size:.75rem;margin-top:.35rem;opacity:.6;">.xlsx · .xls · .csv</div>
+            <input id="xls-file-input" type="file" accept=".xlsx,.xls,.csv" style="display:none;"
+                onchange="xlsLoadFile(this.files[0])">`;
+    }
+
+    modal.style.display = 'flex';
 };
 
 window.closeXlsImport = function() {
-    document.getElementById('modalXlsImport').style.display = 'none';
+    const modal = document.getElementById('modalXlsImport');
+    if (modal) modal.style.display = 'none';
 };
 
 window.xlsDrop = function(e) {
@@ -1006,39 +1116,73 @@ window.xlsDrop = function(e) {
 
 window.xlsLoadFile = function(file) {
     if (!file) return;
-    if (!window.XLSX) {
-        alert('SheetJS ainda carregando, aguarde 2 segundos e tente novamente.');
-        return;
-    }
+
     const drop = document.getElementById('xls-drop');
     if (drop) {
         drop.style.borderColor = '#10b981';
-        drop.innerHTML = `<span class="material-icons-round" style="font-size:2rem;display:block;margin-bottom:.4rem;color:#10b981;">check_circle</span>
+        drop.innerHTML = `<span class="material-icons-round" style="font-size:2rem;display:block;margin-bottom:.4rem;color:#10b981;">hourglass_top</span>
             <div style="font-weight:600;color:#10b981;">${file.name}</div>
-            <div style="font-size:.75rem;color:var(--text-secondary);margin-top:.2rem;">Lendo arquivo...</div>`;
+            <div style="font-size:.75rem;color:var(--text-secondary);margin-top:.2rem;">Aguardando biblioteca... &#9650;</div>`;
     }
 
-    const reader = new FileReader();
-    reader.onload = e => {
-        try {
-            const wb = XLSX.read(e.target.result, { type: 'array' });
-            const ws = wb.Sheets[wb.SheetNames[0]];
-            const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
-
-            if (!data || data.length === 0) {
-                alert('Planilha vazia ou sem dados reconhecíveis.');
-                return;
-            }
-
-            _xlsRows = data;
-            _xlsCols = Object.keys(data[0]);
-            _xlsRenderMapping(_xlsAutoDetect(_xlsCols));
-
-        } catch(err) {
-            alert('Erro ao ler o arquivo: ' + err.message);
+    const doRead = () => {
+        if (drop) {
+            drop.innerHTML = `<span class="material-icons-round" style="font-size:2rem;display:block;margin-bottom:.4rem;color:#10b981;">hourglass_top</span>
+                <div style="font-weight:600;color:#10b981;">${file.name}</div>
+                <div style="font-size:.75rem;color:var(--text-secondary);margin-top:.2rem;">Lendo arquivo...</div>`;
         }
+        const reader = new FileReader();
+        reader.onload = ev => {
+            try {
+                const wb = XLSX.read(ev.target.result, { type: 'array' });
+                const ws = wb.Sheets[wb.SheetNames[0]];
+                const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+                if (!data || data.length === 0) {
+                    if (drop) drop.innerHTML = `<span class="material-icons-round" style="font-size:2rem;color:#ef4444;">error</span><div style="color:#ef4444;font-weight:600;">Planilha vazia ou sem dados.</div>`;
+                    return;
+                }
+
+                // Update drop zone to success state
+                if (drop) {
+                    drop.innerHTML = `<span class="material-icons-round" style="font-size:2rem;display:block;margin-bottom:.4rem;color:#10b981;">check_circle</span>
+                        <div style="font-weight:600;color:#10b981;">${file.name}</div>
+                        <div style="font-size:.75rem;color:#10b981;margin-top:.2rem;">&#10003; ${data.length.toLocaleString('pt-BR')} linhas carregadas com sucesso</div>`;
+                }
+
+                _xlsRows = data;
+                _xlsCols = Object.keys(data[0]);
+                _xlsRenderMapping(_xlsAutoDetect(_xlsCols));
+
+            } catch(err) {
+                if (drop) drop.innerHTML = `<span class="material-icons-round" style="font-size:2rem;color:#ef4444;">error</span><div style="color:#ef4444;font-weight:600;">Erro: ${err.message}</div>`;
+                console.error('xlsLoadFile error:', err);
+            }
+        };
+        reader.readAsArrayBuffer(file);
     };
-    reader.readAsArrayBuffer(file);
+
+    if (window.XLSX) {
+        doRead();
+    } else {
+        // SheetJS not loaded yet — inject and wait
+        if (!document.querySelector('script[data-sheetjs]')) {
+            const sc = document.createElement('script');
+            sc.setAttribute('data-sheetjs', '1');
+            sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+            sc.onload = () => { console.log('SheetJS carregado'); doRead(); };
+            sc.onerror = () => {
+                if (drop) drop.innerHTML = `<span class="material-icons-round" style="font-size:2rem;color:#ef4444;">wifi_off</span><div style="color:#ef4444;font-weight:600;">Falha ao carregar biblioteca. Verifique a conexão.</div>`;
+            };
+            document.head.appendChild(sc);
+        } else {
+            // Script tag exists but still loading — poll
+            const poll = setInterval(() => {
+                if (window.XLSX) { clearInterval(poll); doRead(); }
+            }, 200);
+            setTimeout(() => clearInterval(poll), 15000); // timeout 15s
+        }
+    }
 };
 
 function _xlsRenderMapping(autoMap) {
@@ -1082,7 +1226,7 @@ window._xlsUpdatePreview = function() {
     <table style="width:100%;border-collapse:collapse;font-size:.78rem;">
         <thead>
             <tr style="background:var(--bg-dark);position:sticky;top:0;">
-                ${['Endereço','Rua','Prédio','Nível','Posição','Status','Tipo'].map(h=>
+                ${['Endereço','Depósito','Área','Rua','Prédio','Nível','Apto','Status','Tipo','Equipamento','Operação','Produto V.','Capacidade'].map(h=>
                     `<th style="padding:.4rem .6rem;text-align:left;border-bottom:1px solid var(--border-color);color:var(--text-secondary);white-space:nowrap;">${h}</th>`
                 ).join('')}
             </tr>
@@ -1091,6 +1235,8 @@ window._xlsUpdatePreview = function() {
             ${parsed.map(r => `
             <tr style="border-bottom:1px solid var(--border-color)44;">
                 <td style="padding:.35rem .6rem;font-family:monospace;font-weight:700;color:#818cf8;">${r.id}</td>
+                <td style="padding:.35rem .6rem;">${r.deposito}</td>
+                <td style="padding:.35rem .6rem;">${r.area}</td>
                 <td style="padding:.35rem .6rem;">${r.rua}</td>
                 <td style="padding:.35rem .6rem;">${r.predio}</td>
                 <td style="padding:.35rem .6rem;">${r.nivel}</td>
@@ -1101,6 +1247,10 @@ window._xlsUpdatePreview = function() {
                         border-radius:4px;padding:.1rem .4rem;font-size:.7rem;font-weight:600;">${r.status}</span>
                 </td>
                 <td style="padding:.35rem .6rem;">${r.tipo}</td>
+                <td style="padding:.35rem .6rem;">${r.equipamento}</td>
+                <td style="padding:.35rem .6rem;">${r.operacao}</td>
+                <td style="padding:.35rem .6rem;">${r.produto_vinculado}</td>
+                <td style="padding:.35rem .6rem;">${r.capacidade}</td>
             </tr>`).join('')}
         </tbody>
     </table>`;
@@ -1135,39 +1285,74 @@ function _xlsParseRow(row) {
         return sel?.value ? String(row[sel.value] || '').trim() : '';
     };
 
-    let rua='', predio='', nivel='', posicao='';
-
-    const endId = g('endereco');
-    if (endId) {
-        // Auto-parse "01-02-0101" or "01-02-01-01"
-        const parts = endId.split('-');
-        if (parts.length >= 3) {
-            rua    = parts[0].padStart(2,'0');
-            predio = parts[1].padStart(2,'0');
-            const rest = parts.slice(2).join('');
-            nivel    = rest.slice(0,2).padStart(2,'0');
-            posicao  = (rest.slice(2) || '01').padStart(2,'0');
-        } else {
-            return null;
+    // --- Try to get columns directly by name OR via mapping selects ---
+    // Priority: mapped column via select > direct column name fallback
+    const getOrFallback = (field, ...fallbackKeys) => {
+        const mapped = g(field);
+        if (mapped) return String(mapped).trim();
+        // try raw row direct key match (case-insensitive)
+        for (const k of fallbackKeys) {
+            const found = Object.keys(row).find(rk => rk.toUpperCase() === k.toUpperCase());
+            if (found && row[found] !== '' && row[found] !== null && row[found] !== undefined)
+                return String(row[found]).trim();
         }
-    } else {
-        rua    = g('rua').padStart(2,'0')    || '00';
-        predio = g('predio').padStart(2,'0') || '00';
-        nivel  = g('nivel').padStart(2,'0')  || '01';
-        posicao= g('posicao').padStart(2,'0')|| '01';
-        if (rua === '00' && predio === '00') return null;
+        return '';
+    };
+
+    // Parse RUA, PREDIO, NIVEL, APTO — from individual cols or from ENDEREÇO
+    let rua = getOrFallback('rua', 'RUA', 'CORREDOR');
+    let predio = getOrFallback('predio', 'PREDIO', 'PRÉDIO', 'COLUNA', 'BAY');
+    let nivel = getOrFallback('nivel', 'NIVEL', 'NÍVEL', 'ANDAR');
+    let posicao = getOrFallback('posicao', 'APTO', 'APARTAMENTO', 'POSICAO', 'POSIÇÃO');
+
+    // Fallback: parse from ENDEREÇO column (format: "1-1-101" or "01-02-0101")
+    if ((!rua || !predio) && !g('rua')) {
+        const endId = getOrFallback('endereco', 'ENDEREÇO', 'ENDERECO', 'ENDEREÇO', 'ADDRESS');
+        if (endId) {
+            const parts = endId.split('-');
+            if (parts.length >= 3) {
+                rua    = parts[0];
+                predio = parts[1];
+                const rest = parts.slice(2).join('');
+                // rest like "101" = nivel=1, posicao=01 or "0101" = nivel=01, posicao=01
+                if (rest.length <= 3) {
+                    nivel   = rest.slice(0, 1);
+                    posicao = rest.slice(1).padStart(2, '0');
+                } else {
+                    nivel   = rest.slice(0, 2);
+                    posicao = rest.slice(2).padStart(2, '0');
+                }
+            }
+        }
     }
 
-    const apto = nivel + posicao;
-    const id   = `${rua}-${predio}-${apto}`;
+    if (!rua || !predio) return null;
 
-    const rawStatus = g('status').toUpperCase();
+    // Normalize: keep numeric value (no forced padding in ID to match spreadsheet style)
+    const ruaN = String(parseInt(rua) || 0);
+    const predioN = String(parseInt(predio) || 0);
+    const nivelN = String(parseInt(nivel) || 1);
+    const posicaoN = String(posicao || '01').padStart(2, '0');
+    const apto = nivelN + posicaoN; // e.g. "101" for nivel=1, posicao=01
+    const id = `${ruaN}-${predioN}-${apto}`; // "1-1-101"
+
+    const rawStatus = getOrFallback('status', 'STATUS', 'SITUACAO', 'SITUAÇÃO').toUpperCase();
     const status = ['LIVRE','OCUPADO','BLOQUEADO'].includes(rawStatus) ? rawStatus : 'LIVRE';
 
-    const rawTipo = g('tipo');
-    const tipo = rawTipo || 'Picking';
+    const tipo = getOrFallback('tipo', 'TIPO', 'TYPE') || 'Picking';
+    const deposito = getOrFallback('deposito', 'DEPOSITO', 'DEPÓSITO');
+    const area = getOrFallback('area', 'AREA', 'ÁREA', 'ZONA', 'SETOR');
+    const equipamento = getOrFallback('equipamento', 'EQUIPAMENTO', 'EQUIP');
+    const operacao = getOrFallback('operacao', 'OPERACAO', 'OPERAÇÃO', 'OPERAÇÃO');
+    const produto_vinculado = getOrFallback('produto_vinculado', 'PRODUTO VINCULADO', 'PRODUTO', 'SKU', 'ITEM', 'MATERIAL');
+    const capacidade = getOrFallback('capacidade', 'CAPACIDADE', 'CAPACITY', 'KG', 'PESO');
 
-    return { id, rua, predio, nivel, posicao, apto, status, tipo };
+    return { 
+        id, 
+        rua: ruaN, predio: predioN, nivel: nivelN, posicao: posicaoN, apto,
+        status, tipo, deposito, area, equipamento, 
+        operacao, produto_vinculado, capacidade 
+    };
 }
 
 window.xlsConfirmImport = function() {
@@ -1187,12 +1372,16 @@ window.xlsConfirmImport = function() {
 
     parsed.forEach(r => {
         if (existingMap.has(r.id)) {
-            // Update existing
+            // UPSERT: update ALL fields from the spreadsheet
             const loc = existingMap.get(r.id);
             let changed = false;
-            if (r.tipo && loc.tipo !== r.tipo) { loc.tipo = r.tipo; changed = true; }
-            if (r.status && loc.status !== r.status) { loc.status = r.status; changed = true; }
-            
+            const fields = ['tipo','status','deposito','area','equipamento','operacao','produto_vinculado','capacidade'];
+            fields.forEach(f => {
+                if (r[f] !== undefined && r[f] !== '' && loc[f] !== r[f]) {
+                    loc[f] = r[f];
+                    changed = true;
+                }
+            });
             if (changed) {
                 updatedCount++;
                 toSync.push(loc);
