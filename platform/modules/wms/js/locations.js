@@ -1105,7 +1105,56 @@ function _xlsAutoDetect(headers) {
     return map;
 }
 
-window.openXlsImport = function() {
+// --- Toast notification helper ---
+// Inject @keyframes spin if missing
+if (!document.getElementById('_wmsSpinStyle')) {
+    const s = document.createElement('style');
+    s.id = '_wmsSpinStyle';
+    s.textContent = '@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
+    document.head.appendChild(s);
+}
+function _showToast(msg, type) {
+    let toast = document.getElementById('_wmsToast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = '_wmsToast';
+        toast.style.cssText = [
+            'position:fixed;top:1rem;right:1rem;z-index:99999;',
+            'padding:.75rem 1.25rem;border-radius:10px;',
+            'font-size:.875rem;font-weight:600;',
+            'display:flex;align-items:center;gap:.5rem;',
+            'box-shadow:0 8px 32px rgba(0,0,0,.4);',
+            'transform:translateY(-80px);opacity:0;',
+            'transition:all .3s cubic-bezier(.34,1.56,.64,1);',
+            'pointer-events:none;'
+        ].join('');
+        document.body.appendChild(toast);
+    }
+    const colors = {
+        success: { bg:'#10b981', icon:'check_circle' },
+        info:    { bg:'#3b82f6', icon:'info' },
+        warn:    { bg:'#f59e0b', icon:'warning' },
+        error:   { bg:'#ef4444', icon:'error' }
+    };
+    const c = colors[type] || colors.info;
+    toast.style.background = c.bg;
+    toast.style.color = '#fff';
+    toast.innerHTML = '<span class="material-icons-round" style="font-size:1.1rem;">' + c.icon + '</span>' + msg;
+    // Slide in
+    requestAnimationFrame(() => {
+        toast.style.transform = 'translateY(0)';
+        toast.style.opacity   = '1';
+    });
+    // Slide out after 3s
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => {
+        toast.style.transform = 'translateY(-80px)';
+        toast.style.opacity   = '0';
+    }, 3000);
+}
+window._showToast = _showToast;
+
+window.openXlsImport = function(triggerBtn) {
     // Ensure SheetJS is loaded
     if (!window.XLSX && !document.querySelector('script[data-sheetjs]')) {
         const sc = document.createElement('script');
@@ -1114,8 +1163,29 @@ window.openXlsImport = function() {
         sc.onload = () => console.log('SheetJS carregado');
         document.head.appendChild(sc);
     }
+    // ── Feedback imediato: toast + animação no botão ──────────────────────────
+    _showToast('Abrindo importador...', 'info');
+
+    // Animate the trigger button if we can find it
+    const _btn = triggerBtn || document.querySelector('[onclick*="openXlsImport"]');
+    if (_btn) {
+        const _orig = _btn.innerHTML;
+        _btn.style.transition = 'all .2s';
+        _btn.style.background = '#10b981';
+        _btn.style.color = '#fff';
+        _btn.innerHTML = '<span class="material-icons-round" style="font-size:1rem;animation:spin .8s linear infinite;display:inline-block;">autorenew</span> Abrindo...';
+        _btn.disabled = true;
+        setTimeout(() => {
+            _btn.innerHTML = _orig;
+            _btn.style.background = '';
+            _btn.style.color = '';
+            _btn.disabled = false;
+        }, 1500);
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     _xlsRows = []; _xlsCols = [];
+
 
     // Create modal on-demand if it doesn't exist in DOM yet
     if (!document.getElementById('modalXlsImport')) {
