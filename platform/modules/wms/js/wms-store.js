@@ -340,20 +340,14 @@ window.WmsStore = (function () {
             const snap = await _enderecosCol(_tid()).get();
             if (snap.empty) return 0;
             const addrs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            // So sobrescreve localStorage se Firestore tiver >= dados que o local
-            // Evita apagar 12k enderecos locais com batch parcial do Firestore
-            const localLen = JSON.parse(localStorage.getItem(key) || '[]').length;
-            // Só sobrescreve se Firestore tem MAIS endereços que o local
-            // (evita QuotaExceededError ao tentar regravar dados identicos)
-            if (addrs.length > localLen) {
-                try {
-                    localStorage.setItem(key, JSON.stringify(addrs));
-                    console.log('[WmsStore] ' + addrs.length + ' enderecos sincronizados do Firestore');
-                } catch(qe) {
-                    console.warn('[WmsStore] localStorage cheio, dados mantidos do local (' + localLen + ' end.)');
-                }
-            } else {
-                console.log('[WmsStore] Firestore (' + addrs.length + ') <= local (' + localLen + '), mantendo local.');
+            if (window.locationsState) {
+                window.locationsState.gridData = addrs;
+            }
+            try {
+                localStorage.setItem(key, JSON.stringify(addrs));
+                console.log('[WmsStore] ' + addrs.length + ' enderecos sincronizados para local/memoria.');
+            } catch(qe) {
+                console.warn('[WmsStore] localStorage cheio, salvando apenas em memoria (' + addrs.length + ' end.)');
             }
             return addrs.length;
         } catch(e) {

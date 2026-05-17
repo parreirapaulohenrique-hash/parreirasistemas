@@ -231,18 +231,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (!Array.isArray(addrs) || addrs.length === 0) return;
                     clearTimeout(_syncDebounce);
                     _syncDebounce = setTimeout(() => {
-                        const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
-                        const localNow = JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
-                        // Só sobrescreve se Firestore tem MAIS dados (evita QuotaExceededError
-                        // ao tentar regravar os mesmos 12k enderecos que ja estao no local)
-                        if (addrs.length > localNow.length) {
-                            try {
-                                localStorage.setItem('wms_mock_data' + suf, JSON.stringify(addrs));
-                                if (window.loadDashboardView) loadDashboardView();
-                            } catch(qe) {
-                                console.warn('[WMS] localStorage quota excedido, mantendo dados existentes.');
-                            }
+                        // Atualiza direto na memória se a tela de endereços estiver aberta
+                        if (window.locationsState) {
+                            window.locationsState.gridData = addrs;
                         }
+                        // Tenta salvar local, se não der, segue o jogo (usa a memória apenas)
+                        try {
+                            const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+                            localStorage.setItem('wms_mock_data' + suf, JSON.stringify(addrs));
+                        } catch(qe) {}
+                        
+                        if (window.loadDashboardView) loadDashboardView();
                     }, 600);
                 });
                 window.wmsEnderecosSyncUnsubscribe = unsub;
