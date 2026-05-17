@@ -1456,7 +1456,11 @@ window._xlsUpdatePreview = function() {
 function _xlsParseRow(row) {
     const g = id => {
         const sel = document.getElementById(`xls-map-${id}`);
-        return sel?.value ? String(row[sel.value] || '').trim() : '';
+        if (sel && sel.value && row.hasOwnProperty(sel.value)) {
+            const val = row[sel.value];
+            return val !== null && val !== undefined ? String(val).trim() : '';
+        }
+        return '';
     };
 
     // --- Try to get columns directly by name OR via mapping selects ---
@@ -1516,7 +1520,7 @@ function _xlsParseRow(row) {
     const area = getOrFallback('area', 'AREA', 'ÁREA', 'ZONA', 'SETOR');
     const equipamento = getOrFallback('equipamento', 'EQUIPAMENTO', 'EQUIP');
     const operacao = getOrFallback('operacao', 'OPERACAO', 'OPERAÇÃO');
-    const produto_vinculado = getOrFallback('produto_vinculado', 'PRODUTO VINCULADO', 'PRODUTO', 'SKU', 'ITEM', 'MATERIAL');
+    const produto_vinculado = getOrFallback('produto_vinculado', 'PRODUTO VINCULADO', 'PRODUTO V.', 'PRODUTO V', 'PRODUTO', 'SKU', 'ITEM', 'MATERIAL');
     const capacidade = getOrFallback('capacidade', 'CAPACIDADE', 'CAPACITY', 'KG', 'PESO');
 
     // Status: auto-calculado por produto_vinculado
@@ -1526,8 +1530,12 @@ function _xlsParseRow(row) {
     let status;
     if (rawStatus === 'BLOQUEADO') {
         status = 'BLOQUEADO';
+    } else if (rawStatus === 'OCUPADO') {
+        status = 'OCUPADO';
     } else if (produto_vinculado && produto_vinculado !== '' && produto_vinculado !== '0') {
         status = 'OCUPADO';
+    } else if (rawStatus === 'LIVRE') {
+        status = 'LIVRE';
     } else {
         status = 'LIVRE';
     }
