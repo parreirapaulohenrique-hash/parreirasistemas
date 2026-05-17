@@ -139,7 +139,16 @@ window.WMS3D = (function () {
         // Mapear largura configurada dos corredores
         const cwCfg = cfg.corredores || [];
         const getCW = (ruaNome) => {
-            const c = cwCfg.find(x => x.nome === ruaNome || x.id === ruaNome || x.nome.includes(ruaNome) || x.id.includes(ruaNome));
+            const rnPad = String(ruaNome).padStart(2, '0');
+            const rnNum = String(parseInt(ruaNome, 10));
+            const c = cwCfg.find(x => {
+                if (!x) return false;
+                const n = String(x.nome || '').trim();
+                const i = String(x.id || '').trim();
+                return n === ruaNome || i === ruaNome || 
+                       n.padStart(2, '0') === rnPad || i.padStart(2, '0') === rnPad ||
+                       n === rnNum || i === rnNum;
+            });
             return c && c.largura ? +c.largura : CW;
         };
 
