@@ -1502,13 +1502,13 @@ function _xlsParseRow(row) {
 
     if (!rua || !predio) return null;
 
-    // Normalize: keep numeric value (no forced padding in ID to match spreadsheet style)
-    const ruaN = String(parseInt(rua) || 0);
-    const predioN = String(parseInt(predio) || 0);
-    const nivelN = String(parseInt(nivel) || 1);
+    // Normalize: Pad to 2 digits to match the WMS standard ID format ("01-01-0101")
+    const ruaN = String(parseInt(rua) || 0).padStart(2, '0');
+    const predioN = String(parseInt(predio) || 0).padStart(2, '0');
+    const nivelN = String(parseInt(nivel) || 1).padStart(2, '0');
     const posicaoN = String(posicao || '01').padStart(2, '0');
-    const apto = nivelN + posicaoN; // e.g. "101" for nivel=1, posicao=01
-    const id = `${ruaN}-${predioN}-${apto}`; // "1-1-101"
+    const apto = nivelN + posicaoN; // e.g. "0101"
+    const id = `${ruaN}-${predioN}-${apto}`; // "01-01-0101"
 
 
     const tipo = getOrFallback('tipo', 'TIPO', 'TYPE') || 'Picking';
