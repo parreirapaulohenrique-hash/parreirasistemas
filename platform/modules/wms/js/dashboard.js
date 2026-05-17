@@ -55,10 +55,11 @@ window.loadDashboardView = function () {
             </div>`).join('')}
         </div>
         <div style="font-size:.72rem;color:var(--text-secondary);padding:.3rem 1rem;background:rgba(99,102,241,.05);
-            display:flex;gap:1.5rem;border-bottom:1px solid var(--border-color);">
-            <span>🖥️ Clique e arraste para rotacionar</span>
-            <span>🔍 Scroll para zoom</span>
-            <span>Passe o mouse em uma vaga para ver detalhes</span>
+            display:flex;gap:1.5rem;border-bottom:1px solid var(--border-color);flex-wrap:wrap;">
+            <span>🖱️ <b>Botão Esquerdo</b>: Girar a câmera</span>
+            <span>🖱️ <b>Botão Direito</b>: Mover (Pan)</span>
+            <span>🔍 <b>Scroll</b>: Zoom</span>
+            <span>Passe o mouse para ver detalhes</span>
         </div>
         <!-- Config Panel -->
         <div id="wms3d-cfg-panel" style="display:none;position:absolute;top:0;right:0;width:400px;height:100%;

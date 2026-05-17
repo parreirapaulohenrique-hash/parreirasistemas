@@ -194,7 +194,7 @@ window.WMS3D = (function () {
                 const ruasInPair = [...new Set(addrsInPair.map(a => a.rua))];
                 ruasInPair.forEach(r => {
                     [p1, p2].forEach(p => {
-                        const pa = addrsInPair.filter(a => a.rua === r && a.predio === p);
+                        const pa = addrsInPair.filter(a => a.rua === r && String(a.predio).padStart(2, '0') === p);
                         if (pa.length === 0) return;
                         
                         const niveis = [...new Set(pa.map(a => a.nivel))];
@@ -347,18 +347,22 @@ window.WMS3D = (function () {
         _camera.lookAt(WW/2, (maxNiv*PH)/2, WL/2);
 
 
-        _setupControls(canvas);
+        _setupControls(canvas, WW/2, (maxNiv*PH)/2, WL/2);
         _setupRaycaster(canvas, container);
         _setupResize(container);
         _animate();
     }
 
-    function _setupControls(canvas) {
+    function _setupControls(canvas, targetX, targetY, targetZ) {
         if (window.THREE && THREE.OrbitControls) {
             _controls = new THREE.OrbitControls(_camera, canvas);
             _controls.enableDamping = true;
             _controls.dampingFactor = 0.06;
             _controls.maxPolarAngle = Math.PI / 2.05;
+            if (targetX !== undefined) {
+                _controls.target.set(targetX, targetY, targetZ);
+                _controls.update();
+            }
             canvas.style.cursor = 'grab';
         }
     }
