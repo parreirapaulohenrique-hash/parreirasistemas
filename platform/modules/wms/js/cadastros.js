@@ -587,7 +587,7 @@ window.handleImportProdutos = function(input) {
             }
             
             saveCadastroData(cadData);
-            alert(Planilha importada com sucesso!\nNovos: \nAtualizados: );
+            alert(`Planilha importada com sucesso!\\nNovos: ${countNew}\\nAtualizados: ${countUpdate}`);
             loadCadastroView('cad-prod-cadastro');
         } catch (err) {
             console.error('Erro na importação:', err);
