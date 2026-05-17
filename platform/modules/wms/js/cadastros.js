@@ -317,6 +317,12 @@ function renderCadGrid(container, config, items, viewId) {
                     <input type="text" id="cadSearch" placeholder="Buscar..." style="background:none; border:none; color:var(--text-primary); padding:0.5rem; outline:none; font-size:0.85rem; width:160px;"
                         oninput="filterCadGrid('${viewId}', this.value)">
                 </div>
+                ${viewId === 'cad-prod-cadastro' ? `
+                <button class="btn btn-secondary" onclick="document.getElementById('importProdFile').click()">
+                    <span class="material-icons-round" style="font-size:1rem;">upload_file</span> Importar
+                </button>
+                <input type="file" id="importProdFile" accept=".xlsx, .xls, .csv" style="display:none;" onchange="handleImportProdutos(this)">
+                ` : ''}
                 <button class="btn btn-primary" onclick="openCadForm('${viewId}')">
                     <span class="material-icons-round" style="font-size:1rem;">add</span> Novo
                 </button>
@@ -504,3 +510,90 @@ window.filterCadGrid = function (viewId, query) {
 };
 
 console.log('📋 WMS Cadastros carregados — ' + Object.keys(CAD_CONFIG).length + ' entidades configuradas');
+
+
+// ===========================================
+// IMPORT PRODUTOS (EXCEL)
+// ===========================================
+window.handleImportProdutos = function(input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            
+            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+            if (rows.length < 2) {
+                alert('Planilha vazia ou inválida.');
+                input.value = '';
+                return;
+            }
+            
+            const headers = rows[0].map(h => String(h).trim().toUpperCase());
+            const skuIdx = headers.findIndex(h => h === 'SKU' || h === 'CÓDIGO' || h === 'CODIGO' || h === 'PRODUTO');
+            const descIdx = headers.findIndex(h => h === 'DESCRIÇÃO' || h === 'DESCRICAO' || h === 'NOME');
+            const eanIdx = headers.findIndex(h => h === 'EAN' || h === 'EAN/GTIN' || h === 'CÓDIGO DE BARRAS' || h === 'CODIGO DE BARRAS' || h === 'GTIN');
+            
+            if (skuIdx === -1) {
+                alert('Não foi possível encontrar a coluna SKU/CÓDIGO na planilha.\nColunas encontradas: ' + headers.join(', '));
+                input.value = '';
+                return;
+            }
+            
+            let countNew = 0;
+            let countUpdate = 0;
+            
+            const cadData = getCadastroData();
+            if (!cadData['produtos']) cadData['produtos'] = [];
+            const produtos = cadData['produtos'];
+            
+            const existingSkus = {};
+            produtos.forEach((p, index) => {
+                existingSkus[p.sku] = index;
+            });
+            
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                if (!row || row.length === 0) continue;
+                
+                const skuVal = row[skuIdx];
+                if (!skuVal) continue;
+                const sku = String(skuVal).trim();
+                if (!sku) continue;
+                
+                const descricao = descIdx !== -1 && row[descIdx] ? String(row[descIdx]).trim() : sku;
+                const ean = eanIdx !== -1 && row[eanIdx] ? String(row[eanIdx]).trim() : '';
+                
+                if (existingSkus.hasOwnProperty(sku)) {
+                    const pIdx = existingSkus[sku];
+                    produtos[pIdx].descricao = descricao;
+                    if (ean) produtos[pIdx].ean = ean;
+                    countUpdate++;
+                } else {
+                    produtos.push({
+                        id: 'PROD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+                        sku: sku,
+                        descricao: descricao,
+                        ean: ean,
+                        ativo: true
+                    });
+                    countNew++;
+                }
+            }
+            
+            saveCadastroData(cadData);
+            alert(Planilha importada com sucesso!\nNovos: \nAtualizados: );
+            loadCadastroView('cad-prod-cadastro');
+        } catch (err) {
+            console.error('Erro na importação:', err);
+            alert('Erro ao processar a planilha. Verifique o formato e certifique-se de não estar enviando arquivos protegidos ou vazios.');
+        }
+        input.value = '';
+    };
+    reader.readAsArrayBuffer(file);
+};
