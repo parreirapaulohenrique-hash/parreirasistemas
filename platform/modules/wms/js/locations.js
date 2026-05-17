@@ -1659,12 +1659,7 @@ window.zerarBaseWMS = async function() {
     
     document.body.style.cursor = 'wait';
     try {
-        const addrs = await window.WmsStore.listarEnderecos();
-        let apagados = 0;
-        for (let a of addrs) {
-            await window.WmsStore.excluirEndereco(a.id);
-            apagados++;
-        }
+        const apagados = await window.WmsStore.excluirTodosEnderecos();
         const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
         localStorage.removeItem('wms_mock_data' + suf);
         alert(`Base limpa com sucesso! ${apagados} endereços removidos.`);

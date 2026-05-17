@@ -306,6 +306,27 @@ window.WmsStore = (function () {
         }
     }
 
+    /** Remove TODOS os endereços do Firestore em batches para não travar. */
+    async function excluirTodosEnderecos() {
+        const tid = _tid();
+        const col = _enderecosCol(tid);
+        const db  = _db();
+        const snap = await col.get();
+        if (snap.empty) return 0;
+        
+        const docs = snap.docs;
+        const BATCH_SIZE = 400;
+        let total = 0;
+        for (let i = 0; i < docs.length; i += BATCH_SIZE) {
+            const chunk = docs.slice(i, i + BATCH_SIZE);
+            const batch = db.batch();
+            chunk.forEach(d => batch.delete(d.ref));
+            await batch.commit();
+            total += chunk.length;
+        }
+        return total;
+    }
+
     /** Retorna todos os endereços do Firestore para o tenant. */
     async function listarEnderecos() {
         const snap = await _enderecosCol(_tid()).get();
@@ -422,6 +443,7 @@ window.WmsStore = (function () {
         salvarEnderecosBatch,
         atualizarEndereco,
         excluirEndereco,
+        excluirTodosEnderecos,
         listarEnderecos,
         ouvirEnderecos,
         sincronizarEnderecos,
