@@ -79,6 +79,8 @@ window.WMS3D = (function () {
         if (_controls) _controls.dispose();
         _renderer = _camera = _scene = _controls = _animId = _resizeObs = null;
         _objects = [];
+        _cellInstMesh = null;
+        _addrList = [];
     }
 
     function init(container) {
