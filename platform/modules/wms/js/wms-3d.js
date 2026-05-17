@@ -177,7 +177,8 @@ window.WMS3D = (function () {
         const getDims = (addr) => tipoMap[_norm(addr.tipo)] || { PW, PH, RD };
 
         // Calcular limites globais de pares para alinhar corredores
-        const maxPredioN = Math.max(...addrs.map(a => +a.predio), 1);
+        const validPredios = addrs.map(a => +a.predio).filter(p => !isNaN(p));
+        const maxPredioN = Math.max(...validPredios, 1);
         const numPairs = Math.ceil(maxPredioN / 2);
 
         // Calculate physical width of each GLOBAL pair based on its largest cell configuration anywhere in the warehouse
@@ -187,7 +188,7 @@ window.WMS3D = (function () {
             // The predios in this pair are (pairVal*2 + 1) and (pairVal*2 + 2)
             const p1 = String(pairVal * 2 + 1).padStart(2, '0');
             const p2 = String(pairVal * 2 + 2).padStart(2, '0');
-            const addrsInPair = addrs.filter(a => a.predio === p1 || a.predio === p2);
+            const addrsInPair = addrs.filter(a => String(a.predio).padStart(2, '0') === p1 || String(a.predio).padStart(2, '0') === p2);
             
             if (addrsInPair.length > 0) {
                 const ruasInPair = [...new Set(addrsInPair.map(a => a.rua))];
@@ -229,12 +230,13 @@ window.WMS3D = (function () {
         const predioList = [];
         ruas.forEach((rua, ri) => {
             const ruaA = addrs.filter(a => a.rua === rua);
-            const rp = [...new Set(ruaA.map(a => a.predio))].sort((a,b)=>+a-+b);
+            const rp = [...new Set(ruaA.map(a => String(a.predio).padStart(2, '0')))].sort((a,b)=>+a-+b);
             rp.forEach(p => predioList.push({ rua, predio: p, ri }));
         });
 
         const WL = maxWL > 0 ? maxWL : 20; // Fallback if no addrs
-        const maxNiv = Math.max(...addrs.map(a => +a.nivel), 1);
+        const validNiveis = addrs.map(a => +a.nivel).filter(n => !isNaN(n));
+        const maxNiv = Math.max(...validNiveis, 1);
 
         // Floor + grid
         const floor = new THREE.Mesh(new THREE.PlaneGeometry(WW+12, WL+12), new THREE.MeshLambertMaterial({ color: 0x0a1122 }));
