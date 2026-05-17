@@ -462,6 +462,13 @@ window.WMS3D = (function () {
     function updateData() {
         if (!_cellInstMesh) return;
         const addrs = _mergeStatus(_addresses());
+        
+        // If the number of addresses changed (e.g. initial load from 0 to 12000), we MUST rebuild the geometry
+        if (addrs.length !== _addrList.length) {
+            reload();
+            return;
+        }
+
         const addrMap = {};
         addrs.forEach(a => addrMap[a.id] = a);
 
@@ -474,7 +481,7 @@ window.WMS3D = (function () {
                 _cellInstMesh.setColorAt(i, color);
             }
         }
-        _cellInstMesh.instanceColor.needsUpdate = true;
+        if (_cellInstMesh.instanceColor) _cellInstMesh.instanceColor.needsUpdate = true;
     }
 
     return { init, destroy, getStats, reload, updateData };
