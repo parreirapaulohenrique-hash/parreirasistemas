@@ -434,6 +434,7 @@ window.WMS3D = (function () {
     }
 
     function _animate() {
+        if (!_renderer || !_scene || !_camera) return;
         _animId = requestAnimationFrame(_animate);
         if (_controls) _controls.update();
         _renderer.render(_scene, _camera);
