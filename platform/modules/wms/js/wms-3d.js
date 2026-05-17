@@ -459,7 +459,25 @@ window.WMS3D = (function () {
         if (wrap) { destroy(); init(wrap); }
     }
 
-    return { init, destroy, getStats, reload };
+    function updateData() {
+        if (!_cellInstMesh) return;
+        const addrs = _mergeStatus(_addresses());
+        const addrMap = {};
+        addrs.forEach(a => addrMap[a.id] = a);
+
+        for (let i = 0; i < _addrList.length; i++) {
+            const oldLoc = _addrList[i];
+            const newLoc = addrMap[oldLoc.id];
+            if (newLoc) {
+                _addrList[i] = newLoc;
+                const color = SC[newLoc._status || 'LIVRE'] || SC.LIVRE;
+                _cellInstMesh.setColorAt(i, color);
+            }
+        }
+        _cellInstMesh.instanceColor.needsUpdate = true;
+    }
+
+    return { init, destroy, getStats, reload, updateData };
 })();
 
 // Spin animation for loading indicator

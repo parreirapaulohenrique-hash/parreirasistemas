@@ -241,7 +241,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                             localStorage.setItem('wms_mock_data' + suf, JSON.stringify(addrs));
                         } catch(qe) {}
                         
-                        if (window.loadDashboardView) loadDashboardView();
+                        if (document.getElementById('view-dashboard') && document.getElementById('view-dashboard').style.display !== 'none') {
+                            if (window.WMS3D && window.WMS3D.updateData) {
+                                WMS3D.updateData();
+                                // Note: We do NOT call loadDashboardView() here because it would rebuild the DOM and reset the camera.
+                                // Real-time KPI updates can be added later if needed.
+                            } else if (window.loadDashboardView) {
+                                loadDashboardView();
+                            }
+                        }
                     }, 600);
                 });
                 window.wmsEnderecosSyncUnsubscribe = unsub;
