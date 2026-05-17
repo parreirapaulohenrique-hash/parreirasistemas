@@ -1,4 +1,4 @@
-﻿// WMS Dashboard - KPIs, Occupation Chart, Recent Movements
+// WMS Dashboard - KPIs, Occupation Chart, Recent Movements
 // Renders into #view-dashboard
 
 window.loadDashboardView = function () {
@@ -8,7 +8,12 @@ window.loadDashboardView = function () {
     // Data
     const suf      = window.getTenantSuffix ? window.getTenantSuffix() : '';
     const receipts  = JSON.parse(localStorage.getItem('wms_receipts' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
-    const addresses = JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
+    let addresses = [];
+    if (window.locationsState && window.locationsState.gridData && window.locationsState.gridData.length > 0) {
+        addresses = window.locationsState.gridData;
+    } else {
+        addresses = JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
+    }
     const estoque   = JSON.parse(localStorage.getItem('wms_estoque'  + suf) || '[]');
     const tarefas   = JSON.parse(localStorage.getItem('wms_tarefas'  + suf) || '[]');
     const stockMap  = {}; estoque.forEach(s => stockMap[s.enderecoId] = s);

@@ -9,8 +9,10 @@ let locationsState = {
     gridPage: 0,
     PAGE_SIZE_TABLE: 100,
     PAGE_SIZE_GRID: 200,
+    filters: {},
     _filteredCache: []
 };
+window.locationsState = locationsState;
 
 // --- Dashboard Stats ---
 window.updateDashboardStats = function () {
