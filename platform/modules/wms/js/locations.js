@@ -54,6 +54,9 @@ window.loadLocationsView = async function () {
                         <button class="btn btn-primary" onclick="openGeneratorModal()">
                             <span class="material-icons-round">add_circle</span> Gerar Endereços
                         </button>
+                        <button class="btn btn-secondary" style="background:var(--error-color);color:white;border-radius:6px;border:none;" onclick="zerarBaseWMS()" title="Apagar todos os endereços">
+                            <span class="material-icons-round">delete_forever</span> Zerar Base
+                        </button>
                     </div>
                 </div>
 
@@ -1651,3 +1654,25 @@ window.xlsConfirmImport = function() {
     }, 60);
 };
 
+window.zerarBaseWMS = async function() {
+    if (!confirm("ATENÇÃO: Isso vai APAGAR TODOS os endereços do WMS definitivamente! Deseja continuar?")) return;
+    
+    document.body.style.cursor = 'wait';
+    try {
+        const addrs = await window.WmsStore.listarEnderecos();
+        let apagados = 0;
+        for (let a of addrs) {
+            await window.WmsStore.excluirEndereco(a.id);
+            apagados++;
+        }
+        const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+        localStorage.removeItem('wms_mock_data' + suf);
+        alert(`Base limpa com sucesso! ${apagados} endereços removidos.`);
+        window.location.reload();
+    } catch(e) {
+        console.error(e);
+        alert("Erro ao limpar base: " + e.message);
+    } finally {
+        document.body.style.cursor = 'default';
+    }
+};
