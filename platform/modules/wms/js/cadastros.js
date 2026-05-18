@@ -182,7 +182,7 @@ const CAD_CONFIG = {
             { name: 'controleValidade', label: 'Controle Validade', type: 'checkbox' },
             { name: 'ativo', label: 'Ativo', type: 'checkbox', default: true }
         ],
-        columns: ['sku', 'descricao', 'grupo', 'unidade', 'curvaABC']
+        columns: ['sku', 'descricao', 'grupo', 'unidade', 'pesoLiquido', 'pesoBruto', 'largura', 'altura', 'profundidade', 'ean', 'ncm', 'curvaABC', 'estoqueMinimo', 'estoqueMaximo', 'controleLote', 'controleValidade', 'ativo']
     },
     'cad-end-tipo': {
         key: 'enderecoTipo', label: 'Tipos de Endereço', icon: 'grid_view',
@@ -316,6 +316,20 @@ function renderCadGrid(container, config, items, viewId) {
                     <span class="material-icons-round" style="font-size:1rem; color:var(--text-secondary);">search</span>
                     <input type="text" id="cadSearch" placeholder="Buscar..." style="background:none; border:none; color:var(--text-primary); padding:0.5rem; outline:none; font-size:0.85rem; width:160px;"
                         oninput="filterCadGrid('${viewId}', this.value)">
+                </div>
+                <div style="position:relative;">
+                    <button class="btn btn-secondary" onclick="const el = document.getElementById('colDropdown'); el.style.display = el.style.display === 'none' ? 'block' : 'none'">
+                        <span class="material-icons-round" style="font-size:1rem;">view_column</span> Colunas
+                    </button>
+                    <div id="colDropdown" style="display:none; position:absolute; top:calc(100% + 5px); right:0; background:var(--bg-card); border:1px solid var(--border-color); border-radius:8px; padding:1rem; z-index:100; min-width:200px; box-shadow:0 10px 25px rgba(0,0,0,0.5); max-height:300px; overflow-y:auto;">
+                        <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:0.75rem; font-weight:600; text-transform:uppercase;">Exibir Colunas</div>
+                        ${config.fields.map(f => `
+                            <label style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; cursor:pointer;">
+                                <input type="checkbox" ${config.columns.includes(f.name) ? 'checked' : ''} onchange="toggleCadColumn('${viewId}', '${f.name}')" style="accent-color:var(--wms-primary);">
+                                <span style="font-size:0.85rem;">${f.label}</span>
+                            </label>
+                        `).join('')}
+                    </div>
                 </div>
                 ${viewId === 'cad-prod-cadastro' ? `
                 <button class="btn btn-secondary" onclick="document.getElementById('importProdFile').click()">
@@ -507,6 +521,44 @@ window.filterCadGrid = function (viewId, query) {
         );
     }
     document.getElementById('cadTable').querySelector('tbody').innerHTML = renderCadRows(config, items);
+};
+
+window.toggleCadColumn = function(viewId, fieldName) {
+    const config = CAD_CONFIG[viewId];
+    if (!config) return;
+    const idx = config.columns.indexOf(fieldName);
+    if (idx > -1) {
+        config.columns.splice(idx, 1);
+    } else {
+        // Find original position in fields to maintain order
+        const fieldIdx = config.fields.findIndex(f => f.name === fieldName);
+        let inserted = false;
+        for (let i = 0; i < config.columns.length; i++) {
+            const colIdx = config.fields.findIndex(f => f.name === config.columns[i]);
+            if (fieldIdx < colIdx) {
+                config.columns.splice(i, 0, fieldName);
+                inserted = true;
+                break;
+            }
+        }
+        if (!inserted) config.columns.push(fieldName);
+    }
+    
+    // Re-render the grid entirely
+    const searchVal = document.getElementById('cadSearch') ? document.getElementById('cadSearch').value : '';
+    const data = getCadastroData();
+    const items = data[config.key] || [];
+    const container = document.getElementById('view-dynamic');
+    renderCadGrid(container, config, items, viewId);
+    
+    // Re-open the dropdown and re-apply search if exists
+    if (searchVal) {
+        document.getElementById('cadSearch').value = searchVal;
+        filterCadGrid(viewId, searchVal);
+    }
+    
+    const el = document.getElementById('colDropdown');
+    if (el) el.style.display = 'block';
 };
 
 console.log('📋 WMS Cadastros carregados — ' + Object.keys(CAD_CONFIG).length + ' entidades configuradas');
