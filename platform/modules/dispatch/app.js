@@ -436,8 +436,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (btnLogin) {
 
-
-            btnLogin.addEventListener('click', async () => {
+            // Expõe o handler globalmente para o onclick do HTML (proteção contra falha de addEventListener)
+            window._doDispatchLogin = async () => {
                 const login = loginUserSelect.value;
                 const pass = loginPassInput.value;
                 const tenantInput = document.getElementById('loginTenantInput');
@@ -542,10 +542,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     // Restaurar botão de login
                     btnLogin.disabled = false;
-                    btnLogin.innerHTML = 'ENTRAR';
+                    btnLogin.innerHTML = 'ACESSAR SISTEMA';
                     alert('Credenciais inválidas ou usuário não cadastrado nesta empresa.');
                 }
-            });
+            };
+
+            btnLogin.addEventListener('click', window._doDispatchLogin);
         }
 
         // Elements

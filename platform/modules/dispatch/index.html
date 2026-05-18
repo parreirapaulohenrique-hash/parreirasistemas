@@ -189,6 +189,7 @@
                     placeholder="Digite sua senha">
             </div>
             <button id="btnLogin" class="btn btn-primary"
+                onclick="if(window._doDispatchLogin){window._doDispatchLogin();}else{alert('Sistema ainda carregando, aguarde um momento.');}"
                 style="width: 100%; justify-content: center; height: 48px; font-size: 1rem;">ACESSAR SISTEMA</button>
         </div>
     </div>
@@ -2082,7 +2083,7 @@
     <script src="utils.js?v=11.9.3"></script>
     <script src="data.js?v=11.9.3"></script>
     <script src="acontec-integration.js?v=11.9.3"></script>
-    <script src="app.js?v=11.9.11"></script>
+    <script src="app.js?v=11.9.12"></script>
     <script src="acontec-ui.js?v=11.9.3"></script>
     <script src="delivery-module.js?v=11.9.3"></script>
     <script src="cnpj-lookup.js?v=11.9.7"></script>
@@ -2238,6 +2239,26 @@
             </div>
         </div>
     </div>
+
+<!-- FALLBACK DE EMERGÊNCIA: garante que o botão funciona mesmo se app.js tiver erro -->
+<script>
+    // Este script é independente do app.js.
+    // Se o app.js carregar corretamente, window._doDispatchLogin será definido por ele.
+    // Se o app.js tiver um SyntaxError, este script ainda vai tentar ajudar.
+    window.addEventListener('DOMContentLoaded', function() {
+        var btn = document.getElementById('btnLogin');
+        if (!btn) return;
+        // Se depois de 3s o app.js não registrou o handler, mostra aviso
+        setTimeout(function() {
+            if (!window._doDispatchLogin) {
+                btn.title = 'Erro ao carregar o sistema. Recarregue a página (Ctrl+Shift+R).';
+                btn.style.background = '#ef4444';
+                btn.textContent = '⚠ RECARREGUE A PÁGINA (Ctrl+Shift+R)';
+                btn.style.fontSize = '0.78rem';
+            }
+        }, 3000);
+    });
+</script>
 
 </body>
 
