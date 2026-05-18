@@ -138,11 +138,28 @@ class Store {
             const clientRef = this.db.collection('tenants').doc(this.tenantId)
                                      .collection('fluxo_caixa_clientes').doc(clientId);
 
+            // IMPORTANTE: usar update() e NÃO set({...}, {merge:true}) com dot-notation.
+            // O set() com merge:true cria um campo LITERALMENTE chamado "periods.2026-03.realizado"
+            // ao invés de criar a estrutura aninhada periods > 2026-03 > realizado.
+            // Somente o update() interpreta dot-notation como caminho aninhado.
             const updateObj = {};
             updateObj[`periods.${periodKey}.${type}`] = accountData;
 
-            await clientRef.set(updateObj, { merge: true });
+            try {
+                await clientRef.update(updateObj);
+            } catch (notFoundErr) {
+                // Documento ainda não existe — cria ele do zero com a estrutura correta
+                if (notFoundErr.code === 'not-found') {
+                    const initData = { periods: {} };
+                    initData.periods[periodKey] = {};
+                    initData.periods[periodKey][type] = accountData;
+                    await clientRef.set(initData);
+                } else {
+                    throw notFoundErr;
+                }
+            }
 
+            // Atualiza cache em memória
             const client = this.clientsCache.find(c => c.id === clientId);
             if (client) {
                 if (!client.periods) client.periods = {};
