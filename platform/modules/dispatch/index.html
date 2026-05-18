@@ -1142,14 +1142,21 @@
                     <div class="card" style="margin-bottom: 1.5rem;">
                         <div class="card-body" style="padding: 1.5rem;">
                             <div
-                                style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1.5rem; align-items: end;">
+                                style="display: grid; grid-template-columns: 1.5fr 1fr 1.5fr 1.5fr 1fr; gap: 1rem; align-items: end;">
                                 <!-- Filtro Transportadora -->
                                 <div class="form-group" style="margin-bottom: 0;">
                                     <label class="form-label">Transportadora</label>
                                     <select id="invoiceCarrierFilter" class="form-input"
-                                        onchange="window.filterInvoiceByCarrier(this.value)">
+                                        onchange="window.filterInvoiceByCarrier()">
                                         <option value="">-- Selecione --</option>
                                     </select>
+                                </div>
+                                
+                                <!-- Filtro Mês -->
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label class="form-label">Mês</label>
+                                    <input type="month" id="invoiceMonthFilter" class="form-input" 
+                                        onchange="window.filterInvoiceByCarrier()">
                                 </div>
 
                                 <!-- Valor da Fatura -->
@@ -2075,7 +2082,7 @@
     <script src="utils.js?v=11.9.3"></script>
     <script src="data.js?v=11.9.3"></script>
     <script src="acontec-integration.js?v=11.9.3"></script>
-    <script src="app.js?v=11.9.8"></script>
+    <script src="app.js?v=11.9.9"></script>
     <script src="acontec-ui.js?v=11.9.3"></script>
     <script src="delivery-module.js?v=11.9.3"></script>
     <script src="cnpj-lookup.js?v=11.9.7"></script>

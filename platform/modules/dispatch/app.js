@@ -3456,11 +3456,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Filter NFs by carrier
         window.filterInvoiceByCarrier = (carrier) => {
+            if (typeof carrier === 'undefined' || carrier instanceof Event) {
+                carrier = document.getElementById('invoiceCarrierFilter') ? document.getElementById('invoiceCarrierFilter').value : '';
+            }
             window.invoiceCurrentCarrier = carrier;
             window.invoiceSelectedNFs.clear();
 
             const tbody = document.getElementById('invoiceNFsBody');
             if (!tbody) return;
+            
+            const monthFilterStr = document.getElementById('invoiceMonthFilter') ? document.getElementById('invoiceMonthFilter').value : '';
 
             if (!carrier) {
                 tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Selecione uma transportadora para ver as NFs disponíveis.</td></tr>`;
@@ -3471,11 +3476,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Get dispatched NFs for this carrier
             const dispatches = Utils.getStorage('dispatches') || [];
-            const filtered = dispatches.filter(d =>
+            let filtered = dispatches.filter(d =>
                 d.status === 'Despachado' &&
                 d.carrier &&
                 d.carrier.toUpperCase().trim() === carrier.toUpperCase().trim()
             );
+
+            if (monthFilterStr) {
+                const [year, month] = monthFilterStr.split('-');
+                filtered = filtered.filter(d => {
+                    const dispatchDate = new Date(d.dispatchedAt || d.date);
+                    return dispatchDate.getFullYear().toString() === year && 
+                           (dispatchDate.getMonth() + 1).toString().padStart(2, '0') === month;
+                });
+            }
 
             if (filtered.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Nenhuma NF despachada encontrada para esta transportadora.</td></tr>`;
