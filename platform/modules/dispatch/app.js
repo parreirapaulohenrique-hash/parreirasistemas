@@ -1808,7 +1808,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 gris: option.details.gris,
                 taxaFixa: option.details.fixed,
                 icms: option.details.icms,
-                capturedBy: currentUser ? currentUser.name : 'Sistema'
+                capturedBy: currentUser ? currentUser.name : 'Sistema',
+                // Redespacho: salva transportadora e valor separados para faturamento correto
+                redespCarrier: (ruleUsed.redespacho && ruleUsed.redespacho !== '-') ? String(ruleUsed.redespacho).toUpperCase().trim() : null,
+                redespTotal: option.details.redispatch || 0,
+                mainTotal: finalTotal - (option.details.redispatch || 0)
             };
 
             Utils.addToStorage('dispatches', dispatch);
@@ -3341,13 +3345,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Get unique carriers from dispatched items (status = Despachado, not Pago)
             const dispatches = (await Utils.getFullDispatchesHistory()) || [];
-            const carriers = [...new Set(dispatches
+
+            // Coleta transportadoras principais
+            const mainCarriers = dispatches
                 .filter(d => d.status === 'Despachado' && d.carrier)
-                .map(d => d.carrier.toUpperCase().trim())
-            )].sort();
+                .map(d => d.carrier.toUpperCase().trim());
+
+            // Coleta transportadoras de redespacho (somente as que têm valor real)
+            const redespCarriers = dispatches
+                .filter(d => d.status === 'Despachado' && d.redespCarrier && d.redespTotal > 0)
+                .map(d => d.redespCarrier.toUpperCase().trim());
+
+            const allCarriers = [...new Set([...mainCarriers, ...redespCarriers])].sort();
 
             select.innerHTML = '<option value="">-- Selecione --</option>';
-            carriers.forEach(carrier => {
+            allCarriers.forEach(carrier => {
                 select.innerHTML += `<option value="${carrier}">${carrier}</option>`;
             });
 
@@ -3378,12 +3390,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             // Get dispatched NFs for this carrier
+            // Inclui tanto despachos onde é transportadora principal quanto redespacho
             const dispatches = (await Utils.getFullDispatchesHistory()) || [];
-            let filtered = dispatches.filter(d =>
-                d.status === 'Despachado' &&
-                d.carrier &&
-                d.carrier.toUpperCase().trim() === carrier.toUpperCase().trim()
-            );
+            const carrierNorm = carrier.toUpperCase().trim();
+
+            let filtered = dispatches
+                .filter(d => d.status === 'Despachado' && (
+                    (d.carrier && d.carrier.toUpperCase().trim() === carrierNorm) ||
+                    (d.redespCarrier && d.redespCarrier.toUpperCase().trim() === carrierNorm && d.redespTotal > 0)
+                ))
+                .map(d => {
+                    const isRedesp = d.redespCarrier && d.redespCarrier.toUpperCase().trim() === carrierNorm;
+                    // Calcula o valor correto para esta transportadora
+                    let invoiceValue;
+                    if (isRedesp) {
+                        // Redespacho: usa apenas o valor do redespacho
+                        invoiceValue = d.redespTotal || 0;
+                    } else {
+                        // Principal: usa o total menos o redespacho (evita dupla contagem)
+                        invoiceValue = d.mainTotal != null ? d.mainTotal : (d.total - (d.redespTotal || 0));
+                    }
+                    return { ...d, _invoiceValue: invoiceValue, _isRedesp: isRedesp };
+                });
 
             if (monthFilterStr) {
                 const [year, month] = monthFilterStr.split('-');
@@ -3406,16 +3434,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             tbody.innerHTML = filtered.map(d => {
                 const dispatchDate = d.dispatchedAt ? new Date(d.dispatchedAt) : new Date(d.date);
+                const invoiceValue = d._invoiceValue != null ? d._invoiceValue : (d.total || 0);
+                const redespBadge = d._isRedesp ? `<span style="font-size:0.65rem;background:var(--accent-warning,#f59e0b);color:#000;border-radius:4px;padding:1px 4px;margin-left:4px;">REDESP</span>` : '';
                 return `
                     <tr data-id="${d.id}">
                         <td style="text-align: center;">
-                            <input type="checkbox" class="invoice-nf-checkbox" data-id="${d.id}" data-value="${d.total || 0}" onchange="window.toggleInvoiceNF(${d.id}, this.checked, ${d.total || 0})">
+                            <input type="checkbox" class="invoice-nf-checkbox" data-id="${d.id}" data-value="${invoiceValue}" onchange="window.toggleInvoiceNF(${d.id}, this.checked, ${invoiceValue})">
                         </td>
-                        <td style="font-weight: 600;">${d.invoice || '-'}</td>
+                        <td style="font-weight: 600;">${d.invoice || '-'}${redespBadge}</td>
                         <td><div style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${d.client}">${d.client || '-'}</div></td>
                         <td>${d.city || '-'}</td>
                         <td>${dispatchDate.toLocaleDateString('pt-BR')}</td>
-                        <td style="text-align: right; font-weight: 600; color: var(--accent-success);">${Utils.formatCurrency(d.total || 0)}</td>
+                        <td style="text-align: right; font-weight: 600; color: var(--accent-success);">${Utils.formatCurrency(invoiceValue)}</td>
                     </tr>
                 `;
             }).join('');
