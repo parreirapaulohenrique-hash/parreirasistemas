@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Migração para Banco de Dados - ParreiraLog</title>
+    <style>
+        body { font-family: monospace; background: #1a1a1a; color: #eee; padding: 20px; }
+        .log { padding: 10px; margin: 5px 0; border-radius: 4px; border-left: 5px solid #555; background: #333; }
+        .success { border-left-color: #0f0; background: #1a331a; }
+        .error { border-left-color: #f00; background: #331a1a; }
+        .warn { border-left-color: #ffaa00; background: #332a1a; }
+        button { background: #059669; color: #fff; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: bold; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        input { background: #333; color: #fff; border: 1px solid #555; padding: 8px; width: 250px; }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+</head>
+<body>
+    <h1>⚠️ Migrar Despachos para Banco de Dados Individual</h1>
+    <p>Isso pegará o documento gigante (legacy_store/dispatches) e quebrará em centenas de arquivos separados na coleção `dispatches_db` para liberar o localStorage.</p>
+    
+    <div>
+        <label>Tenant ID: </label>
+        <input type="text" id="tenantInput" value="ltdistribuidora">
+        <button id="btnStart" onclick="startMigration()">🚀 MIGRAR AGORA</button>
+    </div>
+
+    <div id="logs" style="margin-top:20px;"></div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDzatCQ8zmH4aQftznf7Y5wdYPwFYSiARc",
+            authDomain: "parreiralog-91904.firebaseapp.com",
+            projectId: "parreiralog-91904"
+        };
+
+        const logDiv = document.getElementById('logs');
+        function log(msg, type = '') {
+            const el = document.createElement('div');
+            el.className = `log ${type}`;
+            el.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            logDiv.prepend(el);
+        }
+
+        async function startMigration() {
+            const tenantId = document.getElementById('tenantInput').value.trim();
+            if (!tenantId) return alert('Informe o tenant');
+
+            document.getElementById('btnStart').disabled = true;
+            log('Conectando ao Firebase...', 'warn');
+
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+            const db = firebase.firestore();
+
+            try {
+                const docRef = db.collection('tenants').doc(tenantId).collection('legacy_store').doc('dispatches');
+                const docSnap = await docRef.get();
+                
+                if (!docSnap.exists || !docSnap.data().content) {
+                    log('❌ Nenhum dado encontrado em legacy_store/dispatches.', 'error');
+                    return;
+                }
+
+                const data = JSON.parse(docSnap.data().content);
+                log(`Encontrados ${data.length} despachos. Iniciando gravação em lote...`, 'warn');
+
+                let count = 0;
+                let batch = db.batch();
+                let batchCount = 0;
+                
+                for (let i = 0; i < data.length; i++) {
+                    const d = data[i];
+                    const docId = String(d.id || d.codigo || Date.now() + i);
+                    const ref = db.collection('tenants').doc(tenantId).collection('dispatches_db').doc(docId);
+                    
+                    batch.set(ref, d);
+                    batchCount++;
+
+                    // Firestore limit is 500 per batch
+                    if (batchCount === 490 || i === data.length - 1) {
+                        await batch.commit();
+                        count += batchCount;
+                        log(`Lote gravado. Total: ${count} / ${data.length}`, 'success');
+                        batch = db.batch();
+                        batchCount = 0;
+                    }
+                }
+
+                log('✅ MIGRAÇÃO CONCLUÍDA! Pode fechar esta aba.', 'success');
+                
+            } catch (e) {
+                log(`❌ Erro: ${e.message}`, 'error');
+            }
+            document.getElementById('btnStart').disabled = false;
+        }
+    </script>
+</body>
+</html>

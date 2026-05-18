@@ -227,11 +227,89 @@ const Utils = {
 
 
         // --- LOAD WITH AUTO-MIGRATION (Copy-On-Read) ---
+        
+        // --- BACKGROUND SYNC PARA DESPACHOS (QUEUE) ---
+        async startBackgroundSync() {
+            if (!this.hasTenant()) return;
+            
+            setInterval(async () => {
+                if (typeof firebase === 'undefined' || !window.db) return; // Offline
+                
+                let dispatches = Utils.getStorage('dispatches') || [];
+                if (dispatches.length === 0) return;
+                
+                let modified = false;
+                const now = Date.now();
+                const TWELVE_HOURS = 12 * 60 * 60 * 1000;
+                
+                for (let i = dispatches.length - 1; i >= 0; i--) {
+                    const d = dispatches[i];
+                    const dTime = d.timestamp || d.createdAt || 0;
+                    
+                    if ((d.status === 'Despachado' || d.status === 'Cancelado') && (now - dTime > TWELVE_HOURS)) {
+                        try {
+                            const docId = String(d.id || d.codigo || Date.now() + Math.random().toString().substr(2,5));
+                            await window.db.collection('tenants').doc(this.tenantId).collection('dispatches_db').doc(docId).set(d);
+                            console.log(`✅ [BackgroundSync] Despacho ${docId} salvo no banco e removido da fila local.`);
+                            dispatches.splice(i, 1);
+                            modified = true;
+                        } catch (e) {
+                            console.error(`❌ [BackgroundSync] Erro ao salvar despacho ${d.id}:`, e);
+                        }
+                    }
+                }
+                
+                if (modified) {
+                    localStorage.setItem('dispatches', JSON.stringify(dispatches));
+                    Utils.lastWriteTime['dispatches'] = Date.now();
+                }
+            }, 30000);
+        },
+
+        async getFullDispatchesHistory(filters = {}) {
+            let local = Utils.getStorage('dispatches') || [];
+            let cloud = [];
+            
+            if (this.hasTenant() && window.db) {
+                try {
+                    let query = window.db.collection('tenants').doc(this.tenantId).collection('dispatches_db');
+                    
+                    // Se não tiver filtros para limitar, vamos limitar a 500 para evitar travar
+                    if (!filters.start && !filters.end) {
+                        query = query.orderBy('timestamp', 'desc').limit(500);
+                    } else {
+                        if (filters.start) query = query.where('timestamp', '>=', filters.start);
+                        if (filters.end) query = query.where('timestamp', '<=', filters.end);
+                        query = query.orderBy('timestamp', 'desc');
+                    }
+                    
+                    const snapshot = await query.get();
+                    snapshot.forEach(doc => {
+                        cloud.push(doc.data());
+                    });
+                } catch(e) {
+                    console.error("Erro ao buscar histórico do banco:", e);
+                }
+            }
+            
+            // Retorna unindo os locais (filas) com os da nuvem, ordenados por timestamp desc
+            let all = [...local, ...cloud];
+            all.sort((a,b) => (b.timestamp || b.createdAt || 0) - (a.timestamp || a.createdAt || 0));
+            
+            // Remove duplicatas (caso ainda esteja nas duas bases)
+            const map = new Map();
+            all.forEach(d => {
+                const id = String(d.id || d.codigo);
+                if(!map.has(id)) map.set(id, d);
+            });
+            return Array.from(map.values());
+        },
+
         async loadAll() {
             console.log(`🔄 [Cloud] loadAll() chamado. TenantId: ${this.tenantId}`);
             if (!this.hasTenant()) return false;
 
-            const keys = ['dispatches', 'freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients', 'invoice_history', 'app_sellers', 'app_settings', 'app_romaneios', 'delivery_history'];
+            const keys = ['freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients', 'invoice_history', 'app_sellers', 'app_settings', 'app_romaneios', 'delivery_history'];
 
             // --- FIREBASE MODE ---
             if (typeof firebase !== 'undefined' && window.db) {
@@ -283,12 +361,44 @@ const Utils = {
                 } catch (error) { console.error('Cloud Load Error', error); }
 
                 this.listen();
+                this.startBackgroundSync();
                 return true;
             }
 
             // --- LOCAL SIMULATION MODE (Fallback) ---
             if (!window.db) {
                 console.log('⚠️ [Cloud] Sem Firebase. Usando Simulação Local.');
+                
+                // Real-time listener for dispatches_db (Sync across PCs)
+                window.db.collection('tenants').doc(this.tenantId).collection('dispatches_db')
+                    .where('status', '==', 'Pendente Despacho')
+                    .onSnapshot((snapshot) => {
+                        let local = Utils.getStorage('dispatches') || [];
+                        let modified = false;
+                        
+                        snapshot.forEach(doc => {
+                            const data = doc.data();
+                            const idx = local.findIndex(d => (d.id === data.id || d.codigo === data.codigo));
+                            if (idx === -1) {
+                                local.push(data);
+                                modified = true;
+                            } else {
+                                // If cloud is newer or different, we update (simplification: just overwrite)
+                                local[idx] = data;
+                                modified = true;
+                            }
+                        });
+                        
+                        // Also remove from local if they were marked as "Despachado" by another PC and disappeared from query
+                        // This is tricky because the snapshot only contains Pendente. 
+                        // It's better handled by the background sync archiving old finished ones anyway.
+
+                        if (modified) {
+                            localStorage.setItem('dispatches', JSON.stringify(local));
+                            if (window.renderDashboard) window.renderDashboard();
+                        }
+                    });
+
                 keys.forEach(key => {
                     const simKey = `tenant_${this.tenantId}_${key}`;
                     const customData = localStorage.getItem(simKey);
@@ -318,6 +428,7 @@ const Utils = {
                 }, 100);
 
                 this.listen();
+                this.startBackgroundSync();
                 return true;
             }
             return true;
@@ -400,8 +511,39 @@ const Utils = {
             // --- FIREBASE MODE ---
             if (typeof firebase !== 'undefined' && window.db && !window.hasAttachedListeners) {
                 window.hasAttachedListeners = true;
-                const keys = ['dispatches', 'freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients', 'invoice_history', 'app_sellers', 'app_settings', 'app_romaneios', 'delivery_history'];
+                const keys = ['freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients', 'invoice_history', 'app_sellers', 'app_settings', 'app_romaneios', 'delivery_history'];
                 console.log(`📡 Iniciando Sync SaaS (Firestore) para: ${this.tenantId}`);
+
+                
+                // Real-time listener for dispatches_db (Sync across PCs)
+                window.db.collection('tenants').doc(this.tenantId).collection('dispatches_db')
+                    .where('status', '==', 'Pendente Despacho')
+                    .onSnapshot((snapshot) => {
+                        let local = Utils.getStorage('dispatches') || [];
+                        let modified = false;
+                        
+                        snapshot.forEach(doc => {
+                            const data = doc.data();
+                            const idx = local.findIndex(d => (d.id === data.id || d.codigo === data.codigo));
+                            if (idx === -1) {
+                                local.push(data);
+                                modified = true;
+                            } else {
+                                // If cloud is newer or different, we update (simplification: just overwrite)
+                                local[idx] = data;
+                                modified = true;
+                            }
+                        });
+                        
+                        // Also remove from local if they were marked as "Despachado" by another PC and disappeared from query
+                        // This is tricky because the snapshot only contains Pendente. 
+                        // It's better handled by the background sync archiving old finished ones anyway.
+
+                        if (modified) {
+                            localStorage.setItem('dispatches', JSON.stringify(local));
+                            if (window.renderDashboard) window.renderDashboard();
+                        }
+                    });
 
                 keys.forEach(key => {
                     window.db.collection('tenants').doc(this.tenantId).collection('legacy_store').doc(key).onSnapshot((doc) => {
