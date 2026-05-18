@@ -6082,8 +6082,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 `${data.logradouro}${data.numero ? ', ' + data.numero : ''}`;
                             document.getElementById('newClientPhone').value = data.telefone || '';
 
-                            showToast(`✅ Dados preenchidos: ${data.nomeFantasia || data.razaoSocial}`);
-                        }, 'Buscar Cliente por CNPJ');
+                            showToast(`✅ Dados preenchidos: ${data.nomeFantasia || data.razaoSocial || 'CPF inserido'}`);
+                        }, 'Buscar Cliente por CNPJ/CPF');
                     }
                 });
             }

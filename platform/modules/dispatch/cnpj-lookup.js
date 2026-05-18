@@ -7,39 +7,42 @@
 
 const CNPJLookup = {
     /**
-     * Remove caracteres não numéricos do CNPJ
+     * Remove caracteres não numéricos do documento (CNPJ/CPF)
      */
     cleanCNPJ(cnpj) {
         return (cnpj || '').replace(/\D/g, '');
     },
 
     /**
-     * Valida formato do CNPJ (apenas quantidade de dígitos)
+     * Valida formato do documento (11 para CPF, 14 para CNPJ)
      */
     isValidFormat(cnpj) {
         const cleaned = this.cleanCNPJ(cnpj);
-        return cleaned.length === 14;
+        return cleaned.length === 11 || cleaned.length === 14;
     },
 
     /**
-     * Formata CNPJ para exibição: XX.XXX.XXX/XXXX-XX
+     * Formata documento para exibição
      */
     formatCNPJ(cnpj) {
         const cleaned = this.cleanCNPJ(cnpj);
-        if (cleaned.length !== 14) return cnpj;
-        return cleaned.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+        if (cleaned.length === 11) {
+            return cleaned.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+        }
+        if (cleaned.length === 14) {
+            return cleaned.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+        }
+        return cnpj;
     },
 
     /**
      * Busca dados da empresa pelo CNPJ na BrasilAPI
-     * @param {string} cnpj - CNPJ com ou sem formatação
-     * @returns {Promise<Object>} Dados da empresa ou erro
      */
     async lookup(cnpj) {
         const cleaned = this.cleanCNPJ(cnpj);
 
-        if (!this.isValidFormat(cleaned)) {
-            throw new Error('CNPJ deve conter 14 dígitos');
+        if (cleaned.length !== 14) {
+            throw new Error('Consulta automática via API disponível apenas para CNPJ (14 dígitos).');
         }
 
         try {
@@ -56,16 +59,11 @@ const CNPJLookup = {
 
             // Normalizar dados para nosso formato
             return {
-                // Identificação
                 cnpj: this.formatCNPJ(data.cnpj),
                 razaoSocial: data.razao_social || '',
                 nomeFantasia: data.nome_fantasia || data.razao_social || '',
-
-                // Situação
                 situacao: data.descricao_situacao_cadastral || '',
                 dataSituacao: data.data_situacao_cadastral || '',
-
-                // Endereço
                 logradouro: data.descricao_tipo_de_logradouro ?
                     `${data.descricao_tipo_de_logradouro} ${data.logradouro}` :
                     data.logradouro || '',
@@ -75,38 +73,24 @@ const CNPJLookup = {
                 cidade: data.municipio || '',
                 uf: data.uf || '',
                 cep: data.cep || '',
-
-                // Contato
                 telefone: data.ddd_telefone_1 ?
                     `(${data.ddd_telefone_1.substring(0, 2)}) ${data.ddd_telefone_1.substring(2)}` : '',
                 telefone2: data.ddd_telefone_2 ?
                     `(${data.ddd_telefone_2.substring(0, 2)}) ${data.ddd_telefone_2.substring(2)}` : '',
                 email: data.email || '',
-
-                // Atividade
                 atividadePrincipal: data.cnae_fiscal_descricao || '',
                 codigoCNAE: data.cnae_fiscal || '',
-
-                // Jurídico
                 naturezaJuridica: data.natureza_juridica || '',
                 porte: data.porte || '',
                 capitalSocial: data.capital_social || 0,
-
-                // Sócios
                 socios: (data.qsa || []).map(s => ({
                     nome: s.nome_socio,
                     qualificacao: s.qualificacao_socio,
                     dataEntrada: s.data_entrada_sociedade
                 })),
-
-                // Simples Nacional
                 optanteSimples: data.opcao_pelo_simples,
                 optanteMEI: data.opcao_pelo_mei,
-
-                // Metadados
                 dataAbertura: data.data_inicio_atividade || '',
-
-                // Dados brutos para debug
                 _raw: data
             };
         } catch (error) {
@@ -115,28 +99,17 @@ const CNPJLookup = {
         }
     },
 
-    /**
-     * Preenche campos de formulário com dados da empresa
-     * @param {Object} data - Dados retornados pelo lookup
-     * @param {Object} fieldMap - Mapeamento campo -> id do input
-     */
     fillForm(data, fieldMap) {
         Object.entries(fieldMap).forEach(([dataKey, inputId]) => {
             const input = document.getElementById(inputId);
             if (input && data[dataKey] !== undefined) {
                 input.value = data[dataKey];
-                // Trigger change event para validações
                 input.dispatchEvent(new Event('change', { bubbles: true }));
             }
         });
     },
 
-    /**
-     * Cria um modal de busca de CNPJ
-     * @param {Function} onSelect - Callback quando empresa é selecionada
-     */
-    showLookupModal(onSelect, title = 'Buscar Empresa por CNPJ') {
-        // Remover modal anterior se existir
+    showLookupModal(onSelect, title = 'Buscar Cliente por CNPJ/CPF') {
         const existingModal = document.getElementById('cnpj-lookup-modal');
         if (existingModal) existingModal.remove();
 
@@ -152,7 +125,7 @@ const CNPJLookup = {
                     </div>
                     
                     <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                        <input type="text" id="cnpj-lookup-input" placeholder="Digite o CNPJ (apenas números)" 
+                        <input type="text" id="cnpj-lookup-input" placeholder="Digite o CNPJ ou CPF" 
                             style="flex: 1; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color, #334155); 
                                    background: var(--bg-primary, #0f172a); color: var(--text-primary, white); font-size: 16px;"
                             maxlength="18">
@@ -163,18 +136,14 @@ const CNPJLookup = {
                         </button>
                     </div>
                     
-                    <div id="cnpj-lookup-result" style="display: none;">
-                        <!-- Resultado será inserido aqui -->
-                    </div>
+                    <div id="cnpj-lookup-result" style="display: none;"></div>
                     
                     <div id="cnpj-lookup-loading" style="display: none; text-align: center; padding: 40px; color: var(--text-secondary, #94a3b8);">
                         <div style="font-size: 32px; margin-bottom: 10px;">⏳</div>
-                        <div>Consultando Receita Federal...</div>
+                        <div>Consultando...</div>
                     </div>
                     
-                    <div id="cnpj-lookup-error" style="display: none; text-align: center; padding: 20px; color: #ef4444; background: rgba(239,68,68,0.1); border-radius: 8px;">
-                        <!-- Erro será inserido aqui -->
-                    </div>
+                    <div id="cnpj-lookup-error" style="display: none; text-align: center; padding: 20px; color: #ef4444; background: rgba(239,68,68,0.1); border-radius: 8px;"></div>
                 </div>
             </div>
         `;
@@ -187,50 +156,91 @@ const CNPJLookup = {
         const loadingDiv = document.getElementById('cnpj-lookup-loading');
         const errorDiv = document.getElementById('cnpj-lookup-error');
 
-        // Formatação automática do CNPJ
+        // Formatação dinâmica CNPJ ou CPF
         input.addEventListener('input', (e) => {
             let value = e.target.value.replace(/\D/g, '');
             if (value.length > 14) value = value.substring(0, 14);
 
-            // Formatar
-            if (value.length > 12) {
+            if (value.length > 11) {
+                // Formato CNPJ
                 value = value.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/, '$1.$2.$3/$4-$5');
-            } else if (value.length > 8) {
-                value = value.replace(/^(\d{2})(\d{3})(\d{3})(\d{0,4})/, '$1.$2.$3/$4');
-            } else if (value.length > 5) {
-                value = value.replace(/^(\d{2})(\d{3})(\d{0,3})/, '$1.$2.$3');
-            } else if (value.length > 2) {
-                value = value.replace(/^(\d{2})(\d{0,3})/, '$1.$2');
+            } else {
+                // Formato CPF
+                if (value.length > 9) {
+                    value = value.replace(/^(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4');
+                } else if (value.length > 6) {
+                    value = value.replace(/^(\d{3})(\d{3})(\d{0,3})/, '$1.$2.$3');
+                } else if (value.length > 3) {
+                    value = value.replace(/^(\d{3})(\d{0,3})/, '$1.$2');
+                }
             }
             e.target.value = value;
         });
 
-        // Buscar ao pressionar Enter
         input.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') btn.click();
         });
 
-        // Botão de busca
         btn.addEventListener('click', async () => {
-            const cnpj = input.value;
+            const rawValue = input.value;
+            const docLimpo = this.cleanCNPJ(rawValue);
 
-            if (!this.isValidFormat(cnpj)) {
-                errorDiv.innerHTML = '❌ CNPJ inválido. Digite 14 números.';
+            if (!this.isValidFormat(rawValue)) {
+                errorDiv.innerHTML = '❌ Documento inválido. Digite 11 números (CPF) ou 14 números (CNPJ).';
                 errorDiv.style.display = 'block';
                 resultDiv.style.display = 'none';
                 return;
             }
 
-            // Loading
             loadingDiv.style.display = 'block';
             resultDiv.style.display = 'none';
             errorDiv.style.display = 'none';
             btn.disabled = true;
 
-            try {
-                const data = await this.lookup(cnpj);
+            if (docLimpo.length === 11) {
+                // É um CPF. Não tem API pública
+                setTimeout(() => {
+                    const formattedCpf = this.formatCNPJ(docLimpo);
+                    resultDiv.innerHTML = `
+                        <div style="background: rgba(234,179,8,0.1); border: 1px solid #eab308; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                            <div style="display:flex; gap: 8px; align-items:center; color: #eab308; font-weight: 700; margin-bottom: 8px;">
+                                ⚠️ Consulta Restrita
+                            </div>
+                            <div style="font-size: 0.9rem; color: var(--text-primary, white); margin-bottom: 8px;">
+                                CPF: <strong>${formattedCpf}</strong>
+                            </div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary, #94a3b8); line-height: 1.4;">
+                                Por determinação da <strong>LGPD</strong>, a Receita Federal não disponibiliza consulta pública gratuita para dados de Pessoas Físicas (CPF).
+                                <br><br>Você pode utilizar o CPF informado no seu cadastro, preenchendo os demais dados manualmente.
+                            </div>
+                        </div>
+                        <button id="cnpj-select-btn" 
+                            style="width: 100%; padding: 14px; background: linear-gradient(135deg, #eab308, #ca8a04); 
+                                   color: white; border: none; border-radius: 8px; font-weight: 700; font-size: 1rem; 
+                                   cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                            📋 UTILIZAR ESTE CPF
+                        </button>
+                    `;
+                    loadingDiv.style.display = 'none';
+                    resultDiv.style.display = 'block';
+                    btn.disabled = false;
 
-                // Mostrar resultado
+                    document.getElementById('cnpj-select-btn').addEventListener('click', () => {
+                        modal.remove();
+                        if (onSelect) onSelect({
+                            cnpj: formattedCpf,
+                            razaoSocial: '',
+                            nomeFantasia: ''
+                        });
+                    });
+                }, 500);
+                return;
+            }
+
+            // É um CNPJ, prosseguir com consulta na BrasilAPI
+            try {
+                const data = await this.lookup(docLimpo);
+
                 resultDiv.innerHTML = `
                     <div style="background: var(--bg-primary, #0f172a); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
                         <div style="font-size: 1.2rem; font-weight: 700; color: var(--text-primary, white); margin-bottom: 8px;">
@@ -284,7 +294,6 @@ const CNPJLookup = {
 
                 resultDiv.style.display = 'block';
 
-                // Botão de seleção
                 document.getElementById('cnpj-select-btn').addEventListener('click', () => {
                     modal.remove();
                     if (onSelect) onSelect(data);
@@ -299,12 +308,9 @@ const CNPJLookup = {
             }
         });
 
-        // Focar no input
         setTimeout(() => input.focus(), 100);
     }
 };
 
-// Expor globalmente
 window.CNPJLookup = CNPJLookup;
-
-console.log('✅ CNPJ Lookup Module loaded');
+console.log('✅ CNPJ/CPF Lookup Module loaded');
