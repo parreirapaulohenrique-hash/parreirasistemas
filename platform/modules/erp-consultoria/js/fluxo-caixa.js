@@ -281,8 +281,9 @@ window.fcApp = {
             const key = `${year}-${month.toString().padStart(2, '0')}`;
             const mData = yearData[key];
             
-            if(mData && mData.realizado) {
-                mData.realizado.forEach(acc => {
+            const real = mData ? (mData.realizado || mData.contas) : null;
+            if(real) {
+                real.forEach(acc => {
                     totalRealizadoEntradas += acc.a_receber || 0;
                     totalRealizadoSaidas += acc.a_pagar || 0;
                     const saldoRealizado = (acc.a_receber || 0) - (acc.a_pagar || 0);
@@ -317,8 +318,9 @@ window.fcApp = {
         for(let m = 1; m <= 12; m++) {
             const key = `${year}-${m.toString().padStart(2, '0')}`;
             const mData = yearData[key];
-            if(mData && mData.realizado) {
-                allAccountsInYear.push(...mData.realizado);
+            const accs = mData ? (mData.realizado || mData.contas) : null;
+            if(accs) {
+                allAccountsInYear.push(...accs);
             }
         }
         

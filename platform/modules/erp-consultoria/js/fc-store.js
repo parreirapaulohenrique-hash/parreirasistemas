@@ -162,7 +162,7 @@ class Store {
      * Wrapper conveniente sobre savePeriodData.
      */
     async saveMonthData(clientId, periodKey, accounts) {
-        return this.savePeriodData(clientId, periodKey, 'contas', accounts);
+        return this.savePeriodData(clientId, periodKey, 'realizado', accounts);
     }
 
 
