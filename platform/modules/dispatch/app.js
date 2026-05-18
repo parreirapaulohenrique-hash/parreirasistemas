@@ -3339,7 +3339,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.invoiceCurrentCarrier = '';
 
         // Initialize invoice section when shown
-        window.initInvoiceSection = () => {
+        window.initInvoiceSection = async () => {
             const select = document.getElementById('invoiceCarrierFilter');
             if (!select) return;
 
@@ -3370,7 +3370,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         // Filter NFs by carrier
-        window.filterInvoiceByCarrier = (carrier) => {
+        window.filterInvoiceByCarrier = async (carrier) => {
             if (typeof carrier === 'undefined' || carrier instanceof Event) {
                 carrier = document.getElementById('invoiceCarrierFilter') ? document.getElementById('invoiceCarrierFilter').value : '';
             }
@@ -3649,7 +3649,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         // Process the payment (mark NFs as paid)
-        window.processInvoicePayment = (justification = '', authorizedBy = '') => {
+        window.processInvoicePayment = async (justification = '', authorizedBy = '') => {
             console.log('💳 [Invoice] Iniciando processamento de pagamento...');
             console.log('💳 [Invoice] NFs selecionadas:', [...window.invoiceSelectedNFs]);
 
