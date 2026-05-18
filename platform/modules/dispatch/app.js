@@ -1201,9 +1201,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         inputWeight.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') calculateAndSave();
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const volEl = document.getElementById('inputVolume');
+                if (volEl) volEl.focus();
+                else calculateAndSave();
+            }
         });
 
+        const volEl = document.getElementById('inputVolume');
+        if (volEl) {
+            volEl.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') calculateAndSave();
+            });
+        }
         const inputIsComplement = document.getElementById('inputIsComplement');
         const inputMainNF = document.getElementById('inputMainNF');
         const divMainNF = document.getElementById('divMainNF');
@@ -1263,11 +1274,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            const nfValue = parseFloat(inputValue.value);
-            const weight = parseFloat(inputWeight.value);
+            const nfValue = parseFloat(inputValue.value) || 0;
+            const weight = parseFloat(inputWeight.value) || 0;
+            const volEl = document.getElementById('inputVolume');
+            const volume = volEl ? (parseFloat(volEl.value) || 0) : 1;
 
-            if (isNaN(nfValue) || isNaN(weight)) {
-                if (!silent) alert('Preencha os campos Valor da NF e Peso para ver as opções.');
+            if (nfValue <= 0 || weight <= 0 || volume <= 0) {
+                if (!silent) alert('Preencha Valor da NF, Peso e Volume (devem ser maiores que zero).');
+                else {
+                    document.getElementById('resultsArea').innerHTML = `
+                        <div style="text-align: center; color: var(--text-secondary); margin-top: 4rem;">
+                            <span class="material-icons-round" style="font-size: 3rem; opacity: 0.3;">local_shipping</span>
+                            <p>Informe Valor, Peso e Volume maiores que zero para ver as opções.</p>
+                        </div>
+                    `;
+                }
                 return;
             }
 
