@@ -158,6 +158,28 @@ class Store {
     }
 
     /**
+     * Recarrega os dados de períodos de um cliente específico do Firestore.
+     * Usado após salvar para garantir que o cache esteja atualizado antes de renderizar.
+     */
+    async reloadClientPeriods(clientId) {
+        try {
+            const docSnap = await this.db.collection('tenants').doc(this.tenantId)
+                                         .collection('fluxo_caixa_clientes').doc(clientId).get();
+
+            const client = this.clientsCache.find(c => c.id === clientId);
+            if (!client) return;
+
+            if (docSnap.exists) {
+                const data = docSnap.data();
+                client.periods = data.periods || {};
+                console.log(`[fc-store] Períodos recarregados para cliente ${clientId}:`, Object.keys(client.periods));
+            }
+        } catch (error) {
+            console.error('[fc-store] Erro ao recarregar períodos:', error);
+        }
+    }
+
+    /**
      * Salva os dados de um mês completo (contas importadas do PDF).
      * Wrapper conveniente sobre savePeriodData.
      */

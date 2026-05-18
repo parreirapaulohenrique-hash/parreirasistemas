@@ -262,12 +262,16 @@ window.fcApp = {
         this.requireClient('fc-overview');
     },
 
-    refreshDashboard() {
+    async refreshDashboard() {
         const client = store.getActiveClient();
         if(!client) return;
 
-        const year = document.getElementById('filter-period-value')?.value || new Date().getFullYear();
-        const yearData = store.getYearData(client.id, year);
+        const year = String(document.getElementById('filter-period-value')?.value || new Date().getFullYear());
+        
+        // Sempre recarrega os dados do cliente do Firestore antes de renderizar
+        await store.reloadClientPeriods(client.id);
+        const updatedClient = store.getActiveClient();
+        const yearData = store.getYearData(updatedClient.id, year);
         
         let totalRealizadoEntradas = 0;
         let totalRealizadoSaidas = 0;
@@ -328,6 +332,7 @@ window.fcApp = {
             const result = FinancialEngine.processData(allAccountsInYear, this.manualEntries);
             this.renderSummaryBar(result.totals);
             this.renderFlowTableStrict(result.rows, totalRealizadoEntradas, result.pdfTotalReceitas);
+            console.log(`[Dashboard] ${allAccountsInYear.length} contas carregadas para o ano ${year}`);
         }
     },
 
@@ -545,10 +550,15 @@ window.fcApp = {
             if (btn) { btn.textContent = originalText; btn.disabled = false; }
 
             if (success) {
-                alert(`✅ Dados de ${this.pendingImport.period} importados com sucesso!`);
+                const importedPeriod = this.pendingImport.period;
                 this.pendingImport = null;
                 this.resetDropZone();
+                
+                // Força recarregar do Firestore para garantir exibição
+                await store.reloadClientPeriods(client.id);
+                
                 this.requireClient('fc-overview');
+                alert(`✅ Dados de ${importedPeriod} importados com sucesso!`);
             } else {
                 alert('❌ Erro ao salvar no banco de dados. Tente novamente.');
             }
