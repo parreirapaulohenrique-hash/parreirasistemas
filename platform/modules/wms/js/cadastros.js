@@ -521,13 +521,26 @@ window.handleImportProdutos = function(input) {
     const reader = new FileReader();
     
     reader.onload = function(e) {
+        // Garantir que a biblioteca XLSX está carregada
+        if (!window.XLSX) {
+            if (!document.querySelector('script[data-sheetjs]')) {
+                const s = document.createElement('script');
+                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                s.setAttribute('data-sheetjs', 'true');
+                document.head.appendChild(s);
+            }
+            alert('Carregando módulo de planilhas. Por favor, aguarde 2 segundos e selecione o arquivo novamente.');
+            input.value = '';
+            return;
+        }
+
         try {
             const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
+            const workbook = window.XLSX.read(data, { type: 'array' });
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
             
-            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+            const rows = window.XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
             if (rows.length < 2) {
                 alert('Planilha vazia ou inválida.');
                 input.value = '';
