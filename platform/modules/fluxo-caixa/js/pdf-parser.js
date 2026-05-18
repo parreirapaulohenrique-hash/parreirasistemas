@@ -50,10 +50,10 @@ window.PDFParser = {
         if (periodMatch) {
             // Pega o mês do fim do período (ex: 31/03/2026 -> 03/2026)
             const parts = periodMatch[2].split('/');
-            result.periodo = `${parts[1]}/${parts[2]}`;
+            result.periodo = `${parts[2]}-${parts[1]}`;
         } else {
             // Fallback se não encontrar o header exato
-            result.periodo = '01/2026'; // Default
+            result.periodo = '2026-01'; // Default
         }
 
         let isProcessingData = false;
