@@ -2067,80 +2067,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         };
 
-        window.wipeAllFreightTables = async () => {
-            if (confirm('PERIGO: Isso vai apagar TODAS as tabelas de frete da nuvem e do computador.\n\nUse isso se as tabelas antigas estiverem "voltando" sozinhas.\n\nConfirmar limpeza total?')) {
-                try {
-                    // 1. Limpar memória local
-                    rules = [];
-
-                    // 2. Marcar timestamp anti-rollback forte (60 segundos)
-                    Utils.lastWriteTime['freight_tables'] = Date.now();
-
-                    // 3. Limpar localStorage
-                    localStorage.setItem('freight_tables', JSON.stringify([]));
-
-                    // 4. Limpar nuvem - documento principal + TODOS os chunks possíveis
-                    if (window.db && Utils.Cloud && Utils.Cloud.tenantId) {
-                        const tenantId = Utils.Cloud.tenantId;
-                        const legacyStore = window.db.collection('tenants').doc(tenantId).collection('legacy_store');
-                        const docRef = legacyStore.doc('freight_tables');
-
-                        // Verificar se há chunks para deletar
-                        const doc = await docRef.get();
-                        const chunkCount = doc.exists && doc.data().chunkCount ? doc.data().chunkCount : 0;
-
-                        // Deletar até 50 chunks (mais do que o necessário, por segurança)
-                        const maxChunks = Math.max(chunkCount, 50);
-                        console.log(`🧹 Tentando deletar até ${maxChunks} chunks de freight_tables...`);
-
-                        for (let i = 0; i < maxChunks; i++) {
-                            try {
-                                await legacyStore.doc(`freight_tables_chunk_${i}`).delete();
-                                console.log(`✅ Chunk ${i} deletado`);
-                            } catch (e) {
-                                // Ignora se não existe
-                            }
-                        }
-
-                        // Resetar documento principal para vazio e não-chunked
-                        await docRef.set({
-                            content: '[]',
-                            isChunked: false,
-                            chunkCount: 0,
-                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-
-                        console.log('✅ Nuvem limpa com sucesso!');
-                    }
-
-                    // 5. Também limpar carrier_list se não há mais regras
-                    if (confirm('Deseja também limpar a lista de transportadoras cadastradas?')) {
-                        carrierList = [];
-                        localStorage.setItem('carrier_list', JSON.stringify([]));
-                        Utils.lastWriteTime['carrier_list'] = Date.now();
-
-                        if (window.db && Utils.Cloud && Utils.Cloud.tenantId) {
-                            await window.db.collection('tenants').doc(Utils.Cloud.tenantId).collection('legacy_store').doc('carrier_list').set({
-                                content: '[]',
-                                isChunked: false,
-                                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                            });
-                        }
-
-                        renderCarrierConfigs();
-                        populateCarrierSelect();
-                    }
-
-                    renderRulesList();
-                    showToast('💥 Tabelas exterminadas! Nuvem e chunks limpos. Agora você pode importar novos dados.');
-
-                } catch (error) {
-                    console.error('Erro na limpeza:', error);
-                    showToast('❌ Erro ao limpar: ' + error.message);
-                }
-            }
-        };
-
         // Função para reconstruir lista de transportadoras a partir das tabelas de frete
         window.rebuildCarrierList = () => {
             const currentRules = Utils.getStorage('freight_tables') || [];
@@ -2175,29 +2101,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.renderCarrierConfigs = () => {
             const body = document.getElementById('carrierConfigsBody');
             if (!body) return;
-
-            // Inject Admin Tools if container exists above table, or prepend to table container
-            // Vamos hackear e injetar antes da tabela se não existir
-            let tools = document.getElementById('admin-danger-tools');
-            if (!tools) {
-                tools = document.createElement('div');
-                tools.id = 'admin-danger-tools';
-                tools.style = "margin-bottom: 20px; padding: 15px; background: #fff5f5; border: 1px solid #fc8181; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;";
-                tools.innerHTML = `
-                    <div>
-                        <strong style="color: #c53030;">Problemas com tabelas voltando?</strong>
-                        <p style="margin:0; font-size: 0.85rem; color: #c53030;">Clique aqui para zerar a memória da nuvem antes de importar o novo arquivo.</p>
-                    </div>
-                    <button class="btn btn-danger" onclick="window.wipeAllFreightTables()">
-                        🗑️ FORÇAR LIMPEZA DA NUVEM
-                    </button>
-                `;
-                // Tenta inserir antes da tabela wrapper
-                const tableRef = body.parentElement;
-                if (tableRef && tableRef.parentElement) {
-                    tableRef.parentElement.insertBefore(tools, tableRef);
-                }
-            }
 
             const carriers = [...carrierList].sort();
 
