@@ -757,6 +757,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('inputSeller').value = '';
             document.getElementById('inputValue').value = '';
             document.getElementById('inputWeight').value = '';
+            if (document.getElementById('inputVolume')) {
+                document.getElementById('inputVolume').value = '';
+            }
 
             // Reset results area
             document.getElementById('resultsArea').innerHTML = `
@@ -1791,22 +1794,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             showToast('✅ Carga montada com sucesso!');
 
             // Reset form for next input, but stay on Quote screen
-            document.getElementById('inputInvoiceNumber').value = '';
-            document.getElementById('inputWeight').value = '';
-            document.getElementById('inputValue').value = '';
-            document.getElementById('inputVolume').value = '';
+            if (window.resetQuote) {
+                window.resetQuote();
+            } else {
+                document.getElementById('inputInvoiceNumber').value = '';
+                document.getElementById('inputWeight').value = '';
+                document.getElementById('inputValue').value = '';
+                document.getElementById('inputVolume').value = '';
+                document.getElementById('inputIsComplement').value = 'nao';
+                document.getElementById('inputClient').value = '';
+                document.getElementById('inputSeller').value = '';
+                const grp = document.getElementById('mainNFGroup');
+                if (grp) grp.style.display = 'none';
+                document.getElementById('inputMainNF').value = '';
+                document.getElementById('resultsArea').innerHTML = '';
+                if(window.selectedClient) window.selectedClient = null;
+                const clientResult = document.getElementById('clientResult');
+                if(clientResult) clientResult.style.display = 'none';
+            }
 
-            document.getElementById('inputIsComplement').value = 'nao';
-
-            const grp = document.getElementById('mainNFGroup');
-            if (grp) grp.style.display = 'none';
-            document.getElementById('inputMainNF').value = '';
-
-            // Focus back to invoice number for rapid entry
-            document.getElementById('inputInvoiceNumber').focus();
-
-            // Clear results to avoid confusion
-            document.getElementById('resultsArea').innerHTML = '';
             const resContainer = document.getElementById('quoteResults');
             if (resContainer) resContainer.style.display = 'none';
 
