@@ -5,6 +5,9 @@
 
 window.PDFParser = {
     async parseMaxdataPDF(typedarray) {
+        // Configura o worker do PDF.js obrigatório a partir da v3
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
         // Inicializa o PDF.js
         const loadingTask = pdfjsLib.getDocument(typedarray);
         const pdf = await loadingTask.promise;
