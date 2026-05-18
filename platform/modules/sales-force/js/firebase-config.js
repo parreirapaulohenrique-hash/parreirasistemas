@@ -25,11 +25,12 @@ try {
         window.db = db; // Force Global Accessibility
         window.getTenantSuffix = () => '_' + FV_TENANT; // Helper callback for some shared fv-core logic
 
-        // Enable offline persistence to allow salesmen to work without internet
-        db.enablePersistence()
+        // Enable offline persistence with multi-tab support (API moderna)
+        db.enablePersistence({ synchronizeTabs: true })
             .catch((err) => {
                 if (err.code == 'failed-precondition') {
-                    console.warn('[FV] Persistência falhou: Múltiplas abas abertas.');
+                    // Pode ocorrer em browsers muito antigos, não é crítico
+                    console.warn('[FV] Persistência limitada: use apenas uma aba por vez para modo offline.');
                 } else if (err.code == 'unimplemented') {
                     console.warn('[FV] Persistência não suportada neste navegador.');
                 }
