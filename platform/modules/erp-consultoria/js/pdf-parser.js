@@ -54,14 +54,14 @@ window.PDFParser = {
         };
 
         // Encontra o período. Exemplo alvo: "Data Pag.: 01/03/2026 a 31/03/2026"
-        const periodMatch = text.match(/Data Pag\.:?\s*(\d{2}\/\d{2}\/\d{4})\s*a\s*(\d{2}\/\d{2}\/\d{4})/i);
+        const periodMatch = text.match(/Data Pag\.?:?\s*(\d{2}\/\d{2}\/\d{4})\s*a\s*(\d{2}\/\d{2}\/\d{4})/i);
         if (periodMatch) {
-            // Pega o mês do fim do período (ex: 31/03/2026 -> 03/2026)
+            // Pega o mês do fim do período (ex: 31/03/2026 -> partes[2]=2026, partes[1]=03)
             const parts = periodMatch[2].split('/');
-            result.periodo = `${parts[1]}/${parts[2]}`;
+            result.periodo = `${parts[2]}-${parts[1]}`; // Formato: YYYY-MM (ex: 2026-03)
         } else {
             // Fallback se não encontrar o header exato
-            result.periodo = '01/2026'; // Default
+            result.periodo = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`; // Default: ano-mês atual
         }
 
         let isProcessingData = false;
