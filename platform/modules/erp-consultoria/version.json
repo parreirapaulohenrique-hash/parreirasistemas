@@ -1,8 +1,8 @@
 {
     "module": "erp-consultoria",
     "name": "Consultoria ParreiraLog",
-    "version": "11.8.2",
-    "date": "2026-04-30",
-    "last_change": "FIX: saveMonthData() adicionado ao fc-store.js como wrapper de savePeriodData(). Resolve erro 'store.saveMonthData is not a function' ao confirmar importação do PDF",
-    "build": "20260430.10"
+    "version": "11.8.3",
+    "date": "2026-05-18",
+    "last_change": "FIX CRITICO: pdf-parser.js corrigido para formato YYYY-MM. fc-store.js corrigido de set(merge:true) para update() para criar estrutura aninhada correta no Firestore.",
+    "build": "20260518.01"
 }
