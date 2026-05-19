@@ -190,6 +190,8 @@ const CAD_CONFIG = {
             { name: 'codigo',            label: 'Código',                   type: 'text',   required: true },
             { name: 'nome',              label: 'Nome (ex: Picking)',        type: 'text',   required: true },
             { name: 'categoria',         label: 'Categoria',                type: 'select', options: ['Picking', 'Pulmão', 'Blocado', 'Doca', 'Expedição', 'Cross-Dock', 'Quarentena', 'Reservado'] },
+            { name: 'isPicking',         label: 'Endereço de Picking',      type: 'checkbox', default: false },
+            { name: 'isPulmao',          label: 'Endereço de Pulmão',       type: 'checkbox', default: false },
             { name: 'larguraCelula',     label: 'Largura Célula (m)',       type: 'number', default: 1.2 },
             { name: 'alturaCelula',      label: 'Altura Célula (m)',        type: 'number', default: 2.0 },
             { name: 'profundidadeCelula',label: 'Profundidade Célula (m)',  type: 'number', default: 0.8 },
@@ -197,7 +199,7 @@ const CAD_CONFIG = {
             { name: 'capacidadeVol',     label: 'Capacidade (volumes)',     type: 'number' },
             { name: 'ativo',             label: 'Ativo',                    type: 'checkbox', default: true }
         ],
-        columns: ['codigo', 'nome', 'categoria', 'larguraCelula', 'alturaCelula', 'profundidadeCelula', 'capacidadeKg']
+        columns: ['codigo', 'nome', 'categoria', 'isPicking', 'isPulmao', 'larguraCelula', 'alturaCelula', 'profundidadeCelula', 'capacidadeKg']
     },
     'cad-rec-tipo-nf': {
         key: 'tipoNF', label: 'Tipos de NF', icon: 'receipt',
@@ -371,6 +373,16 @@ function renderCadRows(config, items) {
         <tr>
             ${config.columns.map(col => {
         const val = item[col];
+        if (col === 'isPicking') {
+            return val
+                ? `<td><span style="background:rgba(16,185,129,.15);color:#10b981;border-radius:4px;padding:.15rem .5rem;font-size:.75rem;font-weight:700;">✦ Picking</span></td>`
+                : `<td><span style="color:var(--text-secondary);font-size:.8rem;">—</span></td>`;
+        }
+        if (col === 'isPulmao') {
+            return val
+                ? `<td><span style="background:rgba(59,130,246,.15);color:#3b82f6;border-radius:4px;padding:.15rem .5rem;font-size:.75rem;font-weight:700;">◈ Pulmão</span></td>`
+                : `<td><span style="color:var(--text-secondary);font-size:.8rem;">—</span></td>`;
+        }
         if (typeof val === 'boolean') return `<td><span style="color:${val ? 'var(--success)' : 'var(--danger)'};">${val ? 'Sim' : 'Não'}</span></td>`;
         return `<td>${val ?? '-'}</td>`;
     }).join('')}
