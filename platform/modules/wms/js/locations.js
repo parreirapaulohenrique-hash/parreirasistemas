@@ -1396,8 +1396,16 @@ window._xlsUpdatePreview = function() {
     const summary = document.getElementById('xls-summary');
 
     if (parsed.length === 0) {
-        preview.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--text-secondary);font-size:.82rem;">Nenhum dado válido com o mapeamento atual.</div>';
-        document.getElementById('xls-btn-import').style.display = 'none';
+        preview.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--text-secondary);font-size:.82rem;">Nenhum dado válido com o mapeamento atual.<br><strong style="color:#f59e0b;">⚠ Verifique se a coluna "Endereço Completo" ou "Rua" e "Prédio" estão mapeadas.</strong></div>';
+        // Não esconde o botão — mantém visível para o usuário tentar
+        const btnImpEl = document.getElementById('xls-btn-import');
+        if (btnImpEl) {
+            btnImpEl.style.display = 'flex';
+            btnImpEl.disabled = true;
+            btnImpEl.style.background = '#f59e0b';
+            btnImpEl.title = 'Mapeamento inválido — verifique as colunas acima';
+            btnImpEl.innerHTML = '<span class="material-icons-round" style="font-size:1rem;">warning</span> Verifique o mapeamento';
+        }
         return;
     }
 
@@ -1448,14 +1456,29 @@ window._xlsUpdatePreview = function() {
         <span style="background:rgba(59,130,246,.1);color:#3b82f6;border-radius:6px;padding:.3rem .7rem;">
             🆕 ${newCount} novos
         </span>
-        ${dupCount > 0 ? `<span style="background:rgba(245,158,11,.1);color:#f59e0b;border-radius:6px;padding:.3rem .7rem;">
-            ⚠️ ${dupCount} duplicados (serão ignorados)</span>` : ''}
+        ${dupCount > 0 ? `<span style="background:rgba(59,130,246,.1);color:#3b82f6;border-radius:6px;padding:.3rem .7rem;">
+            🔄 ${dupCount} existentes (serão atualizados)</span>` : ''}
         <span style="font-size:.75rem;color:var(--text-secondary);align-self:center;">
             Total na planilha: ${_xlsRows.length} linhas
         </span>
     </div>`;
 
-    document.getElementById('xls-btn-import').style.display = totalAll > 0 ? 'flex' : 'none';
+    const btnEl = document.getElementById('xls-btn-import');
+    if (btnEl) {
+        btnEl.style.display = 'flex';
+        btnEl.disabled = false;
+        btnEl.style.background = '';
+        btnEl.title = '';
+        let btnLabel = 'Confirmar Importação';
+        if (newCount > 0 && dupCount > 0) {
+            btnLabel = `Importar ${newCount} novos + Atualizar ${dupCount} existentes`;
+        } else if (newCount > 0) {
+            btnLabel = `Importar ${newCount} endereços`;
+        } else if (dupCount > 0) {
+            btnLabel = `Atualizar ${dupCount} endereços existentes`;
+        }
+        btnEl.innerHTML = '<span class="material-icons-round" style="font-size:1rem;">download_done</span> ' + btnLabel;
+    }
 };
 
 function _xlsParseRow(row) {
