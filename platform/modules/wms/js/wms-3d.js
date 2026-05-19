@@ -223,6 +223,42 @@ window.WMS3D = (function () {
             return { PW, PH, RD };
         };
 
+        // ── Mapa de alturas acumuladas por prédio ─────────────────────────────────────────
+        // Cada nível empilha sobre o anterior, respeitando a altura do tipo de endereço.
+        // Isso elimina o gap entre picking (PH pequeno) e pulmão (PH grande) no mesmo prédio.
+        const predioYMap = {}; // key: `${rua}|${predio}`, value: { [nivel]: {yCenter, yTop} }
+        ruas.forEach(rua => {
+            const ruaA = addrs.filter(a => a.rua === rua);
+            const predios = [...new Set(ruaA.map(a => a.predio))];
+            predios.forEach(predio => {
+                const pa = ruaA.filter(a => a.predio === predio);
+                const nivelsSorted = [...new Set(pa.map(a => +a.nivel))].sort((a, b) => a - b);
+                const key = `${rua}|${predio}`;
+                predioYMap[key] = {};
+                let cumY = 0;
+                nivelsSorted.forEach(nv => {
+                    const sample = pa.find(a => +a.nivel === nv);
+                    const ph = getDims(sample).PH;
+                    predioYMap[key][nv] = { yCenter: cumY + ph / 2, yTop: cumY + ph };
+                    cumY += ph;
+                });
+            });
+        });
+
+        // Helpers: Y do centro e topo de cada célula (acumulado por prédio)
+        const getYCenter = (addr) =>
+            predioYMap[`${addr.rua}|${addr.predio}`]?.[+addr.nivel]?.yCenter
+            ?? ((+addr.nivel - 0.5) * getDims(addr).PH);
+        const getYTop = (addr) =>
+            predioYMap[`${addr.rua}|${addr.predio}`]?.[+addr.nivel]?.yTop
+            ?? (+addr.nivel * getDims(addr).PH);
+
+        // Altura real máxima do cenário = topo do nível mais alto de qualquer prédio
+        const maxRealHeight = addrs.length > 0
+            ? Math.max(...addrs.map(a => getYTop(a)))
+            : maxNiv * PH;
+        const beamHeight = maxRealHeight + 0.25; // pequena margem acima do último nível
+
         // Calcular limites globais de pares para alinhar corredores
         const validPredios = addrs.map(a => +a.predio).filter(p => !isNaN(p));
         const maxPredioN = Math.max(...validPredios, 1);
@@ -301,12 +337,6 @@ window.WMS3D = (function () {
             _scene.add(m);
         });
 
-        // ── Altura máxima real do cenário (respeita tipos com alturas diferentes) ──────
-        // Usada para vigas e câmera em vez do PH global (que pode ser o fallback padrão)
-        const maxPH = addrs.length > 0
-            ? Math.max(...addrs.map(a => getDims(a).PH))
-            : PH;
-
         // ── InstancedMesh: CELLS (unit cube — scaled per instance) ────────────────
         const cellGeo  = new THREE.BoxGeometry(1, 1, 1);
         const cellMat  = new THREE.MeshLambertMaterial();
@@ -319,8 +349,8 @@ window.WMS3D = (function () {
         const railMat = new THREE.MeshLambertMaterial({ color: 0x475569 });
         const railMesh = new THREE.InstancedMesh(railGeo, railMat, addrs.length);
 
-        // ── InstancedMesh: BEAMS — usa maxPH (altura real do tipo mais alto) ────────
-        const beamGeo = new THREE.BoxGeometry(0.07, maxNiv*maxPH, 0.07);
+        // ── InstancedMesh: BEAMS — altura = topo real do prédio + margem ───────────
+        const beamGeo = new THREE.BoxGeometry(0.07, beamHeight, 0.07);
         const beamMat = new THREE.MeshLambertMaterial({ color: 0x334155 });
         const beamMesh = new THREE.InstancedMesh(beamGeo, beamMat, predioList.length * 4);
 
@@ -355,7 +385,7 @@ window.WMS3D = (function () {
                 const zEnd = zBase + predioZMaxSpan;
                 
                 [[zStart,-RD/2+0.04],[zStart,RD/2-0.04],[zEnd,-RD/2+0.04],[zEnd,RD/2-0.04]].forEach(([bz,dz]) => {
-                    dummy.position.set(sX, maxNiv*maxPH/2, bz+dz);
+                    dummy.position.set(sX, beamHeight / 2, bz+dz); // centro da viga
                     dummy.updateMatrix(); beamMesh.setMatrixAt(iBeam++, dummy.matrix);
                 });
 
@@ -367,14 +397,14 @@ window.WMS3D = (function () {
                     // Center Z of this specific cell block
                     const cz = zBase + (pos - 1) * dims.PW + dims.PW / 2;
                     
-                    // Rail
+                    // Rail — topo do nível acumulado
                     dummy.scale.set(dims.PW, 1, dims.RD);
-                    dummy.position.set(sX, nv*dims.PH, cz);
+                    dummy.position.set(sX, getYTop(loc), cz);
                     dummy.updateMatrix(); railMesh.setMatrixAt(iRail++, dummy.matrix);
                     
-                    // Cell — scaled by tipo dimensions
+                    // Cell — centro do nível acumulado
                     dummy.scale.set(dims.PW - 0.14, dims.PH - 0.18, dims.RD - 0.12);
-                    dummy.position.set(sX, (nv-0.5)*dims.PH + 0.07, cz);
+                    dummy.position.set(sX, getYCenter(loc), cz);
                     dummy.updateMatrix(); _cellInstMesh.setMatrixAt(iCell, dummy.matrix);
                     
                     dummy.scale.set(1, 1, 1); // reset for beams
@@ -392,15 +422,15 @@ window.WMS3D = (function () {
         _scene.add(_cellInstMesh); _scene.add(railMesh); _scene.add(beamMesh);
 
         // Dynamic far plane based on scene diagonal
-        const sceneDiag = Math.sqrt(WW*WW + WL*WL + (maxNiv*maxPH)*(maxNiv*maxPH));
+        const sceneDiag = Math.sqrt(WW*WW + WL*WL + maxRealHeight*maxRealHeight);
         _camera.far = Math.max(2000, sceneDiag * 3);
         _camera.updateProjectionMatrix();
 
-        _camera.position.set(WW/2, maxNiv*maxPH*1.5, WL*1.6);
-        _camera.lookAt(WW/2, (maxNiv*maxPH)/2, WL/2);
+        _camera.position.set(WW/2, maxRealHeight * 1.5, WL * 1.6);
+        _camera.lookAt(WW/2, maxRealHeight / 2, WL / 2);
 
 
-        _setupControls(canvas, WW/2, (maxNiv*maxPH)/2, WL/2);
+        _setupControls(canvas, WW/2, maxRealHeight / 2, WL / 2);
         _setupRaycaster(canvas, container);
         _setupResize(container);
         _animate();
