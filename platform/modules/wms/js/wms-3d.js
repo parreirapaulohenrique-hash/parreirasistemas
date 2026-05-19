@@ -141,15 +141,28 @@ window.WMS3D = (function () {
         // Mapear largura configurada dos corredores
         const cwCfg = cfg.corredores || [];
         const getCW = (ruaNome) => {
-            const rnPad = String(ruaNome).padStart(2, '0');
-            const rnNum = String(parseInt(ruaNome, 10));
+            const ruaNum = parseInt(ruaNome, 10);   // "01" → 1, "1" → 1
+            const rnPad  = String(ruaNome).padStart(2, '0');
+            const rnStr  = String(ruaNome).trim();
+
             const c = cwCfg.find(x => {
                 if (!x) return false;
-                const n = String(x.nome || '').trim();
-                const i = String(x.id || '').trim();
-                return n === ruaNome || i === ruaNome || 
-                       n.padStart(2, '0') === rnPad || i.padStart(2, '0') === rnPad ||
-                       n === rnNum || i === rnNum;
+                const nome = String(x.nome || '').trim();
+                const id   = String(x.id   || '').trim();
+
+                // 1. Correspondência exata de string
+                if (nome === rnStr || id === rnStr) return true;
+                // 2. Padded (ex: id="2" casa com rua="02")
+                if (nome.padStart(2,'0') === rnPad || id.padStart(2,'0') === rnPad) return true;
+                // 3. Extração numérica: "C1"→1, "Corredor 1"→1, "RUA-02"→2
+                //    Compara com o número da rua
+                if (!isNaN(ruaNum)) {
+                    const nomePart = nome.replace(/[^\d]/g, '');
+                    const idPart   = id.replace(/[^\d]/g, '');
+                    if (nomePart && +nomePart === ruaNum) return true;
+                    if (idPart   && +idPart   === ruaNum) return true;
+                }
+                return false;
             });
             return c && c.largura ? +c.largura : CW;
         };
