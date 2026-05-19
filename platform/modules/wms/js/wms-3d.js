@@ -170,22 +170,58 @@ window.WMS3D = (function () {
         });
         const WW = currentX;
 
-        // ── Tipos de Endereço → dimensões por tipo ──────────────────────────
+        // ── Tipos de Endereço → dimensões por tipo ────────────────────────────────────
         const cadSuf   = window.getTenantSuffix ? window.getTenantSuffix() : '';
         const cadData  = JSON.parse(localStorage.getItem('wms_cadastros' + cadSuf) || '{}');
         const tiposCad = cadData.enderecoTipo || [];
+        // TAMBÉM lê do painel 3D (wms_armazem_config.tiposEndereco[].alturaProxNivel)
+        // pois são dois storages diferentes com chaves diferentes
+        const tiposArmazem = cfg.tiposEndereco || [];
         // Normalize (remove accents, uppercase) for matching addr.tipo strings
         const _norm = s => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
+
+        // Mapa secundário: o que foi salvo no painel 3D (alturaProxNivel, largura, profundidade)
+        const tipoArmazemMap = {};
+        tiposArmazem.forEach(t => {
+            const key = _norm(t.codigo || t.nome || '');
+            if (key) tipoArmazemMap[key] = t;
+        });
+
+        // Mapa principal: wms_cadastros é fonte primária, armazem_config preenche lacunas
         const tipoMap = {};
         tiposCad.forEach(t => {
             const key = _norm(t.nome || t.categoria || t.codigo);
+            const arm = tipoArmazemMap[key] || {};
             tipoMap[key] = {
-                PW: +(t.larguraCelula   || cfg.posLargura),
-                PH: +(t.alturaCelula    || cfg.posAltura),
-                RD: +(t.profundidadeCelula || cfg.profundidade),
+                PW: +(t.larguraCelula      || arm.largura          || cfg.posLargura),
+                PH: +(t.alturaCelula       || arm.alturaProxNivel  || cfg.posAltura),
+                RD: +(t.profundidadeCelula || arm.profundidade     || cfg.profundidade),
             };
         });
-        const getDims = (addr) => tipoMap[_norm(addr.tipo)] || { PW, PH, RD };
+        // Tipos existentes apenas no painel 3D (não cadastrados em wms_cadastros)
+        tiposArmazem.forEach(t => {
+            const key = _norm(t.codigo || t.nome || '');
+            if (key && !tipoMap[key]) {
+                tipoMap[key] = {
+                    PW: +(t.largura         || cfg.posLargura),
+                    PH: +(t.alturaProxNivel || cfg.posAltura),
+                    RD: +(t.profundidade    || cfg.profundidade),
+                };
+            }
+        });
+        const getDims = (addr) => {
+            const fromMap = tipoMap[_norm(addr.tipo)];
+            if (fromMap) return fromMap;
+            // Fallback: endereço importado com dimensões próprias
+            if (addr.alturaProxNivel || addr.largura || addr.profundidade) {
+                return {
+                    PW: +(addr.largura          || PW),
+                    PH: +(addr.alturaProxNivel  || PH),
+                    RD: +(addr.profundidade     || RD),
+                };
+            }
+            return { PW, PH, RD };
+        };
 
         // Calcular limites globais de pares para alinhar corredores
         const validPredios = addrs.map(a => +a.predio).filter(p => !isNaN(p));
@@ -265,20 +301,26 @@ window.WMS3D = (function () {
             _scene.add(m);
         });
 
-        // ── InstancedMesh: CELLS (unit cube — scaled per instance) ────────────
+        // ── Altura máxima real do cenário (respeita tipos com alturas diferentes) ──────
+        // Usada para vigas e câmera em vez do PH global (que pode ser o fallback padrão)
+        const maxPH = addrs.length > 0
+            ? Math.max(...addrs.map(a => getDims(a).PH))
+            : PH;
+
+        // ── InstancedMesh: CELLS (unit cube — scaled per instance) ────────────────
         const cellGeo  = new THREE.BoxGeometry(1, 1, 1);
         const cellMat  = new THREE.MeshLambertMaterial();
         _cellInstMesh  = new THREE.InstancedMesh(cellGeo, cellMat, addrs.length);
         _cellInstMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
         _addrList = [];
 
-        // ── InstancedMesh: RAILS ────────────────────────────────────────────
+        // ── InstancedMesh: RAILS ─────────────────────────────────────────
         const railGeo = new THREE.BoxGeometry(1, 0.06, 1);
         const railMat = new THREE.MeshLambertMaterial({ color: 0x475569 });
         const railMesh = new THREE.InstancedMesh(railGeo, railMat, addrs.length);
 
-        // ── InstancedMesh: BEAMS — 2 per predio (start and end of Z span) ──
-        const beamGeo = new THREE.BoxGeometry(0.07, maxNiv*PH, 0.07);
+        // ── InstancedMesh: BEAMS — usa maxPH (altura real do tipo mais alto) ────────
+        const beamGeo = new THREE.BoxGeometry(0.07, maxNiv*maxPH, 0.07);
         const beamMat = new THREE.MeshLambertMaterial({ color: 0x334155 });
         const beamMesh = new THREE.InstancedMesh(beamGeo, beamMat, predioList.length * 4);
 
@@ -313,7 +355,7 @@ window.WMS3D = (function () {
                 const zEnd = zBase + predioZMaxSpan;
                 
                 [[zStart,-RD/2+0.04],[zStart,RD/2-0.04],[zEnd,-RD/2+0.04],[zEnd,RD/2-0.04]].forEach(([bz,dz]) => {
-                    dummy.position.set(sX, maxNiv*PH/2, bz+dz);
+                    dummy.position.set(sX, maxNiv*maxPH/2, bz+dz);
                     dummy.updateMatrix(); beamMesh.setMatrixAt(iBeam++, dummy.matrix);
                 });
 
@@ -350,15 +392,15 @@ window.WMS3D = (function () {
         _scene.add(_cellInstMesh); _scene.add(railMesh); _scene.add(beamMesh);
 
         // Dynamic far plane based on scene diagonal
-        const sceneDiag = Math.sqrt(WW*WW + WL*WL + (maxNiv*PH)*(maxNiv*PH));
+        const sceneDiag = Math.sqrt(WW*WW + WL*WL + (maxNiv*maxPH)*(maxNiv*maxPH));
         _camera.far = Math.max(2000, sceneDiag * 3);
         _camera.updateProjectionMatrix();
 
-        _camera.position.set(WW/2, maxNiv*PH*1.5, WL*1.6);
-        _camera.lookAt(WW/2, (maxNiv*PH)/2, WL/2);
+        _camera.position.set(WW/2, maxNiv*maxPH*1.5, WL*1.6);
+        _camera.lookAt(WW/2, (maxNiv*maxPH)/2, WL/2);
 
 
-        _setupControls(canvas, WW/2, (maxNiv*PH)/2, WL/2);
+        _setupControls(canvas, WW/2, (maxNiv*maxPH)/2, WL/2);
         _setupRaycaster(canvas, container);
         _setupResize(container);
         _animate();
