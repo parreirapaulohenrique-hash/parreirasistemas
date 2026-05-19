@@ -446,11 +446,15 @@ window.WMS3D = (function () {
         _camera.far = Math.max(2000, sceneDiag * 3);
         _camera.updateProjectionMatrix();
 
-        _camera.position.set(WW/2, maxRealHeight * 1.5, WL * 1.6);
-        _camera.lookAt(WW/2, maxRealHeight / 2, WL / 2);
+        // Câmera posicionada em frente ao prédio 1 (não ao último prédio)
+        // Modo ascendente: prédio 1 está em Z=0 → câmera fica em Z negativo (na frente)
+        // Modo descendente: prédio 1 está em Z=WL → câmera fica em Z>WL (atrás)
+        const camZ = descPredios ? WL * 1.5 : -WL * 0.5;
+        _camera.position.set(WW / 2, maxRealHeight * 1.5, camZ);
+        _camera.lookAt(WW / 2, maxRealHeight / 2, WL / 2);
 
 
-        _setupControls(canvas, WW/2, maxRealHeight / 2, WL / 2);
+        _setupControls(canvas, WW / 2, maxRealHeight / 2, WL / 2);
         _setupRaycaster(canvas, container);
         _setupResize(container);
         _animate();
