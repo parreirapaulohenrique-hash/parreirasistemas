@@ -392,8 +392,14 @@ window.WMS3D = (function () {
                 const pa = ruaA.filter(a => a.predio === predio);
                 const isEven = +predio % 2 === 0;
 
-                // ── X: odd=left, even=right ─────────────────────────────────
-                const sX = isEven ? ruaXRight[rua] : ruaXLeft[rua];
+                // ── X: odd=esquerda do corredor, even=direita ──────────────
+                // Quando visuallyInvertX (câmera em -Z olhando +Z), o eixo X
+                // está espelhado na tela: ruaXLeft aparece à direita visual.
+                // Trocamos o assignment para compensar.
+                const sX = visuallyInvertX
+                    ? (isEven ? ruaXLeft[rua]  : ruaXRight[rua])  // espelhado: troca lados
+                    : (isEven ? ruaXRight[rua] : ruaXLeft[rua]);  // normal
+
 
                 // ── Base Z for this Predio ──────────────────────────────────
                 const pairVal = Math.floor((+predio - 1) / 2);
