@@ -5316,7 +5316,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // --- RELATÓRIO DE ENTREGAS (Motoboy/Motorista) ---
-        function renderDeliveryReport(container) {
+        async function renderDeliveryReport(container) {
             // Buscar histórico de entregas
             const deliveryHistory = Utils.getStorage('delivery_history') || [];
             const dispatches = (await Utils.getFullDispatchesHistory()) || [];
@@ -5384,7 +5384,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // Função de filtro do relatório
-        window.applyDeliveryReportFilter = function () {
+        window.applyDeliveryReportFilter = async function () {
             const startDate = document.getElementById('deliveryReportStartDate').value;
             const endDate = document.getElementById('deliveryReportEndDate').value;
             const personFilter = document.getElementById('deliveryReportPerson').value;
