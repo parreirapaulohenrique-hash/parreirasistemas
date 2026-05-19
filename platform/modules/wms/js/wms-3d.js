@@ -133,17 +133,24 @@ window.WMS3D = (function () {
 
         // ── Layout helpers ──────────────────────────────────────────────────
         // Odd predios = LEFT side, Even predios = RIGHT side
+
+        // Sentido dos prédios (precisa ser declarado antes das ruas)
+        const descPredios = (cfg.ordemPredios === 'descendente');
+
+        // ── Ordenação das ruas e compensação do espelhamento do eixo X ──────
+        // Quando a câmera está em Z negativo olhando em +Z (modo ascendente de prédios),
+        // o eixo X do mundo aparece ESPELHADO na tela (+X mundial = esquerda na tela).
+        // Invertemos o sort para compensar: intenção do usuário é mantida visualmente.
         const descRuas = (cfg.ordemRuas === 'direita_esquerda');
+        const visuallyInvertX = !descPredios; // câmera em -Z → X invertido na tela
+        const sortRuasDesc = visuallyInvertX ? !descRuas : descRuas;
         const ruas = [...new Set(addrs.map(a => a.rua))]
             .sort((a, b) => {
                 // Ordenação numérica se possível, senão lexicográfica
                 const na = parseInt(a, 10), nb = parseInt(b, 10);
                 const cmp = (!isNaN(na) && !isNaN(nb)) ? na - nb : a.localeCompare(b);
-                return descRuas ? -cmp : cmp;
+                return sortRuasDesc ? -cmp : cmp;
             });
-        
-        // Sentido dos prédios
-        const descPredios = (cfg.ordemPredios === 'descendente');
 
         // Mapear largura configurada dos corredores
         const cwCfg = cfg.corredores || [];
