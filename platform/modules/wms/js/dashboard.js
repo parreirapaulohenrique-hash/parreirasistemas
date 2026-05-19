@@ -259,11 +259,22 @@ window.loadDashboardView = function () {
         </div>
     `;
 
-    // Init Three.js after DOM is painted
-    requestAnimationFrame(() => {
+    // Init Three.js — tenta repetidamente até o container ter dimensões reais
+    // (na primeira carga o layout pode ainda não estar calculado quando rAF dispara)
+    (function tryInit3D(attempt) {
         const wrap = document.getElementById('wms3d-canvas-wrap');
-        if (wrap && window.WMS3D) WMS3D.init(wrap);
-    });
+        if (!wrap || !window.WMS3D) return;
+        const w = wrap.clientWidth, h = wrap.clientHeight;
+        if (w > 0 && h > 0) {
+            WMS3D.init(wrap);
+        } else if (attempt < 20) {
+            // Dimensões ainda não prontas, tenta novamente
+            setTimeout(() => tryInit3D(attempt + 1), 80);
+        } else {
+            // Fallback: inicializa de qualquer forma após ~1.6s
+            WMS3D.init(wrap);
+        }
+    })(0);
 };
 
 
