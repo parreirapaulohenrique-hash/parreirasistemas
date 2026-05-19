@@ -133,7 +133,14 @@ window.WMS3D = (function () {
 
         // ── Layout helpers ──────────────────────────────────────────────────
         // Odd predios = LEFT side, Even predios = RIGHT side
-        const ruas = [...new Set(addrs.map(a => a.rua))].sort();
+        const descRuas = (cfg.ordemRuas === 'direita_esquerda');
+        const ruas = [...new Set(addrs.map(a => a.rua))]
+            .sort((a, b) => {
+                // Ordenação numérica se possível, senão lexicográfica
+                const na = parseInt(a, 10), nb = parseInt(b, 10);
+                const cmp = (!isNaN(na) && !isNaN(nb)) ? na - nb : a.localeCompare(b);
+                return descRuas ? -cmp : cmp;
+            });
         
         // Sentido dos prédios
         const descPredios = (cfg.ordemPredios === 'descendente');
@@ -711,6 +718,16 @@ window.wms3dRenderConfig = function(panel) {
                 </button>
             </div>
 
+            <!-- Ordem Ruas -->
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;flex-wrap:wrap;">
+                <span style="font-size:.7rem;color:var(--text-secondary);">Ruas (X):</span>
+                <button id="btn-rua-ed" onclick="wms3dSetOrdemRuas('esquerda_direita')"
+                    class="btn ${(cfg.ordemRuas||'esquerda_direita')==='esquerda_direita'?'btn-primary':'btn-secondary'}"
+                    style="font-size:.7rem;padding:.22rem .5rem;">&#8678; Esq &rarr; Dir (1&rarr;N)</button>
+                <button id="btn-rua-de" onclick="wms3dSetOrdemRuas('direita_esquerda')"
+                    class="btn ${cfg.ordemRuas==='direita_esquerda'?'btn-primary':'btn-secondary'}"
+                    style="font-size:.7rem;padding:.22rem .5rem;">&#8680; Dir &rarr; Esq (N&rarr;1)</button>
+            </div>
             <!-- Ordem Corredores -->
             <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;flex-wrap:wrap;">
                 <span style="font-size:.7rem;color:var(--text-secondary);">Corredores:</span>
@@ -860,6 +877,16 @@ window.wms3dAddTipoEndereco = function() {
     if (!tbody) return;
     if (tbody.querySelector('td[colspan]')) tbody.innerHTML = '';
     tbody.insertAdjacentHTML('beforeend', _tipoRow({ codigo: 'TIPO', descricao: 'Novo Tipo', largura: 1.2, profundidade: 0.8, alturaProxNivel: 2.0, capacidadeKg: 500 }));
+};
+
+window.wms3dSetOrdemRuas = function(ordem) {
+    const ed = document.getElementById('btn-rua-ed');
+    const de = document.getElementById('btn-rua-de');
+    if (!ed || !de) return;
+    ed.className = 'btn ' + (ordem === 'esquerda_direita' ? 'btn-primary' : 'btn-secondary');
+    de.className = 'btn ' + (ordem === 'direita_esquerda' ? 'btn-primary' : 'btn-secondary');
+    ed.style.cssText = 'font-size:.7rem;padding:.22rem .5rem;';
+    de.style.cssText = 'font-size:.7rem;padding:.22rem .5rem;';
 };
 
 window.wms3dSetOrdem = function(ordem) {
@@ -1041,6 +1068,8 @@ window.wms3dSaveConfig = function() {
     const ordem        = ordemBtn?.classList.contains('btn-primary') ? 'esquerda_direita' : 'direita_esquerda';
     const predioAscBtn = document.getElementById('btn-predio-asc');
     const ordemPredios = predioAscBtn?.classList.contains('btn-primary') ? 'ascendente' : 'descendente';
+    const ruaEdBtn     = document.getElementById('btn-rua-ed');
+    const ordemRuas    = ruaEdBtn?.classList.contains('btn-primary') ? 'esquerda_direita' : 'direita_esquerda';
 
     const cfg = {
         nomeArmazem:    document.getElementById('wms3d-cfg-nome')?.value  || 'CD',
@@ -1054,6 +1083,7 @@ window.wms3dSaveConfig = function() {
         corridorWidth: +document.getElementById('wms3d-cfg-cw')?.value    || 2.5,
         ordemCorredores: ordem,
         ordemPredios,
+        ordemRuas,
         corredores,
         tiposEndereco,
     };
