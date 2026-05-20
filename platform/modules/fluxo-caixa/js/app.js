@@ -10,7 +10,10 @@ const app = {
     async init() {
         this.bindEvents();
         this.initFilters();
-        
+
+        // Carrega estrutura customizada do plano de contas (se existir)
+        this.loadCustomMasterAccounts();
+
         // Carrega clientes da nuvem
         document.getElementById('clients-grid').innerHTML = '<p style="text-align:center; color: var(--text-muted);">Sincronizando com a nuvem...</p>';
         await this.renderClientsList();
@@ -143,16 +146,16 @@ const app = {
     switchTab(tabId) {
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
         const links = document.querySelectorAll('.nav-item');
-        for(let link of links) {
-            if(link.getAttribute('onclick') && link.getAttribute('onclick').includes(tabId)) {
+        for (let link of links) {
+            if (link.getAttribute('onclick') && link.getAttribute('onclick').includes(tabId)) {
                 link.classList.add('active');
             }
         }
-        
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.getElementById('tab-' + tabId).classList.add('active');
-        
-        if (tabId === 'overview') this.refreshDashboard();
+
+        if (tabId === 'overview')  this.refreshDashboard();
+        if (tabId === 'accounts')  this.renderAccountsEditor();
     },
 
     // --- CLIENTES ---
@@ -763,8 +766,184 @@ const app = {
         const wsAnnual = XLSX.utils.aoa_to_sheet(annualData);
         XLSX.utils.book_append_sheet(wb, wsAnnual, `Anual ${year}`);
 
+
         XLSX.writeFile(wb, `Fluxo_Caixa_${client.name.replace(/\s+/g,'_')}_${year}.xlsx`);
-    }
+    },
+
+    // ══ PLANO DE CONTAS (EDITOR) ══════════════════════════════════════
+
+    loadCustomMasterAccounts() {
+        const custom = localStorage.getItem('customMasterAccounts');
+        if (custom) {
+            try {
+                const parsed = JSON.parse(custom);
+                if (parsed && parsed.length > 0) window.MASTER_ACCOUNTS = parsed;
+            } catch (e) { console.warn('Erro ao carregar plano de contas customizado', e); }
+        }
+    },
+
+    getActiveMasterAccounts() {
+        return window.MASTER_ACCOUNTS || [];
+    },
+
+    renderAccountsEditor() {
+        const accounts = this.getActiveMasterAccounts();
+        const tbody    = document.getElementById('accounts-editor-body');
+        if (!tbody) return;
+
+        const locked = localStorage.getItem('masterAccountsLocked') === 'true';
+        this.updateLockUI(locked);
+
+        tbody.innerHTML = '';
+        accounts.forEach((acc, idx) => {
+            const isHeader = acc.codigo === 'HEADER';
+            const tr = document.createElement('tr');
+            tr.draggable = !locked;
+            tr.dataset.acc = JSON.stringify(acc);
+            tr.style.cursor = locked ? 'default' : 'grab';
+            if (isHeader) tr.style.background = 'rgba(255,255,255,0.06)';
+
+            const badge = isHeader
+                ? '<span class="badge-tipo badge-grupo">GRUPO</span>'
+                : `<span class="badge-tipo badge-conta">${(acc.codigo.match(/\./g)||[]).length <= 1 ? 'Nível 2' : 'Nível 3'}</span>`;
+
+            const codeField = locked
+                ? `<span style="font-family:monospace;color:var(--primary);">${acc.codigo}</span>`
+                : `<input type="text" class="acc-code-input" value="${acc.codigo}"
+                          style="width:110px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);
+                                 border-radius:6px;padding:4px 8px;color:#fff;font-family:monospace;font-size:.9rem;"
+                          ${isHeader ? 'disabled style="color:var(--text-muted);"' : ''}>`;
+
+            tr.innerHTML = `
+                <td class="drag-handle" style="text-align:center;font-size:1.2rem;color:var(--text-muted);user-select:none;">
+                    ${locked ? '🔒' : '⊿️'}
+                </td>
+                <td>${codeField}</td>
+                <td style="color:${isHeader ? '#f8fafc' : 'var(--text-muted)'};
+                           font-weight:${isHeader ? '700' : '400'};
+                           padding-left:${isHeader ? '8px' : '28px'};">
+                    ${acc.descricao}
+                </td>
+                <td style="text-align:center;">${badge}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        if (!locked) this.setupDragDrop(tbody);
+    },
+
+    setupDragDrop(tbody) {
+        let dragSrc = null;
+        tbody.querySelectorAll('tr').forEach(row => {
+            row.addEventListener('dragstart', e => {
+                dragSrc = row;
+                e.dataTransfer.effectAllowed = 'move';
+                row.style.opacity = '0.5';
+            });
+            row.addEventListener('dragend', () => {
+                row.style.opacity = '1';
+                tbody.querySelectorAll('tr').forEach(r => r.classList.remove('drag-over'));
+            });
+            row.addEventListener('dragover', e => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                if (row !== dragSrc) row.classList.add('drag-over');
+            });
+            row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+            row.addEventListener('drop', e => {
+                e.preventDefault();
+                row.classList.remove('drag-over');
+                if (dragSrc && dragSrc !== row) {
+                    const rows = [...tbody.querySelectorAll('tr')];
+                    const si = rows.indexOf(dragSrc);
+                    const di = rows.indexOf(row);
+                    tbody.insertBefore(dragSrc, si < di ? row.nextSibling : row);
+                }
+            });
+        });
+    },
+
+    saveAccountsStructure() {
+        const rows = document.querySelectorAll('#accounts-editor-body tr');
+        const newAccounts = [];
+        rows.forEach(tr => {
+            let acc;
+            try { acc = JSON.parse(tr.dataset.acc); } catch(e) { return; }
+            const input = tr.querySelector('.acc-code-input');
+            newAccounts.push({
+                codigo:   input ? input.value.trim() : acc.codigo,
+                descricao: acc.descricao
+            });
+        });
+        if (newAccounts.length === 0) return;
+        localStorage.setItem('customMasterAccounts', JSON.stringify(newAccounts));
+        window.MASTER_ACCOUNTS = newAccounts;
+        // Atualiza data-acc nos trs para refletir códigos editados
+        document.querySelectorAll('#accounts-editor-body tr').forEach((tr, i) => {
+            if (newAccounts[i]) tr.dataset.acc = JSON.stringify(newAccounts[i]);
+        });
+        this.showToast('✅ Estrutura salva com sucesso!');
+    },
+
+    toggleLockAccounts() {
+        const locked = localStorage.getItem('masterAccountsLocked') === 'true';
+        if (!locked) {
+            if (!confirm('Travar a estrutura do plano de contas? Você não poderá editar os códigos ou reordenar até destravar.')) return;
+            this.saveAccountsStructure(); // salva antes de travar
+            localStorage.setItem('masterAccountsLocked', 'true');
+            this.showToast('🔒 Estrutura travada!');
+        } else {
+            if (!confirm('Destravar a estrutura para edição?')) return;
+            localStorage.removeItem('masterAccountsLocked');
+            this.showToast('🔓 Estrutura destravada para edição.');
+        }
+        this.renderAccountsEditor();
+    },
+
+    resetAccountsStructure() {
+        if (!confirm('Restaurar a estrutura padrão? Todas as alterações de códigos e ordem serão perdidas.')) return;
+        localStorage.removeItem('customMasterAccounts');
+        localStorage.removeItem('masterAccountsLocked');
+        // Reload original
+        const original = window._MASTER_ACCOUNTS_ORIGINAL;
+        if (original) window.MASTER_ACCOUNTS = JSON.parse(JSON.stringify(original));
+        this.showToast('♻️ Estrutura padrão restaurada.');
+        this.renderAccountsEditor();
+    },
+
+    updateLockUI(locked) {
+        const icon  = document.getElementById('lock-icon');
+        const label = document.getElementById('lock-label');
+        const banner = document.getElementById('accounts-lock-banner');
+        if (!icon) return;
+        if (locked) {
+            icon.textContent  = 'lock_open';
+            label.textContent = 'Destravar';
+            banner?.classList.remove('hidden');
+        } else {
+            icon.textContent  = 'lock';
+            label.textContent = 'Travar';
+            banner?.classList.add('hidden');
+        }
+    },
+
+    showToast(msg) {
+        let t = document.getElementById('app-toast');
+        if (!t) {
+            t = document.createElement('div');
+            t.id = 'app-toast';
+            t.style.cssText = `position:fixed;bottom:24px;right:24px;background:#1e293b;color:#f8fafc;
+                border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:14px 22px;
+                font-size:.95rem;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.4);
+                transition:opacity .3s ease;`;
+            document.body.appendChild(t);
+        }
+        t.textContent = msg;
+        t.style.opacity = '1';
+        clearTimeout(this._toastTimer);
+        this._toastTimer = setTimeout(() => { t.style.opacity = '0'; }, 3000);
+    },
+
 };
 
 document.addEventListener('DOMContentLoaded', () => {

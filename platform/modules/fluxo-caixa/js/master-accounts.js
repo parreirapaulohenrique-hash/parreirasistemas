@@ -1000,3 +1000,5 @@ window.MASTER_ACCOUNTS = [
     "descricao": ".CARTÃO ENDERED 5099+4596+6933+8072 - ESCRITORIO"
   }
 ];
+// Backup imutavel da estrutura original (usado pelo botao Restaurar Padrao)
+window._MASTER_ACCOUNTS_ORIGINAL = JSON.parse(JSON.stringify(window.MASTER_ACCOUNTS));

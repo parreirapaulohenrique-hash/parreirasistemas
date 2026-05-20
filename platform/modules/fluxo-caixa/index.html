@@ -82,6 +82,9 @@
                 <a href="#" class="nav-item" onclick="app.switchTab('export')">
                     <span class="material-icons-round">download</span> Exportar Excel
                 </a>
+                <a href="#" class="nav-item" onclick="app.switchTab('accounts')" id="nav-accounts">
+                    <span class="material-icons-round">account_tree</span> Plano de Contas
+                </a>
             </nav>
             <div class="sidebar-footer">
                 <button class="btn btn-ghost" onclick="app.backToClients()">
@@ -268,6 +271,49 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- ═══ ABA: PLANO DE CONTAS ═══════════════════════════════════ -->
+            <div id="tab-accounts" class="tab-content">
+                <div class="accounts-editor-wrap glass-panel">
+                    <div class="accounts-editor-header">
+                        <div>
+                            <h2>🗂️ Estrutura do Plano de Contas</h2>
+                            <p>Edite os <strong>códigos</strong> e arraste as linhas para <strong>reordenar</strong>.<br>
+                            Quando terminar, clique em <strong>Travar</strong> para fixar a estrutura.</p>
+                        </div>
+                        <div class="accounts-toolbar">
+                            <button class="btn btn-primary" onclick="app.saveAccountsStructure()">
+                                <span class="material-icons-round">save</span> Salvar
+                            </button>
+                            <button id="btn-lock-accounts" class="btn btn-secondary" onclick="app.toggleLockAccounts()">
+                                <span class="material-icons-round" id="lock-icon">lock</span>
+                                <span id="lock-label">Travar</span>
+                            </button>
+                            <button class="btn btn-ghost" onclick="app.resetAccountsStructure()" title="Restaurar estrutura padrão">
+                                <span class="material-icons-round">restore</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="accounts-lock-banner" class="accounts-lock-banner hidden">
+                        🔒 Estrutura travada. Clique em <strong>Destrancar</strong> para editar.
+                    </div>
+                    <div class="table-responsive" style="max-height:65vh;overflow-y:auto;">
+                        <table id="accounts-editor-table" style="width:100%;">
+                            <thead style="position:sticky;top:0;background:var(--bg-color);z-index:2;">
+                                <tr>
+                                    <th style="width:36px;"></th>
+                                    <th style="width:130px;">Código</th>
+                                    <th>Descrição</th>
+                                    <th style="width:70px;text-align:center;">Tipo</th>
+                                </tr>
+                            </thead>
+                            <tbody id="accounts-editor-body">
+                                <!-- preenchido pelo JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -298,11 +344,12 @@
     <script src="js/firebase-config.js?v=1.1"></script>
     <script src="js/store.js?v=1.1"></script>
     <script src="js/pdf-parser.js?v=2.0"></script>
-    <script src="js/master-accounts.js?v=1.1"></script>
+    <script src="js/master-accounts.js?v=1.2"></script>
     <script src="js/financial-engine.js?v=6.0"></script>
-    <script src="js/app.js?v=2.2"></script>
+    <script src="js/app.js?v=2.3"></script>
 </body>
 </html>
+
 
 
 
