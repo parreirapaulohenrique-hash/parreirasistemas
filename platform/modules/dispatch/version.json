@@ -1,5 +1,5 @@
 {
-    "version": "3.8.7",
+    "version": "3.8.8",
     "lastUpdate": "2026-05-20",
-    "change": "BUGFIX CRÍTICO: corrigido Utils.getFullDispatchesHistory → Utils.Cloud.getFullDispatchesHistory em 12 pontos do app.js. Corrige telas Montagem de Carga e Conferência de Fatura que ficavam sem dados."
+    "change": "BUGFIX CRÍTICO: getFullDispatchesHistory corrigido — removido orderBy('timestamp') que falhava pois documentos não têm esse campo. Substituído por orderBy('__name__', 'desc') (ID do documento = timestamp numérico). Recupera os 1118 despachos históricos do Firestore. Sort em memória usa d.date como fallback."
 }

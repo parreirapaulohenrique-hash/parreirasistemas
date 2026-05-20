@@ -276,11 +276,12 @@ const Utils = {
                     
                     // Se não tiver filtros para limitar, vamos limitar a 500 para evitar travar
                     if (!filters.start && !filters.end) {
-                        query = query.orderBy('timestamp', 'desc').limit(500);
+                        query = query.orderBy('__name__', 'desc').limit(500);
                     } else {
+                        // Filtros por timestamp permanecem
                         if (filters.start) query = query.where('timestamp', '>=', filters.start);
                         if (filters.end) query = query.where('timestamp', '<=', filters.end);
-                        query = query.orderBy('timestamp', 'desc');
+                        query = query.orderBy('__name__', 'desc');
                     }
                     
                     const snapshot = await query.get();
@@ -294,7 +295,7 @@ const Utils = {
             
             // Retorna unindo os locais (filas) com os da nuvem, ordenados por timestamp desc
             let all = [...local, ...cloud];
-            all.sort((a,b) => (b.timestamp || b.createdAt || 0) - (a.timestamp || a.createdAt || 0));
+            all.sort((a,b) => (b.timestamp || b.createdAt || 0) - (a.timestamp || a.createdAt || 0) || (new Date(b.date || 0) - new Date(a.date || 0)));
             
             // Remove duplicatas (caso ainda esteja nas duas bases)
             const map = new Map();
