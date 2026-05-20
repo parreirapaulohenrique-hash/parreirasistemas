@@ -296,6 +296,8 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
+| **11.21.0** | 2026-05-20 | ERP Consultoria: financial-engine v6 (subheaders automáticos, MANUAL_GROUPS), editor Plano de Contas drag-and-drop, filtros Mensal/Trimestral/Semestral/Anual, conferência PDF vs. manual, fix cache Vercel |
+| **11.20.0** | 2026-05-16 | WMS — Campos de endereço atualizados (DEPOSITO, AREA, EQUIPAMENTO, OPERACAO, PRODUTO VINCULADO, CAPACIDADE) |
 | **11.14.0** | 2026-05-12 | WMS Coletor: Conferência integrada — endereço real ABC, sync Firestore, atualização de estoque e status de endereço no putaway |
 | **11.13.0** | 2026-05-12 | WMS: Motor de Armazenagem (Putaway) — algoritmo ABC/Curva, sugestão inteligente de endereços, integração Firestore |
 | **11.12.0** | 2026-05-12 | WMS: Firebase Sync de Endereços — Firestore fonte da verdade, localStorage cache, write-through, badge Cloud Sync |
@@ -305,4 +307,4 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 | **11.9.x** | 2026-04 | Módulo WMS: inbound com conferência em 3 etapas (Portaria, Receber, Conferência), contagem cega com PIN |
 | **11.8.x** | 2026-03 | Dispatch: ferramenta de arquivamento, faixa de status offline/Firebase, sync pendente |
 
-> ✅ **Compromisso do agente:** A partir da v11.10.0, este documento é atualizado a cada deploy junto com o `version.json`.
+> ✅ **Compromisso do agente:** A partir da v11.10.0, este documento é atualizado a cada deploy junto com o `version.json`. A versão é **por plataforma** (não por módulo). A cada entrega, o agente informa a versão no formato `📦 Deploy — vX.Y.Z`.

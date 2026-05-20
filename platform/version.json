@@ -1,15 +1,16 @@
 {
-    "version": "11.20.0",
-    "build": "20260516",
-    "lastUpdate": "2026-05-16",
-    "description": "WMS — Campos de endereço atualizados (DEPOSITO, AREA, EQUIPAMENTO, OPERACAO, PRODUTO VINCULADO, CAPACIDADE)",
+    "version": "11.21.0",
+    "build": "20260520",
+    "lastUpdate": "2026-05-20",
+    "description": "ERP Consultoria — Motor financeiro v6, editor do Plano de Contas, filtros mensais/trimestrais/semestrais/anuais, subheaders de subgrupo, cache Vercel corrigido",
     "changelog": [
-        "FIX: xlsLoadFile — corrigido travamento em 'Lendo arquivo...' ao selecionar planilha",
-        "NOVO: Importador agora detecta automaticamente as 12 colunas do padrão de endereços (DEPOSITO, AREA, RUA, PREDIO, NIVEL, APTO, ENDERECO, TIPO, EQUIPAMENTO, OPERACAO, PRODUTO VINCULADO, CAPACIDADE)",
-        "NOVO: Filtros da tela de Gestão de Endereços — Área, Tipo, Equipamento com valores reais do galpão",
-        "NOVO: Botão Limpar Filtros na barra de filtros",
-        "FIX: Ordenação dos endereços agora é numérica (1,2,3...9,10) em vez de alfabética",
-        "FIX: SheetJS agora é carregado automaticamente se necessário, sem exigir reload do usuário",
-        "FIX: Tabela de endereços exibe todas as colunas: Depósito, Área, Rua, Prédio, Nível, Apto, Tipo, Equipamento, Operação, Produto Vinculado, Capacidade, Status"
+        "NOVO: financial-engine v6 — prescan de códigos com filhos (codesWithChildren), subheaders verdes automáticos (ex: '1.1. Receita com Vendas') com back-fill de total",
+        "NOVO: MANUAL_GROUPS — Contas Movimento e Receitas aceitam entrada manual com fallback do PDF",
+        "NOVO: Aba 'Plano de Contas' — editor drag-and-drop para reordenar e editar códigos das contas",
+        "NOVO: Botões Salvar / Travar / Destravar / Restaurar Padrão para o plano de contas",
+        "NOVO: Filtros Mensal / Trimestral / Semestral / Anual no dashboard de Visão Geral",
+        "NOVO: Linha de conferência (CONFERIDO / DIFERENÇA) entre total PDF e entradas manuais de Receitas",
+        "FIX: vercel.json — headers no-cache para JS/CSS/HTML corrigem cache stale do edge da Vercel",
+        "FIX: Tabela de fluxo de caixa reformulada para 4 colunas (Conta, Realizado, Anál. Vert.)"
     ]
 }
