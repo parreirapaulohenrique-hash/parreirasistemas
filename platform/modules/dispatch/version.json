@@ -1,5 +1,5 @@
 {
-    "version": "3.8.6",
-    "lastUpdate": "2026-04-15",
-    "change": "Conferência Fatura: adicionados filtros por coluna (NF, Cliente, Cidade, Data, Frete) na tabela de NFs disponíveis (v3.8.6)."
+    "version": "3.8.7",
+    "lastUpdate": "2026-05-20",
+    "change": "BUGFIX CRÍTICO: corrigido Utils.getFullDispatchesHistory → Utils.Cloud.getFullDispatchesHistory em 12 pontos do app.js. Corrige telas Montagem de Carga e Conferência de Fatura que ficavam sem dados."
 }

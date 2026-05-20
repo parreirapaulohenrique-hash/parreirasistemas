@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', async () => {
+﻿document.addEventListener('DOMContentLoaded', async () => {
     try {
         // GLOBAL UI UTILS
         window.showToast = (msg) => {
@@ -838,7 +838,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         async function checkLateDispatchesAndAlert() {
-            const history = await Utils.getFullDispatchesHistory();
+            const history = await Utils.Cloud.getFullDispatchesHistory();
             const hasLate = history.some(d => window.getDispatchDelayInfo(d).isLate);
 
             if (hasLate) {
@@ -3036,7 +3036,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const btnExportCSV = document.getElementById('btnExportCSV');
         if (btnExportCSV) {
             btnExportCSV.addEventListener('click', async () => {
-                const data = await Utils.getFullDispatchesHistory();
+                const data = await Utils.Cloud.getFullDispatchesHistory();
                 if (data.length === 0) {
                     showToast('❌ Nenhum despacho para exportar.');
                     return;
@@ -3090,7 +3090,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.dispatchFilters = {};
 
         window.renderAppHistory = async () => {
-            let list = await Utils.getFullDispatchesHistory();
+            let list = await Utils.Cloud.getFullDispatchesHistory();
             const container = document.getElementById('dispatchListContainer');
             if (!container) {
                 console.error('dispatchListContainer não encontrado no DOM');
@@ -3346,7 +3346,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!select) return;
 
             // Get unique carriers from dispatched items (status = Despachado, not Pago)
-            const dispatches = (await Utils.getFullDispatchesHistory()) || [];
+            const dispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
 
             // Coleta transportadoras principais
             const mainCarriers = dispatches
@@ -3393,7 +3393,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Get dispatched NFs for this carrier
             // Inclui tanto despachos onde é transportadora principal quanto redespacho
-            const dispatches = (await Utils.getFullDispatchesHistory()) || [];
+            const dispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
             const carrierNorm = carrier.toUpperCase().trim();
 
             let filtered = dispatches
@@ -3525,7 +3525,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Update comparison display
         window.updateInvoiceComparison = async () => {
-            const dispatches = (await Utils.getFullDispatchesHistory()) || [];
+            const dispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
 
             // Calculate selected total
             let selectedTotal = 0;
@@ -3588,7 +3588,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Confirm payment
         window.confirmInvoicePayment = async () => {
-            const dispatches = (await Utils.getFullDispatchesHistory()) || [];
+            const dispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
 
             // Calculate totals
             let selectedTotal = 0;
@@ -3655,7 +3655,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log('💳 [Invoice] Iniciando processamento de pagamento...');
             console.log('💳 [Invoice] NFs selecionadas:', [...window.invoiceSelectedNFs]);
 
-            const dispatches = (await Utils.getFullDispatchesHistory()) || [];
+            const dispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
             console.log('💳 [Invoice] Total de despachos carregados:', dispatches.length);
 
             const invoiceRef = document.getElementById('invoiceRef').value.trim() || 'N/A';
@@ -5078,7 +5078,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         async function renderLateDispatchesReport(container) {
-            const history = await Utils.getFullDispatchesHistory();
+            const history = await Utils.Cloud.getFullDispatchesHistory();
             const lateItems = [];
             const now = new Date();
 
@@ -5191,7 +5191,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         async function renderVanPerformanceReport(container) {
-            const history = await Utils.getFullDispatchesHistory();
+            const history = await Utils.Cloud.getFullDispatchesHistory();
             // Filter only VAN dispatches that were negotiated (vanDiff != 0 or total != originalTotal)
             // Or simply all VAN carriers to show overview
             const vanItems = history.filter(d =>
@@ -5319,7 +5319,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         async function renderDeliveryReport(container) {
             // Buscar histórico de entregas
             const deliveryHistory = Utils.getStorage('delivery_history') || [];
-            const dispatches = (await Utils.getFullDispatchesHistory()) || [];
+            const dispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
 
             // Combinar entregas finalizadas (do histórico) e pendentes (dos dispatches)
             const allDeliveries = [
@@ -5392,7 +5392,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Buscar dados
             const deliveryHistory = Utils.getStorage('delivery_history') || [];
-            const dispatches = (await Utils.getFullDispatchesHistory()) || [];
+            const dispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
 
             // Combinar e filtrar
             let allDeliveries = [
