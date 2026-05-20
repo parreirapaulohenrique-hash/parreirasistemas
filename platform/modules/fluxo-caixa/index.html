@@ -196,13 +196,14 @@
                 </div>
             </div>
 
-            <div class="tab-content" id="tab-import">
+            <div id="tab-import" class="tab-content">
                 <div class="import-container glass-panel">
                     <h2>Importar Relatório Maxdata</h2>
-                    <p>Faça upload do PDF "343 - Relatório de Centro de Custos / Plano de Contas".</p>
+                    <p>Faça upload do PDF <strong>"343 - Relatório de Centro de Custos / Plano de Contas"</strong>.<br>
+                    Os valores de todas as filiais serão consolidados automaticamente.</p>
                     
                     <div class="drop-zone" id="pdf-drop-zone">
-                        <span class="material-icons-round">cloud_upload</span>
+                        <span class="material-icons-round" style="font-size:2.5rem;color:#6366f1;">cloud_upload</span>
                         <h3>Arraste o arquivo PDF aqui</h3>
                         <p>ou</p>
                         <input type="file" id="pdf-file-input" accept=".pdf" hidden>
@@ -211,10 +212,11 @@
 
                     <div id="import-preview" class="hidden">
                         <h3>Preview da Importação</h3>
-                        <p id="import-period">Período detectado: -</p>
-                        <div class="table-responsive">
+                        <p id="import-period" style="font-weight:600;color:var(--primary);">Período detectado: -</p>
+                        <!-- Resumo inserido aqui via JS (id=import-summary) -->
+                        <div class="table-responsive" style="max-height:380px;overflow-y:auto;">
                             <table class="preview-table">
-                                <thead>
+                                <thead style="position:sticky;top:0;background:var(--bg-card);z-index:2;">
                                     <tr>
                                         <th>Conta</th>
                                         <th class="text-right">A Receber</th>
@@ -224,9 +226,12 @@
                                 <tbody id="import-preview-body"></tbody>
                             </table>
                         </div>
-                        <div class="import-actions">
+                        <div class="import-actions" style="display:flex;gap:.75rem;justify-content:flex-end;margin-top:1rem;">
                             <button class="btn btn-ghost" onclick="app.cancelImport()">Cancelar</button>
-                            <button class="btn btn-primary" onclick="app.confirmImport()">Confirmar e Salvar</button>
+                            <button id="import-confirm-btn" class="btn btn-primary" onclick="app.confirmImport()">
+                                <span class="material-icons-round" style="font-size:1rem;vertical-align:middle;">save</span>
+                                Confirmar e Salvar
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -296,9 +301,10 @@
 
     <script src="js/firebase-config.js?v=1.1"></script>
     <script src="js/store.js?v=1.1"></script>
-    <script src="js/pdf-parser.js?v=1.1"></script>
+    <script src="js/pdf-parser.js?v=2.0"></script>
     <script src="js/master-accounts.js?v=1.1"></script>
     <script src="js/financial-engine.js?v=1.1"></script>
-    <script src="js/app.js?v=1.1"></script>
+    <script src="js/app.js?v=2.0"></script>
 </body>
 </html>
+

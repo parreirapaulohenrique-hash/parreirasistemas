@@ -471,17 +471,49 @@ const app = {
     showImportPreview(result) {
         document.getElementById('pdf-drop-zone').classList.add('hidden');
         document.getElementById('import-preview').classList.remove('hidden');
-        document.getElementById('import-period').textContent = 'Período detectado: ' + result.periodo;
-        
+
+        // Período: result.periodo vem como 'MM/YYYY' (ex: '03/2026')
+        const [mm, yyyy] = result.periodo.split('/');
+        const monthNames = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                            'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+        const periodLabel = `${monthNames[+mm] || mm}/${yyyy}`;
+        document.getElementById('import-period').textContent = `Período detectado: ${periodLabel}`;
+
+        // Totais para o resumo
+        const totalPagar   = result.contas.reduce((s, c) => s + c.a_pagar,   0);
+        const totalReceber = result.contas.reduce((s, c) => s + c.a_receber, 0);
+        const ccTxt = result.ccCount > 0 ? ` — ${result.ccCount} filiais consolidadas` : '';
+
+        // Resumo no topo do preview
+        let summaryEl = document.getElementById('import-summary');
+        if (!summaryEl) {
+            summaryEl = document.createElement('div');
+            summaryEl.id = 'import-summary';
+            summaryEl.style.cssText = 'display:flex;gap:1rem;flex-wrap:wrap;margin:.75rem 0 1rem;padding:.75rem 1rem;' +
+                'background:rgba(59,130,246,.08);border-radius:8px;font-size:.82rem;border:1px solid rgba(59,130,246,.2);';
+            document.getElementById('import-preview').insertBefore(
+                summaryEl,
+                document.getElementById('import-preview').querySelector('.table-responsive')
+            );
+        }
+        summaryEl.innerHTML = `
+            <span>📄 <strong>${result.contas.length}</strong> contas extraídas${ccTxt}</span>
+            <span>🟢 A Receber: <strong class="positive">R$ ${totalReceber.toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong></span>
+            <span>🔴 A Pagar: <strong class="negative">R$ ${totalPagar.toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong></span>
+            <span>📊 Saldo: <strong>R$ ${(totalReceber - totalPagar).toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong></span>
+        `;
+
         const tbody = document.getElementById('import-preview-body');
         tbody.innerHTML = '';
         
-        result.contas.forEach(c => {
+        // Ordena por código para facilitar conferência
+        const sorted = [...result.contas].sort((a, b) => a.codigo.localeCompare(b.codigo));
+        sorted.forEach(c => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td><strong>${c.codigo}</strong> ${c.descricao}</td>
-                <td class="text-right positive">R$ ${c.a_receber.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                <td class="text-right negative">R$ ${c.a_pagar.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                <td class="text-right positive">${c.a_receber > 0 ? 'R$ ' + c.a_receber.toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</td>
+                <td class="text-right negative">${c.a_pagar > 0 ? 'R$ ' + c.a_pagar.toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -494,31 +526,44 @@ const app = {
         document.getElementById('pdf-drop-zone').classList.remove('hidden');
         document.getElementById('import-preview').classList.add('hidden');
         document.getElementById('pdf-file-input').value = '';
+        // Limpa summary se existir
+        const s = document.getElementById('import-summary');
+        if (s) s.innerHTML = '';
     },
 
     async confirmImport() {
-        if(!this.pendingImport) return;
+        if (!this.pendingImport) return;
         
-        const btn = document.querySelector('.import-actions .btn-primary');
-        const oldText = btn.textContent;
-        btn.textContent = "Sincronizando com a Nuvem...";
-        btn.disabled = true;
+        // Busca o botão de confirmar de forma robusta
+        const btn = document.querySelector('#import-confirm-btn') ||
+                    document.querySelector('.import-actions .btn-primary');
+        if (btn) { btn.textContent = 'Sincronizando...'; btn.disabled = true; }
         
         const client = store.getActiveClient();
+        if (!client) {
+            alert('Nenhum cliente selecionado.');
+            if (btn) { btn.textContent = 'Confirmar e Salvar'; btn.disabled = false; }
+            return;
+        }
+
+        // Período vem como 'MM/YYYY' → converte para chave 'YYYY-MM'
         const [mes, ano] = this.pendingImport.periodo.split('/');
-        const periodKey = `${ano}-${mes}`;
+        const periodKey = `${ano}-${mes.padStart(2, '0')}`;
         
         const success = await store.savePeriodData(client.id, periodKey, 'realizado', this.pendingImport.contas);
         
-        btn.textContent = oldText;
-        btn.disabled = false;
+        if (btn) { btn.textContent = 'Confirmar e Salvar'; btn.disabled = false; }
         
         if (success) {
-            alert('Dados importados com sucesso!');
+            const [mmN, yyyyN] = this.pendingImport.periodo.split('/');
+            const nomes = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                           'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+            const label = `${nomes[+mmN] || mmN}/${yyyyN}`;
+            alert(`✅ ${this.pendingImport.contas.length} contas de ${label} importadas com sucesso!`);
             this.cancelImport();
             this.switchTab('overview');
         } else {
-            alert("Erro ao enviar dados para a nuvem.");
+            alert('❌ Erro ao enviar dados para a nuvem. Verifique a conexão e tente novamente.');
         }
     },
 
