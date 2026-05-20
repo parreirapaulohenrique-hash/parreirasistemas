@@ -9,14 +9,7 @@ const app = {
 
     async init() {
         this.bindEvents();
-        
-        // Populate period filter years
-        const currentYear = new Date().getFullYear();
-        const yearSelect = document.getElementById('filter-period-value');
-        yearSelect.innerHTML = '';
-        for(let y = currentYear - 1; y <= currentYear + 2; y++) {
-            yearSelect.innerHTML += `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`;
-        }
+        this.initFilters();
         
         // Carrega clientes da nuvem
         document.getElementById('clients-grid').innerHTML = '<p style="text-align:center; color: var(--text-muted);">Sincronizando com a nuvem...</p>';
@@ -40,32 +33,107 @@ const app = {
                 dropZone.style.borderColor = 'var(--success)';
                 dropZone.style.background = 'rgba(16, 185, 129, 0.1)';
             });
-
             dropZone.addEventListener('dragleave', (e) => {
                 e.preventDefault();
                 dropZone.style.borderColor = 'var(--primary)';
                 dropZone.style.background = 'rgba(59, 130, 246, 0.05)';
             });
-
             dropZone.addEventListener('drop', (e) => {
                 e.preventDefault();
                 dropZone.style.borderColor = 'var(--primary)';
                 dropZone.style.background = 'rgba(59, 130, 246, 0.05)';
-                if (e.dataTransfer.files.length) {
-                    this.handlePDFUpload(e.dataTransfer.files[0]);
-                }
+                if (e.dataTransfer.files.length) this.handlePDFUpload(e.dataTransfer.files[0]);
             });
-
             fileInput.addEventListener('change', (e) => {
-                if (e.target.files.length) {
-                    this.handlePDFUpload(e.target.files[0]);
-                }
+                if (e.target.files.length) this.handlePDFUpload(e.target.files[0]);
             });
         }
 
-        document.getElementById('filter-period-type').addEventListener('change', () => this.refreshDashboard());
-        document.getElementById('filter-period-value').addEventListener('change', () => this.refreshDashboard());
+        document.getElementById('filter-period-type').addEventListener('change', (e) => {
+            this.updatePeriodSubSelect(e.target.value);
+            this.refreshDashboard();
+        });
+        const subEl = document.getElementById('filter-period-sub');
+        if (subEl) subEl.addEventListener('change', () => this.refreshDashboard());
+        const yearEl = document.getElementById('filter-year');
+        if (yearEl) yearEl.addEventListener('change', () => this.refreshDashboard());
     },
+
+    // ── FILTROS ─────────────────────────────────────────────────────────────
+
+    initFilters() {
+        const now = new Date();
+        const currentYear  = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+
+        // Popula select de ano
+        const yearSel = document.getElementById('filter-year');
+        if (yearSel) {
+            yearSel.innerHTML = '';
+            for (let y = currentYear - 2; y <= currentYear + 1; y++) {
+                yearSel.innerHTML += `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`;
+            }
+        }
+        // Padrão: Mensal, mês atual
+        const typeSel = document.getElementById('filter-period-type');
+        if (typeSel) typeSel.value = 'monthly';
+        this.updatePeriodSubSelect('monthly', currentMonth);
+    },
+
+    updatePeriodSubSelect(type, defaultVal) {
+        const sub = document.getElementById('filter-period-sub');
+        if (!sub) return;
+        sub.innerHTML = '';
+        if (type === 'monthly') {
+            const names = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                           'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+            names.forEach((name, i) => {
+                const sel = (i + 1) === parseInt(defaultVal || 1) ? 'selected' : '';
+                sub.innerHTML += `<option value="${i + 1}" ${sel}>${name}</option>`;
+            });
+            sub.style.display = '';
+        } else if (type === 'quarterly') {
+            [['Q1','1º Trimestre'],['Q2','2º Trimestre'],['Q3','3º Trimestre'],['Q4','4º Trimestre']]
+                .forEach(([val, lbl]) => { sub.innerHTML += `<option value="${val}">${lbl}</option>`; });
+            if (defaultVal) sub.value = defaultVal;
+            sub.style.display = '';
+        } else if (type === 'semiannual') {
+            sub.innerHTML = '<option value="S1">1º Semestre</option><option value="S2">2º Semestre</option>';
+            if (defaultVal) sub.value = defaultVal;
+            sub.style.display = '';
+        } else {
+            sub.style.display = 'none'; // anual: esconde sub
+        }
+    },
+
+    getMonthsForPeriod(type, subVal) {
+        switch (type) {
+            case 'monthly':    return [parseInt(subVal)];
+            case 'quarterly':  return ({Q1:[1,2,3],Q2:[4,5,6],Q3:[7,8,9],Q4:[10,11,12]})[subVal] || [1,2,3];
+            case 'semiannual': return subVal === 'S1' ? [1,2,3,4,5,6] : [7,8,9,10,11,12];
+            default:           return [1,2,3,4,5,6,7,8,9,10,11,12];
+        }
+    },
+
+    getPeriodLabel(type, subVal, year) {
+        const mn = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                    'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+        switch (type) {
+            case 'monthly':    return `${mn[parseInt(subVal)]} ${year}`;
+            case 'quarterly':  return ({Q1:'1º Trimestre',Q2:'2º Trimestre',Q3:'3º Trimestre',Q4:'4º Trimestre'})[subVal] + ` ${year}`;
+            case 'semiannual': return (subVal === 'S1' ? '1º Semestre' : '2º Semestre') + ` ${year}`;
+            default:           return `Anual ${year}`;
+        }
+    },
+
+    getFilterState() {
+        const type   = document.getElementById('filter-period-type')?.value || 'annual';
+        const year   = document.getElementById('filter-year')?.value || new Date().getFullYear().toString();
+        const sub    = document.getElementById('filter-period-sub');
+        const subVal = (sub && sub.style.display !== 'none' && sub.value) ? sub.value : null;
+        return { type, year, subVal };
+    },
+
 
     showView(viewId) {
         document.querySelectorAll('.view-container').forEach(el => el.classList.remove('active'));
@@ -192,45 +260,35 @@ const app = {
 
     refreshDashboard() {
         const client = store.getActiveClient();
-        if(!client) return;
+        if (!client) return;
 
-        const year = document.getElementById('filter-period-value').value;
+        const { type, year, subVal } = this.getFilterState();
         const yearData = store.getYearData(client.id, year);
-        
-        let totalRealizadoEntradas = 0;
-        let totalRealizadoSaidas = 0;
-        let totalProjetadoEntradas = 0;
-        let totalProjetadoSaidas = 0;
-        
+        const months   = this.getMonthsForPeriod(type, subVal);
+
+        let totalRealizadoEntradas = 0, totalRealizadoSaidas   = 0;
+        let totalProjetadoEntradas = 0, totalProjetadoSaidas   = 0;
         const monthlyRealizado = new Array(12).fill(0);
         const monthlyProjetado = new Array(12).fill(0);
-        const aggregatedAccounts = {};
+        const allAccountsInPeriod = [];
 
-        for(let month = 1; month <= 12; month++) {
-            const key = `${year}-${month.toString().padStart(2, '0')}`;
+        for (const month of months) {
+            const key   = `${year}-${month.toString().padStart(2, '0')}`;
             const mData = yearData[key];
-            
-            if(mData && mData.realizado) {
+
+            if (mData && mData.realizado) {
                 mData.realizado.forEach(acc => {
                     totalRealizadoEntradas += acc.a_receber || 0;
-                    totalRealizadoSaidas += acc.a_pagar || 0;
-                    const saldoRealizado = (acc.a_receber || 0) - (acc.a_pagar || 0);
-                    monthlyRealizado[month-1] += saldoRealizado;
-                    
-                    if(!aggregatedAccounts[acc.codigo]) aggregatedAccounts[acc.codigo] = { codigo: acc.codigo, descricao: acc.descricao, realizado: 0, projetado: 0 };
-                    aggregatedAccounts[acc.codigo].realizado += saldoRealizado;
+                    totalRealizadoSaidas   += acc.a_pagar   || 0;
+                    monthlyRealizado[month - 1] += (acc.a_receber || 0) - (acc.a_pagar || 0);
+                    allAccountsInPeriod.push(acc);
                 });
             }
-            
-            if(mData && mData.projetado) {
+            if (mData && mData.projetado) {
                 mData.projetado.forEach(acc => {
                     totalProjetadoEntradas += acc.a_receber || 0;
-                    totalProjetadoSaidas += acc.a_pagar || 0;
-                    const saldoProjetado = (acc.a_receber || 0) - (acc.a_pagar || 0);
-                    monthlyProjetado[month-1] += saldoProjetado;
-                    
-                    if(!aggregatedAccounts[acc.codigo]) aggregatedAccounts[acc.codigo] = { codigo: acc.codigo, descricao: acc.descricao, realizado: 0, projetado: 0 };
-                    aggregatedAccounts[acc.codigo].projetado += saldoProjetado;
+                    totalProjetadoSaidas   += acc.a_pagar   || 0;
+                    monthlyProjetado[month - 1] += (acc.a_receber || 0) - (acc.a_pagar || 0);
                 });
             }
         }
@@ -238,30 +296,29 @@ const app = {
         const saldoRealizadoLiq = totalRealizadoEntradas - totalRealizadoSaidas;
         const saldoProjetadoLiq = totalProjetadoEntradas - totalProjetadoSaidas;
         let variacao = 0;
-        if(saldoProjetadoLiq !== 0) variacao = ((saldoRealizadoLiq - saldoProjetadoLiq) / Math.abs(saldoProjetadoLiq)) * 100;
+        if (saldoProjetadoLiq !== 0) variacao = ((saldoRealizadoLiq - saldoProjetadoLiq) / Math.abs(saldoProjetadoLiq)) * 100;
 
-        // IDs atualizados conforme novo HTML/Logic
-        document.getElementById('kpi-entradas').textContent = this.formatCurrency(totalRealizadoEntradas);
-        document.getElementById('kpi-saidas').textContent = this.formatCurrency(totalRealizadoSaidas);
-        document.getElementById('kpi-saldo-geral').textContent = this.formatCurrency(saldoRealizadoLiq);
-        document.getElementById('kpi-variacao').textContent = variacao.toFixed(2) + '%';
-        
-        this.renderCharts(monthlyRealizado, monthlyProjetado);
-        
-        // --- NOVO: Lógica Baseada em Template de Planilha com Conferência ---
-        const allAccountsInYear = [];
-        for(let m = 1; m <= 12; m++) {
-            const key = `${year}-${m.toString().padStart(2, '0')}`;
-            const mData = yearData[key];
-            if(mData && mData.realizado) {
-                allAccountsInYear.push(...mData.realizado);
-            }
-        }
-        
-        const result = FinancialEngine.processData(allAccountsInYear, this.manualEntries);
-        
+        document.getElementById('kpi-entradas').textContent     = this.formatCurrency(totalRealizadoEntradas);
+        document.getElementById('kpi-saidas').textContent       = this.formatCurrency(totalRealizadoSaidas);
+        document.getElementById('kpi-saldo-geral').textContent  = this.formatCurrency(saldoRealizadoLiq);
+        document.getElementById('kpi-variacao').textContent     = variacao.toFixed(2) + '%';
+
+        // Gráfico: apenas os meses selecionados
+        const shortNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        const chartLabels    = months.map(m => shortNames[m - 1]);
+        const chartRealizado = months.map(m => monthlyRealizado[m - 1]);
+        const chartProjetado = months.map(m => monthlyProjetado[m - 1]);
+        this.renderCharts(chartRealizado, chartProjetado, chartLabels);
+
+        // Tabela financeira detalhada
+        const result = FinancialEngine.processData(allAccountsInPeriod, this.manualEntries);
         this.renderSummaryBar(result.totals);
         this.renderFlowTableStrict(result.rows, totalRealizadoEntradas, result.pdfTotalReceitas);
+
+        // Label do período no header
+        const label = this.getPeriodLabel(type, subVal, year);
+        const lbl = document.getElementById('current-period-label');
+        if (lbl) lbl.textContent = label;
     },
 
     renderFlowTableStrict(rows, totalEntradas, pdfTotalReceitas) {
@@ -356,14 +413,14 @@ const app = {
         }
     },
 
-    renderCharts(realizadoData, projetadoData) {
+    renderCharts(realizadoData, projetadoData, labels) {
         const ctx = document.getElementById('mainChart').getContext('2d');
-        if(this.currentChart) this.currentChart.destroy();
-
+        if (this.currentChart) this.currentChart.destroy();
+        const chartLabels = labels || ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
         this.currentChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+                labels: chartLabels,
                 datasets: [
                     { label: 'Realizado (Saldo Líquido)', data: realizadoData, backgroundColor: 'rgba(59, 130, 246, 0.8)', borderRadius: 4 },
                     { label: 'Projetado (Saldo Líquido)', data: projetadoData, type: 'line', borderColor: '#10b981', borderWidth: 2, fill: false, tension: 0.3 }
