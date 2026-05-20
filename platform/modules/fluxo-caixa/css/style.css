@@ -285,10 +285,19 @@ h1, h2, h3, h4 { font-weight: 600; }
 .table-group-header.group-nao-op td { border-left-color: var(--color-receitas-nao-op); background: rgba(77, 124, 15, 0.15) !important; }
 .table-group-header.group-other td { border-left-color: #64748b; background: rgba(100, 116, 139, 0.1) !important; }
 
+/* Sub-cabeçalho de subgrupo (ex: "1.1. Receita com Vendas") */
+.table-subgroup-header td {
+    background: rgba(101, 163, 13, 0.18) !important;
+    border-left: 4px solid var(--color-receitas);
+    font-weight: 700;
+    color: #a3e635;
+    padding: 10px 16px;
+}
+
 /* Triple Hierarchy Indentation */
 .level-1 td { font-size: 1.1rem; }
-.level-2 td.col-desc { padding-left: 30px !important; color: #f8fafc; font-weight: 600; }
-.level-3 td.col-desc { padding-left: 60px !important; color: var(--text-muted); font-size: 0.9rem; }
+.level-2 td .col-desc { padding-left: 24px; color: #f8fafc; font-weight: 600; display: inline-block; }
+.level-3 td .col-desc { padding-left: 48px; color: var(--text-muted); font-size: 0.9rem; display: inline-block; }
 
 /* Manual Inputs */
 .manual-input {

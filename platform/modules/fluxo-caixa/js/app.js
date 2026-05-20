@@ -324,54 +324,72 @@ const app = {
     renderFlowTableStrict(rows, totalEntradas, pdfTotalReceitas) {
         const tbody = document.getElementById('flow-table-body');
         tbody.innerHTML = '';
-        
+
         let manualSum = 0;
 
         rows.forEach(row => {
             const tr = document.createElement('tr');
             tr.className = `level-${row.level}`;
-            
+
+            // ── Nível 1: Header de grupo principal ──────────────────────────
             if (row.type === 'header') {
-                tr.classList.add('table-group-header', row.style.class);
-                const val = row.valorCalculado !== undefined ? this.formatCurrency(row.valorCalculado) : '-';
+                tr.classList.add('table-group-header', row.style?.class || '');
+                const val = row.valorCalculado !== undefined
+                    ? this.formatCurrency(row.valorCalculado) : '-';
+                const pct = (totalEntradas > 0 && row.valorCalculado !== undefined)
+                    ? ((Math.abs(row.valorCalculado) / totalEntradas) * 100).toFixed(2) + '%' : '-';
                 tr.innerHTML = `
-                    <td colspan="3">${row.descricao}</td>
-                    <td class="text-right">${val}</td>
-                    <td colspan="2"></td>
+                    <td colspan="2">${row.descricao}</td>
+                    <td class="text-right"><strong>${val}</strong></td>
+                    <td class="text-right">${pct}</td>
                 `;
-
-                // Se for o grupo de Receitas, adiciona a barra de conferência logo abaixo
+                tbody.appendChild(tr);
+                // Linha de conferência logo abaixo do header de Receitas
                 if (row.descricao === 'Total Receitas Operacionais / Vendas') {
-                    tbody.appendChild(tr);
                     this.renderValidationRow(tbody, pdfTotalReceitas);
-                    return;
                 }
-            } else {
-                if (row.unmapped) tr.className += ' row-unmapped';
-                if (row.isManual) manualSum += (row.valor || 0);
-
-                const valClass = row.valor >= 0 ? 'positive' : 'negative';
-                let vertical = 0;
-                if(totalEntradas > 0) vertical = (Math.abs(row.valor) / totalEntradas) * 100;
-
-                const descText = row.unmapped ? `⚠️ [VINCULAR] ${row.descricao}` : row.descricao;
-
-                let valorHtml = this.formatCurrency(row.valor);
-                if (row.isManual) {
-                    const key = `${row.codigo}-${row.descricao}`;
-                    valorHtml = `<input type="number" step="0.01" class="manual-input" value="${row.valor || ''}" 
-                                  onchange="app.updateManualEntry('${key}', this.value)" placeholder="0.00">`;
-                }
-
-                tr.innerHTML = `
-                    <td class="col-code"><strong>${row.codigo}</strong></td>
-                    <td class="col-desc">${descText}</td>
-                    <td class="text-right">-</td>
-                    <td class="text-right ${valClass} col-val">${valorHtml}</td>
-                    <td class="text-right">-</td>
-                    <td class="text-right col-perc">${vertical.toFixed(2)}%</td>
-                `;
+                return;
             }
+
+            // ── Nível 2: Sub-cabeçalho de subgrupo (ex: "1.1. Receita com Vendas") ──
+            if (row.isSubheader) {
+                tr.classList.add('table-subgroup-header');
+                const pct = totalEntradas > 0
+                    ? ((Math.abs(row.valor) / totalEntradas) * 100).toFixed(2) + '%' : '0,00%';
+                tr.innerHTML = `
+                    <td colspan="2"><strong>${row.codigo}. ${row.descricao}</strong></td>
+                    <td class="text-right"><strong>${this.formatCurrency(row.valor)}</strong></td>
+                    <td class="text-right"><strong>${pct}</strong></td>
+                `;
+                tbody.appendChild(tr);
+                return;
+            }
+
+            // ── Nível 2/3: Linha de conta (manual ou do PDF) ────────────────
+            if (row.unmapped) tr.classList.add('row-unmapped');
+            if (row.isManual) manualSum += (row.valor || 0);
+
+            const valClass = row.valor >= 0 ? 'positive' : 'negative';
+            const vertical = totalEntradas > 0
+                ? ((Math.abs(row.valor) / totalEntradas) * 100).toFixed(2) + '%' : '0,00%';
+            const descText = row.unmapped ? `⚠️ [VINCULAR] ${row.descricao}` : row.descricao;
+
+            let valorHtml;
+            if (row.isManual) {
+                const key = `${row.codigo}-${row.descricao}`;
+                valorHtml = `<input type="number" step="0.01" class="manual-input"
+                               value="${row.valor || ''}"
+                               onchange="app.updateManualEntry('${key}', this.value)"
+                               placeholder="0,00">`;
+            } else {
+                valorHtml = `<span class="${valClass}">${this.formatCurrency(row.valor)}</span>`;
+            }
+
+            tr.innerHTML = `
+                <td class="col-code"><strong>${row.codigo}</strong> <span class="col-desc">${descText}</span></td>
+                <td class="text-right ${valClass} col-val">${valorHtml}</td>
+                <td class="text-right col-perc">${vertical}</td>
+            `;
             tbody.appendChild(tr);
         });
 
