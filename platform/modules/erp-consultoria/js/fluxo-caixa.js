@@ -39,22 +39,76 @@ window.fcApp = {
     init() {
         this.consolidateFCViews();
         this.bindEvents();
-
-        // Populate period filter years
-        const currentYear = new Date().getFullYear();
-        const yearSelect = document.getElementById('filter-period-value');
-        if (yearSelect) {
-            yearSelect.innerHTML = '';
-            for (let y = currentYear - 1; y <= currentYear + 2; y++) {
-                yearSelect.innerHTML += `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`;
-            }
-        }
+        this.loadCustomMasterAccounts();
+        this.initFilters();
 
         // Carrega clientes da nuvem
         const grid = document.getElementById('fc-clients-grid');
         if (grid) grid.innerHTML = '<p style="text-align:center; color:var(--text-secondary); grid-column:1/-1;">Sincronizando clientes com a nuvem...</p>';
 
         this.renderClientsList();
+    },
+
+    initFilters() {
+        const currentYear = new Date().getFullYear();
+        const currentMonth = new Date().getMonth() + 1;
+
+        // Tipo de período
+        const typeEl = document.getElementById('filter-period-type');
+        if (typeEl && typeEl.options.length <= 1) {
+            typeEl.innerHTML = `
+                <option value="mensal">Mensal</option>
+                <option value="trimestral">Trimestral</option>
+                <option value="semestral">Semestral</option>
+                <option value="anual">Anual</option>
+            `;
+        }
+
+        // Popula anos
+        const yearEl = document.getElementById('filter-period-year');
+        const yearTarget = yearEl || document.getElementById('filter-period-value');
+        if (yearTarget) {
+            yearTarget.innerHTML = '';
+            for (let y = currentYear - 2; y <= currentYear + 2; y++) {
+                yearTarget.innerHTML += `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`;
+            }
+        }
+
+        this.updatePeriodSubSelect();
+
+        if (typeEl) typeEl.addEventListener('change', () => { this.updatePeriodSubSelect(); this.refreshDashboard(); });
+        const subEl = document.getElementById('filter-period-sub');
+        if (subEl) subEl.addEventListener('change', () => this.refreshDashboard());
+        if (yearTarget) yearTarget.addEventListener('change', () => this.refreshDashboard());
+    },
+
+    updatePeriodSubSelect() {
+        const type  = document.getElementById('filter-period-type')?.value || 'anual';
+        const subEl = document.getElementById('filter-period-sub');
+        if (!subEl) return;
+        const currentMonth = new Date().getMonth() + 1;
+        const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+        const options = {
+            mensal:      MONTHS.map((m, i) => ({ v: i+1, l: m })),
+            trimestral:  [{ v:'Q1', l:'1º Trimestre (Jan-Mar)' },{ v:'Q2', l:'2º Trimestre (Abr-Jun)' },{ v:'Q3', l:'3º Trimestre (Jul-Set)' },{ v:'Q4', l:'4º Trimestre (Out-Dez)' }],
+            semestral:   [{ v:'S1', l:'1º Semestre (Jan-Jun)' },{ v:'S2', l:'2º Semestre (Jul-Dez)' }],
+            anual:       [{ v:'ALL', l:'Ano Completo' }]
+        };
+        const list = options[type] || options.anual;
+        subEl.innerHTML = list.map(o => `<option value="${o.v}">${o.l}</option>`).join('');
+        // Seleciona o mês atual por padrão no modo mensal
+        if (type === 'mensal') subEl.value = currentMonth;
+    },
+
+    getMonthsForPeriod(type, sub) {
+        const map = {
+            mensal:     { default: () => [Number(sub)] },
+            trimestral: { Q1: [1,2,3], Q2: [4,5,6], Q3: [7,8,9], Q4: [10,11,12] },
+            semestral:  { S1: [1,2,3,4,5,6], S2: [7,8,9,10,11,12] },
+            anual:      { ALL: [1,2,3,4,5,6,7,8,9,10,11,12] }
+        };
+        if (type === 'mensal') return [Number(sub)];
+        return (map[type] && map[type][sub]) || [1,2,3,4,5,6,7,8,9,10,11,12];
     },
 
     bindEvents() {
@@ -91,11 +145,6 @@ window.fcApp = {
                 });
             }
         }
-
-        const fpt = document.getElementById('filter-period-type');
-        const fpv = document.getElementById('filter-period-value');
-        if(fpt) fpt.addEventListener('change', () => this.refreshDashboard());
-        if(fpv) fpv.addEventListener('change', () => this.refreshDashboard());
     },
 
     openClientSelection() {
@@ -264,75 +313,74 @@ window.fcApp = {
 
     async refreshDashboard() {
         const client = store.getActiveClient();
-        if(!client) return;
+        if (!client) return;
 
-        const year = String(document.getElementById('filter-period-value')?.value || new Date().getFullYear());
-        
+        const type  = document.getElementById('filter-period-type')?.value  || 'anual';
+        const sub   = document.getElementById('filter-period-sub')?.value   || 'ALL';
+        const year  = String(document.getElementById('filter-period-year')?.value
+                          || document.getElementById('filter-period-value')?.value
+                          || new Date().getFullYear());
+
+        const months = this.getMonthsForPeriod(type, sub);
+
         // Sempre recarrega os dados do cliente do Firestore antes de renderizar
         await store.reloadClientPeriods(client.id);
         const updatedClient = store.getActiveClient();
         const yearData = store.getYearData(updatedClient.id, year);
-        
+
         let totalRealizadoEntradas = 0;
-        let totalRealizadoSaidas = 0;
+        let totalRealizadoSaidas   = 0;
         let totalProjetadoEntradas = 0;
-        let totalProjetadoSaidas = 0;
-        
+        let totalProjetadoSaidas   = 0;
         const monthlyRealizado = new Array(12).fill(0);
         const monthlyProjetado = new Array(12).fill(0);
 
-        for(let month = 1; month <= 12; month++) {
-            const key = `${year}-${month.toString().padStart(2, '0')}`;
+        for (const month of months) {
+            const key   = `${year}-${month.toString().padStart(2, '0')}`;
             const mData = yearData[key];
-            
-            const real = mData ? (mData.realizado || mData.contas) : null;
-            if(real) {
+            const real  = mData ? (mData.realizado || mData.contas) : null;
+            if (real) {
                 real.forEach(acc => {
                     totalRealizadoEntradas += acc.a_receber || 0;
-                    totalRealizadoSaidas += acc.a_pagar || 0;
-                    const saldoRealizado = (acc.a_receber || 0) - (acc.a_pagar || 0);
-                    monthlyRealizado[month-1] += saldoRealizado;
+                    totalRealizadoSaidas   += acc.a_pagar   || 0;
+                    monthlyRealizado[month-1] += (acc.a_receber || 0) - (acc.a_pagar || 0);
                 });
             }
-            
-            if(mData && mData.projetado) {
+            if (mData && mData.projetado) {
                 mData.projetado.forEach(acc => {
                     totalProjetadoEntradas += acc.a_receber || 0;
-                    totalProjetadoSaidas += acc.a_pagar || 0;
-                    const saldoProjetado = (acc.a_receber || 0) - (acc.a_pagar || 0);
-                    monthlyProjetado[month-1] += saldoProjetado;
+                    totalProjetadoSaidas   += acc.a_pagar   || 0;
+                    monthlyProjetado[month-1] += (acc.a_receber || 0) - (acc.a_pagar || 0);
                 });
             }
         }
 
-        const saldoRealizadoLiq = totalRealizadoEntradas - totalRealizadoSaidas;
-        const saldoProjetadoLiq = totalProjetadoEntradas - totalProjetadoSaidas;
+        const saldoRealizadoLiq  = totalRealizadoEntradas - totalRealizadoSaidas;
+        const saldoProjetadoLiq  = totalProjetadoEntradas - totalProjetadoSaidas;
         let variacao = 0;
-        if(saldoProjetadoLiq !== 0) variacao = ((saldoRealizadoLiq - saldoProjetadoLiq) / Math.abs(saldoProjetadoLiq)) * 100;
+        if (saldoProjetadoLiq !== 0) variacao = ((saldoRealizadoLiq - saldoProjetadoLiq) / Math.abs(saldoProjetadoLiq)) * 100;
 
-        if(document.getElementById('kpi-entradas')) document.getElementById('kpi-entradas').textContent = this.formatCurrency(totalRealizadoEntradas);
-        if(document.getElementById('kpi-saidas')) document.getElementById('kpi-saidas').textContent = this.formatCurrency(totalRealizadoSaidas);
-        if(document.getElementById('kpi-saldo-geral')) document.getElementById('kpi-saldo-geral').textContent = this.formatCurrency(saldoRealizadoLiq);
-        if(document.getElementById('kpi-variacao')) document.getElementById('kpi-variacao').textContent = variacao.toFixed(2) + '%';
-        
+        const setKpi = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+        setKpi('kpi-entradas',    this.formatCurrency(totalRealizadoEntradas));
+        setKpi('kpi-saidas',      this.formatCurrency(totalRealizadoSaidas));
+        setKpi('kpi-saldo-geral', this.formatCurrency(saldoRealizadoLiq));
+        setKpi('kpi-variacao',    variacao.toFixed(2) + '%');
+
         this.renderCharts(monthlyRealizado, monthlyProjetado);
-        
-        // --- Lógica Baseada em Template de Planilha com Conferência ---
-        const allAccountsInYear = [];
-        for(let m = 1; m <= 12; m++) {
-            const key = `${year}-${m.toString().padStart(2, '0')}`;
+
+        // Consolida contas de todos os meses selecionados
+        const allAccountsInPeriod = [];
+        for (const month of months) {
+            const key   = `${year}-${month.toString().padStart(2, '0')}`;
             const mData = yearData[key];
-            const accs = mData ? (mData.realizado || mData.contas) : null;
-            if(accs) {
-                allAccountsInYear.push(...accs);
-            }
+            const accs  = mData ? (mData.realizado || mData.contas) : null;
+            if (accs) allAccountsInPeriod.push(...accs);
         }
-        
+
         if (window.FinancialEngine) {
-            const result = FinancialEngine.processData(allAccountsInYear, this.manualEntries);
+            const result = FinancialEngine.processData(allAccountsInPeriod, this.manualEntries);
             this.renderSummaryBar(result.totals);
             this.renderFlowTableStrict(result.rows, totalRealizadoEntradas, result.pdfTotalReceitas);
-            console.log(`[Dashboard] ${allAccountsInYear.length} contas carregadas para o ano ${year}`);
         }
     },
 
@@ -340,61 +388,173 @@ window.fcApp = {
         const tbody = document.getElementById('flow-table-body');
         if (!tbody) return;
         tbody.innerHTML = '';
-        
         let manualSum = 0;
 
         rows.forEach(row => {
             const tr = document.createElement('tr');
             tr.className = `level-${row.level}`;
-            
+
+            // Header de grupo principal
             if (row.type === 'header') {
                 tr.classList.add('table-group-header');
-                if (row.style && row.style.class) {
-                    tr.classList.add(row.style.class);
-                }
+                if (row.style && row.style.class) tr.classList.add(row.style.class);
                 const val = row.valorCalculado !== undefined ? this.formatCurrency(row.valorCalculado) : '-';
                 tr.innerHTML = `
                     <td colspan="3">${row.descricao}</td>
                     <td class="text-right">${val}</td>
                     <td colspan="2"></td>
                 `;
-
-                // Se for o grupo de Receitas, adiciona a barra de conferência logo abaixo
                 if (row.descricao === 'Total Receitas Operacionais / Vendas') {
                     tbody.appendChild(tr);
                     this.renderValidationRow(tbody, pdfTotalReceitas);
                     return;
                 }
-            } else {
-                if (row.unmapped) tr.className += ' row-unmapped';
-                if (row.isManual) manualSum += (row.valor || 0);
-
-                const valClass = row.valor >= 0 ? 'positive' : 'negative';
-                let vertical = 0;
-                if(totalEntradas > 0) vertical = (Math.abs(row.valor) / totalEntradas) * 100;
-
-                const descText = row.unmapped ? `⚠️ [VINCULAR] ${row.descricao}` : row.descricao;
-
-                let valorHtml = this.formatCurrency(row.valor);
-                if (row.isManual) {
-                    const key = `${row.codigo}-${row.descricao}`;
-                    valorHtml = `<input type="number" step="0.01" class="manual-input" value="${row.valor || ''}" 
-                                  onchange="fcApp.updateManualEntry('${key}', this.value)" placeholder="0.00">`;
-                }
-
-                tr.innerHTML = `
-                    <td class="col-code"><strong>${row.codigo}</strong></td>
-                    <td class="col-desc">${descText}</td>
-                    <td class="text-right">-</td>
-                    <td class="text-right ${valClass} col-val">${valorHtml}</td>
-                    <td class="text-right">-</td>
-                    <td class="text-right col-perc">${vertical.toFixed(2)}%</td>
-                `;
+                tbody.appendChild(tr);
+                return;
             }
+
+            // Sub-cabeçalho de subgrupo (ex: "1.1. Receita com Vendas")
+            if (row.isSubheader) {
+                tr.classList.add('table-subgroup-header');
+                const pct = totalEntradas > 0
+                    ? ((Math.abs(row.valor) / totalEntradas) * 100).toFixed(2) + '%' : '0,00%';
+                const tdSub = document.createElement('td');
+                tdSub.colSpan = 3;
+                const codeSpanSub = this.makeEditableCode(row.codigo, row.descricao);
+                tdSub.appendChild(codeSpanSub);
+                tdSub.insertAdjacentHTML('beforeend', `. <strong>${row.descricao}</strong>`);
+                tr.appendChild(tdSub);
+                tr.insertAdjacentHTML('beforeend', `
+                    <td class="text-right"><strong>${this.formatCurrency(row.valor)}</strong></td>
+                    <td></td>
+                    <td class="text-right"><strong>${pct}</strong></td>
+                `);
+                tbody.appendChild(tr);
+                return;
+            }
+
+            // Linha de conta (manual ou PDF)
+            if (row.unmapped) tr.className += ' row-unmapped';
+            if (row.isManual) manualSum += (row.valor || 0);
+
+            const valClass  = row.valor >= 0 ? 'positive' : 'negative';
+            const vertical  = totalEntradas > 0
+                ? ((Math.abs(row.valor) / totalEntradas) * 100).toFixed(2) + '%' : '0,00%';
+            const descText  = row.unmapped ? `⚠️ [VINCULAR] ${row.descricao}` : row.descricao;
+
+            let valorHtml;
+            if (row.isManual) {
+                const key = `${row.codigo}-${row.descricao}`;
+                valorHtml = `<input type="number" step="0.01" class="manual-input"
+                               value="${row.valor || ''}"
+                               onchange="fcApp.updateManualEntry('${key}', this.value)"
+                               placeholder="0.00">`;
+            } else {
+                valorHtml = this.formatCurrency(row.valor);
+            }
+
+            const tdCode = document.createElement('td');
+            tdCode.className = 'col-code';
+            tdCode.appendChild(this.makeEditableCode(row.codigo, row.descricao));
+
+            const tdDesc = document.createElement('td');
+            tdDesc.className = 'col-desc';
+            tdDesc.textContent = descText;
+
+            tr.appendChild(tdCode);
+            tr.appendChild(tdDesc);
+            tr.insertAdjacentHTML('beforeend', `
+                <td class="text-right">-</td>
+                <td class="text-right ${valClass} col-val">${valorHtml}</td>
+                <td class="text-right">-</td>
+                <td class="text-right col-perc">${vertical}</td>
+            `);
             tbody.appendChild(tr);
         });
 
         this.updateValidationStatus(manualSum, pdfTotalReceitas);
+    },
+
+    // Cria span de código editável inline
+    makeEditableCode(codigo, descricao) {
+        const span = document.createElement('span');
+        span.className = 'editable-code';
+        span.textContent = codigo;
+        span.title = 'Clique para editar o código';
+        span.addEventListener('click', () => this.inlineEditCode(span, codigo, descricao));
+        return span;
+    },
+
+    inlineEditCode(span, originalCode, descricao) {
+        const input = document.createElement('input');
+        input.type  = 'text';
+        input.value = originalCode;
+        input.className = 'code-edit-input';
+        input.title = 'Enter para salvar · Esc para cancelar';
+        span.replaceWith(input);
+        input.focus();
+        input.select();
+
+        const restore = (code) => {
+            const s = this.makeEditableCode(code, descricao);
+            input.replaceWith(s);
+        };
+        const save = () => {
+            const newCode = input.value.trim();
+            if (newCode && newCode !== originalCode) this.updateAccountCode(originalCode, descricao, newCode);
+            else restore(originalCode);
+        };
+        input.addEventListener('blur', save);
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter')  { e.preventDefault(); input.removeEventListener('blur', save); save(); }
+            if (e.key === 'Escape') { e.preventDefault(); input.removeEventListener('blur', save); restore(originalCode); }
+        });
+    },
+
+    updateAccountCode(originalCode, descricao, newCode) {
+        const accounts = this.getActiveMasterAccounts();
+        let updated = false;
+        const newAccounts = accounts.map(acc => {
+            if (acc.codigo === originalCode && acc.descricao === descricao) {
+                updated = true;
+                return { codigo: newCode, descricao: acc.descricao };
+            }
+            return acc;
+        });
+        if (updated) {
+            localStorage.setItem('customMasterAccounts', JSON.stringify(newAccounts));
+            window.MASTER_ACCOUNTS = newAccounts;
+            this.showToast(`✅ ${originalCode} → ${newCode}`);
+            this.refreshDashboard();
+        }
+    },
+
+    loadCustomMasterAccounts() {
+        const custom = localStorage.getItem('customMasterAccounts');
+        if (custom) {
+            try {
+                const parsed = JSON.parse(custom);
+                if (parsed && parsed.length > 0) window.MASTER_ACCOUNTS = parsed;
+            } catch(e) { console.warn('customMasterAccounts inválido', e); }
+        }
+    },
+
+    getActiveMasterAccounts() {
+        return window.MASTER_ACCOUNTS || [];
+    },
+
+    showToast(msg) {
+        let t = document.getElementById('fc-toast');
+        if (!t) {
+            t = document.createElement('div');
+            t.id = 'fc-toast';
+            t.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1e293b;color:#f8fafc;border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:12px 20px;font-size:.9rem;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.4);transition:opacity .3s;';
+            document.body.appendChild(t);
+        }
+        t.textContent = msg;
+        t.style.opacity = '1';
+        clearTimeout(this._toastTimer);
+        this._toastTimer = setTimeout(() => { t.style.opacity = '0'; }, 3000);
     },
 
     renderValidationRow(tbody, pdfTotal) {

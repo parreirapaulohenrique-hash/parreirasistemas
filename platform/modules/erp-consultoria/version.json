@@ -1,8 +1,8 @@
 {
     "module": "erp-consultoria",
     "name": "Consultoria ParreiraLog",
-    "version": "11.8.3",
-    "date": "2026-05-18",
-    "last_change": "FIX CRITICO: pdf-parser.js corrigido para formato YYYY-MM. fc-store.js corrigido de set(merge:true) para update() para criar estrutura aninhada correta no Firestore.",
-    "build": "20260518.01"
+    "version": "11.22.0",
+    "date": "2026-05-20",
+    "last_change": "financial-engine V6 (MANUAL_GROUPS, subheaders automáticos, back-fill de totais), filtros Mensal/Trimestral/Semestral/Anual, edição inline de códigos de conta, toast de feedback, loadCustomMasterAccounts com persistência em localStorage.",
+    "build": "20260520.01"
 }

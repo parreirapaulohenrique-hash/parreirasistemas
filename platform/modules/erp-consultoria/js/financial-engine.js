@@ -1,132 +1,186 @@
 /**
- * Motor de Inteligência Financeira (V4 - Triple Hierarchy & Validation)
- * Suporta 3 níveis de profundidade e lógica de conferência manual.
+ * Motor de Inteligência Financeira (V6 - Subgroup Headers + Manual Groups)
+ * - MANUAL_GROUPS: itens aceitam entrada manual (PDF primeiro, fallback manual)
+ * - Accounts com filhos em MANUAL_GROUPS → subheader (estilizado, sem input)
+ * - Accounts sem filhos em MANUAL_GROUPS → leaf manual entry (com input)
+ * - Back-fill de totais nos subheaders e headers de grupo após processar todos
  */
 
 window.FinancialEngine = {
     GROUP_STYLES: {
         'Disponíveis Nas Contas Movimento inicial': { color: 'var(--color-disponiveis)', class: 'group-disponiveis' },
-        'Total Receitas Operacionais / Vendas': { color: 'var(--color-receitas)', class: 'group-receitas', allowManual: true },
-        'Total dos Custos': { color: 'var(--color-custos)', class: 'group-custos' },
-        '300. Despesas Operac. Fixas e Variáveis': { color: 'var(--color-despesas)', class: 'group-despesas' },
-        'Receitas Não Operacionais Totais': { color: 'var(--color-receitas-nao-op)', class: 'group-nao-op' }
+        'Total Receitas Operacionais / Vendas':     { color: 'var(--color-receitas)',    class: 'group-receitas' },
+        'Total dos Custos':                         { color: 'var(--color-custos)',      class: 'group-custos' },
+        '300. Despesas Operac. Fixas e Variáveis':  { color: 'var(--color-despesas)',    class: 'group-despesas' },
+        'Receitas Não Operacionais Totais':         { color: 'var(--color-receitas-nao-op)', class: 'group-nao-op' }
     },
 
-    /**
-     * Determina o nível da conta pelo código
-     */
+    MANUAL_GROUPS: new Set([
+        'Disponíveis Nas Contas Movimento inicial',
+        'Total Receitas Operacionais / Vendas'
+    ]),
+
     getLevel(codigo) {
         if (codigo === 'HEADER') return 1;
         const dots = (codigo.match(/\./g) || []).length;
-        if (dots === 0) return 2; // Ex: 300
-        if (dots === 1) return 2; // Ex: 1.1, 3.2
-        return 3; // Ex: 1.1.01
+        return dots >= 2 ? 3 : 2;
     },
 
     processData(pdfAccounts, manualEntries = {}) {
         if (!window.MASTER_ACCOUNTS) return { rows: [], totals: {} };
 
+        // ── PDF map (saldo = a_receber - a_pagar) ───────────────────────────
         const pdfMap = {};
         pdfAccounts.forEach(acc => {
             if (!pdfMap[acc.codigo]) pdfMap[acc.codigo] = { total: 0 };
             pdfMap[acc.codigo].total += (acc.a_receber || 0) - (acc.a_pagar || 0);
         });
 
-        const tableRows = [];
-        let currentGroup = null;
-        const groupTotals = {};
-        const subgroupTotals = {};
+        // ── Pré-scan: quais codes level-2 têm filhos (level-3)? ─────────────
+        // → esses serão sub-cabeçalhos estilizados, sem campo de input
+        const codesWithChildren = new Set();
+        let _lastL2 = null;
+        let _inManual = false;
+        window.MASTER_ACCOUNTS.forEach(m => {
+            if (m.codigo === 'HEADER') {
+                _lastL2 = null;
+                _inManual = this.MANUAL_GROUPS.has(m.descricao);
+                return;
+            }
+            if (!_inManual) return;
+            const lv = this.getLevel(m.codigo);
+            if (lv === 2) { _lastL2 = m.codigo; }
+            if (lv === 3 && _lastL2) { codesWithChildren.add(_lastL2); }
+        });
+
+        // ── Processamento principal ──────────────────────────────────────────
+        const tableRows      = [];
+        let   currentGroup   = null;
+        const groupTotals    = {};
+        const subgroupTotals = {};          // { codigo: running total }
+        const subgroupRowIdx = {};          // { codigo: tableRows index }
+        const manualHeaderIdx = {};         // { groupName: tableRows index }
 
         window.MASTER_ACCOUNTS.forEach(master => {
+
+            // ── Header de grupo (nível 1) ──────────────────────────────────
             if (master.codigo === 'HEADER') {
                 currentGroup = master.descricao;
                 groupTotals[currentGroup] = 0;
-                tableRows.push({
-                    type: 'header',
-                    level: 1,
+
+                const row = {
+                    type:      'header',
+                    level:     1,
                     descricao: master.descricao,
-                    style: this.GROUP_STYLES[master.descricao] || { color: '#64748b', class: 'group-other' }
-                });
-                
-                // Caso especial: Receita Operacional Bruta
+                    style:     this.GROUP_STYLES[master.descricao] || { color: '#64748b', class: 'group-other' }
+                };
+
                 if (master.descricao === 'Receita Operacional Bruta') {
-                    const r1 = groupTotals['Total Receitas Operacionais / Vendas'] || 0;
-                    const r2 = groupTotals['Total dos Custos'] || 0;
-                    tableRows[tableRows.length-1].valorCalculado = r1 + r2; // Custos costumam ser negativos
+                    row.valorCalculado = (groupTotals['Total Receitas Operacionais / Vendas'] || 0)
+                                       + (groupTotals['Total dos Custos'] || 0);
+                }
+
+                tableRows.push(row);
+                if (this.MANUAL_GROUPS.has(currentGroup)) {
+                    manualHeaderIdx[currentGroup] = tableRows.length - 1;
                 }
                 return;
             }
 
-            const level = this.getLevel(master.codigo);
-            let valor = 0;
+            // ── Conta / linha de dados ─────────────────────────────────────
+            const level    = this.getLevel(master.codigo);
+            const isManual = this.MANUAL_GROUPS.has(currentGroup);
 
-            // Lógica de Preenchimento Manual para Receitas
-            if (currentGroup === 'Total Receitas Operacionais / Vendas' && level === 3) {
-                // Se houver valor manual salvo, usa ele, senão 0
-                const manualKey = `${master.codigo}-${master.descricao}`;
-                valor = manualEntries[manualKey] || 0;
-            } else {
-                valor = pdfMap[master.codigo] ? pdfMap[master.codigo].total : 0;
+            // Caso: subheader de subgrupo (level-2 com filhos em MANUAL_GROUP)
+            if (isManual && level === 2 && codesWithChildren.has(master.codigo)) {
+                subgroupTotals[master.codigo] = 0;
+                subgroupRowIdx[master.codigo] = tableRows.length;
+                tableRows.push({
+                    type:        'account',
+                    level:       2,
+                    codigo:      master.codigo,
+                    descricao:   master.descricao,
+                    valor:       0,   // back-filled depois
+                    group:       currentGroup,
+                    isSubheader: true,
+                });
+                return;  // não acumula em groupTotals agora
             }
 
-            // Acumula Totais
+            // Caso: leaf (manual ou PDF)
+            let valor = 0;
+            if (isManual) {
+                const manualKey = `${master.codigo}-${master.descricao}`;
+                valor = pdfMap[master.codigo]
+                    ? pdfMap[master.codigo].total
+                    : (manualEntries[manualKey] || 0);
+                if (pdfMap[master.codigo]) delete pdfMap[master.codigo];
+            } else {
+                valor = pdfMap[master.codigo] ? pdfMap[master.codigo].total : 0;
+                if (pdfMap[master.codigo]) delete pdfMap[master.codigo];
+            }
+
+            // Acumula totais
             if (currentGroup) groupTotals[currentGroup] += valor;
-            if (level === 2) subgroupTotals[master.codigo] = 0;
-            
-            // Tenta somar no subgrupo pai (simplificado: pega os primeiros caracteres até o último ponto)
+            if (level === 2 && !isManual) subgroupTotals[master.codigo] = 0;
             if (level === 3) {
-                const parentCode = master.codigo.substring(0, master.codigo.lastIndexOf('.'));
-                if (subgroupTotals[parentCode] !== undefined) subgroupTotals[parentCode] += valor;
+                const parent = master.codigo.substring(0, master.codigo.lastIndexOf('.'));
+                if (subgroupTotals[parent] !== undefined) subgroupTotals[parent] += valor;
             }
 
             tableRows.push({
-                type: 'account',
-                level: level,
-                codigo: master.codigo,
+                type:      'account',
+                level,
+                codigo:    master.codigo,
                 descricao: master.descricao,
-                valor: valor,
-                group: currentGroup,
-                isManual: (currentGroup === 'Total Receitas Operacionais / Vendas' && level === 3)
+                valor,
+                group:     currentGroup,
+                isManual,
             });
-
-            if (pdfMap[master.codigo]) delete pdfMap[master.codigo];
         });
 
-        // Adicionar Unmapped
-        const unmapped = Object.entries(pdfMap).map(([c, d]) => ({
-            type: 'account',
-            level: 3,
-            codigo: c,
-            descricao: d.descricao || 'Desconhecida',
-            valor: d.total,
-            unmapped: true
-        }));
+        // ── Back-fill subheaders de subgrupo (ex: "1.1. Receita com Vendas") ─
+        for (const [code, idx] of Object.entries(subgroupRowIdx)) {
+            tableRows[idx].valor = subgroupTotals[code] || 0;
+        }
 
+        // ── Back-fill headers de grupos manuais (ex: "Total Receitas...") ────
+        for (const [group, idx] of Object.entries(manualHeaderIdx)) {
+            tableRows[idx].valorCalculado = groupTotals[group] || 0;
+        }
+
+        // ── Contas não mapeadas do PDF ───────────────────────────────────────
+        const unmapped = Object.entries(pdfMap).map(([c, d]) => ({
+            type: 'account', level: 3,
+            codigo: c, descricao: d.descricao || 'Desconhecida',
+            valor: d.total, unmapped: true
+        }));
         if (unmapped.length > 0) {
-            tableRows.push({ type: 'header', level: 1, descricao: 'CONTAS PARA VINCULAR', style: { class: 'group-other' } });
+            tableRows.push({ type: 'header', level: 1, descricao: '⚠️ CONTAS PARA VINCULAR', style: { class: 'group-other' } });
             tableRows.push(...unmapped);
         }
 
-        return { 
-            rows: tableRows, 
-            totals: this.calculateBarTotals(groupTotals),
-            pdfTotalReceitas: pdfAccounts.filter(a => a.codigo.startsWith('1.1') || a.codigo.startsWith('1.5')).reduce((s, a) => s + (a.a_receber - a.a_pagar), 0)
+        return {
+            rows:             tableRows,
+            totals:           this.calculateBarTotals(groupTotals),
+            pdfTotalReceitas: pdfAccounts
+                .filter(a => a.codigo.startsWith('1.1') || a.codigo.startsWith('1.5'))
+                .reduce((s, a) => s + (a.a_receber - a.a_pagar), 0)
         };
     },
 
     calculateBarTotals(groups) {
-        const rOp = groups['Total Receitas Operacionais / Vendas'] || 0;
-        const rNOp = groups['Receitas Não Operacionais Totais'] || 0;
-        const custos = groups['Total dos Custos'] || 0;
-        const despesas = groups['300. Despesas Operac. Fixas e Variáveis'] || 0;
+        const rOp    = groups['Total Receitas Operacionais / Vendas'] || 0;
+        const rNOp   = groups['Receitas Não Operacionais Totais']     || 0;
+        const custos = groups['Total dos Custos']                     || 0;
+        const desp   = groups['300. Despesas Operac. Fixas e Variáveis'] || 0;
         const inicial = groups['Disponíveis Nas Contas Movimento inicial'] || 0;
-
         return {
-            saldoInicial: inicial,
+            saldoInicial:  inicial,
             totalReceitas: rOp + rNOp,
-            totalDespesas: custos + despesas,
-            saldoLiquido: rOp + rNOp + custos + despesas,
-            saldoAjustado: rOp + rNOp + custos + despesas + inicial
+            totalDespesas: custos + desp,
+            saldoLiquido:  rOp + rNOp + custos + desp,
+            saldoAjustado: rOp + rNOp + custos + desp + inicial
         };
     }
 };
