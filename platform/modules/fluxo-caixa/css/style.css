@@ -441,3 +441,33 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 }
 .badge-grupo { background: rgba(245,158,11,.15); color: #fbbf24; }
 .badge-conta { background: rgba(59,130,246,.12); color: #93c5fd; }
+
+/* Código editável inline na tabela de Visão Geral */
+.editable-code {
+    font-weight: 700;
+    font-family: monospace;
+    font-size: .88rem;
+    color: var(--primary);
+    cursor: pointer;
+    border-bottom: 1px dashed rgba(59,130,246,.5);
+    padding: 1px 4px;
+    border-radius: 3px;
+    transition: background .15s, color .15s;
+}
+.editable-code:hover {
+    background: rgba(59,130,246,.12);
+    color: #93c5fd;
+}
+.code-edit-input {
+    width: 90px;
+    background: rgba(15,23,42,.8);
+    border: 1.5px solid var(--primary);
+    border-radius: 5px;
+    padding: 2px 7px;
+    color: #fff;
+    font-family: monospace;
+    font-size: .88rem;
+    font-weight: 700;
+    outline: none;
+    vertical-align: middle;
+}

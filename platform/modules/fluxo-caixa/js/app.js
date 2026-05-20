@@ -359,11 +359,16 @@ const app = {
                 tr.classList.add('table-subgroup-header');
                 const pct = totalEntradas > 0
                     ? ((Math.abs(row.valor) / totalEntradas) * 100).toFixed(2) + '%' : '0,00%';
-                tr.innerHTML = `
-                    <td colspan="2"><strong>${row.codigo}. ${row.descricao}</strong></td>
+                const tdCode = document.createElement('td');
+                tdCode.colSpan = 2;
+                const codeSpanSub = this.makeEditableCode(row.codigo, row.descricao);
+                tdCode.appendChild(codeSpanSub);
+                tdCode.insertAdjacentHTML('beforeend', `. <strong>${row.descricao}</strong>`);
+                tr.appendChild(tdCode);
+                tr.insertAdjacentHTML('beforeend', `
                     <td class="text-right"><strong>${this.formatCurrency(row.valor)}</strong></td>
                     <td class="text-right"><strong>${pct}</strong></td>
-                `;
+                `);
                 tbody.appendChild(tr);
                 return;
             }
@@ -388,11 +393,17 @@ const app = {
                 valorHtml = `<span class="${valClass}">${this.formatCurrency(row.valor)}</span>`;
             }
 
-            tr.innerHTML = `
-                <td class="col-code"><strong>${row.codigo}</strong> <span class="col-desc">${descText}</span></td>
+            // Célula da conta com código editável inline
+            const tdConta = document.createElement('td');
+            tdConta.className = 'col-code';
+            const codeSpan = this.makeEditableCode(row.codigo, row.descricao);
+            tdConta.appendChild(codeSpan);
+            tdConta.insertAdjacentHTML('beforeend', ` <span class="col-desc">${descText}</span>`);
+            tr.appendChild(tdConta);
+            tr.insertAdjacentHTML('beforeend', `
                 <td class="text-right ${valClass} col-val">${valorHtml}</td>
                 <td class="text-right col-perc">${vertical}</td>
-            `;
+            `);
             tbody.appendChild(tr);
         });
 
@@ -409,6 +420,67 @@ const app = {
             <td colspan="2" id="validation-msg" class="text-center">Aguardando Lançamentos...</td>
         `;
         tbody.appendChild(tr);
+    },
+
+    // Cria um <span> de código editável inline na Visão Geral
+    makeEditableCode(codigo, descricao) {
+        const span = document.createElement('span');
+        span.className = 'editable-code';
+        span.textContent = codigo;
+        span.title = 'Clique para editar o código';
+        span.addEventListener('click', () => this.inlineEditCode(span, codigo, descricao));
+        return span;
+    },
+
+    inlineEditCode(span, originalCode, descricao) {
+        if (localStorage.getItem('masterAccountsLocked') === 'true') {
+            this.showToast('🔒 Plano travado. Vá em "Plano de Contas" → Destravar para editar.');
+            return;
+        }
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = originalCode;
+        input.className = 'code-edit-input';
+        input.title = 'Enter para salvar · Esc para cancelar';
+        span.replaceWith(input);
+        input.focus();
+        input.select();
+
+        const restore = (code) => {
+            const newSpan = this.makeEditableCode(code, descricao);
+            input.replaceWith(newSpan);
+        };
+        const save = () => {
+            const newCode = input.value.trim();
+            if (newCode && newCode !== originalCode) {
+                this.updateAccountCode(originalCode, descricao, newCode);
+            } else {
+                restore(originalCode);
+            }
+        };
+        input.addEventListener('blur',    save);
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter')  { e.preventDefault(); input.removeEventListener('blur', save); save(); }
+            if (e.key === 'Escape') { e.preventDefault(); input.removeEventListener('blur', save); restore(originalCode); }
+        });
+    },
+
+    updateAccountCode(originalCode, descricao, newCode) {
+        const accounts = this.getActiveMasterAccounts();
+        let updated = false;
+        const newAccounts = accounts.map(acc => {
+            if (acc.codigo === originalCode && acc.descricao === descricao) {
+                updated = true;
+                return { codigo: newCode, descricao: acc.descricao };
+            }
+            return acc;
+        });
+        if (updated) {
+            localStorage.setItem('customMasterAccounts', JSON.stringify(newAccounts));
+            window.MASTER_ACCOUNTS = newAccounts;
+            this.showToast(`✅ ${originalCode} → ${newCode}`);
+            this.refreshDashboard();
+        }
     },
 
     updateManualEntry(key, value) {
