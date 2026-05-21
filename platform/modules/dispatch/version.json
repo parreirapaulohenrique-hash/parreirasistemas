@@ -1,5 +1,5 @@
 {
-    "version": "3.9.1",
+    "version": "3.9.2",
     "lastUpdate": "2026-05-21",
-    "change": "BUGFIX: selectClient() corrigido para clientes vindos de busca por CNPJ — esses objetos têm razaoSocial/nomeFantasia mas não nome. Adicionados fallbacks: nome || razaoSocial || nomeFantasia e cidade || city. Corrige 'undefined' aparecendo no romaneio de entrega."
+    "change": "BUGFIX: reimprimirRomaneio agora busca dados no Firestore quando não encontra no localStorage (despacho arquivado). Saves de romaneio agora incluem campos completos (client, city, weight, total, etc.) para garantir reimpressão correta mesmo sem acesso ao Firestore."
 }

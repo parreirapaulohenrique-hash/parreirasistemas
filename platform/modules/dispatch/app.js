@@ -4766,7 +4766,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     totalWeight: totalWeight,
                     totalFreight: totalFreight,
                     invoiceCount: toDispatch.length,
-                    items: toDispatch.map(d => ({ id: d.id, invoice: d.invoice })), // Apenas IDs e números pra peso leve
+                    items: toDispatch.map(d => ({
+                        id: d.id, invoice: d.invoice,
+                        client: d.client, city: d.city, neighborhood: d.neighborhood,
+                        carrier: d.carrier, total: d.total, weight: d.weight,
+                        volume: d.volume, nfValue: d.nfValue,
+                        redespacho: d.redespacho, isComplement: d.isComplement
+                    })),
                     status: 'em_rota', // 'em_rota', 'baixado'
                     baixadoAt: null
                 };
@@ -6119,7 +6125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // --- FUNÇÕES DE BAIXA DE ROMANEIO ---
-        window.reimprimirRomaneio = (romaneioId) => {
+        window.reimprimirRomaneio = async (romaneioId) => {
             const romaneios = Utils.getStorage('app_romaneios') || [];
             const manifest = romaneios.find(r => r.id === romaneioId);
             if(!manifest) {
@@ -6127,14 +6133,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            const dispatches = Utils.getStorage('dispatches') || [];
             const manifestItemIds = manifest.items.map(item => item.id);
+
+            // 1. Tenta localStorage primeiro
+            const dispatches = Utils.getStorage('dispatches') || [];
             let fullItems = dispatches.filter(d => manifestItemIds.includes(d.id));
 
-            // FALLBACK: Se não achar em dispatches (dados migraram sem vínculo),
-            // usa os dados que já estão dentro do próprio objeto romaneio.items
+            // 2. Se não achou no localStorage, busca no Firestore
+            if (fullItems.length === 0) {
+                try {
+                    console.log('[Reimprimir] Buscando despachos no Firestore...');
+                    const history = await Utils.Cloud.getFullDispatchesHistory();
+                    fullItems = history.filter(d => manifestItemIds.includes(d.id));
+                    if (fullItems.length > 0) console.log(`[Reimprimir] ${fullItems.length} despachos encontrados no Firestore.`);
+                } catch(e) {
+                    console.error('[Reimprimir] Erro ao buscar no Firestore:', e);
+                }
+            }
+
+            // 3. Fallback final: usa dados salvos dentro do próprio romaneio
             if(fullItems.length === 0 && manifest.items && manifest.items.length > 0) {
-                console.warn(`[Reimprimir] Despachos não encontrados pelo ID. Usando dados internos do romaneio ${romaneioId}.`);
+                console.warn(`[Reimprimir] Usando dados internos do romaneio ${romaneioId}.`);
                 fullItems = manifest.items;
             }
 
@@ -6143,7 +6162,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            // Chamar a função de impressão existente
             if(window.printSpecificRomaneio) {
                 window.printSpecificRomaneio(manifest.carrier, fullItems);
             } else {
