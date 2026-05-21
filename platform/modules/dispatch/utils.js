@@ -266,42 +266,43 @@ const Utils = {
             }, 30000);
         },
 
+
         async getFullDispatchesHistory(filters = {}) {
             let local = Utils.getStorage('dispatches') || [];
             let cloud = [];
-            
+
             if (this.hasTenant() && window.db) {
                 try {
-                    let query = window.db.collection('tenants').doc(this.tenantId).collection('dispatches_db');
-                    
-                    // Se não tiver filtros para limitar, vamos limitar a 500 para evitar travar
-                    if (!filters.start && !filters.end) {
-                        query = query.orderBy('__name__', 'desc').limit(500);
-                    } else {
-                        // Filtros por timestamp permanecem
-                        if (filters.start) query = query.where('timestamp', '>=', filters.start);
-                        if (filters.end) query = query.where('timestamp', '<=', filters.end);
-                        query = query.orderBy('__name__', 'desc');
-                    }
-                    
-                    const snapshot = await query.get();
-                    snapshot.forEach(doc => {
-                        cloud.push(doc.data());
-                    });
+                    // SEM orderBy: evita necessidade de índice Firestore
+                    // Ordenação feita 100% em memória usando d.id (= Date.now() no momento do despacho)
+                    const ref = window.db.collection('tenants').doc(this.tenantId).collection('dispatches_db');
+                    const snapshot = await ref.get();
+                    snapshot.forEach(doc => cloud.push(doc.data()));
+                    console.log(`[Cloud] ${cloud.length} despachos carregados do Firestore.`);
                 } catch(e) {
                     console.error("Erro ao buscar histórico do banco:", e);
                 }
             }
-            
-            // Retorna unindo os locais (filas) com os da nuvem, ordenados por timestamp desc
+
+            // Une locais + nuvem
             let all = [...local, ...cloud];
-            all.sort((a,b) => (b.timestamp || b.createdAt || 0) - (a.timestamp || a.createdAt || 0) || (new Date(b.date || 0) - new Date(a.date || 0)));
-            
-            // Remove duplicatas (caso ainda esteja nas duas bases)
+
+            // Ordena em memória: d.id é Date.now() (mais confiável), d.date como fallback
+            all.sort((a, b) => {
+                const da = Number(a.id) || (a.date ? new Date(a.date).getTime() : 0);
+                const db2 = Number(b.id) || (b.date ? new Date(b.date).getTime() : 0);
+                return db2 - da;
+            });
+
+            // Aplica filtros de data em memória (sem depender de índice Firestore)
+            if (filters.start) all = all.filter(d => (d.date || '') >= new Date(filters.start).toISOString());
+            if (filters.end)   all = all.filter(d => (d.date || '') <= new Date(filters.end).toISOString());
+
+            // Remove duplicatas (item pode estar em localStorage E no Firestore)
             const map = new Map();
             all.forEach(d => {
                 const id = String(d.id || d.codigo);
-                if(!map.has(id)) map.set(id, d);
+                if (!map.has(id)) map.set(id, d);
             });
             return Array.from(map.values());
         },

@@ -1,5 +1,5 @@
 {
-    "version": "3.8.8",
+    "version": "3.8.9",
     "lastUpdate": "2026-05-20",
-    "change": "BUGFIX CRÍTICO: getFullDispatchesHistory corrigido — removido orderBy('timestamp') que falhava pois documentos não têm esse campo. Substituído por orderBy('__name__', 'desc') (ID do documento = timestamp numérico). Recupera os 1118 despachos históricos do Firestore. Sort em memória usa d.date como fallback."
+    "change": "BUGFIX: getFullDispatchesHistory agora usa ref.get() sem orderBy (sem necessidade de índice Firestore). Ordenação 100% em memória por d.id (Date.now). Recupera todos os 1118 despachos históricos. Filtros de data aplicados em memória."
 }
