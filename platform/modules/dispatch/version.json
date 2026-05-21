@@ -1,5 +1,5 @@
 {
-    "version": "3.8.9",
-    "lastUpdate": "2026-05-20",
-    "change": "BUGFIX: getFullDispatchesHistory agora usa ref.get() sem orderBy (sem necessidade de índice Firestore). Ordenação 100% em memória por d.id (Date.now). Recupera todos os 1118 despachos históricos. Filtros de data aplicados em memória."
+    "version": "3.9.0",
+    "lastUpdate": "2026-05-21",
+    "change": "Correções de alertas no console: (1) enablePersistence com synchronizeTabs:true — elimina erro de múltiplas abas; (2) manifest.json simplificado para listar apenas ícones existentes (icon-144.png e icon.svg), eliminando erro de ícone inválido."
 }

@@ -20,13 +20,13 @@ try {
         db = firebase.firestore();
         window.db = db; // Force Global Accessibility
 
-        // Enable offline persistence if possible
-        db.enablePersistence()
+        // Enable offline persistence (synchronizeTabs=true: suporta múltiplas abas abertas)
+        db.enablePersistence({ synchronizeTabs: true })
             .catch((err) => {
-                if (err.code == 'failed-precondition') {
-                    console.warn('Persistência falhou: Múltiplas abas abertas.');
-                } else if (err.code == 'unimplemented') {
-                    console.warn('Persistência não suportada neste navegador.');
+                if (err.code === 'failed-precondition') {
+                    console.warn('⚠️ Persistência: conflito de abas. Usando cache em memória.');
+                } else if (err.code === 'unimplemented') {
+                    console.warn('⚠️ Persistência offline não suportada neste navegador.');
                 }
             });
 
