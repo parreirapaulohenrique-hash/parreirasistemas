@@ -1,4 +1,4 @@
-﻿document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', async () => {
     try {
         // GLOBAL UI UTILS
         window.showToast = (msg) => {
@@ -733,14 +733,15 @@
             }
 
             clientResult.innerHTML = `
-            <div style="font-weight: 600;" id="resClientName">${client.nome}</div>
+            <div style="font-weight: 600;" id="resClientName">${client.nome || client.razaoSocial || client.nomeFantasia || 'Cliente'}</div>
             <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                <span id="resCity">${client.cidade}</span> - <span id="resNeighborhood">${client.bairro || '-'}</span>
+                <span id="resCity">${client.cidade || client.city || '-'}</span> - <span id="resNeighborhood">${client.bairro || '-'}</span>
             </div>
             ${statusHtml}
         `;
             clientResult.style.display = 'block';
             clientResult.style.borderLeft = borderStyle;
+
 
             // Focar no Vendedor após selecionar o cliente (v3.7.1)
             setTimeout(() => {

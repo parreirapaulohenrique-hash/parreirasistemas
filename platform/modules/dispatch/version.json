@@ -1,5 +1,5 @@
 {
-    "version": "3.9.0",
+    "version": "3.9.1",
     "lastUpdate": "2026-05-21",
-    "change": "Correções de alertas no console: (1) enablePersistence com synchronizeTabs:true — elimina erro de múltiplas abas; (2) manifest.json simplificado para listar apenas ícones existentes (icon-144.png e icon.svg), eliminando erro de ícone inválido."
+    "change": "BUGFIX: selectClient() corrigido para clientes vindos de busca por CNPJ — esses objetos têm razaoSocial/nomeFantasia mas não nome. Adicionados fallbacks: nome || razaoSocial || nomeFantasia e cidade || city. Corrige 'undefined' aparecendo no romaneio de entrega."
 }
