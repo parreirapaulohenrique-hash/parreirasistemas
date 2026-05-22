@@ -4954,27 +4954,75 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
 
-        window.returnToDashboard = (id) => {
-            if (confirm('Deseja retornar este despacho para o Painel de Pendências?')) {
-                let history = Utils.getStorage('dispatches');
-                const idx = history.findIndex(d => d.id === id);
-                if (idx !== -1) {
-                    history[idx].status = 'Pendente Despacho';
-                    localStorage.setItem('dispatches', JSON.stringify(history));
-                    showToast('✅ Despacho devolvido para o painel de pendências!');
+        window.returnToDashboard = async (id) => {
+            if (!confirm('Deseja retornar este despacho para o Painel de Pendências?')) return;
 
-                    // Refresh logic
-                    if (window.renderAppHistory) window.renderAppHistory();
+            const numId = Number(id); // normaliza tipo string vs number
+            let history = Utils.getStorage('dispatches') || [];
 
-                    // Ask user if they want to go to dashboard
-                    if (confirm('Ir para o Painel agora para reimprimir?')) {
-                        window.location.hash = '#dashboard';
-                        // Force reload if already on dashboard to refresh
-                        if (window.showSection) window.showSection('dashboard');
+            // 1. Tenta achar no localStorage
+            let idx = history.findIndex(d => Number(d.id) === numId);
+
+            if (idx !== -1) {
+                // ✅ Encontrado no localStorage — atualiza diretamente
+                history[idx].status = 'Pendente Despacho';
+                delete history[idx].dispatchedAt;
+                delete history[idx].deliveryType;
+                delete history[idx].deliveryStatus;
+                delete history[idx].deliveryPerson;
+                localStorage.setItem('dispatches', JSON.stringify(history));
+
+            } else {
+                // 2. Busca no cache do Firestore (carregado pela Montagem de Carga)
+                const allHistory = window._dispatchesFullCache || [];
+                const dispatch = allHistory.find(d => Number(d.id) === numId);
+
+                if (!dispatch) {
+                    alert('❌ Despacho não encontrado. Abra a aba "Montagem de Carga" para carregar o histórico completo e tente novamente.');
+                    return;
+                }
+
+                // Adiciona de volta ao localStorage com status pendente
+                const reverted = { ...dispatch, status: 'Pendente Despacho' };
+                delete reverted.dispatchedAt;
+                delete reverted.deliveryType;
+                delete reverted.deliveryStatus;
+                delete reverted.deliveryPerson;
+                history.push(reverted);
+                localStorage.setItem('dispatches', JSON.stringify(history));
+
+                // Atualiza o status no Firestore também
+                if (Utils.Cloud.hasTenant() && window.db) {
+                    try {
+                        const docId = String(dispatch.id);
+                        await window.db
+                            .collection('tenants').doc(Utils.Cloud.tenantId)
+                            .collection('dispatches_db').doc(docId)
+                            .update({ status: 'Pendente Despacho' });
+                        console.log(`✅ [ReturnToDashboard] Despacho ${docId} atualizado no Firestore.`);
+                    } catch(e) {
+                        console.warn('[ReturnToDashboard] Não foi possível atualizar no Firestore:', e);
                     }
                 }
+
+                // Atualiza o cache local
+                if (window._dispatchesFullCache) {
+                    const cacheIdx = window._dispatchesFullCache.findIndex(d => Number(d.id) === numId);
+                    if (cacheIdx !== -1) window._dispatchesFullCache[cacheIdx].status = 'Pendente Despacho';
+                }
+            }
+
+            showToast('✅ Despacho devolvido para o painel de pendências!');
+
+            // Atualiza a tela
+            if (window.renderAppHistory) window.renderAppHistory();
+            if (window.renderDashboard) window.renderDashboard();
+
+            if (confirm('Ir para o Painel agora?')) {
+                if (window.showSection) window.showSection('dashboard');
             }
         };
+
 
         // --- REPORTS LOGIC ---
         window.showReportDetail = (reportType) => {
