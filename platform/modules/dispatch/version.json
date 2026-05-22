@@ -1,5 +1,5 @@
 {
-    "version": "3.9.6",
+    "version": "3.9.7",
     "lastUpdate": "2026-05-22",
-    "change": "FEATURE: Adicionada função estornarBaixaRomaneio na aba Baixa Romaneio. Botão Estornar (amarelo, ícone undo) aparece ao lado do Reimprimir em todos os romaneios arquivados. Requer senha de supervisor. Reverte status de 'baixado' para 'em_rota', apaga baixadoAt e reexibe na seção Pendentes."
+    "change": "FEATURE: Botão Estornar adicionado também na seção Romaneios Pendentes. Para pendentes, o estorno cancela e remove o romaneio da lista (sem afetar os despachos vinculados). Requer senha de supervisor. Função cancelarRomaneio adicionada."
 }

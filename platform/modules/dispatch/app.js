@@ -6286,13 +6286,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </td>
                         <td style="padding: 1rem; text-align: center;"><span style="background: rgba(59,130,246,0.1); color: var(--primary-color); padding: 4px 10px; border-radius: 12px; font-weight: bold;">${r.invoiceCount} NFs</span></td>
                         <td style="padding: 1rem; text-align: center;">
-                            <div style="display: flex; gap: 8px; justify-content: center;">
+                            <div style="display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;">
                                 <button class="btn btn-secondary" onclick="window.reimprimirRomaneio('${r.id}')" title="Reimprimir Romaneio" style="padding: 6px 10px;">
                                     <span class="material-icons-round">print</span>
                                 </button>
                                 <button class="btn btn-primary" onclick="window.confirmarBaixaRomaneio('${r.id}')" style="background: var(--accent-success); border-color: var(--accent-success); display: flex; align-items: center; gap: 5px;">
                                     <span class="material-icons-round">check_circle</span>
                                     Arquivar / Baixa
+                                </button>
+                                <button class="btn btn-secondary" onclick="window.cancelarRomaneio('${r.id}')" title="Estornar / Cancelar este romaneio" style="padding: 6px 10px; display:flex; align-items:center; gap:4px; background: rgba(234,179,8,0.12); color: #d97706; border-color: rgba(234,179,8,0.3);">
+                                    <span class="material-icons-round" style="font-size:1rem;">undo</span> Estornar
                                 </button>
                             </div>
                         </td>
@@ -6368,6 +6371,30 @@ document.addEventListener('DOMContentLoaded', async () => {
                 delete romaneios[idx].baixadoAt;
                 Utils.saveRaw('app_romaneios', JSON.stringify(romaneios));
                 showToast('↩️ Romaneio estornado! Voltou para "Em Rota".');
+                if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
+            } else {
+                alert('❌ Romaneio não encontrado.');
+            }
+        };
+
+        window.cancelarRomaneio = (romaneioId) => {
+            const pass = prompt(`⚠️ AÇÃO RESTRITA\n\nDigite a senha de SUPERVISOR para CANCELAR o romaneio ${romaneioId}:`);
+            if (pass === null) return;
+
+            const supervisor = users.find(u => u.role === 'supervisor' && u.pass === pass);
+            if (!supervisor) {
+                alert('❌ Senha incorreta ou usuário sem permissão de supervisor.');
+                return;
+            }
+
+            if (!confirm(`Confirma o CANCELAMENTO do romaneio ${romaneioId}?\n\nEle será removido da lista de pendentes.\nOs despachos vinculados NÃO são afetados.`)) return;
+
+            let romaneios = Utils.getStorage('app_romaneios') || [];
+            const beforeLen = romaneios.length;
+            romaneios = romaneios.filter(r => r.id !== romaneioId);
+            if (romaneios.length < beforeLen) {
+                Utils.saveRaw('app_romaneios', JSON.stringify(romaneios));
+                showToast('↩️ Romaneio cancelado e removido da lista!');
                 if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
             } else {
                 alert('❌ Romaneio não encontrado.');
