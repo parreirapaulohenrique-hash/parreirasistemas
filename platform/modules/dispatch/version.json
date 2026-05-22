@@ -1,5 +1,5 @@
 {
-    "version": "3.9.2",
-    "lastUpdate": "2026-05-21",
-    "change": "BUGFIX: reimprimirRomaneio agora busca dados no Firestore quando não encontra no localStorage (despacho arquivado). Saves de romaneio agora incluem campos completos (client, city, weight, total, etc.) para garantir reimpressão correta mesmo sem acesso ao Firestore."
+    "version": "3.9.3",
+    "lastUpdate": "2026-05-22",
+    "change": "BUGFIX: Lançamento de complementos corrigido — busca da NF principal agora usa window._dispatchesFullCache (localStorage + Firestore). Cache populado automaticamente ao abrir Montagem de Carga. Handler do inputMainNF é async com fallback Firestore. Correção de selectedClient.nome para suportar clientes de CNPJ lookup."
 }

@@ -1231,18 +1231,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (inputMainNF) {
-            inputMainNF.addEventListener('input', () => {
+            inputMainNF.addEventListener('input', async () => {
                 const mainNF = inputMainNF.value.trim();
                 if (mainNF) {
-                    const history = Utils.getStorage('dispatches');
-                    const originalDispatch = history.find(d => d.invoice === mainNF);
+                    // Busca no cache local primeiro, depois no Firestore
+                    const localHistory = Utils.getStorage('dispatches') || [];
+                    let allHistory = window._dispatchesFullCache || localHistory;
+                    let originalDispatch = allHistory.find(d => d.invoice === mainNF);
+
+                    // Se não achou e o cache não foi carregado, busca no Firestore
+                    if (!originalDispatch && !window._dispatchesFullCache) {
+                        try {
+                            console.log('[Complemento] NF não encontrada localmente. Buscando no Firestore...');
+                            const fullHistory = await Utils.Cloud.getFullDispatchesHistory();
+                            window._dispatchesFullCache = fullHistory;
+                            originalDispatch = fullHistory.find(d => d.invoice === mainNF);
+                        } catch(e) {
+                            console.error('[Complemento] Erro ao buscar NF no Firestore:', e);
+                        }
+                    }
+
                     if (originalDispatch) {
-                        // Try to find the actual client object in our list to maintain consistency
                         const foundClient = clients.find(c => c.nome === originalDispatch.client);
                         if (foundClient) {
                             selectClient(foundClient);
                         } else {
-                            // If not in current list (maybe imported later), create a temporary one
                             selectClient({
                                 nome: originalDispatch.client,
                                 cidade: originalDispatch.city,
@@ -1307,20 +1320,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>`;
                     return;
                 }
-                const history = Utils.getStorage('dispatches');
-                const originalDispatch = history.find(d => d.invoice === mainNF);
+                // Busca no cache completo (localStorage + Firestore) para encontrar NF principal
+                const localHist = Utils.getStorage('dispatches') || [];
+                const allHist = window._dispatchesFullCache || localHist;
+                const originalDispatch = allHist.find(d => d.invoice === mainNF);
 
                 if (originalDispatch) {
                     targetCarrier = norm(originalDispatch.carrier);
 
-                    // Enforce the client from the original dispatch!
-                    if (norm(selectedClient.nome) !== norm(originalDispatch.client)) {
-                        // Automatically re-select the correct client if they mismatch
+                    // Garante que o cliente do complemento é o mesmo da NF principal
+                    const clienteNomeAtual = selectedClient ? (selectedClient.nome || selectedClient.razaoSocial || '') : '';
+                    if (norm(clienteNomeAtual) !== norm(originalDispatch.client)) {
                         const foundCorrect = clients.find(c => norm(c.nome) === norm(originalDispatch.client));
                         if (foundCorrect) {
                             selectClient(foundCorrect);
                         } else {
-                            // Create temp client if not found in current list
                             selectClient({
                                 nome: originalDispatch.client,
                                 cidade: originalDispatch.city,
@@ -1331,7 +1345,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } else {
                     resultsArea.innerHTML = `<div style="text-align: center; color: var(--text-secondary); margin-top: 4rem;">
                     <span class="material-icons-round" style="font-size: 3rem; opacity: 0.3;">search_off</span>
-                    <p>NF Principal "${mainNF}" não encontrada no histórico de despachos.</p>
+                    <p>NF Principal "${mainNF}" não encontrada. Aguarde o carregamento do histórico ou acesse a aba Montagem de Carga primeiro.</p>
                 </div>`;
                     return;
                 }
@@ -3092,6 +3106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         window.renderAppHistory = async () => {
             let list = await Utils.Cloud.getFullDispatchesHistory();
+            window._dispatchesFullCache = list; // Cache para busca de complementos
             const container = document.getElementById('dispatchListContainer');
             if (!container) {
                 console.error('dispatchListContainer não encontrado no DOM');
