@@ -6321,9 +6321,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </span>
                         </td>
                         <td style="padding: 1rem; text-align: center;">
-                             <button class="btn btn-secondary" onclick="window.reimprimirRomaneio('${r.id}')" title="Reimprimir Romaneio" style="padding: 6px 10px;">
-                                <span class="material-icons-round">print</span> Reimprimir
-                             </button>
+                            <div style="display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;">
+                                <button class="btn btn-secondary" onclick="window.reimprimirRomaneio('${r.id}')" title="Reimprimir Romaneio" style="padding: 6px 10px; display:flex; align-items:center; gap:4px;">
+                                    <span class="material-icons-round" style="font-size:1rem;">print</span> Reimprimir
+                                </button>
+                                <button class="btn btn-secondary" onclick="window.estornarBaixaRomaneio('${r.id}')" title="Estornar: Devolver para Em Rota" style="padding: 6px 10px; display:flex; align-items:center; gap:4px; background: rgba(234,179,8,0.12); color: #d97706; border-color: rgba(234,179,8,0.3);">
+                                    <span class="material-icons-round" style="font-size:1rem;">undo</span> Estornar
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `).join('');
@@ -6341,6 +6346,31 @@ document.addEventListener('DOMContentLoaded', async () => {
                 Utils.saveRaw('app_romaneios', JSON.stringify(romaneios));
                 showToast('✅ Romaneio baixado e arquivado com sucesso!');
                 if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
+            }
+        };
+
+        window.estornarBaixaRomaneio = (romaneioId) => {
+            const pass = prompt(`⚠️ AÇÃO RESTRITA\n\nDigite a senha de SUPERVISOR para estornar o romaneio ${romaneioId}:`);
+            if (pass === null) return;
+
+            const supervisor = users.find(u => u.role === 'supervisor' && u.pass === pass);
+            if (!supervisor) {
+                alert('❌ Senha incorreta ou usuário sem permissão de supervisor.');
+                return;
+            }
+
+            if (!confirm(`Confirma o ESTORNO do romaneio ${romaneioId}?\n\nEle voltara para status "Em Rota" e poderá ser baixado novamente.`)) return;
+
+            let romaneios = Utils.getStorage('app_romaneios') || [];
+            const idx = romaneios.findIndex(r => r.id === romaneioId);
+            if (idx !== -1) {
+                romaneios[idx].status = 'em_rota';
+                delete romaneios[idx].baixadoAt;
+                Utils.saveRaw('app_romaneios', JSON.stringify(romaneios));
+                showToast('↩️ Romaneio estornado! Voltou para "Em Rota".');
+                if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
+            } else {
+                alert('❌ Romaneio não encontrado.');
             }
         };
 
