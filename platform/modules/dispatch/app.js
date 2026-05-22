@@ -4362,7 +4362,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // --- USER MANAGEMENT foi migrado unicamente para o utils.js ---
 
         // Update delete logic with supervisor password
-        window.removeDispatch = (id) => {
+        window.removeDispatch = async (id) => {
             const pass = prompt('AÇÃO RESTRITA: Digite a SENHA DE SUPERVISOR para excluir este lançamento:');
             if (pass === null) return;
 
@@ -4372,9 +4372,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            let history = Utils.getStorage('dispatches');
-            history = history.filter(d => d.id !== id);
+            const numId = Number(id);
+
+            // 1. Remove do localStorage
+            let history = Utils.getStorage('dispatches') || [];
+            const beforeLen = history.length;
+            history = history.filter(d => Number(d.id) !== numId);
             Utils.saveRaw('dispatches', JSON.stringify(history));
+
+            // 2. Remove do Firestore (se existir lá)
+            if (Utils.Cloud.hasTenant() && window.db) {
+                try {
+                    await window.db
+                        .collection('tenants').doc(Utils.Cloud.tenantId)
+                        .collection('dispatches_db').doc(String(numId))
+                        .delete();
+                    console.log(`🗑️ [RemoveDispatch] Despacho ${numId} excluído do Firestore.`);
+                } catch(e) {
+                    console.warn('[RemoveDispatch] Erro ao excluir do Firestore:', e);
+                }
+            }
+
+            // 3. Remove do cache
+            if (window._dispatchesFullCache) {
+                window._dispatchesFullCache = window._dispatchesFullCache.filter(d => Number(d.id) !== numId);
+            }
+
             window.renderAppHistory();
             showToast('🗑️ Lançamento excluído com sucesso.');
         };
@@ -5744,9 +5767,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         // --- WHATSAPP FIX (v1.6.3) ---
         window.sendWhatsApp = (id, silent = false) => {
-            const history = Utils.getStorage('dispatches');
-            const d = history.find(item => item.id === id);
-            if (!d) return;
+            const numId = Number(id);
+            const localHistory = Utils.getStorage('dispatches') || [];
+            const allHistory = window._dispatchesFullCache || localHistory;
+            const d = allHistory.find(item => Number(item.id) === numId);
+            if (!d) {
+                if (!silent) alert('Despacho não encontrado. Abra a aba "Montagem de Carga" primeiro.');
+                return;
+            }
 
             let phone = '';
             const cList = Utils.getStorage('clients');
@@ -5787,8 +5815,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Use api.whatsapp.com (wa.me) proxy page to bypass web concurrency limits
             const url = `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`;
             window.open(url, '_blank');
-
-
         };
 
         if (window.renderDashboard) window.renderDashboard();
@@ -6444,11 +6470,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         window.sendWhatsAppVendedor = function (dispatchId, silent = false) {
-            const history = Utils.getStorage('dispatches');
-            const d = history.find(item => item.id == dispatchId);
+            const numId = Number(dispatchId);
+            const localHistory = Utils.getStorage('dispatches') || [];
+            const allHistory = window._dispatchesFullCache || localHistory;
+            const d = allHistory.find(item => Number(item.id) === numId);
 
             if (!d) {
-                if (!silent) alert('Nota Fiscal não encontrada!');
+                if (!silent) alert('Nota Fiscal não encontrada! Abra a aba "Montagem de Carga" primeiro.');
                 return;
             }
 

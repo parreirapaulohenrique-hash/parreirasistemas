@@ -1,5 +1,5 @@
 {
-    "version": "3.9.4",
+    "version": "3.9.5",
     "lastUpdate": "2026-05-22",
-    "change": "BUGFIX: returnToDashboard agora é async e busca o despacho no localStorage primeiro, depois no cache Firestore (window._dispatchesFullCache). Se encontrado no Firestore, readiciona no localStorage como Pendente Despacho e atualiza o status no Firestore. Normalização de tipo id (Number) para evitar comparação string vs number."
+    "change": "BUGFIX: Todos os botões da coluna Ações da Montagem de Carga agora usam window._dispatchesFullCache como fallback do Firestore. sendWhatsApp, sendWhatsAppVendedor e removeDispatch corrigidos. removeDispatch também apaga do Firestore e do cache. Normalização de tipo id com Number() em todas as funções."
 }
