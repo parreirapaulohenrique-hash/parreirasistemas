@@ -6223,18 +6223,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const manifestItemIds = manifest.items.map(item => item.id);
+            const expectedCount = manifestItemIds.length;
 
             // 1. Tenta localStorage primeiro
             const dispatches = Utils.getStorage('dispatches') || [];
-            let fullItems = dispatches.filter(d => manifestItemIds.includes(d.id));
+            let localItems = dispatches.filter(d => manifestItemIds.includes(d.id));
 
-            // 2. Se não achou no localStorage, busca no Firestore
-            if (fullItems.length === 0) {
+            // ✅ CORRIGIDO: verifica se achou TODOS os itens, não só "achou algum"
+            // Se achou menos do que o esperado → busca no Firestore para completar
+            const missingIds = manifestItemIds.filter(id => !localItems.find(d => d.id === id));
+            let fullItems = [...localItems];
+
+            if (missingIds.length > 0) {
                 try {
-                    console.log('[Reimprimir] Buscando despachos no Firestore...');
+                    console.log(`[Reimprimir] ${missingIds.length} NF(s) não encontradas no localStorage. Buscando no Firestore...`, missingIds);
                     const history = await Utils.Cloud.getFullDispatchesHistory();
-                    fullItems = history.filter(d => manifestItemIds.includes(d.id));
-                    if (fullItems.length > 0) console.log(`[Reimprimir] ${fullItems.length} despachos encontrados no Firestore.`);
+                    const firestoreItems = history.filter(d => missingIds.includes(d.id));
+                    fullItems = [...localItems, ...firestoreItems];
+                    if (firestoreItems.length > 0) {
+                        console.log(`[Reimprimir] ✅ ${firestoreItems.length} NF(s) recuperadas do Firestore. Total: ${fullItems.length}/${expectedCount}`);
+                    } else {
+                        console.warn(`[Reimprimir] ⚠️ NFs não encontradas no Firestore também:`, missingIds);
+                    }
                 } catch(e) {
                     console.error('[Reimprimir] Erro ao buscar no Firestore:', e);
                 }
@@ -6246,9 +6256,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                 fullItems = manifest.items;
             }
 
+            // 4. Se ainda faltar alguma, usa os dados do manifest como fallback parcial
+            if (fullItems.length < expectedCount && manifest.items && manifest.items.length > 0) {
+                const stillMissing = manifestItemIds.filter(id => !fullItems.find(d => d.id === id));
+                const fromManifest = manifest.items.filter(item => stillMissing.includes(item.id));
+                if (fromManifest.length > 0) {
+                    console.warn(`[Reimprimir] Usando ${fromManifest.length} item(s) do snapshot do romaneio como fallback.`);
+                    fullItems = [...fullItems, ...fromManifest];
+                }
+            }
+
             if(fullItems.length === 0) {
                 alert('Erro: Notas do romaneio não encontradas no histórico para impressão.');
                 return;
+            }
+
+            if (fullItems.length < expectedCount) {
+                console.warn(`[Reimprimir] ⚠️ Imprimindo com ${fullItems.length} de ${expectedCount} NFs. Algumas podem estar faltando.`);
             }
 
             if(window.printSpecificRomaneio) {
@@ -6257,6 +6281,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 alert('Erro: Função de impressão não carregada.');
             }
         };
+
 
 
         window.renderBaixaRomaneios = () => {
