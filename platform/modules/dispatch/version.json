@@ -1,5 +1,5 @@
 {
-    "version": "3.9.8",
+    "version": "3.9.9",
     "lastUpdate": "2026-05-23",
-    "change": "BUGFIX CRÍTICO: reimprimirRomaneio agora detecta resultados PARCIAIS do localStorage. Antes, se 8 de 9 NFs fossem encontradas no localStorage, o Firestore era ignorado e a 9ª NF sumia da reimpressão. Agora calcula 'missingIds' e busca especificamente as NFs ausentes no Firestore, mesclando os resultados. Adicionado também fallback parcial do snapshot do próprio romaneio."
+    "change": "BUGFIX: Duplicação de NFs no romaneio corrigida em 3 pontos: (1) selectedNFIds agora usa Set para deduplicar ao abrir modal; (2) toDispatch deduplicado por id antes de salvar e imprimir; (3) manifestItemIds deduplicado na reimpressão. Isso resolve o caso onde a NF 7536 (DILMA FREITAS) aparecia duas vezes em um romaneio."
 }

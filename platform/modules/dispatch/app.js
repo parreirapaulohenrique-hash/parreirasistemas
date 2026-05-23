@@ -4557,7 +4557,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     console.warn('Nenhum item pendente (Pendente Despacho) para:', cleanCarrier);
                 }
 
-                selectedNFIds = items.map(i => i.id);
+                selectedNFIds = [...new Set(items.map(i => i.id))]; // ✅ deduplicado por segurança
 
                 const titleEl = document.getElementById('modalCarrierTitle');
                 if (titleEl) titleEl.innerText = `Itens Pendentes: ${cleanCarrier}`;
@@ -4705,7 +4705,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 const history = Utils.getStorage('dispatches');
-                const toDispatch = history.filter(d => selectedNFIds.includes(d.id));
+                const toDispatchRaw = history.filter(d => selectedNFIds.includes(d.id));
+                // ✅ Deduplicar por id para evitar NFs duplicadas no romaneio
+                const toDispatch = toDispatchRaw.filter((item, idx, arr) => arr.findIndex(x => x.id === item.id) === idx);
+                if (toDispatchRaw.length !== toDispatch.length) {
+                    console.warn(`[Romaneio] ⚠️ ${toDispatchRaw.length - toDispatch.length} NF(s) duplicada(s) removida(s) antes de imprimir.`);
+                }
 
                 if (toDispatch.length === 0) {
                     alert('Erro: Notas selecionadas não encontradas no histórico.');
@@ -6222,7 +6227,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            const manifestItemIds = manifest.items.map(item => item.id);
+            // ✅ Deduplicar IDs do manifesto para evitar busca dupla
+            const manifestItemIds = [...new Set(manifest.items.map(item => item.id))];
             const expectedCount = manifestItemIds.length;
 
             // 1. Tenta localStorage primeiro
