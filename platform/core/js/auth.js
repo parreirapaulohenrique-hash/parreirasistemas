@@ -92,7 +92,13 @@ window.ParreiraAuth = (function () {
     // ─── LOGOUT ───────────────────────────────────────────────────────────────
     async function logout() {
         const s = getSessao();
-        const moduloAtivo = s ? (s.moduloAtivo || null) : null;
+        // ✅ Detecta o módulo pelo URL atual (mais confiável que s.moduloAtivo da sessão)
+        // Ex: /platform/modules/erp-consultoria/index.html → 'erp-consultoria'
+        const urlParts = window.location.pathname.split('/').filter(Boolean);
+        const modulosIdx = urlParts.indexOf('modules');
+        const moduloDoUrl = (modulosIdx >= 0 && urlParts[modulosIdx + 1]) ? urlParts[modulosIdx + 1] : null;
+        const moduloAtivo = moduloDoUrl || (s ? s.moduloAtivo : null);
+
         if (s && window.SessionManager) {
             try {
                 const db = _initDB();
@@ -101,7 +107,7 @@ window.ParreiraAuth = (function () {
         }
         sessionStorage.removeItem('parreira_session');
         localStorage.removeItem('logged_user');
-        // Redireciona preservando o módulo ativo para que o usuário volte ao lugar certo após login
+        // Redireciona preservando o módulo correto
         window.location.href = _loginUrl(moduloAtivo);
     }
 
@@ -148,11 +154,13 @@ window.ParreiraAuth = (function () {
     }
     function _loginUrl(modulo) {
         const parts  = window.location.pathname.split('/').filter(Boolean);
-        // Sobe até achar 'platform' na URL, ou usa profundidade relativa
+        // Sobe até achar 'platform' na URL
         const platformIdx = parts.indexOf('platform');
+        // parts inclui o filename E o diretório 'platform' — precisa subir (length - platformIdx - 2) níveis
+        // Ex: platform/modules/erp-consultoria/index.html => 4 parts, platformIdx=0 => upLevels=2 (correto: ../../login.html)
         const upLevels = platformIdx >= 0
-            ? parts.length - platformIdx - 1   // quantos níveis acima do platform/
-            : Math.max(0, parts.length - 1);
+            ? Math.max(0, parts.length - platformIdx - 2)
+            : Math.max(0, parts.length - 2);
         const base = '../'.repeat(upLevels) + 'login.html';
         if (!modulo) return base;
         // redirect relativo ao platform/
