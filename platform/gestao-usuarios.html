@@ -208,7 +208,7 @@ tr:hover td{background:rgba(255,255,255,.025)}
         <div id="userListEmpty" style="display:none;padding:2rem;text-align:center;color:var(--sec)">
           Nenhum usuário cadastrado ainda.
         </div>
-        <div style="overflow-x:auto" id="userTableWrap" style="display:none">
+        <div style="overflow-x:auto;display:none" id="userTableWrap">
           <table>
             <thead>
               <tr>
@@ -345,7 +345,7 @@ async function criarUsuario() {
         document.getElementById('fSenha').value = '';
 
         toast(`✅ Usuário "${login}" criado em ${tenant}!`);
-        carregarUsuarios();
+        await carregarUsuarios();
 
     } catch(e) {
         alertEl.innerHTML = `<div class="alert alert-error">
@@ -411,8 +411,19 @@ async function carregarUsuarios() {
 
     } catch(e) {
         document.getElementById('userListLoading').style.display = 'none';
-        document.getElementById('userListEmpty').style.display = 'block';
-        document.getElementById('userListEmpty').textContent = '⚠️ Erro ao carregar: ' + e.message;
+        const emptyEl = document.getElementById('userListEmpty');
+        emptyEl.style.display = 'block';
+        emptyEl.innerHTML = `
+            <div style="color:#f87171">
+                <span class="material-icons-round" style="font-size:1.2rem;vertical-align:middle">error</span>
+                <strong>Erro ao carregar usuários:</strong><br>
+                <code style="font-size:.78rem;color:#fca5a5">${e.message}</code><br><br>
+                <small style="color:var(--sec)">
+                    Verifique se o tenant <strong>${getTenant()}</strong> existe no Firestore,
+                    ou se as regras de segurança permitem leitura.
+                </small>
+            </div>`;
+        console.error('[gestao-usuarios] listarUsuarios error:', e);
     }
 }
 

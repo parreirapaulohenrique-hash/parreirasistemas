@@ -178,8 +178,9 @@ window.ParreiraAuth = (function () {
         batch.set(db.collection('users_index').doc(loginKey), { tenantId });
         batch.set(db.collection('tenants').doc(tenantId).collection('users').doc(loginKey), {
             nome, login: loginKey, senhaHash, role,
-            pin:   pin || '',
-            ativo: true,
+            pin:     pin || '',
+            modulos: dados.modulos || [],   // ✅ salva módulos permitidos
+            ativo:   true,
             criadoEm: new Date().toISOString()
         });
         await batch.commit();
