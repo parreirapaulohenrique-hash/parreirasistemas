@@ -416,6 +416,11 @@ window.fcApp = {
             // Sub-cabeçalho de subgrupo (ex: "1.1. Receita com Vendas")
             if (row.isSubheader) {
                 tr.classList.add('table-subgroup-header');
+                // ✅ Adiciona classe do grupo para estilização por cor
+                const subGroupClass = (window.FinancialEngine && row.group)
+                    ? (window.FinancialEngine.GROUP_STYLES[row.group]?.class || 'group-other')
+                    : 'group-other';
+                tr.classList.add(subGroupClass);
                 const pct = totalEntradas > 0
                     ? ((Math.abs(row.valor) / totalEntradas) * 100).toFixed(2) + '%' : '0,00%';
                 const tdSub = document.createElement('td');
@@ -436,6 +441,11 @@ window.fcApp = {
             // Linha de conta (manual ou PDF)
             if (row.unmapped) tr.className += ' row-unmapped';
             if (row.isManual) manualSum += (row.valor || 0);
+            // ✅ Adiciona classe do grupo para hierarquia de cor por nivel
+            const rowGroupClass = (window.FinancialEngine && row.group)
+                ? (window.FinancialEngine.GROUP_STYLES[row.group]?.class || 'group-other')
+                : '';
+            if (rowGroupClass) tr.classList.add(rowGroupClass);
 
             const valClass  = row.valor >= 0 ? 'positive' : 'negative';
             const vertical  = totalEntradas > 0
