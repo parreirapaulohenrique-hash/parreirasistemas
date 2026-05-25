@@ -41,10 +41,10 @@ class Store {
         try {
             const tenantRef = this.db.collection('tenants').doc(this.tenantId);
 
-            // 1. Clientes do ERP (fonte de verdade)
+            // 1. Clientes do ERP (fonte de verdade primária)
             const clientsSnap = await tenantRef.collection('fv_clientes').get();
 
-            // 2. Dados de períodos do Fluxo de Caixa
+            // 2. Dados do Fluxo de Caixa — contém períodos E clientes adicionados pelo módulo FC
             const periodsSnap = await tenantRef.collection('fluxo_caixa_clientes').get();
             const periodsData = {};
             periodsSnap.forEach(doc => {
@@ -54,6 +54,7 @@ class Store {
             this.clientsCache = [];
 
             if (!clientsSnap.empty) {
+                // Carrega clientes do ERP com seus períodos correspondentes
                 clientsSnap.forEach(doc => {
                     const data = doc.data();
                     this.clientsCache.push({
@@ -64,7 +65,7 @@ class Store {
                     });
                 });
             } else {
-                // Fallback: lê do localStorage caso o sync ainda não tenha rodado
+                // Fallback: localStorage (para ERP não sincronizado)
                 const suffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
                 const localClients = JSON.parse(localStorage.getItem('erp_clientes' + suffix)) || window.entities || [];
                 localClients.forEach(c => {
@@ -77,6 +78,22 @@ class Store {
                     });
                 });
             }
+
+            // ✅ CORREÇÃO: Adiciona clientes criados DIRETAMENTE pelo módulo FC (via addClient())
+            // Esses clientes têm campo "name" em fluxo_caixa_clientes mas NÃO estão em fv_clientes.
+            // Sem isso, após recarregar a página, eles sumiam porque o ID Firestore não batia com o ID do localStorage.
+            periodsSnap.forEach(doc => {
+                const data = doc.data();
+                const jaExiste = this.clientsCache.some(c => c.id === doc.id);
+                if (!jaExiste && (data.name || data.nome || data.cnpj)) {
+                    this.clientsCache.push({
+                        id: doc.id,
+                        name: data.name || data.nome || doc.id,
+                        cnpj: data.cnpj || '',
+                        periods: data.periods || {}
+                    });
+                }
+            });
 
             console.log(`[fc-store] ${this.clientsCache.length} cliente(s) carregado(s) para tenant: ${this.tenantId}`);
             return this.clientsCache;
