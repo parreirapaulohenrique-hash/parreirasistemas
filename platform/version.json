@@ -1,13 +1,14 @@
 {
-    "version": "11.22.0",
-    "build": "20260520",
-    "lastUpdate": "2026-05-20",
-    "description": "ERP Consultoria — Códigos de conta editáveis inline na Visão Geral (clique no código para editar, Enter salva, Esc cancela)",
+    "version": "11.23.0",
+    "build": "20260525",
+    "lastUpdate": "2026-05-25",
+    "description": "ERP Consultoria — Auto-Vincular via Excel reescrito: parser por coluna, dropdown completo do plano de contas, UPDATE correto do código existente",
     "changelog": [
-        "NOVO: Códigos de conta (ex: 3.4.13) são editáveis diretamente na tabela da Visão Geral",
-        "NOVO: Clique no código → vira input → Enter salva, Esc cancela",
-        "NOVO: Subheaders de subgrupo (ex: 1.1. Receita com Vendas) também têm código editável",
-        "NOVO: CSS .editable-code com sublinhado tracejado e hover azul para indicar editabilidade",
-        "INFO: Quando o Plano de Contas estiver Travado, edição é bloqueada com aviso"
+        "FIX: Parser Excel agora usa abordagem por coluna (localiza célula N.N.N. Descrição → pega 1º número depois dela) — elimina falsos matches com números de linha e booleanos FALSE",
+        "NOVO: Modal Auto-Vincular mostra dropdown com TODAS as entradas do MASTER_ACCOUNTS para seleção manual quando não há match automático",
+        "FIX: applyAutoVincular agora atualiza o código da entrada existente no MASTER_ACCOUNTS (UPDATE) em vez de inserir duplicata",
+        "NOVO: Contas sem match no Excel também aparecem no modal para vinculação manual",
+        "NOVO: Console debug ([AutoVincular]) mostra entradas extraídas do Excel e matches encontrados",
+        "NOVO: autoVincularMasterChanged sincroniza o dropdown de Grupo quando o usuário seleciona uma linha do plano"
     ]
 }
