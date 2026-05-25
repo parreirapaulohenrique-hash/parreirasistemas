@@ -444,7 +444,11 @@ window.fcApp = {
 
             let valorHtml;
             if (row.isManual) {
-                const key = `${row.codigo}-${row.descricao}`;
+                // ✅ Chave do grupo: mesma lógica do financial-engine.js para não misturar inicial/final
+                const isInitialGroup = row.group === 'Disponíveis Nas Contas Movimento inicial';
+                const key = isInitialGroup
+                    ? `${row.codigo}-${row.descricao}`
+                    : `${row.group}::${row.codigo}-${row.descricao}`;
                 valorHtml = `<input type="number" step="0.01" class="manual-input"
                                value="${row.valor || ''}"
                                onchange="fcApp.updateManualEntry('${key}', this.value)"
@@ -455,7 +459,8 @@ window.fcApp = {
 
             const tdCode = document.createElement('td');
             tdCode.className = 'col-code';
-            tdCode.appendChild(this.makeEditableCode(row.codigo, row.descricao));
+            // ✅ Passa o grupo para que a edição seja limitada à seção correta
+            tdCode.appendChild(this.makeEditableCode(row.codigo, row.descricao, row.group));
 
             const tdDesc = document.createElement('td');
             tdDesc.className = 'col-desc';
@@ -476,16 +481,17 @@ window.fcApp = {
     },
 
     // Cria span de código editável inline
-    makeEditableCode(codigo, descricao) {
+    // group: nome do grupo/seção ao qual este item pertence (para limitar edições à seção correta)
+    makeEditableCode(codigo, descricao, group) {
         const span = document.createElement('span');
         span.className = 'editable-code';
         span.textContent = codigo;
         span.title = 'Clique para editar o código';
-        span.addEventListener('click', () => this.inlineEditCode(span, codigo, descricao));
+        span.addEventListener('click', () => this.inlineEditCode(span, codigo, descricao, group));
         return span;
     },
 
-    inlineEditCode(span, originalCode, descricao) {
+    inlineEditCode(span, originalCode, descricao, group) {
         const input = document.createElement('input');
         input.type  = 'text';
         input.value = originalCode;
@@ -496,12 +502,12 @@ window.fcApp = {
         input.select();
 
         const restore = (code) => {
-            const s = this.makeEditableCode(code, descricao);
+            const s = this.makeEditableCode(code, descricao, group);
             input.replaceWith(s);
         };
         const save = () => {
             const newCode = input.value.trim();
-            if (newCode && newCode !== originalCode) this.updateAccountCode(originalCode, descricao, newCode);
+            if (newCode && newCode !== originalCode) this.updateAccountCode(originalCode, descricao, newCode, group);
             else restore(originalCode);
         };
         input.addEventListener('blur', save);
@@ -511,11 +517,19 @@ window.fcApp = {
         });
     },
 
-    updateAccountCode(originalCode, descricao, newCode) {
+    // ✅ group-aware: altera APENAS a entrada da seção correta (não afeta inicial ao editar final e vice-versa)
+    updateAccountCode(originalCode, descricao, newCode, group) {
         const accounts = this.getActiveMasterAccounts();
         let updated = false;
+        let currentSection = null;
         const newAccounts = accounts.map(acc => {
-            if (acc.codigo === originalCode && acc.descricao === descricao) {
+            if (acc.codigo === 'HEADER') {
+                currentSection = acc.descricao;
+                return acc;
+            }
+            // Só altera se estiver na mesma seção E tiver o mesmo código e descrição
+            const sameSection = !group || currentSection === group;
+            if (sameSection && acc.codigo === originalCode && acc.descricao === descricao) {
                 updated = true;
                 return { codigo: newCode, descricao: acc.descricao };
             }
@@ -535,18 +549,24 @@ window.fcApp = {
             try {
                 let parsed = JSON.parse(custom);
                 if (parsed && parsed.length > 0) {
-                    // ✅ MIGRAÇÃO: renomeia header antigo sem "final" para a versão correta
+                    // ✅ MIGRAÇÃO: renomeia header antigo (sem "final") para a versão correta
+                    // Cobre variações de capitalização e espaços extras
                     let migrated = false;
                     parsed = parsed.map(acc => {
-                        if (acc.codigo === 'HEADER' && acc.descricao === 'Disponíveis nas Contas Movimento') {
-                            migrated = true;
-                            return { ...acc, descricao: 'Disponíveis nas Contas Movimento final' };
+                        if (acc.codigo === 'HEADER') {
+                            const norm = (acc.descricao || '').trim().toLowerCase();
+                            // Detecta a versão SEM "final" E SEM "inicial" = é a seção final antiga
+                            if (norm === 'disponíveis nas contas movimento' ||
+                                norm === 'disponiveis nas contas movimento') {
+                                migrated = true;
+                                return { ...acc, descricao: 'Disponíveis nas Contas Movimento final' };
+                            }
                         }
                         return acc;
                     });
                     if (migrated) {
                         localStorage.setItem('customMasterAccounts', JSON.stringify(parsed));
-                        console.log('[FC] Migração aplicada: header "Disponíveis nas Contas Movimento" → "Disponíveis nas Contas Movimento final"');
+                        console.log('[FC] ✅ Migração: header final atualizado para "Disponíveis nas Contas Movimento final"');
                     }
                     window.MASTER_ACCOUNTS = parsed;
                 }
