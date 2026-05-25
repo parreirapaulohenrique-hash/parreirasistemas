@@ -1,8 +1,8 @@
 {
     "module": "erp-consultoria",
     "name": "Consultoria ParreiraLog",
-    "version": "11.22.0",
-    "date": "2026-05-20",
-    "last_change": "financial-engine V6 (MANUAL_GROUPS, subheaders automáticos, back-fill de totais), filtros Mensal/Trimestral/Semestral/Anual, edição inline de códigos de conta, toast de feedback, loadCustomMasterAccounts com persistência em localStorage.",
-    "build": "20260520.01"
+    "version": "11.22.1",
+    "date": "2026-05-25",
+    "last_change": "BUGFIX: Seção 'Disponíveis nas Contas Movimento' renomeada para 'final' no final do relatório. Agora inicial e final têm títulos distintos e valores independentes (manualKey separada por grupo). GROUP_STYLES e MANUAL_GROUPS atualizados para reconhecer o novo grupo.",
+    "build": "20260525.01"
 }

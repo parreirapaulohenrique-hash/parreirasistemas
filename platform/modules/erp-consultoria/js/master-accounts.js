@@ -933,7 +933,7 @@ window.MASTER_ACCOUNTS = [
   },
   {
     "codigo": "HEADER",
-    "descricao": "Disponíveis nas Contas Movimento"
+    "descricao": "Disponíveis nas Contas Movimento final"
   },
   {
     "codigo": "1.0",

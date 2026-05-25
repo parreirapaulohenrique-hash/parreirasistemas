@@ -9,6 +9,7 @@
 window.FinancialEngine = {
     GROUP_STYLES: {
         'Disponíveis Nas Contas Movimento inicial': { color: 'var(--color-disponiveis)', class: 'group-disponiveis' },
+        'Disponíveis nas Contas Movimento final':  { color: 'var(--color-disponiveis)', class: 'group-disponiveis' },
         'Total Receitas Operacionais / Vendas':     { color: 'var(--color-receitas)',    class: 'group-receitas' },
         'Total dos Custos':                         { color: 'var(--color-custos)',      class: 'group-custos' },
         '300. Despesas Operac. Fixas e Variáveis':  { color: 'var(--color-despesas)',    class: 'group-despesas' },
@@ -17,6 +18,7 @@ window.FinancialEngine = {
 
     MANUAL_GROUPS: new Set([
         'Disponíveis Nas Contas Movimento inicial',
+        'Disponíveis nas Contas Movimento final',
         'Total Receitas Operacionais / Vendas'
     ]),
 
@@ -110,7 +112,12 @@ window.FinancialEngine = {
             // Caso: leaf (manual ou PDF)
             let valor = 0;
             if (isManual) {
-                const manualKey = `${master.codigo}-${master.descricao}`;
+                // ✅ Chave diferenciada por grupo: evita que "inicial" e "final" compartilhem o mesmo valor armazenado
+                // Para o grupo inicial mantemos o formato antigo (compatibilidade com dados já salvos)
+                const isInitialGroup = currentGroup === 'Disponíveis Nas Contas Movimento inicial';
+                const manualKey = isInitialGroup
+                    ? `${master.codigo}-${master.descricao}`
+                    : `${currentGroup}::${master.codigo}-${master.descricao}`;
                 valor = pdfMap[master.codigo]
                     ? pdfMap[master.codigo].total
                     : (manualEntries[manualKey] || 0);
