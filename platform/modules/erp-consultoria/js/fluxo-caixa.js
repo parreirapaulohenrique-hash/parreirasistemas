@@ -709,7 +709,10 @@ window.fcApp = {
                 if (/^(false|true|falso|verdadeiro)$/i.test(str)) continue;
                 const m = str.match(/^(\d+(?:\.\d+)*)\.?\s+(.+)$/);
                 if (m && m[2].trim().length >= 3) {
-                    descInfo   = { excelCode: m[1], desc: m[2].trim() };
+                    const desc = m[2].trim();
+                    // Rejeita se a descrição extraída for uma palavra booleana
+                    if (/^(false|true|falso|verdadeiro)$/i.test(desc)) continue;
+                    descInfo   = { excelCode: m[1], desc };
                     descColIdx = ci;
                     break;
                 }

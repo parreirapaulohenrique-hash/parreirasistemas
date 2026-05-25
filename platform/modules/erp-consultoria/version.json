@@ -1,8 +1,8 @@
 {
     "module": "erp-consultoria",
     "name": "Consultoria ParreiraLog",
-    "version": "11.23.0",
+    "version": "11.23.1",
     "date": "2026-05-25",
-    "last_change": "Auto-Vincular via Excel reescrito: parser por coluna (sem falsos 'Fals'), dropdown completo MASTER_ACCOUNTS no modal, UPDATE correto de codigo existente, debug console, contas sem match aparecem para vincular manualmente.",
-    "build": "20260525.02"
+    "last_change": "BUGFIX: Parser Excel rejeitava booleano como valor mas não como descrição — agora 'Verdadeiro'/'Falso' extraído de célula N.N.N. Verdadeiro também é descartado. Evita descrições 'Verd'/'Fals' no relatório.",
+    "build": "20260525.03"
 }
