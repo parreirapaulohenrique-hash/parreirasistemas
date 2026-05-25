@@ -659,7 +659,10 @@ window.fcApp = {
                 if (typeof XLSX === 'undefined') throw new Error('SheetJS não carregado');
                 const data    = await file.arrayBuffer();
                 const wb      = XLSX.read(data, { type: 'array' });
-                const ws      = wb.Sheets[wb.SheetNames[0]];
+                const sheetName = this._getBestSheetName(wb.SheetNames);
+                this.showToast(`📊 Lendo aba: "${sheetName}"...`);
+                console.log(`[AutoVincular] Lendo aba selecionada: "${sheetName}"`);
+                const ws      = wb.Sheets[sheetName];
                 const entries = this.parseExcelForValueMapping(ws);
 
                 // ── DEBUG: mostra o que foi extraído do Excel ──────────────────
@@ -773,6 +776,52 @@ window.fcApp = {
         const plain = parseFloat(s.replace(',', '.'));
         if (!isNaN(plain)) return neg ? -plain : plain;
         return null;
+    },
+
+    _getBestSheetName(sheetNames) {
+        const type  = document.getElementById('filter-period-type')?.value  || 'anual';
+        const sub   = document.getElementById('filter-period-sub')?.value   || 'ALL';
+        
+        let targetMonthNum = null;
+        if (type === 'mensal') {
+            targetMonthNum = Number(sub);
+        } else {
+            // Se for trimestral/semestral/anual, tenta pegar o primeiro mês do período
+            const months = this.getMonthsForPeriod(type, sub);
+            if (months && months.length > 0) targetMonthNum = months[0];
+        }
+
+        if (!targetMonthNum || isNaN(targetMonthNum)) {
+            return sheetNames[0]; // fallback
+        }
+
+        const MONTH_NAMES = [
+            ['janeiro', 'jan', '01'],
+            ['fevereiro', 'fev', '02'],
+            ['março', 'marco', 'mar', '03'],
+            ['abril', 'abr', '04'],
+            ['maio', 'mai', '05'],
+            ['junho', 'jun', '06'],
+            ['julho', 'jul', '07'],
+            ['agosto', 'ago', '08'],
+            ['setembro', 'set', '09'],
+            ['outubro', 'out', '10'],
+            ['novembro', 'nov', '11'],
+            ['dezembro', 'dez', '12']
+        ];
+
+        const targets = MONTH_NAMES[targetMonthNum - 1];
+
+        // Tenta encontrar um match exato ou parcial nas abas
+        for (const name of sheetNames) {
+            const normName = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+            if (targets.some(t => normName === t || normName.includes(t))) {
+                console.log(`[AutoVincular] Aba selecionada automaticamente para o mês ${targetMonthNum}: "${name}"`);
+                return name;
+            }
+        }
+
+        return sheetNames[0]; // Fallback para a primeira aba
     },
 
     // ── Match: valor do PDF → valor do Excel → descrição do Excel ──────────

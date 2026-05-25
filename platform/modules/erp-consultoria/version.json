@@ -1,8 +1,8 @@
 {
     "module": "erp-consultoria",
     "name": "Consultoria ParreiraLog",
-    "version": "11.23.3",
+    "version": "11.23.4",
     "date": "2026-05-25",
-    "last_change": "MELHORIA: Sistema de vinculação agora associa códigos PDF como apelidos (aliases) das contas reestruturadas no Plano de Contas, preservando a numeração personalizada do relatório.",
-    "build": "20260525.05"
+    "last_change": "MELHORIA: O parser do Excel agora seleciona automaticamente a aba correspondente ao mês atual (ex: MARÇO, MAR, 03) em vez de ler sempre a primeira aba.",
+    "build": "20260525.06"
 }
