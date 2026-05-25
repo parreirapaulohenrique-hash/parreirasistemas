@@ -1011,10 +1011,16 @@ window.fcApp = {
             );
 
             if (entryIdx >= 0) {
-                const old = accounts[entryIdx].codigo;
-                accounts[entryIdx] = { ...accounts[entryIdx], codigo: novoCodigo };
-                console.log(`[AutoVincular] ✅ Atualizado: "${selectedDesc}" — ${old} → ${novoCodigo}`);
-                applied++;
+                const masterAcc = { ...accounts[entryIdx] };
+                if (!masterAcc.aliases) masterAcc.aliases = [];
+                if (!masterAcc.aliases.includes(novoCodigo) && masterAcc.codigo !== novoCodigo) {
+                    masterAcc.aliases.push(novoCodigo);
+                    accounts[entryIdx] = masterAcc;
+                    console.log(`[AutoVincular] ✅ Vinculado alias: "${selectedDesc}" (${masterAcc.codigo}) ← PDF: ${novoCodigo}`);
+                    applied++;
+                } else {
+                    console.log(`[AutoVincular] ℹ️ Já vinculado como alias: "${selectedDesc}" (${masterAcc.codigo}) ← PDF: ${novoCodigo}`);
+                }
             } else {
                 // Fallback: insere nova entrada no grupo selecionado
                 const grupo = document.getElementById(`avm-grupo-${i}`)?.value || '';
@@ -1112,6 +1118,31 @@ window.fcApp = {
         if (!grupo) { alert('Selecione um grupo de destino.'); return; }
 
         const accounts = (window.MASTER_ACCOUNTS || []).slice(); // clone
+
+        // Procure se já existe uma conta com a mesma descrição no MASTER_ACCOUNTS (ignorando acentos/case)
+        const normalizedInputDesc = this._normalizeDesc(descricao);
+        const existingIdx = accounts.findIndex(a => 
+            a.codigo !== 'HEADER' && this._normalizeDesc(a.descricao) === normalizedInputDesc
+        );
+
+        if (existingIdx >= 0) {
+            // Se já existe, apenas adiciona o código do PDF aos aliases dessa conta!
+            const masterAcc = { ...accounts[existingIdx] };
+            if (!masterAcc.aliases) masterAcc.aliases = [];
+            if (!masterAcc.aliases.includes(codigo) && masterAcc.codigo !== codigo) {
+                masterAcc.aliases.push(codigo);
+            }
+            accounts[existingIdx] = masterAcc;
+            localStorage.setItem('customMasterAccounts', JSON.stringify(accounts));
+            window.MASTER_ACCOUNTS = accounts;
+            
+            const modal = document.getElementById('modal-vincular-conta');
+            if (modal) modal.style.display = 'none';
+            this.showToast(`✅ ${codigo} vinculado como alias de "${masterAcc.descricao}"`);
+            this.refreshDashboard();
+            return;
+        }
+
         let insertIdx  = -1;
         let curGroup   = null;
 

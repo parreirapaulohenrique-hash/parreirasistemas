@@ -118,13 +118,30 @@ window.FinancialEngine = {
                 const manualKey = isInitialGroup
                     ? `${master.codigo}-${master.descricao}`
                     : `${currentGroup}::${master.codigo}-${master.descricao}`;
-                valor = pdfMap[master.codigo]
-                    ? pdfMap[master.codigo].total
-                    : (manualEntries[manualKey] || 0);
-                if (pdfMap[master.codigo]) delete pdfMap[master.codigo];
+                
+                // Soma o valor do próprio código + todos os aliases do PDF
+                const codesToMatch = [master.codigo, ...(master.aliases || [])];
+                let foundInPdf = false;
+                codesToMatch.forEach(c => {
+                    if (pdfMap[c]) {
+                        valor += pdfMap[c].total;
+                        delete pdfMap[c];
+                        foundInPdf = true;
+                    }
+                });
+                
+                // Fallback para valor manual apenas se não veio do PDF
+                if (!foundInPdf) {
+                    valor = manualEntries[manualKey] || 0;
+                }
             } else {
-                valor = pdfMap[master.codigo] ? pdfMap[master.codigo].total : 0;
-                if (pdfMap[master.codigo]) delete pdfMap[master.codigo];
+                const codesToMatch = [master.codigo, ...(master.aliases || [])];
+                codesToMatch.forEach(c => {
+                    if (pdfMap[c]) {
+                        valor += pdfMap[c].total;
+                        delete pdfMap[c];
+                    }
+                });
             }
 
             // Acumula totais

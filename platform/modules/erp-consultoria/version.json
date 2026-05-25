@@ -1,8 +1,8 @@
 {
     "module": "erp-consultoria",
     "name": "Consultoria ParreiraLog",
-    "version": "11.23.2",
+    "version": "11.23.3",
     "date": "2026-05-25",
-    "last_change": "MELHORIA: Removidos todos os pontos e espaços iniciais/finais das descrições de contas no Plano de Contas para exibição limpa e maior precisão ao encontrar/vincular lançamentos.",
-    "build": "20260525.04"
+    "last_change": "MELHORIA: Sistema de vinculação agora associa códigos PDF como apelidos (aliases) das contas reestruturadas no Plano de Contas, preservando a numeração personalizada do relatório.",
+    "build": "20260525.05"
 }
