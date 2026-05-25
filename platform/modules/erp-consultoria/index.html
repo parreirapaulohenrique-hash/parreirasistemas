@@ -525,7 +525,9 @@
                         <span id="userTenant" style="font-size:0.7rem; color:var(--text-secondary)">Tenant</span>
                     </div>
                 </div>
-                <a href="../../index.html" style="color:var(--accent-danger); text-decoration:none;" title="Sair">
+                <a href="../../login.html"
+                   onclick="event.preventDefault(); (typeof firebase!=='undefined'&&firebase.auth?firebase.auth().signOut():Promise.resolve()).finally(()=>window.location.href='../../login.html');"
+                   style="color:var(--accent-danger); text-decoration:none;" title="Sair">
                     <span class="material-icons-round">logout</span>
                 </a>
             </div>
