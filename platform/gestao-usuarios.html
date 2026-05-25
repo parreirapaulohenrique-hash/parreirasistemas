@@ -346,6 +346,13 @@ async function criarUsuario() {
 
         toast(`✅ Usuário "${login}" criado em ${tenant}!`);
         await carregarUsuarios();
+        // ✅ Rola automaticamente até a lista para o usuário ver o novo registro
+        setTimeout(() => {
+            const wrap = document.getElementById('userTableWrap');
+            if (wrap && wrap.style.display !== 'none') {
+                wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 200);
 
     } catch(e) {
         alertEl.innerHTML = `<div class="alert alert-error">
@@ -367,11 +374,13 @@ async function carregarUsuarios() {
     try {
         const tenant = getTenant();
         const users = await ParreiraAuth.listarUsuarios(tenant);
+        console.log(`[gestao-usuarios] Tenant: ${tenant} | Usuários encontrados: ${users.length}`);
         document.getElementById('userListLoading').style.display = 'none';
 
         if (users.length === 0) {
             document.getElementById('userListEmpty').style.display = 'block';
             document.getElementById('userListEmpty').textContent = `Nenhum usuário no tenant "${tenant}" ainda.`;
+            toast(`ℹ️ Nenhum usuário em "${tenant}"`);
             return;
         }
 
@@ -408,6 +417,10 @@ async function carregarUsuarios() {
         `).join('');
 
         document.getElementById('userTableWrap').style.display = 'block';
+        // Atualiza o cabeçalho com a contagem
+        const headerEl = document.querySelector('#mainPanel .card:last-child .card-header h2');
+        if (headerEl) headerEl.innerHTML = `<span class="material-icons-round" style="color:var(--success)">group</span> Usuários Cadastrados <span style="font-size:.75rem;color:var(--sec);font-weight:400">(${users.length})</span>`;
+        console.log('[gestao-usuarios] Lista renderizada:', users.map(u => u.login));
 
     } catch(e) {
         document.getElementById('userListLoading').style.display = 'none';
@@ -424,6 +437,7 @@ async function carregarUsuarios() {
                 </small>
             </div>`;
         console.error('[gestao-usuarios] listarUsuarios error:', e);
+        toast(`❌ Erro ao carregar lista: ${e.message}`);
     }
 }
 
