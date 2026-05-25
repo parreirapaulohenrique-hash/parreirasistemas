@@ -589,32 +589,46 @@ window.fcApp = {
 
     loadCustomMasterAccounts() {
         const custom = localStorage.getItem('customMasterAccounts');
+        let parsed = null;
         if (custom) {
             try {
-                let parsed = JSON.parse(custom);
-                if (parsed && parsed.length > 0) {
-                    // ✅ MIGRAÇÃO: renomeia header antigo (sem "final") para a versão correta
-                    // Cobre variações de capitalização e espaços extras
-                    let migrated = false;
-                    parsed = parsed.map(acc => {
-                        if (acc.codigo === 'HEADER') {
-                            const norm = (acc.descricao || '').trim().toLowerCase();
-                            // Detecta a versão SEM "final" E SEM "inicial" = é a seção final antiga
-                            if (norm === 'disponíveis nas contas movimento' ||
-                                norm === 'disponiveis nas contas movimento') {
-                                migrated = true;
-                                return { ...acc, descricao: 'Disponíveis nas Contas Movimento final' };
-                            }
-                        }
-                        return acc;
-                    });
-                    if (migrated) {
-                        localStorage.setItem('customMasterAccounts', JSON.stringify(parsed));
-                        console.log('[FC] ✅ Migração: header final atualizado para "Disponíveis nas Contas Movimento final"');
-                    }
-                    window.MASTER_ACCOUNTS = parsed;
-                }
+                parsed = JSON.parse(custom);
             } catch(e) { console.warn('customMasterAccounts inválido', e); }
+        }
+
+        // Se não tiver custom no localStorage, usa o padrão do window.MASTER_ACCOUNTS
+        if (!parsed || parsed.length === 0) {
+            parsed = window.MASTER_ACCOUNTS || [];
+        }
+
+        if (parsed && parsed.length > 0) {
+            let changed = false;
+            parsed = parsed.map(acc => {
+                let updatedAcc = { ...acc };
+                if (acc.codigo === 'HEADER') {
+                    const norm = (acc.descricao || '').trim().toLowerCase();
+                    // Detecta a versão SEM "final" E SEM "inicial" = é a seção final antiga
+                    if (norm === 'disponíveis nas contas movimento' ||
+                        norm === 'disponiveis nas contas movimento') {
+                        updatedAcc.descricao = 'Disponíveis nas Contas Movimento final';
+                        changed = true;
+                    }
+                } else if (updatedAcc.descricao) {
+                    // Limpa pontos e espaços iniciais/finais das descrições de contas (não headers)
+                    const cleaned = updatedAcc.descricao.replace(/^[\s.\-]+/, '').trim();
+                    if (cleaned !== updatedAcc.descricao) {
+                        updatedAcc.descricao = cleaned;
+                        changed = true;
+                    }
+                }
+                return updatedAcc;
+            });
+
+            if (changed) {
+                localStorage.setItem('customMasterAccounts', JSON.stringify(parsed));
+                console.log('[FC] ✅ Migração: descrições das contas limpas e salvas no localStorage.');
+            }
+            window.MASTER_ACCOUNTS = parsed;
         }
     },
 
@@ -1036,6 +1050,7 @@ window.fcApp = {
 
     openVincularModal(codigo, valor, descricao) {
         const accounts = window.MASTER_ACCOUNTS || [];
+        const cleanedDesc = (descricao || '').replace(/^[\s.\-]+/, '').trim();
         // Coleta todos os grupos (HEADERs com contas válidas)
         const grupos = [];
         let cur = null;
@@ -1065,7 +1080,7 @@ window.fcApp = {
                 <div style="background:#0f172a;border-radius:8px;padding:1rem;margin-bottom:1.5rem;border:1px solid rgba(255,255,255,.05);">
                     <div style="font-size:.75rem;color:#94a3b8;margin-bottom:.25rem;">Conta do PDF</div>
                     <div style="font-weight:700;font-size:1.1rem;color:#f8fafc;">${codigo}</div>
-                    <div style="color:#94a3b8;font-size:.85rem;">${descricao}</div>
+                    <div style="color:#94a3b8;font-size:.85rem;">${cleanedDesc}</div>
                     <div style="color:${valColor};font-weight:600;margin-top:.5rem;">${valFmt}</div>
                 </div>
                 <div style="margin-bottom:1rem;">
@@ -1076,8 +1091,8 @@ window.fcApp = {
                 </div>
                 <div style="margin-bottom:1.5rem;">
                     <label style="display:block;color:#94a3b8;font-size:.85rem;margin-bottom:.4rem;">Descrição para o Plano de Contas</label>
-                    <input type="text" id="vincular-descricao" value="${descricao === 'Desconhecida' ? '' : descricao}"
-                        placeholder="Ex: . Receita em Dinheiro"
+                    <input type="text" id="vincular-descricao" value="${cleanedDesc === 'Desconhecida' ? '' : cleanedDesc}"
+                        placeholder="Ex: Receita em Dinheiro"
                         style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#f8fafc;padding:.6rem;font-size:.9rem;box-sizing:border-box;">
                 </div>
                 <div style="display:flex;gap:1rem;justify-content:flex-end;">
@@ -1092,7 +1107,8 @@ window.fcApp = {
 
     confirmVincular(codigo, valor) {
         const grupo     = document.getElementById('vincular-grupo')?.value;
-        const descricao = document.getElementById('vincular-descricao')?.value.trim() || codigo;
+        const rawDesc   = document.getElementById('vincular-descricao')?.value.trim() || codigo;
+        const descricao = rawDesc.replace(/^[\s.\-]+/, '').trim();
         if (!grupo) { alert('Selecione um grupo de destino.'); return; }
 
         const accounts = (window.MASTER_ACCOUNTS || []).slice(); // clone

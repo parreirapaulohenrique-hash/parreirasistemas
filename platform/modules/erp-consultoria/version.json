@@ -1,8 +1,8 @@
 {
     "module": "erp-consultoria",
     "name": "Consultoria ParreiraLog",
-    "version": "11.23.1",
+    "version": "11.23.2",
     "date": "2026-05-25",
-    "last_change": "BUGFIX: Parser Excel rejeitava booleano como valor mas não como descrição — agora 'Verdadeiro'/'Falso' extraído de célula N.N.N. Verdadeiro também é descartado. Evita descrições 'Verd'/'Fals' no relatório.",
-    "build": "20260525.03"
+    "last_change": "MELHORIA: Removidos todos os pontos e espaços iniciais/finais das descrições de contas no Plano de Contas para exibição limpa e maior precisão ao encontrar/vincular lançamentos.",
+    "build": "20260525.04"
 }

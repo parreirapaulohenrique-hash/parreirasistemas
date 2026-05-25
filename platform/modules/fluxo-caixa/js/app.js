@@ -846,11 +846,36 @@ const app = {
 
     loadCustomMasterAccounts() {
         const custom = localStorage.getItem('customMasterAccounts');
+        let parsed = null;
         if (custom) {
             try {
-                const parsed = JSON.parse(custom);
-                if (parsed && parsed.length > 0) window.MASTER_ACCOUNTS = parsed;
+                parsed = JSON.parse(custom);
             } catch (e) { console.warn('Erro ao carregar plano de contas customizado', e); }
+        }
+
+        if (!parsed || parsed.length === 0) {
+            parsed = window.MASTER_ACCOUNTS || [];
+        }
+
+        if (parsed && parsed.length > 0) {
+            let changed = false;
+            parsed = parsed.map(acc => {
+                let updatedAcc = { ...acc };
+                if (acc.codigo !== 'HEADER' && updatedAcc.descricao) {
+                    const cleaned = updatedAcc.descricao.replace(/^[\s.\-]+/, '').trim();
+                    if (cleaned !== updatedAcc.descricao) {
+                        updatedAcc.descricao = cleaned;
+                        changed = true;
+                    }
+                }
+                return updatedAcc;
+            });
+
+            if (changed) {
+                localStorage.setItem('customMasterAccounts', JSON.stringify(parsed));
+                console.log('[FC Legacy] ✅ Migração: descrições das contas limpas e salvas no localStorage.');
+            }
+            window.MASTER_ACCOUNTS = parsed;
         }
     },
 

@@ -296,6 +296,8 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
+| **11.23.2** | 2026-05-25 | ERP Consultoria: Limpeza automática de pontos e espaços iniciais/finais das descrições das contas no Plano de Contas para exibição limpa e exatidão ao encontrar/vincular lançamentos |
+| **11.23.1** | 2026-05-25 | ERP Consultoria: Tratamento de booleanos (Verd/Fals) na extração do Excel para evitar contaminação do Plano de Contas |
 | **11.23.0** | 2026-05-25 | ERP Consultoria: Auto-Vincular via Excel reescrito — parser por coluna (sem falsos matches), dropdown completo do MASTER_ACCOUNTS no modal, UPDATE correto do código existente, debug no console |
 | **11.22.0** | 2026-05-20 | ERP Consultoria: financial-engine v6 (subheaders automáticos, MANUAL_GROUPS), editor Plano de Contas drag-and-drop, filtros Mensal/Trimestral/Semestral/Anual, conferência PDF vs. manual, fix cache Vercel |
 | **11.20.0** | 2026-05-16 | WMS — Campos de endereço atualizados (DEPOSITO, AREA, EQUIPAMENTO, OPERACAO, PRODUTO VINCULADO, CAPACIDADE) |
