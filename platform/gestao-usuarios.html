@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestão de Usuários | ParreiraLog</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0f172a;--card:#1e293b;--card2:#243044;--border:rgba(255,255,255,.08);--primary:#0ea5e9;--success:#10b981;--danger:#ef4444;--warning:#f59e0b;--text:#f1f5f9;--sec:#94a3b8}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:0}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse at 20% 50%,rgba(14,165,233,.1) 0%,transparent 60%),
+             radial-gradient(ellipse at 80% 10%,rgba(16,185,129,.07) 0%,transparent 50%)}
+header{position:sticky;top:0;z-index:100;background:rgba(15,23,42,.95);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);padding:1rem 2rem;
+  display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:.75rem}
+.brand-icon{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#0ea5e9,#2563eb);
+  display:flex;align-items:center;justify-content:center}
+.brand-icon .material-icons-round{font-size:1.25rem;color:#fff}
+.brand-title h1{font-size:1rem;font-weight:700}
+.brand-title p{font-size:.72rem;color:var(--sec)}
+.btn{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1rem;border-radius:8px;
+  font-family:inherit;font-size:.85rem;font-weight:600;cursor:pointer;border:none;transition:all .2s}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:#0284c7;transform:translateY(-1px)}
+.btn-secondary{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{background:rgba(255,255,255,.1)}
+.btn-danger{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3)}
+.btn-danger:hover{background:rgba(239,68,68,.25)}
+.btn-success{background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.3)}
+.btn-sm{padding:.3rem .7rem;font-size:.78rem}
+.main{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:2rem 1.5rem}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+.card-header{padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.card-header h2{font-size:1rem;font-weight:700;display:flex;align-items:center;gap:.5rem}
+.card-body{padding:1.5rem}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.field{display:flex;flex-direction:column;gap:.4rem}
+.field label{font-size:.75rem;font-weight:500;color:var(--sec)}
+.field input,.field select{
+  background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;
+  color:var(--text);font-family:inherit;font-size:.88rem;padding:.6rem .8rem;outline:none;
+  transition:border-color .2s}
+.field input:focus,.field select:focus{border-color:var(--primary)}
+.field select option{background:#1e293b}
+.alert{padding:.75rem 1rem;border-radius:8px;font-size:.82rem;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.alert-success{background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);color:#34d399}
+.alert-error{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#f87171}
+.alert-info{background:rgba(14,165,233,.12);border:1px solid rgba(14,165,233,.3);color:#38bdf8}
+table{width:100%;border-collapse:collapse}
+th{font-size:.72rem;font-weight:600;color:var(--sec);text-transform:uppercase;letter-spacing:.05em;
+  padding:.6rem .8rem;text-align:left;border-bottom:1px solid var(--border)}
+td{padding:.7rem .8rem;border-bottom:1px solid rgba(255,255,255,.04);font-size:.85rem}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.025)}
+.badge{display:inline-flex;align-items:center;gap:.25rem;padding:.2rem .6rem;border-radius:20px;
+  font-size:.72rem;font-weight:600}
+.badge-admin{background:rgba(168,85,247,.2);color:#c084fc}
+.badge-master{background:rgba(245,158,11,.2);color:#fbbf24}
+.badge-supervisor{background:rgba(14,165,233,.2);color:#38bdf8}
+.badge-operator{background:rgba(100,116,139,.2);color:#94a3b8}
+.badge-active{background:rgba(16,185,129,.15);color:#34d399}
+.badge-inactive{background:rgba(239,68,68,.15);color:#f87171}
+.modulos-check{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.25rem}
+.mod-chip{display:flex;align-items:center;gap:.3rem;padding:.25rem .6rem;border-radius:6px;
+  background:rgba(255,255,255,.05);border:1px solid var(--border);font-size:.75rem;cursor:pointer;transition:all .15s}
+.mod-chip input{width:13px;height:13px;cursor:pointer;accent-color:var(--primary)}
+.mod-chip:has(input:checked){background:rgba(14,165,233,.15);border-color:rgba(14,165,233,.4);color:#38bdf8}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.2);
+  border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#toast{position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;
+  background:#1e293b;color:var(--text);border:1px solid rgba(255,255,255,.12);
+  border-radius:12px;padding:.8rem 1.2rem;font-size:.85rem;font-weight:500;
+  box-shadow:0 8px 32px rgba(0,0,0,.4);opacity:0;transform:translateY(8px);
+  transition:all .25s;pointer-events:none;display:flex;align-items:center;gap:.5rem}
+#toast.show{opacity:1;transform:translateY(0)}
+.section-title{font-size:.72rem;font-weight:700;color:var(--sec);text-transform:uppercase;
+  letter-spacing:.08em;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-icon"><span class="material-icons-round">manage_accounts</span></div>
+    <div class="brand-title">
+      <h1>Gestão de Usuários</h1>
+      <p>ParreiraLog — Painel Admin</p>
+    </div>
+  </div>
+  <div style="display:flex;gap:.75rem;align-items:center">
+    <span id="hdrTenant" style="font-size:.8rem;color:var(--sec)"></span>
+    <a href="login.html" class="btn btn-secondary btn-sm">
+      <span class="material-icons-round" style="font-size:1rem">arrow_back</span> Login
+    </a>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- Auth Gate -->
+  <div id="authGate" style="display:none">
+    <div class="card" style="max-width:400px;margin:4rem auto">
+      <div class="card-body">
+        <p class="section-title">🔐 Acesso Restrito</p>
+        <div class="alert alert-info">
+          <span class="material-icons-round" style="font-size:1rem">info</span>
+          Entre com login e senha de <strong>admin</strong> para acessar esta página.
+        </div>
+        <div class="field" style="margin-bottom:.75rem">
+          <label>Usuário</label>
+          <input id="gLogin" type="text" placeholder="seu.login" autocomplete="username">
+        </div>
+        <div class="field" style="margin-bottom:1rem">
+          <label>Senha</label>
+          <input id="gSenha" type="password" placeholder="••••••" autocomplete="current-password"
+            onkeydown="if(event.key==='Enter')gateLogin()">
+        </div>
+        <div id="gateErr" class="alert alert-error" style="display:none"></div>
+        <button class="btn btn-primary" style="width:100%" onclick="gateLogin()">
+          <span class="material-icons-round">login</span> Entrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main panel (shown after auth) -->
+  <div id="mainPanel" style="display:none">
+
+    <!-- Criar usuário -->
+    <div class="card" style="margin-bottom:1.5rem">
+      <div class="card-header">
+        <h2><span class="material-icons-round" style="color:var(--primary)">person_add</span> Criar Novo Usuário</h2>
+      </div>
+      <div class="card-body">
+        <div id="createAlert"></div>
+        <div class="grid-2" style="margin-bottom:1rem">
+          <div class="field">
+            <label>Nome Completo</label>
+            <input id="fNome" type="text" placeholder="Ex: Alessandro Silva">
+          </div>
+          <div class="field">
+            <label>Login (sem espaços, minúsculo)</label>
+            <input id="fLogin" type="text" placeholder="Ex: alessandro" autocomplete="off">
+          </div>
+          <div class="field">
+            <label>Senha</label>
+            <input id="fSenha" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+          </div>
+          <div class="field">
+            <label>Nível de Acesso</label>
+            <select id="fRole">
+              <option value="operator">Operador</option>
+              <option value="supervisor">Supervisor</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field" style="margin-bottom:1rem">
+          <label>Módulos Permitidos</label>
+          <div class="modulos-check">
+            <label class="mod-chip"><input type="checkbox" value="erp-consultoria" checked> Consultoria</label>
+            <label class="mod-chip"><input type="checkbox" value="erp"> ERP</label>
+            <label class="mod-chip"><input type="checkbox" value="wms"> WMS</label>
+            <label class="mod-chip"><input type="checkbox" value="wms-coletor"> WMS Coletor</label>
+            <label class="mod-chip"><input type="checkbox" value="dispatch"> Despacho</label>
+            <label class="mod-chip"><input type="checkbox" value="sales-force"> Força de Vendas</label>
+          </div>
+          <span style="font-size:.72rem;color:var(--sec);margin-top:.4rem">
+            ℹ️ Admin ignora esta lista e acessa tudo automaticamente.
+          </span>
+        </div>
+
+        <button class="btn btn-primary" id="btnCriar" onclick="criarUsuario()">
+          <span class="material-icons-round">save</span> Criar Usuário
+        </button>
+      </div>
+    </div>
+
+    <!-- Lista de usuários -->
+    <div class="card">
+      <div class="card-header">
+        <h2><span class="material-icons-round" style="color:var(--success)">group</span> Usuários Cadastrados</h2>
+        <button class="btn btn-secondary btn-sm" onclick="carregarUsuarios()">
+          <span class="material-icons-round" style="font-size:1rem">refresh</span> Atualizar
+        </button>
+      </div>
+      <div class="card-body" style="padding:0">
+        <div id="userListLoading" style="padding:2rem;text-align:center;color:var(--sec)">
+          <div class="spinner" style="margin:0 auto 1rem"></div>
+          <p>Carregando usuários...</p>
+        </div>
+        <div id="userListEmpty" style="display:none;padding:2rem;text-align:center;color:var(--sec)">
+          Nenhum usuário cadastrado ainda.
+        </div>
+        <div style="overflow-x:auto" id="userTableWrap" style="display:none">
+          <table>
+            <thead>
+              <tr>
+                <th>Login</th>
+                <th>Nome</th>
+                <th>Nível</th>
+                <th>Status</th>
+                <th>Módulos</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="userTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+<script src="core/js/session-manager.js"></script>
+<script src="core/js/auth.js"></script>
+<script>
+const TENANT_ID = 'parreiralog';
+let _isAuthed = false;
+
+// ── Inicializa ──────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('hdrTenant').textContent = `Tenant: ${TENANT_ID}`;
+
+    // Se já tem sessão ativa e é admin, abre direto
+    const sessao = ParreiraAuth.getSessao();
+    if (sessao && ['admin','master'].includes(sessao.role)) {
+        showPanel();
+    } else {
+        document.getElementById('authGate').style.display = 'block';
+    }
+});
+
+// ── Auth Gate ───────────────────────────────────────────────────────────────
+async function gateLogin() {
+    const login = document.getElementById('gLogin').value.trim();
+    const senha = document.getElementById('gSenha').value;
+    const errEl = document.getElementById('gateErr');
+    errEl.style.display = 'none';
+
+    if (!login || !senha) { showGateErr('Preencha login e senha.'); return; }
+
+    try {
+        const sessao = await ParreiraAuth.login(login, senha, 'erp-consultoria');
+        if (!['admin','master'].includes(sessao.role)) {
+            showGateErr('Acesso restrito a administradores.');
+            return;
+        }
+        showPanel();
+    } catch(e) {
+        showGateErr(e.message || 'Erro ao autenticar.');
+    }
+}
+
+function showGateErr(msg) {
+    const el = document.getElementById('gateErr');
+    el.textContent = msg;
+    el.style.display = 'block';
+}
+
+function showPanel() {
+    _isAuthed = true;
+    document.getElementById('authGate').style.display = 'none';
+    document.getElementById('mainPanel').style.display = 'block';
+    carregarUsuarios();
+}
+
+// ── Criar Usuário ────────────────────────────────────────────────────────────
+async function criarUsuario() {
+    const nome  = document.getElementById('fNome').value.trim();
+    const login = document.getElementById('fLogin').value.trim().toLowerCase().replace(/\s+/g,'');
+    const senha = document.getElementById('fSenha').value;
+    const role  = document.getElementById('fRole').value;
+    const modulos = Array.from(document.querySelectorAll('.modulos-check input:checked')).map(i => i.value);
+
+    const alertEl = document.getElementById('createAlert');
+
+    if (!nome || !login || !senha) {
+        alertEl.innerHTML = '<div class="alert alert-error"><span class="material-icons-round" style="font-size:1rem">error</span> Preencha nome, login e senha.</div>';
+        return;
+    }
+    if (senha.length < 6) {
+        alertEl.innerHTML = '<div class="alert alert-error"><span class="material-icons-round" style="font-size:1rem">error</span> Senha deve ter no mínimo 6 caracteres.</div>';
+        return;
+    }
+
+    const btn = document.getElementById('btnCriar');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Criando...';
+    alertEl.innerHTML = '';
+
+    try {
+        // Cria o usuário via ParreiraAuth (Firestore)
+        await ParreiraAuth.criarUsuario(TENANT_ID, { nome, login, senha, role, modulos });
+
+        alertEl.innerHTML = `<div class="alert alert-success">
+            <span class="material-icons-round" style="font-size:1rem">check_circle</span>
+            Usuário <strong>${login}</strong> criado com sucesso! Já pode fazer login.
+        </div>`;
+
+        // Limpa o formulário
+        document.getElementById('fNome').value = '';
+        document.getElementById('fLogin').value = '';
+        document.getElementById('fSenha').value = '';
+
+        toast(`✅ Usuário "${login}" criado!`);
+        carregarUsuarios();
+
+    } catch(e) {
+        alertEl.innerHTML = `<div class="alert alert-error">
+            <span class="material-icons-round" style="font-size:1rem">error</span>
+            ${e.message || 'Erro ao criar usuário.'}
+        </div>`;
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<span class="material-icons-round">save</span> Criar Usuário';
+}
+
+// ── Listar Usuários ──────────────────────────────────────────────────────────
+async function carregarUsuarios() {
+    document.getElementById('userListLoading').style.display = 'block';
+    document.getElementById('userListEmpty').style.display = 'none';
+    document.getElementById('userTableWrap').style.display = 'none';
+
+    try {
+        const users = await ParreiraAuth.listarUsuarios(TENANT_ID);
+        document.getElementById('userListLoading').style.display = 'none';
+
+        if (users.length === 0) {
+            document.getElementById('userListEmpty').style.display = 'block';
+            return;
+        }
+
+        const ROLE_BADGE = {
+            master: '<span class="badge badge-master">👑 Master</span>',
+            admin: '<span class="badge badge-admin">🔑 Admin</span>',
+            supervisor: '<span class="badge badge-supervisor">🔵 Supervisor</span>',
+            operator: '<span class="badge badge-operator">⚙️ Operador</span>',
+        };
+
+        const tbody = document.getElementById('userTableBody');
+        tbody.innerHTML = users.map(u => `
+            <tr>
+                <td><code style="font-size:.82rem;color:var(--primary)">${u.login}</code></td>
+                <td style="font-weight:500">${u.nome || '-'}</td>
+                <td>${ROLE_BADGE[u.role] || u.role}</td>
+                <td>${u.ativo
+                    ? '<span class="badge badge-active">✅ Ativo</span>'
+                    : '<span class="badge badge-inactive">⛔ Inativo</span>'}</td>
+                <td style="font-size:.75rem;color:var(--sec)">${(u.modulos||[]).join(', ') || (u.role==='admin'?'todos':'—')}</td>
+                <td>
+                    ${u.ativo
+                        ? `<button class="btn btn-danger btn-sm" onclick="toggleUser('${u.login}', false)">
+                              <span class="material-icons-round" style="font-size:.9rem">block</span> Desativar
+                           </button>`
+                        : `<button class="btn btn-success btn-sm" onclick="toggleUser('${u.login}', true)">
+                              <span class="material-icons-round" style="font-size:.9rem">check_circle</span> Ativar
+                           </button>`}
+                </td>
+            </tr>
+        `).join('');
+
+        document.getElementById('userTableWrap').style.display = 'block';
+
+    } catch(e) {
+        document.getElementById('userListLoading').style.display = 'none';
+        document.getElementById('userListEmpty').style.display = 'block';
+        document.getElementById('userListEmpty').textContent = '⚠️ Erro ao carregar: ' + e.message;
+    }
+}
+
+// ── Ativar / Desativar ───────────────────────────────────────────────────────
+async function toggleUser(login, ativo) {
+    try {
+        await ParreiraAuth.atualizarUsuario(TENANT_ID, login, { ativo });
+        toast(`${ativo ? '✅ Ativado' : '⛔ Desativado'}: ${login}`);
+        carregarUsuarios();
+    } catch(e) {
+        toast('❌ Erro: ' + e.message);
+    }
+}
+
+// ── Toast ────────────────────────────────────────────────────────────────────
+let _toastTimer;
+function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>
