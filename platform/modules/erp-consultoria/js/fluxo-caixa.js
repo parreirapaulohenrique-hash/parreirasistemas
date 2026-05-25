@@ -387,6 +387,10 @@ window.fcApp = {
             const result = FinancialEngine.processData(allAccountsInPeriod, this.manualEntries);
             this.renderSummaryBar(result.totals);
             this.renderFlowTableStrict(result.rows, totalRealizadoEntradas, result.pdfTotalReceitas);
+            // ✅ Guarda contas não mapeadas para Auto-Vincular
+            this.pendingUnmapped = result.rows.filter(r => r.unmapped);
+            const avBtn = document.getElementById('btn-auto-vincular');
+            if (avBtn) avBtn.style.display = this.pendingUnmapped.length > 0 ? 'inline-flex' : 'none';
         }
     },
 
@@ -405,6 +409,22 @@ window.fcApp = {
                 tr.classList.add('table-group-header');
                 if (row.style && row.style.class) tr.classList.add(row.style.class);
                 const val = row.valorCalculado !== undefined ? this.formatCurrency(row.valorCalculado) : '-';
+
+                // ✅ Header especial: CONTAS PARA VINCULAR — adiciona botão Auto-Vincular
+                if (row.descricao && row.descricao.includes('CONTAS PARA VINCULAR')) {
+                    tr.innerHTML = `
+                        <td colspan="3">${row.descricao}</td>
+                        <td colspan="3" class="text-right">
+                            <button class="btn-vincular-excel"
+                                onclick="fcApp.autoVincularViaExcel()"
+                                title="Importar planilha Excel para vincular automaticamente por valor">
+                                &#9889; Auto-Vincular via Excel
+                            </button>
+                        </td>`;
+                    tbody.appendChild(tr);
+                    return;
+                }
+
                 tr.innerHTML = `
                     <td colspan="3">${row.descricao}</td>
                     <td class="text-right">${val}</td>
@@ -602,7 +622,236 @@ window.fcApp = {
         return window.MASTER_ACCOUNTS || [];
     },
 
-    // ─── MODAL VINCULAR CONTA ───────────────────────────────────────────────
+    // ─── AUTO-VINCULAR VIA EXCEL ────────────────────────────────────────────────
+
+    autoVincularViaExcel() {
+        const unmapped = this.pendingUnmapped || [];
+        if (unmapped.length === 0) {
+            this.showToast('ℹ️ Nenhuma conta para vincular no período atual');
+            return;
+        }
+        const input = document.createElement('input');
+        input.type  = 'file';
+        input.accept = '.xlsx,.xls,.csv';
+        input.style.display = 'none';
+        document.body.appendChild(input);
+        input.click();
+        input.addEventListener('change', async (e) => {
+            document.body.removeChild(input);
+            const file = e.target.files[0];
+            if (!file) return;
+            this.showToast('📊 Lendo planilha...');
+            try {
+                if (typeof XLSX === 'undefined') throw new Error('SheetJS não carregado');
+                const data    = await file.arrayBuffer();
+                const wb      = XLSX.read(data, { type: 'array' });
+                const ws      = wb.Sheets[wb.SheetNames[0]];
+                const entries = this.parseExcelForValueMapping(ws);
+                if (entries.length === 0) {
+                    alert('Não foram encontrados pares (descrição, valor) na planilha.\nVerifique o formato do arquivo.');
+                    return;
+                }
+                const proposed = this.matchByValue(unmapped, entries);
+                if (proposed.length === 0) {
+                    this.showToast('⚠️ Nenhum valor correspondente encontrado na planilha');
+                    return;
+                }
+                this.pendingAutoVincular = proposed;
+                this.showAutoVincularModal(proposed);
+            } catch(err) {
+                alert('Erro ao ler planilha: ' + err.message);
+            }
+        });
+    },
+
+    parseExcelForValueMapping(ws) {
+        const rows    = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
+        const entries = [];
+        rows.forEach(row => {
+            if (!Array.isArray(row)) return;
+            const texts = [];
+            const nums  = [];
+            row.forEach(cell => {
+                if (cell === null || cell === undefined) return;
+                if (typeof cell === 'number') {
+                    if (Math.abs(cell) > 0.01) nums.push(cell);
+                } else {
+                    const str = String(cell).trim();
+                    if (!str) return;
+                    const brNum = this._parseBRNumber(str);
+                    if (brNum !== null && Math.abs(brNum) > 0.01) {
+                        nums.push(brNum);
+                    } else if (str.length > 1 && !/^\d+(\.\d+)?$/.test(str.replace(',','.'))) {
+                        texts.push(str);
+                    }
+                }
+            });
+            if (texts.length > 0 && nums.length > 0) {
+                texts.forEach(desc => nums.forEach(val => entries.push({ desc, value: val })));
+            }
+        });
+        return entries;
+    },
+
+
+    _parseBRNumber(str) {
+        let s   = str.replace(/[R$\s]/g, '').trim();
+        const neg = s.startsWith('(') && s.endsWith(')');
+        s = s.replace(/[()]/g, '');
+        // Brazilian: 1.234,56
+        if (/^\d{1,3}(\.\d{3})*,\d{2}$/.test(s)) {
+            const val = parseFloat(s.replace(/\./g, '').replace(',', '.'));
+            return neg ? -val : val;
+        }
+        // Plain float (dot decimal)
+        const plain = parseFloat(s.replace(',', '.'));
+        if (!isNaN(plain)) return neg ? -plain : plain;
+        return null;
+    },
+
+    matchByValue(unmappedRows, excelEntries) {
+        const proposed  = [];
+        const TOLERANCE = 0.05; // 5 centavos de tolerância
+        unmappedRows.forEach(row => {
+            const pdfAbs = Math.abs(row.valor);
+            if (pdfAbs < 0.01) return;
+            const matches = excelEntries.filter(e => Math.abs(Math.abs(e.value) - pdfAbs) <= TOLERANCE);
+            const uniqueDescs = [...new Set(matches.map(m => m.desc))];
+            if (uniqueDescs.length === 0) return;
+            proposed.push({
+                pdfCodigo:     row.codigo,
+                pdfValor:      row.valor,
+                matches:       uniqueDescs,
+                selectedDesc:  uniqueDescs[0],
+                selectedGroup: this._suggestGroup(row.codigo)
+            });
+        });
+        return proposed;
+    },
+
+    _suggestGroup(codigo) {
+        const hdrs = (window.MASTER_ACCOUNTS || []).filter(m => m.codigo === 'HEADER').map(m => m.descricao);
+        if (codigo.startsWith('1.') || codigo.startsWith('2.')) return hdrs.find(h => /Receita|Custo/i.test(h)) || hdrs[1] || '';
+        if (codigo.startsWith('3.')) return hdrs.find(h => /Despesa/i.test(h)) || hdrs[2] || '';
+        if (codigo.startsWith('4.')) return hdrs.find(h => /N.o Operac/i.test(h)) || hdrs[3] || '';
+        return hdrs[1] || '';
+    },
+
+    showAutoVincularModal(proposed) {
+        let modal = document.getElementById('modal-auto-vincular');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'modal-auto-vincular';
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:10001;display:flex;align-items:flex-start;justify-content:center;padding:2rem 1rem;box-sizing:border-box;overflow-y:auto;';
+            document.body.appendChild(modal);
+        }
+        const grupos = [];
+        (window.MASTER_ACCOUNTS || []).forEach(m => {
+            if (m.codigo === 'HEADER' && !grupos.includes(m.descricao)) grupos.push(m.descricao);
+        });
+        const tableRows = proposed.map((p, idx) => {
+            const matchOpts = p.matches.map(m =>
+                `<option value="${m.replace(/"/g,"'")}" ${m === p.selectedDesc ? 'selected' : ''}>${m}</option>`
+            ).join('');
+            const gOpts = grupos.map(g =>
+                `<option value="${g.replace(/"/g,"'")}" ${g === p.selectedGroup ? 'selected' : ''}>${g}</option>`
+            ).join('');
+            const badge = p.matches.length === 1
+                ? `<span style="color:#10b981;">✅</span>`
+                : `<span style="color:#f59e0b;" title="${p.matches.length} correspondências">⚠️ ${p.matches.length}</span>`;
+            return `
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                    <td style="padding:8px 10px;"><input type="checkbox" id="avm-chk-${idx}" checked style="width:14px;height:14px;cursor:pointer;accent-color:#3b82f6;"></td>
+                    <td style="padding:8px 10px;font-weight:700;font-size:.82rem;color:#60a5fa;">${p.pdfCodigo}</td>
+                    <td style="padding:8px 10px;font-size:.82rem;color:${p.pdfValor>=0?'#10b981':'#ef4444'};text-align:right;">${this.formatCurrency(p.pdfValor)}</td>
+                    <td style="padding:8px 6px;text-align:center;">${badge}</td>
+                    <td style="padding:8px 4px;"><select id="avm-desc-${idx}" style="background:#0f172a;border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#f8fafc;padding:3px 6px;font-size:.78rem;min-width:160px;max-width:240px;">${matchOpts}</select></td>
+                    <td style="padding:8px 4px;"><select id="avm-grupo-${idx}" style="background:#0f172a;border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#f8fafc;padding:3px 6px;font-size:.78rem;min-width:160px;max-width:240px;">${gOpts}</select></td>
+                </tr>`;
+        }).join('');
+        const totalUnique = proposed.filter(p => p.matches.length === 1).length;
+        modal.innerHTML = `
+            <div style="background:#1e293b;border-radius:14px;padding:2rem;width:100%;max-width:970px;border:1px solid rgba(255,255,255,.08);box-shadow:0 24px 60px rgba(0,0,0,.6);">
+                <div style="display:flex;align-items:center;gap:1rem;margin-bottom:.75rem;">
+                    <h3 style="margin:0;color:#f8fafc;flex:1;">⚡ Auto-Vincular via Planilha</h3>
+                    <span style="background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:20px;padding:3px 12px;font-size:.8rem;font-weight:600;">${proposed.length} encontradas &middot; ${totalUnique} únicas</span>
+                </div>
+                <p style="color:#94a3b8;font-size:.82rem;margin-bottom:1.2rem;">✅&nbsp;=&nbsp;correspondência única (pronto para vincular) &nbsp;&middot;&nbsp; ⚠️&nbsp;=&nbsp;múltiplas opções (escolha a descrição correta)</p>
+                <div style="overflow-x:auto;max-height:55vh;overflow-y:auto;border-radius:8px;border:1px solid rgba(255,255,255,.05);">
+                    <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+                        <thead style="position:sticky;top:0;z-index:1;">
+                            <tr style="background:#0f172a;color:#64748b;text-align:left;">
+                                <th style="padding:10px;"><input type="checkbox" id="avm-chk-all" checked onchange="fcApp.selectAllAutoVincular(${proposed.length},this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:#3b82f6;"></th>
+                                <th style="padding:10px;">Código PDF</th>
+                                <th style="padding:10px;text-align:right;">Valor</th>
+                                <th style="padding:10px;text-align:center;">Match</th>
+                                <th style="padding:10px;">Descrição no Plano</th>
+                                <th style="padding:10px;">Grupo de Destino</th>
+                            </tr>
+                        </thead>
+                        <tbody style="color:#f8fafc;">${tableRows}</tbody>
+                    </table>
+                </div>
+                <div style="display:flex;gap:1rem;align-items:center;margin-top:1.5rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,.06);">
+                    <span style="color:#64748b;font-size:.78rem;">Marque as contas que deseja vincular.</span>
+                    <div style="flex:1;"></div>
+                    <button onclick="document.getElementById('modal-auto-vincular').style.display='none'" style="background:transparent;border:1px solid rgba(255,255,255,.15);color:#94a3b8;border-radius:8px;padding:.6rem 1.2rem;cursor:pointer;">Cancelar</button>
+                    <button onclick="fcApp.applyAutoVincular(${proposed.length})" style="background:#10b981;border:none;color:white;border-radius:8px;padding:.6rem 1.5rem;cursor:pointer;font-weight:700;">⚡ Aplicar Vinculaçoes</button>
+                </div>
+            </div>`;
+        modal.style.display = 'flex';
+    },
+
+    selectAllAutoVincular(count, checked) {
+        for (let i = 0; i < count; i++) {
+            const chk = document.getElementById(`avm-chk-${i}`);
+            if (chk) chk.checked = checked;
+        }
+        const all = document.getElementById('avm-chk-all');
+        if (all) all.checked = checked;
+    },
+
+    applyAutoVincular(count) {
+        const proposed = this.pendingAutoVincular || [];
+        let accounts   = (window.MASTER_ACCOUNTS || []).slice();
+        let applied    = 0;
+        for (let i = 0; i < count; i++) {
+            const chk = document.getElementById(`avm-chk-${i}`);
+            if (!chk || !chk.checked) continue;
+            const p         = proposed[i];
+            if (!p) continue;
+            const codigo    = p.pdfCodigo;
+            const descricao = document.getElementById(`avm-desc-${i}`)?.value || p.selectedDesc;
+            const grupo     = document.getElementById(`avm-grupo-${i}`)?.value || p.selectedGroup;
+            if (!codigo || !descricao || !grupo) continue;
+            // Remove duplicatas
+            accounts = accounts.filter(a => !(a.codigo === codigo && a.descricao === descricao));
+            // Acha último índice do grupo
+            let insertIdx = -1;
+            let curGroup  = null;
+            for (let j = 0; j < accounts.length; j++) {
+                if (accounts[j].codigo === 'HEADER') {
+                    if (curGroup === grupo && insertIdx >= 0) break;
+                    curGroup = accounts[j].descricao;
+                } else if (curGroup === grupo) { insertIdx = j; }
+            }
+            if (insertIdx >= 0) {
+                accounts.splice(insertIdx + 1, 0, { codigo, descricao });
+                applied++;
+            }
+        }
+        if (applied > 0) {
+            localStorage.setItem('customMasterAccounts', JSON.stringify(accounts));
+            window.MASTER_ACCOUNTS = accounts;
+            document.getElementById('modal-auto-vincular').style.display = 'none';
+            this.showToast(`✅ ${applied} conta${applied>1?'s':''} vinculada${applied>1?'s':''} com sucesso!`);
+            this.refreshDashboard();
+        } else {
+            this.showToast('⚠️ Nenhuma conta selecionada');
+        }
+    },
+
+    // ─── MODAL VINCULAR CONTA ────────────────────────────────────────────────
 
     openVincularModal(codigo, valor, descricao) {
         const accounts = window.MASTER_ACCOUNTS || [];
