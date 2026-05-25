@@ -533,8 +533,23 @@ window.fcApp = {
         const custom = localStorage.getItem('customMasterAccounts');
         if (custom) {
             try {
-                const parsed = JSON.parse(custom);
-                if (parsed && parsed.length > 0) window.MASTER_ACCOUNTS = parsed;
+                let parsed = JSON.parse(custom);
+                if (parsed && parsed.length > 0) {
+                    // ✅ MIGRAÇÃO: renomeia header antigo sem "final" para a versão correta
+                    let migrated = false;
+                    parsed = parsed.map(acc => {
+                        if (acc.codigo === 'HEADER' && acc.descricao === 'Disponíveis nas Contas Movimento') {
+                            migrated = true;
+                            return { ...acc, descricao: 'Disponíveis nas Contas Movimento final' };
+                        }
+                        return acc;
+                    });
+                    if (migrated) {
+                        localStorage.setItem('customMasterAccounts', JSON.stringify(parsed));
+                        console.log('[FC] Migração aplicada: header "Disponíveis nas Contas Movimento" → "Disponíveis nas Contas Movimento final"');
+                    }
+                    window.MASTER_ACCOUNTS = parsed;
+                }
             } catch(e) { console.warn('customMasterAccounts inválido', e); }
         }
     },
