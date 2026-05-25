@@ -1,8 +1,8 @@
 {
     "module": "erp-consultoria",
     "name": "Consultoria ParreiraLog",
-    "version": "11.22.1",
+    "version": "11.23.0",
     "date": "2026-05-25",
-    "last_change": "BUGFIX: Seção 'Disponíveis nas Contas Movimento' renomeada para 'final' no final do relatório. Agora inicial e final têm títulos distintos e valores independentes (manualKey separada por grupo). GROUP_STYLES e MANUAL_GROUPS atualizados para reconhecer o novo grupo.",
-    "build": "20260525.01"
+    "last_change": "Auto-Vincular via Excel reescrito: parser por coluna (sem falsos 'Fals'), dropdown completo MASTER_ACCOUNTS no modal, UPDATE correto de codigo existente, debug console, contas sem match aparecem para vincular manualmente.",
+    "build": "20260525.02"
 }
