@@ -143,13 +143,24 @@ window.ParreiraAuth = (function () {
     }
 
     function requireAuth(modulo) {
-        if (!isLogado()) { window.location.href = _loginUrl(); return false; }
+        if (!isLogado()) { window.location.href = _loginUrl(modulo); return false; }
         if (modulo && !hasModulo(modulo)) { alert('Sem acesso a este módulo.'); history.back(); return false; }
         return true;
     }
-    function _loginUrl() {
-        const depth = (window.location.pathname.match(/\//g) || []).length - 1;
-        return '../'.repeat(Math.max(0, depth - 1)) + 'login.html';
+    function _loginUrl(modulo) {
+        const parts  = window.location.pathname.split('/').filter(Boolean);
+        // Sobe até achar 'platform' na URL, ou usa profundidade relativa
+        const platformIdx = parts.indexOf('platform');
+        const upLevels = platformIdx >= 0
+            ? parts.length - platformIdx - 1   // quantos níveis acima do platform/
+            : Math.max(0, parts.length - 1);
+        const base = '../'.repeat(upLevels) + 'login.html';
+        if (!modulo) return base;
+        // redirect relativo ao platform/
+        const afterPlatform = platformIdx >= 0
+            ? parts.slice(platformIdx + 1).join('/')
+            : parts.slice(-1).join('/');
+        return `${base}?module=${encodeURIComponent(modulo)}&redirect=${encodeURIComponent(afterPlatform)}`;
     }
 
     // ─── CRUD DE USUÁRIOS (chamado pelo WMS admin) ────────────────────────────
