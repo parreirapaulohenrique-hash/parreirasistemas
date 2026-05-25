@@ -673,22 +673,30 @@ window.fcApp = {
             const nums      = [];
             row.forEach(cell => {
                 if (cell === null || cell === undefined) return;
+                // ✅ Ignora booleanos (células FALSE/TRUE do Excel que viravam "Fals")
+                if (typeof cell === 'boolean') return;
                 if (typeof cell === 'number') {
                     if (Math.abs(cell) > 0.01) nums.push(cell);
                 } else {
                     const str = String(cell).trim();
                     if (!str) return;
-                    // Tenta parse numérico BR (ex: "33.411,65")
+                    // Ignora strings que são booleanos textuais ou muito curtas
+                    if (/^(false|true|falso|verdadeiro)$/i.test(str)) return;
+                    if (str.length < 3) return;
+                    // Tenta parse numérico BR (ex: "33.411,65" ou "(2.535,00)")
                     const brNum = this._parseBRNumber(str);
                     if (brNum !== null && Math.abs(brNum) > 0.01) {
                         nums.push(brNum);
                         return;
                     }
+                    // Ignora apenas porcentagens
+                    if (/^\d+[,.]\d+%$/.test(str)) return;
                     // Detecta formato "3.2.01. Descrição" → extrai código e descrição
                     const acMatch = str.match(/^(\d+(?:\.\d+)*)\.?\s+(.+)$/);
-                    if (acMatch) {
+                    if (acMatch && acMatch[2].trim().length >= 3) {
                         cellTexts.push({ excelCode: acMatch[1], desc: acMatch[2].trim() });
-                    } else if (str.length > 1 && !/^\d+$/.test(str)) {
+                    } else if (str.length >= 3 && !/^[\d\.\,\s]+$/.test(str)) {
+                        // Texto genérico que não é só números
                         cellTexts.push({ excelCode: null, desc: str });
                     }
                 }
@@ -917,28 +925,38 @@ window.fcApp = {
         const proposed = this.pendingAutoVincular || [];
         let accounts   = (window.MASTER_ACCOUNTS || []).slice();
         let applied    = 0;
+
         for (let i = 0; i < count; i++) {
             const chk = document.getElementById(`avm-chk-${i}`);
             if (!chk || !chk.checked) continue;
             const p = proposed[i];
             if (!p) continue;
 
-            const codigo = p.pdfCodigo;
-            // ✅ Usa descrição do MASTER_ACCOUNTS (campo hidden avm-master) se disponível
-            //    Caso contrário, cai para selectedDesc (descrição crua do Excel)
-            const masterHidden  = document.getElementById(`avm-master-${i}`)?.value;
-            const descricao = (masterHidden && masterHidden.trim())
-                ? masterHidden.trim()
-                : (p.masterEntry?.descricao || p.selectedDesc);
-            const grupo = document.getElementById(`avm-grupo-${i}`)?.value
-                || p.masterEntry?.group || p.selectedGroup;
+            const novoCodigo = p.pdfCodigo;
+            const masterHidden = document.getElementById(`avm-master-${i}`)?.value;
+            const masterDesc   = (masterHidden && masterHidden.trim()) ? masterHidden.trim()
+                                 : (p.masterEntry?.descricao || '');
+            const grupo        = document.getElementById(`avm-grupo-${i}`)?.value
+                                 || p.masterEntry?.group || p.selectedGroup;
 
-            if (!codigo || !descricao || !grupo) continue;
+            if (!novoCodigo || !grupo) continue;
 
-            // Remove duplicatas (mesmo código + mesma descrição)
-            accounts = accounts.filter(a => !(a.codigo === codigo && a.descricao === descricao));
+            if (masterDesc && p.masterEntry) {
+                // ✅ CASO 1: Entrada encontrada no MASTER — atualiza o código existente
+                // (a numeração do sistema foi reestruturada; o PDF ainda usa o código original)
+                const entryIdx = accounts.findIndex(a =>
+                    a.descricao === masterDesc && a.codigo !== 'HEADER'
+                );
+                if (entryIdx >= 0) {
+                    accounts[entryIdx] = { ...accounts[entryIdx], codigo: novoCodigo };
+                    applied++;
+                    continue;
+                }
+            }
 
-            // Acha último índice do grupo alvo para inserção
+            // ✅ CASO 2: Não encontrou entrada no MASTER — insere nova no grupo selecionado
+            const descricaoFallback = masterDesc || p.selectedDesc || novoCodigo;
+            accounts = accounts.filter(a => !(a.codigo === novoCodigo && a.descricao === descricaoFallback));
             let insertIdx = -1;
             let curGroup  = null;
             for (let j = 0; j < accounts.length; j++) {
@@ -948,7 +966,7 @@ window.fcApp = {
                 } else if (curGroup === grupo) { insertIdx = j; }
             }
             if (insertIdx >= 0) {
-                accounts.splice(insertIdx + 1, 0, { codigo, descricao });
+                accounts.splice(insertIdx + 1, 0, { codigo: novoCodigo, descricao: descricaoFallback });
                 applied++;
             }
         }
