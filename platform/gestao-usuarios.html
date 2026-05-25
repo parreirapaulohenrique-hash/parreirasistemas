@@ -93,8 +93,17 @@ tr:hover td{background:rgba(255,255,255,.025)}
       <p>ParreiraLog — Painel Admin</p>
     </div>
   </div>
-  <div style="display:flex;gap:.75rem;align-items:center">
-    <span id="hdrTenant" style="font-size:.8rem;color:var(--sec)"></span>
+  <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:.5rem">
+      <span style="font-size:.75rem;color:var(--sec);white-space:nowrap">Tenant:</span>
+      <select id="hdrTenant" onchange="onTenantChange()" style="background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:.8rem;padding:.3rem .6rem;cursor:pointer">
+        <option value="parreiralog">parreiralog</option>
+        <option value="ltdistribuidora">ltdistribuidora</option>
+        <option value="centralpecas">centralpecas</option>
+        <option value="_custom">Outro...</option>
+      </select>
+      <input id="hdrTenantCustom" type="text" placeholder="id-do-tenant" style="display:none;background:rgba(255,255,255,.06);border:1px solid var(--primary);border-radius:6px;color:var(--text);font-size:.8rem;padding:.3rem .6rem;width:140px">
+    </div>
     <a href="login.html" class="btn btn-secondary btn-sm">
       <span class="material-icons-round" style="font-size:1rem">arrow_back</span> Login
     </a>
@@ -146,7 +155,7 @@ tr:hover td{background:rgba(255,255,255,.025)}
           </div>
           <div class="field">
             <label>Login (sem espaços, minúsculo)</label>
-            <input id="fLogin" type="text" placeholder="Ex: alessandro" autocomplete="off">
+            <input id="fLogin" type="text" placeholder="Ex: ltdistribuidora" autocomplete="off">
           </div>
           <div class="field">
             <label>Senha</label>
@@ -227,13 +236,32 @@ tr:hover td{background:rgba(255,255,255,.025)}
 <script src="core/js/session-manager.js"></script>
 <script src="core/js/auth.js"></script>
 <script>
-const TENANT_ID = 'parreiralog';
+const TENANTS_CONHECIDOS = ['parreiralog','ltdistribuidora','centralpecas'];
 let _isAuthed = false;
+let _currentTenant = 'parreiralog';
+
+function getTenant() {
+    const sel = document.getElementById('hdrTenant');
+    if (sel.value === '_custom') {
+        return document.getElementById('hdrTenantCustom').value.trim().toLowerCase() || 'parreiralog';
+    }
+    return sel.value;
+}
+
+function onTenantChange() {
+    const sel = document.getElementById('hdrTenant');
+    const customInput = document.getElementById('hdrTenantCustom');
+    if (sel.value === '_custom') {
+        customInput.style.display = 'block';
+        customInput.focus();
+    } else {
+        customInput.style.display = 'none';
+    }
+    if (_isAuthed) carregarUsuarios();
+}
 
 // ── Inicializa ──────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('hdrTenant').textContent = `Tenant: ${TENANT_ID}`;
-
     // Se já tem sessão ativa e é admin, abre direto
     const sessao = ParreiraAuth.getSessao();
     if (sessao && ['admin','master'].includes(sessao.role)) {
@@ -302,12 +330,13 @@ async function criarUsuario() {
     alertEl.innerHTML = '';
 
     try {
+        const tenant = getTenant();
         // Cria o usuário via ParreiraAuth (Firestore)
-        await ParreiraAuth.criarUsuario(TENANT_ID, { nome, login, senha, role, modulos });
+        await ParreiraAuth.criarUsuario(tenant, { nome, login, senha, role, modulos });
 
         alertEl.innerHTML = `<div class="alert alert-success">
             <span class="material-icons-round" style="font-size:1rem">check_circle</span>
-            Usuário <strong>${login}</strong> criado com sucesso! Já pode fazer login.
+            Usuário <strong>${login}</strong> criado no tenant <strong>${tenant}</strong>! Já pode fazer login.
         </div>`;
 
         // Limpa o formulário
@@ -315,7 +344,7 @@ async function criarUsuario() {
         document.getElementById('fLogin').value = '';
         document.getElementById('fSenha').value = '';
 
-        toast(`✅ Usuário "${login}" criado!`);
+        toast(`✅ Usuário "${login}" criado em ${tenant}!`);
         carregarUsuarios();
 
     } catch(e) {
@@ -336,11 +365,13 @@ async function carregarUsuarios() {
     document.getElementById('userTableWrap').style.display = 'none';
 
     try {
-        const users = await ParreiraAuth.listarUsuarios(TENANT_ID);
+        const tenant = getTenant();
+        const users = await ParreiraAuth.listarUsuarios(tenant);
         document.getElementById('userListLoading').style.display = 'none';
 
         if (users.length === 0) {
             document.getElementById('userListEmpty').style.display = 'block';
+            document.getElementById('userListEmpty').textContent = `Nenhum usuário no tenant "${tenant}" ainda.`;
             return;
         }
 
@@ -361,7 +392,7 @@ async function carregarUsuarios() {
                     ? '<span class="badge badge-active">✅ Ativo</span>'
                     : '<span class="badge badge-inactive">⛔ Inativo</span>'}</td>
                 <td style="font-size:.75rem;color:var(--sec)">${(u.modulos||[]).join(', ') || (u.role==='admin'?'todos':'—')}</td>
-                <td>
+                <td style="display:flex;gap:.4rem;flex-wrap:wrap">
                     ${u.ativo
                         ? `<button class="btn btn-danger btn-sm" onclick="toggleUser('${u.login}', false)">
                               <span class="material-icons-round" style="font-size:.9rem">block</span> Desativar
@@ -369,6 +400,9 @@ async function carregarUsuarios() {
                         : `<button class="btn btn-success btn-sm" onclick="toggleUser('${u.login}', true)">
                               <span class="material-icons-round" style="font-size:.9rem">check_circle</span> Ativar
                            </button>`}
+                    <button class="btn btn-secondary btn-sm" onclick="redefinirSenha('${u.login}')">
+                        <span class="material-icons-round" style="font-size:.9rem">key</span> Senha
+                    </button>
                 </td>
             </tr>
         `).join('');
@@ -385,9 +419,24 @@ async function carregarUsuarios() {
 // ── Ativar / Desativar ───────────────────────────────────────────────────────
 async function toggleUser(login, ativo) {
     try {
-        await ParreiraAuth.atualizarUsuario(TENANT_ID, login, { ativo });
+        const tenant = getTenant();
+        await ParreiraAuth.atualizarUsuario(tenant, login, { ativo });
         toast(`${ativo ? '✅ Ativado' : '⛔ Desativado'}: ${login}`);
         carregarUsuarios();
+    } catch(e) {
+        toast('❌ Erro: ' + e.message);
+    }
+}
+
+// ── Redefinir Senha ──────────────────────────────────────────────────────────
+async function redefinirSenha(login) {
+    const nova = prompt(`Nova senha para "${login}" (mínimo 6 caracteres):`);
+    if (!nova) return;
+    if (nova.length < 6) { alert('Senha muito curta!'); return; }
+    try {
+        const tenant = getTenant();
+        await ParreiraAuth.atualizarUsuario(tenant, login, { senha: nova });
+        toast(`🔑 Senha de "${login}" redefinida!`);
     } catch(e) {
         toast('❌ Erro: ' + e.message);
     }
