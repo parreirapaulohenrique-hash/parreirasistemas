@@ -62,6 +62,8 @@ window.fcApp = {
                 <option value="semestral">Semestral</option>
                 <option value="anual">Anual</option>
             `;
+            // ✅ Padrão: Anual — assim todos os meses têm chance de aparecer
+            typeEl.value = 'anual';
         }
 
         // Popula anos
@@ -101,14 +103,18 @@ window.fcApp = {
     },
 
     getMonthsForPeriod(type, sub) {
+        const ALL_MONTHS = [1,2,3,4,5,6,7,8,9,10,11,12];
         const map = {
-            mensal:     { default: () => [Number(sub)] },
             trimestral: { Q1: [1,2,3], Q2: [4,5,6], Q3: [7,8,9], Q4: [10,11,12] },
             semestral:  { S1: [1,2,3,4,5,6], S2: [7,8,9,10,11,12] },
-            anual:      { ALL: [1,2,3,4,5,6,7,8,9,10,11,12] }
+            anual:      { ALL: ALL_MONTHS }
         };
-        if (type === 'mensal') return [Number(sub)];
-        return (map[type] && map[type][sub]) || [1,2,3,4,5,6,7,8,9,10,11,12];
+        if (type === 'mensal') {
+            const m = Number(sub);
+            // ✅ Guarda contra sub inválido (NaN, 'ALL', undefined) — retorna o ano todo
+            return (isNaN(m) || m < 1 || m > 12) ? ALL_MONTHS : [m];
+        }
+        return (map[type] && map[type][sub]) || ALL_MONTHS;
     },
 
     bindEvents() {
