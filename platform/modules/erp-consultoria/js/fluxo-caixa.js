@@ -669,8 +669,8 @@ window.fcApp = {
         const entries = [];
         rows.forEach(row => {
             if (!Array.isArray(row)) return;
-            const texts = [];
-            const nums  = [];
+            const cellTexts = [];
+            const nums      = [];
             row.forEach(cell => {
                 if (cell === null || cell === undefined) return;
                 if (typeof cell === 'number') {
@@ -678,16 +678,27 @@ window.fcApp = {
                 } else {
                     const str = String(cell).trim();
                     if (!str) return;
+                    // Tenta parse numérico BR (ex: "33.411,65")
                     const brNum = this._parseBRNumber(str);
                     if (brNum !== null && Math.abs(brNum) > 0.01) {
                         nums.push(brNum);
-                    } else if (str.length > 1 && !/^\d+(\.\d+)?$/.test(str.replace(',','.'))) {
-                        texts.push(str);
+                        return;
+                    }
+                    // Detecta formato "3.2.01. Descrição" → extrai código e descrição
+                    const acMatch = str.match(/^(\d+(?:\.\d+)*)\.?\s+(.+)$/);
+                    if (acMatch) {
+                        cellTexts.push({ excelCode: acMatch[1], desc: acMatch[2].trim() });
+                    } else if (str.length > 1 && !/^\d+$/.test(str)) {
+                        cellTexts.push({ excelCode: null, desc: str });
                     }
                 }
             });
-            if (texts.length > 0 && nums.length > 0) {
-                texts.forEach(desc => nums.forEach(val => entries.push({ desc, value: val })));
+            if (cellTexts.length > 0 && nums.length > 0) {
+                cellTexts.forEach(t => nums.forEach(val => entries.push({
+                    excelCode: t.excelCode,
+                    desc:      t.desc,
+                    value:     val
+                })));
             }
         });
         return entries;
@@ -711,23 +722,93 @@ window.fcApp = {
 
     matchByValue(unmappedRows, excelEntries) {
         const proposed  = [];
-        const TOLERANCE = 0.05; // 5 centavos de tolerância
+        const TOLERANCE = 0.05; // 5 centavos
         unmappedRows.forEach(row => {
             const pdfAbs = Math.abs(row.valor);
             if (pdfAbs < 0.01) return;
-            const matches = excelEntries.filter(e => Math.abs(Math.abs(e.value) - pdfAbs) <= TOLERANCE);
-            const uniqueDescs = [...new Set(matches.map(m => m.desc))];
-            if (uniqueDescs.length === 0) return;
+
+            // ETAPA 1: Encontra entradas do Excel com mesmo valor absoluto
+            const valMatches = excelEntries.filter(e =>
+                Math.abs(Math.abs(e.value) - pdfAbs) <= TOLERANCE
+            );
+            if (valMatches.length === 0) return;
+
+            // ETAPA 2: Para cada match de valor, tenta achar entrada no MASTER_ACCOUNTS
+            // pela descrição do Excel (fuzzy match)
+            const enriched = valMatches.map(m => ({
+                ...m,
+                masterEntry: this._findMasterByDesc(m.desc)
+            }));
+
+            // Prefere matches que encontraram entrada no MASTER
+            const withMaster    = enriched.filter(m => m.masterEntry);
+            const withoutMaster = enriched.filter(m => !m.masterEntry);
+            const best = withMaster.length > 0 ? withMaster[0] : enriched[0];
+
+            // Descrições únicas para o dropdown (para escolha manual)
+            const uniqueDescs = [...new Set(enriched.map(m => m.desc))];
+
             proposed.push({
-                pdfCodigo:     row.codigo,
-                pdfValor:      row.valor,
-                matches:       uniqueDescs,
-                selectedDesc:  uniqueDescs[0],
-                selectedGroup: this._suggestGroup(row.codigo)
+                pdfCodigo:    row.codigo,
+                pdfValor:     row.valor,
+                excelMatches: enriched,             // todos os matches do Excel
+                matches:      uniqueDescs,           // para compatibilidade com modal
+                selectedDesc: best.masterEntry?.descricao || best.desc,
+                selectedGroup: best.masterEntry?.group || this._suggestGroup(row.codigo),
+                masterEntry:  best.masterEntry,      // entrada MASTER que foi encontrada
+                excelDesc:    best.desc,             // descrição crua do Excel
+                autoMatched:  withMaster.length === 1 // ✅ match único e automático
             });
         });
         return proposed;
     },
+
+    // Normaliza string para comparação: remove acentos, pontuação inicial, caixa
+    _normalizeDesc(str) {
+        if (!str) return '';
+        return str
+            .toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
+            .replace(/^[\s\.\-]+/, '')                         // strip leading dots/spaces
+            .replace(/[\/()'"]/g, ' ')                         // normaliza pontuação
+            .replace(/\s+/g, ' ')
+            .trim();
+    },
+
+    // Procura no MASTER_ACCOUNTS pelo match mais próximo da descrição do Excel
+    _findMasterByDesc(excelDesc) {
+        if (!excelDesc) return null;
+        const normExcel = this._normalizeDesc(excelDesc);
+        if (normExcel.length < 4) return null;
+
+        const accounts = window.MASTER_ACCOUNTS || [];
+        let currentGroup = null;
+        let bestMatch    = null;
+        let bestScore    = 0;
+
+        for (const acc of accounts) {
+            if (acc.codigo === 'HEADER') { currentGroup = acc.descricao; continue; }
+            const normMaster = this._normalizeDesc(acc.descricao);
+            if (normMaster.length < 2) continue;
+
+            // Match exato após normalização
+            if (normMaster === normExcel) {
+                return { ...acc, group: currentGroup }; // melhor possível
+            }
+            // Match por substring (um contém o outro)
+            const shorter = normMaster.length < normExcel.length ? normMaster : normExcel;
+            const longer  = normMaster.length >= normExcel.length ? normMaster : normExcel;
+            if (shorter.length >= 5 && longer.includes(shorter)) {
+                const score = shorter.length;
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestMatch = { ...acc, group: currentGroup };
+                }
+            }
+        }
+        return bestMatch;
+    },
+
 
     _suggestGroup(codigo) {
         const hdrs = (window.MASTER_ACCOUNTS || []).filter(m => m.codigo === 'HEADER').map(m => m.descricao);
@@ -749,54 +830,75 @@ window.fcApp = {
         (window.MASTER_ACCOUNTS || []).forEach(m => {
             if (m.codigo === 'HEADER' && !grupos.includes(m.descricao)) grupos.push(m.descricao);
         });
+
         const tableRows = proposed.map((p, idx) => {
-            const matchOpts = p.matches.map(m =>
-                `<option value="${m.replace(/"/g,"'")}" ${m === p.selectedDesc ? 'selected' : ''}>${m}</option>`
-            ).join('');
+            // Descrição no MASTER (editável se não encontrou automaticamente)
+            const masterDesc = p.masterEntry?.descricao || '';
+            const masterGroup = p.masterEntry?.group || '';
+            const autoOk = p.autoMatched && !!p.masterEntry;
+
+            // Dropdown de grupo
             const gOpts = grupos.map(g =>
-                `<option value="${g.replace(/"/g,"'")}" ${g === p.selectedGroup ? 'selected' : ''}>${g}</option>`
+                `<option value="${g.replace(/"/g,"'")}" ${g === (masterGroup || p.selectedGroup) ? 'selected' : ''}>${g}</option>`
             ).join('');
-            const badge = p.matches.length === 1
-                ? `<span style="color:#10b981;">✅</span>`
-                : `<span style="color:#f59e0b;" title="${p.matches.length} correspondências">⚠️ ${p.matches.length}</span>`;
+
+            const badge = autoOk
+                ? `<span style="color:#10b981;font-size:1rem;" title="Correspondência única e automática">✅</span>`
+                : p.masterEntry
+                    ? `<span style="color:#f59e0b;font-size:.85rem;" title="Match encontrado, mas há múltiplos resultados">⚠️</span>`
+                    : `<span style="color:#ef4444;font-size:.85rem;" title="Não encontrado no plano — selecione manualmente">❌</span>`;
+
             return `
                 <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-                    <td style="padding:8px 10px;"><input type="checkbox" id="avm-chk-${idx}" checked style="width:14px;height:14px;cursor:pointer;accent-color:#3b82f6;"></td>
+                    <td style="padding:8px 10px;"><input type="checkbox" id="avm-chk-${idx}" ${autoOk?'checked':p.masterEntry?'checked':''} style="width:14px;height:14px;cursor:pointer;accent-color:#3b82f6;"></td>
                     <td style="padding:8px 10px;font-weight:700;font-size:.82rem;color:#60a5fa;">${p.pdfCodigo}</td>
-                    <td style="padding:8px 10px;font-size:.82rem;color:${p.pdfValor>=0?'#10b981':'#ef4444'};text-align:right;">${this.formatCurrency(p.pdfValor)}</td>
-                    <td style="padding:8px 6px;text-align:center;">${badge}</td>
-                    <td style="padding:8px 4px;"><select id="avm-desc-${idx}" style="background:#0f172a;border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#f8fafc;padding:3px 6px;font-size:.78rem;min-width:160px;max-width:240px;">${matchOpts}</select></td>
-                    <td style="padding:8px 4px;"><select id="avm-grupo-${idx}" style="background:#0f172a;border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#f8fafc;padding:3px 6px;font-size:.78rem;min-width:160px;max-width:240px;">${gOpts}</select></td>
+                    <td style="padding:8px 6px;font-size:.82rem;color:${p.pdfValor>=0?'#10b981':'#ef4444'};text-align:right;">${this.formatCurrency(p.pdfValor)}</td>
+                    <td style="padding:8px 6px;font-size:.78rem;color:#94a3b8;max-width:200px;overflow:hidden;text-overflow:ellipsis;" title="${p.excelDesc||''}"><i>${p.excelDesc||'—'}</i></td>
+                    <td style="padding:8px 4px;text-align:center;">${badge}</td>
+                    <td style="padding:8px 4px;font-size:.78rem;color:${masterDesc?'#a5f3fc':'#ef4444'};"
+                        title="${masterDesc||'Não encontrado no plano de contas'}">
+                        ${masterDesc ? masterDesc : '<span style="color:#ef4444">Não encontrado</span>'}
+                        <input type="hidden" id="avm-master-${idx}" value="${masterDesc.replace(/"/g,"'")}">
+                    </td>
+                    <td style="padding:8px 4px;"><select id="avm-grupo-${idx}" style="background:#0f172a;border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#f8fafc;padding:3px 6px;font-size:.72rem;min-width:140px;max-width:200px;">${gOpts}</select></td>
                 </tr>`;
         }).join('');
-        const totalUnique = proposed.filter(p => p.matches.length === 1).length;
+
+        const totalAuto   = proposed.filter(p => p.autoMatched && p.masterEntry).length;
+        const totalMaster = proposed.filter(p => p.masterEntry).length;
+        const totalNoMatch = proposed.length - totalMaster;
+
         modal.innerHTML = `
-            <div style="background:#1e293b;border-radius:14px;padding:2rem;width:100%;max-width:970px;border:1px solid rgba(255,255,255,.08);box-shadow:0 24px 60px rgba(0,0,0,.6);">
+            <div style="background:#1e293b;border-radius:14px;padding:2rem;width:100%;max-width:1050px;border:1px solid rgba(255,255,255,.08);box-shadow:0 24px 60px rgba(0,0,0,.6);">
                 <div style="display:flex;align-items:center;gap:1rem;margin-bottom:.75rem;">
-                    <h3 style="margin:0;color:#f8fafc;flex:1;">⚡ Auto-Vincular via Planilha</h3>
-                    <span style="background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:20px;padding:3px 12px;font-size:.8rem;font-weight:600;">${proposed.length} encontradas &middot; ${totalUnique} únicas</span>
+                    <h3 style="margin:0;color:#f8fafc;flex:1;">&#9889; Auto-Vincular via Planilha</h3>
+                    <span style="background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:20px;padding:3px 12px;font-size:.8rem;font-weight:600;">${totalAuto} automáticas · ${totalMaster} encontradas · ${totalNoMatch} sem match</span>
                 </div>
-                <p style="color:#94a3b8;font-size:.82rem;margin-bottom:1.2rem;">✅&nbsp;=&nbsp;correspondência única (pronto para vincular) &nbsp;&middot;&nbsp; ⚠️&nbsp;=&nbsp;múltiplas opções (escolha a descrição correta)</p>
+                <p style="color:#94a3b8;font-size:.8rem;margin-bottom:1rem;">
+                    ✅ match único · ⚠️ múltiplos · ❌ não encontrado no plano de contas<br>
+                    <span style="color:#64748b;">Lógica: <b style="color:#a5f3fc;">valor do PDF</b> → <b style="color:#fbbf24;">descrição do Excel</b> → <b style="color:#10b981;">linha no plano de contas</b></span>
+                </p>
                 <div style="overflow-x:auto;max-height:55vh;overflow-y:auto;border-radius:8px;border:1px solid rgba(255,255,255,.05);">
                     <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
                         <thead style="position:sticky;top:0;z-index:1;">
                             <tr style="background:#0f172a;color:#64748b;text-align:left;">
                                 <th style="padding:10px;"><input type="checkbox" id="avm-chk-all" checked onchange="fcApp.selectAllAutoVincular(${proposed.length},this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:#3b82f6;"></th>
-                                <th style="padding:10px;">Código PDF</th>
+                                <th style="padding:10px;">Cód. PDF</th>
                                 <th style="padding:10px;text-align:right;">Valor</th>
-                                <th style="padding:10px;text-align:center;">Match</th>
-                                <th style="padding:10px;">Descrição no Plano</th>
-                                <th style="padding:10px;">Grupo de Destino</th>
+                                <th style="padding:10px;">Descrição do Excel</th>
+                                <th style="padding:10px;"></th>
+                                <th style="padding:10px;">Linha no Plano</th>
+                                <th style="padding:10px;">Grupo</th>
                             </tr>
                         </thead>
                         <tbody style="color:#f8fafc;">${tableRows}</tbody>
                     </table>
                 </div>
                 <div style="display:flex;gap:1rem;align-items:center;margin-top:1.5rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,.06);">
-                    <span style="color:#64748b;font-size:.78rem;">Marque as contas que deseja vincular.</span>
+                    <span style="color:#64748b;font-size:.78rem;">Marque as contas e clique em Aplicar. Apenas linhas com ✅ ou ⚠️ serão vinculadas.</span>
                     <div style="flex:1;"></div>
                     <button onclick="document.getElementById('modal-auto-vincular').style.display='none'" style="background:transparent;border:1px solid rgba(255,255,255,.15);color:#94a3b8;border-radius:8px;padding:.6rem 1.2rem;cursor:pointer;">Cancelar</button>
-                    <button onclick="fcApp.applyAutoVincular(${proposed.length})" style="background:#10b981;border:none;color:white;border-radius:8px;padding:.6rem 1.5rem;cursor:pointer;font-weight:700;">⚡ Aplicar Vinculaçoes</button>
+                    <button onclick="fcApp.applyAutoVincular(${proposed.length})" style="background:#10b981;border:none;color:white;border-radius:8px;padding:.6rem 1.5rem;cursor:pointer;font-weight:700;">&#9889; Aplicar Vinculações</button>
                 </div>
             </div>`;
         modal.style.display = 'flex';
@@ -818,15 +920,25 @@ window.fcApp = {
         for (let i = 0; i < count; i++) {
             const chk = document.getElementById(`avm-chk-${i}`);
             if (!chk || !chk.checked) continue;
-            const p         = proposed[i];
+            const p = proposed[i];
             if (!p) continue;
-            const codigo    = p.pdfCodigo;
-            const descricao = document.getElementById(`avm-desc-${i}`)?.value || p.selectedDesc;
-            const grupo     = document.getElementById(`avm-grupo-${i}`)?.value || p.selectedGroup;
+
+            const codigo = p.pdfCodigo;
+            // ✅ Usa descrição do MASTER_ACCOUNTS (campo hidden avm-master) se disponível
+            //    Caso contrário, cai para selectedDesc (descrição crua do Excel)
+            const masterHidden  = document.getElementById(`avm-master-${i}`)?.value;
+            const descricao = (masterHidden && masterHidden.trim())
+                ? masterHidden.trim()
+                : (p.masterEntry?.descricao || p.selectedDesc);
+            const grupo = document.getElementById(`avm-grupo-${i}`)?.value
+                || p.masterEntry?.group || p.selectedGroup;
+
             if (!codigo || !descricao || !grupo) continue;
-            // Remove duplicatas
+
+            // Remove duplicatas (mesmo código + mesma descrição)
             accounts = accounts.filter(a => !(a.codigo === codigo && a.descricao === descricao));
-            // Acha último índice do grupo
+
+            // Acha último índice do grupo alvo para inserção
             let insertIdx = -1;
             let curGroup  = null;
             for (let j = 0; j < accounts.length; j++) {
@@ -840,6 +952,7 @@ window.fcApp = {
                 applied++;
             }
         }
+
         if (applied > 0) {
             localStorage.setItem('customMasterAccounts', JSON.stringify(accounts));
             window.MASTER_ACCOUNTS = accounts;
