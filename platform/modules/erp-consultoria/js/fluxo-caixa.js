@@ -475,8 +475,16 @@ window.fcApp = {
 
             const tdCode = document.createElement('td');
             tdCode.className = 'col-code';
-            // ✅ Passa o grupo para que a edição seja limitada à seção correta
-            tdCode.appendChild(this.makeEditableCode(row.codigo, row.descricao, row.group));
+            if (row.unmapped) {
+                // ✅ Para contas não mapeadas: botão Vincular em vez de inline-edit
+                tdCode.innerHTML = `
+                    <span class="editable-code" style="opacity:.5;">${row.codigo}</span>
+                    <button class="btn-vincular-small" onclick="fcApp.openVincularModal('${row.codigo}', ${row.valor}, \`${row.descricao}\`)" title="Vincular esta conta ao plano de contas">
+                        🔗 Vincular
+                    </button>`;
+            } else {
+                tdCode.appendChild(this.makeEditableCode(row.codigo, row.descricao, row.group));
+            }
 
             const tdDesc = document.createElement('td');
             tdDesc.className = 'col-desc';
@@ -593,6 +601,110 @@ window.fcApp = {
     getActiveMasterAccounts() {
         return window.MASTER_ACCOUNTS || [];
     },
+
+    // ─── MODAL VINCULAR CONTA ───────────────────────────────────────────────
+
+    openVincularModal(codigo, valor, descricao) {
+        const accounts = window.MASTER_ACCOUNTS || [];
+        // Coleta todos os grupos (HEADERs com contas válidas)
+        const grupos = [];
+        let cur = null;
+        accounts.forEach(m => {
+            if (m.codigo === 'HEADER') { cur = m.descricao; }
+            else if (cur && !grupos.includes(cur)) grupos.push(cur);
+        });
+
+        let modal = document.getElementById('modal-vincular-conta');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'modal-vincular-conta';
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.75);z-index:10000;display:flex;align-items:center;justify-content:center;';
+            document.body.appendChild(modal);
+        }
+
+        const groupOpts = grupos.map(g =>
+            `<option value="${g.replace(/"/g,"'")}">${ g}</option>`
+        ).join('');
+
+        const valFmt = this.formatCurrency(valor);
+        const valColor = valor >= 0 ? '#10b981' : '#ef4444';
+
+        modal.innerHTML = `
+            <div style="background:#1e293b;border-radius:12px;padding:2rem;width:520px;max-width:90vw;border:1px solid rgba(255,255,255,.1);box-shadow:0 20px 60px rgba(0,0,0,.5);">
+                <h3 style="margin:0 0 1rem;color:#f8fafc;">&#128279; Vincular Conta ao Plano de Contas</h3>
+                <div style="background:#0f172a;border-radius:8px;padding:1rem;margin-bottom:1.5rem;border:1px solid rgba(255,255,255,.05);">
+                    <div style="font-size:.75rem;color:#94a3b8;margin-bottom:.25rem;">Conta do PDF</div>
+                    <div style="font-weight:700;font-size:1.1rem;color:#f8fafc;">${codigo}</div>
+                    <div style="color:#94a3b8;font-size:.85rem;">${descricao}</div>
+                    <div style="color:${valColor};font-weight:600;margin-top:.5rem;">${valFmt}</div>
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <label style="display:block;color:#94a3b8;font-size:.85rem;margin-bottom:.4rem;">Grupo de Destino no Plano</label>
+                    <select id="vincular-grupo" style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#f8fafc;padding:.6rem;font-size:.9rem;">
+                        ${groupOpts}
+                    </select>
+                </div>
+                <div style="margin-bottom:1.5rem;">
+                    <label style="display:block;color:#94a3b8;font-size:.85rem;margin-bottom:.4rem;">Descrição para o Plano de Contas</label>
+                    <input type="text" id="vincular-descricao" value="${descricao === 'Desconhecida' ? '' : descricao}"
+                        placeholder="Ex: . Receita em Dinheiro"
+                        style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#f8fafc;padding:.6rem;font-size:.9rem;box-sizing:border-box;">
+                </div>
+                <div style="display:flex;gap:1rem;justify-content:flex-end;">
+                    <button onclick="document.getElementById('modal-vincular-conta').style.display='none'"
+                        style="background:transparent;border:1px solid rgba(255,255,255,.15);color:#94a3b8;border-radius:8px;padding:.6rem 1.5rem;cursor:pointer;">Cancelar</button>
+                    <button onclick="fcApp.confirmVincular('${codigo}', ${valor})"
+                        style="background:#3b82f6;border:none;color:white;border-radius:8px;padding:.6rem 1.5rem;cursor:pointer;font-weight:600;">✔ Vincular</button>
+                </div>
+            </div>`;
+        modal.style.display = 'flex';
+    },
+
+    confirmVincular(codigo, valor) {
+        const grupo     = document.getElementById('vincular-grupo')?.value;
+        const descricao = document.getElementById('vincular-descricao')?.value.trim() || codigo;
+        if (!grupo) { alert('Selecione um grupo de destino.'); return; }
+
+        const accounts = (window.MASTER_ACCOUNTS || []).slice(); // clone
+        let insertIdx  = -1;
+        let curGroup   = null;
+
+        // Encontra o último índice do grupo alvo
+        for (let i = 0; i < accounts.length; i++) {
+            if (accounts[i].codigo === 'HEADER') {
+                if (curGroup === grupo && insertIdx >= 0) break; // passou o grupo
+                curGroup = accounts[i].descricao;
+            } else if (curGroup === grupo) {
+                insertIdx = i;
+            }
+        }
+
+        if (insertIdx < 0) { alert('Grupo não encontrado.'); return; }
+
+        // Remove o código de outros lugares (evita duplicatas)
+        const cleaned = accounts.filter(a => !(a.codigo === codigo && a.descricao === descricao));
+        // Recalcula o índice após filtragem
+        let newInsert = -1;
+        curGroup = null;
+        for (let i = 0; i < cleaned.length; i++) {
+            if (cleaned[i].codigo === 'HEADER') {
+                if (curGroup === grupo && newInsert >= 0) break;
+                curGroup = cleaned[i].descricao;
+            } else if (curGroup === grupo) { newInsert = i; }
+        }
+
+        cleaned.splice((newInsert >= 0 ? newInsert : cleaned.length - 1) + 1, 0,
+            { codigo, descricao });
+
+        localStorage.setItem('customMasterAccounts', JSON.stringify(cleaned));
+        window.MASTER_ACCOUNTS = cleaned;
+
+        document.getElementById('modal-vincular-conta').style.display = 'none';
+        this.showToast(`✅ ${codigo} vinculado → "${grupo}"`);
+        this.refreshDashboard();
+    },
+
+    // ─── TOAST ─────────────────────────────────────────────────────────────────
 
     showToast(msg) {
         let t = document.getElementById('fc-toast');
