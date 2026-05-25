@@ -92,6 +92,7 @@ window.ParreiraAuth = (function () {
     // ─── LOGOUT ───────────────────────────────────────────────────────────────
     async function logout() {
         const s = getSessao();
+        const moduloAtivo = s ? (s.moduloAtivo || null) : null;
         if (s && window.SessionManager) {
             try {
                 const db = _initDB();
@@ -100,10 +101,8 @@ window.ParreiraAuth = (function () {
         }
         sessionStorage.removeItem('parreira_session');
         localStorage.removeItem('logged_user');
-        const path = window.location.pathname;
-        const depth = (path.match(/\//g) || []).length - 1;
-        const up = '../'.repeat(Math.max(0, depth - 1));
-        window.location.href = up + 'login.html';
+        // Redireciona preservando o módulo ativo para que o usuário volte ao lugar certo após login
+        window.location.href = _loginUrl(moduloAtivo);
     }
 
     // ─── SESSÃO ───────────────────────────────────────────────────────────────
