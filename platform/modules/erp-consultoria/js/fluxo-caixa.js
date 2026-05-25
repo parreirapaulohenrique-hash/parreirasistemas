@@ -647,143 +647,164 @@ window.fcApp = {
                 const wb      = XLSX.read(data, { type: 'array' });
                 const ws      = wb.Sheets[wb.SheetNames[0]];
                 const entries = this.parseExcelForValueMapping(ws);
+
+                // ── DEBUG: mostra o que foi extraído do Excel ──────────────────
+                console.log('[AutoVincular] Entradas extraídas do Excel:', entries.length);
+                console.log('[AutoVincular] Primeiras 10 entradas:', entries.slice(0, 10));
+                console.log('[AutoVincular] Contas para vincular:', unmapped.map(r => ({ codigo: r.codigo, valor: r.valor })));
+
                 if (entries.length === 0) {
-                    alert('Não foram encontrados pares (descrição, valor) na planilha.\nVerifique o formato do arquivo.');
+                    alert('Não foram encontrados pares (descrição + valor) na planilha.\nAbra o console (F12) para ver detalhes.');
                     return;
                 }
+
                 const proposed = this.matchByValue(unmapped, entries);
-                if (proposed.length === 0) {
-                    this.showToast('⚠️ Nenhum valor correspondente encontrado na planilha');
+                // Inclui contas sem match (para vinculação manual)
+                const semMatch = unmapped.filter(row =>
+                    !proposed.find(p => p.pdfCodigo === row.codigo)
+                ).map(row => ({
+                    pdfCodigo:   row.codigo,
+                    pdfValor:    row.valor,
+                    excelDesc:   null,
+                    masterEntry: null,
+                    autoMatched: false,
+                    matches:     []
+                }));
+
+                const allProposed = [...proposed, ...semMatch];
+                if (allProposed.length === 0) {
+                    this.showToast('⚠️ Nenhuma conta para exibir');
                     return;
                 }
-                this.pendingAutoVincular = proposed;
-                this.showAutoVincularModal(proposed);
+                this.pendingAutoVincular = allProposed;
+                this.showAutoVincularModal(allProposed);
             } catch(err) {
                 alert('Erro ao ler planilha: ' + err.message);
+                console.error('[AutoVincular] Erro:', err);
             }
         });
     },
 
+    // ── Parser do Excel: abordagem por coluna ──────────────────────────────
+    // Localiza a célula de descrição (no formato "N.N.N. Texto") e pega
+    // o PRIMEIRO número APÓS ela na mesma linha (evita capturar n° de linha).
     parseExcelForValueMapping(ws) {
         const rows    = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
         const entries = [];
+
         rows.forEach(row => {
             if (!Array.isArray(row)) return;
-            const cellTexts = [];
-            const nums      = [];
-            row.forEach(cell => {
-                if (cell === null || cell === undefined) return;
-                // ✅ Ignora booleanos (células FALSE/TRUE do Excel que viravam "Fals")
-                if (typeof cell === 'boolean') return;
+
+            // 1) Acha a primeira célula de descrição no formato "N.N.N. Texto"
+            let descInfo  = null;
+            let descColIdx = -1;
+
+            for (let ci = 0; ci < row.length; ci++) {
+                const cell = row[ci];
+                if (cell === null || cell === undefined) continue;
+                if (typeof cell === 'boolean') continue;
+                if (typeof cell === 'number') continue;
+                const str = String(cell).trim();
+                if (str.length < 3) continue;
+                if (/^(false|true|falso|verdadeiro)$/i.test(str)) continue;
+                const m = str.match(/^(\d+(?:\.\d+)*)\.?\s+(.+)$/);
+                if (m && m[2].trim().length >= 3) {
+                    descInfo   = { excelCode: m[1], desc: m[2].trim() };
+                    descColIdx = ci;
+                    break;
+                }
+            }
+
+            if (!descInfo) return; // linha sem descrição no padrão esperado
+
+            // 2) Pega o primeiro valor numérico significativo APÓS a coluna de descrição
+            for (let ci = descColIdx + 1; ci < row.length; ci++) {
+                const cell = row[ci];
+                if (cell === null || cell === undefined || typeof cell === 'boolean') continue;
+
+                let val = null;
                 if (typeof cell === 'number') {
-                    if (Math.abs(cell) > 0.01) nums.push(cell);
+                    // Ignora decimais muito pequenos (provavelmente %)
+                    if (Math.abs(cell) < 0.5 && cell !== Math.floor(cell)) continue;
+                    val = cell;
                 } else {
                     const str = String(cell).trim();
-                    if (!str) return;
-                    // Ignora strings que são booleanos textuais ou muito curtas
-                    if (/^(false|true|falso|verdadeiro)$/i.test(str)) return;
-                    if (str.length < 3) return;
-                    // Tenta parse numérico BR (ex: "33.411,65" ou "(2.535,00)")
+                    if (!str || /^(false|true|falso|verdadeiro)$/i.test(str)) continue;
+                    if (/^\d+[,.]?\d*\s*%$/.test(str)) continue; // porcentagem
                     const brNum = this._parseBRNumber(str);
-                    if (brNum !== null && Math.abs(brNum) > 0.01) {
-                        nums.push(brNum);
-                        return;
-                    }
-                    // Ignora apenas porcentagens
-                    if (/^\d+[,.]\d+%$/.test(str)) return;
-                    // Detecta formato "3.2.01. Descrição" → extrai código e descrição
-                    const acMatch = str.match(/^(\d+(?:\.\d+)*)\.?\s+(.+)$/);
-                    if (acMatch && acMatch[2].trim().length >= 3) {
-                        cellTexts.push({ excelCode: acMatch[1], desc: acMatch[2].trim() });
-                    } else if (str.length >= 3 && !/^[\d\.\,\s]+$/.test(str)) {
-                        // Texto genérico que não é só números
-                        cellTexts.push({ excelCode: null, desc: str });
-                    }
+                    if (brNum !== null && Math.abs(brNum) >= 0.01) val = brNum;
                 }
-            });
-            if (cellTexts.length > 0 && nums.length > 0) {
-                cellTexts.forEach(t => nums.forEach(val => entries.push({
-                    excelCode: t.excelCode,
-                    desc:      t.desc,
-                    value:     val
-                })));
+
+                if (val !== null) {
+                    entries.push({ excelCode: descInfo.excelCode, desc: descInfo.desc, value: val });
+                    break; // apenas o primeiro valor após a descrição
+                }
             }
         });
+
         return entries;
     },
-
 
     _parseBRNumber(str) {
         let s   = str.replace(/[R$\s]/g, '').trim();
         const neg = s.startsWith('(') && s.endsWith(')');
         s = s.replace(/[()]/g, '');
-        // Brazilian: 1.234,56
         if (/^\d{1,3}(\.\d{3})*,\d{2}$/.test(s)) {
             const val = parseFloat(s.replace(/\./g, '').replace(',', '.'));
             return neg ? -val : val;
         }
-        // Plain float (dot decimal)
         const plain = parseFloat(s.replace(',', '.'));
         if (!isNaN(plain)) return neg ? -plain : plain;
         return null;
     },
 
+    // ── Match: valor do PDF → valor do Excel → descrição do Excel ──────────
     matchByValue(unmappedRows, excelEntries) {
         const proposed  = [];
-        const TOLERANCE = 0.05; // 5 centavos
+        const TOLERANCE = 0.05;
         unmappedRows.forEach(row => {
             const pdfAbs = Math.abs(row.valor);
             if (pdfAbs < 0.01) return;
 
-            // ETAPA 1: Encontra entradas do Excel com mesmo valor absoluto
             const valMatches = excelEntries.filter(e =>
                 Math.abs(Math.abs(e.value) - pdfAbs) <= TOLERANCE
             );
             if (valMatches.length === 0) return;
 
-            // ETAPA 2: Para cada match de valor, tenta achar entrada no MASTER_ACCOUNTS
-            // pela descrição do Excel (fuzzy match)
+            // Para cada match de valor, tenta encontrar no MASTER pela descrição
             const enriched = valMatches.map(m => ({
                 ...m,
                 masterEntry: this._findMasterByDesc(m.desc)
             }));
 
-            // Prefere matches que encontraram entrada no MASTER
-            const withMaster    = enriched.filter(m => m.masterEntry);
-            const withoutMaster = enriched.filter(m => !m.masterEntry);
-            const best = withMaster.length > 0 ? withMaster[0] : enriched[0];
+            const withMaster = enriched.filter(m => m.masterEntry);
+            const best       = withMaster.length > 0 ? withMaster[0] : enriched[0];
 
-            // Descrições únicas para o dropdown (para escolha manual)
-            const uniqueDescs = [...new Set(enriched.map(m => m.desc))];
+            console.log(`[AutoVincular] ${row.codigo} (${row.valor}) → Excel: "${best.desc}" → Master: ${best.masterEntry?.descricao || 'NÃO ENCONTRADO'}`);
 
             proposed.push({
-                pdfCodigo:    row.codigo,
-                pdfValor:     row.valor,
-                excelMatches: enriched,             // todos os matches do Excel
-                matches:      uniqueDescs,           // para compatibilidade com modal
-                selectedDesc: best.masterEntry?.descricao || best.desc,
-                selectedGroup: best.masterEntry?.group || this._suggestGroup(row.codigo),
-                masterEntry:  best.masterEntry,      // entrada MASTER que foi encontrada
-                excelDesc:    best.desc,             // descrição crua do Excel
-                autoMatched:  withMaster.length === 1 // ✅ match único e automático
+                pdfCodigo:   row.codigo,
+                pdfValor:    row.valor,
+                excelDesc:   best.desc,
+                masterEntry: best.masterEntry,
+                autoMatched: withMaster.length === 1,
+                matches:     [...new Set(enriched.map(m => m.desc))]
             });
         });
         return proposed;
     },
 
-    // Normaliza string para comparação: remove acentos, pontuação inicial, caixa
     _normalizeDesc(str) {
         if (!str) return '';
         return str
             .toLowerCase()
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
-            .replace(/^[\s\.\-]+/, '')                         // strip leading dots/spaces
-            .replace(/[\/()'"]/g, ' ')                         // normaliza pontuação
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/^[\s.\-]+/, '')
+            .replace(/[\/()'"]/g, ' ')
             .replace(/\s+/g, ' ')
             .trim();
     },
 
-    // Procura no MASTER_ACCOUNTS pelo match mais próximo da descrição do Excel
     _findMasterByDesc(excelDesc) {
         if (!excelDesc) return null;
         const normExcel = this._normalizeDesc(excelDesc);
@@ -798,25 +819,16 @@ window.fcApp = {
             if (acc.codigo === 'HEADER') { currentGroup = acc.descricao; continue; }
             const normMaster = this._normalizeDesc(acc.descricao);
             if (normMaster.length < 2) continue;
-
-            // Match exato após normalização
-            if (normMaster === normExcel) {
-                return { ...acc, group: currentGroup }; // melhor possível
-            }
-            // Match por substring (um contém o outro)
+            if (normMaster === normExcel) return { ...acc, group: currentGroup };
             const shorter = normMaster.length < normExcel.length ? normMaster : normExcel;
             const longer  = normMaster.length >= normExcel.length ? normMaster : normExcel;
             if (shorter.length >= 5 && longer.includes(shorter)) {
                 const score = shorter.length;
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestMatch = { ...acc, group: currentGroup };
-                }
+                if (score > bestScore) { bestScore = score; bestMatch = { ...acc, group: currentGroup }; }
             }
         }
         return bestMatch;
     },
-
 
     _suggestGroup(codigo) {
         const hdrs = (window.MASTER_ACCOUNTS || []).filter(m => m.codigo === 'HEADER').map(m => m.descricao);
@@ -826,65 +838,86 @@ window.fcApp = {
         return hdrs[1] || '';
     },
 
+    // ── Modal: lista todas as contas com select de MASTER_ACCOUNTS ──────────
     showAutoVincularModal(proposed) {
         let modal = document.getElementById('modal-auto-vincular');
         if (!modal) {
             modal = document.createElement('div');
             modal.id = 'modal-auto-vincular';
-            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:10001;display:flex;align-items:flex-start;justify-content:center;padding:2rem 1rem;box-sizing:border-box;overflow-y:auto;';
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:10001;display:flex;align-items:flex-start;justify-content:center;padding:2rem 1rem;box-sizing:border-box;overflow-y:auto;';
             document.body.appendChild(modal);
         }
-        const grupos = [];
+
+        // Constrói lista de todas as entradas do MASTER_ACCOUNTS (para o select)
+        const allMasterEntries = [];
+        let _curGrp = null;
         (window.MASTER_ACCOUNTS || []).forEach(m => {
-            if (m.codigo === 'HEADER' && !grupos.includes(m.descricao)) grupos.push(m.descricao);
+            if (m.codigo === 'HEADER') { _curGrp = m.descricao; return; }
+            allMasterEntries.push({ codigo: m.codigo, descricao: m.descricao, group: _curGrp });
         });
 
-        const tableRows = proposed.map((p, idx) => {
-            // Descrição no MASTER (editável se não encontrou automaticamente)
-            const masterDesc = p.masterEntry?.descricao || '';
-            const masterGroup = p.masterEntry?.group || '';
-            const autoOk = p.autoMatched && !!p.masterEntry;
+        const grupos = [...new Set(allMasterEntries.map(e => e.group))];
 
-            // Dropdown de grupo
-            const gOpts = grupos.map(g =>
-                `<option value="${g.replace(/"/g,"'")}" ${g === (masterGroup || p.selectedGroup) ? 'selected' : ''}>${g}</option>`
-            ).join('');
+        const tableRows = proposed.map((p, idx) => {
+            const masterDesc  = p.masterEntry?.descricao || '';
+            const masterGroup = p.masterEntry?.group     || (p.pdfCodigo ? this._suggestGroup(p.pdfCodigo) : '');
+            const autoOk      = p.autoMatched && !!p.masterEntry;
 
             const badge = autoOk
-                ? `<span style="color:#10b981;font-size:1rem;" title="Correspondência única e automática">✅</span>`
+                ? `<span title="Correspondência automática única" style="color:#10b981;font-size:1.1rem;">✅</span>`
                 : p.masterEntry
-                    ? `<span style="color:#f59e0b;font-size:.85rem;" title="Match encontrado, mas há múltiplos resultados">⚠️</span>`
-                    : `<span style="color:#ef4444;font-size:.85rem;" title="Não encontrado no plano — selecione manualmente">❌</span>`;
+                    ? `<span title="Correspondência encontrada" style="color:#f59e0b;font-size:.9rem;">⚠️</span>`
+                    : `<span title="Sem correspondência automática — selecione manualmente" style="color:#ef4444;font-size:.9rem;">❌</span>`;
+
+            // Select com TODAS as entradas do MASTER_ACCOUNTS
+            const masterOpts = `<option value="">-- Selecione a linha do plano --</option>` +
+                allMasterEntries.map(m =>
+                    `<option value="${m.descricao.replace(/"/g,"'")}"
+                        data-group="${(m.group||'').replace(/"/g,"'")}"
+                        ${m.descricao === masterDesc ? 'selected' : ''}>
+                        ${m.descricao}
+                    </option>`
+                ).join('');
+
+            const gOpts = grupos.map(g =>
+                `<option value="${g.replace(/"/g,"'")}" ${g === masterGroup ? 'selected' : ''}>${g}</option>`
+            ).join('');
 
             return `
-                <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-                    <td style="padding:8px 10px;"><input type="checkbox" id="avm-chk-${idx}" ${autoOk?'checked':p.masterEntry?'checked':''} style="width:14px;height:14px;cursor:pointer;accent-color:#3b82f6;"></td>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                    <td style="padding:8px 10px;"><input type="checkbox" id="avm-chk-${idx}" ${(autoOk||p.masterEntry)?'checked':''} style="width:14px;height:14px;cursor:pointer;accent-color:#3b82f6;"></td>
                     <td style="padding:8px 10px;font-weight:700;font-size:.82rem;color:#60a5fa;">${p.pdfCodigo}</td>
-                    <td style="padding:8px 6px;font-size:.82rem;color:${p.pdfValor>=0?'#10b981':'#ef4444'};text-align:right;">${this.formatCurrency(p.pdfValor)}</td>
-                    <td style="padding:8px 6px;font-size:.78rem;color:#94a3b8;max-width:200px;overflow:hidden;text-overflow:ellipsis;" title="${p.excelDesc||''}"><i>${p.excelDesc||'—'}</i></td>
+                    <td style="padding:8px 6px;font-size:.82rem;color:${(p.pdfValor||0)>=0?'#10b981':'#ef4444'};text-align:right;">${this.formatCurrency(p.pdfValor||0)}</td>
+                    <td style="padding:8px 6px;font-size:.75rem;color:#94a3b8;max-width:160px;overflow:hidden;text-overflow:ellipsis;" title="${p.excelDesc||''}"><i>${p.excelDesc||'—'}</i></td>
                     <td style="padding:8px 4px;text-align:center;">${badge}</td>
-                    <td style="padding:8px 4px;font-size:.78rem;color:${masterDesc?'#a5f3fc':'#ef4444'};"
-                        title="${masterDesc||'Não encontrado no plano de contas'}">
-                        ${masterDesc ? masterDesc : '<span style="color:#ef4444">Não encontrado</span>'}
-                        <input type="hidden" id="avm-master-${idx}" value="${masterDesc.replace(/"/g,"'")}">
+                    <td style="padding:4px;">
+                        <select id="avm-master-sel-${idx}"
+                            onchange="fcApp.autoVincularMasterChanged(${idx})"
+                            style="background:#0f172a;border:1px solid rgba(255,255,255,.15);border-radius:6px;color:#f8fafc;padding:4px 6px;font-size:.75rem;width:100%;min-width:200px;">
+                            ${masterOpts}
+                        </select>
                     </td>
-                    <td style="padding:8px 4px;"><select id="avm-grupo-${idx}" style="background:#0f172a;border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#f8fafc;padding:3px 6px;font-size:.72rem;min-width:140px;max-width:200px;">${gOpts}</select></td>
+                    <td style="padding:4px;">
+                        <select id="avm-grupo-${idx}" style="background:#0f172a;border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#f8fafc;padding:4px 6px;font-size:.72rem;width:100%;min-width:130px;">${gOpts}</select>
+                    </td>
                 </tr>`;
         }).join('');
 
-        const totalAuto   = proposed.filter(p => p.autoMatched && p.masterEntry).length;
-        const totalMaster = proposed.filter(p => p.masterEntry).length;
+        const totalAuto    = proposed.filter(p => p.autoMatched && p.masterEntry).length;
+        const totalMaster  = proposed.filter(p => p.masterEntry).length;
         const totalNoMatch = proposed.length - totalMaster;
 
         modal.innerHTML = `
-            <div style="background:#1e293b;border-radius:14px;padding:2rem;width:100%;max-width:1050px;border:1px solid rgba(255,255,255,.08);box-shadow:0 24px 60px rgba(0,0,0,.6);">
-                <div style="display:flex;align-items:center;gap:1rem;margin-bottom:.75rem;">
+            <div style="background:#1e293b;border-radius:14px;padding:2rem;width:100%;max-width:1100px;border:1px solid rgba(255,255,255,.08);box-shadow:0 24px 60px rgba(0,0,0,.6);">
+                <div style="display:flex;align-items:center;gap:1rem;margin-bottom:.6rem;">
                     <h3 style="margin:0;color:#f8fafc;flex:1;">&#9889; Auto-Vincular via Planilha</h3>
-                    <span style="background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:20px;padding:3px 12px;font-size:.8rem;font-weight:600;">${totalAuto} automáticas · ${totalMaster} encontradas · ${totalNoMatch} sem match</span>
+                    <span style="background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:20px;padding:3px 12px;font-size:.78rem;font-weight:600;">
+                        ${totalAuto} automáticas · ${totalMaster} encontradas · ${totalNoMatch} manuais
+                    </span>
                 </div>
-                <p style="color:#94a3b8;font-size:.8rem;margin-bottom:1rem;">
-                    ✅ match único · ⚠️ múltiplos · ❌ não encontrado no plano de contas<br>
-                    <span style="color:#64748b;">Lógica: <b style="color:#a5f3fc;">valor do PDF</b> → <b style="color:#fbbf24;">descrição do Excel</b> → <b style="color:#10b981;">linha no plano de contas</b></span>
+                <p style="color:#94a3b8;font-size:.78rem;margin-bottom:1rem;">
+                    ✅ encontrado automaticamente &nbsp;·&nbsp; ⚠️ encontrado (confirme) &nbsp;·&nbsp; ❌ selecione a linha do plano manualmente<br>
+                    <b style="color:#60a5fa;">Coluna "Linha no Plano"</b>: escolha a qual linha do plano de contas este código do PDF corresponde.
                 </p>
                 <div style="overflow-x:auto;max-height:55vh;overflow-y:auto;border-radius:8px;border:1px solid rgba(255,255,255,.05);">
                     <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
@@ -893,9 +926,9 @@ window.fcApp = {
                                 <th style="padding:10px;"><input type="checkbox" id="avm-chk-all" checked onchange="fcApp.selectAllAutoVincular(${proposed.length},this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:#3b82f6;"></th>
                                 <th style="padding:10px;">Cód. PDF</th>
                                 <th style="padding:10px;text-align:right;">Valor</th>
-                                <th style="padding:10px;">Descrição do Excel</th>
+                                <th style="padding:10px;">Desc. Excel</th>
                                 <th style="padding:10px;"></th>
-                                <th style="padding:10px;">Linha no Plano</th>
+                                <th style="padding:10px;">Linha no Plano de Contas</th>
                                 <th style="padding:10px;">Grupo</th>
                             </tr>
                         </thead>
@@ -903,13 +936,27 @@ window.fcApp = {
                     </table>
                 </div>
                 <div style="display:flex;gap:1rem;align-items:center;margin-top:1.5rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,.06);">
-                    <span style="color:#64748b;font-size:.78rem;">Marque as contas e clique em Aplicar. Apenas linhas com ✅ ou ⚠️ serão vinculadas.</span>
+                    <span style="color:#64748b;font-size:.78rem;">Selecione a linha correta e clique Aplicar. Linhas sem seleção serão ignoradas.</span>
                     <div style="flex:1;"></div>
                     <button onclick="document.getElementById('modal-auto-vincular').style.display='none'" style="background:transparent;border:1px solid rgba(255,255,255,.15);color:#94a3b8;border-radius:8px;padding:.6rem 1.2rem;cursor:pointer;">Cancelar</button>
                     <button onclick="fcApp.applyAutoVincular(${proposed.length})" style="background:#10b981;border:none;color:white;border-radius:8px;padding:.6rem 1.5rem;cursor:pointer;font-weight:700;">&#9889; Aplicar Vinculações</button>
                 </div>
             </div>`;
         modal.style.display = 'flex';
+    },
+
+    // Atualiza o dropdown de grupo quando o usuário escolhe uma linha do plano
+    autoVincularMasterChanged(idx) {
+        const sel = document.getElementById(`avm-master-sel-${idx}`);
+        if (!sel || !sel.value) return;
+        const opt = sel.options[sel.selectedIndex];
+        const grp = opt?.dataset?.group;
+        if (!grp) return;
+        const grupoSel = document.getElementById(`avm-grupo-${idx}`);
+        if (!grupoSel) return;
+        for (const o of grupoSel.options) {
+            if (o.value === grp) { o.selected = true; return; }
+        }
     },
 
     selectAllAutoVincular(count, checked) {
@@ -921,6 +968,7 @@ window.fcApp = {
         if (all) all.checked = checked;
     },
 
+    // ── Aplica as vinculações: ATUALIZA o código no MASTER_ACCOUNTS ─────────
     applyAutoVincular(count) {
         const proposed = this.pendingAutoVincular || [];
         let accounts   = (window.MASTER_ACCOUNTS || []).slice();
@@ -933,41 +981,40 @@ window.fcApp = {
             if (!p) continue;
 
             const novoCodigo = p.pdfCodigo;
-            const masterHidden = document.getElementById(`avm-master-${i}`)?.value;
-            const masterDesc   = (masterHidden && masterHidden.trim()) ? masterHidden.trim()
-                                 : (p.masterEntry?.descricao || '');
-            const grupo        = document.getElementById(`avm-grupo-${i}`)?.value
-                                 || p.masterEntry?.group || p.selectedGroup;
-
-            if (!novoCodigo || !grupo) continue;
-
-            if (masterDesc && p.masterEntry) {
-                // ✅ CASO 1: Entrada encontrada no MASTER — atualiza o código existente
-                // (a numeração do sistema foi reestruturada; o PDF ainda usa o código original)
-                const entryIdx = accounts.findIndex(a =>
-                    a.descricao === masterDesc && a.codigo !== 'HEADER'
-                );
-                if (entryIdx >= 0) {
-                    accounts[entryIdx] = { ...accounts[entryIdx], codigo: novoCodigo };
-                    applied++;
-                    continue;
-                }
+            // Pega a descrição selecionada no dropdown (linha do plano de contas)
+            const selectedDesc = document.getElementById(`avm-master-sel-${i}`)?.value?.trim();
+            if (!selectedDesc) {
+                console.log(`[AutoVincular] Linha ${i} (${novoCodigo}): sem seleção no plano, pulando.`);
+                continue;
             }
 
-            // ✅ CASO 2: Não encontrou entrada no MASTER — insere nova no grupo selecionado
-            const descricaoFallback = masterDesc || p.selectedDesc || novoCodigo;
-            accounts = accounts.filter(a => !(a.codigo === novoCodigo && a.descricao === descricaoFallback));
-            let insertIdx = -1;
-            let curGroup  = null;
-            for (let j = 0; j < accounts.length; j++) {
-                if (accounts[j].codigo === 'HEADER') {
-                    if (curGroup === grupo && insertIdx >= 0) break;
-                    curGroup = accounts[j].descricao;
-                } else if (curGroup === grupo) { insertIdx = j; }
-            }
-            if (insertIdx >= 0) {
-                accounts.splice(insertIdx + 1, 0, { codigo: novoCodigo, descricao: descricaoFallback });
+            // Encontra a entrada no MASTER_ACCOUNTS pela descrição
+            const entryIdx = accounts.findIndex(a =>
+                a.descricao === selectedDesc && a.codigo !== 'HEADER'
+            );
+
+            if (entryIdx >= 0) {
+                const old = accounts[entryIdx].codigo;
+                accounts[entryIdx] = { ...accounts[entryIdx], codigo: novoCodigo };
+                console.log(`[AutoVincular] ✅ Atualizado: "${selectedDesc}" — ${old} → ${novoCodigo}`);
                 applied++;
+            } else {
+                // Fallback: insere nova entrada no grupo selecionado
+                const grupo = document.getElementById(`avm-grupo-${i}`)?.value || '';
+                if (!grupo) continue;
+                accounts = accounts.filter(a => !(a.codigo === novoCodigo && a.descricao === selectedDesc));
+                let insertIdx = -1, curGrp = null;
+                for (let j = 0; j < accounts.length; j++) {
+                    if (accounts[j].codigo === 'HEADER') {
+                        if (curGrp === grupo && insertIdx >= 0) break;
+                        curGrp = accounts[j].descricao;
+                    } else if (curGrp === grupo) { insertIdx = j; }
+                }
+                if (insertIdx >= 0) {
+                    accounts.splice(insertIdx + 1, 0, { codigo: novoCodigo, descricao: selectedDesc });
+                    console.log(`[AutoVincular] ➕ Inserido: ${novoCodigo} — "${selectedDesc}" em "${grupo}"`);
+                    applied++;
+                }
             }
         }
 
@@ -978,7 +1025,7 @@ window.fcApp = {
             this.showToast(`✅ ${applied} conta${applied>1?'s':''} vinculada${applied>1?'s':''} com sucesso!`);
             this.refreshDashboard();
         } else {
-            this.showToast('⚠️ Nenhuma conta selecionada');
+            this.showToast('⚠️ Nenhuma conta foi vinculada — selecione as linhas do plano');
         }
     },
 
