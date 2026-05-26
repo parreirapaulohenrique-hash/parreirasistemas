@@ -86,6 +86,12 @@ window.ParreiraAuth = (function () {
         localStorage.setItem('logged_user', JSON.stringify({
             name: perfil.nome, login: loginKey, role: perfil.role
         }));
+        localStorage.setItem('platform_user_logged', JSON.stringify({
+            name: perfil.nome,
+            login: loginKey,
+            role: perfil.role,
+            tenant: tenantId
+        }));
         return sessao;
     }
 
@@ -107,6 +113,7 @@ window.ParreiraAuth = (function () {
         }
         sessionStorage.removeItem('parreira_session');
         localStorage.removeItem('logged_user');
+        localStorage.removeItem('platform_user_logged');
         // Redireciona preservando o módulo correto
         window.location.href = _loginUrl(moduloAtivo);
     }

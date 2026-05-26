@@ -526,7 +526,7 @@
                     </div>
                 </div>
                 <a href="../../login.html?module=erp-consultoria&redirect=modules%2Ferp-consultoria%2Findex.html"
-                   onclick="event.preventDefault(); (typeof firebase!=='undefined'&&firebase.auth?firebase.auth().signOut():Promise.resolve()).finally(()=>window.location.href='../../login.html?module=erp-consultoria&redirect=modules%2Ferp-consultoria%2Findex.html');"
+                   onclick="event.preventDefault(); ParreiraAuth.logout();"
                    style="color:var(--accent-danger); text-decoration:none;" title="Sair — Trocar Usuário">
                     <span class="material-icons-round">logout</span>
                 </a>

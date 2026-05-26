@@ -735,9 +735,24 @@ window.saveEmployee = async function (e) {
                     pin: '',
                     modulos: ["wms", "wms-coletor", "dispatch", "erp", "sales-force", "erp-consultoria"]
                 });
-                console.log(`Created user ${loginVal} in Firestore`);
+            // Sincroniza com platform_users_registry para permitir login no portal
+            const storedUsers = JSON.parse(localStorage.getItem('platform_users_registry') || '[]');
+            const uIdx = storedUsers.findIndex(u => u.login === loginVal);
+            const userObj = {
+                login: loginVal,
+                pass: passVal,
+                name: nameVal,
+                role: 'supervisor',
+                tenant: tenantId
+            };
+            if (uIdx >= 0) {
+                storedUsers[uIdx] = { ...storedUsers[uIdx], ...userObj };
+            } else {
+                storedUsers.push(userObj);
             }
-            alert(`Usuário de login "${loginVal}" foi registrado com sucesso no Firebase.`);
+            localStorage.setItem('platform_users_registry', JSON.stringify(storedUsers));
+
+            alert(`Usuário de login "${loginVal}" foi registrado com sucesso no Firebase e localmente.`);
         } catch (err) {
             console.error('Erro ao provisionar usuário no Firestore:', err);
             alert('Atenção: Funcionário salvo localmente, mas houve um erro ao criar o login no Firebase: ' + err.message);

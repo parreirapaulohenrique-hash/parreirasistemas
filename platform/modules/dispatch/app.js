@@ -241,6 +241,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.logoutUser = () => {
             if (confirm('Deseja realmente sair do sistema?')) {
                 localStorage.removeItem('logged_user');
+                localStorage.removeItem('platform_user_logged');
+                localStorage.removeItem('app_tenant_id');
+                sessionStorage.removeItem('parreira_session');
+                sessionStorage.clear();
                 location.reload();
             }
         };

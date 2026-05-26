@@ -289,6 +289,25 @@
                 // Login Success
                 localStorage.setItem('logged_user', JSON.stringify(validUser));
                 localStorage.setItem('app_tenant_id', tenant);
+                localStorage.setItem('platform_user_logged', JSON.stringify({
+                    name: validUser.name || validUser.nome || validUser.login,
+                    tenant: tenant,
+                    role: validUser.role
+                }));
+
+                // Set sessionStorage session for modules like WMS/WMS-Coletor
+                const sessao = {
+                    login:      validUser.login,
+                    nome:       validUser.name || validUser.nome || validUser.login,
+                    role:       validUser.role,
+                    pin:        validUser.pin || '',
+                    tenantId:   tenant,
+                    tenantNome: tenant,
+                    modulos:    ["wms", "wms-coletor", "dispatch", "erp", "sales-force", "erp-consultoria"],
+                    moduloAtivo: 'portal',
+                    ts:         Date.now()
+                };
+                sessionStorage.setItem('parreira_session', JSON.stringify(sessao));
 
                 // Show UI
                 document.getElementById('loginOverlay').style.display = 'none';
@@ -373,7 +392,10 @@
 
         function logout() {
             localStorage.removeItem('logged_user');
-            // localStorage.removeItem('app_tenant_id'); // Optional: keep tenant for convenience
+            localStorage.removeItem('platform_user_logged');
+            localStorage.removeItem('app_tenant_id');
+            sessionStorage.removeItem('parreira_session');
+            sessionStorage.clear();
             location.reload();
         }
     </script>
