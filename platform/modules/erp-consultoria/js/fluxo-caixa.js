@@ -624,9 +624,52 @@ window.fcApp = {
                 return updatedAcc;
             });
 
+            // --- RECOVERY FOR MISSING LINES 4.6.2 (IOF) and 4.8.2 (IR) ---
+            // 1. IOF (4.6.2)
+            let iofIdx = parsed.findIndex(a => a.descricao && a.descricao.replace(/^[\s.\-]+/, '').trim().toUpperCase() === 'IOF');
+            if (iofIdx >= 0) {
+                if (parsed[iofIdx].codigo !== '4.6.2') {
+                    parsed[iofIdx].codigo = '4.6.2';
+                    changed = true;
+                }
+            } else {
+                let insertIdx = parsed.findIndex(a => {
+                    const descNorm = (a.descricao || '').replace(/^[\s.\-]+/, '').trim().toUpperCase();
+                    return descNorm === 'TARIFAS BANCÁRIAS' || descNorm === 'TARIFAS BANCARIAS' || a.codigo === '4.6.1' || a.codigo === '3.6.01';
+                });
+                if (insertIdx === -1) {
+                    insertIdx = parsed.findIndex(a => a.codigo === 'HEADER' && (a.descricao || '').toUpperCase() === 'DESPESAS FINANCEIRAS');
+                }
+                if (insertIdx !== -1) {
+                    parsed.splice(insertIdx + 1, 0, { codigo: '4.6.2', descricao: 'IOF' });
+                    changed = true;
+                }
+            }
+
+            // 2. IR (4.8.2)
+            let irIdx = parsed.findIndex(a => a.descricao && a.descricao.replace(/^[\s.\-]+/, '').trim().toUpperCase() === 'IR');
+            if (irIdx >= 0) {
+                if (parsed[irIdx].codigo !== '4.8.2') {
+                    parsed[irIdx].codigo = '4.8.2';
+                    changed = true;
+                }
+            } else {
+                let insertIdx = parsed.findIndex(a => {
+                    const descNorm = (a.descricao || '').replace(/^[\s.\-]+/, '').trim().toUpperCase();
+                    return descNorm === 'ICMS-DIFERENCIAL DE ALIQUOTA' || descNorm === 'ICMS - DIFERENCIAL DE ALIQUOTA' || a.codigo === '4.8.1' || a.codigo === '3.8.03';
+                });
+                if (insertIdx === -1) {
+                    insertIdx = parsed.findIndex(a => a.codigo === 'HEADER' && (a.descricao || '').toUpperCase() === 'IMPOSTOS ADMINISTRATIVOS');
+                }
+                if (insertIdx !== -1) {
+                    parsed.splice(insertIdx + 1, 0, { codigo: '4.8.2', descricao: 'IR' });
+                    changed = true;
+                }
+            }
+
             if (changed) {
                 localStorage.setItem('customMasterAccounts', JSON.stringify(parsed));
-                console.log('[FC] ✅ Migração: descrições das contas limpas e salvas no localStorage.');
+                console.log('[FC] ✅ Migração: descrições das contas limpas e recuperadas e salvas no localStorage.');
             }
             window.MASTER_ACCOUNTS = parsed;
         }
