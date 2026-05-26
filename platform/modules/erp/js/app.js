@@ -735,6 +735,9 @@ window.saveEmployee = async function (e) {
                     pin: '',
                     modulos: ["wms", "wms-coletor", "dispatch", "erp", "sales-force", "erp-consultoria"]
                 });
+                console.log(`Created user ${loginVal} in Firestore`);
+            }
+
             // Sincroniza com platform_users_registry para permitir login no portal
             const storedUsers = JSON.parse(localStorage.getItem('platform_users_registry') || '[]');
             const uIdx = storedUsers.findIndex(u => u.login === loginVal);
