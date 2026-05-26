@@ -360,7 +360,7 @@ function setupForms() {
 }
 
 function formatModuleName(code) {
-    const names = { 'dispatch': 'Despacho', 'erp': 'ERP', 'wms': 'WMS', 'sales-force': 'Vendas', 'master': 'Master' };
+    const names = { 'dispatch': 'Despacho', 'erp': 'ERP', 'wms': 'WMS', 'sales-force': 'Vendas', 'master': 'Master', 'erp-consultoria': 'Consultoria', 'wms-coletor': 'WMS Coletor' };
     return names[code] || code.toUpperCase();
 }
 
@@ -435,7 +435,7 @@ window.abrirWmsConfig = async function (tenantId) {
     if (!tenant) { alert('Tenant não encontrado.'); return; }
 
     // Módulos habilitados com nome amigável
-    const modNames = { wms:'WMS', dispatch:'Despacho', erp:'ERP', 'sales-force':'Vendas', master:'Master' };
+    const modNames = { wms:'WMS', dispatch:'Despacho', erp:'ERP', 'sales-force':'Vendas', master:'Master', 'erp-consultoria': 'Consultoria', 'wms-coletor': 'WMS Coletor' };
     const enabledMods = (tenant.modules || []).map(m => modNames[m] || m);
 
     // Carrega configs existentes do Firestore
