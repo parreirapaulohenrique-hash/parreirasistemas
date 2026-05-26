@@ -34,6 +34,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Default View
     switchView('dashboard');
+
+    const empForm = document.getElementById('employeeForm');
+    if (empForm) {
+        empForm.addEventListener('submit', window.saveEmployee);
+    }
 });
 
 
@@ -605,10 +610,7 @@ window.closeEmployeeModal = () => {
     document.getElementById('employeeModal').style.display = 'none';
 };
 
-let employees = [
-    { code: 62, name: 'PAULO HENRIQUE PARREIRA', role: 'Diretor', sector: 'Administrativo', cpf: '000.000.000-00', status: 'Ativo' },
-    { code: 63, name: 'VENDEDOR INTERNO', role: 'Vendedor', sector: 'Comercial', cpf: '111.111.111-11', status: 'Ativo' }
-];
+let employees = JSON.parse(localStorage.getItem('erp_employees' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
 
 window.renderEmployees = (filter = '') => {
     const tbody = document.getElementById('employeesTableBody');
@@ -617,8 +619,8 @@ window.renderEmployees = (filter = '') => {
     tbody.innerHTML = '';
 
     const filtered = employees.filter(e =>
-        e.name.toLowerCase().includes(filter.toLowerCase()) ||
-        e.code.toString().includes(filter)
+        (e.name || '').toLowerCase().includes(filter.toLowerCase()) ||
+        (e.code || '').toString().includes(filter)
     );
 
     if (filtered.length === 0) {
@@ -631,19 +633,132 @@ window.renderEmployees = (filter = '') => {
         tr.innerHTML = `
             <td style="font-weight:600">${e.code}</td>
             <td>
-                <div style="font-weight:600; color:var(--text-primary)">${e.name}</div>
+                <div style="font-weight:600; color:var(--text-primary)">${e.name || ''}</div>
             </td>
-            <td>${e.role} / ${e.sector}</td>
-            <td>${e.cpf}</td>
-            <td><span class="status-badge status-shipped">${e.status}</span></td>
+            <td>${e.role || ''} / ${e.sector || ''}</td>
+            <td>${e.cpf || ''}</td>
+            <td><span class="status-badge status-shipped">${e.status || 'Ativo'}</span></td>
             <td style="text-align:right">
-                <button class="btn btn-secondary btn-icon" style="padding:0.4rem;">
+                <button class="btn btn-secondary btn-icon" style="padding:0.4rem;" onclick="window.editEmployee('${e.code}')">
                     <span class="material-icons-round" style="font-size:1rem;">edit</span>
                 </button>
             </td>
         `;
         tbody.appendChild(tr);
     });
+};
+
+window.editEmployee = function (code) {
+    const emp = employees.find(e => e.code == code);
+    if (!emp) return;
+
+    document.getElementById('empCode').value = emp.code;
+    document.getElementById('empName').value = emp.name || '';
+    document.getElementById('empDate').value = emp.date || '';
+    document.getElementById('empCpf').value = emp.cpf || '';
+    document.getElementById('empRg').value = emp.rg || '';
+    document.getElementById('empSector').value = emp.sector || '';
+    document.getElementById('empRole').value = emp.role || '';
+    document.getElementById('empIsSeller').checked = !!emp.isSeller;
+    document.getElementById('empStreet').value = emp.street || '';
+    document.getElementById('empDistrict').value = emp.district || '';
+    document.getElementById('empZip').value = emp.zip || '';
+    document.getElementById('empCity').value = emp.city || '';
+    document.getElementById('empState').value = emp.state || '';
+    document.getElementById('empCell').value = emp.cell || '';
+    document.getElementById('empLogin').value = emp.login || '';
+    document.getElementById('empPass').value = ''; // clear password field for security
+    document.getElementById('empDismissDate').value = emp.dismissDate || '';
+    document.getElementById('empDismissReason').value = emp.dismissReason || '';
+
+    openEmployeeModal();
+};
+
+window.saveEmployee = async function (e) {
+    if (e) e.preventDefault();
+
+    const codeEl = document.getElementById('empCode');
+    const isEdit = codeEl.value && codeEl.value !== 'Auto' && codeEl.value !== '';
+    const code = isEdit ? parseInt(codeEl.value) : Math.floor(Math.random() * 100000) + 2000;
+
+    const tenantSuffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
+    const tenantId = ParreiraAuth.getTenantId() || 'parreira';
+
+    const loginVal = document.getElementById('empLogin').value.trim().toLowerCase();
+    const passVal = document.getElementById('empPass').value;
+    const nameVal = document.getElementById('empName').value.trim();
+
+    const newEmployee = {
+        code: code,
+        name: nameVal,
+        date: document.getElementById('empDate').value,
+        cpf: document.getElementById('empCpf').value.trim(),
+        rg: document.getElementById('empRg').value.trim(),
+        sector: document.getElementById('empSector').value.trim(),
+        role: document.getElementById('empRole').value.trim(),
+        isSeller: document.getElementById('empIsSeller').checked,
+        street: document.getElementById('empStreet').value.trim(),
+        district: document.getElementById('empDistrict').value.trim(),
+        zip: document.getElementById('empZip').value.trim(),
+        city: document.getElementById('empCity').value.trim(),
+        state: document.getElementById('empState').value.trim(),
+        cell: document.getElementById('empCell').value.trim(),
+        login: loginVal,
+        dismissDate: document.getElementById('empDismissDate').value,
+        dismissReason: document.getElementById('empDismissReason').value.trim(),
+        status: 'Ativo'
+    };
+
+    if (loginVal && passVal) {
+        try {
+            const db = ParreiraAuth.getDB();
+            const existDoc = await db.collection('users_index').doc(loginVal).get();
+            if (existDoc.exists) {
+                const senhaHash = await ParreiraAuth._hash(passVal);
+                await db.collection('tenants').doc(tenantId).collection('users').doc(loginVal).set({
+                    nome: nameVal,
+                    login: loginVal,
+                    senhaHash: senhaHash,
+                    role: 'supervisor',
+                    pin: '',
+                    modulos: ["wms", "wms-coletor", "dispatch", "erp", "sales-force", "erp-consultoria"],
+                    ativo: true,
+                    atualizadoEm: new Date().toISOString()
+                }, { merge: true });
+                console.log(`Updated user ${loginVal} in Firestore`);
+            } else {
+                await ParreiraAuth.criarUsuario(tenantId, {
+                    nome: nameVal,
+                    login: loginVal,
+                    senha: passVal,
+                    role: 'supervisor',
+                    pin: '',
+                    modulos: ["wms", "wms-coletor", "dispatch", "erp", "sales-force", "erp-consultoria"]
+                });
+                console.log(`Created user ${loginVal} in Firestore`);
+            }
+            alert(`Usuário de login "${loginVal}" foi registrado com sucesso no Firebase.`);
+        } catch (err) {
+            console.error('Erro ao provisionar usuário no Firestore:', err);
+            alert('Atenção: Funcionário salvo localmente, mas houve um erro ao criar o login no Firebase: ' + err.message);
+        }
+    }
+
+    const storageKey = 'erp_employees' + tenantSuffix;
+    const localEmployees = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    if (isEdit) {
+        const idx = localEmployees.findIndex(el => el.code === code);
+        if (idx >= 0) localEmployees[idx] = { ...localEmployees[idx], ...newEmployee };
+    } else {
+        localEmployees.push(newEmployee);
+    }
+
+    localStorage.setItem(storageKey, JSON.stringify(localEmployees));
+    employees = localEmployees;
+
+    alert('Funcionário salvo com sucesso!');
+    closeEmployeeModal();
+    renderEmployees();
 };
 
 window.filterEmployees = () => {
