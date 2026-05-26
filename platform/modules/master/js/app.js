@@ -54,7 +54,7 @@ if (!localStorage.getItem(SECURITY_KEY)) {
 if (platformUsers.length === 0) {
     platformUsers = [
         { login: 'paulo', pass: 'master@2026', name: 'Paulo Parreira', tenant: 'parreira', role: 'admin' },
-        { login: 'alessandro', pass: '123456', name: 'Alessandro', tenant: 'centralpecas', role: 'supervisor' },
+        { login: 'alessandro', pass: '123456', name: 'Alessandro', tenant: 'parreira', role: 'supervisor' },
         { login: 'fernando', pass: '123456', name: 'Fernando Masson', tenant: 'centralpecas', role: 'supervisor' }
     ];
     localStorage.setItem('platform_users_registry', JSON.stringify(platformUsers));
