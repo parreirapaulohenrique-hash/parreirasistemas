@@ -1,15 +1,13 @@
 {
-    "version": "11.23.8",
+    "version": "11.23.9",
     "build": "20260527",
     "lastUpdate": "2026-05-27",
-    "description": "ERP Consultoria: Reestruturação do plano de contas — seção 3 movida para posição correta, matching PDF/Excel por código exato, edição inline de códigos removida, botão Auto-Vincular sempre visível, dropdown Grupo corrigido no modal de vinculação",
+    "description": "ERP Consultoria: Prioridade absoluta do valor digitado manualmente sobre PDF nos MANUAL_GROUPS (1, 2, 3, 7). Grupo Custo de Aquisição adicionado ao MANUAL_GROUPS para restaurar campos de entrada das contas 2.x",
     "changelog": [
-        "FIX: Seção 3 (Custo de Aquisição) agora aparece ANTES das contas de custo (2.1/2.2/2.3) com cor e badge corretos",
-        "FIX: Contas de custo herdam cor da seção 3 (vermelho/salmon) em vez da seção 2 (verde)",
-        "BREAKING: Matching PDF/Excel agora usa APENAS o código exato do master-accounts.js — aliases removidos",
-        "NOVO: Códigos do plano de contas não são mais editáveis inline — master-accounts.js é a fonte definitiva",
-        "FIX: Botão Auto-Vincular via Excel sempre visível independente do período/filtro selecionado",
-        "FIX: Dropdown 'Grupo' no modal de vinculação agora lista todos os grupos reais (inclui Custo de Aquisição e Despesas Operac. Fixas e Variáveis), excluindo HEADERs de sumário como Receita Operacional Bruta e Total dos Custos",
-        "INTERNO: MASTER_VERSION bumped de 11.23.7 para 11.23.8 para invalidar cache localStorage"
+        "FIX CRÍTICO: Valores digitados manualmente nos grupos 1, 2, 3 e 7 agora têm prioridade absoluta sobre valores do banco/PDF",
+        "FIX: O PDF só é usado como fallback quando o campo manual está vazio (zero ou não preenchido)",
+        "FIX: PDF consumido silenciosamente quando há valor manual, evitando que apareça como 'não mapeado'",
+        "NOVO: 'Custo de Aquisição' adicionado ao MANUAL_GROUPS — contas 2.1/2.2/2.3 recuperam seus campos de entrada manual",
+        "INTERNO: MASTER_VERSION bumped de 11.23.8 para 11.23.9 para invalidar cache localStorage"
     ]
 }
