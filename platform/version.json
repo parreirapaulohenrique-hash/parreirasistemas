@@ -1,14 +1,16 @@
 {
-    "version": "11.23.0",
-    "build": "20260525",
-    "lastUpdate": "2026-05-25",
-    "description": "ERP Consultoria — Auto-Vincular via Excel reescrito: parser por coluna, dropdown completo do plano de contas, UPDATE correto do código existente",
+    "version": "11.23.5",
+    "build": "20260527",
+    "lastUpdate": "2026-05-27",
+    "description": "Relatório Fluxo de Caixa reestruturado: sessões numeradas 1-7, cores suaves por sessão, hierarquia tipográfica (nível 1/2/3), descrições em Title Case",
     "changelog": [
-        "FIX: Parser Excel agora usa abordagem por coluna (localiza célula N.N.N. Descrição → pega 1º número depois dela) — elimina falsos matches com números de linha e booleanos FALSE",
-        "NOVO: Modal Auto-Vincular mostra dropdown com TODAS as entradas do MASTER_ACCOUNTS para seleção manual quando não há match automático",
-        "FIX: applyAutoVincular agora atualiza o código da entrada existente no MASTER_ACCOUNTS (UPDATE) em vez de inserir duplicata",
-        "NOVO: Contas sem match no Excel também aparecem no modal para vinculação manual",
-        "NOVO: Console debug ([AutoVincular]) mostra entradas extraídas do Excel e matches encontrados",
-        "NOVO: autoVincularMasterChanged sincroniza o dropdown de Grupo quando o usuário seleciona uma linha do plano"
+        "NOVO: Sessões do relatório numeradas de 1 a 7 com badge circular visível",
+        "NOVO: 7 cores suaves distintas de fundo por sessão (âmbar, verde, vermelho, azul, teal, roxo, amarelo)",
+        "NOVO: Borda lateral colorida nos cabeçalhos de sessão para identificação rápida",
+        "FIX: Hierarquia tipográfica aplicada — sessão (0.96rem/700), sub-sessão (0.875rem/600), detalhe (0.81rem/400)",
+        "FIX: Descrições ALL CAPS convertidas automaticamente para Title Case via toDisplayCase()",
+        "FIX: Itálico removido das linhas de detalhe (nível 3)",
+        "FIX: Fonte padronizada para Inter/Roboto/system-ui em toda a tabela",
+        "FIX: Sessão 4 (código 300) agora gera cabeçalho visual correto com numeração"
     ]
 }
