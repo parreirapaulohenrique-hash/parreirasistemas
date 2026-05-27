@@ -1,8 +1,8 @@
 {
     "module": "erp-consultoria",
     "name": "Consultoria ParreiraLog",
-    "version": "11.23.4",
-    "date": "2026-05-25",
-    "last_change": "MELHORIA: O parser do Excel agora seleciona automaticamente a aba correspondente ao mês atual (ex: MARÇO, MAR, 03) em vez de ler sempre a primeira aba.",
-    "build": "20260525.06"
+    "version": "11.23.5",
+    "date": "2026-05-27",
+    "last_change": "MELHORIA: Relatório reestruturado — sessões numeradas 1-7, cores suaves por sessão, hierarquia tipográfica, fontes maiores, descrições em Title Case.",
+    "build": "20260527.01"
 }
