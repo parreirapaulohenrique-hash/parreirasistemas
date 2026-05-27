@@ -20,7 +20,8 @@ window.FinancialEngine = {
     MANUAL_GROUPS: new Set([
         'Disponíveis Nas Contas Movimento inicial',
         'Disponíveis nas Contas Movimento final',
-        'Total Receitas Operacionais / Vendas'
+        'Total Receitas Operacionais / Vendas',
+        'Custo de Aquisição'
     ]),
 
     getLevel(codigo) {
@@ -119,12 +120,22 @@ window.FinancialEngine = {
                     ? `${master.codigo}-${master.descricao}`
                     : `${currentGroup}::${master.codigo}-${master.descricao}`;
 
-                // Matching APENAS pelo código exato do master (sem aliases)
-                if (pdfMap[master.codigo]) {
-                    valor = pdfMap[master.codigo].total;
-                    delete pdfMap[master.codigo];
+                // ⚡ PRIORIDADE: valor digitado manualmente é sempre preferido ao PDF.
+                // O PDF só é usado como fallback se o usuário não digitou nada.
+                const manualVal = manualEntries[manualKey];
+                const hasManual = manualVal !== undefined && manualVal !== null && Number(manualVal) !== 0;
+
+                if (hasManual) {
+                    // Usa o valor manual e consome a entrada do PDF silenciosamente
+                    // (evita que ela apareça como "não mapeada")
+                    valor = Number(manualVal);
+                    if (pdfMap[master.codigo]) delete pdfMap[master.codigo];
                 } else {
-                    valor = manualEntries[manualKey] || 0;
+                    // Sem valor manual → tenta o PDF como fallback
+                    if (pdfMap[master.codigo]) {
+                        valor = pdfMap[master.codigo].total;
+                        delete pdfMap[master.codigo];
+                    }
                 }
             } else {
                 // Matching APENAS pelo código exato do master (sem aliases)
