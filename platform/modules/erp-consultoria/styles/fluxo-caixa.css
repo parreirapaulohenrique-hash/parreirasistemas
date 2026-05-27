@@ -49,8 +49,8 @@
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     font-family: var(--fc-font);
 }
-.summary-item .sum-label { font-size: 0.95rem; }
-.summary-item .sum-value { font-size: 1.15rem; }
+.summary-item .sum-label { font-size: 1.0rem; }
+.summary-item .sum-value { font-size: 1.25rem; }
 .item-orange   { background: var(--color-disponiveis); }
 .item-green    { background: var(--color-receitas); }
 .item-red      { background: var(--color-custos); }
@@ -64,11 +64,11 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     background: rgba(255,255,255,0.22);
-    font-size: 0.88rem;
+    font-size: 0.93rem;
     font-weight: 800;
     margin-right: 12px;
     flex-shrink: 0;
@@ -81,12 +81,12 @@
    ================================================================ */
 .table-group-header td {
     font-family: var(--fc-font);
-    font-size: 1.05rem;
+    font-size: 1.15rem;
     font-weight: 700;
     letter-spacing: 0.02em;
     text-transform: none;
     color: #f8fafc;
-    padding: 15px 18px;
+    padding: 17px 20px;
     line-height: 1.5;
     border-left: 8px solid rgba(255,255,255,0.15);
     background: rgba(255,255,255,0.07) !important;
@@ -116,13 +116,15 @@
    ================================================================ */
 .level-2 td {
     font-family: var(--fc-font);
-    font-size: 1.0rem;
+    font-size: 1.09rem;
     text-transform: none;
     line-height: 1.5;
     border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding-top: 10px;
+    padding-bottom: 10px;
 }
 .level-2 td.col-code {
-    font-size: 0.88rem;
+    font-size: 0.94rem;
     font-weight: 700;
     color: #94a3b8;
     padding-left: 16px !important;
@@ -134,15 +136,15 @@
     text-transform: none;
     font-style: normal;
 }
-.level-2 td.col-val  { font-weight: 600; font-size: 1.0rem; }
-.level-2 td.col-perc { font-size: 0.88rem; color: #94a3b8; }
+.level-2 td.col-val  { font-weight: 600; font-size: 1.09rem; }
+.level-2 td.col-perc { font-size: 0.94rem; color: #94a3b8; }
 
 /* ── Sub-cabeçalho de subgrupo (ex: "1.1 Receita com Vendas") ── */
 .table-subgroup-header td {
     font-family: var(--fc-font);
-    font-size: 0.97rem;
+    font-size: 1.07rem;
     font-weight: 700;
-    padding: 12px 18px !important;
+    padding: 13px 18px !important;
     line-height: 1.5;
     border-left: 4px solid rgba(255,255,255,0.12);
     border-bottom: 1px solid rgba(255,255,255,0.06);
@@ -156,13 +158,15 @@
    ================================================================ */
 .level-3 td {
     font-family: var(--fc-font);
-    font-size: 0.93rem;
+    font-size: 1.01rem;
     text-transform: none;
     line-height: 1.5;
     border-bottom: 1px solid rgba(255,255,255,0.03);
+    padding-top: 9px;
+    padding-bottom: 9px;
 }
 .level-3 td.col-code {
-    font-size: 0.84rem;
+    font-size: 0.9rem;
     font-weight: 500;
     color: #64748b;
     padding-left: 24px !important;
@@ -174,8 +178,8 @@
     font-style: normal;    /* sem itálico */
     text-transform: none;
 }
-.level-3 td.col-val  { font-size: 0.93rem; color: #cbd5e1; font-weight: 500; }
-.level-3 td.col-perc { font-size: 0.84rem; color: #64748b; }
+.level-3 td.col-val  { font-size: 1.01rem; color: #cbd5e1; font-weight: 500; }
+.level-3 td.col-perc { font-size: 0.9rem; color: #64748b; }
 
 /* ================================================================
    CORES DE FUNDO POR SESSÃO — aplicadas a todas as linhas de dados

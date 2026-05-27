@@ -387,10 +387,11 @@ window.fcApp = {
             const result = FinancialEngine.processData(allAccountsInPeriod, this.manualEntries);
             this.renderSummaryBar(result.totals);
             this.renderFlowTableStrict(result.rows, totalRealizadoEntradas, result.pdfTotalReceitas);
-            // ✅ Guarda contas não mapeadas para Auto-Vincular
+            // Guarda contas não mapeadas para Auto-Vincular
             this.pendingUnmapped = result.rows.filter(r => r.unmapped);
+            // Botão sempre visível — o usuário pode acionar a qualquer momento
             const avBtn = document.getElementById('btn-auto-vincular');
-            if (avBtn) avBtn.style.display = this.pendingUnmapped.length > 0 ? 'inline-flex' : 'none';
+            if (avBtn) avBtn.style.display = 'inline-flex';
         }
     },
 
@@ -400,11 +401,12 @@ window.fcApp = {
         tbody.innerHTML = '';
         let manualSum = 0;
 
-        // ── Mapeamento das 7 sessões principais ───────────────────────────
+        // ── Mapeamento das 8 seções principais ──────────────────────
         const SECTION_MAP = {
             'Disponíveis Nas Contas Movimento inicial': { num: 1, label: 'Disponíveis nas Contas Movimento Inicial', cls: 'fc-section-1' },
             'Total Receitas Operacionais / Vendas':     { num: 2, label: 'Total Receitas Operacionais / Vendas',     cls: 'fc-section-2' },
-            'Total dos Custos':                         { num: 3, label: 'Custo',                                    cls: 'fc-section-3' },
+            'Custo de Aquisição':                       { num: 3, label: 'Custo',                                    cls: 'fc-section-3' },
+            'Despesas Operac. Fixas e Variáveis':       { num: 4, label: 'Despesas Operac. Fixas e Variáveis',       cls: 'fc-section-4' },
             'Receitas Não Operacionais Totais':         { num: 5, label: 'Receitas Não Operacionais Totais',         cls: 'fc-section-5' },
             'Despesas Não Operacional':                 { num: 6, label: 'Despesas Não Operacional',                 cls: 'fc-section-6' },
             'Disponíveis nas Contas Movimento final':   { num: 7, label: 'Disponíveis nas Contas Movimento Final',   cls: 'fc-section-7' },
@@ -415,19 +417,6 @@ window.fcApp = {
         rows.forEach(row => {
             const tr = document.createElement('tr');
             tr.className = `level-${row.level}`;
-
-            // ── Detecta: código "300" → início da Sessão 4 ───────────────
-            if (row.type !== 'header' && row.codigo === '300') {
-                currentSectionCls = 'fc-section-4';
-                const sec4tr = document.createElement('tr');
-                sec4tr.className = 'table-group-header fc-section-4 level-1';
-                sec4tr.innerHTML = `
-                    <td colspan="3"><span class="section-num">4</span> Despesas Operac. Fixas e Variáveis</td>
-                    <td class="text-right">-</td>
-                    <td colspan="2"></td>`;
-                tbody.appendChild(sec4tr);
-                return; // não renderiza o "300" como linha de dados
-            }
 
             // ── Header de grupo principal (Nível 1) ──────────────────────
             if (row.type === 'header') {
@@ -585,14 +574,12 @@ window.fcApp = {
         return str;
     },
 
-    // Cria span de código editável inline
-    // group: nome do grupo/seção ao qual este item pertence (para limitar edições à seção correta)
+    // Código da conta — exibido como texto fixo (não editável).
+    // Os códigos do master-accounts.js são os definitivos.
     makeEditableCode(codigo, descricao, group) {
         const span = document.createElement('span');
-        span.className = 'editable-code';
+        span.className = 'code-label';
         span.textContent = codigo;
-        span.title = 'Clique para editar o código';
-        span.addEventListener('click', () => this.inlineEditCode(span, codigo, descricao, group));
         return span;
     },
 
@@ -648,49 +635,85 @@ window.fcApp = {
         }
     },
 
+    // Versão do plano de contas — ao mudar, limpa o customMasterAccounts do localStorage
+    MASTER_VERSION: '11.23.8',
+
     loadCustomMasterAccounts() {
+        const masterAccounts = window.MASTER_ACCOUNTS || [];
+
+        // ── Invalidação de cache: se versão mudou, descarta dados antigos ─────────────────────
+        const storedVersion = localStorage.getItem('masterAccountsVersion');
+        if (storedVersion !== this.MASTER_VERSION) {
+            localStorage.removeItem('customMasterAccounts');
+            localStorage.setItem('masterAccountsVersion', this.MASTER_VERSION);
+            console.log(`[FC] ✅ Plano de contas atualizado para v${this.MASTER_VERSION}. Cache resetado.`);
+        }
+
         const custom = localStorage.getItem('customMasterAccounts');
         let parsed = null;
         if (custom) {
-            try {
-                parsed = JSON.parse(custom);
-            } catch(e) { console.warn('customMasterAccounts inválido', e); }
+            try { parsed = JSON.parse(custom); }
+            catch(e) { console.warn('customMasterAccounts inválido', e); }
         }
 
-        // Se não tiver custom no localStorage, usa o padrão do window.MASTER_ACCOUNTS
+        // Se não tiver custom no localStorage, usa o padrão do master
         if (!parsed || parsed.length === 0) {
-            parsed = window.MASTER_ACCOUNTS || [];
+            parsed = [...masterAccounts];
         }
 
-        if (parsed && parsed.length > 0) {
-            let changed = false;
-            parsed = parsed.map(acc => {
-                let updatedAcc = { ...acc };
-                if (acc.codigo === 'HEADER') {
-                    const norm = (acc.descricao || '').trim().toLowerCase();
-                    // Detecta a versão SEM "final" E SEM "inicial" = é a seção final antiga
-                    if (norm === 'disponíveis nas contas movimento' ||
-                        norm === 'disponiveis nas contas movimento') {
-                        updatedAcc.descricao = 'Disponíveis nas Contas Movimento final';
-                        changed = true;
-                    }
-                } else if (updatedAcc.descricao) {
-                    // Limpa pontos e espaços iniciais/finais das descrições de contas (não headers)
-                    const cleaned = updatedAcc.descricao.replace(/^[\s.\-]+/, '').trim();
-                    if (cleaned !== updatedAcc.descricao) {
-                        updatedAcc.descricao = cleaned;
-                        changed = true;
-                    }
+        let changed = false;
+
+        // ── Migração: renomear headers legados e limpar descrições ──────────
+        parsed = parsed.map(acc => {
+            let u = { ...acc };
+            if (acc.codigo === 'HEADER') {
+                const norm = (acc.descricao || '').trim().toLowerCase();
+                if (norm === 'disponíveis nas contas movimento' ||
+                    norm === 'disponiveis nas contas movimento') {
+                    u.descricao = 'Disponíveis nas Contas Movimento final';
+                    changed = true;
                 }
-                return updatedAcc;
-            });
-
-            if (changed) {
-                localStorage.setItem('customMasterAccounts', JSON.stringify(parsed));
-                console.log('[FC] ✅ Migração: descrições das contas limpas e salvas no localStorage.');
+            } else if (u.descricao) {
+                const cleaned = u.descricao.replace(/^[\s\.\-]+/, '').trim();
+                if (cleaned !== u.descricao) { u.descricao = cleaned; changed = true; }
             }
-            window.MASTER_ACCOUNTS = parsed;
+            return u;
+        });
+
+        // ── Merge: insere contas novas do master que não estão no cache ─────
+        // (garante que qualquer conta adicionada ao master-accounts.js apareça mesmo com cache antigo)
+        const cachedCodes = new Set(parsed.filter(a => a.codigo !== 'HEADER').map(a => a.codigo));
+        let masterHeaderGroup = null;
+
+        masterAccounts.forEach(masterEntry => {
+            if (masterEntry.codigo === 'HEADER') {
+                masterHeaderGroup = masterEntry.descricao;
+                return;
+            }
+            if (cachedCodes.has(masterEntry.codigo)) return; // já existe
+
+            // Encontra a posição de inserção: após o último item do mesmo grupo no cache
+            let insertIdx = -1;
+            let inGroup = false;
+            for (let i = 0; i < parsed.length; i++) {
+                if (parsed[i].codigo === 'HEADER') {
+                    if (inGroup) break;
+                    if (parsed[i].descricao === masterHeaderGroup) inGroup = true;
+                } else if (inGroup) {
+                    insertIdx = i;
+                }
+            }
+            const pos = insertIdx >= 0 ? insertIdx + 1 : parsed.length;
+            parsed.splice(pos, 0, { ...masterEntry });
+            cachedCodes.add(masterEntry.codigo);
+            changed = true;
+            console.log(`[FC] ✅ Merge: conta nova inserida — ${masterEntry.codigo} (${masterEntry.descricao})`);
+        });
+
+        if (changed) {
+            localStorage.setItem('customMasterAccounts', JSON.stringify(parsed));
         }
+        window.MASTER_ACCOUNTS = parsed;
     },
 
     getActiveMasterAccounts() {
@@ -960,8 +983,9 @@ window.fcApp = {
     _suggestGroup(codigo) {
         const hdrs = (window.MASTER_ACCOUNTS || []).filter(m => m.codigo === 'HEADER').map(m => m.descricao);
         if (codigo.startsWith('1.') || codigo.startsWith('2.')) return hdrs.find(h => /Receita|Custo/i.test(h)) || hdrs[1] || '';
-        if (codigo.startsWith('3.')) return hdrs.find(h => /Despesa/i.test(h)) || hdrs[2] || '';
-        if (codigo.startsWith('4.')) return hdrs.find(h => /N.o Operac/i.test(h)) || hdrs[3] || '';
+        if (codigo.startsWith('4.')) return hdrs.find(h => /Despesas Operac/i.test(h)) || hdrs.find(h => /Vari.veis/i.test(h)) || '';
+        if (codigo.startsWith('5.')) return hdrs.find(h => /N.o Operac/i.test(h)) || '';
+        if (codigo.startsWith('6.')) return hdrs.find(h => /Despesas N.o/i.test(h)) || '';
         return hdrs[1] || '';
     },
 
@@ -983,7 +1007,25 @@ window.fcApp = {
             allMasterEntries.push({ codigo: m.codigo, descricao: m.descricao, group: _curGrp });
         });
 
-        const grupos = [...new Set(allMasterEntries.map(e => e.group))];
+        // Constrói a lista de grupos direto dos HEADERs que têm pelo menos uma conta filha.
+        // Isso garante que "Custo de Aquisição", "Despesas Operac. Fixas e Variáveis" e outros
+        // grupos apareçam corretamente, e que HEADERs de sumário (Receita Operacional Bruta,
+        // Total dos Custos) — que não têm contas diretas — sejam excluídos.
+        const grupos = [];
+        {
+            let _scanGrp = null;
+            let _grpHasAccounts = false;
+            (window.MASTER_ACCOUNTS || []).forEach(m => {
+                if (m.codigo === 'HEADER') {
+                    if (_scanGrp !== null && _grpHasAccounts) grupos.push(_scanGrp);
+                    _scanGrp = m.descricao;
+                    _grpHasAccounts = false;
+                } else {
+                    _grpHasAccounts = true;
+                }
+            });
+            if (_scanGrp && _grpHasAccounts) grupos.push(_scanGrp);
+        }
 
         const tableRows = proposed.map((p, idx) => {
             const masterDesc  = p.masterEntry?.descricao || '';

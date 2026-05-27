@@ -5,6 +5,89 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Parreira ERP | Core</title>
+    <!-- ═══ PATCH DE EMERGÊNCIA v2: injeta contas em TODO F5 ═══
+         Fase 1 (síncrono): patcha localStorage antes dos scripts externos.
+         Fase 2 (DOMContentLoaded): patcha window.MASTER_ACCOUNTS após scripts.
+         Desta forma funciona mesmo com JS 100% cacheado. -->
+    <script>
+    var __ACCOUNT_PATCHES = [
+        { after: '4.2.17', entry: { codigo: '4.2.18', descricao: 'ASO' } }
+    ];
+
+    // ── FASE 1: Patch no localStorage (roda antes de qualquer script externo) ──
+    (function patchLocalStorage() {
+        try {
+            var raw = localStorage.getItem('customMasterAccounts');
+            if (!raw) {
+                // Cache vazio: apaga a versão salva para forçar reload do master-accounts.js
+                localStorage.removeItem('masterAccountsVersion');
+                console.log('[PATCH F1] Cache vazio — masterAccountsVersion removida, master-accounts.js vai recarregar.');
+                return;
+            }
+            var accounts = JSON.parse(raw);
+            var changed = false;
+            __ACCOUNT_PATCHES.forEach(function(p) {
+                if (accounts.some(function(a) { return a.codigo === p.entry.codigo; })) return;
+                var idx = -1;
+                for (var i = 0; i < accounts.length; i++) {
+                    if (accounts[i].codigo === p.after) { idx = i; break; }
+                }
+                accounts.splice(idx >= 0 ? idx + 1 : accounts.length, 0, p.entry);
+                changed = true;
+                console.log('[PATCH F1] Conta inserida no localStorage: ' + p.entry.codigo + ' — ' + p.entry.descricao);
+            });
+            if (changed) localStorage.setItem('customMasterAccounts', JSON.stringify(accounts));
+        } catch(e) { console.warn('[PATCH F1] Erro:', e); }
+    })();
+
+    // ── FASE 2: Patch em window.MASTER_ACCOUNTS (após scripts externos carregarem) ──
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            var accs = window.MASTER_ACCOUNTS;
+            if (!Array.isArray(accs)) {
+                console.warn('[PATCH F2] window.MASTER_ACCOUNTS não encontrado.');
+                return;
+            }
+            var changed = false;
+            __ACCOUNT_PATCHES.forEach(function(p) {
+                if (accs.some(function(a) { return a.codigo === p.entry.codigo; })) return;
+                var idx = -1;
+                for (var i = 0; i < accs.length; i++) {
+                    if (accs[i].codigo === p.after) { idx = i; break; }
+                }
+                accs.splice(idx >= 0 ? idx + 1 : accs.length, 0, p.entry);
+                changed = true;
+                console.log('[PATCH F2] Conta inserida em MASTER_ACCOUNTS: ' + p.entry.codigo + ' — ' + p.entry.descricao);
+            });
+            if (changed) {
+                // Atualiza também o localStorage para persistir
+                try {
+                    var raw = localStorage.getItem('customMasterAccounts');
+                    if (raw) {
+                        var cached = JSON.parse(raw);
+                        __ACCOUNT_PATCHES.forEach(function(p) {
+                            if (cached.some(function(a) { return a.codigo === p.entry.codigo; })) return;
+                            var idx = -1;
+                            for (var i = 0; i < cached.length; i++) {
+                                if (cached[i].codigo === p.after) { idx = i; break; }
+                            }
+                            cached.splice(idx >= 0 ? idx + 1 : cached.length, 0, p.entry);
+                        });
+                        localStorage.setItem('customMasterAccounts', JSON.stringify(cached));
+                    }
+                } catch(e2) {}
+                console.log('[PATCH F2] MASTER_ACCOUNTS patchado. Reinicializando plano de contas...');
+                // Força reinicialização se fcApp estiver disponível
+                if (window.fcApp && typeof window.fcApp.loadCustomMasterAccounts === 'function') {
+                    window.fcApp.loadCustomMasterAccounts();
+                    console.log('[PATCH F2] fcApp.loadCustomMasterAccounts() executado.');
+                }
+            } else {
+                console.log('[PATCH F2] Conta 4.2.18 já presente — nenhum patch necessário.');
+            }
+        } catch(e) { console.warn('[PATCH F2] Erro:', e); }
+    });
+    </script>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
@@ -7398,11 +7481,11 @@
 
     <!-- Scripts Fluxo de Caixa (ERP Consultoria) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="js/fc-store.js?v=11.8.3"></script>
-    <script src="js/pdf-parser.js?v=11.8.3"></script>
-    <script src="js/master-accounts.js?v=11.8.3"></script>
-    <script src="js/financial-engine.js?v=11.8.3"></script>
-    <script src="js/fluxo-caixa.js?v=11.8.3"></script>
+    <script src="js/fc-store.js?v=11.23.8"></script>
+    <script src="js/pdf-parser.js?v=11.23.8"></script>
+    <script src="js/master-accounts.js?v=11.23.8"></script>
+    <script src="js/financial-engine.js?v=11.23.8"></script>
+    <script src="js/fluxo-caixa.js?v=11.23.8"></script>
 </body>
 
 </html>

@@ -1,8 +1,9 @@
 {
     "module": "erp-consultoria",
     "name": "Consultoria ParreiraLog",
-    "version": "11.23.6",
+    "version": "11.23.8",
+    "platform_version": "11.23.6",
     "date": "2026-05-27",
-    "last_change": "FIX: Contas 4.6.2 (IOF) e 4.8.2 (IR) movidas para estrutura permanente no master-accounts — removido código de injeção dinâmica.",
-    "build": "20260527.02"
+    "last_change": "FIX: loadCustomMasterAccounts reescrito com merge inteligente — contas novas do master-accounts.js são inseridas automaticamente no cache sem depender de MASTER_VERSION.",
+    "build": "20260527.04"
 }

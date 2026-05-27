@@ -296,6 +296,7 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
+| **11.23.8** | 2026-05-27 | ERP Consultoria: Seção 3 (Custo) reposicionada antes das contas de custo; matching PDF/Excel por código exato (aliases removidos); edição inline de códigos desativada; botão Auto-Vincular sempre visível; dropdown Grupo corrigido no modal de vinculação |
 | **11.23.4** | 2026-05-25 | ERP Consultoria: Excel parser seleciona automaticamente a aba correspondente ao período do dashboard (ex: MARÇO, MAR, 03) |
 | **11.23.3** | 2026-05-25 | ERP Consultoria: Vinculação agora mapeia códigos do PDF como aliases (apelidos) das contas reestruturadas no Plano de Contas, preservando o código personalizado do relatório |
 | **11.23.2** | 2026-05-25 | ERP Consultoria: Limpeza automática de pontos e espaços iniciais/finais das descrições das contas no Plano de Contas para exibição limpa e exatidão ao encontrar/vincular lançamentos |

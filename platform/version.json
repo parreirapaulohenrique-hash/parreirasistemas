@@ -1,16 +1,15 @@
 {
-    "version": "11.23.5",
+    "version": "11.23.8",
     "build": "20260527",
     "lastUpdate": "2026-05-27",
-    "description": "Relatório Fluxo de Caixa reestruturado: sessões numeradas 1-7, cores suaves por sessão, hierarquia tipográfica (nível 1/2/3), descrições em Title Case",
+    "description": "ERP Consultoria: Reestruturação do plano de contas — seção 3 movida para posição correta, matching PDF/Excel por código exato, edição inline de códigos removida, botão Auto-Vincular sempre visível, dropdown Grupo corrigido no modal de vinculação",
     "changelog": [
-        "NOVO: Sessões do relatório numeradas de 1 a 7 com badge circular visível",
-        "NOVO: 7 cores suaves distintas de fundo por sessão (âmbar, verde, vermelho, azul, teal, roxo, amarelo)",
-        "NOVO: Borda lateral colorida nos cabeçalhos de sessão para identificação rápida",
-        "FIX: Hierarquia tipográfica aplicada — sessão (0.96rem/700), sub-sessão (0.875rem/600), detalhe (0.81rem/400)",
-        "FIX: Descrições ALL CAPS convertidas automaticamente para Title Case via toDisplayCase()",
-        "FIX: Itálico removido das linhas de detalhe (nível 3)",
-        "FIX: Fonte padronizada para Inter/Roboto/system-ui em toda a tabela",
-        "FIX: Sessão 4 (código 300) agora gera cabeçalho visual correto com numeração"
+        "FIX: Seção 3 (Custo de Aquisição) agora aparece ANTES das contas de custo (2.1/2.2/2.3) com cor e badge corretos",
+        "FIX: Contas de custo herdam cor da seção 3 (vermelho/salmon) em vez da seção 2 (verde)",
+        "BREAKING: Matching PDF/Excel agora usa APENAS o código exato do master-accounts.js — aliases removidos",
+        "NOVO: Códigos do plano de contas não são mais editáveis inline — master-accounts.js é a fonte definitiva",
+        "FIX: Botão Auto-Vincular via Excel sempre visível independente do período/filtro selecionado",
+        "FIX: Dropdown 'Grupo' no modal de vinculação agora lista todos os grupos reais (inclui Custo de Aquisição e Despesas Operac. Fixas e Variáveis), excluindo HEADERs de sumário como Receita Operacional Bruta e Total dos Custos",
+        "INTERNO: MASTER_VERSION bumped de 11.23.7 para 11.23.8 para invalidar cache localStorage"
     ]
 }

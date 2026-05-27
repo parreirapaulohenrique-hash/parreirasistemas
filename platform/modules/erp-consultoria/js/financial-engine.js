@@ -8,12 +8,13 @@
 
 window.FinancialEngine = {
     GROUP_STYLES: {
-        'Disponíveis Nas Contas Movimento inicial': { color: 'var(--color-disponiveis)', class: 'group-disponiveis' },
-        'Disponíveis nas Contas Movimento final':  { color: 'var(--color-disponiveis)', class: 'group-disponiveis' },
-        'Total Receitas Operacionais / Vendas':     { color: 'var(--color-receitas)',    class: 'group-receitas' },
-        'Total dos Custos':                         { color: 'var(--color-custos)',      class: 'group-custos' },
-        '300. Despesas Operac. Fixas e Variáveis':  { color: 'var(--color-despesas)',    class: 'group-despesas' },
-        'Receitas Não Operacionais Totais':         { color: 'var(--color-receitas-nao-op)', class: 'group-nao-op' }
+        'Disponíveis Nas Contas Movimento inicial': { color: 'var(--color-disponiveis)',      class: 'group-disponiveis' },
+        'Disponíveis nas Contas Movimento final':  { color: 'var(--color-disponiveis)',      class: 'group-disponiveis' },
+        'Total Receitas Operacionais / Vendas':     { color: 'var(--color-receitas)',         class: 'group-receitas'    },
+        'Custo de Aquisição':                       { color: 'var(--color-custos)',           class: 'group-custos'      },
+        'Despesas Operac. Fixas e Variáveis':       { color: 'var(--color-despesas)',         class: 'group-despesas'    },
+        'Receitas Não Operacionais Totais':         { color: 'var(--color-receitas-nao-op)', class: 'group-nao-op'      },
+        'Despesas Não Operacional':                 { color: 'var(--color-despesas)',         class: 'group-despesas'    },
     },
 
     MANUAL_GROUPS: new Set([
@@ -79,7 +80,7 @@ window.FinancialEngine = {
 
                 if (master.descricao === 'Receita Operacional Bruta') {
                     row.valorCalculado = (groupTotals['Total Receitas Operacionais / Vendas'] || 0)
-                                       + (groupTotals['Total dos Custos'] || 0);
+                                       + (groupTotals['Custo de Aquisição'] || 0);
                 }
 
                 tableRows.push(row);
@@ -112,36 +113,25 @@ window.FinancialEngine = {
             // Caso: leaf (manual ou PDF)
             let valor = 0;
             if (isManual) {
-                // ✅ Chave diferenciada por grupo: evita que "inicial" e "final" compartilhem o mesmo valor armazenado
-                // Para o grupo inicial mantemos o formato antigo (compatibilidade com dados já salvos)
+                // Chave diferenciada por grupo
                 const isInitialGroup = currentGroup === 'Disponíveis Nas Contas Movimento inicial';
                 const manualKey = isInitialGroup
                     ? `${master.codigo}-${master.descricao}`
                     : `${currentGroup}::${master.codigo}-${master.descricao}`;
-                
-                // Soma o valor do próprio código + todos os aliases do PDF
-                const codesToMatch = [master.codigo, ...(master.aliases || [])];
-                let foundInPdf = false;
-                codesToMatch.forEach(c => {
-                    if (pdfMap[c]) {
-                        valor += pdfMap[c].total;
-                        delete pdfMap[c];
-                        foundInPdf = true;
-                    }
-                });
-                
-                // Fallback para valor manual apenas se não veio do PDF
-                if (!foundInPdf) {
+
+                // Matching APENAS pelo código exato do master (sem aliases)
+                if (pdfMap[master.codigo]) {
+                    valor = pdfMap[master.codigo].total;
+                    delete pdfMap[master.codigo];
+                } else {
                     valor = manualEntries[manualKey] || 0;
                 }
             } else {
-                const codesToMatch = [master.codigo, ...(master.aliases || [])];
-                codesToMatch.forEach(c => {
-                    if (pdfMap[c]) {
-                        valor += pdfMap[c].total;
-                        delete pdfMap[c];
-                    }
-                });
+                // Matching APENAS pelo código exato do master (sem aliases)
+                if (pdfMap[master.codigo]) {
+                    valor = pdfMap[master.codigo].total;
+                    delete pdfMap[master.codigo];
+                }
             }
 
             // Acumula totais
@@ -194,17 +184,18 @@ window.FinancialEngine = {
     },
 
     calculateBarTotals(groups) {
-        const rOp    = groups['Total Receitas Operacionais / Vendas'] || 0;
-        const rNOp   = groups['Receitas Não Operacionais Totais']     || 0;
-        const custos = groups['Total dos Custos']                     || 0;
-        const desp   = groups['300. Despesas Operac. Fixas e Variáveis'] || 0;
+        const rOp    = groups['Total Receitas Operacionais / Vendas']     || 0;
+        const rNOp   = groups['Receitas Não Operacionais Totais']         || 0;
+        const custos = groups['Custo de Aquisição']                       || 0;
+        const desp   = groups['Despesas Operac. Fixas e Variáveis']       || 0;
+        const despNOp = groups['Despesas Não Operacional']                || 0;
         const inicial = groups['Disponíveis Nas Contas Movimento inicial'] || 0;
         return {
-            saldoInicial:  inicial,
-            totalReceitas: rOp + rNOp,
-            totalDespesas: custos + desp,
-            saldoLiquido:  rOp + rNOp + custos + desp,
-            saldoAjustado: rOp + rNOp + custos + desp + inicial
+            saldoInicial:   inicial,
+            totalReceitas:  rOp + rNOp,
+            totalDespesas:  custos + desp + despNOp,
+            saldoLiquido:   rOp + rNOp + custos + desp + despNOp,
+            saldoAjustado:  rOp + rNOp + custos + desp + despNOp + inicial
         };
     }
 };
