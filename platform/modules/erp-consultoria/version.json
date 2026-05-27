@@ -1,8 +1,8 @@
 {
     "module": "erp-consultoria",
     "name": "Consultoria ParreiraLog",
-    "version": "11.23.5",
+    "version": "11.23.6",
     "date": "2026-05-27",
-    "last_change": "MELHORIA: Relatório reestruturado — sessões numeradas 1-7, cores suaves por sessão, hierarquia tipográfica, fontes maiores, descrições em Title Case.",
-    "build": "20260527.01"
+    "last_change": "FIX: Contas 4.6.2 (IOF) e 4.8.2 (IR) movidas para estrutura permanente no master-accounts — removido código de injeção dinâmica.",
+    "build": "20260527.02"
 }

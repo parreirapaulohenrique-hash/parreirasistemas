@@ -792,6 +792,30 @@ window.MASTER_ACCOUNTS = [
     "descricao": "BONIFICAÇÃO EM PRODUTOS"
   },
   {
+    "codigo": "4.6",
+    "descricao": "DESPESAS FINANCEIRAS"
+  },
+  {
+    "codigo": "4.6.1",
+    "descricao": "TARIFAS BANCÁRIAS"
+  },
+  {
+    "codigo": "4.6.2",
+    "descricao": "IOF"
+  },
+  {
+    "codigo": "4.8",
+    "descricao": "IMPOSTOS ADMINISTRATIVOS"
+  },
+  {
+    "codigo": "4.8.1",
+    "descricao": "ICMS-DIFERENCIAL DE ALIQUOTA"
+  },
+  {
+    "codigo": "4.8.2",
+    "descricao": "IR"
+  },
+  {
     "codigo": "HEADER",
     "descricao": "Despesas Não Operacional"
   },
