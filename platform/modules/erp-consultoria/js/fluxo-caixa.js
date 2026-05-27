@@ -400,17 +400,49 @@ window.fcApp = {
         tbody.innerHTML = '';
         let manualSum = 0;
 
+        // ── Mapeamento das 7 sessões principais ───────────────────────────
+        const SECTION_MAP = {
+            'Disponíveis Nas Contas Movimento inicial': { num: 1, label: 'Disponíveis nas Contas Movimento Inicial', cls: 'fc-section-1' },
+            'Total Receitas Operacionais / Vendas':     { num: 2, label: 'Total Receitas Operacionais / Vendas',     cls: 'fc-section-2' },
+            'Total dos Custos':                         { num: 3, label: 'Custo',                                    cls: 'fc-section-3' },
+            'Receitas Não Operacionais Totais':         { num: 5, label: 'Receitas Não Operacionais Totais',         cls: 'fc-section-5' },
+            'Despesas Não Operacional':                 { num: 6, label: 'Despesas Não Operacional',                 cls: 'fc-section-6' },
+            'Disponíveis nas Contas Movimento final':   { num: 7, label: 'Disponíveis nas Contas Movimento Final',   cls: 'fc-section-7' },
+        };
+
+        let currentSectionCls = '';  // CSS class da sessão ativa
+
         rows.forEach(row => {
             const tr = document.createElement('tr');
             tr.className = `level-${row.level}`;
 
-            // Header de grupo principal
+            // ── Detecta: código "300" → início da Sessão 4 ───────────────
+            if (row.type !== 'header' && row.codigo === '300') {
+                currentSectionCls = 'fc-section-4';
+                const sec4tr = document.createElement('tr');
+                sec4tr.className = 'table-group-header fc-section-4 level-1';
+                sec4tr.innerHTML = `
+                    <td colspan="3"><span class="section-num">4</span> Despesas Operac. Fixas e Variáveis</td>
+                    <td class="text-right">-</td>
+                    <td colspan="2"></td>`;
+                tbody.appendChild(sec4tr);
+                return; // não renderiza o "300" como linha de dados
+            }
+
+            // ── Header de grupo principal (Nível 1) ──────────────────────
             if (row.type === 'header') {
                 tr.classList.add('table-group-header');
                 if (row.style && row.style.class) tr.classList.add(row.style.class);
+
+                const secInfo = SECTION_MAP[row.descricao];
+                if (secInfo) {
+                    currentSectionCls = secInfo.cls;
+                    tr.classList.add(secInfo.cls);
+                }
+
                 const val = row.valorCalculado !== undefined ? this.formatCurrency(row.valorCalculado) : '-';
 
-                // ✅ Header especial: CONTAS PARA VINCULAR — adiciona botão Auto-Vincular
+                // Header especial: CONTAS PARA VINCULAR
                 if (row.descricao && row.descricao.includes('CONTAS PARA VINCULAR')) {
                     tr.innerHTML = `
                         <td colspan="3">${row.descricao}</td>
@@ -425,8 +457,16 @@ window.fcApp = {
                     return;
                 }
 
+                // Label formatado: sessões numeradas recebem badge; outros apenas display case
+                let displayLabel;
+                if (secInfo) {
+                    displayLabel = `<span class="section-num">${secInfo.num}</span> ${secInfo.label}`;
+                } else {
+                    displayLabel = this.toDisplayCase(row.descricao);
+                }
+
                 tr.innerHTML = `
-                    <td colspan="3">${row.descricao}</td>
+                    <td colspan="3">${displayLabel}</td>
                     <td class="text-right">${val}</td>
                     <td colspan="2"></td>
                 `;
@@ -439,10 +479,12 @@ window.fcApp = {
                 return;
             }
 
-            // Sub-cabeçalho de subgrupo (ex: "1.1. Receita com Vendas")
+            // Aplica classe da sessão atual a TODAS as linhas de dados
+            if (currentSectionCls) tr.classList.add(currentSectionCls);
+
+            // ── Sub-cabeçalho de subgrupo (Nível 2 com filhos) ───────────
             if (row.isSubheader) {
                 tr.classList.add('table-subgroup-header');
-                // ✅ Adiciona classe do grupo para estilização por cor
                 const subGroupClass = (window.FinancialEngine && row.group)
                     ? (window.FinancialEngine.GROUP_STYLES[row.group]?.class || 'group-other')
                     : 'group-other';
@@ -453,7 +495,8 @@ window.fcApp = {
                 tdSub.colSpan = 3;
                 const codeSpanSub = this.makeEditableCode(row.codigo, row.descricao);
                 tdSub.appendChild(codeSpanSub);
-                tdSub.insertAdjacentHTML('beforeend', `. <strong>${row.descricao}</strong>`);
+                tdSub.insertAdjacentHTML('beforeend',
+                    `. <strong>${this.toDisplayCase(row.descricao)}</strong>`);
                 tr.appendChild(tdSub);
                 tr.insertAdjacentHTML('beforeend', `
                     <td class="text-right"><strong>${this.formatCurrency(row.valor)}</strong></td>
@@ -464,10 +507,10 @@ window.fcApp = {
                 return;
             }
 
-            // Linha de conta (manual ou PDF)
-            if (row.unmapped) tr.className += ' row-unmapped';
+            // ── Linha de conta (manual ou PDF) — Nível 2/3 ───────────────
+            if (row.unmapped) tr.classList.add('row-unmapped');
             if (row.isManual) manualSum += (row.valor || 0);
-            // ✅ Adiciona classe do grupo para hierarquia de cor por nivel
+
             const rowGroupClass = (window.FinancialEngine && row.group)
                 ? (window.FinancialEngine.GROUP_STYLES[row.group]?.class || 'group-other')
                 : '';
@@ -476,11 +519,11 @@ window.fcApp = {
             const valClass  = row.valor >= 0 ? 'positive' : 'negative';
             const vertical  = totalEntradas > 0
                 ? ((Math.abs(row.valor) / totalEntradas) * 100).toFixed(2) + '%' : '0,00%';
-            const descText  = row.unmapped ? `⚠️ [VINCULAR] ${row.descricao}` : row.descricao;
+            const descRaw   = row.unmapped ? `⚠️ [VINCULAR] ${row.descricao}` : row.descricao;
+            const descText  = this.toDisplayCase(descRaw);
 
             let valorHtml;
             if (row.isManual) {
-                // ✅ Chave do grupo: mesma lógica do financial-engine.js para não misturar inicial/final
                 const isInitialGroup = row.group === 'Disponíveis Nas Contas Movimento inicial';
                 const key = isInitialGroup
                     ? `${row.codigo}-${row.descricao}`
@@ -496,7 +539,6 @@ window.fcApp = {
             const tdCode = document.createElement('td');
             tdCode.className = 'col-code';
             if (row.unmapped) {
-                // ✅ Para contas não mapeadas: botão Vincular em vez de inline-edit
                 tdCode.innerHTML = `
                     <span class="editable-code" style="opacity:.5;">${row.codigo}</span>
                     <button class="btn-vincular-small" onclick="fcApp.openVincularModal('${row.codigo}', ${row.valor}, \`${row.descricao}\`)" title="Vincular esta conta ao plano de contas">
@@ -522,6 +564,25 @@ window.fcApp = {
         });
 
         this.updateValidationStatus(manualSum, pdfTotalReceitas);
+    },
+
+    // Normaliza texto: converte ALL CAPS para Title Case; mantém texto já formatado
+    toDisplayCase(str) {
+        if (!str) return str;
+        const letters = str.replace(/[^a-zA-ZÀ-ÿ]/g, '');
+        if (letters.length < 3) return str;
+        // Conta letras maiúsculas
+        const upperCount = (str.match(/[A-ZÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜ]/g) || []).length;
+        // Se mais de 55% das letras forem maiúsculas → converte para Title Case
+        if (upperCount / letters.length > 0.55) {
+            return str.toLowerCase()
+                .replace(/(^|[\s\-\/\(])([a-záàâãäåçèéêëìíîïñòóôõöùúûü])/g,
+                    (m, p1, p2) => p1 + p2.toUpperCase())
+                // Preposições/artigos em português → minúsculo
+                .replace(/\b(De|Do|Da|Dos|Das|E|Em|Na|No|Nas|Nos|Com|Por|Para|Se|Ao|Aos|À|Um|Uma)\b/g,
+                    w => w.toLowerCase());
+        }
+        return str;
     },
 
     // Cria span de código editável inline

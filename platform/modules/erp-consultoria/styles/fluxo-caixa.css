@@ -1,5 +1,25 @@
-/* Cores de Agrupamento */
+/* ================================================================
+   FLUXO DE CAIXA — Design System
+   Hierarquia visual de 3 níveis:
+     Nível 1 = Sessão (cabeçalho de grupo, numerado 1-7)
+     Nível 2 = Sub-sessão (agrupador / conta pai)
+     Nível 3 = Detalhe (conta folha)
+   ================================================================ */
+
+/* ── Variáveis de cor base ── */
 :root {
+    --fc-font: 'Inter', 'Roboto', system-ui, -apple-system, sans-serif;
+
+    /* Cores de acento por sessão */
+    --s1-color: #f59e0b;   /* Amber  — Disponíveis Inicial  */
+    --s2-color: #22c55e;   /* Green  — Receitas Operacionais */
+    --s3-color: #f87171;   /* Red    — Custo                 */
+    --s4-color: #60a5fa;   /* Blue   — Despesas Operacionais */
+    --s5-color: #34d399;   /* Teal   — Receitas Não Op.      */
+    --s6-color: #c084fc;   /* Purple — Despesas Não Op.      */
+    --s7-color: #fde68a;   /* Yellow — Disponíveis Final     */
+
+    /* Legado (mantido para compatibilidade) */
     --color-disponiveis: #d97706;
     --color-receitas: #65a30d;
     --color-custos: #dc2626;
@@ -9,7 +29,9 @@
     --color-blue-dark: #1d4ed8;
 }
 
-/* Summary Bar */
+/* ================================================================
+   SUMMARY BAR
+   ================================================================ */
 .summary-bar-container {
     display: flex;
     flex-direction: column;
@@ -25,138 +47,193 @@
     font-weight: 600;
     color: white;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    font-family: var(--fc-font);
 }
-.summary-item .sum-label { font-size: 1rem; }
-.summary-item .sum-value { font-size: 1.2rem; }
-
-.item-orange { background: var(--color-disponiveis); }
-.item-green { background: var(--color-receitas); }
-.item-red { background: var(--color-custos); }
-.item-blue-dark { background: var(--color-blue-dark); }
-.item-yellow { background: var(--color-ajustado); color: #0f172a; }
-
-/* Table Grouping */
-.table-group-header td {
-    background: rgba(255,255,255,0.08) !important;
-    font-weight: 700;
-    font-size: 1rem;
-    color: white;
-    padding: 12px 16px;
-    border-left: 8px solid transparent;
-}
-.table-group-header.group-disponiveis td { border-left-color: var(--color-disponiveis); }
-.table-group-header.group-receitas td { border-left-color: var(--color-receitas); }
-.table-group-header.group-custos td { border-left-color: var(--color-custos); }
-.table-group-header.group-despesas td { border-left-color: var(--color-despesas); background: rgba(37, 99, 235, 0.15) !important; }
-.table-group-header.group-nao-op td { border-left-color: var(--color-receitas-nao-op); background: rgba(77, 124, 15, 0.15) !important; }
-.table-group-header.group-other td { border-left-color: #64748b; background: rgba(100, 116, 139, 0.1) !important; }
+.summary-item .sum-label { font-size: 0.95rem; }
+.summary-item .sum-value { font-size: 1.15rem; }
+.item-orange   { background: var(--color-disponiveis); }
+.item-green    { background: var(--color-receitas); }
+.item-red      { background: var(--color-custos); }
+.item-blue-dark{ background: var(--color-blue-dark); }
+.item-yellow   { background: var(--color-ajustado); color: #0f172a; }
 
 /* ================================================================
-   SISTEMA DE HIERARQUIA VISUAL — Detalhamento do Fluxo de Caixa
-   Nível 1: Cabeçalho de Grupo  (HEADER)
-   Nível 2: Sub-conta / agrupador  (ex: 3.1, 1.1)
-   Nível 3: Conta folha / detalhe  (ex: 3.1.01, 1.5.03)
+   BADGE DE NÚMERO DE SESSÃO
    ================================================================ */
+.section-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.22);
+    font-size: 0.78rem;
+    font-weight: 800;
+    margin-right: 10px;
+    flex-shrink: 0;
+    vertical-align: middle;
+    border: 1px solid rgba(255,255,255,0.25);
+}
 
-/* ── Nível 1: Cabeçalho de Grupo (já estilizado acima) ── */
-/* Mantido nas regras .table-group-header */
+/* ================================================================
+   NÍVEL 1 — Cabeçalho de Sessão
+   ================================================================ */
+.table-group-header td {
+    font-family: var(--fc-font);
+    font-size: 0.96rem;
+    font-weight: 700;
+    letter-spacing: 0.025em;
+    text-transform: none;
+    color: #f8fafc;
+    padding: 12px 16px;
+    border-left: 8px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.07) !important;
+}
 
-/* ── Nível 2: Sub-conta / agrupador ── */
+/* Sessões numeradas: cor de fundo + borda lateral por sessão */
+.table-group-header.fc-section-1 td { background: rgba(245,158,11, 0.18) !important; border-left-color: var(--s1-color) !important; }
+.table-group-header.fc-section-2 td { background: rgba(34,197,94,  0.18) !important; border-left-color: var(--s2-color) !important; }
+.table-group-header.fc-section-3 td { background: rgba(248,113,113,0.18) !important; border-left-color: var(--s3-color) !important; }
+.table-group-header.fc-section-4 td { background: rgba(59,130,246, 0.18) !important; border-left-color: var(--s4-color) !important; }
+.table-group-header.fc-section-5 td { background: rgba(16,185,129, 0.18) !important; border-left-color: var(--s5-color) !important; }
+.table-group-header.fc-section-6 td { background: rgba(192,132,252,0.18) !important; border-left-color: var(--s6-color) !important; }
+.table-group-header.fc-section-7 td { background: rgba(234,179,8,  0.18) !important; border-left-color: var(--s7-color) !important; color: #fde68a; }
+
+/* Cabeçalhos calculados (Receita Operacional Bruta, Saldo, etc.) — grupo sem sessão numerada */
+.table-group-header.group-other td  { border-left-color: #64748b !important; background: rgba(100,116,139,0.1) !important; }
+
+/* Compatibilidade legado */
+.table-group-header.group-disponiveis td { border-left-color: var(--color-disponiveis); }
+.table-group-header.group-receitas   td  { border-left-color: var(--color-receitas);    }
+.table-group-header.group-custos     td  { border-left-color: var(--color-custos);      }
+.table-group-header.group-despesas   td  { border-left-color: var(--color-despesas);    }
+.table-group-header.group-nao-op     td  { border-left-color: var(--color-receitas-nao-op); }
+
+/* ================================================================
+   NÍVEL 2 — Sub-sessão / Agrupador
+   ================================================================ */
 .level-2 td {
-    font-size: 0.92rem;
+    font-family: var(--fc-font);
+    font-size: 0.875rem;
+    text-transform: none;
     border-bottom: 1px solid rgba(255,255,255,0.04);
 }
 .level-2 td.col-code {
-    font-size: 0.82rem;
+    font-size: 0.80rem;
     font-weight: 700;
     color: #94a3b8;
-    padding-left: 14px !important;
+    padding-left: 16px !important;
 }
 .level-2 td.col-desc {
-    padding-left: 28px !important;
+    padding-left: 30px !important;
     font-weight: 600;
     color: #e2e8f0;
+    text-transform: none;
+    font-style: normal;
 }
-.level-2 td.col-val { font-weight: 600; }
-.level-2 td.col-perc { font-size: 0.82rem; color: #94a3b8; }
+.level-2 td.col-val  { font-weight: 600; }
+.level-2 td.col-perc { font-size: 0.80rem; color: #94a3b8; }
 
-/* ── Nível 3: Conta folha / detalhe ── */
+/* ── Sub-cabeçalho de subgrupo (ex: "1.1 Receita com Vendas") ── */
+.table-subgroup-header td {
+    font-family: var(--fc-font);
+    font-size: 0.88rem;
+    font-weight: 700;
+    padding: 10px 16px !important;
+    border-left: 4px solid rgba(255,255,255,0.12);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    color: #f1f5f9;
+    text-transform: none;
+    font-style: normal;
+}
+
+/* ================================================================
+   NÍVEL 3 — Conta detalhe / folha
+   ================================================================ */
 .level-3 td {
-    font-size: 0.82rem;
-    border-bottom: 1px solid rgba(255,255,255,0.025);
+    font-family: var(--fc-font);
+    font-size: 0.81rem;
+    text-transform: none;
+    border-bottom: 1px solid rgba(255,255,255,0.02);
 }
 .level-3 td.col-code {
-    font-size: 0.75rem;
+    font-size: 0.73rem;
     font-weight: 500;
     color: #64748b;
-    padding-left: 22px !important;
+    padding-left: 24px !important;
 }
 .level-3 td.col-desc {
     padding-left: 56px !important;
     font-weight: 400;
     color: #94a3b8;
-    font-style: italic;
+    font-style: normal;    /* sem itálico */
+    text-transform: none;
 }
-.level-3 td.col-val { font-size: 0.82rem; color: #cbd5e1; font-weight: 500; }
-.level-3 td.col-perc { font-size: 0.75rem; color: #64748b; }
+.level-3 td.col-val  { font-size: 0.81rem; color: #cbd5e1; font-weight: 500; }
+.level-3 td.col-perc { font-size: 0.73rem; color: #64748b; }
 
-/* ── Sub-cabeçalho de subgrupo (level-2 com filhos) ── */
-.table-subgroup-header td {
-    background: rgba(255,255,255,0.045) !important;
-    font-size: 0.9rem;
-    font-weight: 700;
-    padding: 10px 16px !important;
-    border-left: 4px solid transparent;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-    color: #f1f5f9;
-}
-}
+/* ================================================================
+   CORES DE FUNDO POR SESSÃO — aplicadas a todas as linhas de dados
+   ================================================================ */
 
+/* Sub-cabeçalhos dentro de cada sessão */
+.table-subgroup-header.fc-section-1 td { background: rgba(245,158,11, 0.10) !important; border-left-color: rgba(245,158,11,0.5); }
+.table-subgroup-header.fc-section-2 td { background: rgba(34,197,94,  0.10) !important; border-left-color: rgba(34,197,94, 0.5); }
+.table-subgroup-header.fc-section-3 td { background: rgba(248,113,113,0.10) !important; border-left-color: rgba(248,113,113,0.5); }
+.table-subgroup-header.fc-section-4 td { background: rgba(59,130,246, 0.10) !important; border-left-color: rgba(59,130,246, 0.5); }
+.table-subgroup-header.fc-section-5 td { background: rgba(16,185,129, 0.10) !important; border-left-color: rgba(16,185,129, 0.5); }
+.table-subgroup-header.fc-section-6 td { background: rgba(192,132,252,0.10) !important; border-left-color: rgba(192,132,252,0.5); }
+.table-subgroup-header.fc-section-7 td { background: rgba(234,179,8,  0.10) !important; border-left-color: rgba(234,179,8, 0.5); }
 
-/* ── Cores por grupo — Nível 2 código badge ── */
-.level-2.group-disponiveis td.col-code { color: #fbbf24; }
-.level-2.group-receitas     td.col-code { color: #a3e635; }
-.level-2.group-custos       td.col-code { color: #f87171; }
-.level-2.group-despesas     td.col-code { color: #60a5fa; }
-.level-2.group-nao-op       td.col-code { color: #6ee7b7; }
-.level-2.group-other        td.col-code { color: #94a3b8; }
+/* Linhas de dados nível 2 */
+.level-2.fc-section-1 td { background: rgba(245,158,11, 0.04) !important; }
+.level-2.fc-section-2 td { background: rgba(34,197,94,  0.04) !important; }
+.level-2.fc-section-3 td { background: rgba(248,113,113,0.04) !important; }
+.level-2.fc-section-4 td { background: rgba(59,130,246, 0.04) !important; }
+.level-2.fc-section-5 td { background: rgba(16,185,129, 0.04) !important; }
+.level-2.fc-section-6 td { background: rgba(192,132,252,0.04) !important; }
+.level-2.fc-section-7 td { background: rgba(234,179,8,  0.04) !important; }
 
-/* ── Cores por grupo — Nível 2 borda esquerda ── */
-.level-2.group-disponiveis { border-left: 3px solid rgba(251,191,36,0.35); }
-.level-2.group-receitas    { border-left: 3px solid rgba(163,230,53,0.35); }
-.level-2.group-custos      { border-left: 3px solid rgba(248,113,113,0.35); }
-.level-2.group-despesas    { border-left: 3px solid rgba(96,165,250,0.35); }
-.level-2.group-nao-op      { border-left: 3px solid rgba(110,231,183,0.35); }
+/* Linhas de dados nível 3 */
+.level-3.fc-section-1 td { background: rgba(245,158,11, 0.025) !important; }
+.level-3.fc-section-2 td { background: rgba(34,197,94,  0.025) !important; }
+.level-3.fc-section-3 td { background: rgba(248,113,113,0.025) !important; }
+.level-3.fc-section-4 td { background: rgba(59,130,246, 0.025) !important; }
+.level-3.fc-section-5 td { background: rgba(16,185,129, 0.025) !important; }
+.level-3.fc-section-6 td { background: rgba(192,132,252,0.025) !important; }
+.level-3.fc-section-7 td { background: rgba(234,179,8,  0.025) !important; }
 
-/* ── Cores por grupo — Sub-cabeçalho (level-2 com filhos) ── */
-.table-subgroup-header.group-disponiveis td { border-left-color: #d97706; color: #fbbf24; }
-.table-subgroup-header.group-receitas    td { border-left-color: #65a30d; color: #a3e635; }
-.table-subgroup-header.group-custos      td { border-left-color: #dc2626; color: #f87171; }
-.table-subgroup-header.group-despesas    td { border-left-color: #2563eb; color: #93c5fd; }
-.table-subgroup-header.group-nao-op      td { border-left-color: #4d7c0f; color: #6ee7b7; }
-.table-subgroup-header.group-other       td { border-left-color: #64748b; color: #cbd5e1; }
+/* ================================================================
+   CORES DE CÓDIGO (badge) POR SESSÃO — nível 2
+   ================================================================ */
+.level-2.fc-section-1 td.col-code { color: rgba(245,158,11,  0.85); }
+.level-2.fc-section-2 td.col-code { color: rgba(34,197,94,   0.85); }
+.level-2.fc-section-3 td.col-code { color: rgba(248,113,113, 0.85); }
+.level-2.fc-section-4 td.col-code { color: rgba(96,165,250,  0.85); }
+.level-2.fc-section-5 td.col-code { color: rgba(52,211,153,  0.85); }
+.level-2.fc-section-6 td.col-code { color: rgba(192,132,252, 0.85); }
+.level-2.fc-section-7 td.col-code { color: rgba(253,230,138, 0.85); }
 
-/* ── Cores por grupo — Nível 3 fundo sutil ── */
-.level-3.group-disponiveis td { background: rgba(217,119,6,0.04) !important; }
-.level-3.group-receitas    td { background: rgba(101,163,13,0.04) !important; }
-.level-3.group-custos      td { background: rgba(220,38,38,0.04) !important; }
-.level-3.group-despesas    td { background: rgba(37,99,235,0.04) !important; }
-.level-3.group-nao-op      td { background: rgba(77,124,15,0.04) !important; }
+/* Nível 3: mais suave */
+.level-3.fc-section-1 td.col-code { color: rgba(245,158,11,  0.50); }
+.level-3.fc-section-2 td.col-code { color: rgba(34,197,94,   0.50); }
+.level-3.fc-section-3 td.col-code { color: rgba(248,113,113, 0.50); }
+.level-3.fc-section-4 td.col-code { color: rgba(96,165,250,  0.50); }
+.level-3.fc-section-5 td.col-code { color: rgba(52,211,153,  0.50); }
+.level-3.fc-section-6 td.col-code { color: rgba(192,132,252, 0.50); }
+.level-3.fc-section-7 td.col-code { color: rgba(253,230,138, 0.50); }
 
-/* ── Nível 3 — código com cor de grupo mais suave ── */
-.level-3.group-disponiveis td.col-code { color: rgba(251,191,36,0.55); }
-.level-3.group-receitas    td.col-code { color: rgba(163,230,53,0.55); }
-.level-3.group-custos      td.col-code { color: rgba(248,113,113,0.55); }
-.level-3.group-despesas    td.col-code { color: rgba(96,165,250,0.55); }
-.level-3.group-nao-op      td.col-code { color: rgba(110,231,183,0.55); }
-
-/* ── Editable code span ── */
+/* ================================================================
+   CÓDIGO EDITÁVEL INLINE
+   ================================================================ */
 .editable-code {
     cursor: pointer;
     border-bottom: 1px dashed rgba(255,255,255,0.15);
     border-radius: 2px;
     padding: 1px 3px;
     transition: background 0.15s, color 0.15s;
+    font-family: 'Roboto Mono', monospace, var(--fc-font);
 }
 .editable-code:hover {
     background: rgba(255,255,255,0.08);
@@ -172,9 +249,12 @@
     font-size: 0.82rem;
     font-weight: 700;
     outline: none;
+    font-family: 'Roboto Mono', monospace;
 }
 
-/* Manual Inputs */
+/* ================================================================
+   INPUTS MANUAIS
+   ================================================================ */
 .manual-input {
     background: rgba(255,255,255,0.05);
     border: 1px solid rgba(255,255,255,0.1);
@@ -185,28 +265,35 @@
     text-align: right;
     font-weight: 600;
     outline: none;
+    font-family: var(--fc-font);
 }
-.manual-input:focus { border-color: #10b981; background: rgba(16, 185, 129, 0.1); }
+.manual-input:focus { border-color: #10b981; background: rgba(16,185,129,0.1); }
 
-/* Validation Row */
+/* ================================================================
+   LINHA DE VALIDAÇÃO
+   ================================================================ */
 .validation-row td {
     background: rgba(0,0,0,0.2) !important;
     padding: 12px 24px;
     border-bottom: 2px solid rgba(255,255,255,0.05);
+    font-family: var(--fc-font);
 }
-.status-ok { font-weight: 800; animation: pulse 2s infinite; }
+.status-ok    { font-weight: 800; animation: pulse 2s infinite; }
 .status-error { font-weight: 800; }
-@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
 
+/* ================================================================
+   LINHAS NÃO MAPEADAS / BOTÕES VINCULAR
+   ================================================================ */
 .row-unmapped td {
-    background: rgba(234, 179, 8, 0.1) !important;
+    background: rgba(234,179,8,0.10) !important;
     color: #fde047 !important;
     font-style: italic;
 }
 .btn-vincular-small {
     margin-left: 6px;
-    background: rgba(59, 130, 246, 0.15);
-    border: 1px solid rgba(59, 130, 246, 0.4);
+    background: rgba(59,130,246,0.15);
+    border: 1px solid rgba(59,130,246,0.4);
     color: #60a5fa;
     border-radius: 5px;
     padding: 2px 8px;
@@ -215,16 +302,16 @@
     cursor: pointer;
     transition: background 0.15s;
     white-space: nowrap;
+    font-family: var(--fc-font);
 }
 .btn-vincular-small:hover {
-    background: rgba(59, 130, 246, 0.35);
+    background: rgba(59,130,246,0.35);
     border-color: #60a5fa;
     color: #fff;
 }
-
 .btn-vincular-excel {
-    background: rgba(16, 185, 129, 0.15);
-    border: 1px solid rgba(16, 185, 129, 0.4);
+    background: rgba(16,185,129,0.15);
+    border: 1px solid rgba(16,185,129,0.4);
     color: #10b981;
     border-radius: 6px;
     padding: 4px 12px;
@@ -234,35 +321,40 @@
     transition: background 0.15s, border-color 0.15s;
     white-space: nowrap;
     letter-spacing: 0.01em;
+    font-family: var(--fc-font);
 }
 .btn-vincular-excel:hover {
-    background: rgba(16, 185, 129, 0.3);
+    background: rgba(16,185,129,0.30);
     border-color: #10b981;
     color: #fff;
 }
 
-/* Modals */
+/* ================================================================
+   MODAIS
+   ================================================================ */
 .modal-overlay {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    position: fixed; top:0; left:0; right:0; bottom:0;
     background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
     display: none; align-items: center; justify-content: center;
     z-index: 1000;
 }
 .modal-overlay.active { display: flex; }
 .modal-content {
-    background: rgba(30,41,59,0.95);
+    background: rgba(30,41,59,0.97);
     padding: 30px; border-radius: 16px;
     width: 90%; max-width: 400px;
     border: 1px solid rgba(255,255,255,0.1);
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    font-family: var(--fc-font);
 }
-.modal-content h2 { margin-bottom: 20px; font-size: 1.5rem; }
+.modal-content h2 { margin-bottom: 20px; font-size: 1.4rem; font-weight: 700; }
 .form-group { margin-bottom: 16px; }
-.form-group label { display: block; margin-bottom: 8px; color: #cbd5e1; }
+.form-group label { display: block; margin-bottom: 8px; color: #cbd5e1; font-size: 0.9rem; }
 .form-group input {
     width: 100%; padding: 12px;
     background: rgba(15,23,42,0.6);
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 8px; color: white;
+    font-family: var(--fc-font);
 }
 .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
