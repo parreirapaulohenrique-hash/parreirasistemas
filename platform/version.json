@@ -1,13 +1,6 @@
 {
-    "version": "11.23.9",
-    "build": "20260527",
-    "lastUpdate": "2026-05-27",
-    "description": "ERP Consultoria: Prioridade absoluta do valor digitado manualmente sobre PDF nos MANUAL_GROUPS (1, 2, 3, 7). Grupo Custo de Aquisição adicionado ao MANUAL_GROUPS para restaurar campos de entrada das contas 2.x",
-    "changelog": [
-        "FIX CRÍTICO: Valores digitados manualmente nos grupos 1, 2, 3 e 7 agora têm prioridade absoluta sobre valores do banco/PDF",
-        "FIX: O PDF só é usado como fallback quando o campo manual está vazio (zero ou não preenchido)",
-        "FIX: PDF consumido silenciosamente quando há valor manual, evitando que apareça como 'não mapeado'",
-        "NOVO: 'Custo de Aquisição' adicionado ao MANUAL_GROUPS — contas 2.1/2.2/2.3 recuperam seus campos de entrada manual",
-        "INTERNO: MASTER_VERSION bumped de 11.23.8 para 11.23.9 para invalidar cache localStorage"
-    ]
+    "description":  "FIX: Sub-cabecalhos sem codigo contabil para clareza visual; v11.23.10",
+    "build":  "20260527",
+    "version":  "11.23.10",
+    "lastUpdate":  "2026-05-27"
 }

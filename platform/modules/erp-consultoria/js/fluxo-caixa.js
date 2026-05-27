@@ -482,10 +482,10 @@ window.fcApp = {
                     ? ((Math.abs(row.valor) / totalEntradas) * 100).toFixed(2) + '%' : '0,00%';
                 const tdSub = document.createElement('td');
                 tdSub.colSpan = 3;
-                const codeSpanSub = this.makeEditableCode(row.codigo, row.descricao);
-                tdSub.appendChild(codeSpanSub);
+                // Exibe apenas a descrição sem o código contábil (1.1, 1.5, 2.1...)
+                // para não confundir com a numeração dos grupos do dashboard (1, 2, 3, 7)
                 tdSub.insertAdjacentHTML('beforeend',
-                    `. <strong>${this.toDisplayCase(row.descricao)}</strong>`);
+                    `<strong>${this.toDisplayCase(row.descricao)}</strong>`);
                 tr.appendChild(tdSub);
                 tr.insertAdjacentHTML('beforeend', `
                     <td class="text-right"><strong>${this.formatCurrency(row.valor)}</strong></td>
@@ -636,7 +636,7 @@ window.fcApp = {
     },
 
     // Versão do plano de contas — ao mudar, limpa o customMasterAccounts do localStorage
-    MASTER_VERSION: '11.23.9',
+    MASTER_VERSION: '11.23.10',
 
     loadCustomMasterAccounts() {
         const masterAccounts = window.MASTER_ACCOUNTS || [];
