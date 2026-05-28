@@ -520,11 +520,20 @@ window.fcApp = {
                 const tdSub = document.createElement('td');
                 tdSub.colSpan = 3;
 
-                // ✏️ Botão de edição de código viível quando desbloqueado
+                // ✏️ Botão de edição de código + 🗑 botão de remoção quando desbloqueado
                 if (!locked) {
                     const codeSpan = this.makeEditableCode(row.codigo, row.descricao, row.group, false);
                     codeSpan.style.cssText = 'font-size:.72rem;opacity:.65;margin-right:.5rem;background:rgba(255,255,255,.06);padding:1px 5px;border-radius:4px;';
                     tdSub.appendChild(codeSpan);
+
+                    const delBtnSub = document.createElement('button');
+                    delBtnSub.title = 'Remover linha';
+                    delBtnSub.innerHTML = '×';
+                    delBtnSub.style.cssText = 'float:right;background:transparent;border:none;color:#f87171;cursor:pointer;font-size:1.1rem;line-height:1;padding:0 4px;opacity:0;transition:opacity .15s;';
+                    delBtnSub.onclick = (e) => { e.stopPropagation(); this.deleteAccount(row.codigo, row.descricao, row.group); };
+                    tr.addEventListener('mouseenter', () => delBtnSub.style.opacity = '1');
+                    tr.addEventListener('mouseleave', () => delBtnSub.style.opacity = '0');
+                    tdSub.appendChild(delBtnSub);
                 }
                 tdSub.insertAdjacentHTML('beforeend',
                     `<strong>${this.toDisplayCase(row.descricao)}</strong>`);
@@ -585,7 +594,21 @@ window.fcApp = {
 
             const tdDesc = document.createElement('td');
             tdDesc.className = 'col-desc';
-            tdDesc.textContent = descText;
+            const descSpan = document.createElement('span');
+            descSpan.textContent = descText;
+            tdDesc.appendChild(descSpan);
+
+            // 🗑 Botão de remoção — aparece ao hover, só quando desbloqueado
+            if (!locked) {
+                const delBtn = document.createElement('button');
+                delBtn.title = 'Remover linha do plano de contas';
+                delBtn.innerHTML = '×';
+                delBtn.style.cssText = 'float:right;background:transparent;border:none;color:#f87171;cursor:pointer;font-size:1.1rem;line-height:1;padding:0 4px;opacity:0;transition:opacity .15s;';
+                delBtn.onclick = (e) => { e.stopPropagation(); this.deleteAccount(row.codigo, row.descricao, row.group); };
+                tr.addEventListener('mouseenter', () => delBtn.style.opacity = '1');
+                tr.addEventListener('mouseleave', () => delBtn.style.opacity = '0');
+                tdDesc.appendChild(delBtn);
+            }
 
             tr.appendChild(tdCode);
             tr.appendChild(tdDesc);
@@ -687,6 +710,29 @@ window.fcApp = {
             localStorage.setItem('customMasterAccounts', JSON.stringify(newAccounts));
             window.MASTER_ACCOUNTS = newAccounts;
             this.showToast(`✅ ${originalCode} → ${newCode}`);
+            this.refreshDashboard();
+        }
+    },
+
+    // 🗑️ Remove uma conta do plano de contas (group-aware)
+    deleteAccount(codigo, descricao, group) {
+        if (!confirm(`Remover "${this.toDisplayCase(descricao)}" do plano de contas?`)) return;
+        const accounts = this.getActiveMasterAccounts();
+        let found = false;
+        let currentSection = null;
+        const filtered = accounts.filter(acc => {
+            if (acc.codigo === 'HEADER') { currentSection = acc.descricao; return true; }
+            const sameSection = !group || currentSection === group;
+            if (sameSection && acc.codigo === codigo && acc.descricao === descricao) {
+                found = true;
+                return false; // remove esta entrada
+            }
+            return true;
+        });
+        if (found) {
+            localStorage.setItem('customMasterAccounts', JSON.stringify(filtered));
+            window.MASTER_ACCOUNTS = filtered;
+            this.showToast(`🗑️ Linha removida`);
             this.refreshDashboard();
         }
     },

@@ -15,19 +15,8 @@ window.MASTER_ACCOUNTS = [
   { "codigo": "1.3",    "descricao": "BANCO STONE MATRIZ C.C 40256726-7" },
   { "codigo": "1.4",    "descricao": "BANCO DA AMAZONIA 071730-7 MATRIZ" },
   { "codigo": "1.5",    "descricao": "ITAU C.C.98671-6 MATRIZ" },
-  { "codigo": "1.5.03", "descricao": "ITAU C.C 83290-2 GARANTIDA" },
   { "codigo": "1.9",    "descricao": "CONTA PERDA/ROUBO/BONIFICAÇÃO E DOAÇÃO" },
 
-  { "codigo": "1.21",   "descricao": "BANCO DO BRASIL C.C.60638-3 FILIAL PALMAS" },
-  { "codigo": "1.24",   "descricao": "ITAU C.C.98669-0 FILIAL PALMAS" },
-  { "codigo": "1.29",   "descricao": "CONTA PERDA/ROUBO E BONIFICAÇÃO FILIAL" },
-
-  { "codigo": "1.40",   "descricao": "TESOURARIA FILIAL PORTO" },
-  { "codigo": "1.41",   "descricao": "BANCO DO BRASIL C.C.61105-0 FILIAL PORTO" },
-  { "codigo": "1.44",   "descricao": "MERCADO PAGO PIX FILIAL PORTO" },
-  { "codigo": "1.49",   "descricao": "CONTA PERDA/ROUBO E BONIFICAÇÃO FILIAL" },
-
-  { "codigo": "1.91",   "descricao": "CARTÃO ENDERED 5099+4596+6933+8072 - ESCRITORIO" },
 
   // ══════════════════════════════════════════════════════════════════════════════
   // SEÇÃO 2 — Total Receitas Operacionais / Vendas
