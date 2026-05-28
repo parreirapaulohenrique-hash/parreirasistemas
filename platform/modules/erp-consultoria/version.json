@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.23.17",
+    "version":  "11.23.18",
     "platform_version":  "11.23.6",
     "date":  "2026-05-28",
-    "last_change":  "Delete row button + remove excess section-1 entries from master",
-    "build":  "20260528.17"
+    "last_change":  "Auto-purge: remove linhas excedentes da secao 1 do cache localStorage na inicializacao",
+    "build":  "20260528.18"
 }

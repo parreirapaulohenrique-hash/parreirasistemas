@@ -782,6 +782,20 @@ window.fcApp = {
             return u;
         });
 
+        // ── Purge: remove entradas específicas da Seção 1 que não devem mais aparecer ──
+        // (corrije caches antigos sem precisar resetar MASTER_VERSION)
+        const SEC1_GRP   = 'Disponíveis Nas Contas Movimento inicial';
+        const SEC1_PURGE = new Set(['1.5.03','1.21','1.24','1.29','1.40','1.41','1.44','1.49','1.91',
+                                    '1.6']);   // 1.6 = 1.0 renomeado pelo usuário que não deve ficar em sec.1
+        let purgeSection = null;
+        const beforeLen = parsed.length;
+        parsed = parsed.filter(acc => {
+            if (acc.codigo === 'HEADER') { purgeSection = acc.descricao; return true; }
+            if (purgeSection === SEC1_GRP && SEC1_PURGE.has(acc.codigo)) return false;
+            return true;
+        });
+        if (parsed.length !== beforeLen) changed = true;
+
         // ── Merge: insere contas novas do master que não estão no cache ─────
         // (garante que qualquer conta adicionada ao master-accounts.js apareça mesmo com cache antigo)
         const cachedCodes = new Set(parsed.filter(a => a.codigo !== 'HEADER').map(a => a.codigo));
