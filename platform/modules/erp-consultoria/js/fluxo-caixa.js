@@ -786,7 +786,7 @@ window.fcApp = {
         // (corrije caches antigos sem precisar resetar MASTER_VERSION)
         const SEC1_GRP   = 'Disponíveis Nas Contas Movimento inicial';
         // Purge incondicional por código (entradas que nunca devem estar na seção 1)
-        const SEC1_PURGE = new Set(['1.0','1.5.03','1.21','1.24','1.29','1.40','1.41','1.44','1.49','1.91']);
+        const SEC1_PURGE = new Set(['1.0','1.5','1.5.03','1.21','1.24','1.29','1.40','1.41','1.44','1.49','1.91']);
         // Purge específico por código+descrição (para não apagar código reutilizado pelo usuário)
         const SEC1_PURGE_EXACT = [
             { codigo: '1.6', descricao: 'TESOURARIA MATRIZ PALMAS' },
