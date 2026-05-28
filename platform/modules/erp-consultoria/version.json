@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.23.15",
+    "version":  "11.23.16",
     "platform_version":  "11.23.6",
     "date":  "2026-05-28",
-    "last_change":  "Re-enable inline code editing: clicar no codigo abre input para renomear",
-    "build":  "20260528.15"
+    "last_change":  "Sub-header edit: botao de edicao de codigo em linhas de subgrupo + guard codigo vazio",
+    "build":  "20260528.16"
 }

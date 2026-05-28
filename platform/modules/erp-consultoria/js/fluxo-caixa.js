@@ -519,11 +519,31 @@ window.fcApp = {
                     ? ((Math.abs(row.valor) / totalEntradas) * 100).toFixed(2) + '%' : '0,00%';
                 const tdSub = document.createElement('td');
                 tdSub.colSpan = 3;
+
+                // ✏️ Botão de edição de código viível quando desbloqueado
+                if (!locked) {
+                    const codeSpan = this.makeEditableCode(row.codigo, row.descricao, row.group, false);
+                    codeSpan.style.cssText = 'font-size:.72rem;opacity:.65;margin-right:.5rem;background:rgba(255,255,255,.06);padding:1px 5px;border-radius:4px;';
+                    tdSub.appendChild(codeSpan);
+                }
                 tdSub.insertAdjacentHTML('beforeend',
                     `<strong>${this.toDisplayCase(row.descricao)}</strong>`);
                 tr.appendChild(tdSub);
+
+                // Input de valor na linha de sub-header quando desbloqueado
+                const subKey = `${row.group}::${row.codigo}-${row.descricao}`;
+                let subValHtml;
+                if (locked) {
+                    subValHtml = `<strong>${this.formatCurrency(row.valor)}</strong>`;
+                } else {
+                    const safeSubKey = subKey.replace(/"/g, '&quot;').replace(/'/g, "\\'");
+                    subValHtml = `<input type="number" step="0.01" class="manual-input"
+                        value="${row.valor || ''}"
+                        onchange="fcApp.updateManualEntry('${safeSubKey}', this.value)"
+                        placeholder="0.00">`;
+                }
                 tr.insertAdjacentHTML('beforeend', `
-                    <td class="text-right"><strong>${this.formatCurrency(row.valor)}</strong></td>
+                    <td class="text-right">${subValHtml}</td>
                     <td></td>
                     <td class="text-right"><strong>${pct}</strong></td>
                 `);
@@ -624,12 +644,18 @@ window.fcApp = {
         input.select();
 
         const restore = (code) => {
-            const s = this.makeEditableCode(code, descricao, group);
+            const s = this.makeEditableCode(code, descricao, group, false);
+            s.style.cssText = span.style.cssText; // preserva estilo original (sub-header vs normal)
             input.replaceWith(s);
         };
         const save = () => {
             const newCode = input.value.trim();
-            if (newCode && newCode !== originalCode) this.updateAccountCode(originalCode, descricao, newCode, group);
+            // 🛡️ Guarda: não salva código vazio — sempre restaura o original
+            if (!newCode) {
+                restore(originalCode);
+                return;
+            }
+            if (newCode !== originalCode) this.updateAccountCode(originalCode, descricao, newCode, group);
             else restore(originalCode);
         };
         input.addEventListener('blur', save);
