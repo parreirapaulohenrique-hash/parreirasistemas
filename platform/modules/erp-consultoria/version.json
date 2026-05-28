@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.23.14",
+    "version":  "11.23.15",
     "platform_version":  "11.23.6",
     "date":  "2026-05-28",
-    "last_change":  "Full Manual Mode: persistencia localStorage + botao Lock/Unlock + todos os grupos com input",
-    "build":  "20260528.14"
+    "last_change":  "Re-enable inline code editing: clicar no codigo abre input para renomear",
+    "build":  "20260528.15"
 }

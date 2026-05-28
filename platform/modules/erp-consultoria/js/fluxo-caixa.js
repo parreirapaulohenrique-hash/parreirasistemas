@@ -561,7 +561,7 @@ window.fcApp = {
 
             const tdCode = document.createElement('td');
             tdCode.className = 'col-code';
-            tdCode.appendChild(this.makeEditableCode(row.codigo, row.descricao, row.group));
+            tdCode.appendChild(this.makeEditableCode(row.codigo, row.descricao, row.group, locked));
 
             const tdDesc = document.createElement('td');
             tdDesc.className = 'col-desc';
@@ -598,12 +598,18 @@ window.fcApp = {
         return str;
     },
 
-    // Código da conta — exibido como texto fixo (não editável).
-    // Os códigos do master-accounts.js são os definitivos.
-    makeEditableCode(codigo, descricao, group) {
+    // Código da conta: estático quando bloqueado, editável (clique) quando desbloqueado
+    makeEditableCode(codigo, descricao, group, locked = false) {
         const span = document.createElement('span');
         span.className = 'code-label';
         span.textContent = codigo;
+        if (!locked) {
+            span.title = 'Clique para editar o código';
+            span.style.cursor = 'pointer';
+            span.style.textDecorationLine = 'underline';
+            span.style.textDecorationStyle = 'dotted';
+            span.onclick = () => this.inlineEditCode(span, codigo, descricao, group);
+        }
         return span;
     },
 
