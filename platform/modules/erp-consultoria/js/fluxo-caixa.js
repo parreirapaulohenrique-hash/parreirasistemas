@@ -785,13 +785,21 @@ window.fcApp = {
         // ── Purge: remove entradas específicas da Seção 1 que não devem mais aparecer ──
         // (corrije caches antigos sem precisar resetar MASTER_VERSION)
         const SEC1_GRP   = 'Disponíveis Nas Contas Movimento inicial';
-        const SEC1_PURGE = new Set(['1.0','1.5.03','1.21','1.24','1.29','1.40','1.41','1.44','1.49','1.91',
-                                    '1.6']);   // 1.0/1.6 e filiais não devem aparecer na sec.1
+        // Purge incondicional por código (entradas que nunca devem estar na seção 1)
+        const SEC1_PURGE = new Set(['1.0','1.5.03','1.21','1.24','1.29','1.40','1.41','1.44','1.49','1.91']);
+        // Purge específico por código+descrição (para não apagar código reutilizado pelo usuário)
+        const SEC1_PURGE_EXACT = [
+            { codigo: '1.6', descricao: 'TESOURARIA MATRIZ PALMAS' },
+        ];
         let purgeSection = null;
         const beforeLen = parsed.length;
         parsed = parsed.filter(acc => {
             if (acc.codigo === 'HEADER') { purgeSection = acc.descricao; return true; }
-            if (purgeSection === SEC1_GRP && SEC1_PURGE.has(acc.codigo)) return false;
+            if (purgeSection === SEC1_GRP) {
+                if (SEC1_PURGE.has(acc.codigo)) return false;
+                const d = (acc.descricao || '').toUpperCase();
+                if (SEC1_PURGE_EXACT.some(p => p.codigo === acc.codigo && d.includes(p.descricao))) return false;
+            }
             return true;
         });
         if (parsed.length !== beforeLen) changed = true;
