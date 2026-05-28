@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.23.11",
+    "version":  "11.23.12",
     "platform_version":  "11.23.6",
     "date":  "2026-05-27",
-    "last_change":  "FIX CRITICO: Pre-scan section-aware no financial-engine; banco do brasil em Disponiveis nao era mais sub-cabecalho falso",
-    "build":  "20260527.11"
+    "last_change":  "FIX DEFINITIVO: Disponiveis nunca tem sub-cabecalhos - todas as contas bancarias sao folhas com input",
+    "build":  "20260527.12"
 }

@@ -24,6 +24,14 @@ window.FinancialEngine = {
         'Custo de Aquisição'
     ]),
 
+    // Apenas esses grupos podem ter sub-cabeçalhos (level-2 com filhos).
+    // Disponíveis é propositalmente EXCLUÍDO: todas as contas bancárias ali
+    // são folhas com campo de input, mesmo que tenham sub-códigos (ex: 1.5.03).
+    SUBHEADER_GROUPS: new Set([
+        'Total Receitas Operacionais / Vendas',
+        'Custo de Aquisição'
+    ]),
+
     getLevel(codigo) {
         if (codigo === 'HEADER') return 1;
         const dots = (codigo.match(/\./g) || []).length;
@@ -41,23 +49,24 @@ window.FinancialEngine = {
         });
 
         // ── Pré-scan SECTION-AWARE ───────────────────────────────────────────
-        // Descobre quais códigos level-2 TÊM filhos (level-3) DENTRO DA MESMA SEÇÃO.
-        // Isso evita que "1.1 Banco do Brasil" em "Disponíveis" seja tratado como
-        // sub-cabeçalho só porque "1.1 Receita com Vendas" tem filhos em "Total Receitas".
+        // Descobre quais códigos level-2 TÊM filhos (level-3) DENTRO DA MESMA SEÇÃO,
+        // mas SOMENTE nas seções que permitem sub-cabeçalhos (SUBHEADER_GROUPS).
+        // Seções Disponíveis são EXCLUÍDAS: todas as contas bancárias ali são folhas
+        // com input, mesmo que tenham sub-códigos como 1.5.03.
         const codesWithChildrenBySection = {}; // { sectionName: Set<codigo> }
-        let _scanSection = null;
-        let _scanLastL2  = null;
-        let _inManualScan = false;
+        let _scanSection    = null;
+        let _scanLastL2     = null;
+        let _allowSubheader = false;
 
         window.MASTER_ACCOUNTS.forEach(m => {
             if (m.codigo === 'HEADER') {
-                _scanSection  = m.descricao;
-                _scanLastL2   = null;
-                _inManualScan = this.MANUAL_GROUPS.has(m.descricao);
-                if (_inManualScan) codesWithChildrenBySection[_scanSection] = new Set();
+                _scanSection    = m.descricao;
+                _scanLastL2     = null;
+                _allowSubheader = this.SUBHEADER_GROUPS.has(m.descricao);
+                if (_allowSubheader) codesWithChildrenBySection[_scanSection] = new Set();
                 return;
             }
-            if (!_inManualScan || !_scanSection) return;
+            if (!_allowSubheader || !_scanSection) return;
             const lv = this.getLevel(m.codigo);
             if (lv === 2) { _scanLastL2 = m.codigo; }
             if (lv === 3 && _scanLastL2) { codesWithChildrenBySection[_scanSection].add(_scanLastL2); }
