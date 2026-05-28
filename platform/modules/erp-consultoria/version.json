@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.23.10",
+    "version":  "11.23.11",
     "platform_version":  "11.23.6",
     "date":  "2026-05-27",
-    "last_change":  "FIX: Sub-cabecalhos sem codigo contabil (1.1, 2.1); prioridade manual sobre PDF nos grupos 1,2,3,7",
-    "build":  "20260527.10"
+    "last_change":  "FIX CRITICO: Pre-scan section-aware no financial-engine; banco do brasil em Disponiveis nao era mais sub-cabecalho falso",
+    "build":  "20260527.11"
 }

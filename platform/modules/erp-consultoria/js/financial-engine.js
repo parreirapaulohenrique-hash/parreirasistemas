@@ -40,36 +40,45 @@ window.FinancialEngine = {
             pdfMap[acc.codigo].total += (acc.a_receber || 0) - (acc.a_pagar || 0);
         });
 
-        // ── Pré-scan: quais codes level-2 têm filhos (level-3)? ─────────────
-        // → esses serão sub-cabeçalhos estilizados, sem campo de input
-        const codesWithChildren = new Set();
-        let _lastL2 = null;
-        let _inManual = false;
+        // ── Pré-scan SECTION-AWARE ───────────────────────────────────────────
+        // Descobre quais códigos level-2 TÊM filhos (level-3) DENTRO DA MESMA SEÇÃO.
+        // Isso evita que "1.1 Banco do Brasil" em "Disponíveis" seja tratado como
+        // sub-cabeçalho só porque "1.1 Receita com Vendas" tem filhos em "Total Receitas".
+        const codesWithChildrenBySection = {}; // { sectionName: Set<codigo> }
+        let _scanSection = null;
+        let _scanLastL2  = null;
+        let _inManualScan = false;
+
         window.MASTER_ACCOUNTS.forEach(m => {
             if (m.codigo === 'HEADER') {
-                _lastL2 = null;
-                _inManual = this.MANUAL_GROUPS.has(m.descricao);
+                _scanSection  = m.descricao;
+                _scanLastL2   = null;
+                _inManualScan = this.MANUAL_GROUPS.has(m.descricao);
+                if (_inManualScan) codesWithChildrenBySection[_scanSection] = new Set();
                 return;
             }
-            if (!_inManual) return;
+            if (!_inManualScan || !_scanSection) return;
             const lv = this.getLevel(m.codigo);
-            if (lv === 2) { _lastL2 = m.codigo; }
-            if (lv === 3 && _lastL2) { codesWithChildren.add(_lastL2); }
+            if (lv === 2) { _scanLastL2 = m.codigo; }
+            if (lv === 3 && _scanLastL2) { codesWithChildrenBySection[_scanSection].add(_scanLastL2); }
         });
 
         // ── Processamento principal ──────────────────────────────────────────
         const tableRows      = [];
         let   currentGroup   = null;
+        let   currentSubheaderKey = null; // último sub-cabeçalho visto (chave composta)
         const groupTotals    = {};
-        const subgroupTotals = {};          // { codigo: running total }
-        const subgroupRowIdx = {};          // { codigo: tableRows index }
-        const manualHeaderIdx = {};         // { groupName: tableRows index }
+        // Usa chave composta "group::codigo" para evitar colisão entre seções
+        const subgroupTotals = {};    // { "group::codigo": running total }
+        const subgroupRowIdx = {};    // { "group::codigo": tableRows index }
+        const manualHeaderIdx = {};   // { groupName: tableRows index }
 
         window.MASTER_ACCOUNTS.forEach(master => {
 
             // ── Header de grupo (nível 1) ──────────────────────────────────
             if (master.codigo === 'HEADER') {
-                currentGroup = master.descricao;
+                currentGroup      = master.descricao;
+                currentSubheaderKey = null;           // reset ao trocar de grupo
                 groupTotals[currentGroup] = 0;
 
                 const row = {
@@ -95,10 +104,15 @@ window.FinancialEngine = {
             const level    = this.getLevel(master.codigo);
             const isManual = this.MANUAL_GROUPS.has(currentGroup);
 
-            // Caso: subheader de subgrupo (level-2 com filhos em MANUAL_GROUP)
-            if (isManual && level === 2 && codesWithChildren.has(master.codigo)) {
-                subgroupTotals[master.codigo] = 0;
-                subgroupRowIdx[master.codigo] = tableRows.length;
+            // Sub-cabeçalho: level-2 com filhos NA MESMA SEÇÃO
+            const sectionSet = codesWithChildrenBySection[currentGroup];
+            const isThisSubheader = isManual && level === 2 && sectionSet && sectionSet.has(master.codigo);
+
+            if (isThisSubheader) {
+                const sgKey = `${currentGroup}::${master.codigo}`;
+                currentSubheaderKey  = sgKey;         // registra último sub-cabeçalho
+                subgroupTotals[sgKey] = 0;
+                subgroupRowIdx[sgKey] = tableRows.length;
                 tableRows.push({
                     type:        'account',
                     level:       2,
@@ -121,24 +135,19 @@ window.FinancialEngine = {
                     : `${currentGroup}::${master.codigo}-${master.descricao}`;
 
                 // ⚡ PRIORIDADE: valor digitado manualmente é sempre preferido ao PDF.
-                // O PDF só é usado como fallback se o usuário não digitou nada.
                 const manualVal = manualEntries[manualKey];
                 const hasManual = manualVal !== undefined && manualVal !== null && Number(manualVal) !== 0;
 
                 if (hasManual) {
-                    // Usa o valor manual e consome a entrada do PDF silenciosamente
-                    // (evita que ela apareça como "não mapeada")
                     valor = Number(manualVal);
                     if (pdfMap[master.codigo]) delete pdfMap[master.codigo];
                 } else {
-                    // Sem valor manual → tenta o PDF como fallback
                     if (pdfMap[master.codigo]) {
                         valor = pdfMap[master.codigo].total;
                         delete pdfMap[master.codigo];
                     }
                 }
             } else {
-                // Matching APENAS pelo código exato do master (sem aliases)
                 if (pdfMap[master.codigo]) {
                     valor = pdfMap[master.codigo].total;
                     delete pdfMap[master.codigo];
@@ -147,10 +156,10 @@ window.FinancialEngine = {
 
             // Acumula totais
             if (currentGroup) groupTotals[currentGroup] += valor;
-            if (level === 2 && !isManual) subgroupTotals[master.codigo] = 0;
-            if (level === 3) {
-                const parent = master.codigo.substring(0, master.codigo.lastIndexOf('.'));
-                if (subgroupTotals[parent] !== undefined) subgroupTotals[parent] += valor;
+            // Usa último sub-cabeçalho visto (não prefixo do código) para acumular.
+            // Isso cobre casos onde o código filho não bate com o pai, ex: 1.2.01 sob 1.5.
+            if (level === 3 && currentSubheaderKey && subgroupTotals[currentSubheaderKey] !== undefined) {
+                subgroupTotals[currentSubheaderKey] += valor;
             }
 
             tableRows.push({
@@ -164,12 +173,12 @@ window.FinancialEngine = {
             });
         });
 
-        // ── Back-fill subheaders de subgrupo (ex: "1.1. Receita com Vendas") ─
-        for (const [code, idx] of Object.entries(subgroupRowIdx)) {
-            tableRows[idx].valor = subgroupTotals[code] || 0;
+        // ── Back-fill subheaders ─────────────────────────────────────────────
+        for (const [key, idx] of Object.entries(subgroupRowIdx)) {
+            tableRows[idx].valor = subgroupTotals[key] || 0;
         }
 
-        // ── Back-fill headers de grupos manuais (ex: "Total Receitas...") ────
+        // ── Back-fill headers de grupos manuais ──────────────────────────────
         for (const [group, idx] of Object.entries(manualHeaderIdx)) {
             tableRows[idx].valorCalculado = groupTotals[group] || 0;
         }
