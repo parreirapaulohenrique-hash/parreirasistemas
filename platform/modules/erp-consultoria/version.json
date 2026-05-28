@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.23.21",
+    "version":  "11.23.22",
     "platform_version":  "11.23.6",
     "date":  "2026-05-28",
-    "last_change":  "Restaura 1.6 ITAU C.C.98671-6 MATRIZ na secao 1 (apagado incorretamente pela purge anterior)",
-    "build":  "20260528.21"
+    "last_change":  "Restaura 1.5 Amazonia; ordena secao 1 por codigo numerico automaticamente",
+    "build":  "20260528.22"
 }

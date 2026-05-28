@@ -786,7 +786,7 @@ window.fcApp = {
         // (corrije caches antigos sem precisar resetar MASTER_VERSION)
         const SEC1_GRP   = 'Disponíveis Nas Contas Movimento inicial';
         // Purge incondicional por código (entradas que nunca devem estar na seção 1)
-        const SEC1_PURGE = new Set(['1.0','1.5','1.5.03','1.21','1.24','1.29','1.40','1.41','1.44','1.49','1.91']);
+        const SEC1_PURGE = new Set(['1.0','1.4','1.5.03','1.21','1.24','1.29','1.40','1.41','1.44','1.49','1.91']);
         // Purge específico por código+descrição (para não apagar código reutilizado pelo usuário)
         const SEC1_PURGE_EXACT = [
             { codigo: '1.6', descricao: 'TESOURARIA MATRIZ PALMAS' },
@@ -803,6 +803,28 @@ window.fcApp = {
             return true;
         });
         if (parsed.length !== beforeLen) changed = true;
+
+        // ── Sort: ordena entradas da Seção 1 por código numérico (ex: 1.5 → 1.6 → 1.6.1 → 1.7) ──
+        const parseCode = c => String(c).split('.').map(n => parseInt(n) || 0);
+        const cmpCodes  = (a, b) => {
+            const pa = parseCode(a), pb = parseCode(b);
+            for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+                const d = (pa[i] || 0) - (pb[i] || 0);
+                if (d !== 0) return d;
+            }
+            return 0;
+        };
+        let sortSec = null, sortIdx = -1;
+        for (let i = 0; i <= parsed.length; i++) {
+            const isHdr = i < parsed.length && parsed[i].codigo === 'HEADER';
+            if ((isHdr || i === parsed.length) && sortSec === SEC1_GRP && sortIdx >= 0) {
+                const chunk = parsed.slice(sortIdx, i).sort((a, b) => cmpCodes(a.codigo, b.codigo));
+                parsed.splice(sortIdx, i - sortIdx, ...chunk);
+                changed = true;
+                break;
+            }
+            if (isHdr) { sortSec = parsed[i].descricao; sortIdx = i + 1; }
+        }
 
         // ── Merge: insere contas novas do master que não estão no cache ─────
         // (garante que qualquer conta adicionada ao master-accounts.js apareça mesmo com cache antigo)
