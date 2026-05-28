@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.23.18",
+    "version":  "11.23.19",
     "platform_version":  "11.23.6",
     "date":  "2026-05-28",
-    "last_change":  "Auto-purge: remove linhas excedentes da secao 1 do cache localStorage na inicializacao",
-    "build":  "20260528.18"
+    "last_change":  "Purge 1.0 (Tesouraria Matriz Palmas) da secao 1",
+    "build":  "20260528.19"
 }

@@ -9,7 +9,6 @@ window.MASTER_ACCOUNTS = [
   // ══════════════════════════════════════════════════════════════════════════════
   { "codigo": "HEADER", "descricao": "Disponíveis Nas Contas Movimento inicial" },
 
-  { "codigo": "1.0",    "descricao": "TESOURARIA MATRIZ PALMAS" },
   { "codigo": "1.1",    "descricao": "BANCO DO BRASIL C.C.60409-7 MATRIZ" },
   { "codigo": "1.2",    "descricao": "BRADESCO 15232-3 MATRIZ" },
   { "codigo": "1.3",    "descricao": "BANCO STONE MATRIZ C.C 40256726-7" },

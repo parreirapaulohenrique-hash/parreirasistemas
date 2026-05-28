@@ -785,8 +785,8 @@ window.fcApp = {
         // ── Purge: remove entradas específicas da Seção 1 que não devem mais aparecer ──
         // (corrije caches antigos sem precisar resetar MASTER_VERSION)
         const SEC1_GRP   = 'Disponíveis Nas Contas Movimento inicial';
-        const SEC1_PURGE = new Set(['1.5.03','1.21','1.24','1.29','1.40','1.41','1.44','1.49','1.91',
-                                    '1.6']);   // 1.6 = 1.0 renomeado pelo usuário que não deve ficar em sec.1
+        const SEC1_PURGE = new Set(['1.0','1.5.03','1.21','1.24','1.29','1.40','1.41','1.44','1.49','1.91',
+                                    '1.6']);   // 1.0/1.6 e filiais não devem aparecer na sec.1
         let purgeSection = null;
         const beforeLen = parsed.length;
         parsed = parsed.filter(acc => {
