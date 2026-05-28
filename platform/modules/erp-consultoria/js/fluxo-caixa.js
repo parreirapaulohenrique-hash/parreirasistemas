@@ -636,7 +636,7 @@ window.fcApp = {
     },
 
     // Versão do plano de contas — ao mudar, limpa o customMasterAccounts do localStorage
-    MASTER_VERSION: '11.23.12',
+    MASTER_VERSION: '11.23.13',
 
     loadCustomMasterAccounts() {
         const masterAccounts = window.MASTER_ACCOUNTS || [];
@@ -1612,4 +1612,5 @@ window.fcApp = {
 setTimeout(() => {
     fcApp.init();
 }, 1000);
+
 

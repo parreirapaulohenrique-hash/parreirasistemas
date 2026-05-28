@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.23.12",
+    "version":  "11.23.13",
     "platform_version":  "11.23.6",
     "date":  "2026-05-27",
-    "last_change":  "FIX DEFINITIVO: Disponiveis nunca tem sub-cabecalhos - todas as contas bancarias sao folhas com input",
-    "build":  "20260527.12"
+    "last_change":  "RENUMERACAO COMPLETA: codigos agora respeitam numero do grupo (1.x, 2.x, 3.x, 4.x, 5.x, 6.x)",
+    "build":  "20260527.13"
 }

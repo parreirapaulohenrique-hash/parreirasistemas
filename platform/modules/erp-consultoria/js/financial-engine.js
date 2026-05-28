@@ -206,8 +206,10 @@ window.FinancialEngine = {
         return {
             rows:             tableRows,
             totals:           this.calculateBarTotals(groupTotals),
+            // Aceita códigos antigos (1.1/1.5) e novos (2.1/2.5) para compatibilidade
             pdfTotalReceitas: pdfAccounts
-                .filter(a => a.codigo.startsWith('1.1') || a.codigo.startsWith('1.5'))
+                .filter(a => a.codigo.startsWith('1.1') || a.codigo.startsWith('1.5')
+                          || a.codigo.startsWith('2.1') || a.codigo.startsWith('2.5'))
                 .reduce((s, a) => s + (a.a_receber - a.a_pagar), 0)
         };
     },
