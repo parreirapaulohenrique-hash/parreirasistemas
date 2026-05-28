@@ -1,9 +1,10 @@
 /**
- * Motor de Inteligência Financeira (V6 - Subgroup Headers + Manual Groups)
- * - MANUAL_GROUPS: itens aceitam entrada manual (PDF primeiro, fallback manual)
- * - Accounts com filhos em MANUAL_GROUPS → subheader (estilizado, sem input)
- * - Accounts sem filhos em MANUAL_GROUPS → leaf manual entry (com input)
- * - Back-fill de totais nos subheaders e headers de grupo após processar todos
+ * Motor de Inteligência Financeira (V7 - Full Manual)
+ * - PDF / Excel completamente ignorados
+ * - TODOS os grupos aceitam entrada manual via input
+ * - Sub-cabeçalhos apenas em grupos hierárquicos (Receitas, Custos, Despesas)
+ * - Disponíveis (seções 1 e 7) sempre planos (todos os itens são folhas com input)
+ * - Chave de entrada: "${grupo}::${codigo}-${descricao}" para TODOS os grupos
  */
 
 window.FinancialEngine = {
@@ -17,19 +18,25 @@ window.FinancialEngine = {
         'Despesas Não Operacional':                 { color: 'var(--color-despesas)',         class: 'group-despesas'    },
     },
 
+    // Todos os grupos agora aceitam entrada manual
     MANUAL_GROUPS: new Set([
         'Disponíveis Nas Contas Movimento inicial',
         'Disponíveis nas Contas Movimento final',
         'Total Receitas Operacionais / Vendas',
-        'Custo de Aquisição'
+        'Custo de Aquisição',
+        'Despesas Operac. Fixas e Variáveis',
+        'Receitas Não Operacionais Totais',
+        'Despesas Não Operacional',
     ]),
 
-    // Apenas esses grupos podem ter sub-cabeçalhos (level-2 com filhos).
-    // Disponíveis é propositalmente EXCLUÍDO: todas as contas bancárias ali
-    // são folhas com campo de input, mesmo que tenham sub-códigos (ex: 1.5.03).
+    // Grupos com hierarquia (level-2 com filhos → sub-cabeçalho sem input)
+    // Disponíveis são intencionalmente EXCLUÍDOS: todas as contas bancárias são folhas
     SUBHEADER_GROUPS: new Set([
         'Total Receitas Operacionais / Vendas',
-        'Custo de Aquisição'
+        'Custo de Aquisição',
+        'Despesas Operac. Fixas e Variáveis',
+        'Receitas Não Operacionais Totais',
+        'Despesas Não Operacional',
     ]),
 
     getLevel(codigo) {
@@ -38,22 +45,18 @@ window.FinancialEngine = {
         return dots >= 2 ? 3 : 2;
     },
 
+    /**
+     * Processa os dados para gerar as linhas da tabela.
+     * @param {Array}  pdfAccounts   - ignorado (mantido para assinatura compatível)
+     * @param {Object} manualEntries - { "grupo::codigo-descricao": valor }
+     */
     processData(pdfAccounts, manualEntries = {}) {
         if (!window.MASTER_ACCOUNTS) return { rows: [], totals: {} };
 
-        // ── PDF map (saldo = a_receber - a_pagar) ───────────────────────────
-        const pdfMap = {};
-        pdfAccounts.forEach(acc => {
-            if (!pdfMap[acc.codigo]) pdfMap[acc.codigo] = { total: 0 };
-            pdfMap[acc.codigo].total += (acc.a_receber || 0) - (acc.a_pagar || 0);
-        });
-
         // ── Pré-scan SECTION-AWARE ───────────────────────────────────────────
-        // Descobre quais códigos level-2 TÊM filhos (level-3) DENTRO DA MESMA SEÇÃO,
-        // mas SOMENTE nas seções que permitem sub-cabeçalhos (SUBHEADER_GROUPS).
-        // Seções Disponíveis são EXCLUÍDAS: todas as contas bancárias ali são folhas
-        // com input, mesmo que tenham sub-códigos como 1.5.03.
-        const codesWithChildrenBySection = {}; // { sectionName: Set<codigo> }
+        // Descobre quais códigos level-2 têm filhos level-3 NA MESMA SEÇÃO,
+        // somente para SUBHEADER_GROUPS.
+        const codesWithChildrenBySection = {};
         let _scanSection    = null;
         let _scanLastL2     = null;
         let _allowSubheader = false;
@@ -73,22 +76,21 @@ window.FinancialEngine = {
         });
 
         // ── Processamento principal ──────────────────────────────────────────
-        const tableRows      = [];
-        let   currentGroup   = null;
-        let   currentSubheaderKey = null; // último sub-cabeçalho visto (chave composta)
-        const groupTotals    = {};
-        // Usa chave composta "group::codigo" para evitar colisão entre seções
-        const subgroupTotals = {};    // { "group::codigo": running total }
-        const subgroupRowIdx = {};    // { "group::codigo": tableRows index }
-        const manualHeaderIdx = {};   // { groupName: tableRows index }
+        const tableRows           = [];
+        let   currentGroup        = null;
+        let   currentSubheaderKey = null;
+        const groupTotals         = {};
+        const subgroupTotals      = {};   // { "group::codigo": total }
+        const subgroupRowIdx      = {};   // { "group::codigo": índice em tableRows }
+        const manualHeaderIdx     = {};   // { groupName: índice em tableRows }
 
         window.MASTER_ACCOUNTS.forEach(master => {
 
             // ── Header de grupo (nível 1) ──────────────────────────────────
             if (master.codigo === 'HEADER') {
-                currentGroup      = master.descricao;
-                currentSubheaderKey = null;           // reset ao trocar de grupo
-                groupTotals[currentGroup] = 0;
+                currentGroup        = master.descricao;
+                currentSubheaderKey = null;
+                groupTotals[currentGroup] = groupTotals[currentGroup] || 0;
 
                 const row = {
                     type:      'header',
@@ -97,29 +99,47 @@ window.FinancialEngine = {
                     style:     this.GROUP_STYLES[master.descricao] || { color: '#64748b', class: 'group-other' }
                 };
 
+                // Cabeçalhos calculados (não-manual)
                 if (master.descricao === 'Receita Operacional Bruta') {
                     row.valorCalculado = (groupTotals['Total Receitas Operacionais / Vendas'] || 0)
                                        + (groupTotals['Custo de Aquisição'] || 0);
+                } else if (master.descricao === 'Total dos Custos') {
+                    row.valorCalculado = groupTotals['Custo de Aquisição'] || 0;
+                } else if (master.descricao === 'Total das Despesas Operacionais') {
+                    row.valorCalculado = groupTotals['Despesas Operac. Fixas e Variáveis'] || 0;
+                } else if (master.descricao === 'Total das Despesas Não Operacional') {
+                    row.valorCalculado = groupTotals['Despesas Não Operacional'] || 0;
+                } else if (master.descricao === 'Saldo Operacional Liquido') {
+                    row.valorCalculado = (groupTotals['Total Receitas Operacionais / Vendas'] || 0)
+                                       + (groupTotals['Custo de Aquisição'] || 0)
+                                       + (groupTotals['Despesas Operac. Fixas e Variáveis'] || 0);
+                } else if (master.descricao === 'Saldo Liquido Final' || master.descricao === 'Saldo Liquido Ajustado') {
+                    const rOp  = groupTotals['Total Receitas Operacionais / Vendas'] || 0;
+                    const rNOp = groupTotals['Receitas Não Operacionais Totais']     || 0;
+                    const c    = groupTotals['Custo de Aquisição']                   || 0;
+                    const d    = groupTotals['Despesas Operac. Fixas e Variáveis']   || 0;
+                    const dNOp = groupTotals['Despesas Não Operacional']             || 0;
+                    const ini  = groupTotals['Disponíveis Nas Contas Movimento inicial'] || 0;
+                    row.valorCalculado = rOp + rNOp + c + d + dNOp + (master.descricao.includes('Ajustado') ? ini : 0);
                 }
 
                 tableRows.push(row);
-                if (this.MANUAL_GROUPS.has(currentGroup)) {
-                    manualHeaderIdx[currentGroup] = tableRows.length - 1;
-                }
+                manualHeaderIdx[currentGroup] = tableRows.length - 1;
                 return;
             }
 
-            // ── Conta / linha de dados ─────────────────────────────────────
-            const level    = this.getLevel(master.codigo);
-            const isManual = this.MANUAL_GROUPS.has(currentGroup);
+            if (!currentGroup) return;
 
-            // Sub-cabeçalho: level-2 com filhos NA MESMA SEÇÃO
-            const sectionSet = codesWithChildrenBySection[currentGroup];
-            const isThisSubheader = isManual && level === 2 && sectionSet && sectionSet.has(master.codigo);
+            // ── Conta / linha de dados ─────────────────────────────────────
+            const level = this.getLevel(master.codigo);
+
+            // Sub-cabeçalho: level-2 com filhos NA MESMA SEÇÃO (apenas SUBHEADER_GROUPS)
+            const sectionSet      = codesWithChildrenBySection[currentGroup];
+            const isThisSubheader = level === 2 && sectionSet && sectionSet.has(master.codigo);
 
             if (isThisSubheader) {
                 const sgKey = `${currentGroup}::${master.codigo}`;
-                currentSubheaderKey  = sgKey;         // registra último sub-cabeçalho
+                currentSubheaderKey   = sgKey;
                 subgroupTotals[sgKey] = 0;
                 subgroupRowIdx[sgKey] = tableRows.length;
                 tableRows.push({
@@ -131,42 +151,21 @@ window.FinancialEngine = {
                     group:       currentGroup,
                     isSubheader: true,
                 });
-                return;  // não acumula em groupTotals agora
+                return;
             }
 
-            // Caso: leaf (manual ou PDF)
+            // ── Folha com entrada manual (PDF completamente ignorado) ──────
+            // Chave padrão para TODOS os grupos: "grupo::codigo-descricao"
+            const manualKey = `${currentGroup}::${master.codigo}-${master.descricao}`;
             let valor = 0;
-            if (isManual) {
-                // Chave diferenciada por grupo
-                const isInitialGroup = currentGroup === 'Disponíveis Nas Contas Movimento inicial';
-                const manualKey = isInitialGroup
-                    ? `${master.codigo}-${master.descricao}`
-                    : `${currentGroup}::${master.codigo}-${master.descricao}`;
-
-                // ⚡ PRIORIDADE: valor digitado manualmente é sempre preferido ao PDF.
-                const manualVal = manualEntries[manualKey];
-                const hasManual = manualVal !== undefined && manualVal !== null && Number(manualVal) !== 0;
-
-                if (hasManual) {
-                    valor = Number(manualVal);
-                    if (pdfMap[master.codigo]) delete pdfMap[master.codigo];
-                } else {
-                    if (pdfMap[master.codigo]) {
-                        valor = pdfMap[master.codigo].total;
-                        delete pdfMap[master.codigo];
-                    }
-                }
-            } else {
-                if (pdfMap[master.codigo]) {
-                    valor = pdfMap[master.codigo].total;
-                    delete pdfMap[master.codigo];
-                }
+            const raw = manualEntries[manualKey];
+            if (raw !== undefined && raw !== null && String(raw).trim() !== '') {
+                const n = Number(raw);
+                if (!isNaN(n)) valor = n;
             }
 
             // Acumula totais
-            if (currentGroup) groupTotals[currentGroup] += valor;
-            // Usa último sub-cabeçalho visto (não prefixo do código) para acumular.
-            // Isso cobre casos onde o código filho não bate com o pai, ex: 1.2.01 sob 1.5.
+            groupTotals[currentGroup] += valor;
             if (level === 3 && currentSubheaderKey && subgroupTotals[currentSubheaderKey] !== undefined) {
                 subgroupTotals[currentSubheaderKey] += valor;
             }
@@ -178,39 +177,25 @@ window.FinancialEngine = {
                 descricao: master.descricao,
                 valor,
                 group:     currentGroup,
-                isManual,
+                isManual:  true,
             });
         });
 
-        // ── Back-fill subheaders ─────────────────────────────────────────────
+        // ── Back-fill: preenche totais nos sub-cabeçalhos ───────────────────
         for (const [key, idx] of Object.entries(subgroupRowIdx)) {
             tableRows[idx].valor = subgroupTotals[key] || 0;
         }
 
-        // ── Back-fill headers de grupos manuais ──────────────────────────────
+        // ── Back-fill: preenche totais nos headers de grupo ──────────────────
         for (const [group, idx] of Object.entries(manualHeaderIdx)) {
-            tableRows[idx].valorCalculado = groupTotals[group] || 0;
-        }
-
-        // ── Contas não mapeadas do PDF ───────────────────────────────────────
-        const unmapped = Object.entries(pdfMap).map(([c, d]) => ({
-            type: 'account', level: 3,
-            codigo: c, descricao: d.descricao || 'Desconhecida',
-            valor: d.total, unmapped: true
-        }));
-        if (unmapped.length > 0) {
-            tableRows.push({ type: 'header', level: 1, descricao: '⚠️ CONTAS PARA VINCULAR', style: { class: 'group-other' } });
-            tableRows.push(...unmapped);
+            if (tableRows[idx].valorCalculado === undefined) {
+                tableRows[idx].valorCalculado = groupTotals[group] || 0;
+            }
         }
 
         return {
-            rows:             tableRows,
-            totals:           this.calculateBarTotals(groupTotals),
-            // Aceita códigos antigos (1.1/1.5) e novos (2.1/2.5) para compatibilidade
-            pdfTotalReceitas: pdfAccounts
-                .filter(a => a.codigo.startsWith('1.1') || a.codigo.startsWith('1.5')
-                          || a.codigo.startsWith('2.1') || a.codigo.startsWith('2.5'))
-                .reduce((s, a) => s + (a.a_receber - a.a_pagar), 0)
+            rows:   tableRows,
+            totals: this.calculateBarTotals(groupTotals),
         };
     },
 

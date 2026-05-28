@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.23.13",
+    "version":  "11.23.14",
     "platform_version":  "11.23.6",
-    "date":  "2026-05-27",
-    "last_change":  "RENUMERACAO COMPLETA: codigos agora respeitam numero do grupo (1.x, 2.x, 3.x, 4.x, 5.x, 6.x)",
-    "build":  "20260527.13"
+    "date":  "2026-05-28",
+    "last_change":  "Full Manual Mode: persistencia localStorage + botao Lock/Unlock + todos os grupos com input",
+    "build":  "20260528.14"
 }

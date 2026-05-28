@@ -8,6 +8,54 @@ window.fcApp = {
     pendingImport: null,
     manualEntries: {},
 
+    // ── Persistência de lançamentos manuais no localStorage ────────────────
+    _getEntriesKey() {
+        const c = store.getActiveClient();
+        return c ? `fcEntries_${c.id}` : null;
+    },
+    _saveManualEntries() {
+        const k = this._getEntriesKey();
+        if (k) localStorage.setItem(k, JSON.stringify(this.manualEntries));
+    },
+    _loadManualEntries() {
+        const k = this._getEntriesKey();
+        if (!k) { this.manualEntries = {}; return; }
+        try {
+            const raw = localStorage.getItem(k);
+            this.manualEntries = raw ? JSON.parse(raw) : {};
+        } catch(e) { this.manualEntries = {}; }
+    },
+
+    // ── Estado de bloqueio (lock) por cliente ──────────────────────────────
+    isLocked() {
+        const c = store.getActiveClient();
+        if (!c) return false;
+        return localStorage.getItem(`fcLocked_${c.id}`) === 'true';
+    },
+    lockEntries() {
+        const c = store.getActiveClient();
+        if (!c) return;
+        localStorage.setItem(`fcLocked_${c.id}`, 'true');
+        this._updateLockButton();
+        this.refreshDashboard();
+        this.showToast('🔒 Preenchimento bloqueado com sucesso!');
+    },
+    unlockEntries() {
+        const c = store.getActiveClient();
+        if (!c) return;
+        localStorage.removeItem(`fcLocked_${c.id}`);
+        this._updateLockButton();
+        this.refreshDashboard();
+        this.showToast('🔓 Preenchimento desbloqueado!');
+    },
+    _updateLockButton() {
+        const btn = document.getElementById('btn-lock-entries');
+        if (!btn) return;
+        const locked = this.isLocked();
+        btn.textContent = locked ? '🔓 Desbloquear Edição' : '🔒 Bloquear Preenchimento';
+        btn.style.background = locked ? '#ef4444' : '#10b981';
+    },
+
     /**
      * Garante que as views FC estejam DENTRO do content-wrapper.
      * Resolve o problema de IDs duplicados e views fora da área scrollável.
@@ -291,6 +339,9 @@ window.fcApp = {
 
     loadDashboard(client) {
         store.setActiveClient(client.id);
+
+        // Carrega lançamentos manuais salvos para este cliente
+        this._loadManualEntries();
         
         // Pode atualizar o Header do ERP se quiser indicar o cliente em análise
         const titleEl = document.getElementById('pageTitle');
@@ -386,22 +437,29 @@ window.fcApp = {
         if (window.FinancialEngine) {
             const result = FinancialEngine.processData(allAccountsInPeriod, this.manualEntries);
             this.renderSummaryBar(result.totals);
-            this.renderFlowTableStrict(result.rows, totalRealizadoEntradas, result.pdfTotalReceitas);
-            // Guarda contas não mapeadas para Auto-Vincular
-            this.pendingUnmapped = result.rows.filter(r => r.unmapped);
-            // Botão sempre visível — o usuário pode acionar a qualquer momento
-            const avBtn = document.getElementById('btn-auto-vincular');
-            if (avBtn) avBtn.style.display = 'inline-flex';
+            this.renderFlowTableStrict(result.rows, totalRealizadoEntradas);
+
+            // ── Botão Lock/Unlock — injeta na barra de ações se ainda não existir ──
+            const headerBar = document.querySelector('#view-fc-overview .view-header-bar');
+            if (headerBar && !document.getElementById('btn-lock-entries')) {
+                const lockBtn = document.createElement('button');
+                lockBtn.id = 'btn-lock-entries';
+                lockBtn.style.cssText = 'margin-left:8px;padding:0.45rem 1.1rem;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;color:#fff;transition:background .2s;';
+                lockBtn.onclick = () => this.isLocked() ? this.unlockEntries() : this.lockEntries();
+                headerBar.appendChild(lockBtn);
+            }
+            this._updateLockButton();
         }
     },
 
-    renderFlowTableStrict(rows, totalEntradas, pdfTotalReceitas) {
+    renderFlowTableStrict(rows, totalEntradas) {
         const tbody = document.getElementById('flow-table-body');
         if (!tbody) return;
         tbody.innerHTML = '';
-        let manualSum = 0;
 
-        // ── Mapeamento das 8 seções principais ──────────────────────
+        const locked = this.isLocked();
+
+        // ── Mapeamento das seções principais ─────────────────────────
         const SECTION_MAP = {
             'Disponíveis Nas Contas Movimento inicial': { num: 1, label: 'Disponíveis nas Contas Movimento Inicial', cls: 'fc-section-1' },
             'Total Receitas Operacionais / Vendas':     { num: 2, label: 'Total Receitas Operacionais / Vendas',     cls: 'fc-section-2' },
@@ -412,7 +470,7 @@ window.fcApp = {
             'Disponíveis nas Contas Movimento final':   { num: 7, label: 'Disponíveis nas Contas Movimento Final',   cls: 'fc-section-7' },
         };
 
-        let currentSectionCls = '';  // CSS class da sessão ativa
+        let currentSectionCls = '';
 
         rows.forEach(row => {
             const tr = document.createElement('tr');
@@ -431,22 +489,6 @@ window.fcApp = {
 
                 const val = row.valorCalculado !== undefined ? this.formatCurrency(row.valorCalculado) : '-';
 
-                // Header especial: CONTAS PARA VINCULAR
-                if (row.descricao && row.descricao.includes('CONTAS PARA VINCULAR')) {
-                    tr.innerHTML = `
-                        <td colspan="3">${row.descricao}</td>
-                        <td colspan="3" class="text-right">
-                            <button class="btn-vincular-excel"
-                                onclick="fcApp.autoVincularViaExcel()"
-                                title="Importar planilha Excel para vincular automaticamente por valor">
-                                &#9889; Auto-Vincular via Excel
-                            </button>
-                        </td>`;
-                    tbody.appendChild(tr);
-                    return;
-                }
-
-                // Label formatado: sessões numeradas recebem badge; outros apenas display case
                 let displayLabel;
                 if (secInfo) {
                     displayLabel = `<span class="section-num">${secInfo.num}</span> ${secInfo.label}`;
@@ -459,16 +501,11 @@ window.fcApp = {
                     <td class="text-right">${val}</td>
                     <td colspan="2"></td>
                 `;
-                if (row.descricao === 'Total Receitas Operacionais / Vendas') {
-                    tbody.appendChild(tr);
-                    this.renderValidationRow(tbody, pdfTotalReceitas);
-                    return;
-                }
                 tbody.appendChild(tr);
                 return;
             }
 
-            // Aplica classe da sessão atual a TODAS as linhas de dados
+            // Aplica classe da seção atual a todas as linhas de dados
             if (currentSectionCls) tr.classList.add(currentSectionCls);
 
             // ── Sub-cabeçalho de subgrupo (Nível 2 com filhos) ───────────
@@ -482,8 +519,6 @@ window.fcApp = {
                     ? ((Math.abs(row.valor) / totalEntradas) * 100).toFixed(2) + '%' : '0,00%';
                 const tdSub = document.createElement('td');
                 tdSub.colSpan = 3;
-                // Exibe apenas a descrição sem o código contábil (1.1, 1.5, 2.1...)
-                // para não confundir com a numeração dos grupos do dashboard (1, 2, 3, 7)
                 tdSub.insertAdjacentHTML('beforeend',
                     `<strong>${this.toDisplayCase(row.descricao)}</strong>`);
                 tr.appendChild(tdSub);
@@ -496,46 +531,37 @@ window.fcApp = {
                 return;
             }
 
-            // ── Linha de conta (manual ou PDF) — Nível 2/3 ───────────────
-            if (row.unmapped) tr.classList.add('row-unmapped');
-            if (row.isManual) manualSum += (row.valor || 0);
-
+            // ── Linha de conta manual — Nível 2/3 ────────────────────────
             const rowGroupClass = (window.FinancialEngine && row.group)
                 ? (window.FinancialEngine.GROUP_STYLES[row.group]?.class || 'group-other')
                 : '';
             if (rowGroupClass) tr.classList.add(rowGroupClass);
 
-            const valClass  = row.valor >= 0 ? 'positive' : 'negative';
-            const vertical  = totalEntradas > 0
+            const valClass = row.valor >= 0 ? 'positive' : 'negative';
+            const vertical = totalEntradas > 0
                 ? ((Math.abs(row.valor) / totalEntradas) * 100).toFixed(2) + '%' : '0,00%';
-            const descRaw   = row.unmapped ? `⚠️ [VINCULAR] ${row.descricao}` : row.descricao;
-            const descText  = this.toDisplayCase(descRaw);
+            const descText = this.toDisplayCase(row.descricao);
+
+            // Chave unificada: "grupo::codigo-descricao" para TODOS os grupos
+            const key = `${row.group}::${row.codigo}-${row.descricao}`;
 
             let valorHtml;
-            if (row.isManual) {
-                const isInitialGroup = row.group === 'Disponíveis Nas Contas Movimento inicial';
-                const key = isInitialGroup
-                    ? `${row.codigo}-${row.descricao}`
-                    : `${row.group}::${row.codigo}-${row.descricao}`;
+            if (locked) {
+                // 🔒 BLOQUEADO: exibe valor como texto estático
+                const fmt = this.formatCurrency(row.valor);
+                valorHtml = `<span class="locked-value" style="font-weight:600;">${fmt}</span>`;
+            } else {
+                // 🔓 DESBLOQUEADO: campo de entrada editável
+                const safeKey = key.replace(/"/g, '&quot;').replace(/'/g, '\'');
                 valorHtml = `<input type="number" step="0.01" class="manual-input"
                                value="${row.valor || ''}"
-                               onchange="fcApp.updateManualEntry('${key}', this.value)"
+                               onchange="fcApp.updateManualEntry('${safeKey}', this.value)"
                                placeholder="0.00">`;
-            } else {
-                valorHtml = this.formatCurrency(row.valor);
             }
 
             const tdCode = document.createElement('td');
             tdCode.className = 'col-code';
-            if (row.unmapped) {
-                tdCode.innerHTML = `
-                    <span class="editable-code" style="opacity:.5;">${row.codigo}</span>
-                    <button class="btn-vincular-small" onclick="fcApp.openVincularModal('${row.codigo}', ${row.valor}, \`${row.descricao}\`)" title="Vincular esta conta ao plano de contas">
-                        🔗 Vincular
-                    </button>`;
-            } else {
-                tdCode.appendChild(this.makeEditableCode(row.codigo, row.descricao, row.group));
-            }
+            tdCode.appendChild(this.makeEditableCode(row.codigo, row.descricao, row.group));
 
             const tdDesc = document.createElement('td');
             tdDesc.className = 'col-desc';
@@ -551,8 +577,6 @@ window.fcApp = {
             `);
             tbody.appendChild(tr);
         });
-
-        this.updateValidationStatus(manualSum, pdfTotalReceitas);
     },
 
     // Normaliza texto: converte ALL CAPS para Title Case; mantém texto já formatado
@@ -636,7 +660,7 @@ window.fcApp = {
     },
 
     // Versão do plano de contas — ao mudar, limpa o customMasterAccounts do localStorage
-    MASTER_VERSION: '11.23.13',
+    MASTER_VERSION: '11.23.14',
 
     loadCustomMasterAccounts() {
         const masterAccounts = window.MASTER_ACCOUNTS || [];
@@ -1362,8 +1386,11 @@ window.fcApp = {
     },
 
     updateManualEntry(key, value) {
-        this.manualEntries[key] = parseFloat(value) || 0;
-        this.refreshDashboard(); 
+        const num = parseFloat(value);
+        if (!isNaN(num)) this.manualEntries[key] = num;
+        else delete this.manualEntries[key];
+        this._saveManualEntries();
+        this.refreshDashboard();
     },
 
     updateValidationStatus(manualSum, pdfTotal) {
