@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.23.26",
+    "version":  "11.23.27",
     "platform_version":  "11.23.6",
     "date":  "2026-05-29",
-    "last_change":  "Preserva dados manuais do usuario no F5 — nunca mais apaga customMasterAccounts ao atualizar versao",
-    "build":  "20260529.26"
+    "last_change":  "Remove sort automatico — ordem manual da sessao preservada no F5",
+    "build":  "20260529.27"
 }

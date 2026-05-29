@@ -738,7 +738,7 @@ window.fcApp = {
     },
 
     // Versão do plano de contas — usada apenas para log, NÃO limpa mais o cache do usuário
-    MASTER_VERSION: '11.23.26',
+    MASTER_VERSION: '11.23.27',
 
     loadCustomMasterAccounts() {
         const masterAccounts = window.MASTER_ACCOUNTS || [];
@@ -760,6 +760,9 @@ window.fcApp = {
         // Se não tiver custom no localStorage, usa o padrão do master
         if (!parsed || parsed.length === 0) {
             parsed = [...masterAccounts];
+            localStorage.setItem('customMasterAccounts', JSON.stringify(parsed));
+            window.MASTER_ACCOUNTS = parsed;
+            return;
         }
 
         let changed = false;
@@ -781,64 +784,53 @@ window.fcApp = {
             return u;
         });
 
-        // ── Merge: insere contas novas do master que não estão no cache ─────
-        // (garante que qualquer conta adicionada ao master-accounts.js apareça mesmo com cache antigo)
-        // Contas já existentes no cache (por código) são preservadas intactas — incluindo dados do usuário
+        // ── Merge: insere contas NOVAS do master na posição correta ──────────
+        // Regra: insere logo APÓS a conta anterior no master (mantém ordem relativa do master)
+        // Contas JÁ existentes no cache ficam na posição que o usuário definiu — sem sort
         const cachedCodes = new Set(parsed.filter(a => a.codigo !== 'HEADER').map(a => a.codigo));
         let masterHeaderGroup = null;
+        let lastInsertedIdx   = -1; // rastreia onde inserimos a última conta no mesmo grupo
 
-        masterAccounts.forEach(masterEntry => {
+        masterAccounts.forEach((masterEntry, masterIdx) => {
             if (masterEntry.codigo === 'HEADER') {
                 masterHeaderGroup = masterEntry.descricao;
+                lastInsertedIdx   = -1; // reinicia por grupo
                 return;
             }
-            if (cachedCodes.has(masterEntry.codigo)) return; // já existe — preserva dados do usuário
-
-            // Encontra a posição de inserção: após o último item do mesmo grupo no cache
-            let insertIdx = -1;
-            let inGroup = false;
-            for (let i = 0; i < parsed.length; i++) {
-                if (parsed[i].codigo === 'HEADER') {
-                    if (inGroup) break;
-                    if (parsed[i].descricao === masterHeaderGroup) inGroup = true;
-                } else if (inGroup) {
-                    insertIdx = i;
-                }
+            if (cachedCodes.has(masterEntry.codigo)) {
+                // Conta já existe: atualiza o lastInsertedIdx para onde ela está no cache
+                const pos = parsed.findIndex(a => a.codigo === masterEntry.codigo);
+                if (pos >= 0) lastInsertedIdx = pos;
+                return;
             }
-            const pos = insertIdx >= 0 ? insertIdx + 1 : parsed.length;
-            parsed.splice(pos, 0, { ...masterEntry });
+
+            // Conta NOVA: insere logo após o lastInsertedIdx (= posição da conta anterior no mesmo grupo)
+            // Se não tiver referência, insere no final do grupo
+            let insertAt;
+            if (lastInsertedIdx >= 0) {
+                insertAt = lastInsertedIdx + 1;
+            } else {
+                // Procura o final do grupo no cache
+                let inGroup = false, groupEnd = -1;
+                for (let i = 0; i < parsed.length; i++) {
+                    if (parsed[i].codigo === 'HEADER') {
+                        if (inGroup) { groupEnd = i; break; }
+                        if (parsed[i].descricao === masterHeaderGroup) inGroup = true;
+                    } else if (inGroup) { groupEnd = i + 1; }
+                }
+                insertAt = groupEnd >= 0 ? groupEnd : parsed.length;
+            }
+
+            parsed.splice(insertAt, 0, { ...masterEntry });
             cachedCodes.add(masterEntry.codigo);
+            lastInsertedIdx = insertAt;
             changed = true;
-            console.log(`[FC] ✅ Merge: conta nova inserida — ${masterEntry.codigo} (${masterEntry.descricao})`);
+            console.log(`[FC] ✅ Merge: conta nova inserida em [${insertAt}] — ${masterEntry.codigo} (${masterEntry.descricao})`);
         });
 
-        // ── Sort: ordena cada seção por código numérico ─────────────────────
-        // Preserva a ordem do usuário dentro de cada grupo, mas garante que
-        // contas inseridas via merge fiquem na posição correta
-        const parseCode = c => String(c).split('.').map(n => parseInt(n) || 0);
-        const cmpCodes  = (a, b) => {
-            const pa = parseCode(a), pb = parseCode(b);
-            for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-                const d = (pa[i] || 0) - (pb[i] || 0);
-                if (d !== 0) return d;
-            }
-            return 0;
-        };
-
-        // Ordena os itens de CADA grupo separadamente
-        let i = 0;
-        while (i < parsed.length) {
-            if (parsed[i].codigo !== 'HEADER') { i++; continue; }
-            const groupStart = i + 1;
-            let groupEnd = groupStart;
-            while (groupEnd < parsed.length && parsed[groupEnd].codigo !== 'HEADER') groupEnd++;
-            if (groupEnd > groupStart) {
-                const chunk = parsed.slice(groupStart, groupEnd).sort((a, b) => cmpCodes(a.codigo, b.codigo));
-                parsed.splice(groupStart, groupEnd - groupStart, ...chunk);
-                changed = true;
-            }
-            i = groupEnd;
-        }
+        // ── SEM SORT AUTOMÁTICO ──────────────────────────────────────────────
+        // A ordem é definida pelo usuário e preservada integralmente no F5.
+        // Novas contas do master são inseridas na posição relativa correta.
 
         if (changed) {
             localStorage.setItem('customMasterAccounts', JSON.stringify(parsed));
