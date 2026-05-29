@@ -737,18 +737,17 @@ window.fcApp = {
         }
     },
 
-    // Versão do plano de contas — ao mudar, limpa o customMasterAccounts do localStorage
-    MASTER_VERSION: '11.23.25',
+    // Versão do plano de contas — usada apenas para log, NÃO limpa mais o cache do usuário
+    MASTER_VERSION: '11.23.26',
 
     loadCustomMasterAccounts() {
         const masterAccounts = window.MASTER_ACCOUNTS || [];
 
-        // ── Invalidação de cache: se versão mudou, descarta dados antigos ─────────────────────
+        // ── Registra versão atual (somente para log — não apaga dados do usuário) ──────
         const storedVersion = localStorage.getItem('masterAccountsVersion');
         if (storedVersion !== this.MASTER_VERSION) {
-            localStorage.removeItem('customMasterAccounts');
             localStorage.setItem('masterAccountsVersion', this.MASTER_VERSION);
-            console.log(`[FC] ✅ Plano de contas atualizado para v${this.MASTER_VERSION}. Cache resetado.`);
+            console.log(`[FC] ℹ️ Plano de contas v${this.MASTER_VERSION} — dados do usuário preservados.`);
         }
 
         const custom = localStorage.getItem('customMasterAccounts');
@@ -782,28 +781,9 @@ window.fcApp = {
             return u;
         });
 
-        // ── Purge: remove entradas específicas da Seção 1 que não devem mais aparecer ──
-        // (corrije caches antigos sem precisar resetar MASTER_VERSION)
-        const SEC1_GRP   = 'Disponíveis Nas Contas Movimento inicial';
-        // Purge incondicional por código (entradas que nunca devem estar na seção 1)
-        const SEC1_PURGE = new Set([]);
-        // Purge específico por código+descrição (para não apagar código reutilizado pelo usuário)
-        const SEC1_PURGE_EXACT = [];
-        let purgeSection = null;
-        const beforeLen = parsed.length;
-        parsed = parsed.filter(acc => {
-            if (acc.codigo === 'HEADER') { purgeSection = acc.descricao; return true; }
-            if (purgeSection === SEC1_GRP) {
-                if (SEC1_PURGE.has(acc.codigo)) return false;
-                const d = (acc.descricao || '').toUpperCase();
-                if (SEC1_PURGE_EXACT.some(p => p.codigo === acc.codigo && d.includes(p.descricao))) return false;
-            }
-            return true;
-        });
-        if (parsed.length !== beforeLen) changed = true;
-
         // ── Merge: insere contas novas do master que não estão no cache ─────
         // (garante que qualquer conta adicionada ao master-accounts.js apareça mesmo com cache antigo)
+        // Contas já existentes no cache (por código) são preservadas intactas — incluindo dados do usuário
         const cachedCodes = new Set(parsed.filter(a => a.codigo !== 'HEADER').map(a => a.codigo));
         let masterHeaderGroup = null;
 
@@ -812,7 +792,7 @@ window.fcApp = {
                 masterHeaderGroup = masterEntry.descricao;
                 return;
             }
-            if (cachedCodes.has(masterEntry.codigo)) return; // já existe
+            if (cachedCodes.has(masterEntry.codigo)) return; // já existe — preserva dados do usuário
 
             // Encontra a posição de inserção: após o último item do mesmo grupo no cache
             let insertIdx = -1;
@@ -832,7 +812,9 @@ window.fcApp = {
             console.log(`[FC] ✅ Merge: conta nova inserida — ${masterEntry.codigo} (${masterEntry.descricao})`);
         });
 
-        // ── Sort: ordena entradas da Seção 1 por código numérico (ex: 1.5 → 1.6 → 1.6.1 → 1.7) ──
+        // ── Sort: ordena cada seção por código numérico ─────────────────────
+        // Preserva a ordem do usuário dentro de cada grupo, mas garante que
+        // contas inseridas via merge fiquem na posição correta
         const parseCode = c => String(c).split('.').map(n => parseInt(n) || 0);
         const cmpCodes  = (a, b) => {
             const pa = parseCode(a), pb = parseCode(b);
@@ -842,16 +824,20 @@ window.fcApp = {
             }
             return 0;
         };
-        let sortSec = null, sortIdx = -1;
-        for (let i = 0; i <= parsed.length; i++) {
-            const isHdr = i < parsed.length && parsed[i].codigo === 'HEADER';
-            if ((isHdr || i === parsed.length) && sortSec === SEC1_GRP && sortIdx >= 0) {
-                const chunk = parsed.slice(sortIdx, i).sort((a, b) => cmpCodes(a.codigo, b.codigo));
-                parsed.splice(sortIdx, i - sortIdx, ...chunk);
+
+        // Ordena os itens de CADA grupo separadamente
+        let i = 0;
+        while (i < parsed.length) {
+            if (parsed[i].codigo !== 'HEADER') { i++; continue; }
+            const groupStart = i + 1;
+            let groupEnd = groupStart;
+            while (groupEnd < parsed.length && parsed[groupEnd].codigo !== 'HEADER') groupEnd++;
+            if (groupEnd > groupStart) {
+                const chunk = parsed.slice(groupStart, groupEnd).sort((a, b) => cmpCodes(a.codigo, b.codigo));
+                parsed.splice(groupStart, groupEnd - groupStart, ...chunk);
                 changed = true;
-                break;
             }
-            if (isHdr) { sortSec = parsed[i].descricao; sortIdx = i + 1; }
+            i = groupEnd;
         }
 
         if (changed) {

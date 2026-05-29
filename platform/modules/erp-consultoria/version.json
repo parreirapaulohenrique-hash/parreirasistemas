@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.23.25",
+    "version":  "11.23.26",
     "platform_version":  "11.23.6",
     "date":  "2026-05-29",
-    "last_change":  "Remove purges de contas e sequencia secao 1 e 7 de 1.1 ate 1.15",
-    "build":  "20260529.25"
+    "last_change":  "Preserva dados manuais do usuario no F5 — nunca mais apaga customMasterAccounts ao atualizar versao",
+    "build":  "20260529.26"
 }
