@@ -738,7 +738,7 @@ window.fcApp = {
     },
 
     // Versão do plano de contas — ao mudar, limpa o customMasterAccounts do localStorage
-    MASTER_VERSION: '11.23.14',
+    MASTER_VERSION: '11.23.25',
 
     loadCustomMasterAccounts() {
         const masterAccounts = window.MASTER_ACCOUNTS || [];
@@ -786,13 +786,9 @@ window.fcApp = {
         // (corrije caches antigos sem precisar resetar MASTER_VERSION)
         const SEC1_GRP   = 'Disponíveis Nas Contas Movimento inicial';
         // Purge incondicional por código (entradas que nunca devem estar na seção 1)
-        const SEC1_PURGE = new Set(['1.0','1.5.03','1.21','1.24','1.29','1.40','1.41','1.44','1.49','1.91']);
+        const SEC1_PURGE = new Set([]);
         // Purge específico por código+descrição (para não apagar código reutilizado pelo usuário)
-        const SEC1_PURGE_EXACT = [
-            { codigo: '1.6', descricao: 'TESOURARIA MATRIZ PALMAS' },
-            { codigo: '1.5', descricao: 'BANCO DA AMAZONIA' },
-            { codigo: '1.6', descricao: 'ITAU C.C.98671-6 MATRIZ' }
-        ];
+        const SEC1_PURGE_EXACT = [];
         let purgeSection = null;
         const beforeLen = parsed.length;
         parsed = parsed.filter(acc => {

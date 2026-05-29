@@ -9,13 +9,22 @@ window.MASTER_ACCOUNTS = [
   // ══════════════════════════════════════════════════════════════════════════════
   { "codigo": "HEADER", "descricao": "Disponíveis Nas Contas Movimento inicial" },
 
-  { "codigo": "1.1",    "descricao": "BANCO DO BRASIL C.C.60409-7 MATRIZ" },
-  { "codigo": "1.2",    "descricao": "BRADESCO 15232-3 MATRIZ" },
-  { "codigo": "1.3",    "descricao": "BANCO STONE MATRIZ C.C 40256726-7" },
-  { "codigo": "1.4",    "descricao": "BANCO DA AMAZONIA 071730-7 MATRIZ" },
-  { "codigo": "1.5",    "descricao": "ITAU C.C.98671-6 MATRIZ" },
-  { "codigo": "1.6",    "descricao": "ITAU C.C 83290-2 GARANTIDA" },
-  { "codigo": "1.9",    "descricao": "CONTA PERDA/ROUBO/BONIFICAÇÃO E DOAÇÃO" },
+  { "codigo": "1.1",    "descricao": "TESOURARIA MATRIZ PALMAS" },
+  { "codigo": "1.2",    "descricao": "BANCO DO BRASIL C.C.60409-7 MATRIZ" },
+  { "codigo": "1.3",    "descricao": "BRADESCO 15232-3 MATRIZ" },
+  { "codigo": "1.4",    "descricao": "BANCO STONE MATRIZ C.C 40256726-7" },
+  { "codigo": "1.5",    "descricao": "BANCO DA AMAZONIA 071730-7 MATRIZ" },
+  { "codigo": "1.6",    "descricao": "ITAU C.C.98671-6 MATRIZ" },
+  { "codigo": "1.6.1",  "descricao": "ITAU C.C 83290-2 GARANTIDA" },
+  { "codigo": "1.7",    "descricao": "CONTA PERDA/ROUBO/BONIFICAÇÃO E DOAÇÃO" },
+  { "codigo": "1.8",    "descricao": "BANCO DO BRASIL C.C.60638-3 FILIAL PALMAS" },
+  { "codigo": "1.9",    "descricao": "ITAU C.C.98669-0 FILIAL PALMAS" },
+  { "codigo": "1.10",   "descricao": "CONTA PERDA/ROUBO E BONIFICAÇÃO FILIAL" },
+  { "codigo": "1.11",   "descricao": "TESOURARIA FILIAL PORTO" },
+  { "codigo": "1.12",   "descricao": "BANCO DO BRASIL C.C.61105-0 FILIAL PORTO" },
+  { "codigo": "1.13",   "descricao": "MERCADO PAGO PIX FILIAL PORTO" },
+  { "codigo": "1.14",   "descricao": "CONTA PERDA/ROUBO E BONIFICAÇÃO FILIAL" },
+  { "codigo": "1.15",   "descricao": "CARTÃO ENDERED 5099+4596+6933+8072 - ESCRITORIO" },
 
 
   // ══════════════════════════════════════════════════════════════════════════════
@@ -292,23 +301,22 @@ window.MASTER_ACCOUNTS = [
   // ══════════════════════════════════════════════════════════════════════════════
   { "codigo": "HEADER", "descricao": "Disponíveis nas Contas Movimento final" },
 
-  { "codigo": "1.0",    "descricao": "TESOURARIA MATRIZ PALMAS" },
-  { "codigo": "1.1",    "descricao": "BANCO DO BRASIL C.C.60409-7 MATRIZ" },
-  { "codigo": "1.2",    "descricao": "BRADESCO 15232-3 MATRIZ" },
-  { "codigo": "1.3",    "descricao": "BANCO STONE MATRIZ C.C 40256726-7" },
-  { "codigo": "1.4",    "descricao": "BANCO DA AMAZONIA 071730-7 MATRIZ" },
-  { "codigo": "1.5",    "descricao": "ITAU C.C.98671-6 MATRIZ" },
-  { "codigo": "1.5.03", "descricao": "ITAU C.C 83290-2 GARANTIDA" },
-  { "codigo": "1.9",    "descricao": "CONTA PERDA/ROUBO/BONIFICAÇÃO E DOAÇÃO" },
+  { "codigo": "1.1",    "descricao": "TESOURARIA MATRIZ PALMAS" },
+  { "codigo": "1.2",    "descricao": "BANCO DO BRASIL C.C.60409-7 MATRIZ" },
+  { "codigo": "1.3",    "descricao": "BRADESCO 15232-3 MATRIZ" },
+  { "codigo": "1.4",    "descricao": "BANCO STONE MATRIZ C.C 40256726-7" },
+  { "codigo": "1.5",    "descricao": "BANCO DA AMAZONIA 071730-7 MATRIZ" },
+  { "codigo": "1.6",    "descricao": "ITAU C.C.98671-6 MATRIZ" },
+  { "codigo": "1.6.1",  "descricao": "ITAU C.C 83290-2 GARANTIDA" },
+  { "codigo": "1.7",    "descricao": "CONTA PERDA/ROUBO/BONIFICAÇÃO E DOAÇÃO" },
 
-  { "codigo": "1.21",   "descricao": "BANCO DO BRASIL C.C.60638-3 FILIAL PALMAS" },
-  { "codigo": "1.24",   "descricao": "ITAU C.C.98669-0 FILIAL PALMAS" },
-  { "codigo": "1.29",   "descricao": "CONTA PERDA/ROUBO E BONIFICAÇÃO FILIAL" },
+  { "codigo": "1.8",    "descricao": "BANCO DO BRASIL C.C.60638-3 FILIAL PALMAS" },
+  { "codigo": "1.9",    "descricao": "ITAU C.C.98669-0 FILIAL PALMAS" },
+  { "codigo": "1.10",   "descricao": "CONTA PERDA/ROUBO E BONIFICAÇÃO FILIAL" },
 
-  { "codigo": "1.40",   "descricao": "TESOURARIA FILIAL PORTO" },
-  { "codigo": "1.41",   "descricao": "BANCO DO BRASIL C.C.61105-0 FILIAL PORTO" },
-  { "codigo": "1.44",   "descricao": "MERCADO PAGO PIX FILIAL PORTO" },
-  { "codigo": "1.49",   "descricao": "CONTA PERDA/ROUBO E BONIFICAÇÃO FILIAL" },
-
-  { "codigo": "1.91",   "descricao": "CARTÃO ENDERED 5099+4596+6933+8072 - ESCRITORIO" }
+  { "codigo": "1.11",   "descricao": "TESOURARIA FILIAL PORTO" },
+  { "codigo": "1.12",   "descricao": "BANCO DO BRASIL C.C.61105-0 FILIAL PORTO" },
+  { "codigo": "1.13",   "descricao": "MERCADO PAGO PIX FILIAL PORTO" },
+  { "codigo": "1.14",   "descricao": "CONTA PERDA/ROUBO E BONIFICAÇÃO FILIAL" },
+  { "codigo": "1.15",   "descricao": "CARTÃO ENDERED 5099+4596+6933+8072 - ESCRITORIO" }
 ];
