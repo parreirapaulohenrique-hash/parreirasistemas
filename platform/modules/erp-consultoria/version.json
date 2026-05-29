@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.23.23",
+    "version":  "11.23.24",
     "platform_version":  "11.23.6",
-    "date":  "2026-05-28",
-    "last_change":  "Ordena secao 1 por codigo numerico apos o merge",
-    "build":  "20260528.23"
+    "date":  "2026-05-29",
+    "last_change":  "Corrige mapeamento e visualizacao das contas 1.4, 1.5 e 1.6 da secao 1",
+    "build":  "20260529.24"
 }

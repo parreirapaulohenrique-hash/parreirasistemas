@@ -12,8 +12,9 @@ window.MASTER_ACCOUNTS = [
   { "codigo": "1.1",    "descricao": "BANCO DO BRASIL C.C.60409-7 MATRIZ" },
   { "codigo": "1.2",    "descricao": "BRADESCO 15232-3 MATRIZ" },
   { "codigo": "1.3",    "descricao": "BANCO STONE MATRIZ C.C 40256726-7" },
-  { "codigo": "1.5",    "descricao": "BANCO DA AMAZONIA 071730-7 MATRIZ" },
-  { "codigo": "1.6",    "descricao": "ITAU C.C.98671-6 MATRIZ" },
+  { "codigo": "1.4",    "descricao": "BANCO DA AMAZONIA 071730-7 MATRIZ" },
+  { "codigo": "1.5",    "descricao": "ITAU C.C.98671-6 MATRIZ" },
+  { "codigo": "1.6",    "descricao": "ITAU C.C 83290-2 GARANTIDA" },
   { "codigo": "1.9",    "descricao": "CONTA PERDA/ROUBO/BONIFICAÇÃO E DOAÇÃO" },
 
 
