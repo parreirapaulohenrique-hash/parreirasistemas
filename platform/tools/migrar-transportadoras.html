@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migração de Transportadoras | Parreira Sistemas</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg: #0f172a; --card: #1e293b; --border: rgba(255,255,255,.08);
+            --primary: #6366f1; --success: #10b981; --warn: #f59e0b; --danger: #ef4444;
+            --text: #f1f5f9; --sec: #94a3b8;
+        }
+        body {
+            font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text);
+            min-height: 100vh; display: flex; align-items: flex-start; justify-content: center;
+            padding: 2rem 1rem;
+        }
+        body::before {
+            content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+            background: radial-gradient(ellipse at 20% 30%, rgba(99,102,241,.1) 0%, transparent 60%),
+                        radial-gradient(ellipse at 80% 70%, rgba(16,185,129,.07) 0%, transparent 50%);
+        }
+        .wrap { position:relative; z-index:1; width:100%; max-width:680px; }
+
+        /* Header */
+        .header { text-align:center; margin-bottom:2rem; }
+        .header-icon {
+            width:64px; height:64px; border-radius:16px; margin:0 auto 1rem;
+            background:linear-gradient(135deg,#6366f1,#8b5cf6);
+            display:flex; align-items:center; justify-content:center;
+            box-shadow:0 8px 24px rgba(99,102,241,.35);
+        }
+        .header-icon .material-icons-round { font-size:2rem; color:#fff; }
+        .header h1 { font-size:1.5rem; font-weight:700; }
+        .header p { color:var(--sec); font-size:.85rem; margin-top:.35rem; }
+
+        /* Card */
+        .card {
+            background:var(--card); border:1px solid var(--border);
+            border-radius:16px; padding:1.75rem;
+            box-shadow:0 20px 60px rgba(0,0,0,.4); margin-bottom:1.25rem;
+        }
+        .card h2 { font-size:1rem; font-weight:600; margin-bottom:1.25rem; display:flex; align-items:center; gap:.5rem; }
+        .card h2 .material-icons-round { font-size:1.1rem; color:var(--primary); }
+
+        /* Route display */
+        .route {
+            display:flex; align-items:center; gap:.75rem; padding:1rem 1.25rem;
+            background:rgba(99,102,241,.08); border:1px solid rgba(99,102,241,.2);
+            border-radius:10px; margin-bottom:1.25rem;
+        }
+        .tenant-pill {
+            background:rgba(255,255,255,.07); border:1px solid var(--border);
+            border-radius:8px; padding:.5rem 1rem; font-size:.85rem; font-weight:600; font-family:monospace;
+        }
+        .route .material-icons-round { color:var(--primary); font-size:1.4rem; }
+
+        /* Keys to copy */
+        .key-list { display:flex; flex-direction:column; gap:.5rem; }
+        .key-item {
+            display:flex; align-items:center; gap:.75rem;
+            padding:.65rem 1rem; border-radius:8px;
+            background:rgba(255,255,255,.03); border:1px solid var(--border);
+            font-size:.85rem;
+        }
+        .key-item .material-icons-round { font-size:1rem; }
+        .key-item.copy { color:var(--success); }
+        .key-item.skip { color:var(--sec); opacity:.6; }
+        .key-item.copy .material-icons-round { color:var(--success); }
+        .key-item.skip .material-icons-round { color:var(--sec); }
+
+        /* Log */
+        .log-box {
+            background:#000d1a; border:1px solid var(--border); border-radius:10px;
+            padding:1rem; max-height:280px; overflow-y:auto; font-family:monospace;
+            font-size:.78rem; line-height:1.7; display:none;
+        }
+        .log-box.visible { display:block; }
+        .log-line { display:block; }
+        .log-line.ok   { color:var(--success); }
+        .log-line.warn { color:var(--warn); }
+        .log-line.err  { color:var(--danger); }
+        .log-line.info { color:var(--sec); }
+
+        /* Buttons */
+        .btn-run {
+            width:100%; padding:.9rem; background:var(--primary); color:#fff;
+            border:none; border-radius:10px; font-family:inherit; font-size:1rem;
+            font-weight:600; cursor:pointer; display:flex; align-items:center;
+            justify-content:center; gap:.5rem;
+            transition:background .2s, transform .1s;
+            box-shadow:0 4px 16px rgba(99,102,241,.35);
+        }
+        .btn-run:hover:not(:disabled) { background:#4f46e5; transform:translateY(-1px); }
+        .btn-run:disabled { opacity:.55; cursor:not-allowed; transform:none; }
+
+        /* Status banner */
+        .status {
+            display:none; border-radius:10px; padding:.85rem 1.1rem;
+            font-size:.88rem; font-weight:500; align-items:center; gap:.6rem;
+            margin-top:1rem;
+        }
+        .status.visible { display:flex; }
+        .status.success { background:rgba(16,185,129,.12); border:1px solid rgba(16,185,129,.3); color:#34d399; }
+        .status.error   { background:rgba(239,68,68,.1);   border:1px solid rgba(239,68,68,.3);  color:#f87171; }
+        .status.running { background:rgba(99,102,241,.1);  border:1px solid rgba(99,102,241,.3); color:#a5b4fc; }
+
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .spin { animation:spin .8s linear infinite; }
+
+        .note {
+            font-size:.78rem; color:var(--sec); padding:.75rem 1rem;
+            background:rgba(245,158,11,.05); border:1px solid rgba(245,158,11,.15);
+            border-radius:8px; margin-top:1rem; line-height:1.6;
+        }
+        .note strong { color:var(--warn); }
+    </style>
+</head>
+<body>
+<div class="wrap">
+
+    <div class="header">
+        <div class="header-icon"><span class="material-icons-round">local_shipping</span></div>
+        <h1>Migração de Transportadoras</h1>
+        <p>Copia os cadastros de transportadoras entre tenants no Firestore</p>
+    </div>
+
+    <!-- Rota -->
+    <div class="card">
+        <h2><span class="material-icons-round">swap_horiz</span> Rota da Migração</h2>
+        <div class="route">
+            <div class="tenant-pill">ltdistribuidora</div>
+            <span class="material-icons-round">arrow_forward</span>
+            <div class="tenant-pill">altafix</div>
+        </div>
+
+        <div class="key-list">
+            <div class="key-item copy">
+                <span class="material-icons-round">check_circle</span>
+                <span><strong>carrier_list</strong> — Lista de transportadoras</span>
+            </div>
+            <div class="key-item copy">
+                <span class="material-icons-round">check_circle</span>
+                <span><strong>carrier_configs</strong> — Configurações por transportadora</span>
+            </div>
+            <div class="key-item copy">
+                <span class="material-icons-round">check_circle</span>
+                <span><strong>freight_tables</strong> — Tabelas de frete</span>
+            </div>
+            <div class="key-item copy">
+                <span class="material-icons-round">check_circle</span>
+                <span><strong>carrier_info_v2</strong> — Dados avançados de transportadoras</span>
+            </div>
+            <div class="key-item skip">
+                <span class="material-icons-round">block</span>
+                <span><strong>app_users</strong> — Usuários (não migrar)</span>
+            </div>
+            <div class="key-item skip">
+                <span class="material-icons-round">block</span>
+                <span><strong>company_data</strong> — Dados da empresa (não migrar)</span>
+            </div>
+            <div class="key-item skip">
+                <span class="material-icons-round">block</span>
+                <span><strong>dispatches / clients</strong> — Despachos e clientes (não migrar)</span>
+            </div>
+        </div>
+
+        <div class="note">
+            <strong>⚠️ Atenção:</strong> Os dados serão gravados como <strong>registros normais</strong> no Firestore
+            do tenant <code>altafix</code>. Podem ser editados ou excluídos normalmente pelo módulo Despacho
+            em Configurações → Transportadoras, sem afetar o tenant <code>ltdistribuidora</code>.
+        </div>
+    </div>
+
+    <!-- Log -->
+    <div class="card">
+        <h2><span class="material-icons-round">terminal</span> Log da Migração</h2>
+        <div class="log-box" id="logBox">
+            <span class="log-line info">Aguardando início...</span>
+        </div>
+
+        <div class="status" id="statusBanner">
+            <span class="material-icons-round" id="statusIcon">info</span>
+            <span id="statusMsg">—</span>
+        </div>
+
+        <button class="btn-run" id="btnRun" onclick="runMigration()">
+            <span class="material-icons-round">play_arrow</span>
+            Iniciar Migração
+        </button>
+    </div>
+
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+<script>
+// ── Firebase Init ─────────────────────────────────────────────────────────────
+const firebaseConfig = {
+    apiKey:            "AIzaSyDzatCQ8zmH4aQftznf7Y5wdYPwFYSiARc",
+    authDomain:        "parreiralog-91904.firebaseapp.com",
+    projectId:         "parreiralog-91904",
+    messagingSenderId: "527633267616",
+    appId:             "1:527633267616:web:3567e883b31f7fa02882c5"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ── Configuração da migração ──────────────────────────────────────────────────
+const SOURCE_TENANT = 'ltdistribuidora';
+const TARGET_TENANT = 'altafix';
+
+// Chaves a copiar (somente dados de transportadoras)
+const KEYS_TO_COPY = [
+    'carrier_list',
+    'carrier_configs',
+    'freight_tables',
+    'carrier_info_v2'
+];
+
+// ── Log helper ────────────────────────────────────────────────────────────────
+const logBox = document.getElementById('logBox');
+
+function log(msg, type = 'info') {
+    const span = document.createElement('span');
+    span.className = `log-line ${type}`;
+    const ts = new Date().toLocaleTimeString('pt-BR');
+    span.textContent = `[${ts}] ${msg}`;
+    logBox.appendChild(span);
+    logBox.scrollTop = logBox.scrollHeight;
+}
+
+function setStatus(msg, type) {
+    const banner = document.getElementById('statusBanner');
+    const icon   = document.getElementById('statusIcon');
+    const text   = document.getElementById('statusMsg');
+    const icons  = { running:'sync', success:'check_circle', error:'error' };
+    banner.className = `status visible ${type}`;
+    icon.className   = `material-icons-round${type === 'running' ? ' spin' : ''}`;
+    icon.textContent = icons[type] || 'info';
+    text.textContent = msg;
+}
+
+// ── Migração principal ────────────────────────────────────────────────────────
+async function runMigration() {
+    const btn = document.getElementById('btnRun');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="material-icons-round spin">sync</span> Migrando...';
+
+    logBox.innerHTML = '';
+    logBox.classList.add('visible');
+    setStatus('Migração em andamento...', 'running');
+
+    let copied = 0;
+    let skipped = 0;
+    let errors = 0;
+
+    log(`Iniciando migração: ${SOURCE_TENANT} → ${TARGET_TENANT}`, 'info');
+    log(`Chaves a processar: ${KEYS_TO_COPY.join(', ')}`, 'info');
+    log('─'.repeat(55), 'info');
+
+    for (const key of KEYS_TO_COPY) {
+        try {
+            log(`Lendo "${key}" de ${SOURCE_TENANT}...`, 'info');
+
+            const srcRef = db
+                .collection('tenants').doc(SOURCE_TENANT)
+                .collection('legacy_store').doc(key);
+
+            const srcDoc = await srcRef.get();
+
+            if (!srcDoc.exists) {
+                log(`  ⚠ "${key}" não encontrado em ${SOURCE_TENANT} — pulando.`, 'warn');
+                skipped++;
+                continue;
+            }
+
+            const data = srcDoc.data();
+
+            // Verifica se tem conteúdo útil
+            const hasContent = data && (data.content || Object.keys(data).length > 0);
+            if (!hasContent) {
+                log(`  ⚠ "${key}" existe mas está vazio — pulando.`, 'warn');
+                skipped++;
+                continue;
+            }
+
+            // Grava no tenant destino
+            const dstRef = db
+                .collection('tenants').doc(TARGET_TENANT)
+                .collection('legacy_store').doc(key);
+
+            await dstRef.set(data);
+
+            // Tamanho do conteúdo para info
+            const contentSize = data.content ? `${data.content.length} chars` : `${Object.keys(data).length} campos`;
+            log(`  ✓ "${key}" copiado com sucesso! (${contentSize})`, 'ok');
+            copied++;
+
+        } catch (e) {
+            log(`  ✗ Erro ao copiar "${key}": ${e.message}`, 'err');
+            errors++;
+        }
+    }
+
+    log('─'.repeat(55), 'info');
+    log(`Migração concluída: ${copied} copiados, ${skipped} pulados, ${errors} erros.`, copied > 0 ? 'ok' : 'warn');
+
+    if (errors === 0 && copied > 0) {
+        setStatus(`✅ ${copied} chave(s) copiada(s) com sucesso para o tenant "${TARGET_TENANT}".`, 'success');
+        btn.innerHTML = '<span class="material-icons-round">check_circle</span> Concluído!';
+    } else if (errors > 0) {
+        setStatus(`⚠ Migração com ${errors} erro(s). Verifique o log acima.`, 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-icons-round">replay</span> Tentar Novamente';
+    } else {
+        setStatus(`Nenhum dado encontrado em "${SOURCE_TENANT}" para migrar.`, 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-icons-round">play_arrow</span> Tentar Novamente';
+    }
+}
+</script>
+</body>
+</html>
