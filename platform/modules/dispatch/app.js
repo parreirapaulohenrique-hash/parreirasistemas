@@ -290,7 +290,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 configs: document.querySelector('a[href="#configs"]'),
                 acontec: document.querySelector('a[href="#acontec"]'),
                 system: document.querySelector('a[href="#system"]'),
-                appSettings: document.querySelector('a[href="#app-settings"]')
+                appSettings: document.querySelector('a[href="#app-settings"]'),
+                occurrences: document.querySelector('a[href="#occurrences"]')
             };
 
             // MOTOBOY: Show ONLY Moto Entrega
@@ -330,6 +331,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.body.classList.remove('is-user', 'is-motoboy', 'is-motorista', 'is-delivery-user');
                 // Show all cards including admin-only
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
+                // Ocorrências: visível para supervisor/admin
+                if (allNavItems.occurrences) allNavItems.occurrences.style.display = 'flex';
                 return;
             }
 
@@ -339,6 +342,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (allNavItems.appSettings) allNavItems.appSettings.style.display = 'none';
             if (allNavItems.system) allNavItems.system.style.display = 'flex'; // Show system for client registration
             if (allNavItems.acontec) allNavItems.acontec.style.display = 'none';
+            if (allNavItems.occurrences) allNavItems.occurrences.style.display = 'none'; // Ocorrências: apenas supervisor
             // Moto e Carro agora visíveis para Operacional
             if (allNavItems.moto) allNavItems.moto.style.display = 'flex';
             if (allNavItems.carro) allNavItems.carro.style.display = 'flex';
@@ -563,6 +567,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // Force Dashboard Render after Login
                     if (window.showSection) window.showSection('dashboard');
                     else if (window.renderDashboard) window.renderDashboard();
+
+                    // Inicializa módulo de Ocorrências
+                    if (window.OcorrenciasModule && window.db && tenantId) {
+                        window.OcorrenciasModule.init(window.db, tenantId, user);
+                    }
 
 
                 } else {
@@ -955,6 +964,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             if (id === 'invoice' && window.initInvoiceSection) {
                 window.initInvoiceSection();
+            }
+            if (id === 'occurrences') {
+                if (window.OcorrenciasModule) window.OcorrenciasModule.renderView();
             }
         }
 

@@ -247,6 +247,13 @@
                     <span class="material-icons-round">sync</span>
                     Integração Acontec
                 </a>
+                <a href="#occurrences" onclick="window.showSection('occurrences')" class="nav-item" id="navOcorrencias" style="display:none">
+                    <span class="material-icons-round" style="color:#f59e0b">report_problem</span>
+                    Ocorrências
+                    <span id="navOccBadge" style="display:none;margin-left:auto;background:#ef4444;color:#fff;
+                        font-size:.65rem;font-weight:700;padding:.1rem .4rem;border-radius:10px;
+                        min-width:18px;text-align:center;line-height:1.4">0</span>
+                </a>
                 <a href="#system" onclick="window.showSection('system')" class="nav-item">
                     <span class="material-icons-round">app_registration</span>
                     Cadastros
@@ -1370,6 +1377,11 @@
 
 
 
+                <!-- VIEW: OCORRÊNCIAS LOGÍSTICAS -->
+                <div id="view-occurrences" class="view-section" style="display: none;">
+                    <!-- Populated by OcorrenciasModule.renderView() -->
+                </div>
+
                 <!-- VIEW: INTEGRAÇÃO ACONTEC -->
                 <div id="view-acontec" class="view-section" style="display: none;">
 
@@ -2083,6 +2095,7 @@
     <script src="utils.js?v=11.9.3"></script>
     <script src="data.js?v=11.9.3"></script>
     <script src="acontec-integration.js?v=11.9.3"></script>
+    <script src="occurrences.js?v=11.9.3"></script>
     <script src="app.js?v=11.9.13"></script>
     <script src="acontec-ui.js?v=11.9.3"></script>
     <script src="delivery-module.js?v=11.9.3"></script>

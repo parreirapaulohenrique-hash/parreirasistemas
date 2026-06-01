@@ -1,5 +1,5 @@
 {
-    "version": "3.10.0",
+    "version": "3.11.0",
     "lastUpdate": "2026-06-01",
-    "change": "Onboarding multi-tenant: validação de empresa via Firestore (elimina whitelist hardcoded). Novos clientes cadastrados no painel master são aceitos automaticamente no login."
+    "change": "Módulo de Ocorrências Logísticas: registro de ocorrências por NF, pipeline de tratativa (Aberta → Em Análise → Parecer → Forma de Resolução → Em Resolução → Concluída), busca automática de dados da NF no histórico, controle de acesso por nível (supervisor/admin), relatório PDF por transportadora."
 }
