@@ -118,8 +118,8 @@
 <script>
     // Lê parâmetros de URL: ?redirect=modules/erp-consultoria/index.html&module=erp-consultoria
     const _params   = new URLSearchParams(window.location.search);
-    const _module   = _params.get('module')   || 'erp-consultoria';
-    const _redirect = _params.get('redirect') || 'modules/erp-consultoria/index.html';
+    const _module   = _params.get('module')   || 'portal';
+    const _redirect = _params.get('redirect') || 'index.html';
 
     // Título dinâmico por módulo
     const _modLabels = {
@@ -152,7 +152,10 @@
 
         try {
             await ParreiraAuth.login(login, senha, _module);
-            window.location.href = _redirect;
+            // Módulos que abrem em aba separada (master) → após login vai ao portal
+            const portalModules = ['master', 'portal'];
+            const destino = portalModules.includes(_module) ? 'index.html' : _redirect;
+            window.location.href = destino;
         } catch(e) {
             msg.textContent = e.message || 'Erro ao fazer login.';
             erro.classList.add('on');

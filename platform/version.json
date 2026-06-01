@@ -1,6 +1,6 @@
 {
-    "description":  "FIX: Sub-cabecalhos sem codigo contabil para clareza visual; v11.23.10",
-    "build":  "20260527",
-    "version":  "11.23.10",
-    "lastUpdate":  "2026-05-27"
+    "description":  "FIX: Logout do Master agora volta ao portal (index.html). Login.html: redirect inteligente por módulo. shared/logout.js criado.",
+    "build":  "20260601",
+    "version":  "11.24.0",
+    "lastUpdate":  "2026-06-01"
 }
