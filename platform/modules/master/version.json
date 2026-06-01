@@ -1,8 +1,8 @@
 {
     "module": "module-master",
     "name": "Master Panel (Admin)",
-    "version": "1.0.16",
-    "date": "2026-02-01",
-    "last_change": "Restored Missing Modal Form Content",
-    "build": "20260201.17"
+    "version": "1.1.0",
+    "date": "2026-06-01",
+    "last_change": "Onboarding: ao provisionar admin do tenant, escreve tambem em legacy_store/app_users para compatibilidade com modulo Despacho",
+    "build": "20260601.1"
 }

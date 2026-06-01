@@ -452,19 +452,42 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
 
-                // Security: Whitelist of Allowed Tenants to prevent typos creating orphan environments
-                // Security: Whitelist of Allowed Tenants (Hardcoded + Dynamic)
-                const storedTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
-                const dynamicIds = storedTenants.map(t => t.id);
-                const ALLOWED_TENANTS = ['parreiralog', 'centralpecas', 'ltdistribuidora', 'parreira', ...dynamicIds];
+                // Mostrar loading durante validação
+                btnLogin.disabled = true;
+                btnLogin.innerHTML = '⏳ Verificando empresa...';
 
-                if (!ALLOWED_TENANTS.includes(tenantId)) {
-                    alert(`A empresa '${tenantId}' não está habilitada no sistema.\n\nVerifique a grafia ou entre em contato com o suporte para liberar o acesso.`);
-                    return;
+                // Security: Valida tenant consultando o Firestore
+                // (substitui whitelist hardcoded — qualquer tenant cadastrado no painel master
+                //  com { ativo: true } é automaticamente aceito, sem necessidade de novo deploy)
+                try {
+                    if (window.db) {
+                        const tenantDoc = await window.db.collection('tenants').doc(tenantId).get();
+                        if (!tenantDoc.exists || tenantDoc.data().ativo === false) {
+                            btnLogin.disabled = false;
+                            btnLogin.innerHTML = 'ACESSAR SISTEMA';
+                            alert(`A empresa '${tenantId}' não está habilitada no sistema.\n\nVerifique a grafia ou entre em contato com o suporte.`);
+                            return;
+                        }
+                        console.log(`✅ [Login] Tenant validado no Firestore: ${tenantId}`);
+                    } else {
+                        // Firebase offline: fallback para whitelist local
+                        const storedTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
+                        const dynamicIds = storedTenants.map(t => t.id);
+                        const ALLOWED_TENANTS = ['parreiralog', 'centralpecas', 'ltdistribuidora', 'parreira', ...dynamicIds];
+                        if (!ALLOWED_TENANTS.includes(tenantId)) {
+                            btnLogin.disabled = false;
+                            btnLogin.innerHTML = 'ACESSAR SISTEMA';
+                            alert(`A empresa '${tenantId}' não está habilitada.\n\nVerifique a grafia ou contate o suporte.`);
+                            return;
+                        }
+                        console.warn('[Login] Firebase indisponível — validação via whitelist local.');
+                    }
+                } catch (tenantCheckErr) {
+                    console.warn('[Login] Erro ao validar tenant no Firestore:', tenantCheckErr.message);
+                    // Em caso de erro de rede, permite continuar (fail-open para não bloquear clientes)
                 }
 
-                // Mostrar loading durante login
-                btnLogin.disabled = true;
+                // Continua o loading para o processo de login
                 btnLogin.innerHTML = '⏳ Carregando...';
 
                 // Check if tenant changed

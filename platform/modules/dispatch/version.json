@@ -1,5 +1,5 @@
 {
-    "version": "3.9.9",
-    "lastUpdate": "2026-05-23",
-    "change": "BUGFIX: Duplicação de NFs no romaneio corrigida em 3 pontos: (1) selectedNFIds agora usa Set para deduplicar ao abrir modal; (2) toDispatch deduplicado por id antes de salvar e imprimir; (3) manifestItemIds deduplicado na reimpressão. Isso resolve o caso onde a NF 7536 (DILMA FREITAS) aparecia duas vezes em um romaneio."
+    "version": "3.10.0",
+    "lastUpdate": "2026-06-01",
+    "change": "Onboarding multi-tenant: validação de empresa via Firestore (elimina whitelist hardcoded). Novos clientes cadastrados no painel master são aceitos automaticamente no login."
 }

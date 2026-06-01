@@ -742,9 +742,18 @@ window._provSalvarAdmin = async function(tenantId) {
         });
         await batch.commit();
 
+        // 3. Escreve também no formato legado (legacy_store/app_users)
+        //    para que o módulo Despacho consiga autenticar no primeiro login
+        //    (dispatch usa plain-text pass lido deste caminho via Utils.Cloud.loadAll)
+        const usersLegacy = [{ name: nome, login, pass: senha, role: 'supervisor' }];
+        await db.collection('tenants').doc(tenantId)
+            .collection('legacy_store').doc('app_users')
+            .set({ content: JSON.stringify(usersLegacy) });
+        console.log('[Master] legacy_store/app_users provisionado para dispatch:', tenantId);
+
         if (feedback) { feedback.style.color='#10b981'; feedback.textContent='Acesso de @' + login + ' provisionado!'; }
         renderUsers();
-        setTimeout(() => { if (feedback) feedback.textContent = ''; }, 4000);
+        setTimeout(() =\u003e { if (feedback) feedback.textContent = ''; }, 4000);
     } catch(e) {
         if (feedback) { feedback.style.color='#ef4444'; feedback.textContent='Erro: ' + e.message; }
         console.error('[Prov] salvarAdmin:', e);
