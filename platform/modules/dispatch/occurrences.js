@@ -38,6 +38,20 @@ window.OcorrenciasModule = (function () {
     // Ordem das etapas
     const PIPELINE = ['aberta','em_analise','parecer','forma_resolucao','resolucao','concluida'];
 
+    // ── Helper: lista de transportadoras cadastradas ───────────────────────────
+    function _getCarriersOptions(selectedValue = '') {
+        const lista = (Utils && Utils.getStorage
+            ? Utils.getStorage('carrier_list')
+            : JSON.parse(localStorage.getItem('carrier_list') || '[]')
+        ) || [];
+        const sorted = [...lista].sort();
+        if (sorted.length === 0) {
+            return `<option value="">Nenhuma transportadora cadastrada</option>`;
+        }
+        return `<option value="">Selecione a transportadora...</option>` +
+            sorted.map(c => `<option value="${c}" ${c === selectedValue ? 'selected' : ''}>${c}</option>`).join('');
+    }
+
     // ── Init ──────────────────────────────────────────────────────────────────
     function init(db, tenantId, user) {
         _db          = db;
@@ -363,10 +377,12 @@ window.OcorrenciasModule = (function () {
                     </select>
                 </div>
 
-                <!-- Transportadora (texto livre) -->
+                <!-- Transportadora (select do cadastro) -->
                 <div class="form-group">
                     <label class="form-label">Transportadora Envolvida</label>
-                    <input type="text" id="occTransp" class="form-input" placeholder="Nome da transportadora">
+                    <select id="occTransp" class="form-input" style="height:43px">
+                        ${_getCarriersOptions()}
+                    </select>
                 </div>
 
                 <!-- Descrição -->
@@ -407,9 +423,18 @@ window.OcorrenciasModule = (function () {
             return;
         }
 
-        // Preenche campos automaticamente
+        // Preenche campos automaticamente — tenta encontrar a transportadora no select
         const transpEl = document.getElementById('occTransp');
-        if (transpEl && dados.transportadora !== '—') transpEl.value = dados.transportadora;
+        if (transpEl && dados.transportadora && dados.transportadora !== '—') {
+            // Busca exata primeiro, depois case-insensitive
+            const opts = Array.from(transpEl.options).map(o => o.value);
+            const match = opts.find(o => o === dados.transportadora)
+                       || opts.find(o => o.toUpperCase() === dados.transportadora.toUpperCase());
+            if (match) {
+                transpEl.value = match;
+            }
+            // Se não encontrar no select, deixa no primeiro item (sem forçar texto)
+        }
 
         resultEl.style.background = 'rgba(16,185,129,.08)';
         resultEl.style.borderColor = 'rgba(16,185,129,.2)';

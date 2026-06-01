@@ -1,5 +1,5 @@
 {
-    "version": "3.11.0",
+    "version": "3.11.2",
     "lastUpdate": "2026-06-01",
-    "change": "Módulo de Ocorrências Logísticas: registro de ocorrências por NF, pipeline de tratativa (Aberta → Em Análise → Parecer → Forma de Resolução → Em Resolução → Concluída), busca automática de dados da NF no histórico, controle de acesso por nível (supervisor/admin), relatório PDF por transportadora."
+    "change": "Ocorr\u00eancias: campo Transportadora Envolvida alterado de texto livre para select populado com o cadastro de transportadoras. Auto-sele\u00e7\u00e3o ao buscar NF."
 }
