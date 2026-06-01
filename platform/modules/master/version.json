@@ -1,8 +1,8 @@
 {
     "module": "module-master",
     "name": "Master Panel (Admin)",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "date": "2026-06-01",
-    "last_change": "Onboarding: ao provisionar admin do tenant, escreve tambem em legacy_store/app_users para compatibilidade com modulo Despacho",
-    "build": "20260601.1"
+    "last_change": "BUGFIX: renderTenants defensivo contra modules undefined. Recuperação automática de tenants do Firestore se localStorage limpo.",
+    "build": "20260601.2"
 }

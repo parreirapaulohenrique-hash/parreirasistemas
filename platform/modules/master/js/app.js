@@ -9,7 +9,7 @@ let platformUsers  = JSON.parse(localStorage.getItem('platform_users_registry') 
 
 // SEED: garante que os tenants base do sistema existam em dynamicTenants (source of truth única)
 ;(function seedAndDedup() {
-    // Seed mockTenants que ainda não existem em dynamicTenants
+    // SEMPRE garante que os mockTenants (clientes base) estão presentes
     mockTenants.forEach(mock => {
         if (!dynamicTenants.find(t => t.id === mock.id)) {
             dynamicTenants.push({ ...mock, isDynamic: false });
@@ -20,7 +20,45 @@ let platformUsers  = JSON.parse(localStorage.getItem('platform_users_registry') 
     dynamicTenants.forEach(t => seen.set(t.id, t));
     dynamicTenants = [...seen.values()];
     localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
+    console.log(`[Master] Seed concluído: ${dynamicTenants.length} tenants carregados.`);
 })();
+
+// Recarrega tenants do Firestore (para recuperar clientes cadastrados dinamicamente
+// caso o localStorage tenha sido limpo no browser)
+async function reloadTenantsFromFirestore() {
+    try {
+        if (typeof firebase === 'undefined') return;
+        const db = firebase.firestore();
+        const snap = await db.collection('tenants').get();
+        if (snap.empty) return;
+
+        let updated = false;
+        snap.forEach(doc => {
+            const data = doc.data();
+            if (!data.ativo) return; // Ignora tenants inativos
+            if (!dynamicTenants.find(t => t.id === doc.id)) {
+                dynamicTenants.push({
+                    id:        doc.id,
+                    name:      data.nome || doc.id,
+                    cnpj:      data.cnpj || '',
+                    modules:   data.modulos || [],
+                    status:    'active',
+                    isDynamic: true
+                });
+                updated = true;
+                console.log(`[Master] Tenant restaurado do Firestore: ${doc.id}`);
+            }
+        });
+
+        if (updated) {
+            localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
+            renderTenants(); // Re-renderiza com os dados restaurados
+        }
+    } catch(e) {
+        console.warn('[Master] Falha ao recarregar tenants do Firestore:', e.message);
+    }
+}
+
 
 // --- SECURITY UPDATE (Ensure Owner Access, Remove Generic Admin) ---
 const SECURITY_KEY = 'sec_v1_paulo_only';
@@ -72,6 +110,10 @@ document.addEventListener('DOMContentLoaded', () => {
     renderUsers();
     setupForms();
     loadVersion();
+
+    // Recupera tenants dinâmicos do Firestore (caso localStorage tenha sido limpo)
+    // Executa após um pequeno delay para garantir que Firebase esteja pronto
+    setTimeout(() => reloadTenantsFromFirestore(), 1500);
 
     // Listener do form de editar liberações de módulos
     const editTenantForm = document.getElementById('editTenantForm');
@@ -193,21 +235,36 @@ function renderTenants() {
 
     tableBody.innerHTML = '';
 
-    getAllTenants().forEach(tenant => {
+    const allTenants = getAllTenants();
+
+    if (allTenants.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-secondary); padding:2rem;">
+            <span class="material-icons-round" style="font-size:2rem;display:block;margin-bottom:.5rem;opacity:.4;">business_off</span>
+            Nenhum cliente cadastrado.<br>
+            <small style="opacity:.6;">Se os clientes sumiram, recarregue a página (F5).</small>
+        </td></tr>`;
+        return;
+    }
+
+    allTenants.forEach(tenant => {
         const tr = document.createElement('tr');
         const isDynamic = tenant.isDynamic;
         const statusClass = tenant.status === 'active' ? 'active' : 'inactive';
+        const modules = tenant.modules || []; // Proteção: evita crash se modules for undefined
 
         tr.innerHTML = `
             <td>
                 <div class="cell-info">
-                    <span class="cell-title">${tenant.name} ${isDynamic ? '<span style="font-size:0.65em; background:var(--primary-color); color:white; padding:1px 5px; border-radius:4px; vertical-align:middle;">NOVO</span>' : ''}</span>
+                    <span class="cell-title">${tenant.name || tenant.id} ${isDynamic ? '<span style="font-size:0.65em; background:var(--primary-color); color:white; padding:1px 5px; border-radius:4px; vertical-align:middle;">NOVO</span>' : ''}</span>
                     <span class="cell-subtitle">ID: ${tenant.id}</span>
                 </div>
             </td>
             <td><span style="font-family:monospace; color:var(--text-secondary);">${tenant.cnpj || '-'}</span></td>
             <td>
-                ${tenant.modules.map(mod => `<span class="module-tag">${formatModuleName(mod)}</span>`).join('')}
+                ${modules.length > 0
+                    ? modules.map(mod => `<span class="module-tag">${formatModuleName(mod)}</span>`).join('')
+                    : '<span style="color:var(--text-secondary);font-size:.8rem;">—</span>'
+                }
             </td>
             <td>
                 <span class="status-badge ${statusClass}">Ativo</span>
@@ -216,7 +273,12 @@ function renderTenants() {
                 <button class="action-btn" title="Editar Liberações" onclick="window.editTenant('${tenant.id}')">
                     <span class="material-icons-round">edit</span>
                 </button>
-                ${(tenant.modules || []).includes('wms') ? `
+                ${modules.includes('dispatch') ? `
+                <button class="action-btn" title="Configurar Despacho / Provisionar Admin" onclick="window.abrirWmsConfig('${tenant.id}')"
+                    style="background:rgba(16,185,129,.15);color:#10b981;">
+                    <span class="material-icons-round">admin_panel_settings</span>
+                </button>` : ''}
+                ${modules.includes('wms') ? `
                 <button class="action-btn" title="Configurar WMS" onclick="window.abrirWmsConfig('${tenant.id}')"
                     style="background:rgba(99,102,241,.15);color:#6366f1;">
                     <span class="material-icons-round">warehouse</span>
@@ -226,6 +288,7 @@ function renderTenants() {
         tableBody.appendChild(tr);
     });
 }
+
 
 
 // --- Users Logic ---
