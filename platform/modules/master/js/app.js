@@ -816,7 +816,7 @@ window._provSalvarAdmin = async function(tenantId) {
 
         if (feedback) { feedback.style.color='#10b981'; feedback.textContent='Acesso de @' + login + ' provisionado!'; }
         renderUsers();
-        setTimeout(() =\u003e { if (feedback) feedback.textContent = ''; }, 4000);
+        setTimeout(() => { if (feedback) feedback.textContent = ''; }, 4000);
     } catch(e) {
         if (feedback) { feedback.style.color='#ef4444'; feedback.textContent='Erro: ' + e.message; }
         console.error('[Prov] salvarAdmin:', e);

@@ -1,8 +1,8 @@
 {
     "module": "module-master",
     "name": "Master Panel (Admin)",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "date": "2026-06-01",
-    "last_change": "BUGFIX: renderTenants defensivo contra modules undefined. Recuperação automática de tenants do Firestore se localStorage limpo.",
-    "build": "20260601.2"
+    "last_change": "CRITICAL BUGFIX: Sintaxe corrompida (=\\u003e) na linha 819 causava falha silenciosa do app.js inteiro — clientes nao apareciam.",
+    "build": "20260601.3"
 }
