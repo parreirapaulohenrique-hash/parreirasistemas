@@ -1,5 +1,5 @@
 {
-    "change":  "index.html: renomeação de abas - Cotação Rápida → Cotação, Config. Transportadoras → Cadastro Transportadora",
-    "version":  "3.11.11",
+    "change":  "app.js: extorno unificado - returnToDashboard remove romaneio vinculado, cancelarRomaneio reverte despachos, estornarPagamentoFatura reverte NFs de Pago para Despachado",
+    "version":  "3.11.12",
     "lastUpdate":  "2026-06-02"
 }

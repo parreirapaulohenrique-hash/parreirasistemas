@@ -3801,6 +3801,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <td>${h.nfCount}</td>
                             <td style="text-align: right; font-weight: 600;">${Utils.formatCurrency(h.invoiceValue)}</td>
                             <td>${h.confirmedBy}${h.authorizedBy ? ` (${h.authorizedBy})` : ''}</td>
+                            <td style="text-align: center;">
+                                <button onclick="window.estornarPagamentoFatura('${h.id}')" title="Estornar este lançamento" style="padding: 3px 8px; font-size: 0.75rem; background: rgba(234,179,8,0.12); color: #d97706; border: 1px solid rgba(234,179,8,0.3); border-radius: 6px; cursor: pointer;">↩️ Estornar</button>
+                            </td>
                         </tr>
                     `;
                 }).join('');
@@ -5024,69 +5027,96 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
 
-        window.returnToDashboard = async (id) => {
-            if (!confirm('Deseja retornar este despacho para o Painel de Pendências?')) return;
-
-            const numId = Number(id); // normaliza tipo string vs number
+        // ─── HELPER UNIFICADO: reverte despachos de um romaneio para um status ───────
+        window._reverterDespachosDoRomaneio = async (items, novoStatus) => {
+            if (!items || !items.length) return 0;
+            const idsParaReverter = items.map(item => Number(item.id));
             let history = Utils.getStorage('dispatches') || [];
+            let revertidos = 0;
 
-            // 1. Tenta achar no localStorage
-            let idx = history.findIndex(d => Number(d.id) === numId);
-
-            if (idx !== -1) {
-                // ✅ Encontrado no localStorage — atualiza diretamente
-                history[idx].status = 'Pendente Despacho';
-                delete history[idx].dispatchedAt;
-                delete history[idx].deliveryType;
-                delete history[idx].deliveryStatus;
-                delete history[idx].deliveryPerson;
-                localStorage.setItem('dispatches', JSON.stringify(history));
-
-            } else {
-                // 2. Busca no cache do Firestore (carregado pela Montagem de Carga)
-                const allHistory = window._dispatchesFullCache || [];
-                const dispatch = allHistory.find(d => Number(d.id) === numId);
-
-                if (!dispatch) {
-                    alert('❌ Despacho não encontrado. Abra a aba "Montagem de Carga" para carregar o histórico completo e tente novamente.');
-                    return;
-                }
-
-                // Adiciona de volta ao localStorage com status pendente
-                const reverted = { ...dispatch, status: 'Pendente Despacho' };
-                delete reverted.dispatchedAt;
-                delete reverted.deliveryType;
-                delete reverted.deliveryStatus;
-                delete reverted.deliveryPerson;
-                history.push(reverted);
-                localStorage.setItem('dispatches', JSON.stringify(history));
-
-                // Atualiza o status no Firestore também
-                if (Utils.Cloud.hasTenant() && window.db) {
-                    try {
-                        const docId = String(dispatch.id);
-                        await window.db
-                            .collection('tenants').doc(Utils.Cloud.tenantId)
-                            .collection('dispatches_db').doc(docId)
-                            .update({ status: 'Pendente Despacho' });
-                        console.log(`✅ [ReturnToDashboard] Despacho ${docId} atualizado no Firestore.`);
-                    } catch(e) {
-                        console.warn('[ReturnToDashboard] Não foi possível atualizar no Firestore:', e);
+            for (const dispId of idsParaReverter) {
+                let idx = history.findIndex(d => Number(d.id) === dispId);
+                if (idx !== -1) {
+                    history[idx].status = novoStatus;
+                    if (novoStatus === 'Pendente Despacho') {
+                        delete history[idx].dispatchedAt; delete history[idx].deliveryType;
+                        delete history[idx].deliveryStatus; delete history[idx].deliveryPerson;
                     }
-                }
-
-                // Atualiza o cache local
-                if (window._dispatchesFullCache) {
-                    const cacheIdx = window._dispatchesFullCache.findIndex(d => Number(d.id) === numId);
-                    if (cacheIdx !== -1) window._dispatchesFullCache[cacheIdx].status = 'Pendente Despacho';
+                    delete history[idx].paidAt; delete history[idx].invoiceRef;
+                    delete history[idx].paidBy; delete history[idx].paymentNote;
+                    delete history[idx].authorizedBy;
+                    revertidos++;
+                } else {
+                    const allHistory = window._dispatchesFullCache || [];
+                    const dispatch = allHistory.find(d => Number(d.id) === dispId);
+                    if (dispatch) {
+                        const reverted = { ...dispatch, status: novoStatus };
+                        if (novoStatus === 'Pendente Despacho') {
+                            delete reverted.dispatchedAt; delete reverted.deliveryType;
+                            delete reverted.deliveryStatus; delete reverted.deliveryPerson;
+                        }
+                        delete reverted.paidAt; delete reverted.invoiceRef;
+                        delete reverted.paidBy; delete reverted.paymentNote;
+                        delete reverted.authorizedBy;
+                        history.push(reverted);
+                        if (window._dispatchesFullCache) {
+                            const ci = window._dispatchesFullCache.findIndex(d => Number(d.id) === dispId);
+                            if (ci !== -1) window._dispatchesFullCache[ci].status = novoStatus;
+                        }
+                        revertidos++;
+                    }
                 }
             }
 
-            showToast('✅ Despacho devolvido para o painel de pendências!');
+            localStorage.setItem('dispatches', JSON.stringify(history));
 
-            // Atualiza a tela
+            // Firestore sync
+            if (Utils.Cloud.hasTenant() && window.db) {
+                for (const dispId of idsParaReverter) {
+                    try {
+                        await window.db
+                            .collection('tenants').doc(Utils.Cloud.tenantId)
+                            .collection('dispatches_db').doc(String(dispId))
+                            .update({ status: novoStatus });
+                    } catch(e) {
+                        console.warn('[_reverterDespachosDoRomaneio] Firestore erro para dispatch', dispId, e);
+                    }
+                }
+            }
+            return revertidos;
+        };
+        // ─────────────────────────────────────────────────────────────────────────────
+
+        window.returnToDashboard = async (id) => {
+            const numId = Number(id);
+
+            // Localiza o romaneio que contém este despacho
+            let romaneios = Utils.getStorage('app_romaneios') || [];
+            const romaneioIdx = romaneios.findIndex(r => r.items && r.items.some(item => Number(item.id) === numId));
+            const romaneioAfetado = romaneioIdx !== -1 ? romaneios[romaneioIdx] : null;
+            const idsNoRomaneio = romaneioAfetado ? romaneioAfetado.items : [{ id: numId }];
+            const qtd = idsNoRomaneio.length;
+
+            const msg = romaneioAfetado
+                ? `Deseja retornar para o Painel de Pendências?\n\nO romaneio ${romaneioAfetado.id} (${qtd} NF${qtd > 1 ? 's' : ''}) será REMOVIDO e todos os despachos voltarão para Pendente.`
+                : 'Deseja retornar este despacho para o Painel de Pendências?';
+
+            if (!confirm(msg)) return;
+
+            // Remove o romaneio vinculado
+            if (romaneioAfetado) {
+                romaneios.splice(romaneioIdx, 1);
+                Utils.saveRaw('app_romaneios', JSON.stringify(romaneios));
+            }
+
+            // Reverte TODOS os despachos do romaneio (ou só este, se não havia romaneio)
+            const revertidos = await window._reverterDespachosDoRomaneio(idsNoRomaneio, 'Pendente Despacho');
+
+            showToast(`✅ ${revertidos} despacho(s) devolvido(s) para o painel de pendências!`);
+
             if (window.renderAppHistory) window.renderAppHistory();
             if (window.renderDashboard) window.renderDashboard();
+            if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
 
             if (confirm('Ir para o Painel agora?')) {
                 if (window.showSection) window.showSection('dashboard');
@@ -6463,19 +6493,63 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            if (!confirm(`Confirma o CANCELAMENTO do romaneio ${romaneioId}?\n\nEle será removido da lista de pendentes.\nOs despachos vinculados NÃO são afetados.`)) return;
-
             let romaneios = Utils.getStorage('app_romaneios') || [];
-            const beforeLen = romaneios.length;
-            romaneios = romaneios.filter(r => r.id !== romaneioId);
-            if (romaneios.length < beforeLen) {
-                Utils.saveRaw('app_romaneios', JSON.stringify(romaneios));
-                showToast('↩️ Romaneio cancelado e removido da lista!');
+            const romaneio = romaneios.find(r => r.id === romaneioId);
+            if (!romaneio) { alert('❌ Romaneio não encontrado.'); return; }
+
+            const qtd = romaneio.items ? romaneio.items.length : 0;
+            if (!confirm(`Confirma o CANCELAMENTO do romaneio ${romaneioId}?\n\n${qtd} despacho(s) voltarão para "Pendente Despacho" automaticamente.`)) return;
+
+            // Remove o romaneio
+            Utils.saveRaw('app_romaneios', JSON.stringify(romaneios.filter(r => r.id !== romaneioId)));
+
+            // Reverte os despachos para Pendente
+            const items = romaneio.items || [];
+            window._reverterDespachosDoRomaneio(items, 'Pendente Despacho').then(revertidos => {
+                showToast(`↩️ Romaneio cancelado! ${revertidos} despacho(s) voltaram para pendentes.`);
                 if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
-            } else {
-                alert('❌ Romaneio não encontrado.');
-            }
+                if (window.renderDashboard) window.renderDashboard();
+                if (window.renderAppHistory) window.renderAppHistory();
+            });
         };
+
+        // ─── ESTORNO DE PAGAMENTO DE FATURA ───────────────────────────────────────────
+        window.estornarPagamentoFatura = (invoiceHistoryId) => {
+            const pass = prompt(`⚠️ AÇÃO RESTRITA\n\nDigite a senha de SUPERVISOR para estornar este lançamento de fatura:`);
+            if (pass === null) return;
+            const supervisor = users.find(u => u.role === 'supervisor' && u.pass === pass);
+            if (!supervisor) { alert('❌ Senha incorreta ou usuário sem permissão de supervisor.'); return; }
+
+            let invoiceHistory = Utils.getStorage('invoice_history') || [];
+            const registro = invoiceHistory.find(h => String(h.id) === String(invoiceHistoryId));
+            if (!registro) { alert('❌ Lançamento de fatura não encontrado.'); return; }
+
+            if (!confirm(`Confirma o ESTORNO do lançamento de fatura "${registro.invoiceRef}" (${registro.carrier})?\n\n${registro.nfCount} NF(s) voltarão para status "Despachado".`)) return;
+
+            // Remove o registro do histórico de faturas
+            invoiceHistory = invoiceHistory.filter(h => String(h.id) !== String(invoiceHistoryId));
+            Utils.setStorage('invoice_history', invoiceHistory);
+
+            // Reverte os despachos (por número de NF) de 'Pago' para 'Despachado'
+            let dispatches = Utils.getStorage('dispatches') || [];
+            const nfList = registro.nfList || [];
+            let revertidos = 0;
+            dispatches.forEach(d => {
+                if (nfList.includes(d.invoice) && d.status === 'Pago') {
+                    d.status = 'Despachado';
+                    delete d.paidAt; delete d.invoiceRef;
+                    delete d.paidBy; delete d.paymentNote;
+                    delete d.authorizedBy;
+                    revertidos++;
+                }
+            });
+            Utils.setStorage('dispatches', dispatches);
+
+            showToast(`↩️ Fatura estornada! ${revertidos} NF(s) voltaram para "Despachado".`);
+            if (window.showInvoiceHistory) window.showInvoiceHistory();
+            if (window.renderAppHistory) window.renderAppHistory();
+        };
+        // ─────────────────────────────────────────────────────────────────────────────
 
         // --- FUNÇÕES DE VENDEDORES (v3.6) ---
         window.renderSellersList = function () {
