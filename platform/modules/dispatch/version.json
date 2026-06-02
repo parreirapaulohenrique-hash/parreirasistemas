@@ -1,5 +1,5 @@
 {
-    "version": "3.11.2",
+    "version": "3.11.3",
     "lastUpdate": "2026-06-01",
-    "change": "Ocorr\u00eancias: campo Transportadora Envolvida alterado de texto livre para select populado com o cadastro de transportadoras. Auto-sele\u00e7\u00e3o ao buscar NF."
+    "change": "Ocorr\u00eancias: campo Transportadora Env. din\u00e2mico \u2014 select do cadastro quando respons\u00e1vel = transportadora; input livre quando conferencia/cliente/outro. Label tamb\u00e9m se adapta."
 }

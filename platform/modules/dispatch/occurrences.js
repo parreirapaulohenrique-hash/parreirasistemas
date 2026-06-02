@@ -369,7 +369,8 @@ window.OcorrenciasModule = (function () {
                 <!-- Responsável -->
                 <div class="form-group">
                     <label class="form-label">Responsável</label>
-                    <select id="occResp" class="form-input" style="height:43px">
+                    <select id="occResp" class="form-input" style="height:43px"
+                        onchange="OcorrenciasModule._occRespChange(this.value)">
                         <option value="transportadora">Transportadora</option>
                         <option value="conferencia">Conferência / Expedição</option>
                         <option value="cliente">Cliente</option>
@@ -377,12 +378,19 @@ window.OcorrenciasModule = (function () {
                     </select>
                 </div>
 
-                <!-- Transportadora (select do cadastro) -->
-                <div class="form-group">
-                    <label class="form-label">Transportadora Envolvida</label>
-                    <select id="occTransp" class="form-input" style="height:43px">
+                <!-- Transportadora / Envolvido (campo dinâmico) -->
+                <div class="form-group" id="occTranspGroup">
+                    <label class="form-label" id="occTranspLabel">Transportadora Envolvida</label>
+
+                    <!-- Select: visível quando responsável = transportadora -->
+                    <select id="occTranspSelect" class="form-input" style="height:43px">
                         ${_getCarriersOptions()}
                     </select>
+
+                    <!-- Input livre: visível quando responsável = conferencia/cliente/outro -->
+                    <input type="text" id="occTranspInput" class="form-input"
+                        placeholder="Identifique o envolvido (ex: setor, nome do cliente...)"
+                        style="display:none">
                 </div>
 
                 <!-- Descrição -->
@@ -423,17 +431,21 @@ window.OcorrenciasModule = (function () {
             return;
         }
 
-        // Preenche campos automaticamente — tenta encontrar a transportadora no select
-        const transpEl = document.getElementById('occTransp');
-        if (transpEl && dados.transportadora && dados.transportadora !== '—') {
-            // Busca exata primeiro, depois case-insensitive
-            const opts = Array.from(transpEl.options).map(o => o.value);
-            const match = opts.find(o => o === dados.transportadora)
-                       || opts.find(o => o.toUpperCase() === dados.transportadora.toUpperCase());
-            if (match) {
-                transpEl.value = match;
+        // Preenche transportadora automaticamente no campo correto (select ou input)
+        if (dados.transportadora && dados.transportadora !== '—') {
+            const selEl = document.getElementById('occTranspSelect');
+            const inpEl = document.getElementById('occTranspInput');
+
+            if (selEl && selEl.style.display !== 'none') {
+                // Modo select: tenta casar com o cadastro
+                const opts = Array.from(selEl.options).map(o => o.value);
+                const match = opts.find(o => o === dados.transportadora)
+                           || opts.find(o => o.toUpperCase() === dados.transportadora.toUpperCase());
+                if (match) selEl.value = match;
+            } else if (inpEl) {
+                // Modo texto livre
+                inpEl.value = dados.transportadora;
             }
-            // Se não encontrar no select, deixa no primeiro item (sem forçar texto)
         }
 
         resultEl.style.background = 'rgba(16,185,129,.08)';
@@ -453,9 +465,15 @@ window.OcorrenciasModule = (function () {
         const nf       = document.getElementById('occNF')?.value?.trim();
         const tipo     = document.getElementById('occTipo')?.value;
         const resp     = document.getElementById('occResp')?.value;
-        const transp   = document.getElementById('occTransp')?.value?.trim();
         const desc     = document.getElementById('occDescricao')?.value?.trim();
         const dadosNF  = document.getElementById('occNFResult')?._dadosNF || {};
+
+        // Lê transportadora do campo visível (select ou input livre)
+        const selEl = document.getElementById('occTranspSelect');
+        const inpEl = document.getElementById('occTranspInput');
+        const transp = (selEl && selEl.style.display !== 'none')
+            ? (selEl.value || '').trim()
+            : (inpEl?.value || '').trim();
 
         if (!nf)   { _toast('Informe o número da NF.', 'error'); return; }
         if (!tipo) { _toast('Selecione o tipo de ocorrência.', 'error'); return; }
@@ -494,6 +512,29 @@ window.OcorrenciasModule = (function () {
         } catch(e) {
             _toast('Erro ao salvar: ' + e.message, 'error');
         }
+    }
+
+    // ── Alterna campo de transportadora conforme responsável ──────────────────
+    function _occRespChange(resp) {
+        const selEl   = document.getElementById('occTranspSelect');
+        const inpEl   = document.getElementById('occTranspInput');
+        const labelEl = document.getElementById('occTranspLabel');
+        if (!selEl || !inpEl) return;
+
+        const isTransp = resp === 'transportadora';
+
+        selEl.style.display = isTransp ? '' : 'none';
+        inpEl.style.display = isTransp ? 'none' : '';
+
+        if (labelEl) {
+            labelEl.textContent = isTransp
+                ? 'Transportadora Envolvida'
+                : 'Envolvido / Identificação';
+        }
+
+        // Limpa o campo ao trocar
+        if (isTransp) { selEl.value = ''; }
+        else          { inpEl.value = ''; }
     }
 
     // ── Abre detalhe / pipeline ───────────────────────────────────────────────
@@ -790,6 +831,7 @@ window.OcorrenciasModule = (function () {
         filtrarStatus, filtrarTipo, filtrarPeriodo,
         exportarRelatorio,
         _buscarNFModal, _salvarNovaOcorrencia, _avancarEtapa,
+        _occRespChange,
         buscarNF,
     };
 
