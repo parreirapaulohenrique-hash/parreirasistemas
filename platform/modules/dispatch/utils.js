@@ -323,7 +323,7 @@ const Utils = {
             console.log(`🔄 [Cloud] loadAll() chamado. TenantId: ${this.tenantId}`);
             if (!this.hasTenant()) return false;
 
-            const keys = ['freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients', 'invoice_history', 'app_sellers', 'app_settings', 'app_romaneios', 'delivery_history'];
+            const keys = ['freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients', 'invoice_history', 'app_sellers', 'app_settings', 'app_romaneios', 'delivery_history', 'dispatches'];
 
             // --- FIREBASE MODE ---
             if (typeof firebase !== 'undefined' && window.db) {
@@ -565,7 +565,11 @@ const Utils = {
                     } else {
                         localStorage.setItem(key, cloudContentString);
                         // UI Refresh
-                        if (key === 'dispatches' && window.renderAppHistory) window.renderAppHistory();
+                        if (key === 'dispatches') {
+                            if (window.renderDashboard) window.renderDashboard();
+                            if (window.renderAppHistory) window.renderAppHistory();
+                            console.log(`📡 [SaaS] Despachos sincronizados de outra máquina: ${JSON.parse(cloudContentString).length} itens.`);
+                        }
                         if (key === 'freight_tables' && window.renderRulesList) window.renderRulesList();
                         if (key === 'carrier_configs' && window.renderCarrierConfigs) window.renderCarrierConfigs();
                         if (key === 'app_users' && window.renderUserList) window.renderUserList();
@@ -591,7 +595,7 @@ const Utils = {
             // --- FIREBASE MODE ---
             if (typeof firebase !== 'undefined' && window.db && !window.hasAttachedListeners) {
                 window.hasAttachedListeners = true;
-                const keys = ['freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients', 'invoice_history', 'app_sellers', 'app_settings', 'app_romaneios', 'delivery_history'];
+                const keys = ['freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients', 'invoice_history', 'app_sellers', 'app_settings', 'app_romaneios', 'delivery_history', 'dispatches'];
                 console.log(`📡 Iniciando Sync SaaS (Firestore) para: ${this.tenantId}`);
 
                 

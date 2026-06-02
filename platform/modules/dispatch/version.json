@@ -1,5 +1,5 @@
 ﻿{
-    "change":  "index.html: removido botao fixo fabBiLogistica do canto inferior direito",
-    "version":  "3.11.8",
+    "change":  "utils.js: dispatches adicionado ao loadAll() e listen() - sincronizacao em tempo real entre maquinas altafix/parreiralog",
+    "version":  "3.11.9",
     "lastUpdate":  "2026-06-02"
 }
