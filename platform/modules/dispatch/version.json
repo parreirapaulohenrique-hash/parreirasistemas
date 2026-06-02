@@ -1,5 +1,5 @@
 ﻿{
-    "change":  "utils.js: clients agora em memoria (_memStore) em vez de localStorage — fix QuotaExceededError para 8221 clientes altafix",
-    "version":  "3.11.7",
+    "change":  "index.html: removido botao fixo fabBiLogistica do canto inferior direito",
+    "version":  "3.11.8",
     "lastUpdate":  "2026-06-02"
 }
