@@ -5997,6 +5997,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (!tbody) return;
 
+            // Relê sempre do localStorage para capturar dados carregados via chunks do Firestore
+            clients = Utils.getStorage('clients') || clients;
+
             // Se filterParam for um evento (onchange do checkbox), ignora e pega do input
             let term = (typeof filterParam === 'string' ? filterParam : (searchInput?.value || '')).toLowerCase();
             const onlyNoCoverage = noCoverageCheck ? noCoverageCheck.checked : false;
