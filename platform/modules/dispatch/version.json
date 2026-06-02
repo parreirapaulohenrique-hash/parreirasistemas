@@ -1,5 +1,5 @@
-﻿{
-    "change":  "utils.js: dispatches adicionado ao loadAll() e listen() - sincronizacao em tempo real entre maquinas altafix/parreiralog",
-    "version":  "3.11.9",
+{
+    "change":  "app.js + index.html: freteNegociado agora é flag no cadastro de transportadora (não mais hardcoded para VAN)",
+    "version":  "3.11.10",
     "lastUpdate":  "2026-06-02"
 }

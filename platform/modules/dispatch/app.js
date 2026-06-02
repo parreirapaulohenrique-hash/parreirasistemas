@@ -1610,7 +1610,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             resultsArea.innerHTML = options.map((opt, index) => {
                 const d = opt.details;
                 const rule = d.ruleUsed;
-                const isVan = opt.carrier.toUpperCase().includes('VAN');
+                const isVan = !!(carrierInfo[opt.carrier] && carrierInfo[opt.carrier].freteNegociado === true);
 
                 // Extra variables per rules (NOT global configs)
                 const extraParts = [];
@@ -1634,7 +1634,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const vanInputHtml = isVan ? `
                 <div class="van-adjustment" style="margin-top: 10px; border-top: 1px dashed var(--border-color); padding-top: 8px;" onclick="event.stopPropagation()">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                        <label style="font-size: 0.75rem; color: var(--text-secondary);">Valor Negociado (VAN):</label>
+                        <label style="font-size: 0.75rem; color: var(--text-secondary);">Valor Negociado:</label>
                         <span id="van-diff-${index}" style="font-size: 0.75rem; font-weight: bold;"></span>
                     </div>
                     <input type="number" id="van-input-${index}" class="form-input" 
@@ -2244,6 +2244,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('newCarrierCity').value = info.city || '';
             document.getElementById('newCarrierReliability').value = info.reliability || '3';
             document.getElementById('newCarrierIsRedespacho').checked = info.isRedespacho === true;
+            document.getElementById('newCarrierFreteNegociado').checked = info.freteNegociado === true;
 
 
             // Set Edit Mode
@@ -2431,13 +2432,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     carrierList.push(name);
                 }
 
+                const freteNegociadoInput = document.getElementById('newCarrierFreteNegociado');
                 carrierInfo[name] = {
                     cnpj: cnpjInput.value.trim() || '-',
                     ie: ieInput.value.trim() || '-',
                     address: addrInput.value.trim() || '-',
                     city: cityInput.value.trim() || '-',
                     reliability: parseInt(reliabilityInput.value) || 3,
-                    isRedespacho: isRedespachoInput ? isRedespachoInput.checked : false
+                    isRedespacho: isRedespachoInput ? isRedespachoInput.checked : false,
+                    freteNegociado: freteNegociadoInput ? freteNegociadoInput.checked : false
                 };
 
                 Utils.saveRaw('carrier_list', JSON.stringify(carrierList));
