@@ -326,19 +326,8 @@ const Utils = {
                         const doc = docs[i];
                         const key = keys[i];
 
-                        if (doc.exists) {
-                            // Normal Load
-                            const data = doc.data();
-                            if (data.isChunked) {
-                                if (this.loadChunks) {
-                                    const fullArray = await this.loadChunks(key, data.chunkCount);
-                                    localStorage.setItem(key, JSON.stringify(fullArray));
-                                }
-                            } else {
-                                if (data.content && data.content.length >= 2) localStorage.setItem(key, data.content);
-                            }
-                        } else if (key === 'clients') {
-                            // Doc único não existe — tenta formato chunked (clients__meta + clients__0, __1, ...)
+                        // --- CLIENTS: sempre verifica chunks PRIMEIRO (clients__meta tem prioridade) ---
+                        if (key === 'clients') {
                             try {
                                 const metaDoc = await window.db.collection('tenants').doc(this.tenantId)
                                     .collection('legacy_store').doc('clients__meta').get();
@@ -351,12 +340,34 @@ const Utils = {
                                         if (fullArray.length > 0) {
                                             localStorage.setItem('clients', JSON.stringify(fullArray));
                                             console.log(`[Cloud] clients: ${fullArray.length} registros carregados dos chunks.`);
+                                            // Remove doc legado se ainda existir (ele shadowa os chunks)
+                                            if (doc.exists) {
+                                                window.db.collection('tenants').doc(this.tenantId)
+                                                    .collection('legacy_store').doc('clients').delete()
+                                                    .then(() => console.log('[Cloud] Doc legado clients deletado automaticamente.'))
+                                                    .catch(() => {});
+                                            }
                                             if (window.renderClientsList) window.renderClientsList();
                                         }
+                                        continue; // pula o processamento normal deste key
                                     }
                                 }
                             } catch (chunkErr) {
                                 console.warn('[Cloud] Erro ao carregar chunks de clients:', chunkErr);
+                            }
+                            // Se não tem chunks, cai no fluxo normal abaixo
+                        }
+
+                        if (doc.exists) {
+                            // Normal Load
+                            const data = doc.data();
+                            if (data.isChunked) {
+                                if (this.loadChunks) {
+                                    const fullArray = await this.loadChunks(key, data.chunkCount);
+                                    localStorage.setItem(key, JSON.stringify(fullArray));
+                                }
+                            } else {
+                                if (data.content && data.content.length >= 2) localStorage.setItem(key, data.content);
                             }
                         } else if (this.tenantId === 'ltdistribuidora') {
                             // --- MIGRATION CHECK: If missing in 'ltdistribuidora', check 'parreiralog' ---
