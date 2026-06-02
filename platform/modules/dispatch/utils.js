@@ -337,6 +337,27 @@ const Utils = {
                             } else {
                                 if (data.content && data.content.length >= 2) localStorage.setItem(key, data.content);
                             }
+                        } else if (key === 'clients') {
+                            // Doc único não existe — tenta formato chunked (clients__meta + clients__0, __1, ...)
+                            try {
+                                const metaDoc = await window.db.collection('tenants').doc(this.tenantId)
+                                    .collection('legacy_store').doc('clients__meta').get();
+                                if (metaDoc.exists) {
+                                    const meta = metaDoc.data();
+                                    const totalChunks = meta.totalChunks || 0;
+                                    if (totalChunks > 0) {
+                                        console.log(`[Cloud] clients chunked: ${totalChunks} chunk(s), ${meta.totalCount} registros.`);
+                                        const fullArray = await this._loadChunkedKey('clients', totalChunks);
+                                        if (fullArray.length > 0) {
+                                            localStorage.setItem('clients', JSON.stringify(fullArray));
+                                            console.log(`[Cloud] clients: ${fullArray.length} registros carregados dos chunks.`);
+                                            if (window.renderClientsList) window.renderClientsList();
+                                        }
+                                    }
+                                }
+                            } catch (chunkErr) {
+                                console.warn('[Cloud] Erro ao carregar chunks de clients:', chunkErr);
+                            }
                         } else if (this.tenantId === 'ltdistribuidora') {
                             // --- MIGRATION CHECK: If missing in 'ltdistribuidora', check 'parreiralog' ---
                             console.log(`🕵️ [Migration] ${key} não encontrado em ${this.tenantId}. Buscando em parreiralog...`);
@@ -462,6 +483,32 @@ const Utils = {
                 return fullData;
             } catch (e) {
                 console.error("Erro ao baixar chunks", e);
+                return [];
+            }
+        },
+
+        // --- HELPER: Carrega chunks no formato key__N (double underscore) ---
+        async _loadChunkedKey(key, totalChunks) {
+            const promises = [];
+            for (let i = 0; i < totalChunks; i++) {
+                promises.push(
+                    window.db.collection('tenants').doc(this.tenantId)
+                        .collection('legacy_store').doc(`${key}__${i}`).get()
+                );
+            }
+            try {
+                const docs = await Promise.all(promises);
+                let fullData = [];
+                docs.forEach(d => {
+                    if (d.exists && d.data().content) {
+                        try { fullData = fullData.concat(JSON.parse(d.data().content)); }
+                        catch(e) { console.warn('[Cloud] Erro ao parsear chunk:', d.id, e); }
+                    }
+                });
+                console.log(`[Cloud] _loadChunkedKey(${key}): ${fullData.length} itens reconstruídos de ${totalChunks} chunks.`);
+                return fullData;
+            } catch (e) {
+                console.error('[Cloud] Falha ao carregar chunks:', e);
                 return [];
             }
         },

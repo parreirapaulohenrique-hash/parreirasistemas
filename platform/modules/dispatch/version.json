@@ -1,5 +1,5 @@
-{
-    "version": "3.11.3",
-    "lastUpdate": "2026-06-01",
-    "change": "Ocorr\u00eancias: campo Transportadora Env. din\u00e2mico \u2014 select do cadastro quando respons\u00e1vel = transportadora; input livre quando conferencia/cliente/outro. Label tamb\u00e9m se adapta."
+﻿{
+    "change":  "utils.js: loadAll suporta clientes em chunks (clients__meta + clients__N) para tenants com +1MB de clientes",
+    "version":  "3.11.4",
+    "lastUpdate":  "2026-06-02"
 }
