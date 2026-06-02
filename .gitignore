@@ -14,3 +14,6 @@
 !/deploy.ps1
 !/.gitignore
 !/index.html
+
+# Firebase Admin SDK credentials
+*firebase-adminsdk*.json
