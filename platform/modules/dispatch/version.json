@@ -1,5 +1,5 @@
 {
-    "change":  "app.js + index.html: freteNegociado agora é flag no cadastro de transportadora (não mais hardcoded para VAN)",
-    "version":  "3.11.10",
+    "change":  "index.html: renomeação de abas - Cotação Rápida → Cotação, Config. Transportadoras → Cadastro Transportadora",
+    "version":  "3.11.11",
     "lastUpdate":  "2026-06-02"
 }
