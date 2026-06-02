@@ -1,4 +1,6 @@
 const Utils = {
+    // Armazenamento em memória para dados grandes (>localStorage quota)
+    _memStore: {},
     formatCurrency: (value) => {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
     },
@@ -16,6 +18,8 @@ const Utils = {
     },
 
     getStorage: (key) => {
+        // Verifica memória primeiro (para dados grandes como clients)
+        if (Utils._memStore[key] !== undefined) return Utils._memStore[key];
         try {
             const data = localStorage.getItem(key);
             if (!data) return [];
@@ -101,6 +105,14 @@ const Utils = {
 
         // --- SAVE LOGIC (Direct to TenantID) ---
         async save(key, data) {
+            // Clients usam armazenamento chunked — nunca salvar como doc único
+            if (key === 'clients') {
+                console.warn('[Cloud] clients usa chunks — edições individuais salvas apenas localmente (memória). Use o script de importação para atualizar em massa.');
+                Utils._memStore.clients = Array.isArray(data) ? data : Utils._memStore.clients;
+                if (window.renderClientsList) window.renderClientsList();
+                return true;
+            }
+
             // --- FIREBASE MODE ---
             if (typeof firebase !== 'undefined' && window.db) {
                 try {
@@ -338,8 +350,9 @@ const Utils = {
                                         console.log(`[Cloud] clients chunked: ${totalChunks} chunk(s), ${meta.totalCount} registros.`);
                                         const fullArray = await this._loadChunkedKey('clients', totalChunks);
                                         if (fullArray.length > 0) {
-                                            localStorage.setItem('clients', JSON.stringify(fullArray));
-                                            console.log(`[Cloud] clients: ${fullArray.length} registros carregados dos chunks.`);
+                                            // Guarda em memória (evita QuotaExceededError do localStorage)
+                                            Utils._memStore.clients = fullArray;
+                                            console.log(`[Cloud] clients: ${fullArray.length} registros em memória (sem localStorage).`);
                                             // Remove doc legado se ainda existir (ele shadowa os chunks)
                                             if (doc.exists) {
                                                 window.db.collection('tenants').doc(this.tenantId)
@@ -503,7 +516,7 @@ const Utils = {
             const promises = [];
             for (let i = 0; i < totalChunks; i++) {
                 promises.push(
-                    window.db.collection('tenants').doc(this.tenantId)
+                    window.db.collection('tenants').doc(this.tenantId || Utils.Cloud.tenantId)
                         .collection('legacy_store').doc(`${key}__${i}`).get()
                 );
             }
@@ -542,21 +555,28 @@ const Utils = {
             if (cloudContentString && cloudContentString.length >= 2) {
                 if (cloudContentString !== localContent) {
                     console.log(`🔄 [SaaS] Atualizando local: ${key}`);
-                    localStorage.setItem(key, cloudContentString);
 
-                    // UI Refresh
-                    if (key === 'dispatches' && window.renderAppHistory) window.renderAppHistory();
-                    if (key === 'freight_tables' && window.renderRulesList) window.renderRulesList();
-                    if (key === 'carrier_configs' && window.renderCarrierConfigs) window.renderCarrierConfigs();
-                    if (key === 'app_users' && window.renderUserList) window.renderUserList();
-                    if (key === 'clients' && window.renderClientsList) window.renderClientsList();
-                    if (key === 'carrier_list' && window.renderCarrierConfigs) window.renderCarrierConfigs();
-                    if (key === 'app_sellers' && window.renderSellersList) {
-                        window.renderSellersList();
-                        if (window.populateSellersSelector) window.populateSellersSelector();
+                    // clients vai para memória, não localStorage (evita QuotaExceededError)
+                    if (key === 'clients') {
+                        try {
+                            Utils._memStore.clients = JSON.parse(cloudContentString);
+                            if (window.renderClientsList) window.renderClientsList();
+                        } catch(e) { console.warn('[Cloud] Erro ao parsear clients da nuvem:', e); }
+                    } else {
+                        localStorage.setItem(key, cloudContentString);
+                        // UI Refresh
+                        if (key === 'dispatches' && window.renderAppHistory) window.renderAppHistory();
+                        if (key === 'freight_tables' && window.renderRulesList) window.renderRulesList();
+                        if (key === 'carrier_configs' && window.renderCarrierConfigs) window.renderCarrierConfigs();
+                        if (key === 'app_users' && window.renderUserList) window.renderUserList();
+                        if (key === 'carrier_list' && window.renderCarrierConfigs) window.renderCarrierConfigs();
+                        if (key === 'app_sellers' && window.renderSellersList) {
+                            window.renderSellersList();
+                            if (window.populateSellersSelector) window.populateSellersSelector();
+                        }
+                        if (key === 'app_settings' && window.loadAppSettings) window.loadAppSettings();
+                        if (key === 'app_romaneios' && window.renderBaixaRomaneios) window.renderBaixaRomaneios();
                     }
-                    if (key === 'app_settings' && window.loadAppSettings) window.loadAppSettings();
-                    if (key === 'app_romaneios' && window.renderBaixaRomaneios) window.renderBaixaRomaneios();
                 }
             } else {
                 // Nuvem realmente vazia/nula (menos de 2 chars)

@@ -1,5 +1,5 @@
 ﻿{
-    "change":  "utils.js: loadAll verifica clients__meta ANTES do doc legado; auto-deleta doc legado se chunks existirem — fix definitivo para 8221 clientes altafix",
-    "version":  "3.11.6",
+    "change":  "utils.js: clients agora em memoria (_memStore) em vez de localStorage — fix QuotaExceededError para 8221 clientes altafix",
+    "version":  "3.11.7",
     "lastUpdate":  "2026-06-02"
 }
