@@ -3429,26 +3429,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     }
                                     if (col === 'deliveryConfirm') {
                                         if (d.deliveryConfirmed) {
-                                            const mIcons = { whatsapp: '💬', presencial: '🤝', audio: '🎙️', telefone: '📞' };
-                                            const mLabels = { whatsapp: 'WhatsApp', presencial: 'Presencial', audio: 'Áudio', telefone: 'Telefone' };
+                                            const mIcons = { whatsapp: '💬', presencial: '🤝', audio: '🎙️', telefone: '📞', vendedor: '🧑‍💼' };
+                                            const mLabels = { whatsapp: 'WhatsApp', presencial: 'Presencial', audio: 'Áudio', telefone: 'Telefone', vendedor: 'Vendedor' };
                                             const icon  = mIcons[d.deliveryConfirmMethod]  || '✅';
                                             const label = mLabels[d.deliveryConfirmMethod] || d.deliveryConfirmMethod || '';
                                             const at = d.deliveryConfirmedAt ? new Date(d.deliveryConfirmedAt).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
-                                            return `<td style="width:120px;min-width:108px;text-align:center;padding:4px;">
-                                                <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:7px;padding:5px 6px;display:flex;flex-direction:column;align-items:center;gap:2px;">
-                                                    <span style="font-size:0.8rem;">${icon} <strong style="color:#22c55e;">${label}</strong></span>
-                                                    <span style="font-size:0.68rem;color:var(--text-secondary);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.deliveryConfirmedBy || ''}">${d.deliveryConfirmedBy || ''}</span>
-                                                    <span style="font-size:0.62rem;color:var(--text-secondary);">${at}</span>
-                                                    <button onclick="window.desfazerConfirmacaoEntrega(${d.id})" title="Desfazer confirmação" style="background:none;border:none;cursor:pointer;color:rgba(239,68,68,0.7);font-size:0.65rem;padding:0;margin-top:1px;display:flex;align-items:center;gap:2px;font-family:inherit;">
-                                                        <span class="material-icons-round" style="font-size:0.75rem;">undo</span> Desfazer
+                                            return `<td style="width:90px;min-width:84px;text-align:center;padding:3px 2px;">
+                                                <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:7px;padding:4px 5px;display:flex;flex-direction:column;align-items:center;gap:1px;">
+                                                    <span style="font-size:0.75rem;">${icon} <strong style="color:#22c55e;">${label}</strong></span>
+                                                    <span style="font-size:0.63rem;color:var(--text-secondary);max-width:84px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.deliveryConfirmedBy || ''}">${d.deliveryConfirmedBy || ''}</span>
+                                                    <span style="font-size:0.58rem;color:var(--text-secondary);">${at}</span>
+                                                    <button onclick="window.desfazerConfirmacaoEntrega(${d.id})" title="Desfazer confirmação" style="background:none;border:none;cursor:pointer;color:rgba(239,68,68,0.7);font-size:0.6rem;padding:0;margin-top:1px;display:flex;align-items:center;gap:2px;font-family:inherit;">
+                                                        <span class="material-icons-round" style="font-size:0.7rem;">undo</span> Desfazer
                                                     </button>
                                                 </div>
                                             </td>`;
                                         }
-                                        return `<td style="width:120px;min-width:108px;text-align:center;padding:4px;">
+                                        return `<td style="width:90px;min-width:84px;text-align:center;padding:3px 2px;">
                                             <button class="btn btn-secondary" onclick="window.confirmarEntrega(${d.id})"
-                                                style="padding:4px 8px;font-size:0.75rem;color:#22c55e;border-color:rgba(34,197,94,0.35);background:rgba(34,197,94,0.08);display:flex;align-items:center;gap:4px;margin:auto;">
-                                                <span class="material-icons-round" style="font-size:0.95rem;">verified</span> Confirmar
+                                                style="padding:3px 7px;font-size:0.72rem;color:#22c55e;border-color:rgba(34,197,94,0.35);background:rgba(34,197,94,0.08);display:flex;align-items:center;gap:3px;margin:auto;white-space:nowrap;">
+                                                <span class="material-icons-round" style="font-size:0.9rem;">verified</span> Confirmar
                                             </button>
                                         </td>`;
                                     }
@@ -4592,22 +4592,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                         <div style="margin-bottom:18px;">
                             <label style="display:block;font-size:0.82rem;color:#94a3b8;margin-bottom:10px;font-weight:500;">Como foi confirmada a entrega?</label>
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
                                 <div class="deliv-method-opt" data-val="whatsapp"
-                                    style="border:2px solid #334155;border-radius:9px;padding:12px 8px;text-align:center;cursor:pointer;transition:all 0.18s;color:#94a3b8;font-size:0.82rem;user-select:none;">
-                                    💬<br><span style="margin-top:4px;display:block;">WhatsApp</span>
+                                    style="border:2px solid #334155;border-radius:9px;padding:10px 6px;text-align:center;cursor:pointer;transition:all 0.18s;color:#94a3b8;font-size:0.8rem;user-select:none;">
+                                    💬<br><span style="margin-top:3px;display:block;">WhatsApp</span>
                                 </div>
                                 <div class="deliv-method-opt" data-val="presencial"
-                                    style="border:2px solid #334155;border-radius:9px;padding:12px 8px;text-align:center;cursor:pointer;transition:all 0.18s;color:#94a3b8;font-size:0.82rem;user-select:none;">
-                                    🤝<br><span style="margin-top:4px;display:block;">Presencial</span>
+                                    style="border:2px solid #334155;border-radius:9px;padding:10px 6px;text-align:center;cursor:pointer;transition:all 0.18s;color:#94a3b8;font-size:0.8rem;user-select:none;">
+                                    🤝<br><span style="margin-top:3px;display:block;">Presencial</span>
                                 </div>
                                 <div class="deliv-method-opt" data-val="audio"
-                                    style="border:2px solid #334155;border-radius:9px;padding:12px 8px;text-align:center;cursor:pointer;transition:all 0.18s;color:#94a3b8;font-size:0.82rem;user-select:none;">
-                                    🎙️<br><span style="margin-top:4px;display:block;">Áudio</span>
+                                    style="border:2px solid #334155;border-radius:9px;padding:10px 6px;text-align:center;cursor:pointer;transition:all 0.18s;color:#94a3b8;font-size:0.8rem;user-select:none;">
+                                    🎙️<br><span style="margin-top:3px;display:block;">Áudio</span>
                                 </div>
                                 <div class="deliv-method-opt" data-val="telefone"
-                                    style="border:2px solid #334155;border-radius:9px;padding:12px 8px;text-align:center;cursor:pointer;transition:all 0.18s;color:#94a3b8;font-size:0.82rem;user-select:none;">
-                                    📞<br><span style="margin-top:4px;display:block;">Telefone</span>
+                                    style="border:2px solid #334155;border-radius:9px;padding:10px 6px;text-align:center;cursor:pointer;transition:all 0.18s;color:#94a3b8;font-size:0.8rem;user-select:none;">
+                                    📞<br><span style="margin-top:3px;display:block;">Telefone</span>
+                                </div>
+                                <div class="deliv-method-opt" data-val="vendedor"
+                                    style="border:2px solid #334155;border-radius:9px;padding:10px 6px;text-align:center;cursor:pointer;transition:all 0.18s;color:#94a3b8;font-size:0.8rem;user-select:none;">
+                                    🧑‍💼<br><span style="margin-top:3px;display:block;">Vendedor</span>
                                 </div>
                             </div>
                         </div>
@@ -4668,10 +4672,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('delivConfirmError').textContent = '';
             document.getElementById('delivConfirmId').value = id;
 
-            // Pré-preencher com usuário logado
-            const loggedUser = Utils.getStorage('logged_user');
-            const userName = Array.isArray(loggedUser) ? (loggedUser[0]?.name || '') : (loggedUser?.name || '');
-            document.getElementById('delivConfirmedBy').value = userName;
+            // Pré-preencher com usuário logado (currentUser em memória > sessionStorage > vazio)
+            let _delivUserName = '';
+            if (currentUser && currentUser.name) {
+                _delivUserName = currentUser.name;
+            } else {
+                try {
+                    const _sess = JSON.parse(sessionStorage.getItem('logged_user') || 'null');
+                    if (_sess && _sess.name) _delivUserName = _sess.name;
+                } catch(e) {}
+            }
+            document.getElementById('delivConfirmedBy').value = _delivUserName;
 
             modal.style.display = 'flex';
             setTimeout(() => document.getElementById('delivConfirmedBy').focus(), 80);
