@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             } else {
                 // Firebase OK — verifica tamanho dos dispatches
-                const dispatchesRaw = localStorage.getItem('dispatches') || '[]';
+                const dispatchesRaw = localStorage.getItem(Utils._storageKey('dispatches')) || '[]';
                 const dispSize = dispatchesRaw.length;
                 if (dispSize > 800000) { // 80% do limite — alerta preventivo
                     const kb = (dispSize/1024).toFixed(0);
@@ -131,11 +131,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         let carrierList = Utils.getStorage('carrier_list');
 
         // CORREÇÃO: Não sobrescrever dados da nuvem
-        const carrierListRaw = localStorage.getItem('carrier_list');
+        const carrierListRaw = localStorage.getItem(Utils._storageKey('carrier_list'));
         if (!carrierListRaw || carrierListRaw === 'null' || carrierListRaw === 'undefined') {
             // Cliente NOVO - começa com lista vazia (mas não envia para nuvem!)
             carrierList = [];
-            localStorage.setItem('carrier_list', JSON.stringify(carrierList));
+            localStorage.setItem(Utils._storageKey('carrier_list'), JSON.stringify(carrierList));
             console.log('🆕 Novo cliente: carrier_list inicializada vazia.');
         } else if (carrierListRaw === '[]') {
             // Lista vazia no local - mas pode ter dados na nuvem, não sobrescrever
@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         let users = Utils.getStorage('app_users');
         // CORREÇÃO: Só cria admin padrão se REALMENTE não houver nada salvo (nem local nem nuvem)
         // Verifica se o localStorage está vazio E não existe nada salvo
-        const rawUsers = localStorage.getItem('app_users');
+        const rawUsers = localStorage.getItem(Utils._storageKey('app_users'));
         if (!rawUsers || rawUsers === 'null' || rawUsers === '[]' || rawUsers === 'undefined') {
             // Verificar se há algo na nuvem antes de criar default
             // Se acabamos de carregar da nuvem e está vazio, criamos o admin
@@ -165,7 +165,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.log('👤 Criando usuário admin padrão (nenhum usuário encontrado)');
                 users = [{ name: 'Administrador', login: 'admin', pass: 'admin', role: 'supervisor' }];
                 // Salvar localmente, mas NÃO enviar para nuvem (para não sobrescrever dados de outras sessões)
-                localStorage.setItem('app_users', JSON.stringify(users));
+                localStorage.setItem(Utils._storageKey('app_users'), JSON.stringify(users));
             }
             // Já existem usuários salvos, usar eles
             users = Utils.getStorage('app_users') || [];
@@ -253,6 +253,115 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.isSupervisor = () => {
             const storedUser = Utils.getStorage('logged_user');
             return storedUser && storedUser.role === 'supervisor';
+        };
+
+        // ──────────────────────────────────────────────────────────────────────────────
+        // Helper: Modal de senha de supervisor com input mascarado (type=password)
+        // Uso: window.requestSupervisorPassword('Título da ação', (supervisor) => { ... })
+        // ──────────────────────────────────────────────────────────────────────────────
+        window.requestSupervisorPassword = (title, onConfirm) => {
+            // Injeta o modal na primeira chamada
+            if (!document.getElementById('supPassModal')) {
+                const overlay = document.createElement('div');
+                overlay.id = 'supPassModal';
+                overlay.style.cssText = [
+                    'display:none; position:fixed; inset:0; z-index:9999;',
+                    'background:rgba(0,0,0,0.65); backdrop-filter:blur(4px);',
+                    'align-items:center; justify-content:center;'
+                ].join('');
+                overlay.innerHTML = `
+                    <div style="background:#1e293b; border:1px solid #334155; border-radius:12px;
+                                padding:28px 32px; min-width:320px; max-width:420px; width:90%;
+                                box-shadow:0 20px 60px rgba(0,0,0,0.5); font-family:inherit;">
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
+                            <span style="font-size:1.4rem;">🔐</span>
+                            <div>
+                                <div style="font-size:0.7rem; color:#ef4444; font-weight:700;
+                                            letter-spacing:0.08em; text-transform:uppercase;
+                                            margin-bottom:2px;">AÇÃO RESTRITA</div>
+                                <div id="supPassTitle" style="font-size:1rem; font-weight:600;
+                                            color:#f1f5f9;"></div>
+                            </div>
+                        </div>
+                        <label style="display:block; font-size:0.82rem; color:#94a3b8;
+                                     margin-bottom:6px;">Senha de Supervisor</label>
+                        <div style="position:relative;">
+                            <input id="supPassInput" type="password" autocomplete="current-password"
+                                placeholder="Digite a senha..."
+                                style="width:100%; box-sizing:border-box; padding:10px 40px 10px 12px;
+                                       background:#0f172a; border:1px solid #475569; border-radius:8px;
+                                       color:#f1f5f9; font-size:0.95rem; outline:none;
+                                       font-family:inherit; letter-spacing:0.1em;"/>
+                            <button id="supPassToggle" type="button"
+                                onclick="(function(){var i=document.getElementById('supPassInput');
+                                    var b=document.getElementById('supPassToggle');
+                                    if(i.type==='password'){i.type='text';b.textContent='🙈';}
+                                    else{i.type='password';b.textContent='👁';}})()"
+                                style="position:absolute; right:10px; top:50%; transform:translateY(-50%);
+                                       background:none; border:none; cursor:pointer; font-size:1rem;
+                                       color:#94a3b8; padding:0; line-height:1;">👁</button>
+                        </div>
+                        <div id="supPassError" style="color:#ef4444; font-size:0.8rem;
+                                     min-height:18px; margin-top:6px;"></div>
+                        <div style="display:flex; gap:10px; margin-top:18px; justify-content:flex-end;">
+                            <button id="supPassCancel"
+                                style="padding:8px 20px; border-radius:8px; border:1px solid #475569;
+                                       background:transparent; color:#94a3b8; cursor:pointer;
+                                       font-size:0.9rem; font-family:inherit;">
+                                Cancelar
+                            </button>
+                            <button id="supPassConfirm"
+                                style="padding:8px 20px; border-radius:8px; border:none;
+                                       background:#3b82f6; color:#fff; cursor:pointer;
+                                       font-size:0.9rem; font-weight:600; font-family:inherit;">
+                                Confirmar
+                            </button>
+                        </div>
+                    </div>`;
+                document.body.appendChild(overlay);
+            }
+
+            const modal   = document.getElementById('supPassModal');
+            const input   = document.getElementById('supPassInput');
+            const errEl   = document.getElementById('supPassError');
+            const titleEl = document.getElementById('supPassTitle');
+            const btnOk   = document.getElementById('supPassConfirm');
+            const btnCan  = document.getElementById('supPassCancel');
+
+            // Prepara o modal
+            titleEl.textContent = title;
+            input.value = '';
+            input.type  = 'password';
+            document.getElementById('supPassToggle').textContent = '👁';
+            errEl.textContent = '';
+            modal.style.display = 'flex';
+            setTimeout(() => input.focus(), 80);
+
+            const close = () => { modal.style.display = 'none'; };
+
+            // Clona botões para limpar listeners antigos
+            const newOk  = btnOk.cloneNode(true);
+            const newCan = btnCan.cloneNode(true);
+            btnOk.parentNode.replaceChild(newOk, btnOk);
+            btnCan.parentNode.replaceChild(newCan, btnCan);
+
+            const doConfirm = () => {
+                const pass = input.value;
+                const allUsers = Utils.getStorage('app_users') || [];
+                const supervisor = allUsers.find(u => u.role === 'supervisor' && u.pass === pass);
+                if (!supervisor) {
+                    errEl.textContent = '❌ Senha incorreta ou sem permissão de supervisor.';
+                    input.focus();
+                    return;
+                }
+                close();
+                onConfirm(supervisor);
+            };
+
+            document.getElementById('supPassConfirm').addEventListener('click', doConfirm);
+            document.getElementById('supPassCancel').addEventListener('click', close);
+            input.addEventListener('keydown', (e) => { if (e.key === 'Enter') doConfirm(); });
+            modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
         };
 
         // Apply role-based UI restrictions
@@ -2032,8 +2141,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 Utils.lastWriteTime['carrier_list'] = Date.now();
 
                 // 4. Salvar localmente
-                localStorage.setItem('freight_tables', JSON.stringify(rules));
-                localStorage.setItem('carrier_list', JSON.stringify(carrierList));
+                localStorage.setItem(Utils._storageKey('freight_tables'), JSON.stringify(rules));
+                localStorage.setItem(Utils._storageKey('carrier_list'), JSON.stringify(carrierList));
 
                 // 5. Forçar envio para nuvem
                 if (Utils.Cloud && Utils.Cloud.tenantId) {
@@ -2107,8 +2216,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 Utils.lastWriteTime['freight_tables'] = Date.now();
                 Utils.lastWriteTime['carrier_list'] = Date.now();
 
-                localStorage.setItem('freight_tables', JSON.stringify(rules));
-                localStorage.setItem('carrier_list', JSON.stringify(carrierList));
+                localStorage.setItem(Utils._storageKey('freight_tables'), JSON.stringify(rules));
+                localStorage.setItem(Utils._storageKey('carrier_list'), JSON.stringify(carrierList));
 
                 if (Utils.Cloud && Utils.Cloud.tenantId) {
                     await Utils.Cloud.save('freight_tables', rules);
@@ -2145,7 +2254,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (confirm(`Encontradas ${extractedCarriers.length} transportadoras nas tabelas de frete:\n\n${extractedCarriers.join(', ')}\n\nReconstruir a lista?`)) {
                 carrierList = extractedCarriers;
                 Utils.lastWriteTime['carrier_list'] = Date.now();
-                localStorage.setItem('carrier_list', JSON.stringify(carrierList));
+                localStorage.setItem(Utils._storageKey('carrier_list'), JSON.stringify(carrierList));
 
                 // Forçar envio para nuvem (bypass da proteção de array vazio)
                 if (Utils.Cloud && carrierList.length > 0) {
@@ -3139,6 +3248,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             nfValue: 'Vlr NF', weight: 'Peso', volume: 'Vol.', total: 'Frete',
             isComplement: 'Comp.', mainInvoice: 'Ref.',
             createdTime: 'Hr Cot.', dispatchedTime: 'Hr Desp.',
+            deliveryConfirm: 'Conf. Entrega',
             actions: 'Ações'
         };
 
@@ -3317,6 +3427,31 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     if (col === 'dispatchedTime') {
                                         val = d.dispatchedAt ? new Date(d.dispatchedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-';
                                     }
+                                    if (col === 'deliveryConfirm') {
+                                        if (d.deliveryConfirmed) {
+                                            const mIcons = { whatsapp: '💬', presencial: '🤝', audio: '🎙️', telefone: '📞' };
+                                            const mLabels = { whatsapp: 'WhatsApp', presencial: 'Presencial', audio: 'Áudio', telefone: 'Telefone' };
+                                            const icon  = mIcons[d.deliveryConfirmMethod]  || '✅';
+                                            const label = mLabels[d.deliveryConfirmMethod] || d.deliveryConfirmMethod || '';
+                                            const at = d.deliveryConfirmedAt ? new Date(d.deliveryConfirmedAt).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+                                            return `<td style="width:120px;min-width:108px;text-align:center;padding:4px;">
+                                                <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:7px;padding:5px 6px;display:flex;flex-direction:column;align-items:center;gap:2px;">
+                                                    <span style="font-size:0.8rem;">${icon} <strong style="color:#22c55e;">${label}</strong></span>
+                                                    <span style="font-size:0.68rem;color:var(--text-secondary);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.deliveryConfirmedBy || ''}">${d.deliveryConfirmedBy || ''}</span>
+                                                    <span style="font-size:0.62rem;color:var(--text-secondary);">${at}</span>
+                                                    <button onclick="window.desfazerConfirmacaoEntrega(${d.id})" title="Desfazer confirmação" style="background:none;border:none;cursor:pointer;color:rgba(239,68,68,0.7);font-size:0.65rem;padding:0;margin-top:1px;display:flex;align-items:center;gap:2px;font-family:inherit;">
+                                                        <span class="material-icons-round" style="font-size:0.75rem;">undo</span> Desfazer
+                                                    </button>
+                                                </div>
+                                            </td>`;
+                                        }
+                                        return `<td style="width:120px;min-width:108px;text-align:center;padding:4px;">
+                                            <button class="btn btn-secondary" onclick="window.confirmarEntrega(${d.id})"
+                                                style="padding:4px 8px;font-size:0.75rem;color:#22c55e;border-color:rgba(34,197,94,0.35);background:rgba(34,197,94,0.08);display:flex;align-items:center;gap:4px;margin:auto;">
+                                                <span class="material-icons-round" style="font-size:0.95rem;">verified</span> Confirmar
+                                            </button>
+                                        </td>`;
+                                    }
                                     if (col === 'actions') {
                                         return `<td style="text-align: center; width: 120px; min-width: 115px;">
                                             <div style="display: flex; justify-content: center; align-items: center; gap: 4px;">
@@ -3363,6 +3498,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         displayVal = `<div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${val}</div>`;
                                     }
                                     else if (col === 'createdTime' || col === 'dispatchedTime') style += 'width: 50px; min-width: 45px; text-align: center;';
+                                    else if (col === 'deliveryConfirm') style += 'width: 120px; min-width: 108px; text-align: center;';
 
                                     return `<td style="${style}" title="${String(val).replace(/"/g, '&quot;')}">${displayVal}</td>`;
                                 }).join('')}</tr>`;
@@ -4392,7 +4528,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.emergencyReset = () => {
             const pin = prompt('Para resetar os usuários para o padrão (admin/admin), digite o código de segurança:\n\n9999');
             if (pin === '9999') {
-                localStorage.removeItem('app_users');
+                localStorage.removeItem(Utils._storageKey('app_users'));
                 sessionStorage.removeItem('logged_user');
                 alert('Acessos resetados com sucesso!\n\nUsuário: admin\nSenha: admin\n\nO sistema será recarregado.');
                 location.reload();
@@ -4404,45 +4540,242 @@ document.addEventListener('DOMContentLoaded', async () => {
         // --- USER MANAGEMENT foi migrado unicamente para o utils.js ---
 
         // Update delete logic with supervisor password
-        window.removeDispatch = async (id) => {
-            const pass = prompt('AÇÃO RESTRITA: Digite a SENHA DE SUPERVISOR para excluir este lançamento:');
-            if (pass === null) return;
+        window.removeDispatch = (id) => {
+            window.requestSupervisorPassword('Excluir Lançamento', async () => {
+                const numId = Number(id);
 
-            const supervisor = users.find(u => u.role === 'supervisor' && u.pass === pass);
-            if (!supervisor) {
-                alert('Senha incorreta ou usuário sem permissão de supervisor.');
-                return;
-            }
+                // 1. Remove do localStorage
+                let history = Utils.getStorage('dispatches') || [];
+                history = history.filter(d => Number(d.id) !== numId);
+                Utils.saveRaw('dispatches', JSON.stringify(history));
 
-            const numId = Number(id);
-
-            // 1. Remove do localStorage
-            let history = Utils.getStorage('dispatches') || [];
-            const beforeLen = history.length;
-            history = history.filter(d => Number(d.id) !== numId);
-            Utils.saveRaw('dispatches', JSON.stringify(history));
-
-            // 2. Remove do Firestore (se existir lá)
-            if (Utils.Cloud.hasTenant() && window.db) {
-                try {
-                    await window.db
-                        .collection('tenants').doc(Utils.Cloud.tenantId)
-                        .collection('dispatches_db').doc(String(numId))
-                        .delete();
-                    console.log(`🗑️ [RemoveDispatch] Despacho ${numId} excluído do Firestore.`);
-                } catch(e) {
-                    console.warn('[RemoveDispatch] Erro ao excluir do Firestore:', e);
+                // 2. Remove do Firestore (se existir lá)
+                if (Utils.Cloud.hasTenant() && window.db) {
+                    try {
+                        await window.db
+                            .collection('tenants').doc(Utils.Cloud.tenantId)
+                            .collection('dispatches_db').doc(String(numId))
+                            .delete();
+                        console.log(`🗑️ [RemoveDispatch] Despacho ${numId} excluído do Firestore.`);
+                    } catch(e) {
+                        console.warn('[RemoveDispatch] Erro ao excluir do Firestore:', e);
+                    }
                 }
-            }
 
-            // 3. Remove do cache
-            if (window._dispatchesFullCache) {
-                window._dispatchesFullCache = window._dispatchesFullCache.filter(d => Number(d.id) !== numId);
-            }
+                // 3. Remove do cache
+                if (window._dispatchesFullCache) {
+                    window._dispatchesFullCache = window._dispatchesFullCache.filter(d => Number(d.id) !== numId);
+                }
 
-            window.renderAppHistory();
-            showToast('🗑️ Lançamento excluído com sucesso.');
+                window.renderAppHistory();
+                showToast('🗑️ Lançamento excluído com sucesso.');
+            });
         };
+
+        // ─── CONFIRMAÇÃO DE ENTREGA AO CLIENTE (v3.11.16) ──────────────────────────
+        window.confirmarEntrega = (id) => {
+            // Injeta o modal apenas uma vez no DOM
+            if (!document.getElementById('delivConfirmModal')) {
+                const overlay = document.createElement('div');
+                overlay.id = 'delivConfirmModal';
+                overlay.style.cssText = 'display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);align-items:center;justify-content:center;';
+                overlay.innerHTML = `
+                    <div id="delivConfirmCard" style="background:#1e293b;border:1px solid #334155;border-radius:14px;padding:28px 30px;min-width:340px;max-width:450px;width:92%;box-shadow:0 24px 64px rgba(0,0,0,0.55);font-family:inherit;">
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px;">
+                            <span style="font-size:1.8rem;">📦</span>
+                            <div>
+                                <div style="font-size:0.68rem;color:#22c55e;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;margin-bottom:3px;">CONFIRMAÇÃO DE ENTREGA</div>
+                                <div style="font-size:1rem;font-weight:600;color:#f1f5f9;">Mercadoria chegou ao cliente?</div>
+                            </div>
+                        </div>
+                        <input type="hidden" id="delivConfirmId">
+
+                        <div style="margin-bottom:18px;">
+                            <label style="display:block;font-size:0.82rem;color:#94a3b8;margin-bottom:10px;font-weight:500;">Como foi confirmada a entrega?</label>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                                <div class="deliv-method-opt" data-val="whatsapp"
+                                    style="border:2px solid #334155;border-radius:9px;padding:12px 8px;text-align:center;cursor:pointer;transition:all 0.18s;color:#94a3b8;font-size:0.82rem;user-select:none;">
+                                    💬<br><span style="margin-top:4px;display:block;">WhatsApp</span>
+                                </div>
+                                <div class="deliv-method-opt" data-val="presencial"
+                                    style="border:2px solid #334155;border-radius:9px;padding:12px 8px;text-align:center;cursor:pointer;transition:all 0.18s;color:#94a3b8;font-size:0.82rem;user-select:none;">
+                                    🤝<br><span style="margin-top:4px;display:block;">Presencial</span>
+                                </div>
+                                <div class="deliv-method-opt" data-val="audio"
+                                    style="border:2px solid #334155;border-radius:9px;padding:12px 8px;text-align:center;cursor:pointer;transition:all 0.18s;color:#94a3b8;font-size:0.82rem;user-select:none;">
+                                    🎙️<br><span style="margin-top:4px;display:block;">Áudio</span>
+                                </div>
+                                <div class="deliv-method-opt" data-val="telefone"
+                                    style="border:2px solid #334155;border-radius:9px;padding:12px 8px;text-align:center;cursor:pointer;transition:all 0.18s;color:#94a3b8;font-size:0.82rem;user-select:none;">
+                                    📞<br><span style="margin-top:4px;display:block;">Telefone</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom:4px;">
+                            <label style="display:block;font-size:0.82rem;color:#94a3b8;margin-bottom:6px;font-weight:500;">Quem confirmou?</label>
+                            <input id="delivConfirmedBy" type="text" placeholder="Nome do responsável..." autocomplete="off"
+                                style="width:100%;box-sizing:border-box;padding:10px 13px;background:#0f172a;border:1px solid #475569;border-radius:8px;color:#f1f5f9;font-size:0.9rem;outline:none;font-family:inherit;transition:border-color 0.15s;">
+                        </div>
+                        <div id="delivConfirmError" style="color:#ef4444;font-size:0.78rem;min-height:18px;margin-top:5px;"></div>
+
+                        <div style="display:flex;gap:10px;margin-top:22px;justify-content:flex-end;">
+                            <button id="delivConfirmCancel"
+                                style="padding:9px 22px;border-radius:8px;border:1px solid #475569;background:transparent;color:#94a3b8;cursor:pointer;font-size:0.9rem;font-family:inherit;">
+                                Cancelar
+                            </button>
+                            <button id="delivConfirmOk"
+                                style="padding:9px 22px;border-radius:8px;border:none;background:#22c55e;color:#fff;cursor:pointer;font-size:0.9rem;font-weight:700;font-family:inherit;display:flex;align-items:center;gap:6px;">
+                                <span class="material-icons-round" style="font-size:1.05rem;">check_circle</span> Confirmar
+                            </button>
+                        </div>
+                    </div>`;
+                document.body.appendChild(overlay);
+
+                // Seleção visual dos métodos
+                overlay.addEventListener('click', (e) => {
+                    const opt = e.target.closest('.deliv-method-opt');
+                    if (opt) {
+                        overlay.querySelectorAll('.deliv-method-opt').forEach(b => {
+                            b.style.borderColor = '#334155';
+                            b.style.color = '#94a3b8';
+                            b.style.background = 'transparent';
+                        });
+                        opt.style.borderColor = '#22c55e';
+                        opt.style.color = '#22c55e';
+                        opt.style.background = 'rgba(34,197,94,0.1)';
+                        overlay.dataset.selectedMethod = opt.dataset.val;
+                    }
+                    if (e.target === overlay) overlay.style.display = 'none';
+                });
+
+                // Fechar com Escape
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && document.getElementById('delivConfirmModal')?.style.display === 'flex')
+                        document.getElementById('delivConfirmModal').style.display = 'none';
+                });
+            }
+
+            const modal = document.getElementById('delivConfirmModal');
+
+            // Resetar estado
+            modal.querySelectorAll('.deliv-method-opt').forEach(b => {
+                b.style.borderColor = '#334155';
+                b.style.color = '#94a3b8';
+                b.style.background = 'transparent';
+            });
+            delete modal.dataset.selectedMethod;
+            document.getElementById('delivConfirmError').textContent = '';
+            document.getElementById('delivConfirmId').value = id;
+
+            // Pré-preencher com usuário logado
+            const loggedUser = Utils.getStorage('logged_user');
+            const userName = Array.isArray(loggedUser) ? (loggedUser[0]?.name || '') : (loggedUser?.name || '');
+            document.getElementById('delivConfirmedBy').value = userName;
+
+            modal.style.display = 'flex';
+            setTimeout(() => document.getElementById('delivConfirmedBy').focus(), 80);
+
+            // Substituir botões para limpar listeners antigos
+            ['delivConfirmOk','delivConfirmCancel'].forEach(bid => {
+                const el = document.getElementById(bid);
+                const clone = el.cloneNode(true);
+                el.parentNode.replaceChild(clone, el);
+            });
+
+            document.getElementById('delivConfirmCancel').addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+
+            document.getElementById('delivConfirmOk').addEventListener('click', async () => {
+                const method      = modal.dataset.selectedMethod;
+                const confirmedBy = document.getElementById('delivConfirmedBy').value.trim();
+                const errEl       = document.getElementById('delivConfirmError');
+
+                if (!method)      { errEl.textContent = '❌ Selecione a forma de confirmação.'; return; }
+                if (!confirmedBy) { errEl.textContent = '❌ Informe quem confirmou a entrega.'; return; }
+
+                const numId = Number(document.getElementById('delivConfirmId').value);
+                const now   = new Date().toISOString();
+                const update = {
+                    deliveryConfirmed: true,
+                    deliveryConfirmedAt: now,
+                    deliveryConfirmMethod: method,
+                    deliveryConfirmedBy: confirmedBy
+                };
+
+                // 1. localStorage
+                let dispatches = Utils.getStorage('dispatches') || [];
+                const idx = dispatches.findIndex(d => Number(d.id) === numId);
+                if (idx !== -1) { Object.assign(dispatches[idx], update); Utils.setStorage('dispatches', dispatches); }
+
+                // 2. Firestore
+                if (Utils.Cloud.hasTenant() && window.db) {
+                    try {
+                        await window.db.collection('tenants').doc(Utils.Cloud.tenantId)
+                            .collection('dispatches_db').doc(String(numId)).update(update);
+                    } catch(e) { console.warn('[ConfirmarEntrega] Firestore:', e); }
+                }
+
+                // 3. Cache em memória
+                if (window._dispatchesFullCache) {
+                    const ci = window._dispatchesFullCache.findIndex(d => Number(d.id) === numId);
+                    if (ci !== -1) Object.assign(window._dispatchesFullCache[ci], update);
+                }
+
+                modal.style.display = 'none';
+                showToast('✅ Entrega confirmada com sucesso!');
+                window.renderAppHistory();
+            });
+        };
+
+        window.desfazerConfirmacaoEntrega = (id) => {
+            window.requestSupervisorPassword('Desfazer Confirmação de Entrega', async () => {
+                const numId = Number(id);
+
+                // 1. localStorage
+                let dispatches = Utils.getStorage('dispatches') || [];
+                const idx = dispatches.findIndex(d => Number(d.id) === numId);
+                if (idx !== -1) {
+                    delete dispatches[idx].deliveryConfirmed;
+                    delete dispatches[idx].deliveryConfirmedAt;
+                    delete dispatches[idx].deliveryConfirmMethod;
+                    delete dispatches[idx].deliveryConfirmedBy;
+                    Utils.setStorage('dispatches', dispatches);
+                }
+
+                // 2. Firestore
+                if (Utils.Cloud.hasTenant() && window.db) {
+                    try {
+                        const fv = firebase.firestore.FieldValue.delete;
+                        await window.db.collection('tenants').doc(Utils.Cloud.tenantId)
+                            .collection('dispatches_db').doc(String(numId))
+                            .update({
+                                deliveryConfirmed:     firebase.firestore.FieldValue.delete(),
+                                deliveryConfirmedAt:   firebase.firestore.FieldValue.delete(),
+                                deliveryConfirmMethod: firebase.firestore.FieldValue.delete(),
+                                deliveryConfirmedBy:   firebase.firestore.FieldValue.delete()
+                            });
+                    } catch(e) { console.warn('[DesfazerConfirmacao] Firestore:', e); }
+                }
+
+                // 3. Cache em memória
+                if (window._dispatchesFullCache) {
+                    const ci = window._dispatchesFullCache.findIndex(d => Number(d.id) === numId);
+                    if (ci !== -1) {
+                        const c = window._dispatchesFullCache[ci];
+                        delete c.deliveryConfirmed;
+                        delete c.deliveryConfirmedAt;
+                        delete c.deliveryConfirmMethod;
+                        delete c.deliveryConfirmedBy;
+                    }
+                }
+
+                showToast('↩️ Confirmação de entrega desfeita.');
+                window.renderAppHistory();
+            });
+        };
+        // ───────────────────────────────────────────────────────────────────────────
 
         // --- DASHBOARD LOGIC ---
         window.renderDashboard = () => {
@@ -5065,7 +5398,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            localStorage.setItem('dispatches', JSON.stringify(history));
+            localStorage.setItem(Utils._storageKey('dispatches'), JSON.stringify(history));
 
             // Auto-limpa invoice_history vinculados às NFs revertidas
             if (novoStatus === 'Pendente Despacho') {
@@ -6473,97 +6806,81 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         window.estornarBaixaRomaneio = (romaneioId) => {
-            const pass = prompt(`⚠️ AÇÃO RESTRITA\n\nDigite a senha de SUPERVISOR para estornar o romaneio ${romaneioId}:`);
-            if (pass === null) return;
+            window.requestSupervisorPassword(`Estornar Romaneio ${romaneioId}`, () => {
+                if (!confirm(`Confirma o ESTORNO do romaneio ${romaneioId}?\n\nEle voltará para status "Em Rota" e poderá ser baixado novamente.`)) return;
 
-            const supervisor = users.find(u => u.role === 'supervisor' && u.pass === pass);
-            if (!supervisor) {
-                alert('❌ Senha incorreta ou usuário sem permissão de supervisor.');
-                return;
-            }
-
-            if (!confirm(`Confirma o ESTORNO do romaneio ${romaneioId}?\n\nEle voltara para status "Em Rota" e poderá ser baixado novamente.`)) return;
-
-            let romaneios = Utils.getStorage('app_romaneios') || [];
-            const idx = romaneios.findIndex(r => r.id === romaneioId);
-            if (idx !== -1) {
-                romaneios[idx].status = 'em_rota';
-                delete romaneios[idx].baixadoAt;
-                Utils.saveRaw('app_romaneios', JSON.stringify(romaneios));
-                showToast('↩️ Romaneio estornado! Voltou para "Em Rota".');
-                if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
-            } else {
-                alert('❌ Romaneio não encontrado.');
-            }
+                let romaneios = Utils.getStorage('app_romaneios') || [];
+                const idx = romaneios.findIndex(r => r.id === romaneioId);
+                if (idx !== -1) {
+                    romaneios[idx].status = 'em_rota';
+                    delete romaneios[idx].baixadoAt;
+                    Utils.saveRaw('app_romaneios', JSON.stringify(romaneios));
+                    showToast('↩️ Romaneio estornado! Voltou para "Em Rota".');
+                    if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
+                } else {
+                    alert('❌ Romaneio não encontrado.');
+                }
+            });
         };
 
         window.cancelarRomaneio = (romaneioId) => {
-            const pass = prompt(`⚠️ AÇÃO RESTRITA\n\nDigite a senha de SUPERVISOR para CANCELAR o romaneio ${romaneioId}:`);
-            if (pass === null) return;
+            window.requestSupervisorPassword(`Cancelar Romaneio ${romaneioId}`, () => {
+                let romaneios = Utils.getStorage('app_romaneios') || [];
+                const romaneio = romaneios.find(r => r.id === romaneioId);
+                if (!romaneio) { alert('❌ Romaneio não encontrado.'); return; }
 
-            const supervisor = users.find(u => u.role === 'supervisor' && u.pass === pass);
-            if (!supervisor) {
-                alert('❌ Senha incorreta ou usuário sem permissão de supervisor.');
-                return;
-            }
+                const qtd = romaneio.items ? romaneio.items.length : 0;
+                if (!confirm(`Confirma o CANCELAMENTO do romaneio ${romaneioId}?\n\n${qtd} despacho(s) voltarão para "Pendente Despacho" automaticamente.`)) return;
 
-            let romaneios = Utils.getStorage('app_romaneios') || [];
-            const romaneio = romaneios.find(r => r.id === romaneioId);
-            if (!romaneio) { alert('❌ Romaneio não encontrado.'); return; }
+                // Remove o romaneio
+                Utils.saveRaw('app_romaneios', JSON.stringify(romaneios.filter(r => r.id !== romaneioId)));
 
-            const qtd = romaneio.items ? romaneio.items.length : 0;
-            if (!confirm(`Confirma o CANCELAMENTO do romaneio ${romaneioId}?\n\n${qtd} despacho(s) voltarão para "Pendente Despacho" automaticamente.`)) return;
-
-            // Remove o romaneio
-            Utils.saveRaw('app_romaneios', JSON.stringify(romaneios.filter(r => r.id !== romaneioId)));
-
-            // Reverte os despachos para Pendente
-            const items = romaneio.items || [];
-            window._reverterDespachosDoRomaneio(items, 'Pendente Despacho').then(revertidos => {
-                showToast(`↩️ Romaneio cancelado! ${revertidos} despacho(s) voltaram para pendentes.`);
-                if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
-                if (window.renderDashboard) window.renderDashboard();
-                if (window.renderAppHistory) window.renderAppHistory();
+                // Reverte os despachos para Pendente
+                const items = romaneio.items || [];
+                window._reverterDespachosDoRomaneio(items, 'Pendente Despacho').then(revertidos => {
+                    showToast(`↩️ Romaneio cancelado! ${revertidos} despacho(s) voltaram para pendentes.`);
+                    if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
+                    if (window.renderDashboard) window.renderDashboard();
+                    if (window.renderAppHistory) window.renderAppHistory();
+                });
             });
         };
 
         // ─── ESTORNO DE PAGAMENTO DE FATURA ───────────────────────────────────────────
         window.estornarPagamentoFatura = (invoiceHistoryId) => {
-            const pass = prompt(`⚠️ AÇÃO RESTRITA\n\nDigite a senha de SUPERVISOR para estornar este lançamento de fatura:`);
-            if (pass === null) return;
-            const supervisor = users.find(u => u.role === 'supervisor' && u.pass === pass);
-            if (!supervisor) { alert('❌ Senha incorreta ou usuário sem permissão de supervisor.'); return; }
+            window.requestSupervisorPassword('Estornar Pagamento de Fatura', () => {
+                let invoiceHistory = Utils.getStorage('invoice_history') || [];
+                const registro = invoiceHistory.find(h => String(h.id) === String(invoiceHistoryId));
+                if (!registro) { alert('❌ Lançamento de fatura não encontrado.'); return; }
 
-            let invoiceHistory = Utils.getStorage('invoice_history') || [];
-            const registro = invoiceHistory.find(h => String(h.id) === String(invoiceHistoryId));
-            if (!registro) { alert('❌ Lançamento de fatura não encontrado.'); return; }
+                if (!confirm(`Confirma o ESTORNO do lançamento de fatura "${registro.invoiceRef}" (${registro.carrier})?\n\n${registro.nfCount} NF(s) voltarão para status "Despachado".`)) return;
 
-            if (!confirm(`Confirma o ESTORNO do lançamento de fatura "${registro.invoiceRef}" (${registro.carrier})?\n\n${registro.nfCount} NF(s) voltarão para status "Despachado".`)) return;
+                // Remove o registro do histórico de faturas
+                invoiceHistory = invoiceHistory.filter(h => String(h.id) !== String(invoiceHistoryId));
+                Utils.setStorage('invoice_history', invoiceHistory);
 
-            // Remove o registro do histórico de faturas
-            invoiceHistory = invoiceHistory.filter(h => String(h.id) !== String(invoiceHistoryId));
-            Utils.setStorage('invoice_history', invoiceHistory);
+                // Reverte os despachos (por número de NF) de 'Pago' para 'Despachado'
+                let dispatches = Utils.getStorage('dispatches') || [];
+                const nfList = registro.nfList || [];
+                let revertidos = 0;
+                dispatches.forEach(d => {
+                    if (nfList.includes(d.invoice) && d.status === 'Pago') {
+                        d.status = 'Despachado';
+                        delete d.paidAt; delete d.invoiceRef;
+                        delete d.paidBy; delete d.paymentNote;
+                        delete d.authorizedBy;
+                        revertidos++;
+                    }
+                });
+                Utils.setStorage('dispatches', dispatches);
 
-            // Reverte os despachos (por número de NF) de 'Pago' para 'Despachado'
-            let dispatches = Utils.getStorage('dispatches') || [];
-            const nfList = registro.nfList || [];
-            let revertidos = 0;
-            dispatches.forEach(d => {
-                if (nfList.includes(d.invoice) && d.status === 'Pago') {
-                    d.status = 'Despachado';
-                    delete d.paidAt; delete d.invoiceRef;
-                    delete d.paidBy; delete d.paymentNote;
-                    delete d.authorizedBy;
-                    revertidos++;
-                }
+                showToast(`↩️ Fatura estornada! ${revertidos} NF(s) voltaram para "Despachado".`);
+                if (window.showInvoiceHistory) window.showInvoiceHistory();
+                if (window.renderAppHistory) window.renderAppHistory();
             });
-            Utils.setStorage('dispatches', dispatches);
-
-            showToast(`↩️ Fatura estornada! ${revertidos} NF(s) voltaram para "Despachado".`);
-            if (window.showInvoiceHistory) window.showInvoiceHistory();
-            if (window.renderAppHistory) window.renderAppHistory();
         };
         // ─────────────────────────────────────────────────────────────────────────────
+
 
         // --- FUNÇÕES DE VENDEDORES (v3.6) ---
         window.renderSellersList = function () {

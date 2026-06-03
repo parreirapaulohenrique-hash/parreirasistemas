@@ -1,6 +1,22 @@
 const Utils = {
     // Armazenamento em memória para dados grandes (>localStorage quota)
     _memStore: {},
+
+    // Chaves sensíveis ao tenant — isoladas por prefixo no localStorage
+    _TENANT_KEYS: ['freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users',
+        'carrier_info_v2', 'invoice_history', 'app_sellers', 'app_settings', 'app_romaneios',
+        'delivery_history', 'dispatches'],
+
+    // Retorna a chave com prefixo de tenant quando aplicável
+    _storageKey(key) {
+        const tenantId = (Utils.Cloud && Utils.Cloud.tenantId)
+            || localStorage.getItem('app_tenant_id');
+        if (tenantId && tenantId !== 'null' && tenantId !== 'undefined'
+                && Utils._TENANT_KEYS.includes(key)) {
+            return `tenant_${tenantId}_${key}`;
+        }
+        return key;
+    },
     formatCurrency: (value) => {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
     },
@@ -21,7 +37,8 @@ const Utils = {
         // Verifica memória primeiro (para dados grandes como clients)
         if (Utils._memStore[key] !== undefined) return Utils._memStore[key];
         try {
-            const data = localStorage.getItem(key);
+            const storageKey = Utils._storageKey(key);
+            const data = localStorage.getItem(storageKey);
             if (!data) return [];
             try {
                 const parsed = JSON.parse(data);
@@ -37,7 +54,7 @@ const Utils = {
     lastWriteTime: {},
 
     saveRaw: (key, stringData) => {
-        localStorage.setItem(key, stringData);
+        localStorage.setItem(Utils._storageKey(key), stringData);
         Utils.lastWriteTime[key] = Date.now();
         if (Utils.Cloud) {
             try {
@@ -65,7 +82,7 @@ const Utils = {
             const list = Utils.getStorage(key);
             list.push(item);
             const str = JSON.stringify(list);
-            localStorage.setItem(key, str);
+            localStorage.setItem(Utils._storageKey(key), str);
             Utils.lastWriteTime[key] = Date.now();
             if (Utils.Cloud) Utils.Cloud.save(key, list);
         } catch (e) { console.error(e); }
@@ -73,7 +90,7 @@ const Utils = {
 
     setStorage: (key, data) => {
         try {
-            localStorage.setItem(key, JSON.stringify(data));
+            localStorage.setItem(Utils._storageKey(key), JSON.stringify(data));
             Utils.lastWriteTime[key] = Date.now();
 
             // PROTEÇÃO: Não enviar arrays vazios para a nuvem (evita sobrescrever dados existentes)
@@ -272,7 +289,7 @@ const Utils = {
                 }
                 
                 if (modified) {
-                    localStorage.setItem('dispatches', JSON.stringify(dispatches));
+                    localStorage.setItem(`tenant_${this.tenantId}_dispatches`, JSON.stringify(dispatches));
                     Utils.lastWriteTime['dispatches'] = Date.now();
                 }
             }, 30000);
@@ -374,13 +391,14 @@ const Utils = {
                         if (doc.exists) {
                             // Normal Load
                             const data = doc.data();
+                            const tenantKey = `tenant_${this.tenantId}_${key}`;
                             if (data.isChunked) {
                                 if (this.loadChunks) {
                                     const fullArray = await this.loadChunks(key, data.chunkCount);
-                                    localStorage.setItem(key, JSON.stringify(fullArray));
+                                    localStorage.setItem(tenantKey, JSON.stringify(fullArray));
                                 }
                             } else {
-                                if (data.content && data.content.length >= 2) localStorage.setItem(key, data.content);
+                                if (data.content && data.content.length >= 2) localStorage.setItem(tenantKey, data.content);
                             }
                         } else if (this.tenantId === 'ltdistribuidora') {
                             // --- MIGRATION CHECK: If missing in 'ltdistribuidora', check 'parreiralog' ---
@@ -398,7 +416,7 @@ const Utils = {
                                     if (oldData.isChunked) {
                                         console.warn('Skipping chunked migration auto-copy');
                                     } else {
-                                        if (oldData.content) localStorage.setItem(key, oldData.content);
+                                        if (oldData.content) localStorage.setItem(`tenant_${this.tenantId}_${key}`, oldData.content);
                                     }
                                 }
                             } catch (migErr) { console.warn('Migration check failed', migErr); }
@@ -441,26 +459,23 @@ const Utils = {
                         // It's better handled by the background sync archiving old finished ones anyway.
 
                         if (modified) {
-                            localStorage.setItem('dispatches', JSON.stringify(local));
+                            localStorage.setItem(`tenant_${this.tenantId}_dispatches`, JSON.stringify(local));
                             if (window.renderDashboard) window.renderDashboard();
                         }
                     });
 
                 keys.forEach(key => {
                     const simKey = `tenant_${this.tenantId}_${key}`;
-                    const customData = localStorage.getItem(simKey);
+                    const existingData = localStorage.getItem(simKey);
 
-                    if (customData) {
-                        localStorage.setItem(key, customData);
-                    } else {
-                        // Migration Fallback Local
+                    if (!existingData) {
+                        // Migration Fallback Local: parreiralog → ltdistribuidora
                         if (this.tenantId === 'ltdistribuidora') {
                             const oldKey = `tenant_parreiralog_${key}`;
                             const oldData = localStorage.getItem(oldKey);
                             if (oldData) {
                                 console.log(`📦 [LocalMigration] Migrando ${key} para ltdistribuidora`);
                                 localStorage.setItem(simKey, oldData);
-                                localStorage.setItem(key, oldData);
                             }
                         }
                     }
@@ -540,7 +555,8 @@ const Utils = {
         // --- LÓGICA CENTRAL DE RECEBIMENTO DE DADOS ---
         processIncomingData(key, cloudContentString) {
             console.log(`📩 [Cloud] Recebendo ${key}: ${cloudContentString ? cloudContentString.length + ' chars' : 'null'}`);
-            const localContent = localStorage.getItem(key);
+            const storageKey = `tenant_${this.tenantId}_${key}`;
+            const localContent = localStorage.getItem(storageKey);
 
             // 1. Anti-Echo (60s) - Proteção contra sobrescrita após importação/limpeza
             const lastWrite = Utils.lastWriteTime[key] || 0;
@@ -563,7 +579,7 @@ const Utils = {
                             if (window.renderClientsList) window.renderClientsList();
                         } catch(e) { console.warn('[Cloud] Erro ao parsear clients da nuvem:', e); }
                     } else {
-                        localStorage.setItem(key, cloudContentString);
+                        localStorage.setItem(storageKey, cloudContentString);
                         // UI Refresh
                         if (key === 'dispatches') {
                             if (window.renderDashboard) window.renderDashboard();
@@ -624,7 +640,7 @@ const Utils = {
                         // It's better handled by the background sync archiving old finished ones anyway.
 
                         if (modified) {
-                            localStorage.setItem('dispatches', JSON.stringify(local));
+                            localStorage.setItem(`tenant_${this.tenantId}_dispatches`, JSON.stringify(local));
                             if (window.renderDashboard) window.renderDashboard();
                         }
                     });
@@ -651,9 +667,16 @@ const Utils = {
                     if (e.key && e.key.startsWith(`tenant_${this.tenantId}_`)) {
                         const internalKey = e.key.replace(`tenant_${this.tenantId}_`, '');
                         console.log(`📥 [SimCloud] Update de outra aba: ${internalKey}`);
-                        localStorage.setItem(internalKey, e.newValue);
-                        // Refresh UI if needed
-                        if (internalKey === 'dispatches' && window.renderAppHistory) window.renderAppHistory();
+                        // Dado já está na chave prefixada — apenas atualiza a UI
+                        if (internalKey === 'dispatches') {
+                            if (window.renderDashboard) window.renderDashboard();
+                            if (window.renderAppHistory) window.renderAppHistory();
+                        }
+                        if (internalKey === 'freight_tables' && window.renderRulesList) window.renderRulesList();
+                        if (internalKey === 'carrier_list' && window.renderCarrierConfigs) window.renderCarrierConfigs();
+                        if (internalKey === 'app_settings' && window.loadAppSettings) window.loadAppSettings();
+                        if (internalKey === 'app_sellers' && window.renderSellersList) window.renderSellersList();
+                        if (internalKey === 'app_users' && window.renderUserList) window.renderUserList();
                     }
                 });
             }
