@@ -1,6 +1,6 @@
 ﻿{
-    "change":  "v3.11.17 - Conf.Entrega: coluna redimensionada, usuario logado pre-preenchido corretamente, opcao Vendedor adicionada",
-    "version":  "3.11.17",
+    "change":  "v3.11.18 - fix: campo Quem Confirmou usa login do usuario (iris, franciely, welison, altafix)",
+    "version":  "3.11.18",
     "lastUpdate":  "2026-06-03",
-    "deployedAt": "2026-06-03 16:34"
+    "deployedAt": "2026-06-03 16:43"
 }

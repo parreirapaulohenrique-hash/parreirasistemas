@@ -4672,14 +4672,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('delivConfirmError').textContent = '';
             document.getElementById('delivConfirmId').value = id;
 
-            // Pré-preencher com usuário logado (currentUser em memória > sessionStorage > vazio)
+            // Pré-preencher com o login do usuário logado (iris, franciely, welison, altafix...)
             let _delivUserName = '';
-            if (currentUser && currentUser.name) {
-                _delivUserName = currentUser.name;
+            if (currentUser && currentUser.login) {
+                _delivUserName = currentUser.login;
             } else {
                 try {
                     const _sess = JSON.parse(sessionStorage.getItem('logged_user') || 'null');
-                    if (_sess && _sess.name) _delivUserName = _sess.name;
+                    if (_sess && _sess.login) _delivUserName = _sess.login;
                 } catch(e) {}
             }
             document.getElementById('delivConfirmedBy').value = _delivUserName;
