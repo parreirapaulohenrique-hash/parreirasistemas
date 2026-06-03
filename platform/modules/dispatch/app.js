@@ -3801,9 +3801,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <td>${h.nfCount}</td>
                             <td style="text-align: right; font-weight: 600;">${Utils.formatCurrency(h.invoiceValue)}</td>
                             <td>${h.confirmedBy}${h.authorizedBy ? ` (${h.authorizedBy})` : ''}</td>
-                            <td style="text-align: center;">
-                                <button onclick="window.estornarPagamentoFatura('${h.id}')" title="Estornar este lançamento" style="padding: 3px 8px; font-size: 0.75rem; background: rgba(234,179,8,0.12); color: #d97706; border: 1px solid rgba(234,179,8,0.3); border-radius: 6px; cursor: pointer;">↩️ Estornar</button>
-                            </td>
                         </tr>
                     `;
                 }).join('');
@@ -5069,6 +5066,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             localStorage.setItem('dispatches', JSON.stringify(history));
+
+            // Auto-limpa invoice_history vinculados às NFs revertidas
+            if (novoStatus === 'Pendente Despacho') {
+                const nfsAfetadas = items.map(item => item.invoice).filter(Boolean);
+                if (nfsAfetadas.length > 0) {
+                    let invoiceHist = Utils.getStorage('invoice_history') || [];
+                    const antesLen = invoiceHist.length;
+                    invoiceHist = invoiceHist.filter(h => {
+                        const nfList = h.nfList || [];
+                        return !nfList.some(nf => nfsAfetadas.includes(nf));
+                    });
+                    if (invoiceHist.length < antesLen) {
+                        Utils.setStorage('invoice_history', invoiceHist);
+                        console.log(`[Extorno] ${antesLen - invoiceHist.length} lançamento(s) de fatura removido(s) automaticamente.`);
+                    }
+                }
+            }
 
             // Firestore sync
             if (Utils.Cloud.hasTenant() && window.db) {
