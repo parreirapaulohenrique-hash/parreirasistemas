@@ -3373,6 +3373,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         else if (col === 'carrier') style += 'min-width: 75px; width: 85px; max-width: 100px;';
                         else if (col === 'createdTime' || col === 'dispatchedTime') style += 'width: 50px; min-width: 45px; text-align: center;';
                         else if (col === 'actions') style += 'width: 120px; min-width: 115px; text-align: center;';
+                        else if (col === 'deliveryConfirm') style += 'width: 90px; min-width: 84px; text-align: center;';
 
 
                         return `
@@ -3498,7 +3499,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         displayVal = `<div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${val}</div>`;
                                     }
                                     else if (col === 'createdTime' || col === 'dispatchedTime') style += 'width: 50px; min-width: 45px; text-align: center;';
-                                    else if (col === 'deliveryConfirm') style += 'width: 120px; min-width: 108px; text-align: center;';
+                                    else if (col === 'deliveryConfirm') style += 'width: 90px; min-width: 84px; text-align: center;';
 
                                     return `<td style="${style}" title="${String(val).replace(/"/g, '&quot;')}">${displayVal}</td>`;
                                 }).join('')}</tr>`;
@@ -4672,14 +4673,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('delivConfirmError').textContent = '';
             document.getElementById('delivConfirmId').value = id;
 
-            // Pré-preencher com o login do usuário logado (iris, franciely, welison, altafix...)
+            // Pré-preencher com o nome real do usuário logado
             let _delivUserName = '';
-            if (currentUser && currentUser.login) {
+            if (currentUser && currentUser.name) {
+                _delivUserName = currentUser.name;
+            } else if (currentUser && currentUser.login) {
                 _delivUserName = currentUser.login;
             } else {
                 try {
                     const _sess = JSON.parse(sessionStorage.getItem('logged_user') || 'null');
-                    if (_sess && _sess.login) _delivUserName = _sess.login;
+                    if (_sess && _sess.name) _delivUserName = _sess.name;
+                    else if (_sess && _sess.login) _delivUserName = _sess.login;
                 } catch(e) {}
             }
             document.getElementById('delivConfirmedBy').value = _delivUserName;
