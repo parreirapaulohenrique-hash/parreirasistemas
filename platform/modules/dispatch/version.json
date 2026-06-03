@@ -1,7 +1,6 @@
-{
-    "change":  "app.js: confirmação de entrega ao cliente — nova coluna 'Conf. Entrega' na Montagem de Carga com botão Confirmar (qualquer status), modal de seleção do método (WhatsApp/Presencial/Áudio/Telefone) e campo 'Quem confirmou'; desfazer protegido por senha de supervisor; salvo em localStorage e Firestore",
+﻿{
+    "change":  "app.js: confirmacao de entrega ao cliente - nova coluna Conf. Entrega na Montagem de Carga; modal de selecao do metodo (WhatsApp/Presencial/Audio/Telefone) e campo Quem confirmou; desfazer protegido por senha de supervisor; salvo em localStorage e Firestore",
     "version":  "3.11.16",
-    "lastUpdate":  "2026-06-03"
+    "lastUpdate":  "2026-06-03",
+    "deployedAt": "2026-06-03 16:21"
 }
-
-
