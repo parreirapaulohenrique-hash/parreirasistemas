@@ -2020,7 +2020,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             toast.style.padding = '12px 24px';
             toast.style.borderRadius = 'var(--radius-md)';
             toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
-            toast.style.zIndex = '9999';
+            toast.style.zIndex = '99999';
             toast.style.fontWeight = '600';
             toast.style.display = 'flex';
             toast.style.alignItems = 'center';
@@ -4238,7 +4238,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             // Valida a senha do supervisor (mesmo sistema do modal de autorização)
-            const users = Utils.getStorage('users') || [];
+            const users = Utils.getStorage('app_users') || [];
             const supervisor = users.find(u =>
                 (u.role === 'supervisor' || u.role === 'admin') &&
                 u.pass === supervisorPass
