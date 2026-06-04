@@ -1,7 +1,7 @@
 {
-    "change":  "v3.11.21 - feat: estorno de fatura conferida com confirmacao de supervisor e reversao automatica das NFs para Despachado",
-    "version":  "3.11.21",
+    "change":  "v3.11.22 - fix: botao Estornar nao respondia ao clique (troca onclick inline por event delegation + correcao comparacao id numero vs string)",
+    "version":  "3.11.22",
     "lastUpdate":  "2026-06-04",
-    "deployedAt": "2026-06-04 09:05"
+    "deployedAt": "2026-06-04 09:09"
 }
 

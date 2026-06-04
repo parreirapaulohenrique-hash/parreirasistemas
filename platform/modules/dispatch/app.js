@@ -4053,14 +4053,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <td style="text-align:center;">${badge}</td>
                                 <td style="font-size:0.8rem;">${h.confirmedBy || '—'}${authInfo}</td>
                                 <td style="text-align:center;">
-                                    <button onclick="window.showEstornoModal('${h.id || ''}')" title="Estornar fatura"
-                                        style="background:none;border:1px solid rgba(239,68,68,0.4);border-radius:6px;padding:3px 8px;cursor:pointer;color:#ef4444;font-size:0.75rem;font-family:inherit;display:inline-flex;align-items:center;gap:2px;transition:all 0.15s;white-space:nowrap;"
-                                        onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='none'">
+                                    <button class="btn-estornar" data-hid="${h.id}" title="Estornar fatura"
+                                        style="background:none;border:1px solid rgba(239,68,68,0.4);border-radius:6px;padding:3px 8px;cursor:pointer;color:#ef4444;font-size:0.75rem;font-family:inherit;display:inline-flex;align-items:center;gap:2px;transition:all 0.15s;white-space:nowrap;">
                                         <span class="material-icons-round" style="font-size:0.9rem;">undo</span>Estornar
                                     </button>
                                 </td>
                             </tr>`;
                     }).join('');
+
+                    // Event delegation: captura clique nos botões Estornar
+                    tbody.addEventListener('click', function estornoDelegate(e) {
+                        const btn = e.target.closest('.btn-estornar');
+                        if (!btn) return;
+                        const hid = btn.getAttribute('data-hid');
+                        window.showEstornoModal(hid);
+                    });
                 }
             }
 
@@ -4178,7 +4185,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         window.showEstornoModal = (historyId) => {
             const history = Utils.getStorage('invoice_history') || [];
-            const entry = history.find(h => h.id === historyId);
+            // Compara como string pois o id pode ser número (Date.now())
+            const entry = history.find(h => String(h.id) === String(historyId));
             if (!entry) {
                 Utils.showNotification('Fatura não encontrada no histórico.', 'error');
                 return;
@@ -4242,7 +4250,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.processEstornoInvoice = (historyId, justification, supervisorName) => {
             // 1. Carrega histórico e localiza a entrada
             let history = Utils.getStorage('invoice_history') || [];
-            const entry = history.find(h => h.id === historyId);
+            // Compara como string pois o id pode ser número (Date.now())
+            const entry = history.find(h => String(h.id) === String(historyId));
             if (!entry) {
                 Utils.showNotification('Registro não encontrado.', 'error');
                 return;
@@ -4275,7 +4284,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             Utils.setStorage('dispatches', dispatches);
 
             // 3. Remove a entrada do histórico
-            history = history.filter(h => h.id !== historyId);
+            history = history.filter(h => String(h.id) !== String(historyId));
             Utils.setStorage('invoice_history', history);
 
             // 4. Registra log do estorno
