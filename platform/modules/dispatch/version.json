@@ -1,7 +1,6 @@
 {
-    "change":  "v3.11.22 - fix: botao Estornar nao respondia ao clique (troca onclick inline por event delegation + correcao comparacao id numero vs string)",
-    "version":  "3.11.22",
+    "change":  "v3.11.23 - feat: Aba 'Análise de Faturas' completa - análise de conformidade, relatório de divergência por transportadora com detalhamento por fatura e estorno integrado",
+    "version":  "3.11.23",
     "lastUpdate":  "2026-06-04",
-    "deployedAt": "2026-06-04 09:09"
+    "deployedAt": "2026-06-04 09:20"
 }
-
