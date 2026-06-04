@@ -1,6 +1,6 @@
 {
-    "description":  "FIX: Logout do Master agora volta ao portal (index.html). Login.html: redirect inteligente por módulo. shared/logout.js criado.",
-    "build":  "20260601",
-    "version":  "11.24.0",
-    "lastUpdate":  "2026-06-01"
+    "description":  "FIX: Dispatch - Confirmar Estorno corrigido: chave app_users correta para validar senha do supervisor; toast z-index elevado para 99999 (acima dos modais).",
+    "build":  "20260604",
+    "version":  "11.24.1",
+    "lastUpdate":  "2026-06-04"
 }
