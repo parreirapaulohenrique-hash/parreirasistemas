@@ -3918,6 +3918,253 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log('💳 [Invoice] Processamento concluído!');
         };
 
+        // ==========================================
+        // ANÁLISE DE FATURAS CONFERIDAS - v3.11.20
+        // ==========================================
+
+        // Alterna entre sub-abas da seção de Conferência de Fatura
+        window.showInvoiceTab = (tab) => {
+            const tabConferir = document.getElementById('invoice-tab-conferir');
+            const tabAnalysis = document.getElementById('invoice-tab-analysis');
+            const btnConferir = document.getElementById('btnTabConferir');
+            const btnAnalysis = document.getElementById('btnTabAnalysis');
+
+            if (tab === 'conferir') {
+                if (tabConferir) tabConferir.style.display = '';
+                if (tabAnalysis) tabAnalysis.style.display = 'none';
+                if (btnConferir) {
+                    btnConferir.style.borderBottom = '2.5px solid var(--primary-color)';
+                    btnConferir.style.color = 'var(--primary-color)';
+                    btnConferir.style.background = 'rgba(59,130,246,0.08)';
+                }
+                if (btnAnalysis) {
+                    btnAnalysis.style.borderBottom = '2.5px solid transparent';
+                    btnAnalysis.style.color = 'var(--text-secondary)';
+                    btnAnalysis.style.background = 'transparent';
+                }
+            } else {
+                if (tabConferir) tabConferir.style.display = 'none';
+                if (tabAnalysis) tabAnalysis.style.display = '';
+                if (btnAnalysis) {
+                    btnAnalysis.style.borderBottom = '2.5px solid var(--primary-color)';
+                    btnAnalysis.style.color = 'var(--primary-color)';
+                    btnAnalysis.style.background = 'rgba(59,130,246,0.08)';
+                }
+                if (btnConferir) {
+                    btnConferir.style.borderBottom = '2.5px solid transparent';
+                    btnConferir.style.color = 'var(--text-secondary)';
+                    btnConferir.style.background = 'transparent';
+                }
+                window.renderInvoiceAnalysis();
+            }
+        };
+
+        // Carrega dados e popula os filtros da aba de análise
+        window.renderInvoiceAnalysis = () => {
+            const history = Utils.getStorage('invoice_history') || [];
+
+            // Popula o select de transportadoras com base no histórico
+            const carriers = [...new Set(history.map(h => h.carrier).filter(Boolean))].sort();
+            const carrierFilter = document.getElementById('analysisCarrierFilter');
+            if (carrierFilter) {
+                const currentVal = carrierFilter.value;
+                carrierFilter.innerHTML = '<option value="">Todas</option>';
+                carriers.forEach(c => {
+                    carrierFilter.innerHTML += `<option value="${c}"${currentVal === c ? ' selected' : ''}>${c}</option>`;
+                });
+            }
+
+            window.filterInvoiceAnalysis();
+        };
+
+        // Aplica filtros e renderiza todas as seções da aba de análise
+        window.filterInvoiceAnalysis = () => {
+            const history = Utils.getStorage('invoice_history') || [];
+
+            const carrierVal = document.getElementById('analysisCarrierFilter')?.value || '';
+            const monthVal   = document.getElementById('analysisMonthFilter')?.value   || '';
+            const statusVal  = document.getElementById('analysisStatusFilter')?.value  || '';
+
+            // Filtra o histórico
+            let filtered = history.filter(h => {
+                if (carrierVal && h.carrier !== carrierVal) return false;
+                if (monthVal) {
+                    const [yr, mo] = monthVal.split('-');
+                    const d = new Date(h.date);
+                    if (d.getFullYear().toString() !== yr ||
+                        (d.getMonth() + 1).toString().padStart(2, '0') !== mo) return false;
+                }
+                if (statusVal === 'conforme'     && h.difference !== 0) return false;
+                if (statusVal === 'nao-conforme' && h.difference === 0) return false;
+                return true;
+            });
+
+            // Ordena por data decrescente
+            filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            // ── CARDS DE RESUMO ──────────────────────────────
+            const total        = filtered.length;
+            const conformes    = filtered.filter(h => h.difference === 0).length;
+            const naoConformes = total - conformes;
+            const divTot       = filtered
+                .filter(h => h.difference !== 0)
+                .reduce((s, h) => s + Math.abs(h.difference || 0), 0);
+
+            const safeSet = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = val;
+            };
+            safeSet('analysisCardTotal',           total);
+            safeSet('analysisCardConformes',       conformes);
+            safeSet('analysisCardConformesPct',    total > 0 ? `${Math.round(conformes    / total * 100)}% do total` : '—');
+            safeSet('analysisCardNaoConformes',    naoConformes);
+            safeSet('analysisCardNaoConformesPct', total > 0 ? `${Math.round(naoConformes / total * 100)}% do total` : '—');
+            safeSet('analysisCardDivergencia',     Utils.formatCurrency(divTot));
+
+            const countEl = document.getElementById('analysisInvoiceCount');
+            if (countEl) countEl.textContent = `${total} fatura${total !== 1 ? 's' : ''}`;
+
+            // ── TABELA DE FATURAS CONFERIDAS ─────────────────
+            const tbody = document.getElementById('analysisInvoiceBody');
+            if (tbody) {
+                if (filtered.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-secondary);">Nenhuma fatura encontrada com os filtros selecionados.</td></tr>`;
+                } else {
+                    tbody.innerHTML = filtered.map(h => {
+                        const isConf    = h.difference === 0;
+                        const diffAbs   = Math.abs(h.difference || 0);
+                        const diffColor = isConf ? '#10b981' : (h.difference > 0 ? '#ef4444' : '#3b82f6');
+                        const diffSign  = (h.difference || 0) > 0 ? '+' : '';
+                        const badge     = isConf
+                            ? `<span style="background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:2px 9px;font-size:0.73rem;font-weight:700;white-space:nowrap;">✅ Conforme</span>`
+                            : `<span style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:5px;padding:2px 9px;font-size:0.73rem;font-weight:700;white-space:nowrap;">⚠️ Não Conforme</span>`;
+                        const authInfo  = h.authorizedBy
+                            ? `<br><span style="font-size:0.7rem;color:var(--accent-warning);">Auth: ${h.authorizedBy}</span>` : '';
+                        const justTitle = h.justification ? ` title="Justif.: ${h.justification}"` : '';
+                        return `
+                            <tr${justTitle}>
+                                <td style="font-size:0.82rem;">${new Date(h.date).toLocaleDateString('pt-BR')}</td>
+                                <td style="font-weight:600;">${h.carrier || '—'}</td>
+                                <td style="font-size:0.82rem;">${h.invoiceRef || '—'}</td>
+                                <td style="text-align:center;">${h.nfCount || 0}</td>
+                                <td style="text-align:right;font-weight:600;color:#10b981;">${Utils.formatCurrency(h.calculatedValue || 0)}</td>
+                                <td style="text-align:right;font-weight:600;color:#f59e0b;">${Utils.formatCurrency(h.invoiceValue || 0)}</td>
+                                <td style="text-align:right;font-weight:700;color:${diffColor};">${isConf ? '—' : diffSign + Utils.formatCurrency(diffAbs)}</td>
+                                <td style="text-align:center;">${badge}</td>
+                                <td style="font-size:0.8rem;">${h.confirmedBy || '—'}${authInfo}</td>
+                            </tr>`;
+                    }).join('');
+                }
+            }
+
+            // ── RELATÓRIO DE DIVERGÊNCIA POR TRANSPORTADORA ──
+            const naoConformesArr = filtered.filter(h => h.difference !== 0);
+            const divSection = document.getElementById('analysisDivergenceSection');
+            if (divSection) divSection.style.display = naoConformesArr.length > 0 ? '' : 'none';
+
+            // Agrupa não-conformes filtrados por transportadora
+            const byCarrier = {};
+            naoConformesArr.forEach(h => {
+                const c = h.carrier || 'Sem transportadora';
+                if (!byCarrier[c]) {
+                    byCarrier[c] = { carrier: c, count: 0, totalDiff: 0, maxDiff: 0, faturas: [] };
+                }
+                byCarrier[c].count++;
+                byCarrier[c].totalDiff += (h.difference || 0);
+                byCarrier[c].maxDiff    = Math.max(byCarrier[c].maxDiff, Math.abs(h.difference || 0));
+                byCarrier[c].faturas.push(h);
+            });
+
+            // Conta o total de faturas por transportadora no histórico completo (para o %)
+            const totalByCarrier = {};
+            history.forEach(h => {
+                const c = h.carrier || 'Sem transportadora';
+                totalByCarrier[c] = (totalByCarrier[c] || 0) + 1;
+            });
+
+            const divBody = document.getElementById('analysisDivergenceBody');
+            if (divBody) {
+                const rows = Object.values(byCarrier).sort((a, b) => Math.abs(b.totalDiff) - Math.abs(a.totalDiff));
+
+                divBody.innerHTML = rows.map((r, idx) => {
+                    const totalFat  = totalByCarrier[r.carrier] || r.count;
+                    const pct       = Math.round(r.count / totalFat * 100);
+                    const diffColor = r.totalDiff > 0 ? '#ef4444' : '#3b82f6';
+                    const diffLabel = r.totalDiff > 0 ? '🔴 Cobrado a mais' : '🔵 Cobrado a menos';
+                    const diffSign  = r.totalDiff > 0 ? '+' : '';
+                    const pctColor  = pct >= 50 ? '#ef4444' : (pct >= 25 ? '#f59e0b' : '#10b981');
+
+                    // Linhas de detalhe (faturas individuais desta transportadora)
+                    const detailRows = r.faturas.map(f => `
+                        <tr style="border-top:1px solid rgba(255,255,255,0.05);">
+                            <td style="padding:5px 10px;font-size:0.79rem;">${new Date(f.date).toLocaleDateString('pt-BR')}</td>
+                            <td style="padding:5px 10px;font-size:0.79rem;">${f.invoiceRef || '—'}</td>
+                            <td style="padding:5px 10px;text-align:center;font-size:0.79rem;">${f.nfCount || 0}</td>
+                            <td style="padding:5px 10px;text-align:right;color:#10b981;font-size:0.79rem;">${Utils.formatCurrency(f.calculatedValue || 0)}</td>
+                            <td style="padding:5px 10px;text-align:right;color:#f59e0b;font-size:0.79rem;">${Utils.formatCurrency(f.invoiceValue || 0)}</td>
+                            <td style="padding:5px 10px;text-align:right;font-weight:700;font-size:0.79rem;color:${(f.difference||0) > 0 ? '#ef4444' : '#3b82f6'};">${(f.difference||0) > 0 ? '+' : ''}${Utils.formatCurrency(f.difference || 0)}</td>
+                            <td style="padding:5px 10px;font-size:0.75rem;color:var(--text-secondary);" title="${f.justification || ''}">${f.justification ? f.justification.substring(0, 40) + (f.justification.length > 40 ? '…' : '') : '—'}</td>
+                        </tr>`).join('');
+
+                    return `
+                        <tr>
+                            <td style="font-weight:700;font-size:0.95rem;">${r.carrier}</td>
+                            <td style="text-align:center;">
+                                <span style="font-size:1.1rem;font-weight:700;color:#ef4444;">${r.count}</span>
+                                <span style="font-size:0.75rem;color:var(--text-secondary);"> / ${totalFat}</span>
+                            </td>
+                            <td style="text-align:right;font-weight:700;color:${diffColor};">${diffSign}${Utils.formatCurrency(r.totalDiff)}</td>
+                            <td style="text-align:right;color:var(--text-secondary);">${Utils.formatCurrency(r.maxDiff)}</td>
+                            <td style="text-align:center;">
+                                <span style="display:inline-block;background:rgba(239,68,68,0.1);border-radius:20px;padding:2px 12px;font-size:0.82rem;color:${pctColor};font-weight:700;">${pct}%</span>
+                            </td>
+                            <td style="text-align:center;font-size:0.82rem;color:${diffColor};font-weight:600;">${diffLabel}</td>
+                            <td style="text-align:center;">
+                                <button id="btnDetail_${idx}" onclick="window.toggleCarrierDetail(${idx})"
+                                    style="background:none;border:1px solid var(--border-color);border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--text-secondary);font-size:0.78rem;font-family:inherit;display:inline-flex;align-items:center;gap:3px;transition:all 0.15s;">
+                                    <span class="material-icons-round" style="font-size:0.95rem;">expand_more</span>Ver
+                                </button>
+                            </td>
+                        </tr>
+                        <tr id="carrierDetail_${idx}" style="display:none;">
+                            <td colspan="7" style="padding:0;">
+                                <div style="background:rgba(0,0,0,0.2);border-left:3px solid ${diffColor};padding:0.4rem 0;">
+                                    <table style="width:100%;border-collapse:collapse;">
+                                        <thead>
+                                            <tr style="color:var(--text-secondary);font-size:0.75rem;">
+                                                <th style="padding:4px 10px;text-align:left;font-weight:500;">Data</th>
+                                                <th style="padding:4px 10px;text-align:left;font-weight:500;">Ref. Fatura</th>
+                                                <th style="padding:4px 10px;text-align:center;font-weight:500;">NFs</th>
+                                                <th style="padding:4px 10px;text-align:right;font-weight:500;">Calculado</th>
+                                                <th style="padding:4px 10px;text-align:right;font-weight:500;">Fatura</th>
+                                                <th style="padding:4px 10px;text-align:right;font-weight:500;">Diferença</th>
+                                                <th style="padding:4px 10px;text-align:left;font-weight:500;">Justificativa</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>${detailRows}</tbody>
+                                    </table>
+                                </div>
+                            </td>
+                        </tr>`;
+                }).join('');
+            }
+        };
+
+        // Expande/recolhe o detalhe de uma transportadora no relatório
+        window.toggleCarrierDetail = (idx) => {
+            const detail = document.getElementById(`carrierDetail_${idx}`);
+            const btn    = document.getElementById(`btnDetail_${idx}`);
+            if (!detail) return;
+            const isOpen = detail.style.display !== 'none';
+            detail.style.display = isOpen ? 'none' : '';
+            if (btn) {
+                const icon = btn.querySelector('.material-icons-round');
+                if (icon) icon.textContent = isOpen ? 'expand_more' : 'expand_less';
+                btn.style.color           = isOpen ? 'var(--text-secondary)' : 'var(--primary-color)';
+                btn.style.borderColor     = isOpen ? 'var(--border-color)'   : 'var(--primary-color)';
+            }
+        };
+
         // Show invoice history modal
         window.showInvoiceHistory = () => {
             const history = Utils.getStorage('invoice_history') || [];

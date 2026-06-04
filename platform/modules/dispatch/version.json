@@ -1,6 +1,7 @@
 {
-    "change":  "v3.11.19 - fix: nome do usuario no campo Quem Confirmou; reducao largura coluna confirmacao; opcao Vendedor no modal",
-    "version":  "3.11.19",
-    "lastUpdate":  "2026-06-03",
-    "deployedAt": "2026-06-03 17:10"
+    "change":  "v3.11.20 - feat: segunda tela Analise de Faturas na aba Conferencia; separacao conformes/nao-conformes; relatorio de divergencia por transportadora com drill-down",
+    "version":  "3.11.20",
+    "lastUpdate":  "2026-06-04",
+    "deployedAt": "2026-06-04 08:52"
 }
+
