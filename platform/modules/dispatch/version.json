@@ -1,6 +1,6 @@
 {
-    "change":  "v3.11.23 - feat: Aba 'Análise de Faturas' completa - análise de conformidade, relatório de divergência por transportadora com detalhamento por fatura e estorno integrado",
-    "version":  "3.11.23",
+    "change":  "v3.11.24 - fix: botao Confirmar Estorno nao funcionava (campo senha comparado como u.password ao inves de u.pass) + validacao de senha vazia",
+    "version":  "3.11.24",
     "lastUpdate":  "2026-06-04",
-    "deployedAt": "2026-06-04 09:20"
+    "deployedAt": "2026-06-04 09:32"
 }

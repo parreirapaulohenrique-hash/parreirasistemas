@@ -4233,11 +4233,17 @@
                 return;
             }
 
+            if (!supervisorPass) {
+                Utils.showNotification('Informe a senha do supervisor.', 'error');
+                document.getElementById('estornoSupervisorPass').focus();
+                return;
+            }
+
             // Valida a senha do supervisor (mesmo sistema do modal de autorizaÃ§Ã£o)
             const users = Utils.getStorage('users') || [];
             const supervisor = users.find(u =>
                 (u.role === 'supervisor' || u.role === 'admin') &&
-                u.password === supervisorPass
+                u.pass === supervisorPass
             );
 
             if (!supervisor) {
