@@ -1,4 +1,4 @@
-﻿document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', async () => {
     try {
         // GLOBAL UI UTILS
         window.showToast = (msg) => {
@@ -13,36 +13,36 @@
             }, 3000);
         };
 
-        // FunÃ§Ã£o global para normalizar texto (remover acentos e caracteres corrompidos)
+        // Função global para normalizar texto (remover acentos e caracteres corrompidos)
         window.normalizeText = (str) => {
             if (!str) return '';
 
-            // Mapa de substituiÃ§Ã£o para caracteres acentuados (portuguÃªs)
+            // Mapa de substituição para caracteres acentuados (português)
             const accentMap = {
-                'Ã¡': 'a', 'Ã ': 'a', 'Ã£': 'a', 'Ã¢': 'a', 'Ã¤': 'a',
-                'Ã': 'A', 'Ã€': 'A', 'Ãƒ': 'A', 'Ã‚': 'A', 'Ã„': 'A',
-                'Ã©': 'e', 'Ã¨': 'e', 'Ãª': 'e', 'Ã«': 'e',
-                'Ã‰': 'E', 'Ãˆ': 'E', 'ÃŠ': 'E', 'Ã‹': 'E',
-                'Ã­': 'i', 'Ã¬': 'i', 'Ã®': 'i', 'Ã¯': 'i',
-                'Ã': 'I', 'ÃŒ': 'I', 'ÃŽ': 'I', 'Ã': 'I',
-                'Ã³': 'o', 'Ã²': 'o', 'Ãµ': 'o', 'Ã´': 'o', 'Ã¶': 'o',
-                'Ã“': 'O', 'Ã’': 'O', 'Ã•': 'O', 'Ã”': 'O', 'Ã–': 'O',
-                'Ãº': 'u', 'Ã¹': 'u', 'Ã»': 'u', 'Ã¼': 'u',
-                'Ãš': 'U', 'Ã™': 'U', 'Ã›': 'U', 'Ãœ': 'U',
-                'Ã§': 'c', 'Ã‡': 'C',
-                'Ã±': 'n', 'Ã‘': 'N'
+                'á': 'a', 'à': 'a', 'ã': 'a', 'â': 'a', 'ä': 'a',
+                'Á': 'A', 'À': 'A', 'Ã': 'A', 'Â': 'A', 'Ä': 'A',
+                'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
+                'É': 'E', 'È': 'E', 'Ê': 'E', 'Ë': 'E',
+                'í': 'i', 'ì': 'i', 'î': 'i', 'ï': 'i',
+                'Í': 'I', 'Ì': 'I', 'Î': 'I', 'Ï': 'I',
+                'ó': 'o', 'ò': 'o', 'õ': 'o', 'ô': 'o', 'ö': 'o',
+                'Ó': 'O', 'Ò': 'O', 'Õ': 'O', 'Ô': 'O', 'Ö': 'O',
+                'ú': 'u', 'ù': 'u', 'û': 'u', 'ü': 'u',
+                'Ú': 'U', 'Ù': 'U', 'Û': 'U', 'Ü': 'U',
+                'ç': 'c', 'Ç': 'C',
+                'ñ': 'n', 'Ñ': 'N'
             };
 
-            // Primeiro aplica o mapa de substituiÃ§Ã£o
+            // Primeiro aplica o mapa de substituição
             let result = '';
             for (let char of String(str)) {
                 result += accentMap[char] || char;
             }
 
-            // Depois tenta normalizar acentos que nÃ£o estavam no mapa
+            // Depois tenta normalizar acentos que não estavam no mapa
             result = result.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-            // Remove caracteres nÃ£o-imprimÃ­veis e corrompidos, mas mantÃ©m espaÃ§os e pontuaÃ§Ã£o bÃ¡sica
+            // Remove caracteres não-imprimíveis e corrompidos, mas mantém espaços e pontuação básica
             result = result.replace(/[^\x20-\x7E]/g, '');
 
             return result.trim();
@@ -52,7 +52,7 @@
         const loadingOverlay = document.createElement('div');
         loadingOverlay.id = 'syncOverlay';
         loadingOverlay.style = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.95);z-index:9999;display:flex;justify-content:center;align-items:center;flex-direction:column;font-family:sans-serif;";
-        loadingOverlay.innerHTML = '<div style="font-size:3rem;">â˜ï¸</div><h2 style="margin-top:20px;color:#333;">Sincronizando Dados...</h2><p>Conectando ao Banco de Dados Seguro</p>';
+        loadingOverlay.innerHTML = '<div style="font-size:3rem;">☁️</div><h2 style="margin-top:20px;color:#333;">Sincronizando Dados...</h2><p>Conectando ao Banco de Dados Seguro</p>';
         document.body.appendChild(loadingOverlay);
 
         // Cloud Sync
@@ -67,25 +67,25 @@
             if (loadingOverlay.parentNode) loadingOverlay.parentNode.removeChild(loadingOverlay);
         }
 
-        // â”€â”€ VERIFICAÃ‡ÃƒO DE CONECTIVIDADE FIREBASE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        // Se Firebase nÃ£o inicializou, avisa imediatamente
+        // ── VERIFICAÇÃO DE CONECTIVIDADE FIREBASE ───────────────────────────
+        // Se Firebase não inicializou, avisa imediatamente
         setTimeout(() => {
             if (!window.db || typeof firebase === 'undefined') {
-                console.error('âŒ [App] Firebase NÃƒO inicializou! Modo offline ativo.');
+                console.error('❌ [App] Firebase NÃO inicializou! Modo offline ativo.');
                 if (Utils.Cloud && Utils.Cloud._showOfflineBadge) {
-                    Utils.Cloud._showOfflineBadge('FIREBASE NÃƒO CONECTADO â€” Dados ficando apenas locais!');
+                    Utils.Cloud._showOfflineBadge('FIREBASE NÃO CONECTADO — Dados ficando apenas locais!');
                 }
             } else {
-                // Firebase OK â€” verifica tamanho dos dispatches
+                // Firebase OK — verifica tamanho dos dispatches
                 const dispatchesRaw = localStorage.getItem(Utils._storageKey('dispatches')) || '[]';
                 const dispSize = dispatchesRaw.length;
-                if (dispSize > 800000) { // 80% do limite â€” alerta preventivo
+                if (dispSize > 800000) { // 80% do limite — alerta preventivo
                     const kb = (dispSize/1024).toFixed(0);
-                    const msg = `âš ï¸ ATENÃ‡ÃƒO: HistÃ³rico de despachos estÃ¡ grande (${kb}KB de mÃ¡ximo 1000KB).\n\nRecomenda-se arquivar os registros antigos em RelatÃ³rios antes de atingir o limite e bloquear o sincronismo.`;
+                    const msg = `⚠️ ATENÇÃO: Histórico de despachos está grande (${kb}KB de máximo 1000KB).\n\nRecomenda-se arquivar os registros antigos em Relatórios antes de atingir o limite e bloquear o sincronismo.`;
                     console.warn(msg);
-                    if (window.showToast) window.showToast(`âš ï¸ HistÃ³rico de despachos grande: ${kb}KB. Arquive os dados antigos.`);
+                    if (window.showToast) window.showToast(`⚠️ Histórico de despachos grande: ${kb}KB. Arquive os dados antigos.`);
                 }
-                console.log(`âœ… [App] Firebase conectado. Dispatches: ${(dispSize/1024).toFixed(1)}KB`);
+                console.log(`✅ [App] Firebase conectado. Dispatches: ${(dispSize/1024).toFixed(1)}KB`);
             }
         }, 1500);
 
@@ -111,13 +111,13 @@
 
         // Fallback: se os clientes sumirem (localStorage limpo), restaura do backup do data.js
         if (clients.length === 0 && typeof window.initialClientes !== 'undefined') {
-            console.log("Restaurando clientes do backup estÃ¡tico...");
+            console.log("Restaurando clientes do backup estático...");
             clients = window.initialClientes;
             Utils.setStorage('clients', clients);
         }
         let rules = Utils.getStorage('freight_tables') || [];
 
-        // Removido inicializaÃ§Ã£o automÃ¡tica de dados de exemplo para evitar sobrescrever dados do usuÃ¡rio
+        // Removido inicialização automática de dados de exemplo para evitar sobrescrever dados do usuário
         // if (rules.length === 0 && window.initialTabelas) { ... }
 
         let carrierConfigs = Utils.getStorage('carrier_configs');
@@ -130,19 +130,19 @@
         // Load from storage - starts empty for new clients
         let carrierList = Utils.getStorage('carrier_list');
 
-        // CORREÃ‡ÃƒO: NÃ£o sobrescrever dados da nuvem
+        // CORREÇÃO: Não sobrescrever dados da nuvem
         const carrierListRaw = localStorage.getItem(Utils._storageKey('carrier_list'));
         if (!carrierListRaw || carrierListRaw === 'null' || carrierListRaw === 'undefined') {
-            // Cliente NOVO - comeÃ§a com lista vazia (mas nÃ£o envia para nuvem!)
+            // Cliente NOVO - começa com lista vazia (mas não envia para nuvem!)
             carrierList = [];
             localStorage.setItem(Utils._storageKey('carrier_list'), JSON.stringify(carrierList));
-            console.log('ðŸ†• Novo cliente: carrier_list inicializada vazia.');
+            console.log('🆕 Novo cliente: carrier_list inicializada vazia.');
         } else if (carrierListRaw === '[]') {
-            // Lista vazia no local - mas pode ter dados na nuvem, nÃ£o sobrescrever
+            // Lista vazia no local - mas pode ter dados na nuvem, não sobrescrever
             carrierList = [];
-            console.log('ðŸ“¦ carrier_list vazia localmente');
+            console.log('📦 carrier_list vazia localmente');
         } else {
-            console.log('ðŸ“¦ carrier_list carregada:', carrierList?.length || 0, 'transportadoras');
+            console.log('📦 carrier_list carregada:', carrierList?.length || 0, 'transportadoras');
         }
 
 
@@ -155,26 +155,26 @@
 
         // Users and Session State
         let users = Utils.getStorage('app_users');
-        // CORREÃ‡ÃƒO: SÃ³ cria admin padrÃ£o se REALMENTE nÃ£o houver nada salvo (nem local nem nuvem)
-        // Verifica se o localStorage estÃ¡ vazio E nÃ£o existe nada salvo
+        // CORREÇÃO: Só cria admin padrão se REALMENTE não houver nada salvo (nem local nem nuvem)
+        // Verifica se o localStorage está vazio E não existe nada salvo
         const rawUsers = localStorage.getItem(Utils._storageKey('app_users'));
         if (!rawUsers || rawUsers === 'null' || rawUsers === '[]' || rawUsers === 'undefined') {
-            // Verificar se hÃ¡ algo na nuvem antes de criar default
-            // Se acabamos de carregar da nuvem e estÃ¡ vazio, criamos o admin
+            // Verificar se há algo na nuvem antes de criar default
+            // Se acabamos de carregar da nuvem e está vazio, criamos o admin
             if (!users || !Array.isArray(users) || users.length === 0) {
-                console.log('ðŸ‘¤ Criando usuÃ¡rio admin padrÃ£o (nenhum usuÃ¡rio encontrado)');
+                console.log('👤 Criando usuário admin padrão (nenhum usuário encontrado)');
                 users = [{ name: 'Administrador', login: 'admin', pass: 'admin', role: 'supervisor' }];
-                // Salvar localmente, mas NÃƒO enviar para nuvem (para nÃ£o sobrescrever dados de outras sessÃµes)
+                // Salvar localmente, mas NÃO enviar para nuvem (para não sobrescrever dados de outras sessões)
                 localStorage.setItem(Utils._storageKey('app_users'), JSON.stringify(users));
             }
-            // JÃ¡ existem usuÃ¡rios salvos, usar eles
+            // Já existem usuários salvos, usar eles
             users = Utils.getStorage('app_users') || [];
-            console.log(`ðŸ‘¥ ${users.length} usuÃ¡rios carregados`);
+            console.log(`👥 ${users.length} usuários carregados`);
         }
 
         // Sellers: Load from Storage
         let sellers = Utils.getStorage('app_sellers') || [];
-        console.log(`ðŸ‘¤ ${sellers.length} vendedores carregados`);
+        console.log(`👤 ${sellers.length} vendedores carregados`);
 
         // App Settings: Load and Parametrize
         window.loadAppSettings = function() {
@@ -195,7 +195,7 @@
             };
             Utils.setStorage('app_settings', settings);
             window.app_settings = settings;
-            window.showToast('âœ… ConfiguraÃ§Ãµes salvas com sucesso!');
+            window.showToast('✅ Configurações salvas com sucesso!');
         };
         window.loadAppSettings();
 
@@ -255,10 +255,10 @@
             return storedUser && storedUser.role === 'supervisor';
         };
 
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ──────────────────────────────────────────────────────────────────────────────
         // Helper: Modal de senha de supervisor com input mascarado (type=password)
-        // Uso: window.requestSupervisorPassword('TÃ­tulo da aÃ§Ã£o', (supervisor) => { ... })
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // Uso: window.requestSupervisorPassword('Título da ação', (supervisor) => { ... })
+        // ──────────────────────────────────────────────────────────────────────────────
         window.requestSupervisorPassword = (title, onConfirm) => {
             // Injeta o modal na primeira chamada
             if (!document.getElementById('supPassModal')) {
@@ -274,11 +274,11 @@
                                 padding:28px 32px; min-width:320px; max-width:420px; width:90%;
                                 box-shadow:0 20px 60px rgba(0,0,0,0.5); font-family:inherit;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
-                            <span style="font-size:1.4rem;">ðŸ”</span>
+                            <span style="font-size:1.4rem;">🔐</span>
                             <div>
                                 <div style="font-size:0.7rem; color:#ef4444; font-weight:700;
                                             letter-spacing:0.08em; text-transform:uppercase;
-                                            margin-bottom:2px;">AÃ‡ÃƒO RESTRITA</div>
+                                            margin-bottom:2px;">AÇÃO RESTRITA</div>
                                 <div id="supPassTitle" style="font-size:1rem; font-weight:600;
                                             color:#f1f5f9;"></div>
                             </div>
@@ -295,11 +295,11 @@
                             <button id="supPassToggle" type="button"
                                 onclick="(function(){var i=document.getElementById('supPassInput');
                                     var b=document.getElementById('supPassToggle');
-                                    if(i.type==='password'){i.type='text';b.textContent='ðŸ™ˆ';}
-                                    else{i.type='password';b.textContent='ðŸ‘';}})()"
+                                    if(i.type==='password'){i.type='text';b.textContent='🙈';}
+                                    else{i.type='password';b.textContent='👁';}})()"
                                 style="position:absolute; right:10px; top:50%; transform:translateY(-50%);
                                        background:none; border:none; cursor:pointer; font-size:1rem;
-                                       color:#94a3b8; padding:0; line-height:1;">ðŸ‘</button>
+                                       color:#94a3b8; padding:0; line-height:1;">👁</button>
                         </div>
                         <div id="supPassError" style="color:#ef4444; font-size:0.8rem;
                                      min-height:18px; margin-top:6px;"></div>
@@ -332,14 +332,14 @@
             titleEl.textContent = title;
             input.value = '';
             input.type  = 'password';
-            document.getElementById('supPassToggle').textContent = 'ðŸ‘';
+            document.getElementById('supPassToggle').textContent = '👁';
             errEl.textContent = '';
             modal.style.display = 'flex';
             setTimeout(() => input.focus(), 80);
 
             const close = () => { modal.style.display = 'none'; };
 
-            // Clona botÃµes para limpar listeners antigos
+            // Clona botões para limpar listeners antigos
             const newOk  = btnOk.cloneNode(true);
             const newCan = btnCan.cloneNode(true);
             btnOk.parentNode.replaceChild(newOk, btnOk);
@@ -350,7 +350,7 @@
                 const allUsers = Utils.getStorage('app_users') || [];
                 const supervisor = allUsers.find(u => u.role === 'supervisor' && u.pass === pass);
                 if (!supervisor) {
-                    errEl.textContent = 'âŒ Senha incorreta ou sem permissÃ£o de supervisor.';
+                    errEl.textContent = '❌ Senha incorreta ou sem permissão de supervisor.';
                     input.focus();
                     return;
                 }
@@ -376,15 +376,15 @@
 
             const userRole = storedUser ? (storedUser.role || '').toLowerCase().trim() : '';
 
-            console.log('ðŸ” [Role Check] User:', storedUser);
-            console.log('ðŸ” [Role Check] Role detected:', userRole);
+            console.log('🔐 [Role Check] User:', storedUser);
+            console.log('🔐 [Role Check] Role detected:', userRole);
 
             const isSup = userRole === 'supervisor' || userRole === 'admin';
             const isMotoboy = userRole === 'motoboy';
             const isMotorista = userRole === 'motorista';
             const isDeliveryUser = isMotoboy || isMotorista;
 
-            console.log('ðŸ” [Role Check] isMotoboy:', isMotoboy, '| isMotorista:', isMotorista);
+            console.log('🔐 [Role Check] isMotoboy:', isMotoboy, '| isMotorista:', isMotorista);
 
             // All navigation items
             const allNavItems = {
@@ -405,7 +405,7 @@
 
             // MOTOBOY: Show ONLY Moto Entrega
             if (isMotoboy) {
-                console.log('ðŸï¸ Aplicando restriÃ§Ãµes de MOTOBOY');
+                console.log('🏍️ Aplicando restrições de MOTOBOY');
                 Object.entries(allNavItems).forEach(([key, el]) => {
                     if (el) el.style.display = (key === 'moto') ? 'flex' : 'none';
                 });
@@ -419,7 +419,7 @@
 
             // MOTORISTA: Show ONLY Carro Entrega
             if (isMotorista) {
-                console.log('ðŸš— Aplicando restriÃ§Ãµes de MOTORISTA');
+                console.log('🚗 Aplicando restrições de MOTORISTA');
                 Object.entries(allNavItems).forEach(([key, el]) => {
                     if (el) el.style.display = (key === 'carro') ? 'flex' : 'none';
                 });
@@ -440,7 +440,7 @@
                 document.body.classList.remove('is-user', 'is-motoboy', 'is-motorista', 'is-delivery-user');
                 // Show all cards including admin-only
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
-                // OcorrÃªncias: visÃ­vel para supervisor/admin
+                // Ocorrências: visível para supervisor/admin
                 if (allNavItems.occurrences) allNavItems.occurrences.style.display = 'flex';
                 return;
             }
@@ -451,8 +451,8 @@
             if (allNavItems.appSettings) allNavItems.appSettings.style.display = 'none';
             if (allNavItems.system) allNavItems.system.style.display = 'flex'; // Show system for client registration
             if (allNavItems.acontec) allNavItems.acontec.style.display = 'none';
-            if (allNavItems.occurrences) allNavItems.occurrences.style.display = 'none'; // OcorrÃªncias: apenas supervisor
-            // Moto e Carro agora visÃ­veis para Operacional
+            if (allNavItems.occurrences) allNavItems.occurrences.style.display = 'none'; // Ocorrências: apenas supervisor
+            // Moto e Carro agora visíveis para Operacional
             if (allNavItems.moto) allNavItems.moto.style.display = 'flex';
             if (allNavItems.carro) allNavItems.carro.style.display = 'flex';
 
@@ -478,25 +478,25 @@
             });
         }
 
-        // === CARREGAR USUÃRIOS AO DIGITAR TENANT ===
-        // Quando o usuÃ¡rio digitar o tenant e sair do campo, busca os usuÃ¡rios desse tenant
+        // === CARREGAR USUÁRIOS AO DIGITAR TENANT ===
+        // Quando o usuário digitar o tenant e sair do campo, busca os usuários desse tenant
         const tenantInput = document.getElementById('loginTenantInput');
         if (tenantInput) {
-            // FunÃ§Ã£o que busca usuÃ¡rios do tenant
+            // Função que busca usuários do tenant
             const loadUsersForTenant = async () => {
                 const tenantId = tenantInput.value.trim().toLowerCase();
                 if (!tenantId) return;
 
-                // Verificar se Firebase estÃ¡ disponÃ­vel
+                // Verificar se Firebase está disponível
                 if (!window.db && typeof firebase !== 'undefined') {
                     window.db = firebase.firestore();
                 }
                 if (!window.db) {
-                    console.warn('Firebase nÃ£o disponÃ­vel para carregar usuÃ¡rios');
+                    console.warn('Firebase não disponível para carregar usuários');
                     return;
                 }
 
-                console.log(`ðŸ‘¥ [Login] Buscando usuÃ¡rios do tenant: ${tenantId}...`);
+                console.log(`👥 [Login] Buscando usuários do tenant: ${tenantId}...`);
 
                 try {
                     const doc = await window.db.collection('tenants').doc(tenantId).collection('legacy_store').doc('app_users').get();
@@ -510,24 +510,24 @@
                         }
 
                         if (usersFromCloud.length > 0) {
-                            // Popular dropdown com usuÃ¡rios encontrados
+                            // Popular dropdown com usuários encontrados
                             loginUserSelect.innerHTML = usersFromCloud.map(u =>
                                 `<option value="${u.login}">${u.name} (${u.login})</option>`
                             ).join('');
-                            console.log(`âœ… [Login] ${usersFromCloud.length} usuÃ¡rios carregados para o dropdown`);
+                            console.log(`✅ [Login] ${usersFromCloud.length} usuários carregados para o dropdown`);
                         } else {
-                            // Se nÃ£o tem usuÃ¡rios, mantÃ©m sÃ³ admin padrÃ£o
+                            // Se não tem usuários, mantém só admin padrão
                             loginUserSelect.innerHTML = '<option value="admin">Administrador (admin)</option>';
-                            console.log('âš ï¸ [Login] Nenhum usuÃ¡rio encontrado, usando admin padrÃ£o');
+                            console.log('⚠️ [Login] Nenhum usuário encontrado, usando admin padrão');
                         }
                     } else {
-                        // Tenant existe mas sem usuÃ¡rios cadastrados
+                        // Tenant existe mas sem usuários cadastrados
                         loginUserSelect.innerHTML = '<option value="admin">Administrador (admin)</option>';
-                        console.log('âš ï¸ [Login] Documento app_users nÃ£o existe no tenant');
+                        console.log('⚠️ [Login] Documento app_users não existe no tenant');
                     }
                 } catch (error) {
-                    console.error('âŒ [Login] Erro ao carregar usuÃ¡rios:', error);
-                    // Em caso de erro, mantÃ©m admin padrÃ£o
+                    console.error('❌ [Login] Erro ao carregar usuários:', error);
+                    // Em caso de erro, mantém admin padrão
                     loginUserSelect.innerHTML = '<option value="admin">Administrador (admin)</option>';
                 }
             };
@@ -535,7 +535,7 @@
             // Executar ao sair do campo (blur)
             tenantInput.addEventListener('blur', loadUsersForTenant);
 
-            // TambÃ©m executar se usuÃ¡rio pressionar Enter no campo de tenant
+            // Também executar se usuário pressionar Enter no campo de tenant
             tenantInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -544,7 +544,7 @@
                 }
             });
 
-            // Se jÃ¡ tem valor no campo (ex: value="parreiralog"), carregar automaticamente
+            // Se já tem valor no campo (ex: value="parreiralog"), carregar automaticamente
             if (tenantInput.value.trim()) {
                 // Pequeno delay para garantir que Firebase esteja pronto
                 setTimeout(loadUsersForTenant, 500);
@@ -553,7 +553,7 @@
 
         if (btnLogin) {
 
-            // ExpÃµe o handler globalmente para o onclick do HTML (proteÃ§Ã£o contra falha de addEventListener)
+            // Expõe o handler globalmente para o onclick do HTML (proteção contra falha de addEventListener)
             window._doDispatchLogin = async () => {
                 const login = loginUserSelect.value;
                 const pass = loginPassInput.value;
@@ -565,23 +565,23 @@
                     return;
                 }
 
-                // Mostrar loading durante validaÃ§Ã£o
+                // Mostrar loading durante validação
                 btnLogin.disabled = true;
-                btnLogin.innerHTML = 'â³ Verificando empresa...';
+                btnLogin.innerHTML = '⏳ Verificando empresa...';
 
                 // Security: Valida tenant consultando o Firestore
-                // (substitui whitelist hardcoded â€” qualquer tenant cadastrado no painel master
-                //  com { ativo: true } Ã© automaticamente aceito, sem necessidade de novo deploy)
+                // (substitui whitelist hardcoded — qualquer tenant cadastrado no painel master
+                //  com { ativo: true } é automaticamente aceito, sem necessidade de novo deploy)
                 try {
                     if (window.db) {
                         const tenantDoc = await window.db.collection('tenants').doc(tenantId).get();
                         if (!tenantDoc.exists || tenantDoc.data().ativo === false) {
                             btnLogin.disabled = false;
                             btnLogin.innerHTML = 'ACESSAR SISTEMA';
-                            alert(`A empresa '${tenantId}' nÃ£o estÃ¡ habilitada no sistema.\n\nVerifique a grafia ou entre em contato com o suporte.`);
+                            alert(`A empresa '${tenantId}' não está habilitada no sistema.\n\nVerifique a grafia ou entre em contato com o suporte.`);
                             return;
                         }
-                        console.log(`âœ… [Login] Tenant validado no Firestore: ${tenantId}`);
+                        console.log(`✅ [Login] Tenant validado no Firestore: ${tenantId}`);
                     } else {
                         // Firebase offline: fallback para whitelist local
                         const storedTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
@@ -590,25 +590,25 @@
                         if (!ALLOWED_TENANTS.includes(tenantId)) {
                             btnLogin.disabled = false;
                             btnLogin.innerHTML = 'ACESSAR SISTEMA';
-                            alert(`A empresa '${tenantId}' nÃ£o estÃ¡ habilitada.\n\nVerifique a grafia ou contate o suporte.`);
+                            alert(`A empresa '${tenantId}' não está habilitada.\n\nVerifique a grafia ou contate o suporte.`);
                             return;
                         }
-                        console.warn('[Login] Firebase indisponÃ­vel â€” validaÃ§Ã£o via whitelist local.');
+                        console.warn('[Login] Firebase indisponível — validação via whitelist local.');
                     }
                 } catch (tenantCheckErr) {
                     console.warn('[Login] Erro ao validar tenant no Firestore:', tenantCheckErr.message);
-                    // Em caso de erro de rede, permite continuar (fail-open para nÃ£o bloquear clientes)
+                    // Em caso de erro de rede, permite continuar (fail-open para não bloquear clientes)
                 }
 
                 // Continua o loading para o processo de login
-                btnLogin.innerHTML = 'â³ Carregando...';
+                btnLogin.innerHTML = '⏳ Carregando...';
 
                 // Check if tenant changed
                 const currentTenant = localStorage.getItem('app_tenant_id');
                 const tenantChanged = currentTenant && currentTenant !== tenantId;
 
                 if (tenantChanged) {
-                    if (confirm(`Troca de empresa detectada (de ${currentTenant} para ${tenantId}).\n\nIsso carregarÃ¡ o ambiente da nova empresa e limparÃ¡ os dados da tela atual.\n\nDeseja continuar?`)) {
+                    if (confirm(`Troca de empresa detectada (de ${currentTenant} para ${tenantId}).\n\nIsso carregará o ambiente da nova empresa e limpará os dados da tela atual.\n\nDeseja continuar?`)) {
                         // Clear Business Data
                         ['dispatches', 'freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients'].forEach(k => {
                             localStorage.removeItem(k);
@@ -623,18 +623,18 @@
                     }
                 }
 
-                // CRÃTICO: Definir tenant ANTES de qualquer operaÃ§Ã£o
+                // CRÍTICO: Definir tenant ANTES de qualquer operação
                 const needsSync = !currentTenant || currentTenant !== tenantId;
 
                 if (needsSync) {
-                    console.log(`ðŸ¢ Configurando tenant: ${tenantId}`);
+                    console.log(`🏢 Configurando tenant: ${tenantId}`);
 
-                    // CRÃTICO: Limpar TODOS os dados locais antes de carregar novo tenant
-                    // Isso garante que dados de outro tenant nÃ£o vazem
+                    // CRÍTICO: Limpar TODOS os dados locais antes de carregar novo tenant
+                    // Isso garante que dados de outro tenant não vazem
                     const keysToClean = ['dispatches', 'freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients'];
                     keysToClean.forEach(k => {
                         localStorage.removeItem(k);
-                        console.log(`ðŸ§¹ Limpando local: ${k}`);
+                        console.log(`🧹 Limpando local: ${k}`);
                     });
 
                     // Definir novo tenant
@@ -642,12 +642,12 @@
 
                     // Carregar dados DESTE tenant da nuvem
                     if (Utils.Cloud && Utils.Cloud.hasTenant()) {
-                        console.log(`ðŸ“¥ Carregando dados do tenant: ${tenantId}...`);
+                        console.log(`📥 Carregando dados do tenant: ${tenantId}...`);
                         await Utils.Cloud.loadAll();
                     }
                 }
 
-                // Re-read users from storage (agora jÃ¡ com dados do tenant correto)
+                // Re-read users from storage (agora já com dados do tenant correto)
                 users = Utils.getStorage('app_users') || [];
 
                 // Login Logic
@@ -677,7 +677,7 @@
                     if (window.showSection) window.showSection('dashboard');
                     else if (window.renderDashboard) window.renderDashboard();
 
-                    // Inicializa mÃ³dulo de OcorrÃªncias
+                    // Inicializa módulo de Ocorrências
                     if (window.OcorrenciasModule && window.db && tenantId) {
                         window.OcorrenciasModule.init(window.db, tenantId, user);
                     }
@@ -685,10 +685,10 @@
 
                 } else {
 
-                    // Restaurar botÃ£o de login
+                    // Restaurar botão de login
                     btnLogin.disabled = false;
                     btnLogin.innerHTML = 'ACESSAR SISTEMA';
-                    alert('Credenciais invÃ¡lidas ou usuÃ¡rio nÃ£o cadastrado nesta empresa.');
+                    alert('Credenciais inválidas ou usuário não cadastrado nesta empresa.');
                 }
             };
 
@@ -703,7 +703,7 @@
 
         // Central Normalization Utility
         const norm = (s) => String(s || '')
-            .replace(/â€š/g, 'Ã‡')
+            .replace(/‚/g, 'Ç')
             .normalize("NFD")
             .replace(/[\u0300-\u036f]/g, "")
             .toUpperCase()
@@ -734,7 +734,7 @@
 
             if (currentSearchMatches.length === 0) {
                 clientResult.innerHTML = `
-                <div style="font-weight: 600; color: var(--accent-danger)">Cliente nÃ£o encontrado</div>
+                <div style="font-weight: 600; color: var(--accent-danger)">Cliente não encontrado</div>
                 <div style="font-size: 0.85rem; color: var(--text-secondary);">Verifique o termo ou carregue o CSV atualizado.</div>
             `;
                 clientResult.style.display = 'block';
@@ -820,7 +820,7 @@
             if (found) selectClient(found);
         };
 
-        // FunÃ§Ã£o auxiliar para verificar cobertura (dentro do escopo para acessar 'rules')
+        // Função auxiliar para verificar cobertura (dentro do escopo para acessar 'rules')
         const checkLogisticsCoverage = (clientCity, clientNeighborhood) => {
             const norm = (s) => String(s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase();
             const targetCity = norm(clientCity);
@@ -828,7 +828,7 @@
 
             if (!targetCity) return false;
 
-            // Usa a variÃ¡vel 'rules' do escopo global do init
+            // Usa a variável 'rules' do escopo global do init
             if (!rules || rules.length === 0) return false;
 
             return rules.some(r => {
@@ -850,21 +850,21 @@
             focusedClientIndex = -1;
             currentSearchMatches = [];
 
-            // Verificar cobertura logÃ­stica
+            // Verificar cobertura logística
             const hasCoverage = checkLogisticsCoverage(client.cidade, client.bairro);
 
             let statusHtml = '';
             let borderStyle = '';
 
             if (hasCoverage) {
-                statusHtml = `<div style="margin-top: 5px; font-size: 0.75rem; color: var(--accent-success);">âœ“ Cliente Selecionado</div>`;
+                statusHtml = `<div style="margin-top: 5px; font-size: 0.75rem; color: var(--accent-success);">✓ Cliente Selecionado</div>`;
                 borderStyle = '4px solid var(--accent-success)';
             } else {
                 statusHtml = `
                     <div style="margin-top: 8px; padding: 8px; background: rgba(239, 68, 68, 0.1); border-radius: 4px; color: var(--accent-danger);">
                         <div style="display:flex; gap:6px; align-items:center; font-weight:700; margin-bottom:4px;">
                             <span class="material-icons-round" style="font-size: 1.1rem;">warning</span>
-                            SEM COBERTURA LOGÃSTICA
+                            SEM COBERTURA LOGÍSTICA
                         </div>
                         <div style="font-size: 0.75rem; line-height: 1.3;">
                             Nenhuma transportadora atende <strong>${client.cidade}</strong> ou o bairro <strong>${client.bairro || ''}</strong> (Redespacho).
@@ -874,7 +874,7 @@
                 `;
                 borderStyle = '4px solid var(--accent-danger)';
                 // Opcional: Toast Alert
-                window.showToast(`âš ï¸ AtenÃ§Ã£o: Cliente sem cobertura de transporte cadastrada!`);
+                window.showToast(`⚠️ Atenção: Cliente sem cobertura de transporte cadastrada!`);
             }
 
             clientResult.innerHTML = `
@@ -888,7 +888,7 @@
             clientResult.style.borderLeft = borderStyle;
 
 
-            // Focar no Vendedor apÃ³s selecionar o cliente (v3.7.1)
+            // Focar no Vendedor após selecionar o cliente (v3.7.1)
             setTimeout(() => {
                 const sellerEl = document.getElementById('inputSeller');
                 if (sellerEl) sellerEl.focus();
@@ -967,17 +967,17 @@
                         return { dl, label: m[0] };
                     }).sort((a, b) => a.dl - b.dl);
                     
-                    // Encontra o PRIMEIRO horÃ¡rio aplicÃ¡vel, ou seja, onde o pacote foi lanÃ§ado ANTES do horÃ¡rio de saÃ­da
+                    // Encontra o PRIMEIRO horário aplicável, ou seja, onde o pacote foi lançado ANTES do horário de saída
                     const eligibleDeadline = times.find(t => launchDate <= t.dl);
                     
                     if (eligibleDeadline) {
-                        // O pacote tinha chance de pegar ESSE carro, confirmamos se o carro jÃ¡ foi embora (now > dl)
+                        // O pacote tinha chance de pegar ESSE carro, confirmamos se o carro já foi embora (now > dl)
                         if (now > eligibleDeadline.dl) {
                             return { isLate: true, reason: `Atrasado (Limite: ${eligibleDeadline.label})` };
                         }
                     }
-                    // Se nÃ£o tiver nenhum eligibleDeadline, ele foi postado DEPOIS de todos os despachos do dia.
-                    // Portanto, nÃ£o estÃ¡ atrasado. Espera o carro do dia seguinte pacificamente.
+                    // Se não tiver nenhum eligibleDeadline, ele foi postado DEPOIS de todos os despachos do dia.
+                    // Portanto, não está atrasado. Espera o carro do dia seguinte pacificamente.
                 }
             }
             return { isLate: false };
@@ -997,10 +997,10 @@
                     modal.innerHTML = `
                     <div class="login-card" style="text-align: center; max-width: 400px; animation: fadeIn 0.3s ease; border: 1px solid var(--accent-danger);">
                         <span class="material-icons-round" style="font-size: 3rem; color: var(--accent-danger); margin-bottom: 1rem;">priority_high</span>
-                        <h3 style="margin: 0 0 1rem 0; color: var(--accent-danger);">AtenÃ§Ã£o: Atrasos Detectados</h3>
+                        <h3 style="margin: 0 0 1rem 0; color: var(--accent-danger);">Atenção: Atrasos Detectados</h3>
                         <p style="color: var(--text-secondary); margin-bottom: 1.5rem; line-height: 1.5;">
-                            Existem notas fiscais na lista de montagem que <strong>excederam o horÃ¡rio limite</strong> de saÃ­da.<br><br>
-                            Verifique os itens com Ã­cone <span class="material-icons-round" style="font-size:1.2rem; vertical-align:middle; color:var(--accent-danger);">alarm_off</span> na coluna de Status.
+                            Existem notas fiscais na lista de montagem que <strong>excederam o horário limite</strong> de saída.<br><br>
+                            Verifique os itens com ícone <span class="material-icons-round" style="font-size:1.2rem; vertical-align:middle; color:var(--accent-danger);">alarm_off</span> na coluna de Status.
                         </p>
                         <button class="btn btn-primary" onclick="document.getElementById('dispatchAlertModal').style.display='none'" style="width: 100%; justify-content: center; background: var(--accent-danger); border-color: var(--accent-danger);">
                             Entendido
@@ -1026,13 +1026,13 @@
             if (breadLabel) {
                 const labels = {
                     'dashboard': 'Painel',
-                    'quote': 'CotaÃ§Ã£o RÃ¡pida',
+                    'quote': 'Cotação Rápida',
                     'dispatch': 'Montagem de Carga',
                     'rules': 'Tabelas de Frete',
-                    'reports': 'RelatÃ³rios & KPIs',
+                    'reports': 'Relatórios & KPIs',
                     'configs': 'Config. Transportadoras',
                     'system': 'Cadastros',
-                    'app-settings': 'ConfiguraÃ§Ãµes'
+                    'app-settings': 'Configurações'
                 };
                 breadLabel.innerText = labels[id] || id;
             }
@@ -1061,7 +1061,7 @@
                 renderCarrierConfigs();
             }
             if (id === 'system') {
-                // Renderizar atributos assÃ­ncronos pequenos delay para transiÃ§Ã£o visÃ­vel
+                // Renderizar atributos assíncronos pequenos delay para transição visível
                 setTimeout(() => {
                     if (window.renderUserList) window.renderUserList();
                     if (window.renderClientsList) window.renderClientsList();
@@ -1086,22 +1086,22 @@
             const select = document.getElementById('deliveryTypeSelector');
             if (!select) return;
 
-            // OpÃ§Ã£o padrÃ£o (Direto/PrÃ³prio)
-            // Salva o valor atual caso esteja re-renderizando para nÃ£o perder seleÃ§Ã£o
+            // Opção padrão (Direto/Próprio)
+            // Salva o valor atual caso esteja re-renderizando para não perder seleção
             const currentVal = select.value;
 
-            let optionsHtml = '<option value="direto">ðŸ“¦ Direto (PrÃ³prio)</option>';
+            let optionsHtml = '<option value="direto">📦 Direto (Próprio)</option>';
 
             const users = Utils.getStorage('app_users') || [];
 
             // Filtra Motoboys
             users.filter(u => u.role === 'motoboy').forEach(u => {
-                optionsHtml += `<option value="moto_${u.login}">ðŸï¸ ${u.name}</option>`;
+                optionsHtml += `<option value="moto_${u.login}">🏍️ ${u.name}</option>`;
             });
 
             // Filtra Motoristas
             users.filter(u => u.role === 'motorista').forEach(u => {
-                optionsHtml += `<option value="carro_${u.login}">ðŸš— ${u.name}</option>`;
+                optionsHtml += `<option value="carro_${u.login}">🚗 ${u.name}</option>`;
             });
 
             select.innerHTML = optionsHtml;
@@ -1113,7 +1113,7 @@
         };
 
         // Driver view rendering (for motoboy / motorista)
-        // NOVA LÃ“GICA: Agrupar por motorista em vez de filtrar
+        // NOVA LÓGICA: Agrupar por motorista em vez de filtrar
         function renderDriverView() {
 
             const container = document.getElementById('driverDeliveriesList');
@@ -1122,9 +1122,9 @@
             // Buscar todas as entregas com deliveryStatus === 'em_entrega'
             const allDeliveries = history.filter(d => d.deliveryStatus === 'em_entrega');
 
-            console.log('ðŸ“‹ [DriverView] Total entregas em_entrega:', allDeliveries.length);
+            console.log('📋 [DriverView] Total entregas em_entrega:', allDeliveries.length);
 
-            // --- ESTILOS MOBILE ESPECÃFICOS ---
+            // --- ESTILOS MOBILE ESPECÍFICOS ---
             const styleId = 'driver-mobile-style';
             if (!document.getElementById(styleId)) {
                 const style = document.createElement('style');
@@ -1231,7 +1231,7 @@
             // --- AGRUPAR POR MOTORISTA ---
             const grouped = {};
             allDeliveries.forEach(d => {
-                const driverKey = d.driverName || 'NÃ£o AtribuÃ­do';
+                const driverKey = d.driverName || 'Não Atribuído';
                 if (!grouped[driverKey]) grouped[driverKey] = [];
                 grouped[driverKey].push(d);
             });
@@ -1240,7 +1240,7 @@
 
             Object.keys(grouped).sort().forEach(driverName => {
                 const items = grouped[driverName];
-                const icon = items[0]?.deliveryType === 'carro' ? 'ðŸš—' : 'ðŸï¸';
+                const icon = items[0]?.deliveryType === 'carro' ? '🚗' : '🏍️';
 
                 html += `
                 <div class="driver-section">
@@ -1292,12 +1292,12 @@
             const idx = all.findIndex(d => d.id === id);
 
             if (idx === -1) {
-                alert('Entrega nÃ£o encontrada.');
+                alert('Entrega não encontrada.');
                 return;
             }
 
             if (!navigator.geolocation) {
-                alert('GeolocalizaÃ§Ã£o nÃ£o suportada neste dispositivo.');
+                alert('Geolocalização não suportada neste dispositivo.');
                 return;
             }
 
@@ -1313,13 +1313,13 @@
                 // Salvar
                 Utils.saveRaw('dispatches', JSON.stringify(all));
 
-                showToast('âœ… Entrega confirmada!');
+                showToast('✅ Entrega confirmada!');
                 renderDriverView();
                 if (window.renderAppHistory) window.renderAppHistory();
 
             }, err => {
-                console.error('Erro geolocalizaÃ§Ã£o:', err);
-                alert('NÃ£o foi possÃ­vel obter localizaÃ§Ã£o. Permita o acesso Ã  localizaÃ§Ã£o.');
+                console.error('Erro geolocalização:', err);
+                alert('Não foi possível obter localização. Permita o acesso à localização.');
             });
         };
 
@@ -1387,10 +1387,10 @@
                     let allHistory = window._dispatchesFullCache || localHistory;
                     let originalDispatch = allHistory.find(d => d.invoice === mainNF);
 
-                    // Se nÃ£o achou e o cache nÃ£o foi carregado, busca no Firestore
+                    // Se não achou e o cache não foi carregado, busca no Firestore
                     if (!originalDispatch && !window._dispatchesFullCache) {
                         try {
-                            console.log('[Complemento] NF nÃ£o encontrada localmente. Buscando no Firestore...');
+                            console.log('[Complemento] NF não encontrada localmente. Buscando no Firestore...');
                             const fullHistory = await Utils.Cloud.getFullDispatchesHistory();
                             window._dispatchesFullCache = fullHistory;
                             originalDispatch = fullHistory.find(d => d.invoice === mainNF);
@@ -1420,12 +1420,12 @@
             const sellerId = document.getElementById('inputSeller').value;
             if (!sellerId) {
                 if (!silent) {
-                    alert('Por favor, selecione o Vendedor ResponsÃ¡vel.');
+                    alert('Por favor, selecione o Vendedor Responsável.');
                 } else {
                     document.getElementById('resultsArea').innerHTML = `
                         <div style="text-align: center; color: var(--accent-danger); margin-top: 4rem;">
                             <span class="material-icons-round" style="font-size: 3rem; opacity: 0.5;">support_agent</span>
-                            <p style="font-weight: 600;">Selecione o Vendedor ResponsÃ¡vel para calcular.</p>
+                            <p style="font-weight: 600;">Selecione o Vendedor Responsável para calcular.</p>
                         </div>
                     `;
                 }
@@ -1449,7 +1449,7 @@
                     document.getElementById('resultsArea').innerHTML = `
                         <div style="text-align: center; color: var(--text-secondary); margin-top: 4rem;">
                             <span class="material-icons-round" style="font-size: 3rem; opacity: 0.3;">local_shipping</span>
-                            <p>Informe Valor, Peso e Volume maiores que zero para ver as opÃ§Ãµes.</p>
+                            <p>Informe Valor, Peso e Volume maiores que zero para ver as opções.</p>
                         </div>
                     `;
                 }
@@ -1476,7 +1476,7 @@
                 if (originalDispatch) {
                     targetCarrier = norm(originalDispatch.carrier);
 
-                    // Garante que o cliente do complemento Ã© o mesmo da NF principal
+                    // Garante que o cliente do complemento é o mesmo da NF principal
                     const clienteNomeAtual = selectedClient ? (selectedClient.nome || selectedClient.razaoSocial || '') : '';
                     if (norm(clienteNomeAtual) !== norm(originalDispatch.client)) {
                         const foundCorrect = clients.find(c => norm(c.nome) === norm(originalDispatch.client));
@@ -1493,7 +1493,7 @@
                 } else {
                     resultsArea.innerHTML = `<div style="text-align: center; color: var(--text-secondary); margin-top: 4rem;">
                     <span class="material-icons-round" style="font-size: 3rem; opacity: 0.3;">search_off</span>
-                    <p>NF Principal "${mainNF}" nÃ£o encontrada. Aguarde o carregamento do histÃ³rico ou acesse a aba Montagem de Carga primeiro.</p>
+                    <p>NF Principal "${mainNF}" não encontrada. Aguarde o carregamento do histórico ou acesse a aba Montagem de Carga primeiro.</p>
                 </div>`;
                     return;
                 }
@@ -1531,12 +1531,12 @@
 
             if (cityRules.length === 0) {
                 if (!silent) {
-                    if (targetCarrier) alert(`A transportadora ${targetCarrier} nÃ£o possui tabela para a cidade ${city}.`);
+                    if (targetCarrier) alert(`A transportadora ${targetCarrier} não possui tabela para a cidade ${city}.`);
                     else alert(`Nenhuma tabela de frete encontrada para ${city}.`);
                 }
                 resultsArea.innerHTML = `<div style="text-align: center; color: var(--text-secondary); margin-top: 4rem;">
                 <span class="material-icons-round" style="font-size: 3rem; opacity: 0.3;">error_outline</span>
-                <p>${targetCarrier ? `A transportadora ${targetCarrier} (da NF ${mainNF}) nÃ£o possui tabela para esta cidade.` : 'Nenhuma opÃ§Ã£o de frete disponÃ­vel.'}</p>
+                <p>${targetCarrier ? `A transportadora ${targetCarrier} (da NF ${mainNF}) não possui tabela para esta cidade.` : 'Nenhuma opção de frete disponível.'}</p>
             </div>`;
                 return;
             }
@@ -1651,7 +1651,7 @@
 
             let validOptions = options.filter(opt => opt.total > 0);
             
-            // v3.7.9 - Sempre mostrar opÃ§Ã£o FOB como uma das opÃ§Ãµes de cotaÃ§Ã£o (Ãºltima)
+            // v3.7.9 - Sempre mostrar opção FOB como uma das opções de cotação (última)
             if (!validOptions.some(opt => opt.carrier === 'FOB')) {
                 validOptions.push({
                     carrier: 'FOB',
@@ -1667,26 +1667,26 @@
             }
 
             validOptions.sort((a, b) => {
-                // 1. PreÃ§o (Menor Ã© melhor) - Use epsilon for float comparison
+                // 1. Preço (Menor é melhor) - Use epsilon for float comparison
                 if (Math.abs(a.total - b.total) > 0.01) return a.total - b.total;
 
-                // 2. Confiabilidade (Maior Ã© melhor)
+                // 2. Confiabilidade (Maior é melhor)
                 const relA = (carrierInfo[a.carrier] && carrierInfo[a.carrier].reliability) || 3;
                 const relB = (carrierInfo[b.carrier] && carrierInfo[b.carrier].reliability) || 3;
                 if (relA !== relB) return relB - relA; // Descending
 
-                // 3. Sem Redespacho (PreferÃªncia para quem NÃƒO tem redespacho)
+                // 3. Sem Redespacho (Preferência para quem NÃO tem redespacho)
                 const hasRedesA = !!(a.details.ruleUsed.redespacho);
                 const hasRedesB = !!(b.details.ruleUsed.redespacho);
                 if (hasRedesA !== hasRedesB) return hasRedesA ? 1 : -1; // Se A tem (true) e B nao (false), A vem depois (1)
 
-                // 4. Prazo (Menor Ã© melhor)
+                // 4. Prazo (Menor é melhor)
                 const leadA = parseInt((a.details.ruleUsed.leadTime || '').replace(/\D/g, '')) || 999;
                 const leadB = parseInt((b.details.ruleUsed.leadTime || '').replace(/\D/g, '')) || 999;
                 return leadA - leadB;
             });
 
-            // v3.7.9 - Garante que FOB seja sempre a Ãºltima opÃ§Ã£o
+            // v3.7.9 - Garante que FOB seja sempre a última opção
             const fobIdx = validOptions.findIndex(o => o.carrier === 'FOB');
             if (fobIdx !== -1 && validOptions.length > 1) {
                 const fobItem = validOptions.splice(fobIdx, 1)[0];
@@ -1710,7 +1710,7 @@
 
             const diff = originalTotal - val;
             const color = diff >= 0 ? 'var(--accent-success)' : 'var(--accent-danger)';
-            const label = diff >= 0 ? 'Economia' : 'AcrÃ©scimo';
+            const label = diff >= 0 ? 'Economia' : 'Acréscimo';
 
             diffSpan.innerHTML = `<span style="color: ${color}">${label}: ${Utils.formatCurrency(Math.abs(diff))}</span>`;
         };
@@ -1724,19 +1724,19 @@
                 // Extra variables per rules (NOT global configs)
                 const extraParts = [];
                 if (d.excess > 0) extraParts.push(`Excedente: ${Utils.formatCurrency(d.excess)}`);
-                if (d.toll > 0) extraParts.push(`PedÃ¡gio: ${Utils.formatCurrency(d.toll)}`);
-                // Redespacho removido do extraParts pois terÃ¡ destaque prÃ³prio
+                if (d.toll > 0) extraParts.push(`Pedágio: ${Utils.formatCurrency(d.toll)}`);
+                // Redespacho removido do extraParts pois terá destaque próprio
 
                 const extraText = extraParts.length > 0 ? `<div style="color: var(--primary-color); font-weight: 500; margin-top: 4px;">+ ${extraParts.join(' | ')}</div>` : '';
 
                 let cardClass = index === 0 ? 'best-option' : (options.length > 3 && index === options.length - 1 ? 'worst-option' : 'standard-option');
 
-                const redispatchHtml = rule.redespacho ? `<div style="margin-top:4px; font-size:0.75rem;"><span style="color:var(--text-secondary)">âš“ Redespacho:</span> <strong style="color: var(--accent-warning);">${rule.redespacho}</strong></div>` : '';
+                const redispatchHtml = rule.redespacho ? `<div style="margin-top:4px; font-size:0.75rem;"><span style="color:var(--text-secondary)">⚓ Redespacho:</span> <strong style="color: var(--accent-warning);">${rule.redespacho}</strong></div>` : '';
 
                 // Create a line for estimated time and hours
                 const timeParts = [];
-                if (rule.horarios) timeParts.push(`<span style="color:var(--text-secondary)">ðŸšš SaÃ­das:</span> <strong style="color: var(--primary-color);">${rule.horarios}</strong>`);
-                if (rule.leadTime) timeParts.push(`<span style="color:var(--text-secondary)">ðŸ•’ Entrega:</span> <strong style="color: var(--text-primary);">${rule.leadTime}</strong>`);
+                if (rule.horarios) timeParts.push(`<span style="color:var(--text-secondary)">🚚 Saídas:</span> <strong style="color: var(--primary-color);">${rule.horarios}</strong>`);
+                if (rule.leadTime) timeParts.push(`<span style="color:var(--text-secondary)">🕒 Entrega:</span> <strong style="color: var(--text-primary);">${rule.leadTime}</strong>`);
                 const timeInfoHtml = timeParts.length > 0 ? `<div style="margin-top:6px; font-size:0.75rem; display: flex; align-items: center; gap: 12px;">${timeParts.join(' <span style="opacity:0.3">|</span> ')}</div>` : '';
 
                 // VAN Specific Input
@@ -1753,7 +1753,7 @@
                 </div>
             ` : '';
 
-                // v3.7.9/v3.8.4 - Seletor de transportadora para FOB com consulta automÃ¡tica de horÃ¡rios
+                // v3.7.9/v3.8.4 - Seletor de transportadora para FOB com consulta automática de horários
                 const isFob = opt.carrier === 'FOB';
                 const fobSelectorHtml = isFob ? `
                 <div class="fob-carrier-selector" style="margin-top: 10px; border-top: 1px dashed var(--border-color); padding-top: 8px;" onclick="event.stopPropagation()">
@@ -1769,7 +1769,7 @@
                 </div>
             ` : '';
 
-                // Price Breakdown Logic - EXIBIÃ‡ÃƒO SEPARADA TRANSP + REDESPACHO
+                // Price Breakdown Logic - EXIBIÇÃO SEPARADA TRANSP + REDESPACHO
                 let priceHtml;
                 if (d.redispatch > 0) {
                     // Calcular proporcionalmente com ICMS
@@ -1850,10 +1850,10 @@
             if (rule) {
                 const horario = rule.horarios || rule.horario || '-';
                 const prazo = rule.leadTime || rule.prazo || '-';
-                if (horarioEl) horarioEl.innerHTML = `ðŸšš Sa\u00edda: <strong>${horario}</strong>`;
-                if (prazoEl) prazoEl.innerHTML = `ðŸ•’ Prazo: <strong>${prazo} dias</strong>`;
+                if (horarioEl) horarioEl.innerHTML = `🚚 Sa\u00edda: <strong>${horario}</strong>`;
+                if (prazoEl) prazoEl.innerHTML = `🕒 Prazo: <strong>${prazo} dias</strong>`;
             } else {
-                if (horarioEl) horarioEl.innerHTML = `<span style="color:var(--accent-warning);">âš ï¸ Sem regra cadastrada para ${selectedCarrier} â†’ ${destCity || 'cidade n\u00e3o informada'}</span>`;
+                if (horarioEl) horarioEl.innerHTML = `<span style="color:var(--accent-warning);">⚠️ Sem regra cadastrada para ${selectedCarrier} → ${destCity || 'cidade n\u00e3o informada'}</span>`;
                 if (prazoEl) prazoEl.innerHTML = '';
             }
         };
@@ -1881,11 +1881,11 @@
                 ? `${Utils.formatCurrency(finalTotal)} (Negociado) \n[Original: ${Utils.formatCurrency(option.total)}]`
                 : `${Utils.formatCurrency(option.total)}`;
 
-            // v3.7.9 - ValidaÃ§Ã£o de transportadora para FOB
+            // v3.7.9 - Validação de transportadora para FOB
             if (option.carrier === 'FOB') {
                 const fobSelect = document.getElementById(`fob-carrier-${index}`);
                 if (!fobSelect || !fobSelect.value) {
-                    alert('Por favor, selecione a transportadora que realizarÃ¡ a coleta FOB.');
+                    alert('Por favor, selecione a transportadora que realizará a coleta FOB.');
                     if (fobSelect) fobSelect.focus();
                     return;
                 }
@@ -1919,13 +1919,13 @@
 
 
             if (!invoice) {
-                alert('Por favor, informe o nÃºmero da Nota Fiscal para confirmar o despacho.');
+                alert('Por favor, informe o número da Nota Fiscal para confirmar o despacho.');
                 document.getElementById('inputInvoiceNumber').focus();
                 return;
             }
 
             if (isComp && !mainInv) {
-                alert('Por favor, informe o nÃºmero da NF Principal (Paga) para registrar o complemento.');
+                alert('Por favor, informe o número da NF Principal (Paga) para registrar o complemento.');
                 return;
             }
 
@@ -1934,7 +1934,7 @@
                 const history = Utils.getStorage('dispatches');
                 const duplicate = history.find(d => d.invoice === invoice);
                 if (duplicate) {
-                    alert(`âš ï¸ AtenÃ§Ã£o: A Nota Fiscal nÂº ${invoice} jÃ¡ foi despachada anteriormente para o cliente "${duplicate.client}" em ${new Date(duplicate.date).toLocaleDateString()}.`);
+                    alert(`⚠️ Atenção: A Nota Fiscal nº ${invoice} já foi despachada anteriormente para o cliente "${duplicate.client}" em ${new Date(duplicate.date).toLocaleDateString()}.`);
                     return;
                 }
             }
@@ -1961,7 +1961,7 @@
 
                 isComplement: isComp,
                 mainInvoice: mainInv,
-                status: 'Pendente Despacho', // Novo status padrÃ£o
+                status: 'Pendente Despacho', // Novo status padrão
                 percentual: ruleUsed.percentual,
                 minimo: ruleUsed.minimo,
                 redespacho: ruleUsed.redespacho || '-',
@@ -1981,7 +1981,7 @@
             };
 
             Utils.addToStorage('dispatches', dispatch);
-            showToast('âœ… Carga montada com sucesso!');
+            showToast('✅ Carga montada com sucesso!');
 
             // Reset form for next input, but stay on Quote screen
             if (window.resetQuote) {
@@ -2120,11 +2120,11 @@
             }
         };
 
-        // FunÃ§Ã£o para remover UMA transportadora especÃ­fica (incluindo da nuvem)
+        // Função para remover UMA transportadora específica (incluindo da nuvem)
         window.removeCarrierCompletely = async (carrierName) => {
             if (!carrierName) return;
 
-            const confirm1 = confirm(`âš ï¸ REMOVER TRANSPORTADORA: ${carrierName}\n\nIsso vai excluir:\nâ€¢ A transportadora da lista\nâ€¢ TODAS as ${rules.filter(r => r.transportadora === carrierName).length} tabelas de frete dela\n\nConfirmar?`);
+            const confirm1 = confirm(`⚠️ REMOVER TRANSPORTADORA: ${carrierName}\n\nIsso vai excluir:\n• A transportadora da lista\n• TODAS as ${rules.filter(r => r.transportadora === carrierName).length} tabelas de frete dela\n\nConfirmar?`);
             if (!confirm1) return;
 
             try {
@@ -2144,7 +2144,7 @@
                 localStorage.setItem(Utils._storageKey('freight_tables'), JSON.stringify(rules));
                 localStorage.setItem(Utils._storageKey('carrier_list'), JSON.stringify(carrierList));
 
-                // 5. ForÃ§ar envio para nuvem
+                // 5. Forçar envio para nuvem
                 if (Utils.Cloud && Utils.Cloud.tenantId) {
                     await Utils.Cloud.save('freight_tables', rules);
                     await Utils.Cloud.save('carrier_list', carrierList);
@@ -2156,15 +2156,15 @@
                 renderCarrierConfigs();
                 populateCarrierSelect();
 
-                showToast(`ðŸ—‘ï¸ ${carrierName} removida! ${removedCount} tabelas excluÃ­das.`);
+                showToast(`🗑️ ${carrierName} removida! ${removedCount} tabelas excluídas.`);
 
             } catch (error) {
                 console.error('Erro ao remover transportadora:', error);
-                showToast('âŒ Erro: ' + error.message);
+                showToast('❌ Erro: ' + error.message);
             }
         };
 
-        // FunÃ§Ã£o para detectar e mesclar transportadoras duplicadas por acento
+        // Função para detectar e mesclar transportadoras duplicadas por acento
         window.fixDuplicateCarriers = async () => {
             const normalize = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
 
@@ -2180,13 +2180,13 @@
             const duplicates = Object.entries(groups).filter(([key, names]) => names.length > 1);
 
             if (duplicates.length === 0) {
-                showToast('âœ… Nenhuma duplicata encontrada!');
+                showToast('✅ Nenhuma duplicata encontrada!');
                 return;
             }
 
-            let message = `ðŸ” Encontradas ${duplicates.length} duplicatas:\n\n`;
+            let message = `🔍 Encontradas ${duplicates.length} duplicatas:\n\n`;
             duplicates.forEach(([key, names]) => {
-                message += `â€¢ ${names.join(' / ')}\n`;
+                message += `• ${names.join(' / ')}\n`;
             });
             message += `\nDeseja mesclar para o primeiro nome de cada grupo?`;
 
@@ -2228,26 +2228,26 @@
                 renderCarrierConfigs();
                 populateCarrierSelect();
 
-                showToast(`âœ… ${duplicates.length} duplicatas mescladas com sucesso!`);
+                showToast(`✅ ${duplicates.length} duplicatas mescladas com sucesso!`);
 
             } catch (error) {
                 console.error('Erro ao mesclar duplicatas:', error);
-                showToast('âŒ Erro: ' + error.message);
+                showToast('❌ Erro: ' + error.message);
             }
         };
 
-        // FunÃ§Ã£o para reconstruir lista de transportadoras a partir das tabelas de frete
+        // Função para reconstruir lista de transportadoras a partir das tabelas de frete
         window.rebuildCarrierList = () => {
             const currentRules = Utils.getStorage('freight_tables') || [];
             if (currentRules.length === 0) {
-                showToast('âŒ Nenhuma tabela de frete encontrada para extrair transportadoras');
+                showToast('❌ Nenhuma tabela de frete encontrada para extrair transportadoras');
                 return;
             }
 
             const extractedCarriers = [...new Set(currentRules.map(r => r.transportadora))].filter(c => c).sort();
 
             if (extractedCarriers.length === 0) {
-                showToast('âŒ Nenhuma transportadora encontrada nas tabelas');
+                showToast('❌ Nenhuma transportadora encontrada nas tabelas');
                 return;
             }
 
@@ -2256,14 +2256,14 @@
                 Utils.lastWriteTime['carrier_list'] = Date.now();
                 localStorage.setItem(Utils._storageKey('carrier_list'), JSON.stringify(carrierList));
 
-                // ForÃ§ar envio para nuvem (bypass da proteÃ§Ã£o de array vazio)
+                // Forçar envio para nuvem (bypass da proteção de array vazio)
                 if (Utils.Cloud && carrierList.length > 0) {
                     Utils.Cloud.save('carrier_list', carrierList);
                 }
 
                 renderCarrierConfigs();
                 populateCarrierSelect();
-                showToast(`âœ… Lista reconstruÃ­da com ${extractedCarriers.length} transportadoras!`);
+                showToast(`✅ Lista reconstruída com ${extractedCarriers.length} transportadoras!`);
             }
         };
 
@@ -2324,7 +2324,7 @@
         window.removeCarrier = (name) => {
             const hasRules = rules.some(r => r.transportadora === name);
             if (hasRules) {
-                alert(`âŒ NÃ£o Ã© possÃ­vel excluir "${name}" porque existem tabelas cadastradas para ela. Remova as tabelas primeiro.`);
+                alert(`❌ Não é possível excluir "${name}" porque existem tabelas cadastradas para ela. Remova as tabelas primeiro.`);
                 return;
             }
 
@@ -2335,7 +2335,7 @@
                 Utils.saveRaw('carrier_configs', JSON.stringify(carrierConfigs));
                 renderCarrierConfigs();
                 populateCarrierSelect();
-                showToast('ðŸ—‘ï¸ Transportadora removida.');
+                showToast('🗑️ Transportadora removida.');
             }
         };
 
@@ -2368,7 +2368,7 @@
 
             // Scroll to form
             document.getElementById('formNewCarrier').scrollIntoView({ behavior: 'smooth', block: 'center' });
-            showToast('âœï¸ Editando cadastro de transportadora');
+            showToast('✏️ Editando cadastro de transportadora');
         };
 
         window.resetCarrierForm = () => {
@@ -2449,7 +2449,7 @@
                 return true;
             } else {
                 errorMsg.style.display = 'block';
-                input.setCustomValidity('Transportadora nÃ£o cadastrada'); // Prevents submit
+                input.setCustomValidity('Transportadora não cadastrada'); // Prevents submit
                 return false;
             }
         }
@@ -2473,7 +2473,7 @@
                 });
             }
 
-            // BotÃ£o de busca por CNPJ
+            // Botão de busca por CNPJ
             const btnSearchCNPJ = document.getElementById('btnSearchCarrierCNPJ');
             if (btnSearchCNPJ && window.CNPJLookup) {
                 btnSearchCNPJ.addEventListener('click', () => {
@@ -2481,36 +2481,36 @@
                     const cnpj = cnpjInput.value.trim();
 
                     if (cnpj && window.CNPJLookup.isValidFormat(cnpj)) {
-                        // Buscar diretamente se jÃ¡ tem CNPJ vÃ¡lido
+                        // Buscar diretamente se já tem CNPJ válido
                         btnSearchCNPJ.disabled = true;
-                        btnSearchCNPJ.innerHTML = 'â³';
+                        btnSearchCNPJ.innerHTML = '⏳';
 
                         window.CNPJLookup.lookup(cnpj).then(data => {
-                            // Preencher formulÃ¡rio
+                            // Preencher formulário
                             document.getElementById('newCarrierName').value = data.nomeFantasia || data.razaoSocial;
                             document.getElementById('newCarrierCNPJ').value = data.cnpj;
                             document.getElementById('newCarrierAddress').value =
                                 `${data.logradouro}${data.numero ? ', ' + data.numero : ''}${data.complemento ? ' - ' + data.complemento : ''} - ${data.bairro}`;
                             document.getElementById('newCarrierCity').value = `${data.cidade} - ${data.uf}`;
 
-                            showToast(`âœ… Dados carregados: ${data.nomeFantasia || data.razaoSocial}`);
+                            showToast(`✅ Dados carregados: ${data.nomeFantasia || data.razaoSocial}`);
                         }).catch(err => {
-                            showToast(`âŒ ${err.message}`);
+                            showToast(`❌ ${err.message}`);
                         }).finally(() => {
                             btnSearchCNPJ.disabled = false;
-                            btnSearchCNPJ.innerHTML = 'ðŸ” Buscar';
+                            btnSearchCNPJ.innerHTML = '🔍 Buscar';
                         });
                     } else {
                         // Abrir modal de busca
                         window.CNPJLookup.showLookupModal((data) => {
-                            // Preencher formulÃ¡rio com dados selecionados
+                            // Preencher formulário com dados selecionados
                             document.getElementById('newCarrierName').value = data.nomeFantasia || data.razaoSocial;
                             document.getElementById('newCarrierCNPJ').value = data.cnpj;
                             document.getElementById('newCarrierAddress').value =
                                 `${data.logradouro}${data.numero ? ', ' + data.numero : ''}${data.complemento ? ' - ' + data.complemento : ''} - ${data.bairro}`;
                             document.getElementById('newCarrierCity').value = `${data.cidade} - ${data.uf}`;
 
-                            showToast(`âœ… Dados preenchidos: ${data.nomeFantasia || data.razaoSocial}`);
+                            showToast(`✅ Dados preenchidos: ${data.nomeFantasia || data.razaoSocial}`);
                         }, 'Buscar Transportadora por CNPJ');
                     }
                 });
@@ -2533,7 +2533,7 @@
                 if (!name) return;
 
                 if (!isEditing && carrierList.includes(name)) {
-                    alert('Esta transportadora jÃ¡ estÃ¡ cadastrada.');
+                    alert('Esta transportadora já está cadastrada.');
                     return;
                 }
 
@@ -2558,7 +2558,7 @@
                 window.resetCarrierForm();
                 renderCarrierConfigs();
                 populateCarrierSelect();
-                showToast(isEditing ? 'âœ… Cadastro atualizado!' : 'âœ… Transportadora cadastrada com sucesso!');
+                showToast(isEditing ? '✅ Cadastro atualizado!' : '✅ Transportadora cadastrada com sucesso!');
             });
         }
 
@@ -2607,7 +2607,7 @@
                     address: document.getElementById('compAddress').value.trim(),
                 };
                 Utils.saveRaw('company_data', JSON.stringify(data));
-                showToast('âœ… Dados da empresa salvos!');
+                showToast('✅ Dados da empresa salvos!');
                 window.toggleCompanyEdit(false); // Lock again
             });
         }
@@ -2626,7 +2626,7 @@
                 carrierList.push(carrier);
                 carrierList.sort();
                 Utils.saveRaw('carrier_list', JSON.stringify(carrierList));
-                console.log(`âœ… Transportadora ${carrier} adicionada permanentemente Ã  lista`);
+                console.log(`✅ Transportadora ${carrier} adicionada permanentemente à lista`);
 
                 // Save to cloud
                 if (Utils.Cloud && Utils.Cloud.save) {
@@ -2634,7 +2634,7 @@
                 }
             }
 
-            showToast(`âœ… ConfiguraÃ§Ã£o de ${carrier} salva!`);
+            showToast(`✅ Configuração de ${carrier} salva!`);
         };
 
 
@@ -2651,7 +2651,7 @@
         window.editRule = (index) => {
             const r = rules[index];
             if (!r) {
-                console.error('Regra nÃ£o encontrada para o Ã­ndice:', index);
+                console.error('Regra não encontrada para o índice:', index);
                 return;
             }
 
@@ -2697,7 +2697,7 @@
             form.style.borderRadius = '8px';
 
             form.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            showToast('âœï¸ Modo de EdiÃ§Ã£o Ativado');
+            showToast('✏️ Modo de Edição Ativado');
         };
 
         const btnCancelEdit = document.getElementById('btnCancelEdit');
@@ -2728,7 +2728,7 @@
             rules.splice(index, 1);
             Utils.saveRaw('freight_tables', JSON.stringify(rules));
             renderRulesList();
-            showToast('ðŸ—‘ï¸ Tabela removida com sucesso');
+            showToast('🗑️ Tabela removida com sucesso');
         };
 
         const formNewRule = document.getElementById('formNewRule');
@@ -2747,7 +2747,7 @@
 
                     if (val && !options.includes(val)) {
                         alertNewCity.style.display = 'block';
-                        alertNewCity.innerHTML = `<span class="material-icons-round" style="font-size: 0.8rem; vertical-align: middle;">add_circle</span> Nova cidade: <strong>${val}</strong> serÃ¡ cadastrada.`;
+                        alertNewCity.innerHTML = `<span class="material-icons-round" style="font-size: 0.8rem; vertical-align: middle;">add_circle</span> Nova cidade: <strong>${val}</strong> será cadastrada.`;
                     } else {
                         alertNewCity.style.display = 'none';
                     }
@@ -2758,7 +2758,7 @@
                 if (!validateRuleCarrierInput()) {
                     e.preventDefault();
                     document.getElementById('ruleCarrier').focus();
-                    showToast('âš ï¸ Transportadora invÃ¡lida!');
+                    showToast('⚠️ Transportadora inválida!');
                     return;
                 }
                 e.preventDefault();
@@ -2792,10 +2792,10 @@
 
                 if (editIdx > -1) {
                     rules[editIdx] = newRule;
-                    showToast('âœ… Tabela atualizada com sucesso!');
+                    showToast('✅ Tabela atualizada com sucesso!');
                 } else {
                     rules.unshift(newRule);
-                    showToast('âœ… Tabela cadastrada com sucesso!');
+                    showToast('✅ Tabela cadastrada com sucesso!');
                 }
 
                 // ENSURE carrier is in permanent list (v1.7.1 fix)
@@ -2804,7 +2804,7 @@
                     carrierList.push(carrierName);
                     carrierList.sort();
                     Utils.saveRaw('carrier_list', JSON.stringify(carrierList));
-                    console.log(`âœ… Transportadora ${carrierName} adicionada permanentemente Ã  lista (via regra de frete)`);
+                    console.log(`✅ Transportadora ${carrierName} adicionada permanentemente à lista (via regra de frete)`);
 
                     // Save to cloud
                     if (Utils.Cloud && Utils.Cloud.save) {
@@ -2826,21 +2826,21 @@
             // Remover handler antigo e resetar input
             fileRulesInput.value = '';
 
-            // BotÃ£o Importar abre o seletor de arquivo
+            // Botão Importar abre o seletor de arquivo
             btnSyncData.onclick = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('ðŸ”˜ BotÃ£o Importar clicado');
-                fileRulesInput.value = ''; // Limpar seleÃ§Ã£o anterior
+                console.log('🔘 Botão Importar clicado');
+                fileRulesInput.value = ''; // Limpar seleção anterior
                 fileRulesInput.click();
             };
 
-            // Handler para importaÃ§Ã£o de CSV
+            // Handler para importação de CSV
             fileRulesInput.onchange = (e) => {
                 const file = e.target.files[0];
-                console.log('ðŸ“‚ Evento change disparado, arquivo:', file);
+                console.log('📂 Evento change disparado, arquivo:', file);
                 if (!file) {
-                    console.log('âš ï¸ Nenhum arquivo na seleÃ§Ã£o');
+                    console.log('⚠️ Nenhum arquivo na seleção');
                     return;
                 }
 
@@ -2853,21 +2853,21 @@
                         csvContent = csvContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
                         const lines = csvContent.split('\n').filter(l => l.trim());
-                        console.log('ðŸ“„ Linhas no arquivo:', lines.length);
+                        console.log('📄 Linhas no arquivo:', lines.length);
 
                         if (lines.length < 2) {
-                            showToast('âŒ Arquivo CSV vazio ou invÃ¡lido (menos de 2 linhas)');
+                            showToast('❌ Arquivo CSV vazio ou inválido (menos de 2 linhas)');
                             return;
                         }
 
-                        // Detectar separador (vÃ­rgula, ponto-e-vÃ­rgula ou tab)
+                        // Detectar separador (vírgula, ponto-e-vírgula ou tab)
                         const firstLine = lines[0];
                         let separator = ';';
                         if (firstLine.split(';').length < 3) {
                             if (firstLine.split(',').length >= 3) separator = ',';
                             else if (firstLine.split('\t').length >= 3) separator = '\t';
                         }
-                        console.log('ðŸ” Separador detectado:', separator === '\t' ? 'TAB' : separator);
+                        console.log('🔍 Separador detectado:', separator === '\t' ? 'TAB' : separator);
 
                         // Normalizar headers (remover acentos, BOM, aspas)
                         const normalizeStr = (s) => s.trim()
@@ -2877,9 +2877,9 @@
                             .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
                         const headers = firstLine.split(separator).map(normalizeStr);
-                        console.log('ðŸ“¥ Headers detectados:', headers);
+                        console.log('📥 Headers detectados:', headers);
 
-                        // FunÃ§Ã£o para encontrar coluna
+                        // Função para encontrar coluna
                         const findCol = (...patterns) => {
                             for (const pattern of patterns) {
                                 const idx = headers.findIndex(h => h.includes(pattern));
@@ -2888,9 +2888,9 @@
                             return -1;
                         };
 
-                        // Mapear Ã­ndices das colunas (baseado no formato do Excel do usuÃ¡rio)
-                        // Headers da planilha: Transportadora, Cidade, Percentual, MÃ­nimo, Limite Peso, Valor Excedente, 
-                        // PedÃ¡gio, Cidade Redespacho, Transp. Redespacho, % Red., Min. Redesp., Prazo, HorÃ¡rios
+                        // Mapear índices das colunas (baseado no formato do Excel do usuário)
+                        // Headers da planilha: Transportadora, Cidade, Percentual, Mínimo, Limite Peso, Valor Excedente, 
+                        // Pedágio, Cidade Redespacho, Transp. Redespacho, % Red., Min. Redesp., Prazo, Horários
                         const colMap = {
                             transportadora: findCol('transportadora', 'transp'),
                             cidade: headers.findIndex(h => h.includes('cidade') && !h.includes('redesp') && !h.includes('bairro')),
@@ -2898,7 +2898,7 @@
                             minimo: headers.findIndex(h => h.includes('minimo') && !h.includes('redesp') && !h.includes('rede')),
                             limitePeso: findCol('limite peso', 'limite', 'peso'),
                             valorExcedente: findCol('valor exce', 'excedente', 'valor kg', 'vlr kg'),
-                            // PedÃ¡gio/Taxa Fixa - coluna G
+                            // Pedágio/Taxa Fixa - coluna G
                             pedagio: findCol('pedagio', 'taxa fixa', 'taxa'),
                             // Cidade Redespacho - coluna H
                             cidadeRedespacho: headers.findIndex(h => h.includes('cidade') && h.includes('redesp')),
@@ -2910,15 +2910,15 @@
                             minimoRedespacho: findCol('min. rede', 'min rede', 'min. redesp', 'min redesp'),
                             // Prazo - coluna L
                             leadTime: findCol('prazo', 'lead', 'd+'),
-                            // HorÃ¡rios - coluna M
+                            // Horários - coluna M
                             horarios: findCol('horarios', 'horario')
                         };
 
-                        console.log('ðŸ“Š Mapeamento de colunas:', colMap);
+                        console.log('📊 Mapeamento de colunas:', colMap);
 
                         // Validar colunas essenciais
                         if (colMap.transportadora === -1 || colMap.cidade === -1) {
-                            showToast('âŒ Colunas "Transportadora" e/ou "Cidade" nÃ£o encontradas no CSV');
+                            showToast('❌ Colunas "Transportadora" e/ou "Cidade" não encontradas no CSV');
                             console.error('Headers encontrados:', headers);
                             console.log('Primeira linha de dados:', lines[1]);
                             return;
@@ -2930,36 +2930,36 @@
                             return parseFloat(str.replace(',', '.').replace(/[^\d.-]/g, '')) || 0;
                         };
 
-                        // FunÃ§Ã£o para remover acentos e caracteres corrompidos
+                        // Função para remover acentos e caracteres corrompidos
                         const removeAccents = (str) => {
                             if (!str) return '';
 
-                            // Mapa de substituiÃ§Ã£o para caracteres acentuados (portuguÃªs)
+                            // Mapa de substituição para caracteres acentuados (português)
                             const accentMap = {
-                                'Ã¡': 'a', 'Ã ': 'a', 'Ã£': 'a', 'Ã¢': 'a', 'Ã¤': 'a',
-                                'Ã': 'A', 'Ã€': 'A', 'Ãƒ': 'A', 'Ã‚': 'A', 'Ã„': 'A',
-                                'Ã©': 'e', 'Ã¨': 'e', 'Ãª': 'e', 'Ã«': 'e',
-                                'Ã‰': 'E', 'Ãˆ': 'E', 'ÃŠ': 'E', 'Ã‹': 'E',
-                                'Ã­': 'i', 'Ã¬': 'i', 'Ã®': 'i', 'Ã¯': 'i',
-                                'Ã': 'I', 'ÃŒ': 'I', 'ÃŽ': 'I', 'Ã': 'I',
-                                'Ã³': 'o', 'Ã²': 'o', 'Ãµ': 'o', 'Ã´': 'o', 'Ã¶': 'o',
-                                'Ã“': 'O', 'Ã’': 'O', 'Ã•': 'O', 'Ã”': 'O', 'Ã–': 'O',
-                                'Ãº': 'u', 'Ã¹': 'u', 'Ã»': 'u', 'Ã¼': 'u',
-                                'Ãš': 'U', 'Ã™': 'U', 'Ã›': 'U', 'Ãœ': 'U',
-                                'Ã§': 'c', 'Ã‡': 'C',
-                                'Ã±': 'n', 'Ã‘': 'N'
+                                'á': 'a', 'à': 'a', 'ã': 'a', 'â': 'a', 'ä': 'a',
+                                'Á': 'A', 'À': 'A', 'Ã': 'A', 'Â': 'A', 'Ä': 'A',
+                                'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
+                                'É': 'E', 'È': 'E', 'Ê': 'E', 'Ë': 'E',
+                                'í': 'i', 'ì': 'i', 'î': 'i', 'ï': 'i',
+                                'Í': 'I', 'Ì': 'I', 'Î': 'I', 'Ï': 'I',
+                                'ó': 'o', 'ò': 'o', 'õ': 'o', 'ô': 'o', 'ö': 'o',
+                                'Ó': 'O', 'Ò': 'O', 'Õ': 'O', 'Ô': 'O', 'Ö': 'O',
+                                'ú': 'u', 'ù': 'u', 'û': 'u', 'ü': 'u',
+                                'Ú': 'U', 'Ù': 'U', 'Û': 'U', 'Ü': 'U',
+                                'ç': 'c', 'Ç': 'C',
+                                'ñ': 'n', 'Ñ': 'N'
                             };
 
-                            // Primeiro aplica o mapa de substituiÃ§Ã£o
+                            // Primeiro aplica o mapa de substituição
                             let result = '';
                             for (let char of str) {
                                 result += accentMap[char] || char;
                             }
 
-                            // Depois tenta normalizar acentos que nÃ£o estavam no mapa
+                            // Depois tenta normalizar acentos que não estavam no mapa
                             result = result.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-                            // Remove caracteres nÃ£o-imprimÃ­veis e corrompidos, mas mantÃ©m espaÃ§os e pontuaÃ§Ã£o bÃ¡sica
+                            // Remove caracteres não-imprimíveis e corrompidos, mas mantém espaços e pontuação básica
                             result = result.replace(/[^\x20-\x7E]/g, '');
 
                             return result.trim();
@@ -3006,29 +3006,29 @@
                             });
                         }
 
-                        console.log(`âœ… Processadas ${newRules.length} regras, ${skippedRows} linhas ignoradas`);
+                        console.log(`✅ Processadas ${newRules.length} regras, ${skippedRows} linhas ignoradas`);
 
                         if (newRules.length === 0) {
-                            showToast('âŒ Nenhuma tabela vÃ¡lida encontrada no CSV. Verifique o formato.');
+                            showToast('❌ Nenhuma tabela válida encontrada no CSV. Verifique o formato.');
                             console.log('Primeira linha de dados:', lines[1]);
                             return;
                         }
 
-                        // Confirmar importaÃ§Ã£o (sem opÃ§Ã£o de substituir)
+                        // Confirmar importação (sem opção de substituir)
                         const existingCount = rules.length;
 
                         const confirmMsg = existingCount > 0
-                            ? `ðŸ“¦ Encontradas ${newRules.length} tabelas de ${newCarriers.size} transportadoras.\n\n` +
-                            `VocÃª jÃ¡ tem ${existingCount} tabelas cadastradas.\n\n` +
-                            `A importaÃ§Ã£o irÃ¡:\n` +
-                            `â€¢ ADICIONAR novas cidades/transportadoras\n` +
-                            `â€¢ ATUALIZAR valores de cidades jÃ¡ existentes\n` +
-                            `â€¢ NÃƒO EXCLUIR nada (exclusÃ£o Ã© manual)\n\n` +
+                            ? `📦 Encontradas ${newRules.length} tabelas de ${newCarriers.size} transportadoras.\n\n` +
+                            `Você já tem ${existingCount} tabelas cadastradas.\n\n` +
+                            `A importação irá:\n` +
+                            `• ADICIONAR novas cidades/transportadoras\n` +
+                            `• ATUALIZAR valores de cidades já existentes\n` +
+                            `• NÃO EXCLUIR nada (exclusão é manual)\n\n` +
                             `Deseja continuar?`
                             : `Importar ${newRules.length} tabelas de ${newCarriers.size} transportadoras?`;
 
                         if (!confirm(confirmMsg)) {
-                            showToast('âŒ ImportaÃ§Ã£o cancelada');
+                            showToast('❌ Importação cancelada');
                             return;
                         }
 
@@ -3041,8 +3041,8 @@
                         let updatedCount = 0;
 
                         newRules.forEach(newRule => {
-                            // Verificar se jÃ¡ existe uma regra para mesma cidade + transportadora + cidade de redespacho
-                            // Isso permite mÃºltiplas linhas para a mesma cidade com diferentes destinos de redespacho
+                            // Verificar se já existe uma regra para mesma cidade + transportadora + cidade de redespacho
+                            // Isso permite múltiplas linhas para a mesma cidade com diferentes destinos de redespacho
                             const existingIndex = rules.findIndex(r =>
                                 r.cidade === newRule.cidade &&
                                 r.transportadora === newRule.transportadora &&
@@ -3060,9 +3060,9 @@
                             }
                         });
 
-                        showToast(`âœ… ImportaÃ§Ã£o concluÃ­da: ${addedCount} adicionadas, ${updatedCount} atualizadas`);
+                        showToast(`✅ Importação concluída: ${addedCount} adicionadas, ${updatedCount} atualizadas`);
 
-                        // Adicionar novas transportadoras Ã  lista
+                        // Adicionar novas transportadoras à lista
                         newCarriers.forEach(c => {
                             if (!carrierList.includes(c)) {
                                 carrierList.push(c);
@@ -3081,20 +3081,20 @@
 
                     } catch (err) {
                         console.error('Erro ao importar CSV:', err);
-                        showToast('âŒ Erro ao processar CSV: ' + err.message);
+                        showToast('❌ Erro ao processar CSV: ' + err.message);
                     }
                 };
 
-                reader.readAsText(file, 'windows-1252'); // CodificaÃ§Ã£o do Excel brasileiro
+                reader.readAsText(file, 'windows-1252'); // Codificação do Excel brasileiro
             };
 
-            // FunÃ§Ã£o auxiliar para tentar diferentes codificaÃ§Ãµes
+            // Função auxiliar para tentar diferentes codificações
             const tryReadWithEncoding = (file, encodings, callback) => {
                 let currentIndex = 0;
 
                 const tryNext = () => {
                     if (currentIndex >= encodings.length) {
-                        showToast('âŒ NÃ£o foi possÃ­vel ler o arquivo com nenhuma codificaÃ§Ã£o');
+                        showToast('❌ Não foi possível ler o arquivo com nenhuma codificação');
                         return;
                     }
 
@@ -3103,17 +3103,17 @@
 
                     reader.onload = (event) => {
                         const content = event.target.result;
-                        // Verificar se hÃ¡ muitos caracteres corrompidos (indicador de codificaÃ§Ã£o errada)
-                        const corruptedChars = (content.match(/[\uFFFDï¿½]/g) || []).length;
+                        // Verificar se há muitos caracteres corrompidos (indicador de codificação errada)
+                        const corruptedChars = (content.match(/[\uFFFD�]/g) || []).length;
                         const totalChars = content.length;
 
                         if (corruptedChars > totalChars * 0.01 && currentIndex < encodings.length - 1) {
-                            // Mais de 1% de caracteres corrompidos, tentar prÃ³xima codificaÃ§Ã£o
-                            console.log(`âš ï¸ CodificaÃ§Ã£o ${encoding} produziu ${corruptedChars} caracteres corrompidos, tentando prÃ³xima...`);
+                            // Mais de 1% de caracteres corrompidos, tentar próxima codificação
+                            console.log(`⚠️ Codificação ${encoding} produziu ${corruptedChars} caracteres corrompidos, tentando próxima...`);
                             currentIndex++;
                             tryNext();
                         } else {
-                            console.log(`âœ… Usando codificaÃ§Ã£o: ${encoding}`);
+                            console.log(`✅ Usando codificação: ${encoding}`);
                             callback(content);
                         }
                     };
@@ -3134,7 +3134,7 @@
         const btnExportTables = document.getElementById('btnExportTables');
         if (btnExportTables) {
             btnExportTables.addEventListener('click', () => {
-                if (rules.length === 0) { showToast('âŒ Nenhuma tabela para exportar.'); return; }
+                if (rules.length === 0) { showToast('❌ Nenhuma tabela para exportar.'); return; }
 
                 const headers = ['Transportadora', 'Cidade', 'Percentual', 'Minimo', 'Limite Peso', 'Valor Excedente', 'Redespacho', 'Horarios', 'LeadTime', '% Redespacho', 'Pedagio'];
                 let csv = headers.join(';') + '\n';
@@ -3165,7 +3165,7 @@
                 link.click();
                 document.body.removeChild(link);
                 window.URL.revokeObjectURL(url);
-                showToast('ðŸ“‚ Tabelas exportadas!');
+                showToast('📂 Tabelas exportadas!');
             });
         }
 
@@ -3204,7 +3204,7 @@
             btnExportCSV.addEventListener('click', async () => {
                 const data = await Utils.Cloud.getFullDispatchesHistory();
                 if (data.length === 0) {
-                    showToast('âŒ Nenhum despacho para exportar.');
+                    showToast('❌ Nenhum despacho para exportar.');
                     return;
                 }
 
@@ -3233,7 +3233,7 @@
                 link.href = URL.createObjectURL(blob);
                 link.download = `despachos_parreiralog_${new Date().toISOString().split('T')[0]}.csv`;
                 link.click();
-                showToast('ðŸ“‚ ExportaÃ§Ã£o concluÃ­da!');
+                showToast('📂 Exportação concluída!');
             });
         }
 
@@ -3243,13 +3243,13 @@
             date: 'Data', invoice: 'NF',
             client: 'Cliente', city: 'Cidade',
             neighborhood: 'Bairro', carrier: 'Transp.', percentual: '%',
-            minimo: 'MÃ­n.', redespacho: 'Redesp.', horarios: 'Hora',
+            minimo: 'Mín.', redespacho: 'Redesp.', horarios: 'Hora',
             leadTime: 'Prazo',
             nfValue: 'Vlr NF', weight: 'Peso', volume: 'Vol.', total: 'Frete',
             isComplement: 'Comp.', mainInvoice: 'Ref.',
             createdTime: 'Hr Cot.', dispatchedTime: 'Hr Desp.',
             deliveryConfirm: 'Conf. Entrega',
-            actions: 'AÃ§Ãµes'
+            actions: 'Ações'
         };
 
 
@@ -3261,7 +3261,7 @@
             window._dispatchesFullCache = list; // Cache para busca de complementos
             const container = document.getElementById('dispatchListContainer');
             if (!container) {
-                console.error('dispatchListContainer nÃ£o encontrado no DOM');
+                console.error('dispatchListContainer não encontrado no DOM');
                 return;
             }
             container.innerHTML = '';
@@ -3379,7 +3379,7 @@
                         return `
                                     <th style="${style}">
                                         <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">${columnMap[col]}</div>
-                                        <input type="text" class="filter-input" placeholder="ðŸ”Ž" 
+                                        <input type="text" class="filter-input" placeholder="🔎" 
                                             value="${window.dispatchFilters[col] || ''}"
                                             onkeyup="window.updateDispatchFilter('${col}', this.value)"
                                             style="width: 100%;">
@@ -3418,7 +3418,7 @@
                                     if (col === 'date') val = new Date(val).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
                                     if (['total', 'nfValue', 'minimo'].includes(col)) val = Utils.formatCurrency(val);
                                     if (col === 'percentual' && val !== '-') val = val + '%';
-                                    if (col === 'isComplement') val = val === true ? 'Sim' : 'NÃ£o';
+                                    if (col === 'isComplement') val = val === true ? 'Sim' : 'Não';
                                     if (col === 'volume') val = d.volume || 1;
                                     // Time Columns
 
@@ -3430,9 +3430,9 @@
                                     }
                                     if (col === 'deliveryConfirm') {
                                         if (d.deliveryConfirmed) {
-                                            const mIcons = { whatsapp: 'ðŸ’¬', presencial: 'ðŸ¤', audio: 'ðŸŽ™ï¸', telefone: 'ðŸ“ž', vendedor: 'ðŸ§‘â€ðŸ’¼' };
-                                            const mLabels = { whatsapp: 'WhatsApp', presencial: 'Presencial', audio: 'Ãudio', telefone: 'Telefone', vendedor: 'Vendedor' };
-                                            const icon  = mIcons[d.deliveryConfirmMethod]  || 'âœ…';
+                                            const mIcons = { whatsapp: '💬', presencial: '🤝', audio: '🎙️', telefone: '📞', vendedor: '🧑‍💼' };
+                                            const mLabels = { whatsapp: 'WhatsApp', presencial: 'Presencial', audio: 'Áudio', telefone: 'Telefone', vendedor: 'Vendedor' };
+                                            const icon  = mIcons[d.deliveryConfirmMethod]  || '✅';
                                             const label = mLabels[d.deliveryConfirmMethod] || d.deliveryConfirmMethod || '';
                                             const at = d.deliveryConfirmedAt ? new Date(d.deliveryConfirmedAt).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
                                             return `<td style="width:90px;min-width:84px;text-align:center;padding:3px 2px;">
@@ -3440,7 +3440,7 @@
                                                     <span style="font-size:0.75rem;">${icon} <strong style="color:#22c55e;">${label}</strong></span>
                                                     <span style="font-size:0.63rem;color:var(--text-secondary);max-width:84px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.deliveryConfirmedBy || ''}">${d.deliveryConfirmedBy || ''}</span>
                                                     <span style="font-size:0.58rem;color:var(--text-secondary);">${at}</span>
-                                                    <button onclick="window.desfazerConfirmacaoEntrega(${d.id})" title="Desfazer confirmaÃ§Ã£o" style="background:none;border:none;cursor:pointer;color:rgba(239,68,68,0.7);font-size:0.6rem;padding:0;margin-top:1px;display:flex;align-items:center;gap:2px;font-family:inherit;">
+                                                    <button onclick="window.desfazerConfirmacaoEntrega(${d.id})" title="Desfazer confirmação" style="background:none;border:none;cursor:pointer;color:rgba(239,68,68,0.7);font-size:0.6rem;padding:0;margin-top:1px;display:flex;align-items:center;gap:2px;font-family:inherit;">
                                                         <span class="material-icons-round" style="font-size:0.7rem;">undo</span> Desfazer
                                                     </button>
                                                 </div>
@@ -3528,7 +3528,7 @@
         };
 
         // ==========================================
-        // CONFERÃŠNCIA DE FATURA - INVOICE CHECK
+        // CONFERÊNCIA DE FATURA - INVOICE CHECK
         // ==========================================
 
         // State for invoice check
@@ -3548,7 +3548,7 @@
                 .filter(d => d.status === 'Despachado' && d.carrier)
                 .map(d => d.carrier.toUpperCase().trim());
 
-            // Coleta transportadoras de redespacho (somente as que tÃªm valor real)
+            // Coleta transportadoras de redespacho (somente as que têm valor real)
             const redespCarriers = dispatches
                 .filter(d => d.status === 'Despachado' && d.redespCarrier && d.redespTotal > 0)
                 .map(d => d.redespCarrier.toUpperCase().trim());
@@ -3580,14 +3580,14 @@
             const monthFilterStr = document.getElementById('invoiceMonthFilter') ? document.getElementById('invoiceMonthFilter').value : '';
 
             if (!carrier) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Selecione uma transportadora para ver as NFs disponÃ­veis.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Selecione uma transportadora para ver as NFs disponíveis.</td></tr>`;
                 document.getElementById('invoiceNFsCount').textContent = '0 notas';
                 window.updateInvoiceComparison();
                 return;
             }
 
             // Get dispatched NFs for this carrier
-            // Inclui tanto despachos onde Ã© transportadora principal quanto redespacho
+            // Inclui tanto despachos onde é transportadora principal quanto redespacho
             const dispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
             const carrierNorm = carrier.toUpperCase().trim();
 
@@ -3651,7 +3651,7 @@
             window.updateInvoiceComparison();
         };
 
-        // v3.8.6 - Filtros por coluna na tabela de NFs da ConferÃªncia Fatura
+        // v3.8.6 - Filtros por coluna na tabela de NFs da Conferência Fatura
         window.applyInvoiceColumnFilters = () => {
             const fNf     = (document.getElementById('invF_nf')?.value     || '').toLowerCase();
             const fClient = (document.getElementById('invF_client')?.value || '').toLowerCase();
@@ -3681,7 +3681,7 @@
                 if (match) visible++;
             });
 
-            // Atualiza contador de notas visÃ­veis
+            // Atualiza contador de notas visíveis
             const countEl = document.getElementById('invoiceNFsCount');
             if (countEl) {
                 const total = rows.length;
@@ -3747,7 +3747,7 @@
             const diffCard = document.getElementById('invoiceDifferenceCard');
 
             if (difference === 0 && window.invoiceSelectedNFs.size > 0 && invoiceValue > 0) {
-                diffEl.textContent = 'âœ… OK';
+                diffEl.textContent = '✅ OK';
                 diffEl.style.color = '#10b981';
                 diffCard.style.background = 'rgba(16, 185, 129, 0.1)';
                 diffCard.style.borderColor = 'rgba(16, 185, 129, 0.3)';
@@ -3805,7 +3805,7 @@
                         <div>Total NFs: <strong>${Utils.formatCurrency(selectedTotal)}</strong></div>
                         <div>Valor Fatura: <strong>${Utils.formatCurrency(invoiceValue)}</strong></div>
                         <div style="margin-top: 0.5rem; font-size: 1.2rem; color: #ef4444;">
-                            DiferenÃ§a: <strong>${difference > 0 ? '+' : ''}${Utils.formatCurrency(difference)}</strong>
+                            Diferença: <strong>${difference > 0 ? '+' : ''}${Utils.formatCurrency(difference)}</strong>
                         </div>
                     </div>
                 `;
@@ -3829,29 +3829,29 @@
                 return;
             }
 
-            // Verify supervisor password - CORRIGIDO: usar app_users (nÃ£o users)
+            // Verify supervisor password - CORRIGIDO: usar app_users (não users)
             const users = Utils.getStorage('app_users') || [];
-            console.log('ðŸ” [Invoice] Verificando senha de supervisor. UsuÃ¡rios:', users.length);
+            console.log('🔐 [Invoice] Verificando senha de supervisor. Usuários:', users.length);
             const supervisor = users.find(u => u.role === 'supervisor' && u.pass === pass);
 
             if (!supervisor) {
-                showToast('Senha de supervisor invÃ¡lida.', 'error');
-                console.log('âŒ [Invoice] Supervisor nÃ£o encontrado ou senha incorreta');
+                showToast('Senha de supervisor inválida.', 'error');
+                console.log('❌ [Invoice] Supervisor não encontrado ou senha incorreta');
                 return;
             }
 
-            console.log('âœ… [Invoice] Supervisor autenticado:', supervisor.name);
+            console.log('✅ [Invoice] Supervisor autenticado:', supervisor.name);
             document.getElementById('invoiceSupervisorModal').style.display = 'none';
             window.processInvoicePayment(justification, supervisor.name);
         };
 
         // Process the payment (mark NFs as paid)
         window.processInvoicePayment = async (justification = '', authorizedBy = '') => {
-            console.log('ðŸ’³ [Invoice] Iniciando processamento de pagamento...');
-            console.log('ðŸ’³ [Invoice] NFs selecionadas:', [...window.invoiceSelectedNFs]);
+            console.log('💳 [Invoice] Iniciando processamento de pagamento...');
+            console.log('💳 [Invoice] NFs selecionadas:', [...window.invoiceSelectedNFs]);
 
             const dispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
-            console.log('ðŸ’³ [Invoice] Total de despachos carregados:', dispatches.length);
+            console.log('💳 [Invoice] Total de despachos carregados:', dispatches.length);
 
             const invoiceRef = document.getElementById('invoiceRef').value.trim() || 'N/A';
             const invoiceValue = parseFloat(document.getElementById('invoiceValue').value.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0;
@@ -3866,7 +3866,7 @@
 
             dispatches.forEach(d => {
                 if (window.invoiceSelectedNFs.has(d.id)) {
-                    console.log(`ðŸ’³ [Invoice] Marcando NF ${d.invoice} (ID: ${d.id}) como PAGA`);
+                    console.log(`💳 [Invoice] Marcando NF ${d.invoice} (ID: ${d.id}) como PAGA`);
                     d.status = 'Pago';
                     d.paidAt = new Date().toISOString();
                     d.invoiceRef = invoiceRef;
@@ -3879,10 +3879,10 @@
                 }
             });
 
-            console.log(`ðŸ’³ [Invoice] NFs marcadas como pagas: ${paidCount}`);
-            console.log('ðŸ’³ [Invoice] Salvando dispatches no storage...');
+            console.log(`💳 [Invoice] NFs marcadas como pagas: ${paidCount}`);
+            console.log('💳 [Invoice] Salvando dispatches no storage...');
             Utils.setStorage('dispatches', dispatches);
-            console.log('ðŸ’³ [Invoice] Dispatches salvos!');
+            console.log('💳 [Invoice] Dispatches salvos!');
 
             // Save to invoice history
             const invoiceHistory = Utils.getStorage('invoice_history') || [];
@@ -3901,28 +3901,28 @@
                 justification: justification || null
             });
             Utils.setStorage('invoice_history', invoiceHistory);
-            console.log('ðŸ’³ [Invoice] HistÃ³rico de faturas salvo!');
+            console.log('💳 [Invoice] Histórico de faturas salvo!');
 
-            showToast(`âœ… ${paidCount} NFs marcadas como PAGAS!`, 'success');
+            showToast(`✅ ${paidCount} NFs marcadas como PAGAS!`, 'success');
 
             // Clear form and refresh
             window.clearInvoiceForm();
             window.initInvoiceSection();
 
-            // Atualizar tambÃ©m a tabela de Montagem de Carga se estiver visÃ­vel
+            // Atualizar também a tabela de Montagem de Carga se estiver visível
             if (window.renderAppHistory) {
-                console.log('ðŸ’³ [Invoice] Atualizando tabela de Montagem de Carga...');
+                console.log('💳 [Invoice] Atualizando tabela de Montagem de Carga...');
                 window.renderAppHistory();
             }
 
-            console.log('ðŸ’³ [Invoice] Processamento concluÃ­do!');
+            console.log('💳 [Invoice] Processamento concluído!');
         };
 
         // ==========================================
-        // ANÃLISE DE FATURAS CONFERIDAS - v3.11.20
+        // ANÁLISE DE FATURAS CONFERIDAS - v3.11.20
         // ==========================================
 
-        // Alterna entre sub-abas da seÃ§Ã£o de ConferÃªncia de Fatura
+        // Alterna entre sub-abas da seção de Conferência de Fatura
         window.showInvoiceTab = (tab) => {
             const tabConferir = document.getElementById('invoice-tab-conferir');
             const tabAnalysis = document.getElementById('invoice-tab-analysis');
@@ -3959,11 +3959,11 @@
             }
         };
 
-        // Carrega dados e popula os filtros da aba de anÃ¡lise
+        // Carrega dados e popula os filtros da aba de análise
         window.renderInvoiceAnalysis = () => {
             const history = Utils.getStorage('invoice_history') || [];
 
-            // Popula o select de transportadoras com base no histÃ³rico
+            // Popula o select de transportadoras com base no histórico
             const carriers = [...new Set(history.map(h => h.carrier).filter(Boolean))].sort();
             const carrierFilter = document.getElementById('analysisCarrierFilter');
             if (carrierFilter) {
@@ -3977,7 +3977,7 @@
             window.filterInvoiceAnalysis();
         };
 
-        // Aplica filtros e renderiza todas as seÃ§Ãµes da aba de anÃ¡lise
+        // Aplica filtros e renderiza todas as seções da aba de análise
         window.filterInvoiceAnalysis = () => {
             const history = Utils.getStorage('invoice_history') || [];
 
@@ -3985,7 +3985,7 @@
             const monthVal   = document.getElementById('analysisMonthFilter')?.value   || '';
             const statusVal  = document.getElementById('analysisStatusFilter')?.value  || '';
 
-            // Filtra o histÃ³rico
+            // Filtra o histórico
             let filtered = history.filter(h => {
                 if (carrierVal && h.carrier !== carrierVal) return false;
                 if (monthVal) {
@@ -4002,7 +4002,7 @@
             // Ordena por data decrescente
             filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-            // â”€â”€ CARDS DE RESUMO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── CARDS DE RESUMO ──────────────────────────────
             const total        = filtered.length;
             const conformes    = filtered.filter(h => h.difference === 0).length;
             const naoConformes = total - conformes;
@@ -4016,15 +4016,15 @@
             };
             safeSet('analysisCardTotal',           total);
             safeSet('analysisCardConformes',       conformes);
-            safeSet('analysisCardConformesPct',    total > 0 ? `${Math.round(conformes    / total * 100)}% do total` : 'â€”');
+            safeSet('analysisCardConformesPct',    total > 0 ? `${Math.round(conformes    / total * 100)}% do total` : '—');
             safeSet('analysisCardNaoConformes',    naoConformes);
-            safeSet('analysisCardNaoConformesPct', total > 0 ? `${Math.round(naoConformes / total * 100)}% do total` : 'â€”');
+            safeSet('analysisCardNaoConformesPct', total > 0 ? `${Math.round(naoConformes / total * 100)}% do total` : '—');
             safeSet('analysisCardDivergencia',     Utils.formatCurrency(divTot));
 
             const countEl = document.getElementById('analysisInvoiceCount');
             if (countEl) countEl.textContent = `${total} fatura${total !== 1 ? 's' : ''}`;
 
-            // â”€â”€ TABELA DE FATURAS CONFERIDAS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── TABELA DE FATURAS CONFERIDAS ─────────────────
             const tbody = document.getElementById('analysisInvoiceBody');
             if (tbody) {
                 if (filtered.length === 0) {
@@ -4033,25 +4033,25 @@
                     tbody.innerHTML = filtered.map(h => {
                         const isConf    = h.difference === 0;
                         const diffAbs   = Math.abs(h.difference || 0);
-                        const diffColor = isConf ? '#10b981' : (h.difference < 0 ? '#ef4444' : '#10b981');
+                        const diffColor = isConf ? '#10b981' : (h.difference < 0 ? '#ef4444' : '#3b82f6');
                         const diffSign  = (h.difference || 0) > 0 ? '+' : '';
                         const badge     = isConf
-                            ? `<span style="background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:2px 9px;font-size:0.73rem;font-weight:700;white-space:nowrap;">âœ… Conforme</span>`
-                            : `<span style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:5px;padding:2px 9px;font-size:0.73rem;font-weight:700;white-space:nowrap;">âš ï¸ NÃ£o Conforme</span>`;
+                            ? `<span style="background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:2px 9px;font-size:0.73rem;font-weight:700;white-space:nowrap;">✅ Conforme</span>`
+                            : `<span style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:5px;padding:2px 9px;font-size:0.73rem;font-weight:700;white-space:nowrap;">⚠️ Não Conforme</span>`;
                         const authInfo  = h.authorizedBy
                             ? `<br><span style="font-size:0.7rem;color:var(--accent-warning);">Auth: ${h.authorizedBy}</span>` : '';
                         const justTitle = h.justification ? ` title="Justif.: ${h.justification}"` : '';
                         return `
                             <tr${justTitle}>
                                 <td style="font-size:0.82rem;">${new Date(h.date).toLocaleDateString('pt-BR')}</td>
-                                <td style="font-weight:600;">${h.carrier || 'â€”'}</td>
-                                <td style="font-size:0.82rem;">${h.invoiceRef || 'â€”'}</td>
+                                <td style="font-weight:600;">${h.carrier || '—'}</td>
+                                <td style="font-size:0.82rem;">${h.invoiceRef || '—'}</td>
                                 <td style="text-align:center;">${h.nfCount || 0}</td>
                                 <td style="text-align:right;font-weight:600;color:#10b981;">${Utils.formatCurrency(h.calculatedValue || 0)}</td>
                                 <td style="text-align:right;font-weight:600;color:#f59e0b;">${Utils.formatCurrency(h.invoiceValue || 0)}</td>
-                                <td style="text-align:right;font-weight:700;color:${diffColor};">${isConf ? 'â€”' : diffSign + Utils.formatCurrency(diffAbs)}</td>
+                                <td style="text-align:right;font-weight:700;color:${diffColor};">${isConf ? '—' : diffSign + Utils.formatCurrency(diffAbs)}</td>
                                 <td style="text-align:center;">${badge}</td>
-                                <td style="font-size:0.8rem;">${h.confirmedBy || 'â€”'}${authInfo}</td>
+                                <td style="font-size:0.8rem;">${h.confirmedBy || '—'}${authInfo}</td>
                                 <td style="text-align:center;">
                                     <button class="btn-estornar" data-hid="${h.id}" title="Estornar fatura"
                                         style="background:none;border:1px solid rgba(239,68,68,0.4);border-radius:6px;padding:3px 8px;cursor:pointer;color:#ef4444;font-size:0.75rem;font-family:inherit;display:inline-flex;align-items:center;gap:2px;transition:all 0.15s;white-space:nowrap;">
@@ -4061,7 +4061,7 @@
                             </tr>`;
                     }).join('');
 
-                    // Event delegation: captura clique nos botÃµes Estornar
+                    // Event delegation: captura clique nos botões Estornar
                     tbody.addEventListener('click', function estornoDelegate(e) {
                         const btn = e.target.closest('.btn-estornar');
                         if (!btn) return;
@@ -4071,12 +4071,12 @@
                 }
             }
 
-            // â”€â”€ RELATÃ“RIO DE DIVERGÃŠNCIA POR TRANSPORTADORA â”€â”€
+            // ── RELATÓRIO DE DIVERGÊNCIA POR TRANSPORTADORA ──
             const naoConformesArr = filtered.filter(h => h.difference !== 0);
             const divSection = document.getElementById('analysisDivergenceSection');
             if (divSection) divSection.style.display = naoConformesArr.length > 0 ? '' : 'none';
 
-            // Agrupa nÃ£o-conformes filtrados por transportadora
+            // Agrupa não-conformes filtrados por transportadora
             const byCarrier = {};
             naoConformesArr.forEach(h => {
                 const c = h.carrier || 'Sem transportadora';
@@ -4089,7 +4089,7 @@
                 byCarrier[c].faturas.push(h);
             });
 
-            // Conta o total de faturas por transportadora no histÃ³rico completo (para o %)
+            // Conta o total de faturas por transportadora no histórico completo (para o %)
             const totalByCarrier = {};
             history.forEach(h => {
                 const c = h.carrier || 'Sem transportadora';
@@ -4103,11 +4103,8 @@
                 divBody.innerHTML = rows.map((r, idx) => {
                     const totalFat  = totalByCarrier[r.carrier] || r.count;
                     const pct       = Math.round(r.count / totalFat * 100);
-                    // difference = calculado - fatura
-                    // > 0 â†’ transportadora cobrou MENOS â†’ favorÃ¡vel ao cliente (economia)
-                    // < 0 â†’ transportadora cobrou MAIS  â†’ desfavorÃ¡vel ao cliente (prejuÃ­zo)
-                    const diffColor = r.totalDiff < 0 ? '#ef4444' : '#10b981';
-                    const diffLabel = r.totalDiff < 0 ? 'ðŸ”´ Cobrado a mais' : 'ðŸŸ¢ Cobrado a menos';
+                    const diffColor = r.totalDiff > 0 ? '#3b82f6' : '#ef4444';
+                    const diffLabel = r.totalDiff > 0 ? '🔵 Cobrado a menos' : '🔴 Cobrado a mais';
                     const diffSign  = r.totalDiff > 0 ? '+' : '';
                     const pctColor  = pct >= 50 ? '#ef4444' : (pct >= 25 ? '#f59e0b' : '#10b981');
 
@@ -4115,12 +4112,12 @@
                     const detailRows = r.faturas.map(f => `
                         <tr style="border-top:1px solid rgba(255,255,255,0.05);">
                             <td style="padding:5px 10px;font-size:0.79rem;">${new Date(f.date).toLocaleDateString('pt-BR')}</td>
-                            <td style="padding:5px 10px;font-size:0.79rem;">${f.invoiceRef || 'â€”'}</td>
+                            <td style="padding:5px 10px;font-size:0.79rem;">${f.invoiceRef || '—'}</td>
                             <td style="padding:5px 10px;text-align:center;font-size:0.79rem;">${f.nfCount || 0}</td>
                             <td style="padding:5px 10px;text-align:right;color:#10b981;font-size:0.79rem;">${Utils.formatCurrency(f.calculatedValue || 0)}</td>
                             <td style="padding:5px 10px;text-align:right;color:#f59e0b;font-size:0.79rem;">${Utils.formatCurrency(f.invoiceValue || 0)}</td>
-                            <td style="padding:5px 10px;text-align:right;font-weight:700;font-size:0.79rem;color:${(f.difference||0) < 0 ? '#ef4444' : (f.difference||0) > 0 ? '#10b981' : 'var(--text-secondary)'};">${(f.difference||0) > 0 ? '+' : ''}${Utils.formatCurrency(f.difference || 0)}</td>
-                            <td style="padding:5px 10px;font-size:0.75rem;color:var(--text-secondary);" title="${f.justification || ''}">${f.justification ? f.justification.substring(0, 40) + (f.justification.length > 40 ? 'â€¦' : '') : 'â€”'}</td>
+                            <td style="padding:5px 10px;text-align:right;font-weight:700;font-size:0.79rem;color:${(f.difference||0) < 0 ? '#ef4444' : '#3b82f6'};">  ${(f.difference||0) > 0 ? '+' : ''}${Utils.formatCurrency(f.difference || 0)}</td>
+                            <td style="padding:5px 10px;font-size:0.75rem;color:var(--text-secondary);" title="${f.justification || ''}">${f.justification ? f.justification.substring(0, 40) + (f.justification.length > 40 ? '…' : '') : '—'}</td>
                         </tr>`).join('');
 
                     return `
@@ -4154,7 +4151,7 @@
                                                 <th style="padding:4px 10px;text-align:center;font-weight:500;">NFs</th>
                                                 <th style="padding:4px 10px;text-align:right;font-weight:500;">Calculado</th>
                                                 <th style="padding:4px 10px;text-align:right;font-weight:500;">Fatura</th>
-                                                <th style="padding:4px 10px;text-align:right;font-weight:500;">DiferenÃ§a</th>
+                                                <th style="padding:4px 10px;text-align:right;font-weight:500;">Diferença</th>
                                                 <th style="padding:4px 10px;text-align:left;font-weight:500;">Justificativa</th>
                                             </tr>
                                         </thead>
@@ -4167,7 +4164,7 @@
             }
         };
 
-        // Expande/recolhe o detalhe de uma transportadora no relatÃ³rio
+        // Expande/recolhe o detalhe de uma transportadora no relatório
         window.toggleCarrierDetail = (idx) => {
             const detail = document.getElementById(`carrierDetail_${idx}`);
             const btn    = document.getElementById(`btnDetail_${idx}`);
@@ -4182,16 +4179,16 @@
             }
         };
 
-        // â”€â”€ ESTORNO DE FATURA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        // ReferÃªncia do histÃ³rico que serÃ¡ estornado (salvo entre modal open â†’ confirm)
+        // ── ESTORNO DE FATURA ─────────────────────────────
+        // Referência do histórico que será estornado (salvo entre modal open → confirm)
         let _pendingEstornoId = null;
 
         window.showEstornoModal = (historyId) => {
             const history = Utils.getStorage('invoice_history') || [];
-            // Compara como string pois o id pode ser nÃºmero (Date.now())
+            // Compara como string pois o id pode ser número (Date.now())
             const entry = history.find(h => String(h.id) === String(historyId));
             if (!entry) {
-                Utils.showNotification('Fatura nÃ£o encontrada no histÃ³rico.', 'error');
+                showToast('❌ Fatura não encontrada no histórico.');
                 return;
             }
 
@@ -4201,12 +4198,12 @@
             if (details) {
                 details.innerHTML = `
                     <table style="width:100%;border-collapse:collapse;">
-                        <tr><td style="color:var(--text-secondary);padding:2px 0;width:140px;">Transportadora:</td><td style="font-weight:700;">${entry.carrier || 'â€”'}</td></tr>
-                        <tr><td style="color:var(--text-secondary);padding:2px 0;">Ref. Fatura:</td><td style="font-weight:600;">${entry.invoiceRef || 'â€”'}</td></tr>
-                        <tr><td style="color:var(--text-secondary);padding:2px 0;">Data ConferÃªncia:</td><td>${new Date(entry.date).toLocaleDateString('pt-BR')}</td></tr>
+                        <tr><td style="color:var(--text-secondary);padding:2px 0;width:140px;">Transportadora:</td><td style="font-weight:700;">${entry.carrier || '—'}</td></tr>
+                        <tr><td style="color:var(--text-secondary);padding:2px 0;">Ref. Fatura:</td><td style="font-weight:600;">${entry.invoiceRef || '—'}</td></tr>
+                        <tr><td style="color:var(--text-secondary);padding:2px 0;">Data Conferência:</td><td>${new Date(entry.date).toLocaleDateString('pt-BR')}</td></tr>
                         <tr><td style="color:var(--text-secondary);padding:2px 0;">Qtd de NFs:</td><td>${entry.nfCount || 0} NFs</td></tr>
                         <tr><td style="color:var(--text-secondary);padding:2px 0;">Valor Fatura:</td><td style="color:#f59e0b;font-weight:700;">${Utils.formatCurrency(entry.invoiceValue || 0)}</td></tr>
-                        <tr><td style="color:var(--text-secondary);padding:2px 0;">Conferido por:</td><td>${entry.confirmedBy || 'â€”'}</td></tr>
+                        <tr><td style="color:var(--text-secondary);padding:2px 0;">Conferido por:</td><td>${entry.confirmedBy || '—'}</td></tr>
                     </table>`;
             }
 
@@ -4229,17 +4226,18 @@
             const supervisorPass = document.getElementById('estornoSupervisorPass')?.value?.trim();
 
             if (!justification) {
-                Utils.showNotification('Informe o motivo do estorno.', 'error');
+                showToast('⚠️ Informe o motivo do estorno.');
+                document.getElementById('estornoJustification').focus();
                 return;
             }
 
             if (!supervisorPass) {
-                Utils.showNotification('Informe a senha do supervisor.', 'error');
+                showToast('⚠️ Informe a senha do supervisor.');
                 document.getElementById('estornoSupervisorPass').focus();
                 return;
             }
 
-            // Valida a senha do supervisor (mesmo sistema do modal de autorizaÃ§Ã£o)
+            // Valida a senha do supervisor (mesmo sistema do modal de autorização)
             const users = Utils.getStorage('users') || [];
             const supervisor = users.find(u =>
                 (u.role === 'supervisor' || u.role === 'admin') &&
@@ -4247,7 +4245,7 @@
             );
 
             if (!supervisor) {
-                Utils.showNotification('Senha de supervisor incorreta.', 'error');
+                showToast('❌ Senha de supervisor incorreta.');
                 document.getElementById('estornoSupervisorPass').value = '';
                 document.getElementById('estornoSupervisorPass').focus();
                 return;
@@ -4257,12 +4255,12 @@
         };
 
         window.processEstornoInvoice = (historyId, justification, supervisorName) => {
-            // 1. Carrega histÃ³rico e localiza a entrada
+            // 1. Carrega histórico e localiza a entrada
             let history = Utils.getStorage('invoice_history') || [];
-            // Compara como string pois o id pode ser nÃºmero (Date.now())
+            // Compara como string pois o id pode ser número (Date.now())
             const entry = history.find(h => String(h.id) === String(historyId));
             if (!entry) {
-                Utils.showNotification('Registro nÃ£o encontrado.', 'error');
+                showToast('❌ Registro não encontrado.');
                 return;
             }
 
@@ -4292,7 +4290,7 @@
 
             Utils.setStorage('dispatches', dispatches);
 
-            // 3. Remove a entrada do histÃ³rico
+            // 3. Remove a entrada do histórico
             history = history.filter(h => String(h.id) !== String(historyId));
             Utils.setStorage('invoice_history', history);
 
@@ -4315,17 +4313,14 @@
             // 5. Fecha modal e atualiza a tela
             window.closeEstornoModal();
 
-            Utils.showNotification(
-                `âœ… Estorno concluÃ­do! ${revertedCount} NF${revertedCount !== 1 ? 's' : ''} revertida${revertedCount !== 1 ? 's' : ''} para "Despachado".`,
-                'success'
-            );
+            showToast(`✅ Estorno concluído! ${revertedCount} NF${revertedCount !== 1 ? 's' : ''} revertida${revertedCount !== 1 ? 's' : ''} para "Despachado".`);
 
-            // Recarrega a tela de anÃ¡lise e a tabela principal de despachos
+            // Recarrega a tela de análise e a tabela principal de despachos
             window.filterInvoiceAnalysis();
             if (typeof window.loadDispatches === 'function') window.loadDispatches();
             if (typeof window.updateInvoiceComparison === 'function') window.updateInvoiceComparison();
 
-            console.log(`ðŸ”„ [Estorno] Fatura ${entry.invoiceRef} estornada por ${supervisorName}. ${revertedCount} NFs revertidas.`);
+            console.log(`🔄 [Estorno] Fatura ${entry.invoiceRef} estornada por ${supervisorName}. ${revertedCount} NFs revertidas.`);
         };
 
         // Show invoice history modal
@@ -4339,7 +4334,7 @@
                 history.sort((a, b) => new Date(b.date) - new Date(a.date));
                 tbody.innerHTML = history.map(h => {
                     const date = new Date(h.date);
-                    const hasJustification = h.justification ? `<span title="${h.justification}" style="color: var(--accent-warning);">âš ï¸</span>` : '';
+                    const hasJustification = h.justification ? `<span title="${h.justification}" style="color: var(--accent-warning);">⚠️</span>` : '';
                     return `
                         <tr>
                             <td>${date.toLocaleDateString('pt-BR')} ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</td>
@@ -4373,7 +4368,7 @@
 
             // If empty or short (likely missing DDD), ask user
             if (!phone || phone.length < 10) {
-                let manualPhone = prompt(`Telefone invÃ¡lido ou nÃ£o encontrado para "${item.client}".\n\nDigite o nÃºmero COMPLETO com DDD (Ex: 11999999999):`, phone);
+                let manualPhone = prompt(`Telefone inválido ou não encontrado para "${item.client}".\n\nDigite o número COMPLETO com DDD (Ex: 11999999999):`, phone);
                 if (!manualPhone) return;
                 phone = manualPhone.replace(/\D/g, '');
             }
@@ -4386,11 +4381,11 @@
 
             // Final check
             if (phone.length < 12) {
-                alert('NÃºmero parece invÃ¡lido (muito curto). Verifique o DDD.');
+                alert('Número parece inválido (muito curto). Verifique o DDD.');
                 return;
             }
 
-            const msg = `OlÃ¡ ${item.client}! Seu pedido com NF ${item.invoice} foi despachado pela transportadora ${item.carrier}.\n\nPrevisÃ£o de entrega Ã© de ${item.leadTime}.\n\nAtenciosamente,\nLT Distribuidora`;
+            const msg = `Olá ${item.client}! Seu pedido com NF ${item.invoice} foi despachado pela transportadora ${item.carrier}.\n\nPrevisão de entrega é de ${item.leadTime}.\n\nAtenciosamente,\nLT Distribuidora`;
 
             // Use web.whatsapp.com for direct text injection
             const url = `https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`;
@@ -4428,7 +4423,7 @@
             if (updated) {
                 Utils.saveRaw('dispatches', JSON.stringify(list));
                 renderAppHistory();
-                if (dispatchCount > 0) showToast(`âœ… ${dispatchCount} pedidos marcados como despachados!`);
+                if (dispatchCount > 0) showToast(`✅ ${dispatchCount} pedidos marcados como despachados!`);
             }
 
             const printArea = document.getElementById('print-area');
@@ -4446,9 +4441,9 @@
 
                 page.innerHTML = `
                 <div class="manifest-header" style="border: 1px solid #000; padding: 10px; margin-bottom: 10px; font-family: Arial, sans-serif; text-align: center;">
-                    <h2 style="margin:0; font-size: 16px; font-weight: bold; text-transform: uppercase;">RelatÃ³rio Geral de Despacho</h2>
+                    <h2 style="margin:0; font-size: 16px; font-weight: bold; text-transform: uppercase;">Relatório Geral de Despacho</h2>
                     <div style="font-size: 12px; margin-top: 5px;">DATA: <strong>${day}</strong></div>
-                    <div style="font-size: 10px;">EmissÃ£o: ${new Date().toLocaleString()} | Via ${i + 1}</div>
+                    <div style="font-size: 10px;">Emissão: ${new Date().toLocaleString()} | Via ${i + 1}</div>
                 </div>
 
                 <table class="manifest-table" style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif;">
@@ -4488,7 +4483,7 @@
 
                 <div style="margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; font-family: Arial, sans-serif;">
                     <div style="border-top: 1px solid #000; padding-top: 5px; text-align: center; font-size: 10px;">
-                        ResponsÃ¡vel ExpediÃ§Ã£o
+                        Responsável Expedição
                     </div>
                     <div style="border-top: 1px solid #000; padding-top: 5px; text-align: center; font-size: 10px;">
                         Motorista / Conferente
@@ -4558,7 +4553,7 @@
             });
         }
 
-        // Import CSV de Tabelas de Frete (DINÃ‚MICO v2)
+        // Import CSV de Tabelas de Frete (DINÂMICO v2)
         document.getElementById('fileRules').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -4569,7 +4564,7 @@
                 const lines = text.split(/\r\n|\n/);
 
                 if (lines.length < 2) {
-                    showToast('âš ï¸ Arquivo vazio ou sem cabeÃ§alho.');
+                    showToast('⚠️ Arquivo vazio ou sem cabeçalho.');
                     return;
                 }
 
@@ -4579,19 +4574,19 @@
 
                 // Parse Headers
                 const headers = lines[0].toUpperCase().replace(/"/g, '').split(separator).map(h => h.trim());
-                console.log('ðŸ“‹ CabeÃ§alhos:', headers);
+                console.log('📋 Cabeçalhos:', headers);
 
                 // Map Indices Dynamically
                 const idx = {
                     transp: headers.findIndex(h => h.includes('TRANSPORTA') || h.includes('CARRIER')),
                     cidade: headers.findIndex(h => h === 'CIDADE' || h === 'CITY' || h === 'DESTINO'),
                     pct: headers.findIndex(h => h === 'PERCENTUAL' || h === '%' || h.includes('AD VALOREM')),
-                    min: headers.findIndex(h => h === 'MINIMO' || h === 'MÃNIMO'),
+                    min: headers.findIndex(h => h === 'MINIMO' || h === 'MÍNIMO'),
                     peso: headers.findIndex(h => h.includes('LIMITE') || h.includes('PESO')),
                     exce: headers.findIndex(h => h.includes('EXCED') || h.includes('KG EX')),
-                    ped: headers.findIndex(h => h.includes('PEDAGI') || h.includes('PEDÃGI')),
+                    ped: headers.findIndex(h => h.includes('PEDAGI') || h.includes('PEDÁGI')),
                     prazo: headers.findIndex(h => h.includes('PRAZO') || h.includes('LEAD') || h.includes('TIME')),
-                    hora: headers.findIndex(h => h.includes('HORA') || h.includes('HORÃRI')),
+                    hora: headers.findIndex(h => h.includes('HORA') || h.includes('HORÁRI')),
 
                     // Redespacho Specifics
                     red_nome: headers.findIndex(h => h === 'REDESPACHO' || h === 'RED' || h.includes('NOME RED')),
@@ -4604,7 +4599,7 @@
                 if (idx.cidade === -1) idx.cidade = 1;
                 // If specific Redispatch Name column not found, but we see column 8 (generic common pos), careful not to force it
 
-                console.log('ðŸ“Œ Ãndices mapeados:', idx);
+                console.log('📌 Índices mapeados:', idx);
 
                 let added = 0;
                 let updated = 0;
@@ -4659,8 +4654,8 @@
                     );
 
                     if (existingIdx > -1) {
-                        // Merge com dados existentes para nÃ£o perder campos nÃ£o mapeados? 
-                        // NÃ£o, CSV deve ser autoridade. Mas cuidado com campos opcionais.
+                        // Merge com dados existentes para não perder campos não mapeados? 
+                        // Não, CSV deve ser autoridade. Mas cuidado com campos opcionais.
                         rules[existingIdx] = { ...rules[existingIdx], ...newRule };
                         updated++;
                     } else {
@@ -4688,9 +4683,9 @@
                     }
 
                     renderRulesList();
-                    showToast(`âœ… ImportaÃ§Ã£o: ${added} novas, ${updated} atualizadas.`);
+                    showToast(`✅ Importação: ${added} novas, ${updated} atualizadas.`);
                 } else {
-                    showToast('âš ï¸ Nenhuma regra vÃ¡lida processada.');
+                    showToast('⚠️ Nenhuma regra válida processada.');
                 }
 
                 e.target.value = ''; // Reset input
@@ -4716,19 +4711,19 @@
                     const lines = XLSX.utils.sheet_to_json(worksheet, {header: 1, raw: false, defval: ''});
 
                     if (lines.length === 0) {
-                        alert('âš ï¸ Arquivo vazio ou invÃ¡lido.');
+                        alert('⚠️ Arquivo vazio ou inválido.');
                         return;
                     }
 
-                    // Detecta cabeÃ§alhos (Linha 0)
+                    // Detecta cabeçalhos (Linha 0)
                     const headers = (lines[0] || []).map(h => String(h).trim().toUpperCase());
                     const findIdx = (keywords) => headers.findIndex(h => keywords.some(k => String(h).includes(k)));
 
-                    let idxCode = findIdx(['CODIGO', 'CÃ“DIGO', 'COD']);
-                    let idxName = findIdx(['NOME', 'RAZAO', 'RAZÃƒO', 'CLIENTE', 'SOCIAL']);
+                    let idxCode = findIdx(['CODIGO', 'CÓDIGO', 'COD']);
+                    let idxName = findIdx(['NOME', 'RAZAO', 'RAZÃO', 'CLIENTE', 'SOCIAL']);
                     let idxPhone = findIdx(['TELEFON', 'CELULAR', 'FONE', 'WHATS', 'TEL']);
-                    let idxCity = findIdx(['CIDADE', 'MUNICÃPIO', 'MUNICIPIO', 'MUN']);
-                    let idxNeigh = findIdx(['BAIRRO', 'ENDERECO', 'ENDEREÃ‡O', 'BAI']);
+                    let idxCity = findIdx(['CIDADE', 'MUNICÍPIO', 'MUNICIPIO', 'MUN']);
+                    let idxNeigh = findIdx(['BAIRRO', 'ENDERECO', 'ENDEREÇO', 'BAI']);
 
                     if (idxCode === -1) idxCode = 0;
                     if (idxName === -1) idxName = 1;
@@ -4738,7 +4733,7 @@
                     let count = 0;
 
                     lines.forEach((cols, index) => {
-                        // Ignora cabeÃ§alho e linhas vazias
+                        // Ignora cabeçalho e linhas vazias
                         if (index === 0 || !cols || cols.length < 2) return; 
 
                         const getVal = (idx) => (idx > -1 && cols[idx]) ? String(cols[idx]).trim().toUpperCase() : '';
@@ -4749,7 +4744,7 @@
                         let code = getVal(idxCode);
                         let name = getVal(idxName);
                         
-                        if (!name) return; // Se nÃ£o tem nome, ignora a linha
+                        if (!name) return; // Se não tem nome, ignora a linha
 
                         const client = {
                             codigo: code,
@@ -4779,30 +4774,30 @@
                     Utils.saveRaw('clients', JSON.stringify(clients));
 
                     if (count > 0) {
-                        const msg = `âœ… Sucesso! ${count} clientes importados.\n(Formato: ${formatType})`;
+                        const msg = `✅ Sucesso! ${count} clientes importados.\n(Formato: ${formatType})`;
                         if (typeof Utils.Cloud !== 'undefined' && Utils.Cloud.save) {
                             Utils.Cloud.save('clients', clients).then(success => {
                                 if(success) {
-                                    alert(msg + "\n\nâœ… Sincronizado com a nuvem com sucesso!");
+                                    alert(msg + "\n\n✅ Sincronizado com a nuvem com sucesso!");
                                 } else {
-                                    alert(msg + "\n\nâš ï¸ AtenÃ§Ã£o: Falha ao subir para a nuvem. Verifique o limite de 1MB.");
+                                    alert(msg + "\n\n⚠️ Atenção: Falha ao subir para a nuvem. Verifique o limite de 1MB.");
                                 }
                             });
                         } else {
                             alert(msg);
                         }
                     } else {
-                        alert('âš ï¸ Nenhum cliente vÃ¡lido encontrado.\nVerifique se a planilha tem as colunas corretas.');
+                        alert('⚠️ Nenhum cliente válido encontrado.\nVerifique se a planilha tem as colunas corretas.');
                     }
                 } catch(error) {
                     console.error('Erro ao processar arquivo:', error);
-                    alert('âŒ Erro crÃ­tico ao processar o arquivo. Verifique se o arquivo nÃ£o estÃ¡ corrompido e Ã© um Excel/CSV vÃ¡lido.');
+                    alert('❌ Erro crítico ao processar o arquivo. Verifique se o arquivo não está corrompido e é um Excel/CSV válido.');
                 }
                 
                 e.target.value = ''; // Limpa o input
             };
             
-            // ArrayBuffer lÃª o binÃ¡rio do Excel perfeitamente
+            // ArrayBuffer lê o binário do Excel perfeitamente
             reader.readAsArrayBuffer(file);
         });
 
@@ -4849,7 +4844,7 @@
                     document.body.removeChild(link);
                     window.URL.revokeObjectURL(url);
 
-                    showToast('âœ… Backup completo gerado com sucesso!');
+                    showToast('✅ Backup completo gerado com sucesso!');
                 } catch (err) {
                     console.error('Falha no backup:', err);
                     alert('Erro ao gerar arquivo de backup: ' + err.message);
@@ -4869,12 +4864,12 @@
                     try {
                         const data = JSON.parse(evt.target.result);
                         if (!data.dispatches || !data.freight_tables) {
-                            throw new Error('Arquivo de backup invÃ¡lido.');
+                            throw new Error('Arquivo de backup inválido.');
                         }
-                        if (confirm('AtenÃ§Ã£o! Isso substituirÃ¡ todos os seus dados atuais. Deseja continuar?')) {
+                        if (confirm('Atenção! Isso substituirá todos os seus dados atuais. Deseja continuar?')) {
                             Utils.saveRaw('dispatches', JSON.stringify(data.dispatches));
                             Utils.saveRaw('freight_tables', JSON.stringify(data.freight_tables));
-                            showToast('ðŸ”„ Dados restaurados! Recarregando...');
+                            showToast('🔄 Dados restaurados! Recarregando...');
                             setTimeout(() => location.reload(), 2000);
                         }
                     } catch (err) {
@@ -4919,7 +4914,7 @@
                 showSection('quote');
                 showToast(`Bem - vindo, ${user.name} !`);
             } else {
-                alert('UsuÃ¡rio ou senha incorretos.');
+                alert('Usuário ou senha incorretos.');
             }
         };
 
@@ -4937,14 +4932,14 @@
         };
 
         window.emergencyReset = () => {
-            const pin = prompt('Para resetar os usuÃ¡rios para o padrÃ£o (admin/admin), digite o cÃ³digo de seguranÃ§a:\n\n9999');
+            const pin = prompt('Para resetar os usuários para o padrão (admin/admin), digite o código de segurança:\n\n9999');
             if (pin === '9999') {
                 localStorage.removeItem(Utils._storageKey('app_users'));
                 sessionStorage.removeItem('logged_user');
-                alert('Acessos resetados com sucesso!\n\nUsuÃ¡rio: admin\nSenha: admin\n\nO sistema serÃ¡ recarregado.');
+                alert('Acessos resetados com sucesso!\n\nUsuário: admin\nSenha: admin\n\nO sistema será recarregado.');
                 location.reload();
             } else if (pin !== null) {
-                alert('CÃ³digo incorreto.');
+                alert('Código incorreto.');
             }
         };
 
@@ -4952,7 +4947,7 @@
 
         // Update delete logic with supervisor password
         window.removeDispatch = (id) => {
-            window.requestSupervisorPassword('Excluir LanÃ§amento', async () => {
+            window.requestSupervisorPassword('Excluir Lançamento', async () => {
                 const numId = Number(id);
 
                 // 1. Remove do localStorage
@@ -4960,14 +4955,14 @@
                 history = history.filter(d => Number(d.id) !== numId);
                 Utils.saveRaw('dispatches', JSON.stringify(history));
 
-                // 2. Remove do Firestore (se existir lÃ¡)
+                // 2. Remove do Firestore (se existir lá)
                 if (Utils.Cloud.hasTenant() && window.db) {
                     try {
                         await window.db
                             .collection('tenants').doc(Utils.Cloud.tenantId)
                             .collection('dispatches_db').doc(String(numId))
                             .delete();
-                        console.log(`ðŸ—‘ï¸ [RemoveDispatch] Despacho ${numId} excluÃ­do do Firestore.`);
+                        console.log(`🗑️ [RemoveDispatch] Despacho ${numId} excluído do Firestore.`);
                     } catch(e) {
                         console.warn('[RemoveDispatch] Erro ao excluir do Firestore:', e);
                     }
@@ -4979,11 +4974,11 @@
                 }
 
                 window.renderAppHistory();
-                showToast('ðŸ—‘ï¸ LanÃ§amento excluÃ­do com sucesso.');
+                showToast('🗑️ Lançamento excluído com sucesso.');
             });
         };
 
-        // â”€â”€â”€ CONFIRMAÃ‡ÃƒO DE ENTREGA AO CLIENTE (v3.11.16) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ─── CONFIRMAÇÃO DE ENTREGA AO CLIENTE (v3.11.16) ──────────────────────────
         window.confirmarEntrega = (id) => {
             // Injeta o modal apenas uma vez no DOM
             if (!document.getElementById('delivConfirmModal')) {
@@ -4993,9 +4988,9 @@
                 overlay.innerHTML = `
                     <div id="delivConfirmCard" style="background:#1e293b;border:1px solid #334155;border-radius:14px;padding:28px 30px;min-width:340px;max-width:450px;width:92%;box-shadow:0 24px 64px rgba(0,0,0,0.55);font-family:inherit;">
                         <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px;">
-                            <span style="font-size:1.8rem;">ðŸ“¦</span>
+                            <span style="font-size:1.8rem;">📦</span>
                             <div>
-                                <div style="font-size:0.68rem;color:#22c55e;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;margin-bottom:3px;">CONFIRMAÃ‡ÃƒO DE ENTREGA</div>
+                                <div style="font-size:0.68rem;color:#22c55e;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;margin-bottom:3px;">CONFIRMAÇÃO DE ENTREGA</div>
                                 <div style="font-size:1rem;font-weight:600;color:#f1f5f9;">Mercadoria chegou ao cliente?</div>
                             </div>
                         </div>
@@ -5006,30 +5001,30 @@
                             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
                                 <div class="deliv-method-opt" data-val="whatsapp"
                                     style="border:2px solid #334155;border-radius:9px;padding:10px 6px;text-align:center;cursor:pointer;transition:all 0.18s;color:#94a3b8;font-size:0.8rem;user-select:none;">
-                                    ðŸ’¬<br><span style="margin-top:3px;display:block;">WhatsApp</span>
+                                    💬<br><span style="margin-top:3px;display:block;">WhatsApp</span>
                                 </div>
                                 <div class="deliv-method-opt" data-val="presencial"
                                     style="border:2px solid #334155;border-radius:9px;padding:10px 6px;text-align:center;cursor:pointer;transition:all 0.18s;color:#94a3b8;font-size:0.8rem;user-select:none;">
-                                    ðŸ¤<br><span style="margin-top:3px;display:block;">Presencial</span>
+                                    🤝<br><span style="margin-top:3px;display:block;">Presencial</span>
                                 </div>
                                 <div class="deliv-method-opt" data-val="audio"
                                     style="border:2px solid #334155;border-radius:9px;padding:10px 6px;text-align:center;cursor:pointer;transition:all 0.18s;color:#94a3b8;font-size:0.8rem;user-select:none;">
-                                    ðŸŽ™ï¸<br><span style="margin-top:3px;display:block;">Ãudio</span>
+                                    🎙️<br><span style="margin-top:3px;display:block;">Áudio</span>
                                 </div>
                                 <div class="deliv-method-opt" data-val="telefone"
                                     style="border:2px solid #334155;border-radius:9px;padding:10px 6px;text-align:center;cursor:pointer;transition:all 0.18s;color:#94a3b8;font-size:0.8rem;user-select:none;">
-                                    ðŸ“ž<br><span style="margin-top:3px;display:block;">Telefone</span>
+                                    📞<br><span style="margin-top:3px;display:block;">Telefone</span>
                                 </div>
                                 <div class="deliv-method-opt" data-val="vendedor"
                                     style="border:2px solid #334155;border-radius:9px;padding:10px 6px;text-align:center;cursor:pointer;transition:all 0.18s;color:#94a3b8;font-size:0.8rem;user-select:none;">
-                                    ðŸ§‘â€ðŸ’¼<br><span style="margin-top:3px;display:block;">Vendedor</span>
+                                    🧑‍💼<br><span style="margin-top:3px;display:block;">Vendedor</span>
                                 </div>
                             </div>
                         </div>
 
                         <div style="margin-bottom:4px;">
                             <label style="display:block;font-size:0.82rem;color:#94a3b8;margin-bottom:6px;font-weight:500;">Quem confirmou?</label>
-                            <input id="delivConfirmedBy" type="text" placeholder="Nome do responsÃ¡vel..." autocomplete="off"
+                            <input id="delivConfirmedBy" type="text" placeholder="Nome do responsável..." autocomplete="off"
                                 style="width:100%;box-sizing:border-box;padding:10px 13px;background:#0f172a;border:1px solid #475569;border-radius:8px;color:#f1f5f9;font-size:0.9rem;outline:none;font-family:inherit;transition:border-color 0.15s;">
                         </div>
                         <div id="delivConfirmError" style="color:#ef4444;font-size:0.78rem;min-height:18px;margin-top:5px;"></div>
@@ -5047,7 +5042,7 @@
                     </div>`;
                 document.body.appendChild(overlay);
 
-                // SeleÃ§Ã£o visual dos mÃ©todos
+                // Seleção visual dos métodos
                 overlay.addEventListener('click', (e) => {
                     const opt = e.target.closest('.deliv-method-opt');
                     if (opt) {
@@ -5083,7 +5078,7 @@
             document.getElementById('delivConfirmError').textContent = '';
             document.getElementById('delivConfirmId').value = id;
 
-            // PrÃ©-preencher com o nome real do usuÃ¡rio logado
+            // Pré-preencher com o nome real do usuário logado
             let _delivUserName = '';
             if (currentUser && currentUser.name) {
                 _delivUserName = currentUser.name;
@@ -5101,7 +5096,7 @@
             modal.style.display = 'flex';
             setTimeout(() => document.getElementById('delivConfirmedBy').focus(), 80);
 
-            // Substituir botÃµes para limpar listeners antigos
+            // Substituir botões para limpar listeners antigos
             ['delivConfirmOk','delivConfirmCancel'].forEach(bid => {
                 const el = document.getElementById(bid);
                 const clone = el.cloneNode(true);
@@ -5117,8 +5112,8 @@
                 const confirmedBy = document.getElementById('delivConfirmedBy').value.trim();
                 const errEl       = document.getElementById('delivConfirmError');
 
-                if (!method)      { errEl.textContent = 'âŒ Selecione a forma de confirmaÃ§Ã£o.'; return; }
-                if (!confirmedBy) { errEl.textContent = 'âŒ Informe quem confirmou a entrega.'; return; }
+                if (!method)      { errEl.textContent = '❌ Selecione a forma de confirmação.'; return; }
+                if (!confirmedBy) { errEl.textContent = '❌ Informe quem confirmou a entrega.'; return; }
 
                 const numId = Number(document.getElementById('delivConfirmId').value);
                 const now   = new Date().toISOString();
@@ -5142,20 +5137,20 @@
                     } catch(e) { console.warn('[ConfirmarEntrega] Firestore:', e); }
                 }
 
-                // 3. Cache em memÃ³ria
+                // 3. Cache em memória
                 if (window._dispatchesFullCache) {
                     const ci = window._dispatchesFullCache.findIndex(d => Number(d.id) === numId);
                     if (ci !== -1) Object.assign(window._dispatchesFullCache[ci], update);
                 }
 
                 modal.style.display = 'none';
-                showToast('âœ… Entrega confirmada com sucesso!');
+                showToast('✅ Entrega confirmada com sucesso!');
                 window.renderAppHistory();
             });
         };
 
         window.desfazerConfirmacaoEntrega = (id) => {
-            window.requestSupervisorPassword('Desfazer ConfirmaÃ§Ã£o de Entrega', async () => {
+            window.requestSupervisorPassword('Desfazer Confirmação de Entrega', async () => {
                 const numId = Number(id);
 
                 // 1. localStorage
@@ -5184,7 +5179,7 @@
                     } catch(e) { console.warn('[DesfazerConfirmacao] Firestore:', e); }
                 }
 
-                // 3. Cache em memÃ³ria
+                // 3. Cache em memória
                 if (window._dispatchesFullCache) {
                     const ci = window._dispatchesFullCache.findIndex(d => Number(d.id) === numId);
                     if (ci !== -1) {
@@ -5196,11 +5191,11 @@
                     }
                 }
 
-                showToast('â†©ï¸ ConfirmaÃ§Ã£o de entrega desfeita.');
+                showToast('↩️ Confirmação de entrega desfeita.');
                 window.renderAppHistory();
             });
         };
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ───────────────────────────────────────────────────────────────────────────
 
         // --- DASHBOARD LOGIC ---
         window.renderDashboard = () => {
@@ -5245,7 +5240,7 @@
                 const countA = (pendingByCarrier[String(a || '').trim().toUpperCase()] || []).length;
                 const countB = (pendingByCarrier[String(b || '').trim().toUpperCase()] || []).length;
                 if (countA !== countB) return countB - countA; // Quem tem carga sobe
-                return String(a).localeCompare(String(b));     // Ordem alfabÃ©tica para empate/vazios
+                return String(a).localeCompare(String(b));     // Ordem alfabética para empate/vazios
             });
 
             // Show all carriers (fixed cards)
@@ -5298,7 +5293,7 @@
                     if (schedules.length > 0) {
                         scheduleHtml = `
                         <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border-color); color: var(--text-secondary);">
-                            <div style="font-size: 0.7rem; font-weight: 600; text-transform: uppercase; margin-bottom: 2px;">â° HorÃ¡rios de Despacho</div>
+                            <div style="font-size: 0.7rem; font-weight: 600; text-transform: uppercase; margin-bottom: 2px;">⏰ Horários de Despacho</div>
                             ${schedules.join('')}
                         </div>
                     `;
@@ -5311,8 +5306,8 @@
                             <div>
                                 <div style="font-weight: 700; font-size: 1.1rem; color: ${hasItems ? 'var(--text-primary)' : 'var(--text-secondary)'}; margin-bottom: 0.5rem;">${carrier}</div>
                                 <div style="font-size: 0.85rem; color: var(--text-secondary); display: flex; gap: 1rem;">
-                                    <span>ðŸ“¦ ${items.length} notas</span>
-                                    <span>âš–ï¸ ${weight.toFixed(2)} kg</span>
+                                    <span>📦 ${items.length} notas</span>
+                                    <span>⚖️ ${weight.toFixed(2)} kg</span>
                                 </div>
                             </div>
                             <div style="text-align: right;">
@@ -5357,7 +5352,7 @@
                     console.warn('Nenhum item pendente (Pendente Despacho) para:', cleanCarrier);
                 }
 
-                selectedNFIds = [...new Set(items.map(i => i.id))]; // âœ… deduplicado por seguranÃ§a
+                selectedNFIds = [...new Set(items.map(i => i.id))]; // ✅ deduplicado por segurança
 
                 const titleEl = document.getElementById('modalCarrierTitle');
                 if (titleEl) titleEl.innerText = `Itens Pendentes: ${cleanCarrier}`;
@@ -5370,8 +5365,8 @@
                     // IMPORTANTE: Atualizar dropdown de motoristas
                     if (window.populateDriverSelector) window.populateDriverSelector();
                 } else {
-                    console.error('Elemento #shipmentModal nÃ£o encontrado no DOM!');
-                    alert('Erro crÃ­tico: Modal de despacho nÃ£o encontrado na pÃ¡gina.');
+                    console.error('Elemento #shipmentModal não encontrado no DOM!');
+                    alert('Erro crítico: Modal de despacho não encontrado na página.');
                 }
             } catch (err) {
                 console.error('Falha no openShipmentModal:', err);
@@ -5419,7 +5414,7 @@
             body.innerHTML = items.map(item => {
                 const delayed = isLate(item.carrier, item.city);
                 const iconHtml = delayed
-                    ? `<span class="material-icons-round" style="color: var(--accent-danger); font-size: 1.1rem; vertical-align: middle; margin-left: 4px;" title="âš ï¸ HorÃ¡rio limite de despacho excedido!">alarm_off</span>`
+                    ? `<span class="material-icons-round" style="color: var(--accent-danger); font-size: 1.1rem; vertical-align: middle; margin-left: 4px;" title="⚠️ Horário limite de despacho excedido!">alarm_off</span>`
                     : '';
 
                 return `
@@ -5471,7 +5466,7 @@
         }
 
         window.undoDispatch = (id) => {
-            if (confirm('Deseja estornar este lanÃ§amento? Ele sairÃ¡ desta lista de despacho e voltarÃ¡ para o histÃ³rico como cancelado.')) {
+            if (confirm('Deseja estornar este lançamento? Ele sairá desta lista de despacho e voltará para o histórico como cancelado.')) {
                 let history = Utils.getStorage('dispatches');
                 const idx = history.findIndex(d => d.id === id);
                 if (idx !== -1) {
@@ -5486,12 +5481,12 @@
 
                     if (remaining.length === 0) {
                         document.getElementById('shipmentModal').style.display = 'none';
-                        setTimeout(() => location.reload(), 800); // DÃ¡ tempo do Firebase Sync salvar na nuvem
+                        setTimeout(() => location.reload(), 800); // Dá tempo do Firebase Sync salvar na nuvem
                     } else {
                         selectedNFIds = selectedNFIds.filter(i => i !== id);
                         renderModalItems(remaining);
                     }
-                    showToast('ðŸ”„ LanÃ§amento estornado!');
+                    showToast('🔄 Lançamento estornado!');
                 }
             }
         };
@@ -5506,14 +5501,14 @@
 
                 const history = Utils.getStorage('dispatches');
                 const toDispatchRaw = history.filter(d => selectedNFIds.includes(d.id));
-                // âœ… Deduplicar por id para evitar NFs duplicadas no romaneio
+                // ✅ Deduplicar por id para evitar NFs duplicadas no romaneio
                 const toDispatch = toDispatchRaw.filter((item, idx, arr) => arr.findIndex(x => x.id === item.id) === idx);
                 if (toDispatchRaw.length !== toDispatch.length) {
-                    console.warn(`[Romaneio] âš ï¸ ${toDispatchRaw.length - toDispatch.length} NF(s) duplicada(s) removida(s) antes de imprimir.`);
+                    console.warn(`[Romaneio] ⚠️ ${toDispatchRaw.length - toDispatch.length} NF(s) duplicada(s) removida(s) antes de imprimir.`);
                 }
 
                 if (toDispatch.length === 0) {
-                    alert('Erro: Notas selecionadas nÃ£o encontradas no histÃ³rico.');
+                    alert('Erro: Notas selecionadas não encontradas no histórico.');
                     return;
                 }
 
@@ -5524,8 +5519,8 @@
                 const deliveryTypeEl = document.getElementById('deliveryTypeSelector');
                 let rawType = deliveryTypeEl ? deliveryTypeEl.value : 'direto';
 
-                console.log('ðŸ” [DEBUG] Valor do seletor (rawType):', rawType);
-                console.log('ðŸ” [DEBUG] Elemento seletor:', deliveryTypeEl);
+                console.log('🔍 [DEBUG] Valor do seletor (rawType):', rawType);
+                console.log('🔍 [DEBUG] Elemento seletor:', deliveryTypeEl);
 
                 let deliveryType = rawType;
                 let assignedDriverLogin = null;
@@ -5543,7 +5538,7 @@
                     if (uObj) assignedDriverName = uObj.name;
                 }
 
-                console.log('ðŸ“¦ Tipo de despacho:', deliveryType, '| Motorista:', assignedDriverName || 'N/A');
+                console.log('📦 Tipo de despacho:', deliveryType, '| Motorista:', assignedDriverName || 'N/A');
 
                 // Get logged user info
                 const loggedUser = Utils.getStorage('logged_user');
@@ -5571,13 +5566,13 @@
                                 d.deliveryPerson = assignedDriverName; // Para compatibilidade com DeliveryModule
                             }
 
-                            console.log(`ðŸšš NF ${d.invoice} enviada para ${deliveryType === 'moto' ? 'ðŸï¸ Moto' : 'ðŸš— Carro'} Entrega (${assignedDriverName})`);
+                            console.log(`🚚 NF ${d.invoice} enviada para ${deliveryType === 'moto' ? '🏍️ Moto' : '🚗 Carro'} Entrega (${assignedDriverName})`);
                         }
                     }
                 });
                 Utils.saveRaw('dispatches', JSON.stringify(history));
 
-                // NOVO: Notificar Vendedores automaticamente (ParametrizÃ¡vel v3.7)
+                // NOVO: Notificar Vendedores automaticamente (Parametrizável v3.7)
                 const settings = window.app_settings || { wa_auto_seller: true };
                 if (settings.wa_auto_seller) {
                     const sellersToNotify = {};
@@ -5626,7 +5621,7 @@
                 // Open print manifest
                 window.printSpecificRomaneio(currentModalCarrier, toDispatch);
 
-                // Disparo AutomÃ¡tico de WhatsApp para CLIENTES (ParametrizÃ¡vel v3.7)
+                // Disparo Automático de WhatsApp para CLIENTES (Parametrizável v3.7)
                 if (settings.wa_auto_client) {
                     let delayWa = 1500;
                     toDispatch.forEach((d) => {
@@ -5641,18 +5636,18 @@
 
                 // Show appropriate toast
                 if (deliveryType === 'moto') {
-                    showToast('ðŸï¸ Romaneio gerado! NFs enviadas para Moto Entrega.');
+                    showToast('🏍️ Romaneio gerado! NFs enviadas para Moto Entrega.');
                 } else if (deliveryType === 'carro') {
-                    showToast('ðŸš— Romaneio gerado! NFs enviadas para Carro Entrega.');
+                    showToast('🚗 Romaneio gerado! NFs enviadas para Carro Entrega.');
                 } else {
-                    showToast('ðŸšš Romaneio gerado com sucesso!');
+                    showToast('🚚 Romaneio gerado com sucesso!');
                 }
 
                 // Hide modal immediately
                 const modal = document.getElementById('shipmentModal');
                 if (modal) modal.style.display = 'none';
 
-                // NOVO: Atualizar o Painel imediatamente apÃ³s finalizar o despacho (v3.7.6)
+                // NOVO: Atualizar o Painel imediatamente após finalizar o despacho (v3.7.6)
                 if (window.renderDashboard) window.renderDashboard();
 
                 // Refresh delivery modules if available
@@ -5685,20 +5680,20 @@
                 const totalFreight = items.reduce((acc, curr) => acc + (parseFloat(curr.total) || 0), 0);
 
                 // Ajustamos as celulas para caber em Retrato (A4 normal) usando fonte menor e padding restrito, 
-                // para que nÃ£o falte espaÃ§o e nÃ£o quebre a palavra verticalmente.
+                // para que não falte espaço e não quebre a palavra verticalmente.
                 const cellStyle = 'border: 1px solid #000; padding: 2px; font-size: 10px; color: #000; font-family: Arial, sans-serif; font-weight: bold; text-align: left; white-space: nowrap;';
 
                 // Create 2 copies
                 for (let i = 0; i < 2; i++) {
                     const page = document.createElement('div');
                     page.className = 'manifest-page';
-                    page.style.cssText = 'page-break-inside: avoid; margin-bottom: 40px;'; // Assegura que a segunda via nÃ£o seja cortada no meio
+                    page.style.cssText = 'page-break-inside: avoid; margin-bottom: 40px;'; // Assegura que a segunda via não seja cortada no meio
                     
                     page.innerHTML = `
             <div class="manifest-header" style="display: grid !important; grid-template-columns: 1fr 1fr !important; border: 2px solid #000; padding: 10px; margin-bottom: 15px;">
                 <div>
                     <h3 style="margin:0; font-size: 1rem;">DESPACHANTE (REMETENTE)</h3>
-                    <div style="font-size: 0.9rem; font-weight: bold; margin-top: 5px;">${company.name || 'EMPRESA NÃƒO CONFIGURADA'}</div>
+                    <div style="font-size: 0.9rem; font-weight: bold; margin-top: 5px;">${company.name || 'EMPRESA NÃO CONFIGURADA'}</div>
                     <div style="font-size: 0.8rem;">CNPJ: ${company.cnpj || '-'}</div>
                     <div style="font-size: 0.8rem;">END: ${company.address || '-'}</div>
                 </div>
@@ -5712,11 +5707,11 @@
 
             <div style="text-align: center; margin-bottom: 15px;">
                 <h2 style="margin:0; text-decoration: underline;">ROMANEIO DE ENTREGA</h2>
-                <div style="font-size: 0.8rem;">EmissÃ£o: ${new Date().toLocaleString()} | Via ${i + 1}</div>
+                <div style="font-size: 0.8rem;">Emissão: ${new Date().toLocaleString()} | Via ${i + 1}</div>
             </div>
 
             <div style="display: grid !important; grid-template-columns: 45px 1fr 75px 1fr 28px 70px 40px 38px 45px 55px 55px !important; width: 100%; margin-bottom: 20px; font-family: Arial, sans-serif; font-weight: bold; font-size: 9px; color: #000; border: 1px solid #000;">
-                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background: #f0f0f0;">NÂº NF</div>
+                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background: #f0f0f0;">Nº NF</div>
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background: #f0f0f0;">CLIENTE</div>
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background: #f0f0f0;">TELEFONE</div>
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background: #f0f0f0;">CIDADE</div>
@@ -5735,9 +5730,9 @@
                     let phone = rawPhone || '';
                     if (phone.length > 20) phone = phone.substring(0, 20);
                     const hasRedesp = item.redespacho && item.redespacho !== '-';
-                    const redespLabel = hasRedesp ? 'SIM' : 'NÃƒO';
+                    const redespLabel = hasRedesp ? 'SIM' : 'NÃO';
                     const redespNF = hasRedesp ? item.redespacho.toUpperCase() : '';
-                    const isCompl = item.isComplement ? 'SIM' : 'NÃƒO';
+                    const isCompl = item.isComplement ? 'SIM' : 'NÃO';
                     const pesoValue = parseFloat(item.weight) || 0;
                     const pesoDisplay = pesoValue % 1 === 0 ? pesoValue.toString() : pesoValue.toFixed(2);
                     const nfValueDisplay = parseFloat(item.nfValue) > 0 ? parseFloat(item.nfValue).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) : 'R$ 0,00';
@@ -5764,7 +5759,7 @@
 
             <div style="margin-top: 25px; display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 50px;">
                 <div style="border-top: 1px solid #000; text-align: center; padding-top: 5px; font-size: 0.8rem; font-weight: bold; font-family: Arial, sans-serif;">
-                    ResponsÃ¡vel ExpediÃ§Ã£o
+                    Responsável Expedição
                 </div>
                 <div style="border-top: 1px solid #000; text-align: center; padding-top: 5px; font-size: 0.8rem; font-weight: bold; font-family: Arial, sans-serif;">
                     Motorista / Conferente
@@ -5777,12 +5772,12 @@
                 window.print();
             } catch (err) {
                 console.error('Erro ao gerar romaneio:', err);
-                alert('Falha ao gerar impressÃ£o: ' + err.message);
+                alert('Falha ao gerar impressão: ' + err.message);
             }
         };
 
 
-        // â”€â”€â”€ HELPER UNIFICADO: reverte despachos de um romaneio para um status â”€â”€â”€â”€â”€â”€â”€
+        // ─── HELPER UNIFICADO: reverte despachos de um romaneio para um status ───────
         window._reverterDespachosDoRomaneio = async (items, novoStatus) => {
             if (!items || !items.length) return 0;
             const idsParaReverter = items.map(item => Number(item.id));
@@ -5825,7 +5820,7 @@
 
             localStorage.setItem(Utils._storageKey('dispatches'), JSON.stringify(history));
 
-            // Auto-limpa invoice_history vinculados Ã s NFs revertidas
+            // Auto-limpa invoice_history vinculados às NFs revertidas
             if (novoStatus === 'Pendente Despacho') {
                 const nfsAfetadas = items.map(item => item.invoice).filter(Boolean);
                 if (nfsAfetadas.length > 0) {
@@ -5837,7 +5832,7 @@
                     });
                     if (invoiceHist.length < antesLen) {
                         Utils.setStorage('invoice_history', invoiceHist);
-                        console.log(`[Extorno] ${antesLen - invoiceHist.length} lanÃ§amento(s) de fatura removido(s) automaticamente.`);
+                        console.log(`[Extorno] ${antesLen - invoiceHist.length} lançamento(s) de fatura removido(s) automaticamente.`);
                     }
                 }
             }
@@ -5857,12 +5852,12 @@
             }
             return revertidos;
         };
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ─────────────────────────────────────────────────────────────────────────────
 
         window.returnToDashboard = async (id) => {
             const numId = Number(id);
 
-            // Localiza o romaneio que contÃ©m este despacho
+            // Localiza o romaneio que contém este despacho
             let romaneios = Utils.getStorage('app_romaneios') || [];
             const romaneioIdx = romaneios.findIndex(r => r.items && r.items.some(item => Number(item.id) === numId));
             const romaneioAfetado = romaneioIdx !== -1 ? romaneios[romaneioIdx] : null;
@@ -5870,8 +5865,8 @@
             const qtd = idsNoRomaneio.length;
 
             const msg = romaneioAfetado
-                ? `Deseja retornar para o Painel de PendÃªncias?\n\nO romaneio ${romaneioAfetado.id} (${qtd} NF${qtd > 1 ? 's' : ''}) serÃ¡ REMOVIDO e todos os despachos voltarÃ£o para Pendente.`
-                : 'Deseja retornar este despacho para o Painel de PendÃªncias?';
+                ? `Deseja retornar para o Painel de Pendências?\n\nO romaneio ${romaneioAfetado.id} (${qtd} NF${qtd > 1 ? 's' : ''}) será REMOVIDO e todos os despachos voltarão para Pendente.`
+                : 'Deseja retornar este despacho para o Painel de Pendências?';
 
             if (!confirm(msg)) return;
 
@@ -5881,10 +5876,10 @@
                 Utils.saveRaw('app_romaneios', JSON.stringify(romaneios));
             }
 
-            // Reverte TODOS os despachos do romaneio (ou sÃ³ este, se nÃ£o havia romaneio)
+            // Reverte TODOS os despachos do romaneio (ou só este, se não havia romaneio)
             const revertidos = await window._reverterDespachosDoRomaneio(idsNoRomaneio, 'Pendente Despacho');
 
-            showToast(`âœ… ${revertidos} despacho(s) devolvido(s) para o painel de pendÃªncias!`);
+            showToast(`✅ ${revertidos} despacho(s) devolvido(s) para o painel de pendências!`);
 
             if (window.renderAppHistory) window.renderAppHistory();
             if (window.renderDashboard) window.renderDashboard();
@@ -5922,13 +5917,13 @@
             container.style.display = 'none';
         };
 
-        // --- FUNÃ‡Ã•ES UTILITÃRIAS DE EXPORTAÃ‡ÃƒO ---
+        // --- FUNÇÕES UTILITÁRIAS DE EXPORTAÇÃO ---
 
         // Exportar tabela para Excel (CSV)
         window.exportReportToExcel = (tableId, filename) => {
             const table = document.getElementById(tableId);
             if (!table) {
-                showToast('âŒ Tabela nÃ£o encontrada para exportaÃ§Ã£o.');
+                showToast('❌ Tabela não encontrada para exportação.');
                 return;
             }
 
@@ -5957,14 +5952,14 @@
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
 
-            showToast('ðŸ“¥ Arquivo Excel gerado com sucesso!');
+            showToast('📥 Arquivo Excel gerado com sucesso!');
         };
 
-        // Imprimir relatÃ³rio
+        // Imprimir relatório
         window.printReport = (containerId, title) => {
             const container = document.getElementById(containerId) || document.getElementById('report-content-area');
             if (!container) {
-                showToast('âŒ ConteÃºdo nÃ£o encontrado para impressÃ£o.');
+                showToast('❌ Conteúdo não encontrado para impressão.');
                 return;
             }
 
@@ -6003,7 +5998,7 @@
             }, 500);
         };
 
-        // Gera botÃµes de aÃ§Ã£o para relatÃ³rios
+        // Gera botões de ação para relatórios
         window.getReportActionButtons = (tableId, reportName) => {
             return `
                 <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-bottom: 1rem;" class="no-print">
@@ -6067,7 +6062,7 @@
             <div style="text-align: center; padding: 3rem;">
                 <span class="material-icons-round" style="font-size: 4rem; color: var(--accent-success);">check_circle</span>
                 <h3 style="margin-top: 1rem; color: var(--text-primary);">Tudo no Prazo!</h3>
-                <p style="color: var(--text-secondary);">Nenhum despacho pendente perdeu o horÃ¡rio de corte.</p>
+                <p style="color: var(--text-secondary);">Nenhum despacho pendente perdeu o horário de corte.</p>
             </div>
         `;
                 return;
@@ -6079,7 +6074,7 @@
                 <span class="material-icons-round" style="font-size: 2rem; color: var(--accent-danger);">warning</span>
                 <div>
                     <h2 style="color: var(--accent-danger);">Despachos Atrasados</h2>
-                    <p style="color: var(--text-secondary);">Foram encontrados <strong>${lateItems.length}</strong> despachos que excederam o horÃ¡rio limite de saÃ­da.</p>
+                    <p style="color: var(--text-secondary);">Foram encontrados <strong>${lateItems.length}</strong> despachos que excederam o horário limite de saída.</p>
                 </div>
             </div>
         </div>
@@ -6089,7 +6084,7 @@
                 <span class="material-icons-round" style="font-size: 1.2rem;">download</span>
                 Baixar Excel
             </button>
-            <button class="btn btn-secondary" onclick="window.printReport(null, 'RelatÃ³rio de Atrasos')" style="display: flex; align-items: center; gap: 0.5rem;">
+            <button class="btn btn-secondary" onclick="window.printReport(null, 'Relatório de Atrasos')" style="display: flex; align-items: center; gap: 0.5rem;">
                 <span class="material-icons-round" style="font-size: 1.2rem;">print</span>
                 Imprimir
             </button>
@@ -6104,9 +6099,9 @@
                             <th>NF</th>
                             <th>Cliente</th>
                             <th>Transportadora</th>
-                            <th>HorÃ¡rio SaÃ­da</th>
+                            <th>Horário Saída</th>
                             <th>Motivo Atraso</th>
-                            <th style="text-align: right;">AÃ§Ãµes</th>
+                            <th style="text-align: right;">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -6142,7 +6137,7 @@
             );
 
             if (vanItems.length === 0) {
-                container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-secondary);">Nenhum despacho via VAN encontrado no histÃ³rico.</div>`;
+                container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-secondary);">Nenhum despacho via VAN encontrado no histórico.</div>`;
                 return;
             }
 
@@ -6178,7 +6173,7 @@
                 <div style="font-size: 1.5rem; font-weight: 700; color: var(--accent-danger); margin-top: 0.5rem;">${Utils.formatCurrency(totalExtra)}</div>
             </div>
             <div class="card" style="padding: 1.5rem; text-align: center; border: 1px solid ${netColor};">
-                <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Saldo LÃ­quido</div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Saldo Líquido</div>
                 <div style="font-size: 1.5rem; font-weight: 700; color: ${netColor}; margin-top: 0.5rem;">${Utils.formatCurrency(netResult)}</div>
             </div>
         </div>
@@ -6188,7 +6183,7 @@
                 <span class="material-icons-round" style="font-size: 1.2rem;">download</span>
                 Baixar Excel
             </button>
-            <button class="btn btn-secondary" onclick="window.printReport(null, 'RelatÃ³rio Performance VAN')" style="display: flex; align-items: center; gap: 0.5rem;">
+            <button class="btn btn-secondary" onclick="window.printReport(null, 'Relatório Performance VAN')" style="display: flex; align-items: center; gap: 0.5rem;">
                 <span class="material-icons-round" style="font-size: 1.2rem;">print</span>
                 Imprimir
             </button>
@@ -6250,38 +6245,38 @@
                         list[idx].status = 'Despachado';
                         list[idx].dispatchedAt = new Date().toISOString();
                         Utils.saveRaw('dispatches', JSON.stringify(list));
-                        showToast('âœ… Mercadoria marcada como despachada!');
+                        showToast('✅ Mercadoria marcada como despachada!');
                         renderAppHistory();
                     }
                 }
             };
         }
 
-        // --- RELATÃ“RIO DE ENTREGAS (Motoboy/Motorista) ---
+        // --- RELATÓRIO DE ENTREGAS (Motoboy/Motorista) ---
         async function renderDeliveryReport(container) {
-            // Buscar histÃ³rico de entregas
+            // Buscar histórico de entregas
             const deliveryHistory = Utils.getStorage('delivery_history') || [];
             const dispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
 
-            // Combinar entregas finalizadas (do histÃ³rico) e pendentes (dos dispatches)
+            // Combinar entregas finalizadas (do histórico) e pendentes (dos dispatches)
             const allDeliveries = [
                 ...deliveryHistory,
                 ...dispatches.filter(d => d.deliveryStatus === 'entregue' || d.deliveryStatus === 'devolvido')
             ];
 
-            // Obter lista Ãºnica de entregadores
-            const deliveryPersons = [...new Set(allDeliveries.map(d => d.deliveryPerson || d.driverName || 'NÃ£o AtribuÃ­do'))].sort();
+            // Obter lista única de entregadores
+            const deliveryPersons = [...new Set(allDeliveries.map(d => d.deliveryPerson || d.driverName || 'Não Atribuído'))].sort();
 
-            // Gerar opÃ§Ãµes de filtro
+            // Gerar opções de filtro
             const filterOptions = deliveryPersons.map(p => `<option value="${p}">${p}</option>`).join('');
 
-            // HTML do relatÃ³rio
+            // HTML do relatório
             container.innerHTML = `
                 <div class="welcome-banner" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.1)); border: 1px solid #f59e0b;">
                     <div style="display: flex; align-items: center; gap: 1rem;">
                         <span class="material-icons-round" style="font-size: 2rem; color: #f59e0b;">two_wheeler</span>
                         <div>
-                            <h2 style="color: var(--text-primary); margin: 0;">RelatÃ³rio de Entregas</h2>
+                            <h2 style="color: var(--text-primary); margin: 0;">Relatório de Entregas</h2>
                             <p style="color: var(--text-secondary); margin: 0.5rem 0 0;">Acompanhe o desempenho dos entregadores (Motoboy e Motorista).</p>
                         </div>
                     </div>
@@ -6317,7 +6312,7 @@
                 </div>
 
                 <div id="deliveryReportResults" style="margin-top: 1.5rem;">
-                    <!-- Resultados serÃ£o inseridos aqui -->
+                    <!-- Resultados serão inseridos aqui -->
                 </div>
             `;
 
@@ -6325,7 +6320,7 @@
             window.applyDeliveryReportFilter();
         }
 
-        // FunÃ§Ã£o de filtro do relatÃ³rio
+        // Função de filtro do relatório
         window.applyDeliveryReportFilter = async function () {
             const startDate = document.getElementById('deliveryReportStartDate').value;
             const endDate = document.getElementById('deliveryReportEndDate').value;
@@ -6363,11 +6358,11 @@
             // Filtrar por entregador
             if (personFilter) {
                 allDeliveries = allDeliveries.filter(d =>
-                    (d.deliveryPerson || d.driverName || 'NÃ£o AtribuÃ­do') === personFilter
+                    (d.deliveryPerson || d.driverName || 'Não Atribuído') === personFilter
                 );
             }
 
-            // Helper para formatar duraÃ§Ã£o
+            // Helper para formatar duração
             const formatDuration = (ms) => {
                 if (ms < 0) ms = 0;
                 const minutes = Math.floor(ms / 60000);
@@ -6377,12 +6372,12 @@
                 return `${mins}min`;
             };
 
-            // Calcular estatÃ­sticas por entregador
+            // Calcular estatísticas por entregador
             const stats = {};
 
             // 1. Agrupar
             allDeliveries.forEach(d => {
-                const person = d.deliveryPerson || d.driverName || 'NÃ£o AtribuÃ­do';
+                const person = d.deliveryPerson || d.driverName || 'Não Atribuído';
                 if (!stats[person]) {
                     stats[person] = {
                         total: 0,
@@ -6394,9 +6389,9 @@
                 stats[person].items.push(d);
             });
 
-            // 2. Processar tempos (OrdenaÃ§Ã£o e CÃ¡lculo)
+            // 2. Processar tempos (Ordenação e Cálculo)
             Object.keys(stats).forEach(person => {
-                // Ordenar itens cronologicamente pela data de conclusÃ£o
+                // Ordenar itens cronologicamente pela data de conclusão
                 stats[person].items.sort((a, b) => {
                     const dA = new Date(a.deliveryCompletedAt || a.finalizedAt || a.date).getTime();
                     const dB = new Date(b.deliveryCompletedAt || b.finalizedAt || b.date).getTime();
@@ -6412,19 +6407,19 @@
                         stats[person].devolvidas++;
                     }
 
-                    // LÃ³gica de Tempo de Percurso
+                    // Lógica de Tempo de Percurso
                     const deliveredTime = new Date(item.deliveryCompletedAt || item.finalizedAt || item.date).getTime();
                     const dispatchTime = new Date(item.deliveryDispatchedAt || item.date).getTime(); // Assumindo item.deliveryDispatchedAt como hora do despacho
 
                     let startTime = dispatchTime;
                     let originLabel = 'Despacho';
 
-                    // Se nÃ£o Ã© a primeira entrega do lote...
+                    // Se não é a primeira entrega do lote...
                     if (index > 0) {
                         const prevItem = stats[person].items[index - 1];
                         const prevDeliveredTime = new Date(prevItem.deliveryCompletedAt || prevItem.finalizedAt || prevItem.date).getTime();
 
-                        // Se o despacho atual foi ANTES da entrega anterior, Ã© mesmo lote
+                        // Se o despacho atual foi ANTES da entrega anterior, é mesmo lote
                         if (dispatchTime < prevDeliveredTime) {
                             startTime = prevDeliveredTime;
                             originLabel = 'Entrega Anterior';
@@ -6450,7 +6445,7 @@
                         <span class="material-icons-round" style="font-size: 1.2rem;">download</span>
                         Baixar Excel
                     </button>
-                    <button class="btn btn-secondary" onclick="window.printReport(null, 'RelatÃ³rio de Entregas')" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button class="btn btn-secondary" onclick="window.printReport(null, 'Relatório de Entregas')" style="display: flex; align-items: center; gap: 0.5rem;">
                         <span class="material-icons-round" style="font-size: 1.2rem;">print</span>
                         Imprimir
                     </button>
@@ -6510,7 +6505,7 @@
                                     <div style="font-weight: 700; color: var(--accent-success);">${s.entregues}</div>
                                 </div>
                                 <div style="text-align: right;">
-                                    <div style="font-size: 0.7rem; color: var(--text-secondary);">DevoluÃ§Ãµes</div>
+                                    <div style="font-size: 0.7rem; color: var(--text-secondary);">Devoluções</div>
                                     <div style="font-weight: 700; color: var(--accent-danger);">${s.devolvidas}</div>
                                 </div>
                             </div>
@@ -6559,7 +6554,7 @@
                 `;
             });
 
-            // Tabela consolidada oculta para exportaÃ§Ã£o
+            // Tabela consolidada oculta para exportação
             html += `
                 <table id="deliveryReportExportTable" style="display: none;">
                     <thead>
@@ -6621,7 +6616,7 @@
             const allHistory = window._dispatchesFullCache || localHistory;
             const d = allHistory.find(item => Number(item.id) === numId);
             if (!d) {
-                if (!silent) alert('Despacho nÃ£o encontrado. Abra a aba "Montagem de Carga" primeiro.');
+                if (!silent) alert('Despacho não encontrado. Abra a aba "Montagem de Carga" primeiro.');
                 return;
             }
 
@@ -6636,18 +6631,18 @@
                 phone = clientObj.telefone.replace(/\D/g, '');
             }
 
-            // Ignorar telefones de clientes GenÃ©ricos (ex: DIVERSOS)
+            // Ignorar telefones de clientes Genéricos (ex: DIVERSOS)
             const ignoredNames = ['DIVERSOS', 'CONSUMIDOR FINAL'];
             if (ignoredNames.includes(norm(d.client))) {
-                if(!silent) alert('Cliente genÃ©rico selecionado. NÃ£o Ã© possÃ­vel enviar WhatsApp AutomÃ¡tico.');
+                if(!silent) alert('Cliente genérico selecionado. Não é possível enviar WhatsApp Automático.');
                 return;
             }
 
             if (!phone || phone.length < 10) {
                 if (!silent) {
-                    alert('Telefone do cliente nÃ£o encontrado para envio do WhatsApp.\nVerifique o cadastro do cliente.');
+                    alert('Telefone do cliente não encontrado para envio do WhatsApp.\nVerifique o cadastro do cliente.');
                 } else {
-                    console.warn(`[WA Auto] Telefone invÃ¡lido/inexistente para o cliente ${d.client} da NF ${d.invoice}`);
+                    console.warn(`[WA Auto] Telefone inválido/inexistente para o cliente ${d.client} da NF ${d.invoice}`);
                 }
                 return;
             }
@@ -6659,7 +6654,7 @@
             let fullName = d.client || 'Cliente';
             if (typeof clientObj !== 'undefined' && clientObj && clientObj.nome) fullName = clientObj.nome;
 
-            const msg = `OlÃ¡ ${fullName}!\nInformamos que seu pedido NF: ${d.invoice} foi despachado via ${d.carrier}.\nPrevisÃ£o de Entrega: D+${rawLead} dias.\nLT Distribuidora agradece!\nQualquer dÃºvida, estamos Ã  disposiÃ§Ã£o!`;
+            const msg = `Olá ${fullName}!\nInformamos que seu pedido NF: ${d.invoice} foi despachado via ${d.carrier}.\nPrevisão de Entrega: D+${rawLead} dias.\nLT Distribuidora agradece!\nQualquer dúvida, estamos à disposição!`;
 
             // Use api.whatsapp.com (wa.me) proxy page to bypass web concurrency limits
             const url = `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`;
@@ -6675,7 +6670,7 @@
             fetch('version.json?t=' + new Date().getTime())
                 .then(r => r.json())
                 .then(data => {
-                    console.log('âœ… SYSTEM VERSION:', data.version);
+                    console.log('✅ SYSTEM VERSION:', data.version);
                     // Formata a data YYYY-MM-DD para DD/MM/YYYY manualmente
                     const rawDate = data.date || data.lastUpdate || '';
                     let dateFormatted = rawDate;
@@ -6683,10 +6678,10 @@
                         const dateParts = rawDate.split('-');
                         dateFormatted = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
                     }
-                    vEl.innerText = `v${data.version}${dateFormatted ? ' â€¢ ' + dateFormatted : ''}`;
+                    vEl.innerText = `v${data.version}${dateFormatted ? ' • ' + dateFormatted : ''}`;
                 })
                 .catch(e => {
-                    console.error('Erro ao carregar versÃ£o:', e);
+                    console.error('Erro ao carregar versão:', e);
                     vEl.innerText = 'v? (Erro ao carregar)';
                 });
         }
@@ -6728,8 +6723,8 @@
 
 
 
-        // --- GESTÃƒO DE USUÃRIOS (LÃ³gica) ---
-        // --- GESTÃƒO DE USUÃRIOS (LÃ³gica) ---
+        // --- GESTÃO DE USUÁRIOS (Lógica) ---
+        // --- GESTÃO DE USUÁRIOS (Lógica) ---
         window.saveUserAction = () => {
             const name = document.getElementById('regUserName').value.trim();
             const login = document.getElementById('regUserLogin').value.trim();
@@ -6737,7 +6732,7 @@
             const role = document.getElementById('regUserRole').value;
 
             if (!name || !login || !pass) {
-                alert('Preencha todos os campos obrigatÃ³rios.');
+                alert('Preencha todos os campos obrigatórios.');
                 return;
             }
 
@@ -6749,12 +6744,12 @@
             const isEditing = typeof editLogin === 'string' && editLogin.trim() !== '';
 
             if (isEditing) {
-                // Modo EdiÃ§Ã£o
+                // Modo Edição
                 const realIdx = users.findIndex(u => u.login === editLogin);
                 if (realIdx >= 0) {
                     // Check if they tried to change their login to an EXISTING one (other than theirs)
                     if (login !== editLogin && users.some(u => u.login === login)) {
-                        alert('Este novo login jÃ¡ estÃ¡ sendo usado por outro usuÃ¡rio.');
+                        alert('Este novo login já está sendo usado por outro usuário.');
                         return;
                     }
                     users[realIdx] = { name, login, pass, role };
@@ -6765,7 +6760,7 @@
                 // Modo Novo Cadastro
                 // Verificar duplicidade de login
                 if (users.some(u => u.login === login)) {
-                    alert('Este login jÃ¡ estÃ¡ em uso por outro usuÃ¡rio.');
+                    alert('Este login já está em uso por outro usuário.');
                     return;
                 }
                 users.push({ name, login, pass, role });
@@ -6777,7 +6772,7 @@
             // Atualiza UI
             if (window.renderUserList) window.renderUserList();
 
-            showToast(isEditing ? 'âœ… UsuÃ¡rio atualizado!' : 'âœ… UsuÃ¡rio cadastrado!');
+            showToast(isEditing ? '✅ Usuário atualizado!' : '✅ Usuário cadastrado!');
         };
 
         window.clearUserForm = () => {
@@ -6786,7 +6781,7 @@
             window.__editingUserLogin = null;
             const btn = document.getElementById('btnSaveUser');
             if (btn) {
-                btn.innerHTML = '<span class="material-icons-round">save</span> Salvar UsuÃ¡rio';
+                btn.innerHTML = '<span class="material-icons-round">save</span> Salvar Usuário';
                 btn.classList.remove('btn-warning');
             }
         };
@@ -6802,7 +6797,7 @@
 
             if (!tbody) return;
 
-            // RelÃª sempre do localStorage para capturar dados carregados via chunks do Firestore
+            // Relê sempre do localStorage para capturar dados carregados via chunks do Firestore
             clients = Utils.getStorage('clients') || clients;
 
             // Se filterParam for um evento (onchange do checkbox), ignora e pega do input
@@ -6847,13 +6842,13 @@
                 // Verifica cobertura 
                 const hasCoverage = typeof checkLogisticsCoverage === 'function' ? checkLogisticsCoverage(c.cidade, c.bairro) : true;
 
-                // BotÃ£o de Alerta na coluna de AÃ§Ãµes
+                // Botão de Alerta na coluna de Ações
                 const alertBtn = !hasCoverage ? `
             <button onclick="window.goToTableRegistration('${(c.cidade || '').replace(/'/g, "\\'")}')" 
                 class="btn" 
                 style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-right: 4px; background: rgba(239, 68, 68, 0.1); color: var(--accent-danger); border: 1px solid var(--accent-danger);" 
                 title="SEM COBERTURA: Clique para cadastrar rota para ${c.cidade}">
-                âš ï¸ Rota
+                ⚠️ Rota
             </button>
         ` : '';
 
@@ -6866,9 +6861,9 @@
                 <div style="display: flex; justify-content: center; align-items: center;">
                     ${alertBtn}
                     <button onclick="window.editClient(${clients.indexOf(c)})" class="btn btn-secondary" 
-                        style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-right: 4px;" title="Editar">âœï¸</button>
+                        style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-right: 4px;" title="Editar">✏️</button>
                     <button onclick="window.deleteClient(${clients.indexOf(c)})" class="btn btn-danger" 
-                        style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" title="Excluir">ðŸ—‘ï¸</button>
+                        style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" title="Excluir">🗑️</button>
                 </div>
             </td>
         </tr>
@@ -6897,16 +6892,16 @@
                 if (cityInput) {
                     cityInput.value = city;
                     cityInput.focus();
-                    window.showToast(`ðŸ“ Preenchendo cadastro para: ${city}`);
+                    window.showToast(`📍 Preenchendo cadastro para: ${city}`);
 
-                    // Opcional: Filtrar a lista de tabelas para mostrar se jÃ¡ existe algo parcial
+                    // Opcional: Filtrar a lista de tabelas para mostrar se já existe algo parcial
                     if (window.updateRuleFilter) {
                         const searchInput = document.querySelector('#tableRules .filter-input');
                         if (searchInput) searchInput.value = city;
                         window.updateRuleFilter('cidade', city);
                     }
                 }
-            }, 300); // Delay para garantir transiÃ§Ã£o da aba
+            }, 300); // Delay para garantir transição da aba
         };
 
         // Editar cliente
@@ -6929,7 +6924,7 @@
             document.getElementById('btnCancelEditClient').style.display = 'block';
 
             document.getElementById('formNewClient').scrollIntoView({ behavior: 'smooth', block: 'center' });
-            showToast('âœï¸ Editando cliente');
+            showToast('✏️ Editando cliente');
         };
 
         // Excluir cliente
@@ -6941,11 +6936,11 @@
                 clients.splice(idx, 1);
                 Utils.setStorage('clients', clients);
                 window.renderClientsList();
-                showToast('ðŸ—‘ï¸ Cliente excluÃ­do');
+                showToast('🗑️ Cliente excluído');
             }
         };
 
-        // Resetar formulÃ¡rio de cliente
+        // Resetar formulário de cliente
         window.resetClientForm = () => {
             document.getElementById('formNewClient').reset();
             document.getElementById('editingClientMode').value = 'false';
@@ -6955,10 +6950,10 @@
             document.getElementById('btnCancelEditClient').style.display = 'none';
         };
 
-        // FormulÃ¡rio de cliente
+        // Formulário de cliente
         const formNewClient = document.getElementById('formNewClient');
         if (formNewClient) {
-            // Cancelar ediÃ§Ã£o
+            // Cancelar edição
             document.getElementById('btnCancelEditClient').addEventListener('click', window.resetClientForm);
 
             // Buscar por CNPJ
@@ -6971,7 +6966,7 @@
                     if (cnpj && window.CNPJLookup.isValidFormat(cnpj)) {
                         // Buscar diretamente
                         btnSearchClientCNPJ.disabled = true;
-                        btnSearchClientCNPJ.innerHTML = 'â³';
+                        btnSearchClientCNPJ.innerHTML = '⏳';
 
                         window.CNPJLookup.lookup(cnpj).then(data => {
                             document.getElementById('newClientName').value = data.nomeFantasia || data.razaoSocial;
@@ -6982,12 +6977,12 @@
                                 `${data.logradouro}${data.numero ? ', ' + data.numero : ''}`;
                             document.getElementById('newClientPhone').value = data.telefone || '';
 
-                            showToast(`âœ… Dados carregados: ${data.nomeFantasia || data.razaoSocial}`);
+                            showToast(`✅ Dados carregados: ${data.nomeFantasia || data.razaoSocial}`);
                         }).catch(err => {
-                            showToast(`âŒ ${err.message}`);
+                            showToast(`❌ ${err.message}`);
                         }).finally(() => {
                             btnSearchClientCNPJ.disabled = false;
-                            btnSearchClientCNPJ.innerHTML = 'ðŸ”';
+                            btnSearchClientCNPJ.innerHTML = '🔍';
                         });
                     } else {
                         // Abrir modal
@@ -7000,7 +6995,7 @@
                                 `${data.logradouro}${data.numero ? ', ' + data.numero : ''}`;
                             document.getElementById('newClientPhone').value = data.telefone || '';
 
-                            showToast(`âœ… Dados preenchidos: ${data.nomeFantasia || data.razaoSocial || 'CPF inserido'}`);
+                            showToast(`✅ Dados preenchidos: ${data.nomeFantasia || data.razaoSocial || 'CPF inserido'}`);
                         }, 'Buscar Cliente por CNPJ/CPF');
                     }
                 });
@@ -7014,7 +7009,7 @@
                 });
             }
 
-            // Submit do formulÃ¡rio
+            // Submit do formulário
             formNewClient.addEventListener('submit', (e) => {
                 e.preventDefault();
 
@@ -7023,7 +7018,7 @@
 
                 const nome = document.getElementById('newClientName').value.trim();
                 if (!nome) {
-                    showToast('âŒ Nome Ã© obrigatÃ³rio');
+                    showToast('❌ Nome é obrigatório');
                     return;
                 }
 
@@ -7040,18 +7035,18 @@
 
                 if (isEditing && editIdx >= 0) {
                     clients[editIdx] = { ...clients[editIdx], ...clientData };
-                    showToast('âœ… Cliente atualizado!');
+                    showToast('✅ Cliente atualizado!');
                 } else {
                     // Verificar duplicado
                     const exists = clients.find(c => c.codigo === clientData.codigo ||
                         (clientData.cnpj && c.cnpj === clientData.cnpj));
                     if (exists) {
-                        if (!confirm('JÃ¡ existe um cliente com esse cÃ³digo ou CNPJ. Cadastrar mesmo assim?')) {
+                        if (!confirm('Já existe um cliente com esse código ou CNPJ. Cadastrar mesmo assim?')) {
                             return;
                         }
                     }
                     clients.push(clientData);
-                    showToast('âœ… Cliente cadastrado!');
+                    showToast('✅ Cliente cadastrado!');
                 }
 
                 Utils.setStorage('clients', clients);
@@ -7060,21 +7055,21 @@
             });
         }
 
-        // Renderizar clientes na abertura da seÃ§Ã£o system
+        // Renderizar clientes na abertura da seção system
         if (document.getElementById('clientListBody')) {
             window.renderClientsList();
         }
 
-        // --- FUNÃ‡Ã•ES DE BAIXA DE ROMANEIO ---
+        // --- FUNÇÕES DE BAIXA DE ROMANEIO ---
         window.reimprimirRomaneio = async (romaneioId) => {
             const romaneios = Utils.getStorage('app_romaneios') || [];
             const manifest = romaneios.find(r => r.id === romaneioId);
             if(!manifest) {
-                alert('Romaneio nÃ£o encontrado.');
+                alert('Romaneio não encontrado.');
                 return;
             }
 
-            // âœ… Deduplicar IDs do manifesto para evitar busca dupla
+            // ✅ Deduplicar IDs do manifesto para evitar busca dupla
             const manifestItemIds = [...new Set(manifest.items.map(item => item.id))];
             const expectedCount = manifestItemIds.length;
 
@@ -7082,28 +7077,28 @@
             const dispatches = Utils.getStorage('dispatches') || [];
             let localItems = dispatches.filter(d => manifestItemIds.includes(d.id));
 
-            // âœ… CORRIGIDO: verifica se achou TODOS os itens, nÃ£o sÃ³ "achou algum"
-            // Se achou menos do que o esperado â†’ busca no Firestore para completar
+            // ✅ CORRIGIDO: verifica se achou TODOS os itens, não só "achou algum"
+            // Se achou menos do que o esperado → busca no Firestore para completar
             const missingIds = manifestItemIds.filter(id => !localItems.find(d => d.id === id));
             let fullItems = [...localItems];
 
             if (missingIds.length > 0) {
                 try {
-                    console.log(`[Reimprimir] ${missingIds.length} NF(s) nÃ£o encontradas no localStorage. Buscando no Firestore...`, missingIds);
+                    console.log(`[Reimprimir] ${missingIds.length} NF(s) não encontradas no localStorage. Buscando no Firestore...`, missingIds);
                     const history = await Utils.Cloud.getFullDispatchesHistory();
                     const firestoreItems = history.filter(d => missingIds.includes(d.id));
                     fullItems = [...localItems, ...firestoreItems];
                     if (firestoreItems.length > 0) {
-                        console.log(`[Reimprimir] âœ… ${firestoreItems.length} NF(s) recuperadas do Firestore. Total: ${fullItems.length}/${expectedCount}`);
+                        console.log(`[Reimprimir] ✅ ${firestoreItems.length} NF(s) recuperadas do Firestore. Total: ${fullItems.length}/${expectedCount}`);
                     } else {
-                        console.warn(`[Reimprimir] âš ï¸ NFs nÃ£o encontradas no Firestore tambÃ©m:`, missingIds);
+                        console.warn(`[Reimprimir] ⚠️ NFs não encontradas no Firestore também:`, missingIds);
                     }
                 } catch(e) {
                     console.error('[Reimprimir] Erro ao buscar no Firestore:', e);
                 }
             }
 
-            // 3. Fallback final: usa dados salvos dentro do prÃ³prio romaneio
+            // 3. Fallback final: usa dados salvos dentro do próprio romaneio
             if(fullItems.length === 0 && manifest.items && manifest.items.length > 0) {
                 console.warn(`[Reimprimir] Usando dados internos do romaneio ${romaneioId}.`);
                 fullItems = manifest.items;
@@ -7120,18 +7115,18 @@
             }
 
             if(fullItems.length === 0) {
-                alert('Erro: Notas do romaneio nÃ£o encontradas no histÃ³rico para impressÃ£o.');
+                alert('Erro: Notas do romaneio não encontradas no histórico para impressão.');
                 return;
             }
 
             if (fullItems.length < expectedCount) {
-                console.warn(`[Reimprimir] âš ï¸ Imprimindo com ${fullItems.length} de ${expectedCount} NFs. Algumas podem estar faltando.`);
+                console.warn(`[Reimprimir] ⚠️ Imprimindo com ${fullItems.length} de ${expectedCount} NFs. Algumas podem estar faltando.`);
             }
 
             if(window.printSpecificRomaneio) {
                 window.printSpecificRomaneio(manifest.carrier, fullItems);
             } else {
-                alert('Erro: FunÃ§Ã£o de impressÃ£o nÃ£o carregada.');
+                alert('Erro: Função de impressão não carregada.');
             }
         };
 
@@ -7147,7 +7142,7 @@
             
             // Separar Pendentes (em_rota) de Arquivados (baixado)
             const pendentes = romaneios.filter(r => r.status === 'em_rota').sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-            const arquivados = romaneios.filter(r => r.status === 'baixado').sort((a,b) => new Date(b.baixadoAt) - new Date(a.baixadoAt)).slice(0, 50); // Mostra os 50 Ãºltimos
+            const arquivados = romaneios.filter(r => r.status === 'baixado').sort((a,b) => new Date(b.baixadoAt) - new Date(a.baixadoAt)).slice(0, 50); // Mostra os 50 últimos
 
             if(countPendentes) countPendentes.innerText = pendentes.length;
 
@@ -7182,14 +7177,14 @@
             }
 
             if(arquivados.length === 0) {
-                arquivadosBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2rem; color:var(--text-secondary);">Nenhum histÃ³rico recente.</td></tr>`;
+                arquivadosBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2rem; color:var(--text-secondary);">Nenhum histórico recente.</td></tr>`;
             } else {
                 arquivadosBody.innerHTML = arquivados.map(r => `
                     <tr style="border-bottom: 1px solid var(--border-color);">
                         <td style="padding: 1rem; font-weight: 600;">${r.id}</td>
                         <td style="padding: 1rem; color: var(--accent-success); font-weight: 500;">
                             ${new Date(r.baixadoAt).toLocaleString('pt-BR')}
-                            <br><small style="color:var(--text-secondary);">EmissÃ£o: ${new Date(r.createdAt).toLocaleDateString('pt-BR')}</small>
+                            <br><small style="color:var(--text-secondary);">Emissão: ${new Date(r.createdAt).toLocaleDateString('pt-BR')}</small>
                         </td>
                         <td style="padding: 1rem;">
                             <strong>${r.carrier}</strong>
@@ -7217,7 +7212,7 @@
         };
 
         window.confirmarBaixaRomaneio = (romaneioId) => {
-            if(!confirm(`Tem certeza que o canhoto/romaneio fÃ­sico do cÃ³digo ${romaneioId} retornou e deseja arquivÃ¡-lo no sistema?`)) return;
+            if(!confirm(`Tem certeza que o canhoto/romaneio físico do código ${romaneioId} retornou e deseja arquivá-lo no sistema?`)) return;
 
             let romaneios = Utils.getStorage('app_romaneios') || [];
             const idx = romaneios.findIndex(r => r.id === romaneioId);
@@ -7225,14 +7220,14 @@
                 romaneios[idx].status = 'baixado';
                 romaneios[idx].baixadoAt = new Date().toISOString();
                 Utils.saveRaw('app_romaneios', JSON.stringify(romaneios));
-                showToast('âœ… Romaneio baixado e arquivado com sucesso!');
+                showToast('✅ Romaneio baixado e arquivado com sucesso!');
                 if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
             }
         };
 
         window.estornarBaixaRomaneio = (romaneioId) => {
             window.requestSupervisorPassword(`Estornar Romaneio ${romaneioId}`, () => {
-                if (!confirm(`Confirma o ESTORNO do romaneio ${romaneioId}?\n\nEle voltarÃ¡ para status "Em Rota" e poderÃ¡ ser baixado novamente.`)) return;
+                if (!confirm(`Confirma o ESTORNO do romaneio ${romaneioId}?\n\nEle voltará para status "Em Rota" e poderá ser baixado novamente.`)) return;
 
                 let romaneios = Utils.getStorage('app_romaneios') || [];
                 const idx = romaneios.findIndex(r => r.id === romaneioId);
@@ -7240,10 +7235,10 @@
                     romaneios[idx].status = 'em_rota';
                     delete romaneios[idx].baixadoAt;
                     Utils.saveRaw('app_romaneios', JSON.stringify(romaneios));
-                    showToast('â†©ï¸ Romaneio estornado! Voltou para "Em Rota".');
+                    showToast('↩️ Romaneio estornado! Voltou para "Em Rota".');
                     if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
                 } else {
-                    alert('âŒ Romaneio nÃ£o encontrado.');
+                    alert('❌ Romaneio não encontrado.');
                 }
             });
         };
@@ -7252,10 +7247,10 @@
             window.requestSupervisorPassword(`Cancelar Romaneio ${romaneioId}`, () => {
                 let romaneios = Utils.getStorage('app_romaneios') || [];
                 const romaneio = romaneios.find(r => r.id === romaneioId);
-                if (!romaneio) { alert('âŒ Romaneio nÃ£o encontrado.'); return; }
+                if (!romaneio) { alert('❌ Romaneio não encontrado.'); return; }
 
                 const qtd = romaneio.items ? romaneio.items.length : 0;
-                if (!confirm(`Confirma o CANCELAMENTO do romaneio ${romaneioId}?\n\n${qtd} despacho(s) voltarÃ£o para "Pendente Despacho" automaticamente.`)) return;
+                if (!confirm(`Confirma o CANCELAMENTO do romaneio ${romaneioId}?\n\n${qtd} despacho(s) voltarão para "Pendente Despacho" automaticamente.`)) return;
 
                 // Remove o romaneio
                 Utils.saveRaw('app_romaneios', JSON.stringify(romaneios.filter(r => r.id !== romaneioId)));
@@ -7263,7 +7258,7 @@
                 // Reverte os despachos para Pendente
                 const items = romaneio.items || [];
                 window._reverterDespachosDoRomaneio(items, 'Pendente Despacho').then(revertidos => {
-                    showToast(`â†©ï¸ Romaneio cancelado! ${revertidos} despacho(s) voltaram para pendentes.`);
+                    showToast(`↩️ Romaneio cancelado! ${revertidos} despacho(s) voltaram para pendentes.`);
                     if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
                     if (window.renderDashboard) window.renderDashboard();
                     if (window.renderAppHistory) window.renderAppHistory();
@@ -7271,20 +7266,20 @@
             });
         };
 
-        // â”€â”€â”€ ESTORNO DE PAGAMENTO DE FATURA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ─── ESTORNO DE PAGAMENTO DE FATURA ───────────────────────────────────────────
         window.estornarPagamentoFatura = (invoiceHistoryId) => {
             window.requestSupervisorPassword('Estornar Pagamento de Fatura', () => {
                 let invoiceHistory = Utils.getStorage('invoice_history') || [];
                 const registro = invoiceHistory.find(h => String(h.id) === String(invoiceHistoryId));
-                if (!registro) { alert('âŒ LanÃ§amento de fatura nÃ£o encontrado.'); return; }
+                if (!registro) { alert('❌ Lançamento de fatura não encontrado.'); return; }
 
-                if (!confirm(`Confirma o ESTORNO do lanÃ§amento de fatura "${registro.invoiceRef}" (${registro.carrier})?\n\n${registro.nfCount} NF(s) voltarÃ£o para status "Despachado".`)) return;
+                if (!confirm(`Confirma o ESTORNO do lançamento de fatura "${registro.invoiceRef}" (${registro.carrier})?\n\n${registro.nfCount} NF(s) voltarão para status "Despachado".`)) return;
 
-                // Remove o registro do histÃ³rico de faturas
+                // Remove o registro do histórico de faturas
                 invoiceHistory = invoiceHistory.filter(h => String(h.id) !== String(invoiceHistoryId));
                 Utils.setStorage('invoice_history', invoiceHistory);
 
-                // Reverte os despachos (por nÃºmero de NF) de 'Pago' para 'Despachado'
+                // Reverte os despachos (por número de NF) de 'Pago' para 'Despachado'
                 let dispatches = Utils.getStorage('dispatches') || [];
                 const nfList = registro.nfList || [];
                 let revertidos = 0;
@@ -7299,15 +7294,15 @@
                 });
                 Utils.setStorage('dispatches', dispatches);
 
-                showToast(`â†©ï¸ Fatura estornada! ${revertidos} NF(s) voltaram para "Despachado".`);
+                showToast(`↩️ Fatura estornada! ${revertidos} NF(s) voltaram para "Despachado".`);
                 if (window.showInvoiceHistory) window.showInvoiceHistory();
                 if (window.renderAppHistory) window.renderAppHistory();
             });
         };
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ─────────────────────────────────────────────────────────────────────────────
 
 
-        // --- FUNÃ‡Ã•ES DE VENDEDORES (v3.6) ---
+        // --- FUNÇÕES DE VENDEDORES (v3.6) ---
         window.renderSellersList = function () {
             const tbody = document.getElementById('sellerListBody');
             if (!tbody) return;
@@ -7319,7 +7314,7 @@
                 return;
             }
 
-            // Exibir em ordem alfabÃ©tica
+            // Exibir em ordem alfabética
             sellers.sort((a,b) => a.name.localeCompare(b.name)).forEach((s) => {
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid var(--border-color)';
@@ -7370,35 +7365,35 @@
             const phone = document.getElementById('sellerPhone').value.trim().replace(/\D/g, '');
 
             if (!name || !phone) {
-                window.showToast('âŒ Nome e WhatsApp sÃ£o obrigatÃ³rios!');
+                window.showToast('❌ Nome e WhatsApp são obrigatórios!');
                 return;
             }
             if (phone.length < 10) {
-                window.showToast('âŒ O WhatsApp precisa DDD e NÃºmero vÃ¡lidos!');
+                window.showToast('❌ O WhatsApp precisa DDD e Número válidos!');
                 return;
             }
 
             let sellers = Utils.getStorage('app_sellers') || [];
 
             if (idInput) {
-                // Modo EdiÃ§Ã£o
+                // Modo Edição
                 const idx = sellers.findIndex(s => s.id === idInput);
                 if (idx > -1) {
                     sellers[idx].name = name;
                     sellers[idx].phone = phone;
-                    window.showToast('âœ… Vendedor atualizado!');
+                    window.showToast('✅ Vendedor atualizado!');
                 }
             } else {
-                // Modo CriaÃ§Ã£o
+                // Modo Criação
                 const newId = 'V' + Date.now().toString().substring(7); // ID Curto
                 sellers.push({ id: newId, name, phone });
-                window.showToast('âœ… Novo Vendedor cadastrado!');
+                window.showToast('✅ Novo Vendedor cadastrado!');
             }
 
             Utils.setStorage('app_sellers', sellers);
             document.getElementById('sellerModal').style.display = 'none';
             if (window.renderSellersList) window.renderSellersList();
-            if (window.populateSellersSelector) window.populateSellersSelector(); // Refresca dropdown da CotaÃ§Ã£o
+            if (window.populateSellersSelector) window.populateSellersSelector(); // Refresca dropdown da Cotação
         };
 
         window.deleteSeller = function (id) {
@@ -7410,7 +7405,7 @@
                 Utils.setStorage('app_sellers', sellers);
                 if (window.renderSellersList) window.renderSellersList();
                 if (window.populateSellersSelector) window.populateSellersSelector();
-                window.showToast('ðŸ—‘ï¸ Vendedor removido.');
+                window.showToast('🗑️ Vendedor removido.');
             }
         };
 
@@ -7439,7 +7434,7 @@
             const d = allHistory.find(item => Number(item.id) === numId);
 
             if (!d) {
-                if (!silent) alert('Nota Fiscal nÃ£o encontrada! Abra a aba "Montagem de Carga" primeiro.');
+                if (!silent) alert('Nota Fiscal não encontrada! Abra a aba "Montagem de Carga" primeiro.');
                 return;
             }
 
@@ -7450,16 +7445,16 @@
 
             const phone = d.sellerPhone.replace(/\D/g, '');
             const dispatchDate = new Date(d.dispatchedAt || d.date || new Date()).toLocaleDateString('pt-BR');
-            const msg = `OlÃ¡ ${d.sellerName}!\nInformamos que o pedido do cliente ${d.client}, com nÂº de NF: ${d.invoice}, com ${d.volume} volumes, no valor de ${Utils.formatCurrency(d.nfValue)}, foi despachado em ${dispatchDate} via ${d.carrier}.\nPrevisÃ£o de entrega: ${d.leadTime} dias.\nLT Distribuidora agradece!\nQualquer dÃºvida, estamos Ã  disposiÃ§Ã£o.`;
+            const msg = `Olá ${d.sellerName}!\nInformamos que o pedido do cliente ${d.client}, com nº de NF: ${d.invoice}, com ${d.volume} volumes, no valor de ${Utils.formatCurrency(d.nfValue)}, foi despachado em ${dispatchDate} via ${d.carrier}.\nPrevisão de entrega: ${d.leadTime} dias.\nLT Distribuidora agradece!\nQualquer dúvida, estamos à disposição.`;
 
             const url = `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`;
             window.open(url, '_blank');
         };
 
-        // Hook para popular seletor no carregamento da seÃ§Ã£o
+        // Hook para popular seletor no carregamento da seção
         const originalShowSection = window.showSection;
         window.showSection = (id) => {
-            // SeguranÃ§a: Bloqueio de acesso via URL/Console para Perfis de Entrega (v3.7.5)
+            // Segurança: Bloqueio de acesso via URL/Console para Perfis de Entrega (v3.7.5)
             const storedUser = Utils.getStorage('logged_user');
             const userRole = storedUser ? (storedUser.role || '').toLowerCase().trim() : '';
 
