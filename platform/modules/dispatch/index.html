@@ -1420,10 +1420,11 @@
                                             <th style="width:110px;text-align:right;">Diferença</th>
                                             <th style="width:130px;text-align:center;">Status</th>
                                             <th style="width:110px;">Conferido Por</th>
+                                            <th style="width:80px;text-align:center;">Ação</th>
                                         </tr>
                                     </thead>
                                     <tbody id="analysisInvoiceBody">
-                                        <tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-secondary);">Clique em “Atualizar” para carregar os dados.</td></tr>
+                                        <tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--text-secondary);">Clique em “Atualizar” para carregar os dados.</td></tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -1459,6 +1460,37 @@
 
                     </div> <!-- /invoice-tab-analysis -->
 
+                </div>
+
+                <!-- Modal Estorno de Fatura -->
+                <div id="invoiceEstornoModal" class="login-overlay" style="display:none;">
+                    <div class="login-card" style="max-width:460px;">
+                        <div style="text-align:center;margin-bottom:1.5rem;">
+                            <span class="material-icons-round" style="font-size:3rem;color:#ef4444;">undo</span>
+                            <h3 style="margin:0.5rem 0;color:#ef4444;">Estornar Fatura</h3>
+                            <p style="color:var(--text-secondary);font-size:0.88rem;">
+                                Esta ação irá reverter o pagamento e retornar as NFs para o status <strong>Despachado</strong>.<br>
+                                Requer senha de Supervisor.
+                            </p>
+                        </div>
+                        <div id="estornoDetails"
+                            style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:1rem;margin-bottom:1.5rem;font-size:0.88rem;">
+                            <!-- preenchido via JS -->
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Motivo do Estorno</label>
+                            <input type="text" id="estornoJustification" class="form-input" placeholder="Informe o motivo" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Senha do Supervisor</label>
+                            <input type="password" id="estornoSupervisorPass" class="form-input" placeholder="Digite a senha">
+                        </div>
+                        <div style="display:flex;gap:1rem;margin-top:1rem;">
+                            <button class="btn btn-secondary" onclick="window.closeEstornoModal()" style="flex:1;">Cancelar</button>
+                            <button class="btn" onclick="window.confirmEstorno()"
+                                style="flex:1;background:#ef4444;color:#fff;border-color:#ef4444;">Confirmar Estorno</button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Modal Histórico de Faturas -->

@@ -4028,7 +4028,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const tbody = document.getElementById('analysisInvoiceBody');
             if (tbody) {
                 if (filtered.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-secondary);">Nenhuma fatura encontrada com os filtros selecionados.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--text-secondary);">Nenhuma fatura encontrada com os filtros selecionados.</td></tr>`;
                 } else {
                     tbody.innerHTML = filtered.map(h => {
                         const isConf    = h.difference === 0;
@@ -4052,6 +4052,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <td style="text-align:right;font-weight:700;color:${diffColor};">${isConf ? '—' : diffSign + Utils.formatCurrency(diffAbs)}</td>
                                 <td style="text-align:center;">${badge}</td>
                                 <td style="font-size:0.8rem;">${h.confirmedBy || '—'}${authInfo}</td>
+                                <td style="text-align:center;">
+                                    <button onclick="window.showEstornoModal('${h.id || ''}')" title="Estornar fatura"
+                                        style="background:none;border:1px solid rgba(239,68,68,0.4);border-radius:6px;padding:3px 8px;cursor:pointer;color:#ef4444;font-size:0.75rem;font-family:inherit;display:inline-flex;align-items:center;gap:2px;transition:all 0.15s;white-space:nowrap;"
+                                        onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='none'">
+                                        <span class="material-icons-round" style="font-size:0.9rem;">undo</span>Estornar
+                                    </button>
+                                </td>
                             </tr>`;
                     }).join('');
                 }
@@ -4163,6 +4170,144 @@ document.addEventListener('DOMContentLoaded', async () => {
                 btn.style.color           = isOpen ? 'var(--text-secondary)' : 'var(--primary-color)';
                 btn.style.borderColor     = isOpen ? 'var(--border-color)'   : 'var(--primary-color)';
             }
+        };
+
+        // ── ESTORNO DE FATURA ─────────────────────────────
+        // Referência do histórico que será estornado (salvo entre modal open → confirm)
+        let _pendingEstornoId = null;
+
+        window.showEstornoModal = (historyId) => {
+            const history = Utils.getStorage('invoice_history') || [];
+            const entry = history.find(h => h.id === historyId);
+            if (!entry) {
+                Utils.showNotification('Fatura não encontrada no histórico.', 'error');
+                return;
+            }
+
+            _pendingEstornoId = historyId;
+
+            const details = document.getElementById('estornoDetails');
+            if (details) {
+                details.innerHTML = `
+                    <table style="width:100%;border-collapse:collapse;">
+                        <tr><td style="color:var(--text-secondary);padding:2px 0;width:140px;">Transportadora:</td><td style="font-weight:700;">${entry.carrier || '—'}</td></tr>
+                        <tr><td style="color:var(--text-secondary);padding:2px 0;">Ref. Fatura:</td><td style="font-weight:600;">${entry.invoiceRef || '—'}</td></tr>
+                        <tr><td style="color:var(--text-secondary);padding:2px 0;">Data Conferência:</td><td>${new Date(entry.date).toLocaleDateString('pt-BR')}</td></tr>
+                        <tr><td style="color:var(--text-secondary);padding:2px 0;">Qtd de NFs:</td><td>${entry.nfCount || 0} NFs</td></tr>
+                        <tr><td style="color:var(--text-secondary);padding:2px 0;">Valor Fatura:</td><td style="color:#f59e0b;font-weight:700;">${Utils.formatCurrency(entry.invoiceValue || 0)}</td></tr>
+                        <tr><td style="color:var(--text-secondary);padding:2px 0;">Conferido por:</td><td>${entry.confirmedBy || '—'}</td></tr>
+                    </table>`;
+            }
+
+            const justEl = document.getElementById('estornoJustification');
+            const passEl = document.getElementById('estornoSupervisorPass');
+            if (justEl) justEl.value = '';
+            if (passEl) passEl.value = '';
+
+            document.getElementById('invoiceEstornoModal').style.display = 'flex';
+            setTimeout(() => { if (justEl) justEl.focus(); }, 100);
+        };
+
+        window.closeEstornoModal = () => {
+            document.getElementById('invoiceEstornoModal').style.display = 'none';
+            _pendingEstornoId = null;
+        };
+
+        window.confirmEstorno = () => {
+            const justification = document.getElementById('estornoJustification')?.value?.trim();
+            const supervisorPass = document.getElementById('estornoSupervisorPass')?.value?.trim();
+
+            if (!justification) {
+                Utils.showNotification('Informe o motivo do estorno.', 'error');
+                return;
+            }
+
+            // Valida a senha do supervisor (mesmo sistema do modal de autorização)
+            const users = Utils.getStorage('users') || [];
+            const supervisor = users.find(u =>
+                (u.role === 'supervisor' || u.role === 'admin') &&
+                u.password === supervisorPass
+            );
+
+            if (!supervisor) {
+                Utils.showNotification('Senha de supervisor incorreta.', 'error');
+                document.getElementById('estornoSupervisorPass').value = '';
+                document.getElementById('estornoSupervisorPass').focus();
+                return;
+            }
+
+            window.processEstornoInvoice(_pendingEstornoId, justification, supervisor.name);
+        };
+
+        window.processEstornoInvoice = (historyId, justification, supervisorName) => {
+            // 1. Carrega histórico e localiza a entrada
+            let history = Utils.getStorage('invoice_history') || [];
+            const entry = history.find(h => h.id === historyId);
+            if (!entry) {
+                Utils.showNotification('Registro não encontrado.', 'error');
+                return;
+            }
+
+            // 2. Reverte os despachos correspondentes para status 'Despachado'
+            const nfList = Array.isArray(entry.nfList) ? entry.nfList : [];
+            let dispatches = Utils.getStorage('dispatches') || [];
+
+            let revertedCount = 0;
+            dispatches = dispatches.map(d => {
+                const nfMatch = nfList.length > 0
+                    ? nfList.includes(d.invoice)
+                    : (d.carrier === entry.carrier && d.invoiceRef === entry.invoiceRef);
+
+                if (nfMatch && d.status === 'Pago') {
+                    revertedCount++;
+                    const updated = { ...d, status: 'Despachado' };
+                    delete updated.paidAt;
+                    delete updated.invoiceRef;
+                    delete updated.paidBy;
+                    delete updated.paymentNote;
+                    delete updated.authorizedBy;
+                    delete updated.invoiceConfirmedAt;
+                    return updated;
+                }
+                return d;
+            });
+
+            Utils.setStorage('dispatches', dispatches);
+
+            // 3. Remove a entrada do histórico
+            history = history.filter(h => h.id !== historyId);
+            Utils.setStorage('invoice_history', history);
+
+            // 4. Registra log do estorno
+            const estornoLog = Utils.getStorage('estorno_log') || [];
+            estornoLog.push({
+                date: new Date().toISOString(),
+                historyId,
+                carrier: entry.carrier,
+                invoiceRef: entry.invoiceRef,
+                invoiceValue: entry.invoiceValue,
+                nfCount: entry.nfCount,
+                originalConfirmedBy: entry.confirmedBy,
+                reversedBy: supervisorName,
+                justification,
+                revertedCount
+            });
+            Utils.setStorage('estorno_log', estornoLog);
+
+            // 5. Fecha modal e atualiza a tela
+            window.closeEstornoModal();
+
+            Utils.showNotification(
+                `✅ Estorno concluído! ${revertedCount} NF${revertedCount !== 1 ? 's' : ''} revertida${revertedCount !== 1 ? 's' : ''} para "Despachado".`,
+                'success'
+            );
+
+            // Recarrega a tela de análise e a tabela principal de despachos
+            window.filterInvoiceAnalysis();
+            if (typeof window.loadDispatches === 'function') window.loadDispatches();
+            if (typeof window.updateInvoiceComparison === 'function') window.updateInvoiceComparison();
+
+            console.log(`🔄 [Estorno] Fatura ${entry.invoiceRef} estornada por ${supervisorName}. ${revertedCount} NFs revertidas.`);
         };
 
         // Show invoice history modal

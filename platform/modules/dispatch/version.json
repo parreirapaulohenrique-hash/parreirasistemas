@@ -1,7 +1,7 @@
 {
-    "change":  "v3.11.20 - feat: segunda tela Analise de Faturas na aba Conferencia; separacao conformes/nao-conformes; relatorio de divergencia por transportadora com drill-down",
-    "version":  "3.11.20",
+    "change":  "v3.11.21 - feat: estorno de fatura conferida com confirmacao de supervisor e reversao automatica das NFs para Despachado",
+    "version":  "3.11.21",
     "lastUpdate":  "2026-06-04",
-    "deployedAt": "2026-06-04 08:52"
+    "deployedAt": "2026-06-04 09:05"
 }
 
