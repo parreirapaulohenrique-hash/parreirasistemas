@@ -5791,7 +5791,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             if (!d || !d.sellerPhone) return;
                             const phone = d.sellerPhone.replace(/\D/g, '');
                             const dispatchDate = new Date(d.dispatchedAt || d.date || new Date()).toLocaleDateString('pt-BR');
-                            const msg = `Olá ${d.sellerName}!\nInformamos que o pedido do cliente ${d.client}, com nº de NF: ${d.invoice}, com ${d.volume} volumes, no valor de ${Utils.formatCurrency(d.nfValue)}, foi despachado em ${dispatchDate} via ${d.carrier}.\nPrevisão de entrega: ${d.leadTime} dias.\nLT Distribuidora agradece!\nQualquer dúvida, estamos à disposição.`;
+                            const msg = window._buildVendorWAMsg(d, dispatchDate);
                             waQueue.push({
                                 label: `🧑‍💼 Vendedor: ${d.sellerName}`,
                                 url: `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`
@@ -7650,6 +7650,30 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (currentVal) select.value = currentVal;
         };
 
+        // ─── Mensagem do WhatsApp do Vendedor — personalizada por tenant ───────────────────
+        // Para adicionar um novo tenant, basta incluir um novo `case` abaixo.
+        window._buildVendorWAMsg = function (d, dispatchDate) {
+            const tenant = (Utils.Cloud && Utils.Cloud.tenantId) || localStorage.getItem('app_tenant_id') || '';
+            const sellerName  = d.sellerName  || 'Vendedor';
+            const client      = d.client      || '';
+            const invoice     = d.invoice     || '';
+            const volume      = d.volume      || '';
+            const nfValue     = Utils.formatCurrency(d.nfValue || 0);
+            const carrier     = d.carrier     || '';
+            const leadTime    = d.leadTime    || '';
+            const date        = dispatchDate  || new Date().toLocaleDateString('pt-BR');
+
+            switch (tenant) {
+                case 'altafix':
+                    return `Olá ${sellerName}!\nInformamos que o pedido do cliente ${client}, com nº de NF: ${invoice}, com ${volume} volumes, no valor de ${nfValue}, foi despachado em ${date} via ${carrier}.\nPrevisão de entrega: ${leadTime} dias.\nAlta Fix Distribuidora de Peças agradece!\nQualquer dúvida, estamos à disposição.`;
+
+                case 'ltdistribuidora':
+                default:
+                    return `Olá ${sellerName}!\nInformamos que o pedido do cliente ${client}, com nº de NF: ${invoice}, com ${volume} volumes, no valor de ${nfValue}, foi despachado em ${date} via ${carrier}.\nPrevisão de entrega: ${leadTime} dias.\nLT Distribuidora agradece!\nQualquer dúvida, estamos à disposição.`;
+            }
+        };
+        // ──────────────────────────────────────────────────────────────────────────────────────
+
         window.sendWhatsAppVendedor = function (dispatchId, silent = false) {
             const numId = Number(dispatchId);
             const localHistory = Utils.getStorage('dispatches') || [];
@@ -7668,7 +7692,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const phone = d.sellerPhone.replace(/\D/g, '');
             const dispatchDate = new Date(d.dispatchedAt || d.date || new Date()).toLocaleDateString('pt-BR');
-            const msg = `Olá ${d.sellerName}!\nInformamos que o pedido do cliente ${d.client}, com nº de NF: ${d.invoice}, com ${d.volume} volumes, no valor de ${Utils.formatCurrency(d.nfValue)}, foi despachado em ${dispatchDate} via ${d.carrier}.\nPrevisão de entrega: ${d.leadTime} dias.\nLT Distribuidora agradece!\nQualquer dúvida, estamos à disposição.`;
+            const msg = window._buildVendorWAMsg(d, dispatchDate);
 
             const url = `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`;
             window.open(url, '_blank');
