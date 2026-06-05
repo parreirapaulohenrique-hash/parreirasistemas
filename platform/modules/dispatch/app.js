@@ -3886,7 +3886,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Save to invoice history
             const invoiceHistory = Utils.getStorage('invoice_history') || [];
-            invoiceHistory.push({
+            const newHistoryEntry = {
                 id: Date.now(),
                 date: new Date().toISOString(),
                 carrier: carrier,
@@ -3899,8 +3899,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 confirmedBy: userName,
                 authorizedBy: authorizedBy || null,
                 justification: justification || null
-            });
+            };
+            invoiceHistory.push(newHistoryEntry);
             Utils.setStorage('invoice_history', invoiceHistory);
+
+            // Persiste também no Firestore para sobreviver a reloads
+            if (Utils.Cloud && Utils.Cloud.hasTenant && Utils.Cloud.hasTenant() && window.db) {
+                try {
+                    await window.db.collection('tenants').doc(Utils.Cloud.tenantId)
+                        .collection('invoice_history_db').doc(String(newHistoryEntry.id))
+                        .set(newHistoryEntry);
+                    console.log('💳 [Invoice] Histórico de faturas salvo no Firestore!');
+                } catch (e) {
+                    console.warn('[Invoice] Falha ao salvar histórico no Firestore:', e);
+                }
+            }
             console.log('💳 [Invoice] Histórico de faturas salvo!');
 
             showToast(`✅ ${paidCount} NFs marcadas como PAGAS!`, 'success');
@@ -3960,7 +3973,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         // Carrega dados e popula os filtros da aba de análise
-        window.renderInvoiceAnalysis = () => {
+        window.renderInvoiceAnalysis = async () => {
+            // Sempre tenta sincronizar do Firestore antes de renderizar
+            if (Utils.Cloud && Utils.Cloud.hasTenant && Utils.Cloud.hasTenant() && window.db) {
+                try {
+                    const snap = await window.db.collection('tenants').doc(Utils.Cloud.tenantId)
+                        .collection('invoice_history_db').get();
+                    if (!snap.empty) {
+                        const fsHistory = snap.docs.map(d => d.data());
+                        Utils.setStorage('invoice_history', fsHistory);
+                        console.log(`🔄 [Invoice Analysis] invoice_history sincronizado do Firestore: ${fsHistory.length} registros`);
+                    }
+                } catch (e) {
+                    console.warn('[Invoice Analysis] Falha ao sincronizar do Firestore:', e);
+                }
+            }
+
             const history = Utils.getStorage('invoice_history') || [];
 
             // Popula o select de transportadoras com base no histórico
@@ -4183,8 +4211,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Referência do histórico que será estornado (salvo entre modal open → confirm)
         let _pendingEstornoId = null;
 
-        window.showEstornoModal = (historyId) => {
-            const history = Utils.getStorage('invoice_history') || [];
+        window.showEstornoModal = async (historyId) => {
+            let history = [];
+            if (Utils.Cloud && Utils.Cloud.hasTenant && Utils.Cloud.hasTenant() && window.db) {
+                try {
+                    const snap = await window.db.collection('tenants').doc(Utils.Cloud.tenantId)
+                        .collection('invoice_history_db').get();
+                    if (!snap.empty) {
+                        history = snap.docs.map(d => d.data());
+                        Utils.setStorage('invoice_history', history);
+                    }
+                } catch (e) {
+                    console.warn('[Estorno Modal] Falha ao carregar do Firestore, usando localStorage:', e);
+                }
+            }
+            if (history.length === 0) {
+                history = Utils.getStorage('invoice_history') || [];
+            }
             // Compara como string pois o id pode ser número (Date.now())
             const entry = history.find(h => String(h.id) === String(historyId));
             if (!entry) {
@@ -4255,17 +4298,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         window.processEstornoInvoice = async (historyId, justification, supervisorName) => {
-            // 1. Carrega histórico e localiza a entrada
-            let history = Utils.getStorage('invoice_history') || [];
+            // 1. Carrega histórico — tenta Firestore primeiro (fonte verdadeira)
+            let history = [];
+            let historyFromFirestore = false;
+            if (Utils.Cloud && Utils.Cloud.hasTenant && Utils.Cloud.hasTenant() && window.db) {
+                try {
+                    const snap = await window.db.collection('tenants').doc(Utils.Cloud.tenantId)
+                        .collection('invoice_history_db').get();
+                    if (!snap.empty) {
+                        history = snap.docs.map(d => d.data());
+                        historyFromFirestore = true;
+                        console.log(`🔄 [Estorno] invoice_history carregado do Firestore: ${history.length} registros`);
+                    }
+                } catch (e) {
+                    console.warn('[Estorno] Falha ao carregar invoice_history do Firestore, usando localStorage:', e);
+                }
+            }
+            if (!historyFromFirestore) {
+                history = Utils.getStorage('invoice_history') || [];
+            }
             const entry = history.find(h => String(h.id) === String(historyId));
             if (!entry) {
-                showToast('❌ Registro não encontrado.');
+                showToast('❌ Registro não encontrado. Tente recarregar a página.');
                 return;
             }
 
             // 2. Identifica quais NFs/despachos reverter
             const nfList = Array.isArray(entry.nfList) ? entry.nfList : [];
-            let dispatches = Utils.getStorage('dispatches') || [];
+
+            // CRÍTICO: carrega do Firebase (fonte verdadeira), não do localStorage
+            // O processInvoicePayment salva no Firebase; o localStorage pode estar desatualizado
+            let dispatches = [];
+            try {
+                dispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
+                console.log(`🔄 [Estorno] Carregados ${dispatches.length} despachos do Firebase`);
+            } catch (e) {
+                console.warn('[Estorno] Falha ao carregar do Firebase, usando localStorage:', e);
+                dispatches = Utils.getStorage('dispatches') || [];
+            }
 
             // Campos a remover no estorno
             const revertFirestoreFields = {
@@ -4281,8 +4351,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             let revertedCount = 0;
             const idsToRevert = []; // IDs dos despachos a reverter no Firestore
 
-            // 2a. Atualiza localStorage e coleta IDs para Firestore
-            dispatches = dispatches.map(d => {
+            // 2a. Coleta IDs para reverter e prepara versão local atualizada
+            const updatedDispatches = dispatches.map(d => {
                 const nfMatch = nfList.length > 0
                     ? nfList.includes(d.invoice)
                     : (d.carrier === entry.carrier && d.invoiceRef === entry.invoiceRef);
@@ -4302,7 +4372,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return d;
             });
 
-            Utils.setStorage('dispatches', dispatches);
+            console.log(`🔄 [Estorno] ${revertedCount} NFs encontradas com status 'Pago'. IDs: ${idsToRevert.join(', ')}`);
+
+            // Atualiza localStorage com a lista completa e corrigida
+            Utils.setStorage('dispatches', updatedDispatches);
 
             // 2b. Persiste no Firestore
             if (Utils.Cloud && Utils.Cloud.hasTenant && Utils.Cloud.hasTenant() && window.db) {
@@ -4340,6 +4413,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 3. Remove entrada do histórico
             history = history.filter(h => String(h.id) !== String(historyId));
             Utils.setStorage('invoice_history', history);
+
+            // Remove também do Firestore
+            if (Utils.Cloud && Utils.Cloud.hasTenant && Utils.Cloud.hasTenant() && window.db) {
+                try {
+                    await window.db.collection('tenants').doc(Utils.Cloud.tenantId)
+                        .collection('invoice_history_db').doc(String(historyId)).delete();
+                    console.log(`🔄 [Estorno] invoice_history_db/${historyId} removido do Firestore`);
+                } catch (e) {
+                    console.warn('[Estorno] Falha ao remover histórico do Firestore:', e);
+                }
+            }
 
             // 4. Registra log do estorno
             const estornoLog = Utils.getStorage('estorno_log') || [];

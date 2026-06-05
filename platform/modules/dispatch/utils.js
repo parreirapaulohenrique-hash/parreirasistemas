@@ -313,8 +313,23 @@ const Utils = {
                 }
             }
 
-            // Une locais + nuvem
-            let all = [...local, ...cloud];
+            // PRIORIDADE: Firestore é a fonte verdadeira
+            // Firestore ganha quando há duplicata (o estorno altera lá, e não queremos o local sobrescrevendo)
+            const map = new Map();
+
+            // 1. Insere os locais primeiro (menor prioridade)
+            local.forEach(d => {
+                const id = String(d.id || d.codigo);
+                if (!map.has(id)) map.set(id, d);
+            });
+
+            // 2. Firestore sobrescreve sempre (maior prioridade)
+            cloud.forEach(d => {
+                const id = String(d.id || d.codigo);
+                map.set(id, d); // <-- sobrescreve o local, garantindo que o Firestore vença
+            });
+
+            let all = Array.from(map.values());
 
             // Ordena em memória: d.id é Date.now() (mais confiável), d.date como fallback
             all.sort((a, b) => {
@@ -327,13 +342,7 @@ const Utils = {
             if (filters.start) all = all.filter(d => (d.date || '') >= new Date(filters.start).toISOString());
             if (filters.end)   all = all.filter(d => (d.date || '') <= new Date(filters.end).toISOString());
 
-            // Remove duplicatas (item pode estar em localStorage E no Firestore)
-            const map = new Map();
-            all.forEach(d => {
-                const id = String(d.id || d.codigo);
-                if (!map.has(id)) map.set(id, d);
-            });
-            return Array.from(map.values());
+            return all;
         },
 
         async loadAll() {
