@@ -939,6 +939,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (inputVolume) inputVolume.addEventListener('input', triggerCalc);
         document.getElementById('inputSeller').addEventListener('change', triggerCalc);
 
+        // Recalcular automaticamente ao mudar cidade manual, tipo complemento ou NF principal
+        const inputCity = document.getElementById('inputCity');
+        if (inputCity) inputCity.addEventListener('input', triggerCalc);
+        const inputIsComplement = document.getElementById('inputIsComplement');
+        if (inputIsComplement) inputIsComplement.addEventListener('change', triggerCalc);
+        const inputMainNF = document.getElementById('inputMainNF');
+        if (inputMainNF) inputMainNF.addEventListener('input', triggerCalc);
+
+        // Expor triggerCalc globalmente para uso no botão Recalcular
+        window._triggerQuoteCalc = () => calculateAndSave(false);
+
 
         const navItems = document.querySelectorAll('.nav-item');
         const sections = document.querySelectorAll('.view-section');
@@ -1817,6 +1828,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             </div>`;
             }).join('');
+
+            // Botão Recalcular — aparece sempre que há resultado na tela
+            resultsArea.innerHTML += `
+            <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-color); display: flex; justify-content: center;" onclick="event.stopPropagation()">
+                <button id="btnRecalcular" onclick="window._triggerQuoteCalc()" style="
+                    display: flex; align-items: center; gap: 8px;
+                    background: transparent;
+                    color: var(--text-secondary);
+                    border: 1px solid var(--border-color);
+                    border-radius: 10px;
+                    padding: 8px 22px;
+                    font-size: 0.85rem;
+                    cursor: pointer;
+                    transition: all 0.18s ease;
+                    font-family: inherit;
+                " onmouseover="this.style.color='var(--primary-color)';this.style.borderColor='var(--primary-color)';this.style.background='rgba(var(--primary-rgb,59,130,246),0.07)'"
+                   onmouseout="this.style.color='var(--text-secondary)';this.style.borderColor='var(--border-color)';this.style.background='transparent'">
+                    <span class="material-icons-round" style="font-size:1.1rem;">refresh</span>
+                    Recalcular
+                </button>
+            </div>`;
+
             window.currentOptions = options;
         }
 
