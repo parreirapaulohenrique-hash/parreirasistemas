@@ -1,6 +1,6 @@
 {
-    "change":  "v3.11.24 - fix: botao Confirmar Estorno nao funcionava (campo senha comparado como u.password ao inves de u.pass) + validacao de senha vazia",
-    "version":  "3.11.24",
-    "lastUpdate":  "2026-06-04",
-    "deployedAt": "2026-06-04 09:32"
+    "version":  "3.11.27",
+    "change":  "v3.11.27 - fix: SyntaxError causado por redeclaracao de const inputIsComplement e inputMainNF. Sistema travava no carregamento e usuarios do tenant nao eram listados. Cotacao agora recalcula automaticamente ao alterar campos.",
+    "lastUpdate":  "2026-06-05",
+    "deployedAt": "2026-06-05 17:56"
 }
