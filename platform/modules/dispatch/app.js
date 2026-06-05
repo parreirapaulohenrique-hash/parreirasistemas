@@ -2041,6 +2041,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.rulesFilters = { cidade: '', redespacho: '' };
 
         const renderRulesList = () => {
+            // CRÍTICO: Sempre re-ler do storage (pode ter sido atualizado pelo Cloud listener)
+            rules = Utils.getStorage('freight_tables') || [];
             populateCityDatalist();
             const body = document.getElementById('rulesListBody');
             const tabContainer = document.getElementById('carrierTabs');
@@ -2120,7 +2122,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         };
 
-        // Função para remover UMA transportadora específica (incluindo da nuvem)
+        // Expor globalmente para o Cloud listener (utils.js linha 598) poder chamar após sync do Firestore
+        // SEM isso, tabelas de frete nunca aparecem em computadores novos (ex: Altafix)
+        window.renderRulesList = renderRulesList;
+
         window.removeCarrierCompletely = async (carrierName) => {
             if (!carrierName) return;
 
