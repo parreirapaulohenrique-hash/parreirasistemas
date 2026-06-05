@@ -5705,20 +5705,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // NOVO: Notificar Vendedores automaticamente (Parametrizável v3.7)
                 const settings = window.app_settings || { wa_auto_seller: true };
+                const sellersToNotify = {};
                 if (settings.wa_auto_seller) {
-                    const sellersToNotify = {};
                     toDispatch.forEach(d => {
                         if (d.sellerId && d.sellerPhone) {
                             if (!sellersToNotify[d.sellerId]) {
                                 sellersToNotify[d.sellerId] = d.id;
                             }
                         }
-                    });
-
-                    Object.values(sellersToNotify).forEach((dispatchId, idx) => {
-                        setTimeout(() => {
-                            if (window.sendWhatsAppVendedor) window.sendWhatsAppVendedor(dispatchId, true);
-                        }, (idx + 1) * 7000); 
                     });
                 }
 
@@ -5752,17 +5746,57 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Open print manifest
                 window.printSpecificRomaneio(currentModalCarrier, toDispatch);
 
-                // Disparo Automático de WhatsApp para CLIENTES (Parametrizável v3.7)
-                if (settings.wa_auto_client) {
-                    let delayWa = 1500;
-                    toDispatch.forEach((d) => {
-                        setTimeout(() => {
-                            if (window.sendWhatsApp) {
-                                window.sendWhatsApp(d.id, true); // Modo silencioso = true
+                // Disparo Automático de WhatsApp para CLIENTES + VENDEDORES (Parametrizável v3.7)
+                // NOTA: window.open() dentro de setTimeout é bloqueado por browsers modernos.
+                // Solução: painel flutuante com links clicáveis + auto-abertura via anchor.click()
+                if (settings.wa_auto_client || settings.wa_auto_seller) {
+                    // Coleta todas as URLs a enviar
+                    const waQueue = [];
+
+                    // Clientes
+                    if (settings.wa_auto_client) {
+                        const cList = Utils.getStorage('clients') || [];
+                        const norm = (s) => s ? s.toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase() : '';
+                        const ignoredNames = ['DIVERSOS', 'CONSUMIDOR FINAL'];
+                        toDispatch.forEach(d => {
+                            if (ignoredNames.includes(norm(d.client))) return;
+                            const clientObj = cList.find(c => norm(c.nome) === norm(d.client));
+                            const phone = clientObj && clientObj.telefone ? clientObj.telefone.replace(/\D/g, '') : '';
+                            if (!phone || phone.length < 10) {
+                                console.warn(`[WA Auto] Sem telefone para ${d.client} (NF ${d.invoice})`);
+                                return;
                             }
-                        }, delayWa);
-                        delayWa += 7000;
-                    });
+                            const rawLead = (d.leadTime || '').replace(/\D/g, '');
+                            const fullName = (clientObj && clientObj.nome) ? clientObj.nome : d.client;
+                            const msg = `Olá ${fullName}!\nInformamos que seu pedido NF: ${d.invoice} foi despachado via ${d.carrier}.\nPrevisão de Entrega: D+${rawLead} dias.\nLT Distribuidora agradece!\nQualquer dúvida, estamos à disposição!`;
+                            waQueue.push({
+                                label: `📦 ${d.client} (NF ${d.invoice})`,
+                                url: `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`
+                            });
+                        });
+                    }
+
+                    // Vendedores
+                    if (settings.wa_auto_seller) {
+                        Object.values(sellersToNotify).forEach(dispatchId => {
+                            const numId = Number(dispatchId);
+                            const localH = Utils.getStorage('dispatches') || [];
+                            const allH = window._dispatchesFullCache || localH;
+                            const d = allH.find(item => Number(item.id) === numId);
+                            if (!d || !d.sellerPhone) return;
+                            const phone = d.sellerPhone.replace(/\D/g, '');
+                            const dispatchDate = new Date(d.dispatchedAt || d.date || new Date()).toLocaleDateString('pt-BR');
+                            const msg = `Olá ${d.sellerName}!\nInformamos que o pedido do cliente ${d.client}, com nº de NF: ${d.invoice}, com ${d.volume} volumes, no valor de ${Utils.formatCurrency(d.nfValue)}, foi despachado em ${dispatchDate} via ${d.carrier}.\nPrevisão de entrega: ${d.leadTime} dias.\nLT Distribuidora agradece!\nQualquer dúvida, estamos à disposição.`;
+                            waQueue.push({
+                                label: `🧑‍💼 Vendedor: ${d.sellerName}`,
+                                url: `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`
+                            });
+                        });
+                    }
+
+                    if (waQueue.length > 0) {
+                        window._showWaPanel(waQueue);
+                    }
                 }
 
                 // Show appropriate toast
@@ -6741,6 +6775,66 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.applyRoleRestrictions();
         }
         // --- WHATSAPP FIX (v1.6.3) ---
+        // ── PAINEL FLUTUANTE DE ENVIO WHATSAPP ─────────────────────────────────
+        // Browsers modernos bloqueiam window.open() dentro de setTimeout.
+        // Solução: painel visual com links clicáveis + auto-abertura via anchor.click()
+        window._showWaPanel = (queue) => {
+            // Remove painel anterior se existir
+            const existing = document.getElementById('_waPanelOverlay');
+            if (existing) existing.remove();
+
+            const overlay = document.createElement('div');
+            overlay.id = '_waPanelOverlay';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+
+            const panel = document.createElement('div');
+            panel.style.cssText = 'background:var(--bg-card,#1e2533);border-radius:16px;padding:28px;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.5);border:1px solid rgba(37,211,102,0.3);';
+
+            const sentSet = new Set();
+
+            const renderPanel = () => {
+                const allSent = queue.every((_, i) => sentSet.has(i));
+                panel.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+                        <span style="font-size:1.6rem;">💬</span>
+                        <div>
+                            <div style="font-weight:700;font-size:1rem;color:var(--text-primary,#e2e8f0);">Envio WhatsApp</div>
+                            <div style="font-size:0.78rem;color:var(--text-secondary,#94a3b8);">${queue.length} contato${queue.length !== 1 ? 's' : ''} para notificar</div>
+                        </div>
+                        <button onclick="document.getElementById('_waPanelOverlay').remove()" style="margin-left:auto;background:rgba(255,255,255,0.08);border:none;border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--text-secondary,#94a3b8);font-size:0.85rem;">✕ Fechar</button>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;">
+                        ${queue.map((item, i) => `
+                            <a href="${item.url}" target="_blank" rel="noopener noreferrer"
+                               id="_waLink_${i}"
+                               onclick="document.getElementById('_waStatus_${i}').textContent='✅ Enviado';" 
+                               style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-radius:10px;background:${sentSet.has(i) ? 'rgba(37,211,102,0.1)' : 'rgba(255,255,255,0.05)'};border:1px solid ${sentSet.has(i) ? 'rgba(37,211,102,0.35)' : 'rgba(255,255,255,0.08)'};text-decoration:none;color:var(--text-primary,#e2e8f0);transition:all 0.2s;">
+                                <span style="font-size:0.85rem;font-weight:500;">${item.label}</span>
+                                <span id="_waStatus_${i}" style="font-size:0.75rem;color:${sentSet.has(i) ? '#25D366' : '#94a3b8'};white-space:nowrap;">${sentSet.has(i) ? '✅ Enviado' : '📤 Abrir'}</span>
+                            </a>
+                        `).join('')}
+                    </div>
+                    ${allSent ? '<div style="margin-top:14px;text-align:center;color:#25D366;font-weight:600;font-size:0.9rem;">✅ Todos os WhatsApps enviados!</div>' : '<div style="margin-top:12px;font-size:0.75rem;color:var(--text-secondary,#94a3b8);text-align:center;">💡 Clique em cada contato para abrir o WhatsApp</div>'}
+                `;
+            };
+
+            renderPanel();
+            overlay.appendChild(panel);
+            document.body.appendChild(overlay);
+
+            // Auto-abre o primeiro link após curtíssimo delay (ainda dentro do contexto de evento)
+            // Cada link subsequente requer clique manual (restrição do browser)
+            setTimeout(() => {
+                const firstLink = document.getElementById('_waLink_0');
+                if (firstLink) {
+                    firstLink.click();
+                    sentSet.add(0);
+                    renderPanel();
+                }
+            }, 300);
+        };
+        // ────────────────────────────────────────────────────────────────────────
+
         window.sendWhatsApp = (id, silent = false) => {
             const numId = Number(id);
             const localHistory = Utils.getStorage('dispatches') || [];
@@ -6753,7 +6847,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             let phone = '';
             const cList = Utils.getStorage('clients');
-            // Helper to normalize
             const norm = (s) => s ? s.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase() : '';
 
             const clientObj = cList.find(c => norm(c.nome) === norm(d.client));
@@ -6762,7 +6855,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 phone = clientObj.telefone.replace(/\D/g, '');
             }
 
-            // Ignorar telefones de clientes Genéricos (ex: DIVERSOS)
             const ignoredNames = ['DIVERSOS', 'CONSUMIDOR FINAL'];
             if (ignoredNames.includes(norm(d.client))) {
                 if(!silent) alert('Cliente genérico selecionado. Não é possível enviar WhatsApp Automático.');
@@ -6778,16 +6870,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            // Format Lead Time: "D+X dias."
             const rawLead = (d.leadTime || '').replace(/\D/g, '');
-
-            // User Request: Full Name and NO asterisks.
             let fullName = d.client || 'Cliente';
             if (typeof clientObj !== 'undefined' && clientObj && clientObj.nome) fullName = clientObj.nome;
 
             const msg = `Olá ${fullName}!\nInformamos que seu pedido NF: ${d.invoice} foi despachado via ${d.carrier}.\nPrevisão de Entrega: D+${rawLead} dias.\nLT Distribuidora agradece!\nQualquer dúvida, estamos à disposição!`;
-
-            // Use api.whatsapp.com (wa.me) proxy page to bypass web concurrency limits
             const url = `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`;
             window.open(url, '_blank');
         };
