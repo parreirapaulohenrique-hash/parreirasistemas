@@ -4254,21 +4254,34 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.processEstornoInvoice(_pendingEstornoId, justification, supervisor.name);
         };
 
-        window.processEstornoInvoice = (historyId, justification, supervisorName) => {
+        window.processEstornoInvoice = async (historyId, justification, supervisorName) => {
             // 1. Carrega histórico e localiza a entrada
             let history = Utils.getStorage('invoice_history') || [];
-            // Compara como string pois o id pode ser número (Date.now())
             const entry = history.find(h => String(h.id) === String(historyId));
             if (!entry) {
                 showToast('❌ Registro não encontrado.');
                 return;
             }
 
-            // 2. Reverte os despachos correspondentes para status 'Despachado'
+            // 2. Identifica quais NFs/despachos reverter
             const nfList = Array.isArray(entry.nfList) ? entry.nfList : [];
             let dispatches = Utils.getStorage('dispatches') || [];
 
+            // Campos a remover no estorno
+            const revertFirestoreFields = {
+                status: 'Despachado',
+                paidAt:               firebase.firestore.FieldValue.delete(),
+                invoiceRef:           firebase.firestore.FieldValue.delete(),
+                paidBy:               firebase.firestore.FieldValue.delete(),
+                paymentNote:          firebase.firestore.FieldValue.delete(),
+                authorizedBy:         firebase.firestore.FieldValue.delete(),
+                invoiceConfirmedAt:   firebase.firestore.FieldValue.delete()
+            };
+
             let revertedCount = 0;
+            const idsToRevert = []; // IDs dos despachos a reverter no Firestore
+
+            // 2a. Atualiza localStorage e coleta IDs para Firestore
             dispatches = dispatches.map(d => {
                 const nfMatch = nfList.length > 0
                     ? nfList.includes(d.invoice)
@@ -4276,6 +4289,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (nfMatch && d.status === 'Pago') {
                     revertedCount++;
+                    idsToRevert.push(d.id);
                     const updated = { ...d, status: 'Despachado' };
                     delete updated.paidAt;
                     delete updated.invoiceRef;
@@ -4290,7 +4304,40 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             Utils.setStorage('dispatches', dispatches);
 
-            // 3. Remove a entrada do histórico
+            // 2b. Persiste no Firestore
+            if (Utils.Cloud && Utils.Cloud.hasTenant && Utils.Cloud.hasTenant() && window.db) {
+                for (const did of idsToRevert) {
+                    try {
+                        await window.db.collection('tenants').doc(Utils.Cloud.tenantId)
+                            .collection('dispatches_db').doc(String(did))
+                            .update(revertFirestoreFields);
+                        console.log(`🔄 [Estorno] Firestore OK: despacho ${did} → Despachado`);
+                    } catch (e) {
+                        console.warn(`[Estorno] Firestore erro (despacho ${did}):`, e);
+                    }
+                }
+            } else {
+                console.warn('[Estorno] Firebase indisponível — alteração apenas no localStorage.');
+            }
+
+            // 2c. Atualiza cache em memória (_dispatchesFullCache)
+            if (window._dispatchesFullCache) {
+                window._dispatchesFullCache = window._dispatchesFullCache.map(d => {
+                    if (idsToRevert.includes(d.id)) {
+                        const updated = { ...d, status: 'Despachado' };
+                        delete updated.paidAt;
+                        delete updated.invoiceRef;
+                        delete updated.paidBy;
+                        delete updated.paymentNote;
+                        delete updated.authorizedBy;
+                        delete updated.invoiceConfirmedAt;
+                        return updated;
+                    }
+                    return d;
+                });
+            }
+
+            // 3. Remove entrada do histórico
             history = history.filter(h => String(h.id) !== String(historyId));
             Utils.setStorage('invoice_history', history);
 
