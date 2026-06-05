@@ -940,12 +940,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('inputSeller').addEventListener('change', triggerCalc);
 
         // Recalcular automaticamente ao mudar cidade manual, tipo complemento ou NF principal
-        const inputCity = document.getElementById('inputCity');
-        if (inputCity) inputCity.addEventListener('input', triggerCalc);
-        const inputIsComplement = document.getElementById('inputIsComplement');
-        if (inputIsComplement) inputIsComplement.addEventListener('change', triggerCalc);
-        const inputMainNF = document.getElementById('inputMainNF');
-        if (inputMainNF) inputMainNF.addEventListener('input', triggerCalc);
+        const _qCityEl = document.getElementById('inputCity');
+        if (_qCityEl) _qCityEl.addEventListener('input', triggerCalc);
+        const _qComplementEl = document.getElementById('inputIsComplement');
+        if (_qComplementEl) _qComplementEl.addEventListener('change', triggerCalc);
+        const _qMainNFEl = document.getElementById('inputMainNF');
+        if (_qMainNFEl) _qMainNFEl.addEventListener('input', triggerCalc);
 
         // Expor triggerCalc globalmente para uso no botão Recalcular
         window._triggerQuoteCalc = () => calculateAndSave(false);
