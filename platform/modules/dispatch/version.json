@@ -1,6 +1,6 @@
 {
-    "version":  "3.11.29",
-    "change":  "v3.11.29 - fix: Sanitizacao de campos undefined/null antes de gerar romaneio (evita string 'undefined' no PDF). Fix conferencia de fatura: parser robusto de datas para romaneios historicos 12-15/05.",
+    "version":  "3.11.30",
+    "change":  "v3.11.30 - fix: Conferencia de fatura agora inclui NFs com status Pago (evita sumiço de registros). Parser robusto de datas (_parseDispatchDate) suporta Firestore Timestamp, numerico ms, ISO e fallback pelo id. Calculo correto por transportadora com Map<id,invoiceValue> (sem dupla contagem de redespacho).",
     "lastUpdate":  "2026-06-08",
-    "deployedAt":  "2026-06-08 14:40"
+    "deployedAt":  "2026-06-08 15:20"
 }

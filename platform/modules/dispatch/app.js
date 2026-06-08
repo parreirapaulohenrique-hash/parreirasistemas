@@ -3631,8 +3631,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         // CONFERÊNCIA DE FATURA - INVOICE CHECK
         // ==========================================
 
+        // v3.11.30 — Parser robusto de datas para todos os formatos do banco
+        // Suporta: Firestore Timestamp, timestamp numérico ms, string ISO, fallback pelo id
+        window._parseDispatchDate = (d) => {
+            const candidates = [d.dispatchedAt, d.date, d.createdAt, d.timestamp];
+            for (const raw of candidates) {
+                if (raw == null) continue;
+                let dt;
+                if (typeof raw === 'number') {
+                    dt = new Date(raw);
+                } else if (typeof raw === 'object' && typeof raw.toDate === 'function') {
+                    // Firestore Timestamp
+                    dt = raw.toDate();
+                } else if (typeof raw === 'object' && raw.seconds) {
+                    // Firestore Timestamp serializado: {seconds, nanoseconds}
+                    dt = new Date(raw.seconds * 1000);
+                } else {
+                    dt = new Date(raw);
+                }
+                if (dt && !isNaN(dt.getTime())) return dt;
+            }
+            // Fallback: extrai data do id (Date.now() em ms)
+            if (d.id && String(d.id).length >= 13) {
+                const dt = new Date(Number(String(d.id).substring(0, 13)));
+                if (!isNaN(dt.getTime())) return dt;
+            }
+            return null;
+        };
+
         // State for invoice check
-        window.invoiceSelectedNFs = new Set();
+        // v3.11.30: Map<id, invoiceValue> para cálculo correto por transportadora (evita usar d.total bruto)
+        window.invoiceSelectedNFs = new Map();
         window.invoiceCurrentCarrier = '';
 
         // Initialize invoice section when shown
@@ -3640,17 +3669,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             const select = document.getElementById('invoiceCarrierFilter');
             if (!select) return;
 
-            // Get unique carriers from dispatched items (status = Despachado, not Pago)
+            // v3.11.30: inclui transportadoras de NFs PAGAS também (evita sumiço de registros antigos)
             const dispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
+            const VALID_STATUSES = ['Despachado', 'Pago'];
 
             // Coleta transportadoras principais
             const mainCarriers = dispatches
-                .filter(d => d.status === 'Despachado' && d.carrier)
+                .filter(d => VALID_STATUSES.includes(d.status) && d.carrier)
                 .map(d => d.carrier.toUpperCase().trim());
 
             // Coleta transportadoras de redespacho (somente as que têm valor real)
             const redespCarriers = dispatches
-                .filter(d => d.status === 'Despachado' && d.redespCarrier && d.redespTotal > 0)
+                .filter(d => VALID_STATUSES.includes(d.status) && d.redespCarrier && d.redespTotal > 0)
                 .map(d => d.redespCarrier.toUpperCase().trim());
 
             const allCarriers = [...new Set([...mainCarriers, ...redespCarriers])].sort();
@@ -3661,7 +3691,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             // Clear state
-            window.invoiceSelectedNFs.clear();
+            window.invoiceSelectedNFs = new Map();
             window.invoiceCurrentCarrier = '';
             window.updateInvoiceComparison();
         };
@@ -3672,7 +3702,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 carrier = document.getElementById('invoiceCarrierFilter') ? document.getElementById('invoiceCarrierFilter').value : '';
             }
             window.invoiceCurrentCarrier = carrier;
-            window.invoiceSelectedNFs.clear();
+            window.invoiceSelectedNFs = new Map();
 
             const tbody = document.getElementById('invoiceNFsBody');
             if (!tbody) return;
@@ -3686,18 +3716,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            // Get dispatched NFs for this carrier
-            // Inclui tanto despachos onde é transportadora principal quanto redespacho
+            // v3.11.30: inclui Despachado E Pago — NFs já pagas não somem mais da conferência
             const dispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
             const carrierNorm = carrier.toUpperCase().trim();
+            const VALID_STATUSES_FILTER = ['Despachado', 'Pago'];
+
+            console.log(`[InvoiceFilter v3.11.30] Buscando NFs para ${carrierNorm}. Total despachos: ${dispatches.length}`);
 
             let filtered = dispatches
-                .filter(d => d.status === 'Despachado' && (
+                .filter(d => VALID_STATUSES_FILTER.includes(d.status) && (
                     (d.carrier && d.carrier.toUpperCase().trim() === carrierNorm) ||
                     (d.redespCarrier && d.redespCarrier.toUpperCase().trim() === carrierNorm && d.redespTotal > 0)
                 ))
                 .map(d => {
-                    const isRedesp = d.redespCarrier && d.redespCarrier.toUpperCase().trim() === carrierNorm;
+                    const isRedesp = d.redespCarrier && d.redespCarrier.toUpperCase().trim() === carrierNorm &&
+                                     !(d.carrier && d.carrier.toUpperCase().trim() === carrierNorm);
                     // Calcula o valor correto para esta transportadora
                     let invoiceValue;
                     if (isRedesp) {
@@ -3707,39 +3740,51 @@ document.addEventListener('DOMContentLoaded', async () => {
                         // Principal: usa o total menos o redespacho (evita dupla contagem)
                         invoiceValue = d.mainTotal != null ? d.mainTotal : (d.total - (d.redespTotal || 0));
                     }
-                    return { ...d, _invoiceValue: invoiceValue, _isRedesp: isRedesp };
+                    return { ...d, _invoiceValue: invoiceValue, _isRedesp: isRedesp, _isPago: d.status === 'Pago' };
                 });
+
+            console.log(`[InvoiceFilter v3.11.30] Antes do filtro de mês: ${filtered.length} NFs (Despachadas + Pagas)`);
 
             if (monthFilterStr) {
                 const [year, month] = monthFilterStr.split('-');
                 filtered = filtered.filter(d => {
-                    const dispatchDate = new Date(d.dispatchedAt || d.date);
-                    return dispatchDate.getFullYear().toString() === year && 
+                    // v3.11.30: usa _parseDispatchDate robusto — suporta Firestore Timestamp, numérico, ISO
+                    const dispatchDate = window._parseDispatchDate(d);
+                    if (!dispatchDate) return false;
+                    return dispatchDate.getFullYear().toString() === year &&
                            (dispatchDate.getMonth() + 1).toString().padStart(2, '0') === month;
                 });
+                console.log(`[InvoiceFilter v3.11.30] Após filtro mês ${monthFilterStr}: ${filtered.length} NFs para ${carrierNorm}`);
             }
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Nenhuma NF despachada encontrada para esta transportadora.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Nenhuma NF encontrada para esta transportadora${monthFilterStr ? ' no mês selecionado' : ''}.</td></tr>`;
                 document.getElementById('invoiceNFsCount').textContent = '0 notas';
                 window.updateInvoiceComparison();
                 return;
             }
 
-            // Sort by dispatch date (most recent first)
-            filtered.sort((a, b) => new Date(b.dispatchedAt || b.date) - new Date(a.dispatchedAt || a.date));
+            // Sort by dispatch date (most recent first) — v3.11.30: usa _parseDispatchDate
+            filtered.sort((a, b) => {
+                const da = window._parseDispatchDate(a);
+                const db2 = window._parseDispatchDate(b);
+                return (db2 ? db2.getTime() : 0) - (da ? da.getTime() : 0);
+            });
 
             tbody.innerHTML = filtered.map(d => {
-                const dispatchDate = d.dispatchedAt ? new Date(d.dispatchedAt) : new Date(d.date);
+                const dispatchDate = window._parseDispatchDate(d) || new Date();
                 const invoiceValue = d._invoiceValue != null ? d._invoiceValue : (d.total || 0);
                 const redespBadge = d._isRedesp ? `<span style="font-size:0.65rem;background:var(--accent-warning,#f59e0b);color:#000;border-radius:4px;padding:1px 4px;margin-left:4px;">REDESP</span>` : '';
+                // v3.11.30: badge visual para NFs já pagas — visível mas diferenciado
+                const pagoBadge = d._isPago ? `<span style="font-size:0.62rem;background:rgba(16,185,129,0.18);color:#10b981;border:1px solid rgba(16,185,129,0.35);border-radius:4px;padding:1px 5px;margin-left:4px;font-weight:600;">PAGO</span>` : '';
+                const rowStyle = d._isPago ? ' style="opacity:0.7;background:rgba(16,185,129,0.04);"' : '';
                 return `
-                    <tr data-id="${d.id}">
+                    <tr data-id="${d.id}"${rowStyle}>
                         <td style="text-align: center;">
-                            <input type="checkbox" class="invoice-nf-checkbox" data-id="${d.id}" data-value="${invoiceValue}" onchange="window.toggleInvoiceNF(${d.id}, this.checked, ${invoiceValue})">
+                            <input type="checkbox" class="invoice-nf-checkbox" data-id="${d.id}" data-value="${invoiceValue}" onchange="window.toggleInvoiceNF(${d.id}, this.checked, ${invoiceValue})"${d._isPago ? ' title="NF já paga — marque apenas para reconferência"' : ''}>
                         </td>
-                        <td style="font-weight: 600;">${d.invoice || '-'}${redespBadge}</td>
-                        <td><div style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${d.client}">${d.client || '-'}</div></td>
+                        <td style="font-weight: 600;">${d.invoice || '-'}${redespBadge}${pagoBadge}</td>
+                        <td><div style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${d.client || ''}">${d.client || '-'}</div></td>
                         <td>${d.city || '-'}</td>
                         <td>${dispatchDate.toLocaleDateString('pt-BR')}</td>
                         <td style="text-align: right; font-weight: 600; color: var(--accent-success);">${Utils.formatCurrency(invoiceValue)}</td>
@@ -3747,7 +3792,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
             }).join('');
 
-            document.getElementById('invoiceNFsCount').textContent = `${filtered.length} notas`;
+            const total = filtered.length;
+            const pagas = filtered.filter(d => d._isPago).length;
+            document.getElementById('invoiceNFsCount').textContent = pagas > 0
+                ? `${total} notas (${pagas} já pagas)`
+                : `${total} notas`;
             window.updateInvoiceComparison();
         };
 
@@ -3790,9 +3839,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         // Toggle single NF selection
+        // v3.11.30: armazena o invoiceValue (valor por transportadora) junto com o ID
         window.toggleInvoiceNF = (id, checked, value) => {
             if (checked) {
-                window.invoiceSelectedNFs.add(id);
+                window.invoiceSelectedNFs.set(id, value || 0);
             } else {
                 window.invoiceSelectedNFs.delete(id);
             }
@@ -3800,15 +3850,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         // Select/deselect all NFs
+        // v3.11.30: armazena invoiceValue de cada NF ao selecionar todas
         window.selectAllInvoiceNFs = (selectAll) => {
             const checkboxes = document.querySelectorAll('.invoice-nf-checkbox');
+            if (!selectAll) {
+                window.invoiceSelectedNFs = new Map();
+            }
             checkboxes.forEach(cb => {
                 cb.checked = selectAll;
                 const id = parseInt(cb.dataset.id);
                 if (selectAll) {
-                    window.invoiceSelectedNFs.add(id);
-                } else {
-                    window.invoiceSelectedNFs.delete(id);
+                    window.invoiceSelectedNFs.set(id, parseFloat(cb.dataset.value || 0) || 0);
                 }
             });
 
@@ -3819,14 +3871,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         // Update comparison display
+        // v3.11.30: usa Map<id,invoiceValue> para total correto por transportadora (sem dupla contagem de redespacho)
         window.updateInvoiceComparison = async () => {
-            const dispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
-
-            // Calculate selected total
+            // Calculate selected total direto do Map — sem precisar recarregar dispatches
             let selectedTotal = 0;
-            window.invoiceSelectedNFs.forEach(id => {
-                const d = dispatches.find(x => x.id === id);
-                if (d) selectedTotal += (d.total || 0);
+            window.invoiceSelectedNFs.forEach((value, id) => {
+                selectedTotal += (value || 0);
             });
 
             // Parse invoice value
@@ -3837,7 +3887,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             // Update displays
-            document.getElementById('invoiceSelectedCount').textContent = window.invoiceSelectedNFs.size;
+            document.getElementById('invoiceSelectedCount').textContent = window.invoiceSelectedNFs.size || 0;
             document.getElementById('invoiceCalculatedTotal').textContent = Utils.formatCurrency(selectedTotal);
             document.getElementById('invoiceValueDisplay').textContent = Utils.formatCurrency(invoiceValue);
 
@@ -3867,7 +3917,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Enable/disable confirm button
             const btnConfirm = document.getElementById('btnConfirmInvoice');
             if (btnConfirm) {
-                btnConfirm.disabled = !(window.invoiceSelectedNFs.size > 0 && invoiceValue > 0);
+                btnConfirm.disabled = !((window.invoiceSelectedNFs.size || 0) > 0 && invoiceValue > 0);
             }
         };
 
@@ -3876,20 +3926,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('invoiceCarrierFilter').value = '';
             document.getElementById('invoiceValue').value = '';
             document.getElementById('invoiceRef').value = '';
-            window.invoiceSelectedNFs.clear();
+            window.invoiceSelectedNFs = new Map();
             window.invoiceCurrentCarrier = '';
             window.filterInvoiceByCarrier('');
         };
 
         // Confirm payment
+        // v3.11.30: usa valores do Map (por transportadora) para cálculo correto
         window.confirmInvoicePayment = async () => {
             const dispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
 
-            // Calculate totals
+            // Calculate totals usando valores armazenados no Map (invoiceValue por transportadora)
             let selectedTotal = 0;
-            window.invoiceSelectedNFs.forEach(id => {
-                const d = dispatches.find(x => x.id === id);
-                if (d) selectedTotal += (d.total || 0);
+            window.invoiceSelectedNFs.forEach((value, id) => {
+                selectedTotal += (value || 0);
             });
 
             const invoiceValue = parseFloat(document.getElementById('invoiceValue').value.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0;
@@ -3964,25 +4014,73 @@ document.addEventListener('DOMContentLoaded', async () => {
             let totalPaid = 0;
             const paidNFs = [];
 
+            const paidUpdate = {
+                status: 'Pago',
+                paidAt: new Date().toISOString(),
+                invoiceRef: invoiceRef,
+                paidBy: userName,
+                ...(justification ? { paymentNote: justification } : {}),
+                ...(authorizedBy ? { authorizedBy: authorizedBy } : {})
+            };
+
             dispatches.forEach(d => {
                 if (window.invoiceSelectedNFs.has(d.id)) {
-                    console.log(`💳 [Invoice] Marcando NF ${d.invoice} (ID: ${d.id}) como PAGA`);
-                    d.status = 'Pago';
-                    d.paidAt = new Date().toISOString();
-                    d.invoiceRef = invoiceRef;
-                    d.paidBy = userName;
-                    if (justification) d.paymentNote = justification;
-                    if (authorizedBy) d.authorizedBy = authorizedBy;
+                    const invoiceVal = window.invoiceSelectedNFs.get(d.id) || 0;
+                    console.log(`💳 [Invoice] Marcando NF ${d.invoice} (ID: ${d.id}) como PAGA - valor conferência: ${invoiceVal}`);
+                    Object.assign(d, paidUpdate);
                     paidCount++;
-                    totalPaid += (d.total || 0);
+                    totalPaid += invoiceVal;
                     paidNFs.push(d.invoice);
                 }
             });
 
             console.log(`💳 [Invoice] NFs marcadas como pagas: ${paidCount}`);
-            console.log('💳 [Invoice] Salvando dispatches no storage...');
+
+            // 1. localStorage
+            console.log('💳 [Invoice] Salvando dispatches no localStorage...');
             Utils.setStorage('dispatches', dispatches);
-            console.log('💳 [Invoice] Dispatches salvos!');
+
+            // 2. Firestore — persiste status 'Pago' em cada dispatch individual
+            // v3.11.30 FIX: usa set({merge:true}) em vez de update() para criar o doc se não existir
+            // (registros antigos podem estar apenas no localStorage, nunca migrados para dispatches_db)
+            if (Utils.Cloud && Utils.Cloud.hasTenant && Utils.Cloud.hasTenant() && window.db) {
+                const batch = window.db.batch();
+                let batchCount = 0;
+                dispatches.forEach(d => {
+                    if (window.invoiceSelectedNFs.has(d.id)) {
+                        const docRef = window.db
+                            .collection('tenants').doc(Utils.Cloud.tenantId)
+                            .collection('dispatches_db').doc(String(d.id));
+                        // set({merge:true}) cria o doc se não existir, ou mescla se já existir
+                        // Isso resolve o caso de NFs que estavam apenas no localStorage
+                        batch.set(docRef, { ...d, ...paidUpdate }, { merge: true });
+                        batchCount++;
+                    }
+                });
+                if (batchCount > 0) {
+                    try {
+                        await batch.commit();
+                        console.log(`💳 [Invoice] ${batchCount} NFs persistidas como PAGAS no Firestore dispatches_db (set+merge)!`);
+                    } catch (e) {
+                        console.error('[Invoice] Falha ao persistir status Pago no Firestore:', e);
+                        showToast('⚠️ Aviso: falha ao salvar no servidor. Os dados podem não persistir após recarregar.', 'warning');
+                    }
+                }
+            }
+
+            // 3. Cache em memória
+            if (window._dispatchesFullCache) {
+                dispatches.forEach(d => {
+                    if (window.invoiceSelectedNFs.has(d.id)) {
+                        const ci = window._dispatchesFullCache.findIndex(x => Number(x.id) === Number(d.id));
+                        if (ci !== -1) Object.assign(window._dispatchesFullCache[ci], paidUpdate);
+                    }
+                });
+            }
+            // Limpa o Map após pagamento
+            window.invoiceSelectedNFs = new Map();
+
+            console.log('💳 [Invoice] Dispatches salvos (localStorage + Firestore + cache)!');
 
             // Save to invoice history
             const invoiceHistory = Utils.getStorage('invoice_history') || [];
