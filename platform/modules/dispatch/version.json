@@ -1,6 +1,6 @@
 {
-    "version":  "3.11.30",
-    "change":  "v3.11.30 - fix: Conferencia de fatura agora inclui NFs com status Pago (evita sumiço de registros). Parser robusto de datas (_parseDispatchDate) suporta Firestore Timestamp, numerico ms, ISO e fallback pelo id. Calculo correto por transportadora com Map<id,invoiceValue> (sem dupla contagem de redespacho).",
+    "version":  "3.11.31",
+    "change":  "v3.11.31 - bump: confirma deploy das correcoes da conferencia de fatura (NFs Pagas visiveis + parser de datas robusto 12-15/05).",
     "lastUpdate":  "2026-06-08",
-    "deployedAt":  "2026-06-08 15:20"
+    "deployedAt":  "2026-06-08 15:40"
 }
