@@ -69,6 +69,10 @@
             "destination": "/platform/$1"
         },
         {
+            "source": "/fix_romaneios.html",
+            "destination": "/platform/fix_romaneios.html"
+        },
+        {
             "source": "/web/(.*)",
             "destination": "/web/$1"
         }
