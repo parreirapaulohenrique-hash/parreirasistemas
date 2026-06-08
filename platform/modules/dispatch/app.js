@@ -6102,6 +6102,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background: #f0f0f0;">VALOR NF</div>
                 <div style="border-bottom: 1px solid #000; padding: 2px; background: #f0f0f0;">FRETE</div>
                 ${items.map(item => {
+                    // v3.11.32: sanitização on-the-fly — corrige registros antigos com 'undefined' no localStorage
+                    const _s = (v, fb) => (!v || v === 'undefined' || v === 'null' || String(v).trim() === '') ? fb : String(v);
+                    item.client   = _s(item.client,   'NÃO INFORMADO');
+                    item.city     = _s(item.city,     'NÃO INFORMADO');
+                    item.carrier  = _s(item.carrier,  carrierName || 'NÃO INFORMADO');
+                    item.invoice  = _s(item.invoice,  'S/N');
+                    if (item.total  == null || isNaN(item.total))   item.total   = 0;
+                    if (item.nfValue == null || isNaN(item.nfValue)) item.nfValue = 0;
+                    if (item.weight == null || isNaN(item.weight))   item.weight  = 0;
+
                     const cList = Utils.getStorage('clients') || [];
                     const norm = (s) => s ? s.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase() : '';
                     const clientObj = cList.find(c => norm(c.nome) === norm(item.client));

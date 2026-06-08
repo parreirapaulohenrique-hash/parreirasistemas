@@ -1,6 +1,6 @@
 {
-    "version":  "3.11.31",
-    "change":  "v3.11.31 - bump: confirma deploy das correcoes da conferencia de fatura (NFs Pagas visiveis + parser de datas robusto 12-15/05).",
+    "version":  "3.11.32",
+    "change":  "v3.11.32 - fix: Sanitizacao on-the-fly no printSpecificRomaneio - corrige string 'undefined' em romaneios historicos no PDF/impressao.",
     "lastUpdate":  "2026-06-08",
-    "deployedAt":  "2026-06-08 15:40"
+    "deployedAt":  "2026-06-08 15:55"
 }
