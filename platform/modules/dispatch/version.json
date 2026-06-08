@@ -1,6 +1,6 @@
 {
-    "version":  "3.11.28",
-    "change":  "v3.11.28 - feat: Campo de data retroativa na aba Cotacao. Linha exibida com destaque visual (laranja) quando a data escolhida e anterior a hoje, para prevencao de fraudes.",
+    "version":  "3.11.29",
+    "change":  "v3.11.29 - fix: Sanitizacao de campos undefined/null antes de gerar romaneio (evita string 'undefined' no PDF). Fix conferencia de fatura: parser robusto de datas para romaneios historicos 12-15/05.",
     "lastUpdate":  "2026-06-08",
-    "deployedAt":  "2026-06-08 11:10"
+    "deployedAt":  "2026-06-08 14:40"
 }

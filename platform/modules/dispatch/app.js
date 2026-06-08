@@ -934,7 +934,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('inputInvoiceNumber').focus();
         };
 
-        // === DATA DO LANÇAMENTO (v3.11.28) ===
+        // === DATA DO LANÇAMENTO (v3.11.29) ===
         // Retorna 'YYYY-MM-DD' no fuso horário local
         function getTodayLocalStr() {
             const d = new Date();
@@ -5742,6 +5742,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                     alert('Erro: Notas selecionadas não encontradas no histórico.');
                     return;
                 }
+
+                // v3.11.29 — Sanitizar campos undefined/null antes de gerar romaneio
+                // Evita que a string literal "undefined" apareça no PDF impresso
+                const _san = (v, fb) => (!v || v === 'undefined' || v === 'null' || String(v).trim() === '') ? fb : v;
+                toDispatch.forEach(d => {
+                    d.client       = _san(d.client,       'NÃO INFORMADO');
+                    d.city         = _san(d.city,         'NÃO INFORMADO');
+                    d.neighborhood = _san(d.neighborhood, '-');
+                    d.carrier      = _san(d.carrier,      currentModalCarrier || 'NÃO INFORMADO');
+                    d.invoice      = _san(d.invoice,      'S/N');
+                    if (d.total  == null || isNaN(d.total))   d.total   = 0;
+                    if (d.nfValue == null || isNaN(d.nfValue)) d.nfValue = 0;
+                    if (d.weight == null || isNaN(d.weight))   d.weight  = 0;
+                    console.warn(`[v3.11.29] NF ${d.invoice} — cliente: "${d.client}", cidade: "${d.city}"`);
+                });
 
                 const totalWeight = toDispatch.reduce((acc, curr) => acc + (parseFloat(curr.weight) || 0), 0);
                 const totalFreight = toDispatch.reduce((acc, curr) => acc + (parseFloat(curr.total) || 0), 0);
