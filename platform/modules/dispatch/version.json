@@ -1,6 +1,6 @@
 {
-    "version":  "3.11.27",
-    "change":  "v3.11.27 - fix: SyntaxError causado por redeclaracao de const inputIsComplement e inputMainNF. Sistema travava no carregamento e usuarios do tenant nao eram listados. Cotacao agora recalcula automaticamente ao alterar campos.",
-    "lastUpdate":  "2026-06-05",
-    "deployedAt": "2026-06-05 17:56"
+    "version":  "3.11.28",
+    "change":  "v3.11.28 - feat: Campo de data retroativa na aba Cotacao. Linha exibida com destaque visual (laranja) quando a data escolhida e anterior a hoje, para prevencao de fraudes.",
+    "lastUpdate":  "2026-06-08",
+    "deployedAt":  "2026-06-08 11:10"
 }

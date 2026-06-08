@@ -921,8 +921,43 @@ document.addEventListener('DOMContentLoaded', async () => {
             selectedClient = null;
             clientResult.style.display = 'none';
 
+            // Reset date field to today and hide retroative warning
+            const _dateEl = document.getElementById('inputDate');
+            const _retWarn = document.getElementById('retroDateWarning');
+            if (_dateEl) {
+                const _today = new Date();
+                _dateEl.value = `${_today.getFullYear()}-${String(_today.getMonth()+1).padStart(2,'0')}-${String(_today.getDate()).padStart(2,'0')}`;
+            }
+            if (_retWarn) _retWarn.style.display = 'none';
+
             // Focus first field
             document.getElementById('inputInvoiceNumber').focus();
+        };
+
+        // === DATA DO LANÇAMENTO (v3.11.28) ===
+        // Retorna 'YYYY-MM-DD' no fuso horário local
+        function getTodayLocalStr() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        }
+
+        // Inicializa o campo de data com a data de hoje
+        function initDateField() {
+            const el = document.getElementById('inputDate');
+            if (el && !el.value) el.value = getTodayLocalStr();
+        }
+        initDateField(); // garante data de hoje no carregamento
+
+        // Exibe / esconde o aviso retroativo ao mudar a data
+        window.checkRetroativeDate = function(input) {
+            const warn = document.getElementById('retroDateWarning');
+            if (!warn) return;
+            const today = getTodayLocalStr();
+            if (input.value && input.value < today) {
+                warn.style.display = 'flex';
+            } else {
+                warn.style.display = 'none';
+            }
         };
 
         const inputVolume = document.getElementById('inputVolume');
@@ -1513,7 +1548,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             const cityInput = document.getElementById('inputCity');
             const city = norm(cityInput ? cityInput.value : (selectedClient ? (selectedClient.cidade || selectedClient.City || selectedClient.city) : ''));
 
+            // Bairro do cliente (usado como fallback quando cidade não tem tabela)
+            const clientBairro = selectedClient
+                ? norm(selectedClient.bairro || selectedClient.Bairro || selectedClient.neighborhood || selectedClient.Neighborhood || '')
+                : '';
 
+            // ── 1ª tentativa: busca pela CIDADE ──────────────────────────────────────
             let cityRules = rules.filter(r => {
                 const targetCity = city;
                 const ruleCity = norm(r.cidade);
@@ -1529,12 +1569,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (n1 && ruleRedespCity === n1) return true;
                         if (n2 && ruleRedespCity === n2) return true;
                     }
-
                 }
                 return false;
             });
 
-
+            // ── 2ª tentativa: fallback pelo BAIRRO (compara bairro com r.cidade) ─────
+            let usedBairroFallback = false;
+            if (cityRules.length === 0 && clientBairro) {
+                const bairroRules = rules.filter(r => norm(r.cidade) === clientBairro);
+                if (bairroRules.length > 0) {
+                    cityRules = bairroRules;
+                    usedBairroFallback = true;
+                }
+            }
 
             if (targetCarrier) {
                 cityRules = cityRules.filter(r => norm(r.transportadora) === targetCarrier);
@@ -1543,11 +1590,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (cityRules.length === 0) {
                 if (!silent) {
                     if (targetCarrier) alert(`A transportadora ${targetCarrier} não possui tabela para a cidade ${city}.`);
-                    else alert(`Nenhuma tabela de frete encontrada para ${city}.`);
+                    else alert(`Nenhuma tabela de frete encontrada para ${city}${clientBairro ? ' nem para o bairro ' + clientBairro : ''}.`);
                 }
                 resultsArea.innerHTML = `<div style="text-align: center; color: var(--text-secondary); margin-top: 4rem;">
                 <span class="material-icons-round" style="font-size: 3rem; opacity: 0.3;">error_outline</span>
-                <p>${targetCarrier ? `A transportadora ${targetCarrier} (da NF ${mainNF}) não possui tabela para esta cidade.` : 'Nenhuma opção de frete disponível.'}</p>
+                <p>${targetCarrier ? `A transportadora ${targetCarrier} (da NF ${mainNF}) não possui tabela para esta cidade.` : `Nenhuma opção de frete para <strong>${city}</strong>${clientBairro ? ` nem para o bairro <strong>${clientBairro}</strong>` : ''}.`}</p>
             </div>`;
                 return;
             }
@@ -1704,7 +1751,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 validOptions.push(fobItem);
             }
 
-            renderResults(validOptions);
+            renderResults(validOptions, usedBairroFallback ? clientBairro : null);
         }
 
         // --- VAN Calculation Logic ---
@@ -1726,8 +1773,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             diffSpan.innerHTML = `<span style="color: ${color}">${label}: ${Utils.formatCurrency(Math.abs(diff))}</span>`;
         };
 
-        function renderResults(options) {
-            resultsArea.innerHTML = options.map((opt, index) => {
+        function renderResults(options, bairroFallback) {
+            const fallbackBanner = bairroFallback ? `
+                <div style="background: rgba(255,165,0,0.12); border: 1px solid rgba(255,165,0,0.4); border-radius: 8px; padding: 8px 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: #ffb347;">
+                    <span class="material-icons-round" style="font-size: 1rem;">info</span>
+                    <span>Nenhuma tabela para a cidade — cotação feita pelo <strong>bairro: ${bairroFallback}</strong></span>
+                </div>` : '';
+            resultsArea.innerHTML = fallbackBanner + options.map((opt, index) => {
                 const d = opt.details;
                 const rule = d.ruleUsed;
                 const isVan = !!(carrierInfo[opt.carrier] && carrierInfo[opt.carrier].freteNegociado === true);
@@ -1974,9 +2026,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const ruleUsed = option.details.ruleUsed;
 
+            // Captura data escolhida pelo operador (pode ser retroativa)
+            const _dateInputEl = document.getElementById('inputDate');
+            const _todayStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
+            const _chosenDateStr = (_dateInputEl && _dateInputEl.value) ? _dateInputEl.value : _todayStr;
+            const _isRetroativo = _chosenDateStr < _todayStr;
+            const _dispatchDate = new Date(_chosenDateStr + 'T12:00:00').toISOString();
+
             const dispatch = {
                 id: Date.now(),
-                date: new Date().toISOString(),
+                date: _dispatchDate,
+                isRetroativo: _isRetroativo,
+                registradoEm: new Date().toISOString(), // data/hora real do lançamento
                 client: clientName !== 'Name' ? clientName : 'Consumidor',
                 city: resCity,
                 neighborhood: resNeighborhood,
@@ -3428,7 +3489,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <tbody>
                             ${dItems.map(d => {
                             try {
-                                return `<tr>${activeCols.map(col => {
+                                const _retroStyle = d.isRetroativo ? ' style="background: rgba(245, 158, 11, 0.12); border-left: 3px solid #f59e0b;" title="⚠️ Lançamento retroativo"' : '';
+                                return `<tr${_retroStyle}>${activeCols.map(col => {
                                     if (col === 'status') {
                                         const s = d.status || 'Pendente Despacho';
                                         let icon = 'schedule', cls = 'status-pending', title = 'Pendente Despacho';
@@ -5781,12 +5843,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 Utils.saveRaw('app_romaneios', JSON.stringify(romaneios));
                 // ===============================================
 
-                // Open print manifest
-                window.printSpecificRomaneio(currentModalCarrier, toDispatch);
-
                 // Disparo Automático de WhatsApp para CLIENTES + VENDEDORES (Parametrizável v3.7)
-                // NOTA: window.open() dentro de setTimeout é bloqueado por browsers modernos.
-                // Solução: painel flutuante com links clicáveis + auto-abertura via anchor.click()
+                // IMPORTANTE: O painel de WA deve ser mostrado ANTES de printSpecificRomaneio,
+                // pois window.open() da impressão consome o token de gesto do usuário,
+                // impedindo qualquer abertura subsequente de abas (bloqueio do browser).
                 if (settings.wa_auto_client || settings.wa_auto_seller) {
                     // Coleta todas as URLs a enviar
                     const waQueue = [];
@@ -5836,6 +5896,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         window._showWaPanel(waQueue);
                     }
                 }
+
+                // Open print manifest (called AFTER WA panel to preserve user gesture for WA)
+                window.printSpecificRomaneio(currentModalCarrier, toDispatch);
 
                 // Show appropriate toast
                 if (deliveryType === 'moto') {
@@ -6812,64 +6875,85 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (typeof window.applyRoleRestrictions === 'function') {
             window.applyRoleRestrictions();
         }
-        // --- WHATSAPP FIX (v1.6.3) ---
-        // ── PAINEL FLUTUANTE DE ENVIO WHATSAPP ─────────────────────────────────
-        // Browsers modernos bloqueiam window.open() dentro de setTimeout.
-        // Solução: painel visual com links clicáveis + auto-abertura via anchor.click()
+        // --- WHATSAPP FIX (v1.6.4) ---
         window._showWaPanel = (queue) => {
-            // Remove painel anterior se existir
             const existing = document.getElementById('_waPanelOverlay');
             if (existing) existing.remove();
 
             const overlay = document.createElement('div');
             overlay.id = '_waPanelOverlay';
-            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);padding:20px;';
 
             const panel = document.createElement('div');
-            panel.style.cssText = 'background:var(--bg-card,#1e2533);border-radius:16px;padding:28px;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.5);border:1px solid rgba(37,211,102,0.3);';
+            panel.style.cssText = 'background:var(--bg-card,#1e2533);border-radius:16px;padding:24px;max-width:500px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.1);';
 
             const sentSet = new Set();
 
+            const openAll = () => {
+                queue.forEach((item, i) => {
+                    if (!sentSet.has(i)) {
+                        window.open(item.url, '_blank');
+                        sentSet.add(i);
+                        document.getElementById(`_waStatus_${i}`).textContent = '✅ Enviado';
+                        document.getElementById(`_waLink_${i}`).style.background = 'rgba(37,211,102,0.1)';
+                        document.getElementById(`_waLink_${i}`).style.borderColor = 'rgba(37,211,102,0.35)';
+                    }
+                });
+                renderPanel();
+            };
+
             const renderPanel = () => {
                 const allSent = queue.every((_, i) => sentSet.has(i));
+                const pending = queue.length - sentSet.size;
                 panel.innerHTML = `
-                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
-                        <span style="font-size:1.6rem;">💬</span>
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+                        <span style="font-size:2rem;">💬</span>
                         <div>
-                            <div style="font-weight:700;font-size:1rem;color:var(--text-primary,#e2e8f0);">Envio WhatsApp</div>
-                            <div style="font-size:0.78rem;color:var(--text-secondary,#94a3b8);">${queue.length} contato${queue.length !== 1 ? 's' : ''} para notificar</div>
+                            <div style="font-weight:700;font-size:1.1rem;">Envio WhatsApp</div>
+                            <div style="font-size:0.85rem;color:var(--text-secondary);">${sentSet.size}/${queue.length} enviado${queue.length !== 1 ? 's' : ''}</div>
                         </div>
-                        <button onclick="document.getElementById('_waPanelOverlay').remove()" style="margin-left:auto;background:rgba(255,255,255,0.08);border:none;border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--text-secondary,#94a3b8);font-size:0.85rem;">✕ Fechar</button>
+                        <button onclick="document.getElementById('_waPanelOverlay').remove()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--text-secondary);font-size:1.2rem;">✕</button>
                     </div>
-                    <div style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;">
+                    <div style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;margin-bottom:20px;">
                         ${queue.map((item, i) => `
                             <a href="${item.url}" target="_blank" rel="noopener noreferrer"
                                id="_waLink_${i}"
-                               onclick="document.getElementById('_waStatus_${i}').textContent='✅ Enviado';" 
                                style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-radius:10px;background:${sentSet.has(i) ? 'rgba(37,211,102,0.1)' : 'rgba(255,255,255,0.05)'};border:1px solid ${sentSet.has(i) ? 'rgba(37,211,102,0.35)' : 'rgba(255,255,255,0.08)'};text-decoration:none;color:var(--text-primary,#e2e8f0);transition:all 0.2s;">
                                 <span style="font-size:0.85rem;font-weight:500;">${item.label}</span>
                                 <span id="_waStatus_${i}" style="font-size:0.75rem;color:${sentSet.has(i) ? '#25D366' : '#94a3b8'};white-space:nowrap;">${sentSet.has(i) ? '✅ Enviado' : '📤 Abrir'}</span>
                             </a>
                         `).join('')}
                     </div>
-                    ${allSent ? '<div style="margin-top:14px;text-align:center;color:#25D366;font-weight:600;font-size:0.9rem;">✅ Todos os WhatsApps enviados!</div>' : '<div style="margin-top:12px;font-size:0.75rem;color:var(--text-secondary,#94a3b8);text-align:center;">💡 Clique em cada contato para abrir o WhatsApp</div>'}
+                    ${allSent
+                        ? '<div style="text-align:center;color:#25D366;font-weight:600;font-size:0.95rem;">✅ Todos os WhatsApps foram enviados!</div>'
+                        : `<button id="_waOpenAllBtn" style="width:100%;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;border:none;border-radius:10px;padding:12px;font-size:0.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+                            📲 Abrir Todos (${pending} pendente${pending !== 1 ? 's' : ''})
+                           </button>
+                           <div style="margin-top:8px;font-size:0.72rem;color:var(--text-secondary,#94a3b8);text-align:center;">💡 Ou clique individualmente em cada contato</div>`
+                    }
                 `;
+
+                const btn = panel.querySelector('#_waOpenAllBtn');
+                if (btn) btn.addEventListener('click', openAll);
+
+                // Attach click listener to each individual link
+                queue.forEach((item, i) => {
+                    const link = panel.querySelector(`#_waLink_${i}`);
+                    if (link) {
+                        link.addEventListener('click', () => {
+                            sentSet.add(i);
+                            // Re-render after a short tick so the new tab opens first
+                            setTimeout(renderPanel, 300);
+                        });
+                    }
+                });
             };
 
             renderPanel();
             overlay.appendChild(panel);
             document.body.appendChild(overlay);
-
-            // Auto-abre o primeiro link após curtíssimo delay (ainda dentro do contexto de evento)
-            // Cada link subsequente requer clique manual (restrição do browser)
-            setTimeout(() => {
-                const firstLink = document.getElementById('_waLink_0');
-                if (firstLink) {
-                    firstLink.click();
-                    sentSet.add(0);
-                    renderPanel();
-                }
-            }, 300);
+            // Nota: Não há auto-click via setTimeout — browsers modernos bloqueiam window.open()
+            // fora de um gesto direto do usuário. Use o botão "Abrir Todos" no painel.
         };
         // ────────────────────────────────────────────────────────────────────────
 
