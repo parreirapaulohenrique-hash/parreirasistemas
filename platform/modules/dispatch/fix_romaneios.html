@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>🔧 Recuperação de Romaneios — ParreiraLog</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 24px;
+            min-height: 100vh;
+        }
+        h1 { color: #f8fafc; font-size: 1.5rem; margin-bottom: 4px; }
+        .subtitle { color: #94a3b8; font-size: 0.9rem; margin-bottom: 24px; }
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .card h2 { font-size: 1rem; color: #e2e8f0; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .btn {
+            padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer;
+            font-weight: 600; font-size: 0.9rem; transition: all 0.2s;
+        }
+        .btn-primary { background: #3b82f6; color: #fff; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-danger { background: #ef4444; color: #fff; }
+        .btn-success { background: #10b981; color: #fff; }
+        .btn-warning { background: #f59e0b; color: #000; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        th { background: #0f172a; padding: 8px; text-align: left; color: #94a3b8; font-weight: 600; border-bottom: 1px solid #334155; }
+        td { padding: 6px 8px; border-bottom: 1px solid #1e293b; vertical-align: middle; }
+        tr:hover td { background: rgba(59,130,246,0.05); }
+        .badge { padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; display:inline-block; }
+        .badge-red { background: rgba(239,68,68,0.2); color: #f87171; }
+        .badge-yellow { background: rgba(245,158,11,0.2); color: #fbbf24; }
+        .badge-green { background: rgba(16,185,129,0.2); color: #34d399; }
+        .badge-blue { background: rgba(59,130,246,0.2); color: #60a5fa; }
+        #log {
+            background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+            padding: 12px; font-family: monospace; font-size: 0.8rem;
+            max-height: 350px; overflow-y: auto; white-space: pre-wrap; color: #94a3b8;
+        }
+        .log-ok { color: #34d399; } .log-err { color: #f87171; } .log-warn { color: #fbbf24; }
+        input[type="text"], input[type="date"] {
+            background: #0f172a; border: 1px solid #334155; border-radius: 6px;
+            color: #e2e8f0; padding: 8px 12px; font-size: 0.9rem;
+        }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        .stat-box { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 14px; text-align: center; }
+        .stat-num { font-size: 1.8rem; font-weight: 800; }
+        .stat-label { font-size: 0.72rem; color: #94a3b8; text-transform: uppercase; margin-top: 4px; }
+        .progress-bar { height: 6px; background: #334155; border-radius: 3px; overflow: hidden; margin-top: 8px; }
+        .progress-fill { height: 100%; background: #3b82f6; border-radius: 3px; transition: width 0.3s; width: 0%; }
+        .drop-zone {
+            border: 2px dashed #334155; border-radius: 10px; padding: 24px; text-align: center;
+            cursor: pointer; transition: all 0.2s; color: #94a3b8; font-size: 0.9rem;
+        }
+        .drop-zone:hover, .drop-zone.drag-over { border-color: #3b82f6; background: rgba(59,130,246,0.05); }
+        .drop-zone.loaded { border-color: #10b981; background: rgba(16,185,129,0.05); color: #34d399; }
+        .inline-edit { background: #0f172a; border: 1px solid #3b82f6; border-radius: 4px; color: #e2e8f0; padding: 3px 6px; font-size: 0.8rem; width: 180px; }
+        .btn-sm { padding: 4px 10px; font-size: 0.75rem; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; }
+        .btn-sm-green { background: #10b981; color: #fff; }
+        .btn-sm-blue { background: #3b82f6; color: #fff; }
+    </style>
+</head>
+<body>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+
+    <h1>🔧 Recuperação de Romaneios — ParreiraLog</h1>
+    <p class="subtitle">Diagnostica e corrige registros com campos <code>undefined</code> / vazios no Firestore</p>
+
+    <!-- PASSO 1: CONFIGURAÇÃO -->
+    <div class="card">
+        <h2>⚙️ Passo 1 — Configurar e Conectar</h2>
+        <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+            <div>
+                <label style="font-size:0.8rem;color:#94a3b8;display:block;margin-bottom:4px;">Tenant ID</label>
+                <input type="text" id="cfgTenant" value="ltdistribuidora" style="width:180px;">
+            </div>
+            <div>
+                <label style="font-size:0.8rem;color:#94a3b8;display:block;margin-bottom:4px;">Data início</label>
+                <input type="date" id="cfgDateStart" value="2026-05-09">
+            </div>
+            <div>
+                <label style="font-size:0.8rem;color:#94a3b8;display:block;margin-bottom:4px;">Data fim</label>
+                <input type="date" id="cfgDateEnd" value="2026-06-08">
+            </div>
+            <button class="btn btn-primary" onclick="connectFirebase()">🔌 Conectar Firebase</button>
+        </div>
+        <div id="connStatus" style="margin-top:10px;font-size:0.85rem;color:#94a3b8;">Não conectado</div>
+    </div>
+
+    <!-- PASSO 2: BACKUP LOCAL (opcional) -->
+    <div class="card">
+        <h2>📂 Passo 2 — Carregar Backup Local (Opcional mas Recomendado)</h2>
+        <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:12px;">
+            Carregue o arquivo <code>dispatches_backup_ltdistribuidora_2026-05-09.json</code> para usar como referência na recuperação automática.
+        </p>
+        <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+            📁 Clique aqui ou arraste o arquivo de backup JSON
+        </div>
+        <input type="file" id="fileInput" accept=".json" style="display:none" onchange="loadBackupFile(this)">
+        <div id="backupStatus" style="margin-top:8px;font-size:0.82rem;color:#94a3b8;"></div>
+    </div>
+
+    <!-- PASSO 3: DIAGNÓSTICO -->
+    <div class="card">
+        <h2>🔍 Passo 3 — Diagnóstico</h2>
+        <button class="btn btn-primary" id="btnDiag" onclick="runDiagnosis()" disabled>🔍 Executar Diagnóstico</button>
+        <div class="grid-3" id="statsGrid" style="display:none; margin-top:16px; margin-bottom:16px;">
+            <div class="stat-box"><div class="stat-num" id="statTotal" style="color:#60a5fa">0</div><div class="stat-label">Total no período</div></div>
+            <div class="stat-box"><div class="stat-num" id="statProblemas" style="color:#f87171">0</div><div class="stat-label">Com problemas</div></div>
+            <div class="stat-box"><div class="stat-num" id="statOk" style="color:#34d399">0</div><div class="stat-label">OK / Íntegros</div></div>
+        </div>
+        <div id="resultTable" style="overflow-x:auto; margin-top:12px;"></div>
+        <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;" id="actionButtons" style="display:none;">
+            <button class="btn btn-warning" id="btnExport" onclick="exportReport()" style="display:none;">📥 Exportar Relatório JSON</button>
+        </div>
+    </div>
+
+    <!-- PASSO 4: RECUPERAÇÃO -->
+    <div class="card" id="recoverySection" style="display:none;">
+        <h2>🛠️ Passo 4 — Recuperação</h2>
+        <p style="font-size:0.85rem;color:#94a3b8;margin-bottom:14px;">
+            <strong>Modo automático:</strong> Recupera usando o backup JSON ou localStorage.<br>
+            <strong>Modo manual:</strong> Edite os campos diretamente na tabela acima e clique em 💾 para cada linha.
+        </p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn btn-success" id="btnRecover" onclick="runRecovery()">✅ Recuperar Todos Automaticamente</button>
+            <button class="btn btn-danger" id="btnForceNull" onclick="markNullsAsUnknown()">⚠️ Marcar Sem Dados como "NÃO RECUPERADO"</button>
+            <button class="btn btn-primary" id="btnSaveAll" onclick="saveAllEdited()" style="display:none;">💾 Salvar Todas as Edições Manuais</button>
+        </div>
+        <div class="progress-bar" style="margin-top:12px;"><div class="progress-fill" id="progressFill"></div></div>
+        <div id="recoveryStatus" style="font-size:0.82rem;color:#94a3b8;margin-top:6px;"></div>
+    </div>
+
+    <!-- LOG -->
+    <div class="card">
+        <h2>📋 Log de Operações</h2>
+        <div id="log">Aguardando conexão com Firebase...\n</div>
+    </div>
+
+    <script>
+        let db = null;
+        let problematicRecords = [];
+        let allRecordsInPeriod = [];
+        let backupData = [];
+        let editedRecords = {};
+
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyDK8ZtSiMpuJyivFqgKCVN45dNi-HaxuLw",
+            authDomain: "parreiralog-91904.firebaseapp.com",
+            projectId: "parreiralog-91904",
+            storageBucket: "parreiralog-91904.appspot.com",
+            messagingSenderId: "376693609548",
+            appId: "1:376693609548:web:67e498e11d5fc6a820a8a6"
+        };
+
+        // ===== UTILS =====
+        function log(msg, type = '') {
+            const el = document.getElementById('log');
+            const ts = new Date().toLocaleTimeString('pt-BR');
+            const cls = type === 'ok' ? 'log-ok' : type === 'err' ? 'log-err' : type === 'warn' ? 'log-warn' : '';
+            el.innerHTML += `<span class="${cls}">[${ts}] ${msg}\n</span>`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        const isUndef = v => !v || v === 'undefined' || v === 'null' || String(v).trim() === '';
+
+        function isProblematic(d) {
+            return isUndef(d.client) || isUndef(d.city) ||
+                   isUndef(d.invoice) || isUndef(d.carrier) ||
+                   d.total === undefined || d.total === null ||
+                   d.nfValue === undefined || d.nfValue === null;
+        }
+
+        function getMissingFields(d) {
+            const f = [];
+            if (isUndef(d.client)) f.push('client');
+            if (isUndef(d.city)) f.push('city');
+            if (isUndef(d.invoice)) f.push('invoice');
+            if (isUndef(d.carrier)) f.push('carrier');
+            if (d.total === undefined || d.total === null) f.push('total');
+            if (d.nfValue === undefined || d.nfValue === null) f.push('nfValue');
+            return f;
+        }
+
+        // ===== FIREBASE =====
+        async function connectFirebase() {
+            try {
+                if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+                db = firebase.firestore();
+                await db.collection('tenants').doc('__ping__').get().catch(() => {});
+                const tenant = document.getElementById('cfgTenant').value.trim();
+                document.getElementById('connStatus').innerHTML = `<span style="color:#34d399">✅ Conectado ao Firebase! Tenant: <strong>${tenant}</strong></span>`;
+                document.getElementById('btnDiag').disabled = false;
+                log(`Firebase conectado. Tenant: ${tenant}`, 'ok');
+            } catch(e) {
+                document.getElementById('connStatus').innerHTML = `<span style="color:#f87171">❌ Falha: ${e.message}</span>`;
+                log('Erro Firebase: ' + e.message, 'err');
+            }
+        }
+
+        // ===== BACKUP FILE =====
+        function loadBackupFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                try {
+                    backupData = JSON.parse(e.target.result);
+                    document.getElementById('dropZone').className = 'drop-zone loaded';
+                    document.getElementById('dropZone').textContent = `✅ Backup carregado: ${backupData.length} registros (${file.name})`;
+                    document.getElementById('backupStatus').innerHTML = `<span style="color:#34d399">Prontos para uso na recuperação!</span>`;
+                    log(`Backup carregado: ${backupData.length} registros de ${file.name}`, 'ok');
+                } catch(e) {
+                    log('Erro ao parsear backup: ' + e.message, 'err');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Drag & drop
+        const dz = document.getElementById('dropZone');
+        dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+        dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+        dz.addEventListener('drop', e => {
+            e.preventDefault(); dz.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                const dt = new DataTransfer(); dt.items.add(file);
+                const input = document.getElementById('fileInput'); input.files = dt.files;
+                loadBackupFile(input);
+            }
+        });
+
+        // ===== DIAGNÓSTICO =====
+        async function runDiagnosis() {
+            const tenant = document.getElementById('cfgTenant').value.trim();
+            const dateStart = document.getElementById('cfgDateStart').value;
+            const dateEnd = document.getElementById('cfgDateEnd').value;
+            problematicRecords = []; allRecordsInPeriod = []; editedRecords = {};
+
+            document.getElementById('btnDiag').disabled = true;
+            document.getElementById('btnDiag').textContent = '⏳ Carregando...';
+            log(`\nIniciando diagnóstico — Tenant: ${tenant} | Período: ${dateStart} → ${dateEnd}`);
+
+            try {
+                // 1. dispatches_db (collection individual)
+                log('Buscando dispatches_db...');
+                const snap1 = await db.collection('tenants').doc(tenant).collection('dispatches_db').get();
+                let cloudRecs = [];
+                snap1.forEach(doc => cloudRecs.push({ ...doc.data(), _docId: doc.id, _source: 'dispatches_db' }));
+                log(`  dispatches_db: ${cloudRecs.length} registros`, 'ok');
+
+                // 2. legacy_store/dispatches
+                log('Buscando legacy_store/dispatches...');
+                let legacyRecs = [];
+                try {
+                    const legDoc = await db.collection('tenants').doc(tenant).collection('legacy_store').doc('dispatches').get();
+                    if (legDoc.exists && legDoc.data().content) {
+                        legacyRecs = JSON.parse(legDoc.data().content).map(r => ({ ...r, _source: 'legacy_store' }));
+                        log(`  legacy_store: ${legacyRecs.length} registros`, 'ok');
+                    } else {
+                        log('  legacy_store/dispatches: vazio', 'warn');
+                    }
+                } catch(e) { log('  legacy_store: erro: ' + e.message, 'warn'); }
+
+                // 3. Merge — dispatches_db tem prioridade
+                const map = new Map();
+                legacyRecs.forEach(d => { const id = String(d.id || d.codigo); if (!map.has(id)) map.set(id, d); });
+                cloudRecs.forEach(d => { const id = String(d.id || d.codigo || d._docId); map.set(id, d); });
+                let all = Array.from(map.values());
+                log(`Merge total: ${all.length} registros`);
+
+                // 4. Filtro de período
+                const tStart = dateStart ? new Date(dateStart + 'T00:00:00-03:00').getTime() : 0;
+                const tEnd = dateEnd ? new Date(dateEnd + 'T23:59:59-03:00').getTime() : Date.now();
+                allRecordsInPeriod = all.filter(d => {
+                    const t = Number(d.id) || (d.date ? new Date(d.date).getTime() : 0);
+                    return t >= tStart && t <= tEnd;
+                });
+                log(`No período (${dateStart} → ${dateEnd}): ${allRecordsInPeriod.length} registros`);
+
+                // 5. Identificar problemáticos
+                problematicRecords = allRecordsInPeriod.filter(isProblematic);
+                const okCount = allRecordsInPeriod.length - problematicRecords.length;
+
+                // Stats
+                document.getElementById('statsGrid').style.display = 'grid';
+                document.getElementById('statTotal').textContent = allRecordsInPeriod.length;
+                document.getElementById('statProblemas').textContent = problematicRecords.length;
+                document.getElementById('statOk').textContent = okCount;
+                document.getElementById('btnExport').style.display = 'inline-block';
+
+                if (problematicRecords.length > 0) {
+                    log(`⚠️ ${problematicRecords.length} registros com problemas encontrados!`, 'warn');
+                    renderResultTable();
+                    document.getElementById('recoverySection').style.display = 'block';
+                } else {
+                    log('✅ Nenhum problema encontrado no período!', 'ok');
+                    document.getElementById('resultTable').innerHTML = '<p style="color:#34d399;padding:12px;">✅ Todos os registros estão íntegros!</p>';
+                    document.getElementById('recoverySection').style.display = 'none';
+                }
+            } catch(e) {
+                log('ERRO no diagnóstico: ' + e.message, 'err');
+                console.error(e);
+            }
+
+            document.getElementById('btnDiag').disabled = false;
+            document.getElementById('btnDiag').textContent = '🔍 Executar Diagnóstico';
+        }
+
+        // ===== TABELA COM EDIÇÃO INLINE =====
+        function renderResultTable() {
+            const container = document.getElementById('resultTable');
+            let html = `
+                <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:8px;">
+                    ${problematicRecords.length} registros com dados incompletos. 
+                    Você pode editar manualmente qualquer campo e salvar individualmente com 💾.
+                </p>
+                <table>
+                <thead><tr>
+                    <th>Data</th><th>Transportadora</th><th>NF</th>
+                    <th>Cliente</th><th>Cidade</th><th>Frete (R$)</th>
+                    <th>Status</th><th>Campos Faltantes</th><th>Ações</th>
+                </tr></thead><tbody>`;
+
+            problematicRecords.forEach((d, idx) => {
+                const id = String(d.id || d.codigo || d._docId);
+                const dateStr = d.date
+                    ? new Date(d.date).toLocaleDateString('pt-BR')
+                    : (d.id ? new Date(Number(d.id)).toLocaleDateString('pt-BR') : '?');
+                const missing = getMissingFields(d);
+
+                // Tenta encontrar no backup para pré-preencher sugestão
+                const suggestion = findInBackup(id, d.invoice, d.date);
+
+                const valCarrier = isUndef(d.carrier) ? (suggestion?.carrier || '') : d.carrier;
+                const valInvoice = isUndef(d.invoice) ? (suggestion?.invoice || '') : d.invoice;
+                const valClient  = isUndef(d.client)  ? (suggestion?.client  || '') : d.client;
+                const valCity    = isUndef(d.city)    ? (suggestion?.city    || '') : d.city;
+                const hasSug     = !!suggestion;
+
+                html += `<tr id="row_${idx}" style="${hasSug ? 'background:rgba(16,185,129,0.04)' : ''}">
+                    <td style="white-space:nowrap;">${dateStr}<br><span style="font-size:0.7rem;color:#64748b;">${id.toString().slice(-6)}</span></td>
+                    <td>${renderEditField(idx, 'carrier', valCarrier, isUndef(d.carrier), hasSug)}</td>
+                    <td>${renderEditField(idx, 'invoice', valInvoice, isUndef(d.invoice), hasSug)}</td>
+                    <td>${renderEditField(idx, 'client',  valClient,  isUndef(d.client),  hasSug, 200)}</td>
+                    <td>${renderEditField(idx, 'city',    valCity,    isUndef(d.city),    hasSug)}</td>
+                    <td>
+                        ${d.total !== undefined && d.total !== null
+                            ? `<input class="inline-edit" id="edit_${idx}_total" value="${Number(d.total).toFixed(2)}" style="width:80px;">`
+                            : `<input class="inline-edit" id="edit_${idx}_total" value="${suggestion?.total || 0}" style="width:80px;border-color:#f87171;">`
+                        }
+                    </td>
+                    <td><span class="badge ${d.status === 'Despachado' ? 'badge-green' : d.status === 'Cancelado' ? 'badge-red' : 'badge-yellow'}">${d.status || 'Pendente'}</span></td>
+                    <td><span style="color:#fbbf24;font-size:0.72rem;">${missing.join(', ')}</span>${hasSug ? '<br><span style="color:#34d399;font-size:0.7rem;">✅ backup</span>' : ''}</td>
+                    <td style="white-space:nowrap;">
+                        <button class="btn-sm btn-sm-green" onclick="saveSingle(${idx})" title="Salvar este registro">💾</button>
+                    </td>
+                </tr>`;
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+            document.getElementById('btnSaveAll').style.display = 'inline-block';
+        }
+
+        function renderEditField(idx, field, value, isMissing, hasSuggestion, width = 140) {
+            const borderColor = isMissing ? (hasSuggestion ? '#10b981' : '#ef4444') : '#334155';
+            return `<input class="inline-edit" id="edit_${idx}_${field}" value="${(value||'').replace(/"/g, '&quot;')}" 
+                    style="width:${width}px;border-color:${borderColor};" 
+                    oninput="markEdited(${idx})">`;
+        }
+
+        function markEdited(idx) {
+            editedRecords[idx] = true;
+            const row = document.getElementById(`row_${idx}`);
+            if (row) row.style.outline = '1px solid #3b82f6';
+        }
+
+        function getEditedValues(idx) {
+            const get = field => {
+                const el = document.getElementById(`edit_${idx}_${field}`);
+                return el ? el.value.trim() : null;
+            };
+            return {
+                carrier: get('carrier'),
+                invoice: get('invoice'),
+                client:  get('client'),
+                city:    get('city'),
+                total:   parseFloat(get('total')) || 0
+            };
+        }
+
+        // ===== BUSCA NO BACKUP =====
+        function findInBackup(id, invoice, date) {
+            if (!backupData.length) return null;
+
+            // 1. Por ID exato
+            let found = backupData.find(b => String(b.id || b.codigo) === id);
+            if (found && !isProblematic(found)) return found;
+
+            // 2. Por NF + data aproximada (± 3 dias)
+            if (invoice && date) {
+                const dt = new Date(date).getTime();
+                found = backupData.find(b => {
+                    const bDt = Number(b.id) || new Date(b.date || '').getTime();
+                    const nfMatch = String(b.invoice).trim() === String(invoice).trim();
+                    const datMatch = Math.abs(bDt - dt) < (3 * 86400000);
+                    return nfMatch && datMatch && !isProblematic(b);
+                });
+                if (found) return found;
+            }
+
+            return null;
+        }
+
+        // ===== SALVAR INDIVIDUAL =====
+        async function saveSingle(idx) {
+            const d = problematicRecords[idx];
+            const id = String(d.id || d.codigo || d._docId);
+            const tenant = document.getElementById('cfgTenant').value.trim();
+            const vals = getEditedValues(idx);
+
+            if (!vals.carrier || !vals.client || !vals.city || !vals.invoice) {
+                alert('Preencha pelo menos: Transportadora, NF, Cliente e Cidade antes de salvar.');
+                return;
+            }
+
+            const fixed = {
+                ...d,
+                carrier:      vals.carrier,
+                invoice:      vals.invoice,
+                client:       vals.client,
+                city:         vals.city,
+                neighborhood: d.neighborhood || '-',
+                total:        vals.total,
+                nfValue:      d.nfValue || 0,
+                _fixedAt:     new Date().toISOString(),
+                _fixedBy:     'fix_romaneios_tool'
+            };
+            delete fixed._source; delete fixed._docId;
+
+            try {
+                if (d._source === 'dispatches_db') {
+                    await db.collection('tenants').doc(tenant).collection('dispatches_db').doc(id).set(fixed);
+                    log(`💾 [Manual] ID ${id} salvo — ${vals.carrier} | NF ${vals.invoice} | ${vals.client} | ${vals.city}`, 'ok');
+                } else {
+                    log(`⚠️ Registro de legacy_store — atualização pendente de sync completo`, 'warn');
+                }
+                const row = document.getElementById(`row_${idx}`);
+                if (row) row.style.background = 'rgba(16,185,129,0.08)';
+                delete editedRecords[idx];
+            } catch(e) {
+                log(`❌ Erro ao salvar ID ${id}: ${e.message}`, 'err');
+            }
+        }
+
+        // ===== SALVAR TODOS EDITADOS =====
+        async function saveAllEdited() {
+            const keys = Object.keys(editedRecords);
+            if (keys.length === 0) { alert('Nenhuma edição manual detectada.'); return; }
+            if (!confirm(`Salvar ${keys.length} registro(s) editados manualmente?`)) return;
+            for (const idx of keys) await saveSingle(parseInt(idx));
+            log(`\nTodas as edições manuais salvas!`, 'ok');
+        }
+
+        // ===== RECUPERAÇÃO AUTOMÁTICA =====
+        async function runRecovery() {
+            if (!problematicRecords.length) { alert('Nenhum registro problemático!'); return; }
+            const tenant = document.getElementById('cfgTenant').value.trim();
+            document.getElementById('btnRecover').disabled = true;
+            document.getElementById('btnRecover').textContent = '⏳ Recuperando...';
+            log('\n=== RECUPERAÇÃO AUTOMÁTICA INICIADA ===', 'ok');
+
+            // Também tenta LocalStorage
+            let lsBackup = [];
+            try {
+                const lsKey = `tenant_${tenant}_dispatches`;
+                const lsData = localStorage.getItem(lsKey);
+                if (lsData) {
+                    lsBackup = JSON.parse(lsData);
+                    log(`LocalStorage: ${lsBackup.length} registros encontrados`, 'ok');
+                }
+            } catch(e) { log('LocalStorage indisponível.', 'warn'); }
+
+            let recovered = 0, failed = 0;
+            const total = problematicRecords.length;
+
+            for (let i = 0; i < total; i++) {
+                const rec = problematicRecords[i];
+                const id = String(rec.id || rec.codigo || rec._docId);
+                document.getElementById('progressFill').style.width = Math.round(((i+1)/total)*100) + '%';
+                document.getElementById('recoveryStatus').textContent = `Processando ${i+1}/${total}...`;
+
+                // Fonte 1: backup JSON
+                let source = findInBackup(id, rec.invoice, rec.date);
+                // Fonte 2: localStorage
+                if (!source || isProblematic(source)) {
+                    source = lsBackup.find(d => String(d.id||d.codigo) === id && !isProblematic(d));
+                }
+
+                if (source && !isProblematic(source)) {
+                    // Recuperação completa!
+                    const fixed = { ...rec, ...source };
+                    fixed._fixedAt = new Date().toISOString();
+                    fixed._fixedBy = 'auto_recovery';
+                    delete fixed._source; delete fixed._docId;
+
+                    try {
+                        if (rec._source === 'dispatches_db') {
+                            await db.collection('tenants').doc(tenant).collection('dispatches_db').doc(id).set(fixed);
+                        }
+                        log(`✅ [${i+1}/${total}] ID ${id} — RECUPERADO | NF: ${source.invoice} | ${source.client} | ${source.city}`, 'ok');
+                        recovered++;
+                        // Preenche campos na UI
+                        const setField = (f, v) => { const el = document.getElementById(`edit_${i}_${f}`); if (el) { el.value = v || ''; el.style.borderColor = '#10b981'; } };
+                        setField('carrier', source.carrier); setField('invoice', source.invoice);
+                        setField('client', source.client); setField('city', source.city);
+                    } catch(e) {
+                        log(`❌ [${i+1}/${total}] ID ${id} — Erro ao salvar: ${e.message}`, 'err');
+                        failed++;
+                    }
+                } else {
+                    log(`⚠️ [${i+1}/${total}] ID ${id} — NÃO encontrado no backup (Data: ${rec.date ? new Date(rec.date).toLocaleDateString('pt-BR') : '?'}, NF: ${rec.invoice || '?'})`, 'warn');
+                    failed++;
+                }
+            }
+
+            log(`\n=== RESULTADO ===`, 'ok');
+            log(`✅ Recuperados: ${recovered} | ⚠️ Não encontrados no backup: ${failed}`, 'ok');
+            if (failed > 0) {
+                log(`Os ${failed} não recuperados precisam de edição manual na tabela acima.`, 'warn');
+                log(`💡 Se os dados estiverem nos PDFs dos romaneios originais, edite manualmente e clique em 💾.`, 'warn');
+            }
+            document.getElementById('btnRecover').disabled = false;
+            document.getElementById('btnRecover').textContent = '✅ Recuperar Todos Automaticamente';
+            document.getElementById('recoveryStatus').textContent = `Concluído! ✅ ${recovered} recuperados | ⚠️ ${failed} pendentes.`;
+            if (recovered > 0) setTimeout(() => runDiagnosis(), 2000);
+        }
+
+        async function markNullsAsUnknown() {
+            if (!confirm(`Marcar ${problematicRecords.length} registros não recuperáveis com "DADO NÃO RECUPERADO"? (Pode ser desfeito manualmente depois)`)) return;
+            const tenant = document.getElementById('cfgTenant').value.trim();
+            let count = 0;
+            for (const rec of problematicRecords) {
+                const id = String(rec.id || rec.codigo || rec._docId);
+                if (rec._source !== 'dispatches_db') continue;
+                const fixed = { ...rec };
+                if (isUndef(fixed.client))   fixed.client   = '⚠️ DADO NÃO RECUPERADO';
+                if (isUndef(fixed.city))     fixed.city     = '⚠️ DADO NÃO RECUPERADO';
+                if (isUndef(fixed.carrier))  fixed.carrier  = '⚠️ DESCONHECIDA';
+                if (isUndef(fixed.invoice))  fixed.invoice  = 'S/N';
+                if (fixed.total  == null)    fixed.total    = 0;
+                if (fixed.nfValue == null)   fixed.nfValue  = 0;
+                fixed.neighborhood = fixed.neighborhood || '-';
+                fixed._fixedAt = new Date().toISOString();
+                delete fixed._source; delete fixed._docId;
+                try {
+                    await db.collection('tenants').doc(tenant).collection('dispatches_db').doc(id).set(fixed);
+                    count++;
+                } catch(e) { log(`Erro ID ${id}: ${e.message}`, 'err'); }
+            }
+            log(`${count} registros marcados como "NÃO RECUPERADO".`, 'warn');
+            setTimeout(() => runDiagnosis(), 1500);
+        }
+
+        // ===== EXPORT =====
+        function exportReport() {
+            const report = {
+                geradoEm: new Date().toISOString(),
+                tenant: document.getElementById('cfgTenant').value,
+                periodo: { start: document.getElementById('cfgDateStart').value, end: document.getElementById('cfgDateEnd').value },
+                totalNoPeriodo: allRecordsInPeriod.length,
+                totalProblemas: problematicRecords.length,
+                registrosProblematicos: problematicRecords
+            };
+            const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `diagnostico_romaneios_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            log('Relatório exportado!', 'ok');
+        }
+
+        // Auto-conectar
+        window.onload = () => {
+            log('Ferramenta carregada. Conecte ao Firebase para iniciar.');
+            setTimeout(() => { try { connectFirebase(); } catch(e) {} }, 600);
+        };
+    </script>
+</body>
+</html>
