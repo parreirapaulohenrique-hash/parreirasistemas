@@ -1548,39 +1548,34 @@ document.addEventListener('DOMContentLoaded', async () => {
             const cityInput = document.getElementById('inputCity');
             const city = norm(cityInput ? cityInput.value : (selectedClient ? (selectedClient.cidade || selectedClient.City || selectedClient.city) : ''));
 
-            // Bairro do cliente (usado como fallback quando cidade não tem tabela)
+            // Bairro do cliente (campo bairro/neighborhood do cadastro)
             const clientBairro = selectedClient
                 ? norm(selectedClient.bairro || selectedClient.Bairro || selectedClient.neighborhood || selectedClient.Neighborhood || '')
                 : '';
 
-            // ── 1ª tentativa: busca pela CIDADE ──────────────────────────────────────
-            let cityRules = rules.filter(r => {
-                const targetCity = city;
-                const ruleCity = norm(r.cidade);
-                const ruleRedespCity = norm(r.cidadeRedespacho || '');
+            // ── v3.11.35: nova ordem de busca ─────────────────────────────────────────
+            // 1ª: BAIRRO — se bairro do cliente bater com r.cidade de alguma tabela,
+            //     usa essas regras (inclui redespacho, pois é busca específica por bairro).
+            // 2ª: CIDADE — apenas match direto r.cidade === city.
+            //     NÃO usa r.cidadeRedespacho para evitar trazer tabelas de outras cidades
+            //     que têm TUCUMA (ou qualquer cidade) apenas como destino de redespacho.
+            // ─────────────────────────────────────────────────────────────────────────
 
-                if (ruleCity === targetCity) return true;
-
-                if (ruleRedespCity) {
-                    if (ruleRedespCity === targetCity) return true;
-                    if (selectedClient) {
-                        const n1 = norm(selectedClient.Neighborhood || selectedClient.neighborhood || '');
-                        const n2 = norm(selectedClient.Bairro || selectedClient.bairro || '');
-                        if (n1 && ruleRedespCity === n1) return true;
-                        if (n2 && ruleRedespCity === n2) return true;
-                    }
-                }
-                return false;
-            });
-
-            // ── 2ª tentativa: fallback pelo BAIRRO (compara bairro com r.cidade) ─────
+            let cityRules = [];
             let usedBairroFallback = false;
-            if (cityRules.length === 0 && clientBairro) {
+
+            // ── 1ª tentativa: BAIRRO ──────────────────────────────────────────────────
+            if (clientBairro) {
                 const bairroRules = rules.filter(r => norm(r.cidade) === clientBairro);
                 if (bairroRules.length > 0) {
                     cityRules = bairroRules;
                     usedBairroFallback = true;
                 }
+            }
+
+            // ── 2ª tentativa (fallback): CIDADE — só match direto ─────────────────────
+            if (cityRules.length === 0) {
+                cityRules = rules.filter(r => norm(r.cidade) === city);
             }
 
             if (targetCarrier) {

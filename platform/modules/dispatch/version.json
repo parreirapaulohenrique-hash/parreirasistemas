@@ -1,6 +1,6 @@
 {
-    "version": "3.11.34",
-    "change": "v3.11.34 - fix: modal de recuperacao manual de dados corrompidos ao reimprimir romaneio. Detecta NFs com cliente/cidade ausentes e exibe formulario de preenchimento antes de imprimir.",
+    "version": "3.11.35",
+    "change": "v3.11.35 - fix: cotacao agora busca primeiro pelo BAIRRO (mostra redespacho correto), e no fallback por CIDADE usa apenas match direto (r.cidade), ignorando cidadeRedespacho para nao trazer tabelas de outras cidades.",
     "lastUpdate": "2026-06-09",
-    "deployedAt": "2026-06-09 13:51"
+    "deployedAt": "2026-06-09 17:14"
 }
