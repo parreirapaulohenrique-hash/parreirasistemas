@@ -1575,13 +1575,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // ── 2ª tentativa (fallback): CIDADE — só match direto, sem redespacho ─────
             // Quando chegou aqui (bairro não achou nada), busca pela cidade mas PREFERE
-            // tabelas sem redespacho (tabela direta). Só mostra com redespacho se não
-            // existir nenhuma regra direta — evita mostrar 5x VIOPEX com VAN diferentes.
+            // tabelas SEM redespacho (tabela direta). Uma regra "sem redespacho" é aquela
+            // onde r.redespacho E r.cidadeRedespacho estão vazios/traço.
+            // Só usa as com redespacho se não existir nenhuma regra direta — evita mostrar
+            // 5x VIOPEX com redespacho VAN para TUCUMA quando o cliente é de TUCUMA mesmo.
             if (cityRules.length === 0) {
                 const allCidadeRules = rules.filter(r => norm(r.cidade) === city);
-                const semRedespacho = allCidadeRules.filter(r =>
-                    !r.redespacho || r.redespacho === '-' || r.redespacho === ''
-                );
+                const semRedespacho = allCidadeRules.filter(r => {
+                    const temRedesp = r.redespacho && r.redespacho !== '-' && r.redespacho !== '';
+                    const temCidadeRedesp = r.cidadeRedespacho && r.cidadeRedespacho !== '-' && r.cidadeRedespacho !== '';
+                    return !temRedesp && !temCidadeRedesp;
+                });
                 cityRules = semRedespacho.length > 0 ? semRedespacho : allCidadeRules;
             }
 

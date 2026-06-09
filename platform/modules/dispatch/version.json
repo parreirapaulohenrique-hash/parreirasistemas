@@ -1,6 +1,6 @@
 {
-    "version": "3.11.36",
-    "change": "v3.11.36 - fix: cotacao por CIDADE agora prefere tabelas sem redespacho (tabela direta), evitando exibir multiplos cards da mesma transportadora com redespacho diferente.",
+    "version": "3.11.37",
+    "change": "v3.11.37 - fix: filtro semRedespacho agora checa AMBOS os campos r.redespacho e r.cidadeRedespacho, garantindo que apenas a tabela direta (sem redespacho) apareca na busca por cidade.",
     "lastUpdate": "2026-06-09",
-    "deployedAt": "2026-06-09 17:27"
+    "deployedAt": "2026-06-09 17:33"
 }
