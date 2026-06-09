@@ -1,6 +1,6 @@
 {
-    "version":  "3.11.32",
-    "change":  "v3.11.32 - fix: Sanitizacao on-the-fly no printSpecificRomaneio - corrige string 'undefined' em romaneios historicos no PDF/impressao.",
-    "lastUpdate":  "2026-06-08",
-    "deployedAt":  "2026-06-08 15:55"
+    "version": "3.11.33",
+    "change": "v3.11.33 - fix: sanitizacao defensiva em renderAppHistory (tabela historico) e printSpecificRomaneio - elimina string undefined/null em romaneios historicos 12-15 mai.",
+    "lastUpdate": "2026-06-09",
+    "deployedAt": "2026-06-09 09:14"
 }
