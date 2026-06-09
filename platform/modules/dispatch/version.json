@@ -1,6 +1,6 @@
 {
-    "version": "3.11.35",
-    "change": "v3.11.35 - fix: cotacao agora busca primeiro pelo BAIRRO (mostra redespacho correto), e no fallback por CIDADE usa apenas match direto (r.cidade), ignorando cidadeRedespacho para nao trazer tabelas de outras cidades.",
+    "version": "3.11.36",
+    "change": "v3.11.36 - fix: cotacao por CIDADE agora prefere tabelas sem redespacho (tabela direta), evitando exibir multiplos cards da mesma transportadora com redespacho diferente.",
     "lastUpdate": "2026-06-09",
-    "deployedAt": "2026-06-09 17:14"
+    "deployedAt": "2026-06-09 17:27"
 }

@@ -1573,9 +1573,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            // ── 2ª tentativa (fallback): CIDADE — só match direto ─────────────────────
+            // ── 2ª tentativa (fallback): CIDADE — só match direto, sem redespacho ─────
+            // Quando chegou aqui (bairro não achou nada), busca pela cidade mas PREFERE
+            // tabelas sem redespacho (tabela direta). Só mostra com redespacho se não
+            // existir nenhuma regra direta — evita mostrar 5x VIOPEX com VAN diferentes.
             if (cityRules.length === 0) {
-                cityRules = rules.filter(r => norm(r.cidade) === city);
+                const allCidadeRules = rules.filter(r => norm(r.cidade) === city);
+                const semRedespacho = allCidadeRules.filter(r =>
+                    !r.redespacho || r.redespacho === '-' || r.redespacho === ''
+                );
+                cityRules = semRedespacho.length > 0 ? semRedespacho : allCidadeRules;
             }
 
             if (targetCarrier) {
