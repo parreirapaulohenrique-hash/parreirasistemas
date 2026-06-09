@@ -2,5 +2,5 @@
     "version": "3.11.34",
     "change": "v3.11.34 - fix: modal de recuperacao manual de dados corrompidos ao reimprimir romaneio. Detecta NFs com cliente/cidade ausentes e exibe formulario de preenchimento antes de imprimir.",
     "lastUpdate": "2026-06-09",
-    "deployedAt": "2026-06-09 09:26"
+    "deployedAt": "2026-06-09 13:51"
 }
