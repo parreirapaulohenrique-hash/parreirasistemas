@@ -880,7 +880,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             clientResult.innerHTML = `
             <div style="font-weight: 600;" id="resClientName">${client.nome || client.razaoSocial || client.nomeFantasia || 'Cliente'}</div>
             <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                <span id="resCity">${client.cidade || client.city || '-'}</span> - <span id="resNeighborhood">${client.bairro || '-'}</span>
+                <span id="resCity">${(!client.cidade || client.cidade === 'undefined' || client.cidade === 'null' || String(client.cidade).trim() === '') ? ((!client.city || client.city === 'undefined') ? '-' : client.city) : client.cidade}</span> - <span id="resNeighborhood">${(!client.bairro || client.bairro === 'undefined' || client.bairro === 'null' || String(client.bairro).trim() === '') ? '-' : client.bairro}</span>
             </div>
             ${statusHtml}
         `;
@@ -1980,8 +1980,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!confirm(`Confirmar despacho com ${option.carrier} per ${msgPrice}?`)) return;
 
             const clientName = document.getElementById('resClientName').innerText;
-            const resCity = document.getElementById('resCity').innerText;
-            const resNeighborhood = document.getElementById('resNeighborhood').innerText;
+            // v3.11.33: _sanDom — sanitiza innerText antes de salvar (previne string 'undefined' herdada do DOM)
+            const _sanDom = (v, fb) => (!v || v === 'undefined' || v === 'null' || String(v).trim() === '') ? fb : String(v).trim();
+            const resCity = _sanDom(document.getElementById('resCity').innerText, '-');
+            const resNeighborhood = _sanDom(document.getElementById('resNeighborhood').innerText, '-');
             const val = parseFloat(document.getElementById('inputValue').value) || 0;
             const weight = parseFloat(document.getElementById('inputWeight').value) || 0;
             const volume = parseInt(document.getElementById('inputVolume').value) || 1;
@@ -2038,9 +2040,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 date: _dispatchDate,
                 isRetroativo: _isRetroativo,
                 registradoEm: new Date().toISOString(), // data/hora real do lançamento
-                client: clientName !== 'Name' ? clientName : 'Consumidor',
-                city: resCity,
-                neighborhood: resNeighborhood,
+                client: (clientName && clientName !== 'Name' && clientName !== 'undefined') ? clientName : 'Consumidor',
+                city: resCity || '-',
+                neighborhood: resNeighborhood || '-',
                 carrier: option.selectedFobCarrier ? `FOB - ${option.selectedFobCarrier}` : String(option.carrier || '').trim().toUpperCase(),
                 total: finalTotal, // Use negotiated price if available
                 originalTotal: option.total, // Keep original for records
@@ -3514,7 +3516,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         }
                                         return `<td style="text-align: center; width: 40px;" title="${title}"><span class="material-icons-round ${cls}" style="font-size: 1.2rem; vertical-align: middle; color: ${cls === 'status-late' ? 'var(--accent-danger)' : ''}">${icon}</span></td>`;
                                     }
-                                    let val = d[col] || '-';
+                                    // v3.11.33 — sanitiza string "undefined"/"null" herdadas de dados corrompidos
+                                    const _rawVal = d[col];
+                                    let val = (_rawVal === undefined || _rawVal === null || String(_rawVal).trim() === '' || String(_rawVal).trim() === 'undefined' || String(_rawVal).trim() === 'null') ? '-' : _rawVal;
                                     if (col === 'date') val = new Date(val).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
                                     if (['total', 'nfValue', 'minimo'].includes(col)) val = Utils.formatCurrency(val);
                                     if (col === 'percentual' && val !== '-') val = val + '%';
@@ -6048,7 +6052,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
 
                 const carrierInfo = Utils.getStorage('carrier_info_v2') || {};
-                const company = Utils.getStorage('company_data');
+                // v3.11.33: protege company_data nulo — evita crash se empresa não configurada
+                const _companyRaw = Utils.getStorage('company_data');
+                const company = (_companyRaw && typeof _companyRaw === 'object') ? _companyRaw : {};
                 const cleanName = String(carrierName || '').trim().toUpperCase();
                 const cInfo = carrierInfo[cleanName] || { cnpj: '-', address: '-', city: '-' };
                 
@@ -6102,12 +6108,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background: #f0f0f0;">VALOR NF</div>
                 <div style="border-bottom: 1px solid #000; padding: 2px; background: #f0f0f0;">FRETE</div>
                 ${items.map(item => {
-                    // v3.11.32: sanitização on-the-fly — corrige registros antigos com 'undefined' no localStorage
+                    // v3.11.33: sanitização on-the-fly — corrige TODOS os campos com 'undefined' string no localStorage
                     const _s = (v, fb) => (!v || v === 'undefined' || v === 'null' || String(v).trim() === '') ? fb : String(v);
-                    item.client   = _s(item.client,   'NÃO INFORMADO');
-                    item.city     = _s(item.city,     'NÃO INFORMADO');
-                    item.carrier  = _s(item.carrier,  carrierName || 'NÃO INFORMADO');
-                    item.invoice  = _s(item.invoice,  'S/N');
+                    item.client       = _s(item.client,       'NÃO INFORMADO');
+                    item.city         = _s(item.city,         'NÃO INFORMADO');
+                    item.carrier      = _s(item.carrier,      carrierName || 'NÃO INFORMADO');
+                    item.invoice      = _s(item.invoice,      'S/N');
+                    item.neighborhood = _s(item.neighborhood, '-');
+                    // v3.11.33: redespacho — sanitiza antes de checar hasRedesp (previne 'UNDEFINED' no campo)
+                    item.redespacho   = _s(item.redespacho,   '-');
                     if (item.total  == null || isNaN(item.total))   item.total   = 0;
                     if (item.nfValue == null || isNaN(item.nfValue)) item.nfValue = 0;
                     if (item.weight == null || isNaN(item.weight))   item.weight  = 0;
@@ -6118,7 +6127,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     let rawPhone = clientObj && clientObj.telefone ? clientObj.telefone.replace(/\D/g,'') : '';
                     let phone = rawPhone || '';
                     if (phone.length > 20) phone = phone.substring(0, 20);
-                    const hasRedesp = item.redespacho && item.redespacho !== '-';
+                    // redespacho já sanitizado acima — '-' significa sem redespacho
+                    const hasRedesp = item.redespacho !== '-';
                     const redespLabel = hasRedesp ? 'SIM' : 'NÃO';
                     const redespNF = hasRedesp ? item.redespacho.toUpperCase() : '';
                     const isCompl = item.isComplement ? 'SIM' : 'NÃO';

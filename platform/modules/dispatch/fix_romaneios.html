@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>🔧 Recuperação de Romaneios — ParreiraLog</title>
+    <title>🔧 Recuperação de Romaneios v2 — ParreiraLog</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -41,32 +41,41 @@
         .badge-yellow { background: rgba(245,158,11,0.2); color: #fbbf24; }
         .badge-green { background: rgba(16,185,129,0.2); color: #34d399; }
         .badge-blue { background: rgba(59,130,246,0.2); color: #60a5fa; }
+        .badge-purple { background: rgba(139,92,246,0.2); color: #a78bfa; }
         #log {
             background: #0f172a; border: 1px solid #334155; border-radius: 8px;
             padding: 12px; font-family: monospace; font-size: 0.8rem;
-            max-height: 350px; overflow-y: auto; white-space: pre-wrap; color: #94a3b8;
+            max-height: 400px; overflow-y: auto; white-space: pre-wrap; color: #94a3b8;
         }
         .log-ok { color: #34d399; } .log-err { color: #f87171; } .log-warn { color: #fbbf24; }
         input[type="text"], input[type="date"] {
             background: #0f172a; border: 1px solid #334155; border-radius: 6px;
             color: #e2e8f0; padding: 8px 12px; font-size: 0.9rem;
         }
-        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
         .stat-box { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 14px; text-align: center; }
         .stat-num { font-size: 1.8rem; font-weight: 800; }
         .stat-label { font-size: 0.72rem; color: #94a3b8; text-transform: uppercase; margin-top: 4px; }
-        .progress-bar { height: 6px; background: #334155; border-radius: 3px; overflow: hidden; margin-top: 8px; }
-        .progress-fill { height: 100%; background: #3b82f6; border-radius: 3px; transition: width 0.3s; width: 0%; }
+        .progress-bar { height: 8px; background: #334155; border-radius: 4px; overflow: hidden; margin-top: 8px; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #3b82f6, #10b981); border-radius: 4px; transition: width 0.3s; width: 0%; }
         .drop-zone {
             border: 2px dashed #334155; border-radius: 10px; padding: 24px; text-align: center;
             cursor: pointer; transition: all 0.2s; color: #94a3b8; font-size: 0.9rem;
         }
         .drop-zone:hover, .drop-zone.drag-over { border-color: #3b82f6; background: rgba(59,130,246,0.05); }
         .drop-zone.loaded { border-color: #10b981; background: rgba(16,185,129,0.05); color: #34d399; }
-        .inline-edit { background: #0f172a; border: 1px solid #3b82f6; border-radius: 4px; color: #e2e8f0; padding: 3px 6px; font-size: 0.8rem; width: 180px; }
+        .inline-edit { background: #0f172a; border: 1px solid #3b82f6; border-radius: 4px; color: #e2e8f0; padding: 3px 6px; font-size: 0.8rem; width: 160px; }
         .btn-sm { padding: 4px 10px; font-size: 0.75rem; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; }
         .btn-sm-green { background: #10b981; color: #fff; }
         .btn-sm-blue { background: #3b82f6; color: #fff; }
+        .tab-bar { display: flex; gap: 8px; margin-bottom: 16px; }
+        .tab { padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600;
+               background: #0f172a; border: 1px solid #334155; color: #94a3b8; transition: all 0.2s; }
+        .tab.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+        .alert-box { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.4); border-radius: 8px; padding: 12px; margin-bottom: 12px; font-size: 0.85rem; color: #fbbf24; }
+        .source-ls { color: #a78bfa; } .source-fs { color: #60a5fa; }
     </style>
 </head>
 <body>
@@ -74,12 +83,18 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
 
-    <h1>🔧 Recuperação de Romaneios — ParreiraLog</h1>
-    <p class="subtitle">Diagnostica e corrige registros com campos <code>undefined</code> / vazios no Firestore</p>
+    <h1>🔧 Recuperação de Romaneios v2 — ParreiraLog</h1>
+    <p class="subtitle">Diagnostica e corrige registros com campos <code>undefined</code> / vazios no <strong>localStorage</strong> (dispatches + app_romaneios) E no <strong>Firestore</strong></p>
+
+    <!-- AVISO IMPORTANTE -->
+    <div class="alert-box">
+        ⚠️ <strong>Esta ferramenta deve ser aberta diretamente no navegador que usa o sistema ParreiraLog</strong>, pois ela lê e grava no localStorage daquela aba/domínio.
+        Se o sistema roda em <code>localhost</code> ou <code>parreiralog.vercel.app</code>, acesse esta ferramenta no mesmo domínio.
+    </div>
 
     <!-- PASSO 1: CONFIGURAÇÃO -->
     <div class="card">
-        <h2>⚙️ Passo 1 — Configurar e Conectar</h2>
+        <h2>⚙️ Passo 1 — Configurar</h2>
         <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
             <div>
                 <label style="font-size:0.8rem;color:#94a3b8;display:block;margin-bottom:4px;">Tenant ID</label>
@@ -87,20 +102,20 @@
             </div>
             <div>
                 <label style="font-size:0.8rem;color:#94a3b8;display:block;margin-bottom:4px;">Data início</label>
-                <input type="date" id="cfgDateStart" value="2026-05-09">
+                <input type="date" id="cfgDateStart" value="2026-05-12">
             </div>
             <div>
                 <label style="font-size:0.8rem;color:#94a3b8;display:block;margin-bottom:4px;">Data fim</label>
-                <input type="date" id="cfgDateEnd" value="2026-06-08">
+                <input type="date" id="cfgDateEnd" value="2026-05-15">
             </div>
-            <button class="btn btn-primary" onclick="connectFirebase()">🔌 Conectar Firebase</button>
+            <button class="btn btn-primary" onclick="connectAndScan()">🔌 Conectar e Escanear</button>
         </div>
         <div id="connStatus" style="margin-top:10px;font-size:0.85rem;color:#94a3b8;">Não conectado</div>
     </div>
 
-    <!-- PASSO 2: BACKUP LOCAL (opcional) -->
+    <!-- PASSO 2: BACKUP JSON OPCIONAL -->
     <div class="card">
-        <h2>📂 Passo 2 — Carregar Backup Local (Opcional mas Recomendado)</h2>
+        <h2>📂 Passo 2 — Carregar Backup JSON (Opcional mas Recomendado)</h2>
         <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:12px;">
             Carregue o arquivo <code>dispatches_backup_ltdistribuidora_2026-05-09.json</code> para usar como referência na recuperação automática.
         </p>
@@ -111,32 +126,41 @@
         <div id="backupStatus" style="margin-top:8px;font-size:0.82rem;color:#94a3b8;"></div>
     </div>
 
-    <!-- PASSO 3: DIAGNÓSTICO -->
-    <div class="card">
+    <!-- PASSO 3: RESULTADOS E DIAGNÓSTICO -->
+    <div class="card" id="diagCard" style="display:none;">
         <h2>🔍 Passo 3 — Diagnóstico</h2>
-        <button class="btn btn-primary" id="btnDiag" onclick="runDiagnosis()" disabled>🔍 Executar Diagnóstico</button>
-        <div class="grid-3" id="statsGrid" style="display:none; margin-top:16px; margin-bottom:16px;">
+        <div class="grid-4" id="statsGrid" style="margin-bottom:16px;">
             <div class="stat-box"><div class="stat-num" id="statTotal" style="color:#60a5fa">0</div><div class="stat-label">Total no período</div></div>
             <div class="stat-box"><div class="stat-num" id="statProblemas" style="color:#f87171">0</div><div class="stat-label">Com problemas</div></div>
             <div class="stat-box"><div class="stat-num" id="statOk" style="color:#34d399">0</div><div class="stat-label">OK / Íntegros</div></div>
+            <div class="stat-box"><div class="stat-num" id="statRomaneios" style="color:#a78bfa">0</div><div class="stat-label">Romaneios afetados</div></div>
         </div>
-        <div id="resultTable" style="overflow-x:auto; margin-top:12px;"></div>
-        <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;" id="actionButtons" style="display:none;">
-            <button class="btn btn-warning" id="btnExport" onclick="exportReport()" style="display:none;">📥 Exportar Relatório JSON</button>
+
+        <div class="tab-bar">
+            <div class="tab active" onclick="showTab('tabDispatches')">📋 Dispatches</div>
+            <div class="tab" onclick="showTab('tabRomaneios')">📄 app_romaneios</div>
+        </div>
+
+        <div id="tabDispatches" class="tab-panel active">
+            <div id="resultTableDispatches" style="overflow-x:auto; margin-top:12px;"></div>
+        </div>
+        <div id="tabRomaneios" class="tab-panel">
+            <div id="resultTableRomaneios" style="overflow-x:auto; margin-top:12px;"></div>
         </div>
     </div>
 
-    <!-- PASSO 4: RECUPERAÇÃO -->
+    <!-- PASSO 4: CORREÇÃO -->
     <div class="card" id="recoverySection" style="display:none;">
-        <h2>🛠️ Passo 4 — Recuperação</h2>
+        <h2>🛠️ Passo 4 — Correção</h2>
         <p style="font-size:0.85rem;color:#94a3b8;margin-bottom:14px;">
-            <strong>Modo automático:</strong> Recupera usando o backup JSON ou localStorage.<br>
-            <strong>Modo manual:</strong> Edite os campos diretamente na tabela acima e clique em 💾 para cada linha.
+            <strong>Recuperação automática:</strong> Usa o backup JSON + localStorage como referência.<br>
+            <strong>Correção dos romaneios:</strong> Atualiza os snapshots em <code>app_romaneios</code> com os dados corrigidos do <code>dispatches</code>.<br>
+            <strong>Edição manual:</strong> Edite campos na tabela acima e clique em 💾 por linha.
         </p>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <button class="btn btn-success" id="btnRecover" onclick="runRecovery()">✅ Recuperar Todos Automaticamente</button>
+            <button class="btn btn-primary" id="btnRecoverDispatches" onclick="runRecoveryDispatches()">✅ 1. Corrigir Dispatches (LS + Firestore)</button>
+            <button class="btn btn-success" id="btnFixRomaneios" onclick="runFixRomaneios()">📄 2. Corrigir Snapshots app_romaneios (LS)</button>
             <button class="btn btn-danger" id="btnForceNull" onclick="markNullsAsUnknown()">⚠️ Marcar Sem Dados como "NÃO RECUPERADO"</button>
-            <button class="btn btn-primary" id="btnSaveAll" onclick="saveAllEdited()" style="display:none;">💾 Salvar Todas as Edições Manuais</button>
         </div>
         <div class="progress-bar" style="margin-top:12px;"><div class="progress-fill" id="progressFill"></div></div>
         <div id="recoveryStatus" style="font-size:0.82rem;color:#94a3b8;margin-top:6px;"></div>
@@ -145,15 +169,22 @@
     <!-- LOG -->
     <div class="card">
         <h2>📋 Log de Operações</h2>
-        <div id="log">Aguardando conexão com Firebase...\n</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <button class="btn btn-warning" id="btnExport" onclick="exportReport()" style="display:none;padding:6px 14px;font-size:0.8rem;">📥 Exportar Relatório JSON</button>
+            <button class="btn btn-primary" onclick="document.getElementById('log').innerHTML=''" style="padding:6px 14px;font-size:0.8rem;">🗑️ Limpar Log</button>
+        </div>
+        <div id="log">Aguardando configuração...\n</div>
     </div>
 
     <script>
         let db = null;
-        let problematicRecords = [];
-        let allRecordsInPeriod = [];
+        let problematicDispatches = [];
+        let allDispatchesInPeriod = [];
+        let affectedRomaneios = [];
         let backupData = [];
         let editedRecords = {};
+        let lsKey_dispatches = '';
+        let lsKey_romaneios = '';
 
         const FIREBASE_CONFIG = {
             apiKey: "AIzaSyDK8ZtSiMpuJyivFqgKCVN45dNi-HaxuLw",
@@ -193,20 +224,76 @@
             return f;
         }
 
+        // Detecta as chaves do localStorage com base no tenant
+        function buildLsKeys(tenant) {
+            lsKey_dispatches = `tenant_${tenant}_dispatches`;
+            lsKey_romaneios  = `tenant_${tenant}_app_romaneios`;
+            // Tenta também chaves sem prefixo de tenant (legado)
+            log(`Chaves LS: "${lsKey_dispatches}" | "${lsKey_romaneios}"`);
+        }
+
+        // Lê dispatches do localStorage (tenta múltiplas chaves)
+        function readLsDispatches(tenant) {
+            const tries = [
+                `tenant_${tenant}_dispatches`,
+                `dispatches`,
+                `${tenant}_dispatches`
+            ];
+            for (const k of tries) {
+                try {
+                    const raw = localStorage.getItem(k);
+                    if (raw) {
+                        const arr = JSON.parse(raw);
+                        log(`LocalStorage dispatches: chave "${k}" → ${arr.length} registros`, 'ok');
+                        return { key: k, data: arr };
+                    }
+                } catch(e) {}
+            }
+            log('LocalStorage dispatches: nenhum dado encontrado', 'warn');
+            return { key: null, data: [] };
+        }
+
+        // Lê app_romaneios do localStorage (tenta múltiplas chaves)
+        function readLsRomaneios(tenant) {
+            const tries = [
+                `tenant_${tenant}_app_romaneios`,
+                `app_romaneios`,
+                `${tenant}_app_romaneios`
+            ];
+            for (const k of tries) {
+                try {
+                    const raw = localStorage.getItem(k);
+                    if (raw) {
+                        const arr = JSON.parse(raw);
+                        log(`LocalStorage app_romaneios: chave "${k}" → ${arr.length} registros`, 'ok');
+                        return { key: k, data: arr };
+                    }
+                } catch(e) {}
+            }
+            log('LocalStorage app_romaneios: nenhum dado encontrado', 'warn');
+            return { key: null, data: [] };
+        }
+
         // ===== FIREBASE =====
-        async function connectFirebase() {
+        async function connectAndScan() {
+            const tenant = document.getElementById('cfgTenant').value.trim();
+            buildLsKeys(tenant);
+
+            document.getElementById('connStatus').innerHTML = `<span style="color:#fbbf24">⏳ Conectando ao Firebase...</span>`;
+            log('\n=== INICIANDO CONEXÃO E ESCANEAMENTO ===');
+
             try {
                 if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
                 db = firebase.firestore();
                 await db.collection('tenants').doc('__ping__').get().catch(() => {});
-                const tenant = document.getElementById('cfgTenant').value.trim();
-                document.getElementById('connStatus').innerHTML = `<span style="color:#34d399">✅ Conectado ao Firebase! Tenant: <strong>${tenant}</strong></span>`;
-                document.getElementById('btnDiag').disabled = false;
-                log(`Firebase conectado. Tenant: ${tenant}`, 'ok');
+                document.getElementById('connStatus').innerHTML = `<span style="color:#34d399">✅ Conectado! Tenant: <strong>${tenant}</strong> — escaneando dados...</span>`;
+                log(`Firebase OK. Tenant: ${tenant}`, 'ok');
             } catch(e) {
-                document.getElementById('connStatus').innerHTML = `<span style="color:#f87171">❌ Falha: ${e.message}</span>`;
-                log('Erro Firebase: ' + e.message, 'err');
+                document.getElementById('connStatus').innerHTML = `<span style="color:#f87171">❌ Falha Firebase: ${e.message} — continuando apenas com localStorage</span>`;
+                log('Firebase falhou (continuando com LS): ' + e.message, 'warn');
             }
+
+            await runDiagnosis(tenant);
         }
 
         // ===== BACKUP FILE =====
@@ -242,106 +329,126 @@
             }
         });
 
-        // ===== DIAGNÓSTICO =====
-        async function runDiagnosis() {
-            const tenant = document.getElementById('cfgTenant').value.trim();
+        // ===== DIAGNÓSTICO PRINCIPAL =====
+        async function runDiagnosis(tenant) {
             const dateStart = document.getElementById('cfgDateStart').value;
-            const dateEnd = document.getElementById('cfgDateEnd').value;
-            problematicRecords = []; allRecordsInPeriod = []; editedRecords = {};
+            const dateEnd   = document.getElementById('cfgDateEnd').value;
+            const tStart = dateStart ? new Date(dateStart + 'T00:00:00-03:00').getTime() : 0;
+            const tEnd   = dateEnd   ? new Date(dateEnd   + 'T23:59:59-03:00').getTime() : Date.now();
 
-            document.getElementById('btnDiag').disabled = true;
-            document.getElementById('btnDiag').textContent = '⏳ Carregando...';
-            log(`\nIniciando diagnóstico — Tenant: ${tenant} | Período: ${dateStart} → ${dateEnd}`);
+            problematicDispatches = [];
+            allDispatchesInPeriod = [];
+            affectedRomaneios = [];
+            editedRecords = {};
 
-            try {
-                // 1. dispatches_db (collection individual)
-                log('Buscando dispatches_db...');
-                const snap1 = await db.collection('tenants').doc(tenant).collection('dispatches_db').get();
-                let cloudRecs = [];
-                snap1.forEach(doc => cloudRecs.push({ ...doc.data(), _docId: doc.id, _source: 'dispatches_db' }));
-                log(`  dispatches_db: ${cloudRecs.length} registros`, 'ok');
+            log(`\nPeríodo: ${dateStart} → ${dateEnd}`);
 
-                // 2. legacy_store/dispatches
-                log('Buscando legacy_store/dispatches...');
-                let legacyRecs = [];
+            // ─── 1. DISPATCHES ───────────────────────────────────────────────
+            log('\n--- DISPATCHES ---');
+            const lsDisp = readLsDispatches(tenant);
+            let cloudDisp = [];
+
+            if (db) {
+                try {
+                    log('Buscando dispatches_db no Firestore...');
+                    const snap = await db.collection('tenants').doc(tenant).collection('dispatches_db').get();
+                    snap.forEach(doc => cloudDisp.push({ ...doc.data(), _docId: doc.id, _source: 'firestore' }));
+                    log(`  Firestore dispatches_db: ${cloudDisp.length} registros`, 'ok');
+                } catch(e) { log('  Firestore erro: ' + e.message, 'warn'); }
+
+                // Legacy store
                 try {
                     const legDoc = await db.collection('tenants').doc(tenant).collection('legacy_store').doc('dispatches').get();
                     if (legDoc.exists && legDoc.data().content) {
-                        legacyRecs = JSON.parse(legDoc.data().content).map(r => ({ ...r, _source: 'legacy_store' }));
-                        log(`  legacy_store: ${legacyRecs.length} registros`, 'ok');
-                    } else {
-                        log('  legacy_store/dispatches: vazio', 'warn');
+                        const legArr = JSON.parse(legDoc.data().content).map(r => ({ ...r, _source: 'legacy_store' }));
+                        log(`  legacy_store: ${legArr.length} registros`, 'ok');
+                        legArr.forEach(d => cloudDisp.push(d));
                     }
                 } catch(e) { log('  legacy_store: erro: ' + e.message, 'warn'); }
-
-                // 3. Merge — dispatches_db tem prioridade
-                const map = new Map();
-                legacyRecs.forEach(d => { const id = String(d.id || d.codigo); if (!map.has(id)) map.set(id, d); });
-                cloudRecs.forEach(d => { const id = String(d.id || d.codigo || d._docId); map.set(id, d); });
-                let all = Array.from(map.values());
-                log(`Merge total: ${all.length} registros`);
-
-                // 4. Filtro de período
-                const tStart = dateStart ? new Date(dateStart + 'T00:00:00-03:00').getTime() : 0;
-                const tEnd = dateEnd ? new Date(dateEnd + 'T23:59:59-03:00').getTime() : Date.now();
-                allRecordsInPeriod = all.filter(d => {
-                    const t = Number(d.id) || (d.date ? new Date(d.date).getTime() : 0);
-                    return t >= tStart && t <= tEnd;
-                });
-                log(`No período (${dateStart} → ${dateEnd}): ${allRecordsInPeriod.length} registros`);
-
-                // 5. Identificar problemáticos
-                problematicRecords = allRecordsInPeriod.filter(isProblematic);
-                const okCount = allRecordsInPeriod.length - problematicRecords.length;
-
-                // Stats
-                document.getElementById('statsGrid').style.display = 'grid';
-                document.getElementById('statTotal').textContent = allRecordsInPeriod.length;
-                document.getElementById('statProblemas').textContent = problematicRecords.length;
-                document.getElementById('statOk').textContent = okCount;
-                document.getElementById('btnExport').style.display = 'inline-block';
-
-                if (problematicRecords.length > 0) {
-                    log(`⚠️ ${problematicRecords.length} registros com problemas encontrados!`, 'warn');
-                    renderResultTable();
-                    document.getElementById('recoverySection').style.display = 'block';
-                } else {
-                    log('✅ Nenhum problema encontrado no período!', 'ok');
-                    document.getElementById('resultTable').innerHTML = '<p style="color:#34d399;padding:12px;">✅ Todos os registros estão íntegros!</p>';
-                    document.getElementById('recoverySection').style.display = 'none';
-                }
-            } catch(e) {
-                log('ERRO no diagnóstico: ' + e.message, 'err');
-                console.error(e);
             }
 
-            document.getElementById('btnDiag').disabled = false;
-            document.getElementById('btnDiag').textContent = '🔍 Executar Diagnóstico';
+            // Merge LS + Cloud (cloud tem prioridade)
+            const mapDisp = new Map();
+            lsDisp.data.forEach(d => { const id = String(d.id || d.codigo); if (!mapDisp.has(id)) mapDisp.set(id, { ...d, _source: 'localStorage' }); });
+            cloudDisp.forEach(d => { const id = String(d.id || d.codigo || d._docId); mapDisp.set(id, d); });
+            const allDisp = Array.from(mapDisp.values());
+            log(`Merge total dispatches: ${allDisp.length}`);
+
+            // Filtrar período
+            allDispatchesInPeriod = allDisp.filter(d => {
+                const t = Number(d.id) || (d.date ? new Date(d.date).getTime() : 0);
+                return t >= tStart && t <= tEnd;
+            });
+            log(`No período: ${allDispatchesInPeriod.length} dispatches`);
+            problematicDispatches = allDispatchesInPeriod.filter(isProblematic);
+            log(`Com problemas: ${problematicDispatches.length}`, problematicDispatches.length > 0 ? 'warn' : 'ok');
+
+            // ─── 2. APP_ROMANEIOS ────────────────────────────────────────────
+            log('\n--- APP_ROMANEIOS ---');
+            const lsRom = readLsRomaneios(tenant);
+            const allRom = lsRom.data;
+
+            // Romaneios criados no período
+            const romInPeriod = allRom.filter(r => {
+                const t = r.createdAt ? new Date(r.createdAt).getTime() : 0;
+                return t >= tStart && t <= tEnd;
+            });
+            log(`Romaneios no período: ${romInPeriod.length}`);
+
+            // Detecta romaneios com items problemáticos
+            affectedRomaneios = romInPeriod.filter(r => {
+                if (!r.items || !r.items.length) return false;
+                return r.items.some(item => isProblematic(item));
+            });
+            log(`Romaneios com items corrompidos: ${affectedRomaneios.length}`, affectedRomaneios.length > 0 ? 'warn' : 'ok');
+
+            // ─── STATS ───────────────────────────────────────────────────────
+            document.getElementById('statTotal').textContent = allDispatchesInPeriod.length;
+            document.getElementById('statProblemas').textContent = problematicDispatches.length;
+            document.getElementById('statOk').textContent = allDispatchesInPeriod.length - problematicDispatches.length;
+            document.getElementById('statRomaneios').textContent = affectedRomaneios.length;
+
+            document.getElementById('diagCard').style.display = 'block';
+            document.getElementById('btnExport').style.display = 'inline-block';
+
+            renderTableDispatches();
+            renderTableRomaneios();
+
+            if (problematicDispatches.length > 0 || affectedRomaneios.length > 0) {
+                document.getElementById('recoverySection').style.display = 'block';
+            } else {
+                log('\n✅ Nenhum problema encontrado no período!', 'ok');
+                document.getElementById('recoverySection').style.display = 'none';
+            }
         }
 
-        // ===== TABELA COM EDIÇÃO INLINE =====
-        function renderResultTable() {
-            const container = document.getElementById('resultTable');
-            let html = `
-                <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:8px;">
-                    ${problematicRecords.length} registros com dados incompletos. 
-                    Você pode editar manualmente qualquer campo e salvar individualmente com 💾.
-                </p>
-                <table>
-                <thead><tr>
-                    <th>Data</th><th>Transportadora</th><th>NF</th>
+        // ===== TABELAS =====
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function renderTableDispatches() {
+            const container = document.getElementById('resultTableDispatches');
+            if (problematicDispatches.length === 0) {
+                container.innerHTML = '<p style="color:#34d399;padding:12px;">✅ Todos os dispatches estão íntegros nesse período!</p>';
+                return;
+            }
+            let html = `<p style="font-size:0.82rem;color:#94a3b8;margin-bottom:8px;">${problematicDispatches.length} dispatches com dados incompletos.</p>
+                <table><thead><tr>
+                    <th>Data</th><th>Fonte</th><th>Transportadora</th><th>NF</th>
                     <th>Cliente</th><th>Cidade</th><th>Frete (R$)</th>
-                    <th>Status</th><th>Campos Faltantes</th><th>Ações</th>
+                    <th>Status</th><th>Campos</th><th>Ação</th>
                 </tr></thead><tbody>`;
 
-            problematicRecords.forEach((d, idx) => {
+            problematicDispatches.forEach((d, idx) => {
                 const id = String(d.id || d.codigo || d._docId);
                 const dateStr = d.date
                     ? new Date(d.date).toLocaleDateString('pt-BR')
                     : (d.id ? new Date(Number(d.id)).toLocaleDateString('pt-BR') : '?');
                 const missing = getMissingFields(d);
-
-                // Tenta encontrar no backup para pré-preencher sugestão
                 const suggestion = findInBackup(id, d.invoice, d.date);
 
                 const valCarrier = isUndef(d.carrier) ? (suggestion?.carrier || '') : d.carrier;
@@ -350,212 +457,318 @@
                 const valCity    = isUndef(d.city)    ? (suggestion?.city    || '') : d.city;
                 const hasSug     = !!suggestion;
 
-                html += `<tr id="row_${idx}" style="${hasSug ? 'background:rgba(16,185,129,0.04)' : ''}">
+                const srcBadge = d._source === 'localStorage'
+                    ? `<span class="badge badge-purple">LS</span>`
+                    : d._source === 'firestore'
+                    ? `<span class="badge badge-blue">FS</span>`
+                    : `<span class="badge badge-yellow">${d._source||'?'}</span>`;
+
+                html += `<tr id="drow_${idx}" style="${hasSug ? 'background:rgba(16,185,129,0.04)' : ''}">
                     <td style="white-space:nowrap;">${dateStr}<br><span style="font-size:0.7rem;color:#64748b;">${id.toString().slice(-6)}</span></td>
-                    <td>${renderEditField(idx, 'carrier', valCarrier, isUndef(d.carrier), hasSug)}</td>
-                    <td>${renderEditField(idx, 'invoice', valInvoice, isUndef(d.invoice), hasSug)}</td>
-                    <td>${renderEditField(idx, 'client',  valClient,  isUndef(d.client),  hasSug, 200)}</td>
-                    <td>${renderEditField(idx, 'city',    valCity,    isUndef(d.city),    hasSug)}</td>
+                    <td>${srcBadge}</td>
+                    <td>${renderEdit(idx, 'd', 'carrier', valCarrier, isUndef(d.carrier), hasSug)}</td>
+                    <td>${renderEdit(idx, 'd', 'invoice', valInvoice, isUndef(d.invoice), hasSug, 80)}</td>
+                    <td>${renderEdit(idx, 'd', 'client', valClient, isUndef(d.client), hasSug, 180)}</td>
+                    <td>${renderEdit(idx, 'd', 'city', valCity, isUndef(d.city), hasSug)}</td>
                     <td>
                         ${d.total !== undefined && d.total !== null
-                            ? `<input class="inline-edit" id="edit_${idx}_total" value="${Number(d.total).toFixed(2)}" style="width:80px;">`
-                            : `<input class="inline-edit" id="edit_${idx}_total" value="${suggestion?.total || 0}" style="width:80px;border-color:#f87171;">`
+                            ? `<input class="inline-edit" id="d_edit_${idx}_total" value="${Number(d.total).toFixed(2)}" style="width:80px;">`
+                            : `<input class="inline-edit" id="d_edit_${idx}_total" value="${suggestion?.total || 0}" style="width:80px;border-color:#f87171;">`
                         }
                     </td>
                     <td><span class="badge ${d.status === 'Despachado' ? 'badge-green' : d.status === 'Cancelado' ? 'badge-red' : 'badge-yellow'}">${d.status || 'Pendente'}</span></td>
                     <td><span style="color:#fbbf24;font-size:0.72rem;">${missing.join(', ')}</span>${hasSug ? '<br><span style="color:#34d399;font-size:0.7rem;">✅ backup</span>' : ''}</td>
-                    <td style="white-space:nowrap;">
-                        <button class="btn-sm btn-sm-green" onclick="saveSingle(${idx})" title="Salvar este registro">💾</button>
-                    </td>
+                    <td><button class="btn-sm btn-sm-green" onclick="saveSingleDispatch(${idx})" title="Salvar">💾</button></td>
                 </tr>`;
             });
-
             html += '</tbody></table>';
             container.innerHTML = html;
-            document.getElementById('btnSaveAll').style.display = 'inline-block';
         }
 
-        function renderEditField(idx, field, value, isMissing, hasSuggestion, width = 140) {
+        function renderTableRomaneios() {
+            const container = document.getElementById('resultTableRomaneios');
+            if (affectedRomaneios.length === 0) {
+                container.innerHTML = '<p style="color:#34d399;padding:12px;">✅ Nenhum romaneio com itens corrompidos nesse período!</p>';
+                return;
+            }
+            let html = `<p style="font-size:0.82rem;color:#94a3b8;margin-bottom:8px;">
+                ${affectedRomaneios.length} romaneios com itens corrompidos no snapshot. 
+                Use "Corrigir Snapshots" para consertá-los automaticamente usando os dispatches já corrigidos.
+            </p><table><thead><tr>
+                <th>ID Romaneio</th><th>Criado em</th><th>Transportadora</th><th>NFs</th><th>Itens corrompidos</th><th>Status</th>
+            </tr></thead><tbody>`;
+
+            affectedRomaneios.forEach(r => {
+                const badItems = (r.items || []).filter(isProblematic);
+                const nfs = (r.items || []).map(i => i.invoice || '?').join(', ');
+                html += `<tr>
+                    <td><strong>${r.id}</strong></td>
+                    <td style="white-space:nowrap;">${r.createdAt ? new Date(r.createdAt).toLocaleString('pt-BR') : '?'}</td>
+                    <td>${r.carrier || '?'}</td>
+                    <td style="font-size:0.72rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;">${nfs}</td>
+                    <td><span class="badge badge-red">${badItems.length} de ${(r.items||[]).length}</span></td>
+                    <td><span class="badge ${r.status === 'baixado' ? 'badge-green' : 'badge-yellow'}">${r.status || '?'}</span></td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function renderEdit(idx, prefix, field, value, isMissing, hasSuggestion, width = 140) {
             const borderColor = isMissing ? (hasSuggestion ? '#10b981' : '#ef4444') : '#334155';
-            return `<input class="inline-edit" id="edit_${idx}_${field}" value="${(value||'').replace(/"/g, '&quot;')}" 
-                    style="width:${width}px;border-color:${borderColor};" 
-                    oninput="markEdited(${idx})">`;
-        }
-
-        function markEdited(idx) {
-            editedRecords[idx] = true;
-            const row = document.getElementById(`row_${idx}`);
-            if (row) row.style.outline = '1px solid #3b82f6';
-        }
-
-        function getEditedValues(idx) {
-            const get = field => {
-                const el = document.getElementById(`edit_${idx}_${field}`);
-                return el ? el.value.trim() : null;
-            };
-            return {
-                carrier: get('carrier'),
-                invoice: get('invoice'),
-                client:  get('client'),
-                city:    get('city'),
-                total:   parseFloat(get('total')) || 0
-            };
+            return `<input class="inline-edit" id="${prefix}_edit_${idx}_${field}" value="${(value||'').replace(/"/g, '&quot;')}" 
+                    style="width:${width}px;border-color:${borderColor};">`;
         }
 
         // ===== BUSCA NO BACKUP =====
         function findInBackup(id, invoice, date) {
-            if (!backupData.length) return null;
+            const allSources = [...backupData];
 
             // 1. Por ID exato
-            let found = backupData.find(b => String(b.id || b.codigo) === id);
+            let found = allSources.find(b => String(b.id || b.codigo) === id);
             if (found && !isProblematic(found)) return found;
 
-            // 2. Por NF + data aproximada (± 3 dias)
+            // 2. Por NF + data aproximada (±3 dias)
             if (invoice && date) {
                 const dt = new Date(date).getTime();
-                found = backupData.find(b => {
+                found = allSources.find(b => {
                     const bDt = Number(b.id) || new Date(b.date || '').getTime();
-                    const nfMatch = String(b.invoice).trim() === String(invoice).trim();
+                    const nfMatch = String(b.invoice||'').trim() === String(invoice).trim();
                     const datMatch = Math.abs(bDt - dt) < (3 * 86400000);
                     return nfMatch && datMatch && !isProblematic(b);
                 });
                 if (found) return found;
             }
-
             return null;
         }
 
-        // ===== SALVAR INDIVIDUAL =====
-        async function saveSingle(idx) {
-            const d = problematicRecords[idx];
+        // Lê o valor de um campo de edição inline
+        function getEditField(prefix, idx, field) {
+            const el = document.getElementById(`${prefix}_edit_${idx}_${field}`);
+            return el ? el.value.trim() : null;
+        }
+
+        // ===== SALVAR DISPATCH INDIVIDUAL =====
+        async function saveSingleDispatch(idx) {
+            const d = problematicDispatches[idx];
             const id = String(d.id || d.codigo || d._docId);
             const tenant = document.getElementById('cfgTenant').value.trim();
-            const vals = getEditedValues(idx);
+
+            const vals = {
+                carrier: getEditField('d', idx, 'carrier'),
+                invoice: getEditField('d', idx, 'invoice'),
+                client:  getEditField('d', idx, 'client'),
+                city:    getEditField('d', idx, 'city'),
+                total:   parseFloat(getEditField('d', idx, 'total')) || 0
+            };
 
             if (!vals.carrier || !vals.client || !vals.city || !vals.invoice) {
-                alert('Preencha pelo menos: Transportadora, NF, Cliente e Cidade antes de salvar.');
+                alert('Preencha: Transportadora, NF, Cliente e Cidade antes de salvar.');
                 return;
             }
 
             const fixed = {
                 ...d,
-                carrier:      vals.carrier,
-                invoice:      vals.invoice,
-                client:       vals.client,
-                city:         vals.city,
+                ...vals,
                 neighborhood: d.neighborhood || '-',
-                total:        vals.total,
                 nfValue:      d.nfValue || 0,
                 _fixedAt:     new Date().toISOString(),
-                _fixedBy:     'fix_romaneios_tool'
+                _fixedBy:     'fix_romaneios_v2'
             };
             delete fixed._source; delete fixed._docId;
 
-            try {
-                if (d._source === 'dispatches_db') {
+            // Salva no Firestore
+            if (db) {
+                try {
                     await db.collection('tenants').doc(tenant).collection('dispatches_db').doc(id).set(fixed);
-                    log(`💾 [Manual] ID ${id} salvo — ${vals.carrier} | NF ${vals.invoice} | ${vals.client} | ${vals.city}`, 'ok');
-                } else {
-                    log(`⚠️ Registro de legacy_store — atualização pendente de sync completo`, 'warn');
+                    log(`💾 [FS] ID ${id} salvo — ${vals.carrier} | NF ${vals.invoice} | ${vals.client} | ${vals.city}`, 'ok');
+                } catch(e) {
+                    log(`❌ [FS] ID ${id}: ${e.message}`, 'err');
                 }
-                const row = document.getElementById(`row_${idx}`);
-                if (row) row.style.background = 'rgba(16,185,129,0.08)';
-                delete editedRecords[idx];
-            } catch(e) {
-                log(`❌ Erro ao salvar ID ${id}: ${e.message}`, 'err');
             }
+
+            // Salva no localStorage
+            const lsDisp = readLsDispatches(tenant);
+            if (lsDisp.key && lsDisp.data.length) {
+                const arrUpdated = lsDisp.data.map(item => {
+                    if (String(item.id || item.codigo) === id) return { ...item, ...vals, neighborhood: fixed.neighborhood, nfValue: fixed.nfValue, _fixedAt: fixed._fixedAt, _fixedBy: fixed._fixedBy };
+                    return item;
+                });
+                try {
+                    localStorage.setItem(lsDisp.key, JSON.stringify(arrUpdated));
+                    log(`💾 [LS] ID ${id} atualizado no localStorage (${lsDisp.key})`, 'ok');
+                } catch(e) { log(`❌ [LS] ID ${id}: ${e.message}`, 'err'); }
+            }
+
+            const row = document.getElementById(`drow_${idx}`);
+            if (row) row.style.background = 'rgba(16,185,129,0.08)';
         }
 
-        // ===== SALVAR TODOS EDITADOS =====
-        async function saveAllEdited() {
-            const keys = Object.keys(editedRecords);
-            if (keys.length === 0) { alert('Nenhuma edição manual detectada.'); return; }
-            if (!confirm(`Salvar ${keys.length} registro(s) editados manualmente?`)) return;
-            for (const idx of keys) await saveSingle(parseInt(idx));
-            log(`\nTodas as edições manuais salvas!`, 'ok');
-        }
-
-        // ===== RECUPERAÇÃO AUTOMÁTICA =====
-        async function runRecovery() {
-            if (!problematicRecords.length) { alert('Nenhum registro problemático!'); return; }
+        // ===== RECUPERAÇÃO AUTOMÁTICA — DISPATCHES =====
+        async function runRecoveryDispatches() {
+            if (!problematicDispatches.length) { alert('Nenhum dispatch problemático!'); return; }
             const tenant = document.getElementById('cfgTenant').value.trim();
-            document.getElementById('btnRecover').disabled = true;
-            document.getElementById('btnRecover').textContent = '⏳ Recuperando...';
-            log('\n=== RECUPERAÇÃO AUTOMÁTICA INICIADA ===', 'ok');
+            document.getElementById('btnRecoverDispatches').disabled = true;
+            log('\n=== RECUPERAÇÃO AUTOMÁTICA DE DISPATCHES ===', 'ok');
 
-            // Também tenta LocalStorage
-            let lsBackup = [];
-            try {
-                const lsKey = `tenant_${tenant}_dispatches`;
-                const lsData = localStorage.getItem(lsKey);
-                if (lsData) {
-                    lsBackup = JSON.parse(lsData);
-                    log(`LocalStorage: ${lsBackup.length} registros encontrados`, 'ok');
-                }
-            } catch(e) { log('LocalStorage indisponível.', 'warn'); }
+            // Também tenta LocalStorage direto
+            const lsDisp = readLsDispatches(tenant);
 
             let recovered = 0, failed = 0;
-            const total = problematicRecords.length;
+            const total = problematicDispatches.length;
 
             for (let i = 0; i < total; i++) {
-                const rec = problematicRecords[i];
+                const rec = problematicDispatches[i];
                 const id = String(rec.id || rec.codigo || rec._docId);
                 document.getElementById('progressFill').style.width = Math.round(((i+1)/total)*100) + '%';
-                document.getElementById('recoveryStatus').textContent = `Processando ${i+1}/${total}...`;
+                document.getElementById('recoveryStatus').textContent = `Processando dispatch ${i+1}/${total}...`;
 
-                // Fonte 1: backup JSON
+                // Busca fonte: backup JSON → localStorage
                 let source = findInBackup(id, rec.invoice, rec.date);
-                // Fonte 2: localStorage
                 if (!source || isProblematic(source)) {
-                    source = lsBackup.find(d => String(d.id||d.codigo) === id && !isProblematic(d));
+                    source = lsDisp.data.find(d => String(d.id||d.codigo) === id && !isProblematic(d));
                 }
 
                 if (source && !isProblematic(source)) {
-                    // Recuperação completa!
-                    const fixed = { ...rec, ...source };
-                    fixed._fixedAt = new Date().toISOString();
-                    fixed._fixedBy = 'auto_recovery';
+                    const fixed = {
+                        ...rec, ...source,
+                        _fixedAt: new Date().toISOString(),
+                        _fixedBy: 'auto_recovery_v2'
+                    };
                     delete fixed._source; delete fixed._docId;
 
-                    try {
-                        if (rec._source === 'dispatches_db') {
+                    // Firestore
+                    if (db) {
+                        try {
                             await db.collection('tenants').doc(tenant).collection('dispatches_db').doc(id).set(fixed);
-                        }
-                        log(`✅ [${i+1}/${total}] ID ${id} — RECUPERADO | NF: ${source.invoice} | ${source.client} | ${source.city}`, 'ok');
-                        recovered++;
-                        // Preenche campos na UI
-                        const setField = (f, v) => { const el = document.getElementById(`edit_${i}_${f}`); if (el) { el.value = v || ''; el.style.borderColor = '#10b981'; } };
-                        setField('carrier', source.carrier); setField('invoice', source.invoice);
-                        setField('client', source.client); setField('city', source.city);
-                    } catch(e) {
-                        log(`❌ [${i+1}/${total}] ID ${id} — Erro ao salvar: ${e.message}`, 'err');
-                        failed++;
+                        } catch(e) { log(`❌ [FS] ID ${id}: ${e.message}`, 'err'); }
                     }
+
+                    // LocalStorage
+                    if (lsDisp.key && lsDisp.data.length) {
+                        const updated = lsDisp.data.map(item =>
+                            String(item.id||item.codigo) === id ? { ...item, ...source, _fixedAt: fixed._fixedAt, _fixedBy: fixed._fixedBy } : item
+                        );
+                        try { localStorage.setItem(lsDisp.key, JSON.stringify(updated)); } catch(e) {}
+                    }
+
+                    log(`✅ [${i+1}/${total}] ID ${id} — RECUPERADO | NF: ${source.invoice} | ${source.client} | ${source.city}`, 'ok');
+                    recovered++;
+
+                    // Atualiza UI
+                    ['carrier','invoice','client','city'].forEach(f => {
+                        const el = document.getElementById(`d_edit_${i}_${f}`);
+                        if (el) { el.value = source[f] || ''; el.style.borderColor = '#10b981'; }
+                    });
+                    const row = document.getElementById(`drow_${i}`);
+                    if (row) row.style.background = 'rgba(16,185,129,0.08)';
                 } else {
-                    log(`⚠️ [${i+1}/${total}] ID ${id} — NÃO encontrado no backup (Data: ${rec.date ? new Date(rec.date).toLocaleDateString('pt-BR') : '?'}, NF: ${rec.invoice || '?'})`, 'warn');
+                    log(`⚠️ [${i+1}/${total}] ID ${id} — não encontrado no backup (NF: ${rec.invoice || '?'}, Data: ${rec.date ? new Date(rec.date).toLocaleDateString('pt-BR') : '?'})`, 'warn');
                     failed++;
                 }
             }
 
-            log(`\n=== RESULTADO ===`, 'ok');
-            log(`✅ Recuperados: ${recovered} | ⚠️ Não encontrados no backup: ${failed}`, 'ok');
-            if (failed > 0) {
-                log(`Os ${failed} não recuperados precisam de edição manual na tabela acima.`, 'warn');
-                log(`💡 Se os dados estiverem nos PDFs dos romaneios originais, edite manualmente e clique em 💾.`, 'warn');
-            }
-            document.getElementById('btnRecover').disabled = false;
-            document.getElementById('btnRecover').textContent = '✅ Recuperar Todos Automaticamente';
-            document.getElementById('recoveryStatus').textContent = `Concluído! ✅ ${recovered} recuperados | ⚠️ ${failed} pendentes.`;
-            if (recovered > 0) setTimeout(() => runDiagnosis(), 2000);
+            log(`\n=== RESULTADO DISPATCHES ===`, 'ok');
+            log(`✅ Recuperados: ${recovered} | ⚠️ Pendentes manuais: ${failed}`, recovered > 0 ? 'ok' : 'warn');
+            document.getElementById('btnRecoverDispatches').disabled = false;
+            document.getElementById('recoveryStatus').textContent = `Dispatches: ✅ ${recovered} recuperados | ⚠️ ${failed} pendentes.`;
         }
 
-        async function markNullsAsUnknown() {
-            if (!confirm(`Marcar ${problematicRecords.length} registros não recuperáveis com "DADO NÃO RECUPERADO"? (Pode ser desfeito manualmente depois)`)) return;
+        // ===== CORREÇÃO DOS SNAPSHOTS app_romaneios =====
+        async function runFixRomaneios() {
+            if (!affectedRomaneios.length) { alert('Nenhum romaneio afetado!'); return; }
             const tenant = document.getElementById('cfgTenant').value.trim();
-            let count = 0;
-            for (const rec of problematicRecords) {
+            document.getElementById('btnFixRomaneios').disabled = true;
+            log('\n=== CORRIGINDO SNAPSHOTS app_romaneios ===', 'ok');
+
+            // Fonte de dados limpos: LS dispatches (já pode estar corrigido) + backup
+            const lsDisp = readLsDispatches(tenant);
+            const lsRom  = readLsRomaneios(tenant);
+
+            if (!lsRom.key) {
+                log('❌ Não foi possível encontrar app_romaneios no localStorage. Abra esta ferramenta no mesmo domínio do sistema.', 'err');
+                document.getElementById('btnFixRomaneios').disabled = false;
+                return;
+            }
+
+            const _san = (v, fb) => (!v || v === 'undefined' || v === 'null' || String(v).trim() === '') ? fb : String(v);
+            let fixedCount = 0;
+
+            const updatedRomaneios = lsRom.data.map(r => {
+                if (!r.items || !r.items.length) return r;
+
+                // Verifica se tem itens problemáticos
+                const hasProblems = r.items.some(isProblematic);
+                if (!hasProblems) return r;
+
+                // Corrige cada item do snapshot
+                const fixedItems = r.items.map(item => {
+                    if (!isProblematic(item)) return item;
+
+                    // Tenta encontrar o dispatch original pelos dados corretos
+                    const id = String(item.id);
+                    const dispAtual = lsDisp.data.find(d => String(d.id||d.codigo) === id);
+                    const dispBackup = findInBackup(id, item.invoice, item.id ? new Date(Number(item.id)).toISOString() : null);
+                    const ref = (dispAtual && !isProblematic(dispAtual)) ? dispAtual : (dispBackup && !isProblematic(dispBackup)) ? dispBackup : null;
+
+                    if (ref) {
+                        // Recupera do dispatch original
+                        return {
+                            ...item,
+                            client:       _san(item.client,       ref.client || 'NÃO INFORMADO'),
+                            city:         _san(item.city,         ref.city || 'NÃO INFORMADO'),
+                            carrier:      _san(item.carrier,      ref.carrier || r.carrier || 'NÃO INFORMADO'),
+                            invoice:      _san(item.invoice,      ref.invoice || 'S/N'),
+                            neighborhood: _san(item.neighborhood, ref.neighborhood || '-'),
+                            total:        item.total  != null && !isNaN(item.total)  ? item.total  : (ref.total  || 0),
+                            nfValue:      item.nfValue != null && !isNaN(item.nfValue) ? item.nfValue : (ref.nfValue || 0),
+                            weight:       item.weight != null && !isNaN(item.weight) ? item.weight : (ref.weight || 0),
+                            _itemFixedAt: new Date().toISOString()
+                        };
+                    } else {
+                        // Sanitização mínima — substitui undefined por fallbacks
+                        return {
+                            ...item,
+                            client:       _san(item.client,       'NÃO RECUPERADO'),
+                            city:         _san(item.city,         'NÃO RECUPERADO'),
+                            carrier:      _san(item.carrier,      r.carrier || 'NÃO INFORMADO'),
+                            invoice:      _san(item.invoice,      'S/N'),
+                            neighborhood: _san(item.neighborhood, '-'),
+                            total:        (item.total  != null && !isNaN(item.total))  ? item.total  : 0,
+                            nfValue:      (item.nfValue != null && !isNaN(item.nfValue)) ? item.nfValue : 0,
+                            weight:       (item.weight != null && !isNaN(item.weight)) ? item.weight : 0,
+                            _itemFixedAt: new Date().toISOString()
+                        };
+                    }
+                });
+
+                fixedCount++;
+                log(`📄 Romaneio ${r.id} (${r.carrier}) — ${fixedItems.filter(i => i._itemFixedAt).length} item(s) corrigidos`, 'ok');
+                return { ...r, items: fixedItems, _snapFixedAt: new Date().toISOString() };
+            });
+
+            // Salva no localStorage
+            try {
+                localStorage.setItem(lsRom.key, JSON.stringify(updatedRomaneios));
+                log(`\n✅ app_romaneios atualizado no localStorage! ${fixedCount} romaneio(s) corrigidos.`, 'ok');
+            } catch(e) {
+                log(`❌ Erro ao salvar app_romaneios: ${e.message}`, 'err');
+            }
+
+            document.getElementById('btnFixRomaneios').disabled = false;
+            document.getElementById('recoveryStatus').textContent = `app_romaneios: ✅ ${fixedCount} romaneio(s) corrigidos no localStorage.`;
+
+            // Re-escaneia para confirmar
+            setTimeout(() => runDiagnosis(document.getElementById('cfgTenant').value.trim()), 1500);
+        }
+
+        // ===== MARCAR SEM DADOS =====
+        async function markNullsAsUnknown() {
+            const tenant = document.getElementById('cfgTenant').value.trim();
+            if (!confirm(`Marcar ${problematicDispatches.length} dispatch(es) não recuperáveis com "DADO NÃO RECUPERADO"?`)) return;
+
+            for (const rec of problematicDispatches) {
                 const id = String(rec.id || rec.codigo || rec._docId);
-                if (rec._source !== 'dispatches_db') continue;
                 const fixed = { ...rec };
                 if (isUndef(fixed.client))   fixed.client   = '⚠️ DADO NÃO RECUPERADO';
                 if (isUndef(fixed.city))     fixed.city     = '⚠️ DADO NÃO RECUPERADO';
@@ -566,13 +779,15 @@
                 fixed.neighborhood = fixed.neighborhood || '-';
                 fixed._fixedAt = new Date().toISOString();
                 delete fixed._source; delete fixed._docId;
-                try {
-                    await db.collection('tenants').doc(tenant).collection('dispatches_db').doc(id).set(fixed);
-                    count++;
-                } catch(e) { log(`Erro ID ${id}: ${e.message}`, 'err'); }
+
+                if (db) {
+                    try {
+                        await db.collection('tenants').doc(tenant).collection('dispatches_db').doc(id).set(fixed);
+                    } catch(e) { log(`Erro ID ${id}: ${e.message}`, 'err'); }
+                }
             }
-            log(`${count} registros marcados como "NÃO RECUPERADO".`, 'warn');
-            setTimeout(() => runDiagnosis(), 1500);
+            log(`Registros marcados como "NÃO RECUPERADO".`, 'warn');
+            setTimeout(() => runDiagnosis(tenant), 1500);
         }
 
         // ===== EXPORT =====
@@ -581,24 +796,24 @@
                 geradoEm: new Date().toISOString(),
                 tenant: document.getElementById('cfgTenant').value,
                 periodo: { start: document.getElementById('cfgDateStart').value, end: document.getElementById('cfgDateEnd').value },
-                totalNoPeriodo: allRecordsInPeriod.length,
-                totalProblemas: problematicRecords.length,
-                registrosProblematicos: problematicRecords
+                totalDispatchesNoPeriodo: allDispatchesInPeriod.length,
+                totalDispatchesProblemas: problematicDispatches.length,
+                totalRomaneiosAfetados: affectedRomaneios.length,
+                dispatchesProblematicos: problematicDispatches,
+                romaneiosAfetados: affectedRomaneios
             };
             const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `diagnostico_romaneios_${new Date().toISOString().slice(0,10)}.json`;
+            a.download = `diagnostico_romaneios_v2_${new Date().toISOString().slice(0,10)}.json`;
             a.click();
             URL.revokeObjectURL(url);
             log('Relatório exportado!', 'ok');
         }
 
-        // Auto-conectar
         window.onload = () => {
-            log('Ferramenta carregada. Conecte ao Firebase para iniciar.');
-            setTimeout(() => { try { connectFirebase(); } catch(e) {} }, 600);
+            log('Ferramenta v2 carregada. Período padrão: 12-05-2026 a 15-05-2026.\nClique em "Conectar e Escanear" para iniciar.\n');
         };
     </script>
 </body>
