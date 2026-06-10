@@ -1573,40 +1573,44 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            // ── v3.11.38: lógica de busca em 3 etapas ────────────────────────────────
+            // ── v3.11.39: lógica de busca em 3 etapas ────────────────────────────────
             // 1ª: BAIRRO          → r.cidade === bairroDoCliente (já feito acima)
             // 2ª: CIDADE direta   → r.cidade === city
             //     Prefere tabelas SEM redespacho (tabela direta da cidade).
-            //     Se só existirem com redespacho, usa essas mesmo (sem escolha).
-            //     Isso resolve TUCUMA: tem tabela direta → mostra só ela, não as variantes VAN.
-            // 3ª: cidadeRedespacho → r.cidadeRedespacho === city
-            //     Só usada quando a etapa 2 não achou NADA — significa que a cidade só é
-            //     atendida via redespacho a partir de outro hub (ex: DOM ELISEU via MARABÁ).
-            //     Isso resolve DOM ELISEU: VIOPEX não tem r.cidade="DOM ELISEU", só via redespacho.
+            //     Resolve TUCUMA: mostra só a tabela direta, não as 4 variantes VAN.
+            // 3ª: cidadeRedespacho → r.cidadeRedespacho === city  [SEMPRE, aditivo]
+            //     Adiciona transportadoras que servem esta cidade via redespacho de outro hub.
+            //     Resolve DOM ELISEU: VIOPEX só tem r.cidade="MARABA" + r.cidadeRedespacho="DOM ELISEU".
+            //     Não reintroduz o bug do TUCUMA pois o problema lá era r.cidade=TUCUMA (5 rows),
+            //     não r.cidadeRedespacho=TUCUMA.
             // ─────────────────────────────────────────────────────────────────────────
 
-            // ── 2ª tentativa: CIDADE direta ───────────────────────────────────────────
+            // ── 2ª tentativa: CIDADE direta (só executa se bairro não achou nada) ────
             if (cityRules.length === 0) {
                 const allCidadeRules = rules.filter(r => norm(r.cidade) === city);
 
                 if (allCidadeRules.length > 0) {
-                    // Encontrou tabelas diretas: prefere as SEM redespacho
+                    // Prefere tabelas SEM redespacho; usa com redespacho só se não houver direta
                     const semRedespacho = allCidadeRules.filter(r => {
                         const temRedesp = r.redespacho && r.redespacho !== '-' && r.redespacho !== '';
                         const temCidadeRedesp = r.cidadeRedespacho && r.cidadeRedespacho !== '-' && r.cidadeRedespacho !== '';
                         return !temRedesp && !temCidadeRedesp;
                     });
-                    // Se há diretas (sem redespacho), usa só elas; senão usa tudo que encontrou
                     cityRules = semRedespacho.length > 0 ? semRedespacho : allCidadeRules;
                 }
             }
 
-            // ── 3ª tentativa: cidadeRedespacho ────────────────────────────────────────
-            // Só entra aqui se as etapas 1 e 2 não encontraram NADA.
-            // Cidades como DOM ELISEU são atendidas por redespacho a partir de outro hub
-            // (ex: VIOPEX: r.cidade="MARABA", r.cidadeRedespacho="DOM ELISEU").
-            if (cityRules.length === 0) {
-                cityRules = rules.filter(r => norm(r.cidadeRedespacho) === city);
+            // ── 3ª etapa: cidadeRedespacho [SEMPRE aditiva — merge] ───────────────────
+            // Transportadoras que atendem esta cidade partindo de outro hub via redespacho.
+            // Ex: VIOPEX tem r.cidade="MARABA" e r.cidadeRedespacho="DOM ELISEU".
+            // Para clientes de DOM ELISEU, BOA ESPERANCA e TNORTE já foram encontradas na
+            // etapa 2, mas VIOPEX só aparece aqui. Rodamos SEMPRE e fazemos merge.
+            // Evitamos duplicatas verificando se a regra já está em cityRules.
+            if (!usedBairroFallback) {
+                const redespRules = rules.filter(r => norm(r.cidadeRedespacho) === city);
+                redespRules.forEach(r => {
+                    if (!cityRules.includes(r)) cityRules.push(r);
+                });
             }
 
 

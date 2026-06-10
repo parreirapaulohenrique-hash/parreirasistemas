@@ -1,6 +1,6 @@
 {
-    "version": "3.11.38",
-    "change": "v3.11.38 - fix: busca em 3 etapas (1-bairro, 2-cidade direta preferindo sem redespacho, 3-cidadeRedespacho so quando nao ha tabela direta). Resolve TUCUMA (1 card) e DOM ELISEU (aparece VIOPEX via redespacho de MARABA).",
+    "version": "3.11.39",
+    "change": "v3.11.39 - fix: etapa 3 (cidadeRedespacho) agora SEMPRE roda e faz merge — nao condicional. Resolve DOM ELISEU: VIOPEX aparece mesmo quando BOA ESPERANCA e TNORTE ja preencheram cityRules na etapa 2.",
     "lastUpdate": "2026-06-10",
-    "deployedAt": "2026-06-10 10:22"
+    "deployedAt": "2026-06-10 10:29"
 }
