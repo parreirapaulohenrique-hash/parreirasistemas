@@ -1,6 +1,6 @@
 {
-    "version": "3.11.37",
-    "change": "v3.11.37 - fix: filtro semRedespacho agora checa AMBOS os campos r.redespacho e r.cidadeRedespacho, garantindo que apenas a tabela direta (sem redespacho) apareca na busca por cidade.",
-    "lastUpdate": "2026-06-09",
-    "deployedAt": "2026-06-09 17:33"
+    "version": "3.11.38",
+    "change": "v3.11.38 - fix: busca em 3 etapas (1-bairro, 2-cidade direta preferindo sem redespacho, 3-cidadeRedespacho so quando nao ha tabela direta). Resolve TUCUMA (1 card) e DOM ELISEU (aparece VIOPEX via redespacho de MARABA).",
+    "lastUpdate": "2026-06-10",
+    "deployedAt": "2026-06-10 10:22"
 }

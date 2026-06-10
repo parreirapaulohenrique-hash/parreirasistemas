@@ -1573,21 +1573,42 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            // ── 2ª tentativa (fallback): CIDADE — só match direto, sem redespacho ─────
-            // Quando chegou aqui (bairro não achou nada), busca pela cidade mas PREFERE
-            // tabelas SEM redespacho (tabela direta). Uma regra "sem redespacho" é aquela
-            // onde r.redespacho E r.cidadeRedespacho estão vazios/traço.
-            // Só usa as com redespacho se não existir nenhuma regra direta — evita mostrar
-            // 5x VIOPEX com redespacho VAN para TUCUMA quando o cliente é de TUCUMA mesmo.
+            // ── v3.11.38: lógica de busca em 3 etapas ────────────────────────────────
+            // 1ª: BAIRRO          → r.cidade === bairroDoCliente (já feito acima)
+            // 2ª: CIDADE direta   → r.cidade === city
+            //     Prefere tabelas SEM redespacho (tabela direta da cidade).
+            //     Se só existirem com redespacho, usa essas mesmo (sem escolha).
+            //     Isso resolve TUCUMA: tem tabela direta → mostra só ela, não as variantes VAN.
+            // 3ª: cidadeRedespacho → r.cidadeRedespacho === city
+            //     Só usada quando a etapa 2 não achou NADA — significa que a cidade só é
+            //     atendida via redespacho a partir de outro hub (ex: DOM ELISEU via MARABÁ).
+            //     Isso resolve DOM ELISEU: VIOPEX não tem r.cidade="DOM ELISEU", só via redespacho.
+            // ─────────────────────────────────────────────────────────────────────────
+
+            // ── 2ª tentativa: CIDADE direta ───────────────────────────────────────────
             if (cityRules.length === 0) {
                 const allCidadeRules = rules.filter(r => norm(r.cidade) === city);
-                const semRedespacho = allCidadeRules.filter(r => {
-                    const temRedesp = r.redespacho && r.redespacho !== '-' && r.redespacho !== '';
-                    const temCidadeRedesp = r.cidadeRedespacho && r.cidadeRedespacho !== '-' && r.cidadeRedespacho !== '';
-                    return !temRedesp && !temCidadeRedesp;
-                });
-                cityRules = semRedespacho.length > 0 ? semRedespacho : allCidadeRules;
+
+                if (allCidadeRules.length > 0) {
+                    // Encontrou tabelas diretas: prefere as SEM redespacho
+                    const semRedespacho = allCidadeRules.filter(r => {
+                        const temRedesp = r.redespacho && r.redespacho !== '-' && r.redespacho !== '';
+                        const temCidadeRedesp = r.cidadeRedespacho && r.cidadeRedespacho !== '-' && r.cidadeRedespacho !== '';
+                        return !temRedesp && !temCidadeRedesp;
+                    });
+                    // Se há diretas (sem redespacho), usa só elas; senão usa tudo que encontrou
+                    cityRules = semRedespacho.length > 0 ? semRedespacho : allCidadeRules;
+                }
             }
+
+            // ── 3ª tentativa: cidadeRedespacho ────────────────────────────────────────
+            // Só entra aqui se as etapas 1 e 2 não encontraram NADA.
+            // Cidades como DOM ELISEU são atendidas por redespacho a partir de outro hub
+            // (ex: VIOPEX: r.cidade="MARABA", r.cidadeRedespacho="DOM ELISEU").
+            if (cityRules.length === 0) {
+                cityRules = rules.filter(r => norm(r.cidadeRedespacho) === city);
+            }
+
 
             if (targetCarrier) {
                 cityRules = cityRules.filter(r => norm(r.transportadora) === targetCarrier);
