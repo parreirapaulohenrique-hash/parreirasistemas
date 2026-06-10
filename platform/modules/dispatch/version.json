@@ -1,6 +1,6 @@
 {
-    "version": "3.11.40",
-    "change": "v3.11.40 - fix: estorno de romaneio agora usa Utils.saveRaw() em vez de localStorage.setItem() direto — ativa anti-echo de 60s e impede listener do Firestore de sobrescrever status revertido imediatamente.",
+    "version": "3.11.41",
+    "change": "v3.11.41 - fix: estorno de NF arquivada (>12h) agora busca do Firestore dispatches_db quando nao encontrada no localStorage nem no cache — resolve 65999 nao voltando ao Painel apos estorno de romaneio VIOPEX.",
     "lastUpdate": "2026-06-10",
-    "deployedAt": "2026-06-10 10:50"
+    "deployedAt": "2026-06-10 11:36"
 }

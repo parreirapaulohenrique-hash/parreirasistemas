@@ -6231,10 +6231,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     delete history[idx].authorizedBy;
                     revertidos++;
                 } else {
+                    // ── Dispatch não está no localStorage (possivelmente arquivada pelo BackgroundSync) ──
+                    // Tentativa 1: _dispatchesFullCache (histórico em memória)
                     const allHistory = window._dispatchesFullCache || [];
-                    const dispatch = allHistory.find(d => Number(d.id) === dispId);
-                    if (dispatch) {
-                        const reverted = { ...dispatch, status: novoStatus };
+                    const cachedDispatch = allHistory.find(d => Number(d.id) === dispId);
+                    if (cachedDispatch) {
+                        const reverted = { ...cachedDispatch, status: novoStatus };
                         if (novoStatus === 'Pendente Despacho') {
                             delete reverted.dispatchedAt; delete reverted.deliveryType;
                             delete reverted.deliveryStatus; delete reverted.deliveryPerson;
@@ -6248,8 +6250,38 @@ document.addEventListener('DOMContentLoaded', async () => {
                             if (ci !== -1) window._dispatchesFullCache[ci].status = novoStatus;
                         }
                         revertidos++;
+                        console.log(`[Extorno] Dispatch ${dispId} restaurada do _dispatchesFullCache`);
+                    } else if (Utils.Cloud.hasTenant() && window.db) {
+                        // ✅ FIX v3.11.41: Tentativa 2 — buscar direto do Firestore dispatches_db
+                        // Isso resolve o caso onde a NF foi arquivada pelo BackgroundSync (>12h)
+                        // e removida do localStorage, mas ainda existe no Firestore.
+                        try {
+                            const snap = await window.db
+                                .collection('tenants').doc(Utils.Cloud.tenantId)
+                                .collection('dispatches_db').doc(String(dispId))
+                                .get();
+                            if (snap.exists) {
+                                const firestoreDispatch = snap.data();
+                                const reverted = { ...firestoreDispatch, status: novoStatus };
+                                if (novoStatus === 'Pendente Despacho') {
+                                    delete reverted.dispatchedAt; delete reverted.deliveryType;
+                                    delete reverted.deliveryStatus; delete reverted.deliveryPerson;
+                                }
+                                delete reverted.paidAt; delete reverted.invoiceRef;
+                                delete reverted.paidBy; delete reverted.paymentNote;
+                                delete reverted.authorizedBy;
+                                history.push(reverted);
+                                revertidos++;
+                                console.log(`[Extorno] ✅ Dispatch ${dispId} (NF ${firestoreDispatch.invoice}) resgatada do Firestore dispatches_db`);
+                            } else {
+                                console.warn(`[Extorno] Dispatch ${dispId} não encontrada em nenhuma fonte (local, cache ou Firestore)`);
+                            }
+                        } catch(fetchErr) {
+                            console.warn(`[Extorno] Falha ao buscar dispatch ${dispId} do Firestore:`, fetchErr);
+                        }
                     }
                 }
+
             }
 
             // ✅ FIX v3.11.40: Usar saveRaw em vez de localStorage.setItem direto.
