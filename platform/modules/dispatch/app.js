@@ -5923,12 +5923,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const loggedUser = Utils.getStorage('logged_user');
                 const dispatchedBy = (Array.isArray(loggedUser) ? loggedUser[0]?.login : loggedUser?.login) || 'sistema';
 
+                // ✅ v3.11.40: Gera o ID do romaneio ANTES de carimbar nos despachos
+                const randomId = 'ROM-' + Date.now().toString().slice(-6) + '-' + Math.floor(Math.random() * 100);
+
                 // Mark as dispatched and set delivery type
                 history.forEach(d => {
                     if (selectedNFIds.includes(d.id)) {
                         d.status = 'Despachado';
                         d.dispatchedAt = new Date().toISOString();
                         d.dispatchedBy = dispatchedBy;
+                        d.romaneioId = randomId; // ✅ Vincula despacho ao romaneio para rastreamento
 
                         // If moto or carro, configure for delivery
                         if (deliveryType === 'moto' || deliveryType === 'carro') {
@@ -5966,7 +5970,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // ======= SALVAMENTO DA ENTIDADE ROMANEIO =======
                 const romaneios = Utils.getStorage('app_romaneios') || [];
-                const randomId = 'ROM-' + Date.now().toString().slice(-6) + '-' + Math.floor(Math.random() * 100);
+                // ✅ randomId já foi gerado acima (e carimbado nos despachos)
                 const novoRomaneio = {
                     id: randomId,
                     createdAt: new Date().toISOString(),
@@ -6248,7 +6252,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            localStorage.setItem(Utils._storageKey('dispatches'), JSON.stringify(history));
+            // ✅ FIX v3.11.40: Usar saveRaw em vez de localStorage.setItem direto.
+            // O setItem direto não atualizava Utils.lastWriteTime['dispatches'], causando
+            // o listener do Firestore (processIncomingData) sobrescrever o status revertido
+            // em milissegundos (anti-echo de 60s não era ativado). saveRaw corrige isso.
+            Utils.saveRaw('dispatches', JSON.stringify(history));
 
             // Auto-limpa invoice_history vinculados às NFs revertidas
             if (novoStatus === 'Pendente Despacho') {
@@ -6294,9 +6302,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const idsNoRomaneio = romaneioAfetado ? romaneioAfetado.items : [{ id: numId }];
             const qtd = idsNoRomaneio.length;
 
+            // ✅ v3.11.40: Lista as NFs afetadas no diálogo para evitar confusão
+            const nfList = idsNoRomaneio.map(i => 'NF ' + (i.invoice || ('#' + i.id))).join(', ');
             const msg = romaneioAfetado
-                ? `Deseja retornar para o Painel de Pendências?\n\nO romaneio ${romaneioAfetado.id} (${qtd} NF${qtd > 1 ? 's' : ''}) será REMOVIDO e todos os despachos voltarão para Pendente.`
-                : 'Deseja retornar este despacho para o Painel de Pendências?';
+                ? `Deseja retornar para o Painel de Pendências?\n\nRomaneio: ${romaneioAfetado.id}\nNFs afetadas (${qtd}): ${nfList}\n\nTodos voltarão para \'Pendente Despacho\'.`
+                : `Deseja retornar este despacho para o Painel de Pendências?\n\n${nfList}`;
 
             if (!confirm(msg)) return;
 

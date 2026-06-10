@@ -1,6 +1,6 @@
 {
-    "version": "3.11.39",
-    "change": "v3.11.39 - fix: etapa 3 (cidadeRedespacho) agora SEMPRE roda e faz merge — nao condicional. Resolve DOM ELISEU: VIOPEX aparece mesmo quando BOA ESPERANCA e TNORTE ja preencheram cityRules na etapa 2.",
+    "version": "3.11.40",
+    "change": "v3.11.40 - fix: estorno de romaneio agora usa Utils.saveRaw() em vez de localStorage.setItem() direto — ativa anti-echo de 60s e impede listener do Firestore de sobrescrever status revertido imediatamente.",
     "lastUpdate": "2026-06-10",
-    "deployedAt": "2026-06-10 10:29"
+    "deployedAt": "2026-06-10 10:50"
 }
