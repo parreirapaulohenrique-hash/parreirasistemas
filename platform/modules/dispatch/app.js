@@ -3978,10 +3978,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             const invoiceValue = parseFloat(document.getElementById('invoiceValue').value.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0;
-            const difference = selectedTotal - invoiceValue;
 
-            // If difference exists, require supervisor password
-            if (difference !== 0) {
+            // ✅ FIX v3.11.42: Arredondar para 2 casas decimais antes de comparar.
+            // A soma de floats pode gerar imprecisão (ex: 134.77000000001 vs 134.77)
+            // que aparece como R$ 0,00 na tela mas !== 0 na comparação exata.
+            const selectedTotalRounded = Math.round(selectedTotal * 100) / 100;
+            const invoiceValueRounded  = Math.round(invoiceValue  * 100) / 100;
+            const difference = selectedTotalRounded - invoiceValueRounded;
+
+            // Tolerância: só exige supervisor se diferença >= R$ 0,01
+            if (Math.abs(difference) >= 0.01) {
                 // Show supervisor modal
                 const modal = document.getElementById('invoiceSupervisorModal');
                 const details = document.getElementById('invoiceDiffDetails');

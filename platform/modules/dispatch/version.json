@@ -1,6 +1,6 @@
 {
-    "version": "3.11.41",
-    "change": "v3.11.41 - fix: estorno de NF arquivada (>12h) agora busca do Firestore dispatches_db quando nao encontrada no localStorage nem no cache — resolve 65999 nao voltando ao Painel apos estorno de romaneio VIOPEX.",
+    "version": "3.11.42",
+    "change": "v3.11.42 - fix: conferencia de fatura nao dispara mais alerta de diferenca quando valor e identico — corrigida comparacao de float (arredondamento para 2 casas + tolerancia de R$ 0,01).",
     "lastUpdate": "2026-06-10",
-    "deployedAt": "2026-06-10 11:36"
+    "deployedAt": "2026-06-10 17:21"
 }
