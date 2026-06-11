@@ -194,6 +194,31 @@
             border-bottom: 1px solid var(--border-color);
             font-weight: 600; color: var(--primary-color);
         }
+
+        /* === Validação de campos obrigatórios conferência (v3.11.49) === */
+        .invoice-field-required label::after {
+            content: ' *';
+            color: #ef4444;
+            font-weight: 700;
+        }
+        .invoice-field-error .form-input,
+        .invoice-field-error .month-multi-trigger {
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 0 2px rgba(239,68,68,0.2) !important;
+            animation: shake 0.3s ease;
+        }
+        .invoice-field-error-msg {
+            font-size: 0.72rem;
+            color: #ef4444;
+            margin-top: 3px;
+            display: none;
+        }
+        .invoice-field-error .invoice-field-error-msg { display: block; }
+        @keyframes shake {
+            0%,100%{transform:translateX(0)}
+            20%{transform:translateX(-4px)}
+            60%{transform:translateX(4px)}
+        }
     </style>
 
 </head>
@@ -1246,16 +1271,17 @@
                             <div
                                 style="display: grid; grid-template-columns: 1.5fr 1fr 1.5fr 1.5fr 1fr; gap: 1rem; align-items: end;">
                                 <!-- Filtro Transportadora -->
-                                <div class="form-group" style="margin-bottom: 0;">
+                                <div class="form-group invoice-field-required" id="invFieldCarrier" style="margin-bottom: 0;">
                                     <label class="form-label">Transportadora</label>
                                     <select id="invoiceCarrierFilter" class="form-input"
                                         onchange="window.filterInvoiceByCarrier()">
                                         <option value="">-- Selecione --</option>
                                     </select>
+                                    <span class="invoice-field-error-msg">Selecione uma transportadora</span>
                                 </div>
                                 
                                 <!-- Filtro Mês (multi-seleção v3.11.46) -->
-                                <div class="form-group" style="margin-bottom: 0;">
+                                <div class="form-group invoice-field-required" id="invFieldMonth" style="margin-bottom: 0;">
                                     <label class="form-label">Mês(es)</label>
                                     <div class="month-multi-select-wrapper">
                                         <div id="invoiceMonthTrigger" class="month-multi-trigger" onclick="window.toggleMonthDropdown()">
@@ -1269,20 +1295,23 @@
                                             </label>
                                         </div>
                                     </div>
+                                    <span class="invoice-field-error-msg">Selecione ao menos um mês</span>
                                 </div>
 
                                 <!-- Valor da Fatura -->
-                                <div class="form-group" style="margin-bottom: 0;">
+                                <div class="form-group invoice-field-required" id="invFieldValue" style="margin-bottom: 0;">
                                     <label class="form-label">Valor da Fatura (R$)</label>
                                     <input type="text" id="invoiceValue" class="form-input" placeholder="0,00"
                                         oninput="window.updateInvoiceComparison()">
+                                    <span class="invoice-field-error-msg">Informe o valor da fatura</span>
                                 </div>
 
                                 <!-- Referência da Fatura -->
-                                <div class="form-group" style="margin-bottom: 0;">
+                                <div class="form-group invoice-field-required" id="invFieldRef" style="margin-bottom: 0;">
                                     <label class="form-label">Nº da Fatura (Ref.)</label>
                                     <input type="text" id="invoiceRef" class="form-input"
                                         placeholder="Ex: FAT-2026-001">
+                                    <span class="invoice-field-error-msg">Informe o número/ref. da fatura</span>
                                 </div>
 
                                 <!-- Botão Selecionar Todos -->

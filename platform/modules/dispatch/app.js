@@ -4138,9 +4138,82 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.filterInvoiceByCarrier('');
         };
 
+        // === v3.11.49: Validação de campos obrigatórios da Conferência ===
+        const _invoiceFields = () => [
+            {
+                id: 'invFieldCarrier',
+                valid: () => {
+                    const v = document.getElementById('invoiceCarrierFilter')?.value || '';
+                    return v.trim() !== '';
+                }
+            },
+            {
+                id: 'invFieldMonth',
+                valid: () => {
+                    // válido: "Todos os meses" marcado OU ao menos um mês específico selecionado
+                    const allCb = document.getElementById('invoiceMonthAll');
+                    if (allCb && allCb.checked) return true;
+                    const any = document.querySelectorAll('#invoiceMonthOptions input[type="checkbox"]:not(#invoiceMonthAll):checked');
+                    return any.length > 0;
+                }
+            },
+            {
+                id: 'invFieldValue',
+                valid: () => {
+                    const raw = document.getElementById('invoiceValue')?.value || '';
+                    const num = parseFloat(raw.replace(/[^\d,.-]/g, '').replace(',', '.'));
+                    return !isNaN(num) && num > 0;
+                }
+            },
+            {
+                id: 'invFieldRef',
+                valid: () => {
+                    const v = document.getElementById('invoiceRef')?.value || '';
+                    return v.trim() !== '';
+                }
+            }
+        ];
+
+        window._validateInvoiceFields = () => {
+            let ok = true;
+            _invoiceFields().forEach(f => {
+                const el = document.getElementById(f.id);
+                if (!el) return;
+                if (f.valid()) {
+                    el.classList.remove('invoice-field-error');
+                } else {
+                    el.classList.add('invoice-field-error');
+                    ok = false;
+                }
+            });
+            return ok;
+        };
+
+        // Limpa erro de cada campo quando o usuário interage com ele
+        (() => {
+            const clearErr = (fieldId) => {
+                document.getElementById(fieldId)?.classList.remove('invoice-field-error');
+            };
+            document.getElementById('invoiceCarrierFilter')?.addEventListener('change', () => clearErr('invFieldCarrier'));
+            document.getElementById('invoiceValue')?.addEventListener('input', () => clearErr('invFieldValue'));
+            document.getElementById('invoiceRef')?.addEventListener('input', () => clearErr('invFieldRef'));
+            // Mês: limpa ao fechar o dropdown
+            document.getElementById('invoiceMonthTrigger')?.addEventListener('click', () => {
+                setTimeout(() => {
+                    if (_invoiceFields()[1].valid()) clearErr('invFieldMonth');
+                }, 200);
+            });
+        })();
+
         // Confirm payment
         // v3.11.30: usa valores do Map (por transportadora) para cálculo correto
         window.confirmInvoicePayment = async () => {
+            // v3.11.49: Valida campos obrigatórios antes de prosseguir
+            if (!window._validateInvoiceFields()) {
+                Utils.showToast('Preencha todos os campos obrigatórios (marcados com *)', 'error');
+                return;
+            }
+
             const dispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
 
             // Calculate totals usando valores armazenados no Map (invoiceValue por transportadora)

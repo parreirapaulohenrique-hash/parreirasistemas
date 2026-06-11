@@ -1,6 +1,6 @@
 {
-    "version": "3.11.48",
-    "change": "v3.11.48 - fix: dropdown de meses agora usa position:fixed calculado via getBoundingClientRect(), escapando do overflow:hidden dos containers pais; meses visíveis ao clicar independente do contexto de scroll.",
+    "version": "3.11.49",
+    "change": "v3.11.49 - feat: campos Transportadora, Mês(es), Valor da Fatura e Nº da Fatura agora são obrigatórios na conferência; validação com borda vermelha + mensagem + shake animation + toast de erro.",
     "lastUpdate": "2026-06-11",
-    "deployedAt": "2026-06-11 16:51"
+    "deployedAt": "2026-06-11 17:03"
 }
