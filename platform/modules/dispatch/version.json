@@ -1,6 +1,6 @@
 {
-    "version": "3.11.46",
-    "change": "v3.11.46 - feat: filtro de m\u00eas na confer\u00eancia de fatura agora suporta m\u00faltiplos meses — dropdown com checkboxes, populado dinamicamente por transportadora; sele\u00e7\u00e3o preservada ao refinar filtro, resetada ao trocar transportadora.",
+    "version": "3.11.47",
+    "change": "v3.11.47 - fix: dropdown de meses agora é populado imediatamente ao abrir a conferencia (com todos os meses disponíveis); parsing de datas melhorado com fallback para dispatchedAt e _parseDispatchDate; log de diagnóstico adicionado.",
     "lastUpdate": "2026-06-11",
-    "deployedAt": "2026-06-11 16:35"
+    "deployedAt": "2026-06-11 16:46"
 }

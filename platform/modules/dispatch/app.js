@@ -3777,8 +3777,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             const prevSelected = new Set(reset ? [] : window.getSelectedInvoiceMonths());
             const monthsSet = new Set();
             dispatches.forEach(d => {
-                const raw = d.date || null;
-                const dt = raw ? new Date(raw) : window._parseDispatchDate(d);
+                // Tenta d.date primeiro (data retroativa/intencional), depois dispatchedAt, depois _parseDispatchDate
+                let dt = null;
+                if (d.date) {
+                    const parsed = new Date(d.date);
+                    if (!isNaN(parsed.getTime())) dt = parsed;
+                }
+                if (!dt && d.dispatchedAt) {
+                    const parsed = new Date(d.dispatchedAt?.seconds ? d.dispatchedAt.seconds * 1000 : d.dispatchedAt);
+                    if (!isNaN(parsed.getTime())) dt = parsed;
+                }
+                if (!dt && window._parseDispatchDate) {
+                    dt = window._parseDispatchDate(d);
+                }
                 if (!dt || isNaN(dt.getTime())) return;
                 monthsSet.add(`${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`);
             });
@@ -3786,14 +3797,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             const noneSelected = prevSelected.size === 0;
             dropdown.innerHTML =
                 `<label class="month-multi-option all-option"><input type="checkbox" id="invoiceMonthAll" ${noneSelected ? 'checked' : ''} onchange="window.toggleAllMonths(this.checked)">Todos os meses</label>` +
-                months.map(key => {
-                    const [y, m] = key.split('-');
-                    const s = new Date(Number(y), Number(m) - 1, 1)
-                        .toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-                    const lbl = s.charAt(0).toUpperCase() + s.slice(1);
-                    const chk = prevSelected.has(key) ? ' checked' : '';
-                    return `<label class="month-multi-option"><input type="checkbox" value="${key}"${chk} onchange="window.onMonthOptionChange(this)">${lbl}</label>`;
-                }).join('');
+                (months.length === 0
+                    ? `<div style="padding:0.6rem 0.75rem;font-size:0.82rem;color:var(--text-secondary);">Nenhum mês disponível</div>`
+                    : months.map(key => {
+                        const [y, m] = key.split('-');
+                        const s = new Date(Number(y), Number(m) - 1, 1)
+                            .toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+                        const lbl = s.charAt(0).toUpperCase() + s.slice(1);
+                        const chk = prevSelected.has(key) ? ' checked' : '';
+                        return `<label class="month-multi-option"><input type="checkbox" value="${key}"${chk} onchange="window.onMonthOptionChange(this)">${lbl}</label>`;
+                    }).join(''));
+            console.log(`[MonthDropdown v3.11.47] ${months.length} meses populados. Reset=${reset}`, months);
             window.updateMonthDropdownLabel();
         };
 
@@ -3827,6 +3841,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.invoiceSelectedNFs = new Map();
             window.invoiceCurrentCarrier = '';
             window.updateInvoiceComparison();
+
+            // ✅ v3.11.47: pré-popula o dropdown de meses com TODOS os despachos válidos
+            // O usuário pode filtrar o mês ANTES de selecionar a transportadora
+            const allValid = dispatches.filter(d => VALID_STATUSES.includes(d.status));
+            window.populateMonthDropdown(allValid, true);
         };
 
         // Filter NFs by carrier
