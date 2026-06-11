@@ -3705,6 +3705,98 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.invoiceSelectedNFs = new Map();
         window.invoiceCurrentCarrier = '';
 
+        // === MULTI-MONTH PICKER HELPERS v3.11.46 ===
+        window.toggleMonthDropdown = () => {
+            const trigger  = document.getElementById('invoiceMonthTrigger');
+            const dropdown = document.getElementById('invoiceMonthOptions');
+            if (!trigger || !dropdown) return;
+            const isOpen = dropdown.classList.contains('open');
+            dropdown.classList.toggle('open', !isOpen);
+            trigger.classList.toggle('open', !isOpen);
+        };
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.month-multi-select-wrapper')) {
+                document.getElementById('invoiceMonthOptions')?.classList.remove('open');
+                document.getElementById('invoiceMonthTrigger')?.classList.remove('open');
+            }
+        });
+        // Retorna array de strings "YYYY-MM" dos meses individualmente selecionados.
+        // Array vazio = "Todos os meses" (sem filtro).
+        window.getSelectedInvoiceMonths = () => {
+            const allCb = document.getElementById('invoiceMonthAll');
+            if (allCb && allCb.checked) return [];
+            return Array.from(
+                document.querySelectorAll('#invoiceMonthOptions input[type="checkbox"]:not(#invoiceMonthAll):checked')
+            ).map(cb => cb.value);
+        };
+        window.updateMonthDropdownLabel = () => {
+            const label = document.getElementById('invoiceMonthLabel');
+            if (!label) return;
+            const sel = window.getSelectedInvoiceMonths();
+            if (!sel.length) {
+                label.textContent = 'Todos os meses';
+            } else if (sel.length === 1) {
+                const [y, m] = sel[0].split('-');
+                const s = new Date(Number(y), Number(m) - 1, 1)
+                    .toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+                label.textContent = s.charAt(0).toUpperCase() + s.slice(1);
+            } else {
+                label.textContent = `${sel.length} meses selecionados`;
+            }
+        };
+        // Clique no checkbox "Todos os meses"
+        window.toggleAllMonths = (checked) => {
+            const allCb = document.getElementById('invoiceMonthAll');
+            if (checked) {
+                // Desmarca todos os individuais; mantém "Todos" marcado
+                document.querySelectorAll('#invoiceMonthOptions input[type="checkbox"]:not(#invoiceMonthAll)')
+                    .forEach(cb => { cb.checked = false; });
+                if (allCb) allCb.checked = true;
+            }
+            window.updateMonthDropdownLabel();
+            window.filterInvoiceByCarrier();
+        };
+        // Clique em qualquer mês individual
+        window.onMonthOptionChange = () => {
+            const allCb = document.getElementById('invoiceMonthAll');
+            const cbs = Array.from(
+                document.querySelectorAll('#invoiceMonthOptions input[type="checkbox"]:not(#invoiceMonthAll)')
+            );
+            if (allCb) {
+                // "Todos" fica marcado SOMENTE quando nenhum mês individual está selecionado
+                allCb.checked = cbs.every(c => !c.checked);
+            }
+            window.updateMonthDropdownLabel();
+            window.filterInvoiceByCarrier();
+        };
+        // Reconstrói as opções do dropdown com os meses presentes em `dispatches`.
+        // `reset=true` limpa a seleção (muda de transportadora).
+        window.populateMonthDropdown = (dispatches, reset) => {
+            const dropdown = document.getElementById('invoiceMonthOptions');
+            if (!dropdown) return;
+            const prevSelected = new Set(reset ? [] : window.getSelectedInvoiceMonths());
+            const monthsSet = new Set();
+            dispatches.forEach(d => {
+                const raw = d.date || null;
+                const dt = raw ? new Date(raw) : window._parseDispatchDate(d);
+                if (!dt || isNaN(dt.getTime())) return;
+                monthsSet.add(`${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`);
+            });
+            const months = [...monthsSet].sort().reverse(); // mais recente primeiro
+            const noneSelected = prevSelected.size === 0;
+            dropdown.innerHTML =
+                `<label class="month-multi-option all-option"><input type="checkbox" id="invoiceMonthAll" ${noneSelected ? 'checked' : ''} onchange="window.toggleAllMonths(this.checked)">Todos os meses</label>` +
+                months.map(key => {
+                    const [y, m] = key.split('-');
+                    const s = new Date(Number(y), Number(m) - 1, 1)
+                        .toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+                    const lbl = s.charAt(0).toUpperCase() + s.slice(1);
+                    const chk = prevSelected.has(key) ? ' checked' : '';
+                    return `<label class="month-multi-option"><input type="checkbox" value="${key}"${chk} onchange="window.onMonthOptionChange(this)">${lbl}</label>`;
+                }).join('');
+            window.updateMonthDropdownLabel();
+        };
+
         // Initialize invoice section when shown
         window.initInvoiceSection = async () => {
             const select = document.getElementById('invoiceCarrierFilter');
@@ -3742,13 +3834,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (typeof carrier === 'undefined' || carrier instanceof Event) {
                 carrier = document.getElementById('invoiceCarrierFilter') ? document.getElementById('invoiceCarrierFilter').value : '';
             }
+            // v3.11.46: detecta troca de transportadora para resetar seleção de meses
+            const _carrierChanged = carrier !== window.invoiceCurrentCarrier;
             window.invoiceCurrentCarrier = carrier;
             window.invoiceSelectedNFs = new Map();
 
             const tbody = document.getElementById('invoiceNFsBody');
             if (!tbody) return;
             
-            const monthFilterStr = document.getElementById('invoiceMonthFilter') ? document.getElementById('invoiceMonthFilter').value : '';
+
 
             if (!carrier) {
                 tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Selecione uma transportadora para ver as NFs disponíveis.</td></tr>`;
@@ -3787,24 +3881,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return { ...d, _invoiceValue: invoiceValue, _isRedesp: isRedesp, _isPago: d.status === 'Pago' };
                 });
 
-            console.log(`[InvoiceFilter v3.11.30] Antes do filtro de mês: ${filtered.length} NFs (Despachadas + Pagas)`);
+            console.log(`[InvoiceFilter v3.11.46] Antes do filtro de mês: ${filtered.length} NFs (Despachadas + Pagas)`);
 
-            if (monthFilterStr) {
-                const [year, month] = monthFilterStr.split('-');
+            // Popula o dropdown de mêses (reseta seleção só quando transportadora muda)
+            window.populateMonthDropdown(filtered, _carrierChanged);
+
+            // Aplica filtro de mêses selecionados (array vazio = sem filtro = todos)
+            const _selectedMonths = window.getSelectedInvoiceMonths();
+            if (_selectedMonths.length > 0) {
                 filtered = filtered.filter(d => {
-                    // ✅ FIX v3.11.44: usa d.date (data intencional/retroativa) para filtrar mês
-                    // _parseDispatchDate prioriza dispatchedAt (hora do registro) — errado para retroativos
+                    // usa d.date (data retroativa/intencional) — FIX v3.11.44
                     const raw = d.date || null;
                     const dispatchDate = raw ? new Date(raw) : window._parseDispatchDate(d);
                     if (!dispatchDate || isNaN(dispatchDate.getTime())) return false;
-                    return dispatchDate.getFullYear().toString() === year &&
-                           (dispatchDate.getMonth() + 1).toString().padStart(2, '0') === month;
+                    const key = `${dispatchDate.getFullYear()}-${String(dispatchDate.getMonth() + 1).padStart(2, '0')}`;
+                    return _selectedMonths.includes(key);
                 });
-                console.log(`[InvoiceFilter v3.11.44] Após filtro mês ${monthFilterStr}: ${filtered.length} NFs para ${carrierNorm}`);
+                console.log(`[InvoiceFilter v3.11.46] Após filtro meses [${_selectedMonths.join(', ')}]: ${filtered.length} NFs para ${carrierNorm}`);
             }
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Nenhuma NF encontrada para esta transportadora${monthFilterStr ? ' no mês selecionado' : ''}.</td></tr>`;
+                const _mSel = window.getSelectedInvoiceMonths ? window.getSelectedInvoiceMonths() : [];
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Nenhuma NF encontrada para esta transportadora${_mSel.length ? ` nos meses selecionados (${_mSel.length})` : ''}.</td></tr>`;
                 document.getElementById('invoiceNFsCount').textContent = '0 notas';
                 window.updateInvoiceComparison();
                 return;
