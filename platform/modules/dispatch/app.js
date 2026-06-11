@@ -3773,7 +3773,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         invoiceValue = d.redespTotal || 0;
                     } else {
                         // Principal: usa o total menos o redespacho (evita dupla contagem)
-                        invoiceValue = d.mainTotal != null ? d.mainTotal : (d.total - (d.redespTotal || 0));
+                        // ✅ FIX v3.11.43: Math.round para evitar resíduo float na subtração
+                        // Ex: 200.10 - 65.33 = 134.77000000000001 sem arredondamento
+                        const raw = d.mainTotal != null ? d.mainTotal : (d.total - (d.redespTotal || 0));
+                        invoiceValue = Math.round(raw * 100) / 100;
                     }
                     return { ...d, _invoiceValue: invoiceValue, _isRedesp: isRedesp, _isPago: d.status === 'Pago' };
                 });
@@ -3927,16 +3930,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('invoiceValueDisplay').textContent = Utils.formatCurrency(invoiceValue);
 
             // Calculate difference
-            const difference = selectedTotal - invoiceValue;
+            // ✅ FIX v3.11.43: arredondar antes de comparar para evitar float fantasma
+            // Ex: 134.77000000000001 - 134.77 = 0.0000000001 → aparecia como "+R$ 0,00" vermelho
+            const selRounded = Math.round(selectedTotal * 100) / 100;
+            const invRounded = Math.round(invoiceValue  * 100) / 100;
+            const difference = selRounded - invRounded;
             const diffEl = document.getElementById('invoiceDifference');
             const diffCard = document.getElementById('invoiceDifferenceCard');
 
-            if (difference === 0 && window.invoiceSelectedNFs.size > 0 && invoiceValue > 0) {
+            if (Math.abs(difference) < 0.01 && window.invoiceSelectedNFs.size > 0 && invoiceValue > 0) {
                 diffEl.textContent = '✅ OK';
                 diffEl.style.color = '#10b981';
                 diffCard.style.background = 'rgba(16, 185, 129, 0.1)';
                 diffCard.style.borderColor = 'rgba(16, 185, 129, 0.3)';
-            } else if (difference !== 0 && window.invoiceSelectedNFs.size > 0 && invoiceValue > 0) {
+            } else if (Math.abs(difference) >= 0.01 && window.invoiceSelectedNFs.size > 0 && invoiceValue > 0) {
                 const sign = difference > 0 ? '+' : '';
                 diffEl.textContent = `${sign}${Utils.formatCurrency(difference)}`;
                 diffEl.style.color = '#ef4444';

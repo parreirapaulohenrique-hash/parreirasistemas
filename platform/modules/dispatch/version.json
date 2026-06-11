@@ -1,6 +1,6 @@
 {
-    "version": "3.11.42",
-    "change": "v3.11.42 - fix: conferencia de fatura nao dispara mais alerta de diferenca quando valor e identico — corrigida comparacao de float (arredondamento para 2 casas + tolerancia de R$ 0,01).",
-    "lastUpdate": "2026-06-10",
-    "deployedAt": "2026-06-10 17:21"
+    "version": "3.11.43",
+    "change": "v3.11.43 - fix: corrigida cadeia completa de diferenca fantasma na conferencia de fatura — (1) invoiceValue arredondado na origem (evita float de subtracao mainTotal), (2) updateInvoiceComparison usa tolerancia 0.01 no display (elimina +R$0,00 vermelho), (3) confirmInvoicePayment mantem correcao v3.11.42.",
+    "lastUpdate": "2026-06-11",
+    "deployedAt": "2026-06-11 10:11"
 }
