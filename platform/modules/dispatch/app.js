@@ -1974,7 +1974,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         };
 
-        window.confirmDispatch = (index) => {
+        window.confirmDispatch = async (index) => {
             const option = window.currentOptions[index];
             if (!option) return;
 
@@ -2048,11 +2048,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             // Block repeated NF (unless it's a complement or empty)
+            // ✅ FIX v3.11.45: busca no histórico completo (localStorage + Firestore)
+            // A versão anterior usava apenas Utils.getStorage('dispatches') — NFs arquivadas
+            // (>12h no Firestore) não eram encontradas e a trava não funcionava.
             if (invoice && invoice !== 'S/N' && !isComp) {
-                const history = Utils.getStorage('dispatches');
-                const duplicate = history.find(d => d.invoice === invoice);
+                const fullHistory = (await Utils.Cloud.getFullDispatchesHistory()) || [];
+                const duplicate = fullHistory.find(d => d.invoice === invoice);
                 if (duplicate) {
-                    alert(`⚠️ Atenção: A Nota Fiscal nº ${invoice} já foi despachada anteriormente para o cliente "${duplicate.client}" em ${new Date(duplicate.date).toLocaleDateString()}.`);
+                    const dupDate = duplicate.date
+                        ? new Date(duplicate.date).toLocaleDateString('pt-BR')
+                        : (duplicate.dispatchedAt ? new Date(duplicate.dispatchedAt).toLocaleDateString('pt-BR') : '?');
+                    alert(`⚠️ Atenção: A Nota Fiscal nº ${invoice} já foi despachada anteriormente para o cliente "${duplicate.client}" em ${dupDate}.`);
                     return;
                 }
             }

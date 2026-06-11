@@ -1,6 +1,6 @@
 {
-    "version": "3.11.44",
-    "change": "v3.11.44 - fix: conferencia de fatura agora usa data retroativa (d.date) ao filtrar por mes e exibir data — _parseDispatchDate priorizava dispatchedAt (hora do registro), ignorando a data retroativa informada na cotacao.",
+    "version": "3.11.45",
+    "change": "v3.11.45 - fix: trava de NF duplicada restaurada — confirmDispatch agora e async e busca historico completo (localStorage + Firestore) via Utils.Cloud.getFullDispatchesHistory(); versao anterior usava apenas localStorage e perdia NFs arquivadas.",
     "lastUpdate": "2026-06-11",
-    "deployedAt": "2026-06-11 10:20"
+    "deployedAt": "2026-06-11 11:35"
 }
