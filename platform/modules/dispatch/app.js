@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', async () => {
+﻿document.addEventListener('DOMContentLoaded', async () => {
     try {
         // GLOBAL UI UTILS
         window.showToast = (msg) => {
@@ -4136,6 +4136,165 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.invoiceSelectedNFs = new Map();
             window.invoiceCurrentCarrier = '';
             window.filterInvoiceByCarrier('');
+        };
+
+        // ═══════════════════════════════════════════════════════════════
+        // v3.11.50 — FERRAMENTA DE RECÁLCULO RETROATIVO TNORTE
+        // ═══════════════════════════════════════════════════════════════
+        function _recalcFreightPure(dispatch, rulesArr, cfgNorm) {
+            const norm = Utils.normalizeString;
+            const city    = norm(dispatch.city || '');
+            const bairro  = norm(dispatch.neighborhood || '');
+            const nfValue = parseFloat(dispatch.nfValue) || 0;
+            const weight  = parseFloat(dispatch.weight)  || 0;
+            const volume  = parseInt(dispatch.volume)    || 1;
+            const isComp  = !!dispatch.isComplement;
+            if (nfValue <= 0 || weight <= 0) return null;
+            let cityRules = [], usedBairro = false;
+            if (bairro) { const br = rulesArr.filter(r => norm(r.transportadora) === 'tnorte' && norm(r.cidade) === bairro); if (br.length) { cityRules = br; usedBairro = true; } }
+            if (!cityRules.length) { const all = rulesArr.filter(r => norm(r.transportadora) === 'tnorte' && norm(r.cidade) === city); if (all.length) { const sem = all.filter(r => !r.redespacho || r.redespacho === '-'); cityRules = sem.length ? sem : all; } }
+            if (!usedBairro) rulesArr.filter(r => norm(r.transportadora) === 'tnorte' && norm(r.cidadeRedespacho || '') === city).forEach(r => { if (!cityRules.includes(r)) cityRules.push(r); });
+            if (!cityRules.length) return null;
+            const rule   = cityRules[0];
+            const config = cfgNorm['TNORTE'] || {};
+            let baseVal  = nfValue * (rule.percentual / 100);
+            if (!isComp && baseVal < rule.minimo) baseVal = rule.minimo;
+            const tollVal    = rule.pedagio || 0;
+            const grisVal    = nfValue * ((config.gris || 0) / 100);
+            const volumeCost = (config.valorVolume > 0 && volume >= 1) ? volume * config.valorVolume : 0;
+            let excessCost = 0;
+            if (rule.limitePeso > 0 && weight > rule.limitePeso) excessCost = (weight - rule.limitePeso) * (rule.valorExcedente || 0);
+            let redispatchCost = 0;
+            if (rule.redespacho && rule.redespacho !== '-') {
+                const rCity = norm(rule.cidadeRedespacho || '');
+                if (!rCity || rCity === city || rCity === bairro) {
+                    let rPct = rule.percentualRedespacho > 0 ? nfValue * (rule.percentualRedespacho / 100) : 0;
+                    const rCfg = cfgNorm[(rule.redespacho || '').toUpperCase().trim()] || {};
+                    let rVol   = (rCfg.valorVolume > 0 && volume >= 1) ? volume * rCfg.valorVolume : 0;
+                    let rVal   = Math.max(rPct, rVol);
+                    if (rVal < (rule.minimoRedespacho || 0)) rVal = rule.minimoRedespacho;
+                    redispatchCost = rVal;
+                }
+            }
+            const subtotal = baseVal + (config.taxaFixa || 0) + grisVal + excessCost + tollVal + volumeCost + redispatchCost;
+            const factor   = 1 - ((config.icms || 0) / 100);
+            const total    = factor > 0 ? subtotal / factor : subtotal;
+            const R = v => Math.round(v * 100) / 100;
+            return { total: R(total), mainTotal: R(total - redispatchCost), redespTotal: R(redispatchCost),
+                baseCalculada: R(baseVal), excessoCalculado: R(excessCost), pedagio: R(tollVal),
+                gris: R(grisVal), taxaFixa: R(config.taxaFixa || 0), icms: R(total - subtotal),
+                percentual: rule.percentual, minimo: rule.minimo };
+        }
+
+        window._tnorteRecalcPreview = null;
+
+        window.openTNorteRecalcTool = async () => {
+            const modal = document.getElementById('tnorteRecalcModal');
+            if (!modal) return;
+            modal.style.display = 'flex';
+            document.getElementById('tnorteRecalcBody').innerHTML =
+                '<div style="text-align:center;padding:3rem;color:var(--text-secondary);"><span class="material-icons-round" style="font-size:3rem;display:block;animation:spin 1s linear infinite;">sync</span><p style="margin-top:1rem;">Carregando histórico de despachos...</p></div>';
+            document.getElementById('btnApplyTNorteRecalc').style.display = 'none';
+            const allDispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
+            const cutoff = new Date(); cutoff.setHours(23, 59, 59, 999);
+            const tnorteDispatches = allDispatches.filter(d => {
+                const cn = (d.carrier || '').trim().toUpperCase();
+                const dt = d.date ? new Date(d.date) : (d.dispatchedAt ? new Date(d.dispatchedAt) : null);
+                return cn === 'TNORTE' && (!dt || dt <= cutoff);
+            });
+            if (!tnorteDispatches.length) {
+                document.getElementById('tnorteRecalcBody').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-secondary);"><span class="material-icons-round" style="font-size:2.5rem;">search_off</span><p>Nenhum despacho da TNORTE encontrado no histórico.</p></div>';
+                return;
+            }
+            const cfgNorm = {};
+            Object.keys(carrierConfigs).forEach(k => { cfgNorm[k.toUpperCase().trim()] = carrierConfigs[k]; });
+            const results = tnorteDispatches.map(d => {
+                const newCalc = _recalcFreightPure(d, rules, cfgNorm);
+                const oldTotal = parseFloat(d.total) || 0;
+                const newTotal = newCalc ? newCalc.total : null;
+                const diff = newTotal !== null ? Math.round((newTotal - oldTotal) * 100) / 100 : null;
+                return { dispatch: d, newCalc, oldTotal, newTotal, diff };
+            });
+            window._tnorteRecalcPreview = results;
+            const fmt  = v => Utils.formatCurrency(v);
+            const dc   = d => d > 0 ? '#ef4444' : d < 0 ? '#10b981' : 'var(--text-secondary)';
+            const sign = d => d > 0 ? '+' : '';
+            const withRule  = results.filter(r => r.newCalc);
+            const noRule    = results.filter(r => !r.newCalc);
+            const changed   = withRule.filter(r => Math.abs(r.diff) >= 0.01);
+            const unchanged = withRule.filter(r => Math.abs(r.diff) < 0.01);
+            const totalDiff = changed.reduce((s, r) => s + r.diff, 0);
+            const rows = results.map(r => {
+                const d = r.dispatch;
+                const rawDate = d.date || d.dispatchedAt;
+                const dateStr = rawDate ? new Date(rawDate).toLocaleDateString('pt-BR') : '?';
+                const pagoBadge = (d.status||'').toLowerCase().includes('pago') ? '<span style="font-size:.6rem;background:rgba(16,185,129,.15);color:#10b981;padding:1px 5px;border-radius:4px;margin-left:3px;">PAGO</span>' : '';
+                if (!r.newCalc) return `<tr style="opacity:.5;"><td>${d.invoice||'S/N'}</td><td style="font-size:.8rem;">${d.client||'-'}</td><td style="font-size:.8rem;">${d.city||'-'}</td><td style="font-size:.8rem;">${dateStr}</td><td style="text-align:right;">${fmt(r.oldTotal)}</td><td style="text-align:right;color:var(--text-secondary);">—</td><td style="text-align:right;color:#f59e0b;font-size:.78rem;">Sem regra${pagoBadge}</td></tr>`;
+                const diffCell = Math.abs(r.diff) < 0.01 ? '<span style="color:var(--text-secondary);">≈ igual</span>' : `<span style="color:${dc(r.diff)};font-weight:700;">${sign(r.diff)}${fmt(r.diff)}</span>`;
+                return `<tr><td>${d.invoice||'S/N'}${pagoBadge}</td><td style="font-size:.8rem;">${d.client||'-'}</td><td style="font-size:.8rem;">${d.city||'-'}</td><td style="font-size:.8rem;">${dateStr}</td><td style="text-align:right;">${fmt(r.oldTotal)}</td><td style="text-align:right;font-weight:600;color:#3b82f6;">${fmt(r.newTotal)}</td><td style="text-align:right;">${diffCell}</td></tr>`;
+            }).join('');
+            document.getElementById('tnorteRecalcBody').innerHTML = `
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:1.25rem;">
+                    <div style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:8px;padding:.75rem;text-align:center;"><div style="font-size:.68rem;color:var(--text-secondary);text-transform:uppercase;">Total NFs</div><div style="font-size:1.4rem;font-weight:700;color:#3b82f6;">${results.length}</div></div>
+                    <div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:.75rem;text-align:center;"><div style="font-size:.68rem;color:var(--text-secondary);text-transform:uppercase;">Com Mudança</div><div style="font-size:1.4rem;font-weight:700;color:#f59e0b;">${changed.length}</div></div>
+                    <div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:8px;padding:.75rem;text-align:center;"><div style="font-size:.68rem;color:var(--text-secondary);text-transform:uppercase;">Sem Mudança</div><div style="font-size:1.4rem;font-weight:700;color:#10b981;">${unchanged.length}</div></div>
+                    <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:.75rem;text-align:center;"><div style="font-size:.68rem;color:var(--text-secondary);text-transform:uppercase;">Sem Regra</div><div style="font-size:1.4rem;font-weight:700;color:#ef4444;">${noRule.length}</div></div>
+                </div>
+                ${changed.length > 0 ? `<div style="background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);border-radius:8px;padding:.6rem 1rem;margin-bottom:1rem;font-size:.84rem;">Impacto total em <strong>${changed.length} NFs</strong>: <strong style="color:${dc(totalDiff)};margin-left:6px;">${sign(totalDiff)}${fmt(totalDiff)}</strong> <span style="color:var(--text-secondary);font-size:.74rem;margin-left:8px;">(+ = frete aumentou, − = diminuiu)</span></div>` : ''}
+                <div style="overflow-x:auto;max-height:380px;overflow-y:auto;border-radius:8px;border:1px solid var(--border-color);">
+                    <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+                        <thead><tr style="background:var(--card-bg);position:sticky;top:0;z-index:1;">
+                            <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border-color);font-size:.72rem;color:var(--text-secondary);">NF</th>
+                            <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border-color);font-size:.72rem;color:var(--text-secondary);">Cliente</th>
+                            <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border-color);font-size:.72rem;color:var(--text-secondary);">Cidade</th>
+                            <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border-color);font-size:.72rem;color:var(--text-secondary);">Data</th>
+                            <th style="padding:8px 10px;text-align:right;border-bottom:1px solid var(--border-color);font-size:.72rem;color:var(--text-secondary);">Frete Atual</th>
+                            <th style="padding:8px 10px;text-align:right;border-bottom:1px solid var(--border-color);font-size:.72rem;color:#3b82f6;">Frete Novo</th>
+                            <th style="padding:8px 10px;text-align:right;border-bottom:1px solid var(--border-color);font-size:.72rem;color:var(--text-secondary);">Diferença</th>
+                        </tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>`;
+            if (changed.length > 0) {
+                const btn = document.getElementById('btnApplyTNorteRecalc');
+                btn.style.display = 'inline-flex'; btn.textContent = 'Aplicar Recálculo (' + changed.length + ' NFs)'; btn.disabled = false;
+            }
+        };
+
+        window.applyTNorteRecalc = () => {
+            const preview = window._tnorteRecalcPreview;
+            if (!preview) return;
+            const toChange = preview.filter(r => r.newCalc && Math.abs(r.diff) >= 0.01);
+            if (!toChange.length) return;
+            window.requestSupervisorPassword('Recálculo Retroativo TNORTE — ' + toChange.length + ' NFs', async () => {
+                const recalcAt = new Date().toISOString();
+                let ok = 0, fail = 0;
+                document.getElementById('btnApplyTNorteRecalc').disabled = true;
+                document.getElementById('btnApplyTNorteRecalc').textContent = 'Aplicando...';
+                for (const r of toChange) {
+                    const d = r.dispatch; const numId = Number(d.id); const c = r.newCalc;
+                    const update = { total: c.total, mainTotal: c.mainTotal, redespTotal: c.redespTotal,
+                        baseCalculada: c.baseCalculada, excessoCalculado: c.excessoCalculado,
+                        pedagio: c.pedagio, gris: c.gris, taxaFixa: c.taxaFixa,
+                        icms: c.icms, percentual: c.percentual, minimo: c.minimo,
+                        _recalcAt: recalcAt, _totalAntes: r.oldTotal,
+                        _mainTotalAntes: parseFloat(d.mainTotal) || r.oldTotal, _recalcVersion: '3.11.50' };
+                    try {
+                        const local = Utils.getStorage('dispatches') || [];
+                        const li = local.findIndex(x => Number(x.id) === numId);
+                        if (li !== -1) { Object.assign(local[li], update); Utils.setStorage('dispatches', local); }
+                        if (Utils.Cloud.hasTenant() && window.db)
+                            await window.db.collection('tenants').doc(Utils.Cloud.tenantId)
+                                .collection('dispatches_db').doc(String(numId)).update(update);
+                        if (window._dispatchesFullCache) { const ci = window._dispatchesFullCache.findIndex(x => Number(x.id) === numId); if (ci !== -1) Object.assign(window._dispatchesFullCache[ci], update); }
+                        ok++;
+                    } catch (e) { console.error('[RecalcTNORTE] NF ' + d.invoice + ':', e); fail++; }
+                }
+                window._tnorteRecalcPreview = null;
+                document.getElementById('tnorteRecalcModal').style.display = 'none';
+                Utils.showToast(fail === 0 ? ('✅ Recálculo concluído! ' + ok + ' NFs da TNORTE atualizadas.') : ('⚠️ ' + ok + ' atualizadas, ' + fail + ' com erro.'), fail === 0 ? 'success' : 'error');
+                if (typeof window.renderAppHistory === 'function') window.renderAppHistory();
+            });
         };
 
         // === v3.11.49: Validação de campos obrigatórios da Conferência ===

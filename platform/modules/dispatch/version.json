@@ -1,6 +1,6 @@
 {
-    "version": "3.11.49",
-    "change": "v3.11.49 - feat: campos Transportadora, Mês(es), Valor da Fatura e Nº da Fatura agora são obrigatórios na conferência; validação com borda vermelha + mensagem + shake animation + toast de erro.",
+    "version": "3.11.50",
+    "change": "v3.11.50 - feat: ferramenta de recálculo retroativo TNORTE — pré-visualização dry-run com tabela de diff + aplicação com senha supervisor. Filtro cirurgíco: só TNORTE, só até hoje. Auditoria: _recalcAt, _totalAntes, _recalcVersion.",
     "lastUpdate": "2026-06-11",
-    "deployedAt": "2026-06-11 17:03"
+    "deployedAt": "2026-06-11 17:49"
 }
