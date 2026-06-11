@@ -155,7 +155,7 @@
             font-size: 0.85rem;
         }
 
-        /* === Multi-Month Picker (v3.11.46) === */
+        /* === Multi-Month Picker (v3.11.48) === */
         .month-multi-select-wrapper { position: relative; }
         .month-multi-trigger {
             display: flex; align-items: center; justify-content: space-between;
@@ -169,12 +169,14 @@
             border-color: var(--primary-color);
             box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
         }
+        /* v3.11.48: position:fixed via JS para escapar de overflow:hidden nos pais */
         .month-multi-dropdown {
-            display: none; position: absolute; top: calc(100% + 4px);
-            left: 0; right: 0; min-width: 190px;
+            display: none;
+            position: fixed;          /* posição calculada via JS (getBoundingClientRect) */
+            min-width: 190px;
             background: var(--bg-card); border: 1px solid var(--border-color);
-            border-radius: var(--radius-md); z-index: 300;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+            border-radius: var(--radius-md); z-index: 9999;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.45);
             max-height: 260px; overflow-y: auto;
         }
         .month-multi-dropdown.open { display: block; }

@@ -1,6 +1,6 @@
 {
-    "version": "3.11.47",
-    "change": "v3.11.47 - fix: dropdown de meses agora é populado imediatamente ao abrir a conferencia (com todos os meses disponíveis); parsing de datas melhorado com fallback para dispatchedAt e _parseDispatchDate; log de diagnóstico adicionado.",
+    "version": "3.11.48",
+    "change": "v3.11.48 - fix: dropdown de meses agora usa position:fixed calculado via getBoundingClientRect(), escapando do overflow:hidden dos containers pais; meses visíveis ao clicar independente do contexto de scroll.",
     "lastUpdate": "2026-06-11",
-    "deployedAt": "2026-06-11 16:46"
+    "deployedAt": "2026-06-11 16:51"
 }

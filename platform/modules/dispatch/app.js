@@ -3705,21 +3705,51 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.invoiceSelectedNFs = new Map();
         window.invoiceCurrentCarrier = '';
 
-        // === MULTI-MONTH PICKER HELPERS v3.11.46 ===
+        // === MULTI-MONTH PICKER HELPERS v3.11.48 ===
+        // Helper: posiciona o dropdown com position:fixed para escapar de overflow:hidden
+        const _positionMonthDropdown = () => {
+            const trigger  = document.getElementById('invoiceMonthTrigger');
+            const dropdown = document.getElementById('invoiceMonthOptions');
+            if (!trigger || !dropdown) return;
+            const r = trigger.getBoundingClientRect();
+            dropdown.style.top   = `${r.bottom + 4}px`;
+            dropdown.style.left  = `${r.left}px`;
+            dropdown.style.width = `${r.width}px`;
+        };
+
         window.toggleMonthDropdown = () => {
             const trigger  = document.getElementById('invoiceMonthTrigger');
             const dropdown = document.getElementById('invoiceMonthOptions');
             if (!trigger || !dropdown) return;
             const isOpen = dropdown.classList.contains('open');
-            dropdown.classList.toggle('open', !isOpen);
-            trigger.classList.toggle('open', !isOpen);
-        };
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.month-multi-select-wrapper')) {
-                document.getElementById('invoiceMonthOptions')?.classList.remove('open');
-                document.getElementById('invoiceMonthTrigger')?.classList.remove('open');
+            if (!isOpen) {
+                _positionMonthDropdown(); // calcula coords antes de mostrar
+                dropdown.classList.add('open');
+                trigger.classList.add('open');
+            } else {
+                dropdown.classList.remove('open');
+                trigger.classList.remove('open');
             }
-        });
+        };
+
+        // Fecha ao clicar fora
+        document.addEventListener('click', (e) => {
+            const trigger  = document.getElementById('invoiceMonthTrigger');
+            const dropdown = document.getElementById('invoiceMonthOptions');
+            if (!trigger || !dropdown) return;
+            if (!trigger.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.remove('open');
+                trigger.classList.remove('open');
+            }
+        }, true); // capture=true para pegar antes de toggleMonthDropdown
+
+        // Reposiciona ao rolar / redimensionar (o dropdown segue o trigger)
+        const _closeMonthDropdown = () => {
+            document.getElementById('invoiceMonthOptions')?.classList.remove('open');
+            document.getElementById('invoiceMonthTrigger')?.classList.remove('open');
+        };
+        window.addEventListener('scroll', _closeMonthDropdown, true);
+        window.addEventListener('resize', _closeMonthDropdown);
         // Retorna array de strings "YYYY-MM" dos meses individualmente selecionados.
         // Array vazio = "Todos os meses" (sem filtro).
         window.getSelectedInvoiceMonths = () => {
