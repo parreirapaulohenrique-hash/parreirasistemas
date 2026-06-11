@@ -3786,13 +3786,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (monthFilterStr) {
                 const [year, month] = monthFilterStr.split('-');
                 filtered = filtered.filter(d => {
-                    // v3.11.30: usa _parseDispatchDate robusto — suporta Firestore Timestamp, numérico, ISO
-                    const dispatchDate = window._parseDispatchDate(d);
-                    if (!dispatchDate) return false;
+                    // ✅ FIX v3.11.44: usa d.date (data intencional/retroativa) para filtrar mês
+                    // _parseDispatchDate prioriza dispatchedAt (hora do registro) — errado para retroativos
+                    const raw = d.date || null;
+                    const dispatchDate = raw ? new Date(raw) : window._parseDispatchDate(d);
+                    if (!dispatchDate || isNaN(dispatchDate.getTime())) return false;
                     return dispatchDate.getFullYear().toString() === year &&
                            (dispatchDate.getMonth() + 1).toString().padStart(2, '0') === month;
                 });
-                console.log(`[InvoiceFilter v3.11.30] Após filtro mês ${monthFilterStr}: ${filtered.length} NFs para ${carrierNorm}`);
+                console.log(`[InvoiceFilter v3.11.44] Após filtro mês ${monthFilterStr}: ${filtered.length} NFs para ${carrierNorm}`);
             }
 
             if (filtered.length === 0) {
@@ -3802,15 +3804,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            // Sort by dispatch date (most recent first) — v3.11.30: usa _parseDispatchDate
+            // ✅ FIX v3.11.44: helper que prioriza d.date (data retroativa/intencional)
+            // em vez de dispatchedAt (timestamp real do registro) para exibir mês correto
+            const _getEffectiveDate = (d) => {
+                if (d.date) {
+                    const dt = new Date(d.date);
+                    if (!isNaN(dt.getTime())) return dt;
+                }
+                return window._parseDispatchDate(d) || new Date();
+            };
+
+            // Sort by effective dispatch date (most recent first)
             filtered.sort((a, b) => {
-                const da = window._parseDispatchDate(a);
-                const db2 = window._parseDispatchDate(b);
+                const da = _getEffectiveDate(a);
+                const db2 = _getEffectiveDate(b);
                 return (db2 ? db2.getTime() : 0) - (da ? da.getTime() : 0);
             });
 
             tbody.innerHTML = filtered.map(d => {
-                const dispatchDate = window._parseDispatchDate(d) || new Date();
+                const dispatchDate = _getEffectiveDate(d);
                 const invoiceValue = d._invoiceValue != null ? d._invoiceValue : (d.total || 0);
                 const redespBadge = d._isRedesp ? `<span style="font-size:0.65rem;background:var(--accent-warning,#f59e0b);color:#000;border-radius:4px;padding:1px 4px;margin-left:4px;">REDESP</span>` : '';
                 // v3.11.30: badge visual para NFs já pagas — visível mas diferenciado

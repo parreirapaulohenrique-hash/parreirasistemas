@@ -1,6 +1,6 @@
 {
-    "version": "3.11.43",
-    "change": "v3.11.43 - fix: corrigida cadeia completa de diferenca fantasma na conferencia de fatura — (1) invoiceValue arredondado na origem (evita float de subtracao mainTotal), (2) updateInvoiceComparison usa tolerancia 0.01 no display (elimina +R$0,00 vermelho), (3) confirmInvoicePayment mantem correcao v3.11.42.",
+    "version": "3.11.44",
+    "change": "v3.11.44 - fix: conferencia de fatura agora usa data retroativa (d.date) ao filtrar por mes e exibir data — _parseDispatchDate priorizava dispatchedAt (hora do registro), ignorando a data retroativa informada na cotacao.",
     "lastUpdate": "2026-06-11",
-    "deployedAt": "2026-06-11 10:11"
+    "deployedAt": "2026-06-11 10:20"
 }
