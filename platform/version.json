@@ -1,7 +1,7 @@
-﻿{
-    "version": "3.11.27",
-    "change": "v3.11.27 - fix: SyntaxError causado por redeclaracao de const. Sistema nao carregava usuarios do tenant.",
-    "lastUpdate": "2026-06-05",
-    "build": "20260605",
-    "deployedAt": "2026-06-05 17:55"
+{
+    "version": "3.11.51",
+    "change": "v3.11.51 - fix: transportadora RA - NFs de abril (status legado 'concluido' no Firestore) agora aparecem na conferencia de fatura. Normalizacao de status em getFullDispatchesHistory + filtros VALID_STATUSES atualizados.",
+    "lastUpdate": "2026-06-12",
+    "build": "20260612",
+    "deployedAt": "2026-06-12 09:18"
 }

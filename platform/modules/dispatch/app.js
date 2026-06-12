@@ -1,4 +1,4 @@
-﻿document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', async () => {
     try {
         // GLOBAL UI UTILS
         window.showToast = (msg) => {
@@ -3848,7 +3848,8 @@
 
             // v3.11.30: inclui transportadoras de NFs PAGAS também (evita sumiço de registros antigos)
             const dispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
-            const VALID_STATUSES = ['Despachado', 'Pago'];
+            const VALID_STATUSES = ['Despachado', 'Pago', 'concluido']; // v3.11.51: inclui legado Firestore
+
 
             // Coleta transportadoras principais
             const mainCarriers = dispatches
@@ -3903,7 +3904,8 @@
             // v3.11.30: inclui Despachado E Pago — NFs já pagas não somem mais da conferência
             const dispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
             const carrierNorm = carrier.toUpperCase().trim();
-            const VALID_STATUSES_FILTER = ['Despachado', 'Pago'];
+            const VALID_STATUSES_FILTER = ['Despachado', 'Pago', 'concluido']; // v3.11.51: 'concluido' = legado Firestore (ex-RA abril)
+
 
             console.log(`[InvoiceFilter v3.11.30] Buscando NFs para ${carrierNorm}. Total despachos: ${dispatches.length}`);
 

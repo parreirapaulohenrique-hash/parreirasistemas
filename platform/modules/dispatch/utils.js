@@ -331,6 +331,14 @@ const Utils = {
 
             let all = Array.from(map.values());
 
+            // v3.11.51: Normaliza status legado 'concluido' → 'Despachado' em memória
+            // (registros antigos do Firestore não passaram pela migração do localStorage)
+            all.forEach(d => {
+                if (d.status === 'concluido') d.status = 'Despachado';
+                if (d.status === 'pendente')  d.status = 'Pendente Despacho';
+                if (d.status === 'cancelado') d.status = 'Cancelado';
+            });
+
             // Ordena em memória: d.id é Date.now() (mais confiável), d.date como fallback
             all.sort((a, b) => {
                 const da = Number(a.id) || (a.date ? new Date(a.date).getTime() : 0);
