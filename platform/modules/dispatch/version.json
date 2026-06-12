@@ -1,6 +1,6 @@
 {
-    "version": "3.11.50",
-    "change": "v3.11.50 - feat: ferramenta de recálculo retroativo TNORTE — pré-visualização dry-run com tabela de diff + aplicação com senha supervisor. Filtro cirurgíco: só TNORTE, só até hoje. Auditoria: _recalcAt, _totalAntes, _recalcVersion.",
-    "lastUpdate": "2026-06-11",
-    "deployedAt": "2026-06-11 17:49"
+    "version": "3.11.51",
+    "change": "v3.11.51 - fix: transportadora RA - NFs de abril (status legado 'concluido' no Firestore) agora aparecem na conferencia de fatura. Normalizacao de status em getFullDispatchesHistory + filtros VALID_STATUSES atualizados.",
+    "lastUpdate": "2026-06-12",
+    "deployedAt": "2026-06-12 09:22"
 }
