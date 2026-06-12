@@ -1,6 +1,6 @@
 {
-    "version": "3.11.51",
-    "change": "v3.11.51 - fix: transportadora RA - NFs de abril (status legado 'concluido' no Firestore) agora aparecem na conferencia de fatura. Normalizacao de status em getFullDispatchesHistory + filtros VALID_STATUSES atualizados.",
+    "version": "3.11.52",
+    "change": "v3.11.52 - diag: log detalhado de status únicos por transportadora para identificar NFs de abril (RA) não visíveis. Investiga status legado não mapeado.",
     "lastUpdate": "2026-06-12",
-    "deployedAt": "2026-06-12 09:22"
+    "deployedAt": "2026-06-12 13:05"
 }

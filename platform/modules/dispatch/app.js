@@ -3807,19 +3807,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const prevSelected = new Set(reset ? [] : window.getSelectedInvoiceMonths());
             const monthsSet = new Set();
             dispatches.forEach(d => {
-                // Tenta d.date primeiro (data retroativa/intencional), depois dispatchedAt, depois _parseDispatchDate
-                let dt = null;
-                if (d.date) {
-                    const parsed = new Date(d.date);
-                    if (!isNaN(parsed.getTime())) dt = parsed;
-                }
-                if (!dt && d.dispatchedAt) {
-                    const parsed = new Date(d.dispatchedAt?.seconds ? d.dispatchedAt.seconds * 1000 : d.dispatchedAt);
-                    if (!isNaN(parsed.getTime())) dt = parsed;
-                }
-                if (!dt && window._parseDispatchDate) {
-                    dt = window._parseDispatchDate(d);
-                }
+                // v3.11.52: usa _parseDispatchDate que suporta todos os formatos
+                // (ISO, Firestore Timestamp, {seconds}, número, fallback d.id)
+                const dt = window._parseDispatchDate ? window._parseDispatchDate(d) : null;
                 if (!dt || isNaN(dt.getTime())) return;
                 monthsSet.add(`${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`);
             });
@@ -3906,18 +3896,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             const carrierNorm = carrier.toUpperCase().trim();
             const VALID_STATUSES_FILTER = ['Despachado', 'Pago', 'concluido']; // v3.11.51: 'concluido' = legado Firestore (ex-RA abril)
 
+            // v3.11.52 DIAG: exibe todos status únicos encontrados para esta transportadora
+            const _dispForCarrier = dispatches.filter(d =>
+                (d.carrier && d.carrier.toUpperCase().trim() === carrierNorm) ||
+                (d.redespCarrier && d.redespCarrier.toUpperCase().trim() === carrierNorm)
+            );
+            const _uniqueStatuses = [...new Set(_dispForCarrier.map(d => d.status))];
+            console.log(`[InvoiceFilter DIAG v3.11.52] NFs para ${carrierNorm}: ${_dispForCarrier.length} (qualquer status)`);
+            console.log(`[InvoiceFilter DIAG v3.11.52] Status únicos: ${JSON.stringify(_uniqueStatuses)}`);
+
 
             console.log(`[InvoiceFilter v3.11.30] Buscando NFs para ${carrierNorm}. Total despachos: ${dispatches.length}`);
-            // v3.11.52-diag: loga candidatos para diagnóstico de RA
-            const _diag = dispatches.filter(d => {
-                const c = (d.carrier || '').toUpperCase();
-                const rc = (d.redespCarrier || '').toUpperCase();
-                return c.includes('R A') || c.includes(' RA') || rc.includes('R A') || rc.includes(' RA');
-            });
-            console.log(`[DIAG-RA] ${_diag.length} registros com carrier contendo "RA":`, _diag.map(d => ({
-                nf: d.nf || d.codigo, status: d.status, carrier: d.carrier,
-                redespCarrier: d.redespCarrier, date: d.date, dispatchedAt: d.dispatchedAt
-            })));
+
 
 
             let filtered = dispatches
@@ -3952,9 +3942,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const _selectedMonths = window.getSelectedInvoiceMonths();
             if (_selectedMonths.length > 0) {
                 filtered = filtered.filter(d => {
-                    // usa d.date (data retroativa/intencional) — FIX v3.11.44
-                    const raw = d.date || null;
-                    const dispatchDate = raw ? new Date(raw) : window._parseDispatchDate(d);
+                    // v3.11.52: usa _parseDispatchDate (robusta) para obter mês correto
+                    const dispatchDate = window._parseDispatchDate(d);
                     if (!dispatchDate || isNaN(dispatchDate.getTime())) return false;
                     const key = `${dispatchDate.getFullYear()}-${String(dispatchDate.getMonth() + 1).padStart(2, '0')}`;
                     return _selectedMonths.includes(key);
