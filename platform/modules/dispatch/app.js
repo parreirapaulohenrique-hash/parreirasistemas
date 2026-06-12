@@ -3894,30 +3894,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             // v3.11.30: inclui Despachado E Pago — NFs já pagas não somem mais da conferência
             const dispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
             const carrierNorm = carrier.toUpperCase().trim();
-            const VALID_STATUSES_FILTER = ['Despachado', 'Pago', 'concluido']; // v3.11.51: 'concluido' = legado Firestore (ex-RA abril)
+            const carrierNormNoSpace = carrierNorm.replace(/\s+/g, ''); // v3.11.54: sem espaços para fuzzy match
+            const VALID_STATUSES_FILTER = ['Despachado', 'Pago', 'concluido'];
 
-            // v3.11.52 DIAG: exibe todos status únicos encontrados para esta transportadora
-            const _dispForCarrier = dispatches.filter(d =>
-                (d.carrier && d.carrier.toUpperCase().trim() === carrierNorm) ||
-                (d.redespCarrier && d.redespCarrier.toUpperCase().trim() === carrierNorm)
-            );
-            const _uniqueStatuses = [...new Set(_dispForCarrier.map(d => d.status))];
-            console.log(`[InvoiceFilter DIAG v3.11.52] NFs para ${carrierNorm}: ${_dispForCarrier.length} (qualquer status)`);
-            console.log(`[InvoiceFilter DIAG v3.11.52] Status únicos: ${JSON.stringify(_uniqueStatuses)}`);
+            // v3.11.54: helper de comparação — remove espaços de ambos os lados antes de comparar
+            // Resolve: "RA" (dropdown) !== "R A TRANSPORTES" (Firestore) → agora bate "RA" === "RATRANSPORTES".startsWith("RA") ✓
+            const _carrierMatch = (nfCarrier) => {
+                if (!nfCarrier) return false;
+                const n = nfCarrier.toUpperCase().trim();
+                const nNoSpace = n.replace(/\s+/g, '');
+                return n === carrierNorm || nNoSpace === carrierNormNoSpace ||
+                       nNoSpace.startsWith(carrierNormNoSpace) || carrierNormNoSpace.startsWith(nNoSpace);
+            };
 
-
-            console.log(`[InvoiceFilter v3.11.30] Buscando NFs para ${carrierNorm}. Total despachos: ${dispatches.length}`);
-
-
+            console.log(`[InvoiceFilter v3.11.54] Buscando NFs para ${carrierNorm} (semEspaço: ${carrierNormNoSpace}). Total despachos: ${dispatches.length}`);
 
             let filtered = dispatches
                 .filter(d => VALID_STATUSES_FILTER.includes(d.status) && (
-                    (d.carrier && d.carrier.toUpperCase().trim() === carrierNorm) ||
-                    (d.redespCarrier && d.redespCarrier.toUpperCase().trim() === carrierNorm && d.redespTotal > 0)
+                    _carrierMatch(d.carrier) ||
+                    (_carrierMatch(d.redespCarrier) && d.redespTotal > 0)
                 ))
                 .map(d => {
-                    const isRedesp = d.redespCarrier && d.redespCarrier.toUpperCase().trim() === carrierNorm &&
-                                     !(d.carrier && d.carrier.toUpperCase().trim() === carrierNorm);
+                    const isRedesp = _carrierMatch(d.redespCarrier) && !_carrierMatch(d.carrier);
                     // Calcula o valor correto para esta transportadora
                     let invoiceValue;
                     if (isRedesp) {

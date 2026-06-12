@@ -1,6 +1,6 @@
 {
-    "version": "3.11.53",
-    "change": "v3.11.53 - diag: investiga RA como redespacho da VIOPEX. Exibe todos redespCarrier únicos + NFs VIOPEX com redespacho.",
+    "version": "3.11.54",
+    "change": "v3.11.54 - fix: transportadora RA agora encontra NFs salvas como 'R A TRANSPORTES' no Firestore. Comparação de carrier normaliza espaços antes de comparar.",
     "lastUpdate": "2026-06-12",
-    "deployedAt": "2026-06-12 15:00"
+    "deployedAt": "2026-06-12 15:28"
 }

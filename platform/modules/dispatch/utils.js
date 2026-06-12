@@ -331,31 +331,6 @@ const Utils = {
 
             let all = Array.from(map.values());
 
-            // v3.11.53 DIAG: investiga RA como carrier E redespCarrier
-            const _raRaw = all.filter(d =>
-                (d.carrier && d.carrier.toUpperCase().trim() === 'RA') ||
-                (d.redespCarrier && d.redespCarrier.toUpperCase().trim() === 'RA')
-            );
-            if (_raRaw.length > 0) {
-                const _raStatuses = [...new Set(_raRaw.map(d => d.status))];
-                console.log(`[Utils DIAG v3.11.53] RA encontrada em ${_raRaw.length} NFs. Status BRUTOS: ${JSON.stringify(_raStatuses)}`);
-            } else {
-                console.log(`[Utils DIAG v3.11.53] RA NÃO encontrada em carrier nem redespCarrier`);
-            }
-            // Mostra TODOS os redespCarrier únicos (fundamental para detectar RA como redespacho)
-            const _allRedespCarriers = [...new Set(all.map(d => d.redespCarrier).filter(Boolean))];
-            console.log(`[Utils DIAG v3.11.53] redespCarrier únicos: ${JSON.stringify(_allRedespCarriers)}`);
-            // NFs da VIOPEX com redespacho (independente do redespTotal)
-            const _viopexComRedesp = all.filter(d =>
-                d.carrier && d.carrier.toUpperCase().trim() === 'VIOPEX' && d.redespCarrier
-            );
-            console.log(`[Utils DIAG v3.11.53] VIOPEX com redespCarrier: ${_viopexComRedesp.length} NFs`);
-            if (_viopexComRedesp.length > 0) {
-                const _vr = _viopexComRedesp.map(d => `${d.redespCarrier}|total=${d.total}|redespTotal=${d.redespTotal}|status=${d.status}`).slice(0, 5);
-                console.log(`[Utils DIAG v3.11.53] VIOPEX+redesp (primeiros 5): ${JSON.stringify(_vr)}`);
-            }
-
-
             // v3.11.51: Normaliza status legado 'concluido' → 'Despachado' em memória
             // (registros antigos do Firestore não passaram pela migração do localStorage)
             all.forEach(d => {
