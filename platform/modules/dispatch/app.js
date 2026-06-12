@@ -3908,6 +3908,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
             console.log(`[InvoiceFilter v3.11.30] Buscando NFs para ${carrierNorm}. Total despachos: ${dispatches.length}`);
+            // v3.11.52-diag: loga candidatos para diagnóstico de RA
+            const _diag = dispatches.filter(d => {
+                const c = (d.carrier || '').toUpperCase();
+                const rc = (d.redespCarrier || '').toUpperCase();
+                return c.includes('R A') || c.includes(' RA') || rc.includes('R A') || rc.includes(' RA');
+            });
+            console.log(`[DIAG-RA] ${_diag.length} registros com carrier contendo "RA":`, _diag.map(d => ({
+                nf: d.nf || d.codigo, status: d.status, carrier: d.carrier,
+                redespCarrier: d.redespCarrier, date: d.date, dispatchedAt: d.dispatchedAt
+            })));
+
 
             let filtered = dispatches
                 .filter(d => VALID_STATUSES_FILTER.includes(d.status) && (
