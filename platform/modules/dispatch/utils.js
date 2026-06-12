@@ -331,6 +331,29 @@ const Utils = {
 
             let all = Array.from(map.values());
 
+            // v3.11.52 DIAG: captura status BRUTOS antes de normalizar
+            const _raRaw = all.filter(d =>
+                (d.carrier && d.carrier.toUpperCase().trim() === 'RA') ||
+                (d.redespCarrier && d.redespCarrier.toUpperCase().trim() === 'RA')
+            );
+            if (_raRaw.length > 0) {
+                const _raStatuses = [...new Set(_raRaw.map(d => d.status))];
+                console.log(`[Utils DIAG v3.11.52] RA - ${_raRaw.length} NFs no Firestore. Status BRUTOS: ${JSON.stringify(_raStatuses)}`);
+                // Log de abril especificamente
+                const _aprilRa = _raRaw.filter(d => {
+                    const raw = d.dispatchedAt || d.date || d.createdAt;
+                    if (!raw) return false;
+                    const dt = raw.toDate ? raw.toDate() : (raw.seconds ? new Date(raw.seconds * 1000) : new Date(raw));
+                    return dt && !isNaN(dt) && dt.getMonth() === 3; // abril = mês 3 (0-indexed)
+                });
+                console.log(`[Utils DIAG v3.11.52] RA - NFs de ABRIL: ${_aprilRa.length}. Status brutos abril: ${JSON.stringify([...new Set(_aprilRa.map(d => d.status))])}`);
+            } else {
+                console.log(`[Utils DIAG v3.11.52] RA - NENHUMA NF encontrada no Firestore com carrier='RA'`);
+                // Mostra os primeiros 5 carriers únicos para checar grafia
+                const _allCarriers = [...new Set(all.map(d => d.carrier).filter(Boolean))].slice(0, 20);
+                console.log(`[Utils DIAG v3.11.52] Carriers encontrados: ${JSON.stringify(_allCarriers)}`);
+            }
+
             // v3.11.51: Normaliza status legado 'concluido' → 'Despachado' em memória
             // (registros antigos do Firestore não passaram pela migração do localStorage)
             all.forEach(d => {

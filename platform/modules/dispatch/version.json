@@ -1,6 +1,6 @@
 {
     "version": "3.11.52",
-    "change": "v3.11.52 - diag: log detalhado de status únicos por transportadora para identificar NFs de abril (RA) não visíveis. Investiga status legado não mapeado.",
+    "change": "v3.11.52 - diag: log de status brutos do Firestore para transportadora RA antes da normalização. Identifica NFs de abril ausentes.",
     "lastUpdate": "2026-06-12",
-    "deployedAt": "2026-06-12 13:05"
+    "deployedAt": "2026-06-12 13:12"
 }
