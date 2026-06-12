@@ -2305,6 +2305,31 @@
                         <p>Parametrização de automações e regras globais de despacho.</p>
                     </div>
 
+                    <!-- CARD: FERRAMENTA DE RECÁLCULO RETROATIVO TNORTE -->
+                    <div class="card" style="margin-top: 1rem; margin-bottom: 1.5rem; border: 1px solid rgba(245,158,11,0.35);">
+                        <div class="card-header" style="background: rgba(245,158,11,0.07);">
+                            <h3 style="font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                                <span class="material-icons-round" style="color:#f59e0b;">update</span>
+                                Recálculo Retroativo de Fretes — TNORTE
+                            </h3>
+                        </div>
+                        <div class="card-body" style="padding: 1.25rem 1.5rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+                            <div style="flex:1; min-width:260px;">
+                                <p style="margin:0 0 .35rem; font-size:.9rem; font-weight:600;">Recalcular fretes históricos pela tabela atual</p>
+                                <p style="margin:0; font-size:.82rem; color:var(--text-secondary);">
+                                    Aplica a tabela de preços <strong>atual da TNORTE</strong> a todos os despachos lançados até hoje.
+                                    Exibe uma pré-visualização com os valores antigos × novos antes de qualquer alteração.
+                                    Outras transportadoras <strong>não são afetadas</strong>.
+                                </p>
+                            </div>
+                            <button id="btnOpenTNorteRecalc2" class="btn btn-secondary" onclick="window.openTNorteRecalcTool()"
+                                style="display:flex;align-items:center;gap:.5rem;padding:.65rem 1.25rem;border-color:rgba(245,158,11,.5);color:#f59e0b;white-space:nowrap;">
+                                <span class="material-icons-round" style="font-size:1.1rem;">manage_search</span>
+                                Ver Pré-visualização
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="card" style="margin-top: 1rem; max-width: 600px;">
                         <div class="card-header">
                             <h3 style="display: flex; align-items: center; gap: 0.5rem;">

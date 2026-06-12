@@ -1,6 +1,6 @@
 {
-    "version": "3.11.54",
-    "change": "v3.11.54 - fix: transportadora RA agora encontra NFs salvas como 'R A TRANSPORTES' no Firestore. Comparação de carrier normaliza espaços antes de comparar.",
+    "version": "3.11.55",
+    "change": "v3.11.55 - fix: card Recálculo Retroativo TNORTE agora aparece em Configurações (view-app-settings). Antes estava somente em Cadastro Transportadora.",
     "lastUpdate": "2026-06-12",
-    "deployedAt": "2026-06-12 15:28"
+    "deployedAt": "2026-06-12 16:00"
 }
