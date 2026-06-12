@@ -296,6 +296,9 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
+| **3.11.52** | 2026-06-12 | Dispatch: log de diagnóstico [DIAG-RA] para investigar NFs de abril da RA que não aparecem na conferência de fatura |
+| **3.11.51** | 2026-06-12 | Dispatch: fix transportadora RA — NFs de abril com status legado 'concluido' no Firestore agora aparecem na conferência. Normalização em getFullDispatchesHistory + VALID_STATUSES/VALID_STATUSES_FILTER atualizados |
+
 | **11.23.9** | 2026-05-27 | ERP Consultoria: Prioridade absoluta do valor manual sobre PDF nos grupos 1/2/3/7; 'Custo de Aquisição' adicionado ao MANUAL_GROUPS restaurando campos de entrada das contas 2.x |
 | **11.23.8** | 2026-05-27 | ERP Consultoria: Seção 3 (Custo) reposicionada antes das contas de custo; matching PDF/Excel por código exato (aliases removidos); edição inline de códigos desativada; botão Auto-Vincular sempre visível; dropdown Grupo corrigido no modal de vinculação |
 | **11.23.4** | 2026-05-25 | ERP Consultoria: Excel parser seleciona automaticamente a aba correspondente ao período do dashboard (ex: MARÇO, MAR, 03) |
