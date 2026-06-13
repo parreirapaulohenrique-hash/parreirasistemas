@@ -1,6 +1,6 @@
 {
-    "version": "3.11.55",
-    "change": "v3.11.55 - fix: card Recálculo Retroativo TNORTE agora aparece em Configurações (view-app-settings). Antes estava somente em Cadastro Transportadora.",
-    "lastUpdate": "2026-06-12",
-    "deployedAt": "2026-06-12 16:00"
+    "version": "3.11.56",
+    "change": "v3.11.56 - fix: Recálculo Retroativo TNORTE agora re-lê regras e configs do storage antes de calcular (evita falha quando Firestore ainda não terminou de carregar no init).",
+    "lastUpdate": "2026-06-13",
+    "deployedAt": "2026-06-13 09:00"
 }

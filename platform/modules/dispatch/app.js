@@ -4195,6 +4195,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('tnorteRecalcBody').innerHTML =
                 '<div style="text-align:center;padding:3rem;color:var(--text-secondary);"><span class="material-icons-round" style="font-size:3rem;display:block;animation:spin 1s linear infinite;">sync</span><p style="margin-top:1rem;">Carregando histórico de despachos...</p></div>';
             document.getElementById('btnApplyTNorteRecalc').style.display = 'none';
+
+            // v3.11.56: sempre re-ler regras do storage ANTES de calcular
+            // (evita "Sem Regra" quando as tabelas chegaram do Firestore após o init)
+            rules = Utils.getStorage('freight_tables') || [];
+            console.log(`[RecalcTNORTE v3.11.56] rules carregadas: ${rules.length} total`);
+            const tnorteRules = rules.filter(r => (r.transportadora || '').toUpperCase().trim() === 'TNORTE');
+            console.log(`[RecalcTNORTE v3.11.56] regras TNORTE: ${tnorteRules.length}`);
+            if (tnorteRules.length > 0) {
+                const cidades = [...new Set(tnorteRules.map(r => r.cidade))].slice(0, 8);
+                console.log(`[RecalcTNORTE v3.11.56] cidades TNORTE (amostra): ${JSON.stringify(cidades)}`);
+            }
+
             const allDispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
             const cutoff = new Date(); cutoff.setHours(23, 59, 59, 999);
             const tnorteDispatches = allDispatches.filter(d => {
@@ -4206,6 +4218,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.getElementById('tnorteRecalcBody').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-secondary);"><span class="material-icons-round" style="font-size:2.5rem;">search_off</span><p>Nenhum despacho da TNORTE encontrado no histórico.</p></div>';
                 return;
             }
+
+            // v3.11.56: se ainda não tem regras, mostrar aviso claro
+            if (tnorteRules.length === 0) {
+                document.getElementById('tnorteRecalcBody').innerHTML = `
+                    <div style="text-align:center;padding:2rem;">
+                        <span class="material-icons-round" style="font-size:2.5rem;color:#f59e0b;">warning</span>
+                        <p style="margin-top:1rem;font-weight:600;">Nenhuma regra da TNORTE encontrada na tabela de fretes.</p>
+                        <p style="font-size:.85rem;color:var(--text-secondary);">Acesse <strong>Tabelas de Frete</strong> e verifique se as regras da TNORTE estão cadastradas antes de recalcular.</p>
+                        <p style="font-size:.8rem;color:var(--text-secondary);margin-top:.5rem;">Total de regras carregadas: <strong>${rules.length}</strong></p>
+                    </div>`;
+                return;
+            }
+
+            // v3.11.56: também re-ler carrierConfigs do storage
+            carrierConfigs = Utils.getStorage('carrier_configs') || {};
             const cfgNorm = {};
             Object.keys(carrierConfigs).forEach(k => { cfgNorm[k.toUpperCase().trim()] = carrierConfigs[k]; });
             const results = tnorteDispatches.map(d => {

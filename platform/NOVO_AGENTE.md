@@ -296,6 +296,10 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
+| **3.11.56** | 2026-06-13 | Dispatch: fix Recálculo Retroativo TNORTE — regras e configs re-lidas do storage no momento do cálculo, evitando falha quando Firestore ainda não terminou de carregar no init |
+| **3.11.55** | 2026-06-12 | Dispatch: card Recálculo Retroativo TNORTE agora aparece em Configurações (view-app-settings). Antes estava somente em Cadastro Transportadora |
+| **3.11.54** | 2026-06-12 | Dispatch: fix transportadora RA — helper _carrierMatch com normalização de espaços (replace /\s+/g) resolve visibilidade de NFs da VIOPEX despachadas com redespacho 'R A TRANSPORTES' |
+| **3.11.53** | 2026-06-12 | Dispatch: remoção de logs de diagnóstico [DIAG-RA] de utils.js após resolução do bug de visibilidade |
 | **3.11.52** | 2026-06-12 | Dispatch: log de diagnóstico [DIAG-RA] para investigar NFs de abril da RA que não aparecem na conferência de fatura |
 | **3.11.51** | 2026-06-12 | Dispatch: fix transportadora RA — NFs de abril com status legado 'concluido' no Firestore agora aparecem na conferência. Normalização em getFullDispatchesHistory + VALID_STATUSES/VALID_STATUSES_FILTER atualizados |
 
