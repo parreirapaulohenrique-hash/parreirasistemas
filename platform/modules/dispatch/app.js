@@ -121,7 +121,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         // if (rules.length === 0 && window.initialTabelas) { ... }
 
         let carrierConfigs = Utils.getStorage('carrier_configs');
-        if (Object.keys(carrierConfigs).length === 0) {
+        // v3.11.57: fix TypeError — getStorage pode retornar null quando a chave não existe
+        if (!carrierConfigs || typeof carrierConfigs !== 'object' || Array.isArray(carrierConfigs) || Object.keys(carrierConfigs).length === 0) {
             // Initial empty state, will be populated based on existing carriers
             carrierConfigs = {};
         }

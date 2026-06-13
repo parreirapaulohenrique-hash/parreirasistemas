@@ -1,6 +1,6 @@
 {
-    "version": "3.11.56",
-    "change": "v3.11.56 - fix: Recálculo Retroativo TNORTE agora re-lê regras e configs do storage antes de calcular (evita falha quando Firestore ainda não terminou de carregar no init).",
+    "version": "3.11.57",
+    "change": "v3.11.57 - fix: TypeError crítico em carrierConfigs (Object.keys de null) que impedia o login de carregar. Sistema não iniciava o _doDispatchLogin.",
     "lastUpdate": "2026-06-13",
-    "deployedAt": "2026-06-13 09:00"
+    "deployedAt": "2026-06-13 11:51"
 }
