@@ -1,15 +1,15 @@
 /**
  * ParreiraLog Service Worker
  * Enables offline caching and PWA functionality
- * Version: 1.8.3 - Network First Strategy
+ * Version: 3.11.56 - Network First Strategy
  */
 
-const CACHE_NAME = 'parreiralog-v1.8.3';
+const CACHE_NAME = 'parreiralog-v3.11.56';
 const CACHE_URLS = [
     '/',
     '/index.html',
     '/styles.css',
-    '/app.js',
+    '/app.js?v=3.11.56',
     '/utils.js',
     '/data.js',
     '/firebase-config.js',
@@ -21,7 +21,7 @@ const CACHE_URLS = [
 
 // Install event - cache core files
 self.addEventListener('install', (event) => {
-    console.log('[SW] Installing Service Worker v1.8.3...');
+    console.log('[SW] Installing Service Worker v3.11.56...');
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
