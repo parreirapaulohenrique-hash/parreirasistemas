@@ -296,6 +296,8 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
+| **3.11.58** | 2026-06-15 | Dispatch: fix login — _doDispatchLogin registrado imediatamente (antes do await Cloud.loadAll) para evitar timeout do timer de 3s; handler real em _doDispatchLoginReal; catch exibe erro visual no botão e libera _appReady |
+| **3.11.57** | 2026-06-15 | Dispatch: fix TypeError — Object.keys(carrierConfigs) proteção contra null/undefined quando getStorage retorna null para chave inexistente |
 | **3.11.56** | 2026-06-13 | Dispatch: fix Recálculo Retroativo TNORTE — regras e configs re-lidas do storage no momento do cálculo, evitando falha quando Firestore ainda não terminou de carregar no init |
 | **3.11.55** | 2026-06-12 | Dispatch: card Recálculo Retroativo TNORTE agora aparece em Configurações (view-app-settings). Antes estava somente em Cadastro Transportadora |
 | **3.11.54** | 2026-06-12 | Dispatch: fix transportadora RA — helper _carrierMatch com normalização de espaços (replace /\s+/g) resolve visibilidade de NFs da VIOPEX despachadas com redespacho 'R A TRANSPORTES' |

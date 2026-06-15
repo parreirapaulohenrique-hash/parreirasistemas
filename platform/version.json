@@ -1,7 +1,7 @@
 {
-    "version": "3.11.51",
-    "change": "v3.11.51 - fix: transportadora RA - NFs de abril (status legado 'concluido' no Firestore) agora aparecem na conferencia de fatura. Normalizacao de status em getFullDispatchesHistory + filtros VALID_STATUSES atualizados.",
-    "lastUpdate": "2026-06-12",
-    "build": "20260612",
-    "deployedAt": "2026-06-12 09:18"
+    "version": "3.11.58",
+    "change": "v3.11.58 - fix: Dispatch - registro imediato de _doDispatchLogin antes do await Cloud.loadAll evita timeout do timer de 3s do index.html. Handler real em _doDispatchLoginReal. Catch exibe erro visual no botao de login e libera _appReady.",
+    "lastUpdate": "2026-06-15",
+    "build": "20260615",
+    "deployedAt": "2026-06-15 10:01"
 }

@@ -52,7 +52,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Isso evita que o timer de 3s do index.html marque o botão como erro
         // enquanto o Cloud.loadAll() busca dados do Firestore.
         let _appReady = false;
-        let _pendingLoginCall = null;
         window._doDispatchLogin = async () => {
             if (!_appReady) {
                 // App ainda sincronizando — aguarda até estar pronto (máx 15s)
@@ -582,10 +581,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // v3.11.58: Handler real — substitui o placeholder registrado no início
             window._doDispatchLoginReal = async () => {
-            // (mantém o alias antigo também por compatibilidade)
-            window._doDispatchLogin = window._doDispatchLoginReal;
-            _appReady = true;
-            return (async () => {
+            _appReady = true; // libera o placeholder ao entrar no handler real
+            window._doDispatchLogin = window._doDispatchLoginReal; // alias para compatibilidade
                 const login = loginUserSelect.value;
                 const pass = loginPassInput.value;
                 const tenantInput = document.getElementById('loginTenantInput');
@@ -725,6 +722,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             btnLogin.addEventListener('click', window._doDispatchLogin);
         }
+
+        // Marca app como pronto — libera o placeholder
+        _appReady = true;
 
         // Elements
 
@@ -8506,11 +8506,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             if (originalShowSection) originalShowSection(id);
         };
-            })(); // encerra o IIFE do _doDispatchLoginReal
-            }; // encerra window._doDispatchLoginReal
-
-        // Marca app como pronto — libera o placeholder
-        _appReady = true;
 
     } catch (err) {
         // v3.11.58: Exibe erro visível na tela além do console
