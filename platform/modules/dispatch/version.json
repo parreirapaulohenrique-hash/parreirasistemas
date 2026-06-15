@@ -1,6 +1,6 @@
 {
-    "version": "3.11.57",
-    "change": "v3.11.57 - fix: TypeError crítico em carrierConfigs (Object.keys de null) que impedia o login de carregar. Sistema não iniciava o _doDispatchLogin.",
-    "lastUpdate": "2026-06-13",
-    "deployedAt": "2026-06-13 11:51"
+    "version": "3.11.58",
+    "change": "v3.11.58 - fix DEFINITIVO: _doDispatchLogin registrado IMEDIATAMENTE no inicio do DOMContentLoaded (antes do await Cloud.loadAll), eliminando race condition com o timer de 3s do index.html.",
+    "lastUpdate": "2026-06-15",
+    "deployedAt": "2026-06-15 09:32"
 }

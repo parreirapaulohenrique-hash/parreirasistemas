@@ -48,6 +48,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             return result.trim();
         };
 
+        // v3.11.58: Registra _doDispatchLogin IMEDIATAMENTE (antes de qualquer await)
+        // Isso evita que o timer de 3s do index.html marque o botão como erro
+        // enquanto o Cloud.loadAll() busca dados do Firestore.
+        let _appReady = false;
+        let _pendingLoginCall = null;
+        window._doDispatchLogin = async () => {
+            if (!_appReady) {
+                // App ainda sincronizando — aguarda até estar pronto (máx 15s)
+                const btnTmp = document.getElementById('btnLogin');
+                if (btnTmp) { btnTmp.disabled = true; btnTmp.innerHTML = '⏳ Sincronizando...'; }
+                await new Promise((resolve) => {
+                    const t0 = Date.now();
+                    const check = setInterval(() => {
+                        if (_appReady || (Date.now() - t0) > 15000) {
+                            clearInterval(check);
+                            resolve();
+                        }
+                    }, 100);
+                });
+                if (btnTmp) { btnTmp.disabled = false; btnTmp.innerHTML = 'ACESSAR SISTEMA'; }
+            }
+            if (window._doDispatchLoginReal) {
+                return window._doDispatchLoginReal();
+            }
+        };
+
         // SYNC OVERLAY
         const loadingOverlay = document.createElement('div');
         loadingOverlay.id = 'syncOverlay';
@@ -554,8 +580,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (btnLogin) {
 
-            // Expõe o handler globalmente para o onclick do HTML (proteção contra falha de addEventListener)
-            window._doDispatchLogin = async () => {
+            // v3.11.58: Handler real — substitui o placeholder registrado no início
+            window._doDispatchLoginReal = async () => {
+            // (mantém o alias antigo também por compatibilidade)
+            window._doDispatchLogin = window._doDispatchLoginReal;
+            _appReady = true;
+            return (async () => {
                 const login = loginUserSelect.value;
                 const pass = loginPassInput.value;
                 const tenantInput = document.getElementById('loginTenantInput');
@@ -8476,8 +8506,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             if (originalShowSection) originalShowSection(id);
         };
+            })(); // encerra o IIFE do _doDispatchLoginReal
+            }; // encerra window._doDispatchLoginReal
+
+        // Marca app como pronto — libera o placeholder
+        _appReady = true;
 
     } catch (err) {
+        // v3.11.58: Exibe erro visível na tela além do console
         console.error("FATAL ERROR IN APP.JS:", err);
+        _appReady = true; // libera o placeholder mesmo em caso de erro
+        const btnErr = document.getElementById('btnLogin');
+        if (btnErr) {
+            btnErr.style.background = '#dc2626';
+            btnErr.textContent = '⚠ ERRO: ' + (err && err.message ? err.message.substring(0,60) : 'Recarregue a página');
+        }
     }
 });

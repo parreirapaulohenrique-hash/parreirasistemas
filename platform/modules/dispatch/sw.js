@@ -4,12 +4,12 @@
  * Version: 3.11.56 - Network First Strategy
  */
 
-const CACHE_NAME = 'parreiralog-v3.11.56';
+const CACHE_NAME = 'parreiralog-v3.11.58';
 const CACHE_URLS = [
     '/',
     '/index.html',
     '/styles.css',
-    '/app.js?v=3.11.56',
+    '/app.js?v=3.11.58',
     '/utils.js',
     '/data.js',
     '/firebase-config.js',
