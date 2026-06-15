@@ -561,10 +561,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Executar ao sair do campo (blur)
             tenantInput.addEventListener('blur', loadUsersForTenant);
 
+            // Também executar enquanto digita (com debounce de 600ms)
+            let _tenantDebounce = null;
+            tenantInput.addEventListener('input', () => {
+                clearTimeout(_tenantDebounce);
+                _tenantDebounce = setTimeout(loadUsersForTenant, 600);
+            });
+
             // Também executar se usuário pressionar Enter no campo de tenant
             tenantInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
+                    clearTimeout(_tenantDebounce);
                     loadUsersForTenant();
                     loginPassInput.focus();
                 }
