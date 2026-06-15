@@ -1,7 +1,7 @@
 {
-    "version": "3.11.58",
-    "change": "v3.11.58 - fix: Dispatch - registro imediato de _doDispatchLogin antes do await Cloud.loadAll evita timeout do timer de 3s do index.html. Handler real em _doDispatchLoginReal. Catch exibe erro visual no botao de login e libera _appReady.",
+    "version": "3.11.59",
+    "change": "v3.11.59 - fix: Dispatch - botão de login travado em 'Carregando...': handler envolvido em try/catch/finally garante restauração do botão em qualquer cenário; timeout de 10s no Cloud.loadAll() do login evita travamento por Firebase lento.",
     "lastUpdate": "2026-06-15",
-    "build": "20260615",
-    "deployedAt": "2026-06-15 10:01"
+    "build": "20260615b",
+    "deployedAt": "2026-06-15 11:02"
 }

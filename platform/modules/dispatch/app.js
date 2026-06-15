@@ -587,10 +587,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (btnLogin) {
 
-            // v3.11.58: Handler real — substitui o placeholder registrado no início
+            // v3.11.59: Handler real — substitui o placeholder registrado no início
             window._doDispatchLoginReal = async () => {
             _appReady = true; // libera o placeholder ao entrar no handler real
             window._doDispatchLogin = window._doDispatchLoginReal; // alias para compatibilidade
+
+            // GARANTIA: botão SEMPRE é restaurado ao final (try/finally)
+            try {
                 const login = loginUserSelect.value;
                 const pass = loginPassInput.value;
                 const tenantInput = document.getElementById('loginTenantInput');
@@ -676,10 +679,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // Definir novo tenant
                     Utils.Cloud.setTenantId(tenantId);
 
-                    // Carregar dados DESTE tenant da nuvem
+                    // Carregar dados DESTE tenant da nuvem (com timeout de 10s)
                     if (Utils.Cloud && Utils.Cloud.hasTenant()) {
                         console.log(`📥 Carregando dados do tenant: ${tenantId}...`);
-                        await Utils.Cloud.loadAll();
+                        const loadTimeout = new Promise((_, reject) =>
+                            setTimeout(() => reject(new Error('Timeout ao carregar dados do tenant (10s)')), 10000)
+                        );
+                        try {
+                            await Promise.race([Utils.Cloud.loadAll(), loadTimeout]);
+                        } catch (loadErr) {
+                            console.warn('[Login] loadAll falhou ou timeout:', loadErr.message, '— continuando com dados locais.');
+                        }
                     }
                 }
 
@@ -718,14 +728,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                         window.OcorrenciasModule.init(window.db, tenantId, user);
                     }
 
-
                 } else {
-
-                    // Restaurar botão de login
-                    btnLogin.disabled = false;
-                    btnLogin.innerHTML = 'ACESSAR SISTEMA';
                     alert('Credenciais inválidas ou usuário não cadastrado nesta empresa.');
                 }
+            } catch (loginErr) {
+                console.error('[Login] Erro inesperado:', loginErr);
+                alert('Erro ao fazer login. Tente novamente.');
+            } finally {
+                // SEMPRE restaura o botão — independente de sucesso ou falha
+                if (btnLogin && loginOverlay && loginOverlay.style.display !== 'none') {
+                    btnLogin.disabled = false;
+                    btnLogin.innerHTML = 'ACESSAR SISTEMA';
+                }
+            }
             };
 
             btnLogin.addEventListener('click', window._doDispatchLogin);
