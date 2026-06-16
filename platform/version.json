@@ -1,7 +1,7 @@
 {
-    "version": "3.11.61",
-    "change": "v3.11.61 - fix CRÍTICO: App travando em '⏳ Sincronizando...' para sempre — Cloud.loadAll() na inicialização agora tem timeout de 8s e _appReady=true é garantido no finally (antes podia ficar esperando indefinidamente se Firebase travasse).",
+    "version": "3.11.62",
+    "change": "v3.11.62 - fix: Conferência de Fatura não mostrava NFs de redespacho legado (campo d.redespacho texto) na transportadora RA TRANSPORTES; agora suporta NFs antigas sem redespCarrier usando o campo redespacho herdado.",
     "lastUpdate": "2026-06-16",
-    "build": "20260616b",
-    "deployedAt": "2026-06-16 09:15"
+    "build": "20260616c",
+    "deployedAt": "2026-06-16 09:20"
 }

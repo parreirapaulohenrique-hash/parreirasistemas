@@ -3918,7 +3918,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 .filter(d => VALID_STATUSES.includes(d.status) && d.redespCarrier && d.redespTotal > 0)
                 .map(d => d.redespCarrier.toUpperCase().trim());
 
-            const allCarriers = [...new Set([...mainCarriers, ...redespCarriers])].sort();
+            // v3.11.62: suporte ao campo legado d.redespacho (NFs antigas sem redespCarrier)
+            const legacyRedespCarriers = dispatches
+                .filter(d => VALID_STATUSES.includes(d.status) && d.redespacho && d.redespacho !== '-' && d.redespacho !== '' && !d.redespCarrier)
+                .map(d => d.redespacho.toUpperCase().trim());
+
+            const allCarriers = [...new Set([...mainCarriers, ...redespCarriers, ...legacyRedespCarriers])].sort();
 
             select.innerHTML = '<option value="">-- Selecione --</option>';
             allCarriers.forEach(carrier => {
@@ -3979,15 +3984,29 @@ document.addEventListener('DOMContentLoaded', async () => {
             let filtered = dispatches
                 .filter(d => VALID_STATUSES_FILTER.includes(d.status) && (
                     _carrierMatch(d.carrier) ||
-                    (_carrierMatch(d.redespCarrier) && d.redespTotal > 0)
+                    (_carrierMatch(d.redespCarrier) && d.redespTotal > 0) ||
+                    // v3.11.62: suporte ao campo legado d.redespacho (NFs antigas)
+                    (_carrierMatch(d.redespacho) && !d.redespCarrier && d.redespacho && d.redespacho !== '-')
                 ))
                 .map(d => {
-                    const isRedesp = _carrierMatch(d.redespCarrier) && !_carrierMatch(d.carrier);
+                    // v3.11.62: detecta redespacho tanto pelo campo novo quanto pelo legado
+                    const isRedespNew = _carrierMatch(d.redespCarrier) && !_carrierMatch(d.carrier);
+                    const isRedespLegacy = !d.redespCarrier && _carrierMatch(d.redespacho) && !_carrierMatch(d.carrier)
+                                         && d.redespacho && d.redespacho !== '-';
+                    const isRedesp = isRedespNew || isRedespLegacy;
                     // Calcula o valor correto para esta transportadora
                     let invoiceValue;
-                    if (isRedesp) {
-                        // Redespacho: usa apenas o valor do redespacho
+                    if (isRedespNew) {
+                        // Redespacho novo: usa apenas o valor do redespacho
                         invoiceValue = d.redespTotal || 0;
+                    } else if (isRedespLegacy) {
+                        // Redespacho legado: usa redespTotal se existir, senão tenta calcular
+                        // (NFs antigas podem ter o valor em d.total e não ter mainTotal/redespTotal)
+                        invoiceValue = d.redespTotal || 0;
+                        // Se redespTotal não foi salvo, tenta extrair do percentualRedespacho
+                        if (!invoiceValue && d.percentualRedespacho && d.nfValue) {
+                            invoiceValue = Math.round(d.nfValue * (d.percentualRedespacho / 100) * 100) / 100;
+                        }
                     } else {
                         // Principal: usa o total menos o redespacho (evita dupla contagem)
                         // ✅ FIX v3.11.43: Math.round para evitar resíduo float na subtração
