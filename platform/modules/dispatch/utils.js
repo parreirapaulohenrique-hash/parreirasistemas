@@ -406,16 +406,25 @@ const Utils = {
                         }
 
                         if (doc.exists) {
-                            // Normal Load
+                            // FIX v3.11.63: Usa processIncomingData() que respeita Anti-Echo (lastWriteTime)
+                            // Antes: localStorage.setItem direto sobrescrevia dados locais sem verificação
                             const data = doc.data();
                             const tenantKey = `tenant_${this.tenantId}_${key}`;
                             if (data.isChunked) {
                                 if (this.loadChunks) {
-                                    const fullArray = await this.loadChunks(key, data.chunkCount);
-                                    localStorage.setItem(tenantKey, JSON.stringify(fullArray));
+                                    const lastWrite = Utils.lastWriteTime[key] || 0;
+                                    const timeSinceWrite = Date.now() - lastWrite;
+                                    if (timeSinceWrite < 60000) {
+                                        console.log(`🛡️ [loadAll Anti-Echo] Ignorando nuvem para ${key} (escrita há ${Math.round(timeSinceWrite/1000)}s).`);
+                                    } else {
+                                        const fullArray = await this.loadChunks(key, data.chunkCount);
+                                        localStorage.setItem(tenantKey, JSON.stringify(fullArray));
+                                    }
                                 }
                             } else {
-                                if (data.content && data.content.length >= 2) localStorage.setItem(tenantKey, data.content);
+                                if (data.content && data.content.length >= 2) {
+                                    this.processIncomingData(key, data.content);
+                                }
                             }
                         } else if (this.tenantId === 'ltdistribuidora') {
                             // --- MIGRATION CHECK: If missing in 'ltdistribuidora', check 'parreiralog' ---
@@ -429,11 +438,11 @@ const Utils = {
                                     // 1. Save to New Location (Async)
                                     window.db.collection('tenants').doc(this.tenantId).collection('legacy_store').doc(key).set(oldData);
 
-                                    // 2. Use Data Now
+                                    // 2. Use Data Now (via processIncomingData para respeitar Anti-Echo)
                                     if (oldData.isChunked) {
                                         console.warn('Skipping chunked migration auto-copy');
                                     } else {
-                                        if (oldData.content) localStorage.setItem(`tenant_${this.tenantId}_${key}`, oldData.content);
+                                        if (oldData.content) this.processIncomingData(key, oldData.content);
                                     }
                                 }
                             } catch (migErr) { console.warn('Migration check failed', migErr); }
@@ -583,8 +592,23 @@ const Utils = {
                 return;
             }
 
-            // 2. Anti-Rollback (Tamanho) - Ajustado para PERMITIR zerar dados ([] = 2 chars)
-            // Se veio da nuvem valido, a gente confia.
+            // 2. Anti-Rollback CRÍTICO para chaves de configuração (v3.11.63)
+            // Se a nuvem trouxer array vazio mas o local tem dados, MANTER o local e RE-HEALAR a nuvem
+            const CRITICAL_KEYS = ['carrier_list', 'freight_tables', 'carrier_configs'];
+            if (CRITICAL_KEYS.includes(key) && cloudContentString === '[]' && localContent && localContent !== '[]' && localContent !== 'null') {
+                console.warn(`🛡️ [Anti-Rollback] Nuvem tem [] para "${key}" mas local tem dados. Mantendo local e re-enviando para nuvem.`);
+                try {
+                    const localData = JSON.parse(localContent);
+                    if (Array.isArray(localData) && localData.length > 0) {
+                        // Re-salva dados locais na nuvem para corrigir Firestore corrompido
+                        Utils.lastWriteTime[key] = Date.now();
+                        this.save(key, localData);
+                    }
+                } catch(e) { console.warn('[Anti-Rollback] Erro ao re-healar nuvem:', e); }
+                return;
+            }
+
+            // 3. Anti-Rollback (Tamanho) - Aceita dados válidos da nuvem
             if (cloudContentString && cloudContentString.length >= 2) {
                 if (cloudContentString !== localContent) {
                     console.log(`🔄 [SaaS] Atualizando local: ${key}`);

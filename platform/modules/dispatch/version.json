@@ -1,7 +1,7 @@
 {
-    "version": "3.11.62",
-    "change": "v3.11.62 - fix: Conferência de Fatura não mostrava NFs de redespacho legado (campo d.redespacho texto) na transportadora RA TRANSPORTES; agora suporta NFs antigas sem redespCarrier usando o campo redespacho herdado.",
+    "version": "3.11.63",
+    "change": "v3.11.63 - fix CRÍTICO: Cadastros de transportadoras sumindo — loadAll() agora usa processIncomingData() com Anti-Echo; novo Anti-Rollback impede nuvem vazia ([]) de sobrescrever dados locais de carrier_list/freight_tables e auto-heala o Firestore corrompido.",
     "lastUpdate": "2026-06-16",
-    "build": "20260616c",
-    "deployedAt": "2026-06-16 09:20"
+    "build": "20260616d",
+    "deployedAt": "2026-06-16 09:45"
 }
