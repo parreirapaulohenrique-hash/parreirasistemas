@@ -508,24 +508,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Quando o usuário digitar o tenant e sair do campo, busca os usuários desse tenant
         const tenantInput = document.getElementById('loginTenantInput');
         if (tenantInput) {
-            // Função que busca usuários do tenant
+            // Função que busca usuários do tenant no Firestore
             const loadUsersForTenant = async () => {
                 const tenantId = tenantInput.value.trim().toLowerCase();
                 if (!tenantId) return;
 
-                // Verificar se Firebase está disponível
-                if (!window.db && typeof firebase !== 'undefined') {
-                    window.db = firebase.firestore();
+                // Garantir que window.db está disponível — com retry se Firebase ainda carregando
+                let db = window.db;
+                if (!db && typeof firebase !== 'undefined') {
+                    try { db = window.db = firebase.firestore(); } catch(e) { db = null; }
                 }
-                if (!window.db) {
-                    console.warn('Firebase não disponível para carregar usuários');
+                if (!db) {
+                    // Firebase ainda não pronto — tenta novamente em 1s (máx 3 tentativas)
+                    if (!(loadUsersForTenant._retries >= 3)) {
+                        loadUsersForTenant._retries = (loadUsersForTenant._retries || 0) + 1;
+                        console.warn(`[Login] Firebase não disponível ainda. Tentativa ${loadUsersForTenant._retries}/3 em 1s...`);
+                        setTimeout(loadUsersForTenant, 1000);
+                    } else {
+                        console.warn('[Login] Firebase indisponível após 3 tentativas — usando admin padrão.');
+                    }
                     return;
                 }
+                loadUsersForTenant._retries = 0; // reset para próxima chamada
 
                 console.log(`👥 [Login] Buscando usuários do tenant: ${tenantId}...`);
 
                 try {
-                    const doc = await window.db.collection('tenants').doc(tenantId).collection('legacy_store').doc('app_users').get();
+                    const doc = await db.collection('tenants').doc(tenantId).collection('legacy_store').doc('app_users').get();
 
                     if (doc.exists) {
                         const data = doc.data();
@@ -578,10 +587,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
 
-            // Se já tem valor no campo (ex: value="parreiralog"), carregar automaticamente
+            // Se já tem valor no campo (ex: value="ltdistribuidora"), carregar automaticamente
+            // Usa delay maior e retry interno para garantir que Firebase já inicializou
             if (tenantInput.value.trim()) {
-                // Pequeno delay para garantir que Firebase esteja pronto
-                setTimeout(loadUsersForTenant, 500);
+                setTimeout(loadUsersForTenant, 800);
             }
         }
 
@@ -5099,7 +5108,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log(`🔄 [Estorno] ${revertedCount} NFs encontradas com status 'Pago'. IDs: ${idsToRevert.join(', ')}`);
 
             // Atualiza localStorage com a lista completa e corrigida
-            Utils.setStorage('dispatches', updatedDispatches);
+            // CRÍTICO: Usa localStorage DIRETAMENTE (sem Cloud.save) para evitar o SYNC BLOQUEADO
+            // O Firestore já foi/será atualizado individualmente via dispatches_db (abaixo)
+            try {
+                const storageKey = Utils._storageKey('dispatches');
+                localStorage.setItem(storageKey, JSON.stringify(updatedDispatches));
+                Utils.lastWriteTime['dispatches'] = Date.now();
+            } catch (e) {
+                console.warn('[Estorno] Não foi possível atualizar localStorage de dispatches:', e);
+            }
 
             // 2b. Persiste no Firestore
             if (Utils.Cloud && Utils.Cloud.hasTenant && Utils.Cloud.hasTenant() && window.db) {

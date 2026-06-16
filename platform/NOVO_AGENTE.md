@@ -296,6 +296,7 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
+| **3.11.60** | 2026-06-16 | (1) Estorno de fatura: fix SYNC BLOQUEADO — dispatches atualizado no localStorage direto (sem Cloud.save); Firestore já persiste individualmente via dispatches_db; (2) Login: loadUsersForTenant com retry automático 3×1s quando Firebase ainda não inicializou |
 | **3.11.59** | 2026-06-15 | Dispatch: fix botão de login travado em '⏳ Carregando...' — handler envolvido em try/catch/finally garante restauração do botão em qualquer cenário; timeout de 10s no Cloud.loadAll() do login evita travamento por Firebase lento |
 | **3.11.58** | 2026-06-15 | Dispatch: fix login — _doDispatchLogin registrado imediatamente (antes do await Cloud.loadAll) para evitar timeout do timer de 3s; handler real em _doDispatchLoginReal; catch exibe erro visual no botão e libera _appReady |
 | **3.11.57** | 2026-06-15 | Dispatch: fix TypeError — Object.keys(carrierConfigs) proteção contra null/undefined quando getStorage retorna null para chave inexistente |
