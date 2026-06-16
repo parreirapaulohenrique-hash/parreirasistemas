@@ -1,6 +1,7 @@
 {
-    "version": "3.11.58",
-    "change": "v3.11.58 - fix DEFINITIVO: _doDispatchLogin registrado IMEDIATAMENTE no inicio do DOMContentLoaded (antes do await Cloud.loadAll), eliminando race condition com o timer de 3s do index.html.",
-    "lastUpdate": "2026-06-15",
-    "deployedAt": "2026-06-15 09:32"
+    "version": "3.11.62",
+    "change": "v3.11.62 - fix: Conferência de Fatura não mostrava NFs de redespacho legado (campo d.redespacho texto) na transportadora RA TRANSPORTES; agora suporta NFs antigas sem redespCarrier usando o campo redespacho herdado.",
+    "lastUpdate": "2026-06-16",
+    "build": "20260616c",
+    "deployedAt": "2026-06-16 09:20"
 }
