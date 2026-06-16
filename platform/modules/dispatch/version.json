@@ -1,7 +1,7 @@
 {
-    "version": "3.11.64",
-    "change": "v3.11.64 - fix: lastWriteTime persistido via IIFE no boot (sobrevive reloads). _persistLastWriteTime() chamado em saveRaw/setStorage/addToStorage. Corrige bug de transportadoras voltando após F5.",
+    "version": "3.11.65",
+    "change": "v3.11.65 - fix: dispatches/invoice_history grandes demais não bloqueiam mais o sync. Auto-chunking automático divide dados >1MB em pedaços de 800KB e salva no Firestore sem alert.",
     "lastUpdate": "2026-06-16",
-    "build": "20260616e",
-    "deployedAt": "2026-06-16 10:12"
+    "build": "20260616f",
+    "deployedAt": "2026-06-16 10:25"
 }

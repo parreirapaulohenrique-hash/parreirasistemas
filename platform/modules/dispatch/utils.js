@@ -173,11 +173,58 @@ const Utils = {
                         this._hideOfflineBadge();
                         return true;
                     } else {
+                        // v3.11.65: Auto-Chunking — divide em pedaços de 800KB e salva separado
                         const kb = (size/1024).toFixed(1);
-                        const msg = `⚠️ SYNC BLOQUEADO\n\nO registro "${key}" está grande demais (${kb}KB > 1000KB) e não foi salvo no banco.\n\nContate o suporte para arquivar os dados históricos.`;
-                        console.error('[Cloud]', msg);
-                        alert(msg);
-                        return false;
+                        console.warn(`⚠️ [Cloud] ${key} grande (${kb}KB). Ativando chunking automático...`);
+
+                        const CHUNK_SIZE = 800000; // 800KB por chunk
+                        const items = Array.isArray(data) ? data : [data];
+                        const chunks = [];
+                        let current = [];
+                        let currentSize = 0;
+
+                        for (const item of items) {
+                            const itemStr = JSON.stringify(item);
+                            if (currentSize + itemStr.length > CHUNK_SIZE && current.length > 0) {
+                                chunks.push(current);
+                                current = [];
+                                currentSize = 0;
+                            }
+                            current.push(item);
+                            currentSize += itemStr.length;
+                        }
+                        if (current.length > 0) chunks.push(current);
+
+                        console.log(`📦 [Chunk] ${key}: ${items.length} itens → ${chunks.length} chunk(s)`);
+
+                        // Salva cada chunk
+                        const batch = [];
+                        for (let i = 0; i < chunks.length; i++) {
+                            batch.push(
+                                window.db.collection('tenants').doc(this.tenantId)
+                                    .collection('legacy_store').doc(`${key}_chunk_${i}`)
+                                    .set({
+                                        content: JSON.stringify(chunks[i]),
+                                        chunkIndex: i,
+                                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                                    })
+                            );
+                        }
+                        await Promise.all(batch);
+
+                        // Salva doc principal como referência (isChunked = true)
+                        await window.db.collection('tenants').doc(this.tenantId)
+                            .collection('legacy_store').doc(key).set({
+                                isChunked: true,
+                                chunkCount: chunks.length,
+                                totalCount: items.length,
+                                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+
+                        console.log(`✅ [Cloud] ${key} salvo em ${chunks.length} chunk(s).`);
+                        if (Utils._pendingSync && Utils._pendingSync[key]) delete Utils._pendingSync[key];
+                        this._hideOfflineBadge();
+                        return true;
                     }
                 } catch (e) {
                     console.error('❌ [Cloud] Erro ao salvar no Firestore:', key, e);
