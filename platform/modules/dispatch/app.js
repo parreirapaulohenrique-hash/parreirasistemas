@@ -1708,7 +1708,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Ignore minimum if it's a complement
                 if (!isComplement && baseVal < rule.minimo) baseVal = rule.minimo;
 
-                const tollVal = rule.pedagio || 0;
+                // v3.11.66: taxa fixa por volume — multiplica pedagio pelo numero de volumes se flag ativa
+                const tollVal = (rule.pedagio || 0) * (rule.taxaFixaPorVolume ? volume : 1);
 
                 // 2. Weight Excess
                 let excessCost = 0;
@@ -2290,6 +2291,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             body.innerHTML = activeRules.map((r) => {
                 const originalIndex = rules.indexOf(r);
+                // Exibe taxa fixa com badge "× vol" se for por volume
+                const taxaFixaDisplay = r.pedagio > 0
+                    ? Utils.formatCurrency(r.pedagio) + (r.taxaFixaPorVolume ? ' <span title="Taxa por volume" style="font-size:0.65rem;background:rgba(var(--primary-rgb),0.15);color:var(--primary-color);border-radius:10px;padding:1px 5px;font-weight:700;vertical-align:middle;">×vol</span>' : '')
+                    : '-';
                 return `
             <tr>
                 <td><strong>${r.cidade}</strong></td>
@@ -2301,7 +2306,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td>${r.redespacho || '-'}</td>
                 <td>${r.percentualRedespacho > 0 ? r.percentualRedespacho + '%' : '-'}</td>
                 <td>${r.minimoRedespacho > 0 ? Utils.formatCurrency(r.minimoRedespacho) : '-'}</td>
-                <td>${r.pedagio > 0 ? Utils.formatCurrency(r.pedagio) : '-'}</td>
+                <td>${taxaFixaDisplay}</td>
                 <td style="color: var(--primary-color); font-weight: 500;">${r.leadTime || '-'}</td>
                 <td style="font-size: 0.8rem; color: var(--text-secondary);">${r.horarios || '-'}</td>
                 <td style="text-align: right; display: flex; justify-content: flex-end; gap: 0.5rem;">
@@ -2876,6 +2881,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('ruleWeightLimit').value = r.limitePeso;
             document.getElementById('ruleExcess').value = r.valorExcedente;
             document.getElementById('ruleToll').value = r.pedagio || 0;
+            const chkVol = document.getElementById('ruleTaxaFixaPorVolume');
+            if (chkVol) {
+                chkVol.checked = r.taxaFixaPorVolume || false;
+                const hint = document.getElementById('taxaFixaVolHint');
+                const lbl = document.getElementById('taxaFixaVolLabel');
+                if (hint) hint.style.display = chkVol.checked ? 'block' : 'none';
+                if (lbl) lbl.style.background = chkVol.checked ? 'rgba(var(--primary-rgb),0.18)' : 'rgba(var(--primary-rgb),0.08)';
+            }
             document.getElementById('ruleRedispatch').value = r.redespacho || '';
             document.getElementById('ruleRedispatchPercent').value = r.percentualRedespacho || '';
             document.getElementById('ruleRedispatchMin').value = r.minimoRedespacho || '';
@@ -2917,6 +2930,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             form.reset();
             document.getElementById('editingRuleIndex').value = '-1';
 
+            // Reset flag taxa fixa por volume
+            const chkVol = document.getElementById('ruleTaxaFixaPorVolume');
+            if (chkVol) { chkVol.checked = false; }
+            const hint = document.getElementById('taxaFixaVolHint');
+            if (hint) hint.style.display = 'none';
+            const lbl = document.getElementById('taxaFixaVolLabel');
+            if (lbl) lbl.style.background = 'rgba(var(--primary-rgb),0.08)';
+
             const submitBtn = document.getElementById('btnSubmitRule');
             submitBtn.innerHTML = 'SALVAR TABELA';
             submitBtn.classList.add('btn-primary');
@@ -2937,6 +2958,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderRulesList();
             showToast('🗑️ Tabela removida com sucesso');
         };
+
+        // --- Toggle hint para taxa fixa por volume ---
+        const chkVolToggle = document.getElementById('ruleTaxaFixaPorVolume');
+        if (chkVolToggle) {
+            chkVolToggle.addEventListener('change', () => {
+                const hint = document.getElementById('taxaFixaVolHint');
+                const lbl = document.getElementById('taxaFixaVolLabel');
+                if (hint) hint.style.display = chkVolToggle.checked ? 'block' : 'none';
+                if (lbl) lbl.style.background = chkVolToggle.checked
+                    ? 'rgba(var(--primary-rgb),0.18)'
+                    : 'rgba(var(--primary-rgb),0.08)';
+            });
+        }
 
         const formNewRule = document.getElementById('formNewRule');
         if (formNewRule) {
@@ -2981,6 +3015,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     limitePeso: parseFloat(document.getElementById('ruleWeightLimit').value),
                     valorExcedente: parseFloat(document.getElementById('ruleExcess').value),
                     pedagio: parseFloat(document.getElementById('ruleToll').value) || 0,
+                    taxaFixaPorVolume: document.getElementById('ruleTaxaFixaPorVolume')?.checked || false,
                     redespacho: window.normalizeText(document.getElementById('ruleRedispatch').value),
                     percentualRedespacho: parseFloat(document.getElementById('ruleRedispatchPercent').value) || 0,
                     minimoRedespacho: parseFloat(document.getElementById('ruleRedispatchMin').value) || 0,

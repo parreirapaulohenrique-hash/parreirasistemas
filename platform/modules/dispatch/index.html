@@ -755,9 +755,16 @@
                                         placeholder="0.00" required>
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Taxa Fixa (R$)</label>
+                                    <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;">
+                                        <span>Taxa Fixa (R$)</span>
+                                        <label id="taxaFixaVolLabel" title="Quando marcado, a taxa fixa é multiplicada pelo número de volumes" style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.72rem;font-weight:600;cursor:pointer;background:rgba(var(--primary-rgb),0.08);border:1px solid rgba(var(--primary-rgb),0.2);border-radius:20px;padding:2px 8px;transition:all 0.2s;user-select:none;">
+                                            <input type="checkbox" id="ruleTaxaFixaPorVolume" style="width:13px;height:13px;cursor:pointer;accent-color:var(--primary-color);">
+                                            <span>× vol</span>
+                                        </label>
+                                    </label>
                                     <input type="number" step="0.01" id="ruleToll" class="form-input"
                                         placeholder="0.00">
+                                    <div id="taxaFixaVolHint" style="display:none;font-size:0.72rem;color:var(--primary-color);margin-top:4px;font-weight:500;">📦 Taxa será multiplicada por volume</div>
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Cidade/Bairro para Redespacho</label>

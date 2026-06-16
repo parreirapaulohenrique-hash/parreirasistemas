@@ -1,7 +1,7 @@
 {
-    "version": "3.11.65",
-    "change": "v3.11.65 - fix: dispatches/invoice_history grandes demais não bloqueiam mais o sync. Auto-chunking automático divide dados >1MB em pedaços de 800KB e salva no Firestore sem alert.",
+    "version": "3.11.66",
+    "change": "v3.11.66 - fix: pedagio multiplicado pelo número de volumes quando taxaFixaPorVolume está ativo na regra de frete.",
     "lastUpdate": "2026-06-16",
-    "build": "20260616f",
-    "deployedAt": "2026-06-16 10:25"
+    "build": "20260616g",
+    "deployedAt": "2026-06-16 18:00"
 }
