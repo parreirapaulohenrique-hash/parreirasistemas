@@ -50,12 +50,32 @@ const Utils = {
         }
     },
 
-    // Timestamp da última escrita local (Echo suppression)
-    lastWriteTime: {},
+    // Timestamp da última escrita local (Echo suppression) - PERSISTIDO no localStorage
+    // Sobrevive a refreshes de página para evitar rollback do Firestore
+    lastWriteTime: (() => {
+        try {
+            const raw = localStorage.getItem('_lwt_cache');
+            return raw ? JSON.parse(raw) : {};
+        } catch(e) { return {}; }
+    })(),
+
+    _persistLastWriteTime() {
+        try {
+            // Guarda apenas os últimos 5 minutos (evita crescer indefinidamente)
+            const now = Date.now();
+            const pruned = {};
+            for (const [k, v] of Object.entries(Utils.lastWriteTime)) {
+                if (now - v < 300000) pruned[k] = v; // 5 min
+            }
+            Utils.lastWriteTime = pruned;
+            localStorage.setItem('_lwt_cache', JSON.stringify(pruned));
+        } catch(e) {}
+    },
 
     saveRaw: (key, stringData) => {
         localStorage.setItem(Utils._storageKey(key), stringData);
         Utils.lastWriteTime[key] = Date.now();
+        Utils._persistLastWriteTime(); // FIX v3.11.64: persiste para sobreviver a refreshes
         if (Utils.Cloud) {
             try {
                 const data = JSON.parse(stringData);
@@ -84,6 +104,7 @@ const Utils = {
             const str = JSON.stringify(list);
             localStorage.setItem(Utils._storageKey(key), str);
             Utils.lastWriteTime[key] = Date.now();
+            Utils._persistLastWriteTime();
             if (Utils.Cloud) Utils.Cloud.save(key, list);
         } catch (e) { console.error(e); }
     },
@@ -92,6 +113,7 @@ const Utils = {
         try {
             localStorage.setItem(Utils._storageKey(key), JSON.stringify(data));
             Utils.lastWriteTime[key] = Date.now();
+            Utils._persistLastWriteTime();
 
             // PROTEÇÃO: Não enviar arrays vazios para a nuvem (evita sobrescrever dados existentes)
             if (Utils.Cloud) {

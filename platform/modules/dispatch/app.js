@@ -2341,9 +2341,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 rules = rules.filter(r => r.transportadora !== carrierName);
                 const removedCount = beforeCount - rules.length;
 
-                // 3. Marcar timestamps anti-rollback
+                // 3. Marcar timestamps anti-rollback + PERSISTIR (v3.11.64: sobrevive refresh)
                 Utils.lastWriteTime['freight_tables'] = Date.now();
                 Utils.lastWriteTime['carrier_list'] = Date.now();
+                Utils._persistLastWriteTime();
 
                 // 4. Salvar localmente
                 localStorage.setItem(Utils._storageKey('freight_tables'), JSON.stringify(rules));
@@ -2459,6 +2460,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (confirm(`Encontradas ${extractedCarriers.length} transportadoras nas tabelas de frete:\n\n${extractedCarriers.join(', ')}\n\nReconstruir a lista?`)) {
                 carrierList = extractedCarriers;
                 Utils.lastWriteTime['carrier_list'] = Date.now();
+                Utils._persistLastWriteTime(); // v3.11.64: garante sobrevivência ao refresh
                 localStorage.setItem(Utils._storageKey('carrier_list'), JSON.stringify(carrierList));
 
                 // Forçar envio para nuvem (bypass da proteção de array vazio)
