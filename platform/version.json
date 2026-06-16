@@ -1,7 +1,7 @@
 {
-    "version": "3.11.60",
-    "change": "v3.11.60 - fix: (1) Estorno de fatura: SYNC BLOQUEADO resolvido — dispatches agora é atualizado no localStorage diretamente (sem Cloud.save) já que cada despacho já é persistido individualmente no Firestore dispatches_db; (2) Login ltdistribuidora: loadUsersForTenant com retry automático (3 tentativas × 1s) quando Firebase não está pronto ainda.",
+    "version": "3.11.61",
+    "change": "v3.11.61 - fix CRÍTICO: App travando em '⏳ Sincronizando...' para sempre — Cloud.loadAll() na inicialização agora tem timeout de 8s e _appReady=true é garantido no finally (antes podia ficar esperando indefinidamente se Firebase travasse).",
     "lastUpdate": "2026-06-16",
-    "build": "20260616a",
+    "build": "20260616b",
     "deployedAt": "2026-06-16 09:15"
 }

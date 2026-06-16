@@ -54,13 +54,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         let _appReady = false;
         window._doDispatchLogin = async () => {
             if (!_appReady) {
-                // App ainda sincronizando — aguarda até estar pronto (máx 15s)
+                // App ainda sincronizando — aguarda até estar pronto (máx 8s)
                 const btnTmp = document.getElementById('btnLogin');
                 if (btnTmp) { btnTmp.disabled = true; btnTmp.innerHTML = '⏳ Sincronizando...'; }
                 await new Promise((resolve) => {
                     const t0 = Date.now();
                     const check = setInterval(() => {
-                        if (_appReady || (Date.now() - t0) > 15000) {
+                        if (_appReady || (Date.now() - t0) > 8000) {
                             clearInterval(check);
                             resolve();
                         }
@@ -80,15 +80,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadingOverlay.innerHTML = '<div style="font-size:3rem;">☁️</div><h2 style="margin-top:20px;color:#333;">Sincronizando Dados...</h2><p>Conectando ao Banco de Dados Seguro</p>';
         document.body.appendChild(loadingOverlay);
 
-        // Cloud Sync
+        // Cloud Sync — com timeout de 8s para não travar o app
         try {
             if (Utils.Cloud) {
-                await Utils.Cloud.loadAll();
+                const _syncTimeout = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('loadAll timeout 8s')), 8000)
+                );
+                await Promise.race([Utils.Cloud.loadAll(), _syncTimeout]);
             }
         } catch (e) {
-            console.error("Erro ao sincronizar dados:", e);
+            console.warn('[App] Cloud.loadAll falhou ou timeout — continuando offline:', e.message);
         } finally {
-            // Remove Overlay
+            // Remove Overlay e SEMPRE libera _appReady
+            _appReady = true;
             if (loadingOverlay.parentNode) loadingOverlay.parentNode.removeChild(loadingOverlay);
         }
 
