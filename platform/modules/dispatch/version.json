@@ -1,7 +1,7 @@
 {
-    "version": "3.11.66",
-    "change": "v3.11.66 - fix: pedagio multiplicado pelo número de volumes quando taxaFixaPorVolume está ativo na regra de frete.",
-    "lastUpdate": "2026-06-16",
-    "build": "20260616g",
-    "deployedAt": "2026-06-16 18:00"
+    "version": "3.11.69",
+    "change": "v3.11.69 - fix DEFINITIVO: loadAll() salva dados do Firestore direto no localStorage, bypassando Anti-Echo. Anti-Echo era o bloqueador que impedia carga de transportadoras apos login. Anti-Echo permanece ativo apenas em listeners onSnapshot.",
+    "lastUpdate": "2026-06-17",
+    "build": "20260617a",
+    "deployedAt": "2026-06-17 08:00"
 }

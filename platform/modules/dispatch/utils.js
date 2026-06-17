@@ -475,24 +475,24 @@ const Utils = {
                         }
 
                         if (doc.exists) {
-                            // FIX v3.11.63: Usa processIncomingData() que respeita Anti-Echo (lastWriteTime)
-                            // Antes: localStorage.setItem direto sobrescrevia dados locais sem verificação
+                            // v3.11.69 FIX DEFINITIVO: loadAll() salva DIRETO no localStorage,
+                            // BYPASSANDO o Anti-Echo. O Anti-Echo (60s) era o bloqueador:
+                            // impedia a carga de dados do Firestore no login quando havia
+                            // escrita local recente. O Anti-Echo é apenas para onSnapshot.
                             const data = doc.data();
                             const tenantKey = `tenant_${this.tenantId}_${key}`;
                             if (data.isChunked) {
                                 if (this.loadChunks) {
-                                    const lastWrite = Utils.lastWriteTime[key] || 0;
-                                    const timeSinceWrite = Date.now() - lastWrite;
-                                    if (timeSinceWrite < 60000) {
-                                        console.log(`🛡️ [loadAll Anti-Echo] Ignorando nuvem para ${key} (escrita há ${Math.round(timeSinceWrite/1000)}s).`);
-                                    } else {
-                                        const fullArray = await this.loadChunks(key, data.chunkCount);
-                                        localStorage.setItem(tenantKey, JSON.stringify(fullArray));
-                                    }
+                                    const fullArray = await this.loadChunks(key, data.chunkCount);
+                                    localStorage.setItem(tenantKey, JSON.stringify(fullArray));
+                                    console.log(`[loadAll] ${key} (chunked): ${fullArray.length} itens carregados diretamente.`);
                                 }
                             } else {
                                 if (data.content && data.content.length >= 2) {
-                                    this.processIncomingData(key, data.content);
+                                    localStorage.setItem(tenantKey, data.content);
+                                    console.log(`[loadAll] ${key}: dados carregados do Firestore (${data.content.length} chars).`);
+                                    // Não atualizar lastWriteTime — listeners onSnapshot podem
+                                    // sobrescrever com dados ainda mais recentes se necessário.
                                 }
                             }
                         } else if (this.tenantId === 'ltdistribuidora') {

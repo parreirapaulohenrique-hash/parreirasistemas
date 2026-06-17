@@ -537,36 +537,48 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 console.log(`👥 [Login] Buscando usuários do tenant: ${tenantId}...`);
 
+                // v3.11.67: Busca do sistema novo (tenants/{id}/users) com fallback para legacy
                 try {
-                    const doc = await db.collection('tenants').doc(tenantId).collection('legacy_store').doc('app_users').get();
+                    let usersFromCloud = [];
 
-                    if (doc.exists) {
-                        const data = doc.data();
-                        let usersFromCloud = [];
-
-                        if (data.content) {
-                            usersFromCloud = JSON.parse(data.content);
-                        }
-
-                        if (usersFromCloud.length > 0) {
-                            // Popular dropdown com usuários encontrados
-                            loginUserSelect.innerHTML = usersFromCloud.map(u =>
-                                `<option value="${u.login}">${u.name} (${u.login})</option>`
-                            ).join('');
-                            console.log(`✅ [Login] ${usersFromCloud.length} usuários carregados para o dropdown`);
-                        } else {
-                            // Se não tem usuários, mantém só admin padrão
-                            loginUserSelect.innerHTML = '<option value="admin">Administrador (admin)</option>';
-                            console.log('⚠️ [Login] Nenhum usuário encontrado, usando admin padrão');
-                        }
+                    // Tenta sistema novo primeiro
+                    const usersSnap = await db.collection('tenants').doc(tenantId).collection('users').get();
+                    if (!usersSnap.empty) {
+                        usersFromCloud = usersSnap.docs
+                            .filter(d => d.data().ativo !== false)
+                            .map(d => {
+                                const u = d.data();
+                                return {
+                                    name:      u.nome || u.name || d.id,
+                                    login:     u.login || d.id,
+                                    senhaHash: u.senhaHash || '',
+                                    role:      u.role || 'operator',
+                                    ativo:     u.ativo !== false
+                                };
+                            });
+                        console.log(`✅ [Login] ${usersFromCloud.length} usuário(s) carregado(s) do sistema novo`);
                     } else {
-                        // Tenant existe mas sem usuários cadastrados
+                        // Fallback: sistema legado (legacy_store/app_users)
+                        const doc = await db.collection('tenants').doc(tenantId).collection('legacy_store').doc('app_users').get();
+                        if (doc.exists && doc.data().content) {
+                            usersFromCloud = JSON.parse(doc.data().content);
+                            console.log(`⚠️ [Login] Usando sistema legado (${usersFromCloud.length} usuários)`);
+                        }
+                    }
+
+                    if (usersFromCloud.length > 0) {
+                        // Salva localmente para validação no clique de login
+                        Utils.saveRaw('app_users', JSON.stringify(usersFromCloud));
+                        loginUserSelect.innerHTML = usersFromCloud.map(u =>
+                            `<option value="${u.login}">${u.name} (${u.login})</option>`
+                        ).join('');
+                        console.log(`✅ [Login] Dropdown populado com ${usersFromCloud.length} usuário(s)`);
+                    } else {
                         loginUserSelect.innerHTML = '<option value="admin">Administrador (admin)</option>';
-                        console.log('⚠️ [Login] Documento app_users não existe no tenant');
+                        console.log('⚠️ [Login] Nenhum usuário encontrado, usando admin padrão');
                     }
                 } catch (error) {
                     console.error('❌ [Login] Erro ao carregar usuários:', error);
-                    // Em caso de erro, mantém admin padrão
                     loginUserSelect.innerHTML = '<option value="admin">Administrador (admin)</option>';
                 }
             };
@@ -709,15 +721,40 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Re-read users from storage (agora já com dados do tenant correto)
                 users = Utils.getStorage('app_users') || [];
 
-                // Login Logic
-                let user = users.find(u => u.login === login);
+                // v3.11.67: Login — sistema novo (SHA-256) com fallback para legado (texto puro)
+                let user = null;
+
+                // Tenta validar direto no Firestore (sistema novo)
+                if (window.db) {
+                    try {
+                        const _uDoc = await window.db.collection('tenants').doc(tenantId).collection('users').doc(login).get();
+                        if (_uDoc.exists && _uDoc.data().ativo !== false) {
+                            const _ud = _uDoc.data();
+                            const _hBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass));
+                            const _hHex = Array.from(new Uint8Array(_hBuf)).map(b => b.toString(16).padStart(2,'0')).join('');
+                            if (_hHex === _ud.senhaHash) {
+                                user = { name: _ud.nome || _ud.login || login, login: _ud.login || login, role: _ud.role || 'operator' };
+                                console.log(`✅ [Login] Validado no sistema novo: ${login}`);
+                            }
+                        }
+                    } catch (_e) { console.warn('[Login] Erro ao validar no sistema novo:', _e.message); }
+                }
+
+                // Fallback: sistema legado (senha texto puro em localStorage)
+                if (!user) {
+                    const _lu = users.find(u => u.login === login);
+                    if (_lu && _lu.pass === pass) {
+                        user = _lu;
+                        console.log(`⚠️ [Login] Validado no sistema legado: ${login}`);
+                    }
+                }
 
                 // Admin Fallback always active for setup
                 if (!user && login === 'admin' && pass === 'admin') {
                     user = { name: 'Administrador (Setup)', login: 'admin', pass: 'admin', role: 'supervisor' };
                 }
 
-                if (user && user.pass === pass) {
+                if (user) {
                     currentUser = user;
                     Utils.saveRaw('logged_user', JSON.stringify(user));
 
@@ -7878,6 +7915,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
                 users.push({ name, login, pass, role });
+
+                // v3.11.67: Sincroniza para o sistema novo (Firestore tenants/users)
+                if (window.db && Utils.Cloud && Utils.Cloud.tenantId) {
+                    try {
+                        const _hBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass));
+                        const _hHex = Array.from(new Uint8Array(_hBuf)).map(b => b.toString(16).padStart(2,'0')).join('');
+                        const _tid  = Utils.Cloud.tenantId;
+                        await window.db.collection('tenants').doc(_tid).collection('users').doc(login).set({
+                            nome: name, login, senhaHash: _hHex, role,
+                            ativo: true, criadoEm: new Date().toISOString(), modulos: []
+                        });
+                        await window.db.collection('users_index').doc(login).set({ tenantId: _tid });
+                        console.log(`✅ [saveUser] Sincronizado para sistema novo: ${login}`);
+                    } catch (_e) {
+                        console.warn('[saveUser] Falha ao sincronizar para sistema novo:', _e.message);
+                    }
+                }
             }
 
             Utils.saveRaw('app_users', JSON.stringify(users));
