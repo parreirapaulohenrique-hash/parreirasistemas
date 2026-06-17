@@ -30,6 +30,13 @@ A arquitetura moderna reside na pasta `/platform`. (A antiga subpasta `/web` ain
     *   **wms**: Warehouse Management System (Gestão de Armazéns).
     *   **wms-coletor**: Versão do WMS estritamente otimizada para coletores móveis (Zebra/Android) utilizados na operação de piso.
 
+> ⚠️ **IMPORTANTE — Ambiente de Desenvolvimento Canônico (desde 2026-06-17):**
+> O diretório `OneDrive\Área de Trabalho\TESTE` foi **descontinuado** como ambiente de trabalho.
+> Todo desenvolvimento do módulo Dispatch deve ser feito **exclusivamente** em:
+> `C:\Users\Paulo H Parreira\.gemini\antigravity\scratch\platform\modules\dispatch\`
+> O deploy é feito pelo script `scratch\deploy.ps1`. O TESTE é mantido apenas como histórico.
+
+
 ---
 
 ## 3. Padrões de Integração e Construção
@@ -296,6 +303,7 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
+| **3.11.70** | 2026-06-17 | refactor: TESTE descontinuado. Migração de todos os arquivos exclusivos (etiquetas, leitor, read_files.ps1) para platform/modules/dispatch. Dispatch é agora a única fonte da verdade para o módulo de despacho. |
 | **3.11.69** | 2026-06-17 | fix DEFINITIVO: loadAll() salva dados do Firestore DIRETO no localStorage, bypassando Anti-Echo (60s). Anti-Echo era o bloqueador: impedia carga de transportadoras após login quando havia escrita local recente. Anti-Echo permanece ativo apenas nos listeners onSnapshot em tempo real. |
 | **3.11.63** | 2026-06-16 | fix CRÍTICO: Cadastros de transportadoras sumindo — loadAll() usa processIncomingData() com Anti-Echo; Anti-Rollback impede nuvem vazia ([]) de apagar dados locais e auto-heala Firestore |
 | **3.11.62** | 2026-06-16 | fix: Conferência de Fatura não mostrava NFs de redespacho legado (campo d.redespacho) para transportadora de redespacho (ex: RA TRANSPORTES); suporte a NFs antigas sem redespCarrier |

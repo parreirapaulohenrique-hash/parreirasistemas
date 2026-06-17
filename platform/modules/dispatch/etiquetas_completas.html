@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Etiquetas Completas com Código 14 Dígitos</title>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+<style>
+  @page {
+    margin: 5mm;
+  }
+  body { 
+    font-family: Arial, sans-serif; 
+    background: #f4f4f4;
+    padding: 0;
+    margin: 0;
+  }
+  .page {
+    width: 210mm;
+    background: white;
+    margin: 20px auto;
+    padding: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+  }
+  .label {
+    padding: 12px;
+    border-right: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    height: 145px;
+    overflow: hidden;
+  }
+  .label:nth-child(4n) {
+    border-right: none;
+  }
+  .title {
+    font-size: 10px;
+    font-weight: bold;
+    margin-bottom: 2px;
+  }
+  .desc {
+    font-size: 8px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    min-height: 20px;
+    line-height: 1.2;
+  }
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 8px;
+    margin-bottom: 2px;
+    font-weight: bold;
+  }
+  .barcode-container {
+    text-align: center;
+    margin-top: auto;
+  }
+  svg {
+    max-width: 100%;
+    height: 35px;
+  }
+  .barcode-text {
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    text-align: center;
+    margin-top: -2px;
+  }
+  @media print {
+    body { background: white; }
+    .page { box-shadow: none; margin: 0; page-break-after: always; border: none; }
+    .label { border-right: 1px dashed #ccc; border-bottom: 1px dashed #ccc; }
+    .label:nth-child(4n) { border-right: none; }
+  }
+  
+  .print-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 15px 30px;
+      background: #007bff;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+  }
+  .print-btn:hover { background: #0056b3; }
+  @media print { .print-btn { display: none; } }
+</style>
+</head>
+<body>
+<button class="print-btn" onclick="window.print()">Imprimir Etiquetas</button>
+<div id="pages-container"></div>
+<script>
+  const labelsData = [
+    ['CORRENTE 428H 130L C/ RETENTOR LCT', '8956LCT+', '8956', '1-16-2-3-2', '17890000089562'],
+    ['EMENDA CORRENTE 428H 20 PC/05 LCT', '8957LCT+', '8957', '1-16-2-3-3', '17890000089579'],
+    ['KIT RELACAO BIZ 125 POP 100 110 106 D C/ RETENTOR LCT', '8964LCT+', '8964', '1-17-7-5-5', '17890000089647'],
+    ['KIT RELACAO CROSSER 150 LCT', '8965LCT+', '8965', '1-17-1-2-4', '17890000089654'],
+    ['EMENDA CORRENTE 428H C/RETENTOR PC/05 LCT', '8958LCT+', '8958', '1-15-2-3-2', '17890000089586'],
+    ['EMENDA CORRENTE 520 C RETENTOR LCT', '8960LCT+', '8960', '1-16-3-5-5', '17890000089609'],
+    ['KIT RELACAO FAN 125 09 LCT', '8966LCT+', '8966', '1-17-1-4-4', '17890000089661'],
+    ['KIT RELACAO LANDER 250 520H C/RETENTOR LCT', '8968LCT+', '8968', '1-07-3-3-3', '17890000089685'],
+    ['KIT RELACAO BIZ 100 108 D 00/05 LCT', '8961LCT+', '8961', '1-18-2-2-4', '17890000089616'],
+    ['KIT RELACAO BIZ 125 POP 100/110 106 D LCT', '8963LCT+', '8963', '', '17890000089630'],
+    ['KIT RELACAO BROS 125/150/160 LCT', '8969LCT+', '8969', '1-18-1-1-1', '17890000089692'],
+    ['KIT RELACAO BROS 125/150/160 C/ RETENTOR LCT', '8970LCT+', '8970', '', '17890000089708'],
+    ['KIT RELACAO BROS 160 LCT', '8971LCT+', '8971', '1-18-4-2-3', '17890000089715'],
+    ['KIT RELACAO TITAN 00/08 LCT', '8972LCT+', '8972', '', '17890000089722'],
+    ['KIT RELACAO YBR 125 00/15 LCT', '8977LCT+', '8977', '1-18-5-2-3', '17890000089777'],
+    ['KIT RELACAO CROSSER 150 C/RETENTOR LCT', '9763LCT+', '9763', '1-17-7-1-3', '17890000097635'],
+    ['KIT RELACAO TITAN 150 04/15 LCT', '8973LCT+', '8973', '', '17890000089739'],
+    ['KIT RELACAO TITAN 150 04/15 C/ RETENTOR LCT', '8974LCT+', '8974', '1-18-10-2-3', '17890000089746'],
+    ['KIT RELACAO FAZER 150 15/25 C/RETENTOR LCT', '9764LCT+', '9764', '1-16-13-2-6', '17890000097642'],
+    ['KIT RELACAO YBR 125 00/15 C/RETENTOR LCT', '9766LCT+', '9766', '1-18-4-3-2', '17890000097666'],
+    ['KIT RELACAO TITAN 160 LCT', '8975LCT+', '8975', '1-17-4-4-1', '17890000089753'],
+    ['KIT RELACAO XTZ 125 LCT', '8976LCT+', '8976', '1-17-2-4-2', '17890000089760'],
+    ['KIT RELACAO XRE 300 520H 104L LCT', '12683LCT+', '12683', '', '17890000126830'],
+    ['KIT RELACAO FAZER 150 15/25 FACTOR 150 15/25 428H 124L LCT', '12684LCT+', '12684', '', '17890000126847'],
+    ['KIT RELACAO XLR 125 428H 126L LCT', '12686LCT+', '12686', '', '17890000126861'],
+    ['KIT RELACAO FAZER 250 06 428H 132L LCT', '12688LCT+', '12688', '', '17890000126885'],
+    ['KIT RELACAO FAZER 250 18 428HO 136L C/RETENTOR LCT', '12698LCT+', '12698', '', '17890000126984'],
+    ['PINHAO XR 200 CBX 200 CRF 230 13 D LCT', '12701LCT+', '12701', '', '17890000127011'],
+    ['KIT RELACAO FAZER 250 18 428H 136L LCT', '12689LCT+', '12689', '', '17890000126892'],
+    ['KIT RELACAO TITAN 160 428HO 118L C/RETENTOR LCT', '12693LCT+', '12693', '', '17890000126939'],
+    ['PINHAO TWISTER TORNADO 250 01/08 13 D LCT', '12704LCT+', '12704', '', '17890000127042'],
+    ['PINHAO FAN 125 09/13 14 D LCT', '12705LCT+', '12705', '', '17890000127059'],
+    ['KIT RELACAO BROS 160 XRE 190 428HO 128L C/RETENTOR LCT', '12694LCT+', '12694', '', '17890000126946'],
+    ['KIT RELACAO XRE 300 520HO 104L C/RETENTOR LCT', '12696LCT+', '12696', '', '17890000126960'],
+    ['PINHAO FAZER 150 14 D LCT', '12708LCT+', '12708', '', '17890000127080'],
+    ['CORRENTE 428H 118L C/ RETENTOR LCT', '12712LCT+', '12712', '', '17890000131506'],
+    ['CORRENTE 428H 130L LCT', '12713LCT+', '12713', '', '17890000127134'],
+    ['COROA E PINHAO TITAN 150 LCT', '12714LCT+', '12714', '', '17890000127141'],
+    ['KIT RELACAO BIZ 125 25 428H/106D LCT', '13153LCT+', '13153', '', '17890000131537'],
+    ['KIT RELACAO POP 110 25 428H/104L LCT', '13154LCT+', '13154', '', '17890000131544'],
+    ['COROA E PINHAO BIZ 125 LCT', '12716LCT+', '12716', '', '17890000127165'],
+    ['KIT RELACAO SHI 175 INJETADA 428/130L LCT', '13146LCT+', '13146', '', '17890000131469'],
+    ['KIT RELACAO BIZ 125 25 428HO/106L C/RETENTOR LCT', '13155LCT+', '13155', '', '17890000131551'],
+    ['KIT RELACAO LANDER 250 520H LCT', '13513LCT+', '13513', '1-6-1-202-', '17890000013512'],
+    ['KIT RELACAO SHI 175 CARBURADA 428/128L LCT', '13147LCT+', '13147', '', '17890000131476'],
+    ['KIT RELACAO JEF 150 428/124L LCT', '13148LCT+', '13148', '', '17890000131483'],
+    ['KIT RELACAO SHI 175 CARBURADA 428/128L C/ RETENTOR LCT', '14571LCT+', '14571', '', '17890000145718'],
+    ['KIT RELACAO CRF 250 19 520HO 118L LCT', '14572LCT+', '14572', '', '17890000145725'],
+    ['KIT RELACAO CRF 230 520HO 110L LCT', '14573LCT+', '14573', '', '17890000145732'],
+    ['KIT RELACAO XLS 125 428H 126L C/RETENTOR LCT', '14574LCT+', '14574', '', '17890000145749'],
+    ['PINHAO TWISTER 250 16... 13 D LCT', '14575LCT+', '14575', '', '17890000145756'],
+    ['PINHAO TITAN 160 15 D LCT', '14576LCT+', '14576', '', '17890000145763']
+  ];
+  
+  const container = document.getElementById("pages-container");
+  
+  // Creates pages with 20 labels each (5 rows, 4 cols)
+  for(let i=0; i<labelsData.length; i+=20) {
+      const pageData = labelsData.slice(i, i+20);
+      const pageDiv = document.createElement("div");
+      pageDiv.className = "page";
+      
+      pageData.forEach(item => {
+          const [desc, ref, cod, ender, barcode] = item;
+          
+          const labelDiv = document.createElement("div");
+          labelDiv.className = "label";
+          
+          const enderText = ender ? "Ender.: " + ender : "Ender.:";
+          
+          labelDiv.innerHTML = `
+            <div class="title">LT DISTRIBUIDORA PECAS MOTOS</div>
+            <div class="desc">${desc}</div>
+            <div class="info-row">
+              <span>Ref.: ${ref}</span>
+              <span>Cód.: ${cod}</span>
+            </div>
+            <div class="info-row">
+              <span>Marca: LCT +</span>
+              <span>${enderText}</span>
+            </div>
+            <div class="barcode-container">
+               <svg class="barcode" data-code="${barcode}"></svg>
+               <div class="barcode-text">${barcode}</div>
+            </div>
+          `;
+          
+          pageDiv.appendChild(labelDiv);
+      });
+      
+      container.appendChild(pageDiv);
+  }
+
+  document.querySelectorAll('.barcode').forEach(svg => {
+      const code = svg.getAttribute('data-code');
+      JsBarcode(svg, code, {
+        format: "CODE128", 
+        lineColor: "#000",
+        width: 1.5,
+        height: 35,
+        displayValue: false, 
+        margin: 0
+      });
+  });
+</script>
+</body>
+</html>
