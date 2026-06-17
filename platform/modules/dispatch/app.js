@@ -1,3 +1,36 @@
+// v3.11.71 FIX: Registra _doDispatchLogin NO TOPO DO ARQUIVO, fora do DOMContentLoaded.
+// O app.js tem 483KB. O browser exibe o HTML (com o botão visível) ANTES de terminar
+// de baixar+executar o app.js. Se o _doDispatchLogin só fosse definido dentro do
+// DOMContentLoaded, o usuário que clica cedo receberia o alert 'Sistema ainda carregando'.
+// Agora o placeholder fica disponível assim que o script começa a executar.
+(function() {
+    var _loginQueue = null;
+    window._doDispatchLogin = function() {
+        var btn = document.getElementById('btnLogin');
+        if (window._doDispatchLoginReal) {
+            // Handler real já disponível — executa imediatamente
+            return window._doDispatchLoginReal();
+        }
+        // Handler real ainda não carregado — aguarda com polling (máx 15s)
+        if (btn) { btn.disabled = true; btn.innerHTML = '\u23F3 Carregando...'; }
+        if (_loginQueue) return; // evita duplo click
+        _loginQueue = true;
+        var t0 = Date.now();
+        var id = setInterval(function() {
+            if (window._doDispatchLoginReal || (Date.now() - t0) > 15000) {
+                clearInterval(id);
+                _loginQueue = null;
+                if (btn) { btn.disabled = false; btn.innerHTML = 'ACESSAR SISTEMA'; }
+                if (window._doDispatchLoginReal) {
+                    window._doDispatchLoginReal();
+                } else {
+                    alert('Erro ao carregar o sistema. Recarregue a p\u00E1gina (Ctrl+Shift+R).');
+                }
+            }
+        }, 100);
+    };
+})();
+
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         // GLOBAL UI UTILS
@@ -48,30 +81,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             return result.trim();
         };
 
-        // v3.11.58: Registra _doDispatchLogin IMEDIATAMENTE (antes de qualquer await)
-        // Isso evita que o timer de 3s do index.html marque o botão como erro
-        // enquanto o Cloud.loadAll() busca dados do Firestore.
+        // _appReady: flag interna para controle de sincronização
         let _appReady = false;
-        window._doDispatchLogin = async () => {
-            if (!_appReady) {
-                // App ainda sincronizando — aguarda até estar pronto (máx 8s)
-                const btnTmp = document.getElementById('btnLogin');
-                if (btnTmp) { btnTmp.disabled = true; btnTmp.innerHTML = '⏳ Sincronizando...'; }
-                await new Promise((resolve) => {
-                    const t0 = Date.now();
-                    const check = setInterval(() => {
-                        if (_appReady || (Date.now() - t0) > 8000) {
-                            clearInterval(check);
-                            resolve();
-                        }
-                    }, 100);
-                });
-                if (btnTmp) { btnTmp.disabled = false; btnTmp.innerHTML = 'ACESSAR SISTEMA'; }
-            }
-            if (window._doDispatchLoginReal) {
-                return window._doDispatchLoginReal();
-            }
-        };
 
         // SYNC OVERLAY
         const loadingOverlay = document.createElement('div');

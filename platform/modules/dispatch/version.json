@@ -1,7 +1,7 @@
 {
-    "version": "3.11.70",
-    "change": "v3.11.70 - refactor: TESTE descontinuado como ambiente de desenvolvimento. Migração de todos os arquivos exclusivos do TESTE para platform/modules/dispatch. Dispatch é agora a única fonte da verdade para o módulo de despacho.",
+    "version": "3.11.71",
+    "change": "v3.11.71 - fix: Confirmado e validado fix definitivo do loadAll() (Anti-Echo bypass) no ambiente canonico (platform/modules/dispatch/utils.js). Deploy alinhado ao NOVO_AGENTE.md — ambiente TESTE descontinuado, dispatch canonico como unica fonte da verdade.",
     "lastUpdate": "2026-06-17",
-    "build": "20260617b",
-    "deployedAt": "2026-06-17 08:12"
+    "build": "20260617c",
+    "deployedAt": "2026-06-17"
 }
