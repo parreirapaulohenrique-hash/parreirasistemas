@@ -714,18 +714,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     // Definir novo tenant
                     Utils.Cloud.setTenantId(tenantId);
+                }
 
-                    // Carregar dados DESTE tenant da nuvem (com timeout de 10s)
-                    if (Utils.Cloud && Utils.Cloud.hasTenant()) {
-                        console.log(`📥 Carregando dados do tenant: ${tenantId}...`);
-                        const loadTimeout = new Promise((_, reject) =>
-                            setTimeout(() => reject(new Error('Timeout ao carregar dados do tenant (10s)')), 10000)
-                        );
-                        try {
-                            await Promise.race([Utils.Cloud.loadAll(), loadTimeout]);
-                        } catch (loadErr) {
-                            console.warn('[Login] loadAll falhou ou timeout:', loadErr.message, '— continuando com dados locais.');
-                        }
+                // v3.11.72 FIX: Sempre executa loadAll() no login, mesmo quando tenant não mudou.
+                // Garante que variáveis de closure (carrierList, carrierConfigs, etc.) reflitam
+                // dados frescos do Firestore. Sem isso, needsSync=false pulava o loadAll e as
+                // variáveis ficavam com valores obsoletos (transportadoras não apareciam).
+                if (Utils.Cloud && Utils.Cloud.hasTenant()) {
+                    console.log(`📥 [Login] Carregando dados frescos do tenant: ${tenantId}...`);
+                    const loadTimeout = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('Timeout ao carregar dados do tenant (10s)')), 10000)
+                    );
+                    try {
+                        await Promise.race([Utils.Cloud.loadAll(), loadTimeout]);
+                    } catch (loadErr) {
+                        console.warn('[Login] loadAll falhou ou timeout:', loadErr.message, '— continuando com dados locais.');
                     }
                 }
 
@@ -771,6 +774,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     if (loginOverlay) loginOverlay.style.display = 'none';
                     showToast(`Bem-vindo, ${user.name}! [${tenantId}]`);
+
+                    // v3.11.72 FIX: Re-ler variáveis de closure do localStorage após loadAll().
+                    // renderCarrierConfigs() e outras funções usam as variáveis locais
+                    // (carrierList, carrierConfigs, carrierInfo, rules) — não re-lêem do storage.
+                    // Sem este bloco, mesmo com loadAll() salvando no localStorage, a UI
+                    // continuava mostrando os valores stale lidos na inicialização do app.
+                    carrierList = Utils.getStorage('carrier_list') || [];
+                    carrierConfigs = Utils.getStorage('carrier_configs') || {};
+                    if (!carrierConfigs || typeof carrierConfigs !== 'object' || Array.isArray(carrierConfigs)) carrierConfigs = {};
+                    carrierInfo = Utils.getStorage('carrier_info_v2') || {};
+                    if (Array.isArray(carrierInfo)) carrierInfo = {};
+                    rules = Utils.getStorage('freight_tables') || [];
+                    console.log(`🔄 [Login] Variáveis recarregadas: ${carrierList.length} transportadoras, ${rules.length} tabelas.`);
 
                     // Apply role-based UI restrictions
                     if (window.applyRoleRestrictions) window.applyRoleRestrictions();

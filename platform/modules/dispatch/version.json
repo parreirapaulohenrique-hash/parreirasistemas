@@ -1,7 +1,7 @@
 {
-    "version": "3.11.71",
-    "change": "v3.11.71 - fix: Confirmado e validado fix definitivo do loadAll() (Anti-Echo bypass) no ambiente canonico (platform/modules/dispatch/utils.js). Deploy alinhado ao NOVO_AGENTE.md — ambiente TESTE descontinuado, dispatch canonico como unica fonte da verdade.",
+    "version": "3.11.72",
+    "change": "v3.11.72 - fix: Login sempre executa loadAll() independente de needsSync, e re-le variaveis de closure (carrierList, carrierConfigs, etc.) apos carregamento — transportadoras agora aparecem corretamente apos login.",
     "lastUpdate": "2026-06-17",
-    "build": "20260617c",
+    "build": "20260617d",
     "deployedAt": "2026-06-17"
 }
