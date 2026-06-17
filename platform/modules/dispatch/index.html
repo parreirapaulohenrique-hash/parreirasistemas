@@ -2472,16 +2472,16 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 
-    <script src="firebase-config.js?v=11.9.4"></script>
-    <script src="utils.js?v=11.9.4"></script>
-    <script src="data.js?v=11.9.4"></script>
-    <script src="acontec-integration.js?v=11.9.4"></script>
-    <script src="occurrences.js?v=11.9.4"></script>
-    <script src="app.js?v=3.11.58"></script>
-    <script src="acontec-ui.js?v=11.9.4"></script>
-    <script src="delivery-module.js?v=11.9.4"></script>
-    <script src="cnpj-lookup.js?v=11.9.7"></script>
-    <script src="bi_logistica.js?v=11.9.4"></script>
+    <script src="firebase-config.js?v=3.11.70"></script>
+    <script src="utils.js?v=3.11.70"></script>
+    <script src="data.js?v=3.11.70"></script>
+    <script src="acontec-integration.js?v=3.11.70"></script>
+    <script src="occurrences.js?v=3.11.70"></script>
+    <script src="app.js?v=3.11.70"></script>
+    <script src="acontec-ui.js?v=3.11.70"></script>
+    <script src="delivery-module.js?v=3.11.70"></script>
+    <script src="cnpj-lookup.js?v=3.11.70"></script>
+    <script src="bi_logistica.js?v=3.11.70"></script>
 
 
 
@@ -2629,15 +2629,17 @@
     window.addEventListener('DOMContentLoaded', function() {
         var btn = document.getElementById('btnLogin');
         if (!btn) return;
-        // Se depois de 3s o app.js não registrou o handler, mostra aviso
+        // v3.11.70: timeout aumentado de 3s para 15s — app.js grande pode demorar
+        // para carregar em conexões lentas ou após cache bust
         setTimeout(function() {
             if (!window._doDispatchLogin) {
                 btn.title = 'Erro ao carregar o sistema. Recarregue a página (Ctrl+Shift+R).';
                 btn.style.background = '#ef4444';
                 btn.textContent = '⚠ RECARREGUE A PÁGINA (Ctrl+Shift+R)';
                 btn.style.fontSize = '0.78rem';
+                console.error('[Fallback] app.js não registrou _doDispatchLogin em 15s. Possível erro de carregamento.');
             }
-        }, 3000);
+        }, 15000);
     });
 </script>
 
