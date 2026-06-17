@@ -2547,6 +2547,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             const body = document.getElementById('carrierConfigsBody');
             if (!body) return;
 
+            // v3.11.73 FIX: Reler do storage antes de renderizar.
+            // Garante dados frescos mesmo quando os listeners onSnapshot atualizam o
+            // localStorage mas não recarregam as variáveis de closure do app.js.
+            carrierList = Utils.getStorage('carrier_list') || [];
+            if (!Array.isArray(carrierList)) carrierList = [];
+            carrierConfigs = Utils.getStorage('carrier_configs') || {};
+            if (!carrierConfigs || typeof carrierConfigs !== 'object' || Array.isArray(carrierConfigs)) carrierConfigs = {};
+            carrierInfo = Utils.getStorage('carrier_info_v2') || {};
+            if (Array.isArray(carrierInfo)) carrierInfo = {};
+
             const carriers = [...carrierList].sort();
 
             body.innerHTML = carriers.map(c => {
@@ -7903,7 +7913,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // --- GESTÃO DE USUÁRIOS (Lógica) ---
         // --- GESTÃO DE USUÁRIOS (Lógica) ---
-        window.saveUserAction = () => {
+        window.saveUserAction = async () => {
             const name = document.getElementById('regUserName').value.trim();
             const login = document.getElementById('regUserLogin').value.trim();
             const pass = document.getElementById('regUserPass').value.trim();

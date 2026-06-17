@@ -1,7 +1,7 @@
 {
-    "version": "3.11.72",
-    "change": "v3.11.72 - fix: Login sempre executa loadAll() independente de needsSync, e re-le variaveis de closure (carrierList, carrierConfigs, etc.) apos carregamento — transportadoras agora aparecem corretamente apos login.",
+    "version": "3.11.73",
+    "change": "v3.11.73 - fix: renderCarrierConfigs() rele carrier_list/carrier_configs/carrier_info_v2 do localStorage antes de renderizar, garantindo dados frescos mesmo quando os listeners onSnapshot atualizam o storage sem recarregar variaveis de closure. saveUserAction() convertido para async para suportar sincronizacao Firestore.",
     "lastUpdate": "2026-06-17",
-    "build": "20260617d",
+    "build": "20260617e",
     "deployedAt": "2026-06-17"
 }
