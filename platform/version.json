@@ -1,7 +1,7 @@
 {
-    "version": "3.11.73",
-    "change": "v3.11.73 - fix: renderCarrierConfigs() rele carrier_list/carrier_configs/carrier_info_v2 do localStorage antes de renderizar, garantindo dados frescos mesmo quando os listeners onSnapshot atualizam o storage sem recarregar variaveis de closure. saveUserAction() convertido para async para suportar sincronizacao Firestore.",
+    "version": "3.11.74",
+    "change": "v3.11.74 - fix: (1) QuotaExceededError no localStorage tratado em setStorage e loadAll: libera chaves historicas grandes (delivery_history, invoice_history, app_romaneios, dispatches) antes de re-tentar, com fallback para memoria; (2) Anti-Echo nao bloqueia carrier_list/carrier_configs/carrier_info_v2/freight_tables quando o dado local esta vazio — garante que a nuvem sempre preenche chaves criticas ausentes.",
     "lastUpdate": "2026-06-17",
-    "build": "20260617e",
+    "build": "20260617f",
     "deployedAt": "2026-06-17"
 }

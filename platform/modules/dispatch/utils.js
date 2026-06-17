@@ -111,7 +111,26 @@ const Utils = {
 
     setStorage: (key, data) => {
         try {
-            localStorage.setItem(Utils._storageKey(key), JSON.stringify(data));
+            const serialized = JSON.stringify(data);
+            try {
+                localStorage.setItem(Utils._storageKey(key), serialized);
+            } catch (quotaErr) {
+                if (quotaErr.name === 'QuotaExceededError' || quotaErr.code === 22) {
+                    // v3.11.74 FIX: localStorage cheio — libera chaves grandes não-críticas e tenta novamente
+                    console.warn(`⚠️ [Quota] localStorage cheio ao salvar '${key}'. Liberando espaço...`);
+                    Utils._freeStorageSpace(key);
+                    try {
+                        localStorage.setItem(Utils._storageKey(key), serialized);
+                        console.log(`✅ [Quota] '${key}' salvo após liberação de espaço.`);
+                    } catch (e2) {
+                        // Último recurso: guarda em memória para não perder os dados
+                        Utils._memStore[key] = data;
+                        console.warn(`⚠️ [Quota] '${key}' salvo em memória (localStorage ainda cheio).`);
+                    }
+                } else {
+                    throw quotaErr;
+                }
+            }
             Utils.lastWriteTime[key] = Date.now();
             Utils._persistLastWriteTime();
 
@@ -124,6 +143,41 @@ const Utils = {
                 }
             }
         } catch (e) { console.error(e); }
+    },
+
+    // v3.11.74: Libera espaço no localStorage removendo chaves grandes não-críticas
+    _freeStorageSpace: (keepKey) => {
+        const CRITICAL_KEYS = ['carrier_list', 'carrier_configs', 'freight_tables', 'company_data', 'app_users', 'carrier_info_v2'];
+        const EVICTABLE = ['delivery_history', 'invoice_history', 'app_romaneios', 'dispatches'];
+        const tenantId = Utils.Cloud && Utils.Cloud.tenantId ? Utils.Cloud.tenantId : '';
+        let freed = 0;
+        // 1. Tenta remover chaves evictable (históricas/grandes) do tenant
+        for (const k of EVICTABLE) {
+            if (k === keepKey) continue;
+            const storageKey = tenantId ? `tenant_${tenantId}_${k}` : k;
+            const size = (localStorage.getItem(storageKey) || '').length;
+            if (size > 0) {
+                localStorage.removeItem(storageKey);
+                freed += size;
+                console.warn(`🗑️ [Quota] Removido '${k}' (${size} chars) para liberar espaço.`);
+            }
+        }
+        // 2. Se ainda não liberou, remove versões sem prefixo de tenant
+        if (freed === 0) {
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const k = localStorage.key(i);
+                if (!k) continue;
+                const isCritical = CRITICAL_KEYS.some(ck => k.includes(ck));
+                if (!isCritical && !k.startsWith('_') && k !== 'logged_user' && k !== 'app_tenant_id') {
+                    const size = (localStorage.getItem(k) || '').length;
+                    localStorage.removeItem(k);
+                    freed += size;
+                    console.warn(`🗑️ [Quota] Removido '${k}' (${size} chars) para liberar espaço.`);
+                    if (freed > 200000) break; // libera ~200KB e para
+                }
+            }
+        }
+        console.log(`🗑️ [Quota] Total liberado: ~${Math.round(freed/1024)}KB.`);
     },
 
     Cloud: {
@@ -489,7 +543,22 @@ const Utils = {
                                 }
                             } else {
                                 if (data.content && data.content.length >= 2) {
-                                    localStorage.setItem(tenantKey, data.content);
+                                    // v3.11.74 FIX: Trata QuotaExceededError no loadAll
+                                    try {
+                                        localStorage.setItem(tenantKey, data.content);
+                                    } catch (quotaErr) {
+                                        if (quotaErr.name === 'QuotaExceededError' || quotaErr.code === 22) {
+                                            console.warn(`⚠️ [loadAll/Quota] Sem espaço para '${key}'. Liberando e re-tentando...`);
+                                            Utils._freeStorageSpace(key);
+                                            try {
+                                                localStorage.setItem(tenantKey, data.content);
+                                            } catch(e2) {
+                                                // Fallback memória para dados críticos
+                                                Utils._memStore[key] = JSON.parse(data.content);
+                                                console.warn(`⚠️ [loadAll/Quota] '${key}' salvo em memória.`);
+                                            }
+                                        }
+                                    }
                                     console.log(`[loadAll] ${key}: dados carregados do Firestore (${data.content.length} chars).`);
                                     // Não atualizar lastWriteTime — listeners onSnapshot podem
                                     // sobrescrever com dados ainda mais recentes se necessário.
@@ -657,8 +726,23 @@ const Utils = {
             const lastWrite = Utils.lastWriteTime[key] || 0;
             const timeSinceWrite = Date.now() - lastWrite;
             if (timeSinceWrite < 60000) {
-                console.log(`🛡️ [Anti-Echo] Ignorando nuvem para ${key} (escrita há ${Math.round(timeSinceWrite / 1000)}s).`);
-                return;
+                // v3.11.74 FIX: Se o dado local está VAZIO para chaves críticas, o Anti-Echo
+                // NÃO bloqueia — dados da nuvem são aceitos para evitar tela em branco.
+                const CRITICAL_KEYS_AE = ['carrier_list', 'carrier_configs', 'carrier_info_v2', 'freight_tables'];
+                if (CRITICAL_KEYS_AE.includes(key)) {
+                    const localVal = localContent;
+                    const localEmpty = !localVal || localVal === '[]' || localVal === '{}' || localVal === 'null';
+                    if (localEmpty) {
+                        console.log(`🛡️ [Anti-Echo] Chave crítica '${key}' está vazia localmente — aceitando dados da nuvem (ignorando Anti-Echo).`);
+                        // Não retorna — deixa o fluxo continuar
+                    } else {
+                        console.log(`🛡️ [Anti-Echo] Ignorando nuvem para ${key} (escrita há ${Math.round(timeSinceWrite / 1000)}s).`);
+                        return;
+                    }
+                } else {
+                    console.log(`🛡️ [Anti-Echo] Ignorando nuvem para ${key} (escrita há ${Math.round(timeSinceWrite / 1000)}s).`);
+                    return;
+                }
             }
 
             // 2. Anti-Rollback CRÍTICO para chaves de configuração (v3.11.63)
