@@ -707,28 +707,39 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // CRÍTICO: Limpar TODOS os dados locais antes de carregar novo tenant
                     // Isso garante que dados de outro tenant não vazem
                     const keysToClean = ['dispatches', 'freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients'];
+
+                    // Definir novo tenant ANTES de usar _storageKey
+                    Utils.Cloud.setTenantId(tenantId);
+                    localStorage.setItem('app_tenant_id', tenantId);
+
                     keysToClean.forEach(k => {
                         localStorage.removeItem(k);
+                        localStorage.removeItem(Utils._storageKey(k));
                         console.log(`🧹 Limpando local: ${k}`);
                     });
 
-                    // Definir novo tenant
+                    // v3.11.84: Resetar Anti-Echo para permitir carga da nuvem no login
+                    keysToClean.forEach(k => { delete Utils.lastWriteTime[k]; });
+                    localStorage.removeItem('_lwt_persist');
+                    console.log('🔓 [Login] Anti-Echo resetado para carga inicial do tenant.');
+                } else {
+                    // Mesmo tenant — garante que tenant está configurado e reseta Anti-Echo
                     Utils.Cloud.setTenantId(tenantId);
+                    localStorage.setItem('app_tenant_id', tenantId);
+                    // v3.11.84: Resetar Anti-Echo para garantir leitura atual da nuvem
+                    const syncKeys = ['carrier_list', 'carrier_configs', 'carrier_info_v2', 'freight_tables', 'app_users'];
+                    syncKeys.forEach(k => { delete Utils.lastWriteTime[k]; });
+                    localStorage.removeItem('_lwt_persist');
                 }
 
-                // v3.11.72 FIX: Sempre executa loadAll() no login, mesmo quando tenant não mudou.
-                // Garante que variáveis de closure (carrierList, carrierConfigs, etc.) reflitam
-                // dados frescos do Firestore. Sem isso, needsSync=false pulava o loadAll e as
-                // variáveis ficavam com valores obsoletos (transportadoras não apareciam).
+                // v3.11.75 FIX: loadAll() agora tem Fase 1 (chaves críticas de transportadora)
+                // que completa em paralelo ANTES das demais.
                 if (Utils.Cloud && Utils.Cloud.hasTenant()) {
                     console.log(`📥 [Login] Carregando dados frescos do tenant: ${tenantId}...`);
-                    const loadTimeout = new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error('Timeout ao carregar dados do tenant (10s)')), 10000)
-                    );
                     try {
-                        await Promise.race([Utils.Cloud.loadAll(), loadTimeout]);
+                        await Utils.Cloud.loadAll();
                     } catch (loadErr) {
-                        console.warn('[Login] loadAll falhou ou timeout:', loadErr.message, '— continuando com dados locais.');
+                        console.warn('[Login] loadAll falhou:', loadErr.message, '— continuando com dados locais.');
                     }
                 }
 
@@ -788,6 +799,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                     rules = Utils.getStorage('freight_tables') || [];
                     console.log(`🔄 [Login] Variáveis recarregadas: ${carrierList.length} transportadoras, ${rules.length} tabelas.`);
 
+                    // v3.11.74 AUTO-REBUILD: Se carrier_list está vazia ou incompleta,
+                    // reconstrói silenciosamente a partir das tabelas de frete.
+                    // Isso corrige o caso onde o Firestore tem carrier_list corrompida/apagada
+                    // mas freight_tables contém todas as transportadoras reais.
+                    if (rules.length > 0) {
+                        const carriersInTables = [...new Set(rules.map(r => r.transportadora))].filter(c => c).sort();
+                        if (carriersInTables.length > carrierList.length) {
+                            console.warn(`🔧 [Auto-Rebuild] carrier_list tem ${carrierList.length} itens, mas freight_tables tem ${carriersInTables.length} transportadoras únicas. Reconstruindo...`);
+                            carrierList = carriersInTables;
+                            // Salva localmente (sem atualizar lastWriteTime para não bloquear sync)
+                            localStorage.setItem(Utils._storageKey('carrier_list'), JSON.stringify(carrierList));
+                            // Envia para nuvem para corrigir o Firestore corrompido
+                            if (Utils.Cloud && Utils.Cloud.hasTenant()) {
+                                Utils.Cloud.save('carrier_list', carrierList);
+                            }
+                            showToast(`🔧 Lista de transportadoras reconstruída automaticamente (${carrierList.length} transportadoras).`);
+                            console.log(`✅ [Auto-Rebuild] carrier_list reconstruída: ${carrierList.join(', ')}`);
+                        }
+                    }
+
                     // Apply role-based UI restrictions
                     if (window.applyRoleRestrictions) window.applyRoleRestrictions();
 
@@ -799,6 +830,132 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // Force Dashboard Render after Login
                     if (window.showSection) window.showSection('dashboard');
                     else if (window.renderDashboard) window.renderDashboard();
+
+                    // v3.11.84: Render imediato de transportadoras após loadAll
+                    const _diag = {
+                        carrierListLen: carrierList.length,
+                        lsKey: Utils._storageKey('carrier_list'),
+                        lsRaw: localStorage.getItem(Utils._storageKey('carrier_list'))
+                    };
+                    console.log('[Login] Diagnóstico pós-loadAll:', JSON.stringify(_diag));
+                    if (carrierList.length === 0) {
+                        console.warn('[Login] ⚠️ carrier_list VAZIA após loadAll. Verificar Firestore para tenant:', tenantId);
+                        const _lsRaw = localStorage.getItem(`tenant_${tenantId}_carrier_list`);
+                        console.warn('[Login] localStorage tenant_'+tenantId+'_carrier_list:', _lsRaw ? _lsRaw.substring(0,200) : 'NULL/VAZIO');
+                    }
+                    if (window.populateCarrierSelect) window.populateCarrierSelect();
+                    if (window.renderCarrierConfigs) window.renderCarrierConfigs();
+                    if (window.renderRulesList) window.renderRulesList();
+                    console.log('[Login] UI de transportadoras re-renderizada. Lista:', carrierList.length, 'itens.');
+
+                    // v3.11.84: Segundo render delayed para capturar dados que chegam via onSnapshot
+                    setTimeout(() => {
+                        const _cl2 = Utils.getStorage('carrier_list') || [];
+                        console.log('[Login+2s] Re-render transportadoras. Lista agora:', _cl2.length, 'itens.');
+                        if (_cl2.length > carrierList.length || carrierList.length === 0) {
+                            carrierList = _cl2;
+                            if (window.populateCarrierSelect) window.populateCarrierSelect();
+                            if (window.renderCarrierConfigs) window.renderCarrierConfigs();
+                            if (window.renderRulesList) window.renderRulesList();
+                        }
+                    }, 2000);
+
+                    // v3.11.84: Diagnóstico final — alerta visual se após 10s ainda não há transportadoras
+                    setTimeout(() => {
+                        const _cl10 = Utils.getStorage('carrier_list') || [];
+                        console.log('[Login+10s] Diagnóstico final. Lista agora:', _cl10.length, 'itens.');
+                        if (_cl10.length > 0) {
+                            if (_cl10.length > carrierList.length || carrierList.length === 0) {
+                                carrierList = _cl10;
+                                if (window.populateCarrierSelect) window.populateCarrierSelect();
+                                if (window.renderCarrierConfigs) window.renderCarrierConfigs();
+                                if (window.renderRulesList) window.renderRulesList();
+                            }
+                        } else {
+                            console.error('[Login+10s] ❌ ZERO transportadoras. Possível problema no Firestore para tenant:', tenantId);
+                            showToast('⚠️ Transportadoras não carregadas. Abra F12 e execute diagCarriers() para diagnóstico.', 8000);
+                        }
+                    }, 10000);
+
+                    // v3.11.84: Função global para recarregar transportadoras manualmente
+                    window.reloadCarriers = async () => {
+                        showToast('🔄 Recarregando transportadoras da nuvem...');
+                        if (window.db && Utils.Cloud && Utils.Cloud.hasTenant()) {
+                            try {
+                                const tid = Utils.Cloud.tenantId;
+                                const doc = await window.db.collection('tenants').doc(tid)
+                                    .collection('legacy_store').doc('carrier_list').get();
+                                if (doc.exists) {
+                                    const d = doc.data();
+                                    console.log('[reloadCarriers] Firestore carrier_list campos:', Object.keys(d));
+                                    if (d.content && d.content.length >= 2) {
+                                        const parsed = JSON.parse(d.content);
+                                        carrierList = Array.isArray(parsed) ? parsed : [];
+                                        localStorage.setItem(Utils._storageKey('carrier_list'), d.content);
+                                        console.log('[reloadCarriers] ✅ carrier_list carregada do Firestore:', carrierList.length, 'itens.');
+                                    } else {
+                                        console.warn('[reloadCarriers] ⚠️ Doc existe mas sem campo content. Campos:', Object.keys(d));
+                                    }
+                                } else {
+                                    console.warn('[reloadCarriers] ❌ Doc carrier_list NÃO existe no Firestore para tenant:', Utils.Cloud.tenantId);
+                                }
+                            } catch(e) {
+                                console.error('[reloadCarriers] Erro Firestore:', e);
+                                await Utils.Cloud.loadAll();
+                                carrierList = Utils.getStorage('carrier_list') || [];
+                            }
+                        } else {
+                            await Utils.Cloud.loadAll();
+                            carrierList = Utils.getStorage('carrier_list') || [];
+                        }
+                        if (window.populateCarrierSelect) window.populateCarrierSelect();
+                        if (window.renderCarrierConfigs) window.renderCarrierConfigs();
+                        if (window.renderRulesList) window.renderRulesList();
+                        showToast(`✅ Transportadoras: ${carrierList.length} encontradas.`);
+                        console.log('[reloadCarriers] Concluído:', carrierList.length, 'transportadoras.');
+                    };
+
+                    // v3.11.84: Diagnóstico completo acessível via console (F12) → diagCarriers()
+                    window.diagCarriers = async () => {
+                        const tid = (Utils.Cloud && Utils.Cloud.tenantId) || localStorage.getItem('app_tenant_id') || '?';
+                        const lsKey = `tenant_${tid}_carrier_list`;
+                        const lsVal = localStorage.getItem(lsKey);
+                        console.group('🔍 DIAGNÓSTICO TRANSPORTADORAS');
+                        console.log('Tenant ID:', tid);
+                        console.log('Utils.Cloud.tenantId:', Utils.Cloud && Utils.Cloud.tenantId);
+                        console.log('localStorage key:', lsKey);
+                        console.log('localStorage value:', lsVal ? lsVal.substring(0, 200) : 'NULL/VAZIO');
+                        console.log('carrierList em memória:', carrierList.length, 'itens', carrierList);
+                        console.log('Utils.getStorage(carrier_list):', Utils.getStorage('carrier_list'));
+                        if (window.db) {
+                            try {
+                                const doc = await window.db.collection('tenants').doc(tid)
+                                    .collection('legacy_store').doc('carrier_list').get();
+                                if (doc.exists) {
+                                    const d = doc.data();
+                                    console.log('✅ Firestore doc EXISTS. Campos:', Object.keys(d));
+                                    console.log('Firestore content (200 chars):', d.content ? d.content.substring(0, 200) : 'AUSENTE');
+                                    if (d.content) {
+                                        try {
+                                            const arr = JSON.parse(d.content);
+                                            console.log('✅ Parse OK. Array com', arr.length, 'itens:', arr);
+                                        } catch(pe) { console.error('❌ Parse falhou:', pe); }
+                                    }
+                                } else {
+                                    console.error('❌ Firestore doc NÃO EXISTE para tenant:', tid);
+                                    const col = await window.db.collection('tenants').doc(tid)
+                                        .collection('legacy_store').get();
+                                    console.log('Docs em legacy_store:', col.docs.map(d => d.id));
+                                }
+                            } catch(e) { console.error('Erro ao buscar Firestore:', e); }
+                        } else {
+                            console.warn('Firebase não conectado.');
+                        }
+                        console.groupEnd();
+                        return { tid, lsVal, carrierCount: carrierList.length };
+                    };
+                    console.log('💡 [v3.11.84] Digite diagCarriers() no console (F12) para diagnóstico completo.');
+                    console.log('💡 [v3.11.84] Digite reloadCarriers() no console (F12) para recarregar da nuvem.');
 
                     // Inicializa módulo de Ocorrências
                     if (window.OcorrenciasModule && window.db && tenantId) {
@@ -825,6 +982,32 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Marca app como pronto — libera o placeholder
         _appReady = true;
+
+        // v3.11.75: Callback global para sincronizar variáveis de closure quando dados de
+        // transportadora chegam do Firestore (via loadAll Fase 1 ou onSnapshot).
+        // Isso garante que carrierList, carrierConfigs, rules e carrierInfo sempre reflitam
+        // o que está no localStorage — independentemente de quando o Firestore responde.
+        window._refreshCarrierVars = (source) => {
+            const prevLen = Array.isArray(carrierList) ? carrierList.length : 0;
+            carrierList = Utils.getStorage('carrier_list') || [];
+            carrierConfigs = Utils.getStorage('carrier_configs') || {};
+            if (!carrierConfigs || typeof carrierConfigs !== 'object' || Array.isArray(carrierConfigs)) carrierConfigs = {};
+            carrierInfo = Utils.getStorage('carrier_info_v2') || {};
+            if (Array.isArray(carrierInfo)) carrierInfo = {};
+            rules = Utils.getStorage('freight_tables') || [];
+            console.log(`🔄 [_refreshCarrierVars:${source}] carrierList=${carrierList.length}, rules=${rules.length} (era ${prevLen})`);
+
+            // Auto-rebuild: se carrier_list ainda vazia mas freight_tables tem dados, reconstrói
+            if (carrierList.length === 0 && rules.length > 0) {
+                const carriersInTables = [...new Set(rules.map(r => r.transportadora))].filter(c => c).sort();
+                if (carriersInTables.length > 0) {
+                    console.warn(`🔧 [_refreshCarrierVars] Auto-rebuild: ${carriersInTables.length} transportadoras de freight_tables.`);
+                    carrierList = carriersInTables;
+                    localStorage.setItem(Utils._storageKey('carrier_list'), JSON.stringify(carrierList));
+                    if (Utils.Cloud && Utils.Cloud.hasTenant()) Utils.Cloud.save('carrier_list', carrierList);
+                }
+            }
+        };
 
         // Elements
 
@@ -2558,6 +2741,35 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (Array.isArray(carrierInfo)) carrierInfo = {};
 
             const carriers = [...carrierList].sort();
+
+            // v3.11.84: Estado vazio — mostra aviso com botão de recarga
+            if (carriers.length === 0) {
+                const tenantId = (Utils.Cloud && Utils.Cloud.tenantId) || localStorage.getItem('app_tenant_id') || '?';
+                body.innerHTML = `
+                <tr>
+                    <td colspan="6" style="padding: 2rem; text-align: center;">
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem; color: var(--text-secondary);">
+                            <span class="material-icons-round" style="font-size: 3rem; color: var(--accent-warning, #f59e0b);">local_shipping</span>
+                            <div>
+                                <div style="font-weight: 600; font-size: 1rem; color: var(--text-primary); margin-bottom: 0.25rem;">Nenhuma transportadora carregada</div>
+                                <div style="font-size: 0.8rem;">Empresa: <strong>${tenantId}</strong> &bull; Verifique se há transportadoras cadastradas no sistema.</div>
+                            </div>
+                            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center;">
+                                <button class="btn btn-primary" onclick="window.reloadCarriers && window.reloadCarriers()" style="display: flex; align-items: center; gap: 0.4rem;">
+                                    <span class="material-icons-round" style="font-size: 1.1rem;">refresh</span> Recarregar da Nuvem
+                                </button>
+                                <button class="btn btn-secondary" onclick="window.rebuildCarrierList && window.rebuildCarrierList()" style="display: flex; align-items: center; gap: 0.4rem;">
+                                    <span class="material-icons-round" style="font-size: 1.1rem;">build</span> Reconstruir das Tabelas
+                                </button>
+                            </div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); background: rgba(0,0,0,0.1); padding: 0.5rem 1rem; border-radius: 6px;">
+                                💡 Dica: Abra o console (F12) e execute <em>diagCarriers()</em> para diagnóstico completo.
+                            </div>
+                        </div>
+                    </td>
+                </tr>`;
+                return;
+            }
 
             body.innerHTML = carriers.map(c => {
                 const config = carrierConfigs[c] || { taxaFixa: 0, gris: 0, icms: 0 };

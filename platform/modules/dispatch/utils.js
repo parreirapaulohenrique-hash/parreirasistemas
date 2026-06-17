@@ -480,20 +480,70 @@ const Utils = {
             console.log(`🔄 [Cloud] loadAll() chamado. TenantId: ${this.tenantId}`);
             if (!this.hasTenant()) return false;
 
-            const keys = ['freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients', 'invoice_history', 'app_sellers', 'app_settings', 'app_romaneios', 'delivery_history', 'dispatches'];
+            // v3.11.75: Chaves críticas de transportadora são carregadas em paralelo PRIMEIRO.
+            // Isso garante que mesmo se o loadAll geral der timeout, os dados de transportadora
+            // (carrier_list, carrier_configs, freight_tables, carrier_info_v2) já estarão salvos.
+            const CRITICAL_CARRIER_KEYS = ['freight_tables', 'carrier_list', 'carrier_configs', 'carrier_info_v2'];
+            const OTHER_KEYS = ['company_data', 'app_users', 'clients', 'invoice_history', 'app_sellers', 'app_settings', 'app_romaneios', 'delivery_history', 'dispatches'];
+            const keys = [...CRITICAL_CARRIER_KEYS, ...OTHER_KEYS];
+
+            // Helper para salvar um doc do Firestore no localStorage
+            const _saveDocToLocal = async (key, doc) => {
+                if (!doc.exists) return false;
+                const data = doc.data();
+                const tenantKey = `tenant_${this.tenantId}_${key}`;
+                if (data.isChunked) {
+                    if (this.loadChunks) {
+                        const fullArray = await this.loadChunks(key, data.chunkCount);
+                        localStorage.setItem(tenantKey, JSON.stringify(fullArray));
+                        console.log(`[loadAll] ${key} (chunked): ${fullArray.length} itens carregados.`);
+                    }
+                } else if (data.content && data.content.length >= 2) {
+                    try {
+                        localStorage.setItem(tenantKey, data.content);
+                    } catch (quotaErr) {
+                        if (quotaErr.name === 'QuotaExceededError' || quotaErr.code === 22) {
+                            console.warn(`⚠️ [loadAll/Quota] Sem espaço para '${key}'. Liberando e re-tentando...`);
+                            Utils._freeStorageSpace(key);
+                            try {
+                                localStorage.setItem(tenantKey, data.content);
+                            } catch(e2) {
+                                Utils._memStore[key] = JSON.parse(data.content);
+                                console.warn(`⚠️ [loadAll/Quota] '${key}' salvo em memória.`);
+                            }
+                        }
+                    }
+                    console.log(`[loadAll] ${key}: ${data.content.length} chars carregados do Firestore.`);
+                    return true;
+                }
+                return false;
+            };
 
             // --- FIREBASE MODE ---
             if (typeof firebase !== 'undefined' && window.db) {
                 try {
-                    // 1. Try Load from Current Tenant
-                    const promises = keys.map(key =>
+                    // ── FASE 1: Chaves críticas (transportadoras) — paralelo, sem delay ──────
+                    console.log(`🚀 [loadAll] Fase 1: carregando chaves críticas de transportadora...`);
+                    const criticalPromises = CRITICAL_CARRIER_KEYS.map(key =>
                         window.db.collection('tenants').doc(this.tenantId).collection('legacy_store').doc(key).get()
                     );
-                    const docs = await Promise.all(promises);
+                    const criticalDocs = await Promise.all(criticalPromises);
+                    for (let i = 0; i < criticalDocs.length; i++) {
+                        await _saveDocToLocal(CRITICAL_CARRIER_KEYS[i], criticalDocs[i]);
+                    }
+                    console.log(`✅ [loadAll] Fase 1 completa. Notificando app...`);
+                    // Notifica o app.js para atualizar variáveis de closure com os dados recém-chegados
+                    if (window._refreshCarrierVars) window._refreshCarrierVars('loadAll-phase1');
 
-                    for (let i = 0; i < docs.length; i++) {
-                        const doc = docs[i];
-                        const key = keys[i];
+                    // ── FASE 2: Demais chaves — paralelo ────────────────────────────────────
+                    const otherPromises = OTHER_KEYS.map(key =>
+                        window.db.collection('tenants').doc(this.tenantId).collection('legacy_store').doc(key).get()
+                    );
+                    const otherDocs = await Promise.all(otherPromises);
+
+                    for (let i = 0; i < otherDocs.length; i++) {
+                        const doc = otherDocs[i];
+                        const key = OTHER_KEYS[i];
 
                         // --- CLIENTS: sempre verifica chunks PRIMEIRO (clients__meta tem prioridade) ---
                         if (key === 'clients') {
@@ -507,76 +557,34 @@ const Utils = {
                                         console.log(`[Cloud] clients chunked: ${totalChunks} chunk(s), ${meta.totalCount} registros.`);
                                         const fullArray = await this._loadChunkedKey('clients', totalChunks);
                                         if (fullArray.length > 0) {
-                                            // Guarda em memória (evita QuotaExceededError do localStorage)
                                             Utils._memStore.clients = fullArray;
-                                            console.log(`[Cloud] clients: ${fullArray.length} registros em memória (sem localStorage).`);
-                                            // Remove doc legado se ainda existir (ele shadowa os chunks)
+                                            console.log(`[Cloud] clients: ${fullArray.length} registros em memória.`);
                                             if (doc.exists) {
                                                 window.db.collection('tenants').doc(this.tenantId)
                                                     .collection('legacy_store').doc('clients').delete()
-                                                    .then(() => console.log('[Cloud] Doc legado clients deletado automaticamente.'))
+                                                    .then(() => console.log('[Cloud] Doc legado clients deletado.'))
                                                     .catch(() => {});
                                             }
                                             if (window.renderClientsList) window.renderClientsList();
                                         }
-                                        continue; // pula o processamento normal deste key
+                                        continue;
                                     }
                                 }
                             } catch (chunkErr) {
                                 console.warn('[Cloud] Erro ao carregar chunks de clients:', chunkErr);
                             }
-                            // Se não tem chunks, cai no fluxo normal abaixo
                         }
 
                         if (doc.exists) {
-                            // v3.11.69 FIX DEFINITIVO: loadAll() salva DIRETO no localStorage,
-                            // BYPASSANDO o Anti-Echo. O Anti-Echo (60s) era o bloqueador:
-                            // impedia a carga de dados do Firestore no login quando havia
-                            // escrita local recente. O Anti-Echo é apenas para onSnapshot.
-                            const data = doc.data();
-                            const tenantKey = `tenant_${this.tenantId}_${key}`;
-                            if (data.isChunked) {
-                                if (this.loadChunks) {
-                                    const fullArray = await this.loadChunks(key, data.chunkCount);
-                                    localStorage.setItem(tenantKey, JSON.stringify(fullArray));
-                                    console.log(`[loadAll] ${key} (chunked): ${fullArray.length} itens carregados diretamente.`);
-                                }
-                            } else {
-                                if (data.content && data.content.length >= 2) {
-                                    // v3.11.74 FIX: Trata QuotaExceededError no loadAll
-                                    try {
-                                        localStorage.setItem(tenantKey, data.content);
-                                    } catch (quotaErr) {
-                                        if (quotaErr.name === 'QuotaExceededError' || quotaErr.code === 22) {
-                                            console.warn(`⚠️ [loadAll/Quota] Sem espaço para '${key}'. Liberando e re-tentando...`);
-                                            Utils._freeStorageSpace(key);
-                                            try {
-                                                localStorage.setItem(tenantKey, data.content);
-                                            } catch(e2) {
-                                                // Fallback memória para dados críticos
-                                                Utils._memStore[key] = JSON.parse(data.content);
-                                                console.warn(`⚠️ [loadAll/Quota] '${key}' salvo em memória.`);
-                                            }
-                                        }
-                                    }
-                                    console.log(`[loadAll] ${key}: dados carregados do Firestore (${data.content.length} chars).`);
-                                    // Não atualizar lastWriteTime — listeners onSnapshot podem
-                                    // sobrescrever com dados ainda mais recentes se necessário.
-                                }
-                            }
+                            await _saveDocToLocal(key, doc);
                         } else if (this.tenantId === 'ltdistribuidora') {
-                            // --- MIGRATION CHECK: If missing in 'ltdistribuidora', check 'parreiralog' ---
                             console.log(`🕵️ [Migration] ${key} não encontrado em ${this.tenantId}. Buscando em parreiralog...`);
                             try {
                                 const oldDoc = await window.db.collection('tenants').doc('parreiralog').collection('legacy_store').doc(key).get();
                                 if (oldDoc.exists) {
                                     const oldData = oldDoc.data();
                                     console.log(`📦 [Migration] Conteúdo encontrado em parreiralog. MIGRANDO...`);
-
-                                    // 1. Save to New Location (Async)
                                     window.db.collection('tenants').doc(this.tenantId).collection('legacy_store').doc(key).set(oldData);
-
-                                    // 2. Use Data Now (via processIncomingData para respeitar Anti-Echo)
                                     if (oldData.isChunked) {
                                         console.warn('Skipping chunked migration auto-copy');
                                     } else {
@@ -784,6 +792,12 @@ const Utils = {
                         if (key === 'carrier_configs' && window.renderCarrierConfigs) window.renderCarrierConfigs();
                         if (key === 'app_users' && window.renderUserList) window.renderUserList();
                         if (key === 'carrier_list' && window.renderCarrierConfigs) window.renderCarrierConfigs();
+                        // v3.11.75: Notifica app.js para atualizar variáveis de closure quando
+                        // dados críticos de transportadora chegam via onSnapshot (sync em tempo real).
+                        const CARRIER_REALTIME_KEYS = ['carrier_list', 'carrier_configs', 'freight_tables', 'carrier_info_v2'];
+                        if (CARRIER_REALTIME_KEYS.includes(key) && window._refreshCarrierVars) {
+                            window._refreshCarrierVars(`onSnapshot:${key}`);
+                        }
                         if (key === 'app_sellers' && window.renderSellersList) {
                             window.renderSellersList();
                             if (window.populateSellersSelector) window.populateSellersSelector();

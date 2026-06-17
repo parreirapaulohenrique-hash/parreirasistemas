@@ -1,7 +1,7 @@
 {
-    "version": "3.11.74",
-    "change": "v3.11.74 - fix: (1) QuotaExceededError no localStorage tratado em setStorage e loadAll: libera chaves historicas grandes (delivery_history, invoice_history, app_romaneios, dispatches) antes de re-tentar, com fallback para memoria; (2) Anti-Echo nao bloqueia carrier_list/carrier_configs/carrier_info_v2/freight_tables quando o dado local esta vazio — garante que a nuvem sempre preenche chaves criticas ausentes.",
+    "version": "3.11.85",
+    "change": "v3.11.85 - fix: transportadoras nao aparecem apos login — (1) loadAll com Fase 1 prioritaria (carrier_list, carrier_configs, freight_tables, carrier_info_v2) carregados em paralelo ANTES das demais chaves; (2) Anti-Echo resetado no login para garantir leitura fresca da nuvem; (3) Auto-rebuild de carrier_list a partir de freight_tables quando carrier_list esta vazia; (4) _refreshCarrierVars atualiza variaveis de closure apos onSnapshot e loadAll; (5) Renders delayed (2s e 10s) como fallback para dados que chegam via onSnapshot; (6) diagCarriers() e reloadCarriers() acessiveis no console F12; (7) QuotaExceededError tratado com liberacao de espaco e fallback para memoria.",
     "lastUpdate": "2026-06-17",
-    "build": "20260617f",
+    "build": "20260617g",
     "deployedAt": "2026-06-17"
 }
