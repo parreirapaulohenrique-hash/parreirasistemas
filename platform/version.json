@@ -1,8 +1,8 @@
 {
-    "version": "3.12.5",
-    "change": "v3.12.5 - REFATORAÇÃO Etapa 4: Dashboard extraído de app.js para dispatch-dashboard.js. Funções movidas: renderDashboard, openShipmentModal, toggleNFSelection, undoDispatch, generateRomaneioAction + helpers renderModalItems e updateModalTotals. app.js reduzido em ~520 linhas. Cache-bust: v3.12.5 em todos os scripts.",
+    "version": "3.12.6",
+    "change": "v3.12.6 - FIX CRÍTICO: login agora mescla usuários do sistema novo (tenants/{id}/users) + legado (legacy_store/app_users). Antes era if/else — usuários cadastrados pelo módulo Cadastros (que gravam no legado) não apareciam no dropdown quando o sistema novo já tinha dados. Agora ambas as fontes são lidas e deduplicadas por login (novo tem prioridade).",
     "lastUpdate": "2026-06-17",
-    "build": "20260617m",
+    "build": "20260617n",
     "deployedAt": "2026-06-17"
 }
 

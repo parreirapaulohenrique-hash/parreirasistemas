@@ -1,4 +1,4 @@
-﻿// v3.11.71 FIX: Registra _doDispatchLogin NO TOPO DO ARQUIVO, fora do DOMContentLoaded.
+// v3.11.71 FIX: Registra _doDispatchLogin NO TOPO DO ARQUIVO, fora do DOMContentLoaded.
 // O app.js tem 483KB. O browser exibe o HTML (com o botão visível) ANTES de terminar
 // de baixar+executar o app.js. Se o _doDispatchLogin só fosse definido dentro do
 // DOMContentLoaded, o usuário que clica cedo receberia o alert 'Sistema ainda carregando'.
@@ -572,11 +572,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 console.log(`👥 [Login] Buscando usuários do tenant: ${tenantId}...`);
 
-                // v3.11.67: Busca do sistema novo (tenants/{id}/users) com fallback para legacy
+                // v3.12.5 FIX: Busca E MESCLA sistema novo + legado
+                // Antes era if/else: se novo tinha dados, legado era ignorado.
+                // Agora: lê os dois e deduplica por login (novo tem prioridade).
                 try {
                     let usersFromCloud = [];
 
-                    // Tenta sistema novo primeiro
+                    // 1. Sistema novo: tenants/{id}/users
                     const usersSnap = await db.collection('tenants').doc(tenantId).collection('users').get();
                     if (!usersSnap.empty) {
                         usersFromCloud = usersSnap.docs
@@ -592,14 +594,33 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 };
                             });
                         console.log(`✅ [Login] ${usersFromCloud.length} usuário(s) carregado(s) do sistema novo`);
-                    } else {
-                        // Fallback: sistema legado (legacy_store/app_users)
-                        const doc = await db.collection('tenants').doc(tenantId).collection('legacy_store').doc('app_users').get();
-                        if (doc.exists && doc.data().content) {
-                            usersFromCloud = JSON.parse(doc.data().content);
-                            console.log(`⚠️ [Login] Usando sistema legado (${usersFromCloud.length} usuários)`);
-                        }
                     }
+
+                    // 2. Sistema legado: legacy_store/app_users (SEMPRE lê e mescla)
+                    try {
+                        const legacyDoc = await db.collection('tenants').doc(tenantId).collection('legacy_store').doc('app_users').get();
+                        if (legacyDoc.exists && legacyDoc.data().content) {
+                            const legacyUsers = JSON.parse(legacyDoc.data().content);
+                            let mergeCount = 0;
+                            legacyUsers.forEach(lu => {
+                                const login = lu.login || lu.Login || '';
+                                if (login && !usersFromCloud.find(u => u.login === login)) {
+                                    usersFromCloud.push({
+                                        name:  lu.name || lu.nome || login,
+                                        login: login,
+                                        pass:  lu.pass || '',
+                                        role:  lu.role || 'operator',
+                                        ativo: lu.ativo !== false
+                                    });
+                                    mergeCount++;
+                                }
+                            });
+                            if (mergeCount > 0) console.log(`🔀 [Login] +${mergeCount} usuário(s) mesclado(s) do sistema legado`);
+                        }
+                    } catch (legacyErr) {
+                        console.warn('[Login] Erro ao ler legacy_store (não crítico):', legacyErr.message);
+                    }
+
 
                     if (usersFromCloud.length > 0) {
                         // v3.11.86 FIX: Salva com namespace de tenant para evitar contaminação cross-tenant
