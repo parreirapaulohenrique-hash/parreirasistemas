@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>🔧 Recálculo VIOPEX — ParreiraLog</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; padding: 24px; min-height: 100vh; }
+        h1 { color: #f8fafc; font-size: 1.5rem; margin-bottom: 4px; }
+        .subtitle { color: #94a3b8; font-size: 0.88rem; margin-bottom: 24px; }
+        .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+        .card h2 { font-size: 1rem; color: #e2e8f0; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: all 0.2s; }
+        .btn-primary { background: #3b82f6; color: #fff; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-success { background: #10b981; color: #fff; }
+        .btn-success:hover { background: #059669; }
+        .btn-danger  { background: #ef4444; color: #fff; }
+        .btn-warning { background: #f59e0b; color: #000; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        th { background: #0f172a; padding: 8px; text-align: left; color: #94a3b8; font-weight: 600; border-bottom: 1px solid #334155; }
+        td { padding: 6px 8px; border-bottom: 1px solid #1e293b; vertical-align: middle; }
+        tr:hover td { background: rgba(59,130,246,0.05); }
+        .badge { padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; display:inline-block; }
+        .badge-green { background: rgba(16,185,129,0.2); color: #34d399; }
+        .badge-yellow { background: rgba(245,158,11,0.2); color: #fbbf24; }
+        .badge-red { background: rgba(239,68,68,0.2); color: #f87171; }
+        .badge-blue { background: rgba(59,130,246,0.2); color: #60a5fa; }
+        #log { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px;
+               font-family: monospace; font-size: 0.8rem; max-height: 300px; overflow-y: auto; white-space: pre-wrap; color: #94a3b8; }
+        .log-ok { color: #34d399; } .log-err { color: #f87171; } .log-warn { color: #fbbf24; }
+        input[type="text"] { background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #e2e8f0; padding: 8px 12px; font-size: 0.9rem; }
+        .stat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 12px; }
+        .stat-box { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 14px; text-align: center; }
+        .stat-num { font-size: 1.5rem; font-weight: 800; }
+        .stat-label { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; margin-top: 4px; }
+        .progress-bar { height: 6px; background: #334155; border-radius: 3px; overflow: hidden; margin-top: 8px; }
+        .progress-fill { height: 100%; background: #3b82f6; border-radius: 3px; transition: width 0.3s; width: 0%; }
+        .diff-pos { color: #34d399; font-weight: 600; }
+        .diff-neg { color: #f87171; font-weight: 600; }
+        .diff-zero { color: #64748b; }
+        .warning-box { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 8px; padding: 14px; margin-bottom: 12px; font-size: 0.85rem; color: #fbbf24; }
+        .info-box { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); border-radius: 8px; padding: 12px; margin-bottom: 12px; font-size: 0.82rem; color: #93c5fd; }
+    </style>
+</head>
+<body>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+
+    <h1>🔧 Recálculo de Frete — VIOPEX</h1>
+    <p class="subtitle">Ferramenta pontual de uso único — aplica as tabelas de frete atuais da VIOPEX em todos os lançamentos históricos</p>
+
+    <!-- PASSO 1: Conectar -->
+    <div class="card">
+        <h2>⚙️ Passo 1 — Configurar e Conectar</h2>
+        <div class="warning-box">
+            ⚠️ <strong>ATENÇÃO:</strong> Esta ferramenta modifica dados reais no Firestore. Faça o preview completo antes de aplicar. A operação é irreversível (sem botão de desfazer).
+        </div>
+        <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+            <div>
+                <label style="font-size:0.8rem;color:#94a3b8;display:block;margin-bottom:4px;">Tenant ID</label>
+                <input type="text" id="cfgTenant" value="ltdistribuidora" style="width:180px;">
+            </div>
+            <div>
+                <label style="font-size:0.8rem;color:#94a3b8;display:block;margin-bottom:4px;">Transportadora</label>
+                <input type="text" id="cfgCarrier" value="VIOPEX" style="width:140px;" oninput="this.value = this.value.toUpperCase()">
+            </div>
+            <button class="btn btn-primary" onclick="connectFirebase()">🔌 Conectar Firebase</button>
+        </div>
+        <div id="connStatus" style="margin-top:10px;font-size:0.85rem;color:#94a3b8;">Não conectado</div>
+    </div>
+
+    <!-- PASSO 2: Preview -->
+    <div class="card">
+        <h2>🔍 Passo 2 — Preview do Recálculo</h2>
+        <div class="info-box">
+            📋 Carrega <strong>todos os lançamentos</strong> da transportadora informada (qualquer status), compara o frete atual com o recalculado pela tabela atual, e exibe a diferença. <strong>Nenhum dado é alterado aqui.</strong>
+        </div>
+        <button class="btn btn-primary" id="btnPreview" onclick="runPreview()" disabled>🔍 Calcular Preview</button>
+
+        <div id="statsGrid" class="stat-grid" style="display:none;">
+            <div class="stat-box">
+                <div class="stat-num" id="statTotal" style="color:#60a5fa">0</div>
+                <div class="stat-label">Lançamentos</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-num" id="statNoRule" style="color:#f87171">0</div>
+                <div class="stat-label">Sem regra (cidade não mapeada)</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-num" id="statChanged" style="color:#fbbf24">0</div>
+                <div class="stat-label">Valores alterados</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-num" id="statSame" style="color:#34d399">0</div>
+                <div class="stat-label">Sem alteração</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-num" id="statDiff" style="color:#a78bfa">R$ 0</div>
+                <div class="stat-label">Δ Total (novo − atual)</div>
+            </div>
+        </div>
+
+        <div id="previewTable" style="overflow-x:auto; margin-top:16px;"></div>
+    </div>
+
+    <!-- PASSO 3: Aplicar -->
+    <div class="card" id="applySection" style="display:none;">
+        <h2>✅ Passo 3 — Aplicar Recálculo</h2>
+        <p style="font-size:0.85rem;color:#94a3b8;margin-bottom:14px;">
+            Aplica os novos valores de frete nos lançamentos mostrados no preview. Apenas registros com <strong>valor alterado</strong> são salvos no Firestore. Lançamentos sem regra de frete são ignorados.
+        </p>
+        <div style="display:flex;gap:10px;align-items:center;">
+            <button class="btn btn-success" id="btnApply" onclick="applyRecalc()">✅ Aplicar Recálculo VIOPEX</button>
+            <button class="btn btn-warning" onclick="exportPreview()">📥 Exportar Preview (JSON)</button>
+        </div>
+        <div class="progress-bar" style="margin-top:12px;"><div class="progress-fill" id="progressFill"></div></div>
+        <div id="applyStatus" style="font-size:0.82rem;color:#94a3b8;margin-top:6px;"></div>
+    </div>
+
+    <!-- LOG -->
+    <div class="card">
+        <h2>📋 Log</h2>
+        <div id="log">Aguardando conexão...\n</div>
+    </div>
+
+    <script>
+        let db = null;
+        let previewData = [];    // { dispatch, newTotal, diff, ruleFound }
+        let freightRules = [];
+        let carrierConfigs = {};
+
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyDK8ZtSiMpuJyivFqgKCVN45dNi-HaxuLw",
+            authDomain: "parreiralog-91904.firebaseapp.com",
+            projectId: "parreiralog-91904",
+            storageBucket: "parreiralog-91904.appspot.com",
+            messagingSenderId: "376693609548",
+            appId: "1:376693609548:web:67e498e11d5fc6a820a8a6"
+        };
+
+        const fmt = (v) => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const norm = (s) => s ? String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase() : '';
+
+        function log(msg, type = '') {
+            const el = document.getElementById('log');
+            const ts = new Date().toLocaleTimeString('pt-BR');
+            const cls = type === 'ok' ? 'log-ok' : type === 'err' ? 'log-err' : type === 'warn' ? 'log-warn' : '';
+            el.innerHTML += `<span class="${cls}">[${ts}] ${msg}\n</span>`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        // ── FIREBASE ──────────────────────────────────────────────────────────
+        async function connectFirebase() {
+            try {
+                if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+                db = firebase.firestore();
+                await db.collection('tenants').doc('__ping__').get().catch(() => {});
+                const tenant = document.getElementById('cfgTenant').value.trim();
+                document.getElementById('connStatus').innerHTML = `<span style="color:#34d399">✅ Conectado! Tenant: <strong>${tenant}</strong></span>`;
+                document.getElementById('btnPreview').disabled = false;
+                log(`Firebase conectado. Tenant: ${tenant}`, 'ok');
+            } catch(e) {
+                document.getElementById('connStatus').innerHTML = `<span style="color:#f87171">❌ Falha: ${e.message}</span>`;
+                log('Erro Firebase: ' + e.message, 'err');
+            }
+        }
+
+        // ── FÓRMULA DE FRETE (espelho exato de app.js) ────────────────────────
+        function calcFreight(rule, config, nfValue, weight, volume, isComplement) {
+            // 1. Base (% ad valorem)
+            let baseVal = nfValue * ((rule.percentual || 0) / 100);
+            if (!isComplement && baseVal < (rule.minimo || 0)) baseVal = rule.minimo || 0;
+
+            // 2. Pedágio
+            const tollVal = (rule.pedagio || 0) * (rule.taxaFixaPorVolume ? volume : 1);
+
+            // 3. Excesso de peso
+            let excessCost = 0;
+            if ((rule.limitePeso || 0) > 0 && weight > rule.limitePeso) {
+                excessCost = (weight - rule.limitePeso) * (rule.valorExcedente || 0);
+            }
+
+            // 4. Volume
+            let volumeCost = 0;
+            if (volume >= 1 && (config.valorVolume || 0) > 0) {
+                volumeCost = volume * config.valorVolume;
+            }
+
+            // 5. GRIS
+            const grisVal = nfValue * ((config.gris || 0) / 100);
+
+            // 6. Redespacho
+            let redispatchCost = 0;
+            if (rule.redespacho) {
+                if ((rule.percentualRedespacho || 0) > 0) {
+                    let rVal = nfValue * (rule.percentualRedespacho / 100);
+                    if (rVal < (rule.minimoRedespacho || 0)) rVal = rule.minimoRedespacho || 0;
+                    redispatchCost = rVal;
+                }
+            }
+
+            // Subtotal
+            const subtotal = baseVal + (config.taxaFixa || 0) + grisVal + excessCost + tollVal + volumeCost + redispatchCost;
+
+            // 7. ICMS por dentro
+            const factor = 1 - ((config.icms || 0) / 100);
+            return factor > 0 ? subtotal / factor : subtotal;
+        }
+
+        // ── PREVIEW ───────────────────────────────────────────────────────────
+        async function runPreview() {
+            const tenant = document.getElementById('cfgTenant').value.trim();
+            const carrier = document.getElementById('cfgCarrier').value.trim().toUpperCase();
+
+            document.getElementById('btnPreview').disabled = true;
+            document.getElementById('btnPreview').textContent = '⏳ Calculando...';
+            document.getElementById('applySection').style.display = 'none';
+            previewData = [];
+
+            log(`\n=== PREVIEW — ${carrier} | Tenant: ${tenant} ===`);
+
+            try {
+                // 1. Carregar tabelas de frete
+                log('Carregando freight_tables...');
+                const ftDoc = await db.collection('tenants').doc(tenant).collection('legacy_store').doc('freight_tables').get();
+                if (!ftDoc.exists || !ftDoc.data().content) throw new Error('freight_tables não encontrado no Firestore!');
+                const allRules = JSON.parse(ftDoc.data().content);
+                freightRules = allRules.filter(r => norm(r.transportadora) === norm(carrier));
+                log(`✅ freight_tables: ${allRules.length} total | ${freightRules.length} regras da ${carrier}`, 'ok');
+
+                if (freightRules.length === 0) {
+                    log(`⚠️ NENHUMA regra encontrada para ${carrier}. Verifique se a tabela foi cadastrada.`, 'warn');
+                    document.getElementById('btnPreview').disabled = false;
+                    document.getElementById('btnPreview').textContent = '🔍 Calcular Preview';
+                    return;
+                }
+
+                // 2. Carrier configs
+                log('Carregando carrier_configs...');
+                const ccDoc = await db.collection('tenants').doc(tenant).collection('legacy_store').doc('carrier_configs').get();
+                if (ccDoc.exists && ccDoc.data().content) {
+                    const allConfigs = JSON.parse(ccDoc.data().content);
+                    carrierConfigs = allConfigs;
+                    log(`✅ carrier_configs carregados`, 'ok');
+                } else {
+                    log('⚠️ carrier_configs não encontrado — usando defaults (0)', 'warn');
+                }
+
+                // 3. Carregar despachos da transportadora
+                log(`Carregando despachos da ${carrier}...`);
+                let dispatches = [];
+
+                // 3a. dispatches_db (coleção individual)
+                const dbSnap = await db.collection('tenants').doc(tenant).collection('dispatches_db').get();
+                dbSnap.forEach(doc => {
+                    const d = { ...doc.data(), _docId: doc.id, _src: 'dispatches_db' };
+                    if (norm(d.carrier) === norm(carrier) || norm(d.carrier).startsWith('FOB - ' + carrier)) {
+                        dispatches.push(d);
+                    }
+                });
+                log(`  dispatches_db: ${dispatches.length} da ${carrier}`, 'ok');
+
+                // 3b. legacy_store/dispatches
+                try {
+                    const legDoc = await db.collection('tenants').doc(tenant).collection('legacy_store').doc('dispatches').get();
+                    if (legDoc.exists && legDoc.data().content) {
+                        const legArr = JSON.parse(legDoc.data().content);
+                        const legCarrier = legArr.filter(d => norm(d.carrier) === norm(carrier) || norm(d.carrier || '').startsWith('FOB - ' + carrier));
+                        // Merge: adiciona apenas os que não estão em dispatches_db
+                        const dbIds = new Set(dispatches.map(d => String(d.id || d._docId)));
+                        legCarrier.forEach(d => {
+                            if (!dbIds.has(String(d.id))) dispatches.push({ ...d, _src: 'legacy_store' });
+                        });
+                        log(`  legacy_store: +${legCarrier.length} (${dispatches.length} total após merge)`, 'ok');
+                    }
+                } catch(e) { log('  legacy_store: ' + e.message, 'warn'); }
+
+                log(`📦 Total de lançamentos ${carrier}: ${dispatches.length}`);
+
+                // 4. Calcular novo frete para cada lançamento
+                const config = carrierConfigs[carrier] || {};
+                let changed = 0, same = 0, noRule = 0;
+                let totalDiff = 0;
+
+                dispatches.forEach(d => {
+                    const city = norm(d.city || '');
+                    const rule = freightRules.find(r => norm(r.cidade) === city);
+
+                    if (!rule) {
+                        previewData.push({ dispatch: d, newTotal: null, diff: null, ruleFound: false, city: d.city || '?' });
+                        noRule++;
+                        return;
+                    }
+
+                    const nfValue   = parseFloat(d.nfValue || 0);
+                    const weight    = parseFloat(d.weight  || 0);
+                    const volume    = parseInt(d.volume   || 1) || 1;
+                    const isComplement = !!d.isComplement;
+
+                    const newTotal = calcFreight(rule, config, nfValue, weight, volume, isComplement);
+                    const oldTotal = parseFloat(d.total || 0);
+                    const diff = newTotal - oldTotal;
+
+                    previewData.push({ dispatch: d, newTotal, oldTotal, diff, ruleFound: true, city: d.city || '?' });
+
+                    if (Math.abs(diff) > 0.01) { changed++; totalDiff += diff; }
+                    else same++;
+                });
+
+                // 5. Estatísticas
+                document.getElementById('statsGrid').style.display = 'grid';
+                document.getElementById('statTotal').textContent = dispatches.length;
+                document.getElementById('statNoRule').textContent = noRule;
+                document.getElementById('statChanged').textContent = changed;
+                document.getElementById('statSame').textContent = same;
+                const diffEl = document.getElementById('statDiff');
+                diffEl.textContent = fmt(totalDiff);
+                diffEl.style.color = totalDiff > 0 ? '#34d399' : totalDiff < 0 ? '#f87171' : '#64748b';
+
+                log(`\n📊 RESUMO:`);
+                log(`  Total lançamentos: ${dispatches.length}`);
+                log(`  Sem regra (cidade não mapeada): ${noRule}`, noRule > 0 ? 'warn' : '');
+                log(`  Com alteração de valor: ${changed}`);
+                log(`  Sem alteração: ${same}`);
+                log(`  Δ Total: ${fmt(totalDiff)}`, changed > 0 ? 'warn' : 'ok');
+
+                renderPreviewTable();
+                if (changed > 0) {
+                    document.getElementById('applySection').style.display = 'block';
+                } else {
+                    log('\n✅ Nenhum valor divergente — tabela já está sincronizada!', 'ok');
+                }
+
+            } catch(e) {
+                log('ERRO no preview: ' + e.message, 'err');
+                console.error(e);
+            }
+
+            document.getElementById('btnPreview').disabled = false;
+            document.getElementById('btnPreview').textContent = '🔍 Calcular Preview';
+        }
+
+        function renderPreviewTable() {
+            const changedOnly = previewData.filter(p => p.ruleFound && Math.abs(p.diff) > 0.01);
+            const noRule = previewData.filter(p => !p.ruleFound);
+
+            let html = '';
+
+            if (changedOnly.length > 0) {
+                html += `<p style="font-size:0.82rem;color:#94a3b8;margin-bottom:8px;">Mostrando ${changedOnly.length} lançamento(s) com frete alterado:</p>`;
+                html += `<table>
+                    <thead><tr>
+                        <th>Data</th><th>Status</th><th>NF</th><th>Cliente</th>
+                        <th>Cidade</th><th>Peso</th><th>Valor NF</th>
+                        <th>Frete Atual</th><th>Frete Novo</th><th>Δ Diferença</th>
+                    </tr></thead><tbody>`;
+
+                changedOnly.forEach(p => {
+                    const d = p.dispatch;
+                    const dateStr = d.date ? new Date(d.date).toLocaleDateString('pt-BR') : (d.id ? new Date(Number(d.id)).toLocaleDateString('pt-BR') : '?');
+                    const diffClass = p.diff > 0 ? 'diff-pos' : p.diff < 0 ? 'diff-neg' : 'diff-zero';
+                    const diffSign = p.diff > 0 ? '+' : '';
+                    const statusBadge = d.status === 'Despachado' ? 'badge-green' : d.status === 'Pendente Despacho' ? 'badge-yellow' : 'badge-red';
+
+                    html += `<tr>
+                        <td style="white-space:nowrap">${dateStr}</td>
+                        <td><span class="badge ${statusBadge}">${d.status || '?'}</span></td>
+                        <td style="font-weight:600">${d.invoice || '-'}</td>
+                        <td style="font-size:0.75rem">${d.client || '-'}</td>
+                        <td>${d.city || '-'}</td>
+                        <td>${Number(d.weight || 0).toFixed(1)} kg</td>
+                        <td>${fmt(d.nfValue || 0)}</td>
+                        <td>${fmt(p.oldTotal)}</td>
+                        <td style="font-weight:700">${fmt(p.newTotal)}</td>
+                        <td class="${diffClass}">${diffSign}${fmt(p.diff)}</td>
+                    </tr>`;
+                });
+
+                html += '</tbody></table>';
+            }
+
+            if (noRule.length > 0) {
+                const cidades = [...new Set(noRule.map(p => p.city))].join(', ');
+                html += `<div style="margin-top:12px;padding:10px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:6px;font-size:0.8rem;color:#fbbf24;">
+                    ⚠️ <strong>${noRule.length} lançamento(s) sem regra na tabela</strong> — cidades não mapeadas: <em>${cidades}</em><br>
+                    Estes registros NÃO serão alterados.
+                </div>`;
+            }
+
+            document.getElementById('previewTable').innerHTML = html;
+        }
+
+        // ── APLICAR ───────────────────────────────────────────────────────────
+        async function applyRecalc() {
+            const toChange = previewData.filter(p => p.ruleFound && Math.abs(p.diff) > 0.01);
+            if (toChange.length === 0) { alert('Nenhum registro a alterar!'); return; }
+
+            const carrier = document.getElementById('cfgCarrier').value.trim().toUpperCase();
+            const tenant = document.getElementById('cfgTenant').value.trim();
+
+            if (!confirm(`Confirmar recálculo de ${toChange.length} lançamento(s) da ${carrier}?\n\nEsta operação é IRREVERSÍVEL. Certifique-se de ter revisado o preview.`)) return;
+
+            document.getElementById('btnApply').disabled = true;
+            document.getElementById('btnApply').textContent = '⏳ Aplicando...';
+            log(`\n=== APLICANDO RECÁLCULO — ${toChange.length} registros ===`, 'ok');
+
+            let saved = 0, failed = 0;
+
+            for (let i = 0; i < toChange.length; i++) {
+                const p = toChange[i];
+                const d = p.dispatch;
+                const id = String(d.id || d._docId);
+
+                document.getElementById('progressFill').style.width = Math.round(((i + 1) / toChange.length) * 100) + '%';
+                document.getElementById('applyStatus').textContent = `Salvando ${i + 1}/${toChange.length}...`;
+
+                const updated = {
+                    ...d,
+                    total: Math.round(p.newTotal * 100) / 100,
+                    _recalcAt: new Date().toISOString(),
+                    _recalcTool: 'fix_viopex',
+                    _recalcOldTotal: p.oldTotal
+                };
+                delete updated._docId;
+                delete updated._src;
+
+                try {
+                    if (d._src === 'dispatches_db') {
+                        await db.collection('tenants').doc(tenant).collection('dispatches_db').doc(id).set(updated);
+                        log(`✅ [${i+1}/${toChange.length}] NF ${d.invoice || id} | ${d.city} | ${fmt(p.oldTotal)} → ${fmt(p.newTotal)} (Δ ${p.diff >= 0 ? '+' : ''}${fmt(p.diff)})`, 'ok');
+                    } else {
+                        // legacy_store — avisa mas não altera (requer sync completo)
+                        log(`⚠️ [${i+1}/${toChange.length}] NF ${d.invoice || id} está em legacy_store — atualização via sync necessária`, 'warn');
+                        failed++;
+                        continue;
+                    }
+                    saved++;
+                } catch(e) {
+                    log(`❌ [${i+1}/${toChange.length}] ID ${id} — Erro: ${e.message}`, 'err');
+                    failed++;
+                }
+
+                // Pequena pausa para não sobrecarregar o Firestore
+                if (i % 20 === 0 && i > 0) await new Promise(r => setTimeout(r, 200));
+            }
+
+            log(`\n=== CONCLUÍDO ===`, 'ok');
+            log(`✅ Salvos: ${saved} | ❌ Falhas: ${failed}`, saved > 0 ? 'ok' : 'err');
+            document.getElementById('applyStatus').textContent = `✅ ${saved} salvos | ${failed} falhas`;
+
+            if (saved > 0) {
+                log('\n⚠️ PRÓXIMO PASSO: Abra o módulo de Despacho e execute no console:', 'warn');
+                log('   Utils.Cloud.save("dispatches", Utils.getStorage("dispatches"))', 'warn');
+                log('   — ou aguarde o próximo sync automático para refletir os novos totais no app.', 'warn');
+            }
+
+            document.getElementById('btnApply').disabled = false;
+            document.getElementById('btnApply').textContent = '✅ Aplicar Recálculo VIOPEX';
+        }
+
+        // ── EXPORT ────────────────────────────────────────────────────────────
+        function exportPreview() {
+            const carrier = document.getElementById('cfgCarrier').value.trim().toUpperCase();
+            const report = {
+                geradoEm: new Date().toISOString(),
+                carrier,
+                tenant: document.getElementById('cfgTenant').value,
+                totalLancamentos: previewData.length,
+                totalAlterados: previewData.filter(p => p.ruleFound && Math.abs(p.diff) > 0.01).length,
+                semRegra: previewData.filter(p => !p.ruleFound).length,
+                registros: previewData.map(p => ({
+                    id: String(p.dispatch.id || p.dispatch._docId),
+                    nf: p.dispatch.invoice,
+                    cliente: p.dispatch.client,
+                    cidade: p.dispatch.city,
+                    status: p.dispatch.status,
+                    freteAtual: p.oldTotal,
+                    freteNovo: p.newTotal,
+                    diferenca: p.diff,
+                    semRegra: !p.ruleFound
+                }))
+            };
+            const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `recalculo_${carrier}_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            log('Preview exportado!', 'ok');
+        }
+
+        window.onload = () => {
+            log('Ferramenta carregada. Conecte ao Firebase para iniciar.');
+            setTimeout(() => { try { connectFirebase(); } catch(e) {} }, 500);
+        };
+    </script>
+</body>
+</html>

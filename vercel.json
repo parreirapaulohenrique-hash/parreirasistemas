@@ -100,6 +100,10 @@
             "destination": "/platform/fix_romaneios.html"
         },
         {
+            "source": "/fix_viopex",
+            "destination": "/platform/fix_viopex.html"
+        },
+        {
             "source": "/web/(.*)",
             "destination": "/web/$1"
         }
