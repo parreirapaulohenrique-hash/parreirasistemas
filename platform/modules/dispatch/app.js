@@ -282,12 +282,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (valid) {
                     currentUser = valid;
+                    // Etapa 3: sincroniza AppState com a sessão restaurada
+                    if (typeof AppState !== 'undefined') AppState.set('currentUser', valid);
                     if (loginOverlay) loginOverlay.style.display = 'none';
                     return;
                 }
             }
             // No session
             currentUser = null;
+            if (typeof AppState !== 'undefined') AppState.set('currentUser', null);
             if (loginOverlay) {
                 loginOverlay.style.display = 'flex';
                 const users = Utils.getStorage('app_users');
@@ -297,6 +300,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         window.logoutUser = () => {
             if (confirm('Deseja realmente sair do sistema?')) {
+                // Etapa 3: limpa AppState na saída
+                if (typeof AppState !== 'undefined') {
+                    AppState.set('currentUser', null);
+                    AppState.set('appReady', false);
+                }
                 localStorage.removeItem('logged_user');
                 localStorage.removeItem('platform_user_logged');
                 localStorage.removeItem('app_tenant_id');
@@ -802,6 +810,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     currentUser = user;
                     Utils.saveRaw('logged_user', JSON.stringify(user));
 
+                    // Etapa 3: sincroniza AppState com usuário logado
+                    if (typeof AppState !== 'undefined') AppState.set('currentUser', user);
+
                     if (loginOverlay) loginOverlay.style.display = 'none';
                     showToast(`Bem-vindo, ${user.name}! [${tenantId}]`);
 
@@ -844,6 +855,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // Iniciar listeners de sync em tempo real
                     if (Utils.Cloud && Utils.Cloud.hasTenant()) {
                         Utils.Cloud.listen();
+                    }
+
+                    // Etapa 3: sincroniza AppState completo após loadAll
+                    if (typeof AppState !== 'undefined') {
+                        AppState.syncFromStorage();
+                        AppState.set('appReady', true);
                     }
 
                     // Force Dashboard Render after Login
@@ -1016,6 +1033,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             rules = Utils.getStorage('freight_tables') || [];
             console.log(`🔄 [_refreshCarrierVars:${source}] carrierList=${carrierList.length}, rules=${rules.length} (era ${prevLen})`);
 
+            // Etapa 3: mantém AppState sincronizado quando Firestore atualiza
+            if (typeof AppState !== 'undefined') {
+                AppState.set('carrierList',    carrierList);
+                AppState.set('carrierConfigs', carrierConfigs);
+                AppState.set('carrierInfo',    carrierInfo);
+                AppState.set('rules',          rules);
+            }
+
             // Auto-rebuild: se carrier_list ainda vazia mas freight_tables tem dados, reconstrói
             if (carrierList.length === 0 && rules.length > 0) {
                 const carriersInTables = [...new Set(rules.map(r => r.transportadora))].filter(c => c).sort();
@@ -1024,6 +1049,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     carrierList = carriersInTables;
                     localStorage.setItem(Utils._storageKey('carrier_list'), JSON.stringify(carrierList));
                     if (Utils.Cloud && Utils.Cloud.hasTenant()) Utils.Cloud.save('carrier_list', carrierList);
+                    if (typeof AppState !== 'undefined') AppState.set('carrierList', carrierList);
                 }
             }
         };

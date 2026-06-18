@@ -1,8 +1,8 @@
 {
-    "version": "3.12.2",
-    "change": "v3.12.2 - REFATORAÇÃO Etapa 2: corrigidas 3 duplicações críticas no app.js. (1) showToast unificada: versão com ícone check_circle + accent-success + duração customizável. (2) sendWhatsApp L5575 removida (sobrescrita silenciosa pela versão completa de L8023 com painel WA). (3) Handler CSV duplo desativado (L5778 causava importação dupla de tabelas de frete, handler L3370 permanece ativo).",
+    "version": "3.12.3",
+    "change": "v3.12.3 - REFATORAÇÃO Etapa 3: AppState Integration Bridge. AppState.set('currentUser') chamado em: checkAuth (sessão restaurada), login bem-sucedido, logoutUser. AppState.set('carrierList/carrierConfigs/carrierInfo/rules') chamado em _refreshCarrierVars (sincroniza toda vez que Firestore atualiza). AppState.syncFromStorage() + appReady=true chamados após login completar loadAll. AppState.snapshot() agora mostra dados reais do sistema.",
     "lastUpdate": "2026-06-17",
-    "build": "20260617j",
+    "build": "20260617k",
     "deployedAt": "2026-06-17"
 }
 
