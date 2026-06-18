@@ -1,8 +1,8 @@
 {
-    "version": "3.12.4",
-    "change": "v3.12.4 - FIX: syncFromStorage melhorado com fallback de leitura direta do localStorage com prefixo de tenant (resolve clients=0 no AppState.snapshot). Helper _get() tenta Utils.getStorage primeiro, depois lê tenant_<id>_<chave> diretamente. Log de diagnóstico aprimorado mostra tenant e contagens.",
+    "version": "3.12.5",
+    "change": "v3.12.5 - REFATORAÇÃO Etapa 4: Dashboard extraído de app.js para dispatch-dashboard.js. Funções movidas: renderDashboard, openShipmentModal, toggleNFSelection, undoDispatch, generateRomaneioAction + helpers renderModalItems e updateModalTotals. app.js reduzido em ~520 linhas. Cache-bust: v3.12.5 em todos os scripts.",
     "lastUpdate": "2026-06-17",
-    "build": "20260617l",
+    "build": "20260617m",
     "deployedAt": "2026-06-17"
 }
 
