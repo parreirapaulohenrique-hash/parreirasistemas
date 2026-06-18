@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Etiquetas - Code 128</title>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+<style>
+  body { 
+    font-family: Arial, sans-serif; 
+    background: #f4f4f4;
+    padding: 20px;
+    text-align: center;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .barcode-container {
+    background: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .barcode-container { box-shadow: none; border: 1px solid #ccc; page-break-inside: avoid; }
+    h1, p { display: none; }
+  }
+</style>
+</head>
+<body>
+  <h1>Códigos de Barras Gerados</h1>
+  <p>Pressione <strong>Ctrl + P</strong> para imprimir.</p>
+  <div class="grid" id="barcodes"></div>
+  <script>
+    // Códigos contendo EXATAMENTE o "1" na frente + os 13 dígitos originais intactos
+    const codes = [
+        "17890000089562", "17890000089579", "17890000089647", "17890000089654",
+        "17890000089586", "17890000089609", "17890000089661", "17890000089685",
+        "17890000089616", "17890000089630", "17890000089692", "17890000089708",
+        "17890000089715", "17890000089722", "17890000089777", "17890000097635",
+        "17890000089739", "17890000089746", "17890000097642", "17890000097666",
+        "17890000089753", "17890000089760", "17890000126830", "17890000126847",
+        "17890000126861", "17890000126885", "17890000126984", "17890000127011",
+        "17890000126892", "17890000126939", "17890000127042", "17890000127059",
+        "17890000126946", "17890000126960", "17890000127080", "17890000131506",
+        "17890000127134", "17890000127141", "17890000131537", "17890000131544",
+        "17890000127165", "17890000131469", "17890000131551", "17890000013512",
+        "17890000131476", "17890000131483", "17890000145718", "17890000145725",
+        "17890000145732", "17890000145749", "17890000145756", "17890000145763"
+    ];
+
+    const container = document.getElementById("barcodes");
+    codes.forEach(code => {
+      const div = document.createElement("div");
+      div.className = "barcode-container";
+      
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      div.appendChild(svg);
+      container.appendChild(div);
+
+      // Usando formato CODE 128 pois ele aceita os 14 dígitos exatamente como digitados 
+      // sem forçar a regra matemática do GS1 que invalidaria a barra.
+      JsBarcode(svg, code, {
+        format: "CODE128", 
+        lineColor: "#000",
+        width: 2,
+        height: 60,
+        displayValue: true,
+        fontSize: 16
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Recuperação de Usuários - Tenant AltaFix</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card2: #263347;
+            --border: #334155;
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #93c5fd;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.35rem;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            padding: 0.6rem 0.75rem;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, textarea:focus {
+            border-color: var(--primary);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.8rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .btn-warning { background: var(--warning); color: #1a1a1a; }
+        .btn-warning:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.78rem; }
+
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .log-box {
+            background: #0a0f1e;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.82rem;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .log-info { color: #60a5fa; }
+        .log-success { color: #34d399; }
+        .log-warn { color: #fbbf24; }
+        .log-error { color: #f87171; }
+        .log-data { color: #a78bfa; }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.2rem 0.7rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .badge-ok { background: rgba(16,185,129,0.2); color: #34d399; border: 1px solid rgba(16,185,129,0.4); }
+        .badge-warn { background: rgba(245,158,11,0.2); color: #fbbf24; border: 1px solid rgba(245,158,11,0.4); }
+        .badge-error { background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.4); }
+        .badge-info { background: rgba(59,130,246,0.2); color: #93c5fd; border: 1px solid rgba(59,130,246,0.4); }
+
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .user-table th {
+            text-align: left;
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-card2);
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .user-table td {
+            padding: 0.6rem 0.75rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .user-table tr:hover td { background: rgba(255,255,255,0.03); }
+
+        .flex-gap { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+
+        .section-divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 1rem 0;
+        }
+
+        #statusIndicator {
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .add-user-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr auto;
+            gap: 0.75rem;
+            align-items: end;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2, .add-user-form { grid-template-columns: 1fr; }
+        }
+
+        .pill {
+            background: rgba(59,130,246,0.15);
+            color: #93c5fd;
+            border: 1px solid rgba(59,130,246,0.3);
+            padding: 0.1rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.72rem;
+        }
+    </style>
+</head>
+<body>
+
+<h1>🔧 Recuperação de Usuários</h1>
+<p class="subtitle">Ferramenta de diagnóstico e correção de cadastros do tenant <strong>altafix</strong></p>
+
+<!-- STATUS INDICATOR -->
+<div id="statusIndicator"></div>
+
+<!-- STEP 1: DIAGNÓSTICO -->
+<div class="card">
+    <h2>🔍 1. Diagnóstico do Firestore</h2>
+    <div class="flex-gap" style="margin-bottom:1rem;">
+        <div>
+            <label>Tenant ID</label>
+            <input type="text" id="tenantId" value="altafix" style="width:200px;">
+        </div>
+        <div style="padding-top:1.4rem;">
+            <button class="btn btn-primary" onclick="runDiagnostic()">🔍 Verificar Firestore</button>
+        </div>
+    </div>
+
+    <div id="diagnosticResult" style="display:none;">
+        <hr class="section-divider">
+        <div class="flex-gap" style="margin-bottom:0.75rem;">
+            <span>Status Firestore:</span>
+            <span id="firestoreStatus" class="status-badge badge-info">Aguardando...</span>
+        </div>
+        <div class="flex-gap" style="margin-bottom:0.75rem;">
+            <span>Documento app_users:</span>
+            <span id="docStatus" class="status-badge badge-info">Aguardando...</span>
+        </div>
+        <div class="flex-gap" style="margin-bottom:0.75rem;">
+            <span>Usuários encontrados:</span>
+            <span id="userCount" class="status-badge badge-info">—</span>
+        </div>
+    </div>
+</div>
+
+<!-- STEP 2: USUÁRIOS ENCONTRADOS -->
+<div class="card" id="foundUsersCard" style="display:none;">
+    <h2>👥 2. Usuários no Firestore</h2>
+    <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">
+        Usuários atualmente salvos em <code>tenants/altafix/legacy_store/app_users</code>:
+    </p>
+    <div style="overflow-x:auto;">
+        <table class="user-table" id="foundUsersTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Nome</th>
+                    <th>Login</th>
+                    <th>Senha</th>
+                    <th>Perfil</th>
+                    <th>Ativo</th>
+                </tr>
+            </thead>
+            <tbody id="foundUsersBody"></tbody>
+        </table>
+    </div>
+    <div style="margin-top:1rem;" class="flex-gap">
+        <button class="btn btn-warning" onclick="exportUsersJSON()">📋 Copiar JSON</button>
+        <button class="btn btn-primary" onclick="importToEditor()">✏️ Editar na ferramenta</button>
+    </div>
+</div>
+
+<!-- STEP 3: EDITAR E SALVAR USUÁRIOS -->
+<div class="card">
+    <h2>✏️ 3. Editar e Salvar Usuários</h2>
+    <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">
+        Edite a lista abaixo e clique em <strong>Salvar no Firestore</strong> para restaurar os cadastros.
+    </p>
+
+    <!-- Adicionar usuário rápido -->
+    <div class="add-user-form" style="margin-bottom:1rem;">
+        <div>
+            <label>Nome</label>
+            <input type="text" id="newName" placeholder="Ex: João Silva">
+        </div>
+        <div>
+            <label>Login</label>
+            <input type="text" id="newLogin" placeholder="Ex: joao">
+        </div>
+        <div>
+            <label>Senha</label>
+            <input type="text" id="newPass" placeholder="Ex: 1234">
+        </div>
+        <div>
+            <label>Perfil</label>
+            <select id="newRole">
+                <option value="user">Operador</option>
+                <option value="supervisor">Supervisor</option>
+                <option value="motoboy">Motoboy</option>
+                <option value="motorista">Motorista</option>
+            </select>
+        </div>
+        <div>
+            <button class="btn btn-success" onclick="addUserToList()">➕ Adicionar</button>
+        </div>
+    </div>
+
+    <hr class="section-divider">
+
+    <!-- Tabela de edição -->
+    <div style="overflow-x:auto; margin-bottom:1rem;">
+        <table class="user-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Nome</th>
+                    <th>Login</th>
+                    <th>Senha</th>
+                    <th>Perfil</th>
+                    <th>Ativo</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="editUsersBody">
+                <tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:1.5rem;">
+                    Clique em "Verificar Firestore" para carregar os dados, ou adicione usuários manualmente acima.
+                </td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- JSON bruto (alternativa) -->
+    <details style="margin-bottom:1rem;">
+        <summary style="cursor:pointer; color:var(--text-muted); font-size:0.85rem; margin-bottom:0.5rem;">
+            📝 Editar JSON diretamente (avançado)
+        </summary>
+        <textarea id="jsonEditor" placeholder='[{"name":"Admin","login":"admin","pass":"admin","role":"supervisor","ativo":true}]'></textarea>
+        <div class="flex-gap" style="margin-top:0.5rem;">
+            <button class="btn btn-sm btn-warning" onclick="parseJsonEditor()">↕️ Sincronizar tabela ← JSON</button>
+            <button class="btn btn-sm btn-primary" onclick="syncTableToJson()">↕️ Sincronizar JSON ← tabela</button>
+        </div>
+    </details>
+
+    <hr class="section-divider">
+
+    <div class="flex-gap">
+        <button class="btn btn-success" onclick="saveToFirestore()" id="btnSave">
+            💾 Salvar no Firestore
+        </button>
+        <button class="btn btn-warning" onclick="loadDefaultUsers()">
+            🏠 Carregar Template Padrão
+        </button>
+    </div>
+</div>
+
+<!-- LOG -->
+<div class="card">
+    <h2>📋 Log de Operações</h2>
+    <div class="log-box" id="logBox">Aguardando ações...\n</div>
+    <div style="margin-top:0.75rem; text-align:right;">
+        <button class="btn btn-sm" onclick="document.getElementById('logBox').textContent='Log limpo.\n';" 
+                style="background:var(--bg-card2); color:var(--text-muted);">
+            🗑️ Limpar Log
+        </button>
+    </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<script>
+// ===== FIREBASE CONFIG EMBUTIDA (standalone) =====
+const FIREBASE_CONFIG_EMBEDDED = {
+    apiKey: "AIzaSyDK8ZtSiMpuJyivFqgKCVN45dNi-HaxuLw",
+    authDomain: "parreiralog-91904.firebaseapp.com",
+    projectId: "parreiralog-91904",
+    storageBucket: "parreiralog-91904.appspot.com",
+    messagingSenderId: "376693609548",
+    appId: "1:376693609548:web:67e498e11d5fc6a820a8a6"
+};
+
+// ===== ESTADO =====
+let currentUsers = [];
+let db = null;
+
+// ===== LOG =====
+function log(msg, type = 'info') {
+    const box = document.getElementById('logBox');
+    const ts = new Date().toLocaleTimeString('pt-BR');
+    const line = document.createElement('div');
+    line.className = `log-${type}`;
+    line.textContent = `[${ts}] ${msg}`;
+    box.appendChild(line);
+    box.scrollTop = box.scrollHeight;
+    if (box.children.length === 1 && box.firstChild.textContent === 'Aguardando ações...') {
+        box.firstChild.remove();
+    }
+}
+
+// ===== FIREBASE INIT =====
+function initFirebase() {
+    try {
+        if (typeof firebase === 'undefined') {
+            log('❌ Firebase SDK não carregado!', 'error');
+            return false;
+        }
+        // Inicializar com config embutida se ainda não inicializado
+        if (firebase.apps.length === 0) {
+            firebase.initializeApp(FIREBASE_CONFIG_EMBEDDED);
+            log('✅ Firebase inicializado com config embutida', 'success');
+        } else {
+            log('✅ Firebase já estava inicializado', 'success');
+        }
+        db = firebase.firestore();
+        log('✅ Firestore conectado: projeto parreiralog-91904', 'success');
+        return true;
+    } catch (e) {
+        log('❌ Erro ao inicializar Firebase: ' + e.message, 'error');
+        return false;
+    }
+}
+
+// ===== DIAGNÓSTICO =====
+async function runDiagnostic() {
+    const tenantId = document.getElementById('tenantId').value.trim().toLowerCase();
+    if (!tenantId) { alert('Informe o Tenant ID!'); return; }
+
+    log(`🔍 Iniciando diagnóstico do tenant: ${tenantId}`, 'info');
+    
+    // Init Firebase
+    if (!db && !initFirebase()) {
+        showStatus(`❌ Firebase não disponível. Verifique se o arquivo firebase-config.js está presente.`, 'danger');
+        return;
+    }
+
+    // Mostrar painel de resultado
+    document.getElementById('diagnosticResult').style.display = 'block';
+    updateBadge('firestoreStatus', '🔄 Conectando...', 'info');
+    updateBadge('docStatus', '🔄 Verificando...', 'info');
+    updateBadge('userCount', '🔄', 'info');
+
+    try {
+        // 1. Verificar se tenant existe
+        log(`📁 Verificando documento tenants/${tenantId}...`, 'info');
+        const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+        
+        if (!tenantDoc.exists) {
+            updateBadge('firestoreStatus', '❌ Tenant não existe no Firestore', 'error');
+            log(`❌ Tenant "${tenantId}" NÃO existe na coleção tenants!`, 'error');
+            log(`   Verifique se o tenant foi cadastrado no painel master.`, 'warn');
+            showStatus(`⚠️ Tenant "${tenantId}" não encontrado no Firestore.`, 'warning');
+            return;
+        }
+
+        const tenantData = tenantDoc.data();
+        updateBadge('firestoreStatus', '✅ Tenant encontrado', 'ok');
+        log(`✅ Tenant encontrado. Dados: ativo=${tenantData.ativo}, nome=${tenantData.nome || 'N/A'}`, 'success');
+
+        // 2. Verificar app_users no legacy_store
+        log(`📄 Buscando tenants/${tenantId}/legacy_store/app_users...`, 'info');
+        const appUsersDoc = await db.collection('tenants').doc(tenantId)
+            .collection('legacy_store').doc('app_users').get();
+
+        if (!appUsersDoc.exists) {
+            updateBadge('docStatus', '❌ Documento não existe', 'error');
+            updateBadge('userCount', '0 usuários', 'warn');
+            log(`⚠️ Documento app_users NÃO existe no Firestore!`, 'warn');
+            log(`   Isso explica por que o dropdown de login está vazio.`, 'warn');
+            showStatus(`⚠️ Sem usuários cadastrados no Firestore para "${tenantId}". Use a seção abaixo para criar.`, 'warning');
+            currentUsers = [];
+            renderEditTable();
+            return;
+        }
+
+        updateBadge('docStatus', '✅ Documento encontrado', 'ok');
+        
+        const data = appUsersDoc.data();
+        log(`📄 Documento encontrado. Campos: ${Object.keys(data).join(', ')}`, 'data');
+
+        // 3. Parsear usuários
+        let users = [];
+        if (data.content) {
+            try {
+                users = JSON.parse(data.content);
+                log(`📋 Campo "content": ${users.length} usuários encontrados`, 'success');
+            } catch (parseErr) {
+                log(`❌ Erro ao parsear campo "content": ${parseErr.message}`, 'error');
+                log(`   Conteúdo bruto: ${data.content.substring(0, 200)}...`, 'warn');
+            }
+        } else {
+            log(`⚠️ Campo "content" ausente ou vazio no documento app_users!`, 'warn');
+            log(`   Campos presentes: ${JSON.stringify(data)}`, 'data');
+        }
+
+        if (users.length === 0) {
+            updateBadge('userCount', '0 usuários', 'warn');
+            log(`⚠️ Nenhum usuário encontrado. O documento existe mas está vazio.`, 'warn');
+            showStatus(`⚠️ Documento app_users existe mas está vazio. Adicione usuários abaixo.`, 'warning');
+        } else {
+            updateBadge('userCount', `${users.length} usuários`, 'ok');
+            log(`✅ ${users.length} usuário(s) encontrado(s)`, 'success');
+            users.forEach((u, i) => {
+                log(`   [${i+1}] ${u.name} (${u.login}) - ${u.role || 'user'}`, 'data');
+            });
+            showStatus(`✅ ${users.length} usuário(s) encontrado(s) no Firestore.`, 'success');
+        }
+
+        // Mostrar tabela de usuários encontrados
+        currentUsers = users;
+        document.getElementById('foundUsersCard').style.display = 'block';
+        renderFoundTable(users);
+        renderEditTable();
+        syncTableToJson();
+
+    } catch (err) {
+        log(`❌ Erro ao acessar Firestore: ${err.message}`, 'error');
+        log(`   Código: ${err.code || 'N/A'}`, 'warn');
+        updateBadge('firestoreStatus', '❌ Erro de conexão', 'error');
+        showStatus(`❌ Erro ao acessar Firestore: ${err.message}`, 'danger');
+    }
+}
+
+// ===== RENDER FOUND TABLE =====
+function renderFoundTable(users) {
+    const tbody = document.getElementById('foundUsersBody');
+    if (users.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:1rem;">
+            Nenhum usuário encontrado.
+        </td></tr>`;
+        return;
+    }
+    tbody.innerHTML = users.map((u, i) => `
+        <tr>
+            <td><span class="pill">${i+1}</span></td>
+            <td>${u.name || '—'}</td>
+            <td><code>${u.login || '—'}</code></td>
+            <td><code>${u.pass ? '•'.repeat(Math.min(u.pass.length, 8)) : '—'}</code></td>
+            <td><span class="pill">${u.role || 'user'}</span></td>
+            <td>${u.ativo === false ? '🔴 Inativo' : '🟢 Ativo'}</td>
+        </tr>
+    `).join('');
+}
+
+// ===== RENDER EDIT TABLE =====
+function renderEditTable() {
+    const tbody = document.getElementById('editUsersBody');
+    if (currentUsers.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:1.5rem;">
+            Nenhum usuário na lista. Adicione acima ou carregue do Firestore.
+        </td></tr>`;
+        return;
+    }
+    tbody.innerHTML = currentUsers.map((u, i) => `
+        <tr>
+            <td><span class="pill">${i+1}</span></td>
+            <td><input type="text" value="${u.name || ''}" onchange="currentUsers[${i}].name=this.value;syncTableToJson();" style="min-width:120px;"></td>
+            <td><input type="text" value="${u.login || ''}" onchange="currentUsers[${i}].login=this.value;syncTableToJson();" style="min-width:100px;"></td>
+            <td><input type="text" value="${u.pass || ''}" onchange="currentUsers[${i}].pass=this.value;syncTableToJson();" style="min-width:80px;"></td>
+            <td>
+                <select onchange="currentUsers[${i}].role=this.value;syncTableToJson();">
+                    ${['user','supervisor','motoboy','motorista'].map(r => 
+                        `<option value="${r}" ${u.role===r?'selected':''}>${r}</option>`
+                    ).join('')}
+                </select>
+            </td>
+            <td>
+                <select onchange="currentUsers[${i}].ativo=this.value!=='false';syncTableToJson();">
+                    <option value="true" ${u.ativo!==false?'selected':''}>🟢 Ativo</option>
+                    <option value="false" ${u.ativo===false?'selected':''}>🔴 Inativo</option>
+                </select>
+            </td>
+            <td>
+                <button class="btn btn-sm btn-danger" onclick="removeUser(${i})">🗑️</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// ===== ADICIONAR USUÁRIO =====
+function addUserToList() {
+    const name = document.getElementById('newName').value.trim();
+    const login = document.getElementById('newLogin').value.trim().toLowerCase();
+    const pass = document.getElementById('newPass').value.trim();
+    const role = document.getElementById('newRole').value;
+
+    if (!name || !login || !pass) {
+        alert('Preencha Nome, Login e Senha!');
+        return;
+    }
+
+    if (currentUsers.find(u => u.login === login)) {
+        alert(`Já existe um usuário com login "${login}"!`);
+        return;
+    }
+
+    currentUsers.push({ name, login, pass, role, ativo: true });
+    document.getElementById('newName').value = '';
+    document.getElementById('newLogin').value = '';
+    document.getElementById('newPass').value = '';
+
+    log(`➕ Usuário adicionado: ${name} (${login}) - ${role}`, 'success');
+    renderEditTable();
+    syncTableToJson();
+}
+
+// ===== REMOVER USUÁRIO =====
+function removeUser(idx) {
+    const u = currentUsers[idx];
+    if (!confirm(`Remover usuário "${u.name}" (${u.login})?`)) return;
+    log(`🗑️ Usuário removido: ${u.name} (${u.login})`, 'warn');
+    currentUsers.splice(idx, 1);
+    renderEditTable();
+    syncTableToJson();
+}
+
+// ===== SINCRONIZAR JSON ←→ TABELA =====
+function syncTableToJson() {
+    document.getElementById('jsonEditor').value = JSON.stringify(currentUsers, null, 2);
+}
+
+function parseJsonEditor() {
+    try {
+        const parsed = JSON.parse(document.getElementById('jsonEditor').value);
+        if (!Array.isArray(parsed)) throw new Error('O JSON deve ser um array!');
+        currentUsers = parsed;
+        renderEditTable();
+        log(`↕️ Tabela atualizada a partir do JSON: ${currentUsers.length} usuários`, 'info');
+    } catch (e) {
+        alert('JSON inválido: ' + e.message);
+        log(`❌ JSON inválido: ${e.message}`, 'error');
+    }
+}
+
+// ===== IMPORTAR PARA EDITOR =====
+function importToEditor() {
+    syncTableToJson();
+    document.getElementById('jsonEditor').scrollIntoView({ behavior: 'smooth' });
+    log(`✏️ Usuários importados para o editor`, 'info');
+}
+
+// ===== EXPORTAR JSON =====
+function exportUsersJSON() {
+    const json = JSON.stringify(currentUsers, null, 2);
+    navigator.clipboard.writeText(json).then(() => {
+        log(`📋 JSON copiado para área de transferência`, 'success');
+        alert('JSON copiado!');
+    }).catch(() => {
+        prompt('Copie o JSON abaixo:', json);
+    });
+}
+
+// ===== CARREGAR TEMPLATE PADRÃO =====
+function loadDefaultUsers() {
+    if (!confirm('Isso vai SUBSTITUIR a lista atual por um template padrão. Continuar?')) return;
+    currentUsers = [
+        { name: 'Administrador', login: 'admin', pass: 'admin', role: 'supervisor', ativo: true },
+        { name: 'Operador', login: 'operador', pass: '1234', role: 'user', ativo: true }
+    ];
+    renderEditTable();
+    syncTableToJson();
+    log(`🏠 Template padrão carregado: ${currentUsers.length} usuários`, 'info');
+}
+
+// ===== SALVAR NO FIRESTORE =====
+async function saveToFirestore() {
+    const tenantId = document.getElementById('tenantId').value.trim().toLowerCase();
+    if (!tenantId) { alert('Informe o Tenant ID!'); return; }
+
+    if (!db && !initFirebase()) {
+        alert('Firebase não disponível!');
+        return;
+    }
+
+    if (currentUsers.length === 0) {
+        if (!confirm('A lista de usuários está VAZIA. Isso vai salvar uma lista vazia no Firestore. Continuar?')) return;
+    }
+
+    // Validações básicas
+    const admins = currentUsers.filter(u => u.role === 'supervisor' || u.login === 'admin');
+    if (admins.length === 0) {
+        if (!confirm('⚠️ Nenhum usuário com perfil supervisor na lista! Se continuar, ninguém poderá gerenciar o sistema. Continuar mesmo assim?')) return;
+    }
+
+    const btnSave = document.getElementById('btnSave');
+    btnSave.disabled = true;
+    btnSave.textContent = '⏳ Salvando...';
+
+    try {
+        // Garantir campos obrigatórios
+        const usersToSave = currentUsers.map(u => ({
+            name: u.name || '',
+            login: u.login || '',
+            pass: u.pass || '',
+            role: u.role || 'user',
+            ativo: u.ativo !== false
+        }));
+
+        const contentJson = JSON.stringify(usersToSave);
+        const path = `tenants/${tenantId}/legacy_store/app_users`;
+
+        log(`💾 Salvando ${usersToSave.length} usuário(s) em ${path}...`, 'info');
+
+        await db.collection('tenants').doc(tenantId)
+            .collection('legacy_store').doc('app_users')
+            .set({
+                content: contentJson,
+                updatedAt: new Date().toISOString(),
+                updatedBy: 'recuperar_usuarios_tool',
+                count: usersToSave.length
+            });
+
+        log(`✅ SUCESSO! ${usersToSave.length} usuário(s) salvos no Firestore.`, 'success');
+        usersToSave.forEach((u, i) => {
+            log(`   [${i+1}] ${u.name} (${u.login}) - ${u.role}`, 'data');
+        });
+
+        showStatus(`✅ ${usersToSave.length} usuário(s) salvos com sucesso! Faça login na aplicação para verificar.`, 'success');
+
+        // Atualizar tabela de encontrados
+        currentUsers = usersToSave;
+        renderFoundTable(usersToSave);
+        document.getElementById('foundUsersCard').style.display = 'block';
+
+        alert(`✅ ${usersToSave.length} usuário(s) salvos com sucesso!\n\nAgora acesse o sistema e faça login com o tenant "${tenantId}".`);
+
+    } catch (err) {
+        log(`❌ ERRO ao salvar: ${err.message}`, 'error');
+        log(`   Código: ${err.code || 'N/A'}`, 'warn');
+        showStatus(`❌ Erro ao salvar: ${err.message}`, 'danger');
+        alert('Erro ao salvar: ' + err.message);
+    } finally {
+        btnSave.disabled = false;
+        btnSave.textContent = '💾 Salvar no Firestore';
+    }
+}
+
+// ===== HELPERS =====
+function updateBadge(id, text, type) {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className = `status-badge badge-${type}`;
+}
+
+function showStatus(msg, type) {
+    const el = document.getElementById('statusIndicator');
+    const colors = {
+        success: { bg: 'rgba(16,185,129,0.15)', color: '#34d399', border: 'rgba(16,185,129,0.4)' },
+        warning: { bg: 'rgba(245,158,11,0.15)', color: '#fbbf24', border: 'rgba(245,158,11,0.4)' },
+        danger:  { bg: 'rgba(239,68,68,0.15)', color: '#f87171', border: 'rgba(239,68,68,0.4)' },
+        info:    { bg: 'rgba(59,130,246,0.15)', color: '#93c5fd', border: 'rgba(59,130,246,0.4)' },
+    };
+    const c = colors[type] || colors.info;
+    el.style.background = c.bg;
+    el.style.color = c.color;
+    el.style.border = `1px solid ${c.border}`;
+    el.textContent = msg;
+    el.style.display = 'block';
+}
+
+// ===== AUTO-INIT =====
+window.addEventListener('load', () => {
+    // Small delay to let firebase-config.js initialize
+    setTimeout(() => {
+        if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
+            db = firebase.firestore();
+            log('✅ Firebase inicializado automaticamente', 'success');
+            log('👉 Clique em "Verificar Firestore" para iniciar o diagnóstico', 'info');
+        } else {
+            log('⚠️ Firebase não detectado automaticamente.', 'warn');
+            log('   Verifique se firebase-config.js está no mesmo diretório.', 'warn');
+            log('👉 Clique em "Verificar Firestore" para tentar inicializar.', 'info');
+        }
+    }, 1000);
+});
+</script>
+</body>
+</html>

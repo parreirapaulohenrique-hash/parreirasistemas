@@ -1,0 +1,27 @@
+====================================================
+  DIRETÓRIO DESCONTINUADO COMO AMBIENTE DE TRABALHO
+====================================================
+
+Este diretório (TESTE) foi o ambiente de desenvolvimento inicial
+do módulo Dispatch da plataforma ParreiraLog.
+
+A partir de 2026-06-17, o desenvolvimento passou a ser feito
+exclusivamente em:
+
+  C:\Users\Paulo H Parreira\.gemini\antigravity\scratch\platform\modules\dispatch\
+
+MOTIVO:
+  - Falta de conexão com o projeto completo da platform
+  - Correções precisavam ser duplicadas manualmente
+  - A pasta platform é a fonte da verdade (deploy via Vercel)
+
+AÇÃO DO AGENTE (Antigravity):
+  - Todos os arquivos exclusivos do TESTE foram copiados para dispatch
+  - O deploy.ps1 em scratch/ é o único ponto de publicação
+
+NÃO edite arquivos aqui. Este diretório é mantido apenas como
+histórico e backup local (possui .git próprio).
+
+Versão final neste dir: 3.11.69
+Data de migração: 2026-06-17
+====================================================

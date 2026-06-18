@@ -1,36 +1,3 @@
-// v3.11.71 FIX: Registra _doDispatchLogin NO TOPO DO ARQUIVO, fora do DOMContentLoaded.
-// O app.js tem 483KB. O browser exibe o HTML (com o botão visível) ANTES de terminar
-// de baixar+executar o app.js. Se o _doDispatchLogin só fosse definido dentro do
-// DOMContentLoaded, o usuário que clica cedo receberia o alert 'Sistema ainda carregando'.
-// Agora o placeholder fica disponível assim que o script começa a executar.
-(function() {
-    var _loginQueue = null;
-    window._doDispatchLogin = function() {
-        var btn = document.getElementById('btnLogin');
-        if (window._doDispatchLoginReal) {
-            // Handler real já disponível — executa imediatamente
-            return window._doDispatchLoginReal();
-        }
-        // Handler real ainda não carregado — aguarda com polling (máx 15s)
-        if (btn) { btn.disabled = true; btn.innerHTML = '\u23F3 Carregando...'; }
-        if (_loginQueue) return; // evita duplo click
-        _loginQueue = true;
-        var t0 = Date.now();
-        var id = setInterval(function() {
-            if (window._doDispatchLoginReal || (Date.now() - t0) > 15000) {
-                clearInterval(id);
-                _loginQueue = null;
-                if (btn) { btn.disabled = false; btn.innerHTML = 'ACESSAR SISTEMA'; }
-                if (window._doDispatchLoginReal) {
-                    window._doDispatchLoginReal();
-                } else {
-                    alert('Erro ao carregar o sistema. Recarregue a p\u00E1gina (Ctrl+Shift+R).');
-                }
-            }
-        }, 100);
-    };
-})();
-
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         // GLOBAL UI UTILS
@@ -81,9 +48,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             return result.trim();
         };
 
-        // _appReady: flag interna para controle de sincronização
-        let _appReady = false;
-
         // SYNC OVERLAY
         const loadingOverlay = document.createElement('div');
         loadingOverlay.id = 'syncOverlay';
@@ -91,19 +55,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadingOverlay.innerHTML = '<div style="font-size:3rem;">☁️</div><h2 style="margin-top:20px;color:#333;">Sincronizando Dados...</h2><p>Conectando ao Banco de Dados Seguro</p>';
         document.body.appendChild(loadingOverlay);
 
-        // Cloud Sync — com timeout de 8s para não travar o app
+        // Cloud Sync
         try {
             if (Utils.Cloud) {
-                const _syncTimeout = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('loadAll timeout 8s')), 8000)
-                );
-                await Promise.race([Utils.Cloud.loadAll(), _syncTimeout]);
+                // v3.11.64: Restaura timestamps de escrita local antes de sincronizar
+                if (Utils._restoreLastWriteTime) Utils._restoreLastWriteTime();
+                await Utils.Cloud.loadAll();
             }
         } catch (e) {
-            console.warn('[App] Cloud.loadAll falhou ou timeout — continuando offline:', e.message);
+            console.error("Erro ao sincronizar dados:", e);
         } finally {
-            // Remove Overlay e SEMPRE libera _appReady
-            _appReady = true;
+            // Remove Overlay
             if (loadingOverlay.parentNode) loadingOverlay.parentNode.removeChild(loadingOverlay);
         }
 
@@ -161,27 +123,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         // if (rules.length === 0 && window.initialTabelas) { ... }
 
         let carrierConfigs = Utils.getStorage('carrier_configs');
-        // v3.11.57: fix TypeError — getStorage pode retornar null quando a chave não existe
-        if (!carrierConfigs || typeof carrierConfigs !== 'object' || Array.isArray(carrierConfigs) || Object.keys(carrierConfigs).length === 0) {
+        if (Object.keys(carrierConfigs).length === 0) {
             // Initial empty state, will be populated based on existing carriers
             carrierConfigs = {};
         }
 
-        // CARRIER LIST - MULTI-TENANT READY (v1.8.21)
-        // Load from storage - starts empty for new clients
-        let carrierList = Utils.getStorage('carrier_list');
+        // CARRIER LIST - MULTI-TENANT READY (v3.11.76)
+        // Load from storage - starts empty if tenant not yet defined (before login)
+        let carrierList = Utils.getStorage('carrier_list') || [];
 
-        // CORREÇÃO: Não sobrescrever dados da nuvem
+        // v3.11.76: NUNCA escrever carrier_list=[] no localStorage antes do login/tenant definido.
+        // O loadAll() vai carregar os dados corretos após o login.
         const carrierListRaw = localStorage.getItem(Utils._storageKey('carrier_list'));
         if (!carrierListRaw || carrierListRaw === 'null' || carrierListRaw === 'undefined') {
-            // Cliente NOVO - começa com lista vazia (mas não envia para nuvem!)
+            // Sem dados locais ainda — apenas inicializa variável em memória, sem tocar localStorage
             carrierList = [];
-            localStorage.setItem(Utils._storageKey('carrier_list'), JSON.stringify(carrierList));
-            console.log('🆕 Novo cliente: carrier_list inicializada vazia.');
+            console.log('📦 carrier_list: sem dados locais (aguardando login/loadAll).');
         } else if (carrierListRaw === '[]') {
-            // Lista vazia no local - mas pode ter dados na nuvem, não sobrescrever
+            // Lista vazia no local — pode ter dados na nuvem
             carrierList = [];
-            console.log('📦 carrier_list vazia localmente');
+            console.log('📦 carrier_list vazia localmente (pode ter dados na nuvem).');
         } else {
             console.log('📦 carrier_list carregada:', carrierList?.length || 0, 'transportadoras');
         }
@@ -259,9 +220,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.checkAuth = () => {
             const storedUser = Utils.getStorage('logged_user');
             if (storedUser && storedUser.login) {
-                const users = Utils.getStorage('app_users');
+                const users = Utils.getStorage('app_users') || [];
                 // Allow admin/admin bypass check if not found
-                let valid = users.find(u => u.login === storedUser.login && u.pass === storedUser.pass);
+                let valid = Array.isArray(users) ? users.find(u => u.login === storedUser.login && u.pass === storedUser.pass) : null;
                 if (!valid && storedUser.login === 'admin' && storedUser.pass === 'admin') valid = storedUser;
 
                 if (valid) {
@@ -274,8 +235,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentUser = null;
             if (loginOverlay) {
                 loginOverlay.style.display = 'flex';
-                const users = Utils.getStorage('app_users');
-                if (loginUserSelect) loginUserSelect.innerHTML = users.map(u => `<option value="${u.login}">${u.name}</option>`).join('');
+                const users = Utils.getStorage('app_users') || [];
+                if (loginUserSelect && Array.isArray(users)) {
+                    loginUserSelect.innerHTML = users.map(u => `<option value="${u.login}">${u.name}</option>`).join('');
+                }
             }
         };
 
@@ -523,76 +486,52 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Quando o usuário digitar o tenant e sair do campo, busca os usuários desse tenant
         const tenantInput = document.getElementById('loginTenantInput');
         if (tenantInput) {
-            // Função que busca usuários do tenant no Firestore
+            // Função que busca usuários do tenant
             const loadUsersForTenant = async () => {
                 const tenantId = tenantInput.value.trim().toLowerCase();
                 if (!tenantId) return;
 
-                // Garantir que window.db está disponível — com retry se Firebase ainda carregando
-                let db = window.db;
-                if (!db && typeof firebase !== 'undefined') {
-                    try { db = window.db = firebase.firestore(); } catch(e) { db = null; }
+                // Verificar se Firebase está disponível
+                if (!window.db && typeof firebase !== 'undefined') {
+                    window.db = firebase.firestore();
                 }
-                if (!db) {
-                    // Firebase ainda não pronto — tenta novamente em 1s (máx 3 tentativas)
-                    if (!(loadUsersForTenant._retries >= 3)) {
-                        loadUsersForTenant._retries = (loadUsersForTenant._retries || 0) + 1;
-                        console.warn(`[Login] Firebase não disponível ainda. Tentativa ${loadUsersForTenant._retries}/3 em 1s...`);
-                        setTimeout(loadUsersForTenant, 1000);
-                    } else {
-                        console.warn('[Login] Firebase indisponível após 3 tentativas — usando admin padrão.');
-                    }
+                if (!window.db) {
+                    console.warn('Firebase não disponível para carregar usuários');
                     return;
                 }
-                loadUsersForTenant._retries = 0; // reset para próxima chamada
 
                 console.log(`👥 [Login] Buscando usuários do tenant: ${tenantId}...`);
 
-                // v3.11.67: Busca do sistema novo (tenants/{id}/users) com fallback para legacy
                 try {
-                    let usersFromCloud = [];
+                    const doc = await window.db.collection('tenants').doc(tenantId).collection('legacy_store').doc('app_users').get();
 
-                    // Tenta sistema novo primeiro
-                    const usersSnap = await db.collection('tenants').doc(tenantId).collection('users').get();
-                    if (!usersSnap.empty) {
-                        usersFromCloud = usersSnap.docs
-                            .filter(d => d.data().ativo !== false)
-                            .map(d => {
-                                const u = d.data();
-                                return {
-                                    name:      u.nome || u.name || d.id,
-                                    login:     u.login || d.id,
-                                    senhaHash: u.senhaHash || '',
-                                    role:      u.role || 'operator',
-                                    ativo:     u.ativo !== false
-                                };
-                            });
-                        console.log(`✅ [Login] ${usersFromCloud.length} usuário(s) carregado(s) do sistema novo`);
-                    } else {
-                        // Fallback: sistema legado (legacy_store/app_users)
-                        const doc = await db.collection('tenants').doc(tenantId).collection('legacy_store').doc('app_users').get();
-                        if (doc.exists && doc.data().content) {
-                            usersFromCloud = JSON.parse(doc.data().content);
-                            console.log(`⚠️ [Login] Usando sistema legado (${usersFromCloud.length} usuários)`);
+                    if (doc.exists) {
+                        const data = doc.data();
+                        let usersFromCloud = [];
+
+                        if (data.content) {
+                            usersFromCloud = JSON.parse(data.content);
                         }
-                    }
 
-                    if (usersFromCloud.length > 0) {
-                        // v3.11.86 FIX: Salva com namespace de tenant para evitar contaminação cross-tenant
-                        // NÃO usar Utils.saveRaw('app_users') sem prefixo — isso vaza para outros tenants
-                        localStorage.setItem(`_app_users_${tenantId}`, JSON.stringify(usersFromCloud));
-                        loginUserSelect.innerHTML = usersFromCloud.map(u => {
-                            // Sistema novo usa 'nome', legado usa 'name' — suportar ambos
-                            const displayName = u.nome || u.name || u.login;
-                            return `<option value="${u.login}">${displayName} (${u.login})</option>`;
-                        }).join('');
-                        console.log(`✅ [Login] Dropdown populado com ${usersFromCloud.length} usuário(s) [tenant=${tenantId}]`);
+                        if (usersFromCloud.length > 0) {
+                            // Popular dropdown com usuários encontrados
+                            loginUserSelect.innerHTML = usersFromCloud.map(u =>
+                                `<option value="${u.login}">${u.name} (${u.login})</option>`
+                            ).join('');
+                            console.log(`✅ [Login] ${usersFromCloud.length} usuários carregados para o dropdown`);
+                        } else {
+                            // Se não tem usuários, mantém só admin padrão
+                            loginUserSelect.innerHTML = '<option value="admin">Administrador (admin)</option>';
+                            console.log('⚠️ [Login] Nenhum usuário encontrado, usando admin padrão');
+                        }
                     } else {
+                        // Tenant existe mas sem usuários cadastrados
                         loginUserSelect.innerHTML = '<option value="admin">Administrador (admin)</option>';
-                        console.log('⚠️ [Login] Nenhum usuário encontrado, usando admin padrão');
+                        console.log('⚠️ [Login] Documento app_users não existe no tenant');
                     }
                 } catch (error) {
                     console.error('❌ [Login] Erro ao carregar usuários:', error);
+                    // Em caso de erro, mantém admin padrão
                     loginUserSelect.innerHTML = '<option value="admin">Administrador (admin)</option>';
                 }
             };
@@ -600,39 +539,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Executar ao sair do campo (blur)
             tenantInput.addEventListener('blur', loadUsersForTenant);
 
-            // Também executar enquanto digita (com debounce de 600ms)
-            let _tenantDebounce = null;
-            tenantInput.addEventListener('input', () => {
-                clearTimeout(_tenantDebounce);
-                _tenantDebounce = setTimeout(loadUsersForTenant, 600);
-            });
-
             // Também executar se usuário pressionar Enter no campo de tenant
             tenantInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    clearTimeout(_tenantDebounce);
                     loadUsersForTenant();
                     loginPassInput.focus();
                 }
             });
 
-            // Se já tem valor no campo (ex: value="ltdistribuidora"), carregar automaticamente
-            // Usa delay maior e retry interno para garantir que Firebase já inicializou
+            // Se já tem valor no campo (ex: value="parreiralog"), carregar automaticamente
             if (tenantInput.value.trim()) {
-                setTimeout(loadUsersForTenant, 800);
+                // Pequeno delay para garantir que Firebase esteja pronto
+                setTimeout(loadUsersForTenant, 500);
             }
         }
 
         if (btnLogin) {
 
-            // v3.11.59: Handler real — substitui o placeholder registrado no início
-            window._doDispatchLoginReal = async () => {
-            _appReady = true; // libera o placeholder ao entrar no handler real
-            window._doDispatchLogin = window._doDispatchLoginReal; // alias para compatibilidade
-
-            // GARANTIA: botão SEMPRE é restaurado ao final (try/finally)
-            try {
+            // Expõe o handler globalmente para o onclick do HTML (proteção contra falha de addEventListener)
+            window._doDispatchLogin = async () => {
                 const login = loginUserSelect.value;
                 const pass = loginPassInput.value;
                 const tenantInput = document.getElementById('loginTenantInput');
@@ -704,11 +630,52 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // CRÍTICO: Definir tenant ANTES de qualquer operação
                 const needsSync = !currentTenant || currentTenant !== tenantId;
 
+                // v3.11.82 FIX CRÍTICO: Handler cloudDataLoaded usa dados do evento quando disponíveis
+                // (elimina race condition de re-leitura do localStorage)
+                if (window._cloudDataLoadedHandler) {
+                    window.removeEventListener('cloudDataLoaded', window._cloudDataLoadedHandler);
+                }
+                window._cloudDataLoadedHandler = (evt) => {
+                    const k = evt.detail && evt.detail.key;
+                    const evtData = evt.detail && evt.detail.data; // Dados já parseados (v3.11.82)
+                    console.log(`[cloudDataLoaded] Evento recebido para chave: ${k}${evtData !== undefined ? ' (com dados)' : ' (sem dados)'}`);
+                    if (k === 'carrier_list' || k === 'carrier_configs' || k === 'carrier_info_v2') {
+                        // v3.11.82: Usa dados do evento se disponíveis; senão re-lê do localStorage
+                        if (k === 'carrier_list' && Array.isArray(evtData)) {
+                            carrierList = evtData;
+                            console.log(`[cloudDataLoaded] ✅ carrierList atualizada via evento: ${carrierList.length} itens.`);
+                        } else {
+                            carrierList = Utils.getStorage('carrier_list') || [];
+                        }
+                        if (k === 'carrier_configs' && evtData && typeof evtData === 'object' && !Array.isArray(evtData)) {
+                            carrierConfigs = evtData;
+                        } else {
+                            carrierConfigs = Utils.getStorage('carrier_configs') || {};
+                            if (Array.isArray(carrierConfigs)) carrierConfigs = {};
+                        }
+                        if (k === 'carrier_info_v2' && evtData && typeof evtData === 'object' && !Array.isArray(evtData)) {
+                            carrierInfo = evtData;
+                        } else {
+                            carrierInfo = Utils.getStorage('carrier_info_v2') || {};
+                            if (Array.isArray(carrierInfo)) carrierInfo = {};
+                        }
+                        console.log(`[cloudDataLoaded] Re-render transportadoras: ${carrierList.length} itens.`);
+                        if (window.populateCarrierSelect) window.populateCarrierSelect();
+                        if (window.renderCarrierConfigs) window.renderCarrierConfigs();
+                    }
+                    if (k === 'freight_tables') {
+                        rules = Array.isArray(evtData) ? evtData : (Utils.getStorage('freight_tables') || []);
+                        if (window.renderRulesList) window.renderRulesList();
+                    }
+                };
+                window.addEventListener('cloudDataLoaded', window._cloudDataLoadedHandler);
+                console.log('[Login] ✅ Listener cloudDataLoaded registrado (v3.11.82).');
+
                 if (needsSync) {
                     console.log(`🏢 Configurando tenant: ${tenantId}`);
 
                     // CRÍTICO: Limpar TODOS os dados locais antes de carregar novo tenant
-                    // Isso garante que dados de outro tenant não vazem
+                    // Usa _storageKey para garantir prefixo correto (tenant_XXX_key)
                     const keysToClean = ['dispatches', 'freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients'];
 
                     // Definir novo tenant ANTES de usar _storageKey
@@ -721,106 +688,54 @@ document.addEventListener('DOMContentLoaded', async () => {
                         console.log(`🧹 Limpando local: ${k}`);
                     });
 
-                    // v3.11.84: Resetar Anti-Echo para permitir carga da nuvem no login
+                    // v3.11.69: Resetar Anti-Echo para permitir carga da nuvem no login
                     keysToClean.forEach(k => { delete Utils.lastWriteTime[k]; });
                     localStorage.removeItem('_lwt_persist');
                     console.log('🔓 [Login] Anti-Echo resetado para carga inicial do tenant.');
+
+                    // Carregar dados DESTE tenant da nuvem
+                    if (Utils.Cloud && Utils.Cloud.hasTenant()) {
+                        console.log(`📥 Carregando dados do tenant: ${tenantId}...`);
+                        await Utils.Cloud.loadAll();
+                    }
                 } else {
                     // Mesmo tenant — garante que tenant está configurado e reseta Anti-Echo
                     Utils.Cloud.setTenantId(tenantId);
                     localStorage.setItem('app_tenant_id', tenantId);
-                    // v3.11.84: Resetar Anti-Echo para garantir leitura atual da nuvem
+                    // v3.11.69: Resetar Anti-Echo para garantir leitura atual da nuvem
                     const syncKeys = ['carrier_list', 'carrier_configs', 'carrier_info_v2', 'freight_tables', 'app_users'];
                     syncKeys.forEach(k => { delete Utils.lastWriteTime[k]; });
                     localStorage.removeItem('_lwt_persist');
-                }
-
-                // v3.11.75 FIX: loadAll() agora tem Fase 1 (chaves críticas de transportadora)
-                // que completa em paralelo ANTES das demais.
-                if (Utils.Cloud && Utils.Cloud.hasTenant()) {
-                    console.log(`📥 [Login] Carregando dados frescos do tenant: ${tenantId}...`);
-                    try {
+                    if (Utils.Cloud && Utils.Cloud.hasTenant()) {
+                        console.log(`🔄 [Login] Recarregando dados do tenant: ${tenantId}...`);
                         await Utils.Cloud.loadAll();
-                    } catch (loadErr) {
-                        console.warn('[Login] loadAll falhou:', loadErr.message, '— continuando com dados locais.');
                     }
                 }
 
-                // Re-read users from storage (agora já com dados do tenant correto)
+                // Re-read ALL state variables from storage (agora já com dados do tenant correto)
                 users = Utils.getStorage('app_users') || [];
+                carrierList = Utils.getStorage('carrier_list') || [];
+                carrierConfigs = Utils.getStorage('carrier_configs') || {};
+                if (Array.isArray(carrierConfigs)) carrierConfigs = {};
+                carrierInfo = Utils.getStorage('carrier_info_v2') || {};
+                if (Array.isArray(carrierInfo)) carrierInfo = {};
+                rules = Utils.getStorage('freight_tables') || [];
+                console.log('[Login] Estado sincronizado: ' + carrierList.length + ' transportadoras, ' + rules.length + ' tabelas.');
 
-                // v3.11.67: Login — sistema novo (SHA-256) com fallback para legado (texto puro)
-                let user = null;
-
-                // Tenta validar direto no Firestore (sistema novo)
-                if (window.db) {
-                    try {
-                        const _uDoc = await window.db.collection('tenants').doc(tenantId).collection('users').doc(login).get();
-                        if (_uDoc.exists && _uDoc.data().ativo !== false) {
-                            const _ud = _uDoc.data();
-                            const _hBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass));
-                            const _hHex = Array.from(new Uint8Array(_hBuf)).map(b => b.toString(16).padStart(2,'0')).join('');
-                            if (_hHex === _ud.senhaHash) {
-                                user = { name: _ud.nome || _ud.login || login, login: _ud.login || login, role: _ud.role || 'operator' };
-                                console.log(`✅ [Login] Validado no sistema novo: ${login}`);
-                            }
-                        }
-                    } catch (_e) { console.warn('[Login] Erro ao validar no sistema novo:', _e.message); }
-                }
-
-                // Fallback: sistema legado (senha texto puro em localStorage)
-                if (!user) {
-                    const _lu = users.find(u => u.login === login);
-                    if (_lu && _lu.pass === pass) {
-                        user = _lu;
-                        console.log(`⚠️ [Login] Validado no sistema legado: ${login}`);
-                    }
-                }
+                // Login Logic
+                let user = users.find(u => u.login === login);
 
                 // Admin Fallback always active for setup
                 if (!user && login === 'admin' && pass === 'admin') {
                     user = { name: 'Administrador (Setup)', login: 'admin', pass: 'admin', role: 'supervisor' };
                 }
 
-                if (user) {
+                if (user && user.pass === pass) {
                     currentUser = user;
                     Utils.saveRaw('logged_user', JSON.stringify(user));
 
                     if (loginOverlay) loginOverlay.style.display = 'none';
                     showToast(`Bem-vindo, ${user.name}! [${tenantId}]`);
-
-                    // v3.11.72 FIX: Re-ler variáveis de closure do localStorage após loadAll().
-                    // renderCarrierConfigs() e outras funções usam as variáveis locais
-                    // (carrierList, carrierConfigs, carrierInfo, rules) — não re-lêem do storage.
-                    // Sem este bloco, mesmo com loadAll() salvando no localStorage, a UI
-                    // continuava mostrando os valores stale lidos na inicialização do app.
-                    carrierList = Utils.getStorage('carrier_list') || [];
-                    carrierConfigs = Utils.getStorage('carrier_configs') || {};
-                    if (!carrierConfigs || typeof carrierConfigs !== 'object' || Array.isArray(carrierConfigs)) carrierConfigs = {};
-                    carrierInfo = Utils.getStorage('carrier_info_v2') || {};
-                    if (Array.isArray(carrierInfo)) carrierInfo = {};
-                    rules = Utils.getStorage('freight_tables') || [];
-                    console.log(`🔄 [Login] Variáveis recarregadas: ${carrierList.length} transportadoras, ${rules.length} tabelas.`);
-
-                    // v3.11.74 AUTO-REBUILD: Se carrier_list está vazia ou incompleta,
-                    // reconstrói silenciosamente a partir das tabelas de frete.
-                    // Isso corrige o caso onde o Firestore tem carrier_list corrompida/apagada
-                    // mas freight_tables contém todas as transportadoras reais.
-                    if (rules.length > 0) {
-                        const carriersInTables = [...new Set(rules.map(r => r.transportadora))].filter(c => c).sort();
-                        if (carriersInTables.length > carrierList.length) {
-                            console.warn(`🔧 [Auto-Rebuild] carrier_list tem ${carrierList.length} itens, mas freight_tables tem ${carriersInTables.length} transportadoras únicas. Reconstruindo...`);
-                            carrierList = carriersInTables;
-                            // Salva localmente (sem atualizar lastWriteTime para não bloquear sync)
-                            localStorage.setItem(Utils._storageKey('carrier_list'), JSON.stringify(carrierList));
-                            // Envia para nuvem para corrigir o Firestore corrompido
-                            if (Utils.Cloud && Utils.Cloud.hasTenant()) {
-                                Utils.Cloud.save('carrier_list', carrierList);
-                            }
-                            showToast(`🔧 Lista de transportadoras reconstruída automaticamente (${carrierList.length} transportadoras).`);
-                            console.log(`✅ [Auto-Rebuild] carrier_list reconstruída: ${carrierList.join(', ')}`);
-                        }
-                    }
 
                     // Apply role-based UI restrictions
                     if (window.applyRoleRestrictions) window.applyRoleRestrictions();
@@ -834,7 +749,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (window.showSection) window.showSection('dashboard');
                     else if (window.renderDashboard) window.renderDashboard();
 
-                    // v3.11.84: Render imediato de transportadoras após loadAll
+                    // v3.11.75 FIX: Re-popular listas de transportadoras após login.
+                    // Render imediato (com dados do loadAll)
                     const _diag = {
                         carrierListLen: carrierList.length,
                         lsKey: Utils._storageKey('carrier_list'),
@@ -846,43 +762,57 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const _lsRaw = localStorage.getItem(`tenant_${tenantId}_carrier_list`);
                         console.warn('[Login] localStorage tenant_'+tenantId+'_carrier_list:', _lsRaw ? _lsRaw.substring(0,200) : 'NULL/VAZIO');
                     }
-                    if (window.populateCarrierSelect) window.populateCarrierSelect();
+                    populateCarrierSelect();
                     if (window.renderCarrierConfigs) window.renderCarrierConfigs();
                     if (window.renderRulesList) window.renderRulesList();
                     console.log('[Login] UI de transportadoras re-renderizada. Lista:', carrierList.length, 'itens.');
 
-                    // v3.11.84: Segundo render delayed para capturar dados que chegam via onSnapshot
+                    // v3.11.75: Segundo render delayed para capturar dados que chegam via onSnapshot
+                    // (o Firebase onSnapshot pode demorar alguns segundos para retornar da rede)
                     setTimeout(() => {
                         const _cl2 = Utils.getStorage('carrier_list') || [];
                         console.log('[Login+2s] Re-render transportadoras. Lista agora:', _cl2.length, 'itens.');
                         if (_cl2.length > carrierList.length || carrierList.length === 0) {
                             carrierList = _cl2;
-                            if (window.populateCarrierSelect) window.populateCarrierSelect();
+                            populateCarrierSelect();
                             if (window.renderCarrierConfigs) window.renderCarrierConfigs();
                             if (window.renderRulesList) window.renderRulesList();
                         }
                     }, 2000);
 
-                    // v3.11.84: Diagnóstico final — alerta visual se após 10s ainda não há transportadoras
+                    setTimeout(() => {
+                        const _cl5 = Utils.getStorage('carrier_list') || [];
+                        console.log('[Login+5s] Re-render transportadoras. Lista agora:', _cl5.length, 'itens.');
+                        if (_cl5.length > 0) {
+                            carrierList = _cl5;
+                            populateCarrierSelect();
+                            if (window.renderCarrierConfigs) window.renderCarrierConfigs();
+                            if (window.renderRulesList) window.renderRulesList();
+                        }
+                    }, 5000);
+
+                    // v3.11.70: Diagnóstico final — alerta visual se após 10s ainda não há transportadoras
                     setTimeout(() => {
                         const _cl10 = Utils.getStorage('carrier_list') || [];
-                        console.log('[Login+10s] Diagnóstico final. Lista agora:', _cl10.length, 'itens.');
+                        console.log('[Login+10s] Diagnóstico final transportadoras. Lista agora:', _cl10.length, 'itens.');
                         if (_cl10.length > 0) {
-                            if (_cl10.length > carrierList.length || carrierList.length === 0) {
-                                carrierList = _cl10;
-                                if (window.populateCarrierSelect) window.populateCarrierSelect();
-                                if (window.renderCarrierConfigs) window.renderCarrierConfigs();
-                                if (window.renderRulesList) window.renderRulesList();
-                            }
+                            carrierList = _cl10;
+                            populateCarrierSelect();
+                            if (window.renderCarrierConfigs) window.renderCarrierConfigs();
+                            if (window.renderRulesList) window.renderRulesList();
                         } else {
-                            console.error('[Login+10s] ❌ ZERO transportadoras. Possível problema no Firestore para tenant:', tenantId);
-                            showToast('⚠️ Transportadoras não carregadas. Abra F12 e execute diagCarriers() para diagnóstico.', 8000);
+                            // Nenhuma transportadora após 10s — mostrar alerta visual
+                            console.error('[Login+10s] ❌ ZERO transportadoras após 10s. Possível problema no Firestore para tenant:', tenantId);
+                            const _lsRaw10 = localStorage.getItem(`tenant_${tenantId}_carrier_list`);
+                            console.error('[Login+10s] localStorage carrier_list:', _lsRaw10 ? _lsRaw10.substring(0, 300) : 'NULL/VAZIO');
+                            showToast('⚠️ Transportadoras não carregadas. Verifique o console (F12) e contate suporte se o problema persistir.', 8000);
                         }
                     }, 10000);
 
-                    // v3.11.84: Função global para recarregar transportadoras manualmente
+                    // v3.11.83: Função global para recarregar transportadoras manualmente (busca direta no Firestore)
                     window.reloadCarriers = async () => {
                         showToast('🔄 Recarregando transportadoras da nuvem...');
+                        // Tenta busca direta ao Firestore primeiro (mais confiável)
                         if (window.db && Utils.Cloud && Utils.Cloud.hasTenant()) {
                             try {
                                 const tid = Utils.Cloud.tenantId;
@@ -900,7 +830,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         console.warn('[reloadCarriers] ⚠️ Doc existe mas sem campo content. Campos:', Object.keys(d));
                                     }
                                 } else {
-                                    console.warn('[reloadCarriers] ❌ Doc carrier_list NÃO existe no Firestore para tenant:', Utils.Cloud.tenantId);
+                                    console.warn('[reloadCarriers] ❌ Doc carrier_list NÃO existe no Firestore para tenant:', tid);
                                 }
                             } catch(e) {
                                 console.error('[reloadCarriers] Erro Firestore:', e);
@@ -911,14 +841,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                             await Utils.Cloud.loadAll();
                             carrierList = Utils.getStorage('carrier_list') || [];
                         }
-                        if (window.populateCarrierSelect) window.populateCarrierSelect();
+                        populateCarrierSelect();
                         if (window.renderCarrierConfigs) window.renderCarrierConfigs();
                         if (window.renderRulesList) window.renderRulesList();
                         showToast(`✅ Transportadoras: ${carrierList.length} encontradas.`);
                         console.log('[reloadCarriers] Concluído:', carrierList.length, 'transportadoras.');
                     };
 
-                    // v3.11.84: Diagnóstico completo acessível via console (F12) → diagCarriers()
+                    // v3.11.83: Diagnóstico completo acessível via console (F12) → diagCarriers()
                     window.diagCarriers = async () => {
                         const tid = (Utils.Cloud && Utils.Cloud.tenantId) || localStorage.getItem('app_tenant_id') || '?';
                         const lsKey = `tenant_${tid}_carrier_list`;
@@ -938,6 +868,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     const d = doc.data();
                                     console.log('✅ Firestore doc EXISTS. Campos:', Object.keys(d));
                                     console.log('Firestore content (200 chars):', d.content ? d.content.substring(0, 200) : 'AUSENTE');
+                                    console.log('isChunked:', d.isChunked);
                                     if (d.content) {
                                         try {
                                             const arr = JSON.parse(d.content);
@@ -946,6 +877,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     }
                                 } else {
                                     console.error('❌ Firestore doc NÃO EXISTE para tenant:', tid);
+                                    // Tenta listar todos os docs da coleção legacy_store
                                     const col = await window.db.collection('tenants').doc(tid)
                                         .collection('legacy_store').get();
                                     console.log('Docs em legacy_store:', col.docs.map(d => d.id));
@@ -957,60 +889,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                         console.groupEnd();
                         return { tid, lsVal, carrierCount: carrierList.length };
                     };
-                    console.log('💡 [v3.11.84] Digite diagCarriers() no console (F12) para diagnóstico completo.');
-                    console.log('💡 [v3.11.84] Digite reloadCarriers() no console (F12) para recarregar da nuvem.');
+                    console.log('💡 [v3.11.83] Digite diagCarriers() no console (F12) para diagnóstico completo.');
+
 
                     // Inicializa módulo de Ocorrências
                     if (window.OcorrenciasModule && window.db && tenantId) {
                         window.OcorrenciasModule.init(window.db, tenantId, user);
                     }
 
+                    // v3.11.81: Listener já registrado acima antes do loadAll(). Apenas log de confirmação.
+                    console.log('[Login] ✅ Sistema de sincronização ativo.');
+
+
                 } else {
-                    alert('Credenciais inválidas ou usuário não cadastrado nesta empresa.');
-                }
-            } catch (loginErr) {
-                console.error('[Login] Erro inesperado:', loginErr);
-                alert('Erro ao fazer login. Tente novamente.');
-            } finally {
-                // SEMPRE restaura o botão — independente de sucesso ou falha
-                if (btnLogin && loginOverlay && loginOverlay.style.display !== 'none') {
+
+                    // Restaurar botão de login
                     btnLogin.disabled = false;
                     btnLogin.innerHTML = 'ACESSAR SISTEMA';
+                    alert('Credenciais inválidas ou usuário não cadastrado nesta empresa.');
                 }
-            }
             };
 
             btnLogin.addEventListener('click', window._doDispatchLogin);
         }
-
-        // Marca app como pronto — libera o placeholder
-        _appReady = true;
-
-        // v3.11.75: Callback global para sincronizar variáveis de closure quando dados de
-        // transportadora chegam do Firestore (via loadAll Fase 1 ou onSnapshot).
-        // Isso garante que carrierList, carrierConfigs, rules e carrierInfo sempre reflitam
-        // o que está no localStorage — independentemente de quando o Firestore responde.
-        window._refreshCarrierVars = (source) => {
-            const prevLen = Array.isArray(carrierList) ? carrierList.length : 0;
-            carrierList = Utils.getStorage('carrier_list') || [];
-            carrierConfigs = Utils.getStorage('carrier_configs') || {};
-            if (!carrierConfigs || typeof carrierConfigs !== 'object' || Array.isArray(carrierConfigs)) carrierConfigs = {};
-            carrierInfo = Utils.getStorage('carrier_info_v2') || {};
-            if (Array.isArray(carrierInfo)) carrierInfo = {};
-            rules = Utils.getStorage('freight_tables') || [];
-            console.log(`🔄 [_refreshCarrierVars:${source}] carrierList=${carrierList.length}, rules=${rules.length} (era ${prevLen})`);
-
-            // Auto-rebuild: se carrier_list ainda vazia mas freight_tables tem dados, reconstrói
-            if (carrierList.length === 0 && rules.length > 0) {
-                const carriersInTables = [...new Set(rules.map(r => r.transportadora))].filter(c => c).sort();
-                if (carriersInTables.length > 0) {
-                    console.warn(`🔧 [_refreshCarrierVars] Auto-rebuild: ${carriersInTables.length} transportadoras de freight_tables.`);
-                    carrierList = carriersInTables;
-                    localStorage.setItem(Utils._storageKey('carrier_list'), JSON.stringify(carrierList));
-                    if (Utils.Cloud && Utils.Cloud.hasTenant()) Utils.Cloud.save('carrier_list', carrierList);
-                }
-            }
-        };
 
         // Elements
 
@@ -1958,8 +1859,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Ignore minimum if it's a complement
                 if (!isComplement && baseVal < rule.minimo) baseVal = rule.minimo;
 
-                // v3.11.66: taxa fixa por volume — multiplica pedagio pelo numero de volumes se flag ativa
-                const tollVal = (rule.pedagio || 0) * (rule.taxaFixaPorVolume ? volume : 1);
+                const tollVal = rule.pedagio || 0;
 
                 // 2. Weight Excess
                 let excessCost = 0;
@@ -2541,10 +2441,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             body.innerHTML = activeRules.map((r) => {
                 const originalIndex = rules.indexOf(r);
-                // Exibe taxa fixa com badge "× vol" se for por volume
-                const taxaFixaDisplay = r.pedagio > 0
-                    ? Utils.formatCurrency(r.pedagio) + (r.taxaFixaPorVolume ? ' <span title="Taxa por volume" style="font-size:0.65rem;background:rgba(var(--primary-rgb),0.15);color:var(--primary-color);border-radius:10px;padding:1px 5px;font-weight:700;vertical-align:middle;">×vol</span>' : '')
-                    : '-';
                 return `
             <tr>
                 <td><strong>${r.cidade}</strong></td>
@@ -2556,7 +2452,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td>${r.redespacho || '-'}</td>
                 <td>${r.percentualRedespacho > 0 ? r.percentualRedespacho + '%' : '-'}</td>
                 <td>${r.minimoRedespacho > 0 ? Utils.formatCurrency(r.minimoRedespacho) : '-'}</td>
-                <td>${taxaFixaDisplay}</td>
+                <td>${r.pedagio > 0 ? Utils.formatCurrency(r.pedagio) + (r.taxaFixaPorVolume ? ' <span title="Taxa por volume" style="font-size:0.7rem;color:#4f8ef7;font-weight:600;">×vol</span>' : '') : '-'}</td>
                 <td style="color: var(--primary-color); font-weight: 500;">${r.leadTime || '-'}</td>
                 <td style="font-size: 0.8rem; color: var(--text-secondary);">${r.horarios || '-'}</td>
                 <td style="text-align: right; display: flex; justify-content: flex-end; gap: 0.5rem;">
@@ -2596,10 +2492,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 rules = rules.filter(r => r.transportadora !== carrierName);
                 const removedCount = beforeCount - rules.length;
 
-                // 3. Marcar timestamps anti-rollback + PERSISTIR (v3.11.64: sobrevive refresh)
+                // 3. Marcar timestamps anti-rollback
                 Utils.lastWriteTime['freight_tables'] = Date.now();
                 Utils.lastWriteTime['carrier_list'] = Date.now();
-                Utils._persistLastWriteTime();
 
                 // 4. Salvar localmente
                 localStorage.setItem(Utils._storageKey('freight_tables'), JSON.stringify(rules));
@@ -2715,7 +2610,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (confirm(`Encontradas ${extractedCarriers.length} transportadoras nas tabelas de frete:\n\n${extractedCarriers.join(', ')}\n\nReconstruir a lista?`)) {
                 carrierList = extractedCarriers;
                 Utils.lastWriteTime['carrier_list'] = Date.now();
-                Utils._persistLastWriteTime(); // v3.11.64: garante sobrevivência ao refresh
                 localStorage.setItem(Utils._storageKey('carrier_list'), JSON.stringify(carrierList));
 
                 // Forçar envio para nuvem (bypass da proteção de array vazio)
@@ -2733,19 +2627,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             const body = document.getElementById('carrierConfigsBody');
             if (!body) return;
 
-            // v3.11.73 FIX: Reler do storage antes de renderizar.
-            // Garante dados frescos mesmo quando os listeners onSnapshot atualizam o
-            // localStorage mas não recarregam as variáveis de closure do app.js.
+            // SEMPRE re-ler do localStorage para garantir dados atualizados após sync
             carrierList = Utils.getStorage('carrier_list') || [];
-            if (!Array.isArray(carrierList)) carrierList = [];
             carrierConfigs = Utils.getStorage('carrier_configs') || {};
-            if (!carrierConfigs || typeof carrierConfigs !== 'object' || Array.isArray(carrierConfigs)) carrierConfigs = {};
+            if (Array.isArray(carrierConfigs)) carrierConfigs = {};
             carrierInfo = Utils.getStorage('carrier_info_v2') || {};
             if (Array.isArray(carrierInfo)) carrierInfo = {};
 
+            console.log(`[renderCarrierConfigs] carrierList: ${carrierList.length} itens. LS key: ${Utils._storageKey('carrier_list')} = ${localStorage.getItem(Utils._storageKey('carrier_list')) ? localStorage.getItem(Utils._storageKey('carrier_list')).substring(0,80)+'...' : 'NULL'}`);
+
             const carriers = [...carrierList].sort();
 
-            // v3.11.84: Estado vazio — mostra aviso com botão de recarga
+            // v3.11.83: Estado vazio — mostra aviso com botão de recarga
             if (carriers.length === 0) {
                 const tenantId = (Utils.Cloud && Utils.Cloud.tenantId) || localStorage.getItem('app_tenant_id') || '?';
                 body.innerHTML = `
@@ -2766,7 +2659,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 </button>
                             </div>
                             <div style="font-size: 0.75rem; color: var(--text-secondary); background: rgba(0,0,0,0.1); padding: 0.5rem 1rem; border-radius: 6px;">
-                                💡 Dica: Abra o console (F12) e execute <em>diagCarriers()</em> para diagnóstico completo.
+                                💡 Dica: Abra o console (F12) e veja os logs <em>[loadAll]</em> para diagnóstico.
                             </div>
                         </div>
                     </td>
@@ -2805,20 +2698,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <button class="btn btn-secondary" onclick="window.editCarrier('${safeC}')" style="padding: 0.3rem; min-width: auto; background: rgba(0,123,255,0.1); color: #007bff; border: none;" title="Editar Cadastro">
                         <span class="material-icons-round" style="font-size: 1.2rem;">edit</span>
                     </button>
-
-
                     <button class="btn btn-primary" onclick="window.updateCarrierConfig('${safeC}')" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">
                         SALVAR
                     </button>
-
                     <button class="btn btn-secondary" onclick="window.removeCarrier('${safeC}')" style="padding: 0.4rem; min-width: auto; background: rgba(255,0,0,0.1); color: var(--accent-danger); border: none;">
                         <span class="material-icons-round" style="font-size: 1.2rem;">delete_outline</span>
                     </button>
                 </td>
             </tr>
             `;
-
-
             }).join('');
         };
 
@@ -2887,6 +2775,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         function populateCarrierSelect() {
+            // Re-ler do localStorage para garantir dados atualizados
+            carrierList = Utils.getStorage('carrier_list') || [];
 
             // Now populates datalist instead of select
             const datalist = document.getElementById('carrierList');
@@ -2908,6 +2798,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }
         }
+        // v3.11.80: Expor globalmente para utils.js poder chamar
+        window.populateCarrierSelect = populateCarrierSelect;
 
         function populateRedispatchSelect() {
             const select = document.getElementById('ruleRedispatch');
@@ -3170,14 +3062,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('ruleWeightLimit').value = r.limitePeso;
             document.getElementById('ruleExcess').value = r.valorExcedente;
             document.getElementById('ruleToll').value = r.pedagio || 0;
-            const chkVol = document.getElementById('ruleTaxaFixaPorVolume');
-            if (chkVol) {
-                chkVol.checked = r.taxaFixaPorVolume || false;
-                const hint = document.getElementById('taxaFixaVolHint');
-                const lbl = document.getElementById('taxaFixaVolLabel');
-                if (hint) hint.style.display = chkVol.checked ? 'block' : 'none';
-                if (lbl) lbl.style.background = chkVol.checked ? 'rgba(var(--primary-rgb),0.18)' : 'rgba(var(--primary-rgb),0.08)';
-            }
             document.getElementById('ruleRedispatch').value = r.redespacho || '';
             document.getElementById('ruleRedispatchPercent').value = r.percentualRedespacho || '';
             document.getElementById('ruleRedispatchMin').value = r.minimoRedespacho || '';
@@ -3219,14 +3103,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             form.reset();
             document.getElementById('editingRuleIndex').value = '-1';
 
-            // Reset flag taxa fixa por volume
-            const chkVol = document.getElementById('ruleTaxaFixaPorVolume');
-            if (chkVol) { chkVol.checked = false; }
-            const hint = document.getElementById('taxaFixaVolHint');
-            if (hint) hint.style.display = 'none';
-            const lbl = document.getElementById('taxaFixaVolLabel');
-            if (lbl) lbl.style.background = 'rgba(var(--primary-rgb),0.08)';
-
             const submitBtn = document.getElementById('btnSubmitRule');
             submitBtn.innerHTML = 'SALVAR TABELA';
             submitBtn.classList.add('btn-primary');
@@ -3247,19 +3123,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderRulesList();
             showToast('🗑️ Tabela removida com sucesso');
         };
-
-        // --- Toggle hint para taxa fixa por volume ---
-        const chkVolToggle = document.getElementById('ruleTaxaFixaPorVolume');
-        if (chkVolToggle) {
-            chkVolToggle.addEventListener('change', () => {
-                const hint = document.getElementById('taxaFixaVolHint');
-                const lbl = document.getElementById('taxaFixaVolLabel');
-                if (hint) hint.style.display = chkVolToggle.checked ? 'block' : 'none';
-                if (lbl) lbl.style.background = chkVolToggle.checked
-                    ? 'rgba(var(--primary-rgb),0.18)'
-                    : 'rgba(var(--primary-rgb),0.08)';
-            });
-        }
 
         const formNewRule = document.getElementById('formNewRule');
         if (formNewRule) {
@@ -3304,7 +3167,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     limitePeso: parseFloat(document.getElementById('ruleWeightLimit').value),
                     valorExcedente: parseFloat(document.getElementById('ruleExcess').value),
                     pedagio: parseFloat(document.getElementById('ruleToll').value) || 0,
-                    taxaFixaPorVolume: document.getElementById('ruleTaxaFixaPorVolume')?.checked || false,
                     redespacho: window.normalizeText(document.getElementById('ruleRedispatch').value),
                     percentualRedespacho: parseFloat(document.getElementById('ruleRedispatchPercent').value) || 0,
                     minimoRedespacho: parseFloat(document.getElementById('ruleRedispatchMin').value) || 0,
@@ -4200,9 +4062,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             const prevSelected = new Set(reset ? [] : window.getSelectedInvoiceMonths());
             const monthsSet = new Set();
             dispatches.forEach(d => {
-                // v3.11.52: usa _parseDispatchDate que suporta todos os formatos
-                // (ISO, Firestore Timestamp, {seconds}, número, fallback d.id)
-                const dt = window._parseDispatchDate ? window._parseDispatchDate(d) : null;
+                // Tenta d.date primeiro (data retroativa/intencional), depois dispatchedAt, depois _parseDispatchDate
+                let dt = null;
+                if (d.date) {
+                    const parsed = new Date(d.date);
+                    if (!isNaN(parsed.getTime())) dt = parsed;
+                }
+                if (!dt && d.dispatchedAt) {
+                    const parsed = new Date(d.dispatchedAt?.seconds ? d.dispatchedAt.seconds * 1000 : d.dispatchedAt);
+                    if (!isNaN(parsed.getTime())) dt = parsed;
+                }
+                if (!dt && window._parseDispatchDate) {
+                    dt = window._parseDispatchDate(d);
+                }
                 if (!dt || isNaN(dt.getTime())) return;
                 monthsSet.add(`${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`);
             });
@@ -4244,12 +4116,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 .filter(d => VALID_STATUSES.includes(d.status) && d.redespCarrier && d.redespTotal > 0)
                 .map(d => d.redespCarrier.toUpperCase().trim());
 
-            // v3.11.62: suporte ao campo legado d.redespacho (NFs antigas sem redespCarrier)
-            const legacyRedespCarriers = dispatches
-                .filter(d => VALID_STATUSES.includes(d.status) && d.redespacho && d.redespacho !== '-' && d.redespacho !== '' && !d.redespCarrier)
-                .map(d => d.redespacho.toUpperCase().trim());
-
-            const allCarriers = [...new Set([...mainCarriers, ...redespCarriers, ...legacyRedespCarriers])].sort();
+            const allCarriers = [...new Set([...mainCarriers, ...redespCarriers])].sort();
 
             select.innerHTML = '<option value="">-- Selecione --</option>';
             allCarriers.forEach(carrier => {
@@ -4292,47 +4159,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             // v3.11.30: inclui Despachado E Pago — NFs já pagas não somem mais da conferência
             const dispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
             const carrierNorm = carrier.toUpperCase().trim();
-            const carrierNormNoSpace = carrierNorm.replace(/\s+/g, ''); // v3.11.54: sem espaços para fuzzy match
-            const VALID_STATUSES_FILTER = ['Despachado', 'Pago', 'concluido'];
+            const VALID_STATUSES_FILTER = ['Despachado', 'Pago', 'concluido']; // v3.11.51: 'concluido' = legado Firestore (ex-RA abril)
 
-            // v3.11.54: helper de comparação — remove espaços de ambos os lados antes de comparar
-            // Resolve: "RA" (dropdown) !== "R A TRANSPORTES" (Firestore) → agora bate "RA" === "RATRANSPORTES".startsWith("RA") ✓
-            const _carrierMatch = (nfCarrier) => {
-                if (!nfCarrier) return false;
-                const n = nfCarrier.toUpperCase().trim();
-                const nNoSpace = n.replace(/\s+/g, '');
-                return n === carrierNorm || nNoSpace === carrierNormNoSpace ||
-                       nNoSpace.startsWith(carrierNormNoSpace) || carrierNormNoSpace.startsWith(nNoSpace);
-            };
 
-            console.log(`[InvoiceFilter v3.11.54] Buscando NFs para ${carrierNorm} (semEspaço: ${carrierNormNoSpace}). Total despachos: ${dispatches.length}`);
+            console.log(`[InvoiceFilter v3.11.30] Buscando NFs para ${carrierNorm}. Total despachos: ${dispatches.length}`);
 
             let filtered = dispatches
                 .filter(d => VALID_STATUSES_FILTER.includes(d.status) && (
-                    _carrierMatch(d.carrier) ||
-                    (_carrierMatch(d.redespCarrier) && d.redespTotal > 0) ||
-                    // v3.11.62: suporte ao campo legado d.redespacho (NFs antigas)
-                    (_carrierMatch(d.redespacho) && !d.redespCarrier && d.redespacho && d.redespacho !== '-')
+                    (d.carrier && d.carrier.toUpperCase().trim() === carrierNorm) ||
+                    (d.redespCarrier && d.redespCarrier.toUpperCase().trim() === carrierNorm && d.redespTotal > 0)
                 ))
                 .map(d => {
-                    // v3.11.62: detecta redespacho tanto pelo campo novo quanto pelo legado
-                    const isRedespNew = _carrierMatch(d.redespCarrier) && !_carrierMatch(d.carrier);
-                    const isRedespLegacy = !d.redespCarrier && _carrierMatch(d.redespacho) && !_carrierMatch(d.carrier)
-                                         && d.redespacho && d.redespacho !== '-';
-                    const isRedesp = isRedespNew || isRedespLegacy;
+                    const isRedesp = d.redespCarrier && d.redespCarrier.toUpperCase().trim() === carrierNorm &&
+                                     !(d.carrier && d.carrier.toUpperCase().trim() === carrierNorm);
                     // Calcula o valor correto para esta transportadora
                     let invoiceValue;
-                    if (isRedespNew) {
-                        // Redespacho novo: usa apenas o valor do redespacho
+                    if (isRedesp) {
+                        // Redespacho: usa apenas o valor do redespacho
                         invoiceValue = d.redespTotal || 0;
-                    } else if (isRedespLegacy) {
-                        // Redespacho legado: usa redespTotal se existir, senão tenta calcular
-                        // (NFs antigas podem ter o valor em d.total e não ter mainTotal/redespTotal)
-                        invoiceValue = d.redespTotal || 0;
-                        // Se redespTotal não foi salvo, tenta extrair do percentualRedespacho
-                        if (!invoiceValue && d.percentualRedespacho && d.nfValue) {
-                            invoiceValue = Math.round(d.nfValue * (d.percentualRedespacho / 100) * 100) / 100;
-                        }
                     } else {
                         // Principal: usa o total menos o redespacho (evita dupla contagem)
                         // ✅ FIX v3.11.43: Math.round para evitar resíduo float na subtração
@@ -4352,8 +4196,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const _selectedMonths = window.getSelectedInvoiceMonths();
             if (_selectedMonths.length > 0) {
                 filtered = filtered.filter(d => {
-                    // v3.11.52: usa _parseDispatchDate (robusta) para obter mês correto
-                    const dispatchDate = window._parseDispatchDate(d);
+                    // usa d.date (data retroativa/intencional) — FIX v3.11.44
+                    const raw = d.date || null;
+                    const dispatchDate = raw ? new Date(raw) : window._parseDispatchDate(d);
                     if (!dispatchDate || isNaN(dispatchDate.getTime())) return false;
                     const key = `${dispatchDate.getFullYear()}-${String(dispatchDate.getMonth() + 1).padStart(2, '0')}`;
                     return _selectedMonths.includes(key);
@@ -4571,7 +4416,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const config = cfgNorm['TNORTE'] || {};
             let baseVal  = nfValue * (rule.percentual / 100);
             if (!isComp && baseVal < rule.minimo) baseVal = rule.minimo;
-            const tollVal    = rule.pedagio || 0;
+            // v3.11.66: taxa fixa por volume — multiplica pedagio pelo numero de volumes se flag ativa
+            const tollVal    = (rule.pedagio || 0) * (rule.taxaFixaPorVolume ? volume : 1);
             const grisVal    = nfValue * ((config.gris || 0) / 100);
             const volumeCost = (config.valorVolume > 0 && volume >= 1) ? volume * config.valorVolume : 0;
             let excessCost = 0;
@@ -4607,18 +4453,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('tnorteRecalcBody').innerHTML =
                 '<div style="text-align:center;padding:3rem;color:var(--text-secondary);"><span class="material-icons-round" style="font-size:3rem;display:block;animation:spin 1s linear infinite;">sync</span><p style="margin-top:1rem;">Carregando histórico de despachos...</p></div>';
             document.getElementById('btnApplyTNorteRecalc').style.display = 'none';
-
-            // v3.11.56: sempre re-ler regras do storage ANTES de calcular
-            // (evita "Sem Regra" quando as tabelas chegaram do Firestore após o init)
-            rules = Utils.getStorage('freight_tables') || [];
-            console.log(`[RecalcTNORTE v3.11.56] rules carregadas: ${rules.length} total`);
-            const tnorteRules = rules.filter(r => (r.transportadora || '').toUpperCase().trim() === 'TNORTE');
-            console.log(`[RecalcTNORTE v3.11.56] regras TNORTE: ${tnorteRules.length}`);
-            if (tnorteRules.length > 0) {
-                const cidades = [...new Set(tnorteRules.map(r => r.cidade))].slice(0, 8);
-                console.log(`[RecalcTNORTE v3.11.56] cidades TNORTE (amostra): ${JSON.stringify(cidades)}`);
-            }
-
             const allDispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
             const cutoff = new Date(); cutoff.setHours(23, 59, 59, 999);
             const tnorteDispatches = allDispatches.filter(d => {
@@ -4630,21 +4464,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.getElementById('tnorteRecalcBody').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-secondary);"><span class="material-icons-round" style="font-size:2.5rem;">search_off</span><p>Nenhum despacho da TNORTE encontrado no histórico.</p></div>';
                 return;
             }
-
-            // v3.11.56: se ainda não tem regras, mostrar aviso claro
-            if (tnorteRules.length === 0) {
-                document.getElementById('tnorteRecalcBody').innerHTML = `
-                    <div style="text-align:center;padding:2rem;">
-                        <span class="material-icons-round" style="font-size:2.5rem;color:#f59e0b;">warning</span>
-                        <p style="margin-top:1rem;font-weight:600;">Nenhuma regra da TNORTE encontrada na tabela de fretes.</p>
-                        <p style="font-size:.85rem;color:var(--text-secondary);">Acesse <strong>Tabelas de Frete</strong> e verifique se as regras da TNORTE estão cadastradas antes de recalcular.</p>
-                        <p style="font-size:.8rem;color:var(--text-secondary);margin-top:.5rem;">Total de regras carregadas: <strong>${rules.length}</strong></p>
-                    </div>`;
-                return;
-            }
-
-            // v3.11.56: também re-ler carrierConfigs do storage
-            carrierConfigs = Utils.getStorage('carrier_configs') || {};
             const cfgNorm = {};
             Object.keys(carrierConfigs).forEach(k => { cfgNorm[k.toUpperCase().trim()] = carrierConfigs[k]; });
             const results = tnorteDispatches.map(d => {
@@ -5457,15 +5276,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log(`🔄 [Estorno] ${revertedCount} NFs encontradas com status 'Pago'. IDs: ${idsToRevert.join(', ')}`);
 
             // Atualiza localStorage com a lista completa e corrigida
-            // CRÍTICO: Usa localStorage DIRETAMENTE (sem Cloud.save) para evitar o SYNC BLOQUEADO
-            // O Firestore já foi/será atualizado individualmente via dispatches_db (abaixo)
-            try {
-                const storageKey = Utils._storageKey('dispatches');
-                localStorage.setItem(storageKey, JSON.stringify(updatedDispatches));
-                Utils.lastWriteTime['dispatches'] = Date.now();
-            } catch (e) {
-                console.warn('[Estorno] Não foi possível atualizar localStorage de dispatches:', e);
-            }
+            Utils.setStorage('dispatches', updatedDispatches);
 
             // 2b. Persiste no Firestore
             if (Utils.Cloud && Utils.Cloud.hasTenant && Utils.Cloud.hasTenant() && window.db) {
@@ -8128,7 +7939,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // --- GESTÃO DE USUÁRIOS (Lógica) ---
         // --- GESTÃO DE USUÁRIOS (Lógica) ---
-        window.saveUserAction = async () => {
+        window.saveUserAction = () => {
             const name = document.getElementById('regUserName').value.trim();
             const login = document.getElementById('regUserLogin').value.trim();
             const pass = document.getElementById('regUserPass').value.trim();
@@ -8166,24 +7977,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     alert('Este login já está em uso por outro usuário.');
                     return;
                 }
-                users.push({ name, login, pass, role });
-
-                // v3.11.67: Sincroniza para o sistema novo (Firestore tenants/users)
-                if (window.db && Utils.Cloud && Utils.Cloud.tenantId) {
-                    try {
-                        const _hBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass));
-                        const _hHex = Array.from(new Uint8Array(_hBuf)).map(b => b.toString(16).padStart(2,'0')).join('');
-                        const _tid  = Utils.Cloud.tenantId;
-                        await window.db.collection('tenants').doc(_tid).collection('users').doc(login).set({
-                            nome: name, login, senhaHash: _hHex, role,
-                            ativo: true, criadoEm: new Date().toISOString(), modulos: []
-                        });
-                        await window.db.collection('users_index').doc(login).set({ tenantId: _tid });
-                        console.log(`✅ [saveUser] Sincronizado para sistema novo: ${login}`);
-                    } catch (_e) {
-                        console.warn('[saveUser] Falha ao sincronizar para sistema novo:', _e.message);
-                    }
-                }
+                users.push({ name, login, pass, role, createdAt: new Date().toISOString() });
             }
 
             Utils.saveRaw('app_users', JSON.stringify(users));
@@ -8914,13 +8708,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
     } catch (err) {
-        // v3.11.58: Exibe erro visível na tela além do console
         console.error("FATAL ERROR IN APP.JS:", err);
-        _appReady = true; // libera o placeholder mesmo em caso de erro
-        const btnErr = document.getElementById('btnLogin');
-        if (btnErr) {
-            btnErr.style.background = '#dc2626';
-            btnErr.textContent = '⚠ ERRO: ' + (err && err.message ? err.message.substring(0,60) : 'Recarregue a página');
-        }
     }
 });

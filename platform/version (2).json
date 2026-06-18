@@ -1,0 +1,6 @@
+{
+    "version": "3.11.82",
+    "change": "v3.11.82 - FIX transportadoras: evento cloudDataLoaded passa dados já parseados para eliminar race condition. loadAll() dispara evento com data parseada; handler no login usa dados do evento diretamente sem re-ler localStorage. Listeners reregistrados a cada login para evitar duplicação.",
+    "lastUpdate": "2026-06-17",
+    "deployedAt": "2026-06-17 13:00"
+}

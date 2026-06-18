@@ -8,6 +8,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link rel="stylesheet" href="core/styles/portal.css">
+    <!-- Security Guard (primeiro script da plataforma) -->
+    <script src="core/js/security-guard.js"></script>
 </head>
 
 <body>
@@ -236,11 +238,11 @@
         const dynamicIds = storedTenants.map(t => t.id);
         const ALLOWED_TENANTS = ['ltdistribuidora', 'centralpecas', 'parreira', ...dynamicIds];
 
-        // MOCK USERS for Fallback (if registry is empty/broken)
-        // Isso garante que o admin (você) consiga entrar mesmo se o localStorage for limpo.
-        const FALLBACK_USERS = [
-            { login: 'paulo', pass: 'master@2026', name: 'Paulo Parreira', role: 'admin', tenant: 'parreira' }
-        ];
+        // FALLBACK USERS: removido do código-fonte por segurança.
+        // Em caso de localStorage vazio, use o Painel Admin (Master)
+        // para recadastrar os usuários via Firebase.
+        // Se precisar de acesso emergencial, acesse o Firebase Console.
+        const FALLBACK_USERS = [];
 
         document.addEventListener('DOMContentLoaded', function () {
             checkLogin();
@@ -356,9 +358,9 @@
                 .then(data => {
                     const badge = document.getElementById('versionBadge');
                     if (badge) badge.textContent = `v${data.version}`;
-                    console.log(`🚀 ${data.name} loaded. Build: ${data.build}`);
+                    SecureLogger.log(`🚀 Parreira Sistemas loaded. Build: ${data.build}`);
                 })
-                .catch(err => console.warn('Falha ao carregar versão da plataforma', err));
+                .catch(err => SecureLogger.warn('Falha ao carregar versão da plataforma', err));
         }
 
         function openModule(module) {

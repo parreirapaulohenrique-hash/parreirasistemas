@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔧 Recuperar Usuários — altafix</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  h1 { font-size: 1.5rem; color: #38bdf8; margin-bottom: 4px; }
+  .subtitle { color: #94a3b8; font-size: 0.875rem; margin-bottom: 28px; }
+  .card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .card h2 { font-size: 1rem; color: #f8fafc; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .status-box {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 14px;
+    font-family: monospace;
+    font-size: 0.8rem;
+    max-height: 300px;
+    overflow-y: auto;
+    line-height: 1.6;
+  }
+  .log-ok   { color: #4ade80; }
+  .log-warn { color: #facc15; }
+  .log-err  { color: #f87171; }
+  .log-info { color: #38bdf8; }
+  .log-dim  { color: #64748b; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 20px; border-radius: 8px; border: none;
+    font-size: 0.9rem; font-weight: 600; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: #3b82f6; color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: #2563eb; }
+  .btn-success { background: #16a34a; color: #fff; }
+  .btn-success:hover:not(:disabled) { background: #15803d; }
+  .btn-danger  { background: #dc2626; color: #fff; }
+  .btn-danger:hover:not(:disabled)  { background: #b91c1c; }
+  .btn-secondary { background: #334155; color: #e2e8f0; }
+  .btn-secondary:hover:not(:disabled) { background: #475569; }
+  .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+  label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px; margin-top: 14px; }
+  label:first-of-type { margin-top: 0; }
+  input, select {
+    width: 100%; padding: 9px 12px;
+    background: #0f172a; border: 1px solid #475569;
+    border-radius: 8px; color: #f8fafc; font-size: 0.9rem;
+    outline: none;
+  }
+  input:focus, select:focus { border-color: #3b82f6; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .user-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: #1e3a5f; border: 1px solid #2563eb;
+    border-radius: 20px; padding: 5px 14px; margin: 4px;
+    font-size: 0.82rem;
+  }
+  .user-chip .role { color: #94a3b8; font-size: 0.75rem; }
+  .badge { padding: 2px 8px; border-radius: 9999px; font-size: 0.7rem; font-weight: 700; }
+  .badge-green { background: #14532d; color: #4ade80; }
+  .badge-red   { background: #450a0a; color: #f87171; }
+  .badge-yellow { background: #422006; color: #facc15; }
+  .sep { border: none; border-top: 1px solid #334155; margin: 20px 0; }
+  #tenantBadge {
+    display: inline-block;
+    padding: 3px 10px; border-radius: 6px;
+    background: #1e3a5f; color: #38bdf8;
+    font-size: 0.8rem; font-weight: 700; letter-spacing: .5px;
+  }
+  .alert {
+    padding: 12px 16px; border-radius: 8px;
+    font-size: 0.85rem; margin-bottom: 16px;
+    display: none;
+  }
+  .alert-warn { background: #422006; border: 1px solid #d97706; color: #fcd34d; display: block; }
+  .alert-err  { background: #450a0a; border: 1px solid #dc2626; color: #fca5a5; display: block; }
+</style>
+</head>
+<body>
+
+<h1>🔧 Recuperação de Usuários</h1>
+<p class="subtitle">Tenant: <span id="tenantBadge">altafix</span> &nbsp;·&nbsp; Projeto Firebase: <strong>parreiralog-91904</strong></p>
+
+<!-- STATUS CARD -->
+<div class="card">
+  <h2>📡 Status da Conexão &amp; Diagnóstico</h2>
+  <div class="status-box" id="logBox">
+    <span class="log-dim">Aguardando inicialização do Firebase...</span>
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-primary" id="btnDiag" onclick="runDiag()" disabled>🔍 Verificar Usuários no Firestore</button>
+    <button class="btn btn-secondary" onclick="clearLog()">🗑 Limpar Log</button>
+  </div>
+</div>
+
+<!-- USUÁRIOS ENCONTRADOS -->
+<div class="card" id="foundCard" style="display:none">
+  <h2>👥 Usuários Encontrados em <span id="foundTenant"></span></h2>
+  <div id="foundList"></div>
+  <hr class="sep">
+  <p style="font-size:0.82rem;color:#94a3b8;">Se os usuários corretos aparecem acima, não é necessário recadastrar. Se a lista estiver vazia, use o formulário abaixo.</p>
+</div>
+
+<!-- CADASTRAR / RECUPERAR USUÁRIO -->
+<div class="card">
+  <h2>➕ Cadastrar / Recuperar Usuário</h2>
+  <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:16px;">
+    Preencha os dados do usuário que precisa ser (re)cadastrado no tenant <strong>altafix</strong>. 
+    A senha é salva com hash SHA-256 — não fica em texto puro no Firestore.
+  </p>
+
+  <div class="alert alert-warn" id="alertWarn">
+    ⚠️ <strong>Atenção:</strong> Se o usuário já existe, este formulário irá <strong>sobrescrever</strong> o registro. Use com cuidado ao editar usuários ativos.
+  </div>
+
+  <div class="grid2">
+    <div>
+      <label>Nome completo *</label>
+      <input type="text" id="fName" placeholder="Ex: Paulo Parreira">
+    </div>
+    <div>
+      <label>Login (username) *</label>
+      <input type="text" id="fLogin" placeholder="Ex: paulo" autocomplete="off">
+    </div>
+  </div>
+  <div class="grid2" style="margin-top:0">
+    <div>
+      <label>Senha *</label>
+      <input type="password" id="fPass" placeholder="Mínimo 4 caracteres" autocomplete="new-password">
+    </div>
+    <div>
+      <label>Perfil (role)</label>
+      <select id="fRole">
+        <option value="supervisor">supervisor (Admin)</option>
+        <option value="operator" selected>operator (Operador)</option>
+        <option value="viewer">viewer (Somente leitura)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="btn-group">
+    <button class="btn btn-success" id="btnSave" onclick="saveUser()" disabled>💾 Salvar no Firestore</button>
+    <button class="btn btn-secondary" onclick="clearForm()">✖ Limpar</button>
+  </div>
+</div>
+
+<!-- LOTE: RECADASTRO RÁPIDO -->
+<div class="card">
+  <h2>⚡ Recadastro em Lote (JSON)</h2>
+  <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:12px;">
+    Cole abaixo um array JSON com os usuários a serem recadastrados (senhas em texto puro — serão hashadas automaticamente):
+  </p>
+  <textarea id="batchJson" rows="6" style="width:100%;background:#0f172a;border:1px solid #475569;border-radius:8px;color:#f8fafc;padding:12px;font-family:monospace;font-size:0.82rem;resize:vertical;"
+  placeholder='[
+  {"name": "Paulo Admin", "login": "paulo", "pass": "suasenha", "role": "supervisor"},
+  {"name": "Operador Altafix", "login": "operador", "pass": "senha123", "role": "operator"}
+]'></textarea>
+  <div class="btn-group">
+    <button class="btn btn-primary" id="btnBatch" onclick="saveBatch()" disabled>📤 Importar Lote</button>
+  </div>
+</div>
+
+<!-- LOG DETALHADO DE OPERAÇÕES -->
+<div class="card">
+  <h2>📋 Log de Operações</h2>
+  <div class="status-box" id="opLog" style="min-height:80px;">
+    <span class="log-dim">Nenhuma operação realizada ainda.</span>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<script>
+const TENANT_ID = 'altafix';
+const firebaseConfig = {
+    apiKey: "AIzaSyDzatCQ8zmH4aQftznf7Y5wdYPwFYSiARc",
+    authDomain: "parreiralog-91904.firebaseapp.com",
+    projectId: "parreiralog-91904",
+    messagingSenderId: "527633267616",
+    appId: "1:527633267616:web:3567e883b31f7fa02882c5"
+};
+
+let db = null;
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+
+function log(msg, type = 'info') {
+    const box = document.getElementById('logBox');
+    if (box.querySelector('.log-dim')) box.innerHTML = '';
+    const span = document.createElement('div');
+    span.className = `log-${type}`;
+    const ts = new Date().toLocaleTimeString('pt-BR');
+    span.textContent = `[${ts}] ${msg}`;
+    box.appendChild(span);
+    box.scrollTop = box.scrollHeight;
+}
+
+function opLog(msg, type = 'info') {
+    const box = document.getElementById('opLog');
+    if (box.querySelector('.log-dim')) box.innerHTML = '';
+    const span = document.createElement('div');
+    span.className = `log-${type}`;
+    const ts = new Date().toLocaleTimeString('pt-BR');
+    span.textContent = `[${ts}] ${msg}`;
+    box.appendChild(span);
+    box.scrollTop = box.scrollHeight;
+}
+
+function clearLog() {
+    document.getElementById('logBox').innerHTML = '<span class="log-dim">Log limpo.</span>';
+}
+
+function clearForm() {
+    ['fName','fLogin','fPass'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('fRole').value = 'operator';
+}
+
+async function hashSHA256(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// ── FIREBASE INIT ─────────────────────────────────────────────────────────────
+
+async function initFirebase() {
+    try {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        window.db = db;
+        log('✅ Firebase inicializado: parreiralog-91904', 'ok');
+
+        // Auth anônima para passar pelas rules de segurança
+        firebase.auth().signInAnonymously()
+            .then(cred => {
+                log(`🔒 Auth anônimo OK (uid: ${cred.user.uid.substr(0,8)}...)`, 'ok');
+                // Habilita botões após auth
+                document.getElementById('btnDiag').disabled = false;
+                document.getElementById('btnSave').disabled = false;
+                document.getElementById('btnBatch').disabled = false;
+
+                // Verifica se tenant altafix existe
+                checkTenant();
+            })
+            .catch(err => {
+                log(`⚠️ Auth anônimo falhou: ${err.message} — tentando sem auth...`, 'warn');
+                document.getElementById('btnDiag').disabled = false;
+                document.getElementById('btnSave').disabled = false;
+                document.getElementById('btnBatch').disabled = false;
+                checkTenant();
+            });
+    } catch(e) {
+        log(`❌ Erro ao inicializar Firebase: ${e.message}`, 'err');
+    }
+}
+
+async function checkTenant() {
+    try {
+        log(`🏢 Verificando tenant '${TENANT_ID}' no Firestore...`, 'info');
+        const tenantDoc = await db.collection('tenants').doc(TENANT_ID).get();
+        if (tenantDoc.exists) {
+            const d = tenantDoc.data();
+            log(`✅ Tenant '${TENANT_ID}' encontrado. ativo=${d.ativo}, nome="${d.nome || '—'}"`, 'ok');
+            if (d.ativo === false) {
+                log(`⚠️ Tenant marcado como INATIVO (ativo: false). Isso pode impedir login!`, 'warn');
+            }
+        } else {
+            log(`❌ Tenant '${TENANT_ID}' NÃO EXISTE no Firestore! Precisa ser criado no painel master.`, 'err');
+        }
+    } catch(e) {
+        log(`❌ Erro ao verificar tenant: ${e.message}`, 'err');
+    }
+}
+
+// ── DIAGNÓSTICO ───────────────────────────────────────────────────────────────
+
+async function runDiag() {
+    if (!db) { log('❌ Firebase não conectado.', 'err'); return; }
+    const btn = document.getElementById('btnDiag');
+    btn.disabled = true;
+    btn.textContent = '⏳ Verificando...';
+
+    log(`\n🔍 Iniciando diagnóstico completo para tenant: ${TENANT_ID}`, 'info');
+
+    // 1. Sistema Novo: tenants/altafix/users
+    log('── Sistema Novo: tenants/altafix/users ──', 'dim');
+    try {
+        const snap = await db.collection('tenants').doc(TENANT_ID).collection('users').get();
+        if (snap.empty) {
+            log('⚠️ Coleção "users" VAZIA — nenhum usuário no sistema novo.', 'warn');
+        } else {
+            log(`✅ ${snap.size} usuário(s) encontrado(s) no sistema novo:`, 'ok');
+            const users = [];
+            snap.forEach(doc => {
+                const d = doc.data();
+                const status = d.ativo === false ? '❌ INATIVO' : '✅ ativo';
+                log(`   • ${d.nome || doc.id} (login: ${doc.id}) | role: ${d.role} | ${status} | hash: ${d.senhaHash ? d.senhaHash.substr(0,12)+'…' : '⚠️ SEM HASH'}`, 'info');
+                users.push(d);
+            });
+            showFoundUsers(users);
+        }
+    } catch(e) {
+        log(`❌ Erro ao buscar users: ${e.message}`, 'err');
+    }
+
+    // 2. Sistema Legado: legacy_store/app_users
+    log('── Sistema Legado: legacy_store/app_users ──', 'dim');
+    try {
+        const legacyDoc = await db.collection('tenants').doc(TENANT_ID).collection('legacy_store').doc('app_users').get();
+        if (legacyDoc.exists && legacyDoc.data().content) {
+            const legacyUsers = JSON.parse(legacyDoc.data().content);
+            log(`ℹ️ legacy_store/app_users tem ${legacyUsers.length} registro(s):`, 'warn');
+            legacyUsers.forEach(u => {
+                log(`   • ${u.name || u.nome} (login: ${u.login}) | role: ${u.role} | senha: ${u.pass ? '(texto puro — inseguro)' : u.senhaHash ? '(hash ok)' : '⚠️ SEM SENHA'}`, 'warn');
+            });
+        } else {
+            log('ℹ️ legacy_store/app_users não existe ou está vazio.', 'dim');
+        }
+    } catch(e) {
+        log(`❌ Erro ao buscar legacy app_users: ${e.message}`, 'err');
+    }
+
+    // 3. users_index
+    log('── users_index ──', 'dim');
+    try {
+        const idxSnap = await db.collection('users_index').get();
+        const altafixIdx = [];
+        idxSnap.forEach(doc => {
+            if (doc.data().tenantId === TENANT_ID) altafixIdx.push(doc.id);
+        });
+        if (altafixIdx.length > 0) {
+            log(`ℹ️ users_index tem ${altafixIdx.length} entrada(s) para altafix: ${altafixIdx.join(', ')}`, 'info');
+        } else {
+            log('ℹ️ Nenhuma entrada no users_index para altafix.', 'dim');
+        }
+    } catch(e) {
+        log(`⚠️ Erro ao buscar users_index (pode ser negado pelas regras): ${e.message}`, 'warn');
+    }
+
+    log('✅ Diagnóstico concluído.', 'ok');
+    btn.disabled = false;
+    btn.textContent = '🔍 Verificar Usuários no Firestore';
+}
+
+function showFoundUsers(users) {
+    const card = document.getElementById('foundCard');
+    const list = document.getElementById('foundList');
+    document.getElementById('foundTenant').textContent = TENANT_ID;
+    if (!users || users.length === 0) {
+        list.innerHTML = '<p style="color:#f87171;font-size:0.85rem;">⚠️ Nenhum usuário encontrado. Use o formulário abaixo para recadastrá-los.</p>';
+        card.style.display = 'block';
+        return;
+    }
+    list.innerHTML = users.map(u => `
+        <div class="user-chip">
+            <span>👤 <strong>${u.nome || u.name || u.login}</strong></span>
+            <span class="role">${u.login}</span>
+            <span class="badge ${u.ativo !== false ? 'badge-green' : 'badge-red'}">${u.ativo !== false ? 'ativo' : 'inativo'}</span>
+            <span class="badge badge-yellow">${u.role || 'operator'}</span>
+            ${u.senhaHash ? '<span class="badge badge-green">hash ✓</span>' : '<span class="badge badge-red">sem hash</span>'}
+        </div>
+    `).join('');
+    card.style.display = 'block';
+}
+
+// ── SALVAR USUÁRIO INDIVIDUAL ─────────────────────────────────────────────────
+
+async function saveUser() {
+    if (!db) { alert('Firebase não conectado.'); return; }
+
+    const name  = document.getElementById('fName').value.trim();
+    const login = document.getElementById('fLogin').value.trim().toLowerCase();
+    const pass  = document.getElementById('fPass').value.trim();
+    const role  = document.getElementById('fRole').value;
+
+    if (!name || !login || !pass) { alert('Preencha nome, login e senha.'); return; }
+    if (pass.length < 4) { alert('Senha deve ter no mínimo 4 caracteres.'); return; }
+    if (!/^[a-z0-9._-]+$/.test(login)) { alert('Login deve conter apenas letras minúsculas, números, ponto, hífen ou sublinhado.'); return; }
+
+    const btn = document.getElementById('btnSave');
+    btn.disabled = true;
+    btn.textContent = '⏳ Salvando...';
+
+    try {
+        opLog(`Iniciando salvamento: login="${login}", role="${role}"...`, 'info');
+        const senhaHash = await hashSHA256(pass);
+        opLog(`Hash SHA-256 gerado: ${senhaHash.substr(0,16)}...`, 'dim');
+
+        // Salva no sistema novo
+        await db.collection('tenants').doc(TENANT_ID).collection('users').doc(login).set({
+            nome: name,
+            login: login,
+            senhaHash: senhaHash,
+            role: role,
+            ativo: true,
+            criadoEm: new Date().toISOString(),
+            modulos: [],
+            recuperadoPor: 'recuperar_usuarios_altafix.html',
+            recuperadoEm: new Date().toISOString()
+        });
+        opLog(`✅ Salvo em tenants/${TENANT_ID}/users/${login}`, 'ok');
+
+        // Atualiza users_index
+        try {
+            await db.collection('users_index').doc(login).set({ tenantId: TENANT_ID });
+            opLog(`✅ users_index/${login} atualizado (tenantId: ${TENANT_ID})`, 'ok');
+        } catch(ie) {
+            opLog(`⚠️ Não foi possível atualizar users_index: ${ie.message}`, 'warn');
+        }
+
+        opLog(`🎉 Usuário "${name}" (${login}) cadastrado com sucesso!`, 'ok');
+        clearForm();
+        alert(`✅ Usuário "${name}" cadastrado com sucesso!\n\nLogin: ${login}\nSenha: (conforme digitada)\nRole: ${role}\n\nO usuário já pode fazer login no sistema.`);
+
+    } catch(e) {
+        opLog(`❌ Erro ao salvar usuário: ${e.message}`, 'err');
+        alert(`Erro ao salvar: ${e.message}`);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '💾 Salvar no Firestore';
+    }
+}
+
+// ── IMPORTAÇÃO EM LOTE ────────────────────────────────────────────────────────
+
+async function saveBatch() {
+    if (!db) { alert('Firebase não conectado.'); return; }
+
+    const raw = document.getElementById('batchJson').value.trim();
+    if (!raw) { alert('Cole o JSON com os usuários primeiro.'); return; }
+
+    let users;
+    try {
+        users = JSON.parse(raw);
+        if (!Array.isArray(users)) throw new Error('Deve ser um array JSON.');
+    } catch(e) {
+        alert(`JSON inválido: ${e.message}`);
+        return;
+    }
+
+    if (!confirm(`Confirma importar ${users.length} usuário(s) para o tenant "${TENANT_ID}"?\n\nISTO PODE SOBRESCREVER USUÁRIOS EXISTENTES.`)) return;
+
+    const btn = document.getElementById('btnBatch');
+    btn.disabled = true;
+    btn.textContent = '⏳ Importando...';
+
+    opLog(`\n📤 Iniciando importação em lote: ${users.length} usuário(s)...`, 'info');
+    let ok = 0, fail = 0;
+
+    for (const u of users) {
+        const name  = (u.name || u.nome || '').trim();
+        const login = (u.login || '').trim().toLowerCase();
+        const pass  = (u.pass || u.senha || '').trim();
+        const role  = u.role || 'operator';
+
+        if (!name || !login || !pass) {
+            opLog(`⚠️ Pulando registro inválido (falta name/login/pass): ${JSON.stringify(u)}`, 'warn');
+            fail++;
+            continue;
+        }
+
+        try {
+            const senhaHash = await hashSHA256(pass);
+            await db.collection('tenants').doc(TENANT_ID).collection('users').doc(login).set({
+                nome: name,
+                login: login,
+                senhaHash: senhaHash,
+                role: role,
+                ativo: true,
+                criadoEm: new Date().toISOString(),
+                modulos: [],
+                recuperadoPor: 'batch_import',
+                recuperadoEm: new Date().toISOString()
+            });
+            try {
+                await db.collection('users_index').doc(login).set({ tenantId: TENANT_ID });
+            } catch(_) {}
+            opLog(`✅ [${login}] "${name}" | ${role} — OK`, 'ok');
+            ok++;
+        } catch(e) {
+            opLog(`❌ [${login}] Erro: ${e.message}`, 'err');
+            fail++;
+        }
+    }
+
+    opLog(`\n🏁 Importação concluída: ${ok} ✅  |  ${fail} ❌`, ok === users.length ? 'ok' : 'warn');
+    if (ok > 0) {
+        alert(`✅ ${ok} usuário(s) importado(s) com sucesso!\n${fail > 0 ? `⚠️ ${fail} falhou(ram). Verifique o log.` : ''}`);
+        runDiag(); // Atualiza a lista
+    }
+
+    btn.disabled = false;
+    btn.textContent = '📤 Importar Lote';
+}
+
+// ── INICIALIZAR ───────────────────────────────────────────────────────────────
+window.addEventListener('load', initFirebase);
+</script>
+</body>
+</html>

@@ -43,24 +43,47 @@ const AcontecIntegration = {
     },
 
     /**
-     * Carrega configurações do localStorage
+     * Carrega configurações do localStorage (dados não-sensíveis)
+     * O apiToken é armazenado em sessionStorage (não persiste entre sessões)
+     * para reduzir o risco de exposição via XSS.
      */
     loadConfig() {
+        // Carrega config geral (URL, intervalo, autoSync) — não-sensível
         const saved = localStorage.getItem('acontec_config');
         if (saved) {
             try {
-                this.config = { ...this.config, ...JSON.parse(saved) };
+                const parsed = JSON.parse(saved);
+                // Nunca carrega o token do localStorage (segurança)
+                delete parsed.apiToken;
+                this.config = { ...this.config, ...parsed };
             } catch (e) {
-                console.error('Erro ao carregar config Acontec:', e);
+                if (typeof SecureLogger !== 'undefined') {
+                    SecureLogger.error('Erro ao carregar config Acontec:', e);
+                }
             }
+        }
+        // Carrega o token da sessionStorage (válido apenas para esta aba/sessão)
+        const sessionToken = sessionStorage.getItem('acontec_api_token');
+        if (sessionToken) {
+            this.config.apiToken = sessionToken;
         }
     },
 
     /**
-     * Salva configurações no localStorage
+     * Salva configurações:
+     *   - apiToken → sessionStorage (não persiste após fechar o navegador)
+     *   - demais campos → localStorage (persistência normal, sem token)
      */
     saveConfig() {
-        localStorage.setItem('acontec_config', JSON.stringify(this.config));
+        // Isola o token antes de salvar no localStorage
+        const { apiToken, ...safePart } = this.config;
+        localStorage.setItem('acontec_config', JSON.stringify(safePart));
+        // Token salvo na session (morre quando a aba/browser fecha)
+        if (apiToken) {
+            sessionStorage.setItem('acontec_api_token', apiToken);
+        } else {
+            sessionStorage.removeItem('acontec_api_token');
+        }
     },
 
     /**

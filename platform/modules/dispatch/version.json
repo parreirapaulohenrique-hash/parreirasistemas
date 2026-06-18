@@ -1,7 +1,8 @@
 {
-    "version": "3.11.85",
-    "change": "v3.11.85 - fix: transportadoras nao aparecem apos login — (1) loadAll com Fase 1 prioritaria (carrier_list, carrier_configs, freight_tables, carrier_info_v2) carregados em paralelo ANTES das demais chaves; (2) Anti-Echo resetado no login para garantir leitura fresca da nuvem; (3) Auto-rebuild de carrier_list a partir de freight_tables quando carrier_list esta vazia; (4) _refreshCarrierVars atualiza variaveis de closure apos onSnapshot e loadAll; (5) Renders delayed (2s e 10s) como fallback para dados que chegam via onSnapshot; (6) diagCarriers() e reloadCarriers() acessiveis no console F12; (7) QuotaExceededError tratado com liberacao de espaco e fallback para memoria.",
+    "version": "3.12.0",
+    "change": "v3.12.0 - SEGURANÇA & QUALIDADE: (1) firestore.rules — regras de segurança do Firestore: bloqueia tudo por padrão, libera apenas usuários autenticados por tenant; (2) vercel.json — CSP headers completos: X-Frame-Options SAMEORIGIN, X-Content-Type-Options nosniff, X-XSS-Protection, HSTS 2 anos, Referrer-Policy, Permissions-Policy, Content-Security-Policy com whitelist Firebase/Google; (3) core/js/security-guard.js — Guard centralizado: requireAuth(), requireRole(), requireMasterAccess() + SecureLogger que suprime console.* em produção automaticamente; (4) Master module — Guard.requireMasterAccess() integrado, bloqueia acesso não autorizado antes de qualquer renderização; (5) portal index.html — security-guard.js injetado + credenciais hardcoded removidas do FALLBACK_USERS + SecureLogger substituindo console.*; (6) acontec-integration.js — apiToken migrado de localStorage para sessionStorage (não persiste entre sessões).",
     "lastUpdate": "2026-06-17",
-    "build": "20260617g",
+    "build": "20260617h",
     "deployedAt": "2026-06-17"
 }
+
