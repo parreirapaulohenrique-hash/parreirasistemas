@@ -238,11 +238,13 @@
         const dynamicIds = storedTenants.map(t => t.id);
         const ALLOWED_TENANTS = ['ltdistribuidora', 'centralpecas', 'parreira', ...dynamicIds];
 
-        // FALLBACK USERS: removido do código-fonte por segurança.
-        // Em caso de localStorage vazio, use o Painel Admin (Master)
-        // para recadastrar os usuários via Firebase.
-        // Se precisar de acesso emergencial, acesse o Firebase Console.
-        const FALLBACK_USERS = [];
+        // ACESSO DE EMERGÊNCIA — usado quando platform_users_registry está vazio
+        // (ex: primeiro acesso, localStorage limpo ou usuário não cadastrado no Master)
+        // IMPORTANTE: Após fazer login, acesse o Painel Admin (Master) e cadastre
+        // o usuário paulo lá para poder remover este fallback com segurança.
+        const FALLBACK_USERS = [
+            { login: 'paulo', pass: 'master@2026', name: 'Paulo Parreira', role: 'admin', tenant: 'parreira' }
+        ];
 
         document.addEventListener('DOMContentLoaded', function () {
             checkLogin();
