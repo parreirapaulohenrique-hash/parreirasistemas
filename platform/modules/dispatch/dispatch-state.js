@@ -129,52 +129,67 @@
                 return;
             }
 
+            const tenantId = (Utils.Cloud && Utils.Cloud.tenantId)
+                || localStorage.getItem('app_tenant_id')
+                || '';
+
+            // Helper: tenta Utils.getStorage primeiro; fallback: localStorage direto com prefixo de tenant
+            const _get = (key) => {
+                const fromUtils = Utils.getStorage(key);
+                if (fromUtils && (Array.isArray(fromUtils) ? fromUtils.length > 0 : Object.keys(fromUtils).length > 0)) {
+                    return fromUtils;
+                }
+                // Fallback: lê diretamente com prefixo de tenant
+                if (tenantId) {
+                    try {
+                        const raw = localStorage.getItem(`tenant_${tenantId}_${key}`);
+                        if (raw) return JSON.parse(raw);
+                    } catch(e) { /* ignora parse error */ }
+                }
+                return fromUtils; // retorna o original mesmo se vazio
+            };
+
             // Dados operacionais
-            const clients = Utils.getStorage('clients');
+            const clients = _get('clients');
             if (clients && Array.isArray(clients)) this.set('clients', clients);
 
-            const rules = Utils.getStorage('freight_tables');
+            const rules = _get('freight_tables');
             if (rules && Array.isArray(rules)) this.set('rules', rules);
 
-            let carrierList = Utils.getStorage('carrier_list');
+            let carrierList = _get('carrier_list');
             if (!Array.isArray(carrierList)) carrierList = [];
             this.set('carrierList', carrierList);
 
-            let carrierConfigs = Utils.getStorage('carrier_configs');
+            let carrierConfigs = _get('carrier_configs');
             if (!carrierConfigs || typeof carrierConfigs !== 'object' || Array.isArray(carrierConfigs)) {
                 carrierConfigs = {};
             }
             this.set('carrierConfigs', carrierConfigs);
 
-            let carrierInfo = Utils.getStorage('carrier_info_v2');
+            let carrierInfo = _get('carrier_info_v2');
             if (!carrierInfo || Array.isArray(carrierInfo)) carrierInfo = {};
             this.set('carrierInfo', carrierInfo);
 
-            const companyData = Utils.getStorage('company_data');
+            const companyData = _get('company_data');
             if (companyData) this.set('companyData', companyData);
 
             // Sessão
-            const users = Utils.getStorage('app_users');
+            const users = _get('app_users');
             if (users && Array.isArray(users)) this.set('users', users);
 
-            const sellers = Utils.getStorage('app_sellers');
+            const sellers = _get('app_sellers');
             if (sellers && Array.isArray(sellers)) this.set('sellers', sellers);
 
             const currentUser = Utils.getStorage('logged_user');
             if (currentUser && currentUser.login) this.set('currentUser', currentUser);
 
             // Configurações
-            const settings = Utils.getStorage('app_settings');
+            const settings = _get('app_settings');
             if (settings) this.set('appSettings', settings);
 
-            if (typeof SecureLogger !== 'undefined') {
-                SecureLogger.log(
-                    `[AppState] syncFromStorage: ` +
-                    `${this._data.carrierList.length} transportadoras, ` +
-                    `${this._data.rules.length} tabelas, ` +
-                    `${this._data.clients.length} clientes`
-                );
-            }
+            const summary = `carrierList=${this._data.carrierList.length}, ` +
+                `rules=${this._data.rules.length}, clients=${this._data.clients.length}`;
+            console.log(`[AppState] syncFromStorage (tenant=${tenantId}): ${summary}`);
         },
 
         /**

@@ -1,8 +1,8 @@
 {
-    "version": "3.12.3",
-    "change": "v3.12.3 - REFATORAÇÃO Etapa 3: AppState Integration Bridge. AppState.set('currentUser') chamado em: checkAuth (sessão restaurada), login bem-sucedido, logoutUser. AppState.set('carrierList/carrierConfigs/carrierInfo/rules') chamado em _refreshCarrierVars (sincroniza toda vez que Firestore atualiza). AppState.syncFromStorage() + appReady=true chamados após login completar loadAll. AppState.snapshot() agora mostra dados reais do sistema.",
+    "version": "3.12.4",
+    "change": "v3.12.4 - FIX: syncFromStorage melhorado com fallback de leitura direta do localStorage com prefixo de tenant (resolve clients=0 no AppState.snapshot). Helper _get() tenta Utils.getStorage primeiro, depois lê tenant_<id>_<chave> diretamente. Log de diagnóstico aprimorado mostra tenant e contagens.",
     "lastUpdate": "2026-06-17",
-    "build": "20260617k",
+    "build": "20260617l",
     "deployedAt": "2026-06-17"
 }
 
