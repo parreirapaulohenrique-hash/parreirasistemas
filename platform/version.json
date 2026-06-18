@@ -1,8 +1,8 @@
 {
-    "version": "3.12.1",
-    "change": "v3.12.1 - REFATORAÇÃO Etapa 1: criado dispatch-state.js com AppState centralizado (substitui progressivamente variáveis de closure do app.js). Zero risco — nada removido do app.js. AppState disponível globalmente com get(), set(), onChange(), syncFromStorage(), snapshot(), reset(). Inserido no index.html após utils.js. Todos os scripts atualizados para v3.12.0 (cache-bust).",
+    "version": "3.12.2",
+    "change": "v3.12.2 - REFATORAÇÃO Etapa 2: corrigidas 3 duplicações críticas no app.js. (1) showToast unificada: versão com ícone check_circle + accent-success + duração customizável. (2) sendWhatsApp L5575 removida (sobrescrita silenciosa pela versão completa de L8023 com painel WA). (3) Handler CSV duplo desativado (L5778 causava importação dupla de tabelas de frete, handler L3370 permanece ativo).",
     "lastUpdate": "2026-06-17",
-    "build": "20260617i",
+    "build": "20260617j",
     "deployedAt": "2026-06-17"
 }
 

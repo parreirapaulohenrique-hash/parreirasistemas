@@ -34,16 +34,32 @@
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         // GLOBAL UI UTILS
-        window.showToast = (msg) => {
-
+        // showToast — versão unificada (v3.12.2)
+        // Suporta duração customizada: showToast('msg', 5000)
+        window.showToast = (message, duration) => {
             const toast = document.createElement('div');
-            toast.style = "position:fixed;bottom:20px;right:20px;background:var(--primary-color);color:white;padding:10px 20px;border-radius:8px;z-index:1000000;box-shadow:0 4px 12px rgba(0,0,0,0.5);font-size:0.9rem;animation:slideIn 0.3s ease-out;";
-            toast.innerText = msg;
+            toast.style.position = 'fixed';
+            toast.style.bottom = '20px';
+            toast.style.right = '20px';
+            toast.style.backgroundColor = 'var(--accent-success, #22c55e)';
+            toast.style.color = 'white';
+            toast.style.padding = '12px 24px';
+            toast.style.borderRadius = 'var(--radius-md, 8px)';
+            toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+            toast.style.zIndex = '1000000';
+            toast.style.fontWeight = '600';
+            toast.style.display = 'flex';
+            toast.style.alignItems = 'center';
+            toast.style.gap = '8px';
+            toast.style.fontSize = '0.9rem';
+            toast.style.animation = 'slideIn 0.3s ease-out';
+            toast.innerHTML = `<span class="material-icons-round">check_circle</span> ${message}`;
             document.body.appendChild(toast);
+            const ms = duration || 3000;
             setTimeout(() => {
-                toast.style.animation = "slideOut 0.3s ease-in";
+                toast.style.animation = 'slideOut 0.3s ease-in';
                 setTimeout(() => toast.remove(), 300);
-            }, 3000);
+            }, ms);
         };
 
         // Função global para normalizar texto (remover acentos e caracteres corrompidos)
@@ -2461,30 +2477,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
-        function showToast(message) {
-            const toast = document.createElement('div');
-            toast.style.position = 'fixed';
-            toast.style.bottom = '20px';
-            toast.style.right = '20px';
-            toast.style.backgroundColor = 'var(--accent-success)';
-            toast.style.color = 'white';
-            toast.style.padding = '12px 24px';
-            toast.style.borderRadius = 'var(--radius-md)';
-            toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
-            toast.style.zIndex = '99999';
-            toast.style.fontWeight = '600';
-            toast.style.display = 'flex';
-            toast.style.alignItems = 'center';
-            toast.style.gap = '8px';
-            toast.style.animation = 'slideIn 0.3s ease-out';
-            toast.innerHTML = `<span class="material-icons-round">check_circle</span> ${message}`;
-            document.body.appendChild(toast);
-            setTimeout(() => {
-                toast.style.animation = 'slideOut 0.3s ease-in';
-                setTimeout(() => toast.remove(), 300);
-            }, 1500);
-        }
-        window.showToast = showToast;
+        // showToast — já definida no topo do arquivo (L37, versão unificada v3.12.2)
+        // Esta duplicata foi removida na refatoração Etapa 2.
+        const showToast = window.showToast;
 
         // --- GERENCIAMENTO DE TABELAS DE FRETE ---
 
@@ -5572,46 +5567,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('invoiceHistoryModal').style.display = 'flex';
         };
 
-        window.sendWhatsApp = (id) => {
-            const history = Utils.getStorage('dispatches');
-            const item = history.find(d => d.id === id);
-            if (!item) return;
-
-            // Try to find client phone (Normalize names)
-            const clients = Utils.getStorage('clients');
-            const client = clients.find(c => c.nome.toUpperCase().trim() === item.client.toUpperCase().trim());
-
-            // If phone not found in client list, prompt user
-            let phone = client ? (client.telefone || '') : '';
-
-            // Clean phone first
-            phone = phone.replace(/\D/g, '');
-
-            // If empty or short (likely missing DDD), ask user
-            if (!phone || phone.length < 10) {
-                let manualPhone = prompt(`Telefone inválido ou não encontrado para "${item.client}".\n\nDigite o número COMPLETO com DDD (Ex: 11999999999):`, phone);
-                if (!manualPhone) return;
-                phone = manualPhone.replace(/\D/g, '');
-            }
-
-            // Add 55 if missing (assuming Brazil)
-            if (phone.length >= 10 && phone.length <= 11) {
-                // Case: 11999999999 (11 chars) -> Add 55
-                phone = '55' + phone;
-            }
-
-            // Final check
-            if (phone.length < 12) {
-                alert('Número parece inválido (muito curto). Verifique o DDD.');
-                return;
-            }
-
-            const msg = `Olá ${item.client}! Seu pedido com NF ${item.invoice} foi despachado pela transportadora ${item.carrier}.\n\nPrevisão de entrega é de ${item.leadTime}.\n\nAtenciosamente,\nLT Distribuidora`;
-
-            // Use web.whatsapp.com for direct text injection
-            const url = `https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`;
-            window.open(url, '_blank');
-        };
+        // window.sendWhatsApp — versão completa definida em linha ~8023 (usa _dispatchesFullCache + painel WA)
+        // Esta versão simplificada foi removida na refatoração Etapa 2 para evitar sobrescrita silenciosa.
 
         window.printDayManifest = (day) => {
             const list = Utils.getStorage('dispatches');
@@ -5774,7 +5731,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
 
-        // Import CSV de Tabelas de Frete (DINÂMICO v2)
+        // Import CSV de Tabelas de Frete (DINÂMICO v2) — REMOVIDO na refatoração Etapa 2.
+        // O handler principal (com detecção automática de encoding windows-1252/UTF-8)
+        // já está registrado acima (~L3370). Ter dois handlers no mesmo evento causava
+        // importação dupla de regras. Apenas o handler original (L3370) permanece ativo.
+        // document.getElementById('fileRules').addEventListener('change', (e) => { ... });
+        if (false) { // bloco desativado — mantido para referência até próxima limpeza
         document.getElementById('fileRules').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -5913,7 +5875,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
             // Read as UTF-8 default (removes explicit ISO-8859-1)
             reader.readAsText(file);
-        });
+        }); } // fim bloco desativado (CSV v2 duplicado)
 
         document.getElementById('fileClient').addEventListener('change', (e) => {
             const file = e.target.files[0];
