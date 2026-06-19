@@ -110,6 +110,10 @@
         {
             "source": "/web/(.*)",
             "destination": "/web/$1"
+        },
+        {
+            "source": "/:tenant",
+            "destination": "/platform/modules/dispatch/index.html"
         }
     ]
 }

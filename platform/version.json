@@ -1,9 +1,9 @@
 {
-    "version": "3.12.9",
+    "version": "3.13.0",
     "environment": "staging",
-    "change": "Branch de homologação criada a partir da v3.12.9. Alterações aqui são testadas antes de ir para produção (main).",
+    "change": "v3.13.0-staging - FEAT: Login sem campo ID da Empresa. Tenant detectado automaticamente pela URL (/ltdistribuidora). Rota dinâmica /:tenant no vercel.json serve qualquer empresa pela URL.",
     "lastUpdate": "2026-06-19",
-    "build": "20260619-staging",
+    "build": "20260619-staging-tenant-url",
     "deployedAt": "2026-06-19"
 }
 

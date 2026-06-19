@@ -1,4 +1,4 @@
-﻿// v3.11.71 FIX: Registra _doDispatchLogin NO TOPO DO ARQUIVO, fora do DOMContentLoaded.
+// v3.11.71 FIX: Registra _doDispatchLogin NO TOPO DO ARQUIVO, fora do DOMContentLoaded.
 // O app.js tem 483KB. O browser exibe o HTML (com o botão visível) ANTES de terminar
 // de baixar+executar o app.js. Se o _doDispatchLogin só fosse definido dentro do
 // DOMContentLoaded, o usuário que clica cedo receberia o alert 'Sistema ainda carregando'.
@@ -543,9 +543,41 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
 
+        // ═══════════════════════════════════════════════════════════
+        // TENANT AUTOMÁTICO PELA URL (v3.13.0)
+        // Se a URL for /ltdistribuidora ou /qualquerempresa,
+        // o tenant é extraído do path — sem campo visível no login.
+        //
+        // Exemplos de URL:
+        //   parreirasistemas.vercel.app/ltdistribuidora  → tenant=ltdistribuidora
+        //   parreirasistemas.vercel.app/cliente2          → tenant=cliente2
+        //   parreirasistemas.vercel.app/                  → campo ID visível (fallback)
+        // ═══════════════════════════════════════════════════════════
+        const _getTenantFromUrl = () => {
+            // Pega o primeiro segmento do pathname: /ltdistribuidora → ltdistribuidora
+            const segments = window.location.pathname.split('/').filter(Boolean);
+            const candidate = segments[0] ? segments[0].trim().toLowerCase() : '';
+            // Ignora segmentos que são rotas do sistema (módulos, fix_, etc)
+            const reserved = ['modules', 'platform', 'core', 'fix_frete', 'fix_viopex', 'fix_romaneios', 'web', 'homolog'];
+            return (candidate && !reserved.includes(candidate)) ? candidate : '';
+        };
+
+        const _tenantFromUrl = _getTenantFromUrl();
+        const tenantInputEl = document.getElementById('loginTenantInput');
+        const tenantFormGroup = tenantInputEl ? tenantInputEl.closest('.form-group') : null;
+
+        if (_tenantFromUrl && tenantInputEl) {
+            // Pré-preenche com o tenant da URL
+            tenantInputEl.value = _tenantFromUrl;
+            // Esconde o campo — operador só vê usuário + senha
+            if (tenantFormGroup) tenantFormGroup.style.display = 'none';
+            console.log(`[Login] Tenant detectado pela URL: "${_tenantFromUrl}" — campo ID da Empresa ocultado.`);
+        }
+
         // === CARREGAR USUÁRIOS AO DIGITAR TENANT ===
         // Quando o usuário digitar o tenant e sair do campo, busca os usuários desse tenant
         const tenantInput = document.getElementById('loginTenantInput');
+
         if (tenantInput) {
             // Função que busca usuários do tenant no Firestore
             const loadUsersForTenant = async () => {
