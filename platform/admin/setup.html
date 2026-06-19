@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Setup Super Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: #0f1117; color: #e2e8f0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .box { background: #1a1f2e; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 36px; width: 100%; max-width: 420px; }
+        h1 { font-size: 1.2rem; margin-bottom: 6px; }
+        p { font-size: 0.82rem; color: #94a3b8; margin-bottom: 24px; }
+        label { display: block; font-size: 0.78rem; color: #94a3b8; margin-bottom: 6px; font-weight: 500; }
+        input { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 11px 14px; color: #e2e8f0; font-size: 0.9rem; margin-bottom: 14px; outline: none; font-family: 'Inter', sans-serif; }
+        input:focus { border-color: #3b82f6; }
+        button { width: 100%; background: #3b82f6; color: #fff; border: none; border-radius: 10px; padding: 13px; font-size: 0.9rem; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; }
+        button:hover { background: #2563eb; }
+        #msg { margin-top: 16px; padding: 12px; border-radius: 10px; font-size: 0.82rem; display: none; }
+        .ok  { background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3); color: #22c55e; }
+        .err { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; }
+    </style>
+</head>
+<body>
+<div class="box">
+    <h1>🔐 Setup Super Admin</h1>
+    <p>Cria ou atualiza as credenciais do painel de gestão de tenants no Firestore.</p>
+
+    <label>Usuário (login)</label>
+    <input type="text" id="login" value="admin" placeholder="admin">
+
+    <label>Senha</label>
+    <input type="password" id="pass" placeholder="Escolha uma senha segura">
+
+    <label>Confirmar Senha</label>
+    <input type="password" id="pass2" placeholder="Repita a senha">
+
+    <button onclick="setup()">Criar Credenciais</button>
+    <div id="msg"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script>
+firebase.initializeApp({
+    apiKey: "AIzaSyDzatCQ8zmH4aQftznf7Y5wdYPwFYSiARc",
+    authDomain: "parreiralog-91904.firebaseapp.com",
+    projectId: "parreiralog-91904",
+    messagingSenderId: "527633267616",
+    appId: "1:527633267616:web:3567e883b31f7fa02882c5"
+});
+const db = firebase.firestore();
+firebase.auth().signInAnonymously();
+
+async function setup() {
+    const login = document.getElementById('login').value.trim();
+    const pass  = document.getElementById('pass').value;
+    const pass2 = document.getElementById('pass2').value;
+    const msg   = document.getElementById('msg');
+
+    msg.style.display = 'none';
+
+    if (!login || !pass) return showMsg('Preencha usuário e senha.', 'err');
+    if (pass !== pass2)  return showMsg('As senhas não coincidem.', 'err');
+    if (pass.length < 6) return showMsg('Senha deve ter pelo menos 6 caracteres.', 'err');
+
+    try {
+        await db.collection('super_admin').doc('credentials').set({
+            login, password: pass,
+            updatedAt: new Date().toISOString()
+        });
+        showMsg('✅ Credenciais criadas! Agora acesse /admin e faça login.', 'ok');
+    } catch(e) {
+        showMsg('Erro: ' + e.message, 'err');
+    }
+}
+
+function showMsg(text, type) {
+    const el = document.getElementById('msg');
+    el.textContent = text;
+    el.className = type;
+    el.style.display = 'block';
+}
+</script>
+</body>
+</html>
