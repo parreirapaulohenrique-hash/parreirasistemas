@@ -303,6 +303,7 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
+| **3.14.6** | 2026-06-19 | FIX RAIZ: Importador Excel de Tabelas de Frete — `colMap` agora detecta múltiplas variações de cabeçalho: `Min.`/`Mín.`/`Frete Min`/`Vlr Min` → `minimo`; `Vir Exc.`/`Vir Kg`/`Vlr Exc` → `valorExcedente`; `Lim. Peso`/`Lim Peso` → `limitePeso`. Adiciona aviso em toast quando colunas críticas não são detectadas (causa raiz do recálculo com mínimo=0). |
 | **3.14.5** | 2026-06-19 | FEAT: fix_viopex — botão "Forçar Sync → App" aparece quando preview encontra 0 alterações (valores já corretos em `dispatches_db` mas `legacy_store` stale). Copia registros da carrier de `dispatches_db` → `legacy_store`, dispara `onSnapshot` no app e atualiza a Conferência de Fatura automaticamente. |
 | **3.14.4** | 2026-06-19 | FIX CRÍTICO: fix_viopex — após salvar em `dispatches_db`, agora também atualiza `legacy_store/dispatches`. O `onSnapshot` do app só escutava `dispatches_db` com `status='Pendente Despacho'`; NFs `Despachado` não chegavam ao listener → localStorage stale → Conferência de Fatura exibia valores antigos. Com o sync do `legacy_store` o app recebe e aplica a atualização automaticamente sem recarregar a página. |
 | **3.14.3** | 2026-06-19 | FEAT: Conferência de Fatura — atalho Enter nos filtros: se apenas 1 NF estiver visível após o filtro, Enter a seleciona automaticamente, limpa o campo e mantém foco para busca contínua. Campo pisca amarelo se houver ambiguidade (mais de 1 resultado). |
