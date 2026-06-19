@@ -389,10 +389,38 @@
             }
 
             if (noRule.length > 0) {
-                const cidades = [...new Set(noRule.map(p => p.city))].join(', ');
-                html += `<div style="margin-top:12px;padding:10px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:6px;font-size:0.8rem;color:#fbbf24;">
-                    ⚠️ <strong>${noRule.length} lançamento(s) sem regra na tabela</strong> — cidades não mapeadas: <em>${cidades}</em><br>
-                    Estes registros NÃO serão alterados.
+                const cidadeMap = {};
+                noRule.forEach(p => {
+                    const c = p.city || '(cidade vazia)';
+                    if (!cidadeMap[c]) cidadeMap[c] = [];
+                    cidadeMap[c].push(p.dispatch.invoice || p.dispatch.id || '-');
+                });
+                const cidadesOrdenadas = Object.keys(cidadeMap).sort();
+
+                html += `<div style="margin-top:16px;">
+                    <p style="color:#fbbf24;font-size:0.85rem;font-weight:700;margin-bottom:8px;">
+                        ⚠️ ${noRule.length} lançamento(s) sem regra na tabela de fretes — NF(s) não serão alterados
+                    </p>
+                    <table>
+                    <thead><tr>
+                        <th>Cidade</th>
+                        <th style="text-align:center">Qtd NFs</th>
+                        <th>Números das NFs</th>
+                    </tr></thead><tbody>`;
+
+                cidadesOrdenadas.forEach(cidade => {
+                    const nfs = cidadeMap[cidade];
+                    html += `<tr>
+                        <td style="color:#fbbf24;font-weight:600">${cidade}</td>
+                        <td style="text-align:center;color:#fbbf24">${nfs.length}</td>
+                        <td style="font-size:0.75rem;color:#94a3b8">${nfs.slice(0,15).join(', ')}${nfs.length > 15 ? ` ... +${nfs.length-15}` : ''}</td>
+                    </tr>`;
+                });
+
+                html += `</tbody></table>
+                    <p style="font-size:0.75rem;color:#64748b;margin-top:6px;">
+                        Para corrigir: cadastre a tabela de frete da transportadora para essas cidades e rode o recálculo novamente.
+                    </p>
                 </div>`;
             }
 
