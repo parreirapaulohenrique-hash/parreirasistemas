@@ -104,6 +104,10 @@
             "destination": "/platform/fix_viopex.html"
         },
         {
+            "source": "/fix_frete",
+            "destination": "/platform/fix_recalculo_frete.html"
+        },
+        {
             "source": "/web/(.*)",
             "destination": "/web/$1"
         }
