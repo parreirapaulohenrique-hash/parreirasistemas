@@ -312,14 +312,28 @@
                     const rule = freightRules.find(r => norm(r.cidade) === city);
 
                     if (!rule) {
-                        previewData.push({ dispatch: d, newTotal: null, diff: null, ruleFound: false, city: d.city || '?' });
+                        previewData.push({ dispatch: d, newTotal: null, diff: null, ruleFound: false, city: d.city || '?', skipReason: 'sem_regra' });
                         noRule++;
                         return;
                     }
 
-                    const nfValue   = parseFloat(d.nfValue || 0);
-                    const weight    = parseFloat(d.weight  || 0);
-                    const volume    = parseInt(d.volume   || 1) || 1;
+                    // ── Guarda de redespacho (v3.14.7) ──────────────────────────────────
+                    // Se o despacho tem redespacho (redespTotal > 0) mas a regra atual
+                    // não tem, o cálculo resultaria em mainTotal negativo.
+                    // Nesses casos, sinalizamos como conflito e NÃO recalculamos.
+                    const dispatchHasRedesp = (d.redespTotal != null && parseFloat(d.redespTotal) > 0);
+                    const ruleHasRedesp     = !!(rule.redespacho && rule.redespacho.toUpperCase() !== 'SEM REDESPACHO');
+                    if (dispatchHasRedesp && !ruleHasRedesp) {
+                        previewData.push({ dispatch: d, newTotal: null, diff: null, ruleFound: false,
+                            city: d.city || '?', skipReason: 'redespacho_conflito',
+                            skipDetail: `NF tem redespTotal=${fmt(d.redespTotal)} mas regra atual não tem redespacho` });
+                        noRule++;
+                        return;
+                    }
+
+                    const nfValue      = parseFloat(d.nfValue || 0);
+                    const weight       = parseFloat(d.weight  || 0);
+                    const volume       = parseInt(d.volume   || 1) || 1;
                     const isComplement = !!d.isComplement;
 
                     const newTotal = calcFreight(rule, config, nfValue, weight, volume, isComplement);
@@ -408,39 +422,76 @@
             }
 
             if (noRule.length > 0) {
-                const cidadeMap = {};
-                noRule.forEach(p => {
-                    const c = p.city || '(cidade vazia)';
-                    if (!cidadeMap[c]) cidadeMap[c] = [];
-                    cidadeMap[c].push(p.dispatch.invoice || p.dispatch.id || '-');
-                });
-                const cidadesOrdenadas = Object.keys(cidadeMap).sort();
+                // Separar por tipo de skip
+                const semRegra   = noRule.filter(p => p.skipReason !== 'redespacho_conflito');
+                const redespConf = noRule.filter(p => p.skipReason === 'redespacho_conflito');
 
-                html += `<div style="margin-top:16px;">
-                    <p style="color:#fbbf24;font-size:0.85rem;font-weight:700;margin-bottom:8px;">
-                        ⚠️ ${noRule.length} lançamento(s) sem regra na tabela de fretes — NF(s) não serão alterados
-                    </p>
-                    <table>
-                    <thead><tr>
-                        <th>Cidade</th>
-                        <th style="text-align:center">Qtd NFs</th>
-                        <th>Números das NFs</th>
-                    </tr></thead><tbody>`;
+                // ── Grupo 1: sem regra de cidade ────────────────────────────────
+                if (semRegra.length > 0) {
+                    const cidadeMap = {};
+                    semRegra.forEach(p => {
+                        const c = p.city || '(cidade vazia)';
+                        if (!cidadeMap[c]) cidadeMap[c] = [];
+                        cidadeMap[c].push(p.dispatch.invoice || p.dispatch.id || '-');
+                    });
+                    const cidadesOrdenadas = Object.keys(cidadeMap).sort();
 
-                cidadesOrdenadas.forEach(cidade => {
-                    const nfs = cidadeMap[cidade];
-                    html += `<tr>
-                        <td style="color:#fbbf24;font-weight:600">${cidade}</td>
-                        <td style="text-align:center;color:#fbbf24">${nfs.length}</td>
-                        <td style="font-size:0.75rem;color:#94a3b8">${nfs.slice(0,15).join(', ')}${nfs.length > 15 ? ` ... +${nfs.length-15}` : ''}</td>
-                    </tr>`;
-                });
+                    html += `<div style="margin-top:16px;">
+                        <p style="color:#fbbf24;font-size:0.85rem;font-weight:700;margin-bottom:8px;">
+                            ⚠️ ${semRegra.length} lançamento(s) sem regra na tabela de fretes — NF(s) não serão alterados
+                        </p>
+                        <table>
+                        <thead><tr>
+                            <th>Cidade</th>
+                            <th style="text-align:center">Qtd NFs</th>
+                            <th>Números das NFs</th>
+                        </tr></thead><tbody>`;
 
-                html += `</tbody></table>
-                    <p style="font-size:0.75rem;color:#64748b;margin-top:6px;">
-                        Para corrigir: cadastre a tabela de frete da transportadora para essas cidades e rode o recálculo novamente.
-                    </p>
-                </div>`;
+                    cidadesOrdenadas.forEach(cidade => {
+                        const nfs = cidadeMap[cidade];
+                        html += `<tr>
+                            <td style="color:#fbbf24;font-weight:600">${cidade}</td>
+                            <td style="text-align:center;color:#fbbf24">${nfs.length}</td>
+                            <td style="font-size:0.75rem;color:#94a3b8">${nfs.slice(0,15).join(', ')}${nfs.length > 15 ? ` ... +${nfs.length-15}` : ''}</td>
+                        </tr>`;
+                    });
+
+                    html += `</tbody></table>
+                        <p style="font-size:0.75rem;color:#64748b;margin-top:6px;">
+                            Para corrigir: cadastre a tabela de frete da transportadora para essas cidades e rode o recálculo novamente.
+                        </p>
+                    </div>`;
+                }
+
+                // ── Grupo 2: conflito de redespacho ──────────────────────────────
+                if (redespConf.length > 0) {
+                    html += `<div style="margin-top:16px;padding:12px;border:1px solid rgba(239,68,68,0.3);border-radius:8px;background:rgba(239,68,68,0.05);">
+                        <p style="color:#f87171;font-size:0.85rem;font-weight:700;margin-bottom:8px;">
+                            🔴 ${redespConf.length} NF(s) com CONFLITO DE REDESPACHO — não serão recalculadas (evitando valor negativo)
+                        </p>
+                        <table>
+                        <thead><tr>
+                            <th>NF</th><th>Cliente</th><th>Cidade</th><th>Redesp. Total Atual</th><th>Motivo do Skip</th>
+                        </tr></thead><tbody>`;
+
+                    redespConf.forEach(p => {
+                        const d = p.dispatch;
+                        html += `<tr>
+                            <td style="font-weight:600;color:#f87171">${d.invoice || d.id || '-'}</td>
+                            <td style="font-size:0.75rem">${d.client || '-'}</td>
+                            <td>${d.city || '-'}</td>
+                            <td style="color:#f87171">${fmt(d.redespTotal || 0)}</td>
+                            <td style="font-size:0.72rem;color:#94a3b8">Regra atual sem redespacho — NF deve ser corrigida manualmente</td>
+                        </tr>`;
+                    });
+
+                    html += `</tbody></table>
+                        <p style="font-size:0.75rem;color:#64748b;margin-top:6px;">
+                            ⚠️ Essas NFs têm redespacho registrado mas a regra de frete atual não prevê redespacho. 
+                            Corrija os dados da NF diretamente no app ou atualize a regra de frete para incluir o redespacho correto.
+                        </p>
+                    </div>`;
+                }
             }
 
             document.getElementById('previewTable').innerHTML = html;
