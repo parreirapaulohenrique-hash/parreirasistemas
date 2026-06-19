@@ -1,8 +1,8 @@
 {
-    "version": "3.12.7",
-    "change": "v3.12.7 - REMOVE: Recálculo Retroativo TNORTE removido do sistema (card em Configurações, card duplicado e modal). Código _recalcFreightPure, openTNorteRecalcTool e applyTNorteRecalc removidos de app.js. Ferramenta equivalente disponível em /fix_frete para uso pontual.",
+    "version": "3.12.8",
+    "change": "v3.12.8 - FIX: WhatsApp no romaneio agora abre sequencialmente (1 por clique). O botão 'Abrir Todos' bloqueava abas 2+ por política do browser (user gesture). Novo painel mostra 1 contato por vez com barra de progresso — cada clique é um gesto direto garantindo abertura de todas as abas.",
     "lastUpdate": "2026-06-18",
-    "build": "20260618a",
+    "build": "20260618b",
     "deployedAt": "2026-06-18"
 }
 

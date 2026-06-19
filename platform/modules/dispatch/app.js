@@ -7254,82 +7254,99 @@ document.addEventListener('DOMContentLoaded', async () => {
             const existing = document.getElementById('_waPanelOverlay');
             if (existing) existing.remove();
 
+            if (!queue || queue.length === 0) return;
+
             const overlay = document.createElement('div');
             overlay.id = '_waPanelOverlay';
-            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);padding:20px;';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.65);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);padding:20px;';
 
             const panel = document.createElement('div');
-            panel.style.cssText = 'background:var(--bg-card,#1e2533);border-radius:16px;padding:24px;max-width:500px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.1);';
+            panel.style.cssText = 'background:var(--bg-card,#1e2533);border-radius:16px;padding:28px;max-width:420px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.1);';
 
-            const sentSet = new Set();
+            let current = 0;
 
-            const openAll = () => {
-                queue.forEach((item, i) => {
-                    if (!sentSet.has(i)) {
-                        window.open(item.url, '_blank');
-                        sentSet.add(i);
-                        document.getElementById(`_waStatus_${i}`).textContent = '✅ Enviado';
-                        document.getElementById(`_waLink_${i}`).style.background = 'rgba(37,211,102,0.1)';
-                        document.getElementById(`_waLink_${i}`).style.borderColor = 'rgba(37,211,102,0.35)';
-                    }
-                });
-                renderPanel();
-            };
+            const render = () => {
+                const total = queue.length;
+                const done  = current >= total;
+                const item  = done ? null : queue[current];
 
-            const renderPanel = () => {
-                const allSent = queue.every((_, i) => sentSet.has(i));
-                const pending = queue.length - sentSet.size;
-                panel.innerHTML = `
-                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
-                        <span style="font-size:2rem;">💬</span>
-                        <div>
-                            <div style="font-weight:700;font-size:1.1rem;">Envio WhatsApp</div>
-                            <div style="font-size:0.85rem;color:var(--text-secondary);">${sentSet.size}/${queue.length} enviado${queue.length !== 1 ? 's' : ''}</div>
+                const progressPct = Math.round((current / total) * 100);
+
+                panel.innerHTML = done
+                    ? `
+                        <div style="text-align:center;padding:12px 0;">
+                            <div style="font-size:3rem;margin-bottom:12px;">✅</div>
+                            <div style="font-weight:700;font-size:1.1rem;margin-bottom:6px;">Todos enviados!</div>
+                            <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:20px;">${total} WhatsApp${total !== 1 ? 's' : ''} enviado${total !== 1 ? 's' : ''}</div>
+                            <button onclick="document.getElementById('_waPanelOverlay').remove()"
+                                style="background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:0.9rem;font-weight:700;cursor:pointer;">
+                                Fechar
+                            </button>
+                        </div>`
+                    : `
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+                            <span style="font-size:1.8rem;">💬</span>
+                            <div style="flex:1;">
+                                <div style="font-weight:700;font-size:1rem;">Envio WhatsApp</div>
+                                <div style="font-size:0.8rem;color:#94a3b8;">${current + 1} de ${total}</div>
+                            </div>
+                            <button onclick="document.getElementById('_waPanelOverlay').remove()"
+                                style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:1.2rem;padding:4px;">✕</button>
                         </div>
-                        <button onclick="document.getElementById('_waPanelOverlay').remove()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--text-secondary);font-size:1.2rem;">✕</button>
-                    </div>
-                    <div style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;margin-bottom:20px;">
-                        ${queue.map((item, i) => `
-                            <a href="${item.url}" target="_blank" rel="noopener noreferrer"
-                               id="_waLink_${i}"
-                               style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-radius:10px;background:${sentSet.has(i) ? 'rgba(37,211,102,0.1)' : 'rgba(255,255,255,0.05)'};border:1px solid ${sentSet.has(i) ? 'rgba(37,211,102,0.35)' : 'rgba(255,255,255,0.08)'};text-decoration:none;color:var(--text-primary,#e2e8f0);transition:all 0.2s;">
-                                <span style="font-size:0.85rem;font-weight:500;">${item.label}</span>
-                                <span id="_waStatus_${i}" style="font-size:0.75rem;color:${sentSet.has(i) ? '#25D366' : '#94a3b8'};white-space:nowrap;">${sentSet.has(i) ? '✅ Enviado' : '📤 Abrir'}</span>
-                            </a>
-                        `).join('')}
-                    </div>
-                    ${allSent
-                        ? '<div style="text-align:center;color:#25D366;font-weight:600;font-size:0.95rem;">✅ Todos os WhatsApps foram enviados!</div>'
-                        : `<button id="_waOpenAllBtn" style="width:100%;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;border:none;border-radius:10px;padding:12px;font-size:0.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
-                            📲 Abrir Todos (${pending} pendente${pending !== 1 ? 's' : ''})
-                           </button>
-                           <div style="margin-top:8px;font-size:0.72rem;color:var(--text-secondary,#94a3b8);text-align:center;">💡 Ou clique individualmente em cada contato</div>`
-                    }
-                `;
 
-                const btn = panel.querySelector('#_waOpenAllBtn');
-                if (btn) btn.addEventListener('click', openAll);
+                        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px;margin-bottom:20px;">
+                            <div style="font-size:0.75rem;color:#94a3b8;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;">Contato</div>
+                            <div style="font-weight:600;font-size:1rem;">${item.label}</div>
+                        </div>
 
-                // Attach click listener to each individual link
-                queue.forEach((item, i) => {
-                    const link = panel.querySelector(`#_waLink_${i}`);
-                    if (link) {
-                        link.addEventListener('click', () => {
-                            sentSet.add(i);
-                            // Re-render after a short tick so the new tab opens first
-                            setTimeout(renderPanel, 300);
-                        });
-                    }
-                });
+                        <div style="margin-bottom:20px;">
+                            <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:#94a3b8;margin-bottom:6px;">
+                                <span>Progresso</span><span>${current}/${total} enviados</span>
+                            </div>
+                            <div style="height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">
+                                <div style="height:100%;width:${progressPct}%;background:linear-gradient(90deg,#25D366,#128C7E);border-radius:3px;transition:width .3s;"></div>
+                            </div>
+                        </div>
+
+                        <button id="_waOpenBtn"
+                            style="width:100%;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;border:none;border-radius:12px;padding:14px;font-size:0.95rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;">
+                            📲 Abrir WhatsApp${current + 1 < total ? ' e Avançar →' : ' e Finalizar ✓'}
+                        </button>
+                        ${current + 1 < total
+                            ? `<button id="_waSkipBtn"
+                                style="width:100%;background:transparent;color:#94a3b8;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px;font-size:0.82rem;cursor:pointer;">
+                                Pular este contato →
+                               </button>`
+                            : ''}
+                        <div style="margin-top:10px;font-size:0.72rem;color:#64748b;text-align:center;">
+                            💡 Clique em "Abrir WhatsApp" para abrir a aba e avançar para o próximo
+                        </div>`;
+
+                // Botão principal: abre o WA e avança
+                const openBtn = panel.querySelector('#_waOpenBtn');
+                if (openBtn) {
+                    openBtn.addEventListener('click', () => {
+                        window.open(item.url, '_blank');  // gesto direto → nunca bloqueado
+                        current++;
+                        render();
+                    });
+                }
+
+                // Botão pular
+                const skipBtn = panel.querySelector('#_waSkipBtn');
+                if (skipBtn) {
+                    skipBtn.addEventListener('click', () => {
+                        current++;
+                        render();
+                    });
+                }
             };
 
-            renderPanel();
+            render();
             overlay.appendChild(panel);
             document.body.appendChild(overlay);
-            // Nota: Não há auto-click via setTimeout — browsers modernos bloqueiam window.open()
-            // fora de um gesto direto do usuário. Use o botão "Abrir Todos" no painel.
         };
-        // ────────────────────────────────────────────────────────────────────────
+
 
         window.sendWhatsApp = (id, silent = false) => {
             const numId = Number(id);
