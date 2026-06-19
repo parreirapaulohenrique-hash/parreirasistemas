@@ -315,32 +315,40 @@
     var btn = document.getElementById('btnAdminLogin');
     if (!btn) { console.error('[Admin] ERRO: botão #btnAdminLogin não encontrado!'); return; }
 
-    // Remove qualquer handler antigo e adiciona um novo garantido
+    // Clona para remover quaisquer listeners antigos problemáticos
     var newBtn = btn.cloneNode(true);
     btn.parentNode.replaceChild(newBtn, btn);
 
+    function showErr(msg) {
+        var el = document.getElementById('loginError');
+        if (el) { el.textContent = msg; el.style.display = 'block'; el.style.color = '#ef4444'; }
+        console.error('[Admin Login]', msg);
+    }
+    function showInfo(msg) {
+        var el = document.getElementById('loginError');
+        if (el) { el.textContent = msg; el.style.display = 'block'; el.style.color = '#60a5fa'; }
+        console.log('[Admin Login]', msg);
+    }
+
     newBtn.addEventListener('click', function(e) {
         e.preventDefault();
-        e.stopPropagation();
 
         var user = (document.getElementById('adminUser') || {}).value || '';
         var pass = (document.getElementById('adminPass') || {}).value || '';
-        var errEl = document.getElementById('loginError');
-
-        function showErr(msg) {
-            if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
-            console.error('[Admin Login]', msg);
-        }
 
         if (!user || !pass) { showErr('Preencha usuário e senha.'); return; }
 
-        // Usa window.adminLogin se disponível, senão executa inline
+        // Delega para window.adminLogin se disponível
         if (typeof window.adminLogin === 'function') {
+            showInfo('Verificando...');
             window.adminLogin();
             return;
         }
 
-        // Fallback totalmente inline caso admin.js não tenha carregado
+        // Fallback totalmente inline — admin.js não carregou
+        showInfo('Conectando (modo fallback)...');
+        newBtn.disabled = true;
+
         var db = window.db;
         if (!db) {
             try {
@@ -351,36 +359,39 @@
                     messagingSenderId: "527633267616",
                     appId: "1:527633267616:web:3567e883b31f7fa02882c5"
                 });
-                db = firebase.firestore();
+                db = window.db = firebase.firestore();
                 firebase.auth().signInAnonymously().catch(function(){});
-            } catch(e) { showErr('Firebase não disponível: ' + e.message); return; }
+            } catch(e) { newBtn.disabled=false; showErr('Firebase: ' + e.message); return; }
         }
-
-        newBtn.disabled = true;
-        newBtn.textContent = 'Verificando...';
 
         db.collection('super_admin').doc('credentials').get().then(function(doc) {
             newBtn.disabled = false;
-            newBtn.innerHTML = '<span class="material-icons-round" style="font-size:1rem;">lock_open</span> Entrar';
-
-            if (!doc.exists) { showErr('Credenciais não encontradas. Acesse /admin/setup.html'); return; }
+            if (!doc.exists) { showErr('Credenciais não encontradas.'); return; }
             var data = doc.data();
             if (data.login === user.trim() && data.password === pass) {
+                showInfo('Login OK! Abrindo painel...');
                 sessionStorage.setItem('_sa_auth', btoa(user + ':' + Date.now()));
-                if (typeof window.showApp === 'function') { window.showApp(); }
-                else { location.reload(); }
+                // Tenta showApp, se não funcionar faz reload
+                setTimeout(function() {
+                    if (typeof window.showApp === 'function') {
+                        window.showApp();
+                    } else {
+                        showInfo('Recarregando...');
+                        window.location.reload();
+                    }
+                }, 300);
             } else {
                 showErr('Usuário ou senha incorretos.');
             }
         }).catch(function(e) {
             newBtn.disabled = false;
-            newBtn.innerHTML = '<span class="material-icons-round" style="font-size:1rem;">lock_open</span> Entrar';
-            showErr('Erro: ' + e.message);
+            showErr('Erro Firestore: ' + e.message);
         });
     });
 
-    console.log('[Admin] Fallback inline registrado no botão:', newBtn.id);
+    console.log('[Admin] Fallback inline OK. adminLogin disponível:', typeof window.adminLogin);
 })();
 </script>
+
 </body>
 </html>

@@ -97,9 +97,11 @@ function showApp() {
     loadTenants();
 }
 
-// ── Expor funções globalmente (necessário para onclick no HTML) ──
+// ── Expor funções globalmente ──
 window.adminLogin  = adminLogin;
 window.adminLogout = adminLogout;
+window.showApp     = showApp;
+window.loadTenants = loadTenants;
 
 // ── Registrar eventos diretamente (script está no final do body, DOM já existe) ──
 (function bindEvents() {
