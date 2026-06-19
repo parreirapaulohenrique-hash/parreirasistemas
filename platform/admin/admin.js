@@ -52,17 +52,20 @@ let _editingUsers = []; // usuários do tenant atual no modal
 async function adminLogin() {
     const user = document.getElementById('adminUser').value.trim();
     const pass = document.getElementById('adminPass').value;
-    const errEl = document.getElementById('loginError');
-    errEl.style.display = 'none';
+    showLoginError('');
 
     if (!user || !pass) { showLoginError('Preencha usuário e senha.'); return; }
 
+    if (!db) {
+        showLoginError('Erro: Firebase não inicializado. Recarregue a página (Ctrl+Shift+R).');
+        return;
+    }
+
     try {
         const doc = await db.collection('super_admin').doc('credentials').get();
-        if (!doc.exists) { showLoginError('Credenciais não configuradas no sistema.'); return; }
+        if (!doc.exists) { showLoginError('Credenciais não configuradas. Acesse /admin/setup.html primeiro.'); return; }
 
         const data = doc.data();
-        // Comparação simples — para maior segurança, use hash (SHA-256) no futuro
         if (data.login === user && data.password === pass) {
             sessionStorage.setItem('_sa_auth', btoa(user + ':' + Date.now()));
             showApp();
@@ -70,14 +73,16 @@ async function adminLogin() {
             showLoginError('Usuário ou senha incorretos.');
         }
     } catch (e) {
-        showLoginError('Erro ao verificar credenciais: ' + e.message);
+        showLoginError('Erro: ' + e.message);
+        console.error('[Admin] Erro no login:', e);
     }
 }
 
 function showLoginError(msg) {
     const el = document.getElementById('loginError');
+    if (!el) return;
     el.textContent = msg;
-    el.style.display = 'block';
+    el.style.display = msg ? 'block' : 'none';
 }
 
 function adminLogout() {
@@ -92,13 +97,20 @@ function showApp() {
     loadTenants();
 }
 
-// Enter no login
-document.getElementById('adminPass').addEventListener('keypress', e => {
-    if (e.key === 'Enter') adminLogin();
+// ── Event Listeners (dentro do DOMContentLoaded para garantir DOM pronto) ──
+document.addEventListener('DOMContentLoaded', () => {
+    const btnLogin = document.getElementById('btnAdminLogin');
+    const passInput = document.getElementById('adminPass');
+    const userInput = document.getElementById('adminUser');
+
+    if (btnLogin)  btnLogin.addEventListener('click', adminLogin);
+    if (passInput) passInput.addEventListener('keypress', e => { if (e.key === 'Enter') adminLogin(); });
+    if (userInput) userInput.addEventListener('keypress', e => { if (e.key === 'Enter') adminLogin(); });
+
+    // Manter sessão entre reloads (apenas na mesma aba)
+    if (sessionStorage.getItem('_sa_auth')) showApp();
 });
 
-// Manter sessão entre reloads (apenas na mesma aba)
-if (sessionStorage.getItem('_sa_auth')) showApp();
 
 // ════════════════════════════════════════════════════════════
 // TENANTS — Listagem
