@@ -3,14 +3,14 @@
 // Gestão de tenants, módulos e usuários da plataforma
 // ════════════════════════════════════════════════════════════
 
-// ── Firebase config (mesma do sistema principal) ──
+// ── Firebase config (mesmo projeto do sistema principal) ──
 const FIREBASE_CONFIG = {
-    apiKey: "AIzaSyC5CbdXO3GfXZg29dJHO5O_V9NMFP15sRY",
-    authDomain: "parreiralog-f9e27.firebaseapp.com",
-    projectId: "parreiralog-f9e27",
-    storageBucket: "parreiralog-f9e27.appspot.com",
-    messagingSenderId: "461617676055",
-    appId: "1:461617676055:web:21ae47d6d04892fcb75a6f"
+    apiKey: "AIzaSyDzatCQ8zmH4aQftznf7Y5wdYPwFYSiARc",
+    authDomain: "parreiralog-91904.firebaseapp.com",
+    projectId: "parreiralog-91904",
+    messagingSenderId: "527633267616",
+    appId: "1:527633267616:web:3567e883b31f7fa02882c5",
+    measurementId: "G-CQC6HKZ4V1"
 };
 
 // Módulos disponíveis na plataforma
