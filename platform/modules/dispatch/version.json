@@ -1,8 +1,8 @@
 {
-    "version": "3.14.3",
+    "version": "3.14.4",
     "environment": "staging",
-    "change": "v3.14.3 - FEAT: Conferencia de Fatura — atalho Enter nos filtros: se apenas 1 NF estiver visivel apos o filtro, Enter a seleciona automaticamente, limpa o filtro e mantem o foco no campo para busca continua. Campo pisca amarelo se houver ambiguidade (mais de 1 resultado).",
+    "change": "v3.14.4 - FIX CRITICO: fix_viopex apos salvar em dispatches_db agora tambem atualiza legacy_store/dispatches. O onSnapshot do app so escutava dispatches_db com status=Pendente Despacho; NFs Despachado nao chegavam ao listener e o localStorage ficava stale — Conferencia de Fatura exibia valores antigos. Com o sync do legacy_store o app recebe a atualizacao automaticamente sem recarregar.",
     "lastUpdate": "2026-06-19",
-    "build": "20260619-staging-v3.14.3",
+    "build": "20260619-staging-v3.14.4",
     "deployedAt": "2026-06-19"
 }

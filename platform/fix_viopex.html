@@ -498,10 +498,58 @@
             log(`✅ Salvos: ${saved} | ❌ Falhas: ${failed}`, saved > 0 ? 'ok' : 'err');
             document.getElementById('applyStatus').textContent = `✅ ${saved} salvos | ${failed} falhas`;
 
+            // ── Sync automático: atualiza legacy_store/dispatches ────────────────────
+            // O onSnapshot do app SÓ escuta dispatches_db com status='Pendente Despacho'.
+            // NFs 'Despachado' não chegam ao listener e o localStorage fica stale.
+            // Solução: após salvar em dispatches_db, sincronizar também o legacy_store,
+            // cujo listener não tem filtro de status → o app recebe e atualiza automaticamente.
             if (saved > 0) {
-                log('\n⚠️ PRÓXIMO PASSO: Abra o módulo de Despacho e execute no console:', 'warn');
-                log('   Utils.Cloud.save("dispatches", Utils.getStorage("dispatches"))', 'warn');
-                log('   — ou aguarde o próximo sync automático para refletir os novos totais no app.', 'warn');
+                log('\n📡 Sincronizando legacy_store/dispatches para o app atualizar automaticamente...', 'ok');
+                try {
+                    const legRef = db.collection('tenants').doc(tenant)
+                                     .collection('legacy_store').doc('dispatches');
+                    const legDoc = await legRef.get();
+
+                    if (legDoc.exists && legDoc.data().content) {
+                        const legArr = JSON.parse(legDoc.data().content);
+                        const savedIds = new Set(
+                            toChange
+                                .filter(p => p.dispatch._src === 'dispatches_db')
+                                .map(p => String(p.dispatch.id || p.dispatch._docId))
+                        );
+
+                        let legModified = 0;
+                        legArr.forEach((x, idx) => {
+                            if (!savedIds.has(String(x.id))) return;
+                            const p = toChange.find(pp => String(pp.dispatch.id || pp.dispatch._docId) === String(x.id));
+                            if (!p) return;
+                            const newTotal     = Math.round(p.newTotal * 100) / 100;
+                            const hasRedesp    = x.redespTotal != null && x.redespTotal > 0;
+                            const newMainTotal = hasRedesp
+                                ? Math.round((newTotal - (x.redespTotal || 0)) * 100) / 100
+                                : newTotal;
+                            legArr[idx] = {
+                                ...x,
+                                total:       newTotal,
+                                mainTotal:   newMainTotal,   // sempre garante mainTotal
+                                _recalcAt:   new Date().toISOString(),
+                                _recalcTool: 'fix_viopex'
+                            };
+                            legModified++;
+                        });
+
+                        if (legModified > 0) {
+                            await legRef.set({ content: JSON.stringify(legArr) });
+                            log(`✅ legacy_store/dispatches: ${legModified} registros atualizados — o app irá refrescar automaticamente`, 'ok');
+                        } else {
+                            log('ℹ️ Registros não encontrados em legacy_store (só existem em dispatches_db). O app irá atualizar no próximo login.', 'ok');
+                        }
+                    } else {
+                        log('ℹ️ legacy_store/dispatches não encontrado — sync manual não necessário.', 'ok');
+                    }
+                } catch(syncErr) {
+                    log(`⚠️ Erro no sync legacy_store: ${syncErr.message} — recarregue o app para ver os valores atualizados.`, 'warn');
+                }
             }
 
             document.getElementById('btnApply').disabled = false;

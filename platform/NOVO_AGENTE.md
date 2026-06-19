@@ -303,6 +303,7 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
+| **3.14.4** | 2026-06-19 | FIX CRÍTICO: fix_viopex — após salvar em `dispatches_db`, agora também atualiza `legacy_store/dispatches`. O `onSnapshot` do app só escutava `dispatches_db` com `status='Pendente Despacho'`; NFs `Despachado` não chegavam ao listener → localStorage stale → Conferência de Fatura exibia valores antigos. Com o sync do `legacy_store` o app recebe e aplica a atualização automaticamente sem recarregar a página. |
 | **3.14.3** | 2026-06-19 | FEAT: Conferência de Fatura — atalho Enter nos filtros: se apenas 1 NF estiver visível após o filtro, Enter a seleciona automaticamente, limpa o campo e mantém foco para busca contínua. Campo pisca amarelo se houver ambiguidade (mais de 1 resultado). |
 | **3.14.2** | 2026-06-19 | FEAT: Conferência de Fatura — NFs selecionadas sobem automaticamente para o topo com destaque verde e borda lateral; separador visual mostra quantas NFs ainda estão disponíveis. Funciona por seleção individual e no "selecionar todas". |
 | **3.14.1** | 2026-06-19 | FIX: Importação de tabela de frete — `firstLine is not defined` (variável removida junto com bloco duplicado na refatoração do suporte a Excel v3.14.0). |
