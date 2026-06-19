@@ -3419,6 +3419,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 activeCarrier = newRule.transportadora;
                 Utils.saveRaw('freight_tables', JSON.stringify(rules));
+                // ── Sync cloud: garante que fix_viopex e outros tools leiam as regras atualizadas ──
+                if (Utils.Cloud && Utils.Cloud.save) {
+                    Utils.Cloud.save('freight_tables', rules);
+                    console.log('☁️ freight_tables sincronizado com cloud (', rules.length, 'regras )');
+                }
                 renderRulesList();
                 resetRuleForm();
             });
@@ -3726,6 +3731,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                         // Salvar tudo
                         Utils.saveRaw('freight_tables', JSON.stringify(rules));
                         Utils.saveRaw('carrier_list', JSON.stringify(carrierList));
+                        // ── Sync cloud: garante que fix_viopex e outros tools leiam as regras atualizadas ──
+                        if (Utils.Cloud && Utils.Cloud.save) {
+                            Utils.Cloud.save('freight_tables', rules);
+                            Utils.Cloud.save('carrier_list', carrierList);
+                            console.log('☁️ freight_tables + carrier_list sincronizados com cloud após importação (', rules.length, 'regras )');
+                        }
 
                         activeCarrier = '';
                         renderRulesList();
