@@ -451,12 +451,25 @@
                 document.getElementById('progressFill').style.width = Math.round(((i + 1) / toChange.length) * 100) + '%';
                 document.getElementById('applyStatus').textContent = `Salvando ${i + 1}/${toChange.length}...`;
 
+                const newTotal = Math.round(p.newTotal * 100) / 100;
+
+                // ✅ FIX: Conferência de Fatura usa mainTotal com prioridade sobre total.
+                // Se o registro tem mainTotal (despacho sem redespacho), precisa atualizá-lo também.
+                // Se tem redespacho, mantém mainTotal como newTotal e preserva redespTotal.
+                const hasRedesp = d.redespTotal != null && d.redespTotal > 0;
+                const newMainTotal = hasRedesp
+                    ? Math.round((newTotal - (d.redespTotal || 0)) * 100) / 100  // frete principal sem redespacho
+                    : newTotal;                                                   // sem redespacho: mainTotal = total
+
                 const updated = {
                     ...d,
-                    total: Math.round(p.newTotal * 100) / 100,
+                    total: newTotal,
+                    // Só atualiza mainTotal se ele já existia no registro
+                    ...(d.mainTotal != null ? { mainTotal: newMainTotal } : {}),
                     _recalcAt: new Date().toISOString(),
                     _recalcTool: 'fix_viopex',
-                    _recalcOldTotal: p.oldTotal
+                    _recalcOldTotal: p.oldTotal,
+                    _recalcOldMainTotal: d.mainTotal ?? null
                 };
                 delete updated._docId;
                 delete updated._src;
