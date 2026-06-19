@@ -4551,6 +4551,49 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         };
 
+        // ── Agrupa NFs selecionadas no topo da tabela (v3.14.2) ──────────────────
+        window._sortInvoiceRows = () => {
+            const tbody = document.getElementById('invoiceNFsBody');
+            if (!tbody) return;
+
+            const rows = Array.from(tbody.querySelectorAll('tr[data-id]'));
+            if (!rows.length) return;
+
+            // Remove separador anterior (se houver)
+            const oldSep = tbody.querySelector('tr.invoice-separator');
+            if (oldSep) oldSep.remove();
+
+            const selected   = rows.filter(r => r.querySelector('.invoice-nf-checkbox')?.checked);
+            const unselected = rows.filter(r => !r.querySelector('.invoice-nf-checkbox')?.checked);
+
+            // Aplica estilo de destaque nas selecionadas
+            selected.forEach(r => {
+                r.style.background = 'rgba(34,197,94,0.10)';
+                r.style.borderLeft = '3px solid #22c55e';
+            });
+            unselected.forEach(r => {
+                r.style.background = '';
+                r.style.borderLeft = '';
+            });
+
+            // Reordena o DOM
+            selected.forEach(r => tbody.appendChild(r));
+
+            if (selected.length > 0 && unselected.length > 0) {
+                const sep = document.createElement('tr');
+                sep.className = 'invoice-separator';
+                sep.innerHTML = `<td colspan="6" style="padding:4px 12px;background:rgba(255,255,255,0.04);border-top:1px dashed rgba(255,255,255,0.15);border-bottom:1px dashed rgba(255,255,255,0.15);font-size:0.72rem;color:#64748b;font-weight:600;letter-spacing:.04em;">── ${unselected.length} NF${unselected.length !== 1 ? 's' : ''} disponíveis ──</td>`;
+                tbody.appendChild(sep);
+            }
+
+            unselected.forEach(r => tbody.appendChild(r));
+
+            // Scroll suave até o topo do bloco de selecionadas
+            if (selected.length > 0) {
+                selected[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        };
+
         // Toggle single NF selection
         // v3.11.30: armazena o invoiceValue (valor por transportadora) junto com o ID
         window.toggleInvoiceNF = (id, checked, value) => {
@@ -4560,6 +4603,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.invoiceSelectedNFs.delete(id);
             }
             window.updateInvoiceComparison();
+            window._sortInvoiceRows(); // ← agrupa selecionadas no topo
         };
 
         // Select/deselect all NFs
@@ -4576,6 +4620,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     window.invoiceSelectedNFs.set(id, parseFloat(cb.dataset.value || 0) || 0);
                 }
             });
+            window._sortInvoiceRows(); // ← agrupa/desagrupa ao selecionar todas
 
             const selectAllCb = document.getElementById('invoiceSelectAll');
             if (selectAllCb) selectAllCb.checked = selectAll;

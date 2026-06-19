@@ -1,8 +1,8 @@
 {
-    "version": "3.14.1",
+    "version": "3.14.2",
     "environment": "staging",
-    "change": "v3.14.1 - FIX: Importacao de tabela de frete - firstLine is not defined (variavel removida junto com bloco duplicado na refatoracao do suporte a Excel)",
+    "change": "v3.14.2 - FEAT: Conferencia de Fatura — NFs selecionadas sobem automaticamente para o topo da lista com destaque verde e borda lateral. Separador visual indica quantas NFs ainda estao disponiveis. Funciona em cada selecao individual e no selecionar-todos.",
     "lastUpdate": "2026-06-19",
-    "build": "20260619-staging-v3.14.1",
+    "build": "20260619-staging-v3.14.2",
     "deployedAt": "2026-06-19"
 }

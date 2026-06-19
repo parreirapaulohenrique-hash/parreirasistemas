@@ -303,6 +303,7 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
+| **3.14.2** | 2026-06-19 | FEAT: Conferência de Fatura — NFs selecionadas sobem automaticamente para o topo com destaque verde e borda lateral; separador visual mostra quantas NFs ainda estão disponíveis. Funciona por seleção individual e no "selecionar todas". |
 | **3.14.1** | 2026-06-19 | FIX: Importação de tabela de frete — `firstLine is not defined` (variável removida junto com bloco duplicado na refatoração do suporte a Excel v3.14.0). |
 | **3.14.0** | 2026-06-19 | FEAT: Importação de tabela de frete aceita Excel (.xlsx/.xls) além de CSV — usa XLSX.read via ArrayBuffer. FIX: fix_viopex agora atualiza `mainTotal` além de `total` (Conferência de Fatura priorizava mainTotal, causando valores antigos). FIX: Painel /admin — `<base href="/platform/admin/">` corrigido para carregar admin.js corretamente via Vercel rewrite. TOOL: /fix_clients — ferramenta de migração de clientes entre tenants com suporte a dados chunked. |
 | **3.13.0** | 2026-06-19 | FEAT: Login sem campo ID da Empresa — tenant detectado automaticamente pela URL (/ltdistribuidora). Rota dinâmica `/:tenant` no vercel.json serve qualquer empresa pela URL. FEAT: Painel Super-Admin `/admin` — gestão centralizada de tenants, módulos e usuários. FIX: Clientes ltdistribuidora migrados via /fix_clients (dados em chunks não migravam automaticamente). |
