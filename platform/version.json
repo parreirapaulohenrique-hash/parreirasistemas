@@ -1,9 +1,10 @@
 {
     "version": "3.12.9",
-    "change": "v3.12.9 - FIX: WhatsApp no romaneio restaurado para abertura automática sem intervenção do operador. generateRomaneioAction é 100% síncrona (só usa localStorage), portanto window.open() em forEach dentro do mesmo handler do clique é reconhecido pelo browser como gesto direto e todas as abas abrem automaticamente.",
-    "lastUpdate": "2026-06-18",
-    "build": "20260618c",
-    "deployedAt": "2026-06-18"
+    "environment": "staging",
+    "change": "Branch de homologação criada a partir da v3.12.9. Alterações aqui são testadas antes de ir para produção (main).",
+    "lastUpdate": "2026-06-19",
+    "build": "20260619-staging",
+    "deployedAt": "2026-06-19"
 }
 
 
