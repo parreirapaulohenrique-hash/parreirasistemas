@@ -474,7 +474,12 @@
                 }
 
                 if (waQueue.length > 0) {
-                    window._showWaPanel(waQueue);
+                    // Abre todas as abas automaticamente — sem painel intermediário.
+                    // Funciona porque generateRomaneioAction é 100% síncrona até aqui:
+                    // não há await/Promise antes deste ponto, então o browser ainda
+                    // reconhece o contexto de "gesto do usuário" do clique original
+                    // e libera todos os window.open() sem bloquear.
+                    waQueue.forEach(item => window.open(item.url, '_blank'));
                 }
             }
 
