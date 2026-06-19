@@ -1,8 +1,8 @@
 {
-    "version": "3.14.8",
+    "version": "3.14.9",
     "environment": "production",
-    "change": "v3.14.8 - FIX CRITICO RAIZ: freight_tables nunca era sincronizado com Firestore (cloud) ao salvar/importar regras — app usava Utils.saveRaw (localStorage) sem Utils.Cloud.save. fix_viopex lia sempre o Firestore desatualizado (regras antigas com minimo=0) e calculava incorretamente. AGORA: após salvar regra individual e após importacao em lote, Utils.Cloud.save('freight_tables', rules) e Utils.Cloud.save('carrier_list', carrierList) garantem sync imediato com Firestore.",
+    "change": "v3.14.9 - FIX: fix_viopex redespacho — substitui 'pular NF' por 'recalcular frete principal + preservar redespTotal existente'. Quando dispatch tem redespTotal > 0 mas regra atual nao tem redespacho, calcula: newTotal = calcFreight(regra) + redespTotal_preservado. Evita mainTotal negativo E aplica corretamente o minimo da regra. Preview mostra badge roxo '🔄 +redespacho R$ X' nas linhas afetadas.",
     "lastUpdate": "2026-06-19",
-    "build": "20260619-prod-v3.14.8",
+    "build": "20260619-prod-v3.14.9",
     "deployedAt": "2026-06-19"
 }
