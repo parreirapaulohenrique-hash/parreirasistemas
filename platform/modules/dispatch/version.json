@@ -1,9 +1,9 @@
 {
-    "version": "3.12.6",
-    "change": "v3.12.6 - FIX CRÍTICO: login agora mescla usuários do sistema novo (tenants/{id}/users) + legado (legacy_store/app_users). Antes era if/else — usuários cadastrados pelo módulo Cadastros (que gravam no legado) não apareciam no dropdown quando o sistema novo já tinha dados. Agora ambas as fontes são lidas e deduplicadas por login (novo tem prioridade).",
-    "lastUpdate": "2026-06-17",
-    "build": "20260617n",
-    "deployedAt": "2026-06-17"
+    "version": "3.12.7",
+    "change": "v3.12.7 - REMOVE: Recálculo Retroativo TNORTE removido do sistema (card em Configurações, card duplicado e modal). Código _recalcFreightPure, openTNorteRecalcTool e applyTNorteRecalc removidos de app.js. Ferramenta equivalente disponível em /fix_frete para uso pontual.",
+    "lastUpdate": "2026-06-18",
+    "build": "20260618a",
+    "deployedAt": "2026-06-18"
 }
 
 
