@@ -1,9 +1,8 @@
 {
-    "version": "3.12.9",
-    "change": "v3.12.9 - FIX: WhatsApp no romaneio restaurado para abertura automática sem intervenção do operador. generateRomaneioAction é 100% síncrona (só usa localStorage), portanto window.open() em forEach dentro do mesmo handler do clique é reconhecido pelo browser como gesto direto e todas as abas abrem automaticamente.",
-    "lastUpdate": "2026-06-18",
-    "build": "20260618c",
-    "deployedAt": "2026-06-18"
+    "version": "3.14.0",
+    "environment": "staging",
+    "change": "v3.14.0 - FEAT: Importação de tabela de frete aceita Excel (.xlsx/.xls) além de CSV (XLSX.read via ArrayBuffer). FIX: fix_viopex agora atualiza mainTotal além do total (Conferência de Fatura usava mainTotal com prioridade). FIX: Painel /admin — base href corrigido para carregar admin.js via Vercel rewrite. TOOL: /fix_clients — ferramenta de migração de clientes entre tenants com suporte a chunks.",
+    "lastUpdate": "2026-06-19",
+    "build": "20260619-staging-v3.14.0",
+    "deployedAt": "2026-06-19"
 }
-
-
