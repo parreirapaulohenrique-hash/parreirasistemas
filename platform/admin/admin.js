@@ -97,8 +97,12 @@ function showApp() {
     loadTenants();
 }
 
-// ── Event Listeners (dentro do DOMContentLoaded para garantir DOM pronto) ──
-document.addEventListener('DOMContentLoaded', () => {
+// ── Expor funções globalmente (necessário para onclick no HTML) ──
+window.adminLogin  = adminLogin;
+window.adminLogout = adminLogout;
+
+// ── Registrar eventos diretamente (script está no final do body, DOM já existe) ──
+(function bindEvents() {
     const btnLogin = document.getElementById('btnAdminLogin');
     const passInput = document.getElementById('adminPass');
     const userInput = document.getElementById('adminUser');
@@ -107,9 +111,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (passInput) passInput.addEventListener('keypress', e => { if (e.key === 'Enter') adminLogin(); });
     if (userInput) userInput.addEventListener('keypress', e => { if (e.key === 'Enter') adminLogin(); });
 
-    // Manter sessão entre reloads (apenas na mesma aba)
+    console.log('[Admin] Eventos registrados. btnLogin:', !!btnLogin);
+
+    // Manter sessão entre reloads
     if (sessionStorage.getItem('_sa_auth')) showApp();
-});
+})();
 
 
 // ════════════════════════════════════════════════════════════
