@@ -1,8 +1,8 @@
 {
-    "version": "3.14.6",
+    "version": "3.14.7",
     "environment": "production",
-    "change": "v3.14.6 - FIX RAIZ: Importador Excel de Tabelas de Frete — colMap agora aceita multiplas variacoes de cabecalho: 'Min.', 'Mín.', 'Frete Min', 'Vlr Min' mapeiam para minimo; 'Vir Exc.', 'Vir Kg', 'Vlr Exc' mapeiam para valorExcedente; 'Lim. Peso', 'Lim Peso' mapeiam para limitePeso. Adiciona aviso em toast e console quando colunas criticas nao sao detectadas, prevenindo importacao silenciosa com minimo=0.",
+    "change": "v3.14.7 - FIX: fix_viopex — guarda de redespacho: NFs com redespTotal > 0 mas regra atual sem redespacho sao puladas (evita mainTotal negativo). Preview exibe grupo especifico 'CONFLITO REDESPACHO' em vermelho com NF, cliente, cidade e valor redespTotal. Nao recalcula essas NFs — requerem correcao manual ou atualizacao da regra de frete.",
     "lastUpdate": "2026-06-19",
-    "build": "20260619-prod-v3.14.6",
+    "build": "20260619-prod-v3.14.7",
     "deployedAt": "2026-06-19"
 }
