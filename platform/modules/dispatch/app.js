@@ -3440,39 +3440,53 @@ document.addEventListener('DOMContentLoaded', async () => {
                 fileRulesInput.click();
             };
 
-            // Handler para importação de CSV
+            // Handler para importação de CSV / Excel (.xlsx, .xls)
             fileRulesInput.onchange = (e) => {
                 const file = e.target.files[0];
                 console.log('📂 Evento change disparado, arquivo:', file);
-                if (!file) {
-                    console.log('⚠️ Nenhum arquivo na seleção');
-                    return;
-                }
+                if (!file) { console.log('⚠️ Nenhum arquivo na seleção'); return; }
+
+                const isExcel = /\.(xlsx|xls)$/i.test(file.name);
 
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     try {
-                        let csvContent = event.target.result;
-
-                        // Normalizar quebras de linha
-                        csvContent = csvContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-
-                        const lines = csvContent.split('\n').filter(l => l.trim());
-                        console.log('📄 Linhas no arquivo:', lines.length);
-
-                        if (lines.length < 2) {
-                            showToast('❌ Arquivo CSV vazio ou inválido (menos de 2 linhas)');
-                            return;
-                        }
-
-                        // Detectar separador (vírgula, ponto-e-vírgula ou tab)
-                        const firstLine = lines[0];
+                        let lines = [];
                         let separator = ';';
-                        if (firstLine.split(';').length < 3) {
-                            if (firstLine.split(',').length >= 3) separator = ',';
-                            else if (firstLine.split('\t').length >= 3) separator = '\t';
+
+                        if (isExcel) {
+                            // ── Excel: usa biblioteca XLSX ──────────────────────────────────
+                            if (typeof XLSX === 'undefined') {
+                                showToast('❌ Biblioteca XLSX não carregada. Tente CSV.');
+                                return;
+                            }
+                            const data = new Uint8Array(event.target.result);
+                            const workbook = XLSX.read(data, { type: 'array' });
+                            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                            // Converte para array de arrays (raw=false → valores formatados como string)
+                            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
+                            // Serializa como CSV com tab para reuso do restante do código
+                            separator = '\t';
+                            lines = rows
+                                .filter(r => r.some(c => String(c).trim() !== ''))
+                                .map(r => r.map(c => String(c ?? '').trim()).join('\t'));
+                            console.log(`📊 Excel lido: ${lines.length} linhas, ${rows[0]?.length || 0} colunas`);
+                        } else {
+                            // ── CSV: lê como texto ──────────────────────────────────────────
+                            let csvContent = event.target.result;
+                            csvContent = csvContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+                            lines = csvContent.split('\n').filter(l => l.trim());
+                            // Detectar separador
+                            const firstLine = lines[0] || '';
+                            if (firstLine.split(';').length < 3) {
+                                if (firstLine.split(',').length >= 3) separator = ',';
+                                else if (firstLine.split('\t').length >= 3) separator = '\t';
+                            }
+                            console.log('📄 CSV - Linhas:', lines.length, '| Separador:', separator === '\t' ? 'TAB' : separator);
                         }
-                        console.log('🔍 Separador detectado:', separator === '\t' ? 'TAB' : separator);
+
+                        const lines_COMPAT = lines; // alias mantido para compatibilidade
+                        // separator já definido corretamente no bloco acima (CSV ou Excel)
 
                         // Normalizar headers (remover acentos, BOM, aspas)
                         const normalizeStr = (s) => s.trim()
@@ -3690,7 +3704,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 };
 
-                reader.readAsText(file, 'windows-1252'); // Codificação do Excel brasileiro
+                if (isExcel) {
+                    reader.readAsArrayBuffer(file); // XLSX precisa de ArrayBuffer
+                } else {
+                    reader.readAsText(file, 'windows-1252'); // CSV com encoding do Excel BR
+                }
             };
 
             // Função auxiliar para tentar diferentes codificações
