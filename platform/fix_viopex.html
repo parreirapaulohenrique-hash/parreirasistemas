@@ -47,6 +47,7 @@
 <body>
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
 
     <h1>🔧 Recálculo de Frete — VIOPEX</h1>
@@ -157,7 +158,12 @@
             try {
                 if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
                 db = firebase.firestore();
-                await db.collection('tenants').doc('__ping__').get().catch(() => {});
+
+                // Login anônimo necessário para satisfazer as regras de segurança do Firestore
+                log('Autenticando (login anônimo)...');
+                await firebase.auth().signInAnonymously();
+                log('✅ Autenticado com sucesso!', 'ok');
+
                 const tenant = document.getElementById('cfgTenant').value.trim();
                 document.getElementById('connStatus').innerHTML = `<span style="color:#34d399">✅ Conectado! Tenant: <strong>${tenant}</strong></span>`;
                 document.getElementById('btnPreview').disabled = false;
