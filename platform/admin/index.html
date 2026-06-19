@@ -308,5 +308,79 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="admin.js"></script>
+
+<!-- FALLBACK INLINE: garante que o botão funciona mesmo se admin.js falhar -->
+<script>
+(function() {
+    var btn = document.getElementById('btnAdminLogin');
+    if (!btn) { console.error('[Admin] ERRO: botão #btnAdminLogin não encontrado!'); return; }
+
+    // Remove qualquer handler antigo e adiciona um novo garantido
+    var newBtn = btn.cloneNode(true);
+    btn.parentNode.replaceChild(newBtn, btn);
+
+    newBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        var user = (document.getElementById('adminUser') || {}).value || '';
+        var pass = (document.getElementById('adminPass') || {}).value || '';
+        var errEl = document.getElementById('loginError');
+
+        function showErr(msg) {
+            if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
+            console.error('[Admin Login]', msg);
+        }
+
+        if (!user || !pass) { showErr('Preencha usuário e senha.'); return; }
+
+        // Usa window.adminLogin se disponível, senão executa inline
+        if (typeof window.adminLogin === 'function') {
+            window.adminLogin();
+            return;
+        }
+
+        // Fallback totalmente inline caso admin.js não tenha carregado
+        var db = window.db;
+        if (!db) {
+            try {
+                if (!firebase.apps.length) firebase.initializeApp({
+                    apiKey: "AIzaSyDzatCQ8zmH4aQftznf7Y5wdYPwFYSiARc",
+                    authDomain: "parreiralog-91904.firebaseapp.com",
+                    projectId: "parreiralog-91904",
+                    messagingSenderId: "527633267616",
+                    appId: "1:527633267616:web:3567e883b31f7fa02882c5"
+                });
+                db = firebase.firestore();
+                firebase.auth().signInAnonymously().catch(function(){});
+            } catch(e) { showErr('Firebase não disponível: ' + e.message); return; }
+        }
+
+        newBtn.disabled = true;
+        newBtn.textContent = 'Verificando...';
+
+        db.collection('super_admin').doc('credentials').get().then(function(doc) {
+            newBtn.disabled = false;
+            newBtn.innerHTML = '<span class="material-icons-round" style="font-size:1rem;">lock_open</span> Entrar';
+
+            if (!doc.exists) { showErr('Credenciais não encontradas. Acesse /admin/setup.html'); return; }
+            var data = doc.data();
+            if (data.login === user.trim() && data.password === pass) {
+                sessionStorage.setItem('_sa_auth', btoa(user + ':' + Date.now()));
+                if (typeof window.showApp === 'function') { window.showApp(); }
+                else { location.reload(); }
+            } else {
+                showErr('Usuário ou senha incorretos.');
+            }
+        }).catch(function(e) {
+            newBtn.disabled = false;
+            newBtn.innerHTML = '<span class="material-icons-round" style="font-size:1rem;">lock_open</span> Entrar';
+            showErr('Erro: ' + e.message);
+        });
+    });
+
+    console.log('[Admin] Fallback inline registrado no botão:', newBtn.id);
+})();
+</script>
 </body>
 </html>
