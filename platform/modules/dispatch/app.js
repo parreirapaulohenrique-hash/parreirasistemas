@@ -3488,6 +3488,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const lines_COMPAT = lines; // alias mantido para compatibilidade
                         // separator já definido corretamente no bloco acima (CSV ou Excel)
 
+                        if (lines.length < 2) {
+                            showToast('❌ Arquivo vazio ou sem dados válidos (menos de 2 linhas)');
+                            return;
+                        }
+
                         // Normalizar headers (remover acentos, BOM, aspas)
                         const normalizeStr = (s) => s.trim()
                             .toLowerCase()
@@ -3495,6 +3500,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             .replace(/^\ufeff/, '')
                             .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
+                        const firstLine = lines[0]; // primeira linha = cabeçalho
                         const headers = firstLine.split(separator).map(normalizeStr);
                         console.log('📥 Headers detectados:', headers);
 
