@@ -4551,6 +4551,62 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         };
 
+        // ── Enter rápido nos filtros da Conferência de Fatura (v3.14.3) ──────────
+        // Se após filtrar restar 1 NF visível, pressionar Enter a seleciona
+        // automaticamente, limpa o filtro e foca no mesmo campo para a próxima busca.
+        (() => {
+            const FILTER_IDS = ['invF_nf', 'invF_client', 'invF_city', 'invF_date', 'invF_frete'];
+            FILTER_IDS.forEach(fid => {
+                const el = document.getElementById(fid);
+                if (!el) return;
+                el.addEventListener('keydown', (e) => {
+                    if (e.key !== 'Enter') return;
+                    e.preventDefault();
+
+                    // Garante filtro aplicado
+                    window.applyInvoiceColumnFilters();
+
+                    // Linhas visíveis (não separador, não ocultas)
+                    const visibleRows = Array.from(
+                        document.querySelectorAll('#invoiceNFsBody tr[data-id]')
+                    ).filter(r => r.style.display !== 'none');
+
+                    if (visibleRows.length !== 1) {
+                        // Mais de 1 resultado: pisca o campo para indicar ambiguidade
+                        el.style.outline = '2px solid #f59e0b';
+                        setTimeout(() => { el.style.outline = ''; }, 600);
+                        return;
+                    }
+
+                    const row = visibleRows[0];
+                    const cb  = row.querySelector('.invoice-nf-checkbox');
+                    if (!cb) return;
+
+                    // Alterna: se já marcada, desmarca; senão, marca
+                    const newState = !cb.checked;
+                    cb.checked = newState;
+                    const nfId    = parseInt(cb.dataset.id);
+                    const nfValue = parseFloat(cb.dataset.value || 0) || 0;
+                    window.toggleInvoiceNF(nfId, newState, nfValue);
+
+                    // Feedback visual rápido na linha
+                    row.style.transition = 'outline 0.15s';
+                    row.style.outline = newState ? '2px solid #22c55e' : '2px solid #ef4444';
+                    setTimeout(() => { row.style.outline = ''; }, 400);
+
+                    // Limpa todos os filtros para a próxima busca
+                    FILTER_IDS.forEach(id => {
+                        const fi = document.getElementById(id);
+                        if (fi) fi.value = '';
+                    });
+                    window.applyInvoiceColumnFilters();
+
+                    // Foca no campo que disparou para continuar digitando
+                    el.focus();
+                });
+            });
+        })();
+
         // ── Agrupa NFs selecionadas no topo da tabela (v3.14.2) ──────────────────
         window._sortInvoiceRows = () => {
             const tbody = document.getElementById('invoiceNFsBody');

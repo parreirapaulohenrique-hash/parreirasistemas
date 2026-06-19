@@ -1,8 +1,8 @@
 {
-    "version": "3.14.2",
+    "version": "3.14.3",
     "environment": "staging",
-    "change": "v3.14.2 - FEAT: Conferencia de Fatura — NFs selecionadas sobem automaticamente para o topo da lista com destaque verde e borda lateral. Separador visual indica quantas NFs ainda estao disponiveis. Funciona em cada selecao individual e no selecionar-todos.",
+    "change": "v3.14.3 - FEAT: Conferencia de Fatura — atalho Enter nos filtros: se apenas 1 NF estiver visivel apos o filtro, Enter a seleciona automaticamente, limpa o filtro e mantem o foco no campo para busca continua. Campo pisca amarelo se houver ambiguidade (mais de 1 resultado).",
     "lastUpdate": "2026-06-19",
-    "build": "20260619-staging-v3.14.2",
+    "build": "20260619-staging-v3.14.3",
     "deployedAt": "2026-06-19"
 }
