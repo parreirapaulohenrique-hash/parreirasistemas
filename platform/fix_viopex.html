@@ -121,6 +121,22 @@
         <div id="applyStatus" style="font-size:0.82rem;color:#94a3b8;margin-top:6px;"></div>
     </div>
 
+    <!-- PASSO 3-B: Forçar Sync (quando já está recalculado mas legacy_store está stale) -->
+    <div class="card" id="forceSyncSection" style="display:none;background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.25);">
+        <h2 style="color:#f59e0b;">🔄 Sincronizar App (Sem Recálculo)</h2>
+        <p style="font-size:0.85rem;color:#94a3b8;margin-bottom:14px;">
+            O preview não encontrou diferenças — os valores já estão corretos no Firestore (<code>dispatches_db</code>).<br>
+            Porém a <strong>Conferência de Fatura</strong> pode estar mostrando valores antigos porque o <code>legacy_store</code> ainda não foi atualizado.<br>
+            Clique abaixo para forçar a sincronização: o app irá receber os dados atualizados automaticamente.
+        </p>
+        <div style="display:flex;gap:10px;align-items:center;">
+            <button class="btn btn-warning" id="btnForceSync" onclick="forceSync()">🔄 Forçar Sync → App</button>
+            <button class="btn btn-warning" onclick="exportPreview()">📥 Exportar Preview (JSON)</button>
+        </div>
+        <div class="progress-bar" style="margin-top:12px;"><div class="progress-fill" id="syncProgressFill"></div></div>
+        <div id="syncStatus" style="font-size:0.82rem;color:#94a3b8;margin-top:6px;"></div>
+    </div>
+
     <!-- LOG -->
     <div class="card">
         <h2>📋 Log</h2>
@@ -336,8 +352,11 @@
                 renderPreviewTable();
                 if (changed > 0) {
                     document.getElementById('applySection').style.display = 'block';
+                    document.getElementById('forceSyncSection').style.display = 'none';
                 } else {
-                    log('\n✅ Nenhum valor divergente — tabela já está sincronizada!', 'ok');
+                    log('\n✅ Nenhum valor divergente — valores já estão corretos no dispatches_db!', 'ok');
+                    log('⚠️ Se a Conferência de Fatura ainda mostra valores antigos, clique em "Forçar Sync → App" abaixo.', 'warn');
+                    document.getElementById('forceSyncSection').style.display = 'block';
                 }
 
             } catch(e) {
@@ -451,12 +470,25 @@
                 document.getElementById('progressFill').style.width = Math.round(((i + 1) / toChange.length) * 100) + '%';
                 document.getElementById('applyStatus').textContent = `Salvando ${i + 1}/${toChange.length}...`;
 
+                const newTotal = Math.round(p.newTotal * 100) / 100;
+
+                // ✅ FIX: Conferência de Fatura usa mainTotal com prioridade sobre total.
+                // Se o registro tem mainTotal (despacho sem redespacho), precisa atualizá-lo também.
+                // Se tem redespacho, mantém mainTotal como newTotal e preserva redespTotal.
+                const hasRedesp = d.redespTotal != null && d.redespTotal > 0;
+                const newMainTotal = hasRedesp
+                    ? Math.round((newTotal - (d.redespTotal || 0)) * 100) / 100  // frete principal sem redespacho
+                    : newTotal;                                                   // sem redespacho: mainTotal = total
+
                 const updated = {
                     ...d,
-                    total: Math.round(p.newTotal * 100) / 100,
+                    total: newTotal,
+                    // Só atualiza mainTotal se ele já existia no registro
+                    ...(d.mainTotal != null ? { mainTotal: newMainTotal } : {}),
                     _recalcAt: new Date().toISOString(),
                     _recalcTool: 'fix_viopex',
-                    _recalcOldTotal: p.oldTotal
+                    _recalcOldTotal: p.oldTotal,
+                    _recalcOldMainTotal: d.mainTotal ?? null
                 };
                 delete updated._docId;
                 delete updated._src;
@@ -485,14 +517,149 @@
             log(`✅ Salvos: ${saved} | ❌ Falhas: ${failed}`, saved > 0 ? 'ok' : 'err');
             document.getElementById('applyStatus').textContent = `✅ ${saved} salvos | ${failed} falhas`;
 
+            // ── Sync automático: atualiza legacy_store/dispatches ────────────────────
+            // O onSnapshot do app SÓ escuta dispatches_db com status='Pendente Despacho'.
+            // NFs 'Despachado' não chegam ao listener e o localStorage fica stale.
+            // Solução: após salvar em dispatches_db, sincronizar também o legacy_store,
+            // cujo listener não tem filtro de status → o app recebe e atualiza automaticamente.
             if (saved > 0) {
-                log('\n⚠️ PRÓXIMO PASSO: Abra o módulo de Despacho e execute no console:', 'warn');
-                log('   Utils.Cloud.save("dispatches", Utils.getStorage("dispatches"))', 'warn');
-                log('   — ou aguarde o próximo sync automático para refletir os novos totais no app.', 'warn');
+                log('\n📡 Sincronizando legacy_store/dispatches para o app atualizar automaticamente...', 'ok');
+                try {
+                    const legRef = db.collection('tenants').doc(tenant)
+                                     .collection('legacy_store').doc('dispatches');
+                    const legDoc = await legRef.get();
+
+                    if (legDoc.exists && legDoc.data().content) {
+                        const legArr = JSON.parse(legDoc.data().content);
+                        const savedIds = new Set(
+                            toChange
+                                .filter(p => p.dispatch._src === 'dispatches_db')
+                                .map(p => String(p.dispatch.id || p.dispatch._docId))
+                        );
+
+                        let legModified = 0;
+                        legArr.forEach((x, idx) => {
+                            if (!savedIds.has(String(x.id))) return;
+                            const p = toChange.find(pp => String(pp.dispatch.id || pp.dispatch._docId) === String(x.id));
+                            if (!p) return;
+                            const newTotal     = Math.round(p.newTotal * 100) / 100;
+                            const hasRedesp    = x.redespTotal != null && x.redespTotal > 0;
+                            const newMainTotal = hasRedesp
+                                ? Math.round((newTotal - (x.redespTotal || 0)) * 100) / 100
+                                : newTotal;
+                            legArr[idx] = {
+                                ...x,
+                                total:       newTotal,
+                                mainTotal:   newMainTotal,   // sempre garante mainTotal
+                                _recalcAt:   new Date().toISOString(),
+                                _recalcTool: 'fix_viopex'
+                            };
+                            legModified++;
+                        });
+
+                        if (legModified > 0) {
+                            await legRef.set({ content: JSON.stringify(legArr) });
+                            log(`✅ legacy_store/dispatches: ${legModified} registros atualizados — o app irá refrescar automaticamente`, 'ok');
+                        } else {
+                            log('ℹ️ Registros não encontrados em legacy_store (só existem em dispatches_db). O app irá atualizar no próximo login.', 'ok');
+                        }
+                    } else {
+                        log('ℹ️ legacy_store/dispatches não encontrado — sync manual não necessário.', 'ok');
+                    }
+                } catch(syncErr) {
+                    log(`⚠️ Erro no sync legacy_store: ${syncErr.message} — recarregue o app para ver os valores atualizados.`, 'warn');
+                }
             }
 
             document.getElementById('btnApply').disabled = false;
             document.getElementById('btnApply').textContent = '✅ Aplicar Recálculo VIOPEX';
+        }
+
+        // ── FORCE SYNC: dispatches_db → legacy_store (quando diff=0 mas legacy stale) ───
+        async function forceSync() {
+            const carrier = document.getElementById('cfgCarrier').value.trim().toUpperCase();
+            const tenant  = document.getElementById('cfgTenant').value.trim();
+            if (!db) { alert('Conecte ao Firebase primeiro!'); return; }
+
+            const btn = document.getElementById('btnForceSync');
+            btn.disabled = true;
+            btn.textContent = '⏳ Sincronizando...';
+            document.getElementById('syncStatus').textContent = 'Lendo dispatches_db...';
+
+            log(`\n=== FORÇAR SYNC legacy_store — ${carrier} / ${tenant} ===`, 'ok');
+
+            try {
+                // 1. Ler todos os dispatches da carrier em dispatches_db
+                const norm = s => (s || '').toUpperCase().normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '').trim();
+
+                const dbSnap = await db.collection('tenants').doc(tenant)
+                    .collection('dispatches_db').get();
+
+                const carrierDispatches = [];
+                dbSnap.forEach(doc => {
+                    const d = doc.data();
+                    if (norm(d.carrier) === norm(carrier) ||
+                        norm(d.carrier || '').startsWith('FOB - ' + norm(carrier))) {
+                        carrierDispatches.push(d);
+                    }
+                });
+
+                log(`  dispatches_db: ${carrierDispatches.length} registros de ${carrier}`, 'ok');
+                document.getElementById('syncProgressFill').style.width = '30%';
+
+                // 2. Ler legacy_store/dispatches
+                const legRef = db.collection('tenants').doc(tenant)
+                    .collection('legacy_store').doc('dispatches');
+                const legDoc = await legRef.get();
+
+                if (!legDoc.exists || !legDoc.data().content) {
+                    log('⚠️ legacy_store/dispatches não encontrado. O app irá sincronizar no próximo login.', 'warn');
+                    document.getElementById('syncStatus').textContent = '⚠️ legacy_store não encontrado.';
+                    btn.disabled = false; btn.textContent = '🔄 Forçar Sync → App';
+                    return;
+                }
+
+                const legArr = JSON.parse(legDoc.data().content);
+                const dbMap  = new Map(carrierDispatches.map(d => [String(d.id), d]));
+                document.getElementById('syncProgressFill').style.width = '60%';
+
+                // 3. Sobrescrever registros no legArr com os dados frescos do dispatches_db
+                let updated = 0;
+                legArr.forEach((x, idx) => {
+                    const fresh = dbMap.get(String(x.id));
+                    if (!fresh) return;
+                    // Garante mainTotal mesmo para registros sem esse campo
+                    const hasRedesp = fresh.redespTotal != null && fresh.redespTotal > 0;
+                    const mainTotal = hasRedesp
+                        ? Math.round(((fresh.total || 0) - (fresh.redespTotal || 0)) * 100) / 100
+                        : (fresh.total || 0);
+                    legArr[idx] = { ...fresh, mainTotal };
+                    updated++;
+                });
+
+                document.getElementById('syncProgressFill').style.width = '85%';
+
+                if (updated === 0) {
+                    log('ℹ️ Nenhum registro desta transportadora encontrado em legacy_store. Sync não necessário.', 'ok');
+                    document.getElementById('syncStatus').textContent = 'ℹ️ Nenhum registro para sync.';
+                } else {
+                    // 4. Gravar legacy_store → dispara onSnapshot no app automaticamente
+                    await legRef.set({ content: JSON.stringify(legArr) });
+                    document.getElementById('syncProgressFill').style.width = '100%';
+                    log(`✅ legacy_store/dispatches: ${updated} registros de ${carrier} sincronizados`, 'ok');
+                    log('✅ A Conferência de Fatura no app irá refrescar automaticamente.', 'ok');
+                    document.getElementById('syncStatus').textContent =
+                        `✅ ${updated} registros sincronizados — app atualizando...`;
+                }
+
+            } catch(e) {
+                log(`❌ Erro no Forçar Sync: ${e.message}`, 'err');
+                document.getElementById('syncStatus').textContent = '❌ Erro: ' + e.message;
+            }
+
+            btn.disabled = false;
+            btn.textContent = '🔄 Forçar Sync → App';
         }
 
         // ── EXPORT ────────────────────────────────────────────────────────────

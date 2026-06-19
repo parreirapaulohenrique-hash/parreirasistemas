@@ -1,9 +1,8 @@
 {
-    "version": "3.12.9",
-    "change": "v3.12.9 - FIX: WhatsApp no romaneio restaurado para abertura automática sem intervenção do operador. generateRomaneioAction é 100% síncrona (só usa localStorage), portanto window.open() em forEach dentro do mesmo handler do clique é reconhecido pelo browser como gesto direto e todas as abas abrem automaticamente.",
-    "lastUpdate": "2026-06-18",
-    "build": "20260618c",
-    "deployedAt": "2026-06-18"
+    "version": "3.14.5",
+    "environment": "staging",
+    "change": "v3.14.5 - FEAT: fix_viopex — botao 'Forccar Sync App' aparece quando preview encontra 0 alteracoes (valores ja corretos em dispatches_db mas legacy_store stale). O botao copia todos os registros da transportadora de dispatches_db para legacy_store, disparando o onSnapshot do app e atualizando a Conferencia de Fatura automaticamente sem recarregar.",
+    "lastUpdate": "2026-06-19",
+    "build": "20260619-staging-v3.14.5",
+    "deployedAt": "2026-06-19"
 }
-
-

@@ -1,4 +1,4 @@
-﻿// v3.11.71 FIX: Registra _doDispatchLogin NO TOPO DO ARQUIVO, fora do DOMContentLoaded.
+// v3.11.71 FIX: Registra _doDispatchLogin NO TOPO DO ARQUIVO, fora do DOMContentLoaded.
 // O app.js tem 483KB. O browser exibe o HTML (com o botão visível) ANTES de terminar
 // de baixar+executar o app.js. Se o _doDispatchLogin só fosse definido dentro do
 // DOMContentLoaded, o usuário que clica cedo receberia o alert 'Sistema ainda carregando'.
@@ -543,9 +543,41 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
 
+        // ═══════════════════════════════════════════════════════════
+        // TENANT AUTOMÁTICO PELA URL (v3.13.0)
+        // Se a URL for /ltdistribuidora ou /qualquerempresa,
+        // o tenant é extraído do path — sem campo visível no login.
+        //
+        // Exemplos de URL:
+        //   parreirasistemas.vercel.app/ltdistribuidora  → tenant=ltdistribuidora
+        //   parreirasistemas.vercel.app/cliente2          → tenant=cliente2
+        //   parreirasistemas.vercel.app/                  → campo ID visível (fallback)
+        // ═══════════════════════════════════════════════════════════
+        const _getTenantFromUrl = () => {
+            // Pega o primeiro segmento do pathname: /ltdistribuidora → ltdistribuidora
+            const segments = window.location.pathname.split('/').filter(Boolean);
+            const candidate = segments[0] ? segments[0].trim().toLowerCase() : '';
+            // Ignora segmentos que são rotas do sistema (módulos, fix_, etc)
+            const reserved = ['modules', 'platform', 'core', 'fix_frete', 'fix_viopex', 'fix_romaneios', 'web', 'homolog'];
+            return (candidate && !reserved.includes(candidate)) ? candidate : '';
+        };
+
+        const _tenantFromUrl = _getTenantFromUrl();
+        const tenantInputEl = document.getElementById('loginTenantInput');
+        const tenantFormGroup = tenantInputEl ? tenantInputEl.closest('.form-group') : null;
+
+        if (_tenantFromUrl && tenantInputEl) {
+            // Pré-preenche com o tenant da URL
+            tenantInputEl.value = _tenantFromUrl;
+            // Esconde o campo — operador só vê usuário + senha
+            if (tenantFormGroup) tenantFormGroup.style.display = 'none';
+            console.log(`[Login] Tenant detectado pela URL: "${_tenantFromUrl}" — campo ID da Empresa ocultado.`);
+        }
+
         // === CARREGAR USUÁRIOS AO DIGITAR TENANT ===
         // Quando o usuário digitar o tenant e sair do campo, busca os usuários desse tenant
         const tenantInput = document.getElementById('loginTenantInput');
+
         if (tenantInput) {
             // Função que busca usuários do tenant no Firestore
             const loadUsersForTenant = async () => {
@@ -3408,39 +3440,58 @@ document.addEventListener('DOMContentLoaded', async () => {
                 fileRulesInput.click();
             };
 
-            // Handler para importação de CSV
+            // Handler para importação de CSV / Excel (.xlsx, .xls)
             fileRulesInput.onchange = (e) => {
                 const file = e.target.files[0];
                 console.log('📂 Evento change disparado, arquivo:', file);
-                if (!file) {
-                    console.log('⚠️ Nenhum arquivo na seleção');
-                    return;
-                }
+                if (!file) { console.log('⚠️ Nenhum arquivo na seleção'); return; }
+
+                const isExcel = /\.(xlsx|xls)$/i.test(file.name);
 
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     try {
-                        let csvContent = event.target.result;
+                        let lines = [];
+                        let separator = ';';
 
-                        // Normalizar quebras de linha
-                        csvContent = csvContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+                        if (isExcel) {
+                            // ── Excel: usa biblioteca XLSX ──────────────────────────────────
+                            if (typeof XLSX === 'undefined') {
+                                showToast('❌ Biblioteca XLSX não carregada. Tente CSV.');
+                                return;
+                            }
+                            const data = new Uint8Array(event.target.result);
+                            const workbook = XLSX.read(data, { type: 'array' });
+                            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                            // Converte para array de arrays (raw=false → valores formatados como string)
+                            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
+                            // Serializa como CSV com tab para reuso do restante do código
+                            separator = '\t';
+                            lines = rows
+                                .filter(r => r.some(c => String(c).trim() !== ''))
+                                .map(r => r.map(c => String(c ?? '').trim()).join('\t'));
+                            console.log(`📊 Excel lido: ${lines.length} linhas, ${rows[0]?.length || 0} colunas`);
+                        } else {
+                            // ── CSV: lê como texto ──────────────────────────────────────────
+                            let csvContent = event.target.result;
+                            csvContent = csvContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+                            lines = csvContent.split('\n').filter(l => l.trim());
+                            // Detectar separador
+                            const firstLine = lines[0] || '';
+                            if (firstLine.split(';').length < 3) {
+                                if (firstLine.split(',').length >= 3) separator = ',';
+                                else if (firstLine.split('\t').length >= 3) separator = '\t';
+                            }
+                            console.log('📄 CSV - Linhas:', lines.length, '| Separador:', separator === '\t' ? 'TAB' : separator);
+                        }
 
-                        const lines = csvContent.split('\n').filter(l => l.trim());
-                        console.log('📄 Linhas no arquivo:', lines.length);
+                        const lines_COMPAT = lines; // alias mantido para compatibilidade
+                        // separator já definido corretamente no bloco acima (CSV ou Excel)
 
                         if (lines.length < 2) {
-                            showToast('❌ Arquivo CSV vazio ou inválido (menos de 2 linhas)');
+                            showToast('❌ Arquivo vazio ou sem dados válidos (menos de 2 linhas)');
                             return;
                         }
-
-                        // Detectar separador (vírgula, ponto-e-vírgula ou tab)
-                        const firstLine = lines[0];
-                        let separator = ';';
-                        if (firstLine.split(';').length < 3) {
-                            if (firstLine.split(',').length >= 3) separator = ',';
-                            else if (firstLine.split('\t').length >= 3) separator = '\t';
-                        }
-                        console.log('🔍 Separador detectado:', separator === '\t' ? 'TAB' : separator);
 
                         // Normalizar headers (remover acentos, BOM, aspas)
                         const normalizeStr = (s) => s.trim()
@@ -3449,6 +3500,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             .replace(/^\ufeff/, '')
                             .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
+                        const firstLine = lines[0]; // primeira linha = cabeçalho
                         const headers = firstLine.split(separator).map(normalizeStr);
                         console.log('📥 Headers detectados:', headers);
 
@@ -3658,7 +3710,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 };
 
-                reader.readAsText(file, 'windows-1252'); // Codificação do Excel brasileiro
+                if (isExcel) {
+                    reader.readAsArrayBuffer(file); // XLSX precisa de ArrayBuffer
+                } else {
+                    reader.readAsText(file, 'windows-1252'); // CSV com encoding do Excel BR
+                }
             };
 
             // Função auxiliar para tentar diferentes codificações
@@ -4495,6 +4551,105 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         };
 
+        // ── Enter rápido nos filtros da Conferência de Fatura (v3.14.3) ──────────
+        // Se após filtrar restar 1 NF visível, pressionar Enter a seleciona
+        // automaticamente, limpa o filtro e foca no mesmo campo para a próxima busca.
+        (() => {
+            const FILTER_IDS = ['invF_nf', 'invF_client', 'invF_city', 'invF_date', 'invF_frete'];
+            FILTER_IDS.forEach(fid => {
+                const el = document.getElementById(fid);
+                if (!el) return;
+                el.addEventListener('keydown', (e) => {
+                    if (e.key !== 'Enter') return;
+                    e.preventDefault();
+
+                    // Garante filtro aplicado
+                    window.applyInvoiceColumnFilters();
+
+                    // Linhas visíveis (não separador, não ocultas)
+                    const visibleRows = Array.from(
+                        document.querySelectorAll('#invoiceNFsBody tr[data-id]')
+                    ).filter(r => r.style.display !== 'none');
+
+                    if (visibleRows.length !== 1) {
+                        // Mais de 1 resultado: pisca o campo para indicar ambiguidade
+                        el.style.outline = '2px solid #f59e0b';
+                        setTimeout(() => { el.style.outline = ''; }, 600);
+                        return;
+                    }
+
+                    const row = visibleRows[0];
+                    const cb  = row.querySelector('.invoice-nf-checkbox');
+                    if (!cb) return;
+
+                    // Alterna: se já marcada, desmarca; senão, marca
+                    const newState = !cb.checked;
+                    cb.checked = newState;
+                    const nfId    = parseInt(cb.dataset.id);
+                    const nfValue = parseFloat(cb.dataset.value || 0) || 0;
+                    window.toggleInvoiceNF(nfId, newState, nfValue);
+
+                    // Feedback visual rápido na linha
+                    row.style.transition = 'outline 0.15s';
+                    row.style.outline = newState ? '2px solid #22c55e' : '2px solid #ef4444';
+                    setTimeout(() => { row.style.outline = ''; }, 400);
+
+                    // Limpa todos os filtros para a próxima busca
+                    FILTER_IDS.forEach(id => {
+                        const fi = document.getElementById(id);
+                        if (fi) fi.value = '';
+                    });
+                    window.applyInvoiceColumnFilters();
+
+                    // Foca no campo que disparou para continuar digitando
+                    el.focus();
+                });
+            });
+        })();
+
+        // ── Agrupa NFs selecionadas no topo da tabela (v3.14.2) ──────────────────
+        window._sortInvoiceRows = () => {
+            const tbody = document.getElementById('invoiceNFsBody');
+            if (!tbody) return;
+
+            const rows = Array.from(tbody.querySelectorAll('tr[data-id]'));
+            if (!rows.length) return;
+
+            // Remove separador anterior (se houver)
+            const oldSep = tbody.querySelector('tr.invoice-separator');
+            if (oldSep) oldSep.remove();
+
+            const selected   = rows.filter(r => r.querySelector('.invoice-nf-checkbox')?.checked);
+            const unselected = rows.filter(r => !r.querySelector('.invoice-nf-checkbox')?.checked);
+
+            // Aplica estilo de destaque nas selecionadas
+            selected.forEach(r => {
+                r.style.background = 'rgba(34,197,94,0.10)';
+                r.style.borderLeft = '3px solid #22c55e';
+            });
+            unselected.forEach(r => {
+                r.style.background = '';
+                r.style.borderLeft = '';
+            });
+
+            // Reordena o DOM
+            selected.forEach(r => tbody.appendChild(r));
+
+            if (selected.length > 0 && unselected.length > 0) {
+                const sep = document.createElement('tr');
+                sep.className = 'invoice-separator';
+                sep.innerHTML = `<td colspan="6" style="padding:4px 12px;background:rgba(255,255,255,0.04);border-top:1px dashed rgba(255,255,255,0.15);border-bottom:1px dashed rgba(255,255,255,0.15);font-size:0.72rem;color:#64748b;font-weight:600;letter-spacing:.04em;">── ${unselected.length} NF${unselected.length !== 1 ? 's' : ''} disponíveis ──</td>`;
+                tbody.appendChild(sep);
+            }
+
+            unselected.forEach(r => tbody.appendChild(r));
+
+            // Scroll suave até o topo do bloco de selecionadas
+            if (selected.length > 0) {
+                selected[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        };
+
         // Toggle single NF selection
         // v3.11.30: armazena o invoiceValue (valor por transportadora) junto com o ID
         window.toggleInvoiceNF = (id, checked, value) => {
@@ -4504,6 +4659,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.invoiceSelectedNFs.delete(id);
             }
             window.updateInvoiceComparison();
+            window._sortInvoiceRows(); // ← agrupa selecionadas no topo
         };
 
         // Select/deselect all NFs
@@ -4520,6 +4676,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     window.invoiceSelectedNFs.set(id, parseFloat(cb.dataset.value || 0) || 0);
                 }
             });
+            window._sortInvoiceRows(); // ← agrupa/desagrupa ao selecionar todas
 
             const selectAllCb = document.getElementById('invoiceSelectAll');
             if (selectAllCb) selectAllCb.checked = selectAll;
