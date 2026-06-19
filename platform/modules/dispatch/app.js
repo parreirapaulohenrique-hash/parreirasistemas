@@ -3513,33 +3513,61 @@ document.addEventListener('DOMContentLoaded', async () => {
                             return -1;
                         };
 
-                        // Mapear índices das colunas (baseado no formato do Excel do usuário)
-                        // Headers da planilha: Transportadora, Cidade, Percentual, Mínimo, Limite Peso, Valor Excedente, 
-                        // Pedágio, Cidade Redespacho, Transp. Redespacho, % Red., Min. Redesp., Prazo, Horários
+                        // Mapear índices das colunas — aceita múltiplas variações de cabeçalho
+                        // (Ex: 'Mín.', 'Min.', 'Mínimo', 'Frete Min' → tudo mapeia para minimo)
                         const colMap = {
                             transportadora: findCol('transportadora', 'transp'),
-                            cidade: headers.findIndex(h => h.includes('cidade') && !h.includes('redesp') && !h.includes('bairro')),
-                            percentual: findCol('percentual', 'percentua', '% frete', 'perc'),
-                            minimo: headers.findIndex(h => h.includes('minimo') && !h.includes('redesp') && !h.includes('rede')),
-                            limitePeso: findCol('limite peso', 'limite', 'peso'),
-                            valorExcedente: findCol('valor exce', 'excedente', 'valor kg', 'vlr kg'),
-                            // Pedágio/Taxa Fixa - coluna G
-                            pedagio: findCol('pedagio', 'taxa fixa', 'taxa'),
-                            // Cidade Redespacho - coluna H
-                            cidadeRedespacho: headers.findIndex(h => h.includes('cidade') && h.includes('redesp')),
-                            // Transp. Redespacho - coluna I (busca por "transp" + "redesp")
-                            redespacho: headers.findIndex(h => h.includes('transp') && h.includes('redesp')),
-                            // % Redespacho - coluna J
-                            percentualRedespacho: findCol('% red', '%red', '% redesp'),
-                            // Min. Redespacho - coluna K
-                            minimoRedespacho: findCol('min. rede', 'min rede', 'min. redesp', 'min redesp'),
-                            // Prazo - coluna L
+                            cidade: headers.findIndex(h =>
+                                h.includes('cidade') &&
+                                !h.includes('redesp') && !h.includes('bairro')
+                            ),
+                            percentual: findCol('percentual', 'percentua', '% frete', '% ', 'perc', 'percent'),
+                            // ↓ Aceita: 'Mínimo', 'Min.', 'Mín.', 'Frete Min', 'Vlr Min', 'Valor Min'
+                            minimo: headers.findIndex(h =>
+                                (h.includes('minimo') || h.includes('min.') ||
+                                 h.includes('frete min') || h.includes('vlr min') ||
+                                 h.includes('vir min') || h.includes('valor min') ||
+                                 h === 'min' || h.startsWith('min '))
+                                && !h.includes('redesp') && !h.includes('rede')
+                            ),
+                            // ↓ Aceita: 'Limite Peso', 'Lim. Peso', 'Lim Peso', 'Peso Lim', 'Peso'
+                            limitePeso: headers.findIndex(h =>
+                                h.includes('limite peso') || h.includes('lim. peso') ||
+                                h.includes('lim peso') || h.includes('peso lim') ||
+                                (h.includes('peso') && !h.includes('exce'))
+                            ),
+                            // ↓ Aceita: 'Valor Excedente', 'Vir Exc.', 'Vlr Exc', 'Vir Kg', 'Vlr Kg', 'Excedente'
+                            valorExcedente: headers.findIndex(h =>
+                                h.includes('valor exce') || h.includes('excedente') ||
+                                h.includes('valor kg') || h.includes('vlr kg') ||
+                                h.includes('vir kg') || h.includes('vir exc') ||
+                                h.includes('vlr exc') || h === 'exc'
+                            ),
+                            pedagio: findCol('pedagio', 'taxa fixa', 'taxa', 'toll'),
+                            cidadeRedespacho: headers.findIndex(h =>
+                                h.includes('cidade') && h.includes('redesp')
+                            ),
+                            redespacho: headers.findIndex(h =>
+                                h.includes('transp') && h.includes('redesp')
+                            ),
+                            percentualRedespacho: findCol('% red', '%red', '% redesp', 'perc red'),
+                            minimoRedespacho: findCol('min. rede', 'min rede', 'min. redesp', 'min redesp', 'min red'),
                             leadTime: findCol('prazo', 'lead', 'd+'),
-                            // Horários - coluna M
-                            horarios: findCol('horarios', 'horario')
+                            horarios: findCol('horarios', 'horario', 'hora')
                         };
 
                         console.log('📊 Mapeamento de colunas:', colMap);
+
+                        // ── Avisos para colunas críticas não detectadas ───────────────────
+                        const unmapped = [];
+                        if (colMap.minimo === -1)        unmapped.push('Frete Mínimo ("Mínimo", "Min.", "Frete Min")');
+                        if (colMap.percentual === -1)    unmapped.push('% Frete ("Percentual", "% Frete", "Perc")');
+                        if (colMap.valorExcedente === -1) unmapped.push('Valor Excedente ("Excedente", "Vir Exc.", "Vlr Kg")');
+                        if (unmapped.length > 0) {
+                            const msg = '⚠️ Colunas não detectadas — serão importadas como 0:\n' + unmapped.join('\n');
+                            console.warn(msg);
+                            showToast(`⚠️ Colunas não mapeadas: ${unmapped.join(', ')} — verifique os cabeçalhos do arquivo`);
+                        }
 
                         // Validar colunas essenciais
                         if (colMap.transportadora === -1 || colMap.cidade === -1) {
