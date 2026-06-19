@@ -80,6 +80,14 @@
             "destination": "/.well-known/$1"
         },
         {
+            "source": "/admin",
+            "destination": "/platform/admin/index.html"
+        },
+        {
+            "source": "/admin/(.*)",
+            "destination": "/platform/admin/$1"
+        },
+        {
             "source": "/",
             "destination": "/platform/index.html"
         },

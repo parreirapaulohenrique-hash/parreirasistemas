@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ParreiraLog — Painel Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f1117;
+            --bg-card: #1a1f2e;
+            --bg-card2: #222840;
+            --border: rgba(255,255,255,0.08);
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --radius: 12px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+        /* ── LOGIN ── */
+        #loginScreen {
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            background: radial-gradient(ellipse at 50% 0%, rgba(59,130,246,0.15) 0%, transparent 70%);
+        }
+        .login-box {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px;
+            padding: 40px; width: 100%; max-width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+        .login-logo { text-align: center; margin-bottom: 28px; }
+        .login-logo .icon {
+            width: 56px; height: 56px; background: var(--accent); border-radius: 14px;
+            display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;
+        }
+        .login-logo h1 { font-size: 1.3rem; font-weight: 700; }
+        .login-logo p { font-size: 0.82rem; color: var(--text-muted); margin-top: 4px; }
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 0.8rem; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; }
+        .form-input {
+            width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+            border-radius: 10px; padding: 11px 14px; color: var(--text); font-size: 0.9rem;
+            outline: none; transition: border-color .2s;
+        }
+        .form-input:focus { border-color: var(--accent); }
+        .btn {
+            display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px;
+            border: none; border-radius: 10px; font-size: 0.875rem; font-weight: 600;
+            cursor: pointer; transition: all .2s; text-decoration: none;
+        }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-ghost { background: rgba(255,255,255,0.06); color: var(--text); }
+        .btn-ghost:hover { background: rgba(255,255,255,0.1); }
+        .btn-full { width: 100%; justify-content: center; padding: 13px; }
+
+        /* ── APP SHELL ── */
+        #appShell { display: none; min-height: 100vh; }
+        .topbar {
+            background: var(--bg-card); border-bottom: 1px solid var(--border);
+            padding: 0 28px; height: 60px; display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 100;
+        }
+        .topbar-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1rem; }
+        .topbar-brand .badge {
+            background: var(--accent); color: #fff; font-size: 0.65rem; font-weight: 700;
+            padding: 2px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: .05em;
+        }
+        .main { padding: 32px 28px; max-width: 1100px; margin: 0 auto; }
+
+        /* ── STATS ── */
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 32px; }
+        .stat-card {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 20px; display: flex; align-items: center; gap: 14px;
+        }
+        .stat-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+        .stat-val { font-size: 1.6rem; font-weight: 700; line-height: 1; }
+        .stat-label { font-size: 0.78rem; color: var(--text-muted); margin-top: 3px; }
+
+        /* ── TENANTS LIST ── */
+        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+        .section-title { font-size: 1rem; font-weight: 700; }
+        .tenant-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+        .tenant-card {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 20px; cursor: pointer; transition: all .2s; position: relative;
+        }
+        .tenant-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+        .tenant-card-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+        .tenant-name { font-weight: 700; font-size: 0.95rem; }
+        .tenant-slug { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; font-family: monospace; }
+        .status-badge {
+            font-size: 0.7rem; font-weight: 700; padding: 3px 9px; border-radius: 6px;
+            text-transform: uppercase; letter-spacing: .05em;
+        }
+        .status-active { background: rgba(34,197,94,0.15); color: var(--success); }
+        .status-inactive { background: rgba(239,68,68,0.15); color: var(--danger); }
+        .status-suspended { background: rgba(245,158,11,0.15); color: var(--warning); }
+        .tenant-meta { display: flex; gap: 16px; font-size: 0.78rem; color: var(--text-muted); }
+        .tenant-url {
+            margin-top: 12px; padding: 8px 12px; background: rgba(59,130,246,0.08);
+            border: 1px solid rgba(59,130,246,0.2); border-radius: 8px;
+            font-size: 0.75rem; font-family: monospace; color: var(--accent);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+
+        /* ── MODAL ── */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+            z-index: 500; align-items: flex-start; justify-content: center;
+            padding: 40px 20px; overflow-y: auto; backdrop-filter: blur(4px);
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px;
+            width: 100%; max-width: 720px; box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+        }
+        .modal-header {
+            padding: 22px 28px; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .modal-header h2 { font-size: 1rem; font-weight: 700; }
+        .modal-body { padding: 28px; }
+        .modal-footer {
+            padding: 18px 28px; border-top: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+        }
+        .close-btn { background: none; border: none; cursor: pointer; color: var(--text-muted); }
+
+        /* ── FORM GRID ── */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .form-grid.full { grid-template-columns: 1fr; }
+        .section-sep { border: none; border-top: 1px solid var(--border); margin: 22px 0; }
+
+        /* ── MODULES GRID ── */
+        .modules-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 14px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+        .modules-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+        .module-toggle {
+            display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+            background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+            border-radius: 10px; cursor: pointer; transition: all .15s; user-select: none;
+        }
+        .module-toggle:hover { background: rgba(255,255,255,0.06); }
+        .module-toggle.active { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.35); }
+        .module-toggle .toggle-check {
+            width: 18px; height: 18px; border-radius: 5px; border: 2px solid var(--border);
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all .15s;
+        }
+        .module-toggle.active .toggle-check { background: var(--accent); border-color: var(--accent); }
+        .module-toggle .toggle-name { font-size: 0.82rem; font-weight: 500; }
+
+        /* ── USERS TABLE ── */
+        .users-section { margin-top: 24px; }
+        .users-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+        .users-table th { color: var(--text-muted); font-weight: 500; text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+        .users-table td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .role-badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 5px; font-weight: 600; }
+        .role-admin { background: rgba(59,130,246,0.15); color: var(--accent); }
+        .role-operator { background: rgba(148,163,184,0.1); color: var(--text-muted); }
+        .role-supervisor { background: rgba(245,158,11,0.15); color: var(--warning); }
+
+        /* ── ADD USER INLINE ── */
+        .add-user-form {
+            display: none; background: var(--bg-card2); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 16px; margin-top: 12px;
+        }
+        .add-user-form.open { display: block; }
+
+        /* ── TOASTS ── */
+        #toastContainer { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+        .toast {
+            padding: 12px 18px; border-radius: 10px; font-size: 0.85rem; font-weight: 500;
+            color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.3); animation: slideIn .3s ease;
+            max-width: 320px;
+        }
+        .toast-success { background: #166534; border: 1px solid #22c55e44; }
+        .toast-error   { background: #7f1d1d; border: 1px solid #ef444444; }
+        .toast-info    { background: #1e3a5f; border: 1px solid #3b82f644; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        .loading { text-align: center; padding: 48px; color: var(--text-muted); }
+        .spin { animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="loginScreen">
+    <div class="login-box">
+        <div class="login-logo">
+            <div class="icon">
+                <span class="material-icons-round" style="color:#fff;font-size:1.8rem;">admin_panel_settings</span>
+            </div>
+            <h1>ParreiraLog Admin</h1>
+            <p>Painel de Gestão da Plataforma</p>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Usuário Admin</label>
+            <input type="text" id="adminUser" class="form-input" placeholder="superadmin" autocomplete="off">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Senha</label>
+            <input type="password" id="adminPass" class="form-input" placeholder="••••••••">
+        </div>
+        <div id="loginError" style="display:none;color:#ef4444;font-size:0.8rem;margin-bottom:12px;"></div>
+        <button class="btn btn-primary btn-full" onclick="adminLogin()">
+            <span class="material-icons-round" style="font-size:1rem;">lock_open</span>
+            Entrar
+        </button>
+    </div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div id="appShell">
+    <div class="topbar">
+        <div class="topbar-brand">
+            <span class="material-icons-round" style="color:var(--accent);">admin_panel_settings</span>
+            ParreiraLog Admin
+            <span class="badge">Super Admin</span>
+        </div>
+        <button class="btn btn-ghost" onclick="adminLogout()" style="font-size:0.8rem;">
+            <span class="material-icons-round" style="font-size:1rem;">logout</span>
+            Sair
+        </button>
+    </div>
+    <div class="main">
+        <div class="stats-row" id="statsRow">
+            <div class="stat-card">
+                <div class="stat-icon" style="background:rgba(59,130,246,0.15);">
+                    <span class="material-icons-round" style="color:var(--accent);">business</span>
+                </div>
+                <div>
+                    <div class="stat-val" id="statTotal">—</div>
+                    <div class="stat-label">Empresas</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background:rgba(34,197,94,0.15);">
+                    <span class="material-icons-round" style="color:var(--success);">check_circle</span>
+                </div>
+                <div>
+                    <div class="stat-val" id="statActive">—</div>
+                    <div class="stat-label">Ativas</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background:rgba(239,68,68,0.15);">
+                    <span class="material-icons-round" style="color:var(--danger);">cancel</span>
+                </div>
+                <div>
+                    <div class="stat-val" id="statInactive">—</div>
+                    <div class="stat-label">Inativas</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-header">
+            <div class="section-title">Empresas Clientes</div>
+            <button class="btn btn-primary" onclick="openNewTenantModal()">
+                <span class="material-icons-round" style="font-size:1rem;">add</span>
+                Nova Empresa
+            </button>
+        </div>
+        <div id="tenantGrid" class="tenant-grid">
+            <div class="loading"><span class="material-icons-round spin">sync</span><br>Carregando...</div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL TENANT ═══ -->
+<div class="modal-overlay" id="tenantModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 id="modalTitle">Nova Empresa</h2>
+            <button class="close-btn" onclick="closeModal()">
+                <span class="material-icons-round">close</span>
+            </button>
+        </div>
+        <div class="modal-body" id="modalBody">
+            <!-- Preenchido por JS -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+            <button class="btn btn-danger" id="btnDeleteTenant" style="display:none;" onclick="deleteTenant()">
+                <span class="material-icons-round" style="font-size:1rem;">delete</span>Excluir
+            </button>
+            <button class="btn btn-primary" onclick="saveTenant()">
+                <span class="material-icons-round" style="font-size:1rem;">save</span>Salvar
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="toastContainer"></div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>
