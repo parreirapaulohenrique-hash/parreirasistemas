@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.23.27",
+    "version":  "11.23.28",
     "platform_version":  "11.23.6",
-    "date":  "2026-05-29",
-    "last_change":  "Remove sort automatico — ordem manual da sessao preservada no F5",
-    "build":  "20260529.27"
+    "date":  "2026-06-20",
+    "last_change":  "Vincular automático por valor: PdfMapper calibra PDF x Excel coluna C, consolida múltiplos CCs, preserva mapeamento no Firestore",
+    "build":  "20260620.28"
 }

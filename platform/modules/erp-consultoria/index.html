@@ -7344,40 +7344,111 @@
 
     <!-- View: Fluxo de Caixa - Importar -->
     <div id="view-fc-import" class="page-content" style="display:none;">
-        <div class="import-container glass-panel" style="padding: 2rem;">
-            <h2>Importar Relatório Maxdata</h2>
-            <p>Faça upload do PDF "343 - Relatório de Centro de Custos / Plano de Contas".</p>
-            
-            <div class="drop-zone" id="pdf-drop-zone" style="border: 2px dashed var(--primary); padding: 3rem; text-align: center; border-radius: 8px; margin: 2rem 0; cursor: pointer;">
-                <span class="material-icons-round" style="font-size: 3rem; color: var(--primary);">cloud_upload</span>
-                <h3>Arraste o arquivo PDF aqui</h3>
-                <p>ou</p>
-                <input type="file" id="pdf-file-input" accept=".pdf" hidden>
-                <button class="btn btn-secondary" onclick="document.getElementById('pdf-file-input').click()">Procurar Arquivo</button>
+        <div class="view-header-bar">
+            <span class="material-icons-round">upload_file</span>
+            <h2>Importar PDF — Relatório 343 Maxdata</h2>
+            <span id="import-mapping-badge" style="margin-left:auto;font-size:0.8rem;padding:0.35rem 0.75rem;border-radius:20px;background:rgba(0,0,0,0.1);">
+                Verificando mapeamento...
+            </span>
+            <button class="btn btn-secondary btn-icon" onclick="fcApp.backToClients()" title="Trocar cliente" style="margin-left:0.5rem;">
+                <span class="material-icons-round">swap_horiz</span>
+            </button>
+        </div>
+
+        <div style="padding:1.5rem;">
+
+            <!-- ─── SEÇÃO: Calibração (vincular automático) ─── -->
+            <div class="card" style="margin-bottom:1.5rem;">
+                <div class="card-body" style="padding:1.5rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+                        <div>
+                            <h3 style="margin:0;font-size:1rem;">🔗 Configurar Vínculo Automático</h3>
+                            <p style="margin:0.3rem 0 0;font-size:0.82rem;color:var(--text-secondary);">Faça o upload do PDF e do Excel do mesmo período para calibrar o mapeamento por valor.</p>
+                        </div>
+                        <button class="btn btn-secondary" style="font-size:0.8rem;" onclick="document.getElementById('calib-section').style.display=document.getElementById('calib-section').style.display==='none'?'block':'none'">
+                            <span class="material-icons-round" style="font-size:1rem;vertical-align:middle;">settings</span> Calibrar
+                        </button>
+                    </div>
+
+                    <div id="calib-section" style="display:none;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+                            <!-- Upload PDF para calibração -->
+                            <div style="border:1.5px dashed var(--primary);border-radius:8px;padding:1.25rem;text-align:center;">
+                                <span class="material-icons-round" style="font-size:2rem;color:var(--primary);">picture_as_pdf</span>
+                                <p style="font-size:0.82rem;margin:0.5rem 0;">1. Upload do PDF Maxdata (Relatório 343)</p>
+                                <input type="file" id="pdf-calib-input" accept=".pdf" hidden
+                                    onchange="fcApp.handlePDFForCalib(this.files[0])">
+                                <button class="btn btn-secondary" style="font-size:0.8rem;" onclick="document.getElementById('pdf-calib-input').click()">
+                                    Selecionar PDF
+                                </button>
+                                <div id="calib-pdf-status" style="font-size:0.75rem;margin-top:0.5rem;color:var(--text-secondary);">Nenhum arquivo selecionado</div>
+                            </div>
+                            <!-- Upload Excel para calibração -->
+                            <div style="border:1.5px dashed #10b981;border-radius:8px;padding:1.25rem;text-align:center;">
+                                <span class="material-icons-round" style="font-size:2rem;color:#10b981;">table_view</span>
+                                <p style="font-size:0.82rem;margin:0.5rem 0;">2. Upload do Excel RQ.05 (mesmo período do PDF)</p>
+                                <input type="file" id="excel-calib-input" accept=".xlsx,.xls" hidden>
+                                <button class="btn btn-secondary" style="font-size:0.8rem;" onclick="document.getElementById('excel-calib-input').click()">
+                                    Selecionar Excel
+                                </button>
+                                <div style="font-size:0.75rem;margin-top:0.5rem;color:var(--text-secondary);">O sistema compara valores da coluna C com os do PDF</div>
+                            </div>
+                        </div>
+                        <div id="calib-preview-container" style="display:none;"></div>
+                    </div>
+                </div>
             </div>
 
-            <div id="import-preview" class="hidden" style="display:none;">
-                <h3>Preview da Importação</h3>
-                <p id="import-period">Período detectado: -</p>
-                <div class="table-responsive" style="margin-bottom: 1rem;">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Conta</th>
-                                <th class="text-right">A Receber</th>
-                                <th class="text-right">A Pagar</th>
-                            </tr>
-                        </thead>
-                        <tbody id="import-preview-body"></tbody>
-                    </table>
-                </div>
-                <div class="import-actions" style="display: flex; justify-content: flex-end; gap: 1rem;">
-                    <button class="btn btn-ghost" onclick="fcApp.cancelImport()">Cancelar</button>
-                    <button class="btn btn-primary" onclick="fcApp.confirmImport()">Confirmar e Salvar</button>
+            <!-- ─── SEÇÃO: Importar PDF ─── -->
+            <div class="card">
+                <div class="card-body" style="padding:1.5rem;">
+                    <h3 style="margin:0 0 0.25rem;font-size:1rem;">📥 Importar Dados do PDF</h3>
+                    <p style="font-size:0.82rem;color:var(--text-secondary);margin:0 0 1rem;">Arraste o PDF do mês que deseja lançar no fluxo de caixa.</p>
+
+                    <div id="import-no-mapping-warn" style="display:none;padding:0.75rem 1rem;background:rgba(245,158,11,0.12);border-radius:8px;margin-bottom:1rem;border-left:3px solid #f59e0b;">
+                        <strong style="color:#f59e0b;">⚠️ Mapeamento não configurado</strong>
+                        <p style="font-size:0.8rem;margin:0.25rem 0 0;">Os dados serão importados sem vínculo automático. Configure o mapeamento acima para associar cada conta do PDF ao Fluxo de Caixa.</p>
+                    </div>
+
+                    <div id="pdf-drop-zone" style="border:2px dashed var(--primary);border-radius:12px;padding:3rem;text-align:center;cursor:pointer;">
+                        <span class="material-icons-round" style="font-size:3rem;color:var(--primary);">cloud_upload</span>
+                        <h3 style="margin:1rem 0 0.5rem;">Arraste o arquivo PDF aqui</h3>
+                        <p style="color:var(--text-secondary);">Relatório "343 - Centro de Custos" do ERP Maxdata</p>
+                        <input type="file" id="pdf-file-input" accept=".pdf" hidden>
+                        <button class="btn btn-secondary" style="margin-top:1rem;" onclick="document.getElementById('pdf-file-input').click()">Procurar Arquivo</button>
+                    </div>
+
+                    <div id="import-preview" style="display:none;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+                            <div id="import-period" style="font-weight:600;color:var(--primary);"></div>
+                            <div id="import-mapping-status" style="font-size:0.82rem;"></div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table" style="width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th style="width:30px;"></th>
+                                        <th>Código / Conta PDF</th>
+                                        <th>→ Conta no Sistema</th>
+                                        <th class="text-right">A Receber</th>
+                                        <th class="text-right">A Pagar</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="import-preview-body"></tbody>
+                            </table>
+                        </div>
+                        <div style="display:flex;gap:1rem;margin-top:1.5rem;justify-content:flex-end;">
+                            <button class="btn btn-secondary" onclick="fcApp.cancelImport()">Cancelar</button>
+                            <button class="btn btn-primary" onclick="fcApp.confirmImport()">
+                                <span class="material-icons-round" style="font-size:1rem;vertical-align:middle;">save</span> Confirmar Importação
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
 
     <!-- View: Fluxo de Caixa - Projeções -->
     <div id="view-fc-projections" class="page-content" style="display:none;">
@@ -7481,11 +7552,13 @@
 
     <!-- Scripts Fluxo de Caixa (ERP Consultoria) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="js/fc-store.js?v=11.23.27"></script>
-    <script src="js/pdf-parser.js?v=11.23.27"></script>
+    <script src="js/pdf-parser.js?v=11.23.28"></script>
+    <script src="js/pdf-mapping.js?v=11.23.28"></script>
     <script src="js/master-accounts.js?v=11.23.27"></script>
     <script src="js/financial-engine.js?v=11.23.27"></script>
-    <script src="js/fluxo-caixa.js?v=11.23.27"></script>
+    <script src="js/fluxo-caixa.js?v=11.23.28"></script>
 </body>
 
 </html>

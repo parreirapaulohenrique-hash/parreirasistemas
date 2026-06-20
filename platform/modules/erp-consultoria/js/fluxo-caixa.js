@@ -169,35 +169,36 @@ window.fcApp = {
         const dropZone = document.getElementById('pdf-drop-zone');
         const fileInput = document.getElementById('pdf-file-input');
 
-        if(dropZone) {
+        if (dropZone) {
             dropZone.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 dropZone.style.borderColor = 'var(--accent-success, #10b981)';
                 dropZone.style.background = 'rgba(16, 185, 129, 0.1)';
             });
-
             dropZone.addEventListener('dragleave', (e) => {
                 e.preventDefault();
                 dropZone.style.borderColor = 'var(--primary)';
                 dropZone.style.background = 'transparent';
             });
-
             dropZone.addEventListener('drop', (e) => {
                 e.preventDefault();
                 dropZone.style.borderColor = 'var(--primary)';
                 dropZone.style.background = 'transparent';
-                if (e.dataTransfer.files.length) {
-                    this.handlePDFUpload(e.dataTransfer.files[0]);
-                }
+                if (e.dataTransfer.files.length) this.handlePDFUpload(e.dataTransfer.files[0]);
             });
-
             if (fileInput) {
                 fileInput.addEventListener('change', (e) => {
-                    if (e.target.files.length) {
-                        this.handlePDFUpload(e.target.files[0]);
-                    }
+                    if (e.target.files.length) this.handlePDFUpload(e.target.files[0]);
                 });
             }
+        }
+
+        // Excel file input para calibração
+        const excelInput = document.getElementById('excel-calib-input');
+        if (excelInput) {
+            excelInput.addEventListener('change', (e) => {
+                if (e.target.files.length) this.handleExcelCalib(e.target.files[0]);
+            });
         }
     },
 
@@ -342,29 +343,38 @@ window.fcApp = {
 
         // Carrega lançamentos manuais salvos para este cliente
         this._loadManualEntries();
-        
-        // Pode atualizar o Header do ERP se quiser indicar o cliente em análise
-        const titleEl = document.getElementById('pageTitle');
-        if (titleEl) {
-            titleEl.textContent = `Análise Financeira: ${client.name}`;
+
+        // Carrega mapeamento PDF → MASTER_ACCOUNTS (assíncrono, sem bloquear)
+        if (typeof window.PdfMapper !== 'undefined') {
+            window.PdfMapper.loadMapping(client.id).then(mapping => {
+                const count = Object.keys(mapping).length;
+                const badge = document.getElementById('import-mapping-badge');
+                if (badge) {
+                    if (count > 0) {
+                        badge.textContent = `✅ ${count} vínculos configurados`;
+                        badge.style.color = 'var(--success, #10b981)';
+                    } else {
+                        badge.textContent = '⚠️ Nenhum mapeamento — calibre antes de importar';
+                        badge.style.color = 'var(--warning, #f59e0b)';
+                    }
+                }
+            }).catch(() => {});
         }
 
+        // Atualiza header do ERP
+        const titleEl = document.getElementById('pageTitle');
+        if (titleEl) titleEl.textContent = `Análise Financeira: ${client.name}`;
+
         const fcFunctions = document.getElementById('fc-functions');
-        if (fcFunctions) {
-            fcFunctions.style.display = 'block';
-        }
-        
+        if (fcFunctions) fcFunctions.style.display = 'block';
+
         const clientNameDisplay = document.getElementById('fc-client-name-display');
-        if (clientNameDisplay) {
-            clientNameDisplay.textContent = client.name;
-        }
+        if (clientNameDisplay) clientNameDisplay.textContent = client.name;
 
         // Auto expandir Fluxo de Caixa
         const subFluxoCaixa = document.getElementById('sub-fluxo-caixa');
-        if (subFluxoCaixa) {
-            subFluxoCaixa.style.display = 'block';
-        }
-        
+        if (subFluxoCaixa) subFluxoCaixa.style.display = 'block';
+
         this.requireClient('fc-overview');
     },
 
@@ -1553,18 +1563,14 @@ window.fcApp = {
         if (dropZone) dropZone.innerHTML = '<div style="text-align:center;padding:2rem;"><span class="material-icons-round" style="font-size:3rem;color:var(--primary-color);animation:spin 1s linear infinite;">sync</span><p style="margin-top:1rem;color:var(--text-secondary);">Lendo e extraindo dados do PDF...</p></div>';
 
         try {
-            // Verifica se PDFParser está disponível
             if (typeof window.PDFParser === 'undefined') {
                 throw new Error('Biblioteca PDF não carregada. Aguarde e tente novamente.');
             }
 
-            // Lê o arquivo como ArrayBuffer para o PDF.js
             const arrayBuffer = await file.arrayBuffer();
-
-            // Usa o PDFParser do módulo (pdf-parser.js)
             const result = await window.PDFParser.parseMaxdataPDF({ data: arrayBuffer });
 
-            const period = result.periodo;
+            const period   = result.periodo;
             const accounts = result.contas;
 
             if (!period || accounts.length === 0) {
@@ -1573,8 +1579,20 @@ window.fcApp = {
                 return;
             }
 
-            this.pendingImport = { period, accounts };
-            this.showImportPreview(period, accounts);
+            // Verifica se há mapeamento configurado
+            const client  = store.getActiveClient();
+            const mapping = (typeof window.PdfMapper !== 'undefined' && client)
+                ? (window.PdfMapper.savedMapping || {})
+                : {};
+            const hasMappings = Object.keys(mapping).length > 0;
+
+            // Aplica o mapeamento (enriquece cada conta com masterKey)
+            const enriched = (typeof window.PdfMapper !== 'undefined' && hasMappings)
+                ? window.PdfMapper.applyMapping(accounts, mapping)
+                : accounts.map(a => ({ ...a, masterKey: null, mapped: false }));
+
+            this.pendingImport = { period, accounts: enriched, hasMappings };
+            this.showImportPreview(period, enriched, hasMappings);
 
         } catch (error) {
             console.error('Erro na extração PDF:', error);
@@ -1583,28 +1601,236 @@ window.fcApp = {
         }
     },
 
-
-    showImportPreview(period, accounts) {
+    showImportPreview(period, accounts, hasMappings) {
         const dropZone = document.getElementById('pdf-drop-zone');
-        const preview = document.getElementById('import-preview');
-        const tbody = document.getElementById('import-preview-body');
-        
-        if (!dropZone || !preview || !tbody) return;
+        const preview  = document.getElementById('import-preview');
+        if (!dropZone || !preview) return;
 
         dropZone.style.display = 'none';
-        preview.style.display = 'block';
-        document.getElementById('import-period').textContent = `Período detectado: ${period}`;
+        preview.style.display  = 'block';
 
-        tbody.innerHTML = '';
-        accounts.forEach(acc => {
-            tbody.innerHTML += `
+        // Período
+        const periodEl = document.getElementById('import-period');
+        if (periodEl) periodEl.textContent = `Período detectado: ${period}`;
+
+        const mapped   = accounts.filter(a => a.mapped);
+        const unmapped = accounts.filter(a => !a.mapped);
+
+        const tbody = document.getElementById('import-preview-body');
+        if (!tbody) return;
+
+        if (!hasMappings) {
+            // Sem mapeamento: exibe tabela simples com aviso
+            const warn = document.getElementById('import-no-mapping-warn');
+            if (warn) warn.style.display = 'block';
+
+            tbody.innerHTML = accounts.map(acc => `
                 <tr>
-                    <td>${acc.codigo} - ${acc.descricao}</td>
-                    <td class="text-right" style="color:var(--success)">${this.formatCurrency(acc.a_receber)}</td>
-                    <td class="text-right" style="color:var(--danger)">${this.formatCurrency(acc.a_pagar)}</td>
-                </tr>
-            `;
+                    <td style="font-size:0.82rem;">${acc.codigo}</td>
+                    <td style="font-size:0.82rem;">${acc.descricao}</td>
+                    <td class="text-right" style="color:var(--success);">${this.formatCurrency(acc.a_receber)}</td>
+                    <td class="text-right" style="color:var(--danger);">${this.formatCurrency(acc.a_pagar)}</td>
+                    <td style="color:#f59e0b;font-size:0.75rem;">⚠️ Sem vínculo</td>
+                </tr>`).join('');
+            return;
+        }
+
+        // Com mapeamento: exibe status e duas seções
+        const warn = document.getElementById('import-no-mapping-warn');
+        if (warn) warn.style.display = 'none';
+
+        // Atualiza badge de status
+        const badge = document.getElementById('import-mapping-status');
+        if (badge) {
+            badge.innerHTML = `
+                <span style="color:#10b981;font-weight:600;">✅ ${mapped.length} mapeadas</span>
+                ${unmapped.length > 0 ? `&nbsp;&nbsp;<span style="color:#f59e0b;font-weight:600;">⚠️ ${unmapped.length} sem vínculo</span>` : ''}`;
+        }
+
+        // Tabela com ícone de status
+        tbody.innerHTML = accounts.map(acc => {
+            const statusIcon  = acc.mapped
+                ? '<span style="color:#10b981;" title="Mapeada">✅</span>'
+                : '<span style="color:#f59e0b;" title="Sem vínculo">⚠️</span>';
+            const masterLabel = acc.masterKey
+                ? `<small style="color:var(--text-secondary);display:block;">${acc.masterKey.split('::')[1] || acc.masterKey}</small>`
+                : '<small style="color:#f59e0b;">Configure o mapeamento</small>';
+            return `
+                <tr>
+                    <td style="text-align:center;">${statusIcon}</td>
+                    <td style="font-size:0.82rem;">${acc.codigo}<br><small style="color:var(--text-secondary);">${acc.descricao}</small></td>
+                    <td style="font-size:0.82rem;">${masterLabel}</td>
+                    <td class="text-right" style="color:var(--success);">${this.formatCurrency(acc.a_receber)}</td>
+                    <td class="text-right" style="color:var(--danger);">${this.formatCurrency(acc.a_pagar)}</td>
+                </tr>`;
+        }).join('');
+    },
+
+    // ─── CALIBRAÇÃO: fluxo de vincular PDF + Excel ───────────────────────────
+
+    _calibData: null, // Armazena resultado parcial da calibração
+
+    async handleExcelCalib(file) {
+        if (typeof window.PdfMapper === 'undefined') {
+            alert('Motor de mapeamento não carregado. Recarregue a página.');
+            return;
+        }
+        if (!file || !file.name.match(/\.xlsx?$/i)) {
+            alert('Por favor, selecione um arquivo Excel (.xlsx).');
+            return;
+        }
+
+        const btn = document.getElementById('btn-start-calib');
+        if (btn) { btn.disabled = true; btn.textContent = 'Lendo Excel...'; }
+
+        try {
+            const excelRows = await window.PdfMapper.readExcel(file);
+            if (!this._calibData || !this._calibData.pdfAccounts) {
+                alert('Faça o upload do PDF primeiro, depois do Excel.');
+                if (btn) { btn.disabled = false; btn.textContent = 'Iniciar Calibração'; }
+                return;
+            }
+
+            const calibResult = window.PdfMapper.calibrate(this._calibData.pdfAccounts, excelRows);
+            this.showCalibrationPreview(calibResult);
+
+        } catch (err) {
+            console.error('Erro na calibração:', err);
+            alert('Erro ao processar Excel: ' + err.message);
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = 'Iniciar Calibração'; }
+        }
+    },
+
+    async handlePDFForCalib(file) {
+        if (!file || file.type !== 'application/pdf') { alert('Selecione um PDF válido.'); return; }
+        const status = document.getElementById('calib-pdf-status');
+        if (status) { status.textContent = 'Lendo PDF...'; status.style.color = 'var(--text-secondary)'; }
+        try {
+            const buf    = await file.arrayBuffer();
+            const result = await window.PDFParser.parseMaxdataPDF({ data: buf });
+            this._calibData = { pdfAccounts: result.contas, periodo: result.periodo };
+            if (status) {
+                status.textContent = `✅ ${result.contas.length} contas extraídas — Período: ${result.periodo}`;
+                status.style.color = '#10b981';
+            }
+        } catch (err) {
+            if (status) { status.textContent = '❌ Erro: ' + err.message; status.style.color = '#ef4444'; }
+        }
+    },
+
+    showCalibrationPreview(calibResult) {
+        const container = document.getElementById('calib-preview-container');
+        if (!container) return;
+
+        const { matched, unmatched, conflicts } = calibResult;
+
+        let html = `
+            <div style="margin:1rem 0;padding:1rem;background:rgba(16,185,129,0.08);border-radius:8px;border-left:3px solid #10b981;">
+                <strong style="color:#10b981;">✅ ${matched.length} contas mapeadas por valor</strong>
+                <table class="data-table" style="margin-top:0.75rem;font-size:0.8rem;">
+                    <thead><tr><th>Código PDF</th><th>Descrição PDF</th><th>→ Conta no Sistema</th><th>Valor</th></tr></thead>
+                    <tbody>${matched.map(m => `
+                        <tr>
+                            <td>${m.pdf.codigo}</td>
+                            <td>${m.pdf.descricao}</td>
+                            <td style="color:#10b981;">${m.master ? m.master.descricao : '<em>Descrição não encontrada</em>'}</td>
+                            <td class="text-right">${this.formatCurrency(m.pdf.valor)}</td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+
+        if (unmatched.length > 0) {
+            html += `
+            <div style="margin:1rem 0;padding:1rem;background:rgba(245,158,11,0.08);border-radius:8px;border-left:3px solid #f59e0b;">
+                <strong style="color:#f59e0b;">⚠️ ${unmatched.length} sem correspondência por valor</strong>
+                <table class="data-table" style="margin-top:0.75rem;font-size:0.8rem;">
+                    <thead><tr><th>Código PDF</th><th>Descrição PDF</th><th>Valor</th><th>Vincular a</th></tr></thead>
+                    <tbody>${unmatched.map((acc, idx) => `
+                        <tr>
+                            <td>${acc.codigo}</td>
+                            <td>${acc.descricao}</td>
+                            <td class="text-right">${this.formatCurrency(acc.a_pagar || acc.a_receber)}</td>
+                            <td>
+                                <select id="manual-link-${idx}" data-codigo="${acc.codigo}" style="font-size:0.75rem;padding:0.25rem;width:100%;">
+                                    <option value="">-- Selecionar conta --</option>
+                                    ${this._getMasterOptions()}
+                                </select>
+                            </td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+        }
+
+        if (conflicts.length > 0) {
+            html += `<div style="margin:1rem 0;padding:1rem;background:rgba(239,68,68,0.08);border-radius:8px;border-left:3px solid #ef4444;"><strong style="color:#ef4444;">🔀 ${conflicts.length} conflito(s) de valor (múltiplas linhas com o mesmo valor)</strong><p style="font-size:0.8rem;margin-top:0.5rem;">Esses vínculos precisam ser configurados manualmente.</p></div>`;
+        }
+
+        html += `<div style="display:flex;justify-content:flex-end;gap:1rem;margin-top:1.5rem;">
+            <button class="btn btn-secondary" onclick="fcApp.cancelCalibration()">Cancelar</button>
+            <button class="btn btn-primary" onclick="fcApp.confirmCalibration(${JSON.stringify(unmatched.map((_, i) => i))})">
+                <span class="material-icons-round" style="font-size:1rem;vertical-align:middle;">save</span> Salvar Mapeamento
+            </button>
+        </div>`;
+
+        this._pendingCalibResult = calibResult;
+        container.innerHTML = html;
+        container.style.display = 'block';
+    },
+
+    _getMasterOptions() {
+        if (!window.MASTER_ACCOUNTS) return '';
+        let currentGroup = '', opts = '';
+        window.MASTER_ACCOUNTS.forEach(m => {
+            if (m.codigo === 'HEADER') { currentGroup = m.descricao; return; }
+            if (!currentGroup) return;
+            const key = `${currentGroup}::${m.codigo}-${m.descricao}`;
+            opts += `<option value="${key}">[${m.codigo}] ${m.descricao}</option>`;
         });
+        return opts;
+    },
+
+    async confirmCalibration(unmatchedIndices) {
+        const client = store.getActiveClient();
+        if (!client || !this._pendingCalibResult) return;
+
+        // Coleta vínculos manuais dos selects
+        const manualResolutions = {};
+        const { unmatched } = this._pendingCalibResult;
+        unmatched.forEach((acc, idx) => {
+            const sel = document.getElementById(`manual-link-${idx}`);
+            if (sel && sel.value) manualResolutions[acc.codigo] = sel.value;
+        });
+
+        const mapping = window.PdfMapper.buildMapping(this._pendingCalibResult, manualResolutions);
+        const total   = Object.keys(mapping).length;
+
+        const btn = document.querySelector('#calib-preview-container .btn-primary');
+        if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
+
+        const ok = await window.PdfMapper.saveMapping(client.id, mapping);
+        if (ok) {
+            const badge = document.getElementById('import-mapping-badge');
+            if (badge) { badge.textContent = `✅ ${total} vínculos configurados`; badge.style.color = '#10b981'; }
+
+            // Volta para o painel de importação normal
+            this.cancelCalibration();
+            alert(`✅ Mapeamento salvo! ${total} vínculos configurados.\nAgora você pode importar PDFs normalmente.`);
+        } else {
+            alert('❌ Erro ao salvar o mapeamento.');
+            if (btn) { btn.disabled = false; btn.textContent = 'Salvar Mapeamento'; }
+        }
+    },
+
+    cancelCalibration() {
+        const container = document.getElementById('calib-preview-container');
+        if (container) container.style.display = 'none';
+        this._pendingCalibResult = null;
+        this._calibData = null;
+        const calibSection = document.getElementById('calib-section');
+        if (calibSection) calibSection.style.display = 'none';
     },
 
     async confirmImport() {
