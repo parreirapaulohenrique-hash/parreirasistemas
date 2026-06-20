@@ -242,9 +242,10 @@ graph LR
     Proj -->|Gera Meses Futuros| Dash
 ```
 **POP:**
-*   **Acesso e Seleção (Multi-tenant):** Usuário acessa o módulo (atualmente via localStorage) e seleciona/cria o cliente desejado na tela inicial.
-*   **Importação de Dados Reais:** Usuário arrasta o relatório PDF do ERP Maxdata ("343 - Centro de Custos"). O parser local usa `pdf.js` com regex para extrair valores `A Pagar` e `A Receber`, distribuindo pelo plano de contas.
-*   **Projeções:** Usuário define uma premissa de crescimento (ex: 5% a.m). O sistema replica automaticamente a base dos dados reais para os meses futuros, projetando a variação do caixa.
+*   **Acesso e Seleção (Multi-tenant):** Usuário acessa o módulo e seleciona/cria o cliente desejado na tela inicial.
+*   **Calibração (uma vez por cliente):** Usuário acessa "Importar PDF" → clica em "Calibrar" → faz upload do PDF "834 - Fluxo de Caixa Mensal" (Janeiro a Maio) e do Excel (com abas JANEIRO, FEVEREIRO...). O motor `PdfMapper` detecta colunas por posição X no PDF, lê cada aba do Excel e compara valores: se o valor de qualquer mês bater → vínculo criado. Ao mapear 100%, clica em "🔒 Travar Mapeamento" → salvo permanentemente no Firestore.
+*   **Importação de Dados Reais:** Após calibrado, usuário arrasta qualquer PDF 834 mensal → sistema aplica o mapeamento automaticamente e salva os valores por mês no Firestore.
+*   **Projeções:** Usuário define premissa de crescimento (ex: 5% a.m). O sistema replica automaticamente a base dos dados reais para os meses futuros.
 *   **Exportação:** Em "Exportar Excel", o módulo consolida todas as abas mensais com saldo e variação, e emite o arquivo original em padrão Contábil.
 
 ---
@@ -333,6 +334,8 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 | **3.11.52** | 2026-06-12 | Dispatch: log de diagnóstico [DIAG-RA] para investigar NFs de abril da RA que não aparecem na conferência de fatura |
 | **3.11.51** | 2026-06-12 | Dispatch: fix transportadora RA — NFs de abril com status legado 'concluido' no Firestore agora aparecem na conferência. Normalização em getFullDispatchesHistory + VALID_STATUSES/VALID_STATUSES_FILTER atualizados |
 
+| **11.23.28** | 2026-06-20 | ERP Consultoria: Troca do relatório Maxdata de 343 → **834 (Fluxo de Caixa Mensal)**. Novo pdf-parser.js com detecção dinâmica de colunas por posição X (jan/fev/mar/abr/mai). Motor de calibração multi-mês: compara valor de cada conta do PDF com coluna C de cada aba do Excel (JANEIRO, FEVEREIRO...) — primeiro mês que bate gera vínculo permanente. Botão "🔒 Travar Mapeamento" aparece quando todas as contas estão vinculadas. Fix deploy: script `deploy.ps1` commitava em `staging` sem merge em `main` — adicionado merge manual staging→main antes do push. Fix `consolidateFCViews` usa `reduce` (último com `view-header-bar`) em vez de `find` (primeiro), garantindo que a UI nova de calibração seja exibida. |
+| **11.23.27** | 2026-06-20 | ERP Consultoria: Calibração PDF×Excel por valor (motor PdfMapper v1), UI de calibração no view-fc-import com seção Configurar Vínculo Automático. SheetJS adicionado. Fix consolidateFCViews: usa reduce para pegar último view-header-bar. Fix deploy pipeline staging→main. |
 | **11.23.9** | 2026-05-27 | ERP Consultoria: Prioridade absoluta do valor manual sobre PDF nos grupos 1/2/3/7; 'Custo de Aquisição' adicionado ao MANUAL_GROUPS restaurando campos de entrada das contas 2.x |
 | **11.23.8** | 2026-05-27 | ERP Consultoria: Seção 3 (Custo) reposicionada antes das contas de custo; matching PDF/Excel por código exato (aliases removidos); edição inline de códigos desativada; botão Auto-Vincular sempre visível; dropdown Grupo corrigido no modal de vinculação |
 | **11.23.4** | 2026-05-25 | ERP Consultoria: Excel parser seleciona automaticamente a aba correspondente ao período do dashboard (ex: MARÇO, MAR, 03) |
