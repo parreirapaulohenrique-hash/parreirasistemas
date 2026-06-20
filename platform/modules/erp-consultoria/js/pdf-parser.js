@@ -1,143 +1,254 @@
 /**
- * Parser para o PDF do ERP Maxdata
- * Extrai contas e valores do Relatório 343 (Centro de Custos / Plano de Contas)
- * v2: Consolida valores de múltiplos Centros de Custo (soma todas as filiais)
+ * PDFParser — Tela 834 Maxdata (Fluxo de Caixa Mensal)
+ * Formato: colunas jan/fev/mar/abr/mai + Total por linha de conta
+ * Detecta posições X dos meses dinamicamente no cabeçalho do PDF
+ * v3: multi-mês, coordenadas X para atribuição de coluna
  */
 
-// Configura o worker do PDF.js (necessário para processamento)
+const _MONTH_NAMES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+
 if (typeof pdfjsLib !== 'undefined') {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 
 window.PDFParser = {
+
     async parseMaxdataPDF(typedarray) {
         if (typeof pdfjsLib === 'undefined') {
-            throw new Error('PDF.js não carregado. Verifique a conexão e recarregue a página.');
+            throw new Error('PDF.js não carregado. Recarregue a página.');
         }
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
         const loadingTask = pdfjsLib.getDocument(typedarray);
         const pdf = await loadingTask.promise;
 
-        let fullText = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            let lastY = -1, currentLine = '';
-            for (const item of textContent.items) {
-                if (lastY !== item.transform[5] && lastY !== -1) {
-                    fullText += currentLine + '\n';
-                    currentLine = '';
-                }
-                currentLine += item.str + ' ';
-                lastY = item.transform[5];
+        // Coleta todos os itens de texto com coordenadas (x, y_from_top)
+        const allItems = [];
+
+        for (let pg = 1; pg <= pdf.numPages; pg++) {
+            const page     = await pdf.getPage(pg);
+            const viewport = page.getViewport({ scale: 1.0 });
+            const tc       = await page.getTextContent();
+
+            for (const item of tc.items) {
+                const text = (item.str || '').trim();
+                if (!text) continue;
+                allItems.push({
+                    text,
+                    x:    item.transform[4],
+                    y:    Math.round(viewport.height - item.transform[5]), // de cima
+                    page: pg
+                });
             }
-            fullText += currentLine + '\n';
         }
 
-        return this.processExtractedText(fullText);
+        return this._process834Items(allItems);
     },
 
-    processExtractedText(text) {
-        const lines = text.split('\n');
-        const result = { periodo: '', contas: [], porCC: {} };
+    // ─── Processamento principal ────────────────────────────────────────────
 
-        // Detecta o período do relatório (ex: "Data Pag.: 01/03/2026 a 31/03/2026")
-        const periodMatch = text.match(/Data Pag\.?:?\s*(\d{2}\/\d{2}\/\d{4})\s*a\s*(\d{2}\/\d{2}\/\d{4})/i);
-        if (periodMatch) {
-            const parts = periodMatch[2].split('/');
-            result.periodo = `${parts[2]}-${parts[1]}`; // YYYY-MM
-        } else {
-            result.periodo = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`;
+    _process834Items(items) {
+        // 1. Detecta período (ex: "Período: 01/2026 a 05/2026")
+        const periodInfo = this._detectPeriod(items);
+
+        // 2. Detecta colunas dos meses pelo cabeçalho
+        const monthCols = this._detectMonthColumns(items);
+        if (Object.keys(monthCols).length === 0) {
+            throw new Error(
+                'Não foi possível identificar os meses no PDF.\n' +
+                'Certifique-se que o arquivo é o Relatório 834 (Fluxo de Caixa Mensal) do Maxdata.'
+            );
         }
 
-        let isProcessingData = false;
-        let currentCC = 'GERAL';
+        // Ordena por X e calcula limites de cada coluna
+        const sortedCols = Object.values(monthCols).sort((a, b) => a.x - b.x);
+        for (let i = 0; i < sortedCols.length; i++) {
+            const prev = i > 0 ? sortedCols[i - 1].x : 0;
+            const next = i < sortedCols.length - 1 ? sortedCols[i + 1].x : 9999;
+            sortedCols[i].minX = (sortedCols[i].x + prev) / 2;
+            sortedCols[i].maxX = (sortedCols[i].x + next) / 2;
+        }
 
-        // Mapa de consolidação: codigo -> { descricao, a_pagar, a_receber, ccs: [] }
-        const consolidated = {};
+        // 3. Agrupa itens por linha (Y)
+        const lineMap = {};
+        for (const item of items) {
+            const y = item.y;
+            if (!lineMap[y]) lineMap[y] = [];
+            lineMap[y].push(item);
+        }
 
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (!line) continue;
+        // 4. Parseia cada linha
+        const accounts = {}; // codigo → { codigo, descricao, meses: {monthKey: value}, total }
+        const VALUE_RE = /^-?(\d{1,3}(?:\.\d{3})*|\d+),\d{2}$/;
+        const CODE_RE  = /^(\d+(?:\.\d+)+)\.?$/;
 
-            // Detecta início de seção de Centro de Custo
-            // Ex: "CC: 1.CENTRAL ROLAMENTOS MATRIZ A Pagar: A Receber: Análise Vertical:"
-            const ccMatch = line.match(/^CC:\s*(.+?)\s*A Pagar:/i);
-            if (ccMatch) {
-                currentCC = ccMatch[1].trim();
-                isProcessingData = true;
-                continue;
+        for (const lineItems of Object.values(lineMap)) {
+            // Ordena por X
+            lineItems.sort((a, b) => a.x - b.x);
+
+            // Ignora rodapés e cabeçalhos
+            const lineText = lineItems.map(i => i.text).join(' ');
+            if (lineText.includes('Maxdata Sistemas') ||
+                lineText.includes('Fluxo de Caixa Mensal') ||
+                lineText.includes('Emissão:') ||
+                lineText.match(/^CENTRAL PECAS|CNPJ|RODOVIA|PALMAS-TO/)) continue;
+
+            // Detecta código no início da linha
+            const firstTok = lineItems[0]?.text || '';
+            let codigo = null;
+
+            if (CODE_RE.test(firstTok)) {
+                codigo = firstTok.replace(/\.$/, '');
+            } else {
+                // Código pode estar junto com um ponto no fim: "1.1.01."
+                const m = firstTok.match(/^(\d+(?:\.\d+)+)\.?$/);
+                if (m) codigo = m[1];
             }
 
-            // Inicia processamento após o cabeçalho das colunas
-            if (line.includes('Análise Vertical') || line.includes('A Receber:')) {
-                isProcessingData = true;
-                continue;
-            }
+            if (!codigo) continue;
 
-            if (!isProcessingData) continue;
+            // Só processa contas "folha" (2+ pontos: ex 2.1.01, 3.2.14)
+            // e grupos de 1 nível (ex 1.1, 3.2) — ambos válidos para calibração
+            const dotCount = (codigo.match(/\./g) || []).length;
+            if (dotCount < 1) continue;
 
-            // Ignora linhas de rodapé/cabeçalho de página
-            if (line.includes('Maxdata Sistemas') || line.includes('www.maxdata') ||
-                line.match(/^Pág\.:?\s*\d/) || line.match(/Emissão:/) ||
-                line.match(/^\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}/) ||
-                line.match(/^\d+\/\d+\/\d{4}/)) continue;
+            // Extrai descrição (tokens antes do primeiro valor)
+            let descTokens = [];
+            const valueItems = [];
 
-            // Extrai código da conta no início da linha (ex: "2.1.01." ou "3.2.01")
-            const codeMatch = line.match(/^(\d+(?:\.\d+)+)\.?\s+/);
-            if (!codeMatch) continue;
-
-            const codigo = codeMatch[1];
-            const restOfLine = line.substring(codeMatch[0].length).trim();
-            const tokens = restOfLine.split(/\s+/);
-
-            let valor = 0;
-            const descriptionTokens = [];
-
-            for (const token of tokens) {
-                if (token.includes('%')) continue; // ignora porcentagens
-
-                // Valor monetário: "1.234,56" ou "123,45"
-                if (/^(\d{1,3}(?:\.\d{3})*|\d+),\d{2}$/.test(token)) {
-                    valor = parseFloat(token.replace(/\./g, '').replace(',', '.'));
+            for (let i = 1; i < lineItems.length; i++) {
+                const tok = lineItems[i];
+                if (VALUE_RE.test(tok.text)) {
+                    valueItems.push(tok);
                 } else {
-                    descriptionTokens.push(token);
+                    // Só adiciona à descrição se ainda não encontrou valores
+                    if (valueItems.length === 0) {
+                        descTokens.push(tok.text);
+                    }
                 }
             }
 
-            if (valor === 0 && descriptionTokens.length === 0) continue;
+            if (valueItems.length === 0) continue;
 
-            const descricao = descriptionTokens.join(' ');
-            const isReceita = codigo.startsWith('1.') || codigo.startsWith('4.');
+            const descricao = descTokens.join(' ').trim();
 
-            // Consolida: acumula valores do mesmo código across all CCs
-            if (!consolidated[codigo]) {
-                consolidated[codigo] = { codigo, descricao, a_receber: 0, a_pagar: 0, ccs: [] };
-            } else if (!consolidated[codigo].descricao && descricao) {
-                consolidated[codigo].descricao = descricao;
+            // Para cada valor, determina o mês pela posição X
+            const mesVals = {};
+            let total = null;
+
+            for (const vi of valueItems) {
+                const numVal = parseFloat(vi.text.replace(/\./g, '').replace(',', '.'));
+
+                // Verifica se é o Total (coluna mais à direita, x > 750)
+                if (vi.x > 750) {
+                    total = numVal;
+                    continue;
+                }
+
+                // Encontra a coluna de mês mais próxima
+                let bestCol = null, bestDist = Infinity;
+                for (const col of sortedCols) {
+                    const dist = Math.abs(vi.x - col.x);
+                    if (dist < bestDist) { bestDist = dist; bestCol = col; }
+                }
+
+                if (bestCol && bestDist < 60) { // tolerância de 60 pts
+                    const key = bestCol.monthKey;
+                    mesVals[key] = (mesVals[key] || 0) + numVal;
+                }
             }
 
-            if (isReceita) {
-                consolidated[codigo].a_receber = parseFloat((consolidated[codigo].a_receber + valor).toFixed(2));
-            } else {
-                consolidated[codigo].a_pagar = parseFloat((consolidated[codigo].a_pagar + valor).toFixed(2));
+            if (Object.keys(mesVals).length === 0 && total === null) continue;
+
+            if (!accounts[codigo]) {
+                accounts[codigo] = { codigo, descricao, meses: {}, total: null };
             }
-
-            // Guarda detalhe por CC (para breakdown por filial)
-            consolidated[codigo].ccs.push({ cc: currentCC, valor, isReceita });
-
-            if (!result.porCC[currentCC]) result.porCC[currentCC] = {};
-            result.porCC[currentCC][codigo] = parseFloat(((result.porCC[currentCC][codigo] || 0) + valor).toFixed(2));
+            if (!accounts[codigo].descricao && descricao) {
+                accounts[codigo].descricao = descricao;
+            }
+            // Acumula (pode haver múltiplas filiais somadas — não neste relatório, mas por segurança)
+            for (const [k, v] of Object.entries(mesVals)) {
+                accounts[codigo].meses[k] = parseFloat(
+                    ((accounts[codigo].meses[k] || 0) + v).toFixed(2)
+                );
+            }
+            if (total !== null) {
+                accounts[codigo].total = parseFloat(
+                    ((accounts[codigo].total || 0) + total).toFixed(2)
+                );
+            }
         }
 
-        // Array de contas consolidadas (apenas contas com valor)
-        result.contas = Object.values(consolidated).filter(c => c.a_pagar > 0 || c.a_receber > 0);
+        const contasArray = Object.values(accounts).filter(
+            c => Object.keys(c.meses).length > 0 || c.total !== null
+        );
 
-        if (result.contas.length === 0) {
-            throw new Error('Não foi possível extrair dados válidos. Verifique se o PDF é o "Relatório 343 - Centro de Custos" do Maxdata.');
+        if (contasArray.length === 0) {
+            throw new Error(
+                'Nenhuma conta foi extraída do PDF.\n' +
+                'Verifique se o arquivo é o Relatório 834 (Fluxo de Caixa Mensal) do Maxdata.'
+            );
         }
 
-        return result;
+        // Período compatível com o sistema (primeiro mês detectado)
+        const allMonthKeys = Object.values(monthCols).map(c => c.monthKey).sort();
+        const periodo = allMonthKeys[0] || periodInfo.periodoInicio;
+
+        return {
+            periodo,
+            periodoInicio: periodInfo.periodoInicio,
+            periodoFim:    periodInfo.periodoFim,
+            meses:         allMonthKeys,
+            contas:        contasArray,  // compatível com o fluxo existente
+            contasArray,
+        };
+    },
+
+    // ─── Detecta cabeçalho de período ──────────────────────────────────────
+
+    _detectPeriod(items) {
+        for (const item of items) {
+            const m = item.text.match(/(\d{2})\/(\d{4})\s+a\s+(\d{2})\/(\d{4})/);
+            if (m) {
+                return {
+                    periodoInicio: `${m[2]}-${m[1]}`,
+                    periodoFim:    `${m[4]}-${m[3]}`
+                };
+            }
+        }
+        // Fallback por itens adjacentes
+        const periodoItem = items.find(it => it.text === 'Período:');
+        if (periodoItem) {
+            const nearby = items
+                .filter(it => Math.abs(it.y - periodoItem.y) < 5 && it.x > periodoItem.x)
+                .sort((a, b) => a.x - b.x)
+                .map(it => it.text).join(' ');
+            const m = nearby.match(/(\d{2})\/(\d{4})\s+a\s+(\d{2})\/(\d{4})/);
+            if (m) return { periodoInicio: `${m[2]}-${m[1]}`, periodoFim: `${m[4]}-${m[3]}` };
+        }
+        const now = new Date();
+        const p = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+        return { periodoInicio: p, periodoFim: p };
+    },
+
+    // ─── Detecta colunas de meses pelo cabeçalho ───────────────────────────
+
+    _detectMonthColumns(items) {
+        const cols = {};
+        const MONTH_RE = /^(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\/(\d{2})$/i;
+
+        for (const item of items) {
+            const m = item.text.toLowerCase().match(MONTH_RE);
+            if (!m) continue;
+            const monthName = m[1];
+            const year      = 2000 + parseInt(m[2]);
+            const monthNum  = _MONTH_NAMES.indexOf(monthName) + 1;
+            cols[monthName] = {
+                x:        item.x,
+                monthKey: `${year}-${String(monthNum).padStart(2, '0')}`,
+                label:    item.text
+            };
+        }
+        return cols;
     }
 };
