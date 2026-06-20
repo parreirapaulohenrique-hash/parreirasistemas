@@ -3877,8 +3877,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 // Define columns for export
-                const cols = ['date', 'invoice', 'client', 'city', 'carrier', 'nfValue', 'total'];
-                const headers = ['Data', 'Nota Fiscal', 'Cliente', 'Cidade', 'Transportadora', 'Valor NF', 'Frete'];
+                const cols    = ['date', 'invoice', 'client', 'city', 'carrier', 'weight', 'volume', 'nfValue', 'total'];
+                const headers = ['Data', 'Nota Fiscal', 'Cliente', 'Cidade', 'Transportadora', 'Peso (kg)', 'Volume (cx)', 'Valor NF', 'Frete'];
 
                 let csv = headers.join(';') + '\n';
 
@@ -3890,8 +3890,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         item.client,
                         item.city,
                         item.carrier,
-                        item.nfValue.toString().replace('.', ','),
-                        item.total.toString().replace('.', ',')
+                        (item.weight || '').toString().replace('.', ','),
+                        (item.volume || 1).toString(),
+                        (item.nfValue || '').toString().replace('.', ','),
+                        (item.total || '').toString().replace('.', ',')
                     ];
                     csv += row.join(';') + '\n';
                 });
@@ -4090,7 +4092,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     if (['total', 'nfValue', 'minimo'].includes(col)) val = Utils.formatCurrency(val);
                                     if (col === 'percentual' && val !== '-') val = val + '%';
                                     if (col === 'isComplement') val = val === true ? 'Sim' : 'Não';
-                                    if (col === 'volume') val = d.volume || 1;
+                                    if (col === 'weight') val = (val !== '-' && val !== 0) ? `${Number(val).toFixed(1)} kg` : '-';
+                                    if (col === 'volume') val = d.volume ? `${d.volume} cx` : '1 cx';
                                     // Time Columns
 
                                     if (col === 'createdTime') {
