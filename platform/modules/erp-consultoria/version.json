@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.23.30",
+    "version":  "11.23.31",
     "platform_version":  "11.23.6",
     "date":  "2026-06-20",
-    "last_change":  "Fix pdf-parser: _groupByLines usava lastY causando efeito corrente — trocado para groupStartY, linhas adjacentes agora separadas corretamente",
-    "build":  "20260620.30"
+    "last_change":  "Fix: calibracao usa match exato por descricao (Excel=Visao Geral); confirmImport salva { masterKey: valor } por mes no formato correto para financial-engine",
+    "build":  "20260620.31"
 }
