@@ -1,8 +1,8 @@
 {
-    "version": "3.14.12",
+    "version": "3.14.13",
     "environment": "production",
-    "change": "v3.14.12 - MELHORIA: Montagem de Carga — colunas Peso (kg), Volume (cx) e Valor NF agora habilitadas por padrao. Formatacao do Peso com sufixo 'kg' (X.X kg) e Volume com 'cx'. CSV export atualizado para incluir Peso e Volume. Nao precisa mais habilitar manualmente via botao Colunas.",
+    "change": "v3.14.13 - FIX CRITICO: 1) Auto-Rebuild muda de SUBSTITUIR para MESCLAR (merge) — carriers redespacho puro (sem tabela de frete propria) eram removidos quando freight_tables era reconstruida. Agora apenas ADICIONA carriers ausentes, NUNCA remove existentes. 2) carrier_info_v2 (isRedespacho flag) agora sincronizado na nuvem (Utils.Cloud.save) ao salvar cadastro de transportadora — antes era apenas localStorage, perdido ao trocar browser/maquina.",
     "lastUpdate": "2026-06-20",
-    "build": "20260620-prod-v3.14.12",
+    "build": "20260620-prod-v3.14.13",
     "deployedAt": "2026-06-20"
 }

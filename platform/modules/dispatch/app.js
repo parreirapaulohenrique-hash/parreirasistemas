@@ -882,23 +882,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                     rules = Utils.getStorage('freight_tables') || [];
                     console.log(`🔄 [Login] Variáveis recarregadas: ${carrierList.length} transportadoras, ${rules.length} tabelas.`);
 
-                    // v3.11.74 AUTO-REBUILD: Se carrier_list está vazia ou incompleta,
-                    // reconstrói silenciosamente a partir das tabelas de frete.
-                    // Isso corrige o caso onde o Firestore tem carrier_list corrompida/apagada
-                    // mas freight_tables contém todas as transportadoras reais.
+                    // v3.14.13 AUTO-REBUILD: MERGE em vez de SUBSTITUIR.
+                    // Adiciona transportadoras ausentes da carrier_list (vindas de freight_tables)
+                    // MAS preserva carriers que nao tem tabela de frete (ex: redespacho puro).
+                    // NUNCA remove carriers ja existentes — evita perda de redespacho carriers.
                     if (rules.length > 0) {
                         const carriersInTables = [...new Set(rules.map(r => r.transportadora))].filter(c => c).sort();
-                        if (carriersInTables.length > carrierList.length) {
-                            console.warn(`🔧 [Auto-Rebuild] carrier_list tem ${carrierList.length} itens, mas freight_tables tem ${carriersInTables.length} transportadoras únicas. Reconstruindo...`);
-                            carrierList = carriersInTables;
-                            // Salva localmente (sem atualizar lastWriteTime para não bloquear sync)
+                        const missingCarriers = carriersInTables.filter(c => !carrierList.includes(c));
+                        if (missingCarriers.length > 0) {
+                            console.warn(`🔧 [Auto-Rebuild v3.14.13] MERGE: adicionando ${missingCarriers.length} carriers ausentes (preservando redespacho):`, missingCarriers);
+                            carrierList = [...new Set([...carrierList, ...carriersInTables])].sort();
                             localStorage.setItem(Utils._storageKey('carrier_list'), JSON.stringify(carrierList));
-                            // Envia para nuvem para corrigir o Firestore corrompido
                             if (Utils.Cloud && Utils.Cloud.hasTenant()) {
                                 Utils.Cloud.save('carrier_list', carrierList);
                             }
-                            showToast(`🔧 Lista de transportadoras reconstruída automaticamente (${carrierList.length} transportadoras).`);
-                            console.log(`✅ [Auto-Rebuild] carrier_list reconstruída: ${carrierList.join(', ')}`);
+                            showToast(`🔧 Lista de transportadoras atualizada (${carrierList.length} transportadoras).`);
+                            console.log(`✅ [Auto-Rebuild] carrier_list após merge: ${carrierList.join(', ')}`);
                         }
                     }
 
@@ -3129,6 +3128,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 Utils.saveRaw('carrier_list', JSON.stringify(carrierList));
                 Utils.saveRaw('carrier_info_v2', JSON.stringify(carrierInfo));
+                // v3.14.13: Sincroniza carrier_info_v2 na nuvem para que isRedespacho persista entre browsers
+                if (Utils.Cloud && Utils.Cloud.hasTenant()) {
+                    Utils.Cloud.save('carrier_info_v2', carrierInfo);
+                    Utils.Cloud.save('carrier_list', carrierList);
+                }
 
                 window.resetCarrierForm();
                 renderCarrierConfigs();
