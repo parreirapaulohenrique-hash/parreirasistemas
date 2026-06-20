@@ -1,8 +1,8 @@
 {
-    "version": "3.14.13",
+    "version": "3.14.14",
     "environment": "production",
-    "change": "v3.14.13 - FIX CRITICO: 1) Auto-Rebuild muda de SUBSTITUIR para MESCLAR (merge) — carriers redespacho puro (sem tabela de frete propria) eram removidos quando freight_tables era reconstruida. Agora apenas ADICIONA carriers ausentes, NUNCA remove existentes. 2) carrier_info_v2 (isRedespacho flag) agora sincronizado na nuvem (Utils.Cloud.save) ao salvar cadastro de transportadora — antes era apenas localStorage, perdido ao trocar browser/maquina.",
+    "change": "v3.14.14 - FIX: Platform portal openModule() agora usa window.location.origin + path absoluto para abrir modulos. Garante que producao abre dispatch de producao, staging abre dispatch de staging, preview abre dispatch do proprio preview. Antes o path relativo podia cair no ambiente errado dependendo da URL base do Vercel.",
     "lastUpdate": "2026-06-20",
-    "build": "20260620-prod-v3.14.13",
+    "build": "20260620-prod-v3.14.14",
     "deployedAt": "2026-06-20"
 }

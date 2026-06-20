@@ -369,27 +369,32 @@
             const card = document.querySelector(`.module-${module === 'sales-force' ? 'sales' : module}`);
             if (card && card.classList.contains('disabled')) return;
 
+            // v3.14.14: Usa window.location.origin para garantir que cada ambiente
+            // (produção, staging, preview) sempre abre SUA PRÓPRIA versão do módulo.
+            // Antes: path relativo podia cair no ambiente errado dependendo da URL base.
+            const base = window.location.origin + '/platform/modules/';
+
             switch (module) {
                 case 'dispatch':
-                    window.open('modules/dispatch/index.html', '_blank');
+                    window.open(base + 'dispatch/index.html', '_blank');
                     break;
                 case 'master':
-                    window.open('modules/master/index.html', '_blank');
+                    window.open(base + 'master/index.html', '_blank');
                     break;
                 case 'erp-consultoria':
-                    window.open('modules/erp-consultoria/index.html', '_blank');
+                    window.open(base + 'erp-consultoria/index.html', '_blank');
                     break;
                 case 'erp':
-                    window.open('modules/erp/index.html', '_blank');
+                    window.open(base + 'erp/index.html', '_blank');
                     break;
                 case 'wms':
-                    window.open('modules/wms/index.html', '_blank');
+                    window.open(base + 'wms/index.html', '_blank');
                     break;
                 case 'wms-coletor':
-                    window.open('modules/wms-coletor/index.html', '_blank');
+                    window.open(base + 'wms-coletor/index.html', '_blank');
                     break;
                 case 'sales-force':
-                    window.open('modules/sales-force/index.html', '_blank');
+                    window.open(base + 'sales-force/index.html', '_blank');
                     break;
             }
         }
