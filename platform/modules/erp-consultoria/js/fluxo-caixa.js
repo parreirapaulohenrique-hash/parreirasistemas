@@ -570,22 +570,46 @@ window.fcApp = {
         const monthlyRealizado = new Array(12).fill(0);
         const monthlyProjetado = new Array(12).fill(0);
 
+        // ── Mescla todas as entradas importadas (Firestore) com as manuais (localStorage) ──
+        // O financial-engine espera: { "grupo::codigo-descricao": valor }
+        const mergedEntries = { ...this.manualEntries };
+
         for (const month of months) {
             const key   = `${year}-${month.toString().padStart(2, '0')}`;
             const mData = yearData[key];
-            const real  = mData ? (mData.realizado || mData.contas) : null;
-            if (real) {
+            if (!mData) continue;
+
+            // ── Realizado: novo formato { masterKey: valor } ──────────────
+            const real = mData.realizado;
+            if (real && typeof real === 'object' && !Array.isArray(real)) {
+                // Novo formato — acumula por masterKey (soma meses para visão anual)
+                for (const [mk, val] of Object.entries(real)) {
+                    if (val === undefined || val === null) continue;
+                    mergedEntries[mk] = parseFloat(((mergedEntries[mk] || 0) + Number(val)).toFixed(2));
+                    if (Number(val) > 0) {
+                        totalRealizadoEntradas += Number(val);
+                        monthlyRealizado[month - 1] += Number(val);
+                    } else {
+                        totalRealizadoSaidas   += Math.abs(Number(val));
+                        monthlyRealizado[month - 1] += Number(val);
+                    }
+                }
+            } else if (Array.isArray(real)) {
+                // Formato legado — array de contas (compatibilidade)
                 real.forEach(acc => {
                     totalRealizadoEntradas += acc.a_receber || 0;
                     totalRealizadoSaidas   += acc.a_pagar   || 0;
-                    monthlyRealizado[month-1] += (acc.a_receber || 0) - (acc.a_pagar || 0);
+                    monthlyRealizado[month - 1] += (acc.a_receber || 0) - (acc.a_pagar || 0);
                 });
             }
-            if (mData && mData.projetado) {
-                mData.projetado.forEach(acc => {
+
+            // ── Projetado ─────────────────────────────────────────────────
+            if (mData.projetado) {
+                const proj = Array.isArray(mData.projetado) ? mData.projetado : [];
+                proj.forEach(acc => {
                     totalProjetadoEntradas += acc.a_receber || 0;
                     totalProjetadoSaidas   += acc.a_pagar   || 0;
-                    monthlyProjetado[month-1] += (acc.a_receber || 0) - (acc.a_pagar || 0);
+                    monthlyProjetado[month - 1] += (acc.a_receber || 0) - (acc.a_pagar || 0);
                 });
             }
         }
@@ -603,17 +627,10 @@ window.fcApp = {
 
         this.renderCharts(monthlyRealizado, monthlyProjetado);
 
-        // Consolida contas de todos os meses selecionados
-        const allAccountsInPeriod = [];
-        for (const month of months) {
-            const key   = `${year}-${month.toString().padStart(2, '0')}`;
-            const mData = yearData[key];
-            const accs  = mData ? (mData.realizado || mData.contas) : null;
-            if (accs) allAccountsInPeriod.push(...accs);
-        }
-
+        // ── Passa os dados mesclados para o FinancialEngine ──────────────
+        // mergedEntries = { "grupo::cod-desc": valor } (realizado Firestore + manuais localStorage)
         if (window.FinancialEngine) {
-            const result = FinancialEngine.processData(allAccountsInPeriod, this.manualEntries);
+            const result = FinancialEngine.processData([], mergedEntries);
             this.renderSummaryBar(result.totals);
             this.renderFlowTableStrict(result.rows, totalRealizadoEntradas);
 
