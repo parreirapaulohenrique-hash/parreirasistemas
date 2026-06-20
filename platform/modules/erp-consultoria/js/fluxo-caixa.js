@@ -1889,35 +1889,95 @@ window.fcApp = {
 
         const client = store.getActiveClient();
         if (!client) {
-            alert('Nenhum cliente selecionado. Por favor, volte e selecione um cliente.');
+            alert('Nenhum cliente selecionado.');
             return;
         }
 
-        // Busca o botão de confirmar (sem depender de classe que pode não existir)
         const btn = document.querySelector('#import-preview .btn-primary');
-        const originalText = btn ? btn.textContent : '';
         if (btn) { btn.textContent = 'Salvando na Nuvem...'; btn.disabled = true; }
 
         try {
-            const success = await store.saveMonthData(client.id, this.pendingImport.period, this.pendingImport.accounts);
+            const { accounts, hasMappings } = this.pendingImport;
 
-            if (btn) { btn.textContent = originalText; btn.disabled = false; }
+            // ─── Formato Multi-Mês (PDF 834) ───────────────────────────────
+            // Cada conta tem: { masterKey, meses: {'2026-01': val, ...} }
+            // O financial-engine espera: periods['2026-01'].realizado = { "grupo::cod-desc": valor }
+            const isMultiMonth = accounts.length > 0 && accounts[0].meses !== undefined;
+
+            if (isMultiMonth && hasMappings) {
+                // Agrupa: monthKey → { masterKey: valor }
+                const byMonth = {};
+                for (const acc of accounts) {
+                    if (!acc.masterKey || !acc.meses) continue;
+                    for (const [monthKey, val] of Object.entries(acc.meses)) {
+                        if (!val || Math.abs(val) < 0.001) continue;
+                        if (!byMonth[monthKey]) byMonth[monthKey] = {};
+                        // Soma caso haja múltiplas contas do PDF → mesmo masterKey
+                        byMonth[monthKey][acc.masterKey] =
+                            parseFloat(((byMonth[monthKey][acc.masterKey] || 0) + val).toFixed(2));
+                    }
+                }
+
+                const months = Object.keys(byMonth);
+                if (months.length === 0) {
+                    alert('Nenhum valor mapeado encontrado. Configure o vínculo automático primeiro.');
+                    if (btn) { btn.textContent = 'Confirmar Importação'; btn.disabled = false; }
+                    return;
+                }
+
+                let savedCount = 0;
+                for (const monthKey of months) {
+                    const ok = await store.saveMonthData(client.id, monthKey, byMonth[monthKey]);
+                    if (ok) savedCount++;
+                }
+
+                if (btn) { btn.textContent = 'Confirmar Importação'; btn.disabled = false; }
+
+                if (savedCount > 0) {
+                    const importedPeriod = months[0];
+                    this.pendingImport = null;
+                    this.resetDropZone();
+                    await store.reloadClientPeriods(client.id);
+                    this.requireClient('fc-overview');
+                    alert(`✅ ${savedCount} mês(es) importados com sucesso!\n(${months.join(', ')})`);
+                } else {
+                    alert('❌ Erro ao salvar no banco de dados. Tente novamente.');
+                }
+                return;
+            }
+
+            // ─── Formato Mês Único (legacy) ────────────────────────────────
+            // Converte array de contas para { masterKey: valor } se mapeado
+            let dataToSave;
+            if (hasMappings) {
+                dataToSave = {};
+                for (const acc of accounts) {
+                    if (acc.masterKey) {
+                        const val = acc.a_receber || acc.a_pagar || 0;
+                        dataToSave[acc.masterKey] = val;
+                    }
+                }
+            } else {
+                dataToSave = accounts; // sem mapeamento — salva bruto (compatibilidade)
+            }
+
+            const success = await store.saveMonthData(client.id, this.pendingImport.period, dataToSave);
+
+            if (btn) { btn.textContent = 'Confirmar Importação'; btn.disabled = false; }
 
             if (success) {
                 const importedPeriod = this.pendingImport.period;
                 this.pendingImport = null;
                 this.resetDropZone();
-                
-                // Força recarregar do Firestore para garantir exibição
                 await store.reloadClientPeriods(client.id);
-                
                 this.requireClient('fc-overview');
                 alert(`✅ Dados de ${importedPeriod} importados com sucesso!`);
             } else {
                 alert('❌ Erro ao salvar no banco de dados. Tente novamente.');
             }
+
         } catch (err) {
-            if (btn) { btn.textContent = originalText; btn.disabled = false; }
+            if (btn) { btn.textContent = 'Confirmar Importação'; btn.disabled = false; }
             console.error('Erro ao confirmar importação:', err);
             alert('❌ Erro ao salvar: ' + err.message);
         }

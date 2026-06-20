@@ -263,6 +263,16 @@ window.PdfMapper = {
             .replace(/\s+/g, ' ').trim();
     },
 
+    // Remove prefixo numérico do início da descrição do Excel
+    // Ex: "2.1.01. Receita em Dinheiro " → "receita em dinheiro"
+    //     "1.1. Receita com Vendas"     → "receita com vendas"
+    _normalizeDesc(str) {
+        return (str || '')
+            .replace(/^\d+(?:\.\d+)*\.?\s*/, '') // remove prefixo como "2.1.01."
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase().replace(/\s+/g, ' ').trim();
+    },
+
     _similarity(a, b) {
         const wa = this._normalize(a).split(' ').filter(Boolean);
         const wb = this._normalize(b).split(' ').filter(Boolean);
@@ -273,11 +283,24 @@ window.PdfMapper = {
 
     _findMasterByDesc(excelDesc) {
         if (!window.MASTER_ACCOUNTS) return null;
+
+        // Normaliza: remove prefixo numérico do Excel ("2.1.01. Fornecedores" → "fornecedores")
+        const cleanDesc = this._normalizeDesc(excelDesc);
+        if (!cleanDesc) return null;
+
         let best = 0, match = null, group = null;
         for (const m of window.MASTER_ACCOUNTS) {
             if (m.codigo === 'HEADER') { group = m.descricao; continue; }
-            const score = this._similarity(excelDesc, m.descricao);
-            if (score > best && score >= 0.45) { best = score; match = { ...m, group }; }
+
+            // 1. Correspondência EXATA (após normalizar) — Visão Geral usa mesma descrição do Excel
+            const normMaster = this._normalizeDesc(m.descricao);
+            if (normMaster === cleanDesc) {
+                return { ...m, group }; // retorno imediato, match perfeito
+            }
+
+            // 2. Fuzzy como fallback (mínimo 60% de similaridade)
+            const score = this._similarity(cleanDesc, m.descricao);
+            if (score > best && score >= 0.60) { best = score; match = { ...m, group }; }
         }
         return match;
     },
