@@ -119,8 +119,9 @@ window.fcApp = {
             }
 
             // ── 3. Constrói byMonth a partir dos valores do PDF ────────────
-            // Usa TODOS os meses do PDF (não depende de ler valores do Excel)
+            // Usa APENAS os meses detectados no cabeçalho do PDF (filtra coluna Total)
             setStatus('⏳ Montando dados por mês...', '#f59e0b');
+            const validMonths = new Set(pdfResult.meses || []); // ex: ['2026-01', '2026-02', ...]
             const byMonth    = {}; // { '2026-01': { masterKey: valor } }
             let   totalLinks = 0;
 
@@ -129,6 +130,8 @@ window.fcApp = {
                 if (!conta?.meses) continue;
 
                 for (const [monthKey, val] of Object.entries(conta.meses)) {
+                    // Ignora coluna Total — só processa meses válidos do cabeçalho
+                    if (validMonths.size > 0 && !validMonths.has(monthKey)) continue;
                     if (val === undefined || val === null || Math.abs(val) < 0.001) continue;
                     if (!byMonth[monthKey]) byMonth[monthKey] = {};
                     byMonth[monthKey][masterKey] = parseFloat(

@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.23.37",
+    "version":  "11.23.38",
     "platform_version":  "11.23.6",
     "date":  "2026-06-20",
-    "last_change":  "Fix: refreshDashboard mescla realizado Firestore (masterKey:valor) com manualEntries e passa para FinancialEngine — valores importados agora aparecem nas linhas corretas da Visao Geral",
-    "build":  "20260620.37"
+    "last_change":  "Fix: filtra coluna Total do PDF usando pdfResult.meses como lista de meses validos — somente meses detectados no cabecalho sao importados, coluna Total ignorada",
+    "build":  "20260620.38"
 }
