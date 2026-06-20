@@ -209,19 +209,22 @@ window.PDFParser = {
 
     // ─── Agrupa itens por linha com tolerância ──────────────────────────────
 
-    _groupByLines(items, tolerance = 4) {
+    _groupByLines(items, tolerance = 3) {
         const sorted = [...items].sort((a, b) => a.y !== b.y ? a.y - b.y : a.x - b.x);
-        const groups = [];
-        let current  = [];
-        let lastY    = -9999;
+        const groups    = [];
+        let current     = [];
+        let groupStartY = -9999; // Y do PRIMEIRO item do grupo atual (não do último)
 
         for (const item of sorted) {
-            if (Math.abs(item.y - lastY) > tolerance && current.length > 0) {
+            // Compara com o início do grupo (não com o item anterior)
+            // Evita "efeito corrente" onde Y=100, 103, 106, 109 todos se fundem
+            if (current.length > 0 && Math.abs(item.y - groupStartY) > tolerance) {
                 groups.push(current);
                 current = [];
+                groupStartY = item.y;
             }
+            if (current.length === 0) groupStartY = item.y;
             current.push(item);
-            lastY = item.y;
         }
         if (current.length) groups.push(current);
         return groups;
