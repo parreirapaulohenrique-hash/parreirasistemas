@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.23.31",
+    "version":  "11.23.32",
     "platform_version":  "11.23.6",
     "date":  "2026-06-20",
-    "last_change":  "Fix: calibracao usa match exato por descricao (Excel=Visao Geral); confirmImport salva { masterKey: valor } por mes no formato correto para financial-engine",
-    "build":  "20260620.31"
+    "last_change":  "deploy.ps1 v6.0: merge automatico staging->main antes do push; nao exige mais merge manual a cada deploy",
+    "build":  "20260620.32"
 }
