@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.23.28",
+    "version":  "11.23.29",
     "platform_version":  "11.23.6",
     "date":  "2026-06-20",
-    "last_change":  "Vincular automático por valor: PdfMapper calibra PDF x Excel coluna C, consolida múltiplos CCs, preserva mapeamento no Firestore",
-    "build":  "20260620.28"
+    "last_change":  "Fix pdf-parser v4: Y tolerance line grouping, token scanning para meses, concat fallback para codigos — compatibilidade com PDF.js browser",
+    "build":  "20260620.29"
 }
