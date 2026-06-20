@@ -7,7 +7,7 @@
          acessado via URL de tenant (/ltdistribuidora, /outraempresa, etc.) -->
     <base href="/platform/modules/dispatch/">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>[HOMOLOG] ParreiraLog | Cotação de Fretes</title>
+    <title>ParreiraLog | Cotação de Fretes</title>
 
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#3b82f6">
@@ -250,6 +250,8 @@
             if (h.includes('staging') || h.includes('localhost') || h === '127.0.0.1') {
                 var b = document.getElementById('stagingBanner');
                 if (b) { b.style.display = 'flex'; document.body.style.paddingTop = '34px'; }
+                // Adiciona prefixo [HOMOLOG] ao título da aba
+                document.title = '[HOMOLOG] ' + document.title;
             }
         })();
     </script>
