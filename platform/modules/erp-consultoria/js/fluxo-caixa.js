@@ -108,11 +108,13 @@ window.fcApp = {
                     if (isNaN(val) || Math.abs(val) < 0.01) continue;
 
                     // ── Acha conta do PDF onde valor deste mês bate ──────
-                    const tol = Math.max(0.02, Math.abs(val) * 0.0005);
+                    // IMPORTANTE: ignora sinal (Excel positivo, PDF negativo para despesas)
+                    const absVal = Math.abs(val);
+                    const tol    = Math.max(0.02, absVal * 0.0005);
                     const pdfConta = pdfResult.contas.find(c =>
                         c.meses &&
                         c.meses[monthKey] !== undefined &&
-                        Math.abs(c.meses[monthKey] - val) <= tol
+                        Math.abs(Math.abs(c.meses[monthKey]) - absVal) <= tol
                     );
 
                     if (!pdfConta) { totalSkip++; continue; }

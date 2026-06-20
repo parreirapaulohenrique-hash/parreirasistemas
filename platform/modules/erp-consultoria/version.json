@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.23.34",
+    "version":  "11.23.35",
     "platform_version":  "11.23.6",
     "date":  "2026-06-20",
-    "last_change":  "Fix: botao Importar PDF 834 movido para a view-fc-overview correta (com .view-header-bar) que o consolidateFCViews seleciona",
-    "build":  "20260620.34"
+    "last_change":  "Fix matching: comparacao por valor absoluto (Math.abs) — Excel tem despesas positivas, PDF negativas; agora ignora sinal e vincula corretamente",
+    "build":  "20260620.35"
 }
