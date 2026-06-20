@@ -317,12 +317,18 @@
                         return;
                     }
 
-                    // ── Redespacho: preservar e somar ao frete principal (v3.14.9) ──────────
-                    // Se o despacho tem redespacho (redespTotal > 0) mas a regra atual
-                    // não prevê redespacho, calculamos SÓ o frete principal e adicionamos
-                    // o redespTotal existente — evita mainTotal negativo E corrije o mínimo.
+                    // ── Redespacho: preservar e somar ao frete principal (v3.14.10) ──────────
+                    // ruleHasRedesp = TRUE quando:
+                    //   a) rule.redespacho aponta para uma transportadora (não é 'SEM REDESPACHO')
+                    //   b) OU rule.percentualRedespacho/minimoRedespacho > 0 (calcFreight JÁ inclui redespacho)
+                    // Casos onde ruleHasRedesp=FALSE: calcFreight NÃO inclui redespacho →
+                    //   preservamos o redespTotal existente para evitar mainTotal negativo.
                     const dispatchHasRedesp = (d.redespTotal != null && parseFloat(d.redespTotal) > 0);
-                    const ruleHasRedesp     = !!(rule.redespacho && rule.redespacho.toUpperCase() !== 'SEM REDESPACHO');
+                    const ruleHasRedesp = !!(
+                        (rule.redespacho && rule.redespacho.toUpperCase() !== 'SEM REDESPACHO') ||
+                        ((rule.percentualRedespacho || 0) > 0) ||
+                        ((rule.minimoRedespacho || 0) > 0)
+                    );
 
                     const nfValue      = parseFloat(d.nfValue || 0);
                     const weight       = parseFloat(d.weight  || 0);

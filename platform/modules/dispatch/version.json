@@ -1,8 +1,8 @@
 {
-    "version": "3.14.9",
+    "version": "3.14.10",
     "environment": "production",
-    "change": "v3.14.9 - FIX: fix_viopex redespacho — substitui 'pular NF' por 'recalcular frete principal + preservar redespTotal existente'. Quando dispatch tem redespTotal > 0 mas regra atual nao tem redespacho, calcula: newTotal = calcFreight(regra) + redespTotal_preservado. Evita mainTotal negativo E aplica corretamente o minimo da regra. Preview mostra badge roxo '🔄 +redespacho R$ X' nas linhas afetadas.",
-    "lastUpdate": "2026-06-19",
-    "build": "20260619-prod-v3.14.9",
-    "deployedAt": "2026-06-19"
+    "change": "v3.14.10 - FIX CRITICO: fix_viopex ruleHasRedesp — regras com percentualRedespacho>0 ou minimoRedespacho>0 agora sao detectadas como 'tem redespacho' mesmo quando dropdown=Sem Redespacho. Evita dupla contagem do redespacho para rotas como DOM ELISEU onde calcFreight ja inclui o custo de redespacho via percentualRedespacho=2.5% e a v3.14.9 adicionava redespTotal por cima. ULIANOPOLIS (sem percentualRedespacho) continua usando o path de preservacao correto.",
+    "lastUpdate": "2026-06-20",
+    "build": "20260620-prod-v3.14.10",
+    "deployedAt": "2026-06-20"
 }
