@@ -7386,12 +7386,13 @@
                             <!-- Upload Excel para calibração -->
                             <div style="border:1.5px dashed #10b981;border-radius:8px;padding:1.25rem;text-align:center;">
                                 <span class="material-icons-round" style="font-size:2rem;color:#10b981;">table_view</span>
-                                <p style="font-size:0.82rem;margin:0.5rem 0;">2. Upload do Excel RQ.05 (mesmo período do PDF)</p>
-                                <input type="file" id="excel-calib-input" accept=".xlsx,.xls" hidden>
+                                <p style="font-size:0.82rem;margin:0.5rem 0;">2. Upload do Excel (ex: <em>excel janeiro a maio.xlsx</em>)</p>
+                                <input type="file" id="excel-calib-input" accept=".xlsx,.xls" hidden
+                                    onchange="fcApp.handleExcelCalib(this.files[0])">
                                 <button class="btn btn-secondary" style="font-size:0.8rem;" onclick="document.getElementById('excel-calib-input').click()">
                                     Selecionar Excel
                                 </button>
-                                <div style="font-size:0.75rem;margin-top:0.5rem;color:var(--text-secondary);">O sistema compara valores da coluna C com os do PDF</div>
+                                <div id="calib-excel-status" style="font-size:0.75rem;margin-top:0.5rem;color:var(--text-secondary);">Uma aba por mês (JANEIRO, FEVEREIRO...) — coluna B=descrição, C=valor</div>
                             </div>
                         </div>
                         <div id="calib-preview-container" style="display:none;"></div>

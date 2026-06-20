@@ -1683,26 +1683,35 @@ window.fcApp = {
             alert('Por favor, selecione um arquivo Excel (.xlsx).');
             return;
         }
+        if (!this._calibData || !this._calibData.pdfContas) {
+            alert('Faça o upload do PDF primeiro, depois do Excel.');
+            return;
+        }
 
-        const btn = document.getElementById('btn-start-calib');
-        if (btn) { btn.disabled = true; btn.textContent = 'Lendo Excel...'; }
+        const excelStatusEl = document.getElementById('calib-excel-status');
+        if (excelStatusEl) { excelStatusEl.textContent = 'Lendo Excel...'; excelStatusEl.style.color = 'var(--text-secondary)'; }
 
         try {
-            const excelRows = await window.PdfMapper.readExcel(file);
-            if (!this._calibData || !this._calibData.pdfAccounts) {
-                alert('Faça o upload do PDF primeiro, depois do Excel.');
-                if (btn) { btn.disabled = false; btn.textContent = 'Iniciar Calibração'; }
-                return;
+            // Lê todas as abas de meses do Excel
+            const excelByMonth = await window.PdfMapper.readExcelMultiMonth(file);
+            const mesesLidos = Object.keys(excelByMonth).length;
+
+            if (excelStatusEl) {
+                excelStatusEl.textContent = `✅ ${mesesLidos} meses lidos do Excel`;
+                excelStatusEl.style.color = '#10b981';
             }
 
-            const calibResult = window.PdfMapper.calibrate(this._calibData.pdfAccounts, excelRows);
+            // Calibra: para cada conta do PDF, busca valor igual em qualquer mês do Excel
+            const calibResult = window.PdfMapper.calibrateMultiMonth(
+                this._calibData.pdfContas,
+                excelByMonth
+            );
             this.showCalibrationPreview(calibResult);
 
         } catch (err) {
             console.error('Erro na calibração:', err);
             alert('Erro ao processar Excel: ' + err.message);
-        } finally {
-            if (btn) { btn.disabled = false; btn.textContent = 'Iniciar Calibração'; }
+            if (excelStatusEl) { excelStatusEl.textContent = '❌ Erro: ' + err.message; excelStatusEl.style.color = '#ef4444'; }
         }
     },
 
@@ -1713,11 +1722,23 @@ window.fcApp = {
         try {
             const buf    = await file.arrayBuffer();
             const result = await window.PDFParser.parseMaxdataPDF({ data: buf });
-            this._calibData = { pdfAccounts: result.contas, periodo: result.periodo };
+            // Salva contas com formato multi-mês
+            this._calibData = {
+                pdfContas: result.contas || result.contasArray || [],
+                periodo:   result.periodo,
+                meses:     result.meses || []
+            };
+            const totalContas = this._calibData.pdfContas.length;
+            const periodRange = result.periodoFim
+                ? `${result.periodoInicio} → ${result.periodoFim}`
+                : result.periodo;
             if (status) {
-                status.textContent = `✅ ${result.contas.length} contas extraídas — Período: ${result.periodo}`;
+                status.textContent = `✅ ${totalContas} contas extraídas | Período: ${periodRange}`;
                 status.style.color = '#10b981';
             }
+            // Habilita seleção de Excel
+            const excelBtn = document.querySelector('button[onclick*="excel-calib-input"]');
+            if (excelBtn) excelBtn.disabled = false;
         } catch (err) {
             if (status) { status.textContent = '❌ Erro: ' + err.message; status.style.color = '#ef4444'; }
         }
@@ -1728,55 +1749,75 @@ window.fcApp = {
         if (!container) return;
 
         const { matched, unmatched, conflicts } = calibResult;
+        const allLinked = unmatched.length === 0 && conflicts.length === 0;
 
+        // === SEÇÃO: Mapeadas automaticamente ===
         let html = `
             <div style="margin:1rem 0;padding:1rem;background:rgba(16,185,129,0.08);border-radius:8px;border-left:3px solid #10b981;">
                 <strong style="color:#10b981;">✅ ${matched.length} contas mapeadas por valor</strong>
-                <table class="data-table" style="margin-top:0.75rem;font-size:0.8rem;">
-                    <thead><tr><th>Código PDF</th><th>Descrição PDF</th><th>→ Conta no Sistema</th><th>Valor</th></tr></thead>
+                <table class="data-table" style="margin-top:0.75rem;font-size:0.79rem;">
+                    <thead><tr><th>Código PDF</th><th>Descrição PDF</th><th>Mês que bateu</th><th>→ Conta no Sistema</th></tr></thead>
                     <tbody>${matched.map(m => `
                         <tr>
                             <td>${m.pdf.codigo}</td>
                             <td>${m.pdf.descricao}</td>
-                            <td style="color:#10b981;">${m.master ? m.master.descricao : '<em>Descrição não encontrada</em>'}</td>
-                            <td class="text-right">${this.formatCurrency(m.pdf.valor)}</td>
+                            <td style="color:#10b981;font-weight:600;">${m.monthKey || ''}</td>
+                            <td style="color:#10b981;">${m.master ? m.master.descricao : m.excel.descricao}</td>
                         </tr>`).join('')}
                     </tbody>
                 </table>
             </div>`;
 
+        // === SEÇÃO: Sem correspondência ===
         if (unmatched.length > 0) {
             html += `
             <div style="margin:1rem 0;padding:1rem;background:rgba(245,158,11,0.08);border-radius:8px;border-left:3px solid #f59e0b;">
                 <strong style="color:#f59e0b;">⚠️ ${unmatched.length} sem correspondência por valor</strong>
-                <table class="data-table" style="margin-top:0.75rem;font-size:0.8rem;">
-                    <thead><tr><th>Código PDF</th><th>Descrição PDF</th><th>Valor</th><th>Vincular a</th></tr></thead>
-                    <tbody>${unmatched.map((acc, idx) => `
+                <p style="font-size:0.78rem;margin:0.3rem 0 0.75rem;color:var(--text-secondary);">Vincule manualmente cada conta abaixo:</p>
+                <table class="data-table" style="font-size:0.79rem;">
+                    <thead><tr><th>Código PDF</th><th>Descrição PDF</th><th>Maior valor encontrado</th><th>Vincular a</th></tr></thead>
+                    <tbody>${unmatched.map((acc, idx) => {
+                        const maxVal = Math.max(...Object.values(acc.meses || {}).map(Math.abs));
+                        return `
                         <tr>
                             <td>${acc.codigo}</td>
                             <td>${acc.descricao}</td>
-                            <td class="text-right">${this.formatCurrency(acc.a_pagar || acc.a_receber)}</td>
+                            <td class="text-right">${maxVal > 0 ? this.formatCurrency(maxVal) : '—'}</td>
                             <td>
-                                <select id="manual-link-${idx}" data-codigo="${acc.codigo}" style="font-size:0.75rem;padding:0.25rem;width:100%;">
+                                <select id="manual-link-${idx}" data-codigo="${acc.codigo}"
+                                    style="font-size:0.75rem;padding:0.25rem;width:100%;">
                                     <option value="">-- Selecionar conta --</option>
                                     ${this._getMasterOptions()}
                                 </select>
                             </td>
-                        </tr>`).join('')}
+                        </tr>`;
+                    }).join('')}
                     </tbody>
                 </table>
             </div>`;
         }
 
+        // === SEÇÃO: Conflitos ===
         if (conflicts.length > 0) {
-            html += `<div style="margin:1rem 0;padding:1rem;background:rgba(239,68,68,0.08);border-radius:8px;border-left:3px solid #ef4444;"><strong style="color:#ef4444;">🔀 ${conflicts.length} conflito(s) de valor (múltiplas linhas com o mesmo valor)</strong><p style="font-size:0.8rem;margin-top:0.5rem;">Esses vínculos precisam ser configurados manualmente.</p></div>`;
+            html += `<div style="margin:1rem 0;padding:1rem;background:rgba(239,68,68,0.08);border-radius:8px;border-left:3px solid #ef4444;">
+                <strong style="color:#ef4444;">🔀 ${conflicts.length} conflito(s): valor repetido em múltiplas linhas do Excel</strong>
+                <p style="font-size:0.78rem;margin-top:0.5rem;">Configure manualmente na seção acima.</p></div>`;
         }
 
-        html += `<div style="display:flex;justify-content:flex-end;gap:1rem;margin-top:1.5rem;">
+        // === BOTÕES ===
+        const lockBtn = allLinked
+            ? `<button class="btn" style="background:#10b981;color:#fff;" onclick="fcApp.confirmCalibration([], true)">
+                   🔒 Salvar e TRAVAR Mapeamento
+               </button>`
+            : '';
+
+        html += `<div style="display:flex;justify-content:flex-end;gap:1rem;margin-top:1.5rem;align-items:center;">
+            ${allLinked ? '<span style="color:#10b981;font-size:0.82rem;">Todas as contas vinculadas! Clique em Travar para finalizar.</span>' : ''}
             <button class="btn btn-secondary" onclick="fcApp.cancelCalibration()">Cancelar</button>
-            <button class="btn btn-primary" onclick="fcApp.confirmCalibration(${JSON.stringify(unmatched.map((_, i) => i))})">
+            <button class="btn btn-primary" onclick="fcApp.confirmCalibration([], false)">
                 <span class="material-icons-round" style="font-size:1rem;vertical-align:middle;">save</span> Salvar Mapeamento
             </button>
+            ${lockBtn}
         </div>`;
 
         this._pendingCalibResult = calibResult;
@@ -1796,7 +1837,7 @@ window.fcApp = {
         return opts;
     },
 
-    async confirmCalibration(unmatchedIndices) {
+    async confirmCalibration(_, lock = false) {
         const client = store.getActiveClient();
         if (!client || !this._pendingCalibResult) return;
 
@@ -1811,20 +1852,26 @@ window.fcApp = {
         const mapping = window.PdfMapper.buildMapping(this._pendingCalibResult, manualResolutions);
         const total   = Object.keys(mapping).length;
 
-        const btn = document.querySelector('#calib-preview-container .btn-primary');
-        if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
+        const btns = document.querySelectorAll('#calib-preview-container button');
+        btns.forEach(b => { b.disabled = true; });
 
-        const ok = await window.PdfMapper.saveMapping(client.id, mapping);
+        const ok = await window.PdfMapper.saveMapping(client.id, mapping, lock);
         if (ok) {
             const badge = document.getElementById('import-mapping-badge');
-            if (badge) { badge.textContent = `✅ ${total} vínculos configurados`; badge.style.color = '#10b981'; }
-
-            // Volta para o painel de importação normal
+            if (badge) {
+                badge.textContent = lock
+                    ? `🔒 ${total} vínculos TRAVADOS`
+                    : `✅ ${total} vínculos configurados`;
+                badge.style.color = lock ? '#10b981' : 'var(--success, #10b981)';
+            }
             this.cancelCalibration();
-            alert(`✅ Mapeamento salvo! ${total} vínculos configurados.\nAgora você pode importar PDFs normalmente.`);
+            const msg = lock
+                ? `🔒 Mapeamento TRAVADO! ${total} vínculos permanentes.\nImportações futuras serão automáticas.`
+                : `✅ Mapeamento salvo! ${total} vínculos configurados.`;
+            alert(msg);
         } else {
             alert('❌ Erro ao salvar o mapeamento.');
-            if (btn) { btn.disabled = false; btn.textContent = 'Salvar Mapeamento'; }
+            btns.forEach(b => { b.disabled = false; });
         }
     },
 
