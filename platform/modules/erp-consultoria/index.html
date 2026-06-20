@@ -6935,9 +6935,60 @@
         <div class="view-header-bar">
             <span class="material-icons-round">dashboard</span>
             <h2>Fluxo de Caixa — Visão Geral</h2>
-            <button class="btn btn-secondary btn-icon" onclick="fcApp.backToClients()" style="margin-left:auto;" title="Trocar cliente">
+            <!-- Botão Importar PDF 834 direto na Visão Geral -->
+            <button class="btn btn-secondary" id="vg-import-btn"
+                onclick="fcApp.showVGImportPanel()"
+                style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:0.82rem;">
+                <span class="material-icons-round" style="font-size:1rem;">upload_file</span>
+                Importar PDF 834
+            </button>
+            <button class="btn btn-secondary btn-icon" onclick="fcApp.backToClients()" title="Trocar cliente">
                 <span class="material-icons-round">swap_horiz</span>
             </button>
+        </div>
+        <!-- Painel inline de importação -->
+        <div id="vg-import-panel" style="display:none; padding:0 1.5rem;">
+            <div style="background:var(--bg-card,#1e293b); border:1.5px solid var(--primary); border-radius:10px; padding:1.25rem; margin-bottom:1rem;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
+                    <h4 style="margin:0; color:var(--primary); display:flex; align-items:center; gap:8px;">
+                        <span class="material-icons-round">link</span>
+                        Vincular PDF 834 → Visão Geral
+                    </h4>
+                    <button class="btn btn-ghost" style="padding:4px 8px; font-size:0.8rem;"
+                        onclick="fcApp.hideVGImportPanel()">&#x2715; Fechar</button>
+                </div>
+                <p style="font-size:0.82rem; color:var(--text-secondary); margin:0 0 1rem 0;">
+                    Selecione o PDF 834 e o Excel. O sistema compara os valores, identifica cada linha
+                    e lança diretamente na Visão Geral por mês.
+                </p>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                    <div style="border:1.5px dashed var(--primary); border-radius:8px; padding:1rem; text-align:center; cursor:pointer;"
+                        onclick="document.getElementById('vg-pdf-input').click()">
+                        <span class="material-icons-round" style="font-size:2rem; color:var(--primary);">picture_as_pdf</span>
+                        <p style="font-size:0.8rem; margin:0.4rem 0 0 0; color:var(--text-secondary);">PDF Maxdata 834</p>
+                        <p id="vg-pdf-name" style="font-size:0.75rem; color:#10b981; margin:0.2rem 0 0 0;">Nenhum arquivo</p>
+                        <input type="file" id="vg-pdf-input" accept=".pdf" hidden
+                            onchange="fcApp.handleVGPdfSelect(this.files[0])">
+                    </div>
+                    <div style="border:1.5px dashed #10b981; border-radius:8px; padding:1rem; text-align:center; cursor:pointer;"
+                        onclick="document.getElementById('vg-excel-input').click()">
+                        <span class="material-icons-round" style="font-size:2rem; color:#10b981;">table_chart</span>
+                        <p style="font-size:0.8rem; margin:0.4rem 0 0 0; color:var(--text-secondary);">Excel (abas por mês)</p>
+                        <p id="vg-excel-name" style="font-size:0.75rem; color:#10b981; margin:0.2rem 0 0 0;">Nenhum arquivo</p>
+                        <input type="file" id="vg-excel-input" accept=".xlsx,.xls" hidden
+                            onchange="fcApp.handleVGExcelSelect(this.files[0])">
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:1rem;">
+                    <button class="btn btn-primary" id="vg-import-run-btn"
+                        onclick="fcApp.importarPDFNaVisaoGeral()"
+                        style="display:flex; align-items:center; gap:6px;">
+                        <span class="material-icons-round" style="font-size:1rem;">sync</span>
+                        Vincular e Importar
+                    </button>
+                    <span id="vg-import-status" style="font-size:0.82rem; color:var(--text-secondary);"></span>
+                </div>
+            </div>
         </div>
         <div style="padding:1.5rem;">
             <!-- Filtros -->

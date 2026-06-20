@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.23.33",
+    "version":  "11.23.34",
     "platform_version":  "11.23.6",
     "date":  "2026-06-20",
-    "last_change":  "Importar PDF 834 direto na Visao Geral: botao + painel inline, compara PDF x Excel por valor, lanca nas linhas com mesma descricao, salva por mes no Firestore — sem tela separada, sem calibracao, sem confirmar",
-    "build":  "20260620.33"
+    "last_change":  "Fix: botao Importar PDF 834 movido para a view-fc-overview correta (com .view-header-bar) que o consolidateFCViews seleciona",
+    "build":  "20260620.34"
 }
