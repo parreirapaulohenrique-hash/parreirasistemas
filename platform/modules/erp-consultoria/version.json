@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.23.29",
+    "version":  "11.23.30",
     "platform_version":  "11.23.6",
     "date":  "2026-06-20",
-    "last_change":  "Fix pdf-parser v4: Y tolerance line grouping, token scanning para meses, concat fallback para codigos — compatibilidade com PDF.js browser",
-    "build":  "20260620.29"
+    "last_change":  "Fix pdf-parser: _groupByLines usava lastY causando efeito corrente — trocado para groupStartY, linhas adjacentes agora separadas corretamente",
+    "build":  "20260620.30"
 }
