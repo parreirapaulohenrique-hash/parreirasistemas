@@ -1,8 +1,8 @@
 {
-    "version": "3.14.10",
+    "version": "3.14.11",
     "environment": "production",
-    "change": "v3.14.10 - FIX CRITICO: fix_viopex ruleHasRedesp — regras com percentualRedespacho>0 ou minimoRedespacho>0 agora sao detectadas como 'tem redespacho' mesmo quando dropdown=Sem Redespacho. Evita dupla contagem do redespacho para rotas como DOM ELISEU onde calcFreight ja inclui o custo de redespacho via percentualRedespacho=2.5% e a v3.14.9 adicionava redespTotal por cima. ULIANOPOLIS (sem percentualRedespacho) continua usando o path de preservacao correto.",
+    "change": "v3.14.11 - URGENTE FIX: Banner de homologacao estava hardcoded (display:flex) em index.html sendo levado para producao a cada merge staging->main. Banner agora oculto por padrao (display:none) e exibido APENAS quando hostname contem 'staging' ou 'localhost' via IIFE JavaScript. Producao nao exibe mais o banner amarelo.",
     "lastUpdate": "2026-06-20",
-    "build": "20260620-prod-v3.14.10",
+    "build": "20260620-prod-v3.14.11",
     "deployedAt": "2026-06-20"
 }
