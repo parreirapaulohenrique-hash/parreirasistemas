@@ -8,6 +8,164 @@ window.fcApp = {
     pendingImport: null,
     manualEntries: {},
 
+    // ── Importação direta na Visão Geral ───────────────────────────────────
+    _vgPdfFile:   null,
+    _vgExcelFile: null,
+
+    showVGImportPanel() {
+        const panel = document.getElementById('vg-import-panel');
+        if (panel) panel.style.display = 'block';
+    },
+
+    hideVGImportPanel() {
+        const panel = document.getElementById('vg-import-panel');
+        if (panel) panel.style.display = 'none';
+    },
+
+    handleVGPdfSelect(file) {
+        if (!file) return;
+        this._vgPdfFile = file;
+        const el = document.getElementById('vg-pdf-name');
+        if (el) { el.textContent = '✅ ' + file.name; el.style.color = 'var(--success)'; }
+    },
+
+    handleVGExcelSelect(file) {
+        if (!file) return;
+        this._vgExcelFile = file;
+        const el = document.getElementById('vg-excel-name');
+        if (el) { el.textContent = '✅ ' + file.name; el.style.color = '#10b981'; }
+    },
+
+    async importarPDFNaVisaoGeral() {
+        const status = document.getElementById('vg-import-status');
+        const btn    = document.getElementById('vg-import-run-btn');
+
+        const setStatus = (msg, color = 'var(--text-secondary)') => {
+            if (status) { status.textContent = msg; status.style.color = color; }
+        };
+
+        if (!this._vgPdfFile)   { setStatus('❌ Selecione o PDF 834',      '#ef4444'); return; }
+        if (!this._vgExcelFile) { setStatus('❌ Selecione o arquivo Excel', '#ef4444'); return; }
+
+        const client = store.getActiveClient();
+        if (!client) { setStatus('❌ Nenhum cliente selecionado', '#ef4444'); return; }
+
+        if (btn) { btn.disabled = true; }
+        setStatus('⏳ Lendo PDF...', '#f59e0b');
+
+        try {
+            // ── 1. Parseia o PDF 834 ───────────────────────────────────────
+            if (typeof window.PDFParser === 'undefined') throw new Error('PDF.js não carregado.');
+            const pdfBuf    = await this._vgPdfFile.arrayBuffer();
+            const pdfResult = await window.PDFParser.parseMaxdataPDF({ data: pdfBuf });
+            // pdfResult.contas = [{ codigo, descricao, meses: {'2026-01': val, ...} }]
+
+            console.log('[VGImport] PDF — contas:', pdfResult.contas.length, 'meses:', pdfResult.meses);
+            setStatus('⏳ Lendo Excel...', '#f59e0b');
+
+            // ── 2. Lê o Excel (multi-aba por mês) ─────────────────────────
+            if (typeof XLSX === 'undefined') throw new Error('SheetJS não carregado.');
+            const excelBuf  = await this._vgExcelFile.arrayBuffer();
+            const workbook  = XLSX.read(excelBuf, { type: 'array' });
+
+            const MONTH_MAP = {
+                'JANEIRO':'01','FEVEREIRO':'02','MARÇO':'03','MARCO':'03',
+                'ABRIL':'04','MAIO':'05','JUNHO':'06','JULHO':'07',
+                'AGOSTO':'08','SETEMBRO':'09','OUTUBRO':'10',
+                'NOVEMBRO':'11','DEZEMBRO':'12'
+            };
+
+            // Detecta ano pelo PDF (ex: "2026-01" → "2026")
+            const year = (pdfResult.periodoInicio || '2026-01').split('-')[0];
+
+            const byMonth    = {}; // { '2026-01': { masterKey: valor } }
+            let   totalLinks = 0;
+            let   totalSkip  = 0;
+
+            setStatus('⏳ Vinculando valores...', '#f59e0b');
+
+            // ── 3. Para cada aba do Excel (= mês) ─────────────────────────
+            for (const sheetName of workbook.SheetNames) {
+                const upper    = sheetName.toUpperCase()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+                const monthNum = MONTH_MAP[upper];
+                if (!monthNum) continue;
+
+                const monthKey = `${year}-${monthNum}`;
+                const ws       = workbook.Sheets[sheetName];
+                const rows     = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+                // Col B (idx 1) = descrição, Col C (idx 2) = valor
+                for (const row of rows) {
+                    const descRaw = String(row[1] || '').trim();
+                    const valRaw  = row[2];
+                    if (!descRaw || valRaw === '' || valRaw === undefined) continue;
+
+                    // Normaliza o valor (pode ser número ou string BR)
+                    const val = typeof valRaw === 'number'
+                        ? valRaw
+                        : parseFloat(String(valRaw).replace(/\./g, '').replace(',', '.'));
+                    if (isNaN(val) || Math.abs(val) < 0.01) continue;
+
+                    // ── Acha conta do PDF onde valor deste mês bate ──────
+                    const tol = Math.max(0.02, Math.abs(val) * 0.0005);
+                    const pdfConta = pdfResult.contas.find(c =>
+                        c.meses &&
+                        c.meses[monthKey] !== undefined &&
+                        Math.abs(c.meses[monthKey] - val) <= tol
+                    );
+
+                    if (!pdfConta) { totalSkip++; continue; }
+
+                    // ── Acha linha da Visão Geral com mesma descrição ────
+                    const master = window.PdfMapper?._findMasterByDesc(descRaw);
+                    if (!master) { totalSkip++; continue; }
+
+                    const masterKey = window.PdfMapper._buildKey(master);
+                    if (!masterKey) { totalSkip++; continue; }
+
+                    if (!byMonth[monthKey]) byMonth[monthKey] = {};
+                    // Acumula (pode haver múltiplas linhas do PDF para o mesmo masterKey)
+                    byMonth[monthKey][masterKey] = parseFloat(
+                        ((byMonth[monthKey][masterKey] || 0) + pdfConta.meses[monthKey]).toFixed(2)
+                    );
+                    totalLinks++;
+                }
+            }
+
+            if (totalLinks === 0) {
+                setStatus('⚠️ Nenhum valor foi vinculado. Verifique se PDF e Excel são do mesmo período.', '#f59e0b');
+                if (btn) btn.disabled = false;
+                return;
+            }
+
+            // ── 4. Salva no Firestore (um doc por mês) ────────────────────
+            setStatus('⏳ Salvando...', '#f59e0b');
+            const months = Object.keys(byMonth);
+            let saved = 0;
+            for (const monthKey of months) {
+                const ok = await store.saveMonthData(client.id, monthKey, byMonth[monthKey]);
+                if (ok) saved++;
+            }
+
+            // ── 5. Recarrega Visão Geral ──────────────────────────────────
+            await store.reloadClientPeriods(client.id);
+            this.hideVGImportPanel();
+            this.requireClient('fc-overview');
+
+            const msg = `✅ ${totalLinks} vínculos em ${saved} mês(es) importados!`;
+            setStatus(msg, 'var(--success)');
+            console.log('[VGImport] OK —', totalLinks, 'vínculos,', saved, 'meses, skip:', totalSkip);
+            alert(msg + (totalSkip > 0 ? `\n(${totalSkip} linhas do Excel sem correspondência no PDF)` : ''));
+
+        } catch (err) {
+            console.error('[VGImport] Erro:', err);
+            setStatus('❌ Erro: ' + err.message, '#ef4444');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    },
+
     // ── Persistência de lançamentos manuais no localStorage ────────────────
     _getEntriesKey() {
         const c = store.getActiveClient();
