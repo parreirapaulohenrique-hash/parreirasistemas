@@ -50,115 +50,119 @@ window.fcApp = {
         const client = store.getActiveClient();
         if (!client) { setStatus('❌ Nenhum cliente selecionado', '#ef4444'); return; }
 
-        if (btn) { btn.disabled = true; }
+        if (btn) btn.disabled = true;
         setStatus('⏳ Lendo PDF...', '#f59e0b');
 
         try {
-            // ── 1. Parseia o PDF 834 ───────────────────────────────────────
+            // ── 1. Parseia PDF 834 ─────────────────────────────────────────
             if (typeof window.PDFParser === 'undefined') throw new Error('PDF.js não carregado.');
             const pdfBuf    = await this._vgPdfFile.arrayBuffer();
             const pdfResult = await window.PDFParser.parseMaxdataPDF({ data: pdfBuf });
-            // pdfResult.contas = [{ codigo, descricao, meses: {'2026-01': val, ...} }]
 
-            console.log('[VGImport] PDF — contas:', pdfResult.contas.length, 'meses:', pdfResult.meses);
+            // Indexa por código para acesso O(1): { '3.2.01': { codigo, descricao, meses } }
+            const pdfByCode = {};
+            for (const conta of pdfResult.contas) {
+                if (conta.codigo) pdfByCode[conta.codigo] = conta;
+            }
+            console.log('[VGImport] PDF — contas:', pdfResult.contas.length,
+                        '| Meses:', pdfResult.meses,
+                        '| Exemplo códigos:', Object.keys(pdfByCode).slice(0, 5));
+
             setStatus('⏳ Lendo Excel...', '#f59e0b');
 
-            // ── 2. Lê o Excel (multi-aba por mês) ─────────────────────────
+            // ── 2. Lê o Excel e extrai mapeamento código → descrição ───────
             if (typeof XLSX === 'undefined') throw new Error('SheetJS não carregado.');
-            const excelBuf  = await this._vgExcelFile.arrayBuffer();
-            const workbook  = XLSX.read(excelBuf, { type: 'array' });
+            const excelBuf = await this._vgExcelFile.arrayBuffer();
+            const workbook = XLSX.read(excelBuf, { type: 'array' });
 
-            const MONTH_MAP = {
-                'JANEIRO':'01','FEVEREIRO':'02','MARÇO':'03','MARCO':'03',
-                'ABRIL':'04','MAIO':'05','JUNHO':'06','JULHO':'07',
-                'AGOSTO':'08','SETEMBRO':'09','OUTUBRO':'10',
-                'NOVEMBRO':'11','DEZEMBRO':'12'
-            };
+            // Usa a PRIMEIRA aba para extrair as descrições (são iguais em todas as abas)
+            // Col A (idx 0) = linha, Col B (idx 1) = descrição  (ajustar se necessário)
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const allRows    = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
 
-            // Detecta ano pelo PDF (ex: "2026-01" → "2026")
-            const year = (pdfResult.periodoInicio || '2026-01').split('-')[0];
+            // Extrai código da descrição: "3.2.01. Salário (CLT)" → "3.2.01"
+            const codeToMasterKey = {};
+            let debugDesc = [], debugNoCode = [], debugNoPdf = [], debugNoMaster = [];
 
+            for (const row of allRows) {
+                // Tenta Col B (idx 1) primeiro, depois Col A (idx 0)
+                const descRaw = String(row[1] || row[0] || '').trim();
+                if (!descRaw) continue;
+
+                const codeMatch = descRaw.match(/^(\d+(?:\.\d+)+)/);
+                if (!codeMatch) { debugNoCode.push(descRaw.slice(0, 30)); continue; }
+                const code = codeMatch[1]; // "3.2.01"
+
+                // Verifica se o PDF tem esse código
+                if (!pdfByCode[code]) { debugNoPdf.push(code); continue; }
+
+                // Busca o MASTER_ACCOUNTS pela descrição do Excel (strip do prefixo)
+                const master    = window.PdfMapper?._findMasterByDesc(descRaw);
+                const masterKey = master ? window.PdfMapper._buildKey(master) : null;
+
+                if (!masterKey) { debugNoMaster.push({ code, desc: descRaw.slice(0, 40) }); continue; }
+
+                codeToMasterKey[code] = masterKey;
+                debugDesc.push(`${code} → ${masterKey.split('::')[1]?.slice(0, 30)}`);
+            }
+
+            console.log('[VGImport] Mapeamentos encontrados:', Object.keys(codeToMasterKey).length);
+            console.log('[VGImport] Exemplos vinculados:', debugDesc.slice(0, 10));
+            console.log('[VGImport] Sem código válido:', debugNoCode.slice(0, 10));
+            console.log('[VGImport] Código não no PDF:', [...new Set(debugNoPdf)].slice(0, 10));
+            console.log('[VGImport] Desc sem MASTER_ACCOUNTS:', debugNoMaster.slice(0, 10));
+
+            if (Object.keys(codeToMasterKey).length === 0) {
+                setStatus('⚠️ Nenhum código do Excel bateu com o PDF. Verifique os arquivos.', '#f59e0b');
+                if (btn) btn.disabled = false;
+                return;
+            }
+
+            // ── 3. Constrói byMonth a partir dos valores do PDF ────────────
+            // Usa TODOS os meses do PDF (não depende de ler valores do Excel)
+            setStatus('⏳ Montando dados por mês...', '#f59e0b');
             const byMonth    = {}; // { '2026-01': { masterKey: valor } }
             let   totalLinks = 0;
-            let   totalSkip  = 0;
 
-            setStatus('⏳ Vinculando valores...', '#f59e0b');
+            for (const [code, masterKey] of Object.entries(codeToMasterKey)) {
+                const conta = pdfByCode[code];
+                if (!conta?.meses) continue;
 
-            // ── 3. Para cada aba do Excel (= mês) ─────────────────────────
-            for (const sheetName of workbook.SheetNames) {
-                const upper    = sheetName.toUpperCase()
-                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-                const monthNum = MONTH_MAP[upper];
-                if (!monthNum) continue;
-
-                const monthKey = `${year}-${monthNum}`;
-                const ws       = workbook.Sheets[sheetName];
-                const rows     = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-
-                // Col B (idx 1) = descrição, Col C (idx 2) = valor
-                for (const row of rows) {
-                    const descRaw = String(row[1] || '').trim();
-                    const valRaw  = row[2];
-                    if (!descRaw || valRaw === '' || valRaw === undefined) continue;
-
-                    // Normaliza o valor (pode ser número ou string BR)
-                    const val = typeof valRaw === 'number'
-                        ? valRaw
-                        : parseFloat(String(valRaw).replace(/\./g, '').replace(',', '.'));
-                    if (isNaN(val) || Math.abs(val) < 0.01) continue;
-
-                    // ── Acha conta do PDF onde valor deste mês bate ──────
-                    // IMPORTANTE: ignora sinal (Excel positivo, PDF negativo para despesas)
-                    const absVal = Math.abs(val);
-                    const tol    = Math.max(0.02, absVal * 0.0005);
-                    const pdfConta = pdfResult.contas.find(c =>
-                        c.meses &&
-                        c.meses[monthKey] !== undefined &&
-                        Math.abs(Math.abs(c.meses[monthKey]) - absVal) <= tol
-                    );
-
-                    if (!pdfConta) { totalSkip++; continue; }
-
-                    // ── Acha linha da Visão Geral com mesma descrição ────
-                    const master = window.PdfMapper?._findMasterByDesc(descRaw);
-                    if (!master) { totalSkip++; continue; }
-
-                    const masterKey = window.PdfMapper._buildKey(master);
-                    if (!masterKey) { totalSkip++; continue; }
-
+                for (const [monthKey, val] of Object.entries(conta.meses)) {
+                    if (val === undefined || val === null || Math.abs(val) < 0.001) continue;
                     if (!byMonth[monthKey]) byMonth[monthKey] = {};
-                    // Acumula (pode haver múltiplas linhas do PDF para o mesmo masterKey)
                     byMonth[monthKey][masterKey] = parseFloat(
-                        ((byMonth[monthKey][masterKey] || 0) + pdfConta.meses[monthKey]).toFixed(2)
+                        ((byMonth[monthKey][masterKey] || 0) + val).toFixed(2)
                     );
                     totalLinks++;
                 }
             }
 
+            const months = Object.keys(byMonth);
+            console.log('[VGImport] Meses com dados:', months, '| Links totais:', totalLinks);
+
             if (totalLinks === 0) {
-                setStatus('⚠️ Nenhum valor foi vinculado. Verifique se PDF e Excel são do mesmo período.', '#f59e0b');
+                setStatus('⚠️ Mapeamentos encontrados mas sem valores. Verifique os meses no PDF.', '#f59e0b');
                 if (btn) btn.disabled = false;
                 return;
             }
 
-            // ── 4. Salva no Firestore (um doc por mês) ────────────────────
-            setStatus('⏳ Salvando...', '#f59e0b');
-            const months = Object.keys(byMonth);
+            // ── 4. Salva no Firestore ──────────────────────────────────────
+            setStatus(`⏳ Salvando ${months.length} mês(es)...`, '#f59e0b');
             let saved = 0;
             for (const monthKey of months) {
                 const ok = await store.saveMonthData(client.id, monthKey, byMonth[monthKey]);
                 if (ok) saved++;
             }
 
-            // ── 5. Recarrega Visão Geral ──────────────────────────────────
+            // ── 5. Recarrega Visão Geral ───────────────────────────────────
             await store.reloadClientPeriods(client.id);
             this.hideVGImportPanel();
             this.requireClient('fc-overview');
 
-            const msg = `✅ ${totalLinks} vínculos em ${saved} mês(es) importados!`;
+            const msg = `✅ ${Object.keys(codeToMasterKey).length} contas vinculadas em ${saved} mês(es) — ${totalLinks} valores importados!`;
             setStatus(msg, 'var(--success)');
-            console.log('[VGImport] OK —', totalLinks, 'vínculos,', saved, 'meses, skip:', totalSkip);
-            alert(msg + (totalSkip > 0 ? `\n(${totalSkip} linhas do Excel sem correspondência no PDF)` : ''));
+            alert(msg);
 
         } catch (err) {
             console.error('[VGImport] Erro:', err);

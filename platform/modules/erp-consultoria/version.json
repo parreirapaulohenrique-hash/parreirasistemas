@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.23.35",
+    "version":  "11.23.36",
     "platform_version":  "11.23.6",
     "date":  "2026-06-20",
-    "last_change":  "Fix matching: comparacao por valor absoluto (Math.abs) — Excel tem despesas positivas, PDF negativas; agora ignora sinal e vincula corretamente",
-    "build":  "20260620.35"
+    "last_change":  "Rewrite: matching por CODIGO (extrai prefixo do Excel '3.2.01.' e busca diretamente no PDF) — elimina ambiguidade de valor, muito mais vinculos; valores vem do PDF para todos os meses",
+    "build":  "20260620.36"
 }
