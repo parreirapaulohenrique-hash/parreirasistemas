@@ -70,8 +70,11 @@ window.fcApp = {
             const allMatches = Array.from(document.querySelectorAll('#' + id));
             if (allMatches.length === 0) return;
 
-            // Prefere o que já tem view-header-bar (mais completo); senão pega o primeiro
-            const best = allMatches.find(el => el.querySelector('.view-header-bar')) || allMatches[0];
+            // Prefere o ÚLTIMO que tem view-header-bar (mais completo/novo);
+            // senão o último de todos (adicionado mais recentemente ao HTML)
+            const best = allMatches.reduce((acc, el) =>
+                el.querySelector('.view-header-bar') ? el : acc
+            , allMatches[0]);
 
             // Remove todos os outros duplicados
             allMatches.forEach(el => { if (el !== best) el.remove(); });
@@ -83,6 +86,7 @@ window.fcApp = {
             }
         });
     },
+
 
     init() {
         this.consolidateFCViews();
