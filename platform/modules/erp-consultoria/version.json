@@ -1,9 +1,9 @@
 ﻿{
-    "version":  "11.24.10",
+    "version":  "11.24.11",
     "name":  "Consultoria ParreiraLog",
-    "last_change":  "PARSER BUGFIX: Atribuicao de valores por proximidade de coordenadas X das colunas (incluindo Total), suportando colunas vazias e mescladas sem deslocamento.",
-    "platform_version":  "11.24.10",
+    "last_change":  "PARSER BUGFIX: Corrigido alinhamento do Total e dos meses isolando o contexto do cabecalho ( matchedAnyMonth / headerY ) no _detectMonthColumns.",
+    "platform_version":  "11.24.11",
     "date":  "2026-06-21",
     "module":  "erp-consultoria",
-    "build":  "20260621.50"
+    "build":  "20260621.51"
 }

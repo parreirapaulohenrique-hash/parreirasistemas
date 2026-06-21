@@ -1,8 +1,8 @@
 ﻿{
-    "build":  "20260621-prod-v3.14.15",
-    "version":  "3.14.15",
+    "build":  "20260621-prod-v3.14.16",
+    "version":  "3.14.16",
     "environment":  "production",
-    "change":  "v3.14.15 - FIX: Módulo Fluxo de Caixa (erp-consultoria) - Parser do PDF 834 alinhado via proximidade de coordenadas X das colunas (Jan-Mai e Total) para evitar desalinhamento de colunas vazias.",
+    "change":  "v3.14.16 - FIX: Modulo Fluxo de Caixa (erp-consultoria) - Alinhamento robusto da coluna Total isolando o contexto do cabecalho.",
     "lastUpdate":  "2026-06-21",
     "deployedAt":  "2026-06-21"
 }

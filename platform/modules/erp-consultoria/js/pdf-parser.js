@@ -406,6 +406,7 @@ window.PDFParser = {
     _detectMonthColumns(items) {
         const cols     = {};
         const MONTH_RE = /(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\/(\d{2})/gi;
+        let headerY = null;
 
         for (const item of items) {
             // Caso 1: mês vem como item SEPARADO — usa X diretamente (mais preciso)
@@ -416,6 +417,7 @@ window.PDFParser = {
                 const year      = 2000 + parseInt(directMatch[2]);
                 const monthNum  = _MONTH_NAMES.indexOf(monthName) + 1;
                 if (monthNum > 0 && !cols[monthName]) {
+                    headerY = item.y;
                     cols[monthName] = {
                         x:        item.x,   // X real do item — preciso!
                         monthKey: `${year}-${String(monthNum).padStart(2, '0')}`,
@@ -426,11 +428,13 @@ window.PDFParser = {
             }
 
             if (/^total$/i.test(item.text.trim())) {
-                cols['total'] = {
-                    x:        item.x,
-                    monthKey: 'total',
-                    label:    'Total'
-                };
+                if (headerY !== null && Math.abs(item.y - headerY) <= 10) {
+                    cols['total'] = {
+                        x:        item.x,
+                        monthKey: 'total',
+                        label:    'Total'
+                    };
+                }
                 continue;
             }
 
@@ -440,12 +444,15 @@ window.PDFParser = {
 
             const MONTH_RE_G = /(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\/(\d{2})/gi;
             let m;
+            let matchedAnyMonth = false;
             while ((m = MONTH_RE_G.exec(item.text)) !== null) {
+                matchedAnyMonth = true;
                 const monthName = m[1].toLowerCase();
                 const year      = 2000 + parseInt(m[2]);
                 const monthNum  = _MONTH_NAMES.indexOf(monthName) + 1;
                 const charOffset = m.index;
                 if (monthNum > 0 && !cols[monthName]) {
+                    headerY = item.y;
                     const tokenX = item.x + (charOffset / Math.max(totalChars, 1)) * itemWidth;
                     cols[monthName] = {
                         x:        tokenX,
@@ -455,15 +462,17 @@ window.PDFParser = {
                 }
             }
 
-            const totalMatch = /total/i.exec(item.text);
-            if (totalMatch && !cols['total']) {
-                const charOffset = totalMatch.index;
-                const tokenX = item.x + (charOffset / Math.max(totalChars, 1)) * itemWidth;
-                cols['total'] = {
-                    x:        tokenX,
-                    monthKey: 'total',
-                    label:    'Total'
-                };
+            if (matchedAnyMonth) {
+                const totalMatch = /total/i.exec(item.text);
+                if (totalMatch && !cols['total']) {
+                    const charOffset = totalMatch.index;
+                    const tokenX = item.x + (charOffset / Math.max(totalChars, 1)) * itemWidth;
+                    cols['total'] = {
+                        x:        tokenX,
+                        monthKey: 'total',
+                        label:    'Total'
+                    };
+                }
             }
         }
 
