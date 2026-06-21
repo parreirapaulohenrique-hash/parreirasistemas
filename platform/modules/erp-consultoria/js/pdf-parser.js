@@ -236,6 +236,53 @@ window.PDFParser = {
             );
         }
 
+        // ── Pós-processamento: recalcula contas-pai a partir dos filhos diretos ─
+        // O PDF.js pode agrupar linhas adjacentes (pai + filho no mesmo Y group),
+        // fazendo o pai herdar o valor do filho. A correção: bottom-up sum of
+        // direct children, começando pelos mais profundos, para garantir que
+        // pais intermediários tenham valores corretos antes de serem usados.
+        {
+            const acctMap = {}; // codigo → account
+            for (const a of contasArray) acctMap[a.codigo] = a;
+
+            // Filhos diretos de `cod`: outros códigos com prefixo "cod." sem
+            // ponto adicional (ex: filhos de "1.1" = ["1.1.01","1.1.02"] mas NÃO "1.1.01.01")
+            const getDirectChildren = (cod) => {
+                const prefix = cod + '.';
+                return contasArray.filter(a => {
+                    if (!a.codigo.startsWith(prefix)) return false;
+                    const suffix = a.codigo.slice(prefix.length);
+                    return !suffix.includes('.'); // somente filhos imediatos
+                });
+            };
+
+            // Ordena do código mais profundo para o mais raso (bottom-up)
+            const sorted = [...contasArray].sort((a, b) =>
+                b.codigo.split('.').length - a.codigo.split('.').length
+            );
+
+            for (const acct of sorted) {
+                const children = getDirectChildren(acct.codigo);
+                if (children.length === 0) continue; // conta-folha: mantém valor original
+
+                // Soma os valores mensais dos filhos diretos
+                const newMeses = {};
+                let newTotal  = 0;
+                for (const child of children) {
+                    for (const [mk, val] of Object.entries(child.meses || {})) {
+                        newMeses[mk] = parseFloat(((newMeses[mk] || 0) + val).toFixed(2));
+                    }
+                    newTotal = parseFloat((newTotal + (child.total || 0)).toFixed(2));
+                }
+
+                if (Object.keys(newMeses).length > 0) {
+                    acct.meses = newMeses; // substitui valor parsed pelo soma dos filhos
+                    if (newTotal !== 0) acct.total = newTotal;
+                    console.log(`[PDFParser834] Pai recalculado: ${acct.codigo} (${children.map(c=>c.codigo).join(', ')})`);
+                }
+            }
+        }
+
         const allMonthKeys = Object.values(monthCols).map(c => c.monthKey).sort();
         const periodo = allMonthKeys[0] || periodInfo.periodoInicio;
 
