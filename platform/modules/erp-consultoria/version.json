@@ -1,9 +1,9 @@
 ﻿{
-    "version":  "11.24.11",
+    "version":  "11.24.12",
     "name":  "Consultoria ParreiraLog",
-    "last_change":  "PARSER BUGFIX: Corrigido alinhamento do Total e dos meses isolando o contexto do cabecalho ( matchedAnyMonth / headerY ) no _detectMonthColumns.",
-    "platform_version":  "11.24.11",
+    "last_change":  "PARSER BUGFIX CRITICO: Isolamento de paginas no _groupByLines para evitar que linhas em paginas diferentes com a mesma coordenada Y se fundam.",
+    "platform_version":  "11.24.12",
     "date":  "2026-06-21",
     "module":  "erp-consultoria",
-    "build":  "20260621.51"
+    "build":  "20260621.52"
 }

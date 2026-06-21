@@ -297,15 +297,20 @@ window.PDFParser = {
     // ─── Agrupa itens por linha com tolerância ──────────────────────────────
 
     _groupByLines(items, tolerance = 3) {
-        const sorted = [...items].sort((a, b) => a.y !== b.y ? a.y - b.y : a.x - b.x);
+        const sorted = [...items].sort((a, b) => {
+            if (a.page !== b.page) return a.page - b.page;
+            if (a.y !== b.y) return a.y - b.y;
+            return a.x - b.x;
+        });
         const groups    = [];
         let current     = [];
         let groupStartY = -9999; // Y do PRIMEIRO item do grupo atual (não do último)
 
         for (const item of sorted) {
+            const pageChanged = current.length > 0 && item.page !== current[0].page;
             // Compara com o início do grupo (não com o item anterior)
             // Evita "efeito corrente" onde Y=100, 103, 106, 109 todos se fundem
-            if (current.length > 0 && Math.abs(item.y - groupStartY) > tolerance) {
+            if (current.length > 0 && (pageChanged || Math.abs(item.y - groupStartY) > tolerance)) {
                 groups.push(current);
                 current = [];
                 groupStartY = item.y;
