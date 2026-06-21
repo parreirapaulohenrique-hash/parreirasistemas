@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.24.5",
-    "platform_version":  "11.24.5",
+    "version":  "11.24.7",
+    "platform_version":  "11.24.7",
     "date":  "2026-06-21",
-    "last_change":  "PARSER FIX: _extractCode concatenacao-primeiro (1.1. + 01. = 1.1.01); descricao truncada no primeiro codigo embarcado; KPI soma apenas contas-folha (leaf-only); botao limpar dados do cliente",
-    "build":  "20260621.45"
+    "last_change":  "PARSER BUGFIX CRITICO: _smartJoin insere ponto separador entre segmentos — 1+1.01.=1.1.01. em vez de 11.01.",
+    "build":  "20260621.47"
 }
