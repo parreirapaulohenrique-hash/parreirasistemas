@@ -274,6 +274,20 @@ window.PDFParser = {
         return groups;
     },
 
+    // ─── Concatena tokens de código inserindo "." quando necessário ─────────
+    // PDF.js divide "1.1.01." em ["1", "1.01."] → join simples dá "11.01." (errado)
+    // Com smartJoin: "1" (sem dot) + "1.01." (começa com dígito) → insere "." → "1.1.01." (correto)
+    _smartJoin(tokens) {
+        let result = '';
+        for (const t of tokens) {
+            if (result.length > 0 && !result.endsWith('.') && /^\d/.test(t)) {
+                result += '.'; // insere separador faltante
+            }
+            result += t;
+        }
+        return result;
+    },
+
     // ─── Extrai código do início da linha (robusto a itens concatenados) ───
 
     _extractCode(lineItems, CODE_RE) {
@@ -281,27 +295,24 @@ window.PDFParser = {
 
         const t0 = lineItems[0].text;
 
-        // ── PRIORIDADE 1: concatenação (do maior para o menor) ─────────────
-        // Problema: PDF.js pode dividir "1.1.01." em ["1.1.", "01."]
-        // Se testarmos "1.1." sozinho primeiro, o CODE_RE vai aceitar e retornar
-        // código "1.1" errado. Ao testar concatenações ANTES, encontramos "1.1.01."
-        // que é mais específico e correto.
+        // ── PRIORIDADE 1: concatenação com smart-join (maior → menor) ──────
+        // PDF.js pode dividir "1.1.01." em ["1", "1.01."] ou ["1.", "1.01."]
+        // _smartJoin insere "." quando necessário para recompor o código correto.
         for (let len = Math.min(5, lineItems.length); len >= 2; len--) {
-            const combined = lineItems.slice(0, len).map(i => i.text).join('');
+            const tokens  = lineItems.slice(0, len).map(i => i.text);
+            const combined = this._smartJoin(tokens);
             if (CODE_RE.test(combined)) {
                 return { codigo: combined.replace(/\.$/, ''), descStart: len };
             }
         }
 
-        // ── PRIORIDADE 2: item 0 sozinho ───────────────────────────────────
+        // ── PRIORIDADE 2: item 0 sozinho ────────────────────────────────────
         if (CODE_RE.test(t0)) {
-            // Verifica se o próximo token poderia estender o código (ex: "01." após "1.1.")
-            // Se sim, já foi coberto na prioridade 1 acima.
             return { codigo: t0.replace(/\.$/, ''), descStart: 1 };
         }
 
-        // ── PRIORIDADE 3: prefixo numérico no primeiro item ────────────────
-        // Cobre caso como "1.1.01.RECEITAS COM VENDAS" num token só (sem separação)
+        // ── PRIORIDADE 3: prefixo numérico no primeiro item ─────────────────
+        // Cobre "1.1.01.RECEITAS COM VENDAS" num token só (sem separação)
         const prefixMatch = t0.match(/^(\d+(?:\.\d+)+)\./);
         if (prefixMatch) {
             return { codigo: prefixMatch[1], descStart: 0 };
