@@ -131,30 +131,53 @@ window.PDFParser = {
 
             if (allValues.length === 0) continue;
 
-            const descricao = descTokens.join(' ').trim();
+            // ── Limpa a descrição ─────────────────────────────────────────
+            // Quando PDF.js concatena tudo em um token, descTokens contém o código
+            // e os valores junto com o texto. Removemos ambos.
+            const BR_NUM_RE = /-?\d{1,3}(?:\.\d{3})*,\d{2}/g;
+            const rawDesc = descTokens.join(' ')
+                .replace(/^\d+(?:\.\d+)*\.?\s*/, '')   // remove prefixo de código
+                .replace(BR_NUM_RE, '')                  // remove valores numéricos BR
+                .replace(/\s+/g, ' ')
+                .trim();
+            const descricao = rawDesc;
 
-            // Atribui cada valor ao mês pela posição X
+            // ── Atribui valores ao mês ────────────────────────────────────
             const mesVals = {};
             let   total   = null;
 
-            for (const vi of allValues) {
-                const numVal = parseFloat(vi.text.replace(/\./g, '').replace(',', '.'));
+            if (valueItems.length > 0) {
+                // Caso normal: itens separados com X posição real
+                for (const vi of valueItems) {
+                    const numVal = parseFloat(vi.text.replace(/\./g, '').replace(',', '.'));
+                    if (vi.x > 750) { total = numVal; continue; }
 
-                if (vi.x > 750) {
-                    total = numVal;
-                    continue;
+                    let bestCol = null, bestDist = Infinity;
+                    for (const col of sortedCols) {
+                        const dist = Math.abs(vi.x - col.x);
+                        if (dist < bestDist) { bestDist = dist; bestCol = col; }
+                    }
+                    if (bestCol && bestDist < 70) {
+                        mesVals[bestCol.monthKey] = parseFloat(
+                            ((mesVals[bestCol.monthKey] || 0) + numVal).toFixed(2)
+                        );
+                    }
                 }
-
-                // Encontra a coluna de mês mais próxima
-                let bestCol = null, bestDist = Infinity;
-                for (const col of sortedCols) {
-                    const dist = Math.abs(vi.x - col.x);
-                    if (dist < bestDist) { bestDist = dist; bestCol = col; }
-                }
-
-                if (bestCol && bestDist < 70) {
-                    const key = bestCol.monthKey;
-                    mesVals[key] = parseFloat(((mesVals[key] || 0) + numVal).toFixed(2));
+            } else if (extraValues.length > 0) {
+                // Caso concatenado: PDF.js fundiu todos os tokens num só —
+                // X estimado é impreciso, então atribuímos POR ÍNDICE:
+                // 1º valor → 1º mês, 2º → 2º mês, ... último → Total
+                const numVals = extraValues.map(ev =>
+                    parseFloat(ev.text.replace(/\./g, '').replace(',', '.'))
+                );
+                for (let vi = 0; vi < numVals.length; vi++) {
+                    if (vi < sortedCols.length) {
+                        const key = sortedCols[vi].monthKey;
+                        mesVals[key] = parseFloat(((mesVals[key] || 0) + numVals[vi]).toFixed(2));
+                    } else {
+                        // Valor extra (após todos os meses) = coluna Total
+                        total = numVals[vi];
+                    }
                 }
             }
 
