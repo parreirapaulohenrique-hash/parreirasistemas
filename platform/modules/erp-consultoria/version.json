@@ -1,9 +1,9 @@
-{
-    "module":  "erp-consultoria",
+ï»¿{
+    "version":  "11.24.10",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.24.9",
-    "platform_version":  "11.24.9",
+    "last_change":  "PARSER BUGFIX: Atribuicao de valores por proximidade de coordenadas X das colunas (incluindo Total), suportando colunas vazias e mescladas sem deslocamento.",
+    "platform_version":  "11.24.10",
     "date":  "2026-06-21",
-    "last_change":  "PARSER BUGFIX RAIZ: atribuicao por indice em vez de X-proximity (6px/char estava errado) — valor[0]=Jan, valor[1]=Fev... ordem garantida pelo sort por X dentro da linha",
-    "build":  "20260621.49"
+    "module":  "erp-consultoria",
+    "build":  "20260621.50"
 }
