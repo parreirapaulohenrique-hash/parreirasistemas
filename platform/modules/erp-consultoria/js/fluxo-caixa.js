@@ -545,24 +545,57 @@ window.fcApp = {
         await store.reloadFlowTemplate(client.id);
         const yearData = store.getYearData(client.id, year);
 
-        // ── KPIs: soma todos os valores do período selecionado ────────────
+        // ── KPIs: soma apenas contas-folha (sem filhos) para evitar dupla contagem ─
+        // Contas-mãe (ex: "1.1") têm o mesmo valor que a soma dos filhos ("1.1.01", etc.)
+        // Somar ambas duplicaria/triplicaria os totais.
         let totalRealizadoEntradas = 0;
         let totalRealizadoSaidas   = 0;
         const monthlyRealizado = new Array(12).fill(0);
         const monthlyProjetado = new Array(12).fill(0);
+
+        // Determina quais códigos são pais (têm filhos no template)
+        const template = store.getFlowTemplate(client.id);
+        const codigosComFilhos = new Set();
+        if (template?.contas) {
+            const todosCodigos = template.contas.map(c => c.codigo);
+            for (const cod of todosCodigos) {
+                for (const other of todosCodigos) {
+                    if (other !== cod && other.startsWith(cod + '.')) {
+                        codigosComFilhos.add(cod); // cod é pai de other
+                        break;
+                    }
+                }
+            }
+        }
 
         for (const month of months) {
             const key   = `${year}-${month.toString().padStart(2, '0')}`;
             const mData = yearData[key];
             if (!mData?.realizado) continue;
             const real = mData.realizado;
+
+            let monthEntradas = 0;
+            let monthSaidas   = 0;
+
             if (typeof real === 'object' && !Array.isArray(real)) {
-                for (const val of Object.values(real)) {
+                for (const [cod, val] of Object.entries(real)) {
+                    // Pula contas-pai se o template tiver filhos para elas
+                    if (codigosComFilhos.has(cod)) continue;
+
                     const n = Number(val);
-                    if (n > 0) { totalRealizadoEntradas += n; monthlyRealizado[month - 1] += n; }
-                    else       { totalRealizadoSaidas += Math.abs(n); monthlyRealizado[month - 1] += n; }
+                    if (!n) continue;
+
+                    if (n > 0) {
+                        totalRealizadoEntradas += n;
+                        monthEntradas += n;
+                    } else {
+                        totalRealizadoSaidas += Math.abs(n);
+                        monthSaidas += Math.abs(n);
+                    }
                 }
             }
+            // Gráfico: saldo líquido do mês (entradas - saídas)
+            monthlyRealizado[month - 1] = monthEntradas - monthSaidas;
         }
 
         const saldoLiq   = totalRealizadoEntradas - totalRealizadoSaidas;
@@ -575,8 +608,8 @@ window.fcApp = {
         this.renderCharts(monthlyRealizado, monthlyProjetado);
 
         // ── Renderiza a tabela PDF-nativa ─────────────────────────────────
-        const template = store.getFlowTemplate(client.id);
-        this.renderPDFFlowTable(template, yearData, months, year);
+        const templateForTable = store.getFlowTemplate(client.id);
+        this.renderPDFFlowTable(templateForTable, yearData, months, year);
 
         // ── Barra de resumo (saldos) ──────────────────────────────────────
         this.renderSummaryBar({ saldoInicial: 0, totalReceitas: totalRealizadoEntradas,
