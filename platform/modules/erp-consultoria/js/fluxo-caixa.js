@@ -22,6 +22,44 @@ window.fcApp = {
         if (panel) panel.style.display = 'none';
     },
 
+    async limparDadosCliente() {
+        const client = store.getActiveClient();
+        if (!client) { alert('Nenhum cliente selecionado.'); return; }
+        if (!confirm(`⚠️ Isso vai apagar TODOS os dados importados de "${client.name || client.id}".\n\nContinuar?`)) return;
+
+        try {
+            const db      = store.db;
+            const tenant  = store.tenantId;
+            const ref     = db.collection('tenants').doc(tenant)
+                              .collection('fluxo_caixa_clientes').doc(client.id);
+
+            await ref.update({ periods: {}, flowTemplate: firebase.firestore.FieldValue.delete() });
+
+            // Limpa cache local
+            const cached = store.clientsCache.find(c => c.id === client.id);
+            if (cached) { cached.periods = {}; cached.flowTemplate = null; }
+
+            // Atualiza UI
+            const wrap = document.getElementById('pdf-flow-table-wrap');
+            if (wrap) wrap.innerHTML = '<p style="text-align:center;padding:2rem;color:var(--text-secondary);">Nenhum dado importado. Clique em "Importar PDF 834" para começar.</p>';
+
+            ['kpi-entradas','kpi-saidas','kpi-saldo-geral'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = 'R$ 0,00';
+            });
+
+            const periodoEl = document.getElementById('pdf-flow-table-periodo');
+            if (periodoEl) periodoEl.textContent = '';
+
+            console.log('[fcApp] Dados limpos para cliente:', client.id);
+            alert('✅ Dados apagados com sucesso!');
+
+        } catch (err) {
+            console.error('[fcApp] Erro ao limpar dados:', err);
+            alert('❌ Erro ao limpar: ' + err.message);
+        }
+    },
+
     handleVGPdfSelect(file) {
         if (!file) return;
         this._vgPdfFile = file;
