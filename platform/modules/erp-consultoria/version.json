@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.24.7",
-    "platform_version":  "11.24.7",
+    "version":  "11.24.8",
+    "platform_version":  "11.24.8",
     "date":  "2026-06-21",
-    "last_change":  "PARSER BUGFIX CRITICO: _smartJoin insere ponto separador entre segmentos — 1+1.01.=1.1.01. em vez de 11.01.",
-    "build":  "20260621.47"
+    "last_change":  "PARSER: pos-processamento bottom-up recalcula pai=soma(filhos diretos) — corrige valor 714849 vs 749632 no pai 1.1 quando PDF.js agrupa linhas adjacentes",
+    "build":  "20260621.48"
 }
