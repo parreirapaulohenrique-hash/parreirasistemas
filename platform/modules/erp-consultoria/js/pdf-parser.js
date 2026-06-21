@@ -48,7 +48,8 @@ window.PDFParser = {
 
         console.log('[PDFParser834] Itens extraídos:', allItems.length);
         if (allItems.length > 0) {
-            console.log('[PDFParser834] Amostra:', allItems.slice(0, 10));
+            console.log('[PDFParser834] === ITENS RAW (primeiros 60) ===');
+            console.table(allItems.slice(0, 60).map(i => ({ text: i.text.slice(0,60), x: Math.round(i.x), y: Math.round(i.y), page: i.page })));
         }
 
         return this._process834Items(allItems);
@@ -132,14 +133,24 @@ window.PDFParser = {
             if (allValues.length === 0) continue;
 
             // ── Limpa a descrição ─────────────────────────────────────────
-            // Quando PDF.js concatena tudo em um token, descTokens contém o código
-            // e os valores junto com o texto. Removemos ambos.
+            // Problema: PDF.js concatena a coluna de descrições inteira num único
+            // token (ex: "RECEITAS COM VENDAS 3.6.DESPESAS... 5.3.02.MAQUINAS...").
+            // Solução em 3 passos:
+            //   1. Remove prefixo de código (ex: "1.1.")
+            //   2. Remove valores numéricos no formato BR (ex: "749.632,93")
+            //   3. Trunca no primeiro código embarcado (ex: " 3.6." de outra conta)
             const BR_NUM_RE = /-?\d{1,3}(?:\.\d{3})*,\d{2}/g;
-            const rawDesc = descTokens.join(' ')
-                .replace(/^\d+(?:\.\d+)*\.?\s*/, '')   // remove prefixo de código
-                .replace(BR_NUM_RE, '')                  // remove valores numéricos BR
+            let rawDesc = descTokens.join(' ')
+                .replace(/^\d+(?:\.\d+)*\.?\s*/, '')   // passo 1: remove código inicial
+                .replace(BR_NUM_RE, '')                  // passo 2: remove valores BR
                 .replace(/\s+/g, ' ')
                 .trim();
+            // Passo 3: trunca no primeiro código embarcado de outra conta
+            // (padrão: espaço seguido de dígitos.dígitos — ex: " 3.6" " 1.1.01")
+            const embeddedCodeMatch = rawDesc.match(/\s+\d+\.\d/);
+            if (embeddedCodeMatch) {
+                rawDesc = rawDesc.slice(0, rawDesc.indexOf(embeddedCodeMatch[0])).trim();
+            }
             const descricao = rawDesc;
 
             // ── Atribui valores ao mês ────────────────────────────────────
@@ -203,6 +214,16 @@ window.PDFParser = {
         }
 
         console.log('[PDFParser834] Contas extraídas:', contasParsed, Object.keys(accounts).length);
+        console.log('[PDFParser834] === CONTAS EXTRAÍDAS ===');
+        console.table(Object.values(accounts).slice(0, 40).map(c => ({
+            codigo: c.codigo,
+            descricao: (c.descricao || '').slice(0, 50),
+            meses_count: Object.keys(c.meses).length,
+            jan: c.meses['2026-01'] ?? '-',
+            fev: c.meses['2026-02'] ?? '-',
+            mar: c.meses['2026-03'] ?? '-',
+            total: c.total
+        })));
 
         const contasArray = Object.values(accounts).filter(
             c => Object.keys(c.meses).length > 0 || c.total !== null
