@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.24.0",
-    "platform_version":  "11.24.0",
+    "version":  "11.24.5",
+    "platform_version":  "11.24.5",
     "date":  "2026-06-21",
-    "last_change":  "REBUILD: Visao Geral agora replica estrutura exata do PDF 834 — tabela com colunas por mes (Jan/26, Fev/26...) construida diretamente do flowTemplate; import salva codigo:valor sem Excel; fc-store ganha saveFlowTemplate/getFlowTemplate; financial-engine e master-accounts nao mais usados na Visao Geral",
-    "build":  "20260621.40"
+    "last_change":  "PARSER FIX: _extractCode concatenacao-primeiro (1.1. + 01. = 1.1.01); descricao truncada no primeiro codigo embarcado; KPI soma apenas contas-folha (leaf-only); botao limpar dados do cliente",
+    "build":  "20260621.45"
 }
