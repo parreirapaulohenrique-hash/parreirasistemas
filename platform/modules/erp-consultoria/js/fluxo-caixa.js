@@ -98,50 +98,12 @@ window.fcApp = {
             const validMeses = new Set(pdfResult.meses || []);
             console.log('[VGImport] PDF OK —', pdfResult.contas.length, 'contas | meses:', [...validMeses]);
 
-            // ── 2. Monta flowTemplate (estrutura da tabela) ────────────────
-            // nivel: número de segmentos do código — "3.2" → 2 partes → grupo; "3.2.01" → 3 → conta
-            const templateContas = pdfResult.contas.map(c => ({
-                codigo:   c.codigo,
-                descricao: c.descricao,
-                nivel:    c.codigo.split('.').length,  // "3.2" → 2; "3.2.01" → 3
-            }));
-
-            const template = {
-                meses:      [...validMeses].sort(),
-                contas:     templateContas,
-                importedAt: new Date().toISOString(),
-            };
-
-            setStatus('⏳ Salvando estrutura...', '#f59e0b');
-            await store.saveFlowTemplate(client.id, template);
-
-            // ── 3. Salva realizado por mês: { codigo: valor } ──────────────
-            setStatus('⏳ Salvando valores...', '#f59e0b');
-
-            // Agrupa contas por mês: byMonth[monthKey][codigo] = valor
-            const byMonth = {};
-            for (const conta of pdfResult.contas) {
-                if (!conta.meses) continue;
-                for (const [monthKey, val] of Object.entries(conta.meses)) {
-                    if (!validMeses.has(monthKey)) continue;   // ignora coluna Total
-                    if (val === undefined || val === null) continue;
-                    if (!byMonth[monthKey]) byMonth[monthKey] = {};
-                    byMonth[monthKey][conta.codigo] = val;
-                }
+            // ── 2. PREVIEW MODAL — mostra valores ANTES de salvar ─────────
+            const saved = await this._confirmarImportComPrevia(pdfResult, validMeses, client);
+            if (!saved) {
+                setStatus('⚠️ Importação cancelada.', '#f59e0b');
+                return;
             }
-
-            let saved = 0;
-            for (const [monthKey, data] of Object.entries(byMonth)) {
-                const ok = await store.saveMonthData(client.id, monthKey, data);
-                if (ok) saved++;
-            }
-
-            console.log('[VGImport] Salvo:', saved, 'meses | contas por mês:', Object.keys(byMonth[Object.keys(byMonth)[0]] || {}).length);
-
-            // ── 4. Recarrega e renderiza ───────────────────────────────────
-            await store.reloadFlowTemplate(client.id);
-            this.hideVGImportPanel();
-            await this.refreshDashboard();
 
             const msg = `✅ ${pdfResult.contas.length} contas × ${saved} mês(es) importados!`;
             setStatus(msg, 'var(--success)');
