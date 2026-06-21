@@ -1,8 +1,8 @@
-{
-    "version": "3.14.14",
-    "environment": "production",
-    "change": "v3.14.14 - FIX: Platform portal openModule() agora usa window.location.origin + path absoluto para abrir modulos. Garante que producao abre dispatch de producao, staging abre dispatch de staging, preview abre dispatch do proprio preview. Antes o path relativo podia cair no ambiente errado dependendo da URL base do Vercel.",
-    "lastUpdate": "2026-06-20",
-    "build": "20260620-prod-v3.14.14",
-    "deployedAt": "2026-06-20"
+﻿{
+    "build":  "20260621-prod-v3.14.15",
+    "version":  "3.14.15",
+    "environment":  "production",
+    "change":  "v3.14.15 - FIX: Módulo Fluxo de Caixa (erp-consultoria) - Parser do PDF 834 alinhado via proximidade de coordenadas X das colunas (Jan-Mai e Total) para evitar desalinhamento de colunas vazias.",
+    "lastUpdate":  "2026-06-21",
+    "deployedAt":  "2026-06-21"
 }

@@ -41,6 +41,7 @@ window.PDFParser = {
                     x: item.transform[4],
                     // Y do topo da página (PDF.js tem origem bottom-left)
                     y: viewport.height - item.transform[5],
+                    width: item.width || 0,
                     page: pg
                 });
             }
@@ -128,7 +129,7 @@ window.PDFParser = {
 
             // Também tenta extrair valores de tokens que possam ter sido concatenados
             const extraValues = this._extractGluedValues(lineItems, descStart, VALUE_RE, sortedCols);
-            const allValues   = valueItems.length > 0 ? valueItems : extraValues;
+            const allValues   = [...valueItems, ...extraValues];
 
             if (allValues.length === 0) continue;
 
@@ -153,30 +154,33 @@ window.PDFParser = {
             }
             const descricao = rawDesc;
 
-            // ── Atribui valores ao mês — ÍNDICE-BASEADO ───────────────────
-            // IMPORTANTE: X-matching por proximidade era não-confiável pois as
-            // posições X de coluna eram estimadas com 6px/char (bugado).
-            // Solução: ordena os valores pelo X dentro da linha (para garantir
-            // ordem esquerda→direita) e atribui por índice posicional:
-            //   valor[0] → sortedCols[0] (Jan), valor[1] → sortedCols[1] (Fev)...
-            //   valor[N] onde N >= sortedCols.length → Total
+            // ── Atribui valores ao mês — PROXIMIDADE ──────────────────────
+            // Mapeia cada valor extraído para a coluna mais próxima (menor diferença em X).
             const mesVals = {};
             let   total   = null;
 
-            const rawVals = valueItems.length > 0 ? valueItems : extraValues;
-            if (rawVals.length > 0) {
-                // Ordena valores pelo X para garantir ordem cronológica
-                const sortedVals = [...rawVals].sort((a, b) => a.x - b.x);
-                for (let vi = 0; vi < sortedVals.length; vi++) {
+            if (allValues.length > 0) {
+                for (const valObj of allValues) {
                     const numVal = parseFloat(
-                        sortedVals[vi].text.replace(/\./g, '').replace(',', '.')
+                        valObj.text.replace(/\./g, '').replace(',', '.')
                     );
-                    if (vi < sortedCols.length) {
-                        // Atribui ao mês pelo índice
-                        mesVals[sortedCols[vi].monthKey] = numVal;
-                    } else {
-                        // Valor adicional após todos os meses = Total
-                        total = numVal;
+
+                    let closestCol = null;
+                    let minDiff = 99999;
+                    for (const col of sortedCols) {
+                        const diff = Math.abs(col.x - valObj.x);
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            closestCol = col;
+                        }
+                    }
+
+                    if (closestCol) {
+                        if (closestCol.monthKey === 'total') {
+                            total = numVal;
+                        } else {
+                            mesVals[closestCol.monthKey] = numVal;
+                        }
                     }
                 }
             }
@@ -272,7 +276,10 @@ window.PDFParser = {
             }
         }
 
-        const allMonthKeys = Object.values(monthCols).map(c => c.monthKey).sort();
+        const allMonthKeys = Object.values(monthCols)
+            .map(c => c.monthKey)
+            .filter(mk => mk !== 'total')
+            .sort();
         const periodo = allMonthKeys[0] || periodInfo.periodoInicio;
 
         console.log('[PDFParser834] OK —', contasArray.length, 'contas, meses:', allMonthKeys);
@@ -418,30 +425,45 @@ window.PDFParser = {
                 continue;
             }
 
+            if (/^total$/i.test(item.text.trim())) {
+                cols['total'] = {
+                    x:        item.x,
+                    monthKey: 'total',
+                    label:    'Total'
+                };
+                continue;
+            }
+
             // Caso 2: meses concatenados num único token — estima X proporcionalmente
-            const tokens     = item.text.split(/\s+/);
-            const totalChars = tokens.reduce((s, t, i) => s + t.length + (i < tokens.length - 1 ? 1 : 0), 0);
+            const totalChars = item.text.length;
             const itemWidth  = (item.width && item.width > 0) ? item.width : totalChars * 7;
 
-            let charOffset = 0;
-            for (const token of tokens) {
-                MONTH_RE.lastIndex = 0;
-                const m = MONTH_RE.exec(token);
-                if (m) {
-                    const monthName = m[1].toLowerCase();
-                    const year      = 2000 + parseInt(m[2]);
-                    const monthNum  = _MONTH_NAMES.indexOf(monthName) + 1;
-                    if (monthNum > 0 && !cols[monthName]) {
-                        // Proporcional: tokenX = item.x + (charOffset/totalChars) * itemWidth
-                        const tokenX = item.x + (charOffset / Math.max(totalChars, 1)) * itemWidth;
-                        cols[monthName] = {
-                            x:        tokenX,
-                            monthKey: `${year}-${String(monthNum).padStart(2, '0')}`,
-                            label:    token
-                        };
-                    }
+            const MONTH_RE_G = /(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\/(\d{2})/gi;
+            let m;
+            while ((m = MONTH_RE_G.exec(item.text)) !== null) {
+                const monthName = m[1].toLowerCase();
+                const year      = 2000 + parseInt(m[2]);
+                const monthNum  = _MONTH_NAMES.indexOf(monthName) + 1;
+                const charOffset = m.index;
+                if (monthNum > 0 && !cols[monthName]) {
+                    const tokenX = item.x + (charOffset / Math.max(totalChars, 1)) * itemWidth;
+                    cols[monthName] = {
+                        x:        tokenX,
+                        monthKey: `${year}-${String(monthNum).padStart(2, '0')}`,
+                        label:    m[0]
+                    };
                 }
-                charOffset += token.length + 1;
+            }
+
+            const totalMatch = /total/i.exec(item.text);
+            if (totalMatch && !cols['total']) {
+                const charOffset = totalMatch.index;
+                const tokenX = item.x + (charOffset / Math.max(totalChars, 1)) * itemWidth;
+                cols['total'] = {
+                    x:        tokenX,
+                    monthKey: 'total',
+                    label:    'Total'
+                };
             }
         }
 
