@@ -279,21 +279,29 @@ window.PDFParser = {
     _extractCode(lineItems, CODE_RE) {
         if (!lineItems.length) return { codigo: null, descStart: 0 };
 
-        // Tenta item 0 direto
         const t0 = lineItems[0].text;
-        if (CODE_RE.test(t0)) {
-            return { codigo: t0.replace(/\.$/, ''), descStart: 1 };
-        }
 
-        // Tenta concatenar os primeiros 2-4 tokens
-        for (let len = 2; len <= Math.min(4, lineItems.length); len++) {
+        // ── PRIORIDADE 1: concatenação (do maior para o menor) ─────────────
+        // Problema: PDF.js pode dividir "1.1.01." em ["1.1.", "01."]
+        // Se testarmos "1.1." sozinho primeiro, o CODE_RE vai aceitar e retornar
+        // código "1.1" errado. Ao testar concatenações ANTES, encontramos "1.1.01."
+        // que é mais específico e correto.
+        for (let len = Math.min(5, lineItems.length); len >= 2; len--) {
             const combined = lineItems.slice(0, len).map(i => i.text).join('');
             if (CODE_RE.test(combined)) {
                 return { codigo: combined.replace(/\.$/, ''), descStart: len };
             }
         }
 
-        // Tenta prefixo numérico no primeiro item (ex: "1.1.RECEITAS COM VENDAS")
+        // ── PRIORIDADE 2: item 0 sozinho ───────────────────────────────────
+        if (CODE_RE.test(t0)) {
+            // Verifica se o próximo token poderia estender o código (ex: "01." após "1.1.")
+            // Se sim, já foi coberto na prioridade 1 acima.
+            return { codigo: t0.replace(/\.$/, ''), descStart: 1 };
+        }
+
+        // ── PRIORIDADE 3: prefixo numérico no primeiro item ────────────────
+        // Cobre caso como "1.1.01.RECEITAS COM VENDAS" num token só (sem separação)
         const prefixMatch = t0.match(/^(\d+(?:\.\d+)+)\./);
         if (prefixMatch) {
             return { codigo: prefixMatch[1], descStart: 0 };
