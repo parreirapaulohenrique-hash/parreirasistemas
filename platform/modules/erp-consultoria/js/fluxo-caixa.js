@@ -117,6 +117,97 @@ window.fcApp = {
         }
     },
 
+    /**
+     * Mostra modal de prévia com os dados extraídos do PDF ANTES de salvar.
+     * Retorna nº de meses salvos (>0) ou 0 se cancelado.
+     */
+    async _confirmarImportComPrevia(pdfResult, validMeses, client) {
+        const mesArr = [...validMeses].sort();
+        const MES_LABEL = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        const fmtMk = mk => { const [y,m] = mk.split('-'); return `${MES_LABEL[+m-1]}/${String(y).slice(2)}`; };
+        const fmtN  = v => (v != null && v !== 0) ? Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
+
+        const rows = pdfResult.contas.slice(0, 50).map(c => {
+            const vals = mesArr.map(mk => `<td style="text-align:right;padding:3px 8px;font-size:0.78rem;white-space:nowrap;">${fmtN(c.meses?.[mk])}</td>`).join('');
+            const total = mesArr.reduce((s,mk) => s + (c.meses?.[mk] || 0), 0);
+            const bg    = c.codigo.split('.').length <= 2 ? 'background:rgba(255,255,255,0.08);font-weight:700;' : '';
+            return `<tr style="${bg}">
+                <td style="padding:3px 8px;font-size:0.75rem;white-space:nowrap;color:#94a3b8;">${c.codigo}</td>
+                <td style="padding:3px 14px;font-size:0.8rem;">${c.descricao || ''}</td>
+                ${vals}
+                <td style="text-align:right;padding:3px 8px;font-size:0.78rem;font-weight:700;border-left:1px solid rgba(255,255,255,0.1);">${fmtN(total)}</td>
+            </tr>`;
+        }).join('');
+
+        const colHeaders = mesArr.map(mk => `<th style="padding:4px 8px;text-align:right;font-size:0.75rem;">${fmtMk(mk)}</th>`).join('');
+
+        return new Promise(resolve => {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:99999;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow:auto;';
+            overlay.innerHTML = `
+            <div style="background:#1e293b;border-radius:12px;border:1px solid rgba(255,255,255,0.1);width:100%;max-width:1150px;padding:24px;color:#e2e8f0;margin:auto;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+                    <h3 style="margin:0;font-size:1rem;color:#38bdf8;">📋 Prévia — ${pdfResult.contas.length} contas extraídas do PDF</h3>
+                    <span style="font-size:0.75rem;color:#f59e0b;">⚠️ Confira se os valores batem com o PDF antes de confirmar</span>
+                </div>
+                <div style="overflow:auto;max-height:60vh;border-radius:8px;border:1px solid rgba(255,255,255,0.08);">
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead style="position:sticky;top:0;background:#0f172a;z-index:1;">
+                            <tr>
+                                <th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Código</th>
+                                <th style="padding:6px 14px;text-align:left;font-size:0.75rem;">Descrição</th>
+                                ${colHeaders}
+                                <th style="padding:6px 8px;text-align:right;font-size:0.75rem;border-left:1px solid rgba(255,255,255,0.1);">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+                <p style="margin:10px 0 0;font-size:0.73rem;color:#94a3b8;">
+                    Meses: <b>${mesArr.map(fmtMk).join(', ')}</b>
+                    ${pdfResult.contas.length > 50 ? ` · mostrando 50 de ${pdfResult.contas.length} contas` : ''}
+                </p>
+                <div style="margin-top:16px;display:flex;gap:12px;justify-content:flex-end;">
+                    <button id="prev-cancel" style="padding:8px 20px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:#e2e8f0;cursor:pointer;font-size:0.9rem;">Cancelar</button>
+                    <button id="prev-confirm" style="padding:8px 24px;border-radius:8px;background:#3b82f6;color:#fff;border:none;cursor:pointer;font-weight:600;font-size:0.9rem;">✅ Confirmar Importação</button>
+                </div>
+            </div>`;
+            document.body.appendChild(overlay);
+
+            overlay.querySelector('#prev-cancel').onclick = () => { overlay.remove(); resolve(0); };
+            overlay.querySelector('#prev-confirm').onclick = async () => {
+                overlay.remove();
+                const templateContas = pdfResult.contas.map(c => ({
+                    codigo:    c.codigo,
+                    descricao: c.descricao,
+                    nivel:     c.codigo.split('.').length,
+                }));
+                const template = { meses: [...validMeses].sort(), contas: templateContas, importedAt: new Date().toISOString() };
+                await store.saveFlowTemplate(client.id, template);
+
+                const byMonth = {};
+                for (const conta of pdfResult.contas) {
+                    if (!conta.meses) continue;
+                    for (const [monthKey, val] of Object.entries(conta.meses)) {
+                        if (!validMeses.has(monthKey) || val == null) continue;
+                        if (!byMonth[monthKey]) byMonth[monthKey] = {};
+                        byMonth[monthKey][conta.codigo] = val;
+                    }
+                }
+                let saved = 0;
+                for (const [monthKey, data] of Object.entries(byMonth)) {
+                    const ok = await store.saveMonthData(client.id, monthKey, data);
+                    if (ok) saved++;
+                }
+                console.log('[VGImport] Salvo:', saved, 'meses');
+                await store.reloadFlowTemplate(client.id);
+                this.hideVGImportPanel();
+                await this.refreshDashboard();
+                resolve(saved);
+            };
+        });
+    },
+
     // ── Persistência de lançamentos manuais no localStorage ────────────────
     _getEntriesKey() {
         const c = store.getActiveClient();
