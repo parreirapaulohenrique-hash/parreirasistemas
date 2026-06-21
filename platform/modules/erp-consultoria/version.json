@@ -1,9 +1,9 @@
 {
     "module":  "erp-consultoria",
     "name":  "Consultoria ParreiraLog",
-    "version":  "11.23.38",
-    "platform_version":  "11.23.6",
-    "date":  "2026-06-20",
-    "last_change":  "Fix: filtra coluna Total do PDF usando pdfResult.meses como lista de meses validos — somente meses detectados no cabecalho sao importados, coluna Total ignorada",
-    "build":  "20260620.38"
+    "version":  "11.24.0",
+    "platform_version":  "11.24.0",
+    "date":  "2026-06-21",
+    "last_change":  "REBUILD: Visao Geral agora replica estrutura exata do PDF 834 — tabela com colunas por mes (Jan/26, Fev/26...) construida diretamente do flowTemplate; import salva codigo:valor sem Excel; fc-store ganha saveFlowTemplate/getFlowTemplate; financial-engine e master-accounts nao mais usados na Visao Geral",
+    "build":  "20260621.40"
 }

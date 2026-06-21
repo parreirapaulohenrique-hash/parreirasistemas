@@ -39,14 +39,11 @@ window.fcApp = {
     async importarPDFNaVisaoGeral() {
         const status = document.getElementById('vg-import-status');
         const btn    = document.getElementById('vg-import-run-btn');
-
         const setStatus = (msg, color = 'var(--text-secondary)') => {
             if (status) { status.textContent = msg; status.style.color = color; }
         };
 
-        if (!this._vgPdfFile)   { setStatus('❌ Selecione o PDF 834',      '#ef4444'); return; }
-        if (!this._vgExcelFile) { setStatus('❌ Selecione o arquivo Excel', '#ef4444'); return; }
-
+        if (!this._vgPdfFile) { setStatus('❌ Selecione o PDF 834', '#ef4444'); return; }
         const client = store.getActiveClient();
         if (!client) { setStatus('❌ Nenhum cliente selecionado', '#ef4444'); return; }
 
@@ -54,116 +51,61 @@ window.fcApp = {
         setStatus('⏳ Lendo PDF...', '#f59e0b');
 
         try {
-            // ── 1. Parseia PDF 834 ─────────────────────────────────────────
+            // ── 1. Parseia o PDF 834 ───────────────────────────────────────
             if (typeof window.PDFParser === 'undefined') throw new Error('PDF.js não carregado.');
             const pdfBuf    = await this._vgPdfFile.arrayBuffer();
             const pdfResult = await window.PDFParser.parseMaxdataPDF({ data: pdfBuf });
+            // pdfResult = { meses: ["2026-01",...], contas: [{ codigo, descricao, meses:{}, total }] }
 
-            // Indexa por código para acesso O(1): { '3.2.01': { codigo, descricao, meses } }
-            const pdfByCode = {};
+            const validMeses = new Set(pdfResult.meses || []);
+            console.log('[VGImport] PDF OK —', pdfResult.contas.length, 'contas | meses:', [...validMeses]);
+
+            // ── 2. Monta flowTemplate (estrutura da tabela) ────────────────
+            // nivel: número de segmentos do código — "3.2" → 2 partes → grupo; "3.2.01" → 3 → conta
+            const templateContas = pdfResult.contas.map(c => ({
+                codigo:   c.codigo,
+                descricao: c.descricao,
+                nivel:    c.codigo.split('.').length,  // "3.2" → 2; "3.2.01" → 3
+            }));
+
+            const template = {
+                meses:      [...validMeses].sort(),
+                contas:     templateContas,
+                importedAt: new Date().toISOString(),
+            };
+
+            setStatus('⏳ Salvando estrutura...', '#f59e0b');
+            await store.saveFlowTemplate(client.id, template);
+
+            // ── 3. Salva realizado por mês: { codigo: valor } ──────────────
+            setStatus('⏳ Salvando valores...', '#f59e0b');
+
+            // Agrupa contas por mês: byMonth[monthKey][codigo] = valor
+            const byMonth = {};
             for (const conta of pdfResult.contas) {
-                if (conta.codigo) pdfByCode[conta.codigo] = conta;
-            }
-            console.log('[VGImport] PDF — contas:', pdfResult.contas.length,
-                        '| Meses:', pdfResult.meses,
-                        '| Exemplo códigos:', Object.keys(pdfByCode).slice(0, 5));
-
-            setStatus('⏳ Lendo Excel...', '#f59e0b');
-
-            // ── 2. Lê o Excel e extrai mapeamento código → descrição ───────
-            if (typeof XLSX === 'undefined') throw new Error('SheetJS não carregado.');
-            const excelBuf = await this._vgExcelFile.arrayBuffer();
-            const workbook = XLSX.read(excelBuf, { type: 'array' });
-
-            // Usa a PRIMEIRA aba para extrair as descrições (são iguais em todas as abas)
-            // Col A (idx 0) = linha, Col B (idx 1) = descrição  (ajustar se necessário)
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const allRows    = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
-
-            // Extrai código da descrição: "3.2.01. Salário (CLT)" → "3.2.01"
-            const codeToMasterKey = {};
-            let debugDesc = [], debugNoCode = [], debugNoPdf = [], debugNoMaster = [];
-
-            for (const row of allRows) {
-                // Tenta Col B (idx 1) primeiro, depois Col A (idx 0)
-                const descRaw = String(row[1] || row[0] || '').trim();
-                if (!descRaw) continue;
-
-                const codeMatch = descRaw.match(/^(\d+(?:\.\d+)+)/);
-                if (!codeMatch) { debugNoCode.push(descRaw.slice(0, 30)); continue; }
-                const code = codeMatch[1]; // "3.2.01"
-
-                // Verifica se o PDF tem esse código
-                if (!pdfByCode[code]) { debugNoPdf.push(code); continue; }
-
-                // Busca o MASTER_ACCOUNTS pela descrição do Excel (strip do prefixo)
-                const master    = window.PdfMapper?._findMasterByDesc(descRaw);
-                const masterKey = master ? window.PdfMapper._buildKey(master) : null;
-
-                if (!masterKey) { debugNoMaster.push({ code, desc: descRaw.slice(0, 40) }); continue; }
-
-                codeToMasterKey[code] = masterKey;
-                debugDesc.push(`${code} → ${masterKey.split('::')[1]?.slice(0, 30)}`);
-            }
-
-            console.log('[VGImport] Mapeamentos encontrados:', Object.keys(codeToMasterKey).length);
-            console.log('[VGImport] Exemplos vinculados:', debugDesc.slice(0, 10));
-            console.log('[VGImport] Sem código válido:', debugNoCode.slice(0, 10));
-            console.log('[VGImport] Código não no PDF:', [...new Set(debugNoPdf)].slice(0, 10));
-            console.log('[VGImport] Desc sem MASTER_ACCOUNTS:', debugNoMaster.slice(0, 10));
-
-            if (Object.keys(codeToMasterKey).length === 0) {
-                setStatus('⚠️ Nenhum código do Excel bateu com o PDF. Verifique os arquivos.', '#f59e0b');
-                if (btn) btn.disabled = false;
-                return;
-            }
-
-            // ── 3. Constrói byMonth a partir dos valores do PDF ────────────
-            // Usa APENAS os meses detectados no cabeçalho do PDF (filtra coluna Total)
-            setStatus('⏳ Montando dados por mês...', '#f59e0b');
-            const validMonths = new Set(pdfResult.meses || []); // ex: ['2026-01', '2026-02', ...]
-            const byMonth    = {}; // { '2026-01': { masterKey: valor } }
-            let   totalLinks = 0;
-
-            for (const [code, masterKey] of Object.entries(codeToMasterKey)) {
-                const conta = pdfByCode[code];
-                if (!conta?.meses) continue;
-
+                if (!conta.meses) continue;
                 for (const [monthKey, val] of Object.entries(conta.meses)) {
-                    // Ignora coluna Total — só processa meses válidos do cabeçalho
-                    if (validMonths.size > 0 && !validMonths.has(monthKey)) continue;
-                    if (val === undefined || val === null || Math.abs(val) < 0.001) continue;
+                    if (!validMeses.has(monthKey)) continue;   // ignora coluna Total
+                    if (val === undefined || val === null) continue;
                     if (!byMonth[monthKey]) byMonth[monthKey] = {};
-                    byMonth[monthKey][masterKey] = parseFloat(
-                        ((byMonth[monthKey][masterKey] || 0) + val).toFixed(2)
-                    );
-                    totalLinks++;
+                    byMonth[monthKey][conta.codigo] = val;
                 }
             }
 
-            const months = Object.keys(byMonth);
-            console.log('[VGImport] Meses com dados:', months, '| Links totais:', totalLinks);
-
-            if (totalLinks === 0) {
-                setStatus('⚠️ Mapeamentos encontrados mas sem valores. Verifique os meses no PDF.', '#f59e0b');
-                if (btn) btn.disabled = false;
-                return;
-            }
-
-            // ── 4. Salva no Firestore ──────────────────────────────────────
-            setStatus(`⏳ Salvando ${months.length} mês(es)...`, '#f59e0b');
             let saved = 0;
-            for (const monthKey of months) {
-                const ok = await store.saveMonthData(client.id, monthKey, byMonth[monthKey]);
+            for (const [monthKey, data] of Object.entries(byMonth)) {
+                const ok = await store.saveMonthData(client.id, monthKey, data);
                 if (ok) saved++;
             }
 
-            // ── 5. Recarrega Visão Geral ───────────────────────────────────
-            await store.reloadClientPeriods(client.id);
-            this.hideVGImportPanel();
-            this.requireClient('fc-overview');
+            console.log('[VGImport] Salvo:', saved, 'meses | contas por mês:', Object.keys(byMonth[Object.keys(byMonth)[0]] || {}).length);
 
-            const msg = `✅ ${Object.keys(codeToMasterKey).length} contas vinculadas em ${saved} mês(es) — ${totalLinks} valores importados!`;
+            // ── 4. Recarrega e renderiza ───────────────────────────────────
+            await store.reloadFlowTemplate(client.id);
+            this.hideVGImportPanel();
+            await this.refreshDashboard();
+
+            const msg = `✅ ${pdfResult.contas.length} contas × ${saved} mês(es) importados!`;
             setStatus(msg, 'var(--success)');
             alert(msg);
 
@@ -553,101 +495,169 @@ window.fcApp = {
         const client = store.getActiveClient();
         if (!client) return;
 
-        const type  = document.getElementById('filter-period-type')?.value  || 'anual';
-        const sub   = document.getElementById('filter-period-sub')?.value   || 'ALL';
-        const year  = String(document.getElementById('filter-period-year')?.value
-                          || document.getElementById('filter-period-value')?.value
-                          || new Date().getFullYear());
+        const type = document.getElementById('filter-period-type')?.value || 'anual';
+        const sub  = document.getElementById('filter-period-sub')?.value  || 'ALL';
+        const year = String(document.getElementById('filter-period-year')?.value
+                        || document.getElementById('filter-period-value')?.value
+                        || new Date().getFullYear());
 
         const months = this.getMonthsForPeriod(type, sub);
 
-        // Sempre recarrega os dados do cliente do Firestore antes de renderizar
-        await store.reloadClientPeriods(client.id);
-        const updatedClient = store.getActiveClient();
-        const yearData = store.getYearData(updatedClient.id, year);
+        // Recarrega do Firestore (template + períodos)
+        await store.reloadFlowTemplate(client.id);
+        const yearData = store.getYearData(client.id, year);
 
+        // ── KPIs: soma todos os valores do período selecionado ────────────
         let totalRealizadoEntradas = 0;
         let totalRealizadoSaidas   = 0;
-        let totalProjetadoEntradas = 0;
-        let totalProjetadoSaidas   = 0;
         const monthlyRealizado = new Array(12).fill(0);
         const monthlyProjetado = new Array(12).fill(0);
-
-        // ── Mescla todas as entradas importadas (Firestore) com as manuais (localStorage) ──
-        // O financial-engine espera: { "grupo::codigo-descricao": valor }
-        const mergedEntries = { ...this.manualEntries };
 
         for (const month of months) {
             const key   = `${year}-${month.toString().padStart(2, '0')}`;
             const mData = yearData[key];
-            if (!mData) continue;
-
-            // ── Realizado: novo formato { masterKey: valor } ──────────────
+            if (!mData?.realizado) continue;
             const real = mData.realizado;
-            if (real && typeof real === 'object' && !Array.isArray(real)) {
-                // Novo formato — acumula por masterKey (soma meses para visão anual)
-                for (const [mk, val] of Object.entries(real)) {
-                    if (val === undefined || val === null) continue;
-                    mergedEntries[mk] = parseFloat(((mergedEntries[mk] || 0) + Number(val)).toFixed(2));
-                    if (Number(val) > 0) {
-                        totalRealizadoEntradas += Number(val);
-                        monthlyRealizado[month - 1] += Number(val);
-                    } else {
-                        totalRealizadoSaidas   += Math.abs(Number(val));
-                        monthlyRealizado[month - 1] += Number(val);
-                    }
+            if (typeof real === 'object' && !Array.isArray(real)) {
+                for (const val of Object.values(real)) {
+                    const n = Number(val);
+                    if (n > 0) { totalRealizadoEntradas += n; monthlyRealizado[month - 1] += n; }
+                    else       { totalRealizadoSaidas += Math.abs(n); monthlyRealizado[month - 1] += n; }
                 }
-            } else if (Array.isArray(real)) {
-                // Formato legado — array de contas (compatibilidade)
-                real.forEach(acc => {
-                    totalRealizadoEntradas += acc.a_receber || 0;
-                    totalRealizadoSaidas   += acc.a_pagar   || 0;
-                    monthlyRealizado[month - 1] += (acc.a_receber || 0) - (acc.a_pagar || 0);
-                });
-            }
-
-            // ── Projetado ─────────────────────────────────────────────────
-            if (mData.projetado) {
-                const proj = Array.isArray(mData.projetado) ? mData.projetado : [];
-                proj.forEach(acc => {
-                    totalProjetadoEntradas += acc.a_receber || 0;
-                    totalProjetadoSaidas   += acc.a_pagar   || 0;
-                    monthlyProjetado[month - 1] += (acc.a_receber || 0) - (acc.a_pagar || 0);
-                });
             }
         }
 
-        const saldoRealizadoLiq  = totalRealizadoEntradas - totalRealizadoSaidas;
-        const saldoProjetadoLiq  = totalProjetadoEntradas - totalProjetadoSaidas;
-        let variacao = 0;
-        if (saldoProjetadoLiq !== 0) variacao = ((saldoRealizadoLiq - saldoProjetadoLiq) / Math.abs(saldoProjetadoLiq)) * 100;
-
+        const saldoLiq   = totalRealizadoEntradas - totalRealizadoSaidas;
         const setKpi = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
         setKpi('kpi-entradas',    this.formatCurrency(totalRealizadoEntradas));
         setKpi('kpi-saidas',      this.formatCurrency(totalRealizadoSaidas));
-        setKpi('kpi-saldo-geral', this.formatCurrency(saldoRealizadoLiq));
-        setKpi('kpi-variacao',    variacao.toFixed(2) + '%');
+        setKpi('kpi-saldo-geral', this.formatCurrency(saldoLiq));
+        setKpi('kpi-variacao',    '0.00%');
 
         this.renderCharts(monthlyRealizado, monthlyProjetado);
 
-        // ── Passa os dados mesclados para o FinancialEngine ──────────────
-        // mergedEntries = { "grupo::cod-desc": valor } (realizado Firestore + manuais localStorage)
-        if (window.FinancialEngine) {
-            const result = FinancialEngine.processData([], mergedEntries);
-            this.renderSummaryBar(result.totals);
-            this.renderFlowTableStrict(result.rows, totalRealizadoEntradas);
+        // ── Renderiza a tabela PDF-nativa ─────────────────────────────────
+        const template = store.getFlowTemplate(client.id);
+        this.renderPDFFlowTable(template, yearData, months, year);
 
-            // ── Botão Lock/Unlock — injeta na barra de ações se ainda não existir ──
-            const headerBar = document.querySelector('#view-fc-overview .view-header-bar');
-            if (headerBar && !document.getElementById('btn-lock-entries')) {
-                const lockBtn = document.createElement('button');
-                lockBtn.id = 'btn-lock-entries';
-                lockBtn.style.cssText = 'margin-left:8px;padding:0.45rem 1.1rem;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;color:#fff;transition:background .2s;';
-                lockBtn.onclick = () => this.isLocked() ? this.unlockEntries() : this.lockEntries();
-                headerBar.appendChild(lockBtn);
-            }
-            this._updateLockButton();
+        // ── Barra de resumo (saldos) ──────────────────────────────────────
+        this.renderSummaryBar({ saldoInicial: 0, totalReceitas: totalRealizadoEntradas,
+                                totalDespesas: totalRealizadoSaidas, saldoLiq, saldoAjustado: saldoLiq });
+    },
+
+    /**
+     * Renderiza a tabela de Fluxo de Caixa com estrutura IDÊNTICA ao PDF 834.
+     * Colunas: Código | Descrição | Jan/26 | Fev/26 | ... | Total
+     * Linhas: exatamente as contas do PDF, na ordem original, agrupadas por seção.
+     *
+     * @param {object|null} template  - { contas:[{codigo,descricao,nivel}], meses:[] }
+     * @param {object}      yearData  - { "2026-01": { realizado: {codigo:val} }, ... }
+     * @param {number[]}    months    - meses selecionados pelo filtro [1..12]
+     * @param {string}      year      - ex: "2026"
+     */
+    renderPDFFlowTable(template, yearData, months, year) {
+        const wrap = document.getElementById('pdf-flow-table-wrap');
+        if (!wrap) return;
+
+        // Sem template → mostra mensagem
+        if (!template || !template.contas || template.contas.length === 0) {
+            wrap.innerHTML = '<p style="text-align:center;padding:2rem;color:var(--text-secondary);">Nenhum dado importado. Clique em "Importar PDF 834" para começar.</p>';
+            return;
         }
+
+        // ── Determina quais meses mostrar ──────────────────────────────────
+        // Cruza os meses do template com os meses selecionados pelo filtro
+        const selectedKeys = new Set(
+            months.map(m => `${year}-${m.toString().padStart(2, '0')}`)
+        );
+        const mesKeys = template.meses
+            .filter(mk => selectedKeys.has(mk))
+            .sort();
+
+        // Fallback: se filtro não bate com nada, mostra todos do template
+        const colKeys = mesKeys.length > 0 ? mesKeys : [...template.meses].sort();
+
+        // Formata "2026-01" → "Jan/26"
+        const MES_LABEL = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        const fmtMesLabel = mk => {
+            const [y, m] = mk.split('-');
+            return `${MES_LABEL[parseInt(m) - 1]}/${String(y).slice(2)}`;
+        };
+
+        // Atualiza label do período no cabeçalho do card
+        const periodoEl = document.getElementById('pdf-flow-table-periodo');
+        if (periodoEl && colKeys.length > 0) {
+            periodoEl.textContent = colKeys.length === 1
+                ? fmtMesLabel(colKeys[0])
+                : `${fmtMesLabel(colKeys[0])} → ${fmtMesLabel(colKeys[colKeys.length - 1])}`;
+        }
+
+        // ── Pré-carrega realizado de cada mês ──────────────────────────────
+        // realizadoByMonth[monthKey][codigo] = valor
+        const realizadoByMonth = {};
+        for (const mk of colKeys) {
+            realizadoByMonth[mk] = (yearData[mk]?.realizado) || {};
+        }
+
+        // ── Formata valor como moeda BR ────────────────────────────────────
+        const fmt = v => {
+            if (v === null || v === undefined || v === 0) return '—';
+            const abs  = Math.abs(v);
+            const str  = abs.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return v < 0 ? `(${str})` : str;
+        };
+        const valColor = v => {
+            if (!v || v === 0) return 'var(--text-secondary)';
+            return v > 0 ? 'var(--success, #22c55e)' : '#ef4444';
+        };
+
+        // ── Constrói o HTML da tabela ──────────────────────────────────────
+        const nCols = colKeys.length + 3; // Código + Descrição + meses + Total
+
+        let thead = `<thead><tr>
+            <th style="min-width:80px;white-space:nowrap;">Código</th>
+            <th style="min-width:260px;">Descrição</th>`;
+        for (const mk of colKeys) {
+            thead += `<th style="min-width:110px;text-align:right;">${fmtMesLabel(mk)}</th>`;
+        }
+        thead += `<th style="min-width:120px;text-align:right;background:rgba(255,255,255,0.05);">Total</th></tr></thead>`;
+
+        let tbody = '<tbody>';
+        for (const conta of template.contas) {
+            const isGrupo = conta.nivel <= 2; // "3.2" → nivel 2 → grupo
+            const indent  = Math.max(0, conta.nivel - 2) * 16; // px de indentação
+
+            // Coleta valores de cada mês para esta conta
+            const vals = colKeys.map(mk => realizadoByMonth[mk][conta.codigo] ?? 0);
+            const total = vals.reduce((s, v) => s + v, 0);
+
+            // Verifica se a conta tem algum valor (evita linhas completamente vazias)
+            // Grupos sempre mostram, contas só mostram se tiverem valor OU se o template foi definido
+            const hasValue = vals.some(v => v !== 0);
+
+            if (isGrupo) {
+                // Linha de grupo — fundo escuro, negrito
+                tbody += `<tr style="background:rgba(255,255,255,0.06); font-weight:700;">
+                    <td style="font-size:0.75rem;color:var(--text-secondary);white-space:nowrap;">${conta.codigo}</td>
+                    <td style="padding-left:${indent}px;">${conta.descricao}</td>`;
+                for (const v of vals) {
+                    tbody += `<td style="text-align:right;color:${valColor(v)};">${fmt(v)}</td>`;
+                }
+                tbody += `<td style="text-align:right;font-weight:800;color:${valColor(total)};background:rgba(255,255,255,0.05);">${fmt(total)}</td></tr>`;
+            } else {
+                // Linha de conta — normal, indentada
+                tbody += `<tr>
+                    <td style="font-size:0.72rem;color:var(--text-secondary);white-space:nowrap;">${conta.codigo}</td>
+                    <td style="padding-left:${indent + 12}px;font-size:0.88rem;">${conta.descricao}</td>`;
+                for (const v of vals) {
+                    tbody += `<td style="text-align:right;color:${valColor(v)};font-size:0.88rem;">${fmt(v)}</td>`;
+                }
+                tbody += `<td style="text-align:right;color:${valColor(total)};font-size:0.88rem;background:rgba(255,255,255,0.05);">${fmt(total)}</td></tr>`;
+            }
+        }
+        tbody += '</tbody>';
+
+        wrap.innerHTML = `<table class="data-table" style="width:100%;border-collapse:collapse;">${thead}${tbody}</table>`;
     },
 
     renderFlowTableStrict(rows, totalEntradas) {

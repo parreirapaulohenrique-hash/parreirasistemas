@@ -221,6 +221,59 @@ class Store {
         return this.savePeriodData(clientId, periodKey, 'realizado', accounts);
     }
 
+    /**
+     * Salva o template de estrutura do PDF 834 (códigos, descrições, hierarquia, meses).
+     * Chamado uma vez por importação — define a estrutura da tabela da Visão Geral.
+     * Template: { meses: ["2026-01",...], contas: [{ codigo, descricao, nivel }], importedAt }
+     */
+    async saveFlowTemplate(clientId, template) {
+        try {
+            const clientRef = this.db.collection('tenants').doc(this.tenantId)
+                                     .collection('fluxo_caixa_clientes').doc(clientId);
+            const updateObj = { flowTemplate: template };
+            try {
+                await clientRef.update(updateObj);
+            } catch (notFoundErr) {
+                if (notFoundErr.code === 'not-found') {
+                    await clientRef.set({ periods: {}, flowTemplate: template });
+                } else {
+                    throw notFoundErr;
+                }
+            }
+            // Atualiza cache
+            const client = this.clientsCache.find(c => c.id === clientId);
+            if (client) client.flowTemplate = template;
+            console.log('[fc-store] flowTemplate salvo:', template.contas.length, 'contas,', template.meses.length, 'meses');
+            return true;
+        } catch (error) {
+            console.error('[fc-store] Erro ao salvar flowTemplate:', error);
+            return false;
+        }
+    }
+
+    /** Retorna o flowTemplate do cache em memória (ou null se não existir). */
+    getFlowTemplate(clientId) {
+        const client = this.clientsCache.find(c => c.id === clientId);
+        return client ? (client.flowTemplate || null) : null;
+    }
+
+    /** Recarrega o flowTemplate do Firestore para o cache. */
+    async reloadFlowTemplate(clientId) {
+        try {
+            const docSnap = await this.db.collection('tenants').doc(this.tenantId)
+                                         .collection('fluxo_caixa_clientes').doc(clientId).get();
+            const client = this.clientsCache.find(c => c.id === clientId);
+            if (!client) return;
+            if (docSnap.exists) {
+                const data = docSnap.data();
+                client.flowTemplate = data.flowTemplate || null;
+                client.periods      = data.periods      || {};
+            }
+        } catch (error) {
+            console.error('[fc-store] Erro ao recarregar flowTemplate:', error);
+        }
+    }
+
 
     getYearData(clientId, year) {
         const client = this.clientsCache.find(c => c.id === clientId);

@@ -6946,47 +6946,40 @@
                 <span class="material-icons-round">swap_horiz</span>
             </button>
         </div>
-        <!-- Painel inline de importação -->
+        <!-- Painel inline de importação — PDF 834 apenas -->
         <div id="vg-import-panel" style="display:none; padding:0 1.5rem;">
             <div style="background:var(--bg-card,#1e293b); border:1.5px solid var(--primary); border-radius:10px; padding:1.25rem; margin-bottom:1rem;">
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
                     <h4 style="margin:0; color:var(--primary); display:flex; align-items:center; gap:8px;">
                         <span class="material-icons-round">link</span>
-                        Vincular PDF 834 → Visão Geral
+                        Importar PDF 834 → Visão Geral
                     </h4>
                     <button class="btn btn-ghost" style="padding:4px 8px; font-size:0.8rem;"
                         onclick="fcApp.hideVGImportPanel()">&#x2715; Fechar</button>
                 </div>
                 <p style="font-size:0.82rem; color:var(--text-secondary); margin:0 0 1rem 0;">
-                    Selecione o PDF 834 e o Excel. O sistema compara os valores, identifica cada linha
-                    e lança diretamente na Visão Geral por mês.
+                    Selecione o PDF 834 (Maxdata). A estrutura e os valores são extraídos diretamente do PDF — sem necessidade de Excel.
                 </p>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
-                    <div style="border:1.5px dashed var(--primary); border-radius:8px; padding:1rem; text-align:center; cursor:pointer;"
+                <div style="display:flex; gap:1rem; align-items:center; margin-bottom:1rem; flex-wrap:wrap;">
+                    <!-- PDF Input -->
+                    <div style="border:1.5px dashed var(--primary); border-radius:8px; padding:1rem 1.5rem; text-align:center; cursor:pointer; flex:1; min-width:180px;"
                         onclick="document.getElementById('vg-pdf-input').click()">
-                        <span class="material-icons-round" style="font-size:2rem; color:var(--primary);">picture_as_pdf</span>
+                        <span class="material-icons-round" style="font-size:2.5rem; color:var(--primary);">picture_as_pdf</span>
                         <p style="font-size:0.8rem; margin:0.4rem 0 0 0; color:var(--text-secondary);">PDF Maxdata 834</p>
                         <p id="vg-pdf-name" style="font-size:0.75rem; color:#10b981; margin:0.2rem 0 0 0;">Nenhum arquivo</p>
                         <input type="file" id="vg-pdf-input" accept=".pdf" hidden
                             onchange="fcApp.handleVGPdfSelect(this.files[0])">
                     </div>
-                    <div style="border:1.5px dashed #10b981; border-radius:8px; padding:1rem; text-align:center; cursor:pointer;"
-                        onclick="document.getElementById('vg-excel-input').click()">
-                        <span class="material-icons-round" style="font-size:2rem; color:#10b981;">table_chart</span>
-                        <p style="font-size:0.8rem; margin:0.4rem 0 0 0; color:var(--text-secondary);">Excel (abas por mês)</p>
-                        <p id="vg-excel-name" style="font-size:0.75rem; color:#10b981; margin:0.2rem 0 0 0;">Nenhum arquivo</p>
-                        <input type="file" id="vg-excel-input" accept=".xlsx,.xls" hidden
-                            onchange="fcApp.handleVGExcelSelect(this.files[0])">
+                    <!-- Botão importar -->
+                    <div style="display:flex; flex-direction:column; gap:0.5rem; align-items:flex-start;">
+                        <button class="btn btn-primary" id="vg-import-run-btn"
+                            onclick="fcApp.importarPDFNaVisaoGeral()"
+                            style="display:flex; align-items:center; gap:6px;">
+                            <span class="material-icons-round" style="font-size:1rem;">sync</span>
+                            Importar PDF
+                        </button>
+                        <span id="vg-import-status" style="font-size:0.82rem; color:var(--text-secondary);"></span>
                     </div>
-                </div>
-                <div style="display:flex; align-items:center; gap:1rem;">
-                    <button class="btn btn-primary" id="vg-import-run-btn"
-                        onclick="fcApp.importarPDFNaVisaoGeral()"
-                        style="display:flex; align-items:center; gap:6px;">
-                        <span class="material-icons-round" style="font-size:1rem;">sync</span>
-                        Vincular e Importar
-                    </button>
-                    <span id="vg-import-status" style="font-size:0.82rem; color:var(--text-secondary);"></span>
                 </div>
             </div>
         </div>
@@ -7031,14 +7024,18 @@
                 <div class="card-header"><h3>Evolução Mensal</h3></div>
                 <div class="card-body" style="height:300px; padding:1rem;"><canvas id="mainChart"></canvas></div>
             </div>
-            <!-- Tabela Fluxo -->
-            <div class="card">
-                <div class="card-header"><h3>Detalhamento do Fluxo</h3></div>
+            <!-- Tabela Fluxo — gerada dinamicamente igual ao PDF -->
+            <div class="card" id="pdf-flow-table-card">
+                <div class="card-header" style="display:flex; align-items:center; justify-content:space-between;">
+                    <h3>Fluxo de Caixa — Detalhamento</h3>
+                    <span id="pdf-flow-table-periodo" style="font-size:0.8rem; color:var(--text-secondary);"></span>
+                </div>
                 <div class="card-body" style="padding:0; overflow-x:auto;">
-                    <table class="data-table" style="width:100%;">
-                        <thead><tr><th>Código</th><th>Descrição</th><th>Projetado</th><th>Realizado</th><th>Variação</th><th>% Vertical</th></tr></thead>
-                        <tbody id="flow-table-body"><tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-secondary)">Nenhum dado importado. Use a aba "Importar PDF".</td></tr></tbody>
-                    </table>
+                    <div id="pdf-flow-table-wrap">
+                        <p style="text-align:center;padding:2rem;color:var(--text-secondary);">
+                            Nenhum dado importado. Clique em "Importar PDF 834" para começar.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
