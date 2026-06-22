@@ -17,3 +17,7 @@
 
 # Firebase Admin SDK credentials
 *firebase-adminsdk*.json
+
+# Microsoft Office temporary files
+~$*
+*~$*
