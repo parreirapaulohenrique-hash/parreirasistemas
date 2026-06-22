@@ -1,9 +1,9 @@
 {
-    "version":  "11.24.13",
+    "version":  "11.24.14",
     "name":  "Consultoria ParreiraLog",
-    "last_change":  "FEAT: Recalculo bottom-up dinamico dos grupos de contas na tabela do Fluxo de Caixa (PDF 834).",
-    "platform_version":  "11.24.13",
+    "last_change":  "FEAT: Insercao da secao 'Disponiveis nas Contas Movimento inicial' antes das linhas de receitas no relatorio de Fluxo de Caixa.",
+    "platform_version":  "11.24.14",
     "date":  "2026-06-22",
     "module":  "erp-consultoria",
-    "build":  "20260622.01"
+    "build":  "20260622.02"
 }
