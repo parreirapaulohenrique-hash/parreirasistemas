@@ -39,6 +39,15 @@ window.fcApp = {
             const cached = store.clientsCache.find(c => c.id === client.id);
             if (cached) { cached.periods = {}; cached.flowTemplate = null; }
 
+            // Limpa dados manuais do localStorage
+            const prefix = `fc_disp_${client.id}_`;
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith(prefix)) {
+                    localStorage.removeItem(key);
+                }
+            }
+
             // Atualiza UI
             const wrap = document.getElementById('pdf-flow-table-wrap');
             if (wrap) wrap.innerHTML = '<p style="text-align:center;padding:2rem;color:var(--text-secondary);">Nenhum dado importado. Clique em "Importar PDF 834" para começar.</p>';
@@ -224,6 +233,51 @@ window.fcApp = {
             const raw = localStorage.getItem(k);
             this.manualEntries = raw ? JSON.parse(raw) : {};
         } catch(e) { this.manualEntries = {}; }
+    },
+
+    saveDispValue(codigo, monthKey, valueStr) {
+        const client = store.getActiveClient();
+        if (!client) return;
+        
+        const year = String(document.getElementById('filter-period-year')?.value
+                        || document.getElementById('filter-period-value')?.value
+                        || new Date().getFullYear());
+                        
+        const storageKey = `fc_disp_${client.id}_${year}`;
+        let savedDisp = {};
+        try {
+            const stored = localStorage.getItem(storageKey);
+            if (stored) savedDisp = JSON.parse(stored);
+        } catch (e) {
+            console.error('[fcApp] Erro ao ler localStorage:', e);
+        }
+        
+        if (!savedDisp[monthKey]) savedDisp[monthKey] = {};
+        
+        const parseBRL = str => {
+            if (!str) return 0;
+            let cleaned = str.replace(/\s/g, '');
+            if (cleaned.includes(',') && cleaned.includes('.')) {
+                cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+            } else if (cleaned.includes(',')) {
+                cleaned = cleaned.replace(',', '.');
+            }
+            const val = parseFloat(cleaned);
+            return isNaN(val) ? 0 : val;
+        };
+        
+        const val = parseBRL(valueStr);
+        if (val === 0) {
+            delete savedDisp[monthKey][codigo];
+            if (Object.keys(savedDisp[monthKey]).length === 0) {
+                delete savedDisp[monthKey];
+            }
+        } else {
+            savedDisp[monthKey][codigo] = val;
+        }
+        
+        localStorage.setItem(storageKey, JSON.stringify(savedDisp));
+        this.refreshDashboard();
     },
 
     // ── Estado de bloqueio (lock) por cliente ──────────────────────────────
@@ -664,9 +718,50 @@ window.fcApp = {
         const templateForTable = store.getFlowTemplate(client.id);
         this.renderPDFFlowTable(templateForTable, yearData, months, year);
 
+        // Determina os colKeys ativos para calcular o saldo inicial do primeiro mês exibido
+        let colKeys = [];
+        if (templateForTable?.meses) {
+            const selectedKeys = new Set(
+                months.map(m => `${year}-${m.toString().padStart(2, '0')}`)
+            );
+            const mesKeys = templateForTable.meses.filter(mk => selectedKeys.has(mk)).sort();
+            colKeys = mesKeys.length > 0 ? mesKeys : [...templateForTable.meses].sort();
+        }
+
+        let saldoInicial = 0;
+        if (colKeys.length > 0) {
+            const firstMonthKey = colKeys[0];
+            const masterAccounts = window.MASTER_ACCOUNTS || [];
+            let inDispSection = false;
+            for (const acc of masterAccounts) {
+                if (acc.codigo === 'HEADER') {
+                    if (acc.descricao === 'Disponíveis Nas Contas Movimento inicial') {
+                        inDispSection = true;
+                    } else if (inDispSection) {
+                        break;
+                    }
+                    continue;
+                }
+                if (inDispSection) {
+                    const storageKey = `fc_disp_${client.id}_${year}`;
+                    let savedVal = 0;
+                    try {
+                        const stored = localStorage.getItem(storageKey);
+                        if (stored) {
+                            const parsed = JSON.parse(stored);
+                            savedVal = parsed[firstMonthKey]?.[acc.codigo] || 0;
+                        }
+                    } catch (e) {}
+                    saldoInicial += savedVal;
+                }
+            }
+        }
+
+        const saldoAjustado = saldoInicial + saldoLiq;
+
         // ── Barra de resumo (saldos) ──────────────────────────────────────
-        this.renderSummaryBar({ saldoInicial: 0, totalReceitas: totalRealizadoEntradas,
-                                totalDespesas: totalRealizadoSaidas, saldoLiq, saldoAjustado: saldoLiq });
+        this.renderSummaryBar({ saldoInicial, totalReceitas: totalRealizadoEntradas,
+                                totalDespesas: totalRealizadoSaidas, saldoLiquido: saldoLiq, saldoAjustado });
     },
 
     /**
@@ -716,11 +811,28 @@ window.fcApp = {
                 : `${fmtMesLabel(colKeys[0])} → ${fmtMesLabel(colKeys[colKeys.length - 1])}`;
         }
 
+        const client = store.getActiveClient();
+        const storageKey = client ? `fc_disp_${client.id}_${year}` : null;
+        let savedDisp = {};
+        if (storageKey) {
+            try {
+                const stored = localStorage.getItem(storageKey);
+                if (stored) savedDisp = JSON.parse(stored);
+            } catch (e) {
+                console.error('[fcApp] Erro ao ler localStorage:', e);
+            }
+        }
+
         // ── Pré-carrega realizado de cada mês ──────────────────────────────
         // realizadoByMonth[monthKey][codigo] = valor (clonado para evitar mutações)
         const realizadoByMonth = {};
         for (const mk of colKeys) {
             realizadoByMonth[mk] = { ...(yearData[mk]?.realizado || {}) };
+            if (savedDisp[mk]) {
+                for (const [accCod, val] of Object.entries(savedDisp[mk])) {
+                    realizadoByMonth[mk][accCod] = val;
+                }
+            }
         }
 
         // ── Recalcula os totais dos grupos (bottom-up) ─────────────────────
@@ -808,6 +920,8 @@ window.fcApp = {
             if (inDispSection) dispSection.push(acc);
         }
 
+        const locked = this.isLocked();
+
         // ── Função auxiliar para renderizar uma linha da tabela ────────────
         const renderRow = (codigo, descricao, nivel, vals, total) => {
             const isGrupo = nivel <= 2;
@@ -829,6 +943,37 @@ window.fcApp = {
             }
         };
 
+        // ── Função auxiliar para renderizar linha editável (Disponíveis) ────
+        const renderEditableRow = (codigo, descricao, nivel, vals, total, colKeys) => {
+            const indent  = Math.max(0, nivel - 2) * 16;
+            const displayCodigo = codigo.replace(/^1\./, '0.');
+            
+            let row = `<tr>
+                <td style="font-size:0.72rem;color:var(--text-secondary);white-space:nowrap;">${displayCodigo}</td>
+                <td style="padding-left:${indent + 12}px;font-size:0.88rem;">${descricao}</td>`;
+            
+            colKeys.forEach((mk, idx) => {
+                const v = vals[idx] || 0;
+                const valStr = v ? v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
+                if (locked) {
+                    row += `<td style="text-align:right;color:${valColor(v)};font-size:0.88rem;padding-right:12px;">${v === 0 ? '—' : valStr}</td>`;
+                } else {
+                    row += `<td style="text-align:right;font-size:0.88rem;padding:4px 8px;">
+                        <input type="text" class="disp-val-input" data-month="${mk}" data-code="${codigo}" value="${valStr}" 
+                            style="text-align:right;width:100%;max-width:105px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:#fff;border-radius:4px;padding:3px 6px;font-size:0.85rem;box-sizing:border-box;transition:all 0.2s;"
+                            placeholder="—"
+                            onfocus="this.style.border='1px solid var(--primary,#e07a35)';this.style.background='rgba(255,255,255,0.08)';"
+                            onblur="this.style.border='1px solid rgba(255,255,255,0.1)';this.style.background='rgba(255,255,255,0.04)';"
+                            onchange="window.fcApp.saveDispValue('${codigo}', '${mk}', this.value)"
+                        />
+                    </td>`;
+                }
+            });
+            
+            row += `<td style="text-align:right;color:${valColor(total)};font-size:0.88rem;background:rgba(255,255,255,0.05);font-weight:700;line-height:2rem;padding-right:12px;">${fmt(total)}</td></tr>`;
+            return row;
+        };
+
         let tbody = '<tbody>';
 
         // ── Bloco: Disponíveis nas Contas Movimento inicial ────────────────
@@ -837,8 +982,21 @@ window.fcApp = {
             const nCols = colKeys.length + 2;
             tbody += `<tr style="background:linear-gradient(90deg,#c2692a,#e07a35);color:#fff;font-weight:800;font-size:0.95rem;">
                 <td colspan="2" style="padding:8px 12px;">Disponíveis Nas Contas Movimento inicial</td>`;
-            // Células vazias para cada coluna de mês + Total
-            for (let i = 0; i < colKeys.length + 1; i++) tbody += `<td></td>`;
+            
+            // Calcula totais mensais do grupo Disponíveis
+            const headerVals = colKeys.map(mk => {
+                let sum = 0;
+                for (const acc of dispSection) {
+                    sum += (realizadoByMonth[mk][acc.codigo] || 0);
+                }
+                return sum;
+            });
+            const headerTotal = headerVals.reduce((s, v) => s + v, 0);
+
+            for (const hv of headerVals) {
+                tbody += `<td style="text-align:right;padding:8px;font-size:0.88rem;color:#fff;">${fmt(hv)}</td>`;
+            }
+            tbody += `<td style="text-align:right;font-weight:800;color:#fff;background:rgba(255,255,255,0.08);padding:8px;font-size:0.88rem;">${fmt(headerTotal)}</td>`;
             tbody += `</tr>`;
 
             // Linhas das contas bancárias
@@ -846,7 +1004,7 @@ window.fcApp = {
                 const nivel = acc.codigo.split('.').length;
                 const vals  = colKeys.map(mk => realizadoByMonth[mk][acc.codigo] ?? 0);
                 const total = vals.reduce((s, v) => s + v, 0);
-                tbody += renderRow(acc.codigo, acc.descricao, nivel, vals, total);
+                tbody += renderEditableRow(acc.codigo, acc.descricao, nivel, vals, total, colKeys);
             }
         }
 

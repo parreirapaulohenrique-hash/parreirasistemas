@@ -1,9 +1,9 @@
 {
-    "version":  "11.24.14",
+    "version":  "11.24.15",
     "name":  "Consultoria ParreiraLog",
-    "last_change":  "FEAT: Insercao da secao 'Disponiveis nas Contas Movimento inicial' antes das linhas de receitas no relatorio de Fluxo de Caixa.",
-    "platform_version":  "11.24.14",
+    "last_change":  "FEAT: Adicionada edicao manual para contas de movimento inicial, remapeamento de codigo de conta (1.X -> 0.X) e calculo automatico de saldos inicial/ajustado.",
+    "platform_version":  "11.24.15",
     "date":  "2026-06-22",
     "module":  "erp-consultoria",
-    "build":  "20260622.02"
+    "build":  "20260622.03"
 }
