@@ -1,8 +1,8 @@
-﻿{
-    "build":  "20260621-prod-v3.14.17",
-    "version":  "3.14.17",
+{
+    "build":  "20260622-prod-v3.14.18",
+    "version":  "3.14.18",
     "environment":  "production",
-    "change":  "v3.14.17 - FIX: Módulo Fluxo de Caixa (erp-consultoria) - Isolamento de páginas no agrupamento de linhas do parser do PDF 834.",
-    "lastUpdate":  "2026-06-21",
-    "deployedAt":  "2026-06-21"
+    "change":  "v3.14.18 - FEAT: Módulo Fluxo de Caixa (erp-consultoria) - Recálculo dinâmico e bottom-up dos totais de grupos de contas na tabela do PDF 834.",
+    "lastUpdate":  "2026-06-22",
+    "deployedAt":  "2026-06-22"
 }
