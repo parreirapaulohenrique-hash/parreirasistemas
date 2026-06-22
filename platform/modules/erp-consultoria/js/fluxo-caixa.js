@@ -717,10 +717,55 @@ window.fcApp = {
         }
 
         // ── Pré-carrega realizado de cada mês ──────────────────────────────
-        // realizadoByMonth[monthKey][codigo] = valor
+        // realizadoByMonth[monthKey][codigo] = valor (clonado para evitar mutações)
         const realizadoByMonth = {};
         for (const mk of colKeys) {
-            realizadoByMonth[mk] = (yearData[mk]?.realizado) || {};
+            realizadoByMonth[mk] = { ...(yearData[mk]?.realizado || {}) };
+        }
+
+        // ── Recalcula os totais dos grupos (bottom-up) ─────────────────────
+        if (template && template.contas) {
+            const todosCodigos = Array.from(new Set(template.contas.map(c => c.codigo)));
+            
+            // 1. Identifica quais códigos têm filhos (são pais/grupos)
+            const codigosComFilhos = new Set();
+            for (const cod of todosCodigos) {
+                for (const other of todosCodigos) {
+                    if (other !== cod && other.startsWith(cod + '.')) {
+                        codigosComFilhos.add(cod);
+                        break;
+                    }
+                }
+            }
+
+            // 2. Ordena os códigos dos pais por profundidade decrescente (bottom-up)
+            const paisOrdenados = Array.from(codigosComFilhos).sort((a, b) => {
+                return b.split('.').length - a.split('.').length;
+            });
+
+            // 3. Função para obter filhos diretos de um código
+            const obterFilhosDiretos = (paiCod) => {
+                const prefixo = paiCod + '.';
+                return todosCodigos.filter(cod => {
+                    if (!cod.startsWith(prefixo)) return false;
+                    const sufixo = cod.slice(prefixo.length);
+                    return !sufixo.includes('.');
+                });
+            };
+
+            // 4. Para cada mês visível, recalcula o valor do pai como a soma de seus filhos diretos
+            for (const mk of colKeys) {
+                for (const paiCod of paisOrdenados) {
+                    const filhos = obterFilhosDiretos(paiCod);
+                    if (filhos.length > 0) {
+                        let soma = 0;
+                        for (const filho of filhos) {
+                            soma += (realizadoByMonth[mk][filho] || 0);
+                        }
+                        realizadoByMonth[mk][paiCod] = parseFloat(soma.toFixed(2));
+                    }
+                }
+            }
         }
 
         // ── Formata valor como moeda BR ────────────────────────────────────
