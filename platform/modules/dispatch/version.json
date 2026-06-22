@@ -1,8 +1,8 @@
 {
-    "build":  "20260622-prod-v3.14.19",
-    "version":  "3.14.19",
+    "build":  "20260622-prod-v3.14.20",
+    "version":  "3.14.20",
     "environment":  "production",
-    "change":  "v3.14.19 - FEAT: Módulo Fluxo de Caixa - Seção Disponíveis nas Contas Movimento inicial inserida no topo do relatório de Fluxo de Caixa.",
+    "change":  "v3.14.20 - FEAT: Edicao manual de Disponiveis, remapeamento (1.X -> 0.X) e recalculo de saldos inicial e ajustado no Fluxo de Caixa.",
     "lastUpdate":  "2026-06-22",
     "deployedAt":  "2026-06-22"
 }
