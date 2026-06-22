@@ -1,8 +1,8 @@
 {
-    "build":  "20260622-prod-v3.14.18",
-    "version":  "3.14.18",
+    "build":  "20260622-prod-v3.14.19",
+    "version":  "3.14.19",
     "environment":  "production",
-    "change":  "v3.14.18 - FEAT: Módulo Fluxo de Caixa (erp-consultoria) - Recálculo dinâmico e bottom-up dos totais de grupos de contas na tabela do PDF 834.",
+    "change":  "v3.14.19 - FEAT: Módulo Fluxo de Caixa - Seção Disponíveis nas Contas Movimento inicial inserida no topo do relatório de Fluxo de Caixa.",
     "lastUpdate":  "2026-06-22",
     "deployedAt":  "2026-06-22"
 }

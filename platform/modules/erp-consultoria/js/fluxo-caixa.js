@@ -791,38 +791,71 @@ window.fcApp = {
         }
         thead += `<th style="min-width:120px;text-align:right;background:rgba(255,255,255,0.05);">Total</th></tr></thead>`;
 
-        let tbody = '<tbody>';
-        for (const conta of template.contas) {
-            const isGrupo = conta.nivel <= 2; // "3.2" → nivel 2 → grupo
-            const indent  = Math.max(0, conta.nivel - 2) * 16; // px de indentação
-
-            // Coleta valores de cada mês para esta conta
-            const vals = colKeys.map(mk => realizadoByMonth[mk][conta.codigo] ?? 0);
-            const total = vals.reduce((s, v) => s + v, 0);
-
-            // Verifica se a conta tem algum valor (evita linhas completamente vazias)
-            // Grupos sempre mostram, contas só mostram se tiverem valor OU se o template foi definido
-            const hasValue = vals.some(v => v !== 0);
-
-            if (isGrupo) {
-                // Linha de grupo — fundo escuro, negrito
-                tbody += `<tr style="background:rgba(255,255,255,0.06); font-weight:700;">
-                    <td style="font-size:0.75rem;color:var(--text-secondary);white-space:nowrap;">${conta.codigo}</td>
-                    <td style="padding-left:${indent}px;">${conta.descricao}</td>`;
-                for (const v of vals) {
-                    tbody += `<td style="text-align:right;color:${valColor(v)};">${fmt(v)}</td>`;
+        // ── Monta a seção "Disponíveis nas Contas Movimento inicial" ──────
+        // Extrai do master-accounts.js as contas do grupo "Disponíveis Nas Contas Movimento inicial"
+        const masterAccounts = window.MASTER_ACCOUNTS || [];
+        const dispSection = [];
+        let inDispSection = false;
+        for (const acc of masterAccounts) {
+            if (acc.codigo === 'HEADER') {
+                if (acc.descricao === 'Disponíveis Nas Contas Movimento inicial') {
+                    inDispSection = true;
+                } else if (inDispSection) {
+                    break; // Termina ao encontrar o próximo HEADER
                 }
-                tbody += `<td style="text-align:right;font-weight:800;color:${valColor(total)};background:rgba(255,255,255,0.05);">${fmt(total)}</td></tr>`;
-            } else {
-                // Linha de conta — normal, indentada
-                tbody += `<tr>
-                    <td style="font-size:0.72rem;color:var(--text-secondary);white-space:nowrap;">${conta.codigo}</td>
-                    <td style="padding-left:${indent + 12}px;font-size:0.88rem;">${conta.descricao}</td>`;
-                for (const v of vals) {
-                    tbody += `<td style="text-align:right;color:${valColor(v)};font-size:0.88rem;">${fmt(v)}</td>`;
-                }
-                tbody += `<td style="text-align:right;color:${valColor(total)};font-size:0.88rem;background:rgba(255,255,255,0.05);">${fmt(total)}</td></tr>`;
+                continue;
             }
+            if (inDispSection) dispSection.push(acc);
+        }
+
+        // ── Função auxiliar para renderizar uma linha da tabela ────────────
+        const renderRow = (codigo, descricao, nivel, vals, total) => {
+            const isGrupo = nivel <= 2;
+            const indent  = Math.max(0, nivel - 2) * 16;
+            if (isGrupo) {
+                let row = `<tr style="background:rgba(255,255,255,0.06); font-weight:700;">
+                    <td style="font-size:0.75rem;color:var(--text-secondary);white-space:nowrap;">${codigo}</td>
+                    <td style="padding-left:${indent}px;">${descricao}</td>`;
+                for (const v of vals) row += `<td style="text-align:right;color:${valColor(v)};">${fmt(v)}</td>`;
+                row += `<td style="text-align:right;font-weight:800;color:${valColor(total)};background:rgba(255,255,255,0.05);">${fmt(total)}</td></tr>`;
+                return row;
+            } else {
+                let row = `<tr>
+                    <td style="font-size:0.72rem;color:var(--text-secondary);white-space:nowrap;">${codigo}</td>
+                    <td style="padding-left:${indent + 12}px;font-size:0.88rem;">${descricao}</td>`;
+                for (const v of vals) row += `<td style="text-align:right;color:${valColor(v)};font-size:0.88rem;">${fmt(v)}</td>`;
+                row += `<td style="text-align:right;color:${valColor(total)};font-size:0.88rem;background:rgba(255,255,255,0.05);">${fmt(total)}</td></tr>`;
+                return row;
+            }
+        };
+
+        let tbody = '<tbody>';
+
+        // ── Bloco: Disponíveis nas Contas Movimento inicial ────────────────
+        if (dispSection.length > 0) {
+            // Header da seção — estilo laranja como no PDF original
+            const nCols = colKeys.length + 2;
+            tbody += `<tr style="background:linear-gradient(90deg,#c2692a,#e07a35);color:#fff;font-weight:800;font-size:0.95rem;">
+                <td colspan="2" style="padding:8px 12px;">Disponíveis Nas Contas Movimento inicial</td>`;
+            // Células vazias para cada coluna de mês + Total
+            for (let i = 0; i < colKeys.length + 1; i++) tbody += `<td></td>`;
+            tbody += `</tr>`;
+
+            // Linhas das contas bancárias
+            for (const acc of dispSection) {
+                const nivel = acc.codigo.split('.').length;
+                const vals  = colKeys.map(mk => realizadoByMonth[mk][acc.codigo] ?? 0);
+                const total = vals.reduce((s, v) => s + v, 0);
+                tbody += renderRow(acc.codigo, acc.descricao, nivel, vals, total);
+            }
+        }
+
+        // ── Bloco: Linhas vindas do template do PDF ────────────────────────
+        for (const conta of template.contas) {
+            const nivel  = conta.nivel;
+            const vals   = colKeys.map(mk => realizadoByMonth[mk][conta.codigo] ?? 0);
+            const total  = vals.reduce((s, v) => s + v, 0);
+            tbody += renderRow(conta.codigo, conta.descricao, nivel, vals, total);
         }
         tbody += '</tbody>';
 
