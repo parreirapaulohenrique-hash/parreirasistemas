@@ -32,6 +32,29 @@
 })();
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // === SWAP TENANT DETECTED BY URL BEFORE INITIALIZATION ===
+    const segments = window.location.pathname.split('/').filter(Boolean);
+    const candidate = segments[0] ? segments[0].trim().toLowerCase() : '';
+    const reserved = ['modules', 'platform', 'core', 'fix_frete', 'fix_viopex', 'fix_romaneios', 'web', 'homolog'];
+    const tenantFromUrl = (candidate && !reserved.includes(candidate)) ? candidate : '';
+    const currentTenant = localStorage.getItem('app_tenant_id');
+    
+    if (tenantFromUrl && tenantFromUrl !== currentTenant) {
+        console.warn(`[Tenant Switch] URL tenant (${tenantFromUrl}) diferente do atual (${currentTenant}). Resetando dados...`);
+        if (currentTenant) {
+            ['dispatches', 'freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients'].forEach(k => {
+                localStorage.removeItem(k);
+                localStorage.removeItem(`tenant_${currentTenant}_${k}`);
+            });
+            localStorage.removeItem('logged_user');
+        }
+        localStorage.setItem('app_tenant_id', tenantFromUrl);
+        if (currentTenant) {
+            location.reload();
+            return;
+        }
+    }
+
     try {
         // GLOBAL UI UTILS
         // showToast — versão unificada (v3.12.2)
