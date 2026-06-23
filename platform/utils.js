@@ -771,10 +771,18 @@ const Utils = {
                     });
 
                 keys.forEach(key => {
-                    window.db.collection('tenants').doc(this.tenantId).collection('legacy_store').doc(key).onSnapshot((doc) => {
+                    window.db.collection('tenants').doc(this.tenantId).collection('legacy_store').doc(key).onSnapshot(async (doc) => {
                         if (doc.exists) {
                             const data = doc.data();
-                            this.processIncomingData(key, data.content);
+                            if (data.isChunked) {
+                                console.log(`[onSnapshot] Chunks detectados para ${key}. Carregando...`);
+                                const fullArray = await this.loadChunks(key, data.chunkCount);
+                                if (fullArray.length > 0) {
+                                    this.processIncomingData(key, JSON.stringify(fullArray));
+                                }
+                            } else {
+                                this.processIncomingData(key, data.content);
+                            }
                         } else {
                             this.processIncomingData(key, null); // Clear if deleted
                         }
