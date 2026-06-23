@@ -1,8 +1,8 @@
 {
-    "build":  "20260623-prod-v3.14.21",
-    "version":  "3.14.21",
+    "build":  "20260623-prod-v3.14.22",
+    "version":  "3.14.22",
     "environment":  "production",
-    "change":  "v3.14.21 - FIX: Adicionado fallback no calculo de valor de redespacho para NFs antigas/recalculadas na conferencia de faturas.",
+    "change":  "v3.14.22 - FIX: Melhoria na deteccao de ambiente de homologacao e exibicao da faixa laranja no topo.",
     "lastUpdate":  "2026-06-23",
     "deployedAt":  "2026-06-23"
 }

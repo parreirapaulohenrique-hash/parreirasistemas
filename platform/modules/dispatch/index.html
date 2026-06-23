@@ -244,12 +244,26 @@
         <span>⚠️</span>
     </div>
     <script>
-        // Exibe banner e ajusta padding SOMENTE em homologação/localhost
+        // Exibe banner e ajusta padding SOMENTE em homologação/localhost/preview
         (function() {
             var h = window.location.hostname;
-            if (h.includes('staging') || h.includes('localhost') || h === '127.0.0.1') {
+            if (h.includes('staging') || h.includes('localhost') || h === '127.0.0.1' || (h.includes('vercel.app') && h !== 'parreirasistemas.vercel.app')) {
                 var b = document.getElementById('stagingBanner');
-                if (b) { b.style.display = 'flex'; document.body.style.paddingTop = '34px'; }
+                if (b) { 
+                    b.style.display = 'flex'; 
+                    document.body.style.paddingTop = '34px'; 
+                    // Ajusta altura do container principal para não cortar o rodapé
+                    var appContainer = document.querySelector('.app-container');
+                    if (appContainer) {
+                        appContainer.style.height = 'calc(100% - 34px)';
+                    }
+                    // Ajusta overlay de login para começar abaixo da faixa de homologação
+                    var loginOverlay = document.querySelector('.login-overlay');
+                    if (loginOverlay) {
+                        loginOverlay.style.top = '34px';
+                        loginOverlay.style.height = 'calc(100% - 34px)';
+                    }
+                }
                 // Adiciona prefixo [HOMOLOG] ao título da aba
                 document.title = '[HOMOLOG] ' + document.title;
             }
