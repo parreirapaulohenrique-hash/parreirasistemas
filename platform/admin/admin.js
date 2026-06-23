@@ -129,7 +129,16 @@ async function loadTenants() {
 
     try {
         const snap = await db.collection('tenants').get();
-        _tenants = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        _tenants = snap.docs.map(d => {
+            const data = d.data();
+            return {
+                id: d.id,
+                name: data.nome || data.name || d.id,
+                modules: data.modulos || data.modules || [],
+                status: data.ativo !== undefined ? (data.ativo ? 'active' : 'inactive') : (data.status || 'active'),
+                ...data
+            };
+        });
         renderTenantGrid();
     } catch (e) {
         grid.innerHTML = `<div class="loading" style="color:#ef4444;">Erro ao carregar: ${e.message}</div>`;
@@ -397,7 +406,19 @@ async function saveTenant() {
     // Coleta módulos selecionados
     const modules = ALL_MODULES.filter(m => document.getElementById(`mod_${m.id}`)?.classList.contains('active')).map(m => m.id);
 
-    const data = { name, slug, status, contactEmail: email, contactPhone: phone, notes, modules, updatedAt: new Date().toISOString() };
+    const data = { 
+        name, 
+        nome: name, 
+        slug, 
+        status, 
+        ativo: status === 'active', 
+        contactEmail: email, 
+        contactPhone: phone, 
+        notes, 
+        modules, 
+        modulos: modules, 
+        updatedAt: new Date().toISOString() 
+    };
 
     try {
         const docId = _currentTenantId || slug;
@@ -431,7 +452,11 @@ async function deleteTenant() {
     if (!confirm(`Excluir a empresa "${tenant?.name || _currentTenantId}"?\n\nIsso remove os dados do tenant. Usuários e dados de despacho não são apagados automaticamente.`)) return;
 
     try {
-        await db.collection('tenants').doc(_currentTenantId).update({ status: 'inactive', deletedAt: new Date().toISOString() });
+        await db.collection('tenants').doc(_currentTenantId).update({ 
+            status: 'inactive', 
+            ativo: false, 
+            deletedAt: new Date().toISOString() 
+        });
         toast('Empresa desativada.', 'info');
         closeModal();
         loadTenants();

@@ -26,7 +26,7 @@ window.LicencasManager = (function () {
     // ── Helpers ──────────────────────────────────────────────────────────────
     function _col() {
         try {
-            return firebase.firestore()
+            return ParreiraAuth.getDB()
                 .collection('platform').doc('licencas').collection('clientes');
         } catch(e) { return null; }
     }
