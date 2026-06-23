@@ -85,9 +85,9 @@ if ($status) {
 Write-Host ""
 
 # ============================================
-# ETAPA 4: MERGE STAGING -> MAIN + PUSH
+# ETAPA 4: DEPLOY EM HOMOLOGACAO (STAGING)
 # ============================================
-Write-Host "[4/5] Mergeando staging -> main e enviando para o GitHub..." -ForegroundColor Yellow
+Write-Host "[4/5] Enviando alteracoes para a branch staging no GitHub..." -ForegroundColor Yellow
 
 $currentBranch = git rev-parse --abbrev-ref HEAD
 Write-Host "  Branch atual: $currentBranch" -ForegroundColor Gray
@@ -99,24 +99,13 @@ try {
         Write-Host "  -> Mudou para branch staging" -ForegroundColor Gray
     }
 
-    # Vai para main e faz o merge
-    git checkout main
-    git merge staging --no-edit
-    Write-Host "  -> Merge staging -> main concluido" -ForegroundColor Gray
-
-    # Push main para o GitHub (Vercel escuta main)
-    git push origin main
-    Write-Host "  OK Push main concluido! Vercel iniciara o deploy automaticamente." -ForegroundColor Green
-
-    # Volta para staging (ambiente de trabalho padrao)
-    git checkout staging
-    Write-Host "  -> Voltou para branch staging" -ForegroundColor Gray
+    # Push staging para o GitHub (Vercel escuta staging para homologação)
+    git push origin staging
+    Write-Host "  OK Push staging concluido! Vercel iniciara o deploy de homologacao automaticamente." -ForegroundColor Green
 
 } catch {
-    Write-Host "  ERRO no processo de merge/push: $_" -ForegroundColor Red
-    Write-Host "  DICA: Verifique conflitos com 'git status'" -ForegroundColor Yellow
-    # Tenta voltar para staging em caso de erro
-    git checkout staging 2>$null
+    Write-Host "  ERRO no processo de push: $_" -ForegroundColor Red
+    Write-Host "  DICA: Verifique conflitos ou permissoes." -ForegroundColor Yellow
 }
 Write-Host ""
 
@@ -164,8 +153,8 @@ Write-Host ""
 # ETAPA 5: CONCLUSAO
 # ============================================
 Write-Host "========================================"  -ForegroundColor Cyan
-Write-Host "  DEPLOY CONCLUIDO COM SUCESSO! v6.0"    -ForegroundColor Green
-Write-Host "  staging -> main -> Vercel"               -ForegroundColor Green
+Write-Host "  DEPLOY EM HOMOLOGACAO CONCLUIDO!"      -ForegroundColor Green
+Write-Host "  staging -> GitHub -> Vercel Staging"     -ForegroundColor Green
 Write-Host "========================================"  -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  Vercel (Frontend):   https://vercel.com/dashboard" -ForegroundColor Gray

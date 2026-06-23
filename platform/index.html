@@ -13,6 +13,42 @@
 </head>
 
 <body>
+    <!-- ⚠️ BANNER DE HOMOLOGAÇÃO — exibido automaticamente quando hostname contiver 'staging' ou 'localhost' -->
+    <div id="stagingBanner" style="
+        display: none;
+        position: fixed; top: 0; left: 0; right: 0; z-index: 999999;
+        background: linear-gradient(90deg, #f59e0b, #d97706);
+        color: #000; font-weight: 700; font-size: 0.82rem;
+        text-align: center; padding: 6px 12px;
+        letter-spacing: 0.08em; text-transform: uppercase;
+        box-shadow: 0 2px 8px rgba(245,158,11,0.5);
+        align-items: center; justify-content: center; gap: 8px;
+    ">
+        <span>⚠️</span>
+        <span>AMBIENTE DE HOMOLOGAÇÃO — DADOS DE TESTE, NÃO USE EM PRODUÇÃO</span>
+        <span>⚠️</span>
+    </div>
+    <script>
+        // Exibe banner e ajusta padding SOMENTE em homologação/localhost/preview
+        (function() {
+            var h = window.location.hostname;
+            if (h.includes('staging') || h.includes('localhost') || h === '127.0.0.1' || (h.includes('vercel.app') && h !== 'parreirasistemas.vercel.app')) {
+                var b = document.getElementById('stagingBanner');
+                if (b) { 
+                    b.style.display = 'flex'; 
+                    document.body.style.paddingTop = '34px'; 
+                    // Ajusta overlay de login para começar abaixo da faixa de homologação
+                    var loginOverlay = document.querySelector('.login-overlay');
+                    if (loginOverlay) {
+                        loginOverlay.style.top = '34px';
+                        loginOverlay.style.height = 'calc(100% - 34px)';
+                    }
+                }
+                // Adiciona prefixo [HOMOLOG] ao título da aba
+                document.title = '[HOMOLOG] ' + document.title;
+            }
+        })();
+    </script>
     <header class="header">
         <div class="logo">
             <div class="logo-icon">

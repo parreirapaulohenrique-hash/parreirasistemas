@@ -27,21 +27,22 @@ let platformUsers  = JSON.parse(localStorage.getItem('platform_users_registry') 
 // caso o localStorage tenha sido limpo no browser)
 async function reloadTenantsFromFirestore() {
     try {
-        if (typeof firebase === 'undefined') return;
-        const db = firebase.firestore();
+        const db = ParreiraAuth.getDB();
+        if (!db) return;
         const snap = await db.collection('tenants').get();
         if (snap.empty) return;
 
         let updated = false;
         snap.forEach(doc => {
             const data = doc.data();
-            if (!data.ativo) return; // Ignora tenants inativos
+            const isAtivo = data.ativo !== undefined ? data.ativo : (data.status === 'active');
+            if (!isAtivo) return; // Ignora tenants inativos
             if (!dynamicTenants.find(t => t.id === doc.id)) {
                 dynamicTenants.push({
                     id:        doc.id,
-                    name:      data.nome || doc.id,
+                    name:      data.nome || data.name || doc.id,
                     cnpj:      data.cnpj || '',
-                    modules:   data.modulos || [],
+                    modules:   data.modulos || data.modules || [],
                     status:    'active',
                     isDynamic: true
                 });
@@ -504,8 +505,8 @@ window.abrirWmsConfig = async function (tenantId) {
     // Carrega configs existentes do Firestore
     let wmsInt = {}, wmsCfg = {}, tenantAdmin = null;
     try {
-        if (typeof firebase !== 'undefined') {
-            const db = firebase.firestore();
+        const db = ParreiraAuth.getDB();
+        if (db) {
             const [intSnap, cfgSnap, usersSnap] = await Promise.all([
                 db.collection('tenants').doc(tenantId).collection('wms_config').doc('integration').get(),
                 db.collection('tenants').doc(tenantId).collection('wms_config').doc('config').get(),
@@ -899,8 +900,8 @@ window.salvarWmsConfig = async function(tenantId) {
 
     if (feedback) { feedback.style.color='#94a3b8'; feedback.textContent='Salvandoâ€¦'; }
     try {
-        if (typeof firebase !== 'undefined') {
-            const db = firebase.firestore();
+        const db = ParreiraAuth.getDB();
+        if (db) {
             await Promise.all([
                 db.collection('tenants').doc(tenantId).collection('wms_config').doc('integration').set(integrationData),
                 db.collection('tenants').doc(tenantId).collection('wms_config').doc('config').set(configData)
