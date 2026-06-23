@@ -5,7 +5,7 @@ const Utils = {
     // Chaves sensíveis ao tenant — isoladas por prefixo no localStorage
     _TENANT_KEYS: ['freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users',
         'carrier_info_v2', 'invoice_history', 'app_sellers', 'app_settings', 'app_romaneios',
-        'delivery_history', 'dispatches'],
+        'delivery_history', 'dispatches', 'clients'],
 
     // Retorna a chave com prefixo de tenant quando aplicável
     _storageKey(key) {
@@ -78,9 +78,10 @@ const Utils = {
         localStorage.setItem(Utils._storageKey(key), stringData);
         Utils.lastWriteTime[key] = Date.now();
         Utils._persistLastWriteTime(); // v3.11.64
-        if (Utils.Cloud) {
-            try {
-                const data = JSON.parse(stringData);
+        try {
+            const data = JSON.parse(stringData);
+            Utils._memStore[key] = data; // Keep memory store in sync!
+            if (Utils.Cloud) {
                 // PROTEÇÃO: Não enviar arrays vazios para a nuvem
                 if (Array.isArray(data) && data.length === 0) {
                     console.warn(`⚠️ [Proteção] saveRaw: Não enviando array vazio para nuvem: ${key}`);
@@ -95,8 +96,8 @@ const Utils = {
                         Utils.Cloud.save(key, data);
                     }
                 }
-            } catch (e) { console.error('[saveRaw] Erro:', e); }
-        }
+            }
+        } catch (e) { console.error('[saveRaw] Erro:', e); }
     },
 
     addToStorage: (key, item) => {
@@ -114,6 +115,7 @@ const Utils = {
     setStorage: (key, data) => {
         try {
             localStorage.setItem(Utils._storageKey(key), JSON.stringify(data));
+            Utils._memStore[key] = data; // Keep memory store in sync!
             Utils.lastWriteTime[key] = Date.now();
             Utils._persistLastWriteTime(); // v3.11.64
             // PROTEÇÃO: Não enviar arrays vazios para a nuvem (evita sobrescrever dados existentes)
@@ -145,14 +147,6 @@ const Utils = {
 
         // --- SAVE LOGIC (Direct to TenantID) ---
         async save(key, data) {
-            // Clients usam armazenamento chunked — nunca salvar como doc único
-            if (key === 'clients') {
-                console.warn('[Cloud] clients usa chunks — edições individuais salvas apenas localmente (memória). Use o script de importação para atualizar em massa.');
-                Utils._memStore.clients = Array.isArray(data) ? data : Utils._memStore.clients;
-                if (window.renderClientsList) window.renderClientsList();
-                return true;
-            }
-
             // --- FIREBASE MODE ---
             if (typeof firebase !== 'undefined' && window.db) {
                 try {
