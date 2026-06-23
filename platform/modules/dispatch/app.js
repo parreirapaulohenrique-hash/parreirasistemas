@@ -4469,6 +4469,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (isRedespNew) {
                         // Redespacho novo: usa apenas o valor do redespacho
                         invoiceValue = d.redespTotal || 0;
+                        
+                        // Se redespTotal não foi salvo, tenta extrair da regra de redespacho cadastrada
+                        if (!invoiceValue) {
+                            const freightRules = Utils.getStorage('freight_tables') || [];
+                            const dCarrier = String(d.carrier || '').trim().toUpperCase();
+                            const dCity = String(d.city || '').trim().toUpperCase();
+                            const rule = freightRules.find(r =>
+                                String(r.transportadora || '').trim().toUpperCase() === dCarrier &&
+                                String(r.cidade || '').trim().toUpperCase() === dCity &&
+                                String(r.redespacho || '').trim().toUpperCase() === carrierNorm
+                            );
+                            if (rule && d.nfValue) {
+                                let rVal = 0;
+                                if (rule.percentualRedespacho > 0) {
+                                    rVal = d.nfValue * (rule.percentualRedespacho / 100);
+                                }
+                                const rMin = rule.minimoRedespacho || 0;
+                                if (rVal < rMin) rVal = rMin;
+                                invoiceValue = Math.round(rVal * 100) / 100;
+                            }
+                        }
+                        
+                        // Como último recurso, se ainda for 0, tenta usar a diferença de originalTotal e total (recalculado)
+                        if (!invoiceValue && d.originalTotal && d.total && d.originalTotal > d.total) {
+                            invoiceValue = Math.round((d.originalTotal - d.total) * 100) / 100;
+                        }
                     } else if (isRedespLegacy) {
                         // Redespacho legado: usa redespTotal se existir, senão tenta calcular
                         // (NFs antigas podem ter o valor em d.total e não ter mainTotal/redespTotal)
@@ -4476,6 +4502,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                         // Se redespTotal não foi salvo, tenta extrair do percentualRedespacho
                         if (!invoiceValue && d.percentualRedespacho && d.nfValue) {
                             invoiceValue = Math.round(d.nfValue * (d.percentualRedespacho / 100) * 100) / 100;
+                        }
+                        
+                        // Se ainda for 0, tenta buscar a regra ativa no localStorage
+                        if (!invoiceValue) {
+                            const freightRules = Utils.getStorage('freight_tables') || [];
+                            const dCarrier = String(d.carrier || '').trim().toUpperCase();
+                            const dCity = String(d.city || '').trim().toUpperCase();
+                            const rule = freightRules.find(r =>
+                                String(r.transportadora || '').trim().toUpperCase() === dCarrier &&
+                                String(r.cidade || '').trim().toUpperCase() === dCity &&
+                                String(r.redespacho || '').trim().toUpperCase() === carrierNorm
+                            );
+                            if (rule && d.nfValue) {
+                                let rVal = 0;
+                                if (rule.percentualRedespacho > 0) {
+                                    rVal = d.nfValue * (rule.percentualRedespacho / 100);
+                                }
+                                const rMin = rule.minimoRedespacho || 0;
+                                if (rVal < rMin) rVal = rMin;
+                                invoiceValue = Math.round(rVal * 100) / 100;
+                            }
+                        }
+                        
+                        // Como último recurso, se ainda for 0, tenta usar a diferença de originalTotal e total (recalculado)
+                        if (!invoiceValue && d.originalTotal && d.total && d.originalTotal > d.total) {
+                            invoiceValue = Math.round((d.originalTotal - d.total) * 100) / 100;
                         }
                     } else {
                         // Principal: usa o total menos o redespacho (evita dupla contagem)
