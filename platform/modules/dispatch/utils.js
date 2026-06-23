@@ -94,8 +94,8 @@ const Utils = {
                         Utils.Cloud.save(key, data);
                     }
                 }
-            } catch (e) { console.error('[saveRaw] Erro:', e); }
-        }
+            }
+        } catch (e) { console.error('[saveRaw] Erro:', e); }
     },
 
     addToStorage: (key, item) => {
