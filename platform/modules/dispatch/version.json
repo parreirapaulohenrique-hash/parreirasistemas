@@ -1,8 +1,8 @@
 {
-    "build":  "20260623-prod-v3.14.22",
-    "version":  "3.14.22",
+    "build":  "20260623-prod-v3.14.23",
+    "version":  "3.14.23",
     "environment":  "production",
-    "change":  "v3.14.22 - FIX: Melhoria na deteccao de ambiente de homologacao e exibicao da faixa laranja no topo.",
+    "change":  "v3.14.23 - FIX: Adicionado banner de homologacao tambem no portal de entrada (platform/index.html).",
     "lastUpdate":  "2026-06-23",
     "deployedAt":  "2026-06-23"
 }
