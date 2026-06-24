@@ -581,7 +581,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const segments = window.location.pathname.split('/').filter(Boolean);
             const candidate = segments[0] ? segments[0].trim().toLowerCase() : '';
             // Ignora segmentos que são rotas do sistema (módulos, fix_, etc)
-            const reserved = ['modules', 'platform', 'core', 'fix_frete', 'fix_viopex', 'fix_romaneios', 'web', 'homolog'];
+            const reserved = ['modules', 'platform', 'core', 'fix_frete', 'fix_viopex', 'fix_romaneios', 'web', 'homolog', 'login.html', 'index.html', 'setup.html'];
             return (candidate && !reserved.includes(candidate)) ? candidate : '';
         };
 

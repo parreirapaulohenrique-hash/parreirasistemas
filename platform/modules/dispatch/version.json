@@ -1,8 +1,8 @@
 {
-    "build":  "20260624-prod-v3.14.24",
-    "version":  "3.14.24",
+    "build":  "20260624-prod-v3.14.25",
+    "version":  "3.14.25",
     "environment":  "production",
-    "change":  "v3.14.24 - FIX: Cache busting for dispatch scripts to force reload tenant swap logic.",
+    "change":  "v3.14.25 - FIX: Added vercel.json rewrite for login.html and updated reserved segments in app.js.",
     "lastUpdate":  "2026-06-24",
     "deployedAt":  "2026-06-24"
 }
