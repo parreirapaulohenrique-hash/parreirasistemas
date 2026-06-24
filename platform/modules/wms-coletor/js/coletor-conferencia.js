@@ -1,4 +1,4 @@
-﻿// =============================================================================
+// =============================================================================
 // WMS Coletor — Tela "Conferir" (Conferência de Recebimento)
 // Etapa final do fluxo: Portaria → Doca → CONFERIR
 // Parâmetros configuráveis via WMS > Configurações (para uso futuro):
@@ -415,22 +415,19 @@ window.finalizarConferencia = async function() {
         const fim    = new Date().toISOString();
 
         const maxdataPayload = {
-            recebimentoId: r.id,
-            nfNumero:      r.nfNumero,
-            chaveNfe:      r.chaveNfe || '',
-            fornecedor:    r.fornecedor,
-            pedidoCompra:  r.pedidoCompra || '',
-            operador:      sessao.nome || sessao.login || 'Operador',
-            inicio:        window._confSessao.inicio, fim,
+            recebimentoId:   r.id,
+            nfNumero:        r.nfNumero,
+            chaveNfe:        r.chaveNfe || '',
+            fornecedor:      r.fornecedor,
+            pedidoCompra:    r.pedidoCompra || '',
+            operador:        sessao.nome || sessao.login || 'Operador',
+            inicio:          window._confSessao.inicio, fim,
             hasDivergencia,
-            itens:         itensPayload
+            itens:           itensPayload,
+            _maxdataEntryId: r._maxdataEntryId || ''
         };
 
-        // 1. Envia resumo ao ERP Maxdata (não bloqueia em caso de falha)
-        WmsProcedures.proc_enviar_conferencia_maxdata(maxdataPayload)
-            .catch(e => console.warn('[Maxdata] Falha no envio (será retentado):', e.message));
-
-        // 2. Notifica ERP (procedure original)
+        // 1. Notifica ERP (esta procedure encaminha para o conector correto)
         await WmsProcedures.proc_confirmar_conferencia_itens(maxdataPayload);
 
         // 3. Finaliza no Firestore

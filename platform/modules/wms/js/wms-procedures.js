@@ -1,4 +1,4 @@
-﻿// =============================================================================
+// =============================================================================
 // WMS Procedures — Camada de Integração Multi-ERP
 // Versão: 1.0.0 | WMS v1.7.0
 //
@@ -391,11 +391,33 @@
             } catch (err) {
                 result = { status: 'warning', message: `ERP inacessível. Dados salvos localmente. (${err.message})` };
             }
+        } else if (id === 'maxdata') {
+            try {
+                const token = await _maxdataGetToken();
+                const cfg2  = _maxdataCfg();
+                const base  = cfg2.baseUrl.replace(/\/$/, '');
+                const body = {
+                    entryId:        payload._maxdataEntryId || payload.entryId || payload._maxdataId || null,
+                    volumes:        payload.volumesFisicos || 0,
+                    placa:          payload.placa || '',
+                    motorista:      payload.motorista || '',
+                    operador:       payload.operador || '',
+                    dataCheckin:    payload.dataConferencia || new Date().toISOString()
+                };
+                const resp = await fetch(`${base}/entry/checkin`, {
+                    method: 'PUT',
+                    headers: _maxdataHdrs(token),
+                    body: JSON.stringify(body),
+                    signal: AbortSignal.timeout(15000)
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                result = { status: 'ok', message: 'Check-in de volumes confirmado no Maxdata.' };
+            } catch (err) {
+                result = { status: 'warning', message: `Erro na integração Maxdata: ${err.message}. Check-in salvo localmente.` };
+            }
         } else {
-            // Maxdata + Standalone: recebimento de volumes é validação INTERNA do WMS.
-            // O Maxdata NÃO consome esse evento — apenas a conferência item a item
-            // (proc_enviar_conferencia_maxdata → PUT /entry/markaschecked) vai ao ERP.
-            result = { status: 'ok', message: 'Recebimento de volumes registrado localmente. Aguardando conferência de itens para integração com Maxdata.' };
+            // Standalone (sem ERP)
+            result = { status: 'ok', message: 'Recebimento de volumes registrado localmente (Standalone).' };
         }
 
 
@@ -699,14 +721,25 @@ ${emailRemetente ? `<${emailRemetente}>` : ''}
         // @param {object} payload — { nfNumero, chaveNfe, operador, inicio, fim, itens: [{sku, divergenciaQty, lido, esperado}] }
         const { connectorId } = window.WmsIntegration.getStatus();
 
+        if (connectorId === 'maxdata') {
+            try {
+                const res = await proc_enviar_conferencia_maxdata(payload);
+                _logSync('proc_confirmar_conferencia_itens', 'wms→erp', 'ok', `Conferência de itens da NF ${payload.nfNumero} integrada com Maxdata.`);
+                return { status: 'ok', message: 'Conferência integrada com Maxdata.', protocolo: res.protocolo };
+            } catch (err) {
+                _logSync('proc_confirmar_conferencia_itens', 'wms→erp', 'error', `Falha ao integrar conferência com Maxdata: ${err.message}`);
+                throw new Error(`Falha na integração com Maxdata: ${err.message}`);
+            }
+        }
+
         if (connectorId !== 'standalone') {
             try {
-                const res = await window.WmsIntegration.sync('product_conference', 'wms→erp', payload);
+                const res = await window.WmsIntegration.push('receipts', payload);
                 if (res.status === 'error') throw new Error(res.message);
-                _logSync('proc_confirmar_conferencia_itens', 'wms→erp', 'ok', `Conferência Produtos NF ${payload.nfNumero} repassada via ${connectorId}`);
+                _logSync('proc_confirmar_conferencia_itens', 'wms→erp', 'ok', `Conferência Produtos NF ${payload.nfNumero} repassada via conector ${connectorId}`);
                 return res;
             } catch (err) {
-                _logSync('proc_confirmar_conferencia_itens', 'wms→erp', 'error', `Falha ao integrar conferência NF ${payload.nfNumero}: ${err.message}`);
+                _logSync('proc_confirmar_conferencia_itens', 'wms→erp', 'error', `Falha ao integrar conferência NF ${payload.nfNumero} via conector: ${err.message}`);
                 throw new Error(`Falha na integração: ${err.message}`);
             }
         }
