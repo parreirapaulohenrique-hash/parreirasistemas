@@ -27,6 +27,15 @@ window.ParreiraAuth = (function () {
         return _db;
     }
 
+    async function _ensureAuth() {
+        if (typeof firebase !== 'undefined' && firebase.auth) {
+            const auth = firebase.auth();
+            if (!auth.currentUser) {
+                await auth.signInAnonymously();
+            }
+        }
+    }
+
     // ─── SHA-256 via Web Crypto API ───────────────────────────────────────────
     async function _hash(str) {
         const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
@@ -39,6 +48,9 @@ window.ParreiraAuth = (function () {
         const db       = _initDB();
         const loginKey = loginStr.trim().toLowerCase();
         modulo = modulo || 'wms';
+
+        // Garante autenticação anônima antes de acessar o firestore
+        await _ensureAuth();
 
         // 1. Localiza tenant via índice
         const idxDoc = await db.collection('users_index').doc(loginKey).get();

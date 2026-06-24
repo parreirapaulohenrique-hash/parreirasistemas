@@ -177,7 +177,8 @@ window.salvarCheckin = async function() {
             await WmsStore.atualizarRecebimento(payload.id, {
                 status:        'AGUARDANDO_CONFERENCIA',
                 itens:         preEntrada.itens,
-                pedidoCompra:  preEntrada.pedidoCompra || ''
+                pedidoCompra:  preEntrada.pedidoCompra || '',
+                _maxdataEntryId: preEntrada._maxdataEntryId || ''
             });
             Feedback.beep('success'); Feedback.flash('success');
             showToast('✅ Pré-Entrada confirmada! NF liberada para conferência.', 'success');
@@ -482,6 +483,37 @@ window.salvarConferenciaFisica = async function() {
 
     try {
         await WmsStore.atualizarRecebimento(window._confAtivoId, update);
+
+        // Notifica o ERP (Check-in/Recebimento de volumes na doca)
+        const r = window._confFisicoRec || {};
+        const user = JSON.parse(localStorage.getItem('logged_user') || '{}');
+        const payload = {
+            id:              r.id,
+            chaveNfe:        r.chaveNfe || '',
+            nfNumero:        r.nfNumero,
+            nfSerie:         r.nfSerie || '1',
+            fornecedor:      r.fornecedor,
+            cnpjFornecedor:  r.cnpjFornecedor || '',
+            empresaDestino:  r.empresaDestino || '',
+            cnpjDestino:     r.cnpjDestino || '',
+            pedidoCompra:    r.pedidoCompra || '',
+            valorTotalNF:    r.valorTotalNF || 0,
+            transportadora:  r.transportadora || '',
+            doca:            r.doca || '',
+            placa:           r.placa || '',
+            motorista:       r.motorista || '',
+            volumesNF:       r.volumesNF || 0,
+            volumesFisicos:  volfis,
+            condicaoCarga:   update.condicaoCarga,
+            observacoes:     r.observacoes || '',
+            emailFornecedor: r.emailFornecedor || '',
+            itens:           r.itens || [],
+            operador:        user.name || user.login || 'Operador',
+            dataConferencia: update.dataConferenciaMacro,
+            _maxdataEntryId: r._maxdataEntryId || ''
+        };
+        await WmsProcedures.proc_confirmar_recebimento(payload);
+
         Feedback.beep('success'); Feedback.flash('success');
         showToast('Volumes confirmados! Iniciando conferência de itens.', 'success');
         if (window.updateHomeStats) updateHomeStats();
