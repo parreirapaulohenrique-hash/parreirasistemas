@@ -4534,6 +4534,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (!invoiceValue && d.originalTotal && d.total && d.originalTotal > d.total) {
                             invoiceValue = Math.round((d.originalTotal - d.total) * 100) / 100;
                         }
+
+                        // Se ainda for 0, tenta aproximar subtraindo os custos principais do total
+                        if (!invoiceValue && d.total) {
+                            const mainCosts = (d.baseCalculada || d.minimo || 0) + (d.pedagio || 0) + (d.gris || 0) + (d.taxaFixa || 0) + (d.excessoCalculado || 0);
+                            const estimatedRedesp = d.total - mainCosts;
+                            if (estimatedRedesp > 0) {
+                                invoiceValue = Math.round(estimatedRedesp * 100) / 100;
+                            }
+                        }
                     } else if (isRedespLegacy) {
                         // Redespacho legado: usa redespTotal se existir, senão tenta calcular
                         // (NFs antigas podem ter o valor em d.total e não ter mainTotal/redespTotal)
@@ -4567,6 +4576,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                         // Como último recurso, se ainda for 0, tenta usar a diferença de originalTotal e total (recalculado)
                         if (!invoiceValue && d.originalTotal && d.total && d.originalTotal > d.total) {
                             invoiceValue = Math.round((d.originalTotal - d.total) * 100) / 100;
+                        }
+
+                        // Se ainda for 0, como último recurso para NFs legadas, subtrai os custos principais do total
+                        if (!invoiceValue && d.total) {
+                            const mainCosts = (d.baseCalculada || d.minimo || 0) + (d.pedagio || 0) + (d.gris || 0) + (d.taxaFixa || 0) + (d.excessoCalculado || 0);
+                            const estimatedRedesp = d.total - mainCosts;
+                            if (estimatedRedesp > 0) {
+                                invoiceValue = Math.round(estimatedRedesp * 100) / 100;
+                            }
                         }
                     } else {
                         // Principal: usa o total menos o redespacho (evita dupla contagem)
