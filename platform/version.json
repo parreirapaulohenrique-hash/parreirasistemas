@@ -1,8 +1,8 @@
 {
-    "build":  "20260625-prod-v3.14.28",
-    "version":  "3.14.28",
+    "build":  "20260625-prod-v3.14.29",
+    "version":  "3.14.29",
     "environment":  "production",
-    "change":  "v3.14.28 - FIX: Redirect index.html directly to login.html if unauthorized, preventing local registry login bypass issues.",
+    "change":  "v3.14.29 - FIX: Added a fallback subtraction method to resolve missing redispatch values in legacy dispatches on the Invoice Verification screen.",
     "lastUpdate":  "2026-06-25",
     "deployedAt":  "2026-06-25"
 }
