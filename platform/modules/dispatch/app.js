@@ -2024,13 +2024,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const allCidadeRules = rules.filter(r => norm(r.cidade) === city);
 
                 if (allCidadeRules.length > 0) {
-                    // Prefere tabelas SEM redespacho; usa com redespacho só se não houver direta
-                    const semRedespacho = allCidadeRules.filter(r => {
-                        const temRedesp = r.redespacho && r.redespacho !== '-' && r.redespacho !== '';
-                        const temCidadeRedesp = r.cidadeRedespacho && r.cidadeRedespacho !== '-' && r.cidadeRedespacho !== '';
-                        return !temRedesp && !temCidadeRedesp;
+                    // Prefere tabelas SEM redespacho por transportadora individual; usa com redespacho se não houver direta para aquela transportadora específica
+                    const rulesByCarrier = {};
+                    allCidadeRules.forEach(r => {
+                        const c = r.transportadora;
+                        if (!rulesByCarrier[c]) rulesByCarrier[c] = [];
+                        rulesByCarrier[c].push(r);
                     });
-                    cityRules = semRedespacho.length > 0 ? semRedespacho : allCidadeRules;
+
+                    const filteredRules = [];
+                    Object.keys(rulesByCarrier).forEach(c => {
+                        const carrierRules = rulesByCarrier[c];
+                        const semRedespacho = carrierRules.filter(r => {
+                            const temRedesp = r.redespacho && r.redespacho !== '-' && r.redespacho !== '';
+                            const temCidadeRedesp = r.cidadeRedespacho && r.cidadeRedespacho !== '-' && r.cidadeRedespacho !== '';
+                            return !temRedesp && !temCidadeRedesp;
+                        });
+                        if (semRedespacho.length > 0) {
+                            filteredRules.push(...semRedespacho);
+                        } else {
+                            filteredRules.push(...carrierRules);
+                        }
+                    });
+                    cityRules = filteredRules;
                 }
             }
 

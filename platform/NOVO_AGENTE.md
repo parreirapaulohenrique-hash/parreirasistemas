@@ -304,6 +304,8 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
+| **3.14.28** | 2026-06-25 | FIX: Redirecionamento automático de index.html para login.html quando o usuário não estiver autenticado, eliminando falhas de login decorrentes de cache/localStorage vazio. |
+| **3.14.27** | 2026-06-25 | FIX: Correção de bug no cálculo de cotação rápida onde a transportadora BOA ESPERANÇA não era listada devido ao filtro global de redespacho. Agora a preferência por rotas diretas é aplicada por transportadora individual. |
 | **3.14.26** | 2026-06-24 | FIX: Correção de permissão de Firestore no `login.html` habilitando autenticação anônima e adicionando regras seguras de leitura para o índice `users_index`. Implementação de integração MaxData de recebimento de volumes (check-in de portaria) e correção de bug no push de encerramento da conferência de itens. |
 | **3.14.25** | 2026-06-24 | FIX CRÍTICO: Correção de roteamento do Vercel. Acesso direto a `/login.html` estava colidindo com o wildcard de tenant `/:tenant` e redirecionando incorretamente para o app de despacho, forçando a empresa `login.html` como padrão. Adicionado rewrite direto para `/login.html` no `vercel.json` e atualizado `reserved` segments em `app.js`. |
 | **3.14.11** | 2026-06-20 | URGENTE FIX: Banner de homologação estava `display:flex` hardcoded em `index.html` → levado para produção a cada merge `staging→main`. Banner agora `display:none` por padrão e exibido SOMENTE quando `hostname` contém `'staging'` ou `'localhost'` via IIFE JS. Produção não exibe mais o banner amarelo. |

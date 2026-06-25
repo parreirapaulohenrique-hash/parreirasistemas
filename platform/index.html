@@ -292,7 +292,7 @@
             const tenant = localStorage.getItem('app_tenant_id');
 
             if (!user || !tenant) {
-                document.getElementById('loginOverlay').style.display = 'flex';
+                window.location.href = 'login.html';
                 return;
             }
 

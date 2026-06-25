@@ -1,8 +1,8 @@
 {
-    "build":  "20260624-prod-v3.14.26",
-    "version":  "3.14.26",
+    "build":  "20260625-prod-v3.14.28",
+    "version":  "3.14.28",
     "environment":  "production",
-    "change":  "v3.14.26 - FIX: Resolved login.html firestore permissions using anonymous auth and added MaxData check-in and conference integration.",
-    "lastUpdate":  "2026-06-24",
-    "deployedAt":  "2026-06-24"
+    "change":  "v3.14.28 - FIX: Redirect index.html directly to login.html if unauthorized, preventing local registry login bypass issues.",
+    "lastUpdate":  "2026-06-25",
+    "deployedAt":  "2026-06-25"
 }
