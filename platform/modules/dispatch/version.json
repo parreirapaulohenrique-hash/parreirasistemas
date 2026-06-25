@@ -1,8 +1,8 @@
 {
-    "build":  "20260625-prod-v3.14.27",
-    "version":  "3.14.27",
+    "build":  "20260625-prod-v3.14.28",
+    "version":  "3.14.28",
     "environment":  "production",
-    "change":  "v3.14.27 - FIX: Corrected quick quoting carrier matching to group by carrier first before filtering out redispatch tables.",
+    "change":  "v3.14.28 - FIX: Redirect index.html directly to login.html if unauthorized, preventing local registry login bypass issues.",
     "lastUpdate":  "2026-06-25",
     "deployedAt":  "2026-06-25"
 }
