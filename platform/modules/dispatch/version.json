@@ -1,8 +1,8 @@
 {
-    "build":  "20260626-prod-v3.14.31",
-    "version":  "3.14.31",
+    "build":  "20260626-prod-v3.14.32",
+    "version":  "3.14.32",
     "environment":  "production",
-    "change":  "v3.14.31 - FIX: Restricted the fallback static clients array initialization to ltdistribuidora tenant.",
+    "change":  "v3.14.32 - FEAT: Moved client CSV/Excel import button from cotação form to the Cadastro de Clientes section.",
     "lastUpdate":  "2026-06-26",
     "deployedAt":  "2026-06-26"
 }
