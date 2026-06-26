@@ -5718,7 +5718,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const tbody = document.getElementById('invoiceHistoryBody');
 
             if (history.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Nenhuma fatura conferida ainda.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Nenhuma fatura conferida ainda.</td></tr>`;
             } else {
                 history.sort((a, b) => new Date(b.date) - new Date(a.date));
                 tbody.innerHTML = history.map(h => {
@@ -5732,12 +5732,229 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <td>${h.nfCount}</td>
                             <td style="text-align: right; font-weight: 600;">${Utils.formatCurrency(h.invoiceValue)}</td>
                             <td>${h.confirmedBy}${h.authorizedBy ? ` (${h.authorizedBy})` : ''}</td>
+                            <td style="text-align: center;">
+                                <button onclick="window.printInvoiceReport('${h.id}')" class="btn btn-secondary" style="padding: 0.2rem 0.5rem; min-width: auto; display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem;">
+                                    <span class="material-icons-round" style="font-size: 0.9rem;">print</span> Imprimir
+                                </button>
+                            </td>
                         </tr>
                     `;
                 }).join('');
             }
 
             document.getElementById('invoiceHistoryModal').style.display = 'flex';
+        };
+
+        // window.printInvoiceReport - Gera layout profissional de conferência de fatura confirmada para impressão
+        window.printInvoiceReport = (historyId) => {
+            const history = Utils.getStorage('invoice_history') || [];
+            const entry = history.find(h => String(h.id) === String(historyId));
+            if (!entry) {
+                alert('Fatura não encontrada no histórico.');
+                return;
+            }
+
+            const dispatches = Utils.getStorage('dispatches') || [];
+            const carrierNorm = String(entry.carrier).trim().toUpperCase();
+            const _carrierMatch = (name) => String(name || '').trim().toUpperCase() === carrierNorm;
+
+            const relatedNFs = dispatches.filter(d => {
+                const isMain = _carrierMatch(d.carrier);
+                const isRedesp = _carrierMatch(d.redespCarrier) || (_carrierMatch(d.redespacho) && !d.redespCarrier);
+                return (isMain || isRedesp) && d.invoiceRef === entry.invoiceRef && d.status === 'Pago';
+            });
+
+            // Função auxiliar de extração de valores do frete conforme lógica da conferência
+            const getNFVal = (d) => {
+                const isRedespNew = _carrierMatch(d.redespCarrier) && !_carrierMatch(d.carrier);
+                const isRedespLegacy = !d.redespCarrier && _carrierMatch(d.redespacho) && !_carrierMatch(d.carrier)
+                                     && d.redespacho && d.redespacho !== '-';
+                
+                let val = 0;
+                if (isRedespNew) {
+                    val = d.redespTotal || 0;
+                    if (!val) {
+                        const freightRules = Utils.getStorage('freight_tables') || [];
+                        const dCarrier = String(d.carrier || '').trim().toUpperCase();
+                        const dCity = String(d.city || '').trim().toUpperCase();
+                        const rule = freightRules.find(r =>
+                            String(r.transportadora || '').trim().toUpperCase() === dCarrier &&
+                            String(r.cidade || '').trim().toUpperCase() === dCity &&
+                            String(r.redespacho || '').trim().toUpperCase() === carrierNorm
+                        );
+                        if (rule && d.nfValue) {
+                            let rVal = 0;
+                            if (rule.percentualRedespacho > 0) rVal = d.nfValue * (rule.percentualRedespacho / 100);
+                            const rMin = rule.minimoRedespacho || 0;
+                            if (rVal < rMin) rVal = rMin;
+                            val = Math.round(rVal * 100) / 100;
+                        }
+                    }
+                    if (!val && d.originalTotal && d.total && d.originalTotal > d.total) {
+                        val = Math.round((d.originalTotal - d.total) * 100) / 100;
+                    }
+                    if (!val && d.total) {
+                        const mainCosts = (d.baseCalculada || d.minimo || 0) + (d.pedagio || 0) + (d.gris || 0) + (d.taxaFixa || 0) + (d.excessoCalculado || 0);
+                        const estimatedRedesp = d.total - mainCosts;
+                        if (estimatedRedesp > 0) val = Math.round(estimatedRedesp * 100) / 100;
+                    }
+                } else if (isRedespLegacy) {
+                    val = d.redespTotal || 0;
+                    if (!val && d.percentualRedespacho && d.nfValue) {
+                        val = Math.round(d.nfValue * (d.percentualRedespacho / 100) * 100) / 100;
+                    }
+                    if (!val) {
+                        const freightRules = Utils.getStorage('freight_tables') || [];
+                        const dCarrier = String(d.carrier || '').trim().toUpperCase();
+                        const dCity = String(d.city || '').trim().toUpperCase();
+                        const rule = freightRules.find(r =>
+                            String(r.transportadora || '').trim().toUpperCase() === dCarrier &&
+                            String(r.cidade || '').trim().toUpperCase() === dCity &&
+                            String(r.redespacho || '').trim().toUpperCase() === carrierNorm
+                        );
+                        if (rule && d.nfValue) {
+                            let rVal = 0;
+                            if (rule.percentualRedespacho > 0) rVal = d.nfValue * (rule.percentualRedespacho / 100);
+                            const rMin = rule.minimoRedespacho || 0;
+                            if (rVal < rMin) rVal = rMin;
+                            val = Math.round(rVal * 100) / 100;
+                        }
+                    }
+                    if (!val && d.originalTotal && d.total && d.originalTotal > d.total) {
+                        val = Math.round((d.originalTotal - d.total) * 100) / 100;
+                    }
+                    if (!val && d.total) {
+                        const mainCosts = (d.baseCalculada || d.minimo || 0) + (d.pedagio || 0) + (d.gris || 0) + (d.taxaFixa || 0) + (d.excessoCalculado || 0);
+                        const estimatedRedesp = d.total - mainCosts;
+                        if (estimatedRedesp > 0) val = Math.round(estimatedRedesp * 100) / 100;
+                    }
+                } else {
+                    const raw = d.mainTotal != null ? d.mainTotal : (d.total - (d.redespTotal || 0));
+                    val = Math.round(raw * 100) / 100;
+                }
+                return val;
+            };
+
+            const dateStr = new Date(entry.date).toLocaleString('pt-BR');
+            const currentTenant = localStorage.getItem('app_tenant_id') || '';
+
+            const printWindow = window.open('', '_blank', 'width=900,height=700');
+            relatedNFs.sort((a, b) => String(a.invoice || '').localeCompare(String(b.invoice || '')));
+
+            let rowsHtml = '';
+            relatedNFs.forEach(nf => {
+                const nfVal = getNFVal(nf);
+                const depDate = nf.date ? new Date(nf.date).toLocaleDateString('pt-BR') : '-';
+                const clientName = nf.client || 'N/A';
+                const cityBairro = `${nf.city || ''}${nf.neighborhood ? ` / ${nf.neighborhood}` : ''}`;
+                rowsHtml += `
+                    <tr>
+                        <td style="border:1px solid #cbd5e1; padding:8px; font-weight:bold;">${nf.invoice || '#'+nf.id}</td>
+                        <td style="border:1px solid #cbd5e1; padding:8px;">${clientName}</td>
+                        <td style="border:1px solid #cbd5e1; padding:8px;">${cityBairro}</td>
+                        <td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">${depDate}</td>
+                        <td style="border:1px solid #cbd5e1; padding:8px; text-align:right; font-weight:600;">${Utils.formatCurrency(nfVal)}</td>
+                    </tr>
+                `;
+            });
+
+            const diffLabel = entry.difference > 0 ? 'Acréscimo' : (entry.difference < 0 ? 'Desconto' : 'Diferença');
+            const diffColor = entry.difference > 0 ? '#ef4444' : (entry.difference < 0 ? '#10b981' : '#334155');
+
+            const htmlContent = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Relatório de Conferência - Fatura ${entry.invoiceRef}</title>
+                    <style>
+                        body { font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; color:#333; padding:20px; line-height:1.4; }
+                        .header { border-bottom:2px solid #333; padding-bottom:15px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-end; }
+                        .header h1 { margin:0; font-size:1.6rem; text-transform:uppercase; color:#1e293b; }
+                        .header p { margin:3px 0 0; font-size:0.9rem; color:#64748b; }
+                        .details-grid { display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px; background:#f8fafc; border:1px solid #e2e8f0; padding:15px; border-radius:8px; }
+                        .detail-item { font-size:0.9rem; }
+                        .detail-item p { margin: 4px 0; }
+                        .detail-item strong { color:#1e293b; }
+                        table { width:100%; border-collapse:collapse; margin-bottom:30px; font-size:0.85rem; }
+                        th { background:#f1f5f9; text-align:left; border:1px solid #cbd5e1; padding:10px; font-weight:700; color:#334155; }
+                        td { border:1px solid #cbd5e1; padding:8px; }
+                        .footer { display:flex; justify-content:space-between; margin-top:60px; font-size:0.9rem; }
+                        .sig-box { width:240px; border-top:1px solid #000; text-align:center; padding-top:5px; margin-top:40px; }
+                        @media print {
+                            body { padding:0; }
+                            .no-print { display:none; }
+                            .details-grid { background:none !important; border:1px solid #000 !important; }
+                            th { background:#f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="no-print" style="margin-bottom:20px; display:flex; gap:10px;">
+                        <button onclick="window.print()" style="padding:8px 16px; background:#0ea5e9; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">🖨️ Imprimir Relatório</button>
+                        <button onclick="window.close()" style="padding:8px 16px; background:#64748b; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">Fechar Janela</button>
+                    </div>
+                    
+                    <div class="header">
+                        <div>
+                            <h1>Relatório de Conferência</h1>
+                            <p>Tenant: ${String(currentTenant).toUpperCase()}</p>
+                        </div>
+                        <div style="text-align:right;">
+                            <p><strong>Fatura Ref: ${entry.invoiceRef}</strong></p>
+                            <p style="font-size:0.8rem; color:#64748b;">Confirmada em: ${dateStr}</p>
+                        </div>
+                    </div>
+
+                    <div class="details-grid">
+                        <div class="detail-item">
+                            <p><strong>Transportadora:</strong> ${entry.carrier}</p>
+                            <p><strong>Conferido por:</strong> ${entry.confirmedBy}</p>
+                            ${entry.authorizedBy ? `<p><strong>Autorizado por:</strong> ${entry.authorizedBy}</p>` : ''}
+                        </div>
+                        <div class="detail-item" style="text-align:right;">
+                            <p><strong>Qtd de Notas Fiscais:</strong> ${entry.nfCount}</p>
+                            <p><strong>Valor da Fatura:</strong> ${Utils.formatCurrency(entry.invoiceValue)}</p>
+                            <p><strong>Total Calculado (NFs):</strong> ${Utils.formatCurrency(entry.calculatedValue)}</p>
+                            <p><strong>${diffLabel}:</strong> <span style="color:${diffColor}; font-weight:bold;">${Utils.formatCurrency(Math.abs(entry.difference))}</span></p>
+                        </div>
+                    </div>
+
+                    ${entry.justification ? `
+                    <div style="margin-bottom:20px; border:1px solid #fcd34d; background:#fffbeb; padding:12px; border-radius:8px; font-size:0.9rem;">
+                        <strong>Justificativa de Diferença:</strong> ${entry.justification}
+                    </div>` : ''}
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width:100px;">NF</th>
+                                <th>Cliente</th>
+                                <th>Cidade / Bairro</th>
+                                <th style="width:120px; text-align:center;">Data Desp.</th>
+                                <th style="width:120px; text-align:right;">Valor Frete</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+
+                    <div class="footer">
+                        <div class="sig-box">
+                            Conferido por
+                        </div>
+                        <div class="sig-box">
+                            Supervisor / Gerência
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `;
+
+            printWindow.document.open();
+            printWindow.document.write(htmlContent);
+            printWindow.document.close();
         };
 
         // window.sendWhatsApp — versão completa definida em linha ~8023 (usa _dispatchesFullCache + painel WA)

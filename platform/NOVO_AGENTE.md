@@ -280,7 +280,7 @@ Garanta que as modificações foram testadas e estão funcionais localmente no p
 ### Passo 4: Atualizar a Versão
 Modifique o controle de versão do sistema. Atualize o arquivo `platform/version.json` (ou manifest/json do módulo modificado). Crie uma nova nota de `last_change`, suba o número principal da `version` e atualize a data e a `build`.
 
-### Passo 5: Subir Deploy pelo Script de Backup (`deploy.ps1`)
+### Passo 5: Subir Deploy para Homologação (`deploy.ps1`)
 Abra o terminal do PowerShell na raiz do projeto (`C:\Users\Paulo H Parreira\.gemini\antigravity\scratch`) e rode o comando:
 ```powershell
 .\deploy.ps1
@@ -289,10 +289,23 @@ Abra o terminal do PowerShell na raiz do projeto (`C:\Users\Paulo H Parreira\.ge
 **O que o script faz por baixo dos panos?**
 1.  **Backup em Camadas (redundância adicional):** Copia a versão antiga de segurança `backup 1` → para a pasta `backup 2`.
 2.  Depois copia o código atual de produção `platform/` → para a pasta de segurança `backup 1`. (Faz o mesmo com o diretório web).
-3.  **Controle de Versão Git:** Executa `git add .`, faz um commit com a data/hora exata do deploy, e sobe para o GitHub (`git push origin main`).
-4.  **Deploy em Prod:** O Vercel escuta a master do Github e automaticamente constrói as URLs de produção assim que o script Ps1 termina.
+3.  **Controle de Versão Git:** Executa `git add .`, faz um commit com a data/hora exata do deploy, e envia para a branch de homologação (`git push origin staging`).
+4.  **Deploy em Staging**: O Vercel escuta a branch `staging` do GitHub e reconstrói o ambiente de homologação.
 
 > 💡 **Nota:** O Passo 5 (`deploy.ps1`) executa **seu próprio** backup em camadas internamente. Isso significa que o sistema possui **dupla proteção**: backup preventivo (Passo 1) antes de alterar, e backup de deploy (Passo 5) antes de publicar.
+
+### Passo 6: Validação pelo Usuário e Promoção para Produção (`promote.ps1`)
+> ⚠️ **REGRA DE OURO CRÍTICA: NUNCA DEPLOYE PARA PRODUÇÃO SIMULTANEAMENTE COM HOMOLOGAÇÃO.**
+> O ambiente de homologação (`staging`) existe especificamente para proteger a produção de falhas ou comportamentos inesperados. 
+> 
+> **Fluxo obrigatório:**
+> 1. Execute o deploy em homologação (`deploy.ps1`).
+> 2. Solicite e aguarde a validação de testes do usuário no ambiente de staging.
+> 3. **Apenas após a aprovação/confirmação explícita do usuário**, promova as alterações para produção executando:
+> ```powershell
+> .\promote.ps1
+> ```
+> O script `promote.ps1` fará o merge seguro de `staging` em `main` e enviará a versão estável para a Vercel de produção.
 
 ---
 
@@ -304,6 +317,7 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
+| **3.14.30** | 2026-06-26 | FEAT: Adicionada opção de impressão de faturas confirmadas no Histórico de Conferência de Faturas, gerando um layout de relatório profissional com detalhamento das NFs. |
 | **3.14.29** | 2026-06-25 | FIX: Adicionado fallback no módulo de despacho para calcular dinamicamente o valor do frete de redespacho em NFs legadas (antigas) que não possuíam o campo `redespTotal` ou regras válidas na tabela. |
 | **3.14.28** | 2026-06-25 | FIX: Redirecionamento automático de index.html para login.html quando o usuário não estiver autenticado, eliminando falhas de login decorrentes de cache/localStorage vazio. |
 | **3.14.27** | 2026-06-25 | FIX: Correção de bug no cálculo de cotação rápida onde a transportadora BOA ESPERANÇA não era listada devido ao filtro global de redespacho. Agora a preferência por rotas diretas é aplicada por transportadora individual. |

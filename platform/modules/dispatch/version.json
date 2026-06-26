@@ -1,8 +1,8 @@
 {
-    "build":  "20260625-prod-v3.14.29",
-    "version":  "3.14.29",
+    "build":  "20260626-prod-v3.14.30",
+    "version":  "3.14.30",
     "environment":  "production",
-    "change":  "v3.14.29 - FIX: Added a fallback subtraction method to resolve missing redispatch values in legacy dispatches on the Invoice Verification screen.",
-    "lastUpdate":  "2026-06-25",
-    "deployedAt":  "2026-06-25"
+    "change":  "v3.14.30 - FEAT: Added print invoice report feature to allow users to generate print layouts for confirmed invoices.",
+    "lastUpdate":  "2026-06-26",
+    "deployedAt":  "2026-06-26"
 }
