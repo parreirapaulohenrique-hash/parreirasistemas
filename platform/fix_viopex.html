@@ -309,7 +309,20 @@
 
                 dispatches.forEach(d => {
                     const city = norm(d.city || '');
-                    const rule = freightRules.find(r => norm(r.cidade) === city);
+                    const cityRules = freightRules.filter(r => norm(r.cidade) === city);
+                    let rule = null;
+                    if (cityRules.length > 0) {
+                        const semRedespacho = cityRules.filter(r => {
+                            const temRedesp = r.redespacho && r.redespacho !== '-' && r.redespacho !== '';
+                            const temCidadeRedesp = r.cidadeRedespacho && r.cidadeRedespacho !== '-' && r.cidadeRedespacho !== '';
+                            return !temRedesp && !temCidadeRedesp;
+                        });
+                        if (semRedespacho.length > 0) {
+                            rule = semRedespacho[0];
+                        } else {
+                            rule = cityRules[0];
+                        }
+                    }
 
                     if (!rule) {
                         previewData.push({ dispatch: d, newTotal: null, diff: null, ruleFound: false, city: d.city || '?', skipReason: 'sem_regra' });
