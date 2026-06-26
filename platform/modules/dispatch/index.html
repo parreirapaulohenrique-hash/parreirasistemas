@@ -575,8 +575,6 @@
                                         <span class="material-icons-round">search</span>
                                     </button>
                                 </div>
-                                <label for="fileClient" class="file-upload-mini">Carregar Excel/CSV</label>
-                                <input type="file" id="fileClient" hidden accept=".csv, .xlsx, .xls">
                             </div>
 
                             <div class="form-group">
@@ -2186,14 +2184,22 @@
                                                 style="font-size: 0.85rem; color: var(--text-secondary);">(0)</span>
                                         </h4>
                                         <div style="display: flex; gap: 1rem; align-items: center;">
-                                            <label class="check-label" style="color: var(--accent-danger);">
+                                            <label class="check-label" style="color: var(--accent-danger); cursor: pointer; margin-right: 0.5rem; display: flex; align-items: center; gap: 0.2rem; user-select: none;">
                                                 <input type="checkbox" id="filterNoCoverage"
                                                     onchange="window.renderClientsList()">
                                                 ⚠️ Sem Cobertura
                                             </label>
                                             <input type="text" id="searchClientInput" class="form-input"
                                                 placeholder="🔍 Buscar cliente..."
-                                                style="max-width: 250px; padding: 0.5rem;">
+                                                style="max-width: 180px; padding: 0.5rem; height: 35px; box-sizing: border-box;">
+                                            
+                                            <!-- Botão de Importar Excel/CSV de Clientes -->
+                                            <label for="fileClient" class="btn btn-secondary"
+                                                style="padding: 0.5rem 1rem; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: var(--primary-color); cursor: pointer; margin: 0; white-space: nowrap; height: 35px; box-sizing: border-box; transition: all 0.15s; border-radius: var(--radius-md);">
+                                                <span class="material-icons-round" style="font-size: 1rem;">upload_file</span>
+                                                Importar Excel/CSV
+                                            </label>
+                                            <input type="file" id="fileClient" hidden accept=".csv, .xlsx, .xls">
                                         </div>
                                     </div>
 
@@ -2441,20 +2447,20 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 
-    <script src="firebase-config.js?v=3.14.31"></script>
-    <script src="utils.js?v=3.14.31"></script>
+    <script src="firebase-config.js?v=3.14.32"></script>
+    <script src="utils.js?v=3.14.32"></script>
     <!-- Estado Global Centralizado (AppState) -->
-    <script src="dispatch-state.js?v=3.14.31"></script>
+    <script src="dispatch-state.js?v=3.14.32"></script>
     <!-- Módulo Dashboard (Etapa 4) -->
-    <script src="dispatch-dashboard.js?v=3.14.31"></script>
-    <script src="data.js?v=3.14.31"></script>
-    <script src="acontec-integration.js?v=3.14.31"></script>
-    <script src="occurrences.js?v=3.14.31"></script>
-    <script src="app.js?v=3.14.31"></script>
-    <script src="acontec-ui.js?v=3.14.31"></script>
-    <script src="delivery-module.js?v=3.14.31"></script>
-    <script src="cnpj-lookup.js?v=3.14.31"></script>
-    <script src="bi_logistica.js?v=3.14.31"></script>
+    <script src="dispatch-dashboard.js?v=3.14.32"></script>
+    <script src="data.js?v=3.14.32"></script>
+    <script src="acontec-integration.js?v=3.14.32"></script>
+    <script src="occurrences.js?v=3.14.32"></script>
+    <script src="app.js?v=3.14.32"></script>
+    <script src="acontec-ui.js?v=3.14.32"></script>
+    <script src="delivery-module.js?v=3.14.32"></script>
+    <script src="cnpj-lookup.js?v=3.14.32"></script>
+    <script src="bi_logistica.js?v=3.14.32"></script>
 
 
 
