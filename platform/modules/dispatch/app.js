@@ -188,9 +188,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Clients: Load from Storage (Cloud)
         let clients = Utils.getStorage('clients') || [];
 
-        // Fallback: se os clientes sumirem (localStorage limpo), restaura do backup do data.js
-        if (clients.length === 0 && typeof window.initialClientes !== 'undefined') {
-            console.log("Restaurando clientes do backup estático...");
+        // Fallback: se os clientes sumirem (localStorage limpo), restaura do backup do data.js apenas para ltdistribuidora
+        const tenantId = (Utils.Cloud && Utils.Cloud.tenantId) || localStorage.getItem('app_tenant_id') || '';
+        if (clients.length === 0 && tenantId === 'ltdistribuidora' && typeof window.initialClientes !== 'undefined') {
+            console.log("Restaurando clientes do backup estático para ltdistribuidora...");
             clients = window.initialClientes;
             Utils.setStorage('clients', clients);
         }

@@ -317,6 +317,7 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
+| **3.14.31** | 2026-06-26 | FIX: Restringido o fallback automático da lista de clientes estáticos de data.js apenas para o tenant ltdistribuidora, corrigindo o bug onde a Central Peças e outros tenants carregavam a lista de clientes da LT. |
 | **3.14.30** | 2026-06-26 | FEAT: Adicionada opção de impressão de faturas confirmadas no Histórico de Conferência de Faturas, gerando um layout de relatório profissional com detalhamento das NFs. |
 | **3.14.29** | 2026-06-25 | FIX: Adicionado fallback no módulo de despacho para calcular dinamicamente o valor do frete de redespacho em NFs legadas (antigas) que não possuíam o campo `redespTotal` ou regras válidas na tabela. |
 | **3.14.28** | 2026-06-25 | FIX: Redirecionamento automático de index.html para login.html quando o usuário não estiver autenticado, eliminando falhas de login decorrentes de cache/localStorage vazio. |
