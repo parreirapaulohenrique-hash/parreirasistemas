@@ -1,8 +1,8 @@
 {
-    "build":  "20260629-prod-v3.14.36",
-    "version":  "3.14.36",
+    "build":  "20260629-prod-v3.14.37",
+    "version":  "3.14.37",
     "environment":  "production",
-    "change":  "v3.14.36 - FIX: Normalized invoice selection map keys to String to avoid type-coercion mismatches during billing confirmation.",
+    "change":  "v3.14.37 - FIX: Optimized processInvoicePayment to load and persist only selected dispatches individually instead of scanning the entire collection.",
     "lastUpdate":  "2026-06-29",
     "deployedAt":  "2026-06-29"
 }
