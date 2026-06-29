@@ -4110,10 +4110,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         const s = d.status || 'Pendente Despacho';
                                         let icon = 'schedule', cls = 'status-pending', title = 'Pendente Despacho';
 
-                                        if (s === 'Despachado') {
+                                        if (s === 'Despachado' || s === 'Pago') {
                                             icon = 'check_circle';
                                             cls = 'status-shipped';
-                                            title = 'Despachado';
+                                            title = s;
                                         } else if (s === 'Cancelado') {
                                             icon = 'cancel';
                                             cls = 'status-cancelled';

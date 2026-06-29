@@ -1,8 +1,8 @@
 {
-    "build":  "20260629-prod-v3.14.34",
-    "version":  "3.14.34",
+    "build":  "20260629-prod-v3.14.35",
+    "version":  "3.14.35",
     "environment":  "production",
-    "change":  "v3.14.34 - FIX: Injected dynamic Firestore loading for related invoices in printInvoiceReport to ensure NFs are populated correctly in printed reports.",
+    "change":  "v3.14.35 - FIX: Corrected status rendering for 'Pago' dispatches and rebuilt legacy_store to fix stale pending statuses in client caches.",
     "lastUpdate":  "2026-06-29",
     "deployedAt":  "2026-06-29"
 }
