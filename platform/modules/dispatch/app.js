@@ -4650,7 +4650,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return `
                     <tr data-id="${d.id}"${rowStyle}>
                         <td style="text-align: center;">
-                            <input type="checkbox" class="invoice-nf-checkbox" data-id="${d.id}" data-value="${invoiceValue}" onchange="window.toggleInvoiceNF(${d.id}, this.checked, ${invoiceValue})"${d._isPago ? ' title="NF já paga — marque apenas para reconferência"' : ''}>
+                            <input type="checkbox" class="invoice-nf-checkbox" data-id="${d.id}" data-value="${invoiceValue}" onchange="window.toggleInvoiceNF('${d.id}', this.checked, ${invoiceValue})"${d._isPago ? ' title="NF já paga — marque apenas para reconferência"' : ''}>
                         </td>
                         <td style="font-weight: 600;">${d.invoice || '-'}${redespBadge}${pagoBadge}</td>
                         <td><div style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${d.client || ''}">${d.client || '-'}</div></td>
@@ -4741,7 +4741,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // Alterna: se já marcada, desmarca; senão, marca
                     const newState = !cb.checked;
                     cb.checked = newState;
-                    const nfId    = parseInt(cb.dataset.id);
+                    const nfId    = String(cb.dataset.id);
                     const nfValue = parseFloat(cb.dataset.value || 0) || 0;
                     window.toggleInvoiceNF(nfId, newState, nfValue);
 
@@ -4809,10 +4809,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Toggle single NF selection
         // v3.11.30: armazena o invoiceValue (valor por transportadora) junto com o ID
         window.toggleInvoiceNF = (id, checked, value) => {
+            const sId = String(id);
             if (checked) {
-                window.invoiceSelectedNFs.set(id, value || 0);
+                window.invoiceSelectedNFs.set(sId, value || 0);
             } else {
-                window.invoiceSelectedNFs.delete(id);
+                window.invoiceSelectedNFs.delete(sId);
             }
             window.updateInvoiceComparison();
             window._sortInvoiceRows(); // ← agrupa selecionadas no topo
@@ -4827,7 +4828,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             checkboxes.forEach(cb => {
                 cb.checked = selectAll;
-                const id = parseInt(cb.dataset.id);
+                const id = String(cb.dataset.id);
                 if (selectAll) {
                     window.invoiceSelectedNFs.set(id, parseFloat(cb.dataset.value || 0) || 0);
                 }
@@ -5077,8 +5078,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
 
             dispatches.forEach(d => {
-                if (window.invoiceSelectedNFs.has(d.id)) {
-                    const invoiceVal = window.invoiceSelectedNFs.get(d.id) || 0;
+                const sId = String(d.id);
+                if (window.invoiceSelectedNFs.has(sId)) {
+                    const invoiceVal = window.invoiceSelectedNFs.get(sId) || 0;
                     console.log(`💳 [Invoice] Marcando NF ${d.invoice} (ID: ${d.id}) como PAGA - valor conferência: ${invoiceVal}`);
                     Object.assign(d, paidUpdate);
                     paidCount++;
@@ -5100,7 +5102,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const batch = window.db.batch();
                 let batchCount = 0;
                 dispatches.forEach(d => {
-                    if (window.invoiceSelectedNFs.has(d.id)) {
+                    const sId = String(d.id);
+                    if (window.invoiceSelectedNFs.has(sId)) {
                         const docRef = window.db
                             .collection('tenants').doc(Utils.Cloud.tenantId)
                             .collection('dispatches_db').doc(String(d.id));
@@ -5124,8 +5127,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 3. Cache em memória
             if (window._dispatchesFullCache) {
                 dispatches.forEach(d => {
-                    if (window.invoiceSelectedNFs.has(d.id)) {
-                        const ci = window._dispatchesFullCache.findIndex(x => Number(x.id) === Number(d.id));
+                    const sId = String(d.id);
+                    if (window.invoiceSelectedNFs.has(sId)) {
+                        const ci = window._dispatchesFullCache.findIndex(x => String(x.id) === sId);
                         if (ci !== -1) Object.assign(window._dispatchesFullCache[ci], paidUpdate);
                     }
                 });
