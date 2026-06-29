@@ -5054,8 +5054,31 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log('💳 [Invoice] Iniciando processamento de pagamento...');
             console.log('💳 [Invoice] NFs selecionadas:', [...window.invoiceSelectedNFs]);
 
-            const dispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
-            console.log('💳 [Invoice] Total de despachos carregados:', dispatches.length);
+            const dispatches = [];
+            for (const id of window.invoiceSelectedNFs.keys()) {
+                let d = null;
+                if (window.db && Utils.Cloud && Utils.Cloud.tenantId) {
+                    try {
+                        const doc = await window.db.collection('tenants').doc(Utils.Cloud.tenantId)
+                            .collection('dispatches_db').doc(String(id)).get();
+                        if (doc.exists) {
+                            d = { id: doc.id, ...doc.data() };
+                        }
+                    } catch (e) {
+                        console.error(`[Invoice] Falha ao carregar NF ID ${id} do Firestore:`, e);
+                    }
+                }
+                if (!d) {
+                    const localDispatches = Utils.getStorage('dispatches') || [];
+                    d = localDispatches.find(x => String(x.id) === String(id));
+                }
+                if (d) {
+                    dispatches.push(d);
+                } else {
+                    console.warn(`[Invoice] NF com ID ${id} selecionada mas não encontrada no banco ou cache local.`);
+                }
+            }
+            console.log('💳 [Invoice] Total de despachos selecionados carregados:', dispatches.length);
 
             const invoiceRef = document.getElementById('invoiceRef').value.trim() || 'N/A';
             const invoiceValue = parseFloat(document.getElementById('invoiceValue').value.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0;
@@ -5091,13 +5114,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             console.log(`💳 [Invoice] NFs marcadas como pagas: ${paidCount}`);
 
-            // 1. localStorage
+            // 1. localStorage (atualiza apenas os itens modificados)
             console.log('💳 [Invoice] Salvando dispatches no localStorage...');
-            Utils.setStorage('dispatches', dispatches);
+            const localDispatches = Utils.getStorage('dispatches') || [];
+            dispatches.forEach(d => {
+                const idx = localDispatches.findIndex(x => String(x.id) === String(d.id));
+                if (idx !== -1) {
+                    localDispatches[idx] = d;
+                } else {
+                    localDispatches.push(d);
+                }
+            });
+            Utils.setStorage('dispatches', localDispatches);
 
             // 2. Firestore — persiste status 'Pago' em cada dispatch individual
-            // v3.11.30 FIX: usa set({merge:true}) em vez de update() para criar o doc se não existir
-            // (registros antigos podem estar apenas no localStorage, nunca migrados para dispatches_db)
             if (Utils.Cloud && Utils.Cloud.hasTenant && Utils.Cloud.hasTenant() && window.db) {
                 const batch = window.db.batch();
                 let batchCount = 0;
@@ -5107,8 +5137,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const docRef = window.db
                             .collection('tenants').doc(Utils.Cloud.tenantId)
                             .collection('dispatches_db').doc(String(d.id));
-                        // set({merge:true}) cria o doc se não existir, ou mescla se já existir
-                        // Isso resolve o caso de NFs que estavam apenas no localStorage
                         batch.set(docRef, { ...d, ...paidUpdate }, { merge: true });
                         batchCount++;
                     }
