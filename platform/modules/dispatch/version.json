@@ -1,8 +1,8 @@
 {
-    "build":  "20260626-prod-v3.14.33",
-    "version":  "3.14.33",
+    "build":  "20260629-prod-v3.14.34",
+    "version":  "3.14.34",
     "environment":  "production",
-    "change":  "v3.14.33 - FIX: Fixed rule lookup logic in fix_viopex.html to prefer direct rules without redispatch.",
-    "lastUpdate":  "2026-06-26",
-    "deployedAt":  "2026-06-26"
+    "change":  "v3.14.34 - FIX: Injected dynamic Firestore loading for related invoices in printInvoiceReport to ensure NFs are populated correctly in printed reports.",
+    "lastUpdate":  "2026-06-29",
+    "deployedAt":  "2026-06-29"
 }
