@@ -1235,6 +1235,18 @@ function renderProjectDetail() {
 
     let filtered = activeFilter === 'all' ? tasks : tasks.filter(t => t.status === activeFilter);
 
+    // Sort by importance: priority (high > medium > low) then status urgency
+    const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
+    const STATUS_ORDER   = { blocked: 0, doing: 1, review: 2, pending: 3, done: 4, cancelled: 5 };
+    filtered = [...filtered].sort((a, b) => {
+        const pa = PRIORITY_ORDER[a.priority] ?? 1;
+        const pb = PRIORITY_ORDER[b.priority] ?? 1;
+        if (pa !== pb) return pa - pb;
+        const sa = STATUS_ORDER[a.status] ?? 3;
+        const sb = STATUS_ORDER[b.status] ?? 3;
+        return sa - sb;
+    });
+
     const filters = [
         { key: 'all',     label: `Todas (${tasks.length})` },
         { key: 'pending', label: `A Fazer (${counts.pending})` },
@@ -1311,7 +1323,11 @@ function renderProjectDetail() {
                 : `<table class="task-table">
                     <thead><tr>
                         <th style="width:28px;"></th>
-                        <th style="width:18px;"></th>
+                        <th style="width:18px;" title="Ordenado por: Alta → Média → Baixa">
+                            <span style="display:inline-flex;align-items:center;gap:.2rem;color:var(--accent-blue);">
+                                <span class="material-icons-round" style="font-size:.85rem;">sort</span>
+                            </span>
+                        </th>
                         <th>Tarefa</th>
                         <th>Responsável</th>
                         <th>Status</th>
