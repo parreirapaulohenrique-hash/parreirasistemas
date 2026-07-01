@@ -6967,7 +6967,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     printArea.appendChild(page);
                 }
 
-                window.print();
+                // ✅ FIX: Garante que o DOM do print-area seja totalmente pintado antes de abrir o diálogo
+                // de impressão. O window.open() do WhatsApp automático desvia o foco e causava o browser
+                // capturar o conteúdo ANTERIOR do print-area (bug: sempre imprimia o romaneio anterior).
+                requestAnimationFrame(() => {
+                    setTimeout(() => { window.print(); }, 300);
+                });
             } catch (err) {
                 console.error('Erro ao gerar romaneio:', err);
                 alert('Falha ao gerar impressão: ' + err.message);
