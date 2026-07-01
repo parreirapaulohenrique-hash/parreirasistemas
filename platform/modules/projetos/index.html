@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ParreiraLog | Gestão de Projetos</title>
+    <meta name="description" content="Módulo de gestão e acompanhamento de projetos e tarefas - ParreiraLog">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-base: #0d1117;
+            --bg-card: #161b22;
+            --bg-card-hover: #1c2128;
+            --bg-input: #21262d;
+            --border-color: #30363d;
+            --border-hover: #484f58;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #484f58;
+            --accent-blue: #388bfd;
+            --accent-blue-dim: #1f4b8e;
+            --accent-green: #3fb950;
+            --accent-green-dim: #1a4a24;
+            --accent-yellow: #d29922;
+            --accent-yellow-dim: #4a3800;
+            --accent-red: #f85149;
+            --accent-red-dim: #5c1a18;
+            --accent-purple: #a371f7;
+            --accent-purple-dim: #2f1a5e;
+            --accent-orange: #e3b341;
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 14px;
+            --radius-xl: 20px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,.4);
+            --shadow-md: 0 4px 16px rgba(0,0,0,.5);
+            --shadow-lg: 0 8px 32px rgba(0,0,0,.6);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-base);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ── TOP BAR ─────────────────────────────────────────────────── */
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(13,17,23,.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0 1.5rem;
+            height: 60px;
+        }
+        .topbar-logo {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--accent-blue);
+            text-decoration: none;
+        }
+        .topbar-logo span.material-icons-round { font-size: 1.5rem; }
+        .topbar-title {
+            font-size: .9rem;
+            color: var(--text-secondary);
+            margin-left: .25rem;
+        }
+        .topbar-title strong { color: var(--text-primary); }
+        .topbar-actions { margin-left: auto; display: flex; gap: .5rem; }
+
+        /* ── LAYOUT ──────────────────────────────────────────────────── */
+        .page-wrap {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            min-height: calc(100vh - 60px);
+        }
+
+        /* ── SIDEBAR ─────────────────────────────────────────────────── */
+        .sidebar {
+            background: var(--bg-card);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            padding: 1.25rem 1rem;
+            overflow-y: auto;
+        }
+        .sidebar-section-title {
+            font-size: .7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            padding: .5rem .5rem .25rem;
+            margin-top: .5rem;
+        }
+        .project-item {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            padding: .6rem .75rem;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: background .15s;
+            font-size: .88rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            position: relative;
+        }
+        .project-item:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+        .project-item.active { background: var(--accent-blue-dim); color: var(--accent-blue); }
+        .project-item .dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            background: var(--accent-blue);
+        }
+        .project-item .dot.done  { background: var(--accent-green); }
+        .project-item .dot.late  { background: var(--accent-red); }
+        .project-item .dot.pause { background: var(--accent-yellow); }
+        .project-item .badge-count {
+            margin-left: auto;
+            background: var(--bg-input);
+            color: var(--text-secondary);
+            font-size: .7rem;
+            padding: .1rem .4rem;
+            border-radius: 20px;
+        }
+        .project-item .remove-proj {
+            display: none;
+            margin-left: 2px;
+            color: var(--accent-red);
+            font-size: 1rem;
+        }
+        .project-item:hover .remove-proj { display: inline-flex; }
+
+        .btn-new-project {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            width: 100%;
+            padding: .6rem .75rem;
+            border-radius: var(--radius-sm);
+            border: 1px dashed var(--border-color);
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: .85rem;
+            cursor: pointer;
+            transition: all .15s;
+            margin-top: .5rem;
+            font-family: 'Inter', sans-serif;
+        }
+        .btn-new-project:hover { border-color: var(--accent-blue); color: var(--accent-blue); background: var(--accent-blue-dim); }
+
+        /* ── MAIN CONTENT ────────────────────────────────────────────── */
+        .main-content { padding: 1.75rem 2rem; overflow-y: auto; }
+
+        .project-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .project-header-info { flex: 1; }
+        .project-name-display {
+            font-size: 1.6rem;
+            font-weight: 700;
+            line-height: 1.2;
+            background: linear-gradient(135deg, #e6edf3, #8b949e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .project-meta {
+            display: flex;
+            gap: 1rem;
+            margin-top: .4rem;
+            flex-wrap: wrap;
+        }
+        .project-meta-item {
+            display: flex;
+            align-items: center;
+            gap: .3rem;
+            font-size: .8rem;
+            color: var(--text-secondary);
+        }
+        .project-meta-item .material-icons-round { font-size: .95rem; }
+
+        /* KPI Cards */
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 1rem 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: .25rem;
+            transition: transform .15s, box-shadow .15s;
+        }
+        .kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .kpi-label {
+            font-size: .75rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+        .kpi-value.blue { color: var(--accent-blue); }
+        .kpi-value.green { color: var(--accent-green); }
+        .kpi-value.yellow { color: var(--accent-yellow); }
+        .kpi-value.red { color: var(--accent-red); }
+        .kpi-sub { font-size: .75rem; color: var(--text-muted); margin-top: .1rem; }
+
+        /* Progress bar */
+        .progress-global {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: .5rem;
+        }
+        .progress-label-text { font-size: .85rem; font-weight: 600; }
+        .progress-pct { font-size: 1.2rem; font-weight: 700; color: var(--accent-blue); }
+        .progress-track {
+            background: var(--bg-input);
+            border-radius: 99px;
+            height: 10px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 99px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+            transition: width .6s cubic-bezier(.34,1.56,.64,1);
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .toolbar-title {
+            font-size: 1rem;
+            font-weight: 600;
+            flex: 1;
+        }
+        .filter-tabs {
+            display: flex;
+            gap: .25rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: .2rem;
+        }
+        .filter-tab {
+            padding: .3rem .7rem;
+            border-radius: 4px;
+            font-size: .78rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            transition: all .15s;
+            font-family: 'Inter', sans-serif;
+        }
+        .filter-tab.active { background: var(--accent-blue); color: #fff; }
+
+        /* Task Table */
+        .task-table { width: 100%; border-collapse: collapse; }
+        .task-table thead tr {
+            background: var(--bg-card);
+            border-bottom: 2px solid var(--border-color);
+        }
+        .task-table th {
+            padding: .65rem .85rem;
+            text-align: left;
+            font-size: .75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            white-space: nowrap;
+        }
+        .task-table tbody tr {
+            border-bottom: 1px solid var(--border-color);
+            transition: background .1s;
+        }
+        .task-table tbody tr:hover { background: var(--bg-card-hover); }
+        .task-table td {
+            padding: .75rem .85rem;
+            font-size: .875rem;
+            vertical-align: middle;
+        }
+
+        /* Status badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .3rem;
+            padding: .22rem .6rem;
+            border-radius: 99px;
+            font-size: .75rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .badge .material-icons-round { font-size: .85rem; }
+        .badge-pending    { background: var(--bg-input);           color: var(--text-secondary); border: 1px solid var(--border-color); }
+        .badge-doing      { background: var(--accent-blue-dim);    color: var(--accent-blue); border: 1px solid var(--accent-blue-dim); }
+        .badge-review     { background: var(--accent-yellow-dim);  color: var(--accent-yellow); border: 1px solid var(--accent-yellow-dim); }
+        .badge-done       { background: var(--accent-green-dim);   color: var(--accent-green); border: 1px solid var(--accent-green-dim); }
+        .badge-blocked    { background: var(--accent-red-dim);     color: var(--accent-red); border: 1px solid var(--accent-red-dim); }
+        .badge-cancelled  { background: var(--bg-input);           color: var(--text-muted); border: 1px solid var(--border-color); }
+
+        /* Priority dots */
+        .priority-dot {
+            display: inline-block;
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .priority-high   { background: var(--accent-red); box-shadow: 0 0 4px var(--accent-red); }
+        .priority-medium { background: var(--accent-yellow); }
+        .priority-low    { background: var(--accent-green); }
+
+        /* Task title cell */
+        .task-title-wrap { display: flex; flex-direction: column; gap: .15rem; }
+        .task-title-text { font-weight: 500; color: var(--text-primary); }
+        .task-desc-text { font-size: .78rem; color: var(--text-secondary); }
+
+        /* Progress mini bar */
+        .mini-progress { display: flex; align-items: center; gap: .5rem; }
+        .mini-track {
+            flex: 1;
+            background: var(--bg-input);
+            border-radius: 99px;
+            height: 6px;
+            overflow: hidden;
+            min-width: 70px;
+        }
+        .mini-fill {
+            height: 100%;
+            border-radius: 99px;
+            transition: width .4s ease;
+        }
+        .mini-fill-blue   { background: var(--accent-blue); }
+        .mini-fill-green  { background: var(--accent-green); }
+        .mini-fill-yellow { background: var(--accent-yellow); }
+        .mini-fill-red    { background: var(--accent-red); }
+        .mini-pct { font-size: .75rem; color: var(--text-secondary); min-width: 28px; text-align: right; }
+
+        /* Action buttons */
+        .btn-icon {
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            padding: .3rem;
+            border-radius: var(--radius-sm);
+            display: inline-flex;
+            align-items: center;
+            color: var(--text-secondary);
+            transition: all .15s;
+        }
+        .btn-icon:hover { background: var(--bg-input); color: var(--text-primary); }
+        .btn-icon.danger:hover { background: var(--accent-red-dim); color: var(--accent-red); }
+        .btn-icon .material-icons-round { font-size: 1.1rem; }
+
+        /* Primary button */
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            padding: .5rem 1rem;
+            background: var(--accent-blue);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: .85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .15s;
+            font-family: 'Inter', sans-serif;
+        }
+        .btn-primary:hover { background: #58a6ff; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(56,139,253,.4); }
+        .btn-primary .material-icons-round { font-size: 1rem; }
+
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            padding: .5rem 1rem;
+            background: transparent;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: .85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all .15s;
+            font-family: 'Inter', sans-serif;
+        }
+        .btn-secondary:hover { border-color: var(--border-hover); background: var(--bg-card-hover); }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+        .empty-state .material-icons-round { font-size: 3.5rem; opacity: .3; display: block; margin-bottom: .75rem; }
+        .empty-state p { font-size: .95rem; }
+
+        /* ── MODAL ───────────────────────────────────────────────────── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.7);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            width: 100%;
+            max-width: 560px;
+            box-shadow: var(--shadow-lg);
+            animation: modal-in .2s ease;
+        }
+        @keyframes modal-in {
+            from { opacity: 0; transform: translateY(20px) scale(.97); }
+            to   { opacity: 1; transform: translateY(0)    scale(1); }
+        }
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .modal-header h3 { font-size: 1rem; font-weight: 600; }
+        .modal-body { padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+        .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: .5rem; }
+
+        /* Form fields */
+        .field { display: flex; flex-direction: column; gap: .35rem; }
+        .field label { font-size: .8rem; font-weight: 600; color: var(--text-secondary); }
+        .field input, .field select, .field textarea {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            padding: .55rem .75rem;
+            font-size: .875rem;
+            font-family: 'Inter', sans-serif;
+            transition: border-color .15s;
+            outline: none;
+        }
+        .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent-blue); }
+        .field textarea { resize: vertical; min-height: 70px; }
+        .field select option { background: var(--bg-card); }
+
+        .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+
+        /* Progress slider */
+        .progress-slider-wrap { display: flex; align-items: center; gap: .75rem; }
+        .progress-slider-wrap input[type=range] {
+            flex: 1;
+            -webkit-appearance: none;
+            background: var(--bg-input);
+            border: none;
+            border-radius: 99px;
+            height: 6px;
+            padding: 0;
+        }
+        .progress-slider-wrap input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: var(--accent-blue);
+            cursor: pointer;
+            box-shadow: 0 0 6px rgba(56,139,253,.5);
+        }
+        .progress-slider-label {
+            font-size: .85rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            min-width: 36px;
+            text-align: right;
+        }
+
+        /* Misc */
+        .no-project-selected {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: calc(100vh - 60px);
+            color: var(--text-secondary);
+            text-align: center;
+            gap: 1rem;
+        }
+        .no-project-selected .material-icons-round { font-size: 4rem; opacity: .2; }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: .5rem;
+        }
+        .toast {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: .75rem 1rem;
+            font-size: .85rem;
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            box-shadow: var(--shadow-md);
+            animation: toast-in .2s ease;
+            min-width: 240px;
+        }
+        @keyframes toast-in { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        .toast.success { border-color: var(--accent-green); color: var(--accent-green); }
+        .toast.error   { border-color: var(--accent-red);   color: var(--accent-red); }
+        .toast .material-icons-round { font-size: 1.1rem; }
+
+        /* Due date highlight */
+        .overdue { color: var(--accent-red); }
+        .due-soon { color: var(--accent-yellow); }
+
+        @media (max-width: 900px) {
+            .page-wrap { grid-template-columns: 1fr; }
+            .sidebar { border-right: none; border-bottom: 1px solid var(--border-color); }
+            .kpi-row { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+    <a class="topbar-logo" href="#" title="ParreiraLog">
+        <span class="material-icons-round">rocket_launch</span>
+        ParreiraLog
+    </a>
+    <div class="topbar-title">/ <strong>Gestão de Projetos</strong></div>
+    <div class="topbar-actions">
+        <button class="btn-primary" id="btn-export-csv">
+            <span class="material-icons-round">download</span> Exportar CSV
+        </button>
+    </div>
+</header>
+
+<!-- LAYOUT -->
+<div class="page-wrap">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-section-title">Projetos</div>
+        <div id="projects-list"></div>
+        <button class="btn-new-project" id="btn-new-project">
+            <span class="material-icons-round">add</span> Novo Projeto
+        </button>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content" id="main-content">
+        <div class="no-project-selected" id="no-project-msg">
+            <span class="material-icons-round">folder_open</span>
+            <p style="font-size:1.1rem; font-weight:600;">Nenhum projeto selecionado</p>
+            <p>Crie ou selecione um projeto na barra lateral para começar.</p>
+            <button class="btn-primary" id="btn-new-project-main">
+                <span class="material-icons-round">add</span> Criar Projeto
+            </button>
+        </div>
+        <div id="project-detail" style="display:none;"></div>
+    </main>
+
+</div>
+
+<!-- MODAL: New/Edit Project -->
+<div class="modal-overlay" id="modal-project">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="modal-project-title">Novo Projeto</h3>
+            <button class="btn-icon" onclick="closeModal('modal-project')">
+                <span class="material-icons-round">close</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="field">
+                <label>Nome do Projeto *</label>
+                <input type="text" id="proj-name" placeholder="Ex: Implantação Sistema XYZ" maxlength="80">
+            </div>
+            <div class="field">
+                <label>Descrição / Objetivo</label>
+                <textarea id="proj-desc" placeholder="Descreva o objetivo do projeto..."></textarea>
+            </div>
+            <div class="field-row">
+                <div class="field">
+                    <label>Responsável</label>
+                    <input type="text" id="proj-owner" placeholder="Nome do responsável">
+                </div>
+                <div class="field">
+                    <label>Status</label>
+                    <select id="proj-status">
+                        <option value="active">🟢 Em andamento</option>
+                        <option value="pause">🟡 Pausado</option>
+                        <option value="done">✅ Concluído</option>
+                        <option value="late">🔴 Atrasado</option>
+                    </select>
+                </div>
+            </div>
+            <div class="field-row">
+                <div class="field">
+                    <label>Data de Início</label>
+                    <input type="date" id="proj-start">
+                </div>
+                <div class="field">
+                    <label>Prazo Final</label>
+                    <input type="date" id="proj-end">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeModal('modal-project')">Cancelar</button>
+            <button class="btn-primary" id="btn-save-project">
+                <span class="material-icons-round">save</span> Salvar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: New/Edit Task -->
+<div class="modal-overlay" id="modal-task">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="modal-task-title">Nova Tarefa</h3>
+            <button class="btn-icon" onclick="closeModal('modal-task')">
+                <span class="material-icons-round">close</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="field">
+                <label>Título da Tarefa *</label>
+                <input type="text" id="task-title" placeholder="Ex: Mapear processos de TI" maxlength="120">
+            </div>
+            <div class="field">
+                <label>Descrição / Detalhes</label>
+                <textarea id="task-desc" placeholder="Descreva o que precisa ser feito..."></textarea>
+            </div>
+            <div class="field-row">
+                <div class="field">
+                    <label>Responsável</label>
+                    <input type="text" id="task-owner" placeholder="Quem vai executar?">
+                </div>
+                <div class="field">
+                    <label>Prioridade</label>
+                    <select id="task-priority">
+                        <option value="high">🔴 Alta</option>
+                        <option value="medium" selected>🟡 Média</option>
+                        <option value="low">🟢 Baixa</option>
+                    </select>
+                </div>
+            </div>
+            <div class="field-row">
+                <div class="field">
+                    <label>Status</label>
+                    <select id="task-status">
+                        <option value="pending">⏳ A Fazer</option>
+                        <option value="doing">🔵 Em Execução</option>
+                        <option value="review">🟡 Em Revisão</option>
+                        <option value="done">✅ Concluído</option>
+                        <option value="blocked">🔴 Bloqueado</option>
+                        <option value="cancelled">⛔ Cancelado</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Prazo</label>
+                    <input type="date" id="task-due">
+                </div>
+            </div>
+            <div class="field">
+                <label>Progresso (%)</label>
+                <div class="progress-slider-wrap">
+                    <input type="range" id="task-progress" min="0" max="100" step="5" value="0"
+                           oninput="document.getElementById('task-progress-label').textContent = this.value + '%'">
+                    <span class="progress-slider-label" id="task-progress-label">0%</span>
+                </div>
+            </div>
+            <div class="field">
+                <label>Observações / Atualização</label>
+                <textarea id="task-note" placeholder="Atualize o status, bloqueios, observações..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeModal('modal-task')">Cancelar</button>
+            <button class="btn-primary" id="btn-save-task">
+                <span class="material-icons-round">save</span> Salvar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Update Progress Only -->
+<div class="modal-overlay" id="modal-update">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Atualizar Progresso</h3>
+            <button class="btn-icon" onclick="closeModal('modal-update')">
+                <span class="material-icons-round">close</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div id="update-task-name" style="font-weight:600; color: var(--text-primary); margin-bottom:.25rem; font-size:.95rem;"></div>
+            <div class="field">
+                <label>Status</label>
+                <select id="update-status">
+                    <option value="pending">⏳ A Fazer</option>
+                    <option value="doing">🔵 Em Execução</option>
+                    <option value="review">🟡 Em Revisão</option>
+                    <option value="done">✅ Concluído</option>
+                    <option value="blocked">🔴 Bloqueado</option>
+                    <option value="cancelled">⛔ Cancelado</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Progresso (%)</label>
+                <div class="progress-slider-wrap">
+                    <input type="range" id="update-progress" min="0" max="100" step="5" value="0"
+                           oninput="document.getElementById('update-progress-label').textContent = this.value + '%'">
+                    <span class="progress-slider-label" id="update-progress-label">0%</span>
+                </div>
+            </div>
+            <div class="field">
+                <label>Observação da Atualização</label>
+                <textarea id="update-note" placeholder="Descreva o que foi feito ou qual é o bloqueio..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeModal('modal-update')">Cancelar</button>
+            <button class="btn-primary" id="btn-save-update">
+                <span class="material-icons-round">update</span> Atualizar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+'use strict';
+
+const STORAGE_KEY = 'parreiralog_projects_v1';
+
+function loadData() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || { projects: [] }; }
+    catch { return { projects: [] }; }
+}
+function saveData(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+function uid() { return Date.now() + '_' + Math.random().toString(36).slice(2, 7); }
+
+let appData = loadData();
+let activeProjectId = null;
+let activeFilter = 'all';
+let editingProjectId = null;
+let editingTaskId = null;
+let updatingTaskId = null;
+
+function getProject(id) { return appData.projects.find(p => p.id === id); }
+
+function projectProgress(project) {
+    if (!project.tasks || project.tasks.length === 0) return 0;
+    const valid = project.tasks.filter(t => t.status !== 'cancelled');
+    if (valid.length === 0) return 0;
+    return Math.round(valid.reduce((a, t) => a + (t.progress || 0), 0) / valid.length);
+}
+
+const STATUS_CFG = {
+    pending:   { label: 'A Fazer',     icon: 'schedule',     cls: 'badge-pending',   fillCls: 'mini-fill-blue'   },
+    doing:     { label: 'Em Execução', icon: 'play_circle',  cls: 'badge-doing',     fillCls: 'mini-fill-blue'   },
+    review:    { label: 'Em Revisão',  icon: 'rate_review',  cls: 'badge-review',    fillCls: 'mini-fill-yellow' },
+    done:      { label: 'Concluído',   icon: 'check_circle', cls: 'badge-done',      fillCls: 'mini-fill-green'  },
+    blocked:   { label: 'Bloqueado',   icon: 'block',        cls: 'badge-blocked',   fillCls: 'mini-fill-red'    },
+    cancelled: { label: 'Cancelado',   icon: 'cancel',       cls: 'badge-cancelled', fillCls: 'mini-fill-blue'   },
+};
+
+const PRIORITY_CFG = {
+    high:   { label: 'Alta',  cls: 'priority-high'   },
+    medium: { label: 'Média', cls: 'priority-medium' },
+    low:    { label: 'Baixa', cls: 'priority-low'    },
+};
+
+const PROJ_STATUS = {
+    active: { label: 'Em andamento', dot: '',      emoji: '🟢' },
+    pause:  { label: 'Pausado',      dot: 'pause', emoji: '🟡' },
+    done:   { label: 'Concluído',    dot: 'done',  emoji: '✅' },
+    late:   { label: 'Atrasado',     dot: 'late',  emoji: '🔴' },
+};
+
+function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDate(d) {
+    if (!d) return '';
+    const [y,m,dd] = d.split('-');
+    return `${dd}/${m}/${y}`;
+}
+
+function dueDateDisplay(d) {
+    if (!d) return '—';
+    const today = new Date(); today.setHours(0,0,0,0);
+    const due   = new Date(d + 'T00:00:00');
+    const diff  = Math.round((due - today) / 86400000);
+    const fmt   = fmtDate(d);
+    if (diff < 0)  return `<span class="overdue">📛 ${fmt}</span>`;
+    if (diff <= 3) return `<span class="due-soon">⚠️ ${fmt}</span>`;
+    return fmt;
+}
+
+function relTime(iso) {
+    if (!iso) return '—';
+    const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+    if (m < 1)  return 'agora';
+    if (m < 60) return `${m}min atrás`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h atrás`;
+    const d = Math.floor(h / 24);
+    return d < 7 ? `${d}d atrás` : fmtDate(new Date(iso).toISOString().slice(0,10));
+}
+
+function showToast(msg, type = 'success') {
+    const c = document.getElementById('toast-container');
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.innerHTML = `<span class="material-icons-round">${type === 'success' ? 'check_circle' : 'error'}</span>${msg}`;
+    c.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, 3000);
+}
+
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+/* ── SIDEBAR ─────────────────────────────────────────────────── */
+function renderSidebar() {
+    const el = document.getElementById('projects-list');
+    if (!appData.projects.length) {
+        el.innerHTML = `<div style="padding:.5rem;font-size:.8rem;color:var(--text-muted);">Nenhum projeto ainda</div>`;
+        return;
+    }
+    el.innerHTML = appData.projects.map(p => {
+        const cfg = PROJ_STATUS[p.status] || PROJ_STATUS.active;
+        return `<div class="project-item ${p.id === activeProjectId ? 'active' : ''}" onclick="selectProject('${p.id}')">
+            <span class="dot ${cfg.dot}"></span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(p.name)}">${esc(p.name)}</span>
+            <span class="badge-count">${(p.tasks||[]).length}</span>
+            <span class="material-icons-round remove-proj" onclick="confirmDeleteProject(event,'${p.id}')" style="font-size:.9rem;">delete</span>
+        </div>`;
+    }).join('');
+}
+
+function selectProject(id) {
+    activeProjectId = id;
+    activeFilter = 'all';
+    renderSidebar();
+    renderProjectDetail();
+}
+
+/* ── PROJECT DETAIL ──────────────────────────────────────────── */
+function renderProjectDetail() {
+    const project = getProject(activeProjectId);
+    document.getElementById('no-project-msg').style.display  = project ? 'none'  : 'flex';
+    document.getElementById('project-detail').style.display  = project ? 'block' : 'none';
+    if (!project) return;
+
+    const tasks  = project.tasks || [];
+    const counts = {
+        pending:   tasks.filter(t => t.status === 'pending').length,
+        doing:     tasks.filter(t => t.status === 'doing').length,
+        review:    tasks.filter(t => t.status === 'review').length,
+        done:      tasks.filter(t => t.status === 'done').length,
+        blocked:   tasks.filter(t => t.status === 'blocked').length,
+        cancelled: tasks.filter(t => t.status === 'cancelled').length,
+    };
+    const pct = projectProgress(project);
+    const cfg = PROJ_STATUS[project.status] || PROJ_STATUS.active;
+
+    let filtered = activeFilter === 'all' ? tasks : tasks.filter(t => t.status === activeFilter);
+
+    const filters = [
+        { key: 'all',     label: `Todas (${tasks.length})` },
+        { key: 'pending', label: `A Fazer (${counts.pending})` },
+        { key: 'doing',   label: `Execução (${counts.doing})` },
+        { key: 'review',  label: `Revisão (${counts.review})` },
+        { key: 'done',    label: `Concluídas (${counts.done})` },
+        { key: 'blocked', label: `Bloqueadas (${counts.blocked})` },
+    ];
+
+    document.getElementById('project-detail').innerHTML = `
+        <div class="project-header">
+            <div class="project-header-info">
+                <div class="project-name-display">${esc(project.name)}</div>
+                <div class="project-meta">
+                    <div class="project-meta-item"><span class="material-icons-round">circle</span>${cfg.emoji} ${cfg.label}</div>
+                    ${project.owner ? `<div class="project-meta-item"><span class="material-icons-round">person</span>${esc(project.owner)}</div>` : ''}
+                    ${project.endDate ? `<div class="project-meta-item"><span class="material-icons-round">event</span>Prazo: ${fmtDate(project.endDate)}</div>` : ''}
+                    ${project.description ? `<div class="project-meta-item"><span class="material-icons-round">info</span>${esc(project.description.slice(0,80))}${project.description.length>80?'…':''}</div>` : ''}
+                </div>
+            </div>
+            <div style="display:flex;gap:.5rem;flex-shrink:0;">
+                <button class="btn-secondary" onclick="openEditProject('${project.id}')">
+                    <span class="material-icons-round">edit</span> Editar
+                </button>
+                <button class="btn-primary" onclick="openNewTask()">
+                    <span class="material-icons-round">add</span> Nova Tarefa
+                </button>
+            </div>
+        </div>
+
+        <div class="kpi-row">
+            <div class="kpi-card">
+                <div class="kpi-label">Total de Tarefas</div>
+                <div class="kpi-value blue">${tasks.length}</div>
+                <div class="kpi-sub">${counts.doing} em execução</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Concluídas</div>
+                <div class="kpi-value green">${counts.done}</div>
+                <div class="kpi-sub">${tasks.length ? Math.round((counts.done/tasks.length)*100) : 0}% do total</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Pendentes</div>
+                <div class="kpi-value yellow">${counts.pending + counts.doing + counts.review}</div>
+                <div class="kpi-sub">${counts.review} em revisão</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Bloqueadas</div>
+                <div class="kpi-value red">${counts.blocked}</div>
+                <div class="kpi-sub">${counts.cancelled} canceladas</div>
+            </div>
+        </div>
+
+        <div class="progress-global">
+            <div class="progress-label">
+                <span class="progress-label-text">Progresso Geral do Projeto</span>
+                <span class="progress-pct">${pct}%</span>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill" style="width:${pct}%"></div>
+            </div>
+        </div>
+
+        <div class="toolbar">
+            <div class="toolbar-title">Tarefas</div>
+            <div class="filter-tabs">
+                ${filters.map(f => `<button class="filter-tab ${activeFilter===f.key?'active':''}" onclick="setFilter('${f.key}')">${f.label}</button>`).join('')}
+            </div>
+        </div>
+
+        <div style="overflow-x:auto;border-radius:var(--radius-md);border:1px solid var(--border-color);overflow:hidden;">
+            ${filtered.length === 0
+                ? `<div class="empty-state"><span class="material-icons-round">checklist</span><p>${activeFilter==='all'?'Nenhuma tarefa ainda. Clique em "Nova Tarefa" para começar.':'Nenhuma tarefa com esse status.'}</p></div>`
+                : `<table class="task-table">
+                    <thead><tr>
+                        <th style="width:20px;"></th>
+                        <th>Tarefa</th>
+                        <th>Responsável</th>
+                        <th>Status</th>
+                        <th>Progresso</th>
+                        <th>Prazo</th>
+                        <th>Atualizado</th>
+                        <th style="text-align:right;">Ações</th>
+                    </tr></thead>
+                    <tbody>${filtered.map(t => renderTaskRow(t)).join('')}</tbody>
+                </table>`
+            }
+        </div>
+    `;
+}
+
+function renderTaskRow(task) {
+    const st  = STATUS_CFG[task.status]   || STATUS_CFG.pending;
+    const pr  = PRIORITY_CFG[task.priority] || PRIORITY_CFG.medium;
+    const pct = task.progress || 0;
+    return `<tr>
+        <td><span class="priority-dot ${pr.cls}" title="Prioridade ${pr.label}"></span></td>
+        <td>
+            <div class="task-title-wrap">
+                <div class="task-title-text">${esc(task.title)}</div>
+                ${task.description ? `<div class="task-desc-text">${esc(task.description.slice(0,80))}${task.description.length>80?'…':''}</div>` : ''}
+                ${task.note ? `<div class="task-desc-text" style="color:var(--accent-yellow);">📝 ${esc(task.note.slice(0,100))}</div>` : ''}
+            </div>
+        </td>
+        <td style="color:var(--text-secondary);font-size:.82rem;">${esc(task.owner||'—')}</td>
+        <td><span class="badge ${st.cls}"><span class="material-icons-round">${st.icon}</span>${st.label}</span></td>
+        <td>
+            <div class="mini-progress">
+                <div class="mini-track"><div class="mini-fill ${st.fillCls}" style="width:${pct}%"></div></div>
+                <span class="mini-pct">${pct}%</span>
+            </div>
+        </td>
+        <td>${dueDateDisplay(task.dueDate)}</td>
+        <td style="font-size:.78rem;color:var(--text-secondary);">${relTime(task.updatedAt)}</td>
+        <td>
+            <div style="display:flex;gap:.2rem;justify-content:flex-end;">
+                <button class="btn-icon" title="Atualizar progresso" onclick="openUpdateTask('${task.id}')"><span class="material-icons-round">update</span></button>
+                <button class="btn-icon" title="Editar" onclick="openEditTask('${task.id}')"><span class="material-icons-round">edit</span></button>
+                <button class="btn-icon danger" title="Excluir" onclick="confirmDeleteTask('${task.id}')"><span class="material-icons-round">delete</span></button>
+            </div>
+        </td>
+    </tr>`;
+}
+
+function setFilter(key) { activeFilter = key; renderProjectDetail(); }
+
+/* ── PROJECT CRUD ────────────────────────────────────────────── */
+function openNewProject() {
+    editingProjectId = null;
+    document.getElementById('modal-project-title').textContent = 'Novo Projeto';
+    ['proj-name','proj-desc','proj-owner','proj-start','proj-end'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('proj-status').value = 'active';
+    openModal('modal-project');
+    setTimeout(() => document.getElementById('proj-name').focus(), 80);
+}
+
+function openEditProject(id) {
+    editingProjectId = id;
+    const p = getProject(id);
+    if (!p) return;
+    document.getElementById('modal-project-title').textContent = 'Editar Projeto';
+    document.getElementById('proj-name').value   = p.name;
+    document.getElementById('proj-desc').value   = p.description || '';
+    document.getElementById('proj-owner').value  = p.owner || '';
+    document.getElementById('proj-status').value = p.status || 'active';
+    document.getElementById('proj-start').value  = p.startDate || '';
+    document.getElementById('proj-end').value    = p.endDate || '';
+    openModal('modal-project');
+}
+
+document.getElementById('btn-save-project').addEventListener('click', () => {
+    const name = document.getElementById('proj-name').value.trim();
+    if (!name) { showToast('Informe o nome do projeto.', 'error'); return; }
+
+    const fields = {
+        name,
+        description: document.getElementById('proj-desc').value.trim(),
+        owner:       document.getElementById('proj-owner').value.trim(),
+        status:      document.getElementById('proj-status').value,
+        startDate:   document.getElementById('proj-start').value,
+        endDate:     document.getElementById('proj-end').value,
+        updatedAt:   new Date().toISOString(),
+    };
+
+    if (editingProjectId) {
+        const p = getProject(editingProjectId);
+        if (p) Object.assign(p, fields);
+    } else {
+        const newP = { id: uid(), createdAt: new Date().toISOString(), tasks: [], ...fields };
+        appData.projects.push(newP);
+        activeProjectId = newP.id;
+    }
+
+    saveData(appData);
+    closeModal('modal-project');
+    renderSidebar();
+    renderProjectDetail();
+    showToast(editingProjectId ? 'Projeto atualizado!' : 'Projeto criado!', 'success');
+});
+
+function confirmDeleteProject(e, id) {
+    e.stopPropagation();
+    if (!confirm('Excluir este projeto e todas as suas tarefas?')) return;
+    appData.projects = appData.projects.filter(p => p.id !== id);
+    if (activeProjectId === id) activeProjectId = appData.projects.length ? appData.projects[0].id : null;
+    saveData(appData);
+    renderSidebar();
+    renderProjectDetail();
+    showToast('Projeto excluído.', 'success');
+}
+
+/* ── TASK CRUD ───────────────────────────────────────────────── */
+function openNewTask() {
+    editingTaskId = null;
+    document.getElementById('modal-task-title').textContent = 'Nova Tarefa';
+    ['task-title','task-desc','task-owner','task-due','task-note'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('task-priority').value = 'medium';
+    document.getElementById('task-status').value   = 'pending';
+    document.getElementById('task-progress').value = '0';
+    document.getElementById('task-progress-label').textContent = '0%';
+    openModal('modal-task');
+    setTimeout(() => document.getElementById('task-title').focus(), 80);
+}
+
+function openEditTask(taskId) {
+    const proj = getProject(activeProjectId);
+    const task = proj && proj.tasks.find(t => t.id === taskId);
+    if (!task) return;
+    editingTaskId = taskId;
+    document.getElementById('modal-task-title').textContent = 'Editar Tarefa';
+    document.getElementById('task-title').value    = task.title;
+    document.getElementById('task-desc').value     = task.description || '';
+    document.getElementById('task-owner').value    = task.owner || '';
+    document.getElementById('task-priority').value = task.priority || 'medium';
+    document.getElementById('task-status').value   = task.status || 'pending';
+    document.getElementById('task-due').value      = task.dueDate || '';
+    document.getElementById('task-progress').value = task.progress || 0;
+    document.getElementById('task-progress-label').textContent = (task.progress || 0) + '%';
+    document.getElementById('task-note').value     = task.note || '';
+    openModal('modal-task');
+}
+
+document.getElementById('btn-save-task').addEventListener('click', () => {
+    const proj = getProject(activeProjectId);
+    if (!proj) return;
+    const title = document.getElementById('task-title').value.trim();
+    if (!title) { showToast('Informe o título da tarefa.', 'error'); return; }
+
+    let progress = parseInt(document.getElementById('task-progress').value) || 0;
+    const status = document.getElementById('task-status').value;
+    if (status === 'done') progress = 100;
+
+    const taskData = {
+        title, progress, status,
+        description: document.getElementById('task-desc').value.trim(),
+        owner:       document.getElementById('task-owner').value.trim(),
+        priority:    document.getElementById('task-priority').value,
+        dueDate:     document.getElementById('task-due').value,
+        note:        document.getElementById('task-note').value.trim(),
+        updatedAt:   new Date().toISOString(),
+    };
+
+    if (editingTaskId) {
+        const idx = proj.tasks.findIndex(t => t.id === editingTaskId);
+        if (idx !== -1) proj.tasks[idx] = { ...proj.tasks[idx], ...taskData };
+    } else {
+        proj.tasks.push({ id: uid(), createdAt: new Date().toISOString(), ...taskData });
+    }
+
+    proj.updatedAt = new Date().toISOString();
+    saveData(appData);
+    closeModal('modal-task');
+    renderSidebar();
+    renderProjectDetail();
+    showToast(editingTaskId ? 'Tarefa atualizada!' : 'Tarefa adicionada!', 'success');
+});
+
+function openUpdateTask(taskId) {
+    const proj = getProject(activeProjectId);
+    const task = proj && proj.tasks.find(t => t.id === taskId);
+    if (!task) return;
+    updatingTaskId = taskId;
+    document.getElementById('update-task-name').textContent = task.title;
+    document.getElementById('update-status').value   = task.status || 'pending';
+    document.getElementById('update-progress').value = task.progress || 0;
+    document.getElementById('update-progress-label').textContent = (task.progress || 0) + '%';
+    document.getElementById('update-note').value = '';
+    openModal('modal-update');
+}
+
+document.getElementById('btn-save-update').addEventListener('click', () => {
+    const proj = getProject(activeProjectId);
+    const idx = proj && proj.tasks.findIndex(t => t.id === updatingTaskId);
+    if (!proj || idx === undefined || idx === -1) return;
+
+    const status   = document.getElementById('update-status').value;
+    let   progress = parseInt(document.getElementById('update-progress').value) || 0;
+    const note     = document.getElementById('update-note').value.trim();
+
+    if (status === 'done') progress = 100;
+    proj.tasks[idx].status    = status;
+    proj.tasks[idx].progress  = progress;
+    if (note) proj.tasks[idx].note = note;
+    proj.tasks[idx].updatedAt = new Date().toISOString();
+    proj.updatedAt = new Date().toISOString();
+
+    saveData(appData);
+    closeModal('modal-update');
+    renderSidebar();
+    renderProjectDetail();
+    showToast('Progresso atualizado!', 'success');
+});
+
+function confirmDeleteTask(taskId) {
+    if (!confirm('Excluir esta tarefa?')) return;
+    const proj = getProject(activeProjectId);
+    if (!proj) return;
+    proj.tasks = proj.tasks.filter(t => t.id !== taskId);
+    proj.updatedAt = new Date().toISOString();
+    saveData(appData);
+    renderSidebar();
+    renderProjectDetail();
+    showToast('Tarefa excluída.', 'success');
+}
+
+/* ── EXPORT ─────────────────────────────────────────────────── */
+document.getElementById('btn-export-csv').addEventListener('click', () => {
+    const proj = getProject(activeProjectId);
+    if (!proj) { showToast('Selecione um projeto para exportar.', 'error'); return; }
+    const header = ['Tarefa','Responsável','Status','Prioridade','Progresso (%)','Prazo','Observação','Criado Em','Atualizado Em'];
+    const rows = (proj.tasks||[]).map(t => [
+        `"${(t.title||'').replace(/"/g,'""')}"`,
+        `"${(t.owner||'').replace(/"/g,'""')}"`,
+        (STATUS_CFG[t.status]||{}).label||t.status,
+        (PRIORITY_CFG[t.priority]||{}).label||t.priority,
+        t.progress||0,
+        t.dueDate||'',
+        `"${(t.note||'').replace(/"/g,'""')}"`,
+        t.createdAt ? new Date(t.createdAt).toLocaleDateString('pt-BR') : '',
+        t.updatedAt ? new Date(t.updatedAt).toLocaleDateString('pt-BR') : '',
+    ]);
+    const csv  = [header.join(';'), ...rows.map(r => r.join(';'))].join('\n');
+    const blob = new Blob(['\ufeff'+csv], { type: 'text/csv;charset=utf-8;' });
+    const a    = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
+    a.download = `${proj.name.replace(/[^a-z0-9]/gi,'_')}_tarefas.csv`;
+    a.click();
+});
+
+/* ── INIT ────────────────────────────────────────────────────── */
+document.getElementById('btn-new-project').addEventListener('click', openNewProject);
+document.getElementById('btn-new-project-main').addEventListener('click', openNewProject);
+document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); }));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open')); });
+
+if (appData.projects.length) activeProjectId = appData.projects[0].id;
+renderSidebar();
+renderProjectDetail();
+</script>
+</body>
+</html>
