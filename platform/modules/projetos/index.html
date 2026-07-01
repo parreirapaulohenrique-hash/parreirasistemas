@@ -950,7 +950,9 @@
             <div class="field-row">
                 <div class="field">
                     <label>Responsável</label>
-                    <input type="text" id="task-owner" placeholder="Quem vai executar?">
+                    <select id="task-owner">
+                        <option value="">— Selecione —</option>
+                    </select>
                 </div>
                 <div class="field">
                     <label>Prioridade</label>
@@ -1616,10 +1618,20 @@ function confirmDeleteProject(e, id) {
 }
 
 /* ── TASK CRUD ───────────────────────────────────────────────── */
+function populateOwnerSelect(currentValue) {
+    const sel = document.getElementById('task-owner');
+    if (!sel) return;
+    const members = appData.members || [];
+    sel.innerHTML = `<option value="">— Selecione —</option>` +
+        members.map(m => `<option value="${esc(m.name)}"${m.name === currentValue ? ' selected' : ''}>${esc(m.name)}</option>`).join('') +
+        (!members.length ? `<option disabled>Cadastre responsáveis na barra lateral</option>` : '');
+}
+
 function openNewTask() {
     editingTaskId = null;
     document.getElementById('modal-task-title').textContent = 'Nova Tarefa';
-    ['task-title','task-desc','task-owner','task-due','task-note'].forEach(id => document.getElementById(id).value = '');
+    ['task-title','task-desc','task-due','task-note'].forEach(id => document.getElementById(id).value = '');
+    populateOwnerSelect('');
     document.getElementById('task-priority').value = 'medium';
     document.getElementById('task-status').value   = 'pending';
     document.getElementById('task-progress').value = '0';
@@ -1636,7 +1648,7 @@ function openEditTask(taskId) {
     document.getElementById('modal-task-title').textContent = 'Editar Tarefa';
     document.getElementById('task-title').value    = task.title;
     document.getElementById('task-desc').value     = task.description || '';
-    document.getElementById('task-owner').value    = task.owner || '';
+    populateOwnerSelect(task.owner || '');
     document.getElementById('task-priority').value = task.priority || 'medium';
     document.getElementById('task-status').value   = task.status || 'pending';
     document.getElementById('task-due').value      = task.dueDate || '';
