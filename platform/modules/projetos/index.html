@@ -574,6 +574,171 @@
         .overdue { color: var(--accent-red); }
         .due-soon { color: var(--accent-yellow); }
 
+        /* ── TASK ROW EXPAND ─────────────────────────────────────────── */
+        .task-row-main {
+            cursor: pointer;
+            user-select: none;
+        }
+        .task-row-main:hover { background: var(--bg-card-hover); }
+        .task-expand-btn {
+            display: inline-flex;
+            align-items: center;
+            color: var(--text-muted);
+            transition: transform .2s, color .15s;
+            font-size: 1.15rem;
+        }
+        .task-expand-btn.open {
+            transform: rotate(90deg);
+            color: var(--accent-blue);
+        }
+        .task-detail-row { display: none; }
+        .task-detail-row.open { display: table-row; }
+        .task-detail-cell {
+            background: #0d1117;
+            border-top: none;
+            padding: 0 0 1rem 3.2rem;
+        }
+
+        /* Timeline */
+        .log-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            padding-top: .75rem;
+        }
+        .log-entry {
+            display: flex;
+            gap: .75rem;
+            position: relative;
+            padding-bottom: .85rem;
+        }
+        .log-entry:last-of-type { padding-bottom: .5rem; }
+        .log-line {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-shrink: 0;
+            width: 20px;
+        }
+        .log-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: var(--accent-blue);
+            border: 2px solid var(--bg-base);
+            flex-shrink: 0;
+            margin-top: 3px;
+            z-index: 1;
+        }
+        .log-dot.first { background: var(--accent-purple); }
+        .log-dot.last  { background: var(--accent-green); }
+        .log-connector {
+            width: 2px;
+            flex: 1;
+            background: var(--border-color);
+            min-height: 16px;
+            margin-top: 2px;
+        }
+        .log-body { flex: 1; min-width: 0; }
+        .log-header {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            flex-wrap: wrap;
+        }
+        .log-author {
+            font-size: .78rem;
+            font-weight: 600;
+            color: var(--accent-blue);
+        }
+        .log-datetime {
+            font-size: .72rem;
+            color: var(--text-muted);
+        }
+        .log-progress-badge {
+            font-size: .7rem;
+            font-weight: 700;
+            background: var(--accent-blue-dim);
+            color: var(--accent-blue);
+            padding: .1rem .4rem;
+            border-radius: 20px;
+            margin-left: auto;
+        }
+        .log-text {
+            font-size: .82rem;
+            color: var(--text-secondary);
+            margin-top: .2rem;
+            line-height: 1.45;
+        }
+        .log-delete-btn {
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: .15rem;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            font-size: .85rem;
+            transition: color .15s, background .15s;
+            flex-shrink: 0;
+        }
+        .log-delete-btn:hover { color: var(--accent-red); background: var(--accent-red-dim); }
+        .log-delete-btn .material-icons-round { font-size: .95rem; }
+
+        /* Add log form */
+        .log-add-form {
+            display: flex;
+            gap: .5rem;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: .75rem;
+            margin-top: .75rem;
+        }
+        .log-add-form input, .log-add-form textarea {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            padding: .45rem .65rem;
+            font-size: .82rem;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: border-color .15s;
+        }
+        .log-add-form input:focus, .log-add-form textarea:focus { border-color: var(--accent-blue); }
+        .log-form-author { width: 130px; flex-shrink: 0; }
+        .log-form-desc   { flex: 1; min-width: 180px; resize: none; height: 38px; overflow: hidden; }
+        .log-form-pct    { width: 68px; flex-shrink: 0; }
+        .btn-log-add {
+            display: inline-flex;
+            align-items: center;
+            gap: .3rem;
+            padding: .4rem .85rem;
+            background: var(--accent-blue);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: .8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background .15s;
+            font-family: 'Inter', sans-serif;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+        .btn-log-add:hover { background: #58a6ff; }
+        .btn-log-add .material-icons-round { font-size: .95rem; }
+
+        .log-empty {
+            font-size: .8rem;
+            color: var(--text-muted);
+            font-style: italic;
+            padding: .25rem 0;
+        }
+
         @media (max-width: 900px) {
             .page-wrap { grid-template-columns: 1fr; }
             .sidebar { border-right: none; border-bottom: 1px solid var(--border-color); }
@@ -1005,12 +1170,13 @@ function renderProjectDetail() {
             </div>
         </div>
 
-        <div style="overflow-x:auto;border-radius:var(--radius-md);border:1px solid var(--border-color);overflow:hidden;">
+        <div style="border-radius:var(--radius-md);border:1px solid var(--border-color);overflow:hidden;">
             ${filtered.length === 0
                 ? `<div class="empty-state"><span class="material-icons-round">checklist</span><p>${activeFilter==='all'?'Nenhuma tarefa ainda. Clique em "Nova Tarefa" para começar.':'Nenhuma tarefa com esse status.'}</p></div>`
                 : `<table class="task-table">
                     <thead><tr>
-                        <th style="width:20px;"></th>
+                        <th style="width:28px;"></th>
+                        <th style="width:18px;"></th>
                         <th>Tarefa</th>
                         <th>Responsável</th>
                         <th>Status</th>
@@ -1027,16 +1193,50 @@ function renderProjectDetail() {
 }
 
 function renderTaskRow(task) {
-    const st  = STATUS_CFG[task.status]   || STATUS_CFG.pending;
-    const pr  = PRIORITY_CFG[task.priority] || PRIORITY_CFG.medium;
-    const pct = task.progress || 0;
-    return `<tr>
+    const st   = STATUS_CFG[task.status]    || STATUS_CFG.pending;
+    const pr   = PRIORITY_CFG[task.priority] || PRIORITY_CFG.medium;
+    const pct  = task.progress || 0;
+    const logs = task.executionLog || [];
+    const logCount = logs.length;
+
+    // Build timeline HTML
+    const timelineHtml = logs.length === 0
+        ? `<div class="log-empty">Nenhum lançamento de execução ainda. Use o formulário abaixo para registrar.</div>`
+        : logs.map((entry, idx) => {
+            const isFirst = idx === 0;
+            const isLast  = idx === logs.length - 1;
+            const dotCls  = isFirst ? 'first' : isLast ? 'last' : '';
+            return `<div class="log-entry">
+                <div class="log-line">
+                    <span class="log-dot ${dotCls}"></span>
+                    ${!isLast ? '<span class="log-connector"></span>' : ''}
+                </div>
+                <div class="log-body">
+                    <div class="log-header">
+                        <span class="log-author">${esc(entry.author || 'Sistema')}</span>
+                        <span class="log-datetime">${fmtDateTime(entry.createdAt)}</span>
+                        ${entry.progress !== undefined ? `<span class="log-progress-badge">${entry.progress}%</span>` : ''}
+                        <button class="log-delete-btn" title="Remover lançamento"
+                            onclick="deleteLogEntry('${task.id}','${entry.id}')">
+                            <span class="material-icons-round">close</span>
+                        </button>
+                    </div>
+                    <div class="log-text">${esc(entry.text)}</div>
+                </div>
+            </div>`;
+        }).join('');
+
+    const mainRow = `<tr class="task-row-main" onclick="toggleTaskDetail('${task.id}')">
+        <td onclick="event.stopPropagation()" style="padding-left:.85rem;">
+            <span class="material-icons-round task-expand-btn" id="expand-icon-${task.id}">chevron_right</span>
+        </td>
         <td><span class="priority-dot ${pr.cls}" title="Prioridade ${pr.label}"></span></td>
         <td>
             <div class="task-title-wrap">
-                <div class="task-title-text">${esc(task.title)}</div>
+                <div class="task-title-text">${esc(task.title)}
+                    ${logCount > 0 ? `<span style="font-size:.7rem;color:var(--accent-blue);font-weight:600;margin-left:.4rem;background:var(--accent-blue-dim);padding:.1rem .4rem;border-radius:20px;">${logCount} lançamento${logCount>1?'s':''}</span>` : ''}
+                </div>
                 ${task.description ? `<div class="task-desc-text">${esc(task.description.slice(0,80))}${task.description.length>80?'…':''}</div>` : ''}
-                ${task.note ? `<div class="task-desc-text" style="color:var(--accent-yellow);">📝 ${esc(task.note.slice(0,100))}</div>` : ''}
             </div>
         </td>
         <td style="color:var(--text-secondary);font-size:.82rem;">${esc(task.owner||'—')}</td>
@@ -1049,7 +1249,7 @@ function renderTaskRow(task) {
         </td>
         <td>${dueDateDisplay(task.dueDate)}</td>
         <td style="font-size:.78rem;color:var(--text-secondary);">${relTime(task.updatedAt)}</td>
-        <td>
+        <td onclick="event.stopPropagation()">
             <div style="display:flex;gap:.2rem;justify-content:flex-end;">
                 <button class="btn-icon" title="Atualizar progresso" onclick="openUpdateTask('${task.id}')"><span class="material-icons-round">update</span></button>
                 <button class="btn-icon" title="Editar" onclick="openEditTask('${task.id}')"><span class="material-icons-round">edit</span></button>
@@ -1057,6 +1257,157 @@ function renderTaskRow(task) {
             </div>
         </td>
     </tr>`;
+
+    const detailRow = `<tr class="task-detail-row" id="detail-row-${task.id}">
+        <td colspan="9" class="task-detail-cell">
+            <div class="log-timeline" id="log-timeline-${task.id}">${timelineHtml}</div>
+            <div class="log-add-form">
+                <input  class="log-form-author" id="log-author-${task.id}" type="text" placeholder="Seu nome" />
+                <textarea class="log-form-desc" id="log-desc-${task.id}" placeholder="O que foi feito nesta execução?" rows="1"></textarea>
+                <input  class="log-form-pct"    id="log-pct-${task.id}"   type="number" min="0" max="100" placeholder="% atual" title="Progresso atual (%)"/>
+                <button class="btn-log-add" onclick="addLogEntry('${task.id}')">
+                    <span class="material-icons-round">add</span> Lançar
+                </button>
+            </div>
+        </td>
+    </tr>`;
+
+    return mainRow + detailRow;
+}
+
+function toggleTaskDetail(taskId) {
+    const detailRow = document.getElementById('detail-row-' + taskId);
+    const icon      = document.getElementById('expand-icon-' + taskId);
+    if (!detailRow) return;
+    const isOpen = detailRow.classList.toggle('open');
+    icon.classList.toggle('open', isOpen);
+    if (isOpen) {
+        // Focus the author field for quick entry
+        const authorEl = document.getElementById('log-author-' + taskId);
+        if (authorEl && !authorEl.value) {
+            const user = (function(){ try { const u = JSON.parse(localStorage.getItem('logged_user')); return u ? (u.name||u.login||'') : ''; } catch{ return ''; } })();
+            if (user) authorEl.value = user;
+        }
+    }
+}
+
+function addLogEntry(taskId) {
+    const proj = getProject(activeProjectId);
+    if (!proj) return;
+    const task = proj.tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const authorEl = document.getElementById('log-author-' + taskId);
+    const descEl   = document.getElementById('log-desc-'   + taskId);
+    const pctEl    = document.getElementById('log-pct-'    + taskId);
+
+    const text    = descEl.value.trim();
+    const author  = authorEl.value.trim() || 'Sistema';
+    const pctRaw  = pctEl.value;
+    const progress = pctRaw !== '' ? Math.min(100, Math.max(0, parseInt(pctRaw))) : undefined;
+
+    if (!text) { showToast('Descreva o que foi feito.', 'error'); descEl.focus(); return; }
+
+    if (!task.executionLog) task.executionLog = [];
+    const entry = { id: uid(), createdAt: new Date().toISOString(), author, text, progress };
+    task.executionLog.push(entry);
+
+    // Update task progress if provided
+    if (progress !== undefined) {
+        task.progress  = progress;
+        if (progress === 100) task.status = 'done';
+    }
+    task.updatedAt = new Date().toISOString();
+    proj.updatedAt = new Date().toISOString();
+    saveData(appData);
+
+    // Update the timeline in place without full re-render
+    const timeline = document.getElementById('log-timeline-' + taskId);
+    if (timeline) {
+        const logs = task.executionLog;
+        const idx  = logs.length - 1;
+        const isFirst = idx === 0;
+        const dotCls  = isFirst ? 'first' : '';
+        // Remove "empty" message if present
+        if (timeline.querySelector('.log-empty')) timeline.innerHTML = '';
+        // Un-mark previous last dot
+        const prevLast = timeline.querySelector('.log-dot.last');
+        if (prevLast) prevLast.classList.remove('last');
+        // Add connector to previous last entry
+        const prevEntry = timeline.lastElementChild;
+        if (prevEntry) {
+            const prevLine = prevEntry.querySelector('.log-line');
+            if (prevLine && !prevLine.querySelector('.log-connector')) {
+                prevLine.insertAdjacentHTML('beforeend', '<span class="log-connector"></span>');
+            }
+        }
+        const newHtml = `<div class="log-entry">
+            <div class="log-line">
+                <span class="log-dot last ${dotCls}"></span>
+            </div>
+            <div class="log-body">
+                <div class="log-header">
+                    <span class="log-author">${esc(author)}</span>
+                    <span class="log-datetime">${fmtDateTime(entry.createdAt)}</span>
+                    ${progress !== undefined ? `<span class="log-progress-badge">${progress}%</span>` : ''}
+                    <button class="log-delete-btn" title="Remover lançamento"
+                        onclick="deleteLogEntry('${taskId}','${entry.id}')">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+                <div class="log-text">${esc(text)}</div>
+            </div>
+        </div>`;
+        timeline.insertAdjacentHTML('beforeend', newHtml);
+    }
+
+    // Clear inputs
+    descEl.value  = '';
+    pctEl.value   = '';
+    descEl.focus();
+
+    // Update badge count on main row without collapse
+    renderSidebar();
+    // Re-render only the main row count badge
+    const titleEl = document.querySelector(`#expand-icon-${taskId}`)?.closest('tr')?.querySelector('.task-title-text');
+    if (titleEl) {
+        const cnt = task.executionLog.length;
+        const badge = titleEl.querySelector('span');
+        const badgeHtml = `<span style="font-size:.7rem;color:var(--accent-blue);font-weight:600;margin-left:.4rem;background:var(--accent-blue-dim);padding:.1rem .4rem;border-radius:20px;">${cnt} lançamento${cnt>1?'s':''}</span>`;
+        if (badge) badge.outerHTML = badgeHtml;
+        else titleEl.insertAdjacentHTML('beforeend', badgeHtml);
+    }
+    showToast('Lançamento registrado!', 'success');
+}
+
+function deleteLogEntry(taskId, entryId) {
+    if (!confirm('Remover este lançamento?')) return;
+    const proj = getProject(activeProjectId);
+    if (!proj) return;
+    const task = proj.tasks.find(t => t.id === taskId);
+    if (!task || !task.executionLog) return;
+    task.executionLog = task.executionLog.filter(e => e.id !== entryId);
+    task.updatedAt = new Date().toISOString();
+    proj.updatedAt = new Date().toISOString();
+    saveData(appData);
+    // Re-render detail keeping row open
+    renderProjectDetail();
+    // Re-open the row
+    setTimeout(() => {
+        const row  = document.getElementById('detail-row-' + taskId);
+        const icon = document.getElementById('expand-icon-' + taskId);
+        if (row)  row.classList.add('open');
+        if (icon) icon.classList.add('open');
+    }, 0);
+    showToast('Lançamento removido.', 'success');
+}
+
+function fmtDateTime(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const date = d.toLocaleDateString('pt-BR');
+    const time = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return `${date} ${time}`;
 }
 
 function setFilter(key) { activeFilter = key; renderProjectDetail(); }
