@@ -188,13 +188,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Clients: Load from Storage (Cloud)
         let clients = Utils.getStorage('clients') || [];
 
-        // Fallback: se os clientes sumirem (localStorage limpo), restaura do backup do data.js apenas para ltdistribuidora
-        const tenantId = (Utils.Cloud && Utils.Cloud.tenantId) || localStorage.getItem('app_tenant_id') || '';
+        // Fallback: se os clientes sumirem (localStorage limpo), usa data.js APENAS como exibição
+        // temporária na closure — NÃO grava no _memStore para não bloquear a carga do Firestore.
+        // FIX v3.14.32: Utils.setStorage era chamado aqui, contaminando _memStore com 1.371 clientes
+        // sem telefone (data.js), impedindo que os ~1.955 clientes reais (com telefone) do Firestore
+        // sobrescrevessem corretamente após os chunks carregarem.
         if (clients.length === 0 && tenantId === 'ltdistribuidora' && typeof window.initialClientes !== 'undefined') {
-            console.log("Restaurando clientes do backup estático para ltdistribuidora...");
+            console.log("⚠️ [Fallback] Usando data.js temporariamente enquanto Firestore carrega chunks...");
             clients = window.initialClientes;
-            Utils.setStorage('clients', clients);
+            // NÃO chamar Utils.setStorage — Firestore sobrescreve _memStore ao terminar de carregar
         }
+
         let rules = Utils.getStorage('freight_tables') || [];
 
         // Removido inicialização automática de dados de exemplo para evitar sobrescrever dados do usuário
