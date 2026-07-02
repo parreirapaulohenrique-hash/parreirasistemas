@@ -222,6 +222,8 @@ const Utils = {
                         return true;
                     } else {
                         // v3.11.65: Auto-Chunking — divide em pedaços de 800KB e salva separado
+                        // FIX v3.14.32: Unifica os dois formatos de chunk (single e double underscore)
+                        // para eliminar conflito entre dados da importação Excel e da migração fix_clients.
                         const kb = (size/1024).toFixed(1);
                         console.warn(`⚠️ [Cloud] ${key} grande (${kb}KB). Ativando chunking automático...`);
 
@@ -245,22 +247,32 @@ const Utils = {
 
                         console.log(`📦 [Chunk] ${key}: ${items.length} itens → ${chunks.length} chunk(s)`);
 
-                        // Salva cada chunk
+                        // Salva cada chunk em AMBOS os formatos (single e double underscore)
+                        // para garantir compatibilidade com loadAll e loadChunks.
                         const batch = [];
                         for (let i = 0; i < chunks.length; i++) {
+                            const chunkContent = JSON.stringify(chunks[i]);
+                            const chunkMeta = {
+                                content: chunkContent,
+                                chunkIndex: i,
+                                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            };
+                            // Formato antigo: key_chunk_N (lido por loadChunks / onSnapshot)
                             batch.push(
                                 window.db.collection('tenants').doc(this.tenantId)
                                     .collection('legacy_store').doc(`${key}_chunk_${i}`)
-                                    .set({
-                                        content: JSON.stringify(chunks[i]),
-                                        chunkIndex: i,
-                                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                                    })
+                                    .set(chunkMeta)
+                            );
+                            // Formato novo: key__N (lido por _loadChunkedKey / loadAll via clients__meta)
+                            batch.push(
+                                window.db.collection('tenants').doc(this.tenantId)
+                                    .collection('legacy_store').doc(`${key}__${i}`)
+                                    .set(chunkMeta)
                             );
                         }
                         await Promise.all(batch);
 
-                        // Salva doc principal como referência (isChunked = true)
+                        // Salva doc principal como referência para onSnapshot (formato antigo)
                         await window.db.collection('tenants').doc(this.tenantId)
                             .collection('legacy_store').doc(key).set({
                                 isChunked: true,
@@ -269,7 +281,15 @@ const Utils = {
                                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                             });
 
-                        console.log(`✅ [Cloud] ${key} salvo em ${chunks.length} chunk(s).`);
+                        // Atualiza clients__meta para loadAll (formato novo) com dados frescos
+                        await window.db.collection('tenants').doc(this.tenantId)
+                            .collection('legacy_store').doc(`${key}__meta`).set({
+                                totalChunks: chunks.length,
+                                totalCount: items.length,
+                                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+
+                        console.log(`✅ [Cloud] ${key} salvo em ${chunks.length} chunk(s) (ambos os formatos).`);
                         if (Utils._pendingSync && Utils._pendingSync[key]) delete Utils._pendingSync[key];
                         this._hideOfflineBadge();
                         return true;
@@ -539,30 +559,44 @@ const Utils = {
                         const doc = otherDocs[i];
                         const key = OTHER_KEYS[i];
 
-                        // --- CLIENTS: sempre verifica chunks PRIMEIRO (clients__meta tem prioridade) ---
+                        // --- CLIENTS: FIX v3.14.32 — prioriza formato mais recente com mais dados ---
+                        // Problema original: dois formatos de chunk incompatíveis coexistiam no Firestore.
+                        // (1) clients_chunk_N + clients doc (Auto-Chunking via Cloud.save > 1MB)
+                        // (2) clients__N + clients__meta (Migração via /fix_clients)
+                        // O loadAll verificava apenas (2), ignorando dados novos gravados em (1).
+                        // Solução: verifica os dois e usa o que tiver MAIS registros.
                         if (key === 'clients') {
                             try {
+                                let bestArray = [];
+
+                                // Caminho A: Auto-Chunking (clients doc + clients_chunk_N)
+                                if (doc.exists) {
+                                    const docData = doc.data();
+                                    if (docData.isChunked && docData.chunkCount > 0) {
+                                        console.log(`[Cloud] clients auto-chunked: ${docData.chunkCount} chunk(s), ${docData.totalCount} registros.`);
+                                        const arrayA = await this.loadChunks('clients', docData.chunkCount);
+                                        if (arrayA.length > bestArray.length) bestArray = arrayA;
+                                    }
+                                }
+
+                                // Caminho B: Migração legacy (clients__meta + clients__N)
                                 const metaDoc = await window.db.collection('tenants').doc(this.tenantId)
                                     .collection('legacy_store').doc('clients__meta').get();
                                 if (metaDoc.exists) {
                                     const meta = metaDoc.data();
                                     const totalChunks = meta.totalChunks || 0;
                                     if (totalChunks > 0) {
-                                        console.log(`[Cloud] clients chunked: ${totalChunks} chunk(s), ${meta.totalCount} registros.`);
-                                        const fullArray = await this._loadChunkedKey('clients', totalChunks);
-                                        if (fullArray.length > 0) {
-                                            Utils._memStore.clients = fullArray;
-                                            console.log(`[Cloud] clients: ${fullArray.length} registros em memória.`);
-                                            if (doc.exists) {
-                                                window.db.collection('tenants').doc(this.tenantId)
-                                                    .collection('legacy_store').doc('clients').delete()
-                                                    .then(() => console.log('[Cloud] Doc legado clients deletado.'))
-                                                    .catch(() => {});
-                                            }
-                                            if (window.renderClientsList) window.renderClientsList();
-                                        }
-                                        continue;
+                                        console.log(`[Cloud] clients legacy-chunked: ${totalChunks} chunk(s), ${meta.totalCount} registros.`);
+                                        const arrayB = await this._loadChunkedKey('clients', totalChunks);
+                                        if (arrayB.length > bestArray.length) bestArray = arrayB;
                                     }
+                                }
+
+                                if (bestArray.length > 0) {
+                                    Utils._memStore.clients = bestArray;
+                                    console.log(`[Cloud] ✅ clients: ${bestArray.length} registros em memória (melhor fonte).`);
+                                    if (window.renderClientsList) window.renderClientsList();
+                                    continue;
                                 }
                             } catch (chunkErr) {
                                 console.warn('[Cloud] Erro ao carregar chunks de clients:', chunkErr);
