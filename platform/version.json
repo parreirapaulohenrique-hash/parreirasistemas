@@ -1,8 +1,8 @@
 {
-    "build":  "20260702-prod-v3.14.38",
-    "version":  "3.14.38",
+    "build":  "20260702-prod-v3.14.39",
+    "version":  "3.14.39",
     "environment":  "production",
-    "change":  "v3.14.38 - FIX: Clientes ltdistribuidora mostrando 1408 sem telefone. Unificado formato duplo de chunks no Cloud.save e loadAll. Fallback data.js nao contamina mais _memStore.",
+    "change":  "v3.14.39 - FEAT: Painel /tenants com ambientes HML por tenant. Cards mostram links PROD e HML lado a lado. Botao Criar HML automatico. Rota /tenants adicionada ao vercel.json.",
     "lastUpdate":  "2026-07-02",
     "deployedAt":  "2026-07-02"
 }
