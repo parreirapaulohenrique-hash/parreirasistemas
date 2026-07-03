@@ -199,11 +199,11 @@ function renderTenantGrid() {
 
             <!-- Link PRODUÇÃO -->
             <div class="tenant-url" style="margin-top:12px; border-color:rgba(34,197,94,0.3); background:rgba(34,197,94,0.06);">
-                <div style="display:flex;align-items:center;gap:6px;">
-                    <span style="font-size:0.65rem;font-weight:700;color:#22c55e;background:rgba(34,197,94,0.15);padding:2px 6px;border-radius:4px;letter-spacing:.04em;">PROD</span>
-                    <span style="color:#22c55e;font-size:0.73rem;">${prodUrl}</span>
+                <div class="url-text" style="display:flex;align-items:center;gap:6px;min-width:0;">
+                    <span style="font-size:0.65rem;font-weight:700;color:#22c55e;background:rgba(34,197,94,0.15);padding:2px 6px;border-radius:4px;letter-spacing:.04em;flex-shrink:0;">PROD</span>
+                    <span class="url-text" style="color:#22c55e;font-size:0.73rem;" title="${prodUrl}">${prodUrl}</span>
                 </div>
-                <div style="display:flex;gap:6px;">
+                <div class="url-actions">
                     <span class="material-icons-round" style="font-size:.9rem;cursor:pointer;color:#22c55e;" title="Copiar" onclick="event.stopPropagation();copyUrl('${prodUrl}')">content_copy</span>
                     <a href="https://${prodUrl}" target="_blank" onclick="event.stopPropagation()" style="color:#22c55e;"><span class="material-icons-round" style="font-size:.9rem;">open_in_new</span></a>
                 </div>
@@ -211,18 +211,19 @@ function renderTenantGrid() {
 
             <!-- Link HOMOLOGAÇÃO -->
             <div class="tenant-url" style="margin-top:6px; border-color:rgba(245,158,11,${hasHml ? '0.3' : '0.1'}); background:rgba(245,158,11,${hasHml ? '0.06' : '0.02'});">
-                <div style="display:flex;align-items:center;gap:6px;">
-                    <span style="font-size:0.65rem;font-weight:700;color:${hasHml ? '#f59e0b' : '#64748b'};background:rgba(245,158,11,${hasHml ? '0.15' : '0.05'});padding:2px 6px;border-radius:4px;letter-spacing:.04em;">HML</span>
-                    <span style="color:${hasHml ? '#f59e0b' : '#475569'};font-size:0.73rem;">${hmlUrlFull}</span>
+                <div class="url-text" style="display:flex;align-items:center;gap:6px;min-width:0;">
+                    <span style="font-size:0.65rem;font-weight:700;color:${hasHml ? '#f59e0b' : '#64748b'};background:rgba(245,158,11,${hasHml ? '0.15' : '0.05'});padding:2px 6px;border-radius:4px;letter-spacing:.04em;flex-shrink:0;">HML</span>
+                    <span class="url-text" style="color:${hasHml ? '#f59e0b' : '#475569'};font-size:0.73rem;" title="${hmlUrlFull}">${hmlUrlFull}</span>
                 </div>
-                ${hasHml ? `<div style="display:flex;gap:6px;">
+                ${hasHml ? `<div class="url-actions">
                     <span class="material-icons-round" style="font-size:.9rem;cursor:pointer;color:#f59e0b;" title="Copiar" onclick="event.stopPropagation();copyUrl('${hmlUrlFull}')">content_copy</span>
                     <a href="https://${hmlUrlFull}" target="_blank" onclick="event.stopPropagation()" style="color:#f59e0b;"><span class="material-icons-round" style="font-size:.9rem;">open_in_new</span></a>
-                </div>` : `<span style="font-size:0.7rem;color:#475569;font-style:italic;">não criado</span>`}
+                </div>` : `<span style="font-size:0.7rem;color:#475569;font-style:italic;flex-shrink:0;">não criado</span>`}
             </div>
 
             ${!hasHml ? `<button class="btn" style="margin-top:10px;width:100%;justify-content:center;font-size:0.78rem;padding:7px;background:rgba(245,158,11,0.1);color:#f59e0b;border:1px solid rgba(245,158,11,0.25);" onclick="event.stopPropagation();createHmlTenant('${t.id}','${t.name || t.id}')"><span class="material-icons-round" style="font-size:.9rem;">science</span> Criar Ambiente HML</button>` : ''}
         </div>`;
+
     };
 
     const renderHmlOrphan = (t) => {
@@ -238,11 +239,11 @@ function renderTenantGrid() {
                 <span class="status-badge" style="background:rgba(245,158,11,0.15);color:#f59e0b;">Apenas HML</span>
             </div>
             <div class="tenant-url" style="border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.06);">
-                <div style="display:flex;align-items:center;gap:6px;">
-                    <span style="font-size:0.65rem;font-weight:700;color:#f59e0b;background:rgba(245,158,11,0.15);padding:2px 6px;border-radius:4px;">HML</span>
-                    <span style="color:#f59e0b;font-size:0.73rem;">${hmlUrl}</span>
+                <div class="url-text" style="display:flex;align-items:center;gap:6px;min-width:0;">
+                    <span style="font-size:0.65rem;font-weight:700;color:#f59e0b;background:rgba(245,158,11,0.15);padding:2px 6px;border-radius:4px;flex-shrink:0;">HML</span>
+                    <span class="url-text" style="color:#f59e0b;font-size:0.73rem;" title="${hmlUrl}">${hmlUrl}</span>
                 </div>
-                <div style="display:flex;gap:6px;">
+                <div class="url-actions">
                     <span class="material-icons-round" style="font-size:.9rem;cursor:pointer;color:#f59e0b;" onclick="event.stopPropagation();copyUrl('${hmlUrl}')">content_copy</span>
                     <a href="https://${hmlUrl}" target="_blank" onclick="event.stopPropagation()" style="color:#f59e0b;"><span class="material-icons-round" style="font-size:.9rem;">open_in_new</span></a>
                 </div>
