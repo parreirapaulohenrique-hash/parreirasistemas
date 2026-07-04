@@ -1127,3 +1127,49 @@ window.handleUserFormSubmit = function (e) {
     roleEl.value = 'user';
     nameEl.focus();
 };
+
+// ═══════════════════════════════════════════════════════════
+// AUDIT LOG — Utils.writeLog
+// Grava um evento de auditoria no Firestore e no localStorage.
+// Retenção: 90 dias. Visibilidade: admin/supervisor.
+// ═══════════════════════════════════════════════════════════
+Utils.writeLog = async function(action, entity, description, before = null, after = null) {
+    try {
+        const loggedUser = Utils.getStorage('logged_user');
+        const entry = {
+            timestamp: new Date().toISOString(),
+            user: loggedUser ? (loggedUser.name || loggedUser.login || 'Sistema') : 'Sistema',
+            userRole: loggedUser ? (loggedUser.role || 'user') : 'system',
+            action,
+            entity,
+            description,
+            before: before ? JSON.parse(JSON.stringify(before)) : null,
+            after:  after  ? JSON.parse(JSON.stringify(after))  : null
+        };
+
+        // ── 1. Firestore (persistência primária) ──
+        if (window.db && Utils.Cloud && Utils.Cloud.tenantId) {
+            try {
+                await window.db
+                    .collection('tenants').doc(Utils.Cloud.tenantId)
+                    .collection('audit_log').add(entry);
+            } catch (e) {
+                console.warn('[AuditLog] Falha ao gravar no Firestore:', e.message);
+            }
+        }
+
+        // ── 2. localStorage (fallback / acesso offline) ──
+        const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
+        const cutoff = new Date(Date.now() - NINETY_DAYS_MS).toISOString();
+        let local = [];
+        try { local = Utils.getStorage('audit_log') || []; } catch (_) {}
+        local.unshift(entry);
+        // Purge entries older than 90 days and cap at 2000
+        local = local.filter(e => e.timestamp > cutoff).slice(0, 2000);
+        try { Utils.setStorage('audit_log', local); } catch (_) {}
+
+    } catch (err) {
+        console.warn('[AuditLog] Erro inesperado:', err);
+    }
+};
+

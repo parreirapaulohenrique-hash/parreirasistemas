@@ -1,8 +1,8 @@
 {
-    "build":  "20260702-prod-v3.14.39",
-    "version":  "3.14.39",
+    "build":  "20260704-prod-v3.14.40",
+    "version":  "3.14.40",
     "environment":  "production",
-    "change":  "v3.14.39 - FEAT: Painel /tenants com ambientes HML por tenant. Cards mostram links PROD e HML lado a lado. Botao Criar HML automatico. Rota /tenants adicionada ao vercel.json.",
-    "lastUpdate":  "2026-07-02",
-    "deployedAt":  "2026-07-02"
+    "change":  "v3.14.40 - FEAT: Log de Auditoria. Aba exclusiva para admin/supervisor. Registra despachos, alteracoes de tabela de frete, config. transportadora e pagamentos. Retencao 90 dias. Firestore + localStorage. Exportacao CSV. Filtros por acao, data e busca livre.",
+    "lastUpdate":  "2026-07-04",
+    "deployedAt":  "2026-07-04"
 }
