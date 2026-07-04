@@ -1,8 +1,8 @@
 {
-    "build":  "20260629-prod-v3.14.37",
-    "version":  "3.14.37",
+    "build":  "20260702-prod-v3.14.39",
+    "version":  "3.14.39",
     "environment":  "production",
-    "change":  "v3.14.37 - FIX: Optimized processInvoicePayment to load and persist only selected dispatches individually instead of scanning the entire collection.",
-    "lastUpdate":  "2026-06-29",
-    "deployedAt":  "2026-06-29"
+    "change":  "v3.14.39 - FEAT: Painel /tenants com ambientes HML por tenant. Cards mostram links PROD e HML lado a lado. Botao Criar HML automatico. Rota /tenants adicionada ao vercel.json.",
+    "lastUpdate":  "2026-07-02",
+    "deployedAt":  "2026-07-02"
 }

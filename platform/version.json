@@ -1,8 +1,8 @@
 {
-    "build":  "20260629-prod-v3.14.37",
-    "version":  "3.14.37",
+    "build":  "20260704-prod-v3.14.40",
+    "version":  "3.14.40",
     "environment":  "production",
-    "change":  "v3.14.37 - FIX: Optimized processInvoicePayment to load and persist only selected dispatches individually instead of scanning the entire collection.",
-    "lastUpdate":  "2026-06-29",
-    "deployedAt":  "2026-06-29"
+    "change":  "v3.14.40 - FEAT: Log de Auditoria. Aba exclusiva para admin/supervisor. Registra despachos, alteracoes de tabela de frete, config. transportadora e pagamentos. Retencao 90 dias. Firestore + localStorage. Exportacao CSV. Filtros por acao, data e busca livre.",
+    "lastUpdate":  "2026-07-04",
+    "deployedAt":  "2026-07-04"
 }

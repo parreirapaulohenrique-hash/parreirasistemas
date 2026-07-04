@@ -364,6 +364,10 @@
                         font-size:.65rem;font-weight:700;padding:.1rem .4rem;border-radius:10px;
                         min-width:18px;text-align:center;line-height:1.4">0</span>
                 </a>
+                <a href="#auditLog" onclick="window.showSection('auditLog')" class="nav-item" id="navAuditLog" style="display:none">
+                    <span class="material-icons-round" style="color:#a855f7">manage_search</span>
+                    Log / Auditoria
+                </a>
                 <a href="#system" onclick="window.showSection('system')" class="nav-item">
                     <span class="material-icons-round">app_registration</span>
                     Cadastros
@@ -1725,6 +1729,60 @@
 
 
                 <!-- VIEW: OCORRÊNCIAS LOGÍSTICAS -->
+
+                <!-- VIEW: LOG DE AUDITORIA -->
+                <div id="view-auditLog" class="view-section" style="display:none;">
+                    <div class="welcome-banner">
+                        <h2 style="display:flex;align-items:center;gap:.5rem;">
+                            <span class="material-icons-round" style="color:#a855f7;">manage_search</span>
+                            Log de Auditoria
+                        </h2>
+                        <p>Histórico completo de alterações, despachos e pagamentos. Retenção: 90 dias.</p>
+                    </div>
+
+                    <div class="card" style="margin-bottom:1.5rem;">
+                        <!-- Barra de Filtros -->
+                        <div style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:center;padding:1rem 1.25rem;border-bottom:1px solid var(--border-color,rgba(255,255,255,.08));">
+                            <select id="auditFilterAction" onchange="window.renderAuditLog()" style="background:var(--bg-secondary,#1e2435);border:1px solid var(--border-color,rgba(255,255,255,.1));color:var(--text-primary,#e2e8f0);padding:.45rem .8rem;border-radius:8px;font-size:.82rem;">
+                                <option value="">Todas as ações</option>
+                                <option value="DISPATCH_CREATE">Despacho</option>
+                                <option value="FREIGHT_TABLE_CREATE">Tabela Nova</option>
+                                <option value="FREIGHT_TABLE_EDIT">Tabela Editada</option>
+                                <option value="FREIGHT_TABLE_DELETE">Tabela Excluída</option>
+                                <option value="CARRIER_CONFIG_EDIT">Config. Transportadora</option>
+                                <option value="INVOICE_PAYMENT">Pagamento</option>
+                            </select>
+                            <input type="date" id="auditFilterDate" onchange="window.renderAuditLog()" style="background:var(--bg-secondary,#1e2435);border:1px solid var(--border-color,rgba(255,255,255,.1));color:var(--text-primary,#e2e8f0);padding:.45rem .8rem;border-radius:8px;font-size:.82rem;">
+                            <input type="text" id="auditSearch" placeholder="🔍 Buscar descrição ou usuário..." oninput="window.renderAuditLog()" style="flex:1;min-width:200px;background:var(--bg-secondary,#1e2435);border:1px solid var(--border-color,rgba(255,255,255,.1));color:var(--text-primary,#e2e8f0);padding:.45rem .8rem;border-radius:8px;font-size:.82rem;">
+                            <span id="auditLogStats" style="font-size:.78rem;color:var(--text-secondary,#94a3b8);white-space:nowrap;">—</span>
+                            <button onclick="window.exportAuditLogCSV()" style="background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.25);padding:.45rem .9rem;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">
+                                <span class="material-icons-round" style="font-size:.9rem;">download</span> CSV
+                            </button>
+                            <button onclick="window.renderAuditLog()" style="background:rgba(168,85,247,.12);color:#a855f7;border:1px solid rgba(168,85,247,.25);padding:.45rem .9rem;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">
+                                <span class="material-icons-round" style="font-size:.9rem;">refresh</span> Atualizar
+                            </button>
+                        </div>
+
+                        <!-- Tabela -->
+                        <div style="overflow-x:auto;">
+                            <table style="width:100%;border-collapse:collapse;">
+                                <thead>
+                                    <tr style="border-bottom:1px solid rgba(255,255,255,.08);">
+                                        <th style="padding:.65rem .8rem;text-align:left;font-size:.75rem;font-weight:600;color:var(--text-secondary,#94a3b8);white-space:nowrap;">Data / Hora</th>
+                                        <th style="padding:.65rem .8rem;text-align:left;font-size:.75rem;font-weight:600;color:var(--text-secondary,#94a3b8);">Ação</th>
+                                        <th style="padding:.65rem .8rem;text-align:left;font-size:.75rem;font-weight:600;color:var(--text-secondary,#94a3b8);">Descrição</th>
+                                        <th style="padding:.65rem .8rem;text-align:left;font-size:.75rem;font-weight:600;color:var(--text-secondary,#94a3b8);">Usuário</th>
+                                        <th style="padding:.65rem .8rem;text-align:center;font-size:.75rem;font-weight:600;color:var(--text-secondary,#94a3b8);">Det.</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="auditLogTableBody">
+                                    <tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-secondary,#94a3b8);">Carregando...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <!-- /LOG DE AUDITORIA -->
                 <div id="view-occurrences" class="view-section" style="display: none;">
                     <!-- Populated by OcorrenciasModule.renderView() -->
                 </div>

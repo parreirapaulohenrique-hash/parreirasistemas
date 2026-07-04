@@ -88,6 +88,14 @@
             "destination": "/platform/admin/$1"
         },
         {
+            "source": "/tenants",
+            "destination": "/platform/admin/index.html"
+        },
+        {
+            "source": "/tenants/(.*)",
+            "destination": "/platform/admin/$1"
+        },
+        {
             "source": "/",
             "destination": "/platform/index.html"
         },

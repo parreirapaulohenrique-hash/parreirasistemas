@@ -493,7 +493,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 acontec: document.querySelector('a[href="#acontec"]'),
                 system: document.querySelector('a[href="#system"]'),
                 appSettings: document.querySelector('a[href="#app-settings"]'),
-                occurrences: document.querySelector('a[href="#occurrences"]')
+                occurrences: document.querySelector('a[href="#occurrences"]'),
+                auditLog: document.querySelector('a[href="#auditLog"]')
             };
 
             // MOTOBOY: Show ONLY Moto Entrega
@@ -533,8 +534,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.body.classList.remove('is-user', 'is-motoboy', 'is-motorista', 'is-delivery-user');
                 // Show all cards including admin-only
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
-                // Ocorrências: visível para supervisor/admin
+                // Ocorrências e Log de Auditoria: visível apenas para supervisor/admin
                 if (allNavItems.occurrences) allNavItems.occurrences.style.display = 'flex';
+                if (allNavItems.auditLog)    allNavItems.auditLog.style.display    = 'flex';
                 return;
             }
 
@@ -545,6 +547,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (allNavItems.system) allNavItems.system.style.display = 'flex'; // Show system for client registration
             if (allNavItems.acontec) allNavItems.acontec.style.display = 'none';
             if (allNavItems.occurrences) allNavItems.occurrences.style.display = 'none'; // Ocorrências: apenas supervisor
+            if (allNavItems.auditLog)    allNavItems.auditLog.style.display    = 'none'; // Log: apenas supervisor
             // Moto e Carro agora visíveis para Operacional
             if (allNavItems.moto) allNavItems.moto.style.display = 'flex';
             if (allNavItems.carro) allNavItems.carro.style.display = 'flex';
@@ -2572,6 +2575,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             Utils.addToStorage('dispatches', dispatch);
             showToast('✅ Carga montada com sucesso!');
 
+            // ── AUDIT LOG ──
+            if (Utils.writeLog) Utils.writeLog(
+                'DISPATCH_CREATE', 'Despacho',
+                `NF ${dispatch.invoice} — ${dispatch.carrier} / ${dispatch.city} — ${Utils.formatCurrency(dispatch.total)}`,
+                null,
+                { invoice: dispatch.invoice, carrier: dispatch.carrier, city: dispatch.city, total: dispatch.total, nfValue: dispatch.nfValue, minimo: dispatch.minimo, baseCalculada: dispatch.baseCalculada }
+            );
+
             // Reset form for next input, but stay on Quote screen
             if (window.resetQuote) {
                 window.resetQuote();
@@ -3241,7 +3252,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const icms = parseFloat(document.getElementById(`icms_${carrier}`).value) || 0;
             const valorVolume = parseFloat(document.getElementById(`valorVolume_${carrier}`).value) || 0;
 
-            carrierConfigs[carrier] = { taxaFixa, gris, icms, valorVolume };
+            // ── AUDIT LOG: captura estado anterior ──
+            const _cfgBefore = carrierConfigs[carrier] ? { ...carrierConfigs[carrier] } : { taxaFixa: 0, gris: 0, icms: 0, valorVolume: 0 };
+            const _cfgAfter  = { taxaFixa, gris, icms, valorVolume };
+
+            carrierConfigs[carrier] = _cfgAfter;
             Utils.saveRaw('carrier_configs', JSON.stringify(carrierConfigs));
 
             // ENSURE carrier is in permanent list (v1.7.1 fix)
@@ -3258,6 +3273,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             showToast(`✅ Configuração de ${carrier} salva!`);
+
+            // ── AUDIT LOG ──
+            const _cfgDiff = Object.keys(_cfgAfter).filter(k => _cfgAfter[k] !== _cfgBefore[k]).map(k => `${k}: ${_cfgBefore[k]} → ${_cfgAfter[k]}`).join(' | ');
+            if (Utils.writeLog) Utils.writeLog(
+                'CARRIER_CONFIG_EDIT', 'Config. Transportadora',
+                `${carrier}${_cfgDiff ? ' — ' + _cfgDiff : ' — sem alterações'}`,
+                _cfgBefore, _cfgAfter
+            );
         };
 
 
@@ -3364,10 +3387,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         window.deleteRule = (index) => {
             if (!confirm('Tem certeza que deseja excluir esta tabela?')) return;
+            const _deletedRule = { ...rules[index] };
             rules.splice(index, 1);
             Utils.saveRaw('freight_tables', JSON.stringify(rules));
             renderRulesList();
             showToast('🗑️ Tabela removida com sucesso');
+
+            // ── AUDIT LOG ──
+            if (Utils.writeLog) Utils.writeLog(
+                'FREIGHT_TABLE_DELETE', 'Tabela de Frete',
+                `${_deletedRule.transportadora} / ${_deletedRule.cidade} — Regra excluída (${_deletedRule.percentual}%, mín. ${Utils.formatCurrency(_deletedRule.minimo)})`,
+                _deletedRule, null
+            );
         };
 
         // --- Toggle hint para taxa fixa por volume ---
@@ -3415,6 +3446,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 e.preventDefault();
                 const editIdx = parseInt(document.getElementById('editingRuleIndex').value);
+                // ── AUDIT LOG: captura estado anterior ──
+                const _ruleBefore = editIdx > -1 ? { ...rules[editIdx] } : null;
 
                 const newRule = {
                     transportadora: window.normalizeText(document.getElementById('ruleCarrier').value).toUpperCase(),
@@ -3449,6 +3482,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } else {
                     rules.unshift(newRule);
                     showToast('✅ Tabela cadastrada com sucesso!');
+                }
+
+                // ── AUDIT LOG ──
+                if (Utils.writeLog) {
+                    const _isEdit = editIdx > -1;
+                    let _desc = `${newRule.transportadora} / ${newRule.cidade}`;
+                    if (_isEdit && _ruleBefore) {
+                        const _diffs = ['percentual','minimo','pedagio','minimoRedespacho'].filter(k => String(newRule[k]) !== String(_ruleBefore[k])).map(k => `${k}: ${_ruleBefore[k]} → ${newRule[k]}`);
+                        _desc += _diffs.length ? ' — ' + _diffs.join(' | ') : ' — sem alterações numéricas';
+                    } else {
+                        _desc += ` — Nova regra (${newRule.percentual}%, mín. ${Utils.formatCurrency(newRule.minimo)})`;
+                    }
+                    Utils.writeLog(
+                        _isEdit ? 'FREIGHT_TABLE_EDIT' : 'FREIGHT_TABLE_CREATE',
+                        'Tabela de Frete', _desc, _ruleBefore, newRule
+                    );
                 }
 
                 // ENSURE carrier is in permanent list (v1.7.1 fix)
@@ -5204,6 +5253,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log('💳 [Invoice] Histórico de faturas salvo!');
 
             showToast(`✅ ${paidCount} NFs marcadas como PAGAS!`, 'success');
+
+            // ── AUDIT LOG ──
+            if (Utils.writeLog) Utils.writeLog(
+                'INVOICE_PAYMENT', 'Conferência de Fatura',
+                `${carrier} — ${paidNFs.join(', ')} — ${Utils.formatCurrency(totalPaid)} (Ref: ${invoiceRef})`,
+                null,
+                { carrier, paidNFs, totalPaid, invoiceRef, invoiceValue, authorizedBy: authorizedBy || null }
+            );
 
             // Clear form and refresh
             window.clearInvoiceForm();
@@ -8843,10 +8900,129 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (window.populateSellersSelector) window.populateSellersSelector();
                 }, 100);
             }
+
+            // Bloqueia acesso ao Log para perfis sem permissão
+            if (id === 'auditLog') {
+                const isSup = userRole === 'supervisor' || userRole === 'admin';
+                if (!isSup) {
+                    showToast('⛔ Acesso restrito a Administradores e Supervisores.', 'error');
+                    return;
+                }
+            }
+
             if (originalShowSection) originalShowSection(id);
+
+            // Carrega o Log após a seção ser exibida
+            if (id === 'auditLog') {
+                setTimeout(() => window.renderAuditLog && window.renderAuditLog(), 50);
+            }
         };
 
-    } catch (err) {
+        // ═══════════════════════════════════════════════════════════
+        // RENDER AUDIT LOG — Log de Auditoria
+        // ═══════════════════════════════════════════════════════════
+        window.renderAuditLog = async function() {
+            const container = document.getElementById('auditLogTableBody');
+            const statsEl   = document.getElementById('auditLogStats');
+            if (!container) return;
+
+            container.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-secondary)"><span class="material-icons-round" style="animation:spin 1s linear infinite;display:inline-block">sync</span> Carregando log...</td></tr>';
+
+            let entries = [];
+
+            // 1. Firestore (primário)
+            if (window.db && Utils.Cloud && Utils.Cloud.tenantId) {
+                try {
+                    const snap = await window.db
+                        .collection('tenants').doc(Utils.Cloud.tenantId)
+                        .collection('audit_log')
+                        .orderBy('timestamp', 'desc')
+                        .limit(500)
+                        .get();
+                    entries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                } catch (e) {
+                    console.warn('[AuditLog] Falha ao carregar do Firestore:', e.message);
+                }
+            }
+
+            // 2. Fallback localStorage
+            if (entries.length === 0) {
+                entries = (Utils.getStorage('audit_log') || []).sort((a,b) => b.timestamp.localeCompare(a.timestamp));
+            }
+
+            // Filtros
+            const fAction = (document.getElementById('auditFilterAction') || {}).value || '';
+            const fSearch = ((document.getElementById('auditSearch') || {}).value || '').toLowerCase().trim();
+            const fDate   = (document.getElementById('auditFilterDate') || {}).value || '';
+
+            let filtered = entries.filter(e => {
+                if (fAction && e.action !== fAction) return false;
+                if (fDate && !e.timestamp.startsWith(fDate)) return false;
+                if (fSearch && !( (e.description||'').toLowerCase().includes(fSearch) || (e.user||'').toLowerCase().includes(fSearch) )) return false;
+                return true;
+            });
+
+            if (statsEl) statsEl.textContent = `${filtered.length} evento${filtered.length !== 1 ? 's' : ''}`;
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-secondary)">Nenhum evento encontrado.</td></tr>';
+                return;
+            }
+
+            const ACTION_CONFIG = {
+                DISPATCH_CREATE:      { label: 'Despacho',       color: '#22c55e', bg: 'rgba(34,197,94,.12)',   icon: 'local_shipping' },
+                FREIGHT_TABLE_CREATE: { label: 'Tabela Nova',    color: '#3b82f6', bg: 'rgba(59,130,246,.12)',  icon: 'add_circle' },
+                FREIGHT_TABLE_EDIT:   { label: 'Tabela Edit.',   color: '#f59e0b', bg: 'rgba(245,158,11,.12)',  icon: 'edit' },
+                FREIGHT_TABLE_DELETE: { label: 'Tabela Excl.',   color: '#ef4444', bg: 'rgba(239,68,68,.12)',   icon: 'delete' },
+                CARRIER_CONFIG_EDIT:  { label: 'Config. Transp.', color: '#a855f7', bg: 'rgba(168,85,247,.12)', icon: 'settings' },
+                INVOICE_PAYMENT:      { label: 'Pagamento',      color: '#06b6d4', bg: 'rgba(6,182,212,.12)',   icon: 'payments' },
+            };
+
+            const fmt = ts => {
+                const d = new Date(ts);
+                return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            };
+
+            container.innerHTML = filtered.map((e, i) => {
+                const cfg = ACTION_CONFIG[e.action] || { label: e.action, color: '#94a3b8', bg: 'rgba(148,163,184,.1)', icon: 'info' };
+                const hasDetail = e.before || e.after;
+                return `
+                <tr style="cursor:${hasDetail?'pointer':'default'};border-bottom:1px solid rgba(255,255,255,0.05);" onclick="${hasDetail ? `document.getElementById('auditDetail_${i}').style.display=document.getElementById('auditDetail_${i}').style.display==='none'?'table-row':'none'` : ''}">
+                    <td style="padding:.7rem .8rem;white-space:nowrap;font-size:.78rem;color:var(--text-secondary)">${fmt(e.timestamp)}</td>
+                    <td style="padding:.7rem .8rem;">
+                        <span style="font-size:.68rem;font-weight:700;background:${cfg.bg};color:${cfg.color};padding:2px 8px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap">
+                            <span class="material-icons-round" style="font-size:.75rem">${cfg.icon}</span>${cfg.label}
+                        </span>
+                    </td>
+                    <td style="padding:.7rem .8rem;font-size:.8rem">${e.description || ''}</td>
+                    <td style="padding:.7rem .8rem;font-size:.78rem;color:var(--text-secondary)">${e.user || 'Sistema'}</td>
+                    <td style="padding:.7rem .8rem;text-align:center">${hasDetail ? '<span class="material-icons-round" style="font-size:.9rem;color:var(--text-secondary);vertical-align:middle">unfold_more</span>' : ''}</td>
+                </tr>
+                ${hasDetail ? `<tr id="auditDetail_${i}" style="display:none;background:rgba(0,0,0,.2)">
+                    <td colspan="5" style="padding:1rem 1.5rem">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;font-size:.75rem;font-family:monospace">
+                            ${e.before ? `<div><div style="color:#ef4444;font-weight:700;margin-bottom:.5rem">◀ ANTES</div><pre style="white-space:pre-wrap;word-break:break-all;color:var(--text-secondary);margin:0">${JSON.stringify(e.before, null, 2)}</pre></div>` : '<div></div>'}
+                            ${e.after  ? `<div><div style="color:#22c55e;font-weight:700;margin-bottom:.5rem">▶ DEPOIS</div><pre style="white-space:pre-wrap;word-break:break-all;color:var(--text-secondary);margin:0">${JSON.stringify(e.after, null, 2)}</pre></div>` : '<div></div>'}
+                        </div>
+                    </td>
+                </tr>` : ''}`;
+            }).join('');
+        };
+
+        window.exportAuditLogCSV = function() {
+            const entries = (Utils.getStorage('audit_log') || []).sort((a,b) => b.timestamp.localeCompare(a.timestamp));
+            const rows = [['Data/Hora','Ação','Entidade','Descrição','Usuário']];
+            entries.forEach(e => {
+                rows.push([ e.timestamp, e.action, e.entity, (e.description||'').replace(/,/g,';'), e.user||'Sistema' ]);
+            });
+            const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob(['\ufeff'+csv], { type: 'text/csv;charset=utf-8;' }));
+            a.download = 'audit_log_' + new Date().toISOString().slice(0,10) + '.csv';
+            a.click();
+        };
+
+
         // v3.11.58: Exibe erro visível na tela além do console
         console.error("FATAL ERROR IN APP.JS:", err);
         _appReady = true; // libera o placeholder mesmo em caso de erro

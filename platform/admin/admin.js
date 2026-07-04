@@ -147,10 +147,21 @@ async function loadTenants() {
 
 function renderTenantGrid() {
     const grid = document.getElementById('tenantGrid');
-    const active   = _tenants.filter(t => t.status === 'active').length;
-    const inactive = _tenants.filter(t => t.status !== 'active').length;
 
-    document.getElementById('statTotal').textContent   = _tenants.length;
+    // Separar tenants de produção dos de homologação (_hml)
+    const prodTenants = _tenants.filter(t => !t.id.endsWith('_hml'));
+    const hmlMap = {};
+    _tenants.filter(t => t.id.endsWith('_hml')).forEach(t => {
+        hmlMap[t.id.replace(/_hml$/, '')] = t;
+    });
+
+    // Tenants HML sem produção correspondente (orphans)
+    const hmlOrphans = _tenants.filter(t => t.id.endsWith('_hml') && !_tenants.find(p => p.id === t.id.replace(/_hml$/, '')));
+
+    const active   = prodTenants.filter(t => t.status === 'active').length;
+    const inactive = prodTenants.filter(t => t.status !== 'active').length;
+
+    document.getElementById('statTotal').textContent   = prodTenants.length;
     document.getElementById('statActive').textContent  = active;
     document.getElementById('statInactive').textContent = inactive;
 
@@ -159,18 +170,25 @@ function renderTenantGrid() {
         return;
     }
 
-    grid.innerHTML = _tenants.map(t => {
+    const PROD_URL  = 'parreirasistemas.vercel.app';
+    const HML_URL   = 'parreirasistemas-git-staging-paulo-h-parreiras-projects.vercel.app';
+
+    const renderCard = (t, hmlTenant) => {
         const statusClass = t.status === 'active' ? 'status-active' : t.status === 'suspended' ? 'status-suspended' : 'status-inactive';
         const statusLabel = t.status === 'active' ? 'Ativa' : t.status === 'suspended' ? 'Suspenso' : 'Inativa';
         const mods = (t.modules || []).length;
-        const url = `parreirasistemas.vercel.app/${t.slug || t.id}`;
+        const slug = t.slug || t.id;
+        const prodUrl  = `${PROD_URL}/${slug}`;
+        const hmlSlug  = hmlTenant ? (hmlTenant.slug || hmlTenant.id) : `${slug}_hml`;
+        const hmlUrlFull = `${HML_URL}/${hmlSlug}`;
+        const hasHml = !!hmlTenant;
 
         return `
         <div class="tenant-card" onclick="openEditTenantModal('${t.id}')">
             <div class="tenant-card-head">
                 <div>
                     <div class="tenant-name">${t.name || t.id}</div>
-                    <div class="tenant-slug">/${t.slug || t.id}</div>
+                    <div class="tenant-slug">/${slug}</div>
                 </div>
                 <span class="status-badge ${statusClass}">${statusLabel}</span>
             </div>
@@ -178,17 +196,99 @@ function renderTenantGrid() {
                 <span><span class="material-icons-round" style="font-size:.9rem;vertical-align:middle;">apps</span> ${mods} módulo${mods !== 1 ? 's' : ''}</span>
                 ${t.contactPhone ? `<span><span class="material-icons-round" style="font-size:.9rem;vertical-align:middle;">phone</span> ${t.contactPhone}</span>` : ''}
             </div>
-            <div class="tenant-url">
-                <span>${url}</span>
-                <span class="material-icons-round" style="font-size:.9rem;cursor:pointer;" onclick="event.stopPropagation();copyUrl('${url}')">content_copy</span>
+
+            <!-- Link PRODUÇÃO -->
+            <div class="tenant-url" style="margin-top:12px; border-color:rgba(34,197,94,0.3); background:rgba(34,197,94,0.06);">
+                <div class="url-text" style="display:flex;align-items:center;gap:6px;min-width:0;">
+                    <span style="font-size:0.65rem;font-weight:700;color:#22c55e;background:rgba(34,197,94,0.15);padding:2px 6px;border-radius:4px;letter-spacing:.04em;flex-shrink:0;">PROD</span>
+                    <span class="url-text" style="color:#22c55e;font-size:0.73rem;" title="${prodUrl}">${prodUrl}</span>
+                </div>
+                <div class="url-actions">
+                    <span class="material-icons-round" style="font-size:.9rem;cursor:pointer;color:#22c55e;" title="Copiar" onclick="event.stopPropagation();copyUrl('${prodUrl}')">content_copy</span>
+                    <a href="https://${prodUrl}" target="_blank" onclick="event.stopPropagation()" style="color:#22c55e;"><span class="material-icons-round" style="font-size:.9rem;">open_in_new</span></a>
+                </div>
+            </div>
+
+            <!-- Link HOMOLOGAÇÃO -->
+            <div class="tenant-url" style="margin-top:6px; border-color:rgba(245,158,11,${hasHml ? '0.3' : '0.1'}); background:rgba(245,158,11,${hasHml ? '0.06' : '0.02'});">
+                <div class="url-text" style="display:flex;align-items:center;gap:6px;min-width:0;">
+                    <span style="font-size:0.65rem;font-weight:700;color:${hasHml ? '#f59e0b' : '#64748b'};background:rgba(245,158,11,${hasHml ? '0.15' : '0.05'});padding:2px 6px;border-radius:4px;letter-spacing:.04em;flex-shrink:0;">HML</span>
+                    <span class="url-text" style="color:${hasHml ? '#f59e0b' : '#475569'};font-size:0.73rem;" title="${hmlUrlFull}">${hmlUrlFull}</span>
+                </div>
+                ${hasHml ? `<div class="url-actions">
+                    <span class="material-icons-round" style="font-size:.9rem;cursor:pointer;color:#f59e0b;" title="Copiar" onclick="event.stopPropagation();copyUrl('${hmlUrlFull}')">content_copy</span>
+                    <a href="https://${hmlUrlFull}" target="_blank" onclick="event.stopPropagation()" style="color:#f59e0b;"><span class="material-icons-round" style="font-size:.9rem;">open_in_new</span></a>
+                </div>` : `<span style="font-size:0.7rem;color:#475569;font-style:italic;flex-shrink:0;">não criado</span>`}
+            </div>
+
+            ${!hasHml ? `<button class="btn" style="margin-top:10px;width:100%;justify-content:center;font-size:0.78rem;padding:7px;background:rgba(245,158,11,0.1);color:#f59e0b;border:1px solid rgba(245,158,11,0.25);" onclick="event.stopPropagation();createHmlTenant('${t.id}','${t.name || t.id}')"><span class="material-icons-round" style="font-size:.9rem;">science</span> Criar Ambiente HML</button>` : ''}
+        </div>`;
+
+    };
+
+    const renderHmlOrphan = (t) => {
+        const slug = t.slug || t.id;
+        const hmlUrl = `${HML_URL}/${slug}`;
+        return `
+        <div class="tenant-card" style="border-color:rgba(245,158,11,0.3);" onclick="openEditTenantModal('${t.id}')">
+            <div class="tenant-card-head">
+                <div>
+                    <div class="tenant-name">${t.name || t.id}</div>
+                    <div class="tenant-slug">/${slug}</div>
+                </div>
+                <span class="status-badge" style="background:rgba(245,158,11,0.15);color:#f59e0b;">Apenas HML</span>
+            </div>
+            <div class="tenant-url" style="border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.06);">
+                <div class="url-text" style="display:flex;align-items:center;gap:6px;min-width:0;">
+                    <span style="font-size:0.65rem;font-weight:700;color:#f59e0b;background:rgba(245,158,11,0.15);padding:2px 6px;border-radius:4px;flex-shrink:0;">HML</span>
+                    <span class="url-text" style="color:#f59e0b;font-size:0.73rem;" title="${hmlUrl}">${hmlUrl}</span>
+                </div>
+                <div class="url-actions">
+                    <span class="material-icons-round" style="font-size:.9rem;cursor:pointer;color:#f59e0b;" onclick="event.stopPropagation();copyUrl('${hmlUrl}')">content_copy</span>
+                    <a href="https://${hmlUrl}" target="_blank" onclick="event.stopPropagation()" style="color:#f59e0b;"><span class="material-icons-round" style="font-size:.9rem;">open_in_new</span></a>
+                </div>
             </div>
         </div>`;
-    }).join('');
+    };
+
+    grid.innerHTML = [
+        ...prodTenants.map(t => renderCard(t, hmlMap[t.id])),
+        ...hmlOrphans.map(t => renderHmlOrphan(t))
+    ].join('');
 }
+
 
 function copyUrl(url) {
     navigator.clipboard.writeText('https://' + url).then(() => toast('URL copiada!', 'success'));
 }
+
+// Cria automaticamente o tenant _hml a partir do tenant de produção
+window.createHmlTenant = async function(prodId, prodName) {
+    const hmlId   = prodId + '_hml';
+    const hmlName = prodName + ' (HML)';
+    if (!confirm(`Criar ambiente de homologação "${hmlId}" para ${prodName}?\n\nIsso criará um tenant separado com dados isolados.`)) return;
+    try {
+        const prodDoc = await db.collection('tenants').doc(prodId).get();
+        const prodData = prodDoc.exists ? prodDoc.data() : {};
+        await db.collection('tenants').doc(hmlId).set({
+            nome: hmlName,
+            name: hmlName,
+            slug: hmlId,
+            ativo: true,
+            status: 'active',
+            modulos: prodData.modulos || prodData.modules || [],
+            modules: prodData.modulos || prodData.modules || [],
+            isHml: true,
+            prodTenantRef: prodId,
+            createdAt: new Date().toISOString()
+        });
+        toast(`✅ Ambiente HML "${hmlId}" criado com sucesso!`, 'success');
+        await loadTenants();
+    } catch (e) {
+        toast('Erro ao criar HML: ' + e.message, 'error');
+    }
+};
+
 
 // ════════════════════════════════════════════════════════════
 // MODAL — Novo / Editar Tenant
