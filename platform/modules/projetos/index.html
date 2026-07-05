@@ -51,6 +51,126 @@
             overflow-x: hidden;
         }
 
+        /* ── LOGIN OVERLAY ─────────────────────────────────────────── */
+        #login-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(ellipse at 60% 40%, #0d1117 0%, #0a0e1a 100%);
+            backdrop-filter: blur(0);
+        }
+        #login-overlay::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 20% 80%, rgba(56,139,253,.12) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(163,113,247,.10) 0%, transparent 50%);
+            pointer-events: none;
+        }
+        .login-card {
+            position: relative;
+            background: rgba(22,27,34,.92);
+            border: 1px solid rgba(48,54,61,.8);
+            border-radius: 20px;
+            padding: 2.5rem 2.25rem 2rem;
+            width: 100%;
+            max-width: 360px;
+            box-shadow: 0 24px 64px rgba(0,0,0,.7), 0 0 0 1px rgba(56,139,253,.08);
+            animation: loginFadeIn .4s cubic-bezier(.22,.68,0,1.2);
+        }
+        @keyframes loginFadeIn {
+            from { opacity: 0; transform: translateY(20px) scale(.97); }
+            to   { opacity: 1; transform: translateY(0)   scale(1); }
+        }
+        @keyframes loginShake {
+            0%,100% { transform: translateX(0); }
+            20%     { transform: translateX(-8px); }
+            40%     { transform: translateX(8px); }
+            60%     { transform: translateX(-5px); }
+            80%     { transform: translateX(5px); }
+        }
+        .login-card.shake { animation: loginShake .4s ease; }
+        .login-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+            margin-bottom: 1.75rem;
+        }
+        .login-logo-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #388bfd, #a371f7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 16px rgba(56,139,253,.3);
+        }
+        .login-logo-icon .material-icons-round { font-size: 1.4rem; color: #fff; }
+        .login-logo-text { font-size: 1.15rem; font-weight: 700; color: var(--text-primary); }
+        .login-logo-sub  { font-size: .72rem; color: var(--text-secondary); text-align: center; margin-top: .15rem; }
+        .login-field {
+            margin-bottom: 1rem;
+        }
+        .login-field label {
+            display: block;
+            font-size: .75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            letter-spacing: .05em;
+            text-transform: uppercase;
+            margin-bottom: .4rem;
+        }
+        .login-field input {
+            width: 100%;
+            background: rgba(33,38,45,.9);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            font-size: .9rem;
+            padding: .65rem .9rem;
+            outline: none;
+            transition: border-color .2s, box-shadow .2s;
+        }
+        .login-field input:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(56,139,253,.15);
+        }
+        .login-error {
+            font-size: .78rem;
+            color: var(--accent-red);
+            text-align: center;
+            margin-bottom: .75rem;
+            min-height: 1.1rem;
+            opacity: 0;
+            transition: opacity .2s;
+        }
+        .login-error.visible { opacity: 1; }
+        .login-btn {
+            width: 100%;
+            padding: .75rem;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #388bfd, #a371f7);
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-size: .95rem;
+            font-weight: 700;
+            cursor: pointer;
+            letter-spacing: .03em;
+            box-shadow: 0 4px 16px rgba(56,139,253,.25);
+            transition: opacity .2s, transform .15s;
+        }
+        .login-btn:hover  { opacity: .9; transform: translateY(-1px); }
+        .login-btn:active { opacity: 1;  transform: translateY(0); }
+        .body-locked > *:not(#login-overlay) { visibility: hidden; pointer-events: none; }
+
         /* ── TOP BAR ─────────────────────────────────────────────────── */
         .topbar {
             position: sticky;
@@ -821,7 +941,32 @@
         }
     </style>
 </head>
-<body>
+<body class="body-locked">
+
+<!-- ── LOGIN OVERLAY ─────────────────────────────────────────────────── -->
+<div id="login-overlay">
+    <div class="login-card" id="loginCard">
+        <div class="login-logo">
+            <div class="login-logo-icon">
+                <span class="material-icons-round">rocket_launch</span>
+            </div>
+        </div>
+        <div style="text-align:center;margin-bottom:1.75rem;">
+            <div class="login-logo-text">ParreiraLog</div>
+            <div class="login-logo-sub">Gestão de Projetos &mdash; Acesso Restrito</div>
+        </div>
+        <div class="login-field">
+            <label for="loginUser">Usuário</label>
+            <input type="text" id="loginUser" placeholder="Digite seu usuário" autocomplete="username" autofocus>
+        </div>
+        <div class="login-field">
+            <label for="loginPass">Senha</label>
+            <input type="password" id="loginPass" placeholder="Digite sua senha" autocomplete="current-password">
+        </div>
+        <div class="login-error" id="loginError">Usuário ou senha incorretos.</div>
+        <button class="login-btn" id="loginBtn">Entrar</button>
+    </div>
+</div>
 
 <!-- TOP BAR -->
 <header class="topbar">
@@ -1790,6 +1935,52 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') document.que
 if (appData.projects.length) activeProjectId = appData.projects[0].id;
 renderSidebar();
 renderProjectDetail();
+
+/* ── AUTH ────────────────────────────────────────────────────────────── */
+(function() {
+    const SESSION_KEY = 'projetos_auth_ok';
+    const VALID_USER  = 'admin';
+    const VALID_PASS  = '0290';
+
+    const overlay  = document.getElementById('login-overlay');
+    const card     = document.getElementById('loginCard');
+    const userInp  = document.getElementById('loginUser');
+    const passInp  = document.getElementById('loginPass');
+    const errorEl  = document.getElementById('loginError');
+    const btn      = document.getElementById('loginBtn');
+
+    function unlock() {
+        overlay.style.display = 'none';
+        document.body.classList.remove('body-locked');
+        sessionStorage.setItem(SESSION_KEY, '1');
+    }
+
+    function tryLogin() {
+        const u = (userInp.value || '').trim().toLowerCase();
+        const p = (passInp.value || '').trim();
+        if (u === VALID_USER && p === VALID_PASS) {
+            unlock();
+        } else {
+            errorEl.classList.add('visible');
+            card.classList.remove('shake');
+            void card.offsetWidth; // reflow para re-disparar animation
+            card.classList.add('shake');
+            passInp.value = '';
+            passInp.focus();
+        }
+    }
+
+    // Já autenticado nesta sessão?
+    if (sessionStorage.getItem(SESSION_KEY) === '1') {
+        unlock();
+        return;
+    }
+
+    btn.addEventListener('click', tryLogin);
+    [userInp, passInp].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); }));
+    passInp.addEventListener('input', () => errorEl.classList.remove('visible'));
+    userInp.addEventListener('input', () => errorEl.classList.remove('visible'));
+})();
 </script>
 </body>
 </html>
