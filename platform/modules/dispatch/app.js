@@ -9036,6 +9036,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
 
+    } catch (err) {
         // v3.11.58: Exibe erro visível na tela além do console
         console.error("FATAL ERROR IN APP.JS:", err);
         _appReady = true; // libera o placeholder mesmo em caso de erro
