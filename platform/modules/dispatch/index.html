@@ -3,11 +3,16 @@
 
 <head>
     <meta charset="UTF-8">
+    <!-- v3.14.44: Impede cache do HTML no browser — garante versão sempre atual dos scripts -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <!-- Base path: garante que assets relativos resolvem corretamente quando
          acessado via URL de tenant (/ltdistribuidora, /outraempresa, etc.) -->
     <base href="/platform/modules/dispatch/">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ParreiraLog | Cotação de Fretes</title>
+
 
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#3b82f6">
