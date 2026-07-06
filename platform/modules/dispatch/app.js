@@ -8571,6 +8571,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     telefone: document.getElementById('newClientPhone').value.trim()
                 };
 
+                const _clientBefore = (isEditing && editIdx >= 0) ? { ...clients[editIdx] } : null;
+
                 if (isEditing && editIdx >= 0) {
                     clients[editIdx] = { ...clients[editIdx], ...clientData };
                     showToast('✅ Cliente atualizado!');
@@ -8587,7 +8589,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                     showToast('✅ Cliente cadastrado!');
                 }
 
+                // 1. Salvar local
                 Utils.setStorage('clients', clients);
+
+                // 2. v3.14.52: Sincronizar com Firestore
+                if (Utils.Cloud && Utils.Cloud.save) {
+                    Utils.Cloud.save('clients', clients);
+                }
+
+                // 3. v3.14.52: Audit Log
+                if (Utils.writeLog) {
+                    const _isEdit = isEditing && editIdx >= 0;
+                    let _desc = clientData.nome;
+                    if (_isEdit && _clientBefore) {
+                        const _diffs = ['nome', 'cidade', 'bairro', 'endereco', 'telefone', 'cnpj', 'codigo']
+                            .filter(k => String(clientData[k] || '') !== String(_clientBefore[k] || ''))
+                            .map(k => `${k}: ${_clientBefore[k] || '(vazio)'} → ${clientData[k] || '(vazio)'}`);
+                        _desc += _diffs.length ? ' — ' + _diffs.join(' | ') : ' — sem alterações';
+                    } else {
+                        _desc += ` — Novo cliente (cidade: ${clientData.cidade})`;
+                    }
+                    Utils.writeLog(
+                        _isEdit ? 'CLIENT_EDIT' : 'CLIENT_CREATE',
+                        'Cadastro Cliente', _desc, _clientBefore, clientData
+                    );
+                }
+
                 window.resetClientForm();
                 window.renderClientsList();
             });
@@ -9104,6 +9131,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 FREIGHT_TABLE_DELETE: { label: 'Tabela Excl.',   color: '#ef4444', bg: 'rgba(239,68,68,.12)',   icon: 'delete' },
                 CARRIER_CONFIG_EDIT:  { label: 'Config. Transp.', color: '#a855f7', bg: 'rgba(168,85,247,.12)', icon: 'settings' },
                 INVOICE_PAYMENT:      { label: 'Pagamento',      color: '#06b6d4', bg: 'rgba(6,182,212,.12)',   icon: 'payments' },
+                // v3.14.52: Cadastro de clientes
+                CLIENT_CREATE:        { label: 'Cadastro Cli.',  color: '#22c55e', bg: 'rgba(34,197,94,.12)',   icon: 'person_add' },
+                CLIENT_EDIT:          { label: 'Edicao Cli.',    color: '#f59e0b', bg: 'rgba(245,158,11,.12)',  icon: 'manage_accounts' },
+                CLIENT_DELETE:        { label: 'Exclusao Cli.',  color: '#ef4444', bg: 'rgba(239,68,68,.12)',   icon: 'person_remove' },
             };
 
             const fmt = ts => {
