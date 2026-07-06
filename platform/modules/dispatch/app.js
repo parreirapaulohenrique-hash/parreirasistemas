@@ -7045,12 +7045,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px;">${pesoDisplay}</div>
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px;">${item.volume || 1}</div>
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px;">${nfValueDisplay}</div>
-                <div style="border-bottom: 1px solid #000; padding: 2px;">${valorDisplay}</div>`;
-                ${_hasRedespRow ? `
-                <div style="grid-column: 1 / 10; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background:#fffbeb; font-size:9px; color:#92400e;">
-                    ↗ Redespacho: ${_redespRowCarrier} — ${(item.redespTotal||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
-                </div>
-                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background:#fffbeb;"></div>` : ''}
+                <div style="border-bottom: 1px solid #000; padding: 2px;">${valorDisplay}</div>
+                ${_hasRedespRow ? `<div style="grid-column: 1 / 10; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background:#fffbeb; font-size:9px; color:#92400e;">↗ Redespacho: ${_redespRowCarrier} — ${(item.redespTotal||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div><div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background:#fffbeb;"></div>` : ''}`;
                 }).join('')}
                 <div style="grid-column: 1 / 8; border-right: 1px solid #000; padding: 2px; text-align: right;">TOTAIS</div>
                 <div style="border-right: 1px solid #000; padding: 2px;">${totalWeight % 1 === 0 ? totalWeight.toString() : totalWeight.toFixed(2)}</div>
