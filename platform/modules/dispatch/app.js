@@ -2008,44 +2008,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ? norm(selectedClient.bairro || selectedClient.Bairro || selectedClient.neighborhood || selectedClient.Neighborhood || '')
                 : '';
 
-            // ── v3.11.35: nova ordem de busca ─────────────────────────────────────────
-            // 1ª: BAIRRO — se bairro do cliente bater com r.cidade de alguma tabela,
-            //     usa essas regras (inclui redespacho, pois é busca específica por bairro).
-            // 2ª: CIDADE — apenas match direto r.cidade === city.
-            //     NÃO usa r.cidadeRedespacho para evitar trazer tabelas de outras cidades
-            //     que têm TUCUMA (ou qualquer cidade) apenas como destino de redespacho.
+            // ── v3.14.50: Ordem correta de busca ─────────────────────────────────────
+            // 1ª: CIDADE direta → r.cidade === city
+            //     Prefere tabelas SEM redespacho por transportadora.
+            //     Se a cidade tem tabela, usa ela — bairro não interfere.
+            //     CORRIGE bug ANAPU/NOVO PROGRESSO: o bairro "NOVO PROGRESSO"
+            //     do cliente não deve sobrepor a cidade "ANAPU" que tem tabela própria.
+            // 2ª: BAIRRO (fallback real) → r.cidade === bairroDoCliente
+            //     Só executa se a cidade NÃO tem nenhuma tabela cadastrada.
+            //     Ex: cliente em bairro "NOVO PROGRESSO" dentro de cidade sem tabela.
+            // 3ª: cidadeRedespacho → r.cidadeRedespacho === city  [SEMPRE, aditivo]
+            //     Transportadoras que atendem esta cidade via redespacho de outro hub.
             // ─────────────────────────────────────────────────────────────────────────
 
             let cityRules = [];
             let usedBairroFallback = false;
 
-            // ── 1ª tentativa: BAIRRO ──────────────────────────────────────────────────
-            if (clientBairro) {
-                const bairroRules = rules.filter(r => norm(r.cidade) === clientBairro);
-                if (bairroRules.length > 0) {
-                    cityRules = bairroRules;
-                    usedBairroFallback = true;
-                }
-            }
-
-            // ── v3.11.39: lógica de busca em 3 etapas ────────────────────────────────
-            // 1ª: BAIRRO          → r.cidade === bairroDoCliente (já feito acima)
-            // 2ª: CIDADE direta   → r.cidade === city
-            //     Prefere tabelas SEM redespacho (tabela direta da cidade).
-            //     Resolve TUCUMA: mostra só a tabela direta, não as 4 variantes VAN.
-            // 3ª: cidadeRedespacho → r.cidadeRedespacho === city  [SEMPRE, aditivo]
-            //     Adiciona transportadoras que servem esta cidade via redespacho de outro hub.
-            //     Resolve DOM ELISEU: VIOPEX só tem r.cidade="MARABA" + r.cidadeRedespacho="DOM ELISEU".
-            //     Não reintroduz o bug do TUCUMA pois o problema lá era r.cidade=TUCUMA (5 rows),
-            //     não r.cidadeRedespacho=TUCUMA.
-            // ─────────────────────────────────────────────────────────────────────────
-
-            // ── 2ª tentativa: CIDADE direta (só executa se bairro não achou nada) ────
-            if (cityRules.length === 0) {
+            // ── 1ª tentativa: CIDADE direta ──────────────────────────────────────────
+            {
                 const allCidadeRules = rules.filter(r => norm(r.cidade) === city);
 
                 if (allCidadeRules.length > 0) {
-                    // Prefere tabelas SEM redespacho por transportadora individual; usa com redespacho se não houver direta para aquela transportadora específica
+                    // Prefere tabelas SEM redespacho por transportadora individual;
+                    // usa com redespacho se não houver direta para aquela transportadora
                     const rulesByCarrier = {};
                     allCidadeRules.forEach(r => {
                         const c = r.transportadora;
@@ -2071,11 +2056,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
+            // ── 2ª tentativa: BAIRRO (só se cidade não tem tabela — fallback real) ──
+            if (cityRules.length === 0 && clientBairro) {
+                const bairroRules = rules.filter(r => norm(r.cidade) === clientBairro);
+                if (bairroRules.length > 0) {
+                    cityRules = bairroRules;
+                    usedBairroFallback = true;
+                }
+            }
+
             // ── 3ª etapa: cidadeRedespacho [SEMPRE aditiva — merge] ───────────────────
             // Transportadoras que atendem esta cidade partindo de outro hub via redespacho.
             // Ex: VIOPEX tem r.cidade="MARABA" e r.cidadeRedespacho="DOM ELISEU".
             // Para clientes de DOM ELISEU, BOA ESPERANCA e TNORTE já foram encontradas na
-            // etapa 2, mas VIOPEX só aparece aqui. Rodamos SEMPRE e fazemos merge.
+            // etapa 1, mas VIOPEX só aparece aqui. Rodamos SEMPRE e fazemos merge.
             // Evitamos duplicatas verificando se a regra já está em cityRules.
             if (!usedBairroFallback) {
                 const redespRules = rules.filter(r => norm(r.cidadeRedespacho) === city);
