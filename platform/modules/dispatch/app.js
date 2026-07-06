@@ -8471,8 +8471,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!client) return;
 
             if (confirm(`Tem certeza que deseja excluir o cliente "${client.nome}"?`)) {
+                const _deletedClient = { ...client };
                 clients.splice(idx, 1);
+
+                // 1. Salvar local
                 Utils.setStorage('clients', clients);
+
+                // 2. v3.14.53: Sincronizar com Firestore
+                if (Utils.Cloud && Utils.Cloud.save) {
+                    Utils.Cloud.save('clients', clients);
+                }
+
+                // 3. v3.14.53: Audit Log
+                if (Utils.writeLog) {
+                    Utils.writeLog(
+                        'CLIENT_DELETE',
+                        'Cadastro Cliente',
+                        `${_deletedClient.nome} — cidade: ${_deletedClient.cidade || ''}`,
+                        _deletedClient, null
+                    );
+                }
+
                 window.renderClientsList();
                 showToast('🗑️ Cliente excluído');
             }
