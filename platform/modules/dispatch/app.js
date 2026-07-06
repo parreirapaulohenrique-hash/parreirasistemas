@@ -615,6 +615,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const tenantId = tenantInput.value.trim().toLowerCase();
                 if (!tenantId) return;
 
+                // Indicador visual de carregando no select
+                if (loginUserSelect) {
+                    loginUserSelect.innerHTML = '<option value="">⏳ Carregando usuários...</option>';
+                    loginUserSelect.disabled = true;
+                }
+
                 // Garantir que window.db está disponível — com retry se Firebase ainda carregando
                 let db = window.db;
                 if (!db && typeof firebase !== 'undefined') {
@@ -702,6 +708,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } catch (error) {
                     console.error('❌ [Login] Erro ao carregar usuários:', error);
                     loginUserSelect.innerHTML = '<option value="admin">Administrador (admin)</option>';
+                } finally {
+                    if (loginUserSelect) loginUserSelect.disabled = false;
                 }
             };
 
@@ -755,12 +763,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 btnLogin.disabled = true;
                 btnLogin.innerHTML = '⏳ Verificando empresa...';
 
-                // Security: Valida tenant consultando o Firestore
-                // (substitui whitelist hardcoded — qualquer tenant cadastrado no painel master
-                //  com { ativo: true } é automaticamente aceito, sem necessidade de novo deploy)
+                // Security: Valida tenant consultando o Firestore (com timeout de 8s)
                 try {
                     if (window.db) {
-                        const tenantDoc = await window.db.collection('tenants').doc(tenantId).get();
+                        const tenantDoc = await Promise.race([
+                            window.db.collection('tenants').doc(tenantId).get(),
+                            new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))
+                        ]);
                         if (!tenantDoc.exists || tenantDoc.data().ativo === false) {
                             btnLogin.disabled = false;
                             btnLogin.innerHTML = 'ACESSAR SISTEMA';
@@ -844,13 +853,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 // v3.11.75 FIX: loadAll() agora tem Fase 1 (chaves críticas de transportadora)
-                // que completa em paralelo ANTES das demais.
+                // v3.14.42 FIX: Timeout de 10s para evitar travamento indefinido no login
                 if (Utils.Cloud && Utils.Cloud.hasTenant()) {
                     console.log(`📥 [Login] Carregando dados frescos do tenant: ${tenantId}...`);
+                    btnLogin.innerHTML = '⏳ Carregando dados...';
                     try {
-                        await Utils.Cloud.loadAll();
+                        await Promise.race([
+                            Utils.Cloud.loadAll(),
+                            new Promise((_, rej) => setTimeout(() => rej(new Error('loadAll timeout 10s')), 10000))
+                        ]);
                     } catch (loadErr) {
-                        console.warn('[Login] loadAll falhou:', loadErr.message, '— continuando com dados locais.');
+                        console.warn('[Login] loadAll falhou ou timeout:', loadErr.message, '— continuando com dados locais.');
                     }
                 }
 

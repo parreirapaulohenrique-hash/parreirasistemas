@@ -1,8 +1,8 @@
 {
-    "build":  "20260706-prod-v3.14.42",
-    "version":  "3.14.42",
+    "build":  "20260706-prod-v3.14.43",
+    "version":  "3.14.43",
     "environment":  "production",
-    "change":  "v3.14.42 - FIX: Acesso Direto — checkAuth restaura sessao sem revalidar senha contra app_users (que nao esta carregado no startup). Cache busters atualizados para ?v=3.14.42 forçando reload dos scripts.",
+    "change":  "v3.14.43 - FIX: Login travado em 'Carregando' — timeout de 8s no tenant check e 10s no loadAll. Indicador visual no dropdown durante carregamento de usuarios.",
     "lastUpdate":  "2026-07-06",
     "deployedAt":  "2026-07-06"
 }
