@@ -282,10 +282,10 @@
                     <span class="material-icons-round" style="font-size: 2rem; color: white;">local_shipping</span>
                 </div>
                 <h1 style="font-size: 1.5rem; color: var(--text-primary); margin-bottom: 0.5rem;">ParreiraLog</h1>
-                <p style="color: var(--text-secondary);">Faça login para continuar</p>
+                <p id="loginSubtitle" style="color: var(--text-secondary);">Faça login para continuar</p>
             </div>
 
-            <div class="form-group">
+            <div id="loginTenantGroup" class="form-group" style="display:none">
                 <label class="form-label">ID da Empresa</label>
                 <input type="text" id="loginTenantInput" class="form-input"
                     style="height: 48px; text-transform: lowercase;" placeholder="ex: parreiralog" value="">
@@ -306,6 +306,28 @@
             <button id="btnLogin" class="btn btn-primary"
                 onclick="if(window._doDispatchLogin){window._doDispatchLogin();}else{alert('Sistema ainda carregando, aguarde um momento.');}"
                 style="width: 100%; justify-content: center; height: 48px; font-size: 1rem;">ACESSAR SISTEMA</button>
+
+            <!-- Script inline: executado APOS o form estar no DOM -->
+            <!-- Decide mostrar ou esconder o campo ID da Empresa sem nenhum piscar -->
+            <script>
+            (function() {
+                var seg = window.location.pathname.split('/').filter(Boolean);
+                var reserved = ['modules','platform','core','fix_frete','fix_viopex','fix_romaneios','web','homolog','admin','tenants'];
+                var tenant = (seg[0] && !reserved.includes(seg[0])) ? seg[0].trim().toLowerCase() : '';
+                var group    = document.getElementById('loginTenantGroup');
+                var input    = document.getElementById('loginTenantInput');
+                var subtitle = document.getElementById('loginSubtitle');
+                if (tenant) {
+                    // Tenant na URL: campo ID fica oculto, preenche valor invisivel
+                    if (input) input.value = tenant;
+                    if (subtitle) subtitle.textContent = 'Acesse sua conta';
+                    // group permanece display:none (ja veio assim do HTML)
+                } else {
+                    // Sem tenant na URL: mostra o campo para o usuario digitar
+                    if (group) group.style.display = '';
+                }
+            })();
+            </script>
         </div>
     </div>
 
