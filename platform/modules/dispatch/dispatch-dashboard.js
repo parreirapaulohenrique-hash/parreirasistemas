@@ -401,8 +401,10 @@
             if (settings.wa_auto_seller) {
                 toDispatch.forEach(d => {
                     if (d.sellerId && d.sellerPhone) {
+                        // v3.14.55: armazena o objeto completo (não só o ID)
+                        // para evitar re-lookup no _dispatchesFullCache que pode não ter o despacho recém-criado
                         if (!sellersToNotify[d.sellerId]) {
-                            sellersToNotify[d.sellerId] = d.id;
+                            sellersToNotify[d.sellerId] = d;
                         }
                     }
                 });
@@ -463,11 +465,8 @@
                 }
 
                 if (settings.wa_auto_seller) {
-                    Object.values(sellersToNotify).forEach(dispatchId => {
-                        const numId = Number(dispatchId);
-                        const localH = Utils.getStorage('dispatches') || [];
-                        const allH = window._dispatchesFullCache || localH;
-                        const d = allH.find(item => Number(item.id) === numId);
+                    // v3.14.55: usa o objeto do despacho diretamente (sem re-lookup no cache)
+                    Object.values(sellersToNotify).forEach(d => {
                         if (!d || !d.sellerPhone) return;
                         const phone = d.sellerPhone.replace(/\D/g, '');
                         const dispatchDate = new Date(d.dispatchedAt || d.date || new Date()).toLocaleDateString('pt-BR');
