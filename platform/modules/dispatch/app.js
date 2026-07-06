@@ -4259,6 +4259,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         </td>`;
                                     }
 
+                                    // v3.14.48: Separação despacho × redespacho na coluna FRETE
+                                    if (col === 'total') {
+                                        const mainVal = d.mainTotal != null ? d.mainTotal : (d.total - (d.redespTotal || 0));
+                                        const redespVal = d.redespTotal || 0;
+                                        const redespCN = (d.redespCarrier && d.redespCarrier !== '-') ? d.redespCarrier
+                                                       : (d.redespacho && d.redespacho !== '-' ? d.redespacho : null);
+                                        if (redespVal > 0 && redespCN) {
+                                            const mFmt = Utils.formatCurrency(mainVal);
+                                            const rFmt = Utils.formatCurrency(redespVal);
+                                            const tFmt = Utils.formatCurrency(d.total);
+                                            return `<td style="width:75px;min-width:70px;text-align:right;padding:3px 4px;" title="Total: ${tFmt} | Principal: ${mFmt} | Redesp. ${redespCN}: ${rFmt}">
+                                                <div style="font-weight:700;color:var(--accent-success);font-size:0.82rem;">${mFmt}</div>
+                                                <div style="font-size:0.63rem;color:#f59e0b;white-space:nowrap;">+${rFmt} ↗${String(redespCN).substring(0,7)}</div>
+                                            </td>`;
+                                        }
+                                        return `<td style="width:75px;min-width:70px;font-weight:600;color:var(--accent-success);text-align:right;" title="${Utils.formatCurrency(d.total)}">${Utils.formatCurrency(d.total)}</td>`;
+                                    }
 
                                     let style = '';
                                     if (col === 'total') style += 'font-weight:600;color:var(--accent-success); text-align: right;';
@@ -6935,7 +6952,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 printArea.innerHTML = '';
 
                 const totalWeight = items.reduce((acc, curr) => acc + (parseFloat(curr.weight) || 0), 0);
-                const totalFreight = items.reduce((acc, curr) => acc + (parseFloat(curr.total) || 0), 0);
+                // v3.14.48: usa mainTotal (frete da transp. principal, sem redespacho)
+                const totalFreight = items.reduce((acc, curr) => {
+                    const mv = curr.mainTotal != null ? curr.mainTotal : (curr.total - (curr.redespTotal || 0));
+                    return acc + (parseFloat(mv) || parseFloat(curr.total) || 0);
+                }, 0);
 
                 // Ajustamos as celulas para caber em Retrato (A4 normal) usando fonte menor e padding restrito, 
                 // para que não falte espaço e não quebre a palavra verticalmente.
@@ -7008,7 +7029,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const pesoValue = parseFloat(item.weight) || 0;
                     const pesoDisplay = pesoValue % 1 === 0 ? pesoValue.toString() : pesoValue.toFixed(2);
                     const nfValueDisplay = parseFloat(item.nfValue) > 0 ? parseFloat(item.nfValue).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) : 'R$ 0,00';
-                    const valorDisplay = parseFloat(item.total) > 0 ? parseFloat(item.total).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) : 'R$ 0,00';
+                    // v3.14.48: mostra mainTotal (sem redespacho) no romaneio da transportadora principal
+                    const _mainVal = item.mainTotal != null ? item.mainTotal : (item.total - (item.redespTotal || 0));
+                    const _hasRedespRow = (item.redespTotal || 0) > 0 && (item.redespCarrier || (item.redespacho && item.redespacho !== '-'));
+                    const _redespRowCarrier = item.redespCarrier || (item.redespacho !== '-' ? item.redespacho : '');
+                    const valorDisplay = parseFloat(_mainVal || item.total) > 0 ? parseFloat(_hasRedespRow ? _mainVal : item.total).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) : 'R$ 0,00';
                     return `
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px;">${item.invoice}</div>
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; overflow: hidden; text-overflow: ellipsis;">${item.client}</div>
@@ -7021,6 +7046,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px;">${item.volume || 1}</div>
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px;">${nfValueDisplay}</div>
                 <div style="border-bottom: 1px solid #000; padding: 2px;">${valorDisplay}</div>`;
+                ${_hasRedespRow ? `
+                <div style="grid-column: 1 / 10; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background:#fffbeb; font-size:9px; color:#92400e;">
+                    ↗ Redespacho: ${_redespRowCarrier} — ${(item.redespTotal||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
+                </div>
+                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background:#fffbeb;"></div>` : ''}
                 }).join('')}
                 <div style="grid-column: 1 / 8; border-right: 1px solid #000; padding: 2px; text-align: right;">TOTAIS</div>
                 <div style="border-right: 1px solid #000; padding: 2px;">${totalWeight % 1 === 0 ? totalWeight.toString() : totalWeight.toFixed(2)}</div>
@@ -7040,6 +7070,95 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
                     printArea.appendChild(page);
                 }
+
+                // v3.14.48: Gera romaneios de redespacho automaticamente (um por transp. redespacho)
+                const redespGroups = {};
+                items.forEach(it => {
+                    const rc = it.redespCarrier || (it.redespacho && it.redespacho !== '-' ? it.redespacho : null);
+                    if (rc && (it.redespTotal || 0) > 0) {
+                        const key = String(rc).toUpperCase().trim();
+                        if (!redespGroups[key]) redespGroups[key] = [];
+                        redespGroups[key].push(it);
+                    }
+                });
+
+                Object.entries(redespGroups).forEach(([rcName, rcItems]) => {
+                    const rcInfo = (Utils.getStorage('carrier_info_v2') || {})[rcName] || { cnpj: '-', address: '-' };
+                    const rcFreightTotal = rcItems.reduce((a, c) => a + (parseFloat(c.redespTotal) || 0), 0);
+                    const rcWeightTotal  = rcItems.reduce((a, c) => a + (parseFloat(c.weight)     || 0), 0);
+
+                    for (let ri = 0; ri < 2; ri++) {
+                        const rPage = document.createElement('div');
+                        rPage.className = 'manifest-page';
+                        rPage.style.cssText = 'page-break-before: always; page-break-inside: avoid; margin-bottom: 40px;';
+                        rPage.innerHTML = `
+            <div class="manifest-header" style="display: grid !important; grid-template-columns: 1fr 1fr !important; border: 2px solid #000; padding: 10px; margin-bottom: 15px;">
+                <div>
+                    <h3 style="margin:0; font-size: 1rem;">REMETENTE (ENTREGA PARA REDESPACHO)</h3>
+                    <div style="font-size: 0.9rem; font-weight: bold; margin-top: 5px;">${company.name || 'EMPRESA NÃO CONFIGURADA'}</div>
+                    <div style="font-size: 0.8rem;">CNPJ: ${company.cnpj || '-'}</div>
+                    <div style="font-size: 0.8rem;">END: ${company.address || '-'}</div>
+                    <div style="font-size: 0.75rem; margin-top:4px; color:#555;">Transportadora Principal: ${cleanName}</div>
+                </div>
+                <div style="border-left: 2px solid #000; padding-left: 15px;">
+                    <h3 style="margin:0; font-size: 1rem;">TRANSPORTADORA REDESPACHO</h3>
+                    <div style="font-size: 0.9rem; font-weight: bold; margin-top: 5px;">${rcName}</div>
+                    <div style="font-size: 0.8rem;">CNPJ: ${rcInfo.cnpj}</div>
+                    <div style="font-size: 0.8rem;">END: ${rcInfo.address}</div>
+                </div>
+            </div>
+            <div style="text-align: center; margin-bottom: 15px;">
+                <h2 style="margin:0; text-decoration: underline;">ROMANEIO DE REDESPACHO</h2>
+                <div style="font-size: 0.8rem;">Emissão: ${new Date().toLocaleString()} | Via ${ri + 1}</div>
+            </div>
+            <div style="display: grid !important; grid-template-columns: 45px 1fr 75px 1fr 1fr 40px 38px 45px 55px 55px !important; width: 100%; margin-bottom: 20px; font-family: Arial, sans-serif; font-weight: bold; font-size: 9px; color: #000; border: 1px solid #000;">
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">Nº NF</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">CLIENTE</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">TELEFONE</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">CIDADE</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">TRANSP. PRINCIPAL</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">PESO</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">VOL.</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">VALOR NF</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">FR. PRINC.</div>
+                <div style="border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">FR. REDESP.</div>
+                ${rcItems.map(it => {
+                    const cList = Utils.getStorage('clients') || [];
+                    const norm = s => s ? s.toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase() : '';
+                    const cObj = cList.find(c => norm(c.nome) === norm(it.client));
+                    let ph = cObj && cObj.telefone ? cObj.telefone.replace(/\D/g,'') : '';
+                    if (ph.length > 20) ph = ph.substring(0,20);
+                    const nfFmt    = parseFloat(it.nfValue||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+                    const mainFmt  = parseFloat(it.mainTotal != null ? it.mainTotal : (it.total-(it.redespTotal||0))).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+                    const redFmt   = parseFloat(it.redespTotal||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+                    const pw = parseFloat(it.weight)||0;
+                    const pwDisp = pw%1===0?pw.toString():pw.toFixed(2);
+                    return `
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;">${it.invoice||'S/N'}</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;overflow:hidden;text-overflow:ellipsis;">${it.client||'-'}</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;">${ph}</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;overflow:hidden;text-overflow:ellipsis;">${it.city||'-'}</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;overflow:hidden;text-overflow:ellipsis;">${cleanName}</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;">${pwDisp}</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;">${it.volume||1}</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;">${nfFmt}</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;">${mainFmt}</div>
+                <div style="border-bottom:1px solid #000;padding:2px;font-weight:bold;">${redFmt}</div>`;
+                }).join('')}
+                <div style="grid-column:1/7;border-right:1px solid #000;padding:2px;text-align:right;">TOTAIS</div>
+                <div style="border-right:1px solid #000;padding:2px;">${rcWeightTotal%1===0?rcWeightTotal.toString():rcWeightTotal.toFixed(2)}</div>
+                <div style="border-right:1px solid #000;padding:2px;">${rcItems.reduce((a,c)=>a+(parseInt(c.volume)||1),0)}</div>
+                <div style="border-right:1px solid #000;padding:2px;">${rcItems.reduce((a,c)=>a+(parseFloat(c.nfValue)||0),0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
+                <div style="border-right:1px solid #000;padding:2px;">-</div>
+                <div style="padding:2px;font-weight:bold;">${rcFreightTotal>0?rcFreightTotal.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'R$ 0,00'}</div>
+            </div>
+            <div style="margin-top:25px;display:grid !important;grid-template-columns:1fr 1fr !important;gap:50px;">
+                <div style="border-top:1px solid #000;text-align:center;padding-top:5px;font-size:0.8rem;font-weight:bold;font-family:Arial,sans-serif;">Responsável Expedição</div>
+                <div style="border-top:1px solid #000;text-align:center;padding-top:5px;font-size:0.8rem;font-weight:bold;font-family:Arial,sans-serif;">Conferente / Redespacho</div>
+            </div>`;
+                        printArea.appendChild(rPage);
+                    }
+                });
 
                 // ✅ FIX: Garante que o DOM do print-area seja totalmente pintado antes de abrir o diálogo
                 // de impressão. O window.open() do WhatsApp automático desvia o foco e causava o browser
