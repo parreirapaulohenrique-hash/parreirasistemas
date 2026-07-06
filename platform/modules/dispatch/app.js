@@ -300,29 +300,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
         // Define checkAuth function inside scope
+        // v3.14.42 FIX: Sessão restaurada diretamente do logged_user.
+        // A validação de senha já foi feita no momento do login.
+        // NÃO revalidamos contra app_users porque eles ainda não foram
+        // carregados da nuvem no início da página (Cloud.loadAll() só roda no login).
         window.checkAuth = () => {
             const storedUser = Utils.getStorage('logged_user');
             if (storedUser && storedUser.login) {
-                const users = Utils.getStorage('app_users');
-                // Allow admin/admin bypass check if not found
-                let valid = users.find(u => u.login === storedUser.login && u.pass === storedUser.pass);
-                if (!valid && storedUser.login === 'admin' && storedUser.pass === 'admin') valid = storedUser;
-
-                if (valid) {
-                    currentUser = valid;
-                    // Etapa 3: sincroniza AppState com a sessão restaurada
-                    if (typeof AppState !== 'undefined') AppState.set('currentUser', valid);
-                    if (loginOverlay) loginOverlay.style.display = 'none';
-                    return;
-                }
+                // Sessão válida encontrada — restaura sem re-validar senha
+                currentUser = storedUser;
+                if (typeof AppState !== 'undefined') AppState.set('currentUser', storedUser);
+                if (loginOverlay) loginOverlay.style.display = 'none';
+                console.log(`[checkAuth] Sessão restaurada: ${storedUser.login} (${storedUser.role || 'operator'})`);
+                return;
             }
-            // No session
+            // Sem sessão — exibe overlay de login
             currentUser = null;
             if (typeof AppState !== 'undefined') AppState.set('currentUser', null);
             if (loginOverlay) {
                 loginOverlay.style.display = 'flex';
-                const users = Utils.getStorage('app_users');
-                if (loginUserSelect) loginUserSelect.innerHTML = users.map(u => `<option value="${u.login}">${u.name}</option>`).join('');
+                const users = Utils.getStorage('app_users') || [];
+                if (loginUserSelect && users.length) {
+                    loginUserSelect.innerHTML = users.map(u => `<option value="${u.login}">${u.name || u.login}</option>`).join('');
+                }
             }
         };
 

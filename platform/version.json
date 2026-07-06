@@ -1,8 +1,8 @@
 {
-    "build":  "20260704-prod-v3.14.40",
-    "version":  "3.14.40",
+    "build":  "20260706-prod-v3.14.42",
+    "version":  "3.14.42",
     "environment":  "production",
-    "change":  "v3.14.40 - FEAT: Log de Auditoria. Aba exclusiva para admin/supervisor. Registra despachos, alteracoes de tabela de frete, config. transportadora e pagamentos. Retencao 90 dias. Firestore + localStorage. Exportacao CSV. Filtros por acao, data e busca livre.",
-    "lastUpdate":  "2026-07-04",
-    "deployedAt":  "2026-07-04"
+    "change":  "v3.14.42 - FIX: Acesso Direto — checkAuth restaura sessao sem revalidar senha contra app_users (que nao esta carregado no startup). Cache busters atualizados para ?v=3.14.42 forçando reload dos scripts.",
+    "lastUpdate":  "2026-07-06",
+    "deployedAt":  "2026-07-06"
 }
