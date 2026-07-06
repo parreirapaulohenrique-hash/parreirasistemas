@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // FIX v3.14.32: Utils.setStorage era chamado aqui, contaminando _memStore com 1.371 clientes
         // sem telefone (data.js), impedindo que os ~1.955 clientes reais (com telefone) do Firestore
         // sobrescrevessem corretamente após os chunks carregarem.
-        if (clients.length === 0 && tenantId === 'ltdistribuidora' && typeof window.initialClientes !== 'undefined') {
+        if (clients.length === 0 && tenantFromUrl === 'ltdistribuidora' && typeof window.initialClientes !== 'undefined') {
             console.log("⚠️ [Fallback] Usando data.js temporariamente enquanto Firestore carrega chunks...");
             clients = window.initialClientes;
             // NÃO chamar Utils.setStorage — Firestore sobrescreve _memStore ao terminar de carregar
