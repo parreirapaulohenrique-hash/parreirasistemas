@@ -328,6 +328,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         window.logoutUser = () => {
             if (confirm('Deseja realmente sair do sistema?')) {
+                // v3.14.54: Audit Log antes de limpar a sessão
+                const _logoutUser = Utils.getStorage('logged_user');
+                if (Utils.writeLog && _logoutUser) {
+                    Utils.writeLog('USER_LOGOUT', 'Acesso', `Logout: ${_logoutUser.name || _logoutUser.login || '?'}`, _logoutUser, null);
+                }
                 // Etapa 3: limpa AppState na saída
                 if (typeof AppState !== 'undefined') {
                     AppState.set('currentUser', null);
@@ -2978,6 +2983,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 renderCarrierConfigs();
                 populateCarrierSelect();
                 showToast('🗑️ Transportadora removida.');
+                // v3.14.54: Audit Log
+                if (Utils.writeLog) Utils.writeLog('CARRIER_DELETE', 'Transportadora', `${name} excluída`, { name }, null);
             }
         };
 
@@ -3254,6 +3261,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     address: document.getElementById('compAddress').value.trim(),
                 };
                 Utils.saveRaw('company_data', JSON.stringify(data));
+                // v3.14.54: Audit Log
+                if (Utils.writeLog) Utils.writeLog('COMPANY_CONFIG_EDIT', 'Config. Empresa', `Dados da empresa atualizados: ${data.name || ''}`, null, data);
                 showToast('✅ Dados da empresa salvos!');
                 window.toggleCompanyEdit(false); // Lock again
             });
@@ -3829,6 +3838,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         });
 
                         showToast(`✅ Importação concluída: ${addedCount} adicionadas, ${updatedCount} atualizadas`);
+                        // v3.14.54: Audit Log
+                        if (Utils.writeLog) Utils.writeLog('FREIGHT_TABLE_IMPORT', 'Tabela de Frete', `${addedCount + updatedCount} regras importadas via planilha (${addedCount} novas, ${updatedCount} atualizadas, ${newCarriers.size} transp.)`, null, { total: addedCount + updatedCount, added: addedCount, updated: updatedCount, carriers: newCarriers.size });
 
                         // Adicionar novas transportadoras à lista
                         newCarriers.forEach(c => {
@@ -5822,6 +5833,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 revertedCount
             });
             Utils.setStorage('estorno_log', estornoLog);
+            // v3.14.54: Audit Log
+            if (Utils.writeLog) Utils.writeLog('DISPATCH_REVERSE', 'Estorno Fatura', `${entry.carrier} — Fatura ${entry.invoiceRef} — ${entry.nfCount} NF(s) revertidas por ${supervisorName} (motivo: ${justification})`, { status: 'Pago', invoiceRef: entry.invoiceRef, carrier: entry.carrier, nfCount: entry.nfCount }, { status: 'Despachado', reversedBy: supervisorName });
 
             // 5. Fecha modal e atualiza a tela
             window.closeEstornoModal();
@@ -6598,6 +6611,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                             throw new Error('Arquivo de backup inválido.');
                         }
                         if (confirm('Atenção! Isso substituirá todos os seus dados atuais. Deseja continuar?')) {
+                            // v3.14.54: Audit Log antes de restaurar
+                            if (Utils.writeLog) Utils.writeLog('BACKUP_RESTORE', 'Sistema', `Restauração de backup: ${file.name}`, null, { file: file.name, dispatches: data.dispatches?.length, freightTables: data.freight_tables?.length });
                             Utils.saveRaw('dispatches', JSON.stringify(data.dispatches));
                             Utils.saveRaw('freight_tables', JSON.stringify(data.freight_tables));
                             showToast('🔄 Dados restaurados! Recarregando...');
@@ -6644,6 +6659,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 checkAuth();
                 showSection('quote');
                 showToast(`Bem - vindo, ${user.name} !`);
+                // v3.14.54: Audit Log
+                if (Utils.writeLog) Utils.writeLog('USER_LOGIN', 'Acesso', `Login: ${user.name || user.login} (${user.role || 'user'})`, null, { login: user.login, role: user.role });
             } else {
                 alert('Usuário ou senha incorretos.');
             }
@@ -6703,6 +6720,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (window._dispatchesFullCache) {
                     window._dispatchesFullCache = window._dispatchesFullCache.filter(d => Number(d.id) !== numId);
                 }
+
+                // v3.14.54: Audit Log
+                const _dispRemoved = history.find ? null : null; // já removido do array
+                if (Utils.writeLog) Utils.writeLog('DISPATCH_DELETE', 'Despacho', `Lançamento #${numId} excluído permanentemente`, { id: numId }, null);
 
                 window.renderAppHistory();
                 showToast('🗑️ Lançamento excluído com sucesso.');
@@ -6876,6 +6897,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 modal.style.display = 'none';
                 showToast('✅ Entrega confirmada com sucesso!');
+                // v3.14.54: Audit Log
+                if (Utils.writeLog) Utils.writeLog('DELIVERY_CONFIRM', 'Entrega', `NF #${numId} entrega confirmada por "${confirmedBy}" via ${method}`, null, { id: numId, confirmedBy, method, confirmedAt: now });
                 window.renderAppHistory();
             });
         };
@@ -6923,6 +6946,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 showToast('↩️ Confirmação de entrega desfeita.');
+                // v3.14.54: Audit Log
+                if (Utils.writeLog) Utils.writeLog('DELIVERY_UNDO', 'Entrega', `NF #${numId} — confirmação de entrega desfeita`, { deliveryConfirmed: true }, { deliveryConfirmed: false });
                 window.renderAppHistory();
             });
         };
@@ -7310,6 +7335,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const revertidos = await window._reverterDespachosDoRomaneio(idsNoRomaneio, 'Pendente Despacho');
 
             showToast(`✅ ${revertidos} despacho(s) devolvido(s) para o painel de pendências!`);
+            // v3.14.54: Audit Log
+            if (Utils.writeLog) Utils.writeLog('DISPATCH_UNDISPATCH', 'Romaneio', `Romaneio ${romaneioAfetado ? romaneioAfetado.id : '#'+numId} devolvido ao painel — ${revertidos} despacho(s) revertidos`, romaneioAfetado ? { id: romaneioAfetado.id, items: romaneioAfetado.items?.length } : null, { status: 'Pendente Despacho' });
 
             if (window.renderAppHistory) window.renderAppHistory();
             if (window.renderDashboard) window.renderDashboard();
@@ -8307,6 +8334,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             Utils.saveRaw('app_users', JSON.stringify(users));
             window.clearUserForm();
 
+            // v3.14.54: Audit Log
+            if (Utils.writeLog) {
+                const _uDesc = isEditing
+                    ? `${name} (${login}) — editado (perfil: ${role})`
+                    : `${name} (${login}) — novo usuário (perfil: ${role})`;
+                Utils.writeLog(
+                    isEditing ? 'USER_MANAGE_EDIT' : 'USER_MANAGE_CREATE',
+                    'Usuário', _uDesc,
+                    isEditing ? { login: editLogin } : null,
+                    { name, login, role }
+                );
+            }
+
             // Atualiza UI
             if (window.renderUserList) window.renderUserList();
 
@@ -8798,6 +8838,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 romaneios[idx].status = 'baixado';
                 romaneios[idx].baixadoAt = new Date().toISOString();
                 Utils.saveRaw('app_romaneios', JSON.stringify(romaneios));
+                // v3.14.54: Audit Log
+                if (Utils.writeLog) Utils.writeLog('ROMANEIO_BAIXA', 'Romaneio', `Romaneio ${romaneioId} baixado e arquivado`, { status: 'em_rota', id: romaneioId }, { status: 'baixado', baixadoAt: romaneios[idx].baixadoAt });
                 showToast('✅ Romaneio baixado e arquivado com sucesso!');
                 if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
             }
@@ -8814,6 +8856,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     delete romaneios[idx].baixadoAt;
                     Utils.saveRaw('app_romaneios', JSON.stringify(romaneios));
                     showToast('↩️ Romaneio estornado! Voltou para "Em Rota".');
+                    // v3.14.54: Audit Log
+                    if (Utils.writeLog) Utils.writeLog('ROMANEIO_ESTORNO', 'Romaneio', `Romaneio ${romaneioId} estornado — voltou para "Em Rota"`, { status: 'baixado', id: romaneioId }, { status: 'em_rota' });
                     if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
                 } else {
                     alert('❌ Romaneio não encontrado.');
@@ -8837,6 +8881,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const items = romaneio.items || [];
                 window._reverterDespachosDoRomaneio(items, 'Pendente Despacho').then(revertidos => {
                     showToast(`↩️ Romaneio cancelado! ${revertidos} despacho(s) voltaram para pendentes.`);
+                    // v3.14.54: Audit Log
+                    if (Utils.writeLog) Utils.writeLog('ROMANEIO_CANCEL', 'Romaneio', `Romaneio ${romaneioId} cancelado — ${revertidos} despacho(s) revertidos`, { status: 'em_rota', id: romaneioId, items: items.length }, { status: 'cancelado' });
                     if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
                     if (window.renderDashboard) window.renderDashboard();
                     if (window.renderAppHistory) window.renderAppHistory();
@@ -8873,6 +8919,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 Utils.setStorage('dispatches', dispatches);
 
                 showToast(`↩️ Fatura estornada! ${revertidos} NF(s) voltaram para "Despachado".`);
+                // v3.14.54: Audit Log
+                if (Utils.writeLog) Utils.writeLog('INVOICE_REVERSE', 'Pagamento', `Fatura ${registro.invoiceRef} (${registro.carrier}) estornada — ${revertidos} NF(s) revertidas para "Despachado"`, { status: 'Pago', invoiceRef: registro.invoiceRef, carrier: registro.carrier, nfCount: registro.nfCount }, { status: 'Despachado', revertidos });
                 if (window.showInvoiceHistory) window.showInvoiceHistory();
                 if (window.renderAppHistory) window.renderAppHistory();
             });
@@ -8969,6 +9017,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             Utils.setStorage('app_sellers', sellers);
+            // v3.14.54: Audit Log
+            if (Utils.writeLog) Utils.writeLog(
+                idInput ? 'SELLER_EDIT' : 'SELLER_CREATE',
+                'Vendedor',
+                idInput ? `${name} — editado` : `${name} — novo vendedor`,
+                idInput ? { id: idInput } : null,
+                { name, phone }
+            );
             document.getElementById('sellerModal').style.display = 'none';
             if (window.renderSellersList) window.renderSellersList();
             if (window.populateSellersSelector) window.populateSellersSelector(); // Refresca dropdown da Cotação
@@ -8981,6 +9037,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (confirm(`Tem certeza que deseja remover o vendedor "${seller.name}"?`)) {
                 sellers = sellers.filter(s => s.id !== id);
                 Utils.setStorage('app_sellers', sellers);
+                // v3.14.54: Audit Log
+                if (Utils.writeLog) Utils.writeLog('SELLER_DELETE', 'Vendedor', `${seller.name} excluído`, seller, null);
                 if (window.renderSellersList) window.renderSellersList();
                 if (window.populateSellersSelector) window.populateSellersSelector();
                 window.showToast('🗑️ Vendedor removido.');
@@ -9144,16 +9202,37 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const ACTION_CONFIG = {
-                DISPATCH_CREATE:      { label: 'Despacho',       color: '#22c55e', bg: 'rgba(34,197,94,.12)',   icon: 'local_shipping' },
-                FREIGHT_TABLE_CREATE: { label: 'Tabela Nova',    color: '#3b82f6', bg: 'rgba(59,130,246,.12)',  icon: 'add_circle' },
-                FREIGHT_TABLE_EDIT:   { label: 'Tabela Edit.',   color: '#f59e0b', bg: 'rgba(245,158,11,.12)',  icon: 'edit' },
-                FREIGHT_TABLE_DELETE: { label: 'Tabela Excl.',   color: '#ef4444', bg: 'rgba(239,68,68,.12)',   icon: 'delete' },
+                DISPATCH_CREATE:      { label: 'Despacho',        color: '#22c55e', bg: 'rgba(34,197,94,.12)',   icon: 'local_shipping' },
+                FREIGHT_TABLE_CREATE: { label: 'Tabela Nova',     color: '#3b82f6', bg: 'rgba(59,130,246,.12)',  icon: 'add_circle' },
+                FREIGHT_TABLE_EDIT:   { label: 'Tabela Edit.',    color: '#f59e0b', bg: 'rgba(245,158,11,.12)',  icon: 'edit' },
+                FREIGHT_TABLE_DELETE: { label: 'Tabela Excl.',    color: '#ef4444', bg: 'rgba(239,68,68,.12)',   icon: 'delete' },
+                FREIGHT_TABLE_IMPORT: { label: 'Import. Tabela', color: '#8b5cf6', bg: 'rgba(139,92,246,.12)',  icon: 'upload_file' },
                 CARRIER_CONFIG_EDIT:  { label: 'Config. Transp.', color: '#a855f7', bg: 'rgba(168,85,247,.12)', icon: 'settings' },
-                INVOICE_PAYMENT:      { label: 'Pagamento',      color: '#06b6d4', bg: 'rgba(6,182,212,.12)',   icon: 'payments' },
+                CARRIER_DELETE:       { label: 'Excl. Transp.',  color: '#ef4444', bg: 'rgba(239,68,68,.12)',   icon: 'cancel' },
+                INVOICE_PAYMENT:      { label: 'Pagamento',       color: '#06b6d4', bg: 'rgba(6,182,212,.12)',   icon: 'payments' },
+                INVOICE_REVERSE:      { label: 'Est. Pgto.',      color: '#f97316', bg: 'rgba(249,115,22,.12)',  icon: 'money_off' },
+                DISPATCH_REVERSE:     { label: 'Estorno Fat.',    color: '#f97316', bg: 'rgba(249,115,22,.12)',  icon: 'undo' },
+                DISPATCH_DELETE:      { label: 'Excl. Desp.',     color: '#ef4444', bg: 'rgba(239,68,68,.12)',   icon: 'delete_forever' },
+                DISPATCH_UNDISPATCH:  { label: 'Ret. Painel',     color: '#f59e0b', bg: 'rgba(245,158,11,.12)',  icon: 'replay' },
+                ROMANEIO_BAIXA:       { label: 'Baixa Roman.',    color: '#22c55e', bg: 'rgba(34,197,94,.12)',   icon: 'check_circle' },
+                ROMANEIO_ESTORNO:     { label: 'Est. Roman.',     color: '#f97316', bg: 'rgba(249,115,22,.12)',  icon: 'undo' },
+                ROMANEIO_CANCEL:      { label: 'Cancel. Roman.',  color: '#ef4444', bg: 'rgba(239,68,68,.12)',   icon: 'cancel' },
+                DELIVERY_CONFIRM:     { label: 'Entrega Conf.',   color: '#22c55e', bg: 'rgba(34,197,94,.12)',   icon: 'done_all' },
+                DELIVERY_UNDO:        { label: 'Undo Entrega',    color: '#f59e0b', bg: 'rgba(245,158,11,.12)',  icon: 'undo' },
+                BACKUP_RESTORE:       { label: 'Rest. Backup',    color: '#ef4444', bg: 'rgba(239,68,68,.12)',   icon: 'restore' },
+                USER_LOGIN:           { label: 'Login',           color: '#22c55e', bg: 'rgba(34,197,94,.12)',   icon: 'login' },
+                USER_LOGOUT:          { label: 'Logout',          color: '#6b7280', bg: 'rgba(107,114,128,.12)', icon: 'logout' },
+                USER_MANAGE_CREATE:   { label: 'Novo Usuário',    color: '#22c55e', bg: 'rgba(34,197,94,.12)',   icon: 'person_add' },
+                USER_MANAGE_EDIT:     { label: 'Edit. Usuário',  color: '#f59e0b', bg: 'rgba(245,158,11,.12)',  icon: 'manage_accounts' },
+                COMPANY_CONFIG_EDIT:  { label: 'Config. Empresa', color: '#06b6d4', bg: 'rgba(6,182,212,.12)',  icon: 'business' },
                 // v3.14.52: Cadastro de clientes
-                CLIENT_CREATE:        { label: 'Cadastro Cli.',  color: '#22c55e', bg: 'rgba(34,197,94,.12)',   icon: 'person_add' },
-                CLIENT_EDIT:          { label: 'Edicao Cli.',    color: '#f59e0b', bg: 'rgba(245,158,11,.12)',  icon: 'manage_accounts' },
-                CLIENT_DELETE:        { label: 'Exclusao Cli.',  color: '#ef4444', bg: 'rgba(239,68,68,.12)',   icon: 'person_remove' },
+                CLIENT_CREATE:        { label: 'Cadastro Cli.',   color: '#22c55e', bg: 'rgba(34,197,94,.12)',  icon: 'person_add' },
+                CLIENT_EDIT:          { label: 'Edicao Cli.',     color: '#f59e0b', bg: 'rgba(245,158,11,.12)', icon: 'manage_accounts' },
+                CLIENT_DELETE:        { label: 'Exclusao Cli.',   color: '#ef4444', bg: 'rgba(239,68,68,.12)',  icon: 'person_remove' },
+                // v3.14.54: Vendedores
+                SELLER_CREATE:        { label: 'Cadastro Vend.',  color: '#22c55e', bg: 'rgba(34,197,94,.12)',  icon: 'person_add' },
+                SELLER_EDIT:          { label: 'Ediçao Vend.',    color: '#f59e0b', bg: 'rgba(245,158,11,.12)', icon: 'edit' },
+                SELLER_DELETE:        { label: 'Excl. Vend.',     color: '#ef4444', bg: 'rgba(239,68,68,.12)',  icon: 'person_remove' },
             };
 
             const fmt = ts => {

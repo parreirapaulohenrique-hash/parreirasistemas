@@ -277,8 +277,12 @@
             let history = Utils.getStorage('dispatches');
             const idx = history.findIndex(d => d.id === id);
             if (idx !== -1) {
+                const _dispBefore = { ...history[idx] };
                 history[idx].status = 'Cancelado';
                 Utils.saveRaw('dispatches', JSON.stringify(history));
+
+                // v3.14.54: Audit Log
+                if (Utils.writeLog) Utils.writeLog('DISPATCH_UNDISPATCH', 'Despacho', `NF ${_dispBefore.invoice || '#'+id} cancelada do painel — ${_dispBefore.carrier || ''} / ${_dispBefore.city || ''}`, { status: 'Pendente Despacho', id }, { status: 'Cancelado' });
 
                 // Refresh modal
                 const remaining = history.filter(d => {
@@ -428,6 +432,8 @@
             };
             romaneios.push(novoRomaneio);
             Utils.saveRaw('app_romaneios', JSON.stringify(romaneios));
+            // v3.14.54: Audit Log
+            if (Utils.writeLog) Utils.writeLog('ROMANEIO_CREATE', 'Romaneio', `Romaneio ${randomId} gerado — ${currentModalCarrier} — ${toDispatch.length} NF(s) despachadas por ${dispatchedBy}`, null, { id: randomId, carrier: currentModalCarrier, nfs: toDispatch.length, dispatchedBy });
             // ===============================================
 
             // Disparo Automático de WhatsApp para CLIENTES + VENDEDORES (Parametrizável v3.7)
