@@ -1814,8 +1814,12 @@
                     <!-- Populated by OcorrenciasModule.renderView() -->
                 </div>
 
-                <!-- VIEW: INTEGRAÇÃO ACONTEC -->
+                <!-- VIEW: INTEGRAÇÃO ERP (multi-tenant, gerenciado por ErpUI) -->
                 <div id="view-acontec" class="view-section" style="display: none;">
+                    <div class="card">
+                        <!-- Container preenchido dinamicamente por ErpUI.init('dispatch') -->
+                        <div id="erp-config-container"></div>
+                    </div>
 
                     <div class="welcome-banner" style="margin-bottom: 2rem;">
                         <div>
@@ -2539,10 +2543,22 @@
     <!-- Módulo Dashboard (Etapa 4) -->
     <script src="dispatch-dashboard.js?v=3.14.42"></script>
     <script src="data.js?v=3.14.42"></script>
-    <script src="acontec-integration.js?v=3.14.42"></script>
+    <!-- Camada de Integração ERP (shared/integrations) - v1.0.0 -->
+    <script src="/platform/shared/integrations/erp-adapter.js?v=1.0.0"></script>
+    <script src="/platform/shared/integrations/erp-registry.js?v=1.0.0"></script>
+    <script src="/platform/shared/integrations/acontec/adapter.js?v=1.0.0"></script>
+    <script src="/platform/shared/integrations/erp-ui.js?v=1.0.0"></script>
+    <script src="/platform/shared/integrations/index.js?v=1.0.0"></script>
     <script src="occurrences.js?v=3.14.42"></script>
     <script src="app.js?v=3.14.42"></script>
-    <script src="acontec-ui.js?v=3.14.42"></script>
+    <script>
+        // Inicializa a UI de configuração ERP na seção de Integração do Dispatch
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof ErpIntegration !== 'undefined') {
+                ErpIntegration.initUI('dispatch');
+            }
+        });
+    </script>
     <script src="delivery-module.js?v=3.14.42"></script>
     <script src="cnpj-lookup.js?v=3.14.42"></script>
     <script src="bi_logistica.js?v=3.14.42"></script>

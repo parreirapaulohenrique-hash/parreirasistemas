@@ -1,8 +1,8 @@
 {
-    "build":  "20260706-prod-v3.14.43",
-    "version":  "3.14.43",
+    "build":  "20260707-prod-v3.15.0",
+    "version":  "3.15.0",
     "environment":  "production",
-    "change":  "v3.14.43 - FIX: Login travado em 'Carregando' — timeout de 8s no tenant check e 10s no loadAll. Indicador visual no dropdown durante carregamento de usuarios.",
-    "lastUpdate":  "2026-07-06",
-    "deployedAt":  "2026-07-06"
+    "change":  "v3.15.0 - ARCH: Camada de integração ERP centralizada (shared/integrations). ErpAdapter (contrato genérico), ErpRegistry (multi-tenant, config no Firestore), AcontecAdapter (implementação), ErpUI (interface compartilhada). Dispatch e WMS consomem ErpIntegration — sem duplicação de código. Token em sessionStorage, URL/config no Firestore por tenant.",
+    "lastUpdate":  "2026-07-07",
+    "deployedAt":  "2026-07-07"
 }

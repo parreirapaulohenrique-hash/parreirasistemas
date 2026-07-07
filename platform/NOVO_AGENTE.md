@@ -29,6 +29,12 @@ A arquitetura moderna reside na pasta `/platform`. (A antiga subpasta `/web` ain
     *   **sales-force**: Força de Vendas Mobile (PWA para RCA em campo, offline-first com IndexedDB).
     *   **wms**: Warehouse Management System (Gestão de Armazéns).
     *   **wms-coletor**: Versão do WMS estritamente otimizada para coletores móveis (Zebra/Android) utilizados na operação de piso.
+*   **`platform/shared/integrations/`** (v3.15.0+): Camada centralizada de integração com ERPs externos.
+    *   **`erp-adapter.js`**: Contrato genérico (interface). Todo ERP deve implementar `syncClients()`, `syncProducts()`, `syncOrders()`, `syncNFs()`, `confirmDispatch()`.
+    *   **`erp-registry.js`**: Registro multi-tenant. Lê do Firestore qual ERP cada tenant usa e instancia o adaptador correto. Token fica em `sessionStorage`.
+    *   **`erp-ui.js`**: Interface de configuração reutilizável (Dispatch, WMS e futuros módulos).
+    *   **`acontec/adapter.js`**: Implementação específica da API Acontec.
+    *   **`index.js`**: Registra provedores e exporta `window.ErpIntegration` para os módulos consumirem.
 
 > ⚠️ **IMPORTANTE — Ambiente de Desenvolvimento Canônico (desde 2026-06-17):**
 > O diretório `OneDrive\Área de Trabalho\TESTE` foi **descontinuado** como ambiente de trabalho.
@@ -317,6 +323,7 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
+| **3.15.0** | 2026-07-07 | ARCH: Camada de integração ERP centralizada em `shared/integrations/`. `ErpAdapter` (contrato genérico), `ErpRegistry` (registro multi-tenant com config no Firestore, token em sessionStorage), `AcontecAdapter` (migração e reescrita de `dispatch/acontec-integration.js`), `ErpUI` (interface compartilhada para Dispatch e WMS). Módulos consomem via `ErpIntegration.getActive()` sem acoplamento ao ERP específico. |
 | **3.14.31** | 2026-06-26 | FIX: Restringido o fallback automático da lista de clientes estáticos de data.js apenas para o tenant ltdistribuidora, corrigindo o bug onde a Central Peças e outros tenants carregavam a lista de clientes da LT. |
 | **3.14.30** | 2026-06-26 | FEAT: Adicionada opção de impressão de faturas confirmadas no Histórico de Conferência de Faturas, gerando um layout de relatório profissional com detalhamento das NFs. |
 | **3.14.29** | 2026-06-25 | FIX: Adicionado fallback no módulo de despacho para calcular dinamicamente o valor do frete de redespacho em NFs legadas (antigas) que não possuíam o campo `redespTotal` ou regras válidas na tabela. |

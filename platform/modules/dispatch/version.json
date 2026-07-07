@@ -1,8 +1,8 @@
 {
-    "build":  "20260702-prod-v3.14.39",
-    "version":  "3.14.39",
+    "build":  "20260707-prod-v3.15.0",
+    "version":  "3.15.0",
     "environment":  "production",
-    "change":  "v3.14.39 - FEAT: Painel /tenants com ambientes HML por tenant. Cards mostram links PROD e HML lado a lado. Botao Criar HML automatico. Rota /tenants adicionada ao vercel.json.",
-    "lastUpdate":  "2026-07-02",
-    "deployedAt":  "2026-07-02"
+    "change":  "v3.15.0 - ARCH: Camada de integração ERP centralizada (shared/integrations). ErpAdapter (contrato genérico), ErpRegistry (multi-tenant, config no Firestore), AcontecAdapter (implementação), ErpUI (interface compartilhada). Dispatch e WMS consomem ErpIntegration — sem duplicação de código. Token em sessionStorage, URL/config no Firestore por tenant.",
+    "lastUpdate":  "2026-07-07",
+    "deployedAt":  "2026-07-07"
 }

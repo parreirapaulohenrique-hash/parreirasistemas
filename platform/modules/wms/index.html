@@ -377,6 +377,14 @@
                 <!-- View: Divergências de Recebimento -->
                 <div id="view-divergencias" class="page-content" style="display:none;"></div>
 
+                <!-- View: Integração ERP (shared/integrations) -->
+                <div id="view-cfg-integracao" class="page-content" style="display:none;">
+                    <div style="padding:1.5rem;">
+                        <!-- Container preenchido dinamicamente por ErpIntegration.initUI('wms') -->
+                        <div id="erp-config-container"></div>
+                    </div>
+                </div>
+
                 <!-- Generic dynamic view container -->
                 <div id="view-dynamic" class="page-content" style="display:none;"></div>
             </div>
@@ -405,6 +413,13 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 
     <!-- Auth Central -->
+    <!-- Camada de Integração ERP (shared/integrations) v1.0.0 -->
+    <script src="/platform/shared/integrations/erp-adapter.js?v=1.0.0"></script>
+    <script src="/platform/shared/integrations/erp-registry.js?v=1.0.0"></script>
+    <script src="/platform/shared/integrations/acontec/adapter.js?v=1.0.0"></script>
+    <script src="/platform/shared/integrations/erp-ui.js?v=1.0.0"></script>
+    <script src="/platform/shared/integrations/index.js?v=1.0.0"></script>
+
     <script src="../../core/js/auth.js?v=20260515r"></script>
     <script src="js/wms-integration.js?v=20260515r"></script>
     <!-- Three.js 3D -->
@@ -432,6 +447,15 @@
     <script src="js/bi_operacional.js?v=20260516r"></script>
     <script src="js/wms-usuarios.js?v=20260516r"></script>
     <script src="js/divergencias.js?v=20260516r"></script>
+
+    <script>
+        // Inicializa a UI de configuração ERP na view de Integrações do WMS
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof ErpIntegration !== 'undefined') {
+                ErpIntegration.initUI('wms');
+            }
+        });
+    </script>
 
     <script>
         // Session Guard
