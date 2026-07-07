@@ -292,7 +292,9 @@
             const tenant = localStorage.getItem('app_tenant_id');
 
             if (!user || !tenant) {
-                window.location.href = 'login.html';
+                // Exibe o overlay de login embutido — NÃO redireciona para login.html
+                // (evita loop de redirect em ambiente de staging/homologação)
+                document.getElementById('loginOverlay').style.display = 'flex';
                 return;
             }
 
