@@ -220,6 +220,7 @@ window.ErpNFQueue = (function() {
         // Libera lock anterior se havia outro selecionado
         if (_mySelectedNF && _mySelectedNF !== String(nfNumber)) {
             await _releaseLock(_mySelectedNF);
+            _unlockErpFields();
         }
 
         // Adquire lock
@@ -266,6 +267,22 @@ window.ErpNFQueue = (function() {
                 }
             }
         }
+
+        // Preenche vendedor se disponível
+        if (nf.sellerName || nf.sellerId) {
+            const sellerSel = _el('inputSeller');
+            if (sellerSel) {
+                const opts = Array.from(sellerSel.options);
+                const match = opts.find(o =>
+                    o.value === nf.sellerId ||
+                    (o.text || '').toUpperCase().includes((nf.sellerName || '').toUpperCase())
+                );
+                if (match) sellerSel.value = match.value;
+            }
+        }
+
+        // Trava campos preenchidos pelo ERP
+        _lockErpFields();
 
         // Força re-render da tabela para mostrar linha como selecionada
         _renderTable();
