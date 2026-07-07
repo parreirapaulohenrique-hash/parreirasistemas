@@ -248,13 +248,13 @@ class AcontecAdapter extends ErpAdapter {
 
     /**
      * Mapeia NF do formato Acontec para o formato interno do Dispatch.
-     * Campos: ver API_ACONTEC_INTEGRACAO_REDESPACHO.md
+     * Campos: ver documentação de integração Acontec.
+     * Nota: redespacho é controlado pelas tabelas de frete do sistema — não vem do ERP.
      */
     _mapNF(raw) {
-        const redespacho = raw.redespacho || {};
-        const frete      = raw.frete || {};
-        const cliente    = raw.cliente || {};
-        const vendedor   = raw.vendedor || {};
+        const frete   = raw.frete || {};
+        const cliente = raw.cliente || {};
+        const vendedor = raw.vendedor || {};
 
         return {
             // Identificação
@@ -268,7 +268,6 @@ class AcontecAdapter extends ErpAdapter {
             client:      (cliente.razao_social || cliente.nome || '').toUpperCase().trim(),
             city:        (cliente.cidade || '').toUpperCase().trim(),
             neighborhood:(cliente.bairro || '').toUpperCase().trim(),
-            state:       (cliente.estado || '').toUpperCase(),
             clientCode:  String(cliente.codigo || ''),
             cnpj:        cliente.cnpj || '',
             address:     cliente.endereco_completo || '',
@@ -279,19 +278,11 @@ class AcontecAdapter extends ErpAdapter {
             sellerPhone: (vendedor.telefone || '').replace(/\D/g, ''),
 
             // Frete
-            nfValue:     parseFloat(frete.valor_nf || 0),
-            weight:      parseFloat(frete.peso_kg || 0),
-            volume:      parseInt(frete.volumes || 1),
-            freightType: (frete.tipo_frete || 'CIF').toUpperCase(),
+            nfValue:          parseFloat(frete.valor_nf || 0),
+            weight:           parseFloat(frete.peso_kg || 0),
+            volume:           parseInt(frete.volumes || 1),
+            freightType:      (frete.tipo_frete || 'CIF').toUpperCase(),
             suggestedCarrier: frete.transportadora_sugerida || '',
-
-            // Redespacho (campos críticos para o cálculo)
-            hasRedespacho:          redespacho.possui_redespacho === true,
-            redespCidade:           (redespacho.cidade_hub || '').toUpperCase(),
-            redespCarrier:          (redespacho.transportadora_redespacho || '').toUpperCase(),
-            redespTotal:            parseFloat(redespacho.valor_redespacho || 0),
-            percentualRedespacho:   parseFloat(redespacho.percentual_redespacho || 0),
-            minimoRedespacho:       parseFloat(redespacho.minimo_redespacho || 0),
 
             // NF complementar
             isComplement: raw.complemento?.is_complemento === true,
@@ -303,47 +294,7 @@ class AcontecAdapter extends ErpAdapter {
         };
     }
 
-    // ─────────────────────────────────────────────
-    //  WEBHOOK: CONFIRMAÇÃO DE DESPACHO
-    // ─────────────────────────────────────────────
-
-    /**
-     * Notifica a Acontec que uma NF foi despachada.
-     * Endpoint: POST /webhook/despacho-confirmado
-     * Opcional: se a Acontec não tiver o endpoint, registra aviso e segue.
-     */
-    async confirmDispatch(nfData) {
-        this._log('info', `Notificando Acontec: despacho NF ${nfData.numero_nf}...`);
-
-        try {
-            const payload = {
-                evento:                  'DESPACHO_CONFIRMADO',
-                timestamp:               new Date().toISOString(),
-                numero_nf:               nfData.numero_nf,
-                transportadora:          nfData.transportadora,
-                redespacho_carrier:      nfData.redespacho_carrier || null,
-                valor_frete_total:       nfData.valor_frete_total,
-                valor_frete_principal:   nfData.valor_frete_principal,
-                valor_redespacho:        nfData.valor_redespacho || 0,
-                data_despacho:           nfData.data_despacho,
-                romaneio_id:             nfData.romaneio_id,
-                operador:                nfData.operador || 'Sistema'
-            };
-
-            await this._request('/webhook/despacho-confirmado', {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            });
-
-            this._log('success', `✅ Acontec notificada: NF ${nfData.numero_nf} despachada`);
-            return { success: true };
-
-        } catch (e) {
-            // Não bloqueia o fluxo — webhook é opcional
-            this._log('warning', `Falha ao notificar Acontec (não crítico): ${e.message}`);
-            return { success: false, error: e.message };
-        }
-    }
+    // (webhook de confirmação removido — status de despacho não é enviado de volta ao ERP)
 
     // ─────────────────────────────────────────────
     //  HELPERS INTERNOS
