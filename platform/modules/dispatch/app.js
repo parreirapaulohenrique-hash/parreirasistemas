@@ -4688,7 +4688,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const raw = d.mainTotal != null ? d.mainTotal : (d.total - (d.redespTotal || 0));
                         invoiceValue = Math.round(raw * 100) / 100;
                     }
-                    return { ...d, _invoiceValue: invoiceValue, _isRedesp: isRedesp, _isPago: d.status === 'Pago' };
+                    // v3.14.56: _isPago diferenciado por tipo de carrier
+                    // Redespacho: usa d.redespPago (novo campo); Principal: usa d.status === 'Pago'
+                    const _isPago = isRedesp ? (d.redespPago === true) : (d.status === 'Pago');
+                    return { ...d, _invoiceValue: invoiceValue, _isRedesp: isRedesp, _isPago };
                 });
 
             console.log(`[InvoiceFilter v3.11.46] Antes do filtro de mês: ${filtered.length} NFs (Despachadas + Pagas)`);
@@ -5180,11 +5183,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             const loggedUser = Utils.getStorage('logged_user');
             const userName = loggedUser ? (loggedUser.name || loggedUser.login) : 'Sistema';
 
+            // v3.14.56: helper para detectar se o pagamento é para transportadora de redespacho
+            const _carrierNorm2 = (s) => s ? s.toUpperCase().trim().replace(/\s+/g, '') : '';
+            const _carrierN2 = _carrierNorm2(carrier);
+            const _isRedespPayment = (d) => {
+                const mainN = _carrierNorm2(d.carrier);
+                const mainMatch = mainN === _carrierN2 || mainN.startsWith(_carrierN2) || _carrierN2.startsWith(mainN);
+                const newRedespN = _carrierNorm2(d.redespCarrier);
+                const newRedesp = d.redespCarrier && (newRedespN === _carrierN2 || newRedespN.startsWith(_carrierN2) || _carrierN2.startsWith(newRedespN));
+                const legRedespN = _carrierNorm2(d.redespacho);
+                const legRedesp = !d.redespCarrier && d.redespacho && d.redespacho !== '-' && (legRedespN === _carrierN2 || legRedespN.startsWith(_carrierN2) || _carrierN2.startsWith(legRedespN));
+                return (newRedesp || legRedesp) && !mainMatch;
+            };
+
             // Mark selected NFs as paid
             let paidCount = 0;
             let totalPaid = 0;
             const paidNFs = [];
 
+            // Update para transportadora PRINCIPAL
             const paidUpdate = {
                 status: 'Pago',
                 paidAt: new Date().toISOString(),
@@ -5194,12 +5211,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ...(authorizedBy ? { authorizedBy: authorizedBy } : {})
             };
 
+            // v3.14.56: Update SEPARADO para redespacho — não altera `status`
+            const redespUpdate = {
+                redespPago: true,
+                redespPaidAt: new Date().toISOString(),
+                redespInvoiceRef: invoiceRef,
+                redespPaidBy: userName,
+                ...(justification ? { redespPaymentNote: justification } : {}),
+                ...(authorizedBy ? { redespAuthorizedBy: authorizedBy } : {})
+            };
+
             dispatches.forEach(d => {
                 const sId = String(d.id);
                 if (window.invoiceSelectedNFs.has(sId)) {
                     const invoiceVal = window.invoiceSelectedNFs.get(sId) || 0;
-                    console.log(`💳 [Invoice] Marcando NF ${d.invoice} (ID: ${d.id}) como PAGA - valor conferência: ${invoiceVal}`);
-                    Object.assign(d, paidUpdate);
+                    const isRedesp = _isRedespPayment(d);
+                    console.log(`💳 [Invoice] NF ${d.invoice} (ID: ${d.id}) - ${isRedesp ? '🔄 REDESPACHO' : '⭐ PRINCIPAL'} - valor: ${invoiceVal}`);
+                    Object.assign(d, isRedesp ? redespUpdate : paidUpdate);
                     paidCount++;
                     totalPaid += invoiceVal;
                     paidNFs.push(d.invoice);
@@ -5231,7 +5259,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const docRef = window.db
                             .collection('tenants').doc(Utils.Cloud.tenantId)
                             .collection('dispatches_db').doc(String(d.id));
-                        batch.set(docRef, { ...d, ...paidUpdate }, { merge: true });
+                        // v3.14.56: usa { ...d } já mutado (redespUpdate ou paidUpdate aplicado acima)
+                        batch.set(docRef, { ...d }, { merge: true });
                         batchCount++;
                     }
                 });
