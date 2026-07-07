@@ -262,12 +262,34 @@ function copyUrl(url) {
     navigator.clipboard.writeText('https://' + url).then(() => toast('URL copiada!', 'success'));
 }
 
+// Garante que o Firebase Auth está pronto (signInAnonymously concluído)
+function _ensureAuth() {
+    return new Promise((resolve, reject) => {
+        const currentUser = firebase.auth().currentUser;
+        if (currentUser) { resolve(currentUser); return; }
+        // Aguarda o onAuthStateChanged disparar (ou faz signIn se necessário)
+        const unsubscribe = firebase.auth().onAuthStateChanged(user => {
+            unsubscribe();
+            if (user) { resolve(user); return; }
+            // Sem usuário: faz signInAnonymously agora e aguarda
+            firebase.auth().signInAnonymously()
+                .then(cred => resolve(cred.user))
+                .catch(reject);
+        });
+        // Timeout de segurança: 8 segundos
+        setTimeout(() => reject(new Error('Timeout aguardando autenticação Firebase.')), 8000);
+    });
+}
+
 // Cria automaticamente o tenant _hml a partir do tenant de produção
 window.createHmlTenant = async function(prodId, prodName) {
     const hmlId   = prodId + '_hml';
     const hmlName = prodName + ' (HML)';
     if (!confirm(`Criar ambiente de homologação "${hmlId}" para ${prodName}?\n\nIsso criará um tenant separado com dados isolados.`)) return;
     try {
+        // Garante autenticação Firebase antes de qualquer escrita no Firestore
+        await _ensureAuth();
+
         const prodDoc = await db.collection('tenants').doc(prodId).get();
         const prodData = prodDoc.exists ? prodDoc.data() : {};
         await db.collection('tenants').doc(hmlId).set({
