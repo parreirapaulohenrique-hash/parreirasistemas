@@ -232,9 +232,12 @@ class AcontecAdapter extends ErpAdapter {
 
         try {
             const rawNFs = await this._fetchAllPages('/notas-fiscais', params, 50);
-            const nfs    = rawNFs.map(nf => this._mapNF(nf));
+            const nfs = rawNFs
+                .map(nf => this._mapNF(nf))
+                // Regra: só NFs com transportadora informada no ERP
+                .filter(nf => nf.suggestedCarrier && String(nf.suggestedCarrier).trim() !== '');
 
-            this._log('success', `✅ ${nfs.length} NF(s) recebida(s) da Acontec`);
+            this._log('success', `✅ ${nfs.length} NF(s) com transportadora recebida(s) da Acontec`);
             return nfs;
 
         } catch (e) {
