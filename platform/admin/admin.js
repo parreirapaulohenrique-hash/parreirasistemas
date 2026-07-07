@@ -285,13 +285,16 @@ function _ensureAuth() {
 window.createHmlTenant = async function(prodId, prodName) {
     const hmlId   = prodId + '_hml';
     const hmlName = prodName + ' (HML)';
-    if (!confirm(`Criar ambiente de homologação "${hmlId}" para ${prodName}?\n\nIsso criará um tenant separado com dados isolados.`)) return;
+    if (!confirm(`Criar ambiente de homologação "${hmlId}" para ${prodName}?\n\nIsso criará um tenant separado.\nOs usuários e configurações de frete serão copiados da produção.`)) return;
     try {
         // Garante autenticação Firebase antes de qualquer escrita no Firestore
         await _ensureAuth();
 
-        const prodDoc = await db.collection('tenants').doc(prodId).get();
+        // 1. Lê dados do tenant de produção
+        const prodDoc  = await db.collection('tenants').doc(prodId).get();
         const prodData = prodDoc.exists ? prodDoc.data() : {};
+
+        // 2. Cria o documento do tenant HML
         await db.collection('tenants').doc(hmlId).set({
             nome: hmlName,
             name: hmlName,
@@ -304,7 +307,27 @@ window.createHmlTenant = async function(prodId, prodName) {
             prodTenantRef: prodId,
             createdAt: new Date().toISOString()
         });
-        toast(`✅ Ambiente HML "${hmlId}" criado com sucesso!`, 'success');
+
+        // 3. Copia documentos essenciais do legacy_store de produção → HML
+        //    (usuários, tabelas de frete, transportadoras, dados da empresa)
+        const DOCS_TO_COPY = ['app_users', 'freight_tables', 'carrier_list',
+                              'carrier_configs', 'company_data', 'carrier_info_v2'];
+        let copiedCount = 0;
+        for (const docName of DOCS_TO_COPY) {
+            try {
+                const snap = await db.collection('tenants').doc(prodId)
+                                     .collection('legacy_store').doc(docName).get();
+                if (snap.exists) {
+                    await db.collection('tenants').doc(hmlId)
+                            .collection('legacy_store').doc(docName).set(snap.data());
+                    copiedCount++;
+                }
+            } catch(e) {
+                console.warn(`[HML] Falha ao copiar ${docName}:`, e.message);
+            }
+        }
+
+        toast(`✅ Ambiente HML "${hmlId}" criado! ${copiedCount} config(s) copiada(s) da produção.`, 'success');
         await loadTenants();
     } catch (e) {
         toast('Erro ao criar HML: ' + e.message, 'error');
