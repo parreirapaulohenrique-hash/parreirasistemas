@@ -158,16 +158,8 @@ const ErpUI = {
             <!-- Ações de sincronização -->
             <div style="padding:1rem; background:var(--bg-secondary,#f9fafb); border-radius:12px; display:flex; flex-direction:column; gap:1rem;">
                 <h4 style="margin:0; font-size:0.9rem; font-weight:600;">Sincronização Manual</h4>
-                <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
-                    <button id="btnSyncErpClients" class="btn btn-primary" style="display:flex; align-items:center; gap:0.5rem;">
-                        👥 Sincronizar Clientes
-                    </button>
-                    <button id="btnSyncErpProducts" class="btn btn-secondary" style="display:flex; align-items:center; gap:0.5rem;">
-                        📦 Sincronizar Produtos
-                    </button>
-                    <button id="btnSyncErpOrders" class="btn btn-secondary" style="display:flex; align-items:center; gap:0.5rem;">
-                        🧾 Sincronizar Pedidos
-                    </button>
+                    <!-- Botões contextuais por módulo, gerados por _getSyncButtons() -->
+                    ${this._getSyncButtonsHTML()}
                 </div>
                 <!-- Barra de progresso -->
                 <div id="erp-sync-progress" style="display:none;">
@@ -225,9 +217,12 @@ const ErpUI = {
             btnTest.addEventListener('click', async () => await this._testConnection());
         }
 
-        // Sincronizações manuais
+        // Sincronizações manuais (contextuais por módulo)
         const btnClients = $('btnSyncErpClients');
         if (btnClients) btnClients.addEventListener('click', async () => await this._runSync('clients'));
+
+        const btnNFs = $('btnSyncErpNFs');
+        if (btnNFs) btnNFs.addEventListener('click', async () => await this._runSync('nfs'));
 
         const btnProducts = $('btnSyncErpProducts');
         if (btnProducts) btnProducts.addEventListener('click', async () => await this._runSync('products'));
@@ -332,10 +327,12 @@ const ErpUI = {
     async _runSync(type) {
         const buttons = {
             clients:  document.getElementById('btnSyncErpClients'),
+            nfs:      document.getElementById('btnSyncErpNFs'),
             products: document.getElementById('btnSyncErpProducts'),
             orders:   document.getElementById('btnSyncErpOrders')
         };
-        const labels = { clients: 'Clientes', products: 'Produtos', orders: 'Pedidos' };
+        const labels  = { clients: 'Clientes', nfs: 'NFs para Cotação', products: 'Produtos', orders: 'Pedidos' };
+        const icons   = { clients: '👥', nfs: '📊', products: '📦', orders: '🧧' };
         const btn = buttons[type];
 
         if (btn) { btn.disabled = true; btn.textContent = `⏳ Sincronizando ${labels[type]}...`; }
@@ -347,17 +344,51 @@ const ErpUI = {
 
             let result;
             if (type === 'clients')  result = await erp.syncClients();
+            if (type === 'nfs')      result = await erp.syncNFs({ status: 'pendente' });
             if (type === 'products') result = await erp.syncProducts();
             if (type === 'orders')   result = await erp.syncOrders();
 
-            this._addLog('success', `✅ ${labels[type]} sincronizados com sucesso`, result);
+            this._addLog('success', `✅ ${labels[type]} sincronizado(s) com sucesso`, result);
 
         } catch (e) {
             this._addLog('error', `❌ Falha ao sincronizar ${labels[type]}: ${e.message}`);
         } finally {
-            if (btn) { btn.disabled = false; btn.textContent = `${type === 'clients' ? '👥' : type === 'products' ? '📦' : '🧾'} Sincronizar ${labels[type]}`; }
+            if (btn) { btn.disabled = false; btn.textContent = `${icons[type]} ${type === 'nfs' ? 'Importar NFs para Cotação' : 'Sincronizar ' + labels[type]}`; }
             this._showProgress(false);
         }
+    },
+
+    /**
+     * Retorna o HTML dos botões de sincronização de acordo com o módulo.
+     * Dispatch: Clientes + NFs para Cotação (sem Produtos)
+     * WMS e demais: Clientes + Produtos + Pedidos
+     */
+    _getSyncButtonsHTML() {
+        if (this._moduleContext === 'dispatch') {
+            return `
+                <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                    <button id="btnSyncErpClients" class="btn btn-primary" style="display:flex; align-items:center; gap:0.5rem;">
+                        👥 Sincronizar Clientes
+                    </button>
+                    <button id="btnSyncErpNFs" class="btn btn-secondary" style="display:flex; align-items:center; gap:0.5rem;">
+                        📊 Importar NFs para Cotação
+                    </button>
+                </div>`;
+        }
+
+        // WMS, Sales Force e demais módulos
+        return `
+            <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                <button id="btnSyncErpClients" class="btn btn-primary" style="display:flex; align-items:center; gap:0.5rem;">
+                    👥 Sincronizar Clientes
+                </button>
+                <button id="btnSyncErpProducts" class="btn btn-secondary" style="display:flex; align-items:center; gap:0.5rem;">
+                    📦 Sincronizar Produtos
+                </button>
+                <button id="btnSyncErpOrders" class="btn btn-secondary" style="display:flex; align-items:center; gap:0.5rem;">
+                    🧧 Sincronizar Pedidos
+                </button>
+            </div>`;
     },
 
     // ─────────────────────────────────────────────
