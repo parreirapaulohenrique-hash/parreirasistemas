@@ -277,8 +277,12 @@
             let history = Utils.getStorage('dispatches');
             const idx = history.findIndex(d => d.id === id);
             if (idx !== -1) {
+                const _dispBefore = { ...history[idx] };
                 history[idx].status = 'Cancelado';
                 Utils.saveRaw('dispatches', JSON.stringify(history));
+
+                // v3.14.54: Audit Log
+                if (Utils.writeLog) Utils.writeLog('DISPATCH_UNDISPATCH', 'Despacho', `NF ${_dispBefore.invoice || '#'+id} cancelada do painel — ${_dispBefore.carrier || ''} / ${_dispBefore.city || ''}`, { status: 'Pendente Despacho', id }, { status: 'Cancelado' });
 
                 // Refresh modal
                 const remaining = history.filter(d => {
@@ -397,8 +401,10 @@
             if (settings.wa_auto_seller) {
                 toDispatch.forEach(d => {
                     if (d.sellerId && d.sellerPhone) {
+                        // v3.14.55: armazena o objeto completo (não só o ID)
+                        // para evitar re-lookup no _dispatchesFullCache que pode não ter o despacho recém-criado
                         if (!sellersToNotify[d.sellerId]) {
-                            sellersToNotify[d.sellerId] = d.id;
+                            sellersToNotify[d.sellerId] = d;
                         }
                     }
                 });
@@ -428,6 +434,8 @@
             };
             romaneios.push(novoRomaneio);
             Utils.saveRaw('app_romaneios', JSON.stringify(romaneios));
+            // v3.14.54: Audit Log
+            if (Utils.writeLog) Utils.writeLog('ROMANEIO_CREATE', 'Romaneio', `Romaneio ${randomId} gerado — ${currentModalCarrier} — ${toDispatch.length} NF(s) despachadas por ${dispatchedBy}`, null, { id: randomId, carrier: currentModalCarrier, nfs: toDispatch.length, dispatchedBy });
             // ===============================================
 
             // Disparo Automático de WhatsApp para CLIENTES + VENDEDORES (Parametrizável v3.7)
@@ -457,11 +465,8 @@
                 }
 
                 if (settings.wa_auto_seller) {
-                    Object.values(sellersToNotify).forEach(dispatchId => {
-                        const numId = Number(dispatchId);
-                        const localH = Utils.getStorage('dispatches') || [];
-                        const allH = window._dispatchesFullCache || localH;
-                        const d = allH.find(item => Number(item.id) === numId);
+                    // v3.14.55: usa o objeto do despacho diretamente (sem re-lookup no cache)
+                    Object.values(sellersToNotify).forEach(d => {
                         if (!d || !d.sellerPhone) return;
                         const phone = d.sellerPhone.replace(/\D/g, '');
                         const dispatchDate = new Date(d.dispatchedAt || d.date || new Date()).toLocaleDateString('pt-BR');

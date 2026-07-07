@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // FIX v3.14.32: Utils.setStorage era chamado aqui, contaminando _memStore com 1.371 clientes
         // sem telefone (data.js), impedindo que os ~1.955 clientes reais (com telefone) do Firestore
         // sobrescrevessem corretamente após os chunks carregarem.
-        if (clients.length === 0 && tenantId === 'ltdistribuidora' && typeof window.initialClientes !== 'undefined') {
+        if (clients.length === 0 && tenantFromUrl === 'ltdistribuidora' && typeof window.initialClientes !== 'undefined') {
             console.log("⚠️ [Fallback] Usando data.js temporariamente enquanto Firestore carrega chunks...");
             clients = window.initialClientes;
             // NÃO chamar Utils.setStorage — Firestore sobrescreve _memStore ao terminar de carregar
@@ -300,34 +300,39 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
         // Define checkAuth function inside scope
+        // v3.14.42 FIX: Sessão restaurada diretamente do logged_user.
+        // A validação de senha já foi feita no momento do login.
+        // NÃO revalidamos contra app_users porque eles ainda não foram
+        // carregados da nuvem no início da página (Cloud.loadAll() só roda no login).
         window.checkAuth = () => {
             const storedUser = Utils.getStorage('logged_user');
             if (storedUser && storedUser.login) {
-                const users = Utils.getStorage('app_users');
-                // Allow admin/admin bypass check if not found
-                let valid = users.find(u => u.login === storedUser.login && u.pass === storedUser.pass);
-                if (!valid && storedUser.login === 'admin' && storedUser.pass === 'admin') valid = storedUser;
-
-                if (valid) {
-                    currentUser = valid;
-                    // Etapa 3: sincroniza AppState com a sessão restaurada
-                    if (typeof AppState !== 'undefined') AppState.set('currentUser', valid);
-                    if (loginOverlay) loginOverlay.style.display = 'none';
-                    return;
-                }
+                // Sessão válida encontrada — restaura sem re-validar senha
+                currentUser = storedUser;
+                if (typeof AppState !== 'undefined') AppState.set('currentUser', storedUser);
+                if (loginOverlay) loginOverlay.style.display = 'none';
+                console.log(`[checkAuth] Sessão restaurada: ${storedUser.login} (${storedUser.role || 'operator'})`);
+                return;
             }
-            // No session
+            // Sem sessão — exibe overlay de login
             currentUser = null;
             if (typeof AppState !== 'undefined') AppState.set('currentUser', null);
             if (loginOverlay) {
                 loginOverlay.style.display = 'flex';
-                const users = Utils.getStorage('app_users');
-                if (loginUserSelect) loginUserSelect.innerHTML = users.map(u => `<option value="${u.login}">${u.name}</option>`).join('');
+                const users = Utils.getStorage('app_users') || [];
+                if (loginUserSelect && users.length) {
+                    loginUserSelect.innerHTML = users.map(u => `<option value="${u.login}">${u.name || u.login}</option>`).join('');
+                }
             }
         };
 
         window.logoutUser = () => {
             if (confirm('Deseja realmente sair do sistema?')) {
+                // v3.14.54: Audit Log antes de limpar a sessão
+                const _logoutUser = Utils.getStorage('logged_user');
+                if (Utils.writeLog && _logoutUser) {
+                    Utils.writeLog('USER_LOGOUT', 'Acesso', `Logout: ${_logoutUser.name || _logoutUser.login || '?'}`, _logoutUser, null);
+                }
                 // Etapa 3: limpa AppState na saída
                 if (typeof AppState !== 'undefined') {
                     AppState.set('currentUser', null);
@@ -615,6 +620,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const tenantId = tenantInput.value.trim().toLowerCase();
                 if (!tenantId) return;
 
+                // Indicador visual de carregando no select
+                if (loginUserSelect) {
+                    loginUserSelect.innerHTML = '<option value="">⏳ Carregando usuários...</option>';
+                    loginUserSelect.disabled = true;
+                }
+
                 // Garantir que window.db está disponível — com retry se Firebase ainda carregando
                 let db = window.db;
                 if (!db && typeof firebase !== 'undefined') {
@@ -702,6 +713,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } catch (error) {
                     console.error('❌ [Login] Erro ao carregar usuários:', error);
                     loginUserSelect.innerHTML = '<option value="admin">Administrador (admin)</option>';
+                } finally {
+                    if (loginUserSelect) loginUserSelect.disabled = false;
                 }
             };
 
@@ -755,12 +768,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 btnLogin.disabled = true;
                 btnLogin.innerHTML = '⏳ Verificando empresa...';
 
-                // Security: Valida tenant consultando o Firestore
-                // (substitui whitelist hardcoded — qualquer tenant cadastrado no painel master
-                //  com { ativo: true } é automaticamente aceito, sem necessidade de novo deploy)
+                // Security: Valida tenant consultando o Firestore (com timeout de 8s)
                 try {
                     if (window.db) {
-                        const tenantDoc = await window.db.collection('tenants').doc(tenantId).get();
+                        const tenantDoc = await Promise.race([
+                            window.db.collection('tenants').doc(tenantId).get(),
+                            new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))
+                        ]);
                         if (!tenantDoc.exists || tenantDoc.data().ativo === false) {
                             btnLogin.disabled = false;
                             btnLogin.innerHTML = 'ACESSAR SISTEMA';
@@ -844,13 +858,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 // v3.11.75 FIX: loadAll() agora tem Fase 1 (chaves críticas de transportadora)
-                // que completa em paralelo ANTES das demais.
+                // v3.14.42 FIX: Timeout de 10s para evitar travamento indefinido no login
                 if (Utils.Cloud && Utils.Cloud.hasTenant()) {
                     console.log(`📥 [Login] Carregando dados frescos do tenant: ${tenantId}...`);
+                    btnLogin.innerHTML = '⏳ Carregando dados...';
                     try {
-                        await Utils.Cloud.loadAll();
+                        await Promise.race([
+                            Utils.Cloud.loadAll(),
+                            new Promise((_, rej) => setTimeout(() => rej(new Error('loadAll timeout 10s')), 10000))
+                        ]);
                     } catch (loadErr) {
-                        console.warn('[Login] loadAll falhou:', loadErr.message, '— continuando com dados locais.');
+                        console.warn('[Login] loadAll falhou ou timeout:', loadErr.message, '— continuando com dados locais.');
                     }
                 }
 
@@ -2965,6 +2983,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 renderCarrierConfigs();
                 populateCarrierSelect();
                 showToast('🗑️ Transportadora removida.');
+                // v3.14.54: Audit Log
+                if (Utils.writeLog) Utils.writeLog('CARRIER_DELETE', 'Transportadora', `${name} excluída`, { name }, null);
             }
         };
 
@@ -3241,6 +3261,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     address: document.getElementById('compAddress').value.trim(),
                 };
                 Utils.saveRaw('company_data', JSON.stringify(data));
+                // v3.14.54: Audit Log
+                if (Utils.writeLog) Utils.writeLog('COMPANY_CONFIG_EDIT', 'Config. Empresa', `Dados da empresa atualizados: ${data.name || ''}`, null, data);
                 showToast('✅ Dados da empresa salvos!');
                 window.toggleCompanyEdit(false); // Lock again
             });
@@ -3816,6 +3838,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         });
 
                         showToast(`✅ Importação concluída: ${addedCount} adicionadas, ${updatedCount} atualizadas`);
+                        // v3.14.54: Audit Log
+                        if (Utils.writeLog) Utils.writeLog('FREIGHT_TABLE_IMPORT', 'Tabela de Frete', `${addedCount + updatedCount} regras importadas via planilha (${addedCount} novas, ${updatedCount} atualizadas, ${newCarriers.size} transp.)`, null, { total: addedCount + updatedCount, added: addedCount, updated: updatedCount, carriers: newCarriers.size });
 
                         // Adicionar novas transportadoras à lista
                         newCarriers.forEach(c => {
@@ -4246,6 +4270,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         </td>`;
                                     }
 
+                                    // v3.14.48: Separação despacho × redespacho na coluna FRETE
+                                    if (col === 'total') {
+                                        const mainVal = d.mainTotal != null ? d.mainTotal : (d.total - (d.redespTotal || 0));
+                                        const redespVal = d.redespTotal || 0;
+                                        const redespCN = (d.redespCarrier && d.redespCarrier !== '-') ? d.redespCarrier
+                                                       : (d.redespacho && d.redespacho !== '-' ? d.redespacho : null);
+                                        if (redespVal > 0 && redespCN) {
+                                            const mFmt = Utils.formatCurrency(mainVal);
+                                            const rFmt = Utils.formatCurrency(redespVal);
+                                            const tFmt = Utils.formatCurrency(d.total);
+                                            return `<td style="width:75px;min-width:70px;text-align:right;padding:3px 4px;" title="Total: ${tFmt} | Principal: ${mFmt} | Redesp. ${redespCN}: ${rFmt}">
+                                                <div style="font-weight:700;color:var(--accent-success);font-size:0.82rem;">${mFmt}</div>
+                                                <div style="font-size:0.63rem;color:#f59e0b;white-space:nowrap;">+${rFmt} ↗${String(redespCN).substring(0,7)}</div>
+                                            </td>`;
+                                        }
+                                        return `<td style="width:75px;min-width:70px;font-weight:600;color:var(--accent-success);text-align:right;" title="${Utils.formatCurrency(d.total)}">${Utils.formatCurrency(d.total)}</td>`;
+                                    }
 
                                     let style = '';
                                     if (col === 'total') style += 'font-weight:600;color:var(--accent-success); text-align: right;';
@@ -4647,7 +4688,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const raw = d.mainTotal != null ? d.mainTotal : (d.total - (d.redespTotal || 0));
                         invoiceValue = Math.round(raw * 100) / 100;
                     }
-                    return { ...d, _invoiceValue: invoiceValue, _isRedesp: isRedesp, _isPago: d.status === 'Pago' };
+                    // v3.14.56: _isPago diferenciado por tipo de carrier
+                    // Redespacho: usa d.redespPago (novo campo); Principal: usa d.status === 'Pago'
+                    const _isPago = isRedesp ? (d.redespPago === true) : (d.status === 'Pago');
+                    return { ...d, _invoiceValue: invoiceValue, _isRedesp: isRedesp, _isPago };
                 });
 
             console.log(`[InvoiceFilter v3.11.46] Antes do filtro de mês: ${filtered.length} NFs (Despachadas + Pagas)`);
@@ -5139,11 +5183,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             const loggedUser = Utils.getStorage('logged_user');
             const userName = loggedUser ? (loggedUser.name || loggedUser.login) : 'Sistema';
 
+            // v3.14.56: helper para detectar se o pagamento é para transportadora de redespacho
+            const _carrierNorm2 = (s) => s ? s.toUpperCase().trim().replace(/\s+/g, '') : '';
+            const _carrierN2 = _carrierNorm2(carrier);
+            const _isRedespPayment = (d) => {
+                const mainN = _carrierNorm2(d.carrier);
+                const mainMatch = mainN === _carrierN2 || mainN.startsWith(_carrierN2) || _carrierN2.startsWith(mainN);
+                const newRedespN = _carrierNorm2(d.redespCarrier);
+                const newRedesp = d.redespCarrier && (newRedespN === _carrierN2 || newRedespN.startsWith(_carrierN2) || _carrierN2.startsWith(newRedespN));
+                const legRedespN = _carrierNorm2(d.redespacho);
+                const legRedesp = !d.redespCarrier && d.redespacho && d.redespacho !== '-' && (legRedespN === _carrierN2 || legRedespN.startsWith(_carrierN2) || _carrierN2.startsWith(legRedespN));
+                return (newRedesp || legRedesp) && !mainMatch;
+            };
+
             // Mark selected NFs as paid
             let paidCount = 0;
             let totalPaid = 0;
             const paidNFs = [];
 
+            // Update para transportadora PRINCIPAL
             const paidUpdate = {
                 status: 'Pago',
                 paidAt: new Date().toISOString(),
@@ -5153,12 +5211,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ...(authorizedBy ? { authorizedBy: authorizedBy } : {})
             };
 
+            // v3.14.56: Update SEPARADO para redespacho — não altera `status`
+            const redespUpdate = {
+                redespPago: true,
+                redespPaidAt: new Date().toISOString(),
+                redespInvoiceRef: invoiceRef,
+                redespPaidBy: userName,
+                ...(justification ? { redespPaymentNote: justification } : {}),
+                ...(authorizedBy ? { redespAuthorizedBy: authorizedBy } : {})
+            };
+
             dispatches.forEach(d => {
                 const sId = String(d.id);
                 if (window.invoiceSelectedNFs.has(sId)) {
                     const invoiceVal = window.invoiceSelectedNFs.get(sId) || 0;
-                    console.log(`💳 [Invoice] Marcando NF ${d.invoice} (ID: ${d.id}) como PAGA - valor conferência: ${invoiceVal}`);
-                    Object.assign(d, paidUpdate);
+                    const isRedesp = _isRedespPayment(d);
+                    console.log(`💳 [Invoice] NF ${d.invoice} (ID: ${d.id}) - ${isRedesp ? '🔄 REDESPACHO' : '⭐ PRINCIPAL'} - valor: ${invoiceVal}`);
+                    Object.assign(d, isRedesp ? redespUpdate : paidUpdate);
                     paidCount++;
                     totalPaid += invoiceVal;
                     paidNFs.push(d.invoice);
@@ -5190,7 +5259,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const docRef = window.db
                             .collection('tenants').doc(Utils.Cloud.tenantId)
                             .collection('dispatches_db').doc(String(d.id));
-                        batch.set(docRef, { ...d, ...paidUpdate }, { merge: true });
+                        // v3.14.56: usa { ...d } já mutado (redespUpdate ou paidUpdate aplicado acima)
+                        batch.set(docRef, { ...d }, { merge: true });
                         batchCount++;
                     }
                 });
@@ -5792,6 +5862,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 revertedCount
             });
             Utils.setStorage('estorno_log', estornoLog);
+            // v3.14.54: Audit Log
+            if (Utils.writeLog) Utils.writeLog('DISPATCH_REVERSE', 'Estorno Fatura', `${entry.carrier} — Fatura ${entry.invoiceRef} — ${entry.nfCount} NF(s) revertidas por ${supervisorName} (motivo: ${justification})`, { status: 'Pago', invoiceRef: entry.invoiceRef, carrier: entry.carrier, nfCount: entry.nfCount }, { status: 'Despachado', reversedBy: supervisorName });
 
             // 5. Fecha modal e atualiza a tela
             window.closeEstornoModal();
@@ -6568,6 +6640,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                             throw new Error('Arquivo de backup inválido.');
                         }
                         if (confirm('Atenção! Isso substituirá todos os seus dados atuais. Deseja continuar?')) {
+                            // v3.14.54: Audit Log antes de restaurar
+                            if (Utils.writeLog) Utils.writeLog('BACKUP_RESTORE', 'Sistema', `Restauração de backup: ${file.name}`, null, { file: file.name, dispatches: data.dispatches?.length, freightTables: data.freight_tables?.length });
                             Utils.saveRaw('dispatches', JSON.stringify(data.dispatches));
                             Utils.saveRaw('freight_tables', JSON.stringify(data.freight_tables));
                             showToast('🔄 Dados restaurados! Recarregando...');
@@ -6614,6 +6688,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 checkAuth();
                 showSection('quote');
                 showToast(`Bem - vindo, ${user.name} !`);
+                // v3.14.54: Audit Log
+                if (Utils.writeLog) Utils.writeLog('USER_LOGIN', 'Acesso', `Login: ${user.name || user.login} (${user.role || 'user'})`, null, { login: user.login, role: user.role });
             } else {
                 alert('Usuário ou senha incorretos.');
             }
@@ -6673,6 +6749,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (window._dispatchesFullCache) {
                     window._dispatchesFullCache = window._dispatchesFullCache.filter(d => Number(d.id) !== numId);
                 }
+
+                // v3.14.54: Audit Log
+                const _dispRemoved = history.find ? null : null; // já removido do array
+                if (Utils.writeLog) Utils.writeLog('DISPATCH_DELETE', 'Despacho', `Lançamento #${numId} excluído permanentemente`, { id: numId }, null);
 
                 window.renderAppHistory();
                 showToast('🗑️ Lançamento excluído com sucesso.');
@@ -6846,6 +6926,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 modal.style.display = 'none';
                 showToast('✅ Entrega confirmada com sucesso!');
+                // v3.14.54: Audit Log
+                if (Utils.writeLog) Utils.writeLog('DELIVERY_CONFIRM', 'Entrega', `NF #${numId} entrega confirmada por "${confirmedBy}" via ${method}`, null, { id: numId, confirmedBy, method, confirmedAt: now });
                 window.renderAppHistory();
             });
         };
@@ -6893,6 +6975,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 showToast('↩️ Confirmação de entrega desfeita.');
+                // v3.14.54: Audit Log
+                if (Utils.writeLog) Utils.writeLog('DELIVERY_UNDO', 'Entrega', `NF #${numId} — confirmação de entrega desfeita`, { deliveryConfirmed: true }, { deliveryConfirmed: false });
                 window.renderAppHistory();
             });
         };
@@ -6922,7 +7006,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 printArea.innerHTML = '';
 
                 const totalWeight = items.reduce((acc, curr) => acc + (parseFloat(curr.weight) || 0), 0);
-                const totalFreight = items.reduce((acc, curr) => acc + (parseFloat(curr.total) || 0), 0);
+                // v3.14.48: usa mainTotal (frete da transp. principal, sem redespacho)
+                const totalFreight = items.reduce((acc, curr) => {
+                    const mv = curr.mainTotal != null ? curr.mainTotal : (curr.total - (curr.redespTotal || 0));
+                    return acc + (parseFloat(mv) || parseFloat(curr.total) || 0);
+                }, 0);
 
                 // Ajustamos as celulas para caber em Retrato (A4 normal) usando fonte menor e padding restrito, 
                 // para que não falte espaço e não quebre a palavra verticalmente.
@@ -6995,7 +7083,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const pesoValue = parseFloat(item.weight) || 0;
                     const pesoDisplay = pesoValue % 1 === 0 ? pesoValue.toString() : pesoValue.toFixed(2);
                     const nfValueDisplay = parseFloat(item.nfValue) > 0 ? parseFloat(item.nfValue).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) : 'R$ 0,00';
-                    const valorDisplay = parseFloat(item.total) > 0 ? parseFloat(item.total).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) : 'R$ 0,00';
+                    // v3.14.48: mostra mainTotal (sem redespacho) no romaneio da transportadora principal
+                    const _mainVal = item.mainTotal != null ? item.mainTotal : (item.total - (item.redespTotal || 0));
+                    const _hasRedespRow = (item.redespTotal || 0) > 0 && (item.redespCarrier || (item.redespacho && item.redespacho !== '-'));
+                    const _redespRowCarrier = item.redespCarrier || (item.redespacho !== '-' ? item.redespacho : '');
+                    const valorDisplay = parseFloat(_mainVal || item.total) > 0 ? parseFloat(_hasRedespRow ? _mainVal : item.total).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) : 'R$ 0,00';
                     return `
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px;">${item.invoice}</div>
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; overflow: hidden; text-overflow: ellipsis;">${item.client}</div>
@@ -7007,7 +7099,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px;">${pesoDisplay}</div>
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px;">${item.volume || 1}</div>
                 <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px;">${nfValueDisplay}</div>
-                <div style="border-bottom: 1px solid #000; padding: 2px;">${valorDisplay}</div>`;
+                <div style="border-bottom: 1px solid #000; padding: 2px;">${valorDisplay}</div>
+                ${_hasRedespRow ? `<div style="grid-column: 1 / 10; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background:#fffbeb; font-size:9px; color:#92400e;">↗ Redespacho: ${_redespRowCarrier} — ${(item.redespTotal||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div><div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background:#fffbeb;"></div>` : ''}`;
                 }).join('')}
                 <div style="grid-column: 1 / 8; border-right: 1px solid #000; padding: 2px; text-align: right;">TOTAIS</div>
                 <div style="border-right: 1px solid #000; padding: 2px;">${totalWeight % 1 === 0 ? totalWeight.toString() : totalWeight.toFixed(2)}</div>
@@ -7027,6 +7120,95 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
                     printArea.appendChild(page);
                 }
+
+                // v3.14.48: Gera romaneios de redespacho automaticamente (um por transp. redespacho)
+                const redespGroups = {};
+                items.forEach(it => {
+                    const rc = it.redespCarrier || (it.redespacho && it.redespacho !== '-' ? it.redespacho : null);
+                    if (rc && (it.redespTotal || 0) > 0) {
+                        const key = String(rc).toUpperCase().trim();
+                        if (!redespGroups[key]) redespGroups[key] = [];
+                        redespGroups[key].push(it);
+                    }
+                });
+
+                Object.entries(redespGroups).forEach(([rcName, rcItems]) => {
+                    const rcInfo = (Utils.getStorage('carrier_info_v2') || {})[rcName] || { cnpj: '-', address: '-' };
+                    const rcFreightTotal = rcItems.reduce((a, c) => a + (parseFloat(c.redespTotal) || 0), 0);
+                    const rcWeightTotal  = rcItems.reduce((a, c) => a + (parseFloat(c.weight)     || 0), 0);
+
+                    for (let ri = 0; ri < 2; ri++) {
+                        const rPage = document.createElement('div');
+                        rPage.className = 'manifest-page';
+                        rPage.style.cssText = 'page-break-before: always; page-break-inside: avoid; margin-bottom: 40px;';
+                        rPage.innerHTML = `
+            <div class="manifest-header" style="display: grid !important; grid-template-columns: 1fr 1fr !important; border: 2px solid #000; padding: 10px; margin-bottom: 15px;">
+                <div>
+                    <h3 style="margin:0; font-size: 1rem;">REMETENTE (ENTREGA PARA REDESPACHO)</h3>
+                    <div style="font-size: 0.9rem; font-weight: bold; margin-top: 5px;">${company.name || 'EMPRESA NÃO CONFIGURADA'}</div>
+                    <div style="font-size: 0.8rem;">CNPJ: ${company.cnpj || '-'}</div>
+                    <div style="font-size: 0.8rem;">END: ${company.address || '-'}</div>
+                    <div style="font-size: 0.75rem; margin-top:4px; color:#555;">Transportadora Principal: ${cleanName}</div>
+                </div>
+                <div style="border-left: 2px solid #000; padding-left: 15px;">
+                    <h3 style="margin:0; font-size: 1rem;">TRANSPORTADORA REDESPACHO</h3>
+                    <div style="font-size: 0.9rem; font-weight: bold; margin-top: 5px;">${rcName}</div>
+                    <div style="font-size: 0.8rem;">CNPJ: ${rcInfo.cnpj}</div>
+                    <div style="font-size: 0.8rem;">END: ${rcInfo.address}</div>
+                </div>
+            </div>
+            <div style="text-align: center; margin-bottom: 15px;">
+                <h2 style="margin:0; text-decoration: underline;">ROMANEIO DE REDESPACHO</h2>
+                <div style="font-size: 0.8rem;">Emissão: ${new Date().toLocaleString()} | Via ${ri + 1}</div>
+            </div>
+            <div style="display: grid !important; grid-template-columns: 45px 1fr 75px 1fr 1fr 40px 38px 45px 55px 55px !important; width: 100%; margin-bottom: 20px; font-family: Arial, sans-serif; font-weight: bold; font-size: 9px; color: #000; border: 1px solid #000;">
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">Nº NF</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">CLIENTE</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">TELEFONE</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">CIDADE</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">TRANSP. PRINCIPAL</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">PESO</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">VOL.</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">VALOR NF</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">FR. PRINC.</div>
+                <div style="border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">FR. REDESP.</div>
+                ${rcItems.map(it => {
+                    const cList = Utils.getStorage('clients') || [];
+                    const norm = s => s ? s.toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase() : '';
+                    const cObj = cList.find(c => norm(c.nome) === norm(it.client));
+                    let ph = cObj && cObj.telefone ? cObj.telefone.replace(/\D/g,'') : '';
+                    if (ph.length > 20) ph = ph.substring(0,20);
+                    const nfFmt    = parseFloat(it.nfValue||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+                    const mainFmt  = parseFloat(it.mainTotal != null ? it.mainTotal : (it.total-(it.redespTotal||0))).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+                    const redFmt   = parseFloat(it.redespTotal||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+                    const pw = parseFloat(it.weight)||0;
+                    const pwDisp = pw%1===0?pw.toString():pw.toFixed(2);
+                    return `
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;">${it.invoice||'S/N'}</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;overflow:hidden;text-overflow:ellipsis;">${it.client||'-'}</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;">${ph}</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;overflow:hidden;text-overflow:ellipsis;">${it.city||'-'}</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;overflow:hidden;text-overflow:ellipsis;">${cleanName}</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;">${pwDisp}</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;">${it.volume||1}</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;">${nfFmt}</div>
+                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;">${mainFmt}</div>
+                <div style="border-bottom:1px solid #000;padding:2px;font-weight:bold;">${redFmt}</div>`;
+                }).join('')}
+                <div style="grid-column:1/7;border-right:1px solid #000;padding:2px;text-align:right;">TOTAIS</div>
+                <div style="border-right:1px solid #000;padding:2px;">${rcWeightTotal%1===0?rcWeightTotal.toString():rcWeightTotal.toFixed(2)}</div>
+                <div style="border-right:1px solid #000;padding:2px;">${rcItems.reduce((a,c)=>a+(parseInt(c.volume)||1),0)}</div>
+                <div style="border-right:1px solid #000;padding:2px;">${rcItems.reduce((a,c)=>a+(parseFloat(c.nfValue)||0),0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
+                <div style="border-right:1px solid #000;padding:2px;">-</div>
+                <div style="padding:2px;font-weight:bold;">${rcFreightTotal>0?rcFreightTotal.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'R$ 0,00'}</div>
+            </div>
+            <div style="margin-top:25px;display:grid !important;grid-template-columns:1fr 1fr !important;gap:50px;">
+                <div style="border-top:1px solid #000;text-align:center;padding-top:5px;font-size:0.8rem;font-weight:bold;font-family:Arial,sans-serif;">Responsável Expedição</div>
+                <div style="border-top:1px solid #000;text-align:center;padding-top:5px;font-size:0.8rem;font-weight:bold;font-family:Arial,sans-serif;">Conferente / Redespacho</div>
+            </div>`;
+                        printArea.appendChild(rPage);
+                    }
+                });
 
                 // ✅ FIX: Garante que o DOM do print-area seja totalmente pintado antes de abrir o diálogo
                 // de impressão. O window.open() do WhatsApp automático desvia o foco e causava o browser
@@ -7182,6 +7364,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const revertidos = await window._reverterDespachosDoRomaneio(idsNoRomaneio, 'Pendente Despacho');
 
             showToast(`✅ ${revertidos} despacho(s) devolvido(s) para o painel de pendências!`);
+            // v3.14.54: Audit Log
+            if (Utils.writeLog) Utils.writeLog('DISPATCH_UNDISPATCH', 'Romaneio', `Romaneio ${romaneioAfetado ? romaneioAfetado.id : '#'+numId} devolvido ao painel — ${revertidos} despacho(s) revertidos`, romaneioAfetado ? { id: romaneioAfetado.id, items: romaneioAfetado.items?.length } : null, { status: 'Pendente Despacho' });
 
             if (window.renderAppHistory) window.renderAppHistory();
             if (window.renderDashboard) window.renderDashboard();
@@ -8179,6 +8363,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             Utils.saveRaw('app_users', JSON.stringify(users));
             window.clearUserForm();
 
+            // v3.14.54: Audit Log
+            if (Utils.writeLog) {
+                const _uDesc = isEditing
+                    ? `${name} (${login}) — editado (perfil: ${role})`
+                    : `${name} (${login}) — novo usuário (perfil: ${role})`;
+                Utils.writeLog(
+                    isEditing ? 'USER_MANAGE_EDIT' : 'USER_MANAGE_CREATE',
+                    'Usuário', _uDesc,
+                    isEditing ? { login: editLogin } : null,
+                    { name, login, role }
+                );
+            }
+
             // Atualiza UI
             if (window.renderUserList) window.renderUserList();
 
@@ -8343,8 +8540,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!client) return;
 
             if (confirm(`Tem certeza que deseja excluir o cliente "${client.nome}"?`)) {
+                const _deletedClient = { ...client };
                 clients.splice(idx, 1);
+
+                // 1. Salvar local
                 Utils.setStorage('clients', clients);
+
+                // 2. v3.14.53: Sincronizar com Firestore
+                if (Utils.Cloud && Utils.Cloud.save) {
+                    Utils.Cloud.save('clients', clients);
+                }
+
+                // 3. v3.14.53: Audit Log
+                if (Utils.writeLog) {
+                    Utils.writeLog(
+                        'CLIENT_DELETE',
+                        'Cadastro Cliente',
+                        `${_deletedClient.nome} — cidade: ${_deletedClient.cidade || ''}`,
+                        _deletedClient, null
+                    );
+                }
+
                 window.renderClientsList();
                 showToast('🗑️ Cliente excluído');
             }
@@ -8443,6 +8659,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     telefone: document.getElementById('newClientPhone').value.trim()
                 };
 
+                const _clientBefore = (isEditing && editIdx >= 0) ? { ...clients[editIdx] } : null;
+
                 if (isEditing && editIdx >= 0) {
                     clients[editIdx] = { ...clients[editIdx], ...clientData };
                     showToast('✅ Cliente atualizado!');
@@ -8459,7 +8677,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                     showToast('✅ Cliente cadastrado!');
                 }
 
+                // 1. Salvar local
                 Utils.setStorage('clients', clients);
+
+                // 2. v3.14.52: Sincronizar com Firestore
+                if (Utils.Cloud && Utils.Cloud.save) {
+                    Utils.Cloud.save('clients', clients);
+                }
+
+                // 3. v3.14.52: Audit Log
+                if (Utils.writeLog) {
+                    const _isEdit = isEditing && editIdx >= 0;
+                    let _desc = clientData.nome;
+                    if (_isEdit && _clientBefore) {
+                        const _diffs = ['nome', 'cidade', 'bairro', 'endereco', 'telefone', 'cnpj', 'codigo']
+                            .filter(k => String(clientData[k] || '') !== String(_clientBefore[k] || ''))
+                            .map(k => `${k}: ${_clientBefore[k] || '(vazio)'} → ${clientData[k] || '(vazio)'}`);
+                        _desc += _diffs.length ? ' — ' + _diffs.join(' | ') : ' — sem alterações';
+                    } else {
+                        _desc += ` — Novo cliente (cidade: ${clientData.cidade})`;
+                    }
+                    Utils.writeLog(
+                        _isEdit ? 'CLIENT_EDIT' : 'CLIENT_CREATE',
+                        'Cadastro Cliente', _desc, _clientBefore, clientData
+                    );
+                }
+
                 window.resetClientForm();
                 window.renderClientsList();
             });
@@ -8624,6 +8867,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 romaneios[idx].status = 'baixado';
                 romaneios[idx].baixadoAt = new Date().toISOString();
                 Utils.saveRaw('app_romaneios', JSON.stringify(romaneios));
+                // v3.14.54: Audit Log
+                if (Utils.writeLog) Utils.writeLog('ROMANEIO_BAIXA', 'Romaneio', `Romaneio ${romaneioId} baixado e arquivado`, { status: 'em_rota', id: romaneioId }, { status: 'baixado', baixadoAt: romaneios[idx].baixadoAt });
                 showToast('✅ Romaneio baixado e arquivado com sucesso!');
                 if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
             }
@@ -8640,6 +8885,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     delete romaneios[idx].baixadoAt;
                     Utils.saveRaw('app_romaneios', JSON.stringify(romaneios));
                     showToast('↩️ Romaneio estornado! Voltou para "Em Rota".');
+                    // v3.14.54: Audit Log
+                    if (Utils.writeLog) Utils.writeLog('ROMANEIO_ESTORNO', 'Romaneio', `Romaneio ${romaneioId} estornado — voltou para "Em Rota"`, { status: 'baixado', id: romaneioId }, { status: 'em_rota' });
                     if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
                 } else {
                     alert('❌ Romaneio não encontrado.');
@@ -8663,6 +8910,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const items = romaneio.items || [];
                 window._reverterDespachosDoRomaneio(items, 'Pendente Despacho').then(revertidos => {
                     showToast(`↩️ Romaneio cancelado! ${revertidos} despacho(s) voltaram para pendentes.`);
+                    // v3.14.54: Audit Log
+                    if (Utils.writeLog) Utils.writeLog('ROMANEIO_CANCEL', 'Romaneio', `Romaneio ${romaneioId} cancelado — ${revertidos} despacho(s) revertidos`, { status: 'em_rota', id: romaneioId, items: items.length }, { status: 'cancelado' });
                     if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
                     if (window.renderDashboard) window.renderDashboard();
                     if (window.renderAppHistory) window.renderAppHistory();
@@ -8699,6 +8948,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 Utils.setStorage('dispatches', dispatches);
 
                 showToast(`↩️ Fatura estornada! ${revertidos} NF(s) voltaram para "Despachado".`);
+                // v3.14.54: Audit Log
+                if (Utils.writeLog) Utils.writeLog('INVOICE_REVERSE', 'Pagamento', `Fatura ${registro.invoiceRef} (${registro.carrier}) estornada — ${revertidos} NF(s) revertidas para "Despachado"`, { status: 'Pago', invoiceRef: registro.invoiceRef, carrier: registro.carrier, nfCount: registro.nfCount }, { status: 'Despachado', revertidos });
                 if (window.showInvoiceHistory) window.showInvoiceHistory();
                 if (window.renderAppHistory) window.renderAppHistory();
             });
@@ -8795,6 +9046,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             Utils.setStorage('app_sellers', sellers);
+            // v3.14.54: Audit Log
+            if (Utils.writeLog) Utils.writeLog(
+                idInput ? 'SELLER_EDIT' : 'SELLER_CREATE',
+                'Vendedor',
+                idInput ? `${name} — editado` : `${name} — novo vendedor`,
+                idInput ? { id: idInput } : null,
+                { name, phone }
+            );
             document.getElementById('sellerModal').style.display = 'none';
             if (window.renderSellersList) window.renderSellersList();
             if (window.populateSellersSelector) window.populateSellersSelector(); // Refresca dropdown da Cotação
@@ -8807,6 +9066,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (confirm(`Tem certeza que deseja remover o vendedor "${seller.name}"?`)) {
                 sellers = sellers.filter(s => s.id !== id);
                 Utils.setStorage('app_sellers', sellers);
+                // v3.14.54: Audit Log
+                if (Utils.writeLog) Utils.writeLog('SELLER_DELETE', 'Vendedor', `${seller.name} excluído`, seller, null);
                 if (window.renderSellersList) window.renderSellersList();
                 if (window.populateSellersSelector) window.populateSellersSelector();
                 window.showToast('🗑️ Vendedor removido.');
@@ -8970,12 +9231,37 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const ACTION_CONFIG = {
-                DISPATCH_CREATE:      { label: 'Despacho',       color: '#22c55e', bg: 'rgba(34,197,94,.12)',   icon: 'local_shipping' },
-                FREIGHT_TABLE_CREATE: { label: 'Tabela Nova',    color: '#3b82f6', bg: 'rgba(59,130,246,.12)',  icon: 'add_circle' },
-                FREIGHT_TABLE_EDIT:   { label: 'Tabela Edit.',   color: '#f59e0b', bg: 'rgba(245,158,11,.12)',  icon: 'edit' },
-                FREIGHT_TABLE_DELETE: { label: 'Tabela Excl.',   color: '#ef4444', bg: 'rgba(239,68,68,.12)',   icon: 'delete' },
+                DISPATCH_CREATE:      { label: 'Despacho',        color: '#22c55e', bg: 'rgba(34,197,94,.12)',   icon: 'local_shipping' },
+                FREIGHT_TABLE_CREATE: { label: 'Tabela Nova',     color: '#3b82f6', bg: 'rgba(59,130,246,.12)',  icon: 'add_circle' },
+                FREIGHT_TABLE_EDIT:   { label: 'Tabela Edit.',    color: '#f59e0b', bg: 'rgba(245,158,11,.12)',  icon: 'edit' },
+                FREIGHT_TABLE_DELETE: { label: 'Tabela Excl.',    color: '#ef4444', bg: 'rgba(239,68,68,.12)',   icon: 'delete' },
+                FREIGHT_TABLE_IMPORT: { label: 'Import. Tabela', color: '#8b5cf6', bg: 'rgba(139,92,246,.12)',  icon: 'upload_file' },
                 CARRIER_CONFIG_EDIT:  { label: 'Config. Transp.', color: '#a855f7', bg: 'rgba(168,85,247,.12)', icon: 'settings' },
-                INVOICE_PAYMENT:      { label: 'Pagamento',      color: '#06b6d4', bg: 'rgba(6,182,212,.12)',   icon: 'payments' },
+                CARRIER_DELETE:       { label: 'Excl. Transp.',  color: '#ef4444', bg: 'rgba(239,68,68,.12)',   icon: 'cancel' },
+                INVOICE_PAYMENT:      { label: 'Pagamento',       color: '#06b6d4', bg: 'rgba(6,182,212,.12)',   icon: 'payments' },
+                INVOICE_REVERSE:      { label: 'Est. Pgto.',      color: '#f97316', bg: 'rgba(249,115,22,.12)',  icon: 'money_off' },
+                DISPATCH_REVERSE:     { label: 'Estorno Fat.',    color: '#f97316', bg: 'rgba(249,115,22,.12)',  icon: 'undo' },
+                DISPATCH_DELETE:      { label: 'Excl. Desp.',     color: '#ef4444', bg: 'rgba(239,68,68,.12)',   icon: 'delete_forever' },
+                DISPATCH_UNDISPATCH:  { label: 'Ret. Painel',     color: '#f59e0b', bg: 'rgba(245,158,11,.12)',  icon: 'replay' },
+                ROMANEIO_BAIXA:       { label: 'Baixa Roman.',    color: '#22c55e', bg: 'rgba(34,197,94,.12)',   icon: 'check_circle' },
+                ROMANEIO_ESTORNO:     { label: 'Est. Roman.',     color: '#f97316', bg: 'rgba(249,115,22,.12)',  icon: 'undo' },
+                ROMANEIO_CANCEL:      { label: 'Cancel. Roman.',  color: '#ef4444', bg: 'rgba(239,68,68,.12)',   icon: 'cancel' },
+                DELIVERY_CONFIRM:     { label: 'Entrega Conf.',   color: '#22c55e', bg: 'rgba(34,197,94,.12)',   icon: 'done_all' },
+                DELIVERY_UNDO:        { label: 'Undo Entrega',    color: '#f59e0b', bg: 'rgba(245,158,11,.12)',  icon: 'undo' },
+                BACKUP_RESTORE:       { label: 'Rest. Backup',    color: '#ef4444', bg: 'rgba(239,68,68,.12)',   icon: 'restore' },
+                USER_LOGIN:           { label: 'Login',           color: '#22c55e', bg: 'rgba(34,197,94,.12)',   icon: 'login' },
+                USER_LOGOUT:          { label: 'Logout',          color: '#6b7280', bg: 'rgba(107,114,128,.12)', icon: 'logout' },
+                USER_MANAGE_CREATE:   { label: 'Novo Usuário',    color: '#22c55e', bg: 'rgba(34,197,94,.12)',   icon: 'person_add' },
+                USER_MANAGE_EDIT:     { label: 'Edit. Usuário',  color: '#f59e0b', bg: 'rgba(245,158,11,.12)',  icon: 'manage_accounts' },
+                COMPANY_CONFIG_EDIT:  { label: 'Config. Empresa', color: '#06b6d4', bg: 'rgba(6,182,212,.12)',  icon: 'business' },
+                // v3.14.52: Cadastro de clientes
+                CLIENT_CREATE:        { label: 'Cadastro Cli.',   color: '#22c55e', bg: 'rgba(34,197,94,.12)',  icon: 'person_add' },
+                CLIENT_EDIT:          { label: 'Edicao Cli.',     color: '#f59e0b', bg: 'rgba(245,158,11,.12)', icon: 'manage_accounts' },
+                CLIENT_DELETE:        { label: 'Exclusao Cli.',   color: '#ef4444', bg: 'rgba(239,68,68,.12)',  icon: 'person_remove' },
+                // v3.14.54: Vendedores
+                SELLER_CREATE:        { label: 'Cadastro Vend.',  color: '#22c55e', bg: 'rgba(34,197,94,.12)',  icon: 'person_add' },
+                SELLER_EDIT:          { label: 'Ediçao Vend.',    color: '#f59e0b', bg: 'rgba(245,158,11,.12)', icon: 'edit' },
+                SELLER_DELETE:        { label: 'Excl. Vend.',     color: '#ef4444', bg: 'rgba(239,68,68,.12)',  icon: 'person_remove' },
             };
 
             const fmt = ts => {
@@ -9023,6 +9309,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
 
+    } catch (err) {
         // v3.11.58: Exibe erro visível na tela além do console
         console.error("FATAL ERROR IN APP.JS:", err);
         _appReady = true; // libera o placeholder mesmo em caso de erro

@@ -124,6 +124,10 @@
             "destination": "/platform/fix_recalculo_frete.html"
         },
         {
+            "source": "/fix_clients",
+            "destination": "/platform/fix_clients_migration.html"
+        },
+        {
             "source": "/web/(.*)",
             "destination": "/web/$1"
         },

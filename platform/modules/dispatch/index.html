@@ -3,11 +3,16 @@
 
 <head>
     <meta charset="UTF-8">
+    <!-- v3.14.44: Impede cache do HTML no browser — garante versão sempre atual dos scripts -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <!-- Base path: garante que assets relativos resolvem corretamente quando
          acessado via URL de tenant (/ltdistribuidora, /outraempresa, etc.) -->
     <base href="/platform/modules/dispatch/">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ParreiraLog | Cotação de Fretes</title>
+
 
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#3b82f6">
@@ -277,10 +282,10 @@
                     <span class="material-icons-round" style="font-size: 2rem; color: white;">local_shipping</span>
                 </div>
                 <h1 style="font-size: 1.5rem; color: var(--text-primary); margin-bottom: 0.5rem;">ParreiraLog</h1>
-                <p style="color: var(--text-secondary);">Faça login para continuar</p>
+                <p id="loginSubtitle" style="color: var(--text-secondary);">Faça login para continuar</p>
             </div>
 
-            <div class="form-group">
+            <div id="loginTenantGroup" class="form-group" style="display:none">
                 <label class="form-label">ID da Empresa</label>
                 <input type="text" id="loginTenantInput" class="form-input"
                     style="height: 48px; text-transform: lowercase;" placeholder="ex: parreiralog" value="">
@@ -301,6 +306,28 @@
             <button id="btnLogin" class="btn btn-primary"
                 onclick="if(window._doDispatchLogin){window._doDispatchLogin();}else{alert('Sistema ainda carregando, aguarde um momento.');}"
                 style="width: 100%; justify-content: center; height: 48px; font-size: 1rem;">ACESSAR SISTEMA</button>
+
+            <!-- Script inline: executado APOS o form estar no DOM -->
+            <!-- Decide mostrar ou esconder o campo ID da Empresa sem nenhum piscar -->
+            <script>
+            (function() {
+                var seg = window.location.pathname.split('/').filter(Boolean);
+                var reserved = ['modules','platform','core','fix_frete','fix_viopex','fix_romaneios','web','homolog','admin','tenants'];
+                var tenant = (seg[0] && !reserved.includes(seg[0])) ? seg[0].trim().toLowerCase() : '';
+                var group    = document.getElementById('loginTenantGroup');
+                var input    = document.getElementById('loginTenantInput');
+                var subtitle = document.getElementById('loginSubtitle');
+                if (tenant) {
+                    // Tenant na URL: campo ID fica oculto, preenche valor invisivel
+                    if (input) input.value = tenant;
+                    if (subtitle) subtitle.textContent = 'Acesse sua conta';
+                    // group permanece display:none (ja veio assim do HTML)
+                } else {
+                    // Sem tenant na URL: mostra o campo para o usuario digitar
+                    if (group) group.style.display = '';
+                }
+            })();
+            </script>
         </div>
     </div>
 
@@ -1787,8 +1814,12 @@
                     <!-- Populated by OcorrenciasModule.renderView() -->
                 </div>
 
-                <!-- VIEW: INTEGRAÇÃO ACONTEC -->
+                <!-- VIEW: INTEGRAÇÃO ERP (multi-tenant, gerenciado por ErpUI) -->
                 <div id="view-acontec" class="view-section" style="display: none;">
+                    <div class="card">
+                        <!-- Container preenchido dinamicamente por ErpUI.init('dispatch') -->
+                        <div id="erp-config-container"></div>
+                    </div>
 
                     <div class="welcome-banner" style="margin-bottom: 2rem;">
                         <div>
@@ -2505,20 +2536,32 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 
-    <script src="firebase-config.js?v=3.14.32"></script>
-    <script src="utils.js?v=3.14.32"></script>
+    <script src="firebase-config.js?v=3.14.42"></script>
+    <script src="utils.js?v=3.14.42"></script>
     <!-- Estado Global Centralizado (AppState) -->
-    <script src="dispatch-state.js?v=3.14.32"></script>
+    <script src="dispatch-state.js?v=3.14.42"></script>
     <!-- Módulo Dashboard (Etapa 4) -->
-    <script src="dispatch-dashboard.js?v=3.14.32"></script>
-    <script src="data.js?v=3.14.32"></script>
-    <script src="acontec-integration.js?v=3.14.32"></script>
-    <script src="occurrences.js?v=3.14.32"></script>
-    <script src="app.js?v=3.14.32"></script>
-    <script src="acontec-ui.js?v=3.14.32"></script>
-    <script src="delivery-module.js?v=3.14.32"></script>
-    <script src="cnpj-lookup.js?v=3.14.32"></script>
-    <script src="bi_logistica.js?v=3.14.32"></script>
+    <script src="dispatch-dashboard.js?v=3.14.42"></script>
+    <script src="data.js?v=3.14.42"></script>
+    <!-- Camada de Integração ERP (shared/integrations) - v1.0.0 -->
+    <script src="/platform/shared/integrations/erp-adapter.js?v=1.0.0"></script>
+    <script src="/platform/shared/integrations/erp-registry.js?v=1.0.0"></script>
+    <script src="/platform/shared/integrations/acontec/adapter.js?v=1.0.0"></script>
+    <script src="/platform/shared/integrations/erp-ui.js?v=1.0.0"></script>
+    <script src="/platform/shared/integrations/index.js?v=1.0.0"></script>
+    <script src="occurrences.js?v=3.14.42"></script>
+    <script src="app.js?v=3.14.42"></script>
+    <script>
+        // Inicializa a UI de configuração ERP na seção de Integração do Dispatch
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof ErpIntegration !== 'undefined') {
+                ErpIntegration.initUI('dispatch');
+            }
+        });
+    </script>
+    <script src="delivery-module.js?v=3.14.42"></script>
+    <script src="cnpj-lookup.js?v=3.14.42"></script>
+    <script src="bi_logistica.js?v=3.14.42"></script>
 
 
 
@@ -2661,25 +2704,50 @@
 
 <!-- FALLBACK DE EMERGÊNCIA: garante que o botão funciona mesmo se app.js tiver erro -->
 <script>
-    // Este script é independente do app.js.
-    // Se o app.js carregar corretamente, window._doDispatchLogin será definido por ele.
-    // Se o app.js tiver um SyntaxError, este script ainda vai tentar ajudar.
+    // v3.14.44: Limpeza preventiva de Service Workers desatualizados
+    // Executa IMEDIATAMENTE ao carregar a página (não espera DOMContentLoaded)
+    if (navigator.serviceWorker) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+            if (regs.length > 0) {
+                console.log('[Fallback] Desregistrando ' + regs.length + ' service worker(s) antigo(s)...');
+                regs.forEach(function(r) { r.unregister(); });
+            }
+        });
+    }
+    if (window.caches) {
+        caches.keys().then(function(keys) {
+            if (keys.length > 0) {
+                console.log('[Fallback] Limpando ' + keys.length + ' cache(s) do Service Worker...');
+                keys.forEach(function(k) { caches.delete(k); });
+            }
+        });
+    }
+
+    // Monitora se app.js registrou _doDispatchLogin dentro de 15s
     window.addEventListener('DOMContentLoaded', function() {
         var btn = document.getElementById('btnLogin');
         if (!btn) return;
-        // v3.11.70: timeout aumentado de 3s para 15s — app.js grande pode demorar
-        // para carregar em conexões lentas ou após cache bust
         setTimeout(function() {
             if (!window._doDispatchLogin) {
-                btn.title = 'Erro ao carregar o sistema. Recarregue a página (Ctrl+Shift+R).';
+                console.error('[Fallback] app.js não registrou _doDispatchLogin em 15s. Recarregando automaticamente...');
+                // Força hard reload limpando localStorage de controle
+                try { localStorage.removeItem('_lwt_persist'); } catch(e) {}
+                btn.title = 'Clique para recarregar o sistema com cache limpo.';
                 btn.style.background = '#ef4444';
-                btn.textContent = '⚠ RECARREGUE A PÁGINA (Ctrl+Shift+R)';
                 btn.style.fontSize = '0.78rem';
-                console.error('[Fallback] app.js não registrou _doDispatchLogin em 15s. Possível erro de carregamento.');
+                btn.textContent = '⚠ CLIQUE PARA RECARREGAR';
+                btn.disabled = false;
+                btn.onclick = function() {
+                    btn.textContent = '⏳ Recarregando...';
+                    btn.disabled = true;
+                    // Hard reload — força o browser a ignorar qualquer cache
+                    window.location.reload(true);
+                };
             }
         }, 15000);
     });
 </script>
+
 
 </body>
 

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Migração de Clientes — ltdistribuidora</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; padding: 32px; min-height: 100vh; }
+        h1 { font-size: 1.4rem; margin-bottom: 8px; }
+        .subtitle { color: #94a3b8; font-size: 0.875rem; margin-bottom: 28px; }
+        .card { background: #1a1f2e; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+        .card h2 { font-size: 1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        label { font-size: 0.82rem; color: #94a3b8; display: block; margin-bottom: 6px; }
+        input, select { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 12px; color: #e2e8f0; font-size: 0.875rem; margin-bottom: 14px; outline: none; }
+        button { padding: 12px 24px; border: none; border-radius: 10px; font-size: 0.875rem; font-weight: 700; cursor: pointer; }
+        .btn-primary { background: #3b82f6; color: #fff; }
+        .btn-success { background: #22c55e; color: #fff; }
+        .btn-warning { background: #f59e0b; color: #000; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        #log { background: #0a0c14; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 0.78rem; max-height: 400px; overflow-y: auto; line-height: 1.8; margin-top: 16px; }
+        .ok   { color: #22c55e; }
+        .warn { color: #f59e0b; }
+        .err  { color: #ef4444; }
+        .info { color: #60a5fa; }
+        .muted { color: #64748b; }
+        .progress-bar { height: 6px; background: rgba(255,255,255,0.1); border-radius: 4px; margin: 12px 0; }
+        .progress-fill { height: 100%; background: #22c55e; border-radius: 4px; width: 0%; transition: width 0.3s; }
+        .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+        .stat { background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px; text-align: center; }
+        .stat-val { font-size: 1.5rem; font-weight: 700; }
+        .stat-label { font-size: 0.72rem; color: #94a3b8; margin-top: 4px; }
+        .warning-box { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 8px; padding: 14px; margin-bottom: 18px; font-size: 0.82rem; color: #f59e0b; line-height: 1.6; }
+    </style>
+</head>
+<body>
+<h1>🔧 Migração de Clientes — ltdistribuidora</h1>
+<p class="subtitle">Ferramenta pontual — copia clientes do tenant antigo (parreiralog) para o novo (ltdistribuidora), incluindo dados em formato chunked.</p>
+
+<div class="warning-box">
+    ⚠️ <strong>Use apenas uma vez.</strong> Execute o "Diagnóstico" primeiro para confirmar onde os dados estão antes de migrar.
+</div>
+
+<div class="card">
+    <h2>⚙️ Configuração</h2>
+    <label>Tenant de Origem (onde os clientes estão)</label>
+    <input type="text" id="srcTenant" value="parreiralog">
+    <label>Tenant de Destino (onde os clientes devem ir)</label>
+    <input type="text" id="dstTenant" value="ltdistribuidora">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn-primary" onclick="diagnose()">🔍 Diagnóstico</button>
+        <button class="btn-success" id="btnMigrate" onclick="migrate()" disabled>✅ Executar Migração</button>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="stat-row">
+        <div class="stat"><div class="stat-val" id="statSrc">—</div><div class="stat-label">Clientes na Origem</div></div>
+        <div class="stat"><div class="stat-val" id="statDst">—</div><div class="stat-label">Clientes no Destino</div></div>
+        <div class="stat"><div class="stat-val" id="statMig">—</div><div class="stat-label">Migrados</div></div>
+    </div>
+    <div id="log"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script>
+firebase.initializeApp({
+    apiKey: "AIzaSyDzatCQ8zmH4aQftznf7Y5wdYPwFYSiARc",
+    authDomain: "parreiralog-91904.firebaseapp.com",
+    projectId: "parreiralog-91904",
+    messagingSenderId: "527633267616",
+    appId: "1:527633267616:web:3567e883b31f7fa02882c5"
+});
+const db = firebase.firestore();
+firebase.auth().signInAnonymously();
+
+let _clientsToMigrate = [];
+
+function log(msg, cls = '') {
+    const el = document.getElementById('log');
+    const ts = new Date().toLocaleTimeString('pt-BR');
+    el.innerHTML += `<div class="${cls}">[${ts}] ${msg}</div>`;
+    el.scrollTop = el.scrollHeight;
+}
+
+function setProgress(pct) {
+    document.getElementById('progressFill').style.width = pct + '%';
+}
+
+async function loadClientsFromTenant(tenantId) {
+    const base = db.collection('tenants').doc(tenantId).collection('legacy_store');
+
+    // 1. Tenta chunks (clients__meta)
+    try {
+        const metaDoc = await base.doc('clients__meta').get();
+        if (metaDoc.exists) {
+            const meta = metaDoc.data();
+            const totalChunks = meta.totalChunks || 0;
+            log(`📦 [${tenantId}] clients__meta encontrado: ${totalChunks} chunk(s), ${meta.totalCount || '?'} registros.`, 'info');
+
+            if (totalChunks > 0) {
+                const allClients = [];
+                for (let i = 0; i < totalChunks; i++) {
+                    const chunkDoc = await base.doc(`clients__chunk_${i}`).get();
+                    if (chunkDoc.exists) {
+                        const data = chunkDoc.data();
+                        const arr = data.data || JSON.parse(data.content || '[]');
+                        allClients.push(...arr);
+                        log(`  ↳ chunk_${i}: ${arr.length} registros`, 'muted');
+                    } else {
+                        log(`  ↳ chunk_${i}: NÃO ENCONTRADO`, 'warn');
+                    }
+                    setProgress(Math.round(((i + 1) / totalChunks) * 50));
+                }
+                log(`✅ [${tenantId}] Total carregado dos chunks: ${allClients.length} clientes.`, 'ok');
+                return { source: 'chunks', clients: allClients, meta: meta };
+            }
+        }
+    } catch (e) {
+        log(`⚠️ [${tenantId}] Erro ao ler chunks: ${e.message}`, 'warn');
+    }
+
+    // 2. Tenta doc único (clients)
+    try {
+        const singleDoc = await base.doc('clients').get();
+        if (singleDoc.exists) {
+            const data = singleDoc.data();
+            let arr = [];
+            if (data.content) arr = JSON.parse(data.content);
+            else if (Array.isArray(data.data)) arr = data.data;
+            log(`📄 [${tenantId}] Doc único 'clients' encontrado: ${arr.length} registros.`, 'info');
+            return { source: 'single', clients: arr, rawData: data };
+        }
+    } catch (e) {
+        log(`⚠️ [${tenantId}] Erro ao ler doc único: ${e.message}`, 'warn');
+    }
+
+    log(`❌ [${tenantId}] Nenhum cliente encontrado.`, 'err');
+    return { source: null, clients: [] };
+}
+
+async function diagnose() {
+    document.getElementById('log').innerHTML = '';
+    document.getElementById('btnMigrate').disabled = true;
+    _clientsToMigrate = [];
+
+    const src = document.getElementById('srcTenant').value.trim();
+    const dst = document.getElementById('dstTenant').value.trim();
+
+    log(`🔍 Iniciando diagnóstico: ${src} → ${dst}`, 'info');
+
+    // Origem
+    log(`\n📂 Verificando origem: ${src}`, 'info');
+    const srcResult = await loadClientsFromTenant(src);
+    document.getElementById('statSrc').textContent = srcResult.clients.length;
+
+    // Destino
+    log(`\n📂 Verificando destino: ${dst}`, 'info');
+    const dstResult = await loadClientsFromTenant(dst);
+    document.getElementById('statDst').textContent = dstResult.clients.length;
+
+    setProgress(100);
+
+    if (srcResult.clients.length > 0 && dstResult.clients.length === 0) {
+        log(`\n✅ DIAGNÓSTICO: ${srcResult.clients.length} clientes em "${src}" prontos para migrar para "${dst}".`, 'ok');
+        log(`👉 Clique em "Executar Migração" para prosseguir.`, 'ok');
+        _clientsToMigrate = srcResult.clients;
+        document.getElementById('btnMigrate').disabled = false;
+    } else if (dstResult.clients.length > 0) {
+        log(`\nℹ️ DIAGNÓSTICO: Destino já tem ${dstResult.clients.length} clientes. Migração não necessária.`, 'info');
+        log(`Se os clientes ainda não aparecem no sistema, pode ser um problema de sincronização (reload a página do sistema).`, 'warn');
+    } else if (srcResult.clients.length === 0) {
+        log(`\n❌ DIAGNÓSTICO: Origem "${src}" também não tem clientes. Verifique o tenant correto.`, 'err');
+    }
+}
+
+async function migrate() {
+    if (!_clientsToMigrate.length) { log('Rode o Diagnóstico primeiro.', 'err'); return; }
+
+    const dst = document.getElementById('dstTenant').value.trim();
+    document.getElementById('btnMigrate').disabled = true;
+    log(`\n🚀 Iniciando migração de ${_clientsToMigrate.length} clientes para "${dst}"...`, 'info');
+
+    const base = db.collection('tenants').doc(dst).collection('legacy_store');
+    const CHUNK_SIZE = 400;
+    const chunks = [];
+
+    for (let i = 0; i < _clientsToMigrate.length; i += CHUNK_SIZE) {
+        chunks.push(_clientsToMigrate.slice(i, i + CHUNK_SIZE));
+    }
+
+    log(`📦 Dividindo em ${chunks.length} chunk(s) de até ${CHUNK_SIZE} registros.`, 'info');
+
+    try {
+        // Escreve chunks
+        for (let i = 0; i < chunks.length; i++) {
+            await base.doc(`clients__chunk_${i}`).set({ data: chunks[i] });
+            log(`  ↳ chunk_${i} salvo (${chunks[i].length} registros)`, 'ok');
+            setProgress(Math.round(((i + 1) / chunks.length) * 90));
+        }
+
+        // Escreve meta
+        await base.doc('clients__meta').set({
+            totalChunks: chunks.length,
+            totalCount: _clientsToMigrate.length,
+            migratedAt: new Date().toISOString(),
+            migratedFrom: document.getElementById('srcTenant').value.trim()
+        });
+
+        setProgress(100);
+        document.getElementById('statMig').textContent = _clientsToMigrate.length;
+        document.getElementById('statDst').textContent = _clientsToMigrate.length;
+        log(`\n✅ MIGRAÇÃO CONCLUÍDA! ${_clientsToMigrate.length} clientes salvos em "${dst}".`, 'ok');
+        log(`🔄 Recarregue o sistema ParreiraLog para ver os clientes.`, 'ok');
+    } catch (e) {
+        log(`❌ Erro durante migração: ${e.message}`, 'err');
+        document.getElementById('btnMigrate').disabled = false;
+    }
+}
+</script>
+</body>
+</html>
