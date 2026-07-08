@@ -1,1 +1,1 @@
-{"build":"20260708-staging-v3.16.2","version":"3.16.2","environment":"staging","change":"v3.16.2 - UI: Botoes WA ficam verde solido ao clicar (estado enviado para cliente e vendedor)","lastUpdate":"2026-07-08","deployedAt":"2026-07-08"}
+{"build":"20260708-staging-v3.16.4","version":"3.16.4","environment":"staging","change":"v3.16.4 - FIX: Relatorio de conferencia de fatura redespacho (SF Transportes) agora mostra NFs corretamente via redespInvoiceRef","lastUpdate":"2026-07-08","deployedAt":"2026-07-08"}

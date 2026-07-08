@@ -2467,7 +2467,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             // etapa 2, mas VIOPEX só aparece aqui. Rodamos SEMPRE e fazemos merge.
             // Evitamos duplicatas verificando se a regra já está em cityRules.
             if (!usedBairroFallback) {
-                const redespRules = rules.filter(r => norm(r.cidadeRedespacho) === city);
+                // v3.16.3 FIX: normaliza hifens com espaços ("IGARAPE - ACU" → "IGARAPE-ACU")
+                // para não perder rotas de redespacho digitadas com espaços ao redor do hífen.
+                const normH = (s) => (s || '').replace(/\s*-\s*/g, '-').replace(/\s+/g, ' ').trim();
+                const cityNormH = normH(city);
+                const redespRules = rules.filter(r => {
+                    const rCityNorm = normH(norm(r.cidadeRedespacho || ''));
+                    return rCityNorm !== '' && rCityNorm === cityNormH;
+                });
                 redespRules.forEach(r => {
                     if (!cityRules.includes(r)) cityRules.push(r);
                 });
@@ -6396,6 +6403,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // 1. Tenta carregar do Firestore dispatches_db
                 if (window.db && Utils.Cloud && Utils.Cloud.tenantId) {
                     try {
+                        // Busca por invoiceRef (transportadora principal)
                         const snap = await window.db.collection('tenants').doc(Utils.Cloud.tenantId)
                             .collection('dispatches_db')
                             .where('invoiceRef', '==', entry.invoiceRef)
@@ -6403,6 +6411,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                         snap.forEach(doc => {
                             dispatches.push({ id: doc.id, ...doc.data() });
                         });
+
+                        // v3.16.4 FIX: também busca por redespInvoiceRef (transportadora de redespacho)
+                        // Quando a fatura é de redespacho (ex: SF Transportes), o campo salvo é
+                        // redespInvoiceRef, não invoiceRef — sem isso a tabela de NFs ficava vazia.
+                        const snapRedesp = await window.db.collection('tenants').doc(Utils.Cloud.tenantId)
+                            .collection('dispatches_db')
+                            .where('redespInvoiceRef', '==', entry.invoiceRef)
+                            .get();
+                        snapRedesp.forEach(doc => {
+                            const alreadyIn = dispatches.some(d => d.id === doc.id);
+                            if (!alreadyIn) dispatches.push({ id: doc.id, ...doc.data() });
+                        });
+
                         console.log(`[Print] ${dispatches.length} NFs carregadas do Firestore para a fatura ${entry.invoiceRef}`);
                     } catch (e) {
                         console.error('[Print] Falha ao carregar do Firestore dispatches_db:', e);
@@ -6412,7 +6433,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // 2. Fallback para o localStorage se a busca na nuvem veio vazia ou falhou
                 if (dispatches.length === 0) {
                     const localDispatches = Utils.getStorage('dispatches') || [];
-                    dispatches = localDispatches.filter(d => d.invoiceRef === entry.invoiceRef);
+                    // v3.16.4 FIX: verifica invoiceRef E redespInvoiceRef
+                    dispatches = localDispatches.filter(d =>
+                        d.invoiceRef === entry.invoiceRef ||
+                        d.redespInvoiceRef === entry.invoiceRef
+                    );
                 }
 
                 // 3. Filtra apenas os dispatches relacionados da fatura
