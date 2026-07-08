@@ -1,1 +1,1 @@
-{"build":"20260708-staging-v3.16.5","version":"3.16.5","environment":"staging","change":"v3.16.5 - Conferencia Fatura: filtro por Periodo Inicial e Periodo Final substituindo seletor de mes","lastUpdate":"2026-07-08","deployedAt":"2026-07-08"}
+{"build":"20260708-staging-v3.16.6","version":"3.16.6","environment":"staging","change":"v3.16.6 - NFs pagas saem de Conferir Fatura; aparecem expandidas dentro de cada linha na Analise de Faturas","lastUpdate":"2026-07-08","deployedAt":"2026-07-08"}
