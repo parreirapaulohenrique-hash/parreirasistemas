@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
@@ -535,6 +535,98 @@
                     </div>
 
                     <div class="quote-container">
+
+                        <!-- ══ FILA DE NFs ERP (Acontec) ══════════════════════════════════════ -->
+                        <div id="erp-nf-queue" style="display:none; margin-bottom:1.25rem;">
+                            <div style="
+                                background: rgba(37,99,235,0.07);
+                                border: 1px solid rgba(37,99,235,0.25);
+                                border-radius: var(--radius-lg, 12px);
+                                overflow: hidden;
+                            ">
+                                <!-- Header -->
+                                <div style="
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: space-between;
+                                    padding: 0.75rem 1rem;
+                                    border-bottom: 1px solid rgba(37,99,235,0.15);
+                                    background: rgba(37,99,235,0.05);
+                                ">
+                                    <div style="display:flex; align-items:center; gap:0.6rem;">
+                                        <span class="material-icons-round" style="color:#3b82f6; font-size:1.1rem;">inbox</span>
+                                        <span style="font-size:0.85rem; font-weight:700; color:#93c5fd; letter-spacing:0.03em; text-transform:uppercase;">
+                                            NFs Importadas do ERP
+                                        </span>
+                                        <span id="erp-nf-badge" style="
+                                            display:none;
+                                            background:#2563eb; color:#fff;
+                                            font-size:0.7rem; font-weight:700;
+                                            padding:0.15rem 0.5rem;
+                                            border-radius:999px;
+                                            min-width:1.4rem; text-align:center;
+                                        ">0</span>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                                        <span id="erp-nf-sync-status" style="font-size:0.72rem; color:var(--text-secondary); display:none;"></span>
+                                        <button id="erp-nf-refresh-btn" onclick="window.ErpNFQueue && window.ErpNFQueue.refresh()" style="
+                                            background:none; border:1px solid rgba(37,99,235,0.3);
+                                            color:#93c5fd; border-radius:8px;
+                                            padding:0.3rem 0.65rem;
+                                            font-size:0.75rem; cursor:pointer;
+                                            display:flex; align-items:center; gap:0.3rem;
+                                            transition: all 0.2s;
+                                        " onmouseover="this.style.background='rgba(37,99,235,0.15)'" onmouseout="this.style.background='none'">
+                                            <span class="material-icons-round" style="font-size:0.85rem;">refresh</span>
+                                            Atualizar
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Tabela de NFs -->
+                                <div id="erp-nf-table-wrap" style="overflow-x:auto; max-height:260px; overflow-y:auto;">
+                                    <table id="erp-nf-table" style="
+                                        width:100%; border-collapse:collapse;
+                                        font-size:0.82rem;
+                                    ">
+                                        <thead>
+                                            <tr style="background:rgba(30,58,95,0.4);">
+                                                <th style="padding:0.5rem 0.75rem; text-align:left; color:#93c5fd; font-weight:600; white-space:nowrap;">NF</th>
+                                                <th style="padding:0.5rem 0.75rem; text-align:left; color:#93c5fd; font-weight:600;">Cliente</th>
+                                                <th style="padding:0.5rem 0.75rem; text-align:left; color:#93c5fd; font-weight:600; white-space:nowrap;">Cidade</th>
+                                                <th style="padding:0.5rem 0.75rem; text-align:right; color:#93c5fd; font-weight:600; white-space:nowrap;">Valor NF</th>
+                                                <th style="padding:0.5rem 0.75rem; text-align:right; color:#93c5fd; font-weight:600; white-space:nowrap;">Peso (kg)</th>
+                                                <th style="padding:0.5rem 0.75rem; text-align:right; color:#93c5fd; font-weight:600; white-space:nowrap;">Vol.</th>
+                                                <th style="padding:0.5rem 0.75rem; text-align:left; color:#93c5fd; font-weight:600; white-space:nowrap;">Transportadora</th>
+                                                <th style="padding:0.5rem 0.75rem; text-align:center; color:#93c5fd; font-weight:600; white-space:nowrap;">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="erp-nf-table-body">
+                                            <!-- Linhas injetadas por ErpNFQueue.render() -->
+                                        </tbody>
+                                    </table>
+                                    <!-- Empty / Loading states -->
+                                    <div id="erp-nf-empty" style="
+                                        display:none; text-align:center;
+                                        padding:1.5rem; color:var(--text-secondary);
+                                        font-size:0.82rem;
+                                    ">
+                                        <span class="material-icons-round" style="display:block; font-size:2rem; opacity:0.3; margin-bottom:0.4rem;">inbox</span>
+                                        Nenhuma NF pendente no ERP
+                                    </div>
+                                    <div id="erp-nf-loading" style="
+                                        display:none; text-align:center;
+                                        padding:1.25rem; color:var(--text-secondary);
+                                        font-size:0.82rem;
+                                    ">
+                                        <span class="material-icons-round" style="display:block; font-size:1.5rem; opacity:0.5; margin-bottom:0.4rem; animation: spin 1s linear infinite;">sync</span>
+                                        Buscando NFs...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- ══ FIM FILA NFs ERP ════════════════════════════════════════════════ -->
+
                         <!-- Input Form -->
                         <div class="form-section">
                             <div

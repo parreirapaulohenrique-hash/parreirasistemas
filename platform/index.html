@@ -10,6 +10,12 @@
     <link rel="stylesheet" href="core/styles/portal.css">
     <!-- Security Guard (primeiro script da plataforma) -->
     <script src="core/js/security-guard.js"></script>
+    <!-- Firebase (necessário para ParreiraAuth) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="core/js/session-manager.js"></script>
+    <script src="core/js/auth.js"></script>
 </head>
 
 <body>
@@ -262,7 +268,7 @@
         </div>
     </div>
 
-    <div class="version-badge" id="versionBadge">v3.4.0</div>
+    <div class="version-badge" id="versionBadge">carregando...</div>
 
     <script>
         // Whitelist compartilhada de tenants permitidos (Hardcoded + Dynamic)
@@ -288,15 +294,29 @@
         });
 
         function checkLogin() {
+            // Usa ParreiraAuth (sessionStorage) — mesmo sistema dos módulos.
+            // Evita o loop entre index.html (localStorage) e login.html (sessionStorage).
+            if (typeof ParreiraAuth !== 'undefined' && ParreiraAuth.isLogado()) {
+                const sessao = ParreiraAuth.getSessao ? ParreiraAuth.getSessao() : null;
+                if (sessao) {
+                    renderUserInfo({ name: sessao.nome, role: sessao.role, login: sessao.login });
+                    // Garante que o localStorage também fica sincronizado
+                    if (!localStorage.getItem('logged_user')) {
+                        localStorage.setItem('logged_user', JSON.stringify({ name: sessao.nome, role: sessao.role, login: sessao.login }));
+                        localStorage.setItem('app_tenant_id', sessao.tenantId);
+                    }
+                    return;
+                }
+            }
+            // Fallback: verifica localStorage (login pelo overlay embutido)
             const user = JSON.parse(localStorage.getItem('logged_user') || 'null');
             const tenant = localStorage.getItem('app_tenant_id');
-
-            if (!user || !tenant) {
-                window.location.href = 'login.html';
+            if (user && tenant) {
+                renderUserInfo(user);
                 return;
             }
-
-            renderUserInfo(user);
+            // Sem sessão: exibe overlay de login embutido — NÃO redireciona
+            document.getElementById('loginOverlay').style.display = 'flex';
         }
 
         async function handleLogin(e) {

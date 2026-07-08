@@ -1194,16 +1194,60 @@
 <!-- TOAST -->
 <div class="toast-container" id="toast-container"></div>
 
+<!-- Firebase SDK v8 (mesmo projeto Dispatch) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
 <script>
 'use strict';
 
+/* ── FIREBASE (v3.14.57) ──────────────────────────────────────── */
+const _FB_CFG = {
+    apiKey: "AIzaSyDzatCQ8zmH4aQftznf7Y5wdYPwFYSiARc",
+    authDomain: "parreiralog-91904.firebaseapp.com",
+    projectId: "parreiralog-91904",
+    messagingSenderId: "527633267616",
+    appId: "1:527633267616:web:3567e883b31f7fa02882c5"
+};
+let _db = null;
+let _tenantId = localStorage.getItem('app_tenant_id') || null;
+
+try {
+    if (typeof firebase !== 'undefined') {
+        if (!firebase.apps.length) firebase.initializeApp(_FB_CFG);
+        _db = firebase.app().firestore();
+        firebase.auth().signInAnonymously().catch(e => console.warn('[Projetos] Auth:', e));
+        console.log('[Projetos] Firebase conectado. Tenant:', _tenantId || '(sem tenant)');
+    }
+} catch(e) {
+    console.warn('[Projetos] Firebase indisponível, modo localStorage apenas.', e);
+}
+
 const STORAGE_KEY = 'parreiralog_projects_v1';
+// Chave tenant-aware (compatível com o padrão do Dispatch)
+const _LS_KEY = _tenantId ? `tenant_${_tenantId}_projects` : STORAGE_KEY;
 
 function loadData() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || { projects: [], members: [] }; }
+    try {
+        // Tenta chave tenant-aware primeiro, depois chave genérica (migração)
+        return JSON.parse(localStorage.getItem(_LS_KEY))
+            || JSON.parse(localStorage.getItem(STORAGE_KEY))
+            || { projects: [], members: [] };
+    }
     catch { return { projects: [], members: [] }; }
 }
-function saveData(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+function saveData(data) {
+    // Salva localmente (imediato)
+    localStorage.setItem(_LS_KEY, JSON.stringify(data));
+    // Persiste no Firestore (assíncrono)
+    if (_db && _tenantId) {
+        _db.collection('tenants').doc(_tenantId)
+           .collection('projects_db').doc('main')
+           .set(data)
+           .catch(e => console.warn('[Projetos] Falha ao salvar Firestore:', e));
+    }
+}
 function uid() { return Date.now() + '_' + Math.random().toString(36).slice(2, 7); }
 
 let appData = loadData();
@@ -1935,6 +1979,37 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') document.que
 if (appData.projects.length) activeProjectId = appData.projects[0].id;
 renderSidebar();
 renderProjectDetail();
+
+/* ── SYNC FIRESTORE (v3.14.57) ─────────────────────────────── */
+// Carrega dados da nuvem em segundo plano e re-renderiza se houver dados mais recentes
+(async function _syncFromFirestore() {
+    if (!_db || !_tenantId) return;
+    try {
+        const doc = await _db.collection('tenants').doc(_tenantId)
+                             .collection('projects_db').doc('main').get();
+        if (doc.exists) {
+            const fsData = doc.data();
+            if (fsData && Array.isArray(fsData.projects) && fsData.projects.length > 0) {
+                // Dados na nuvem existem: usar como fonte da verdade
+                appData = fsData;
+                if (!appData.members) appData.members = [];
+                localStorage.setItem(_LS_KEY, JSON.stringify(appData)); // atualiza cache local
+                if (!activeProjectId || !getProject(activeProjectId)) {
+                    activeProjectId = appData.projects[0]?.id || null;
+                }
+                renderSidebar();
+                renderProjectDetail();
+                console.log(`[Projetos] ${appData.projects.length} projeto(s) carregado(s) do Firestore.`);
+            }
+        } else if (appData.projects.length > 0) {
+            // Não existe na nuvem mas existe local: sobe para Firestore
+            saveData(appData);
+            console.log('[Projetos] Dados locais sincronizados para o Firestore pela primeira vez.');
+        }
+    } catch(e) {
+        console.warn('[Projetos] Falha ao sincronizar com Firestore:', e);
+    }
+})();
 
 /* ── AUTH ────────────────────────────────────────────────────────────── */
 (function() {

@@ -31,6 +31,390 @@
     };
 })();
 
+// ═══════════════════════════════════════════════════════════════════════════════
+//  ErpNFQueue — Fila automática de NFs da integração Acontec na tela de cotação
+//  v1.0.0 — 2026-07-07
+// ═══════════════════════════════════════════════════════════════════════════════
+window.ErpNFQueue = (function() {
+    // ── Estado interno ──────────────────────────────────────────────────────────
+    let _nfs          = [];         // NFs carregadas do ERP
+    let _locks        = {};         // { [nfNumber]: { operator, operatorId, expiresAt } }
+    let _locksListener = null;      // Listener Firestore em tempo real
+    let _refreshTimer  = null;      // setInterval de 1 minuto
+    let _mySelectedNF  = null;      // NF selecionada pelo operador atual
+    let _initialized   = false;
+
+    const LOCK_TTL_MS   = 15 * 60 * 1000; // 15 minutos — lock expira
+    const REFRESH_MS    = 60 * 1000;       // 1 minuto
+    const EXCLUDED_KEY  = () => 'erp_excluded_nfs_' + (Utils && Utils.Cloud ? Utils.Cloud.tenantId : 'local');
+    const LOCKS_COLL    = () => window.db && Utils.Cloud.hasTenant()
+        ? window.db.collection('tenants').doc(Utils.Cloud.tenantId).collection('erp_nf_locks')
+        : null;
+
+    // ── UI helpers ─────────────────────────────────────────────────────────────
+    function _el(id) { return document.getElementById(id); }
+    function _fmtCurrency(v) {
+        return 'R$\u00A0' + Number(v || 0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    }
+    function _fmtWeight(v) { return Number(v || 0).toLocaleString('pt-BR', {minimumFractionDigits:1, maximumFractionDigits:1}); }
+    function _now() { return Date.now(); }
+    function _setStatus(msg, type) {
+        const el = _el('erp-nf-sync-status');
+        if (!el) return;
+        el.textContent = msg;
+        el.style.display = msg ? 'inline' : 'none';
+        el.style.color = type === 'error' ? '#f87171' : type === 'ok' ? '#4ade80' : '#94a3b8';
+    }
+    function _setLoading(on) {
+        const l = _el('erp-nf-loading'), e = _el('erp-nf-empty'), t = _el('erp-nf-table');
+        if (on) {
+            if (l) l.style.display = 'block';
+            if (e) e.style.display = 'none';
+            if (t) t.style.display = 'none';
+        } else {
+            if (l) l.style.display = 'none';
+        }
+    }
+
+    // ── Exclusão permanente (NFs deletadas) ────────────────────────────────────
+    function _getExcluded() {
+        try { return JSON.parse(localStorage.getItem(EXCLUDED_KEY()) || '[]'); } catch(e) { return []; }
+    }
+    function _saveExcluded(arr) {
+        try { localStorage.setItem(EXCLUDED_KEY(), JSON.stringify(arr)); } catch(e) {}
+    }
+    function _isExcluded(nfNumber) {
+        return _getExcluded().includes(String(nfNumber));
+    }
+
+    // ── Locks Firebase ─────────────────────────────────────────────────────────
+    function _startLocksListener() {
+        const coll = LOCKS_COLL();
+        if (!coll || _locksListener) return;
+        _locksListener = coll.onSnapshot(snap => {
+            const now = _now();
+            _locks = {};
+            snap.forEach(doc => {
+                const d = doc.data();
+                // Ignora locks expirados
+                if (d.expiresAt && d.expiresAt.toMillis && d.expiresAt.toMillis() > now) {
+                    _locks[doc.id] = d;
+                } else if (d.expiresAt && typeof d.expiresAt === 'number' && d.expiresAt > now) {
+                    _locks[doc.id] = d;
+                }
+            });
+            _renderTable();
+        }, err => {
+            console.warn('[ErpNFQueue] Locks listener error:', err);
+        });
+    }
+    function _stopLocksListener() {
+        if (_locksListener) { _locksListener(); _locksListener = null; }
+    }
+    async function _acquireLock(nfNumber) {
+        const coll = LOCKS_COLL();
+        if (!coll) return true; // sem Firebase: permite sem lock
+        const user = window.currentUser || {};
+        const expiresAt = new Date(_now() + LOCK_TTL_MS);
+        try {
+            await coll.doc(String(nfNumber)).set({
+                operator:    user.name  || user.email || 'Operador',
+                operatorId:  user.uid   || user.id   || 'local',
+                lockedAt:    firebase.firestore.FieldValue.serverTimestamp(),
+                expiresAt:   firebase.firestore.Timestamp.fromDate(expiresAt)
+            });
+            return true;
+        } catch(e) {
+            console.warn('[ErpNFQueue] Falha ao adquirir lock:', e);
+            return false;
+        }
+    }
+    async function _releaseLock(nfNumber) {
+        const coll = LOCKS_COLL();
+        if (!coll || !nfNumber) return;
+        try { await coll.doc(String(nfNumber)).delete(); } catch(e) {}
+    }
+
+    // ── Render da tabela ───────────────────────────────────────────────────────
+    function _renderTable() {
+        const tbody  = _el('erp-nf-table-body');
+        const empty  = _el('erp-nf-empty');
+        const tbl    = _el('erp-nf-table');
+        const badge  = _el('erp-nf-badge');
+        if (!tbody) return;
+
+        const myId = (window.currentUser || {}).uid || (window.currentUser || {}).id || 'local';
+
+        // Filtra excluídas
+        const visible = _nfs.filter(nf => !_isExcluded(nf.invoice));
+
+        if (visible.length === 0) {
+            if (tbl)   tbl.style.display   = 'none';
+            if (empty) empty.style.display  = 'block';
+            if (badge) badge.style.display  = 'none';
+            tbody.innerHTML = '';
+            return;
+        }
+
+        if (tbl)   tbl.style.display   = '';
+        if (empty) empty.style.display  = 'none';
+        if (badge) { badge.textContent = visible.length; badge.style.display = 'inline'; }
+
+        tbody.innerHTML = visible.map(nf => {
+            const lock   = _locks[String(nf.invoice)];
+            const isMine = _mySelectedNF === String(nf.invoice);
+            const isLocked = lock && !isMine;
+
+            let rowStyle = 'cursor:pointer; transition:background 0.15s;';
+            let statusHtml = '';
+            let onclickAttr = '';
+
+            if (isMine) {
+                rowStyle += ' background:rgba(37,99,235,0.18); outline:1px solid rgba(37,99,235,0.5);';
+                statusHtml = '<span style="background:rgba(37,99,235,0.3);color:#93c5fd;padding:0.15rem 0.5rem;border-radius:6px;font-size:0.72rem;font-weight:700;">Em cotação</span>';
+                onclickAttr = '';
+            } else if (isLocked) {
+                rowStyle += ' background:rgba(100,116,139,0.1); cursor:default; opacity:0.6;';
+                const op = lock.operator || 'outro operador';
+                statusHtml = `<span style="background:rgba(100,116,139,0.25);color:#94a3b8;padding:0.15rem 0.5rem;border-radius:6px;font-size:0.7rem;" title="Bloqueada por ${op}">🔒 ${op.split(' ')[0]}</span>`;
+                onclickAttr = '';
+            } else {
+                rowStyle += ' background:transparent;';
+                statusHtml = '<span style="background:rgba(74,222,128,0.12);color:#4ade80;padding:0.15rem 0.5rem;border-radius:6px;font-size:0.72rem;">Disponível</span>';
+                onclickAttr = `onclick="window.ErpNFQueue.select('${String(nf.invoice).replace(/'/g,'\'')}')"`;
+            }
+
+            const valStr    = _fmtCurrency(nf.nfValue);
+            const pesoStr   = _fmtWeight(nf.weight);
+            const carrier   = nf.suggestedCarrier || '-';
+
+            return `<tr id="erp-nf-row-${nf.invoice}" style="${rowStyle}" ${onclickAttr}
+                        onmouseover="if(!this.dataset.locked)this.style.background='rgba(37,99,235,0.1)'"
+                        onmouseout="if(!this.dataset.locked)this.style.background='transparent'"
+                        data-locked="${isLocked ? '1' : ''}">
+                <td style="padding:0.55rem 0.75rem; font-weight:700; color:#e2e8f0; white-space:nowrap;">${nf.invoice}</td>
+                <td style="padding:0.55rem 0.75rem; color:#cbd5e1; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${nf.client}">${nf.client}</td>
+                <td style="padding:0.55rem 0.75rem; color:#94a3b8; white-space:nowrap;">${nf.city}${nf.state ? '/' + nf.state : ''}</td>
+                <td style="padding:0.55rem 0.75rem; text-align:right; color:#e2e8f0; white-space:nowrap;">${valStr}</td>
+                <td style="padding:0.55rem 0.75rem; text-align:right; color:#94a3b8; white-space:nowrap;">${pesoStr}</td>
+                <td style="padding:0.55rem 0.75rem; text-align:right; color:#94a3b8;">${nf.volume || 1}</td>
+                <td style="padding:0.55rem 0.75rem; color:#93c5fd; font-size:0.78rem; white-space:nowrap;">${carrier}</td>
+                <td style="padding:0.55rem 0.75rem; text-align:center;">${statusHtml}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    // ── Selecionar NF (preenche formulário) ────────────────────────────────────
+    async function _select(nfNumber) {
+        const nf = _nfs.find(n => String(n.invoice) === String(nfNumber));
+        if (!nf) return;
+
+        // Verifica se já está bloqueada por outro
+        const myId = (window.currentUser || {}).uid || 'local';
+        const lock = _locks[String(nfNumber)];
+        if (lock && (lock.operatorId !== myId)) {
+            if (window.showToast) window.showToast('⛔ Esta NF já está sendo cotada por ' + (lock.operator || 'outro operador'), 'error');
+            return;
+        }
+
+        // Libera lock anterior se havia outro selecionado
+        if (_mySelectedNF && _mySelectedNF !== String(nfNumber)) {
+            await _releaseLock(_mySelectedNF);
+            _unlockErpFields();
+        }
+
+        // Adquire lock
+        const ok = await _acquireLock(nfNumber);
+        if (!ok) {
+            if (window.showToast) window.showToast('⚠️ Não foi possível reservar esta NF. Tente novamente.', 'error');
+            return;
+        }
+        _mySelectedNF = String(nfNumber);
+
+        // Preenche o formulário de cotação
+        const setVal = (id, val) => { const el = _el(id); if (el) el.value = val; };
+
+        setVal('inputInvoiceNumber', nf.invoice);
+        setVal('inputValue',         nf.nfValue || '');
+        setVal('inputWeight',        nf.weight  || '');
+        setVal('inputVolume',        nf.volume  || 1);
+        setVal('inputDate',          nf.dataEmissao || new Date().toISOString().slice(0,10));
+        setVal('inputIsComplement',  nf.isComplement ? 'sim' : 'nao');
+        if (nf.isComplement && nf.mainInvoice) setVal('inputMainNF', nf.mainInvoice);
+
+        // Preenche cliente — tenta busca pelo código ou nome
+        if (nf.clientCode || nf.client) {
+            const clientInput = _el('inputClient');
+            if (clientInput) {
+                clientInput.value = nf.clientCode || nf.client;
+                // Aciona busca de cliente (já existe no sistema)
+                if (window.searchClient) {
+                    window.searchClient(nf.clientCode || nf.client);
+                } else {
+                    // Fallback: tenta preencher campos de cidade/bairro diretamente
+                    const selEl = _el('resClientName');
+                    const citEl = _el('resCity');
+                    const nbrEl = _el('resNeighborhood');
+                    const resEl = _el('clientResult');
+                    if (selEl) selEl.textContent = nf.client;
+                    if (citEl) citEl.textContent = nf.city;
+                    if (nbrEl) nbrEl.textContent = nf.neighborhood;
+                    if (resEl) resEl.style.display = 'block';
+                    window.selectedClient = {
+                        nome: nf.client, codigo: nf.clientCode,
+                        cidade: nf.city, bairro: nf.neighborhood, estado: nf.state
+                    };
+                }
+            }
+        }
+
+        // Preenche vendedor se disponível
+        if (nf.sellerName || nf.sellerId) {
+            const sellerSel = _el('inputSeller');
+            if (sellerSel) {
+                const opts = Array.from(sellerSel.options);
+                const match = opts.find(o =>
+                    o.value === nf.sellerId ||
+                    (o.text || '').toUpperCase().includes((nf.sellerName || '').toUpperCase())
+                );
+                if (match) sellerSel.value = match.value;
+            }
+        }
+
+        // Trava campos preenchidos pelo ERP
+        _lockErpFields();
+
+        // Força re-render da tabela para mostrar linha como selecionada
+        _renderTable();
+
+        // Aciona cálculo automático se tiver dados suficientes
+        if (nf.nfValue && nf.weight && (nf.city || nf.clientCode)) {
+            setTimeout(() => { if (window._triggerQuoteCalc) window._triggerQuoteCalc(); }, 350);
+        }
+
+        // Scroll para o formulário
+        const formSec = document.querySelector('#view-quote .form-section');
+        if (formSec) formSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        if (window.showToast) window.showToast(`📋 NF ${nfNumber} carregada — escolha a transportadora.`);
+    }
+
+    // ── Refresh ────────────────────────────────────────────────────────────────
+    async function _refresh() {
+        // Verifica se integração Acontec está ativa
+        const adapter = window._erpAdapter || window.acontecAdapter;
+        if (!adapter || typeof adapter.syncNFs !== 'function') return;
+
+        const queueEl = _el('erp-nf-queue');
+        if (!queueEl) return;
+
+        _setLoading(true);
+        _setStatus('Sincronizando...', 'info');
+
+        try {
+            const raw = await adapter.syncNFs({ status: 'pendente' });
+
+            // Filtro: só NFs com transportadora sugerida preenchida
+            _nfs = (raw || []).filter(nf =>
+                nf.suggestedCarrier && String(nf.suggestedCarrier).trim() !== ''
+            );
+
+            _setLoading(false);
+            _renderTable();
+
+            const t = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+            _setStatus('Atualizado às ' + t, 'ok');
+
+            // Mostra o painel se não estava visível
+            queueEl.style.display = '';
+
+        } catch(err) {
+            _setLoading(false);
+            _setStatus('Erro ao buscar NFs', 'error');
+            console.warn('[ErpNFQueue] Refresh error:', err);
+        }
+    }
+
+    // ── Pública: init ──────────────────────────────────────────────────────────
+    function _init() {
+        // Verifica se há adaptador ERP configurado
+        const adapter = window._erpAdapter || window.acontecAdapter;
+        if (!adapter) return; // sem integração, painel permanece oculto
+
+        const queueEl = _el('erp-nf-queue');
+        if (!queueEl) return;
+
+        // Primeira carga
+        _refresh();
+
+        // Inicia listener de locks em tempo real
+        _startLocksListener();
+
+        // Auto-refresh a cada 1 minuto
+        if (_refreshTimer) clearInterval(_refreshTimer);
+        _refreshTimer = setInterval(_refresh, REFRESH_MS);
+
+        _initialized = true;
+    }
+
+    // ── Pública: NF confirmada (some da fila) ──────────────────────────────────
+    async function _onConfirmed(nfNumber) {
+        if (!nfNumber) return;
+        const nfStr = String(nfNumber);
+        // Remove da lista local
+        _nfs = _nfs.filter(n => String(n.invoice) !== nfStr);
+        // Libera lock
+        await _releaseLock(nfStr);
+        if (_mySelectedNF === nfStr) _mySelectedNF = null;
+        _renderTable();
+    }
+
+    // ── Pública: NF excluída permanentemente (não volta) ──────────────────────
+    async function _onDeleted(nfNumber) {
+        if (!nfNumber) return;
+        const nfStr = String(nfNumber);
+        // Grava na lista de excluídas
+        const excluded = _getExcluded();
+        if (!excluded.includes(nfStr)) {
+            excluded.push(nfStr);
+            _saveExcluded(excluded);
+        }
+        // Remove da lista local e libera lock
+        _nfs = _nfs.filter(n => String(n.invoice) !== nfStr);
+        await _releaseLock(nfStr);
+        if (_mySelectedNF === nfStr) _mySelectedNF = null;
+        _renderTable();
+    }
+
+    // ── Pública: NF extornada (volta para a fila) ─────────────────────────────
+    function _onReturned(nfNumbers) {
+        if (!nfNumbers) return;
+        const arr = Array.isArray(nfNumbers) ? nfNumbers : [nfNumbers];
+        // Remove da lista de excluídas
+        let excluded = _getExcluded();
+        excluded = excluded.filter(n => !arr.map(String).includes(n));
+        _saveExcluded(excluded);
+        // Força refresh para re-buscar NFs do ERP
+        _refresh();
+    }
+
+    // ── API pública ────────────────────────────────────────────────────────────
+    return {
+        init:       _init,
+        refresh:    _refresh,
+        select:     _select,
+        onConfirmed:_onConfirmed,
+        onDeleted:  _onDeleted,
+        onReturned: _onReturned,
+        destroy() {
+            _stopLocksListener();
+            if (_refreshTimer) { clearInterval(_refreshTimer); _refreshTimer = null; }
+            _initialized = false;
+        }
+    };
+})();
+// ═══════════════════════════════════════════════════════════════════════════════
+
 document.addEventListener('DOMContentLoaded', async () => {
     // === SWAP TENANT DETECTED BY URL BEFORE INITIALIZATION ===
     const segments = window.location.pathname.split('/').filter(Boolean);
@@ -2592,6 +2976,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             Utils.addToStorage('dispatches', dispatch);
             showToast('✅ Carga montada com sucesso!');
+
+            // ── Notifica ErpNFQueue: NF confirmada → sai da fila ──────────────
+            if (window.ErpNFQueue && dispatch.invoice) {
+                window.ErpNFQueue.onConfirmed(dispatch.invoice);
+            }
 
             // ── AUDIT LOG ──
             if (Utils.writeLog) Utils.writeLog(
@@ -6756,6 +7145,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 window.renderAppHistory();
                 showToast('🗑️ Lançamento excluído com sucesso.');
+
+                // ── Notifica ErpNFQueue: NF excluída → não volta para a fila ──
+                const removedDispatch = (Utils.getStorage('dispatches') || []).find(d => Number(d.id) === numId);
+                const removedInvoice  = removedDispatch ? removedDispatch.invoice : null;
+                if (window.ErpNFQueue && removedInvoice) {
+                    window.ErpNFQueue.onDeleted(removedInvoice);
+                }
             });
         };
 
@@ -7370,6 +7766,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (window.renderAppHistory) window.renderAppHistory();
             if (window.renderDashboard) window.renderDashboard();
             if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
+
+            // ── Notifica ErpNFQueue: NFs extornadas → voltam para a fila ────────
+            if (window.ErpNFQueue && idsNoRomaneio.length > 0) {
+                const nfsAfetadas = idsNoRomaneio.map(i => i.invoice).filter(Boolean);
+                if (nfsAfetadas.length > 0) window.ErpNFQueue.onReturned(nfsAfetadas);
+            }
+
 
             if (confirm('Ir para o Painel agora?')) {
                 if (window.showSection) window.showSection('dashboard');
@@ -9159,6 +9562,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (id === 'system' || id === 'quote') {
                 setTimeout(() => {
                     if (window.populateSellersSelector) window.populateSellersSelector();
+                    // ── Inicia fila automática de NFs do ERP ──────────────────
+                    if (window.ErpNFQueue) window.ErpNFQueue.init();
                 }, 100);
             }
 
