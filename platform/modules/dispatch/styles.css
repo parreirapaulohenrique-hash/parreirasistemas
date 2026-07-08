@@ -901,8 +901,8 @@ input[type=number] {
     padding: 0;
     min-width: 30px;
     min-height: 30px;
-    background: rgba(37, 211, 102, 0.2);
-    border: 1px solid var(--border-color);
+    background: rgba(37, 211, 102, 0.18);
+    border: 1.5px solid #25D366;
     color: #25D366;
     border-radius: 4px;
     display: flex;
@@ -911,7 +911,6 @@ input[type=number] {
     transition: background 0.2s, transform 0.1s;
     position: relative;
     z-index: 1;
-    /* Low z-index to avoid overlap issues */
 }
 
 .whatsapp-btn:hover {

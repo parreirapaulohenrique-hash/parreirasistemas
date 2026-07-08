@@ -1,1 +1,1 @@
-{"build":"20260707-prod-v3.16.0","version":"3.16.0","environment":"production","change":"v3.16.0 - FEAT: ErpNFQueue - fila automatica de NFs do ERP na tela de cotacao. Fix: loop de login no platform/index.html","lastUpdate":"2026-07-07","deployedAt":"2026-07-07"}
+{"build":"20260708-prod-v3.16.1","version":"3.16.1","environment":"production","change":"v3.16.1 - FIX: Fatura redespacho campo separado redespPago; Firebase no modulo Projetos; UI botoes WA verde/estorno branco","lastUpdate":"2026-07-08","deployedAt":"2026-07-08"}
