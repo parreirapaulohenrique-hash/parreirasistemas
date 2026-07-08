@@ -923,10 +923,14 @@ input[type=number] {
 }
 
 .whatsapp-btn.sent {
-    background: rgba(37, 211, 102, 0.8) !important;
-    color: white !important;
+    background: #25D366 !important;
+    color: #ffffff !important;
+    border-color: #1da851 !important;
     transform: scale(0.95);
-    border-color: #25D366;
+}
+
+.whatsapp-btn.sent svg {
+    fill: #ffffff !important;
 }
 
 .whatsapp-btn svg {
@@ -934,6 +938,14 @@ input[type=number] {
     height: 18px;
     fill: currentColor;
     pointer-events: none;
+}
+
+/* Estado enviado para botão do vendedor */
+.whatsapp-seller-btn.sent {
+    background: #25D366 !important;
+    color: #ffffff !important;
+    border-color: #1da851 !important;
+    transform: scale(0.95);
 }
 
 /* End of login styles cleanup */

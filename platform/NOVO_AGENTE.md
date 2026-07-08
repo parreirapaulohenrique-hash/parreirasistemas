@@ -260,6 +260,19 @@ graph LR
 
 Nossa esteira de atualização tem um fluxo cravado em pedra para **evitar perda de dados e assegurar redundância**. Todas as vezes que um novo recurso for finalizado, seja uma correção ou grande fase de projeto, siga obrigatoriamente nesta ordem:
 
+> 🚨 **REGRA ABSOLUTA PARA AGENTES — LEIA ANTES DE QUALQUER DEPLOY**
+>
+> **NUNCA use `git push` direto para a branch `main`.**
+> **NUNCA faça `git push origin staging:main` ou merge manual de branches.**
+> **NUNCA promova para produção sem a aprovação explícita do usuário.**
+>
+> O único fluxo permitido é:
+> 1. **Deploy em Homologação:** use SEMPRE o script `.\deploy.ps1` (nunca `git push` manual). Ele faz backup, commit e push para `staging`.
+> 2. **Aguarde** o usuário testar no ambiente de homologação e dar aprovação explícita.
+> 3. **Promoção para Produção:** somente após aprovação, use `.\promote.ps1`. Nunca antes.
+>
+> Ignorar este processo coloca código não testado em produção e compromete a operação em tempo real dos clientes.
+
 ### Passo 1: Backup Preventivo em Camadas (ANTES de qualquer alteração)
 **OBRIGATÓRIO antes de tocar em qualquer código.** Essa etapa garante que existe uma cópia de segurança íntegra do estado atual caso algo dê errado durante o desenvolvimento.
 

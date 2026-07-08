@@ -1,1 +1,1 @@
-{"build":"20260708-prod-v3.16.1","version":"3.16.1","environment":"production","change":"v3.16.1 - FIX: Fatura redespacho campo separado redespPago; Firebase no modulo Projetos; UI botoes WA verde/estorno branco","lastUpdate":"2026-07-08","deployedAt":"2026-07-08"}
+{"build":"20260708-staging-v3.16.2","version":"3.16.2","environment":"staging","change":"v3.16.2 - UI: Botoes WA ficam verde solido ao clicar (estado enviado para cliente e vendedor)","lastUpdate":"2026-07-08","deployedAt":"2026-07-08"}
