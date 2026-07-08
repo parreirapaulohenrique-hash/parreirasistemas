@@ -286,6 +286,16 @@ Garanta que as modificações foram testadas e estão funcionais localmente no p
 ### Passo 4: Atualizar a Versão
 Modifique o controle de versão do sistema. Atualize o arquivo `platform/version.json` (ou manifest/json do módulo modificado). Crie uma nova nota de `last_change`, suba o número principal da `version` e atualize a data e a `build`.
 
+> 🚨 **REGRA OBRIGATÓRIA — VERIFICAR VERSÃO ANTES DE QUALQUER COMMIT**
+> O contexto do agente pode estar truncado ou desatualizado em sessões longas.
+> **NUNCA use um número de versão de memória ou de sessões anteriores.**
+> **Antes de nomear qualquer versão em commits, mensagens ou código, LEIA SEMPRE o arquivo `platform/version.json`:**
+> ```powershell
+> Get-Content "platform/version.json"
+> ```
+> A versão atual é a fonte da verdade. Incremente a partir dela (ex: `3.16.0` → `3.16.1`).
+> Ignorar esta regra gera commits com versões erradas e histórico inconsistente.
+
 ### Passo 5: Subir Deploy para Homologação (`deploy.ps1`)
 Abra o terminal do PowerShell na raiz do projeto (`C:\Users\Paulo H Parreira\.gemini\antigravity\scratch`) e rode o comando:
 ```powershell
