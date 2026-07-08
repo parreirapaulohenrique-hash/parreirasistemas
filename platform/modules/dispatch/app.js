@@ -2467,7 +2467,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             // etapa 2, mas VIOPEX só aparece aqui. Rodamos SEMPRE e fazemos merge.
             // Evitamos duplicatas verificando se a regra já está em cityRules.
             if (!usedBairroFallback) {
-                const redespRules = rules.filter(r => norm(r.cidadeRedespacho) === city);
+                // v3.16.3 FIX: normaliza hifens com espaços ("IGARAPE - ACU" → "IGARAPE-ACU")
+                // para não perder rotas de redespacho digitadas com espaços ao redor do hífen.
+                const normH = (s) => (s || '').replace(/\s*-\s*/g, '-').replace(/\s+/g, ' ').trim();
+                const cityNormH = normH(city);
+                const redespRules = rules.filter(r => {
+                    const rCityNorm = normH(norm(r.cidadeRedespacho || ''));
+                    return rCityNorm !== '' && rCityNorm === cityNormH;
+                });
                 redespRules.forEach(r => {
                     if (!cityRules.includes(r)) cityRules.push(r);
                 });
