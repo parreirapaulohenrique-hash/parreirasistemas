@@ -1443,7 +1443,7 @@
                     <div class="card" style="margin-bottom: 1.5rem;">
                         <div class="card-body" style="padding: 1.5rem;">
                             <div
-                                style="display: grid; grid-template-columns: 1.5fr 1fr 1.5fr 1.5fr 1fr; gap: 1rem; align-items: end;">
+                                style="display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.5fr 1.5fr 1fr; gap: 1rem; align-items: end;">
                                 <!-- Filtro Transportadora -->
                                 <div class="form-group invoice-field-required" id="invFieldCarrier" style="margin-bottom: 0;">
                                     <label class="form-label">Transportadora</label>
@@ -1453,23 +1453,19 @@
                                     </select>
                                     <span class="invoice-field-error-msg">Selecione uma transportadora</span>
                                 </div>
-                                
-                                <!-- Filtro Mês (multi-seleção v3.11.46) -->
-                                <div class="form-group invoice-field-required" id="invFieldMonth" style="margin-bottom: 0;">
-                                    <label class="form-label">Mês(es)</label>
-                                    <div class="month-multi-select-wrapper">
-                                        <div id="invoiceMonthTrigger" class="month-multi-trigger" onclick="window.toggleMonthDropdown()">
-                                            <span id="invoiceMonthLabel" style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Todos os meses</span>
-                                            <span class="material-icons-round" style="font-size:1rem;flex-shrink:0;color:var(--text-secondary);">expand_more</span>
-                                        </div>
-                                        <div id="invoiceMonthOptions" class="month-multi-dropdown">
-                                            <label class="month-multi-option all-option">
-                                                <input type="checkbox" id="invoiceMonthAll" checked onchange="window.toggleAllMonths(this.checked)">
-                                                Todos os meses
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <span class="invoice-field-error-msg">Selecione ao menos um mês</span>
+
+                                <!-- Período Inicial -->
+                                <div class="form-group" id="invFieldDateStart" style="margin-bottom: 0;">
+                                    <label class="form-label">Período Inicial</label>
+                                    <input type="date" id="invoiceDateStart" class="form-input"
+                                        onchange="window.filterInvoiceByCarrier()">
+                                </div>
+
+                                <!-- Período Final -->
+                                <div class="form-group" id="invFieldDateEnd" style="margin-bottom: 0;">
+                                    <label class="form-label">Período Final</label>
+                                    <input type="date" id="invoiceDateEnd" class="form-input"
+                                        onchange="window.filterInvoiceByCarrier()">
                                 </div>
 
                                 <!-- Valor da Fatura -->

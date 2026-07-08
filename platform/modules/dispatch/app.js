@@ -4935,10 +4935,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.invoiceCurrentCarrier = '';
             window.updateInvoiceComparison();
 
-            // ✅ v3.11.47: pré-popula o dropdown de meses com TODOS os despachos válidos
-            // O usuário pode filtrar o mês ANTES de selecionar a transportadora
-            const allValid = dispatches.filter(d => VALID_STATUSES.includes(d.status));
-            window.populateMonthDropdown(allValid, true);
+            // v3.16.5: preenche datas padrão — 1º do mês atual até hoje
+            const _today = new Date();
+            const _firstDay = new Date(_today.getFullYear(), _today.getMonth(), 1);
+            const _toISO = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            const startEl = document.getElementById('invoiceDateStart');
+            const endEl   = document.getElementById('invoiceDateEnd');
+            if (startEl && !startEl.value) startEl.value = _toISO(_firstDay);
+            if (endEl   && !endEl.value)   endEl.value   = _toISO(_today);
         };
 
         // Filter NFs by carrier
@@ -5092,25 +5096,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             console.log(`[InvoiceFilter v3.11.46] Antes do filtro de mês: ${filtered.length} NFs (Despachadas + Pagas)`);
 
-            // Popula o dropdown de mêses (reseta seleção só quando transportadora muda)
-            window.populateMonthDropdown(filtered, _carrierChanged);
+            // v3.16.5: Aplica filtro de período (data inicial e final)
+            const _dateStartVal = document.getElementById('invoiceDateStart')?.value || '';
+            const _dateEndVal   = document.getElementById('invoiceDateEnd')?.value   || '';
+            const _dateStart = _dateStartVal ? new Date(_dateStartVal + 'T00:00:00') : null;
+            const _dateEnd   = _dateEndVal   ? new Date(_dateEndVal   + 'T23:59:59') : null;
 
-            // Aplica filtro de mêses selecionados (array vazio = sem filtro = todos)
-            const _selectedMonths = window.getSelectedInvoiceMonths();
-            if (_selectedMonths.length > 0) {
+            if (_dateStart || _dateEnd) {
                 filtered = filtered.filter(d => {
-                    // v3.11.52: usa _parseDispatchDate (robusta) para obter mês correto
                     const dispatchDate = window._parseDispatchDate(d);
-                    if (!dispatchDate || isNaN(dispatchDate.getTime())) return false;
-                    const key = `${dispatchDate.getFullYear()}-${String(dispatchDate.getMonth() + 1).padStart(2, '0')}`;
-                    return _selectedMonths.includes(key);
+                    if (!dispatchDate || isNaN(dispatchDate.getTime())) return true; // mantém se sem data
+                    if (_dateStart && dispatchDate < _dateStart) return false;
+                    if (_dateEnd   && dispatchDate > _dateEnd)   return false;
+                    return true;
                 });
-                console.log(`[InvoiceFilter v3.11.46] Após filtro meses [${_selectedMonths.join(', ')}]: ${filtered.length} NFs para ${carrierNorm}`);
+                const _rangeLabel = [_dateStartVal, _dateEndVal].filter(Boolean).join(' → ');
+                console.log(`[InvoiceFilter v3.16.5] Após filtro período [${_rangeLabel}]: ${filtered.length} NFs para ${carrierNorm}`);
             }
 
             if (filtered.length === 0) {
-                const _mSel = window.getSelectedInvoiceMonths ? window.getSelectedInvoiceMonths() : [];
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Nenhuma NF encontrada para esta transportadora${_mSel.length ? ` nos meses selecionados (${_mSel.length})` : ''}.</td></tr>`;
+                const _rangeDesc = [_dateStartVal, _dateEndVal].filter(Boolean).join(' a ');
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Nenhuma NF encontrada para esta transportadora${_rangeDesc ? ` no período ${_rangeDesc}` : ''}.</td></tr>`;
                 document.getElementById('invoiceNFsCount').textContent = '0 notas';
                 window.updateInvoiceComparison();
                 return;
