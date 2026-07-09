@@ -2461,24 +2461,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             // ── 3ª etapa: cidadeRedespacho [SEMPRE aditiva — merge] ───────────────────
-            // Transportadoras que atendem esta cidade partindo de outro hub via redespacho.
-            // Ex: VIOPEX tem r.cidade="MARABA" e r.cidadeRedespacho="DOM ELISEU".
-            // Para clientes de DOM ELISEU, BOA ESPERANCA e TNORTE já foram encontradas na
-            // etapa 2, mas VIOPEX só aparece aqui. Rodamos SEMPRE e fazemos merge.
-            // Evitamos duplicatas verificando se a regra já está em cityRules.
+            // Transportadoras que atendem esta cidade/bairro via redespacho de outro hub.
+            // v3.16.9 FIX: também verifica r.cidadeRedespacho === bairro do cliente.
+            //   Ex: cliente BRAGANÇA - VILA EMBORAIZINHO → encontra rota CASTANHAL→VILA EMBORAIZINHO.
             if (!usedBairroFallback) {
-                // v3.16.3 FIX: normaliza hifens com espaços ("IGARAPE - ACU" → "IGARAPE-ACU")
-                // para não perder rotas de redespacho digitadas com espaços ao redor do hífen.
+                // Normaliza hifens com espaços ("IGARAPE - ACU" → "IGARAPE-ACU")
                 const normH = (s) => (s || '').replace(/\s*-\s*/g, '-').replace(/\s+/g, ' ').trim();
-                const cityNormH = normH(city);
+                const cityNormH   = normH(city);
+                const bairroNormH = normH(clientBairro);
                 const redespRules = rules.filter(r => {
                     const rCityNorm = normH(norm(r.cidadeRedespacho || ''));
-                    return rCityNorm !== '' && rCityNorm === cityNormH;
+                    if (rCityNorm === '') return false;
+                    // Bate com a cidade OU com o bairro do cliente (v3.16.9)
+                    return rCityNorm === cityNormH || (bairroNormH && rCityNorm === bairroNormH);
                 });
                 redespRules.forEach(r => {
                     if (!cityRules.includes(r)) cityRules.push(r);
                 });
             }
+
+
 
 
             if (targetCarrier) {
@@ -4934,11 +4936,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.invoiceSelectedNFs = new Map();
             window.invoiceCurrentCarrier = '';
             window.updateInvoiceComparison();
-
-            // ✅ v3.11.47: pré-popula o dropdown de meses com TODOS os despachos válidos
-            // O usuário pode filtrar o mês ANTES de selecionar a transportadora
-            const allValid = dispatches.filter(d => VALID_STATUSES.includes(d.status));
-            window.populateMonthDropdown(allValid, true);
+            // v3.16.7: datas iniciam VAZIAS — sem filtro de data por padrão
+            // (equivalente ao antigo "Todos os meses"). O usuário preenche se quiser restringir.
         };
 
         // Filter NFs by carrier
@@ -4981,13 +4980,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             console.log(`[InvoiceFilter v3.11.54] Buscando NFs para ${carrierNorm} (semEspaço: ${carrierNormNoSpace}). Total despachos: ${dispatches.length}`);
 
+            // v3.16.8: Conferir Fatura mostra APENAS NFs ainda não pagas/faturadas.
+            // - Principal: exclui status 'Pago' (invoiceRef confirmado)
+            // - Redespacho: exclui onde redespPago === true
+            // NFs pagas migram para 'Análise de Faturas' (expandidas dentro da fatura).
             let filtered = dispatches
-                .filter(d => VALID_STATUSES_FILTER.includes(d.status) && (
-                    _carrierMatch(d.carrier) ||
-                    (_carrierMatch(d.redespCarrier) && d.redespTotal > 0) ||
-                    // v3.11.62: suporte ao campo legado d.redespacho (NFs antigas)
-                    (_carrierMatch(d.redespacho) && !d.redespCarrier && d.redespacho && d.redespacho !== '-')
-                ))
+                .filter(d => {
+                    const hasBase = ['Despachado', 'Pago', 'concluido'].includes(d.status);
+                    if (!hasBase) return false;
+                    // Principal não paga
+                    const mainOk  = _carrierMatch(d.carrier) && d.status !== 'Pago';
+                    // Redespacho novo não pago
+                    const rdNew   = _carrierMatch(d.redespCarrier) && d.redespTotal > 0 && !d.redespPago;
+                    // Redespacho legado não pago
+                    const rdLeg   = _carrierMatch(d.redespacho) && !d.redespCarrier
+                                    && d.redespacho && d.redespacho !== '-' && !d.redespPago;
+                    return mainOk || rdNew || rdLeg;
+                })
                 .map(d => {
                     // v3.11.62: detecta redespacho tanto pelo campo novo quanto pelo legado
                     const isRedespNew = _carrierMatch(d.redespCarrier) && !_carrierMatch(d.carrier);
@@ -5092,25 +5101,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             console.log(`[InvoiceFilter v3.11.46] Antes do filtro de mês: ${filtered.length} NFs (Despachadas + Pagas)`);
 
-            // Popula o dropdown de mêses (reseta seleção só quando transportadora muda)
-            window.populateMonthDropdown(filtered, _carrierChanged);
+            // v3.16.5: Aplica filtro de período (data inicial e final)
+            const _dateStartVal = document.getElementById('invoiceDateStart')?.value || '';
+            const _dateEndVal   = document.getElementById('invoiceDateEnd')?.value   || '';
+            const _dateStart = _dateStartVal ? new Date(_dateStartVal + 'T00:00:00') : null;
+            const _dateEnd   = _dateEndVal   ? new Date(_dateEndVal   + 'T23:59:59') : null;
 
-            // Aplica filtro de mêses selecionados (array vazio = sem filtro = todos)
-            const _selectedMonths = window.getSelectedInvoiceMonths();
-            if (_selectedMonths.length > 0) {
+            if (_dateStart || _dateEnd) {
                 filtered = filtered.filter(d => {
-                    // v3.11.52: usa _parseDispatchDate (robusta) para obter mês correto
                     const dispatchDate = window._parseDispatchDate(d);
-                    if (!dispatchDate || isNaN(dispatchDate.getTime())) return false;
-                    const key = `${dispatchDate.getFullYear()}-${String(dispatchDate.getMonth() + 1).padStart(2, '0')}`;
-                    return _selectedMonths.includes(key);
+                    if (!dispatchDate || isNaN(dispatchDate.getTime())) return true; // mantém se sem data
+                    if (_dateStart && dispatchDate < _dateStart) return false;
+                    if (_dateEnd   && dispatchDate > _dateEnd)   return false;
+                    return true;
                 });
-                console.log(`[InvoiceFilter v3.11.46] Após filtro meses [${_selectedMonths.join(', ')}]: ${filtered.length} NFs para ${carrierNorm}`);
+                const _rangeLabel = [_dateStartVal, _dateEndVal].filter(Boolean).join(' → ');
+                console.log(`[InvoiceFilter v3.16.5] Após filtro período [${_rangeLabel}]: ${filtered.length} NFs para ${carrierNorm}`);
             }
 
             if (filtered.length === 0) {
-                const _mSel = window.getSelectedInvoiceMonths ? window.getSelectedInvoiceMonths() : [];
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Nenhuma NF encontrada para esta transportadora${_mSel.length ? ` nos meses selecionados (${_mSel.length})` : ''}.</td></tr>`;
+                const _rangeDesc = [_dateStartVal, _dateEndVal].filter(Boolean).join(' a ');
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Nenhuma NF encontrada para esta transportadora${_rangeDesc ? ` no período ${_rangeDesc}` : ''}.</td></tr>`;
                 document.getElementById('invoiceNFsCount').textContent = '0 notas';
                 window.updateInvoiceComparison();
                 return;
@@ -5862,42 +5873,110 @@ document.addEventListener('DOMContentLoaded', async () => {
             const countEl = document.getElementById('analysisInvoiceCount');
             if (countEl) countEl.textContent = `${total} fatura${total !== 1 ? 's' : ''}`;
 
-            // ── TABELA DE FATURAS CONFERIDAS ─────────────────
+            // ── TABELA DE FATURAS CONFERIDAS (com NFs expandíveis) ─────────────────
             const tbody = document.getElementById('analysisInvoiceBody');
             if (tbody) {
                 if (filtered.length === 0) {
                     tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--text-secondary);">Nenhuma fatura encontrada com os filtros selecionados.</td></tr>`;
                 } else {
+                    // Carrega dispatches do localStorage para montar os detalhes das NFs
+                    const _allDispatches = Utils.getStorage('dispatches') || [];
+
                     tbody.innerHTML = filtered.map(h => {
                         const isConf    = h.difference === 0;
                         const diffAbs   = Math.abs(h.difference || 0);
                         const diffColor = isConf ? '#10b981' : (h.difference < 0 ? '#ef4444' : '#3b82f6');
                         const diffSign  = (h.difference || 0) > 0 ? '+' : '';
                         const badge     = isConf
-                            ? `<span style="background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:2px 9px;font-size:0.73rem;font-weight:700;white-space:nowrap;">✅ Conforme</span>`
-                            : `<span style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:5px;padding:2px 9px;font-size:0.73rem;font-weight:700;white-space:nowrap;">⚠️ Não Conforme</span>`;
+                            ? `<span style="background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:2px 9px;font-size:0.73rem;font-weight:700;white-space:nowrap;">\u2705 Conforme</span>`
+                            : `<span style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:5px;padding:2px 9px;font-size:0.73rem;font-weight:700;white-space:nowrap;">\u26a0\ufe0f N\u00e3o Conforme</span>`;
                         const authInfo  = h.authorizedBy
                             ? `<br><span style="font-size:0.7rem;color:var(--accent-warning);">Auth: ${h.authorizedBy}</span>` : '';
                         const justTitle = h.justification ? ` title="Justif.: ${h.justification}"` : '';
+
+                        // v3.16.6: monta linhas das NFs recolhidas nesta fatura
+                        const nfNums = h.nfList || [];
+                        const nfCount = nfNums.length || h.nfCount || 0;
+                        let nfDetailRows = '';
+                        if (nfNums.length > 0) {
+                            nfDetailRows = nfNums.map(nfNum => {
+                                const d = _allDispatches.find(x =>
+                                    String(x.invoice) === String(nfNum) &&
+                                    (x.invoiceRef === h.invoiceRef || x.redespInvoiceRef === h.invoiceRef)
+                                );
+                                const depDate = d && d.date ? new Date(d.date).toLocaleDateString('pt-BR') : '—';
+                                const city    = d ? `${d.city || ''}${d.neighborhood ? ' / ' + d.neighborhood : ''}` : '—';
+                                const client  = d ? (d.client || '—') : '—';
+                                const val     = d ? Utils.formatCurrency(d.total || 0) : '—';
+                                return `<tr style="background:rgba(255,255,255,0.02);">
+                                    <td style="padding:5px 10px;font-weight:600;font-size:0.79rem;">${nfNum}</td>
+                                    <td style="padding:5px 10px;font-size:0.79rem;">${client}</td>
+                                    <td style="padding:5px 10px;font-size:0.79rem;">${city}</td>
+                                    <td style="padding:5px 10px;text-align:center;font-size:0.79rem;">${depDate}</td>
+                                    <td style="padding:5px 10px;text-align:right;font-weight:600;font-size:0.79rem;color:#10b981;">${val}</td>
+                                </tr>`;
+                            }).join('');
+                        } else {
+                            nfDetailRows = `<tr><td colspan="5" style="padding:8px 10px;text-align:center;font-size:0.79rem;color:var(--text-secondary);">Detalhes das NFs n\u00e3o dispon\u00edveis</td></tr>`;
+                        }
+
+                        const subTable = `
+                            <tr id="nfs-expand-${h.id}" style="display:none;">
+                                <td colspan="10" style="padding:0;">
+                                    <div style="margin:0 0 0.5rem 2.5rem;border-left:3px solid rgba(99,102,241,0.4);">
+                                        <table style="width:100%;border-collapse:collapse;font-size:0.79rem;">
+                                            <thead>
+                                                <tr style="background:rgba(99,102,241,0.08);">
+                                                    <th style="padding:6px 10px;text-align:left;color:var(--text-secondary);font-weight:600;">NF</th>
+                                                    <th style="padding:6px 10px;text-align:left;color:var(--text-secondary);font-weight:600;">Cliente</th>
+                                                    <th style="padding:6px 10px;text-align:left;color:var(--text-secondary);font-weight:600;">Cidade / Bairro</th>
+                                                    <th style="padding:6px 10px;text-align:center;color:var(--text-secondary);font-weight:600;">Data Desp.</th>
+                                                    <th style="padding:6px 10px;text-align:right;color:var(--text-secondary);font-weight:600;">Valor Frete</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>${nfDetailRows}</tbody>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>`;
+
                         return `
-                            <tr${justTitle}>
+                            <tr${justTitle} style="cursor:pointer;" onclick="window.toggleAnalysisNFs('${h.id}')">
                                 <td style="font-size:0.82rem;">${new Date(h.date).toLocaleDateString('pt-BR')}</td>
-                                <td style="font-weight:600;">${h.carrier || '—'}</td>
-                                <td style="font-size:0.82rem;">${h.invoiceRef || '—'}</td>
-                                <td style="text-align:center;">${h.nfCount || 0}</td>
+                                <td style="font-weight:600;">${h.carrier || '\u2014'}</td>
+                                <td style="font-size:0.82rem;">${h.invoiceRef || '\u2014'}</td>
+                                <td style="text-align:center;">
+                                    <span style="display:inline-flex;align-items:center;gap:4px;">
+                                        <span class="material-icons-round" id="expand-icon-${h.id}" style="font-size:0.9rem;color:var(--accent-primary);transition:transform 0.2s;">expand_more</span>
+                                        ${nfCount}
+                                    </span>
+                                </td>
                                 <td style="text-align:right;font-weight:600;color:#10b981;">${Utils.formatCurrency(h.calculatedValue || 0)}</td>
                                 <td style="text-align:right;font-weight:600;color:#f59e0b;">${Utils.formatCurrency(h.invoiceValue || 0)}</td>
-                                <td style="text-align:right;font-weight:700;color:${diffColor};">${isConf ? '—' : diffSign + Utils.formatCurrency(diffAbs)}</td>
+                                <td style="text-align:right;font-weight:700;color:${diffColor};">${isConf ? '\u2014' : diffSign + Utils.formatCurrency(diffAbs)}</td>
                                 <td style="text-align:center;">${badge}</td>
-                                <td style="font-size:0.8rem;">${h.confirmedBy || '—'}${authInfo}</td>
-                                <td style="text-align:center;">
-                                    <button class="btn-estornar" data-hid="${h.id}" title="Estornar fatura"
-                                        style="background:none;border:1px solid rgba(239,68,68,0.4);border-radius:6px;padding:3px 8px;cursor:pointer;color:#ef4444;font-size:0.75rem;font-family:inherit;display:inline-flex;align-items:center;gap:2px;transition:all 0.15s;white-space:nowrap;">
+                                <td style="font-size:0.8rem;">${h.confirmedBy || '\u2014'}${authInfo}</td>
+                                <td style="text-align:center;" onclick="event.stopPropagation()">
+                                    <button class="btn-imprimir" onclick="window.printInvoiceReport('${h.id}')" style="background:none;border:1px solid rgba(99,102,241,0.4);border-radius:6px;padding:3px 8px;cursor:pointer;color:var(--accent-primary);font-size:0.75rem;font-family:inherit;display:inline-flex;align-items:center;gap:2px;margin-right:4px;white-space:nowrap;">
+                                        <span class="material-icons-round" style="font-size:0.9rem;">print</span>Imprimir
+                                    </button>
+                                    <button class="btn-estornar" data-hid="${h.id}" style="background:none;border:1px solid rgba(239,68,68,0.4);border-radius:6px;padding:3px 8px;cursor:pointer;color:#ef4444;font-size:0.75rem;font-family:inherit;display:inline-flex;align-items:center;gap:2px;white-space:nowrap;">
                                         <span class="material-icons-round" style="font-size:0.9rem;">undo</span>Estornar
                                     </button>
                                 </td>
-                            </tr>`;
+                            </tr>
+                            ${subTable}`;
                     }).join('');
+
+                    // v3.16.6: toggle expand por fatura
+                    window.toggleAnalysisNFs = (hid) => {
+                        const row  = document.getElementById(`nfs-expand-${hid}`);
+                        const icon = document.getElementById(`expand-icon-${hid}`);
+                        if (!row) return;
+                        const isOpen = row.style.display !== 'none';
+                        row.style.display  = isOpen ? 'none' : '';
+                        if (icon) icon.style.transform = isOpen ? '' : 'rotate(180deg)';
+                    };
 
                     // Event delegation: captura clique nos botões Estornar
                     tbody.addEventListener('click', function estornoDelegate(e) {
