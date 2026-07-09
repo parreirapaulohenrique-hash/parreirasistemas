@@ -2461,19 +2461,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             // ── 3ª etapa: cidadeRedespacho [SEMPRE aditiva — merge] ───────────────────
-            // Transportadoras que atendem esta cidade partindo de outro hub via redespacho.
+            // Transportadoras que atendem esta cidade/bairro partindo de outro hub via redespacho.
             // Ex: VIOPEX tem r.cidade="MARABA" e r.cidadeRedespacho="DOM ELISEU".
-            // Para clientes de DOM ELISEU, BOA ESPERANCA e TNORTE já foram encontradas na
-            // etapa 2, mas VIOPEX só aparece aqui. Rodamos SEMPRE e fazemos merge.
-            // Evitamos duplicatas verificando se a regra já está em cityRules.
+            // v3.16.9 FIX: também verifica r.cidadeRedespacho === bairro do cliente.
+            //   Antes: cliente BRAGANÇA - VILA EMBORAÚINHO só achava redespacho para BRAGANÇA,
+            //   não para VILA EMBORAÚINHO. Agora ambos são verificados.
             if (!usedBairroFallback) {
                 // v3.16.3 FIX: normaliza hifens com espaços ("IGARAPE - ACU" → "IGARAPE-ACU")
                 // para não perder rotas de redespacho digitadas com espaços ao redor do hífen.
                 const normH = (s) => (s || '').replace(/\s*-\s*/g, '-').replace(/\s+/g, ' ').trim();
-                const cityNormH = normH(city);
+                const cityNormH   = normH(city);
+                const bairroNormH = normH(clientBairro); // v3.16.9
                 const redespRules = rules.filter(r => {
                     const rCityNorm = normH(norm(r.cidadeRedespacho || ''));
-                    return rCityNorm !== '' && rCityNorm === cityNormH;
+                    if (rCityNorm === '') return false;
+                    // Bate com a cidade OU (v3.16.9) com o bairro do cliente
+                    return rCityNorm === cityNormH || (bairroNormH && rCityNorm === bairroNormH);
                 });
                 redespRules.forEach(r => {
                     if (!cityRules.includes(r)) cityRules.push(r);
