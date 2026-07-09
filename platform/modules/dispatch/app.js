@@ -1268,14 +1268,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const _uDoc = await window.db.collection('tenants').doc(tenantId).collection('users').doc(login).get();
                         if (_uDoc.exists && _uDoc.data().ativo !== false) {
                             const _ud = _uDoc.data();
-                            const _hBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass));
-                            const _hHex = Array.from(new Uint8Array(_hBuf)).map(b => b.toString(16).padStart(2,'0')).join('');
-                            if (_hHex === _ud.senhaHash) {
+                            // v3.16.12: aceita senhaHash (SHA-256) OU pass (texto puro legado/manual)
+                            let _match = false;
+                            if (_ud.senhaHash) {
+                                const _hBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass));
+                                const _hHex = Array.from(new Uint8Array(_hBuf)).map(b => b.toString(16).padStart(2,'0')).join('');
+                                _match = (_hHex === _ud.senhaHash);
+                            }
+                            if (!_match && _ud.pass) {
+                                _match = (pass === _ud.pass);
+                            }
+                            if (_match) {
                                 user = { name: _ud.nome || _ud.login || login, login: _ud.login || login, role: _ud.role || 'operator' };
-                                console.log(`✅ [Login] Validado no sistema novo: ${login}`);
+                                console.log(`✅ [Login] Validado no Firestore: ${login}`);
                             }
                         }
-                    } catch (_e) { console.warn('[Login] Erro ao validar no sistema novo:', _e.message); }
+                    } catch (_e) { console.warn('[Login] Erro ao validar no Firestore:', _e.message); }
                 }
 
                 // Fallback: sistema legado (senha texto puro em localStorage)
