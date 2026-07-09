@@ -1,1 +1,1 @@
-{"build":"20260709-staging-v3.16.9","version":"3.16.9","environment":"staging","change":"v3.16.9 - FIX: cotacao agora inclui redespacho por bairro (cidadeRedespacho===bairro cliente). Ex: BRAGANCA-VILA EMBORAÚINHO mostra cards especificos do bairro","lastUpdate":"2026-07-09","deployedAt":"2026-07-09"}
+{"build":"20260709-staging-v3.16.10","version":"3.16.10","environment":"staging","change":"v3.16.10 - DEBUG: log no step3 da cotacao para diagnosticar por que card do bairro nao aparece","lastUpdate":"2026-07-09","deployedAt":"2026-07-09"}

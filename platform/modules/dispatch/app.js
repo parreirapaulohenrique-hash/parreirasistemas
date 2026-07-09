@@ -2461,27 +2461,29 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             // ── 3ª etapa: cidadeRedespacho [SEMPRE aditiva — merge] ───────────────────
-            // Transportadoras que atendem esta cidade/bairro partindo de outro hub via redespacho.
-            // Ex: VIOPEX tem r.cidade="MARABA" e r.cidadeRedespacho="DOM ELISEU".
             // v3.16.9 FIX: também verifica r.cidadeRedespacho === bairro do cliente.
-            //   Antes: cliente BRAGANÇA - VILA EMBORAÚINHO só achava redespacho para BRAGANÇA,
-            //   não para VILA EMBORAÚINHO. Agora ambos são verificados.
             if (!usedBairroFallback) {
-                // v3.16.3 FIX: normaliza hifens com espaços ("IGARAPE - ACU" → "IGARAPE-ACU")
-                // para não perder rotas de redespacho digitadas com espaços ao redor do hífen.
                 const normH = (s) => (s || '').replace(/\s*-\s*/g, '-').replace(/\s+/g, ' ').trim();
                 const cityNormH   = normH(city);
                 const bairroNormH = normH(clientBairro); // v3.16.9
                 const redespRules = rules.filter(r => {
                     const rCityNorm = normH(norm(r.cidadeRedespacho || ''));
                     if (rCityNorm === '') return false;
-                    // Bate com a cidade OU (v3.16.9) com o bairro do cliente
                     return rCityNorm === cityNormH || (bairroNormH && rCityNorm === bairroNormH);
+                });
+                // v3.16.10: debug log — abre o Console do navegador (F12) para ver
+                console.log('[v3.16.10] Step3 redespacho debug:', {
+                    city, cityNormH, clientBairro, bairroNormH,
+                    usedBairroFallback,
+                    totalRules: rules.length,
+                    redespRulesFound: redespRules.map(r => `${r.transportadora} | cidade:${r.cidade} | cidadeRedesp:${r.cidadeRedespacho}`),
+                    allCidadesRedesp: [...new Set(rules.map(r => r.cidadeRedespacho).filter(Boolean))].sort()
                 });
                 redespRules.forEach(r => {
                     if (!cityRules.includes(r)) cityRules.push(r);
                 });
             }
+
 
 
             if (targetCarrier) {
