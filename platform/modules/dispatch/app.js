@@ -5854,13 +5854,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                         .collection('invoice_history_db').get();
                     if (!snap.empty) {
                         const fsHistory = snap.docs.map(d => d.data());
-                        Utils.setStorage('invoice_history', fsHistory);
-                        console.log(`🔄 [Invoice Analysis] invoice_history sincronizado do Firestore: ${fsHistory.length} registros`);
+                        // v3.16.17 FIX: MERGE em vez de SUBSTITUIR.
+                        // Se o save no Firestore falhou (silencioso), a entrada ficou só no
+                        // localStorage. Ao substituir, ela sumia. Agora fazemos union por ID.
+                        const localHistory = Utils.getStorage('invoice_history') || [];
+                        const merged = [...fsHistory];
+                        localHistory.forEach(lh => {
+                            if (lh.id && !merged.find(fh => String(fh.id) === String(lh.id))) {
+                                merged.push(lh);
+                                // Tenta salvar no Firestore os que estavam só locais
+                                if (window.db) {
+                                    window.db.collection('tenants').doc(Utils.Cloud.tenantId)
+                                        .collection('invoice_history_db').doc(String(lh.id))
+                                        .set(lh)
+                                        .then(() => console.log(`🔄 [InvoiceAnalysis] Entrada local ${lh.id} sincronizada para Firestore.`))
+                                        .catch(e => console.warn('[InvoiceAnalysis] Falha ao re-salvar entrada local:', e));
+                                }
+                            }
+                        });
+                        Utils.setStorage('invoice_history', merged);
+                        console.log(`🔄 [Invoice Analysis] invoice_history mesclado: ${merged.length} registros (FS:${fsHistory.length} + local extras:${merged.length - fsHistory.length})`);
                     }
                 } catch (e) {
                     console.warn('[Invoice Analysis] Falha ao sincronizar do Firestore:', e);
                 }
             }
+
 
             const history = Utils.getStorage('invoice_history') || [];
 
