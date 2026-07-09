@@ -1,1 +1,1 @@
-{"build":"20260708-staging-v3.16.6","version":"3.16.6","environment":"staging","change":"v3.16.6 - NFs pagas saem de Conferir Fatura; aparecem expandidas dentro de cada linha na Analise de Faturas","lastUpdate":"2026-07-08","deployedAt":"2026-07-08"}
+{"build":"20260709-staging-v3.16.7","version":"3.16.7","environment":"staging","change":"v3.16.7 - FIX: data filtro inicia vazio (sem restricao por padrao); NFs pagas voltam a aparecer em Conferir Fatura como badge PAGO desabilitado","lastUpdate":"2026-07-09","deployedAt":"2026-07-09"}

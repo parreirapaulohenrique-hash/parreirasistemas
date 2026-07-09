@@ -4934,15 +4934,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.invoiceSelectedNFs = new Map();
             window.invoiceCurrentCarrier = '';
             window.updateInvoiceComparison();
-
-            // v3.16.5: preenche datas padrão — 1º do mês atual até hoje
-            const _today = new Date();
-            const _firstDay = new Date(_today.getFullYear(), _today.getMonth(), 1);
-            const _toISO = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-            const startEl = document.getElementById('invoiceDateStart');
-            const endEl   = document.getElementById('invoiceDateEnd');
-            if (startEl && !startEl.value) startEl.value = _toISO(_firstDay);
-            if (endEl   && !endEl.value)   endEl.value   = _toISO(_today);
+            // v3.16.7: datas iniciam VAZIAS — sem filtro de data por padrão
+            // (equivalente ao antigo "Todos os meses"). O usuário preenche se quiser restringir.
         };
 
         // Filter NFs by carrier
@@ -4985,21 +4978,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             console.log(`[InvoiceFilter v3.11.54] Buscando NFs para ${carrierNorm} (semEspaço: ${carrierNormNoSpace}). Total despachos: ${dispatches.length}`);
 
-            // v3.16.6: Conferir Fatura mostra APENAS NFs ainda não pagas.
-            // - Transportadora principal: exclui status 'Pago'
-            // - Redespacho: exclui onde redespPago === true
-            // NFs pagas migram para 'Análise de Faturas' (expandidas dentro da fatura).
+            // v3.16.7: Conferir Fatura — NFs pagas ficam visíveis mas desabilitadas (badge PAGO)
+            // e NFs de redespacho já pagas também. O usuário vê o histórico mas não seleciona.
             let filtered = dispatches
                 .filter(d => {
                     const hasBase = ['Despachado', 'Pago', 'concluido'].includes(d.status);
                     if (!hasBase) return false;
-                    // Principal não paga
-                    const mainOk  = _carrierMatch(d.carrier) && d.status !== 'Pago';
-                    // Redespacho novo não pago
-                    const rdNew   = _carrierMatch(d.redespCarrier) && d.redespTotal > 0 && !d.redespPago;
-                    // Redespacho legado não pago
+                    // Principal
+                    const mainOk  = _carrierMatch(d.carrier);
+                    // Redespacho novo
+                    const rdNew   = _carrierMatch(d.redespCarrier) && d.redespTotal > 0;
+                    // Redespacho legado
                     const rdLeg   = _carrierMatch(d.redespacho) && !d.redespCarrier
-                                    && d.redespacho && d.redespacho !== '-' && !d.redespPago;
+                                    && d.redespacho && d.redespacho !== '-';
                     return mainOk || rdNew || rdLeg;
                 })
                 .map(d => {
