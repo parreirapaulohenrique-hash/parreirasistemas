@@ -3286,6 +3286,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         };
 
+        // v3.16.15: Sincroniza carrier_info_v2 → carrier_list (resolve FORA DA LISTA)
+        window.fixOrphanCarriers = () => {
+            const infoKeys = Object.keys(carrierInfo || {}).filter(c => c);
+            const orphans = infoKeys.filter(c => !carrierList.includes(c));
+            if (orphans.length === 0) {
+                showToast('✅ Nenhuma transportadora fora da lista. Tudo sincronizado!');
+                return;
+            }
+            if (confirm(`${orphans.length} transportadora(s) serão adicionadas à lista:\n\n${orphans.join('\n')}\n\nConfirmar?`)) {
+                carrierList = [...new Set([...carrierList, ...orphans])].sort();
+                localStorage.setItem(Utils._storageKey('carrier_list'), JSON.stringify(carrierList));
+                if (Utils.Cloud && Utils.Cloud.hasTenant()) {
+                    Utils.Cloud.save('carrier_list', carrierList);
+                }
+                renderCarrierConfigs();
+                populateCarrierSelect();
+                showToast(`✅ ${orphans.length} transportadora(s) sincronizada(s) com sucesso!`);
+            }
+        };
+
         window.renderCarrierConfigs = () => {
             const body = document.getElementById('carrierConfigsBody');
             if (!body) return;
