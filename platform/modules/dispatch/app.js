@@ -3409,17 +3409,30 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (confirm(`Tem certeza que deseja excluir a transportadora "${name}"?`)) {
+                // v3.16.14 FIX: remove de TODAS as fontes (carrier_list, configs e info_v2)
                 carrierList = carrierList.filter(c => c !== name);
                 delete carrierConfigs[name];
-                Utils.saveRaw('carrier_list', JSON.stringify(carrierList));
+                delete carrierInfo[name];   // ← era o que faltava: remove do carrier_info_v2
+
+                // Salva localmente
+                Utils.saveRaw('carrier_list',    JSON.stringify(carrierList));
                 Utils.saveRaw('carrier_configs', JSON.stringify(carrierConfigs));
+                Utils.saveRaw('carrier_info_v2', JSON.stringify(carrierInfo));
+
+                // v3.16.14 FIX: sincroniza com a nuvem — sem isso o carrier voltava após reload
+                if (Utils.Cloud && Utils.Cloud.hasTenant()) {
+                    Utils.Cloud.save('carrier_list',    carrierList);
+                    Utils.Cloud.save('carrier_configs', carrierConfigs);
+                    Utils.Cloud.save('carrier_info_v2', carrierInfo);
+                }
+
                 renderCarrierConfigs();
                 populateCarrierSelect();
                 showToast('🗑️ Transportadora removida.');
-                // v3.14.54: Audit Log
                 if (Utils.writeLog) Utils.writeLog('CARRIER_DELETE', 'Transportadora', `${name} excluída`, { name }, null);
             }
         };
+
 
         window.editCarrier = (name) => {
             // Use fallback if info is missing (legacy carriers)
