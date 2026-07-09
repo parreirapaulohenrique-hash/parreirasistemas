@@ -4978,19 +4978,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             console.log(`[InvoiceFilter v3.11.54] Buscando NFs para ${carrierNorm} (semEspaço: ${carrierNormNoSpace}). Total despachos: ${dispatches.length}`);
 
-            // v3.16.7: Conferir Fatura — NFs pagas ficam visíveis mas desabilitadas (badge PAGO)
-            // e NFs de redespacho já pagas também. O usuário vê o histórico mas não seleciona.
+            // v3.16.8: Conferir Fatura mostra APENAS NFs ainda não pagas/faturadas.
+            // - Principal: exclui status 'Pago' (invoiceRef confirmado)
+            // - Redespacho: exclui onde redespPago === true
+            // NFs pagas migram para 'Análise de Faturas' (expandidas dentro da fatura).
             let filtered = dispatches
                 .filter(d => {
                     const hasBase = ['Despachado', 'Pago', 'concluido'].includes(d.status);
                     if (!hasBase) return false;
-                    // Principal
-                    const mainOk  = _carrierMatch(d.carrier);
-                    // Redespacho novo
-                    const rdNew   = _carrierMatch(d.redespCarrier) && d.redespTotal > 0;
-                    // Redespacho legado
+                    // Principal não paga
+                    const mainOk  = _carrierMatch(d.carrier) && d.status !== 'Pago';
+                    // Redespacho novo não pago
+                    const rdNew   = _carrierMatch(d.redespCarrier) && d.redespTotal > 0 && !d.redespPago;
+                    // Redespacho legado não pago
                     const rdLeg   = _carrierMatch(d.redespacho) && !d.redespCarrier
-                                    && d.redespacho && d.redespacho !== '-';
+                                    && d.redespacho && d.redespacho !== '-' && !d.redespPago;
                     return mainOk || rdNew || rdLeg;
                 })
                 .map(d => {
