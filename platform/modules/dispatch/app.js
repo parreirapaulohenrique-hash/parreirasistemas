@@ -2461,28 +2461,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             // ── 3ª etapa: cidadeRedespacho [SEMPRE aditiva — merge] ───────────────────
+            // Transportadoras que atendem esta cidade/bairro via redespacho de outro hub.
             // v3.16.9 FIX: também verifica r.cidadeRedespacho === bairro do cliente.
+            //   Ex: cliente BRAGANÇA - VILA EMBORAIZINHO → encontra rota CASTANHAL→VILA EMBORAIZINHO.
             if (!usedBairroFallback) {
+                // Normaliza hifens com espaços ("IGARAPE - ACU" → "IGARAPE-ACU")
                 const normH = (s) => (s || '').replace(/\s*-\s*/g, '-').replace(/\s+/g, ' ').trim();
                 const cityNormH   = normH(city);
-                const bairroNormH = normH(clientBairro); // v3.16.9
+                const bairroNormH = normH(clientBairro);
                 const redespRules = rules.filter(r => {
                     const rCityNorm = normH(norm(r.cidadeRedespacho || ''));
                     if (rCityNorm === '') return false;
+                    // Bate com a cidade OU com o bairro do cliente (v3.16.9)
                     return rCityNorm === cityNormH || (bairroNormH && rCityNorm === bairroNormH);
-                });
-                // v3.16.10: debug log — abre o Console do navegador (F12) para ver
-                console.log('[v3.16.10] Step3 redespacho debug:', {
-                    city, cityNormH, clientBairro, bairroNormH,
-                    usedBairroFallback,
-                    totalRules: rules.length,
-                    redespRulesFound: redespRules.map(r => `${r.transportadora} | cidade:${r.cidade} | cidadeRedesp:${r.cidadeRedespacho}`),
-                    allCidadesRedesp: [...new Set(rules.map(r => r.cidadeRedespacho).filter(Boolean))].sort()
                 });
                 redespRules.forEach(r => {
                     if (!cityRules.includes(r)) cityRules.push(r);
                 });
             }
+
 
 
 
