@@ -1324,15 +1324,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                     console.log(`🔄 [Login] Variáveis recarregadas: ${carrierList.length} transportadoras, ${rules.length} tabelas.`);
 
                     // v3.14.13 AUTO-REBUILD: MERGE em vez de SUBSTITUIR.
-                    // Adiciona transportadoras ausentes da carrier_list (vindas de freight_tables)
+                    // Adiciona transportadoras ausentes da carrier_list (vindas de freight_tables E carrier_info_v2)
                     // MAS preserva carriers que nao tem tabela de frete (ex: redespacho puro).
                     // NUNCA remove carriers ja existentes — evita perda de redespacho carriers.
-                    if (rules.length > 0) {
-                        const carriersInTables = [...new Set(rules.map(r => r.transportadora))].filter(c => c).sort();
-                        const missingCarriers = carriersInTables.filter(c => !carrierList.includes(c));
+                    {
+                        const carriersInTables = rules.length > 0
+                            ? [...new Set(rules.map(r => r.transportadora))].filter(c => c)
+                            : [];
+                        // v3.16.13: também inclui chaves do carrier_info_v2 para não perder cadastros orfãos
+                        const carriersInInfo = Object.keys(carrierInfo || {}).filter(c => c);
+                        const allKnownCarriers = [...new Set([...carriersInTables, ...carriersInInfo])].sort();
+                        const missingCarriers = allKnownCarriers.filter(c => !carrierList.includes(c));
                         if (missingCarriers.length > 0) {
-                            console.warn(`🔧 [Auto-Rebuild v3.14.13] MERGE: adicionando ${missingCarriers.length} carriers ausentes (preservando redespacho):`, missingCarriers);
-                            carrierList = [...new Set([...carrierList, ...carriersInTables])].sort();
+                            console.warn(`🔧 [Auto-Rebuild v3.16.13] MERGE: adicionando ${missingCarriers.length} carriers ausentes:`, missingCarriers);
+                            carrierList = [...new Set([...carrierList, ...allKnownCarriers])].sort();
                             localStorage.setItem(Utils._storageKey('carrier_list'), JSON.stringify(carrierList));
                             if (Utils.Cloud && Utils.Cloud.hasTenant()) {
                                 Utils.Cloud.save('carrier_list', carrierList);
@@ -3295,7 +3300,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             carrierInfo = Utils.getStorage('carrier_info_v2') || {};
             if (Array.isArray(carrierInfo)) carrierInfo = {};
 
-            const carriers = [...carrierList].sort();
+            // v3.16.13: union de carrier_list + chaves de carrier_info_v2
+            // Garante que cadastros feitos via edição direta (sem tabela de frete)
+            // também apareçam, evitando o sumiço de transportadoras como R E A.
+            const allSources = [...new Set([...carrierList, ...Object.keys(carrierInfo)])].sort();
+            const carriers = allSources;
 
             // v3.11.84: Estado vazio — mostra aviso com botão de recarga
             if (carriers.length === 0) {
@@ -3330,12 +3339,30 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const config = carrierConfigs[c] || { taxaFixa: 0, gris: 0, icms: 0 };
                 const info = carrierInfo[c] || { cnpj: '-', ie: '-', address: '-', city: '-' };
                 const safeC = c.replace(/'/g, "\\'");
+                const inList = carrierList.includes(c);
+
+                // v3.16.13: formata data de cadastro
+                let dateLabel = '';
+                if (info.createdAt) {
+                    try {
+                        const d = new Date(info.createdAt);
+                        dateLabel = `📅 ${d.toLocaleDateString('pt-BR')} ${d.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}`;
+                    } catch(_) { dateLabel = info.createdAt; }
+                } else {
+                    dateLabel = '<span style="color:var(--accent-warning)">⚠️ sem data de cadastro</span>';
+                }
+
+                // Alerta visual se está em carrier_info mas sumiu do carrier_list
+                const orphanBadge = !inList
+                    ? `<span style="background:rgba(239,68,68,0.15);color:#ef4444;font-size:0.65rem;padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">FORA DA LISTA</span>`
+                    : '';
 
                 return `
             <tr style="border-bottom: 2px solid var(--border-color);">
                 <td>
-                    <div style="font-weight: 700; color: var(--text-primary);">${c}</div>
+                    <div style="font-weight: 700; color: var(--text-primary);">${c}${orphanBadge}</div>
                     <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px;">CNPJ: ${info.cnpj}</div>
+                    <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 1px;">${dateLabel}</div>
                 </td>
                 <td>
                     <input type="number" step="0.01" value="${config.taxaFixa}" 
@@ -3597,6 +3624,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 const freteNegociadoInput = document.getElementById('newCarrierFreteNegociado');
+                // v3.16.13: preserva createdAt existente na edição, cria novo timestamp no cadastro
+                const existingCreatedAt = (carrierInfo[name] && carrierInfo[name].createdAt) || null;
                 carrierInfo[name] = {
                     cnpj: cnpjInput.value.trim() || '-',
                     ie: ieInput.value.trim() || '-',
@@ -3604,7 +3633,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     city: cityInput.value.trim() || '-',
                     reliability: parseInt(reliabilityInput.value) || 3,
                     isRedespacho: isRedespachoInput ? isRedespachoInput.checked : false,
-                    freteNegociado: freteNegociadoInput ? freteNegociadoInput.checked : false
+                    freteNegociado: freteNegociadoInput ? freteNegociadoInput.checked : false,
+                    createdAt: existingCreatedAt || new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
                 };
 
                 Utils.saveRaw('carrier_list', JSON.stringify(carrierList));
