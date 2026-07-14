@@ -5897,6 +5897,102 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.filterInvoiceAnalysis();
         };
 
+        // v3.16.18: Recupera conferências perdidas a partir do Log de Auditoria
+        // Lê audit_log (INVOICE_PAYMENT), detecta entradas ausentes do invoice_history_db e as recria.
+        window.recoverInvoiceFromAuditLog = async () => {
+            if (!window.db || !Utils.Cloud || !Utils.Cloud.hasTenant()) {
+                showToast('❌ Conexão com servidor não disponível.'); return;
+            }
+            showToast('🔍 Buscando conferências no Log de Auditoria...');
+
+            try {
+                // 1. Carrega audit_log do Firestore
+                const auditSnap = await window.db.collection('tenants').doc(Utils.Cloud.tenantId)
+                    .collection('audit_log')
+                    .where('action', '==', 'INVOICE_PAYMENT')
+                    .get();
+
+                if (auditSnap.empty) { showToast('ℹ️ Nenhum registro de pagamento no Log de Auditoria.'); return; }
+
+                // 2. Carrega invoice_history_db atual do Firestore
+                const histSnap = await window.db.collection('tenants').doc(Utils.Cloud.tenantId)
+                    .collection('invoice_history_db').get();
+                const existingHistory = histSnap.docs.map(d => d.data());
+
+                // 3. Para cada entrada do audit_log, verifica se já existe no histórico
+                const missing = [];
+                auditSnap.docs.forEach(doc => {
+                    const entry = doc.data();
+                    const after = entry.after || {};
+                    if (!after.carrier || !after.invoiceRef) return; // entrada incompleta
+
+                    // Considera "existente" se há registro com mesmo carrier + invoiceRef
+                    const alreadyExists = existingHistory.some(h =>
+                        h.carrier === after.carrier &&
+                        String(h.invoiceRef) === String(after.invoiceRef)
+                    );
+                    if (!alreadyExists) {
+                        missing.push({ auditEntry: entry, after });
+                    }
+                });
+
+                if (missing.length === 0) {
+                    showToast('✅ Nenhuma conferência perdida encontrada. Análise está completa!');
+                    return;
+                }
+
+                // 4. Mostra resumo e pede confirmação
+                const summary = missing.map(m =>
+                    `${m.after.carrier} — Ref: ${m.after.invoiceRef} — ${Utils.formatCurrency(m.after.totalPaid || 0)} — ${new Date(m.auditEntry.timestamp).toLocaleDateString('pt-BR')} (por ${m.auditEntry.user})`
+                ).join('\n');
+
+                if (!confirm(`${missing.length} conferência(s) perdida(s) encontrada(s) no Log de Auditoria:\n\n${summary}\n\nRecriar na Análise de Faturas?`)) return;
+
+                // 5. Recria as entradas
+                const localHistory = Utils.getStorage('invoice_history') || [];
+                let recovered = 0;
+
+                for (const { auditEntry, after } of missing) {
+                    const newEntry = {
+                        id:              new Date(auditEntry.timestamp).getTime() || Date.now(),
+                        date:            auditEntry.timestamp,
+                        carrier:         after.carrier,
+                        invoiceRef:      after.invoiceRef  || '',
+                        invoiceValue:    after.invoiceValue || 0,
+                        calculatedValue: after.totalPaid   || 0,
+                        difference:      (after.totalPaid || 0) - (after.invoiceValue || 0),
+                        nfCount:         (after.paidNFs || []).length,
+                        nfList:          after.paidNFs || [],
+                        confirmedBy:     auditEntry.user   || 'Recuperado',
+                        authorizedBy:    after.authorizedBy || null,
+                        justification:   null,
+                        _recoveredFromAudit: true
+                    };
+
+                    // Salva no Firestore
+                    await window.db.collection('tenants').doc(Utils.Cloud.tenantId)
+                        .collection('invoice_history_db').doc(String(newEntry.id))
+                        .set(newEntry);
+
+                    // Adiciona ao localStorage se não existir
+                    if (!localHistory.find(h => String(h.id) === String(newEntry.id))) {
+                        localHistory.push(newEntry);
+                    }
+                    recovered++;
+                }
+
+                Utils.setStorage('invoice_history', localHistory);
+                showToast(`✅ ${recovered} conferência(s) recuperada(s) com sucesso!`, 'success');
+
+                // Atualiza a tela
+                await window.renderInvoiceAnalysis();
+
+            } catch (e) {
+                console.error('[RecoverInvoice] Erro:', e);
+                showToast('❌ Erro ao recuperar: ' + e.message);
+            }
+        };
+
         // Aplica filtros e renderiza todas as seções da aba de análise
         window.filterInvoiceAnalysis = () => {
             const history = Utils.getStorage('invoice_history') || [];
