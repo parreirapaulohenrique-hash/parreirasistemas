@@ -619,7 +619,7 @@
     async function proc_enviar_email_divergencia(divPayload) {
         const wmsConfig = JSON.parse(localStorage.getItem('wms_config' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
         const emailRemetente  = wmsConfig.email?.remetente || '';
-        const nomeRemetente   = wmsConfig.email?.nomeRemetente || 'WMS ParreiraLog';
+        const nomeRemetente   = wmsConfig.email?.nomeRemetente || 'Bússola WMS';
         const emailjsKey      = wmsConfig.email?.emailjsPublicKey || '';
         const emailjsService  = wmsConfig.email?.emailjsServiceId || '';
         const emailjsTemplate = wmsConfig.email?.emailjsTemplateId || '';
@@ -701,7 +701,7 @@ Por favor, entre em contato para providenciar a regularização.
 Atenciosamente,
 ${nomeRemetente}
 ${emailRemetente ? `<${emailRemetente}>` : ''}
---- Gerado automaticamente pelo WMS ParreiraLog ---`);
+--- Gerado automaticamente pelo Bússola WMS ---`);
 
         const mailtoUrl = `mailto:${destinatario}?subject=${subject}&body=${body}`;
         window.open(mailtoUrl, '_blank');
