@@ -6124,12 +6124,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <td style="text-align:center;">${badge}</td>
                                 <td style="font-size:0.8rem;">${h.confirmedBy || '\u2014'}${authInfo}</td>
                                 <td style="text-align:center;" onclick="event.stopPropagation()">
-                                    <button class="btn-imprimir" onclick="window.printInvoiceReport('${h.id}')" style="background:none;border:1px solid rgba(99,102,241,0.4);border-radius:6px;padding:3px 8px;cursor:pointer;color:var(--accent-primary);font-size:0.75rem;font-family:inherit;display:inline-flex;align-items:center;gap:2px;margin-right:4px;white-space:nowrap;">
-                                        <span class="material-icons-round" style="font-size:0.9rem;">print</span>Imprimir
-                                    </button>
-                                    <button class="btn-estornar" data-hid="${h.id}" style="background:none;border:1px solid rgba(239,68,68,0.4);border-radius:6px;padding:3px 8px;cursor:pointer;color:#ef4444;font-size:0.75rem;font-family:inherit;display:inline-flex;align-items:center;gap:2px;white-space:nowrap;">
-                                        <span class="material-icons-round" style="font-size:0.9rem;">undo</span>Estornar
-                                    </button>
+                                    <div style="display:flex;flex-direction:column;gap:3px;align-items:center;">
+                                        <button class="btn-imprimir" onclick="window.printInvoiceReport('${h.id}')" style="background:none;border:1px solid rgba(99,102,241,0.4);border-radius:6px;padding:2px 6px;cursor:pointer;color:var(--accent-primary);font-size:0.72rem;font-family:inherit;display:inline-flex;align-items:center;gap:2px;white-space:nowrap;">
+                                            <span class="material-icons-round" style="font-size:0.85rem;">print</span>Imprimir
+                                        </button>
+                                        <button class="btn-estornar" data-hid="${h.id}" style="background:none;border:1px solid rgba(239,68,68,0.4);border-radius:6px;padding:2px 6px;cursor:pointer;color:#ef4444;font-size:0.72rem;font-family:inherit;display:inline-flex;align-items:center;gap:2px;white-space:nowrap;">
+                                            <span class="material-icons-round" style="font-size:0.85rem;">undo</span>Estornar
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                             ${subTable}`;
@@ -6408,14 +6410,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             const idsToRevert = []; // IDs dos despachos a reverter no Firestore
 
             // 2a. Coleta IDs para reverter e prepara versão local atualizada
+            // v3.16.19 FIX: também reverte NFs de redespacho (redespPago:true).
+            // Antes só verificava status==='Pago', ignorando redespacho cuja principal
+            // permanece 'Despachado' mas tem redespPago:true.
             const updatedDispatches = dispatches.map(d => {
                 const nfMatch = nfList.length > 0
                     ? nfList.includes(d.invoice)
                     : (d.carrier === entry.carrier && d.invoiceRef === entry.invoiceRef);
 
-                if (nfMatch && d.status === 'Pago') {
+                const isMainPaid   = nfMatch && d.status === 'Pago';
+                const isRedespPaid = nfMatch && d.redespPago === true;
+
+                if (isMainPaid) {
                     revertedCount++;
-                    idsToRevert.push(d.id);
+                    idsToRevert.push({ id: d.id, type: 'main' });
                     const updated = { ...d, status: 'Despachado' };
                     delete updated.paidAt;
                     delete updated.invoiceRef;
@@ -6425,14 +6433,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                     delete updated.invoiceConfirmedAt;
                     return updated;
                 }
+                if (isRedespPaid) {
+                    revertedCount++;
+                    idsToRevert.push({ id: d.id, type: 'redesp' });
+                    const updated = { ...d };
+                    delete updated.redespPago;
+                    delete updated.redespInvoiceRef;
+                    delete updated.redespPaidAt;
+                    return updated;
+                }
                 return d;
             });
 
-            console.log(`🔄 [Estorno] ${revertedCount} NFs encontradas com status 'Pago'. IDs: ${idsToRevert.join(', ')}`);
+            console.log(`🔄 [Estorno] ${revertedCount} NFs encontradas. IDs: ${idsToRevert.map(x=>x.id).join(', ')}`);
 
             // Atualiza localStorage com a lista completa e corrigida
-            // CRÍTICO: Usa localStorage DIRETAMENTE (sem Cloud.save) para evitar o SYNC BLOQUEADO
-            // O Firestore já foi/será atualizado individualmente via dispatches_db (abaixo)
             try {
                 const storageKey = Utils._storageKey('dispatches');
                 localStorage.setItem(storageKey, JSON.stringify(updatedDispatches));
@@ -6441,14 +6456,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.warn('[Estorno] Não foi possível atualizar localStorage de dispatches:', e);
             }
 
-            // 2b. Persiste no Firestore
+            // 2b. Persiste no Firestore (trata main e redespacho separadamente)
             if (Utils.Cloud && Utils.Cloud.hasTenant && Utils.Cloud.hasTenant() && window.db) {
-                for (const did of idsToRevert) {
+                for (const { id: did, type } of idsToRevert) {
                     try {
+                        const fields = type === 'redesp'
+                            ? {
+                                redespPago:       firebase.firestore.FieldValue.delete(),
+                                redespInvoiceRef: firebase.firestore.FieldValue.delete(),
+                                redespPaidAt:     firebase.firestore.FieldValue.delete()
+                              }
+                            : revertFirestoreFields;
                         await window.db.collection('tenants').doc(Utils.Cloud.tenantId)
                             .collection('dispatches_db').doc(String(did))
-                            .update(revertFirestoreFields);
-                        console.log(`🔄 [Estorno] Firestore OK: despacho ${did} → Despachado`);
+                            .update(fields);
+                        console.log(`🔄 [Estorno] Firestore OK: despacho ${did} → ${type === 'redesp' ? 'redesp revertido' : 'Despachado'}`);
                     } catch (e) {
                         console.warn(`[Estorno] Firestore erro (despacho ${did}):`, e);
                     }
@@ -6460,17 +6482,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 2c. Atualiza cache em memória (_dispatchesFullCache)
             if (window._dispatchesFullCache) {
                 window._dispatchesFullCache = window._dispatchesFullCache.map(d => {
-                    if (idsToRevert.includes(d.id)) {
-                        const updated = { ...d, status: 'Despachado' };
-                        delete updated.paidAt;
-                        delete updated.invoiceRef;
-                        delete updated.paidBy;
-                        delete updated.paymentNote;
-                        delete updated.authorizedBy;
-                        delete updated.invoiceConfirmedAt;
+                    const found = idsToRevert.find(x => x.id === d.id);
+                    if (!found) return d;
+                    if (found.type === 'redesp') {
+                        const updated = { ...d };
+                        delete updated.redespPago;
+                        delete updated.redespInvoiceRef;
+                        delete updated.redespPaidAt;
                         return updated;
                     }
-                    return d;
+                    const updated = { ...d, status: 'Despachado' };
+                    delete updated.paidAt;
+                    delete updated.invoiceRef;
+                    delete updated.paidBy;
+                    delete updated.paymentNote;
+                    delete updated.authorizedBy;
+                    delete updated.invoiceConfirmedAt;
+                    return updated;
                 });
             }
 
