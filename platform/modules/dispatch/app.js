@@ -6124,12 +6124,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <td style="text-align:center;">${badge}</td>
                                 <td style="font-size:0.8rem;">${h.confirmedBy || '\u2014'}${authInfo}</td>
                                 <td style="text-align:center;" onclick="event.stopPropagation()">
-                                    <button class="btn-imprimir" onclick="window.printInvoiceReport('${h.id}')" style="background:none;border:1px solid rgba(99,102,241,0.4);border-radius:6px;padding:3px 8px;cursor:pointer;color:var(--accent-primary);font-size:0.75rem;font-family:inherit;display:inline-flex;align-items:center;gap:2px;margin-right:4px;white-space:nowrap;">
-                                        <span class="material-icons-round" style="font-size:0.9rem;">print</span>Imprimir
-                                    </button>
-                                    <button class="btn-estornar" data-hid="${h.id}" style="background:none;border:1px solid rgba(239,68,68,0.4);border-radius:6px;padding:3px 8px;cursor:pointer;color:#ef4444;font-size:0.75rem;font-family:inherit;display:inline-flex;align-items:center;gap:2px;white-space:nowrap;">
-                                        <span class="material-icons-round" style="font-size:0.9rem;">undo</span>Estornar
-                                    </button>
+                                    <div style="display:flex;flex-direction:column;gap:3px;align-items:center;">
+                                        <button class="btn-imprimir" onclick="window.printInvoiceReport('${h.id}')" style="background:none;border:1px solid rgba(99,102,241,0.4);border-radius:6px;padding:2px 6px;cursor:pointer;color:var(--accent-primary);font-size:0.72rem;font-family:inherit;display:inline-flex;align-items:center;gap:2px;white-space:nowrap;">
+                                            <span class="material-icons-round" style="font-size:0.85rem;">print</span>Imprimir
+                                        </button>
+                                        <button class="btn-estornar" data-hid="${h.id}" style="background:none;border:1px solid rgba(239,68,68,0.4);border-radius:6px;padding:2px 6px;cursor:pointer;color:#ef4444;font-size:0.72rem;font-family:inherit;display:inline-flex;align-items:center;gap:2px;white-space:nowrap;">
+                                            <span class="material-icons-round" style="font-size:0.85rem;">undo</span>Estornar
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                             ${subTable}`;
