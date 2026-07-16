@@ -34,6 +34,7 @@ let db = null;
 let _currentTenantId = null; // tenant sendo editado (null = novo)
 let _tenants = [];
 let _editingUsers = []; // usuários do tenant atual no modal
+let _originalUserDocIds = []; // IDs dos docs de usuário quando o modal abriu (para detectar exclusões)
 
 // ── Init Firebase ──
 (function initFirebase() {
@@ -357,8 +358,11 @@ async function openEditTenantModal(tenantId) {
     try {
         const usersSnap = await db.collection('tenants').doc(tenantId).collection('users').get();
         _editingUsers = usersSnap.docs.map(d => ({ _docId: d.id, ...d.data() }));
+        // Guarda os IDs originais para detectar exclusões no saveTenant
+        _originalUserDocIds = _editingUsers.map(u => u._docId || u.login).filter(Boolean);
     } catch (e) {
         _editingUsers = [];
+        _originalUserDocIds = [];
     }
 
     renderModalBody(tenant, _editingUsers);
@@ -581,6 +585,36 @@ async function saveTenant() {
         for (const u of _editingUsers.filter(u => u._isNew)) {
             const userDoc = { nome: u.nome, login: u.login, pass: u.pass, role: u.role, ativo: true, createdAt: new Date().toISOString() };
             await db.collection('tenants').doc(docId).collection('users').doc(u.login).set(userDoc);
+        }
+
+        // v3.16.19 FIX: Deleta do Firestore usuários que foram removidos da lista
+        const currentDocIds = _editingUsers.map(u => u._docId || u.login).filter(Boolean);
+        const deletedDocIds = _originalUserDocIds.filter(id => !currentDocIds.includes(id));
+        for (const docIdToDelete of deletedDocIds) {
+            try {
+                await db.collection('tenants').doc(docId).collection('users').doc(docIdToDelete).delete();
+                console.log(`🗑️ [Admin] Usuário "${docIdToDelete}" deletado do Firestore.`);
+            } catch (e) {
+                console.warn(`[Admin] Falha ao deletar usuário "${docIdToDelete}":`, e.message);
+            }
+        }
+
+        // v3.16.19: Também limpa deleted users do legacy_store/app_users para não voltarem pelo merge de login
+        if (deletedDocIds.length > 0) {
+            try {
+                const legacyDoc = await db.collection('tenants').doc(docId).collection('legacy_store').doc('app_users').get();
+                if (legacyDoc.exists && legacyDoc.data().content) {
+                    const legacyUsers = JSON.parse(legacyDoc.data().content);
+                    const cleaned = legacyUsers.filter(lu => !deletedDocIds.includes(lu.login || lu.Login || ''));
+                    if (cleaned.length !== legacyUsers.length) {
+                        await db.collection('tenants').doc(docId).collection('legacy_store').doc('app_users')
+                            .set({ content: JSON.stringify(cleaned), updatedAt: new Date().toISOString() });
+                        console.log(`🧹 [Admin] ${legacyUsers.length - cleaned.length} usuário(s) removido(s) do legacy_store.`);
+                    }
+                }
+            } catch (legacyErr) {
+                console.warn('[Admin] Falha ao limpar legacy_store (não crítico):', legacyErr.message);
+            }
         }
 
         toast(`Empresa "${name}" salva com sucesso!`, 'success');
