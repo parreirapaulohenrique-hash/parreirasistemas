@@ -624,21 +624,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Users and Session State
         let users = Utils.getStorage('app_users');
-        // CORREÇÃO: Só cria admin padrão se REALMENTE não houver nada salvo (nem local nem nuvem)
-        // Verifica se o localStorage está vazio E não existe nada salvo
+        // v3.16.21 SECURITY: Não mais cria usuário admin/admin automático.
+        // Se não há usuários em localStorage, aguarda carregamento do Firestore (feito na tela de login).
         const rawUsers = localStorage.getItem(Utils._storageKey('app_users'));
         if (!rawUsers || rawUsers === 'null' || rawUsers === '[]' || rawUsers === 'undefined') {
-            // Verificar se há algo na nuvem antes de criar default
-            // Se acabamos de carregar da nuvem e está vazio, criamos o admin
-            if (!users || !Array.isArray(users) || users.length === 0) {
-                console.log('👤 Criando usuário admin padrão (nenhum usuário encontrado)');
-                users = [{ name: 'Administrador', login: 'admin', pass: 'admin', role: 'supervisor' }];
-                // Salvar localmente, mas NÃO enviar para nuvem (para não sobrescrever dados de outras sessões)
-                localStorage.setItem(Utils._storageKey('app_users'), JSON.stringify(users));
-            }
-            // Já existem usuários salvos, usar eles
             users = Utils.getStorage('app_users') || [];
-            console.log(`👥 ${users.length} usuários carregados`);
         }
 
         // Sellers: Load from Storage
@@ -695,7 +685,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentUser = storedUser;
                 if (typeof AppState !== 'undefined') AppState.set('currentUser', storedUser);
                 if (loginOverlay) loginOverlay.style.display = 'none';
-                console.log(`[checkAuth] Sessão restaurada: ${storedUser.login} (${storedUser.role || 'operator'})`);
+                console.log(`[checkAuth] Sessão restaurada: ${storedUser.login} (${storedUser.role || 'operator'})`.replace(/pass.*/, '[senha omitida]'));;
                 return;
             }
             // Sem sessão — exibe overlay de login
@@ -1295,10 +1285,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 }
 
-                // Admin Fallback always active for setup
-                if (!user && login === 'admin' && pass === 'admin') {
-                    user = { name: 'Administrador (Setup)', login: 'admin', pass: 'admin', role: 'supervisor' };
-                }
+                // v3.16.21 SECURITY: Fallback admin/admin removido (era backdoor)
+                // Acesso só via Firestore (SHA-256) ou sistema legado acima
 
                 if (user) {
                     currentUser = user;
@@ -7376,8 +7364,35 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // --- LOGIN & AUTH ---
+        // v3.16.21 SECURITY: Brute-force protection — bloqueia após 5 tentativas por 5 minutos
+        const _BF_KEY = 'login_attempts';
+        function _checkBruteForce() {
+            const bf = JSON.parse(sessionStorage.getItem(_BF_KEY) || '{"count":0,"until":0}');
+            if (bf.until && Date.now() < bf.until) {
+                const mins = Math.ceil((bf.until - Date.now()) / 60000);
+                showToast(`❌ Login bloqueado por muitas tentativas. Aguarde ${mins} minuto(s).`, 'error');
+                return false;
+            }
+            return true;
+        }
+        function _registerFailedAttempt() {
+            const bf = JSON.parse(sessionStorage.getItem(_BF_KEY) || '{"count":0,"until":0}');
+            bf.count = (bf.count || 0) + 1;
+            if (bf.count >= 5) {
+                bf.until = Date.now() + 5 * 60 * 1000; // 5 minutos
+                bf.count = 0;
+                showToast('⚠️ 5 tentativas incorretas. Login bloqueado por 5 minutos.', 'error');
+            }
+            sessionStorage.setItem(_BF_KEY, JSON.stringify(bf));
+        }
+        function _clearBruteForce() {
+            sessionStorage.removeItem(_BF_KEY);
+        }
+
         window.handleLogin = (e) => {
             if (e) e.preventDefault();
+            if (!_checkBruteForce()) return;
+
             const loginInput = document.getElementById('loginUser');
             const passInput = document.getElementById('loginPass');
 
@@ -7386,27 +7401,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             const login = loginInput.value.trim().toLowerCase();
             const pass = passInput.value.trim();
 
-            // Final fallback to ensure 'admin' works even if the users list is somehow corrupted
-            if (login === 'admin' && pass === 'admin') {
-                const adminUser = users.find(u => u.login === 'admin') || { name: 'Administrador', login: 'admin', pass: 'admin', role: 'supervisor' };
-                currentUser = adminUser;
-                sessionStorage.setItem('logged_user', JSON.stringify(adminUser));
-                checkAuth();
-                showSection('quote');
-                showToast(`Bem - vindo, Administrador!`);
-                return;
-            }
-
-            const user = users.find(u => u.login.toLowerCase() === login && u.pass === pass);
+            // v3.16.21 SECURITY: Backdoor admin/admin removido.
+            // Autenticação somente via lista de usuários carregada do Firestore.
+            const user = users.find(u => u.login && u.login.toLowerCase() === login && u.pass === pass);
             if (user) {
+                _clearBruteForce();
                 currentUser = user;
-                sessionStorage.setItem('logged_user', JSON.stringify(user));
+                sessionStorage.setItem('logged_user', JSON.stringify({ name: user.name, login: user.login, role: user.role }));
                 checkAuth();
                 showSection('quote');
-                showToast(`Bem - vindo, ${user.name} !`);
+                showToast(`Bem-vindo, ${user.name}!`);
                 // v3.14.54: Audit Log
                 if (Utils.writeLog) Utils.writeLog('USER_LOGIN', 'Acesso', `Login: ${user.name || user.login} (${user.role || 'user'})`, null, { login: user.login, role: user.role });
             } else {
+                _registerFailedAttempt();
                 alert('Usuário ou senha incorretos.');
             }
         };
@@ -7424,17 +7432,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         };
 
-        window.emergencyReset = () => {
-            const pin = prompt('Para resetar os usuários para o padrão (admin/admin), digite o código de segurança:\n\n9999');
-            if (pin === '9999') {
-                localStorage.removeItem(Utils._storageKey('app_users'));
-                sessionStorage.removeItem('logged_user');
-                alert('Acessos resetados com sucesso!\n\nUsuário: admin\nSenha: admin\n\nO sistema será recarregado.');
-                location.reload();
-            } else if (pin !== null) {
-                alert('Código incorreto.');
-            }
-        };
+        // v3.16.21 SECURITY: emergencyReset com PIN público '9999' removido por risco crítico.
+        // Recuperação de acesso: use o painel admin (/admin) ou o Firebase Console.
 
         // --- USER MANAGEMENT foi migrado unicamente para o utils.js ---
 
