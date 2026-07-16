@@ -3138,6 +3138,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         // SEM isso, tabelas de frete nunca aparecem em computadores novos (ex: Altafix)
         window.renderRulesList = renderRulesList;
 
+        // v3.16.20: Helper — verifica se algum despacho atende ao predicado.
+        // Usa cache em memória (_dispatchesFullCache) se disponível, senão localStorage.
+        // Garante integridade referencial: cadastros usados em despachos não podem ser excluídos.
+        window._hasDispatchUsing = function(predicate) {
+            const dispatches = window._dispatchesFullCache
+                || Utils.getStorage('dispatches')
+                || [];
+            return dispatches.some(predicate);
+        };
+
         window.removeCarrierCompletely = async (carrierName) => {
             if (!carrierName) return;
 
@@ -3405,6 +3415,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             const hasRules = rules.some(r => r.transportadora === name);
             if (hasRules) {
                 alert(`❌ Não é possível excluir "${name}" porque existem tabelas cadastradas para ela. Remova as tabelas primeiro.`);
+                return;
+            }
+
+            // v3.16.20: Integridade referencial — bloqueia se há despachos com essa transportadora
+            if (window._hasDispatchUsing(d => (d.carrier || '') === name)) {
+                alert(`❌ Não é possível excluir "${name}": já existem despachos registrados com esta transportadora. O histórico deve ser preservado.`);
                 return;
             }
 
@@ -3858,6 +3874,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         window.deleteRule = (index) => {
+            const rule = rules[index];
+            if (!rule) return;
+
+            // v3.16.20: Integridade referencial — bloqueia se há despachos para essa rota
+            if (window._hasDispatchUsing(d =>
+                (d.carrier || '') === rule.transportadora &&
+                (d.city   || '') === rule.cidade
+            )) {
+                showToast(`❌ Não é possível excluir a tabela ${rule.transportadora} → ${rule.cidade}: já existem despachos registrados para esta rota. O histórico deve ser preservado.`, 'error');
+                return;
+            }
+
             if (!confirm('Tem certeza que deseja excluir esta tabela?')) return;
             const _deletedRule = { ...rules[index] };
             rules.splice(index, 1);
@@ -9241,6 +9269,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             const client = clients[idx];
             if (!client) return;
 
+            // v3.16.20: Integridade referencial — bloqueia se há despachos para este cliente
+            if (window._hasDispatchUsing(d => d.client === client.nome)) {
+                showToast(`❌ Não é possível excluir "${client.nome}": já existem despachos registrados para este cliente. O histórico deve ser preservado.`, 'error');
+                return;
+            }
+
             if (confirm(`Tem certeza que deseja excluir o cliente "${client.nome}"?`)) {
                 const _deletedClient = { ...client };
                 clients.splice(idx, 1);
@@ -9765,6 +9799,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             let sellers = Utils.getStorage('app_sellers') || [];
             const seller = sellers.find(s => s.id === id);
             if (!seller) return;
+
+            // v3.16.20: Integridade referencial — bloqueia se há despachos com este vendedor
+            if (window._hasDispatchUsing(d => d.sellerId === id || d.sellerName === seller.name)) {
+                window.showToast(`❌ Não é possível excluir "${seller.name}": já existem despachos registrados com este vendedor. O histórico deve ser preservado.`, 'error');
+                return;
+            }
+
             if (confirm(`Tem certeza que deseja remover o vendedor "${seller.name}"?`)) {
                 sellers = sellers.filter(s => s.id !== id);
                 Utils.setStorage('app_sellers', sellers);
