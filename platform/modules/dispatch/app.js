@@ -5623,6 +5623,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Process the payment (mark NFs as paid)
         window.processInvoicePayment = async (justification = '', authorizedBy = '') => {
+            // v3.16.22: Proteção contra duplo clique — evita duplicação no histórico e log
+            if (window._invoicePaymentInProgress) {
+                console.warn('[Invoice] Pagamento já em andamento. Duplo clique ignorado.');
+                return;
+            }
+            window._invoicePaymentInProgress = true;
+
+            // Desabilita botões durante o processamento
+            const _btnConfirm = document.getElementById('btnConfirmInvoice');
+            const _btnForce   = document.querySelector('#invoiceSupervisorModal .btn-primary');
+            if (_btnConfirm) { _btnConfirm.disabled = true; _btnConfirm.innerHTML = '⏳ Processando...'; }
+            if (_btnForce)   { _btnForce.disabled   = true; }
+
             console.log('💳 [Invoice] Iniciando processamento de pagamento...');
             console.log('💳 [Invoice] NFs selecionadas:', [...window.invoiceSelectedNFs]);
 
@@ -5806,6 +5819,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 null,
                 { carrier, paidNFs, totalPaid, invoiceRef, invoiceValue, authorizedBy: authorizedBy || null }
             );
+
+            // Libera flag e restaura botão
+            window._invoicePaymentInProgress = false;
+            const _btnConfirmEnd = document.getElementById('btnConfirmInvoice');
+            if (_btnConfirmEnd) {
+                _btnConfirmEnd.disabled = false;
+                _btnConfirmEnd.innerHTML = '<span class="material-icons-round" style="font-size:1.1rem">check_circle</span> CONFIRMAR CONFERÊNCIA';
+            }
 
             // Clear form and refresh
             window.clearInvoiceForm();
