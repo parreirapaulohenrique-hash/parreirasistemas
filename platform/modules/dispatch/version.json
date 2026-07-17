@@ -1,1 +1,1 @@
-{"build":"20260716-staging-v3.16.21","version":"3.16.21","environment":"staging","change":"v3.16.21 SECURITY - Remove 3x backdoor admin/admin, remove emergencyReset PIN 9999, add brute-force protection (5 attempts / 5min lockout), remove sensitive console.logs","lastUpdate":"2026-07-16","deployedAt":"2026-07-16"}
+{"build":"20260717-staging-v3.16.22","version":"3.16.22","environment":"staging","change":"v3.16.22 - Corrige duplicacao na confirmacao de conferencia de fatura (double-click protection em processInvoicePayment)","lastUpdate":"2026-07-17","deployedAt":"2026-07-17"}
