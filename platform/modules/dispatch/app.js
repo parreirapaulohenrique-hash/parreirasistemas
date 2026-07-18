@@ -9621,6 +9621,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             <td style="padding: 0.6rem; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${c.nome}">${c.nome || '-'}</td>
             <td style="padding: 0.6rem;">${c.cidade || '-'}</td>
             <td style="padding: 0.6rem; text-align: center;">
+                ${c.taxaRegiao != null
+                    ? `<span style="font-weight:600; color:#10b981;">${Number(c.taxaRegiao).toFixed(2)}%</span>`
+                    : `<span style="color:#6b7280; font-size:0.8rem;">N/I</span>`}
+            </td>
+            <td style="padding: 0.6rem; text-align: center;">
                 <div style="display: flex; justify-content: center; align-items: center;">
                     ${alertBtn}
                     <button onclick="window.editClient(${clients.indexOf(c)})" class="btn btn-secondary" 
@@ -9679,6 +9684,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('newClientNeighborhood').value = client.bairro || '';
             document.getElementById('newClientAddress').value = client.endereco || '';
             document.getElementById('newClientPhone').value = client.telefone || '';
+            document.getElementById('newClientTaxaRegiao').value = client.taxaRegiao != null ? client.taxaRegiao : '';
             document.getElementById('editingClientMode').value = 'true';
             document.getElementById('editingClientId').value = idx;
 
@@ -9811,14 +9817,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 const clientData = {
-                    cnpj: document.getElementById('newClientCNPJ').value.trim(),
-                    nome: nome.toUpperCase(),
-                    codigo: document.getElementById('newClientCode').value.trim().toUpperCase() ||
+                    cnpj:       document.getElementById('newClientCNPJ').value.trim(),
+                    nome:       nome.toUpperCase(),
+                    codigo:     document.getElementById('newClientCode').value.trim().toUpperCase() ||
                         nome.substring(0, 10).toUpperCase().replace(/\s+/g, ''),
-                    cidade: document.getElementById('newClientCity').value.trim().toUpperCase(),
-                    bairro: document.getElementById('newClientNeighborhood').value.trim().toUpperCase(),
-                    endereco: document.getElementById('newClientAddress').value.trim(),
-                    telefone: document.getElementById('newClientPhone').value.trim()
+                    cidade:     document.getElementById('newClientCity').value.trim().toUpperCase(),
+                    bairro:     document.getElementById('newClientNeighborhood').value.trim().toUpperCase(),
+                    endereco:   document.getElementById('newClientAddress').value.trim(),
+                    telefone:   document.getElementById('newClientPhone').value.trim(),
+                    taxaRegiao: (() => {
+                        const v = parseFloat(document.getElementById('newClientTaxaRegiao')?.value);
+                        return isNaN(v) ? null : v;
+                    })()
                 };
 
                 const _clientBefore = (isEditing && editIdx >= 0) ? { ...clients[editIdx] } : null;
@@ -9852,7 +9862,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const _isEdit = isEditing && editIdx >= 0;
                     let _desc = clientData.nome;
                     if (_isEdit && _clientBefore) {
-                        const _diffs = ['nome', 'cidade', 'bairro', 'endereco', 'telefone', 'cnpj', 'codigo']
+                        const _diffs = ['nome', 'cidade', 'bairro', 'endereco', 'telefone', 'cnpj', 'codigo', 'taxaRegiao']
                             .filter(k => String(clientData[k] || '') !== String(_clientBefore[k] || ''))
                             .map(k => `${k}: ${_clientBefore[k] || '(vazio)'} → ${clientData[k] || '(vazio)'}`);
                         _desc += _diffs.length ? ' — ' + _diffs.join(' | ') : ' — sem alterações';

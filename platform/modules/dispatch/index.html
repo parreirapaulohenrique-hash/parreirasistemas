@@ -2143,6 +2143,14 @@
                                             <input type="text" id="newClientPhone" class="form-input"
                                                 placeholder="(00) 00000-0000">
                                         </div>
+                                        <div class="form-group" style="margin-bottom: 0;">
+                                            <label class="form-label" title="Taxa de frete cobrada do cliente (vem do ERP ou cadastro manual)">
+                                                Taxa Região (%) — <span style="font-size:0.75rem; color:var(--text-secondary);">frete cobrado do cliente</span>
+                                            </label>
+                                            <input type="number" id="newClientTaxaRegiao" class="form-input"
+                                                placeholder="Ex: 3.5" step="0.01" min="0" max="100"
+                                                style="max-width: 160px;">
+                                        </div>
                                         <input type="hidden" id="editingClientMode" value="false">
                                         <input type="hidden" id="editingClientId" value="">
                                         <div style="display: flex; gap: 0.5rem;">
@@ -2198,6 +2206,7 @@
                                                     <th style="text-align: left; padding: 0.6rem;">Código</th>
                                                     <th style="text-align: left; padding: 0.6rem;">Nome</th>
                                                     <th style="text-align: left; padding: 0.6rem;">Cidade</th>
+                                                    <th style="text-align: center; padding: 0.6rem;">Taxa Região</th>
                                                     <th style="text-align: center; padding: 0.6rem; width: 80px;">Ações
                                                     </th>
                                                 </tr>
