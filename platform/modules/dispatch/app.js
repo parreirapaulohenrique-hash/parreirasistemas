@@ -679,6 +679,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         // NÃO revalidamos contra app_users porque eles ainda não foram
         // carregados da nuvem no início da página (Cloud.loadAll() só roda no login).
         window.checkAuth = () => {
+            // v3.17.0 BRIDGE: Aceita sessão do Hub (login.html / ParreiraAuth)
+            // Se o usuário já está logado via Hub, não pede login de novo no Bússola Log
+            const _parreiraSessao = (() => {
+                try { return JSON.parse(sessionStorage.getItem('parreira_session') || 'null'); }
+                catch { return null; }
+            })();
+            if (_parreiraSessao && _parreiraSessao.login && _parreiraSessao.tenantId &&
+                (Date.now() - (_parreiraSessao.ts || 0) < 8 * 3600000)) {
+                currentUser = {
+                    name:     _parreiraSessao.nome  || _parreiraSessao.login,
+                    login:    _parreiraSessao.login,
+                    role:     _parreiraSessao.role  || 'supervisor',
+                    tenantId: _parreiraSessao.tenantId
+                };
+                if (typeof AppState !== 'undefined') AppState.set('currentUser', currentUser);
+                if (loginOverlay) loginOverlay.style.display = 'none';
+                console.log(`[checkAuth] ✅ Sessão bridge (Hub): ${currentUser.login} (${currentUser.role})`);
+                return;
+            }
+
+            // Fluxo original: verifica sessão em localStorage
             const storedUser = Utils.getStorage('logged_user');
             if (storedUser && storedUser.login) {
                 // Sessão válida encontrada — restaura sem re-validar senha

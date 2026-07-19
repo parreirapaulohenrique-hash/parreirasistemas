@@ -237,56 +237,13 @@
         }
     </style>
 
-    <div class="login-overlay" id="loginOverlay" style="display: none;">
-        <div class="login-card">
-            <div class="login-header">
-                <div class="logo-icon" style="margin: 0 auto 1rem; width: 64px; height: 64px;">
-                    <span class="material-icons-round" style="font-size: 32px;">hub</span>
-                </div>
-                <h2>Parreira Sistemas</h2>
-                <p style="color: var(--text-secondary);">Faça login para continuar</p>
-            </div>
-
-            <form id="loginForm" onsubmit="handleLogin(event)">
-                <div class="form-group">
-                    <label class="form-label">ID da Empresa</label>
-                    <input type="text" id="tenantId" class="form-input" placeholder="Ex: parreiralog" required>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Usuário</label>
-                    <input type="text" id="username" class="form-input" placeholder="Usuário" required>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Senha</label>
-                    <input type="password" id="password" class="form-input" placeholder="Senha" required>
-                </div>
-
-                <button type="submit" class="btn-login">ENTRAR</button>
-            </form>
-        </div>
-    </div>
+    <!-- Login overlay removido: autenticação centralizada em /platform/login.html -->
 
     <div class="version-badge" id="versionBadge">carregando...</div>
 
     <script>
-        // Whitelist compartilhada de tenants permitidos (Hardcoded + Dynamic)
-        // Registry: Tenants and Users (Shared LocalStorage)
-        const storedTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
-        const storedUsers = JSON.parse(localStorage.getItem('platform_users_registry') || '[]');
-
-        // Update Whitelist
-        const dynamicIds = storedTenants.map(t => t.id);
-        const ALLOWED_TENANTS = ['ltdistribuidora', 'centralpecas', 'parreira', ...dynamicIds];
-
-        // ACESSO DE EMERGÊNCIA — usado quando platform_users_registry está vazio
-        // (ex: primeiro acesso, localStorage limpo ou usuário não cadastrado no Master)
-        // IMPORTANTE: Após fazer login, acesse o Painel Admin (Master) e cadastre
-        // o usuário paulo lá para poder remover este fallback com segurança.
-        const FALLBACK_USERS = [
-            { login: 'paulo', pass: 'master@2026', name: 'Paulo Parreira', role: 'admin', tenant: 'parreira' }
-        ];
+        // v3.17.0: Autenticação centralizada — usa ParreiraAuth (Firestore) via login.html
+        // FALLBACK_USERS e platform_users_registry removidos por segurança.
 
         document.addEventListener('DOMContentLoaded', function () {
             checkLogin();
@@ -315,8 +272,8 @@
                 renderUserInfo(user);
                 return;
             }
-            // Sem sessão: exibe overlay de login embutido — NÃO redireciona
-            document.getElementById('loginOverlay').style.display = 'flex';
+            // Sem sessão: redireciona para login único (ParreiraAuth)
+            window.location.href = '/platform/login.html?module=portal&redirect=platform/index.html';
         }
 
         async function handleLogin(e) {

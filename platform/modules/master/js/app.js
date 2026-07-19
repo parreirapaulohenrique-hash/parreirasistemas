@@ -57,47 +57,15 @@ async function reloadTenantsFromFirestore() {
         }
     } catch(e) {
         console.warn('[Master] Falha ao recarregar tenants do Firestore:', e.message);
+
+        // v3.17.0: Seeds com senhas hardcoded removidos — usuários gerenciados via Firestore (ParreiraAuth)
+        // Para criar/editar usuários, usar o Firebase Console ou o módulo de gestão de usuários.
+
+        // v3.17.0: Bloco SECURITY_KEY removido — sem mais senhas hardcoded no código.
+        // Usuários gerenciados exclusivamente via Firestore (ParreiraAuth).
     }
 }
 
-
-// --- SECURITY UPDATE (Ensure Owner Access, Remove Generic Admin) ---
-const SECURITY_KEY = 'sec_v1_paulo_only';
-if (!localStorage.getItem(SECURITY_KEY)) {
-    console.log('ðŸ”’ Aplicando atualização de segurança...');
-
-    // 1. Remove insecure 'admin'
-    platformUsers = platformUsers.filter(u => u.login !== 'admin');
-
-    // 2. Add/Update Owner 'paulo'
-    const ownerUser = {
-        login: 'paulo',
-        pass: 'master@2026',
-        name: 'Paulo Parreira',
-        tenant: 'parreira',
-        role: 'admin'
-    };
-
-    // Remove existing 'paulo' or 'parreira' (legacy owner) to avoid duplicates
-    platformUsers = platformUsers.filter(u => u.login !== 'paulo' && u.login !== 'parreira');
-
-    // Add new definitive owner
-    platformUsers.unshift(ownerUser);
-
-    localStorage.setItem('platform_users_registry', JSON.stringify(platformUsers));
-    localStorage.setItem(SECURITY_KEY, 'true');
-    console.log('ðŸ”’ Usuário Admin configurado: paulo / master@2026');
-}
-
-// --- Fallback Seeds ---
-if (platformUsers.length === 0) {
-    platformUsers = [
-        { login: 'paulo', pass: 'master@2026', name: 'Paulo Parreira', tenant: 'parreira', role: 'admin' },
-        { login: 'alessandro', pass: '123456', name: 'Alessandro', tenant: 'parreira', role: 'supervisor' },
-        { login: 'fernando', pass: '123456', name: 'Fernando Masson', tenant: 'centralpecas', role: 'supervisor' }
-    ];
-    localStorage.setItem('platform_users_registry', JSON.stringify(platformUsers));
-}
 
 document.addEventListener('DOMContentLoaded', () => {
     // Expor globais para onclick inline no HTML
