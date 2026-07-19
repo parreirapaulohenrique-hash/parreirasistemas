@@ -140,7 +140,7 @@ window.switchView = (viewName) => {
     if (viewEl) viewEl.style.display = 'block';
 
     // Active Nav Item
-    const navIndex = { tenants: 0, users: 1, licencas: 2 }[viewName] ?? 0;
+    const navIndex = { tenants: 0, users: 1, licencas: 2, ambientes: 3 }[viewName] ?? 0;
     const navItems = document.querySelectorAll('.nav-item');
     if (navItems[navIndex]) navItems[navIndex].classList.add('active');
 
@@ -148,7 +148,11 @@ window.switchView = (viewName) => {
     if (viewName === 'licencas' && window.LicencasManager) {
         window.LicencasManager.renderView();
     }
+    if (viewName === 'ambientes') {
+        renderAmbientes();
+    }
 };
+
 
 // Modal Control
 function openModal(modalId) {
@@ -878,10 +882,114 @@ window.salvarWmsConfig = async function(tenantId) {
         } else {
             const ts = `_${tenantId}`;
             localStorage.setItem('wms_integration_config' + ts, JSON.stringify({ connectorId: connector, connectorConfig: { baseUrl, empId, terminal } }));
-            if (feedback) { feedback.style.color='#f59e0b'; feedback.textContent='âš ï¸ Salvo localmente (Firebase indisponível).'; }
+            if (feedback) { feedback.style.color='#f59e0b'; feedback.textContent='⚠️ Salvo localmente (Firebase indisponível).'; }
         }
     } catch(e) {
-        if (feedback) { feedback.style.color='#ef4444'; feedback.textContent=`âŒ Erro: ${e.message}`; }
+        if (feedback) { feedback.style.color='#ef4444'; feedback.textContent=`❌ Erro: ${e.message}`; }
     }
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// renderAmbientes — Aba de Ambientes: cards PROD/HML por tenant
+// Migrado do Admin Legado (platform/admin/) para o Master Panel unificado
+// ─────────────────────────────────────────────────────────────────────────────
+window.renderAmbientes = function renderAmbientes() {
+    const grid = document.getElementById('ambientesGrid');
+    if (!grid) return;
+
+    const PROD_URL = 'parreirasistemas.vercel.app';
+    const HML_URL  = 'parreirasistemas-git-staging-paulo-h-parreiras-projects.vercel.app';
+
+    const allTenants = getAllTenants();
+
+    // Separa produção de homologação (_hml)
+    const prodTenants = allTenants.filter(t => !t.id.endsWith('_hml'));
+    const hmlMap = {};
+    allTenants.filter(t => t.id.endsWith('_hml')).forEach(t => {
+        hmlMap[t.id.replace(/_hml$/, '')] = t;
+    });
+
+    // Estatísticas
+    const statTotal  = document.getElementById('amb-stat-total');
+    const statActive = document.getElementById('amb-stat-active');
+    const statHml    = document.getElementById('amb-stat-hml');
+    if (statTotal)  statTotal.textContent  = prodTenants.length;
+    if (statActive) statActive.textContent = prodTenants.filter(t => t.status === 'active').length;
+    if (statHml)    statHml.textContent    = prodTenants.filter(t => hmlMap[t.id]).length;
+
+    if (!prodTenants.length) {
+        grid.innerHTML = '<p style="color:var(--text-secondary);padding:1rem;">Nenhum tenant encontrado.</p>';
+        return;
+    }
+
+    const copyIcon = `<span class="material-icons-round" style="font-size:.85rem;cursor:pointer;vertical-align:middle;" title="Copiar">content_copy</span>`;
+    const openIcon = `<span class="material-icons-round" style="font-size:.85rem;vertical-align:middle;" title="Abrir">open_in_new</span>`;
+
+    grid.innerHTML = prodTenants.map(t => {
+        const slug    = t.slug || t.id;
+        const hml     = hmlMap[t.id];
+        const hmlSlug = hml ? (hml.slug || hml.id) : `${slug}_hml`;
+        const prodUrl = `${PROD_URL}/${slug}`;
+        const hmlUrl  = `${HML_URL}/${hmlSlug}`;
+        const status  = t.status === 'active' ? 'active' : t.status === 'suspended' ? 'suspended' : 'inactive';
+        const statusLabel = { active: 'Ativo', suspended: 'Suspenso', inactive: 'Inativo' }[status];
+        const statusColor = { active: '#22c55e', suspended: '#f59e0b', inactive: '#ef4444' }[status];
+        const mods = (t.modules || []).length;
+
+        return `
+        <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1.25rem;
+                    transition:border-color .2s,transform .2s;cursor:default;"
+             onmouseenter="this.style.borderColor='var(--accent)';this.style.transform='translateY(-2px)'"
+             onmouseleave="this.style.borderColor='var(--border)';this.style.transform='none'">
+
+            <!-- Cabeçalho -->
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.75rem;">
+                <div>
+                    <div style="font-weight:700;font-size:1rem;">${t.name || t.id}</div>
+                    <div style="font-size:.75rem;color:var(--text-secondary);margin-top:2px;">/${slug}</div>
+                </div>
+                <span style="font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:20px;
+                             background:${statusColor}22;color:${statusColor};border:1px solid ${statusColor}44;">
+                    ${statusLabel}
+                </span>
+            </div>
+
+            <!-- Módulos -->
+            <div style="font-size:.75rem;color:var(--text-secondary);margin-bottom:1rem;">
+                <span class="material-icons-round" style="font-size:.85rem;vertical-align:middle;">apps</span>
+                ${mods} módulo${mods !== 1 ? 's' : ''}
+            </div>
+
+            <!-- Link PRODUÇÃO -->
+            <div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.25);border-radius:8px;
+                        padding:.6rem .85rem;display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
+                <div style="overflow:hidden;">
+                    <span style="font-size:.6rem;font-weight:700;color:#22c55e;background:rgba(34,197,94,.15);
+                                 padding:2px 6px;border-radius:4px;letter-spacing:.05em;margin-right:6px;">PROD</span>
+                    <span style="font-size:.72rem;color:#22c55e;" title="${prodUrl}">${prodUrl}</span>
+                </div>
+                <div style="display:flex;gap:.5rem;color:#22c55e;flex-shrink:0;margin-left:.5rem;">
+                    <span onclick="navigator.clipboard.writeText('https://${prodUrl}').then(()=>showToast('✅ URL copiada!'))">${copyIcon}</span>
+                    <a href="https://${prodUrl}" target="_blank" style="color:#22c55e;">${openIcon}</a>
+                </div>
+            </div>
+
+            <!-- Link HML -->
+            <div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,${hml ? '.3' : '.1'});border-radius:8px;
+                        padding:.6rem .85rem;display:flex;justify-content:space-between;align-items:center;
+                        ${hml ? '' : 'opacity:.45;'}">
+                <div style="overflow:hidden;">
+                    <span style="font-size:.6rem;font-weight:700;color:#f59e0b;background:rgba(245,158,11,.15);
+                                 padding:2px 6px;border-radius:4px;letter-spacing:.05em;margin-right:6px;">HML</span>
+                    <span style="font-size:.72rem;color:#f59e0b;" title="${hmlUrl}">${hmlUrl}</span>
+                </div>
+                <div style="display:flex;gap:.5rem;color:#f59e0b;flex-shrink:0;margin-left:.5rem;">
+                    <span onclick="navigator.clipboard.writeText('https://${hmlUrl}').then(()=>showToast('✅ URL copiada!'))">${copyIcon}</span>
+                    <a href="https://${hmlUrl}" target="_blank" style="color:#f59e0b;">${openIcon}</a>
+                </div>
+            </div>
+            ${!hml ? `<div style="font-size:.68rem;color:var(--text-secondary);margin-top:.4rem;text-align:center;">
+                sem ambiente HML configurado</div>` : ''}
+        </div>`;
+    }).join('');
+};

@@ -78,6 +78,10 @@
                     <span class="material-icons-round">verified</span>
                     Controle de Licenças
                 </a>
+                <a href="#" class="nav-item" onclick="switchView('ambientes')">
+                    <span class="material-icons-round">cloud</span>
+                    Ambientes
+                </a>
                 <a href="#" class="nav-item">
                     <span class="material-icons-round">settings</span>
                     Configurações
@@ -164,6 +168,49 @@
                 </div>
             </header>
             <div class="content-body" id="licencas-container"></div>
+        </main>
+
+        <!-- View: Ambientes (PROD/HML) -->
+        <main class="main-content" id="view-ambientes" style="display: none;">
+            <header class="header">
+                <div>
+                    <h2>Ambientes</h2>
+                    <p>Links de acesso de produção e homologação por cliente.</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" onclick="renderAmbientes()" title="Recarregar">
+                        <span class="material-icons-round">refresh</span>
+                    </button>
+                </div>
+            </header>
+            <div class="content-body">
+                <!-- Estatísticas -->
+                <div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+                    <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:.75rem 1.25rem;display:flex;align-items:center;gap:.6rem;">
+                        <span class="material-icons-round" style="color:var(--accent);font-size:1.2rem;">business</span>
+                        <div>
+                            <div style="font-size:.7rem;color:var(--text-secondary);">TOTAL</div>
+                            <div style="font-weight:700;" id="amb-stat-total">—</div>
+                        </div>
+                    </div>
+                    <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:.75rem 1.25rem;display:flex;align-items:center;gap:.6rem;">
+                        <span class="material-icons-round" style="color:#22c55e;font-size:1.2rem;">check_circle</span>
+                        <div>
+                            <div style="font-size:.7rem;color:var(--text-secondary);">ATIVOS</div>
+                            <div style="font-weight:700;" id="amb-stat-active">—</div>
+                        </div>
+                    </div>
+                    <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:.75rem 1.25rem;display:flex;align-items:center;gap:.6rem;">
+                        <span class="material-icons-round" style="color:#f59e0b;font-size:1.2rem;">science</span>
+                        <div>
+                            <div style="font-size:.7rem;color:var(--text-secondary);">COM HML</div>
+                            <div style="font-weight:700;" id="amb-stat-hml">—</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Grid de cards -->
+                <div id="ambientesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1rem;"></div>
+            </div>
         </main>
     </div>
 
