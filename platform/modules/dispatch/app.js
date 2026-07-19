@@ -694,6 +694,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     tenantId: _parreiraSessao.tenantId
                 };
                 if (typeof AppState !== 'undefined') AppState.set('currentUser', currentUser);
+                // Salva em localStorage para que o role check (Utils.getStorage) encontre o usuário
+                Utils.setStorage('logged_user', currentUser);
                 if (loginOverlay) loginOverlay.style.display = 'none';
                 console.log(`[checkAuth] ✅ Sessão bridge (Hub): ${currentUser.login} (${currentUser.role})`);
                 return;
@@ -745,7 +747,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Helper: Check if current user is supervisor
         window.isSupervisor = () => {
             const storedUser = Utils.getStorage('logged_user');
-            return storedUser && storedUser.role === 'supervisor';
+            return storedUser && ['supervisor', 'admin', 'master'].includes(storedUser.role);
         };
 
         // ──────────────────────────────────────────────────────────────────────────────
@@ -872,7 +874,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log('🔐 [Role Check] User:', storedUser);
             console.log('🔐 [Role Check] Role detected:', userRole);
 
-            const isSup = userRole === 'supervisor' || userRole === 'admin';
+            // 'master' (ParreiraAuth) é mapeado para acesso total igual a 'admin'
+            const isSup = ['supervisor', 'admin', 'master'].includes(userRole);
             const isMotoboy = userRole === 'motoboy';
             const isMotorista = userRole === 'motorista';
             const isDeliveryUser = isMotoboy || isMotorista;
@@ -6399,7 +6402,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Valida a senha do supervisor (mesmo sistema do modal de autorização)
             const users = Utils.getStorage('app_users') || [];
             const supervisor = users.find(u =>
-                (u.role === 'supervisor' || u.role === 'admin') &&
+                (u.role === 'supervisor' || u.role === 'admin' || u.role === 'master') &&
                 u.pass === supervisorPass
             );
 
@@ -10366,7 +10369,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Bloqueia acesso ao Log para perfis sem permissão
             if (id === 'auditLog') {
-                const isSup = userRole === 'supervisor' || userRole === 'admin';
+                const isSup = ['supervisor', 'admin', 'master'].includes(userRole);
                 if (!isSup) {
                     showToast('⛔ Acesso restrito a Administradores e Supervisores.', 'error');
                     return;
