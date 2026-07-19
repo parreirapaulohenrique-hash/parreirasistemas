@@ -113,6 +113,15 @@ class AcontecAdapter extends ErpAdapter {
             estado:    (raw.endereco?.estado || raw.estado || '').toUpperCase(),
             cnpj:      raw.cnpj || '',
             email:     raw.email || '',
+            // Taxa de frete da região (campo "TAXA REGIÃO" no Acontec)
+            taxaRegiao: parseFloat(
+                raw.taxa_regiao   ||
+                raw.taxaRegiao    ||
+                raw.taxa_região   ||
+                raw['TAXA REGIÃO']||
+                raw.taxa_frete    ||
+                raw.perc_frete    || 0
+            ) || null,
             // Metadados de sincronização
             _source:   'acontec',
             _syncedAt: new Date().toISOString()

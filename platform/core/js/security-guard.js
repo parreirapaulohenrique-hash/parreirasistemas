@@ -151,7 +151,8 @@
             const role   = Session.getRole();
             const tenant = Session.getTenantId();
 
-            if (tenant !== 'parreira' || role !== 'admin') {
+            // Aceita 'admin' e 'master' como roles válidos para o Painel Admin
+            if (tenant !== 'parreira' || !['admin', 'master'].includes(role)) {
                 SecureLogger.secError(
                     `Guard [MASTER]: acesso negado — tenant='${tenant}', role='${role}'`
                 );

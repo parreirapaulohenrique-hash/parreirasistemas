@@ -679,6 +679,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         // NÃO revalidamos contra app_users porque eles ainda não foram
         // carregados da nuvem no início da página (Cloud.loadAll() só roda no login).
         window.checkAuth = () => {
+            // v3.17.0 BRIDGE: Aceita sessão do Hub (login.html / ParreiraAuth)
+            // Se o usuário já está logado via Hub, não pede login de novo no Bússola Log
+            const _parreiraSessao = (() => {
+                try { return JSON.parse(sessionStorage.getItem('parreira_session') || 'null'); }
+                catch { return null; }
+            })();
+            if (_parreiraSessao && _parreiraSessao.login && _parreiraSessao.tenantId &&
+                (Date.now() - (_parreiraSessao.ts || 0) < 8 * 3600000)) {
+                currentUser = {
+                    name:     _parreiraSessao.nome  || _parreiraSessao.login,
+                    login:    _parreiraSessao.login,
+                    role:     _parreiraSessao.role  || 'supervisor',
+                    tenantId: _parreiraSessao.tenantId
+                };
+                if (typeof AppState !== 'undefined') AppState.set('currentUser', currentUser);
+                if (loginOverlay) loginOverlay.style.display = 'none';
+                console.log(`[checkAuth] ✅ Sessão bridge (Hub): ${currentUser.login} (${currentUser.role})`);
+                return;
+            }
+
+            // Fluxo original: verifica sessão em localStorage
             const storedUser = Utils.getStorage('logged_user');
             if (storedUser && storedUser.login) {
                 // Sessão válida encontrada — restaura sem re-validar senha
@@ -8139,6 +8160,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 renderLateDispatchesReport(content);
             } else if (reportType === 'delivery-report') {
                 renderDeliveryReport(content);
+            } else if (reportType === 'freight-by-client') {
+                renderFreightByClientReport(content);
             }
             // Add other reports here
 
@@ -8835,6 +8858,410 @@ document.addEventListener('DOMContentLoaded', async () => {
             resultsContainer.innerHTML = html;
         };
 
+        // --- RELATÓRIO: ANÁLISE DE FRETE POR CLIENTE (v3.16.23) ---
+
+        function renderFreightByClientReport(container) {
+            const now = new Date();
+            const fromDefault = new Date(now); fromDefault.setDate(fromDefault.getDate() - 30);
+            const pad = n => String(n).padStart(2, '0');
+            const toISO = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
+            container.innerHTML = `
+                <div class="welcome-banner" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem;">
+                    <span class="material-icons-round" style="font-size: 2.5rem; color: rgba(255,255,255,0.9);">account_balance_wallet</span>
+                    <div>
+                        <h2 style="margin: 0; color: white; font-size: 1.3rem;">Análise de Frete por Cliente</h2>
+                        <p style="margin: 0.25rem 0 0; color: rgba(255,255,255,0.8); font-size: 0.9rem;">Compare a taxa de região (ERP) com o custo efetivo pago (despacho + redespacho)</p>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <div class="card-header"><span>🔍 Filtros</span></div>
+                    <div class="card-body">
+                        <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;">
+                            <div>
+                                <label style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Período de</label>
+                                <input type="date" id="frcDateFrom" class="input-field" value="${toISO(fromDefault)}" style="width: 160px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Até</label>
+                                <input type="date" id="frcDateTo" class="input-field" value="${toISO(now)}" style="width: 160px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Cliente (parcial)</label>
+                                <input type="text" id="frcClient" class="input-field" placeholder="Todos" style="width: 200px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Status</label>
+                                <select id="frcStatus" class="input-field" style="width: 160px;">
+                                    <option value="">Todos</option>
+                                    <option value="Pago">Pago</option>
+                                    <option value="Despachado">Despachado</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">% Absorvida pela Distribuidora</label>
+                                <input type="number" id="frcAbsorvido" class="input-field" value="3" step="0.1" min="0" max="100" style="width: 140px;">
+                            </div>
+                            <div>
+                                <button class="btn btn-primary" onclick="window.applyFreightByClientFilter()" style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <span class="material-icons-round" style="font-size: 1rem;">bar_chart</span> Gerar Relatório
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="frcResults"></div>
+            `;
+        }
+
+        window.applyFreightByClientFilter = async function () {
+            const dateFrom      = document.getElementById('frcDateFrom')?.value || '';
+            const dateTo        = document.getElementById('frcDateTo')?.value || '';
+            const clientFilter  = (document.getElementById('frcClient')?.value || '').trim().toUpperCase();
+            const statusFilter  = document.getElementById('frcStatus')?.value || '';
+            const percAbsorvido = parseFloat(document.getElementById('frcAbsorvido')?.value) || 0;
+            const resultsEl     = document.getElementById('frcResults');
+            if (!resultsEl) return;
+
+            resultsEl.innerHTML = '<div style="text-align:center; padding: 2rem; color: var(--text-secondary);">⏳ Carregando dados...</div>';
+
+            try {
+                const allDispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
+                const clients       = Utils.getStorage('clients') || [];
+
+                // Monta mapa nome → cliente (para buscar taxaRegiao do ERP)
+                const clientMap = {};
+                clients.forEach(c => {
+                    if (c.nome) clientMap[c.nome.toUpperCase()] = c;
+                });
+
+                // Filtra despachos
+                const filtered = allDispatches.filter(d => {
+                    const dDate = (d.date || d.registradoEm || '').slice(0, 10);
+                    if (dateFrom && dDate < dateFrom) return false;
+                    if (dateTo   && dDate > dateTo)   return false;
+                    if (statusFilter && d.status !== statusFilter) return false;
+                    if (clientFilter && !(d.client || '').toUpperCase().includes(clientFilter)) return false;
+                    if (!d.nfValue || d.nfValue <= 0) return false;
+                    return true;
+                });
+
+                // Agrupa por cliente
+                const byClient = {};
+                filtered.forEach(d => {
+                    const key = (d.client || 'SEM CLIENTE').toUpperCase();
+                    if (!byClient[key]) {
+                        const cData = clientMap[key] || {};
+                        byClient[key] = {
+                            nome:        d.client || 'SEM CLIENTE',
+                            cidade:      d.city || '',
+                            nfs:         [],
+                            totalNF:     0,
+                            totalFrete:  0,
+                            totalRedesp: 0,
+                            taxaRegiao:  cData.taxaRegiao != null ? parseFloat(cData.taxaRegiao) : null
+                        };
+                    }
+                    byClient[key].nfs.push(d);
+                    byClient[key].totalNF     += d.nfValue     || 0;
+                    byClient[key].totalFrete  += d.total       || 0;
+                    byClient[key].totalRedesp += d.redespTotal || 0;
+                });
+
+                const clientRows = Object.values(byClient);
+
+                if (clientRows.length === 0) {
+                    resultsEl.innerHTML = '<div class="card" style="padding:2rem; text-align:center; color: var(--text-secondary);">Nenhum dado encontrado para os filtros selecionados.</div>';
+                    return;
+                }
+
+                // Calcula métricas por cliente
+                let grandTotalNF = 0, grandTotalFrete = 0, grandResultado = 0;
+                clientRows.forEach(c => {
+                    c._totalFreteTotal = c.totalFrete + c.totalRedesp;
+                    c._percEfetivo     = c.totalNF > 0 ? (c._totalFreteTotal / c.totalNF * 100) : 0;
+                    c._taxaRef         = (c.taxaRegiao || 0) + percAbsorvido;
+                    c._diferenca       = c._percEfetivo - c._taxaRef;
+                    c._resultadoR      = c.taxaRegiao != null
+                        ? (c.totalNF * c._taxaRef / 100) - c._totalFreteTotal
+                        : null;
+                    grandTotalNF    += c.totalNF;
+                    grandTotalFrete += c._totalFreteTotal;
+                    if (c._resultadoR != null) grandResultado += c._resultadoR;
+                });
+
+                const grandPerc = grandTotalNF > 0 ? (grandTotalFrete / grandTotalNF * 100) : 0;
+                const fmt  = v => Utils.formatCurrency ? Utils.formatCurrency(v) : `R$ ${Number(v).toFixed(2)}`;
+                const fmtP = v => `${Number(v).toFixed(2)}%`;
+                const fmtDate = s => (s || '').slice(0,10).split('-').reverse().join('/');
+
+                // Ordena: maior déficit primeiro
+                clientRows.sort((a, b) => b._diferenca - a._diferenca);
+
+                // Salva para impressão individual
+                window._frcClientData    = clientRows;
+                window._frcPercAbsorvido = percAbsorvido;
+                window._frcFmt           = fmt;
+                window._frcFmtP          = fmtP;
+
+                resultsEl.innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div class="card" style="padding: 1.25rem; text-align: center;">
+                            <div style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.4rem;">Clientes</div>
+                            <div style="font-size: 2rem; font-weight: 700; color: var(--primary-color);">${clientRows.length}</div>
+                        </div>
+                        <div class="card" style="padding: 1.25rem; text-align: center;">
+                            <div style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.4rem;">Total NFs</div>
+                            <div style="font-size: 2rem; font-weight: 700; color: var(--text-primary);">${filtered.length}</div>
+                        </div>
+                        <div class="card" style="padding: 1.25rem; text-align: center;">
+                            <div style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.4rem;">Valor Total NFs</div>
+                            <div style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary);">${fmt(grandTotalNF)}</div>
+                        </div>
+                        <div class="card" style="padding: 1.25rem; text-align: center;">
+                            <div style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.4rem;">Frete Total Pago</div>
+                            <div style="font-size: 1.15rem; font-weight: 700; color: #f59e0b;">${fmt(grandTotalFrete)}</div>
+                        </div>
+                        <div class="card" style="padding: 1.25rem; text-align: center;">
+                            <div style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.4rem;">% Efetivo Médio</div>
+                            <div style="font-size: 2rem; font-weight: 700; color: #f59e0b;">${fmtP(grandPerc)}</div>
+                        </div>
+                        <div class="card" style="padding: 1.25rem; text-align: center;">
+                            <div style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.4rem;">Resultado Global</div>
+                            <div style="font-size: 1.15rem; font-weight: 700; color: ${grandResultado >= 0 ? '#10b981' : '#ef4444'};">${fmt(grandResultado)}</div>
+                            <div style="font-size: 0.7rem; color: var(--text-secondary);">${grandResultado >= 0 ? '✅ Coberto' : '🔴 Déficit'}</div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-bottom: 1rem;" class="no-print">
+                        <button class="btn btn-secondary" onclick="window.exportReportToExcel('frcTable', 'Analise_Frete_Cliente')" style="display:flex; align-items:center; gap:0.4rem;">
+                            <span class="material-icons-round" style="font-size:1rem;">download</span> Excel
+                        </button>
+                        <button class="btn btn-secondary" onclick="window.printReport(null, 'Análise de Frete por Cliente')" style="display:flex; align-items:center; gap:0.4rem;">
+                            <span class="material-icons-round" style="font-size:1rem;">print</span> Imprimir
+                        </button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <span>📦 Análise por Cliente &nbsp;·&nbsp; % Absorvida: <strong>${percAbsorvido}%</strong></span>
+                        </div>
+                        <div class="card-body" style="padding: 0; overflow-x: auto;">
+                            <table class="dispatch-table" id="frcTable">
+                                <thead>
+                                    <tr>
+                                        <th>Cliente</th>
+                                        <th>Cidade</th>
+                                        <th style="text-align:center;">NFs</th>
+                                        <th style="text-align:right;">Valor NFs</th>
+                                        <th style="text-align:right;">Frete Desp.</th>
+                                        <th style="text-align:right;">Redespacho</th>
+                                        <th style="text-align:right;">Total Frete</th>
+                                        <th style="text-align:center;">% Efetivo</th>
+                                        <th style="text-align:center;">Taxa Região</th>
+                                        <th style="text-align:center;">% Absorv.</th>
+                                        <th style="text-align:center;">% Referência</th>
+                                        <th style="text-align:center;">Diferença</th>
+                                        <th style="text-align:right;">Resultado R$</th>
+                                        <th class="no-print" style="text-align:center;">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${clientRows.map((c, idx) => {
+                                        const difColor = c._diferenca > 0.5 ? '#ef4444' : c._diferenca > 0 ? '#f59e0b' : '#10b981';
+                                        const difIcon  = c._diferenca > 0.5 ? '🔴' : c._diferenca > 0 ? '🟡' : '✅';
+                                        const resColor = (c._resultadoR == null || c._resultadoR >= 0) ? '#10b981' : '#ef4444';
+                                        const ni = '<span style="color:#6b7280;font-size:0.8rem;">N/I</span>';
+                                        return `
+                                        <tr>
+                                            <td><strong>${c.nome}</strong></td>
+                                            <td style="color:var(--text-secondary);">${c.cidade}</td>
+                                            <td style="text-align:center;">${c.nfs.length}</td>
+                                            <td style="text-align:right;">${fmt(c.totalNF)}</td>
+                                            <td style="text-align:right;">${fmt(c.totalFrete)}</td>
+                                            <td style="text-align:right;">${fmt(c.totalRedesp)}</td>
+                                            <td style="text-align:right; font-weight:600;">${fmt(c._totalFreteTotal)}</td>
+                                            <td style="text-align:center; font-weight:700; color:#f59e0b;">${fmtP(c._percEfetivo)}</td>
+                                            <td style="text-align:center;">${c.taxaRegiao != null ? fmtP(c.taxaRegiao) : ni}</td>
+                                            <td style="text-align:center;">${fmtP(percAbsorvido)}</td>
+                                            <td style="text-align:center; font-weight:600;">${c.taxaRegiao != null ? fmtP(c._taxaRef) : ni}</td>
+                                            <td style="text-align:center; font-weight:700; color:${difColor};">${c.taxaRegiao != null ? difIcon+' '+(c._diferenca > 0 ? '+' : '')+fmtP(c._diferenca) : ni}</td>
+                                            <td style="text-align:right; font-weight:700; color:${resColor};">${c._resultadoR != null ? fmt(c._resultadoR) : ni}</td>
+                                            <td class="no-print" style="text-align:center; white-space:nowrap;">
+                                                <button class="btn btn-secondary" title="Ver últimos 3 despachos"
+                                                    style="padding:0.2rem 0.5rem; font-size:0.75rem; margin-right:2px;"
+                                                    onclick="window.toggleFrcDetail('frcD${idx}')">
+                                                    <span class="material-icons-round" style="font-size:0.85rem;">expand_more</span>
+                                                </button>
+                                                <button class="btn btn-secondary" title="Imprimir extrato do cliente"
+                                                    style="padding:0.2rem 0.5rem; font-size:0.75rem;"
+                                                    onclick="window.printFrcClient(${idx})">
+                                                    <span class="material-icons-round" style="font-size:0.85rem;">print</span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr id="frcD${idx}" style="display:none;">
+                                            <td colspan="14" style="padding:0;">
+                                                <div style="background:rgba(0,0,0,0.15); padding:1rem;">
+                                                    <div style="font-size:0.82rem; font-weight:600; margin-bottom:0.6rem; color:var(--text-secondary);">📋 Últimos ${Math.min(3, c.nfs.length)} despacho(s) — ${c.nome}</div>
+                                                    <table class="dispatch-table" style="font-size:0.8rem;">
+                                                        <thead><tr>
+                                                            <th>NF</th><th>Data</th>
+                                                            <th style="text-align:right;">Valor NF</th>
+                                                            <th>Transportadora</th>
+                                                            <th style="text-align:right;">Frete</th>
+                                                            <th>Redespacho</th>
+                                                            <th style="text-align:right;">Frete Redesp.</th>
+                                                            <th style="text-align:right;">Total</th>
+                                                            <th style="text-align:center;">% Efetivo</th>
+                                                            <th>Status</th>
+                                                        </tr></thead>
+                                                        <tbody>
+                                                            ${[...c.nfs]
+                                                                .sort((a,b)=>((b.date||'')>(a.date||'')?1:-1))
+                                                                .slice(0,3)
+                                                                .map(d=>{
+                                                                    const tot = (d.total||0)+(d.redespTotal||0);
+                                                                    const prc = d.nfValue>0?(tot/d.nfValue*100):0;
+                                                                    const pc  = prc > c._taxaRef ? '#ef4444':'#10b981';
+                                                                    return `<tr>
+                                                                        <td><strong>${d.invoice||'-'}</strong></td>
+                                                                        <td>${fmtDate(d.date)}</td>
+                                                                        <td style="text-align:right;">${fmt(d.nfValue||0)}</td>
+                                                                        <td>${d.carrier||'-'}</td>
+                                                                        <td style="text-align:right;">${fmt(d.total||0)}</td>
+                                                                        <td>${d.redespCarrier||d.redespacho||'-'}</td>
+                                                                        <td style="text-align:right;">${fmt(d.redespTotal||0)}</td>
+                                                                        <td style="text-align:right; font-weight:600;">${fmt(tot)}</td>
+                                                                        <td style="text-align:center; font-weight:700; color:${pc};">${fmtP(prc)}</td>
+                                                                        <td><span style="font-size:0.72rem;">${d.status||'-'}</span></td>
+                                                                    </tr>`;
+                                                                }).join('')}
+                                                        </tbody>
+                                                    </table>
+                                                    ${c.nfs.length > 3 ? `<div style="text-align:center; margin-top:0.5rem; font-size:0.78rem; color:var(--text-secondary);">... e mais ${c.nfs.length-3} despacho(s) no período</div>` : ''}
+                                                </div>
+                                            </td>
+                                        </tr>`;
+                                    }).join('')}
+                                </tbody>
+                                <tfoot>
+                                    <tr style="font-weight:700; border-top:2px solid var(--border-color);">
+                                        <td colspan="3"><strong>TOTAL (${clientRows.length} clientes · ${filtered.length} NFs)</strong></td>
+                                        <td style="text-align:right;"><strong>${fmt(grandTotalNF)}</strong></td>
+                                        <td style="text-align:right;"><strong>${fmt(clientRows.reduce((s,c)=>s+c.totalFrete,0))}</strong></td>
+                                        <td style="text-align:right;"><strong>${fmt(clientRows.reduce((s,c)=>s+c.totalRedesp,0))}</strong></td>
+                                        <td style="text-align:right;"><strong>${fmt(grandTotalFrete)}</strong></td>
+                                        <td style="text-align:center; color:#f59e0b;"><strong>${fmtP(grandPerc)}</strong></td>
+                                        <td colspan="4"></td>
+                                        <td style="text-align:right; color:${grandResultado>=0?'#10b981':'#ef4444'};"><strong>${fmt(grandResultado)}</strong></td>
+                                        <td class="no-print"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                `;
+
+            } catch (e) {
+                resultsEl.innerHTML = `<div class="card" style="padding:2rem; text-align:center; color:#ef4444;">❌ Erro ao carregar dados: ${e.message}</div>`;
+                console.error('[FRC Report]', e);
+            }
+        };
+
+        window.toggleFrcDetail = function(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
+        };
+
+        window.printFrcClient = function(idx) {
+            const c   = window._frcClientData?.[idx];
+            if (!c) return;
+            const fmt  = window._frcFmt  || (v => `R$ ${Number(v).toFixed(2)}`);
+            const fmtP = window._frcFmtP || (v => `${Number(v).toFixed(2)}%`);
+            const perc = window._frcPercAbsorvido || 0;
+            const fmtD = s => (s||'').slice(0,10).split('-').reverse().join('/');
+            const rows = [...c.nfs].sort((a,b)=>((b.date||'')>(a.date||'')?1:-1));
+            const win  = window.open('', '_blank', 'width=1000,height=750');
+            if (!win) return;
+            win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+                <title>Extrato de Frete — ${c.nome}</title>
+                <style>
+                    body{font-family:Arial,sans-serif;font-size:12px;color:#000;margin:20px;}
+                    h1{font-size:16px;margin-bottom:4px;} h2{font-size:13px;color:#555;margin-bottom:16px;}
+                    table{width:100%;border-collapse:collapse;margin-top:12px;}
+                    th{background:#1e3a5f;color:#fff;padding:6px 8px;font-size:11px;text-align:left;}
+                    td{padding:5px 8px;border-bottom:1px solid #e5e7eb;font-size:11px;}
+                    tr:nth-child(even) td{background:#f9fafb;}
+                    .tfoot td{background:#f0fdf4;font-weight:bold;}
+                    .summary{background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;padding:12px;margin:12px 0;}
+                    .sg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;}
+                    .si{text-align:center;} .sl{font-size:10px;color:#6b7280;text-transform:uppercase;}
+                    .sv{font-size:14px;font-weight:bold;}
+                    .header{display:flex;justify-content:space-between;margin-bottom:16px;}
+                    @media print{button{display:none;}}
+                </style></head><body>
+                <div class="header">
+                    <div><h1>🧭 Bússola Log — Demonstrativo de Frete</h1><h2>Cliente: ${c.nome} · Cidade: ${c.cidade}</h2></div>
+                    <div style="text-align:right;color:#6b7280;font-size:11px;">
+                        Gerado em: ${new Date().toLocaleDateString('pt-BR')}<br>
+                        Período: ${rows.length>0?fmtD(rows[rows.length-1].date)+' a '+fmtD(rows[0].date):'-'}
+                    </div>
+                </div>
+                <div class="summary"><strong>Resumo Consolidado</strong>
+                    <div class="sg">
+                        <div class="si"><div class="sl">Total NFs</div><div class="sv">${c.nfs.length}</div></div>
+                        <div class="si"><div class="sl">Valor Total NFs</div><div class="sv">${fmt(c.totalNF)}</div></div>
+                        <div class="si"><div class="sl">Frete Total Pago</div><div class="sv">${fmt(c._totalFreteTotal)}</div></div>
+                        <div class="si"><div class="sl">% Efetivo</div><div class="sv">${fmtP(c._percEfetivo)}</div></div>
+                        <div class="si"><div class="sl">Taxa Região (ERP)</div><div class="sv">${c.taxaRegiao!=null?fmtP(c.taxaRegiao):'N/I'}</div></div>
+                        <div class="si"><div class="sl">% Referência (Taxa+Absorv.)</div>
+                            <div class="sv" style="color:${c._diferenca>0?'#dc2626':'#059669'}">
+                                ${c.taxaRegiao!=null?fmtP(c._taxaRef):'N/I'} &nbsp; ${c._diferenca>0?'🔴 Déficit':'✅ Coberto'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <table>
+                    <thead><tr><th>NF</th><th>Data</th><th>Valor NF</th><th>Transportadora</th><th>Frete</th><th>Redespacho</th><th>Fr. Redesp.</th><th>Total Frete</th><th>% Efetivo</th><th>Status</th></tr></thead>
+                    <tbody>
+                        ${rows.map(d=>{
+                            const tot=(d.total||0)+(d.redespTotal||0);
+                            const prc=d.nfValue>0?(tot/d.nfValue*100).toFixed(2):'0.00';
+                            return `<tr>
+                                <td>${d.invoice||'-'}</td><td>${fmtD(d.date)}</td>
+                                <td>${fmt(d.nfValue||0)}</td><td>${d.carrier||'-'}</td>
+                                <td>${fmt(d.total||0)}</td><td>${d.redespCarrier||d.redespacho||'-'}</td>
+                                <td>${fmt(d.redespTotal||0)}</td>
+                                <td><strong>${fmt(tot)}</strong></td>
+                                <td><strong>${prc}%</strong></td>
+                                <td>${d.status||'-'}</td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                    <tfoot><tr class="tfoot">
+                        <td colspan="2"><strong>TOTAL (${c.nfs.length} NFs)</strong></td>
+                        <td><strong>${fmt(c.totalNF)}</strong></td><td></td>
+                        <td><strong>${fmt(c.totalFrete)}</strong></td><td></td>
+                        <td><strong>${fmt(c.totalRedesp)}</strong></td>
+                        <td><strong>${fmt(c._totalFreteTotal)}</strong></td>
+                        <td><strong>${fmtP(c._percEfetivo)}</strong></td><td></td>
+                    </tr></tfoot>
+                </table>
+                <div style="margin-top:20px;text-align:center;">
+                    <button onclick="window.print()" style="padding:8px 20px;background:#1e3a5f;color:#fff;border:none;border-radius:4px;cursor:pointer;">🖨️ Imprimir / Salvar PDF</button>
+                </div>
+                <div style="margin-top:24px;font-size:10px;color:#9ca3af;text-align:center;border-top:1px solid #e5e7eb;padding-top:8px;">
+                    Bússola Log — Gestão Logística Inteligente &bull; ${new Date().toLocaleString('pt-BR')}
+                </div>
+            </body></html>`);
+            win.document.close();
+            setTimeout(() => win.print(), 500);
+        };
+
         // --- FINAL INITIALIZATION ---
 
         populateCarrierSelect();
@@ -9215,6 +9642,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             <td style="padding: 0.6rem; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${c.nome}">${c.nome || '-'}</td>
             <td style="padding: 0.6rem;">${c.cidade || '-'}</td>
             <td style="padding: 0.6rem; text-align: center;">
+                ${c.taxaRegiao != null
+                    ? `<span style="font-weight:600; color:#10b981;">${Number(c.taxaRegiao).toFixed(2)}%</span>`
+                    : `<span style="color:#6b7280; font-size:0.8rem;">N/I</span>`}
+            </td>
+            <td style="padding: 0.6rem; text-align: center;">
                 <div style="display: flex; justify-content: center; align-items: center;">
                     ${alertBtn}
                     <button onclick="window.editClient(${clients.indexOf(c)})" class="btn btn-secondary" 
@@ -9273,6 +9705,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('newClientNeighborhood').value = client.bairro || '';
             document.getElementById('newClientAddress').value = client.endereco || '';
             document.getElementById('newClientPhone').value = client.telefone || '';
+            document.getElementById('newClientTaxaRegiao').value = client.taxaRegiao != null ? client.taxaRegiao : '';
             document.getElementById('editingClientMode').value = 'true';
             document.getElementById('editingClientId').value = idx;
 
@@ -9405,14 +9838,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 const clientData = {
-                    cnpj: document.getElementById('newClientCNPJ').value.trim(),
-                    nome: nome.toUpperCase(),
-                    codigo: document.getElementById('newClientCode').value.trim().toUpperCase() ||
+                    cnpj:       document.getElementById('newClientCNPJ').value.trim(),
+                    nome:       nome.toUpperCase(),
+                    codigo:     document.getElementById('newClientCode').value.trim().toUpperCase() ||
                         nome.substring(0, 10).toUpperCase().replace(/\s+/g, ''),
-                    cidade: document.getElementById('newClientCity').value.trim().toUpperCase(),
-                    bairro: document.getElementById('newClientNeighborhood').value.trim().toUpperCase(),
-                    endereco: document.getElementById('newClientAddress').value.trim(),
-                    telefone: document.getElementById('newClientPhone').value.trim()
+                    cidade:     document.getElementById('newClientCity').value.trim().toUpperCase(),
+                    bairro:     document.getElementById('newClientNeighborhood').value.trim().toUpperCase(),
+                    endereco:   document.getElementById('newClientAddress').value.trim(),
+                    telefone:   document.getElementById('newClientPhone').value.trim(),
+                    taxaRegiao: (() => {
+                        const v = parseFloat(document.getElementById('newClientTaxaRegiao')?.value);
+                        return isNaN(v) ? null : v;
+                    })()
                 };
 
                 const _clientBefore = (isEditing && editIdx >= 0) ? { ...clients[editIdx] } : null;
@@ -9446,7 +9883,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const _isEdit = isEditing && editIdx >= 0;
                     let _desc = clientData.nome;
                     if (_isEdit && _clientBefore) {
-                        const _diffs = ['nome', 'cidade', 'bairro', 'endereco', 'telefone', 'cnpj', 'codigo']
+                        const _diffs = ['nome', 'cidade', 'bairro', 'endereco', 'telefone', 'cnpj', 'codigo', 'taxaRegiao']
                             .filter(k => String(clientData[k] || '') !== String(_clientBefore[k] || ''))
                             .map(k => `${k}: ${_clientBefore[k] || '(vazio)'} → ${clientData[k] || '(vazio)'}`);
                         _desc += _diffs.length ? ' — ' + _diffs.join(' | ') : ' — sem alterações';
