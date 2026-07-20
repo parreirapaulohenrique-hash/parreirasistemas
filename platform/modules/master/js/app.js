@@ -37,15 +37,37 @@ async function reloadTenantsFromFirestore() {
             const data = doc.data();
             const isAtivo = data.ativo !== undefined ? data.ativo : (data.status === 'active');
             if (!isAtivo) return; // Ignora tenants inativos
-            if (!dynamicTenants.find(t => t.id === doc.id)) {
-                dynamicTenants.push({
-                    id:        doc.id,
-                    name:      data.nome || data.name || doc.id,
-                    cnpj:      data.cnpj || '',
-                    modules:   data.modulos || data.modules || [],
-                    status:    'active',
-                    isDynamic: true
-                });
+
+            const firestoreData = {
+                id:        doc.id,
+                name:      data.nome || data.name || doc.id,
+                cnpj:      data.cnpj || '',
+                modules:   data.modulos || data.modules || [],
+                status:    'active',
+                slug:      data.slug || doc.id,
+                isDynamic: true
+            };
+
+            const existingIdx = dynamicTenants.findIndex(t => t.id === doc.id);
+            if (existingIdx >= 0) {
+                // MERGE: atualiza dados existentes com informações do Firestore
+                // Firestore tem precedência sobre data.js para nome, CNPJ e módulos
+                const existing = dynamicTenants[existingIdx];
+                const merged = {
+                    ...existing,
+                    name:    (data.nome || data.name) || existing.name,
+                    cnpj:    data.cnpj || existing.cnpj || '',
+                    modules: (data.modulos || data.modules)?.length ? (data.modulos || data.modules) : existing.modules,
+                    slug:    data.slug || existing.slug || doc.id
+                };
+                // Só marca como updated se algo mudou de fato
+                if (JSON.stringify(merged) !== JSON.stringify(existing)) {
+                    dynamicTenants[existingIdx] = merged;
+                    updated = true;
+                }
+            } else {
+                // Novo tenant: adiciona do Firestore
+                dynamicTenants.push(firestoreData);
                 updated = true;
                 console.log(`[Master] Tenant restaurado do Firestore: ${doc.id}`);
             }
@@ -53,7 +75,7 @@ async function reloadTenantsFromFirestore() {
 
         if (updated) {
             localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
-            renderTenants(); // Re-renderiza com os dados restaurados
+            renderTenants(); // Re-renderiza com os dados atualizados
         }
     } catch(e) {
         console.warn('[Master] Falha ao recarregar tenants do Firestore:', e.message);
