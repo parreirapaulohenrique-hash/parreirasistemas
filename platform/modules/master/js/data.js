@@ -23,5 +23,19 @@ window.mockTenants = [
         modules: ['dispatch'],
         status: 'active',
         createdAt: '2026-01-31'
+    },
+    {
+        id: 'parreiralog',
+        name: 'ParreiraLog',
+        cnpj: '',
+        modules: ['dispatch'],
+        status: 'active'
+    },
+    {
+        id: 'altsfix',
+        name: 'Altsfix',
+        cnpj: '',
+        modules: ['dispatch'],
+        status: 'active'
     }
 ];
