@@ -391,10 +391,6 @@ window.openCNPJSearch = (context = 'client') => {
 
 window.entities = JSON.parse(localStorage.getItem('erp_clientes' + window.getTenantSuffix()) || 'null') || [];
 
-window.renderEntities = (filter = '') => {
-    const tbody = document.getElementById('entitiesTableBody');
-    if (!tbody) return;
-
 /**
  * Carrega clientes do Firestore (fv_clientes) e mescla com localStorage.
  * Chamado assincronamente ao navegar para a pag Gestao de Clientes.
@@ -413,7 +409,6 @@ async function loadEntitiesFromFirebase() {
             const data = doc.data();
             const codeStr = data.codigo || data.id || doc.id;
             const codeNum = parseInt(codeStr) || codeStr;
-            // Evita duplicatas (mesmo code)
             if (!entities.some(e => String(e.code) === String(codeNum))) {
                 entities.push({
                     code: codeNum,
