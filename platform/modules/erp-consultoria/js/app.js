@@ -492,14 +492,16 @@ window.renderEntities = (filter = '') => {
             <td><span class="status-badge status-pending" style="color:var(--primary-color)">${e.seller || ''}</span></td>
             <td><span class="status-badge ${statusClass}">${statusText}</span></td>
             <td style="text-align:right; display:flex; gap:0.3rem; justify-content:flex-end;">
-                <button class="btn btn-secondary btn-icon" style="padding:0.4rem;" onclick="editCliente(${e.code})" title="Editar">
+                <button class="btn btn-secondary btn-icon" style="padding:0.4rem;" data-action="edit" title="Editar">
                     <span class="material-icons-round" style="font-size:1rem;">edit</span>
                 </button>
-                <button class="btn btn-icon" style="padding:0.4rem; background:rgba(239,68,68,.15); color:#ef4444; border:1px solid rgba(239,68,68,.3);" onclick="deleteCliente('${e.code}', '${(e.name||'').replace(/'/g,\"&apos;\")}')" title="Excluir">
+                <button class="btn btn-icon" style="padding:0.4rem; background:rgba(239,68,68,.15); color:#ef4444; border:1px solid rgba(239,68,68,.3);" data-action="delete" title="Excluir">
                     <span class="material-icons-round" style="font-size:1rem;">delete</span>
                 </button>
             </td>
         `;
+        tr.querySelector('[data-action="edit"]').addEventListener('click', () => editCliente(e.code));
+        tr.querySelector('[data-action="delete"]').addEventListener('click', () => deleteCliente(e.code, e.name));
         tbody.appendChild(tr);
     });
 };
