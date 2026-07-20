@@ -1029,11 +1029,11 @@ window.fcApp = {
             tbody += `<tr style="background:linear-gradient(90deg,#c2692a,#e07a35);color:#fff;font-weight:800;font-size:0.95rem;">
                 <td colspan="2" style="padding:8px 12px;">Disponíveis Nas Contas Movimento inicial</td>`;
             
-            // Calcula totais mensais do grupo Disponíveis
+            // Calcula totais mensais do grupo Disponíveis (usa APENAS savedDisp -- entradas manuais)
             const headerVals = colKeys.map(mk => {
                 let sum = 0;
                 for (const acc of dispSection) {
-                    sum += (realizadoByMonth[mk][acc.codigo] || 0);
+                    sum += (savedDisp[mk]?.[acc.codigo] || 0);
                 }
                 return sum;
             });
@@ -1045,10 +1045,10 @@ window.fcApp = {
             tbody += `<td style="text-align:right;font-weight:800;color:#fff;background:rgba(255,255,255,0.08);padding:8px;font-size:0.88rem;">${fmt(headerTotal)}</td>`;
             tbody += `</tr>`;
 
-            // Linhas das contas bancárias
+            // Linhas das contas bancárias (usa APENAS savedDisp -- entradas manuais)
             for (const acc of dispSection) {
                 const nivel = acc.codigo.split('.').length;
-                const vals  = colKeys.map(mk => realizadoByMonth[mk][acc.codigo] ?? 0);
+                const vals  = colKeys.map(mk => savedDisp[mk]?.[acc.codigo] ?? 0);
                 const total = vals.reduce((s, v) => s + v, 0);
                 tbody += renderEditableRow(acc.codigo, acc.descricao, nivel, vals, total, colKeys);
             }
