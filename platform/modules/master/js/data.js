@@ -32,9 +32,10 @@ window.mockTenants = [
         status: 'active'
     },
     {
-        id: 'altsfix',
-        name: 'Altsfix',
+        id: 'altafix',
+        name: 'Altafix',
         cnpj: '',
+        slug: 'altafix',
         modules: ['dispatch'],
         status: 'active'
     }
