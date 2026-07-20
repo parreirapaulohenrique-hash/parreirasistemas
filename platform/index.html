@@ -257,11 +257,10 @@
                 const sessao = ParreiraAuth.getSessao ? ParreiraAuth.getSessao() : null;
                 if (sessao) {
                     renderUserInfo({ name: sessao.nome, role: sessao.role, login: sessao.login });
-                    // Garante que o localStorage também fica sincronizado
-                    if (!localStorage.getItem('logged_user')) {
-                        localStorage.setItem('logged_user', JSON.stringify({ name: sessao.nome, role: sessao.role, login: sessao.login }));
-                        localStorage.setItem('app_tenant_id', sessao.tenantId);
-                    }
+                    // SEMPRE sincroniza localStorage com a sessão ParreiraAuth
+                    // (não apenas quando vazio — garante que role e tenant sejam sempre atuais)
+                    localStorage.setItem('logged_user', JSON.stringify({ name: sessao.nome, role: sessao.role, login: sessao.login }));
+                    localStorage.setItem('app_tenant_id', sessao.tenantId);
                     return;
                 }
             }
