@@ -405,16 +405,32 @@ async function loadEntitiesFromFirebase() {
             .collection('fv_clientes').get();
         if (snap.empty) return;
         let changed = false;
+        // Remove entradas inválidas do localStorage (code undefined ou auto-ID Firestore)
+        const beforeClean = entities.length;
+        window.entities = entities.filter(e => e.code !== undefined && e.code !== 'undefined' && typeof e.code === 'number');
+        if (window.entities.length !== beforeClean) {
+            localStorage.setItem('erp_clientes' + window.getTenantSuffix(), JSON.stringify(entities));
+            console.log(`[ERP] Limpeza: removidas ${beforeClean - entities.length} entradas inválidas`);
+        }
+
         snap.forEach(doc => {
             const data = doc.data();
             const codeStr = data.codigo || data.id || doc.id;
-            const codeNum = parseInt(codeStr) || codeStr;
-            if (!entities.some(e => String(e.code) === String(codeNum))) {
+            const codeNum = (codeStr && parseInt(codeStr)) || codeStr || doc.id;
+            const name    = data.razaoSocial || data.nome || data.name || '';
+            const cnpj    = data.cnpjCpf || data.cnpj || '';
+
+            // Dedup por code OU por nome normalizado (previne duplicatas da auto-migração)
+            const jaExiste = entities.some(e =>
+                (codeNum && String(e.code) === String(codeNum)) ||
+                (name && e.name && e.name.toLowerCase() === name.toLowerCase())
+            );
+            if (!jaExiste) {
                 entities.push({
-                    code: codeNum,
-                    name: data.razaoSocial || data.nome || data.name || '',
+                    code: codeNum || doc.id,
+                    name,
                     fantasy: data.fantasia || data.nomeFantasia || '',
-                    cnpj: data.cnpjCpf || data.cnpj || '',
+                    cnpj,
                     tipoCliente: data.tipoCliente || 'PJ',
                     cidade: data.cidade || '',
                     uf: data.uf || '',
