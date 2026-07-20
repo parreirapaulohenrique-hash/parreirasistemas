@@ -252,28 +252,56 @@
 
         function checkLogin() {
             // Usa ParreiraAuth (sessionStorage) — mesmo sistema dos módulos.
-            // Evita o loop entre index.html (localStorage) e login.html (sessionStorage).
             if (typeof ParreiraAuth !== 'undefined' && ParreiraAuth.isLogado()) {
                 const sessao = ParreiraAuth.getSessao ? ParreiraAuth.getSessao() : null;
                 if (sessao) {
+                    // ── CONTROLE DE ACESSO POR TENANT ───────────────────────────────────
+                    // Tenants que NÃO são 'parreira' não têm acesso ao hub.
+                    // São redirecionados direto para o módulo do seu tenant.
+                    if (sessao.tenantId && sessao.tenantId !== 'parreira') {
+                        const allTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
+                        const tenant = allTenants.find(t => t.id === sessao.tenantId);
+                        const slug = tenant?.slug || sessao.tenantId;
+                        console.log(`[Hub] Tenant externo detectado: ${sessao.tenantId} → redirecionando para /${slug}`);
+                        window.location.href = `/${slug}`;
+                        return;
+                    }
+                    // ── TENANT PARREIRA: mostra hub ──────────────────────────────────────
                     renderUserInfo({ name: sessao.nome, role: sessao.role, login: sessao.login });
                     // SEMPRE sincroniza localStorage com a sessão ParreiraAuth
-                    // (não apenas quando vazio — garante que role e tenant sejam sempre atuais)
                     localStorage.setItem('logged_user', JSON.stringify({ name: sessao.nome, role: sessao.role, login: sessao.login }));
                     localStorage.setItem('app_tenant_id', sessao.tenantId);
+
+                    // Painel Admin: visível apenas para role admin ou master
+                    const isMasterRole = ['admin', 'master'].includes((sessao.role || '').toLowerCase());
+                    const masterCard = document.querySelector('.module-master');
+                    if (masterCard) masterCard.style.display = isMasterRole ? '' : 'none';
                     return;
                 }
             }
-            // Fallback: verifica localStorage (login pelo overlay embutido)
+            // Fallback: verifica localStorage (sessão persistida)
             const user = JSON.parse(localStorage.getItem('logged_user') || 'null');
             const tenant = localStorage.getItem('app_tenant_id');
             if (user && tenant) {
+                // Aplica bypass para não-parreira também via localStorage
+                if (tenant !== 'parreira') {
+                    const allTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
+                    const t = allTenants.find(x => x.id === tenant);
+                    const slug = t?.slug || tenant;
+                    window.location.href = `/${slug}`;
+                    return;
+                }
                 renderUserInfo(user);
+                // Painel Admin: oculto se não for admin/master
+                const isMasterRole = ['admin', 'master'].includes((user.role || '').toLowerCase());
+                const masterCard = document.querySelector('.module-master');
+                if (masterCard) masterCard.style.display = isMasterRole ? '' : 'none';
                 return;
             }
             // Sem sessão: redireciona para login único (ParreiraAuth)
             window.location.href = '/platform/login.html?module=portal&redirect=platform/index.html';
         }
+
 
         async function handleLogin(e) {
             e.preventDefault();
