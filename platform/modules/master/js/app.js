@@ -929,19 +929,28 @@ window.salvarWmsConfig = async function(tenantId) {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// renderAmbientes — Aba de Ambientes: cards PROD/HML por tenant
-// Migrado do Admin Legado (platform/admin/) para o Master Panel unificado
+// renderAmbientes — Aba de Ambientes: cards com acesso direto por módulo
 // ─────────────────────────────────────────────────────────────────────────────
 window.renderAmbientes = function renderAmbientes() {
     const grid = document.getElementById('ambientesGrid');
     if (!grid) return;
 
-    const PROD_URL = 'parreirasistemas.vercel.app';
-    const HML_URL  = 'parreirasistemas-git-staging-paulo-h-parreiras-projects.vercel.app';
+    const PROD = 'https://parreirasistemas.vercel.app';
+    const HML  = 'https://parreirasistemas-git-staging-paulo-h-parreiras-projects.vercel.app';
+
+    // Mapeamento de módulos → URL, ícone, cor e label
+    // Baseado nas rotas reais do vercel.json
+    const MODULE_CONFIG = {
+        'dispatch':        { label: 'Bússola Log',  icon: 'local_shipping',       color: '#6366f1', prodUrl: (slug) => `${PROD}/${slug}`,                   hmlUrl: (slug) => `${HML}/${slug}` },
+        'master':          { label: 'Admin Panel',  icon: 'admin_panel_settings', color: '#8b5cf6', prodUrl: ()     => `${PROD}/platform/modules/master/`,   hmlUrl: ()     => `${HML}/platform/modules/master/` },
+        'erp':             { label: 'ERP',           icon: 'account_balance',      color: '#f59e0b', prodUrl: (slug) => `${PROD}/erp`,                        hmlUrl: (slug) => `${HML}/erp` },
+        'wms':             { label: 'WMS',           icon: 'warehouse',            color: '#10b981', prodUrl: (slug) => `${PROD}/wms`,                        hmlUrl: (slug) => `${HML}/wms` },
+        'wms-coletor':     { label: 'WMS Coletor',  icon: 'phone_android',        color: '#06b6d4', prodUrl: ()     => `${PROD}/apk`,                        hmlUrl: ()     => `${HML}/apk` },
+        'sales-force':     { label: 'Força Vendas', icon: 'storefront',           color: '#ec4899', prodUrl: (slug) => `${PROD}/sales`,                      hmlUrl: (slug) => `${HML}/sales` },
+        'erp-consultoria': { label: 'Consultoria',  icon: 'savings',              color: '#14b8a6', prodUrl: (slug) => `${PROD}/consultoria`,                hmlUrl: (slug) => `${HML}/consultoria` },
+    };
 
     const allTenants = getAllTenants();
-
-    // Separa produção de homologação (_hml)
     const prodTenants = allTenants.filter(t => !t.id.endsWith('_hml'));
     const hmlMap = {};
     allTenants.filter(t => t.id.endsWith('_hml')).forEach(t => {
@@ -961,74 +970,83 @@ window.renderAmbientes = function renderAmbientes() {
         return;
     }
 
-    const copyIcon = `<span class="material-icons-round" style="font-size:.85rem;cursor:pointer;vertical-align:middle;" title="Copiar">content_copy</span>`;
-    const openIcon = `<span class="material-icons-round" style="font-size:.85rem;vertical-align:middle;" title="Abrir">open_in_new</span>`;
-
     grid.innerHTML = prodTenants.map(t => {
-        const slug    = t.slug || t.id;
-        const hml     = hmlMap[t.id];
-        const hmlSlug = hml ? (hml.slug || hml.id) : `${slug}_hml`;
-        const prodUrl = `${PROD_URL}/${slug}`;
-        const hmlUrl  = `${HML_URL}/${hmlSlug}`;
-        const status  = t.status === 'active' ? 'active' : t.status === 'suspended' ? 'suspended' : 'inactive';
-        const statusLabel = { active: 'Ativo', suspended: 'Suspenso', inactive: 'Inativo' }[status];
-        const statusColor = { active: '#22c55e', suspended: '#f59e0b', inactive: '#ef4444' }[status];
-        const mods = (t.modules || []).length;
+        const slug         = t.slug || t.id;
+        const hml          = hmlMap[t.id];
+        const status       = t.status === 'active' ? 'active' : t.status === 'suspended' ? 'suspended' : 'inactive';
+        const statusLabel  = { active: 'Ativo', suspended: 'Suspenso', inactive: 'Inativo' }[status];
+        const statusColor  = { active: '#22c55e', suspended: '#f59e0b', inactive: '#ef4444' }[status];
+        const modules      = t.modules || [];
+
+        // ── Chips de módulos com links diretos ───────────────────────────────
+        const moduleChips = modules.map(modId => {
+            const cfg = MODULE_CONFIG[modId];
+            if (!cfg) return '';
+            const pUrl = cfg.prodUrl(slug);
+            const hUrl = hml ? cfg.hmlUrl(hml.slug || `${slug}_hml`) : null;
+            return `
+            <div style="border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.6rem .85rem;
+                        display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;
+                        background:rgba(255,255,255,.02);">
+                <div style="display:flex;align-items:center;gap:.5rem;">
+                    <span class="material-icons-round" style="font-size:1rem;color:${cfg.color};">${cfg.icon}</span>
+                    <span style="font-size:.82rem;font-weight:600;color:${cfg.color};">${cfg.label}</span>
+                </div>
+                <div style="display:flex;gap:.4rem;align-items:center;">
+                    <a href="${pUrl}" target="_blank"
+                       style="font-size:.68rem;font-weight:700;padding:3px 10px;border-radius:6px;
+                              background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3);
+                              text-decoration:none;display:flex;align-items:center;gap:3px;"
+                       title="Abrir em Produção">
+                        <span class="material-icons-round" style="font-size:.7rem;">open_in_new</span> PROD
+                    </a>
+                    ${hUrl ? `<a href="${hUrl}" target="_blank"
+                       style="font-size:.68rem;font-weight:700;padding:3px 10px;border-radius:6px;
+                              background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);
+                              text-decoration:none;display:flex;align-items:center;gap:3px;"
+                       title="Abrir em Homologação">
+                        <span class="material-icons-round" style="font-size:.7rem;">science</span> HML
+                    </a>` : `<span style="font-size:.65rem;color:var(--text-secondary);opacity:.5;">sem HML</span>`}
+                    <span onclick="navigator.clipboard.writeText('${pUrl}').then(()=>showToast('✅ URL copiada!'))"
+                          style="cursor:pointer;color:var(--text-secondary);opacity:.6;"
+                          title="Copiar URL de Produção">
+                        <span class="material-icons-round" style="font-size:.85rem;">content_copy</span>
+                    </span>
+                </div>
+            </div>`;
+        }).join('');
 
         return `
-        <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1.25rem;
-                    transition:border-color .2s,transform .2s;cursor:default;"
+        <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:1.25rem;
+                    transition:border-color .2s,transform .2s;"
              onmouseenter="this.style.borderColor='var(--accent)';this.style.transform='translateY(-2px)'"
              onmouseleave="this.style.borderColor='var(--border)';this.style.transform='none'">
 
             <!-- Cabeçalho -->
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.75rem;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">
                 <div>
-                    <div style="font-weight:700;font-size:1rem;">${t.name || t.id}</div>
-                    <div style="font-size:.75rem;color:var(--text-secondary);margin-top:2px;">/${slug}</div>
+                    <div style="font-weight:700;font-size:1.05rem;">${t.name || t.id}</div>
+                    <div style="font-size:.72rem;color:var(--text-secondary);margin-top:2px;display:flex;align-items:center;gap:.3rem;">
+                        <span class="material-icons-round" style="font-size:.75rem;">link</span>
+                        ${slug}
+                        ${t.cnpj ? `<span style="margin-left:.5rem;opacity:.5;">• ${t.cnpj}</span>` : ''}
+                    </div>
                 </div>
-                <span style="font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:20px;
-                             background:${statusColor}22;color:${statusColor};border:1px solid ${statusColor}44;">
-                    ${statusLabel}
-                </span>
-            </div>
-
-            <!-- Módulos -->
-            <div style="font-size:.75rem;color:var(--text-secondary);margin-bottom:1rem;">
-                <span class="material-icons-round" style="font-size:.85rem;vertical-align:middle;">apps</span>
-                ${mods} módulo${mods !== 1 ? 's' : ''}
-            </div>
-
-            <!-- Link PRODUÇÃO -->
-            <div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.25);border-radius:8px;
-                        padding:.6rem .85rem;display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
-                <div style="overflow:hidden;">
-                    <span style="font-size:.6rem;font-weight:700;color:#22c55e;background:rgba(34,197,94,.15);
-                                 padding:2px 6px;border-radius:4px;letter-spacing:.05em;margin-right:6px;">PROD</span>
-                    <span style="font-size:.72rem;color:#22c55e;" title="${prodUrl}">${prodUrl}</span>
-                </div>
-                <div style="display:flex;gap:.5rem;color:#22c55e;flex-shrink:0;margin-left:.5rem;">
-                    <span onclick="navigator.clipboard.writeText('https://${prodUrl}').then(()=>showToast('✅ URL copiada!'))">${copyIcon}</span>
-                    <a href="https://${prodUrl}" target="_blank" style="color:#22c55e;">${openIcon}</a>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.3rem;">
+                    <span style="font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:20px;
+                                 background:${statusColor}22;color:${statusColor};border:1px solid ${statusColor}44;">
+                        ${statusLabel}
+                    </span>
+                    <span style="font-size:.68rem;color:var(--text-secondary);">
+                        ${modules.length} módulo${modules.length !== 1 ? 's' : ''}
+                    </span>
                 </div>
             </div>
 
-            <!-- Link HML -->
-            <div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,${hml ? '.3' : '.1'});border-radius:8px;
-                        padding:.6rem .85rem;display:flex;justify-content:space-between;align-items:center;
-                        ${hml ? '' : 'opacity:.45;'}">
-                <div style="overflow:hidden;">
-                    <span style="font-size:.6rem;font-weight:700;color:#f59e0b;background:rgba(245,158,11,.15);
-                                 padding:2px 6px;border-radius:4px;letter-spacing:.05em;margin-right:6px;">HML</span>
-                    <span style="font-size:.72rem;color:#f59e0b;" title="${hmlUrl}">${hmlUrl}</span>
-                </div>
-                <div style="display:flex;gap:.5rem;color:#f59e0b;flex-shrink:0;margin-left:.5rem;">
-                    <span onclick="navigator.clipboard.writeText('https://${hmlUrl}').then(()=>showToast('✅ URL copiada!'))">${copyIcon}</span>
-                    <a href="https://${hmlUrl}" target="_blank" style="color:#f59e0b;">${openIcon}</a>
-                </div>
+            <!-- Módulos com acesso direto -->
+            <div style="border-top:1px solid var(--border);padding-top:.85rem;">
+                ${moduleChips || '<p style="font-size:.75rem;color:var(--text-secondary);">Nenhum módulo configurado</p>'}
             </div>
-            ${!hml ? `<div style="font-size:.68rem;color:var(--text-secondary);margin-top:.4rem;text-align:center;">
-                sem ambiente HML configurado</div>` : ''}
         </div>`;
     }).join('');
-};
+};
