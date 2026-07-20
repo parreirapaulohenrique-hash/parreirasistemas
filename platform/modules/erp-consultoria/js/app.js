@@ -491,14 +491,62 @@ window.renderEntities = (filter = '') => {
             <td style="text-align:right">${limFmt(e.limiteDisponivel)}</td>
             <td><span class="status-badge status-pending" style="color:var(--primary-color)">${e.seller || ''}</span></td>
             <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-            <td style="text-align:right">
-                <button class="btn btn-secondary btn-icon" style="padding:0.4rem;" onclick="editCliente(${e.code})">
+            <td style="text-align:right; display:flex; gap:0.3rem; justify-content:flex-end;">
+                <button class="btn btn-secondary btn-icon" style="padding:0.4rem;" onclick="editCliente(${e.code})" title="Editar">
                     <span class="material-icons-round" style="font-size:1rem;">edit</span>
+                </button>
+                <button class="btn btn-icon" style="padding:0.4rem; background:rgba(239,68,68,.15); color:#ef4444; border:1px solid rgba(239,68,68,.3);" onclick="deleteCliente('${e.code}', '${(e.name||'').replace(/'/g,\"&apos;\")}')" title="Excluir">
+                    <span class="material-icons-round" style="font-size:1rem;">delete</span>
                 </button>
             </td>
         `;
         tbody.appendChild(tr);
     });
+};
+
+// Excluir cliente — remove de localStorage, fv_clientes e fluxo_caixa_clientes
+window.deleteCliente = async function (code, name) {
+    if (!confirm(`Confirma exclusão do cliente "${name}"?\n\nEsta ação também remove o cliente da Análise Financeira.`)) return;
+
+    // 1. Remove do array em memória e localStorage
+    const idx = entities.findIndex(e => String(e.code) === String(code));
+    if (idx >= 0) entities.splice(idx, 1);
+    localStorage.setItem('erp_clientes' + window.getTenantSuffix(), JSON.stringify(entities));
+    renderEntities();
+
+    // 2. Remove do Firestore (fv_clientes + fluxo_caixa_clientes)
+    try {
+        const user = JSON.parse(localStorage.getItem('platform_user_logged') || '{}');
+        const tenantId = user && user.tenant ? user.tenant : 'parreira';
+        if (typeof firebase !== 'undefined' && firebase.firestore) {
+            const tenantRef = firebase.firestore().collection('tenants').doc(tenantId);
+            const docId = String(code);
+
+            // Remove de fv_clientes (pode haver mais de 1 doc se houve migração duplicada)
+            const fvSnap = await tenantRef.collection('fv_clientes')
+                .where('razaoSocial', '==', name).get()
+                .catch(() => ({ empty: true, docs: [] }));
+            const deletePromises = [];
+            // Deleta por code/id exato
+            deletePromises.push(tenantRef.collection('fv_clientes').doc(docId).delete());
+            // Deleta qualquer documento com o mesmo nome (limpa duplicatas de migração)
+            if (!fvSnap.empty) {
+                fvSnap.docs.forEach(d => { if (d.id !== docId) deletePromises.push(d.ref.delete()); });
+            }
+            // Remove de fluxo_caixa_clientes (também por nome caso o id seja diferente)
+            deletePromises.push(tenantRef.collection('fluxo_caixa_clientes').doc(docId).delete());
+            const fcSnap = await tenantRef.collection('fluxo_caixa_clientes')
+                .where('name', '==', name).get()
+                .catch(() => ({ empty: true, docs: [] }));
+            if (!fcSnap.empty) {
+                fcSnap.docs.forEach(d => { if (d.id !== docId) deletePromises.push(d.ref.delete()); });
+            }
+            await Promise.allSettled(deletePromises);
+            console.log(`[ERP] Cliente "${name}" excluído (fv_clientes + fluxo_caixa_clientes).`);
+        }
+    } catch (err) {
+        console.warn('[ERP] Erro ao excluir cliente do Firebase:', err);
+    }
 };
 
 // Export Clientes ERP → FV Format

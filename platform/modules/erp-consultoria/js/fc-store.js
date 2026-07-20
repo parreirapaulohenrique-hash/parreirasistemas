@@ -57,12 +57,20 @@ class Store {
                 // Carrega clientes do ERP com seus períodos correspondentes
                 clientsSnap.forEach(doc => {
                     const data = doc.data();
-                    this.clientsCache.push({
-                        id: doc.id,
-                        name: data.razaoSocial || data.nome || data.name || doc.id,
-                        cnpj: data.cnpjCpf || data.cnpj || '',
-                        periods: periodsData[doc.id] ? (periodsData[doc.id].periods || {}) : {}
-                    });
+                    const name = data.razaoSocial || data.nome || data.name || doc.id;
+                    // Dedup por nome normalizado (evita duplicatas de auto-migração em fv_clientes)
+                    const jaExiste = this.clientsCache.some(c =>
+                        c.id === doc.id ||
+                        (c.name && name && c.name.toLowerCase() === name.toLowerCase())
+                    );
+                    if (!jaExiste) {
+                        this.clientsCache.push({
+                            id: doc.id,
+                            name,
+                            cnpj: data.cnpjCpf || data.cnpj || '',
+                            periods: periodsData[doc.id] ? (periodsData[doc.id].periods || {}) : {}
+                        });
+                    }
                 });
             } else {
                 // Fallback: localStorage (para ERP não sincronizado)
