@@ -1,4 +1,4 @@
-﻿// app.js Ã¢â‚¬â€ Painel Admin | Parreira Sistemas
+// app.js Ã¢â‚¬â€ Painel Admin | Parreira Sistemas
 // (usa window.mockTenants definido em data.js)
 const mockTenants = window.mockTenants || [];
 
@@ -880,7 +880,9 @@ window.testarWmsConexao = async function() {
     if (!baseUrl || !empId || !terminal) {
         if (result) { result.style.color='#ef4444'; result.textContent='Ã¢ÂÅ’ Preencha URL, empId e Terminal.'; } return;
     }
-    if (result) { result.style.color='#94a3b8'; result.textContent='TestandoÃ¢â‚¬Â¦'; }
+        if (result) { result.style.color='#ef4444'; result.textContent='âš  Preencha URL, empId e Terminal.'; } return;
+    }
+    if (result) { result.style.color='#94a3b8'; result.textContent='Testando...'; }
     try {
         const resp = await fetch(`${baseUrl.replace(/\/$/, '')}/auth`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -890,14 +892,14 @@ window.testarWmsConexao = async function() {
         const data = resp.ok ? await resp.json() : null;
         if (result) {
             result.style.color = data?.token ? '#10b981' : '#ef4444';
-            result.textContent = data?.token ? 'Ã¢Å“â€¦ AutenticaÃ§Ã£o OK!' : `Ã¢ÂÅ’ HTTP ${resp.status}`;
+            result.textContent = data?.token ? 'âœ… Autenticação OK!' : `âš  HTTP ${resp.status}`;
         }
     } catch(e) {
-        if (result) { result.style.color='#ef4444'; result.textContent=`Ã¢ÂÅ’ ${e.message}`; }
+        if (result) { result.style.color='#ef4444'; result.textContent=`âš  ${e.message}`; }
     }
 };
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Salvar configuraÃ§Ã£o WMS (integraÃ§Ã£o + CNPJs) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// â”€â”€â”€ Salvar configuração WMS (integração + CNPJs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 window.salvarWmsConfig = async function(tenantId) {
     const feedback  = document.getElementById('wms-save-feedback');
@@ -940,27 +942,23 @@ window.renderAmbientes = function renderAmbientes() {
     const HML  = 'https://parreirasistemas-git-staging-paulo-h-parreiras-projects.vercel.app';
 
     const MODULE_CONFIG = {
-        'dispatch':        { label: 'BÃºssola Log',   icon: 'local_shipping',       color: '#3b82f6', prodUrl: (s) => `${PROD}/${s}`,                  hmlUrl: (s) => `${HML}/${s}` },
-        'master':          { label: 'Painel Admin',  icon: 'admin_panel_settings', color: '#8b5cf6', prodUrl: ()  => `${PROD}/platform/modules/master/`,hmlUrl: ()  => `${HML}/platform/modules/master/` },
-        'erp':             { label: 'ERP',            icon: 'account_balance',      color: '#f59e0b', prodUrl: ()  => `${PROD}/erp`,                   hmlUrl: ()  => `${HML}/erp` },
-        'wms':             { label: 'WMS',            icon: 'warehouse',            color: '#10b981', prodUrl: ()  => `${PROD}/wms`,                   hmlUrl: ()  => `${HML}/wms` },
-        'wms-coletor':     { label: 'WMS Coletor',   icon: 'phone_android',        color: '#06b6d4', prodUrl: ()  => `${PROD}/apk`,                   hmlUrl: ()  => `${HML}/apk` },
-        'sales-force':     { label: 'ForÃ§a de Vendas', icon: 'storefront',         color: '#ec4899', prodUrl: ()  => `${PROD}/sales`,                 hmlUrl: ()  => `${HML}/sales` },
-        'erp-consultoria': { label: 'Consultoria',   icon: 'savings',              color: '#14b8a6', prodUrl: ()  => `${PROD}/consultoria`,            hmlUrl: ()  => `${HML}/consultoria` },
+        'dispatch':        { label: 'B\u00FAassola Log',    icon: 'local_shipping',       color: '#3b82f6', prodUrl: (s) => `${PROD}/${s}`,                   hmlUrl: (s) => `${HML}/${s}` },
+        'master':          { label: 'Painel Admin',    icon: 'admin_panel_settings', color: '#8b5cf6', prodUrl: ()  => `${PROD}/platform/modules/master/`,hmlUrl: ()  => `${HML}/platform/modules/master/` },
+        'erp':             { label: 'ERP',              icon: 'account_balance',      color: '#f59e0b', prodUrl: ()  => `${PROD}/erp`,                    hmlUrl: ()  => `${HML}/erp` },
+        'wms':             { label: 'WMS',              icon: 'warehouse',            color: '#10b981', prodUrl: ()  => `${PROD}/wms`,                    hmlUrl: ()  => `${HML}/wms` },
+        'wms-coletor':     { label: 'WMS Coletor',     icon: 'phone_android',        color: '#06b6d4', prodUrl: ()  => `${PROD}/apk`,                    hmlUrl: ()  => `${HML}/apk` },
+        'sales-force':     { label: 'For\u00E7a de Vendas', icon: 'storefront',       color: '#ec4899', prodUrl: ()  => `${PROD}/sales`,                  hmlUrl: ()  => `${HML}/sales` },
+        'erp-consultoria': { label: 'Consultoria',     icon: 'savings',              color: '#14b8a6', prodUrl: ()  => PROD + '/erp-consultoria',             hmlUrl: ()  => HML + '/erp-consultoria_hml' },
     };
 
     const allTenants  = getAllTenants();
     const prodTenants = allTenants.filter(t => !t.id.endsWith('_hml'));
-    const hmlMap      = {};
-    allTenants.filter(t => t.id.endsWith('_hml')).forEach(t => {
-        hmlMap[t.id.replace(/_hml$/, '')] = t;
-    });
+    const active      = prodTenants.filter(t => t.status === 'active');
 
-    // EstatÃ­sticas
     const el = (id) => document.getElementById(id);
     if (el('amb-stat-total'))  el('amb-stat-total').textContent  = prodTenants.length;
-    if (el('amb-stat-active')) el('amb-stat-active').textContent = prodTenants.filter(t => t.status === 'active').length;
-    if (el('amb-stat-hml'))    el('amb-stat-hml').textContent    = prodTenants.filter(t => hmlMap[t.id]).length;
+    if (el('amb-stat-active')) el('amb-stat-active').textContent = active.length;
+    if (el('amb-stat-hml'))    el('amb-stat-hml').textContent    = active.length;
 
     if (!prodTenants.length) {
         grid.innerHTML = '<div class="empty-state"><span class="material-icons-round" style="font-size:2.5rem;color:var(--text-secondary);margin-bottom:.5rem;">cloud_off</span><p>Nenhum cliente encontrado.</p></div>';
@@ -969,8 +967,7 @@ window.renderAmbientes = function renderAmbientes() {
 
     grid.innerHTML = prodTenants.map(t => {
         const slug    = t.slug || t.id;
-        const hml     = hmlMap[t.id];
-        const hmlSlug = hml?.slug || `${slug}_hml`;
+        const hmlSlug = `${slug}_hml`;
         const status  = t.status === 'active' ? 'active' : t.status === 'suspended' ? 'suspended' : 'inactive';
         const statusLabel = { active: 'Ativo', suspended: 'Suspenso', inactive: 'Inativo' }[status];
         const modules = t.modules || [];
@@ -979,7 +976,7 @@ window.renderAmbientes = function renderAmbientes() {
             const cfg = MODULE_CONFIG[modId];
             if (!cfg) return '';
             const pUrl = cfg.prodUrl(slug);
-            const hUrl = hml ? cfg.hmlUrl(hmlSlug) : null;
+            const hUrl = cfg.hmlUrl(hmlSlug);
             return `
             <div class="amb-module-row">
                 <div class="amb-mod-label">
@@ -987,15 +984,13 @@ window.renderAmbientes = function renderAmbientes() {
                     ${cfg.label}
                 </div>
                 <div class="amb-mod-actions">
-                    <a href="${pUrl}" target="_blank" class="amb-btn amb-btn-prod" title="Abrir em ProduÃ§Ã£o">
+                    <a href="${pUrl}" target="_blank" class="amb-btn amb-btn-prod" title="Abrir em Produ\u00E7\u00E3o">
                         <span class="material-icons-round">open_in_new</span> PROD
                     </a>
-                    ${hUrl
-                        ? `<a href="${hUrl}" target="_blank" class="amb-btn amb-btn-hml" title="Abrir em HomologaÃ§Ã£o">
-                                <span class="material-icons-round">science</span> HML
-                           </a>`
-                        : `<span class="amb-no-hml">sem HML</span>`}
-                    <button class="amb-btn-copy" onclick="navigator.clipboard.writeText('${pUrl}').then(()=>showToast('âœ… URL copiada!'))" title="Copiar URL de ProduÃ§Ã£o">
+                    <a href="${hUrl}" target="_blank" class="amb-btn amb-btn-hml" title="Abrir em Homologa\u00E7\u00E3o">
+                        <span class="material-icons-round">science</span> HML
+                    </a>
+                    <button class="amb-btn-copy" onclick="navigator.clipboard.writeText('${pUrl}').then(()=>showToast('\u2705 URL copiada!'))" title="Copiar URL de Produ\u00E7\u00E3o">
                         <span class="material-icons-round">content_copy</span>
                     </button>
                 </div>
@@ -1009,16 +1004,16 @@ window.renderAmbientes = function renderAmbientes() {
                     <div class="amb-card-name">${t.name || t.id}</div>
                     <div class="amb-card-slug">
                         <span class="material-icons-round">link</span>
-                        ${slug}${t.cnpj ? ` <span style="opacity:.4;margin-left:.3rem;">Â· ${t.cnpj}</span>` : ''}
+                        ${slug}${t.cnpj ? ` <span style="opacity:.4;margin-left:.3rem;">\u00B7 ${t.cnpj}</span>` : ''}
                     </div>
                 </div>
                 <div class="amb-card-meta">
                     <span class="amb-status-badge amb-status-${status}">${statusLabel}</span>
-                    <span class="amb-mod-count">${modules.length} mÃ³dulo${modules.length !== 1 ? 's' : ''}</span>
+                    <span class="amb-mod-count">${modules.length} m\u00F3dulo${modules.length !== 1 ? 's' : ''}</span>
                 </div>
             </div>
             <div class="amb-modules-list">
-                ${moduleRows || '<p style="font-size:.8rem;color:var(--text-secondary);padding:.25rem .5rem;">Nenhum mÃ³dulo configurado</p>'}
+                ${moduleRows || '<p style="font-size:.8rem;color:var(--text-secondary);padding:.25rem .5rem;">Nenhum m\u00F3dulo configurado</p>'}
             </div>
         </div>`;
     }).join('');
