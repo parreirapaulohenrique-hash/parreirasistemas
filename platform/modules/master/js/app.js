@@ -1,4 +1,4 @@
-// app.js â€” Painel Admin | Parreira Sistemas
+﻿// app.js Ã¢â‚¬â€ Painel Admin | Parreira Sistemas
 // (usa window.mockTenants definido em data.js)
 const mockTenants = window.mockTenants || [];
 
@@ -7,29 +7,29 @@ const mockTenants = window.mockTenants || [];
 let dynamicTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
 let platformUsers  = JSON.parse(localStorage.getItem('platform_users_registry')  || '[]');
 
-// MIGRAÇÃO v3.17.5: remove IDs depreciados do localStorage
-// (substituídos, duplicados ou criados por erro no Firestore)
+// MIGRAÃ‡ÃƒO v3.17.5: remove IDs depreciados do localStorage
+// (substituÃ­dos, duplicados ou criados por erro no Firestore)
 const _DEPRECATED = ['altsfix', 'login.html', '01', 'contrapecas'];
 if (dynamicTenants.some(t => _DEPRECATED.includes(t.id))) {
     dynamicTenants = dynamicTenants.filter(t => !_DEPRECATED.includes(t.id));
     localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
-    console.log('[Master] Migração: IDs depreciados removidos do localStorage');
+    console.log('[Master] MigraÃ§Ã£o: IDs depreciados removidos do localStorage');
 }
 
-// SEED: garante que os tenants base do sistema existam em dynamicTenants (source of truth única)
+// SEED: garante que os tenants base do sistema existam em dynamicTenants (source of truth Ãºnica)
 ;(function seedAndDedup() {
-    // SEMPRE garante que os mockTenants (clientes base) estão presentes
+    // SEMPRE garante que os mockTenants (clientes base) estÃ£o presentes
     mockTenants.forEach(mock => {
         if (!dynamicTenants.find(t => t.id === mock.id)) {
             dynamicTenants.push({ ...mock, isDynamic: false });
         }
     });
-    // Dedup: mantém a última entrada de cada ID
+    // Dedup: mantÃ©m a Ãºltima entrada de cada ID
     const seen = new Map();
     dynamicTenants.forEach(t => seen.set(t.id, t));
     dynamicTenants = [...seen.values()];
     localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
-    console.log(`[Master] Seed concluído: ${dynamicTenants.length} tenants carregados.`);
+    console.log(`[Master] Seed concluÃ­do: ${dynamicTenants.length} tenants carregados.`);
 })();
 
 
@@ -43,7 +43,7 @@ async function reloadTenantsFromFirestore() {
         if (snap.empty) return;
 
         let updated = false;
-        // IDs depreciados: existem no Firestore mas foram substituídos por IDs corretos
+        // IDs depreciados: existem no Firestore mas foram substituÃ­dos por IDs corretos
         const DEPRECATED_IDS = ['altsfix', 'login.html', '01', 'contrapecas'];
 
         snap.forEach(doc => {
@@ -67,8 +67,8 @@ async function reloadTenantsFromFirestore() {
 
             const existingIdx = dynamicTenants.findIndex(t => t.id === doc.id);
             if (existingIdx >= 0) {
-                // MERGE: atualiza dados existentes com informações do Firestore
-                // Firestore tem precedência sobre data.js para nome, CNPJ e módulos
+                // MERGE: atualiza dados existentes com informaÃ§Ãµes do Firestore
+                // Firestore tem precedÃªncia sobre data.js para nome, CNPJ e mÃ³dulos
                 const existing = dynamicTenants[existingIdx];
                 const merged = {
                     ...existing,
@@ -77,7 +77,7 @@ async function reloadTenantsFromFirestore() {
                     modules: (data.modulos || data.modules)?.length ? (data.modulos || data.modules) : existing.modules,
                     slug:    data.slug || existing.slug || doc.id
                 };
-                // Só marca como updated se algo mudou de fato
+                // SÃ³ marca como updated se algo mudou de fato
                 if (JSON.stringify(merged) !== JSON.stringify(existing)) {
                     dynamicTenants[existingIdx] = merged;
                     updated = true;
@@ -97,11 +97,11 @@ async function reloadTenantsFromFirestore() {
     } catch(e) {
         console.warn('[Master] Falha ao recarregar tenants do Firestore:', e.message);
 
-        // v3.17.0: Seeds com senhas hardcoded removidos — usuários gerenciados via Firestore (ParreiraAuth)
-        // Para criar/editar usuários, usar o Firebase Console ou o módulo de gestão de usuários.
+        // v3.17.0: Seeds com senhas hardcoded removidos â€” usuÃ¡rios gerenciados via Firestore (ParreiraAuth)
+        // Para criar/editar usuÃ¡rios, usar o Firebase Console ou o mÃ³dulo de gestÃ£o de usuÃ¡rios.
 
-        // v3.17.0: Bloco SECURITY_KEY removido — sem mais senhas hardcoded no código.
-        // Usuários gerenciados exclusivamente via Firestore (ParreiraAuth).
+        // v3.17.0: Bloco SECURITY_KEY removido â€” sem mais senhas hardcoded no cÃ³digo.
+        // UsuÃ¡rios gerenciados exclusivamente via Firestore (ParreiraAuth).
     }
 }
 
@@ -119,11 +119,11 @@ document.addEventListener('DOMContentLoaded', () => {
     setupForms();
     loadVersion();
 
-    // Recupera tenants dinâmicos do Firestore (caso localStorage tenha sido limpo)
-    // Executa após um pequeno delay para garantir que Firebase esteja pronto
+    // Recupera tenants dinÃ¢micos do Firestore (caso localStorage tenha sido limpo)
+    // Executa apÃ³s um pequeno delay para garantir que Firebase esteja pronto
     setTimeout(() => reloadTenantsFromFirestore(), 1500);
 
-    // Listener do form de editar liberações de módulos
+    // Listener do form de editar liberaÃ§Ãµes de mÃ³dulos
     const editTenantForm = document.getElementById('editTenantForm');
     if (editTenantForm) {
         editTenantForm.addEventListener('submit', (e) => {
@@ -220,7 +220,7 @@ function closeModal(modalId) {
     }
 }
 
-// Ãšnica fonte de verdade â€” tudo está em dynamicTenants
+// ÃƒÅ¡nica fonte de verdade Ã¢â‚¬â€ tudo estÃ¡ em dynamicTenants
 function getAllTenants() {
     return dynamicTenants;
 }
@@ -253,7 +253,7 @@ function renderTenants() {
         tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-secondary); padding:2rem;">
             <span class="material-icons-round" style="font-size:2rem;display:block;margin-bottom:.5rem;opacity:.4;">business_off</span>
             Nenhum cliente cadastrado.<br>
-            <small style="opacity:.6;">Se os clientes sumiram, recarregue a página (F5).</small>
+            <small style="opacity:.6;">Se os clientes sumiram, recarregue a pÃ¡gina (F5).</small>
         </td></tr>`;
         return;
     }
@@ -262,7 +262,7 @@ function renderTenants() {
         const tr = document.createElement('tr');
         const isDynamic = tenant.isDynamic;
         const statusClass = tenant.status === 'active' ? 'active' : 'inactive';
-        const modules = tenant.modules || []; // Proteção: evita crash se modules for undefined
+        const modules = tenant.modules || []; // ProteÃ§Ã£o: evita crash se modules for undefined
 
         tr.innerHTML = `
             <td>
@@ -275,14 +275,14 @@ function renderTenants() {
             <td>
                 ${modules.length > 0
                     ? modules.map(mod => `<span class="module-tag">${formatModuleName(mod)}</span>`).join('')
-                    : '<span style="color:var(--text-secondary);font-size:.8rem;">—</span>'
+                    : '<span style="color:var(--text-secondary);font-size:.8rem;">â€”</span>'
                 }
             </td>
             <td>
                 <span class="status-badge ${statusClass}">Ativo</span>
             </td>
             <td style="text-align: right; display:flex; gap:.5rem; justify-content:flex-end;">
-                <button class="action-btn" title="Editar Liberações" onclick="window.editTenant('${tenant.id}')">
+                <button class="action-btn" title="Editar LiberaÃ§Ãµes" onclick="window.editTenant('${tenant.id}')">
                     <span class="material-icons-round">edit</span>
                 </button>
                 ${modules.includes('dispatch') ? `
@@ -343,7 +343,7 @@ function setupForms() {
             const id = idInput.value.trim().toLowerCase();
 
             if (getAllTenants().find(t => t.id === id)) {
-                alert('ID já existe!');
+                alert('ID jÃ¡ existe!');
                 return;
             }
 
@@ -420,14 +420,14 @@ function setupForms() {
                 document.getElementById('userLogin').removeAttribute('readonly');
             } else {
                 if (platformUsers.find(u => u.login === login && u.tenant === tenant)) {
-                    alert('Usuário já existe nesta empresa!');
+                    alert('UsuÃ¡rio jÃ¡ existe nesta empresa!');
                     return;
                 }
                 platformUsers.push(newUser);
             }
 
             localStorage.setItem('platform_users_registry', JSON.stringify(platformUsers));
-            alert(isEdit ? 'Usuário atualizado com sucesso!' : 'Usuário cadastrado com sucesso!');
+            alert(isEdit ? 'UsuÃ¡rio atualizado com sucesso!' : 'UsuÃ¡rio cadastrado com sucesso!');
             closeModal('userModal');
             renderUsers();
         });
@@ -449,7 +449,7 @@ function editTenant(tenantId) {
     const allTenants = getAllTenants();
     const tenant = allTenants.find(t => t.id === tenantId);
     if (!tenant) {
-        alert('Tenant não encontrado!');
+        alert('Tenant nÃ£o encontrado!');
         return;
     }
 
@@ -472,7 +472,7 @@ function editTenant(tenantId) {
 function editUser(login, tenant) {
     const user = platformUsers.find(u => u.login === login && u.tenant === tenant);
     if (!user) {
-        alert('Usuário não encontrado!');
+        alert('UsuÃ¡rio nÃ£o encontrado!');
         return;
     }
 
@@ -496,10 +496,10 @@ function editUser(login, tenant) {
 }
 
 // ============================================================
-// PROVISIONING â€” Admin Master provisiona cada tenant
-// Duas seções independentes:
-//   1) Configuração WMS (Maxdata + CNPJs)
-//   2) Acesso do Tenant (1 usuário admin para todos os módulos)
+// PROVISIONING Ã¢â‚¬â€ Admin Master provisiona cada tenant
+// Duas seÃ§Ãµes independentes:
+//   1) ConfiguraÃ§Ã£o WMS (Maxdata + CNPJs)
+//   2) Acesso do Tenant (1 usuÃ¡rio admin para todos os mÃ³dulos)
 // ============================================================
 
 window.abrirWmsConfig = async function (tenantId) {
@@ -507,9 +507,9 @@ window.abrirWmsConfig = async function (tenantId) {
     if (old) old.remove();
 
     const tenant = getAllTenants().find(t => t.id === tenantId);
-    if (!tenant) { alert('Tenant não encontrado.'); return; }
+    if (!tenant) { alert('Tenant nÃ£o encontrado.'); return; }
 
-    // Módulos habilitados com nome amigável
+    // MÃ³dulos habilitados com nome amigÃ¡vel
     const modNames = { wms:'WMS', dispatch:'Despacho', erp:'ERP', 'sales-force':'Vendas', master:'Master', 'erp-consultoria': 'Consultoria', 'wms-coletor': 'WMS Coletor' };
     const enabledMods = (tenant.modules || []).map(m => modNames[m] || m);
 
@@ -529,14 +529,14 @@ window.abrirWmsConfig = async function (tenantId) {
         }
     } catch(e) { console.warn('[Prov] Firestore read:', e.message); }
 
-    // Procura admin local se não achou no Firestore
+    // Procura admin local se nÃ£o achou no Firestore
     if (!tenantAdmin) {
         tenantAdmin = platformUsers.find(u => u.tenant === tenantId && u.role === 'admin') || null;
     }
 
     const hasWms = (tenant.modules || []).includes('wms');
 
-    // â”€â”€ painel lateral â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Ã¢â€â‚¬Ã¢â€â‚¬ painel lateral Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     const panel = document.createElement('div');
     panel.id = 'prov-panel';
     panel.style.cssText = [
@@ -571,23 +571,23 @@ window.abrirWmsConfig = async function (tenantId) {
         </div>
     </div>
 
-    <!-- Corpo rolável -->
+    <!-- Corpo rolÃ¡vel -->
     <div style="padding:1.5rem 1.75rem;display:flex;flex-direction:column;gap:1.75rem;flex:1;">
 
-        <!-- â•â•â• SEÇÃƒO 1: ACESSO DO TENANT â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+        <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â SEÃ‡ÃƒÆ’O 1: ACESSO DO TENANT Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
         <section>
             <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.9rem;">
                 <span class="material-icons-round" style="font-size:1.2rem;color:#f59e0b;">admin_panel_settings</span>
                 <div>
                     <h3 style="font-size:.9rem;font-weight:700;margin:0;">Acesso do Tenant</h3>
                     <p style="font-size:.72rem;color:var(--text-secondary,#94a3b8);margin:.1rem 0 0;">
-                        1 usuário administrador â€” acessa todos os módulos liberados
+                        1 usuÃ¡rio administrador Ã¢â‚¬â€ acessa todos os mÃ³dulos liberados
                     </p>
                 </div>
             </div>
 
             ${tenantAdmin ? `
-            <!-- Admin já existe -->
+            <!-- Admin jÃ¡ existe -->
             <div style="background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.2);
                 border-radius:10px;padding:1rem;margin-bottom:1rem;">
                 <div style="display:flex;align-items:center;gap:.75rem;">
@@ -604,11 +604,11 @@ window.abrirWmsConfig = async function (tenantId) {
                 </div>
                 <div style="margin-top:.6rem;padding-top:.6rem;border-top:1px solid rgba(255,255,255,.06);
                     font-size:.72rem;color:var(--text-secondary,#94a3b8);">
-                    âœ“ Acesso habilitado para: <strong>${enabledMods.join(', ')}</strong>
+                    Ã¢Å“â€œ Acesso habilitado para: <strong>${enabledMods.join(', ')}</strong>
                 </div>
             </div>
             <div id="prov-admin-form" style="display:none;">` : `
-            <!-- Admin não existe ainda -->
+            <!-- Admin nÃ£o existe ainda -->
             <div id="prov-admin-form">`}
                 <div style="background:rgba(255,255,255,.03);border:1px solid var(--border,#334155);
                     border-radius:10px;padding:1rem;display:flex;flex-direction:column;gap:.7rem;">
@@ -616,7 +616,7 @@ window.abrirWmsConfig = async function (tenantId) {
                         <div>
                             <label class="prov-label">Nome completo</label>
                             <input id="prov-admin-name" type="text"
-                                value="${tenantAdmin?.name || ''}" placeholder="Ex: João Silva"
+                                value="${tenantAdmin?.name || ''}" placeholder="Ex: JoÃ£o Silva"
                                 class="prov-input">
                         </div>
                         <div>
@@ -637,7 +637,7 @@ window.abrirWmsConfig = async function (tenantId) {
                         border-radius:6px;padding:.6rem .75rem;font-size:.75rem;color:#fbbf24;
                         display:flex;align-items:center;gap:.4rem;">
                         <span class="material-icons-round" style="font-size:.95rem;">info</span>
-                        Demais usuários (operadores, supervisores) são gerenciados dentro do módulo.
+                        Demais usuÃ¡rios (operadores, supervisores) sÃ£o gerenciados dentro do mÃ³dulo.
                     </div>
                     <button onclick="window._provSalvarAdmin('${tenantId}')"
                         style="padding:.6rem 1rem;background:#f59e0b;border:none;color:#0f172a;
@@ -651,15 +651,15 @@ window.abrirWmsConfig = async function (tenantId) {
             </div>
         </section>
 
-        <!-- â•â•â• SEÇÃƒO 2: CONFIGURAÇÃƒO WMS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+        <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â SEÃ‡ÃƒÆ’O 2: CONFIGURAÃ‡ÃƒÆ’O WMS Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
         ${hasWms ? `
         <section>
             <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.9rem;">
                 <span class="material-icons-round" style="font-size:1.2rem;color:#6366f1;">integration_instructions</span>
                 <div>
-                    <h3 style="font-size:.9rem;font-weight:700;margin:0;">Configuração WMS</h3>
+                    <h3 style="font-size:.9rem;font-weight:700;margin:0;">ConfiguraÃ§Ã£o WMS</h3>
                     <p style="font-size:.72rem;color:var(--text-secondary,#94a3b8);margin:.1rem 0 0;">
-                        Integração Maxdata ERP e CNPJs destinatários
+                        IntegraÃ§Ã£o Maxdata ERP e CNPJs destinatÃ¡rios
                     </p>
                 </div>
             </div>
@@ -688,7 +688,7 @@ window.abrirWmsConfig = async function (tenantId) {
                             <label class="prov-label">Conector</label>
                             <select id="wms-connector" class="prov-input">
                                 <option value="maxdata" ${(wmsInt.connectorId||'maxdata')==='maxdata'?'selected':''}>Maxdata ERP</option>
-                                <option value="rest-api" ${wmsInt.connectorId==='rest-api'?'selected':''}>REST API Genérica</option>
+                                <option value="rest-api" ${wmsInt.connectorId==='rest-api'?'selected':''}>REST API GenÃ©rica</option>
                                 <option value="standalone" ${wmsInt.connectorId==='standalone'?'selected':''}>Standalone</option>
                             </select>
                         </div>
@@ -696,14 +696,14 @@ window.abrirWmsConfig = async function (tenantId) {
                     <div>
                         <label class="prov-label">Terminal</label>
                         <input id="wms-terminal" type="text" value="${wmsInt.terminal || ''}"
-                            placeholder="Código do terminal no Maxdata Manager"
+                            placeholder="CÃ³digo do terminal no Maxdata Manager"
                             class="prov-input" style="width:100%;box-sizing:border-box;">
                     </div>
                     <div style="display:flex;align-items:center;gap:.6rem;">
                         <button onclick="window.testarWmsConexao('${tenantId}')"
                             style="padding:.45rem .9rem;background:none;border:1px solid #6366f1;color:#6366f1;
                                 border-radius:6px;cursor:pointer;font-size:.8rem;display:flex;align-items:center;gap:.35rem;">
-                            <span class="material-icons-round" style="font-size:.95rem;">wifi</span>Testar Conexão
+                            <span class="material-icons-round" style="font-size:.95rem;">wifi</span>Testar ConexÃ£o
                         </button>
                         <span id="wms-test-result" style="font-size:.78rem;"></span>
                     </div>
@@ -713,10 +713,10 @@ window.abrirWmsConfig = async function (tenantId) {
                 <div style="background:rgba(255,255,255,.03);border:1px solid var(--border,#334155);
                     border-radius:10px;padding:1rem;display:flex;flex-direction:column;gap:.6rem;">
                     <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">
-                        CNPJs Destinatários
+                        CNPJs DestinatÃ¡rios
                     </div>
                     <div style="display:flex;">
-                        <input id="wms-cnpj-input" type="text" placeholder="CNPJ â€” ex: 12.345.678/0001-90"
+                        <input id="wms-cnpj-input" type="text" placeholder="CNPJ Ã¢â‚¬â€ ex: 12.345.678/0001-90"
                             style="flex:1;padding:.55rem .75rem;background:var(--bg-dark,#0f172a);
                                 border:1px solid var(--border,#334155);border-radius:6px 0 0 6px;
                                 color:inherit;font-size:.82rem;">
@@ -729,12 +729,12 @@ window.abrirWmsConfig = async function (tenantId) {
                     <div id="wms-cnpjs-list" style="display:flex;flex-direction:column;gap:.35rem;min-height:36px;"></div>
                 </div>
 
-                <!-- Botão salvar WMS -->
+                <!-- BotÃ£o salvar WMS -->
                 <button onclick="window.salvarWmsConfig('${tenantId}')"
                     style="padding:.7rem 1rem;background:#6366f1;border:none;color:white;border-radius:8px;
                         cursor:pointer;font-weight:700;font-size:.88rem;display:flex;align-items:center;
                         justify-content:center;gap:.4rem;">
-                    <span class="material-icons-round" style="font-size:1rem;">save</span>Salvar Configuração WMS
+                    <span class="material-icons-round" style="font-size:1rem;">save</span>Salvar ConfiguraÃ§Ã£o WMS
                 </button>
                 <div id="wms-save-feedback" style="font-size:.78rem;min-height:1rem;text-align:center;"></div>
             </div>
@@ -743,9 +743,9 @@ window.abrirWmsConfig = async function (tenantId) {
         <div style="background:rgba(255,255,255,.03);border:1px dashed var(--border,#334155);
             border-radius:10px;padding:1.25rem;text-align:center;color:var(--text-secondary,#94a3b8);font-size:.82rem;">
             <span class="material-icons-round" style="font-size:1.5rem;display:block;margin-bottom:.4rem;">warehouse</span>
-            Módulo WMS não está habilitado para este tenant.<br>
+            MÃ³dulo WMS nÃ£o estÃ¡ habilitado para este tenant.<br>
             <a onclick="window.editTenant('${tenantId}')" style="color:#6366f1;cursor:pointer;font-size:.78rem;">
-                Clique aqui para habilitar â†’
+                Clique aqui para habilitar Ã¢â€ â€™
             </a>
         </div>
         `}
@@ -768,13 +768,13 @@ window.abrirWmsConfig = async function (tenantId) {
 
     document.body.appendChild(panel);
 
-    // â”€â”€ Inicializa CNPJs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Inicializa CNPJs Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     const cnpjs = wmsCfg.cnpjs || [];
     _wmsCnpjs = [...cnpjs];
     _renderWmsCnpjs();
 };
 
-// Mostra o form de edição quando o admin já existe
+// Mostra o form de ediÃ§Ã£o quando o admin jÃ¡ existe
 window._provEditarAdmin = function(tenantId) {
     const form = document.getElementById('prov-admin-form');
     if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
@@ -817,8 +817,8 @@ window._provSalvarAdmin = async function(tenantId) {
         });
         await batch.commit();
 
-        // 3. Escreve também no formato legado (legacy_store/app_users)
-        //    para que o módulo Despacho consiga autenticar no primeiro login
+        // 3. Escreve tambÃ©m no formato legado (legacy_store/app_users)
+        //    para que o mÃ³dulo Despacho consiga autenticar no primeiro login
         //    (dispatch usa plain-text pass lido deste caminho via Utils.Cloud.loadAll)
         const usersLegacy = [{ name: nome, login, pass: senha, role: 'supervisor' }];
         await db.collection('tenants').doc(tenantId)
@@ -835,7 +835,7 @@ window._provSalvarAdmin = async function(tenantId) {
     }
 };
 
-// â”€â”€â”€ Helpers CNPJs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Helpers CNPJs Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 let _wmsCnpjs = [];
 function _renderWmsCnpjs() {
@@ -863,14 +863,14 @@ window._wmsAddCnpj = function() {
     const input = document.getElementById('wms-cnpj-input');
     const val = (input?.value || '').trim();
     if (!val) return;
-    const razao    = prompt('Razão Social (opcional):') || '';
+    const razao    = prompt('RazÃ£o Social (opcional):') || '';
     const principal = _wmsCnpjs.length === 0;
     _wmsCnpjs.push({ cnpj: val, razaoSocial: razao, principal });
     input.value = '';
     _renderWmsCnpjs();
 };
 
-// â”€â”€â”€ Testar conexão Maxdata â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Testar conexÃ£o Maxdata Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 window.testarWmsConexao = async function() {
     const result  = document.getElementById('wms-test-result');
@@ -878,9 +878,9 @@ window.testarWmsConexao = async function() {
     const empId   = Number(document.getElementById('wms-empId')?.value || 0);
     const terminal= (document.getElementById('wms-terminal')?.value || '').trim();
     if (!baseUrl || !empId || !terminal) {
-        if (result) { result.style.color='#ef4444'; result.textContent='âŒ Preencha URL, empId e Terminal.'; } return;
+        if (result) { result.style.color='#ef4444'; result.textContent='Ã¢ÂÅ’ Preencha URL, empId e Terminal.'; } return;
     }
-    if (result) { result.style.color='#94a3b8'; result.textContent='Testandoâ€¦'; }
+    if (result) { result.style.color='#94a3b8'; result.textContent='TestandoÃ¢â‚¬Â¦'; }
     try {
         const resp = await fetch(`${baseUrl.replace(/\/$/, '')}/auth`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -890,14 +890,14 @@ window.testarWmsConexao = async function() {
         const data = resp.ok ? await resp.json() : null;
         if (result) {
             result.style.color = data?.token ? '#10b981' : '#ef4444';
-            result.textContent = data?.token ? 'âœ… Autenticação OK!' : `âŒ HTTP ${resp.status}`;
+            result.textContent = data?.token ? 'Ã¢Å“â€¦ AutenticaÃ§Ã£o OK!' : `Ã¢ÂÅ’ HTTP ${resp.status}`;
         }
     } catch(e) {
-        if (result) { result.style.color='#ef4444'; result.textContent=`âŒ ${e.message}`; }
+        if (result) { result.style.color='#ef4444'; result.textContent=`Ã¢ÂÅ’ ${e.message}`; }
     }
 };
 
-// â”€â”€â”€ Salvar configuração WMS (integração + CNPJs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Salvar configuraÃ§Ã£o WMS (integraÃ§Ã£o + CNPJs) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 window.salvarWmsConfig = async function(tenantId) {
     const feedback  = document.getElementById('wms-save-feedback');
@@ -909,7 +909,7 @@ window.salvarWmsConfig = async function(tenantId) {
     const integrationData = { connectorId: connector, baseUrl, empId, terminal, updatedAt: new Date().toISOString() };
     const configData      = { cnpjs: _wmsCnpjs, updatedAt: new Date().toISOString() };
 
-    if (feedback) { feedback.style.color='#94a3b8'; feedback.textContent='Salvandoâ€¦'; }
+    if (feedback) { feedback.style.color='#94a3b8'; feedback.textContent='SalvandoÃ¢â‚¬Â¦'; }
     try {
         const db = ParreiraAuth.getDB();
         if (db) {
@@ -917,20 +917,21 @@ window.salvarWmsConfig = async function(tenantId) {
                 db.collection('tenants').doc(tenantId).collection('wms_config').doc('integration').set(integrationData),
                 db.collection('tenants').doc(tenantId).collection('wms_config').doc('config').set(configData)
             ]);
-            if (feedback) { feedback.style.color='#10b981'; feedback.textContent='âœ… Configuração WMS salva no Firestore!'; }
+            if (feedback) { feedback.style.color='#10b981'; feedback.textContent='Ã¢Å“â€¦ ConfiguraÃ§Ã£o WMS salva no Firestore!'; }
         } else {
             const ts = `_${tenantId}`;
             localStorage.setItem('wms_integration_config' + ts, JSON.stringify({ connectorId: connector, connectorConfig: { baseUrl, empId, terminal } }));
-            if (feedback) { feedback.style.color='#f59e0b'; feedback.textContent='⚠️ Salvo localmente (Firebase indisponível).'; }
+            if (feedback) { feedback.style.color='#f59e0b'; feedback.textContent='âš ï¸ Salvo localmente (Firebase indisponÃ­vel).'; }
         }
     } catch(e) {
-        if (feedback) { feedback.style.color='#ef4444'; feedback.textContent=`❌ Erro: ${e.message}`; }
+        if (feedback) { feedback.style.color='#ef4444'; feedback.textContent=`âŒ Erro: ${e.message}`; }
     }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// renderAmbientes — Aba de Ambientes: cards com acesso direto por módulo
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// renderAmbientes â€” Aba de Ambientes: cards com acesso direto por mÃ³dulo
+// Design: baseado no BÃºssola Log (paleta slate, classes .amb-*)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 window.renderAmbientes = function renderAmbientes() {
     const grid = document.getElementById('ambientesGrid');
     if (!grid) return;
@@ -938,115 +939,87 @@ window.renderAmbientes = function renderAmbientes() {
     const PROD = 'https://parreirasistemas.vercel.app';
     const HML  = 'https://parreirasistemas-git-staging-paulo-h-parreiras-projects.vercel.app';
 
-    // Mapeamento de módulos → URL, ícone, cor e label
-    // Baseado nas rotas reais do vercel.json
     const MODULE_CONFIG = {
-        'dispatch':        { label: 'Bússola Log',  icon: 'local_shipping',       color: '#6366f1', prodUrl: (slug) => `${PROD}/${slug}`,                   hmlUrl: (slug) => `${HML}/${slug}` },
-        'master':          { label: 'Admin Panel',  icon: 'admin_panel_settings', color: '#8b5cf6', prodUrl: ()     => `${PROD}/platform/modules/master/`,   hmlUrl: ()     => `${HML}/platform/modules/master/` },
-        'erp':             { label: 'ERP',           icon: 'account_balance',      color: '#f59e0b', prodUrl: (slug) => `${PROD}/erp`,                        hmlUrl: (slug) => `${HML}/erp` },
-        'wms':             { label: 'WMS',           icon: 'warehouse',            color: '#10b981', prodUrl: (slug) => `${PROD}/wms`,                        hmlUrl: (slug) => `${HML}/wms` },
-        'wms-coletor':     { label: 'WMS Coletor',  icon: 'phone_android',        color: '#06b6d4', prodUrl: ()     => `${PROD}/apk`,                        hmlUrl: ()     => `${HML}/apk` },
-        'sales-force':     { label: 'Força Vendas', icon: 'storefront',           color: '#ec4899', prodUrl: (slug) => `${PROD}/sales`,                      hmlUrl: (slug) => `${HML}/sales` },
-        'erp-consultoria': { label: 'Consultoria',  icon: 'savings',              color: '#14b8a6', prodUrl: (slug) => `${PROD}/consultoria`,                hmlUrl: (slug) => `${HML}/consultoria` },
+        'dispatch':        { label: 'BÃºssola Log',   icon: 'local_shipping',       color: '#3b82f6', prodUrl: (s) => `${PROD}/${s}`,                  hmlUrl: (s) => `${HML}/${s}` },
+        'master':          { label: 'Painel Admin',  icon: 'admin_panel_settings', color: '#8b5cf6', prodUrl: ()  => `${PROD}/platform/modules/master/`,hmlUrl: ()  => `${HML}/platform/modules/master/` },
+        'erp':             { label: 'ERP',            icon: 'account_balance',      color: '#f59e0b', prodUrl: ()  => `${PROD}/erp`,                   hmlUrl: ()  => `${HML}/erp` },
+        'wms':             { label: 'WMS',            icon: 'warehouse',            color: '#10b981', prodUrl: ()  => `${PROD}/wms`,                   hmlUrl: ()  => `${HML}/wms` },
+        'wms-coletor':     { label: 'WMS Coletor',   icon: 'phone_android',        color: '#06b6d4', prodUrl: ()  => `${PROD}/apk`,                   hmlUrl: ()  => `${HML}/apk` },
+        'sales-force':     { label: 'ForÃ§a de Vendas', icon: 'storefront',         color: '#ec4899', prodUrl: ()  => `${PROD}/sales`,                 hmlUrl: ()  => `${HML}/sales` },
+        'erp-consultoria': { label: 'Consultoria',   icon: 'savings',              color: '#14b8a6', prodUrl: ()  => `${PROD}/consultoria`,            hmlUrl: ()  => `${HML}/consultoria` },
     };
 
-    const allTenants = getAllTenants();
+    const allTenants  = getAllTenants();
     const prodTenants = allTenants.filter(t => !t.id.endsWith('_hml'));
-    const hmlMap = {};
+    const hmlMap      = {};
     allTenants.filter(t => t.id.endsWith('_hml')).forEach(t => {
         hmlMap[t.id.replace(/_hml$/, '')] = t;
     });
 
-    // Estatísticas
-    const statTotal  = document.getElementById('amb-stat-total');
-    const statActive = document.getElementById('amb-stat-active');
-    const statHml    = document.getElementById('amb-stat-hml');
-    if (statTotal)  statTotal.textContent  = prodTenants.length;
-    if (statActive) statActive.textContent = prodTenants.filter(t => t.status === 'active').length;
-    if (statHml)    statHml.textContent    = prodTenants.filter(t => hmlMap[t.id]).length;
+    // EstatÃ­sticas
+    const el = (id) => document.getElementById(id);
+    if (el('amb-stat-total'))  el('amb-stat-total').textContent  = prodTenants.length;
+    if (el('amb-stat-active')) el('amb-stat-active').textContent = prodTenants.filter(t => t.status === 'active').length;
+    if (el('amb-stat-hml'))    el('amb-stat-hml').textContent    = prodTenants.filter(t => hmlMap[t.id]).length;
 
     if (!prodTenants.length) {
-        grid.innerHTML = '<p style="color:var(--text-secondary);padding:1rem;">Nenhum tenant encontrado.</p>';
+        grid.innerHTML = '<div class="empty-state"><span class="material-icons-round" style="font-size:2.5rem;color:var(--text-secondary);margin-bottom:.5rem;">cloud_off</span><p>Nenhum cliente encontrado.</p></div>';
         return;
     }
 
     grid.innerHTML = prodTenants.map(t => {
-        const slug         = t.slug || t.id;
-        const hml          = hmlMap[t.id];
-        const status       = t.status === 'active' ? 'active' : t.status === 'suspended' ? 'suspended' : 'inactive';
-        const statusLabel  = { active: 'Ativo', suspended: 'Suspenso', inactive: 'Inativo' }[status];
-        const statusColor  = { active: '#22c55e', suspended: '#f59e0b', inactive: '#ef4444' }[status];
-        const modules      = t.modules || [];
+        const slug    = t.slug || t.id;
+        const hml     = hmlMap[t.id];
+        const hmlSlug = hml?.slug || `${slug}_hml`;
+        const status  = t.status === 'active' ? 'active' : t.status === 'suspended' ? 'suspended' : 'inactive';
+        const statusLabel = { active: 'Ativo', suspended: 'Suspenso', inactive: 'Inativo' }[status];
+        const modules = t.modules || [];
 
-        // ── Chips de módulos com links diretos ───────────────────────────────
-        const moduleChips = modules.map(modId => {
+        const moduleRows = modules.map(modId => {
             const cfg = MODULE_CONFIG[modId];
             if (!cfg) return '';
             const pUrl = cfg.prodUrl(slug);
-            const hUrl = hml ? cfg.hmlUrl(hml.slug || `${slug}_hml`) : null;
+            const hUrl = hml ? cfg.hmlUrl(hmlSlug) : null;
             return `
-            <div style="border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.6rem .85rem;
-                        display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;
-                        background:rgba(255,255,255,.02);">
-                <div style="display:flex;align-items:center;gap:.5rem;">
-                    <span class="material-icons-round" style="font-size:1rem;color:${cfg.color};">${cfg.icon}</span>
-                    <span style="font-size:.82rem;font-weight:600;color:${cfg.color};">${cfg.label}</span>
+            <div class="amb-module-row">
+                <div class="amb-mod-label">
+                    <span class="material-icons-round amb-mod-icon" style="color:${cfg.color};">${cfg.icon}</span>
+                    ${cfg.label}
                 </div>
-                <div style="display:flex;gap:.4rem;align-items:center;">
-                    <a href="${pUrl}" target="_blank"
-                       style="font-size:.68rem;font-weight:700;padding:3px 10px;border-radius:6px;
-                              background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3);
-                              text-decoration:none;display:flex;align-items:center;gap:3px;"
-                       title="Abrir em Produção">
-                        <span class="material-icons-round" style="font-size:.7rem;">open_in_new</span> PROD
+                <div class="amb-mod-actions">
+                    <a href="${pUrl}" target="_blank" class="amb-btn amb-btn-prod" title="Abrir em ProduÃ§Ã£o">
+                        <span class="material-icons-round">open_in_new</span> PROD
                     </a>
-                    ${hUrl ? `<a href="${hUrl}" target="_blank"
-                       style="font-size:.68rem;font-weight:700;padding:3px 10px;border-radius:6px;
-                              background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);
-                              text-decoration:none;display:flex;align-items:center;gap:3px;"
-                       title="Abrir em Homologação">
-                        <span class="material-icons-round" style="font-size:.7rem;">science</span> HML
-                    </a>` : `<span style="font-size:.65rem;color:var(--text-secondary);opacity:.5;">sem HML</span>`}
-                    <span onclick="navigator.clipboard.writeText('${pUrl}').then(()=>showToast('✅ URL copiada!'))"
-                          style="cursor:pointer;color:var(--text-secondary);opacity:.6;"
-                          title="Copiar URL de Produção">
-                        <span class="material-icons-round" style="font-size:.85rem;">content_copy</span>
-                    </span>
+                    ${hUrl
+                        ? `<a href="${hUrl}" target="_blank" class="amb-btn amb-btn-hml" title="Abrir em HomologaÃ§Ã£o">
+                                <span class="material-icons-round">science</span> HML
+                           </a>`
+                        : `<span class="amb-no-hml">sem HML</span>`}
+                    <button class="amb-btn-copy" onclick="navigator.clipboard.writeText('${pUrl}').then(()=>showToast('âœ… URL copiada!'))" title="Copiar URL de ProduÃ§Ã£o">
+                        <span class="material-icons-round">content_copy</span>
+                    </button>
                 </div>
             </div>`;
         }).join('');
 
         return `
-        <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:1.25rem;
-                    transition:border-color .2s,transform .2s;"
-             onmouseenter="this.style.borderColor='var(--accent)';this.style.transform='translateY(-2px)'"
-             onmouseleave="this.style.borderColor='var(--border)';this.style.transform='none'">
-
-            <!-- Cabeçalho -->
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">
+        <div class="amb-tenant-card">
+            <div class="amb-card-header">
                 <div>
-                    <div style="font-weight:700;font-size:1.05rem;">${t.name || t.id}</div>
-                    <div style="font-size:.72rem;color:var(--text-secondary);margin-top:2px;display:flex;align-items:center;gap:.3rem;">
-                        <span class="material-icons-round" style="font-size:.75rem;">link</span>
-                        ${slug}
-                        ${t.cnpj ? `<span style="margin-left:.5rem;opacity:.5;">• ${t.cnpj}</span>` : ''}
+                    <div class="amb-card-name">${t.name || t.id}</div>
+                    <div class="amb-card-slug">
+                        <span class="material-icons-round">link</span>
+                        ${slug}${t.cnpj ? ` <span style="opacity:.4;margin-left:.3rem;">Â· ${t.cnpj}</span>` : ''}
                     </div>
                 </div>
-                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.3rem;">
-                    <span style="font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:20px;
-                                 background:${statusColor}22;color:${statusColor};border:1px solid ${statusColor}44;">
-                        ${statusLabel}
-                    </span>
-                    <span style="font-size:.68rem;color:var(--text-secondary);">
-                        ${modules.length} módulo${modules.length !== 1 ? 's' : ''}
-                    </span>
+                <div class="amb-card-meta">
+                    <span class="amb-status-badge amb-status-${status}">${statusLabel}</span>
+                    <span class="amb-mod-count">${modules.length} mÃ³dulo${modules.length !== 1 ? 's' : ''}</span>
                 </div>
             </div>
-
-            <!-- Módulos com acesso direto -->
-            <div style="border-top:1px solid var(--border);padding-top:.85rem;">
-                ${moduleChips || '<p style="font-size:.75rem;color:var(--text-secondary);">Nenhum módulo configurado</p>'}
+            <div class="amb-modules-list">
+                ${moduleRows || '<p style="font-size:.8rem;color:var(--text-secondary);padding:.25rem .5rem;">Nenhum mÃ³dulo configurado</p>'}
             </div>
         </div>`;
     }).join('');
-};
+};
