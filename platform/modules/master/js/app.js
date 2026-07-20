@@ -7,11 +7,13 @@ const mockTenants = window.mockTenants || [];
 let dynamicTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
 let platformUsers  = JSON.parse(localStorage.getItem('platform_users_registry')  || '[]');
 
-// MIGRAÇÃO v3.17.4: remove ID errado 'altsfix' (renomeado para 'altafix')
-if (dynamicTenants.some(t => t.id === 'altsfix')) {
-    dynamicTenants = dynamicTenants.filter(t => t.id !== 'altsfix');
+// MIGRAÇÃO v3.17.5: remove IDs depreciados do localStorage
+// (substituídos, duplicados ou criados por erro no Firestore)
+const _DEPRECATED = ['altsfix', 'login.html', '01', 'contrapecas'];
+if (dynamicTenants.some(t => _DEPRECATED.includes(t.id))) {
+    dynamicTenants = dynamicTenants.filter(t => !_DEPRECATED.includes(t.id));
     localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
-    console.log('[Master] Migração: altsfix removido, substituído por altafix');
+    console.log('[Master] Migração: IDs depreciados removidos do localStorage');
 }
 
 // SEED: garante que os tenants base do sistema existam em dynamicTenants (source of truth única)
@@ -41,7 +43,14 @@ async function reloadTenantsFromFirestore() {
         if (snap.empty) return;
 
         let updated = false;
+        // IDs depreciados: existem no Firestore mas foram substituídos por IDs corretos
+        const DEPRECATED_IDS = ['altsfix', 'login.html', '01', 'contrapecas'];
+
         snap.forEach(doc => {
+            if (DEPRECATED_IDS.includes(doc.id)) {
+                console.log(`[Master] Firestore: ignorando tenant depreciado '${doc.id}'`);
+                return;
+            }
             const data = doc.data();
             const isAtivo = data.ativo !== undefined ? data.ativo : (data.status === 'active');
             if (!isAtivo) return; // Ignora tenants inativos
