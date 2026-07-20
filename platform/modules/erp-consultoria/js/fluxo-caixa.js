@@ -874,11 +874,9 @@ window.fcApp = {
         const realizadoByMonth = {};
         for (const mk of colKeys) {
             realizadoByMonth[mk] = { ...(yearData[mk]?.realizado || {}) };
-            if (savedDisp[mk]) {
-                for (const [accCod, val] of Object.entries(savedDisp[mk])) {
-                    realizadoByMonth[mk][accCod] = val;
-                }
-            }
+            // savedDisp (saldos bancarios manuais) NAO e mesclado aqui porque o PDF Maxdata 834
+            // usa os mesmos codigos (1.1, 1.2...) para RECEITAS -- mesclar causaria divergencia
+            // nos totais. savedDisp e usado DIRETAMENTE na secao de exibicao das contas bancarias.
         }
 
         // ── Recalcula os totais dos grupos (bottom-up) ─────────────────────
@@ -1091,7 +1089,7 @@ window.fcApp = {
                 }
                 const despNaoOp = lastGroupCode ? (data[lastGroupCode] || 0) : 0;
                 let saldoInicial = 0;
-                for (const acc of dispSection) saldoInicial += (data[acc.codigo] || 0);
+                for (const acc of dispSection) saldoInicial += (savedDisp[mk]?.[acc.codigo] || 0);
                 const saldoLiquido = totalReceitas + totalDespesas;
                 summaryByMonth[mk] = {
                     despNaoOp, saldoInicial, totalReceitas, totalDespesas,
