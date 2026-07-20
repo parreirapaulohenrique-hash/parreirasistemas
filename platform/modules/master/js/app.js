@@ -948,7 +948,7 @@ window.renderAmbientes = function renderAmbientes() {
         'wms':             { label: 'WMS',              icon: 'warehouse',            color: '#10b981', prodUrl: ()  => `${PROD}/wms`,                    hmlUrl: ()  => `${HML}/wms` },
         'wms-coletor':     { label: 'WMS Coletor',     icon: 'phone_android',        color: '#06b6d4', prodUrl: ()  => `${PROD}/apk`,                    hmlUrl: ()  => `${HML}/apk` },
         'sales-force':     { label: 'For\u00E7a de Vendas', icon: 'storefront',       color: '#ec4899', prodUrl: ()  => `${PROD}/sales`,                  hmlUrl: ()  => `${HML}/sales` },
-        'erp-consultoria': { label: 'Consultoria',     icon: 'savings',              color: '#14b8a6', prodUrl: ()  => `${PROD}/consultoria`,             hmlUrl: ()  => `${HML}/consultoria` },
+        'erp-consultoria': { label: 'Consultoria',     icon: 'savings',              color: '#14b8a6', prodUrl: ()  => PROD + '/erp-consultoria',             hmlUrl: ()  => HML + '/erp-consultoria_hml' },
     };
 
     const allTenants  = getAllTenants();
