@@ -7,6 +7,13 @@ const mockTenants = window.mockTenants || [];
 let dynamicTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
 let platformUsers  = JSON.parse(localStorage.getItem('platform_users_registry')  || '[]');
 
+// MIGRAÇÃO v3.17.4: remove ID errado 'altsfix' (renomeado para 'altafix')
+if (dynamicTenants.some(t => t.id === 'altsfix')) {
+    dynamicTenants = dynamicTenants.filter(t => t.id !== 'altsfix');
+    localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
+    console.log('[Master] Migração: altsfix removido, substituído por altafix');
+}
+
 // SEED: garante que os tenants base do sistema existam em dynamicTenants (source of truth única)
 ;(function seedAndDedup() {
     // SEMPRE garante que os mockTenants (clientes base) estão presentes
@@ -22,6 +29,7 @@ let platformUsers  = JSON.parse(localStorage.getItem('platform_users_registry') 
     localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
     console.log(`[Master] Seed concluído: ${dynamicTenants.length} tenants carregados.`);
 })();
+
 
 // Recarrega tenants do Firestore (para recuperar clientes cadastrados dinamicamente
 // caso o localStorage tenha sido limpo no browser)
