@@ -196,7 +196,7 @@ window.switchView = (viewName) => {
     document.getElementById('pageTitle').textContent = titles[viewName] || 'ERP';
 
     // Load Data on View Switch
-    if (viewName === 'entities') renderEntities();
+    if (viewName === 'entities') { renderEntities(); loadEntitiesFromFirebase(); }
     if (viewName === 'suppliers') renderSuppliers();
     if (viewName === 'employees') renderEmployees();
     if (viewName === 'products') renderProducts();
@@ -391,6 +391,57 @@ window.openCNPJSearch = (context = 'client') => {
 
 window.entities = JSON.parse(localStorage.getItem('erp_clientes' + window.getTenantSuffix()) || 'null') || [];
 
+/**
+ * Carrega clientes do Firestore (fv_clientes) e mescla com localStorage.
+ * Chamado assincronamente ao navegar para a pag Gestao de Clientes.
+ */
+async function loadEntitiesFromFirebase() {
+    try {
+        if (typeof firebase === 'undefined' || !firebase.firestore) return;
+        const user = JSON.parse(localStorage.getItem('platform_user_logged') || '{}');
+        const tenantId = user && user.tenant ? user.tenant : 'parreira';
+        const snap = await firebase.firestore()
+            .collection('tenants').doc(tenantId)
+            .collection('fv_clientes').get();
+        if (snap.empty) return;
+        let changed = false;
+        snap.forEach(doc => {
+            const data = doc.data();
+            const codeStr = data.codigo || data.id || doc.id;
+            const codeNum = parseInt(codeStr) || codeStr;
+            if (!entities.some(e => String(e.code) === String(codeNum))) {
+                entities.push({
+                    code: codeNum,
+                    name: data.razaoSocial || data.nome || data.name || '',
+                    fantasy: data.fantasia || data.nomeFantasia || '',
+                    cnpj: data.cnpjCpf || data.cnpj || '',
+                    tipoCliente: data.tipoCliente || 'PJ',
+                    cidade: data.cidade || '',
+                    uf: data.uf || '',
+                    bairro: data.bairro || '',
+                    cep: data.cep || '',
+                    endereco: data.endereco || '',
+                    telefone: data.telefone || '',
+                    email: data.email || '',
+                    status: data.status || 'ativo',
+                    bloqueado: data.bloqueado || false,
+                    limiteTotal: data.limiteTotal || 0,
+                    limiteDisponivel: data.limiteDisponivel || 0,
+                    seller: data.seller || ''
+                });
+                changed = true;
+            }
+        });
+        if (changed) {
+            localStorage.setItem('erp_clientes' + window.getTenantSuffix(), JSON.stringify(entities));
+            renderEntities();
+            console.log('[ERP] Clientes atualizados do Firebase:', entities.length);
+        }
+    } catch (e) {
+        console.warn('[ERP] Erro ao carregar clientes do Firebase:', e);
+    }
+}
+
 window.renderEntities = (filter = '') => {
     const tbody = document.getElementById('entitiesTableBody');
     if (!tbody) return;
@@ -569,7 +620,15 @@ window.saveEntity = function (e) {
                 .collection('tenants').doc(tenantId)
                 .collection('fv_clientes').doc(docId)
                 .set(clienteFV, { merge: true })
-                .then(() => console.log(`✅ [ERP] Cliente ${newClient.name} sincronizado com Firebase (tenant: ${tenantId})`))
+                .then(() => {
+                    console.log(`✅ [ERP] Cliente ${newClient.name} sincronizado com Firebase (tenant: ${tenantId})`);
+                    // Cria entrada vazia em fluxo_caixa_clientes para Analise Financeira
+                    firebase.firestore()
+                        .collection('tenants').doc(tenantId)
+                        .collection('fluxo_caixa_clientes').doc(docId)
+                        .set({ name: newClient.name, cnpj: newClient.cnpj || '', createdAt: new Date().toISOString(), periods: {} }, { merge: true })
+                        .catch(err => console.warn('[ERP] Erro ao sync fluxo_caixa_clientes:', err));
+                })
                 .catch(err => console.warn('[ERP] Erro ao sincronizar cliente com Firebase:', err));
         }
     } catch (syncErr) {

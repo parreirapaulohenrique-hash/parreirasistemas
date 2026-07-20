@@ -878,9 +878,7 @@ window.testarWmsConexao = async function() {
     const empId   = Number(document.getElementById('wms-empId')?.value || 0);
     const terminal= (document.getElementById('wms-terminal')?.value || '').trim();
     if (!baseUrl || !empId || !terminal) {
-        if (result) { result.style.color='#ef4444'; result.textContent='Ã¢ÂÅ’ Preencha URL, empId e Terminal.'; } return;
-    }
-        if (result) { result.style.color='#ef4444'; result.textContent='âš  Preencha URL, empId e Terminal.'; } return;
+        if (result) { result.style.color='#ef4444'; result.textContent='⚠ Preencha URL, empId e Terminal.'; } return;
     }
     if (result) { result.style.color='#94a3b8'; result.textContent='Testando...'; }
     try {

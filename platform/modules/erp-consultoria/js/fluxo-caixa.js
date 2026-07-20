@@ -280,6 +280,42 @@ window.fcApp = {
         this.refreshDashboard();
     },
 
+    // Salva saldo FINAL das contas bancarias (Disponiveis Finais -- entrada manual)
+    saveDispFinalValue(codigo, monthKey, valueStr) {
+        const client = store.getActiveClient();
+        if (!client) return;
+        const year = String(document.getElementById('filter-period-year')?.value
+                        || document.getElementById('filter-period-value')?.value
+                        || new Date().getFullYear());
+        const storageKey = `fc_disp_final_${client.id}_${year}`;
+        let savedDisp = {};
+        try {
+            const stored = localStorage.getItem(storageKey);
+            if (stored) savedDisp = JSON.parse(stored);
+        } catch (e) { console.error('[fcApp] Erro ao ler fc_disp_final:', e); }
+        if (!savedDisp[monthKey]) savedDisp[monthKey] = {};
+        const parseBRL = str => {
+            if (!str) return 0;
+            let cleaned = str.replace(/\s/g, '');
+            if (cleaned.includes(',') && cleaned.includes('.')) {
+                cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+            } else if (cleaned.includes(',')) {
+                cleaned = cleaned.replace(',', '.');
+            }
+            const val = parseFloat(cleaned);
+            return isNaN(val) ? 0 : val;
+        };
+        const val = parseBRL(valueStr);
+        if (val === 0) {
+            delete savedDisp[monthKey][codigo];
+            if (Object.keys(savedDisp[monthKey]).length === 0) delete savedDisp[monthKey];
+        } else {
+            savedDisp[monthKey][codigo] = val;
+        }
+        localStorage.setItem(storageKey, JSON.stringify(savedDisp));
+        this.refreshDashboard();
+    },
+
     // ── Estado de bloqueio (lock) por cliente ──────────────────────────────
     isLocked() {
         const c = store.getActiveClient();
@@ -823,16 +859,24 @@ window.fcApp = {
             }
         }
 
+        // Carrega saldos FINAIS das contas bancarias (Disponiveis nas Contas Movimento Final)
+        const storageFinalKey = client ? `fc_disp_final_${client.id}_${year}` : null;
+        let savedDispFinal = {};
+        if (storageFinalKey) {
+            try {
+                const stored = localStorage.getItem(storageFinalKey);
+                if (stored) savedDispFinal = JSON.parse(stored);
+            } catch (e) { console.error('[fcApp] Erro ao ler fc_disp_final:', e); }
+        }
+
         // ── Pré-carrega realizado de cada mês ──────────────────────────────
         // realizadoByMonth[monthKey][codigo] = valor (clonado para evitar mutações)
         const realizadoByMonth = {};
         for (const mk of colKeys) {
             realizadoByMonth[mk] = { ...(yearData[mk]?.realizado || {}) };
-            if (savedDisp[mk]) {
-                for (const [accCod, val] of Object.entries(savedDisp[mk])) {
-                    realizadoByMonth[mk][accCod] = val;
-                }
-            }
+            // savedDisp (saldos bancarios manuais) NAO e mesclado aqui porque o PDF Maxdata 834
+            // usa os mesmos codigos (1.1, 1.2...) para RECEITAS -- mesclar causaria divergencia
+            // nos totais. savedDisp e usado DIRETAMENTE na secao de exibicao das contas bancarias.
         }
 
         // ── Recalcula os totais dos grupos (bottom-up) ─────────────────────
@@ -983,11 +1027,11 @@ window.fcApp = {
             tbody += `<tr style="background:linear-gradient(90deg,#c2692a,#e07a35);color:#fff;font-weight:800;font-size:0.95rem;">
                 <td colspan="2" style="padding:8px 12px;">Disponíveis Nas Contas Movimento inicial</td>`;
             
-            // Calcula totais mensais do grupo Disponíveis
+            // Calcula totais mensais do grupo Disponíveis (usa APENAS savedDisp -- entradas manuais)
             const headerVals = colKeys.map(mk => {
                 let sum = 0;
                 for (const acc of dispSection) {
-                    sum += (realizadoByMonth[mk][acc.codigo] || 0);
+                    sum += (savedDisp[mk]?.[acc.codigo] || 0);
                 }
                 return sum;
             });
@@ -999,10 +1043,10 @@ window.fcApp = {
             tbody += `<td style="text-align:right;font-weight:800;color:#fff;background:rgba(255,255,255,0.08);padding:8px;font-size:0.88rem;">${fmt(headerTotal)}</td>`;
             tbody += `</tr>`;
 
-            // Linhas das contas bancárias
+            // Linhas das contas bancárias (usa APENAS savedDisp -- entradas manuais)
             for (const acc of dispSection) {
                 const nivel = acc.codigo.split('.').length;
-                const vals  = colKeys.map(mk => realizadoByMonth[mk][acc.codigo] ?? 0);
+                const vals  = colKeys.map(mk => savedDisp[mk]?.[acc.codigo] ?? 0);
                 const total = vals.reduce((s, v) => s + v, 0);
                 tbody += renderEditableRow(acc.codigo, acc.descricao, nivel, vals, total, colKeys);
             }
@@ -1015,6 +1059,129 @@ window.fcApp = {
             const total  = vals.reduce((s, v) => s + v, 0);
             tbody += renderRow(conta.codigo, conta.descricao, nivel, vals, total);
         }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // BLOCO FIXO 1: Linhas de Resumo (alimentadas pelo relatorio importado)
+        // ═══════════════════════════════════════════════════════════════════
+        {
+            // Identifica codigos topo de cada secao (nivel<=2 sem pai na mesma lista)
+            const nivel2Codes = (template.contas || [])
+                .filter(c => c.nivel <= 2)
+                .map(c => c.codigo);
+
+            const uniqueTopCodes = nivel2Codes.filter(cod => {
+                const parts = cod.split('.');
+                if (parts.length <= 1) return true;
+                const parentCod = parts.slice(0, -1).join('.');
+                return !nivel2Codes.includes(parentCod);
+            });
+
+            // Ultimo grupo nivel<=2 = Total das Despesas Nao Operacionais
+            const lastGroupCode = [...(template.contas || [])].reverse().find(c => c.nivel <= 2)?.codigo;
+
+            const summaryByMonth = {};
+            for (const mk of colKeys) {
+                const data = realizadoByMonth[mk] || {};
+                let totalReceitas = 0, totalDespesas = 0;
+                for (const cod of uniqueTopCodes) {
+                    const v = data[cod] || 0;
+                    if (v > 0) totalReceitas += v; else totalDespesas += v;
+                }
+                const despNaoOp = lastGroupCode ? (data[lastGroupCode] || 0) : 0;
+                let saldoInicial = 0;
+                for (const acc of dispSection) saldoInicial += (savedDisp[mk]?.[acc.codigo] || 0);
+                const saldoLiquido = totalReceitas + totalDespesas;
+                summaryByMonth[mk] = {
+                    despNaoOp, saldoInicial, totalReceitas, totalDespesas,
+                    saldoLiquido, saldoAjustado: saldoInicial + saldoLiquido
+                };
+            }
+
+            const sumKeys = ['despNaoOp','saldoInicial','totalReceitas','totalDespesas','saldoLiquido','saldoAjustado'];
+            const summaryTotals = {};
+            for (const k of sumKeys) {
+                summaryTotals[k] = colKeys.reduce((s, mk) => s + (summaryByMonth[mk]?.[k] || 0), 0);
+            }
+
+            // Separador visual
+            tbody += `<tr><td colspan="${colKeys.length + 3}" style="height:5px;background:linear-gradient(90deg,rgba(224,122,53,0.6),transparent);"></td></tr>`;
+
+            // 6 linhas de resumo
+            const summaryDefs = [
+                { label: 'Total das Despesas N\u00e3o Operacionais',   key: 'despNaoOp',    bg: 'rgba(139,69,19,0.9)' },
+                { label: 'Saldo Inicial Conta Movimento',              key: 'saldoInicial', bg: 'rgba(21,101,192,0.9)' },
+                { label: 'Total Receitas Operac. e N\u00e3o Operac.', key: 'totalReceitas', bg: 'rgba(27,94,32,0.9)' },
+                { label: 'Total Despesas Operac. e N\u00e3o Operac.', key: 'totalDespesas', bg: 'rgba(183,28,28,0.9)' },
+                { label: 'Saldo L\u00edquido Final',                   key: 'saldoLiquido', bg: 'rgba(21,101,192,0.95)', bold:true },
+                { label: 'Saldo L\u00edquido Ajustado',               key: 'saldoAjustado',bg: 'rgba(230,81,0,0.95)',   bold:true },
+            ];
+
+            for (const def of summaryDefs) {
+                const fw   = def.bold ? '800' : '700';
+                const vals = colKeys.map(mk => summaryByMonth[mk]?.[def.key] || 0);
+                const tot  = summaryTotals[def.key];
+                tbody += `<tr style="background:${def.bg};color:#fff;font-weight:${fw};">`;
+                tbody += `<td style="padding:7px 8px;font-size:0.72rem;color:rgba(255,255,255,0.6);">&#8212;</td>`;
+                tbody += `<td style="padding:7px 12px;">${def.label}</td>`;
+                for (const v of vals) {
+                    tbody += `<td style="text-align:right;padding:7px 10px;color:${v < 0 ? '#fca5a5' : '#bbf7d0'};"> ${fmt(v)}</td>`;
+                }
+                tbody += `<td style="text-align:right;padding:7px 10px;font-weight:${fw};background:rgba(0,0,0,0.18);color:${tot < 0 ? '#fca5a5' : '#bbf7d0'};"> ${fmt(tot)}</td></tr>`;
+            }
+
+            // ═══════════════════════════════════════════════════════════════
+            // BLOCO FIXO 2: Disponiveis nas Contas Movimento FINAL (manual)
+            // ═══════════════════════════════════════════════════════════════
+
+            // Cabecalho da secao Final
+            tbody += `<tr style="background:linear-gradient(90deg,#c2692a,#e07a35);color:#fff;font-weight:800;font-size:0.8rem;">`;
+            tbody += `<td colspan="2" style="padding:8px 12px;">Dispon\u00edveis Nas Contas Movimento Final</td>`;
+            for (const mk of colKeys) tbody += `<td style="text-align:right;padding:6px 10px;font-size:0.78rem;">${fmtMesLabel(mk)}</td>`;
+            tbody += `<td style="text-align:right;padding:6px 10px;">Total</td></tr>`;
+
+            // Linha de total do header
+            const finalHdrVals = colKeys.map(mk => {
+                let s = 0;
+                for (const acc of dispSection) s += (savedDispFinal[mk]?.[acc.codigo] || 0);
+                return s;
+            });
+            const finalHdrTotal = finalHdrVals.reduce((s, v) => s + v, 0);
+            tbody += `<tr style="background:rgba(194,105,42,0.25);font-weight:700;">`;
+            tbody += `<td colspan="2" style="padding:5px 12px;font-size:0.82rem;">Total Dispon\u00edvel Final</td>`;
+            for (const hv of finalHdrVals) tbody += `<td style="text-align:right;padding:5px 10px;color:${valColor(hv)};">${fmt(hv)}</td>`;
+            tbody += `<td style="text-align:right;padding:5px 10px;font-weight:800;color:${valColor(finalHdrTotal)};background:rgba(255,255,255,0.05);">${fmt(finalHdrTotal)}</td></tr>`;
+
+            // Linhas editaveis das contas bancarias
+            for (const acc of dispSection) {
+                const nivel = acc.codigo.split('.').length;
+                const indent = Math.max(0, nivel - 2) * 16;
+                const displayCodigo = acc.codigo.replace(/^1\./, '0.');
+                const vals = colKeys.map(mk => savedDispFinal[mk]?.[acc.codigo] || 0);
+                const total = vals.reduce((s, v) => s + v, 0);
+                let frow = `<tr>`;
+                frow += `<td style="font-size:0.72rem;color:var(--text-secondary);white-space:nowrap;">${displayCodigo}</td>`;
+                frow += `<td style="padding-left:${indent + 12}px;font-size:0.88rem;">${acc.descricao}</td>`;
+                colKeys.forEach((mk, idx) => {
+                    const v = vals[idx] || 0;
+                    const valStr = v ? v.toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 }) : '';
+                    if (locked) {
+                        frow += `<td style="text-align:right;color:${valColor(v)};font-size:0.88rem;padding-right:12px;">${v === 0 ? '\u2014' : valStr}</td>`;
+                    } else {
+                        frow += `<td style="text-align:right;font-size:0.88rem;padding:4px 8px;">`;
+                        frow += `<input type="text" class="disp-final-val-input" data-month="${mk}" data-code="${acc.codigo}" value="${valStr}"`;
+                        frow += ` style="text-align:right;width:100%;max-width:105px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:#fff;border-radius:4px;padding:3px 6px;font-size:0.85rem;box-sizing:border-box;transition:all 0.2s;"`;
+                        frow += ` placeholder="\u2014"`;
+                        frow += ` onfocus="this.style.border='1px solid var(--primary,#e07a35)';this.style.background='rgba(255,255,255,0.08)';"`;
+                        frow += ` onblur="this.style.border='1px solid rgba(255,255,255,0.1)';this.style.background='rgba(255,255,255,0.04)';"`;
+                        frow += ` onchange="window.fcApp.saveDispFinalValue('${acc.codigo}', '${mk}', this.value)"`;
+                        frow += `/></td>`;
+                    }
+                });
+                frow += `<td style="text-align:right;color:${valColor(total)};font-size:0.88rem;background:rgba(255,255,255,0.05);font-weight:700;line-height:2rem;padding-right:12px;">${fmt(total)}</td></tr>`;
+                tbody += frow;
+            }
+        }
+
         tbody += '</tbody>';
 
         wrap.innerHTML = `<table class="data-table" style="width:100%;border-collapse:collapse;">${thead}${tbody}</table>`;

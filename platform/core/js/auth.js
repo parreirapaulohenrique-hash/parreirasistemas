@@ -173,21 +173,36 @@ window.ParreiraAuth = (function () {
     }
     function _loginUrl(modulo) {
         const parts  = window.location.pathname.split('/').filter(Boolean);
-        // Sobe até achar 'platform' na URL
         const platformIdx = parts.indexOf('platform');
-        // parts inclui o filename E o diretório 'platform' — precisa subir (length - platformIdx - 2) níveis
-        // Ex: platform/modules/erp-consultoria/index.html => 4 parts, platformIdx=0 => upLevels=2 (correto: ../../login.html)
-        const upLevels = platformIdx >= 0
-            ? Math.max(0, parts.length - platformIdx - 2)
-            : Math.max(0, parts.length - 2);
+
+        // Módulo acessado via alias (ex: /erp-consultoria_hml) — 'platform' não está na URL real.
+        // A tag <base> redireciona assets mas afeta caminhos relativos no window.location.href.
+        // Solução: usa a base tag para calcular o caminho absoluto até login.html.
+        if (platformIdx < 0) {
+            const baseEl = document.querySelector('base[href]');
+            if (baseEl) {
+                const basePath = new URL(baseEl.href).pathname; // ex: /platform/modules/erp-consultoria/
+                const splitPlatform = basePath.split('platform');
+                const platformRoot = splitPlatform[0] + 'platform/'; // ex: /platform/
+                const loginPath   = platformRoot + 'login.html';    // ex: /platform/login.html
+                if (!modulo) return loginPath;
+                const afterPlatform = splitPlatform[1]?.replace(/^\//, '').replace(/\/$/, '') || '';
+                return `${loginPath}?module=${encodeURIComponent(modulo)}&redirect=${encodeURIComponent(afterPlatform)}`;
+            }
+            // Fallback sem base tag
+            const base = 'login.html';
+            if (!modulo) return base;
+            return `${base}?module=${encodeURIComponent(modulo)}&redirect=${encodeURIComponent(parts.slice(-1).join('/'))}`;
+        }
+
+        // Módulo acessado pelo caminho real (ex: /platform/modules/erp-consultoria/index.html)
+        const upLevels = Math.max(0, parts.length - platformIdx - 2);
         const base = '../'.repeat(upLevels) + 'login.html';
         if (!modulo) return base;
-        // redirect relativo ao platform/
-        const afterPlatform = platformIdx >= 0
-            ? parts.slice(platformIdx + 1).join('/')
-            : parts.slice(-1).join('/');
+        const afterPlatform = parts.slice(platformIdx + 1).join('/');
         return `${base}?module=${encodeURIComponent(modulo)}&redirect=${encodeURIComponent(afterPlatform)}`;
     }
+
 
     // ─── CRUD DE USUÁRIOS (chamado pelo WMS admin) ────────────────────────────
     async function criarUsuario(tenantId, dados) {

@@ -79,19 +79,27 @@ class Store {
                 });
             }
 
-            // ✅ CORREÇÃO: Adiciona clientes criados DIRETAMENTE pelo módulo FC (via addClient())
-            // Esses clientes têm campo "name" em fluxo_caixa_clientes mas NÃO estão em fv_clientes.
-            // Sem isso, após recarregar a página, eles sumiam porque o ID Firestore não batia com o ID do localStorage.
+            // Auto-migracao: clientes criados pelo modulo FC (em fluxo_caixa_clientes)
+            // que ainda nao estao em fv_clientes sao sincronizados em background.
             periodsSnap.forEach(doc => {
                 const data = doc.data();
                 const jaExiste = this.clientsCache.some(c => c.id === doc.id);
                 if (!jaExiste && (data.name || data.nome || data.cnpj)) {
-                    this.clientsCache.push({
+                    const client = {
                         id: doc.id,
                         name: data.name || data.nome || doc.id,
                         cnpj: data.cnpj || '',
                         periods: data.periods || {}
-                    });
+                    };
+                    this.clientsCache.push(client);
+                    // Migra para fv_clientes (background, nao bloqueia)
+                    tenantRef.collection('fv_clientes').doc(doc.id).set({
+                        razaoSocial: client.name, nome: client.name, name: client.name,
+                        cnpjCpf: client.cnpj, cnpj: client.cnpj,
+                        status: 'ativo',
+                        migratedAt: new Date().toISOString(),
+                        createdBy: 'fc-migration'
+                    }, { merge: true }).catch(e => console.warn('[fc-store] Erro na migracao:', e));
                 }
             });
 
@@ -105,18 +113,23 @@ class Store {
 
     async addClient(name, cnpj) {
         try {
-            const newClient = {
-                name,
-                cnpj,
+            const tenantRef = this.db.collection('tenants').doc(this.tenantId);
+
+            // 1. Cria em fv_clientes (fonte primaria / Gestao de Clientes)
+            const fvData = {
+                razaoSocial: name, nome: name, name,
+                cnpjCpf: cnpj || '', cnpj: cnpj || '',
+                status: 'ativo',
                 createdAt: new Date().toISOString(),
-                periods: {}
+                createdBy: 'fc-module'
             };
+            const fvDocRef = await tenantRef.collection('fv_clientes').add(fvData);
 
-            const docRef = await this.db.collection('tenants').doc(this.tenantId)
-                                        .collection('fluxo_caixa_clientes')
-                                        .add(newClient);
+            // 2. Cria em fluxo_caixa_clientes com o MESMO ID (para vincular periodos)
+            const newClient = { name, cnpj: cnpj || '', createdAt: new Date().toISOString(), periods: {} };
+            await tenantRef.collection('fluxo_caixa_clientes').doc(fvDocRef.id).set(newClient);
 
-            newClient.id = docRef.id;
+            newClient.id = fvDocRef.id;
             this.clientsCache.push(newClient);
             return newClient;
         } catch (error) {
