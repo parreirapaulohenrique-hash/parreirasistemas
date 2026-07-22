@@ -301,7 +301,7 @@ window.ErpNFQueue = (function() {
 
     // ── Refresh ────────────────────────────────────────────────────────────────
     async function _refresh() {
-        // Verifica se integração Acontec está ativa
+        // Verifica se integração ERP está ativa
         const adapter = window._erpAdapter || window.acontecAdapter;
         if (!adapter || typeof adapter.syncNFs !== 'function') return;
 
