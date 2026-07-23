@@ -119,6 +119,123 @@ window.filterAccountPlans = function () {
 window.deleteAccountPlan = function (id) { if (deleteCadastro('accountPlans', id)) renderAccountPlansGrid(); };
 
 // ===========================================
+// SEED: Plano de Contas padrão (baseado no relatório 834)
+// Executado automaticamente se accountPlans estiver vazio
+// ===========================================
+const PLANO_CONTAS_DEFAULT = [
+    // GRUPO 1 — RECEITAS
+    { codigo: '1.1',    conta: 'RECEITAS COM VENDAS',               tipo: 'Sintética' },
+    { codigo: '1.1.01', conta: 'VENDAS',                            tipo: 'Analítica' },
+    // GRUPO 2 — CUSTO E IMPOSTOS
+    { codigo: '2.1',    conta: 'CUSTO COM MERCADORIA REVENDA',       tipo: 'Sintética' },
+    { codigo: '2.1.01', conta: 'FORNECEDORES DE MERCADORIAS',        tipo: 'Analítica' },
+    { codigo: '2.1.03', conta: 'TRANSPORTADORA MERCA REVENDA',       tipo: 'Analítica' },
+    { codigo: '2.3',    conta: 'IMPOSTOS SE ESTIVER NO CMV',         tipo: 'Sintética' },
+    { codigo: '2.3.06', conta: 'ICMS - NORMAL',                      tipo: 'Analítica' },
+    { codigo: '2.3.07', conta: 'SUBSTITUIÇÃO TRIBUTÁRIA SAÍDA',      tipo: 'Analítica' },
+    { codigo: '2.3.09', conta: 'FUNDO DESENVOLVIMENTO ECONOMICO',    tipo: 'Analítica' },
+    { codigo: '2.3.11', conta: 'IMPOSTOS PARCELADOS',                tipo: 'Analítica' },
+    // GRUPO 3 — DESPESAS OPERACIONAIS
+    { codigo: '3.1',    conta: 'DESPESAS COM VENDAS',                tipo: 'Sintética' },
+    { codigo: '3.1.01', conta: 'MARKETING E PROPAGANDA',             tipo: 'Analítica' },
+    { codigo: '3.1.03', conta: 'SACOLAS E EMBALAGENS',               tipo: 'Analítica' },
+    { codigo: '3.1.05', conta: 'COMISSÃO REPRESENTANTE COMERCIAL',   tipo: 'Analítica' },
+    { codigo: '3.1.06', conta: 'FRETE COM ENTREGA DE VENDAS',        tipo: 'Analítica' },
+    { codigo: '3.1.07', conta: 'TAXA CARTÃO CRÉDITO/DÉBITO',         tipo: 'Analítica' },
+    { codigo: '3.1.10', conta: 'TARIFA PIX RECEBIDO',                tipo: 'Analítica' },
+    { codigo: '3.2',    conta: 'FUNCIONÁRIOS',                       tipo: 'Sintética' },
+    { codigo: '3.2.01', conta: 'SALÁRIO (CLT)',                      tipo: 'Analítica' },
+    { codigo: '3.2.02', conta: 'ADIANTAMENTO SALARIO/VALES',         tipo: 'Analítica' },
+    { codigo: '3.2.03', conta: 'AUXILIO ALIMENTAÇÃO/REFEIÇÃO',       tipo: 'Analítica' },
+    { codigo: '3.2.05', conta: 'SEGURO DE VIDA FUNCIONÁRIOS',        tipo: 'Analítica' },
+    { codigo: '3.2.06', conta: 'CONFRATERNIZAÇÃO E PREMIAÇÃO',       tipo: 'Analítica' },
+    { codigo: '3.2.07', conta: 'VIAGENS E ESTADIAS FUNCIONÁRIOS',    tipo: 'Analítica' },
+    { codigo: '3.2.08', conta: 'TREINAMENTOS E CURSOS',              tipo: 'Analítica' },
+    { codigo: '3.2.12', conta: 'VALE TRANSPORTE',                    tipo: 'Analítica' },
+    { codigo: '3.2.13', conta: 'FGTS',                               tipo: 'Analítica' },
+    { codigo: '3.2.14', conta: 'INSS/GPS',                           tipo: 'Analítica' },
+    { codigo: '3.2.15', conta: 'CONTRIBUIÇÃO SINDICAL',              tipo: 'Analítica' },
+    { codigo: '3.2.16', conta: 'RESCISÃO TRABALHISTA',               tipo: 'Analítica' },
+    { codigo: '3.2.17', conta: 'SELEÇÃO E CONTRATAÇÃO',              tipo: 'Analítica' },
+    { codigo: '3.2.18', conta: 'ASO',                                tipo: 'Analítica' },
+    { codigo: '3.2.20', conta: 'DESPESA COM TERCEIRIZADO',           tipo: 'Analítica' },
+    { codigo: '3.2.21', conta: 'UNIFORMES E EPI',                    tipo: 'Analítica' },
+    { codigo: '3.2.23', conta: 'DECIMO TERCEIRO INTEGRAL',           tipo: 'Analítica' },
+    { codigo: '3.3',    conta: 'DESPESA DE INFORMÁTICA',             tipo: 'Sintética' },
+    { codigo: '3.3.03', conta: 'CONSULTORIA DE TI',                  tipo: 'Analítica' },
+    { codigo: '3.3.04', conta: 'MENSALI. PROG. DE TECNO INFORMACA',  tipo: 'Analítica' },
+    { codigo: '3.4',    conta: 'DESPESAS ADMINISTRATIVAS',           tipo: 'Sintética' },
+    { codigo: '3.4.01', conta: 'SUPERMERCADO/PADARIA/FARMÁCIA',      tipo: 'Analítica' },
+    { codigo: '3.4.02', conta: 'MATERIAL ADMINISTRATIVO/EXPEDIEN',   tipo: 'Analítica' },
+    { codigo: '3.4.04', conta: 'CARTÓRIO',                           tipo: 'Analítica' },
+    { codigo: '3.4.06', conta: 'MANUTENÇÃO/REFORMAS/REPAROS',        tipo: 'Analítica' },
+    { codigo: '3.4.07', conta: 'DIÁRIA DE PRESTADOR DE SERVIÇO',     tipo: 'Analítica' },
+    { codigo: '3.4.08', conta: 'CONSULTORIA DE RH/ADM/FIN/CON',      tipo: 'Analítica' },
+    { codigo: '3.4.09', conta: 'HONORÁRIOS ADVOCATÍCIOS',            tipo: 'Analítica' },
+    { codigo: '3.4.10', conta: 'TAXAS ADMINISTRATIVAS',              tipo: 'Analítica' },
+    { codigo: '3.4.13', conta: 'SEGURADORA PREDIAL/EQUIPAMENTOS',    tipo: 'Analítica' },
+    { codigo: '3.4.14', conta: 'CONSULTA DE CRÉDITO SPC/SERASA',     tipo: 'Analítica' },
+    { codigo: '3.4.16', conta: 'PRO LABORE',                         tipo: 'Analítica' },
+    { codigo: '3.5',    conta: 'DESPESAS FIXAS',                     tipo: 'Sintética' },
+    { codigo: '3.5.01', conta: 'CONTA DE ÁGUA',                      tipo: 'Analítica' },
+    { codigo: '3.5.02', conta: 'CONTA DE ENERGIA',                   tipo: 'Analítica' },
+    { codigo: '3.5.03', conta: 'CONTA TELEFONE FIXO/INTERNET',       tipo: 'Analítica' },
+    { codigo: '3.5.04', conta: 'CONTA CELULAR',                      tipo: 'Analítica' },
+    { codigo: '3.5.05', conta: 'ALUGUEL PREDIAL',                    tipo: 'Analítica' },
+    { codigo: '3.5.07', conta: 'EMPRESA DE VIGILÂNCIA E MONITORA',   tipo: 'Analítica' },
+    { codigo: '3.5.10', conta: 'HONORÁRIOS CONTABILIDADE',           tipo: 'Analítica' },
+    { codigo: '3.6',    conta: 'DESPESAS BANCÁRIAS/FINANCEIRAS',     tipo: 'Sintética' },
+    { codigo: '3.6.01', conta: 'TARIFAS BANCÁRIAS',                  tipo: 'Analítica' },
+    { codigo: '3.6.02', conta: 'IOF',                                tipo: 'Analítica' },
+    { codigo: '3.6.08', conta: 'JUROS SOBRE EMPRÉSTIMOS',            tipo: 'Analítica' },
+    { codigo: '3.7',    conta: 'VEÍCULOS',                           tipo: 'Sintética' },
+    { codigo: '3.7.01', conta: 'COMBUSTÍVEL E LUBRIFICANTES',        tipo: 'Analítica' },
+    { codigo: '3.7.06', conta: 'ALUGUEL DE VEÍCULO',                 tipo: 'Analítica' },
+    { codigo: '3.7.07', conta: 'RASTREAMENTO POR GPS',               tipo: 'Analítica' },
+    // GRUPO 4 — RECEITAS E DESPESAS FINANCEIRAS
+    { codigo: '4.1',    conta: 'RECEITA DE EMPRÉSTIMO/FINANCIAMENTO', tipo: 'Sintética' },
+    { codigo: '4.1.01', conta: 'BANCÁRIOS',                          tipo: 'Analítica' },
+    { codigo: '4.2',    conta: 'RECEITA DE INVESTIMENTO',            tipo: 'Sintética' },
+    { codigo: '4.2.06', conta: 'RENDIMENTOS CDB/FUNDOS/ALUGUÉIS',   tipo: 'Analítica' },
+    { codigo: '4.3',    conta: 'RECEITAS FINANCEIRAS',               tipo: 'Sintética' },
+    { codigo: '4.3.07', conta: 'RECEITA NÃO IDENTIFICADA',           tipo: 'Analítica' },
+    { codigo: '4.3.08', conta: 'DESPESAS NÃO IDENTIFICADAS',         tipo: 'Analítica' },
+    // GRUPO 5 — FINANCIAMENTOS E INVESTIMENTOS
+    { codigo: '5.1',    conta: 'EMPRÉSTIMO/FINANCIAMENTO',           tipo: 'Sintética' },
+    { codigo: '5.1.01', conta: 'BANCÁRIOS',                          tipo: 'Analítica' },
+    { codigo: '5.2',    conta: 'DESPESA COM INVESTIMENTOS',          tipo: 'Sintética' },
+    { codigo: '5.2.01', conta: 'IMÓVEIS',                            tipo: 'Analítica' },
+    { codigo: '5.2.04', conta: 'COMPRA DE TERRENOS',                 tipo: 'Analítica' },
+    { codigo: '5.2.06', conta: 'AQUISIÇÃO TÍTULO DE CAPITALIZAÇÃO',  tipo: 'Analítica' },
+    { codigo: '5.2.07', conta: 'CONSÓRCIOS',                         tipo: 'Analítica' },
+    { codigo: '5.3',    conta: 'INVESTIMENTO EM IMOBILIZADOS',       tipo: 'Sintética' },
+    { codigo: '5.3.01', conta: 'MOVEIS E UTENSI. IMOBILIZADOS',      tipo: 'Analítica' },
+    { codigo: '5.3.02', conta: 'MAQUINAS E EQUIPAM. IMOBILIZADOS',   tipo: 'Analítica' },
+    { codigo: '5.4',    conta: 'DISTRIBUIÇÃO DE LUCROS',             tipo: 'Sintética' },
+    { codigo: '5.4.03', conta: 'VIAGENS E ESTADAS - DIRETORIA',      tipo: 'Analítica' },
+];
+
+window.seedAccountPlans = function () {
+    const existing = loadCadastros('accountPlans');
+    if (existing.length > 0) return; // já populado
+    const suffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
+    const seeded = PLANO_CONTAS_DEFAULT.map((a, idx) => ({
+        id: 'AP-SEED-' + idx,
+        codigo: a.codigo,
+        conta: a.conta,
+        contaContabil: a.codigo,
+        tipo: a.tipo,
+        valorOrcado: '',
+        investimento: 'Não',
+        exibirDre: 'Sim'
+    }));
+    localStorage.setItem('erp_accountPlans' + suffix, JSON.stringify(seeded));
+    // Força reload do cache interno do módulo de cadastros
+    if (typeof cadastrosData !== 'undefined') cadastrosData['accountPlans'] = seeded;
+    console.log('[ERP] Plano de Contas populado com', seeded.length, 'contas.');
+};
+
+// ===========================================
 // 2. COBRANÇA
 // ===========================================
 window.openBillingModal = function (editId) {
@@ -528,84 +645,157 @@ window.baixarContaReceber = function (id) {
 window.renderPagarGrid = function () {
     const tbody = document.getElementById('pagarTableBody');
     if (!tbody) return;
-    const items = JSON.parse(localStorage.getItem('erp_pagar') || '[]');
+    const suffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
+    let items = JSON.parse(localStorage.getItem('erp_pagar' + suffix) || '[]');
+
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    const fmtBRL = v => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const CCS = { '1': 'MATRIZ', '2': 'PALMAS', '4': 'PORTO' };
+
+    // Atualiza status Vencido automaticamente
+    items = items.map(i => {
+        if (i.status === 'Aberto' && new Date(i.vencimento) < hoje) return { ...i, status: 'Vencido' };
+        return i;
+    });
+    localStorage.setItem('erp_pagar' + suffix, JSON.stringify(items)); // persiste status atualizado
+
+    // Cards de resumo
+    const totalPendente = items.filter(i => i.status !== 'Pago').reduce((s,i) => s + parseFloat(i.valor||0), 0);
+    const totalVencido  = items.filter(i => i.status === 'Vencido').reduce((s,i) => s + parseFloat(i.valor||0), 0);
+    const totalPagoMes  = items.filter(i => i.status === 'Pago' && i.dataPagamento && new Date(i.dataPagamento) >= inicioMes)
+                               .reduce((s,i) => s + parseFloat(i.valor||0), 0);
+    const cardsEl = document.getElementById('pagar-cards');
+    if (cardsEl) cardsEl.innerHTML = `
+        <div class="stat-card" style="cursor:default;">
+            <div class="stat-icon" style="background:rgba(251,191,36,.15);color:#fbbf24;"><span class="material-icons-round">pending_actions</span></div>
+            <div><div style="font-size:.75rem;color:var(--text-secondary);">Total Pendente</div><div style="font-size:1.1rem;font-weight:700;">${fmtBRL(totalPendente)}</div></div>
+        </div>
+        <div class="stat-card" style="cursor:default;">
+            <div class="stat-icon" style="background:rgba(239,68,68,.15);color:#ef4444;"><span class="material-icons-round">warning</span></div>
+            <div><div style="font-size:.75rem;color:var(--text-secondary);">Vencido</div><div style="font-size:1.1rem;font-weight:700;color:#ef4444;">${fmtBRL(totalVencido)}</div></div>
+        </div>
+        <div class="stat-card" style="cursor:default;">
+            <div class="stat-icon" style="background:rgba(16,185,129,.15);color:#10b981;"><span class="material-icons-round">check_circle</span></div>
+            <div><div style="font-size:.75rem;color:var(--text-secondary);">Pago este Mês</div><div style="font-size:1.1rem;font-weight:700;color:#10b981;">${fmtBRL(totalPagoMes)}</div></div>
+        </div>`;
 
     if (!items.length) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:2rem; color:var(--text-secondary);"><span class="material-icons-round" style="font-size:2rem; vertical-align:middle;">sentiment_dissatisfied</span> Nenhuma conta a pagar</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-secondary);"><span class="material-icons-round" style="font-size:2rem;vertical-align:middle;">sentiment_dissatisfied</span> Nenhuma conta a pagar cadastrada</td></tr>`;
         return;
     }
 
-    // Sort by vencimento
     items.sort((a, b) => new Date(a.vencimento) - new Date(b.vencimento));
-
     tbody.innerHTML = items.map(i => {
-        const venc = new Date(i.vencimento).toLocaleDateString('pt-BR');
-        const est = i.status === 'Pago' ? 'status-shipped' : (new Date(i.vencimento) < new Date() ? 'status-cancelled' : 'status-pending');
-        const valor = parseFloat(i.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
+        const venc = new Date(i.vencimento + 'T00:00:00').toLocaleDateString('pt-BR');
+        const isPago = i.status === 'Pago';
+        const isVencido = i.status === 'Vencido';
+        const est = isPago ? 'status-shipped' : (isVencido ? 'status-cancelled' : 'status-pending');
+        const contaLabel = i.codigoConta ? `${i.codigoConta} — ${i.conta || ''}` : (i.categoria || '-');
+        const ccLabel = CCS[i.centroCusto] || '-';
         return `<tr>
-            <td style="font-weight:600;">${i.descricao}</td>
-            <td>${venc}</td>
-            <td><span class="status-badge status-pending" style="background:var(--bg-secondary); color:var(--text-primary);">${i.categoria}</span></td>
-            <td style="font-weight:700;">${valor}</td>
+            <td>
+                <div style="font-weight:600;">${i.descricao}</div>
+                ${i.beneficiario ? `<div style="font-size:.8rem;color:var(--text-secondary);">${i.beneficiario}</div>` : ''}
+            </td>
+            <td style="font-size:.82rem;color:var(--text-secondary);max-width:180px;overflow:hidden;text-overflow:ellipsis;">${contaLabel}</td>
+            <td><span class="status-badge" style="background:rgba(99,102,241,.12);color:#818cf8;font-size:.7rem;">${ccLabel}</span></td>
+            <td style="${isVencido?'color:#ef4444;':''}">${venc}</td>
+            <td style="font-weight:700;">${(parseFloat(i.valor||0)).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td>
             <td><span class="status-badge ${est}">${i.status}</span></td>
-            <td style="text-align:right;">
-                ${i.status !== 'Pago' ?
-                `<button class="btn btn-primary btn-icon" style="padding:0.4rem; background:var(--accent-primary);" onclick="baixarContaPagar('${i.id}')" title="Baixar/Pagar">
-                    <span class="material-icons-round" style="font-size:1rem;">payment</span>
-                </button>` :
-                `<span class="material-icons-round" style="color:var(--accent-success);">check_circle</span>`}
+            <td style="text-align:right;display:flex;gap:.25rem;justify-content:flex-end;">
+                ${!isPago ? `<button class="btn btn-primary btn-icon" data-pagid="${i.id}" style="padding:.35rem;" title="Baixar/Pagar"><span class="material-icons-round" style="font-size:.95rem;">payment</span></button>` : `<span class="material-icons-round" style="color:var(--accent-success);line-height:2rem;">check_circle</span>`}
+                <button class="btn btn-secondary btn-icon" data-delid="${i.id}" style="padding:.35rem;" title="Excluir"><span class="material-icons-round" style="font-size:.95rem;color:#ef4444;">delete</span></button>
             </td>
         </tr>`;
     }).join('');
+
+    tbody.querySelectorAll('[data-pagid]').forEach(btn =>
+        btn.addEventListener('click', () => baixarContaPagar(btn.dataset.pagid)));
+    tbody.querySelectorAll('[data-delid]').forEach(btn =>
+        btn.addEventListener('click', () => {
+            if (!confirm('Excluir esta conta a pagar?')) return;
+            const it2 = JSON.parse(localStorage.getItem('erp_pagar' + suffix) || '[]').filter(x => x.id !== btn.dataset.delid);
+            localStorage.setItem('erp_pagar' + suffix, JSON.stringify(it2));
+            renderPagarGrid();
+        }));
 };
 
 window.novaDespesa = function () {
+    // Popula select de contas a partir do Plano de Contas (somente Analíticas)
+    const plans = loadCadastros('accountPlans');
+    const sinteticas = plans.filter(p => p.tipo === 'Sintética').sort((a,b) => a.codigo.localeCompare(b.codigo));
+    const analiticas = plans.filter(p => p.tipo === 'Analítica').sort((a,b) => a.codigo.localeCompare(b.codigo));
+    let optsHtml = '<option value="">-- Selecione a Conta --</option>';
+    sinteticas.forEach(s => {
+        const filhos = analiticas.filter(a => a.codigo.startsWith(s.codigo + '.'));
+        if (!filhos.length) return;
+        optsHtml += `<optgroup label="${s.codigo} — ${s.conta}">`;
+        filhos.forEach(a => { optsHtml += `<option value="${a.codigo}|${a.conta}">${a.codigo} — ${a.conta}</option>`; });
+        optsHtml += '</optgroup>';
+    });
+    // Analíticas sem pai listado
+    const semPai = analiticas.filter(a => !sinteticas.some(s => a.codigo.startsWith(s.codigo + '.')));
+    if (semPai.length) {
+        optsHtml += '<optgroup label="Outras">';
+        semPai.forEach(a => { optsHtml += `<option value="${a.codigo}|${a.conta}">${a.codigo} — ${a.conta}</option>`; });
+        optsHtml += '</optgroup>';
+    }
+    const selEl = document.getElementById('despesaCodigoConta');
+    if (selEl) selEl.innerHTML = optsHtml;
+
+    // Limpa campos
+    ['despesaDescricao','despesaBeneficiario','despesaValor'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+    });
+    const vencEl = document.getElementById('despesaVencimento');
+    if (vencEl) vencEl.value = new Date().toISOString().split('T')[0];
+    const ccEl = document.getElementById('despesaCentroCusto');
+    if (ccEl) ccEl.value = '';
     document.getElementById('finDespesaModal').style.display = 'flex';
-    document.getElementById('despesaDescricao').value = '';
-    document.getElementById('despesaValor').value = '';
-    document.getElementById('despesaVencimento').value = new Date().toISOString().split('T')[0];
 };
 
 window.salvarDespesa = function () {
-    const desc = document.getElementById('despesaDescricao').value;
-    const valor = parseFloat(document.getElementById('despesaValor').value.replace(',', '.'));
-    const venc = document.getElementById('despesaVencimento').value;
-    const cat = document.getElementById('despesaCategoria').value;
+    const desc  = (document.getElementById('despesaDescricao')?.value || '').trim();
+    const valor = parseFloat((document.getElementById('despesaValor')?.value || '').replace(',', '.'));
+    const venc  = document.getElementById('despesaVencimento')?.value || '';
+    const contaRaw = document.getElementById('despesaCodigoConta')?.value || '';
+    const cc    = document.getElementById('despesaCentroCusto')?.value || '';
+    const ben   = (document.getElementById('despesaBeneficiario')?.value || '').trim();
 
-    if (!desc || isNaN(valor) || !venc) {
-        alert('Preencha os campos obrigatórios!');
-        return;
-    }
+    if (!desc || isNaN(valor) || !venc) { alert('Preencha os campos obrigatórios!'); return; }
 
-    const items = JSON.parse(localStorage.getItem('erp_pagar') || '[]');
+    const [codigoConta, conta] = contaRaw ? contaRaw.split('|') : ['', ''];
+    const suffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
+    const items = JSON.parse(localStorage.getItem('erp_pagar' + suffix) || '[]');
     items.push({
         id: 'CP-' + Date.now(),
         descricao: desc,
-        valor: valor,
+        beneficiario: ben,
+        valor,
         vencimento: venc,
-        categoria: cat,
+        codigoConta: codigoConta || '',
+        conta: conta || '',
+        categoria: conta || 'Outros', // compatibilidade retroativa
+        centroCusto: cc,
         status: 'Aberto',
         criadoEm: new Date().toISOString()
     });
-    localStorage.setItem('erp_pagar', JSON.stringify(items));
-
-    alert('Despesa salva com sucesso!');
+    localStorage.setItem('erp_pagar' + suffix, JSON.stringify(items));
     document.getElementById('finDespesaModal').style.display = 'none';
     renderPagarGrid();
 };
 
 window.baixarContaPagar = function (id) {
     if (!confirm('Confirmar o pagamento desta conta?')) return;
-
-    const items = JSON.parse(localStorage.getItem('erp_pagar') || '[]');
+    const suffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
+    const items = JSON.parse(localStorage.getItem('erp_pagar' + suffix) || '[]');
     const item = items.find(i => i.id === id);
     if (item) {
         item.status = 'Pago';
         item.dataPagamento = new Date().toISOString();
-        localStorage.setItem('erp_pagar', JSON.stringify(items));
+        localStorage.setItem('erp_pagar' + suffix, JSON.stringify(items));
         renderPagarGrid();
-        alert('Conta paga com sucesso!');
     }
 };
 
@@ -618,7 +808,7 @@ window.switchView = function (viewName) {
 
     // Render grids when switching to financial/fiscal views
     switch (viewName) {
-        case 'accountPlans': renderAccountPlansGrid(); break;
+        case 'accountPlans': seedAccountPlans(); renderAccountPlansGrid(); break;
         case 'billing': renderBillingGrid(); break;
         case 'paymentPlans': renderPaymentPlansGrid(); break;
         case 'banks': renderBanksGrid(); break;
@@ -670,4 +860,6 @@ document.addEventListener('DOMContentLoaded', () => {
             cadastrosData[key] = stored ? JSON.parse(stored) : [];
         }
     });
+    // Seed Plano de Contas na primeira carga
+    if (typeof seedAccountPlans === 'function') seedAccountPlans();
 });
