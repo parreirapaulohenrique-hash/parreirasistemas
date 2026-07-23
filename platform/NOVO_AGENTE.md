@@ -309,6 +309,11 @@ Modifique o controle de versão do sistema. Atualize o arquivo `platform/version
 > A versão atual é a fonte da verdade. Incremente a partir dela (ex: `3.16.0` → `3.16.1`).
 > Ignorar esta regra gera commits com versões erradas e histórico inconsistente.
 
+> 🚨 **REGRA OBRIGATÓRIA — SEMPRE INFORMAR A VERSÃO AO USTUÁRIO**
+> Ao concluir qualquer deploy (mesmo pequenos ajustes de UI ou texto), **sempre informe ao usuário a versão gerada** no formato:
+> `📦 Deploy — v3.X.Y | [descrição resumida da melhoria]`
+> Nunca finalize um deploy sem comunicar explicitamente o número da versão.
+
 ### Passo 5: Subir Deploy para Homologação (`deploy.ps1`)
 Abra o terminal do PowerShell na raiz do projeto (`C:\Users\Paulo H Parreira\.gemini\antigravity\scratch`) e rode o comando:
 ```powershell
@@ -346,6 +351,7 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
+| **3.16.23** | 2026-07-23 | RENAME: Menu lateral do Dispatch — “Integração Acontec” renomeado para “Integração ERP”. Nome genérico para suportar múltiplos ERPs parceiros. |
 | **3.15.0** | 2026-07-07 | ARCH: Camada de integração ERP centralizada em `shared/integrations/`. `ErpAdapter` (contrato genérico), `ErpRegistry` (registro multi-tenant com config no Firestore, token em sessionStorage), adaptadores ERP-específicos em subpastas (`{erp-slug}/adapter.js`), `ErpUI` (interface compartilhada para Dispatch e WMS). Módulos consomem via `ErpIntegration.getActive()` sem acoplamento ao ERP específico. |
 | **3.14.31** | 2026-06-26 | FIX: Restringido o fallback automático da lista de clientes estáticos de data.js apenas para o tenant ltdistribuidora, corrigindo o bug onde a Central Peças e outros tenants carregavam a lista de clientes da LT. |
 | **3.14.30** | 2026-06-26 | FEAT: Adicionada opção de impressão de faturas confirmadas no Histórico de Conferência de Faturas, gerando um layout de relatório profissional com detalhamento das NFs. |
