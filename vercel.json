@@ -172,6 +172,10 @@
             "destination": "/platform/modules/wms/index.html"
         },
         {
+            "source": "/wms/:tenant",
+            "destination": "/platform/modules/wms/index.html"
+        },
+        {
             "source": "/:tenant",
             "destination": "/platform/modules/dispatch/index.html"
         }
