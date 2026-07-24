@@ -224,9 +224,16 @@
         if (!el) return;
         try {
             const status = window.WmsIntegration ? window.WmsIntegration.getStatus() : null;
-            el.textContent = status ? status.connectorName : 'Standalone';
+            if (status && status.connectorId === 'maxdata') {
+                const empId = status.config?.empId || 5;
+                el.textContent = `Maxdata ERP (empId: ${empId})`;
+            } else if (status && status.connectorName) {
+                el.textContent = status.connectorName;
+            } else {
+                el.textContent = 'Standalone (sem ERP)';
+            }
         } catch (e) {
-            el.textContent = 'Standalone';
+            el.textContent = 'Standalone (sem ERP)';
         }
     }
 

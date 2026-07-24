@@ -74,7 +74,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ─── Firestore: carregar configs WMS do tenant (provisionadas pelo Admin Master) ──
     // Garante que as configurações sobrevivam limpeza de cache e troca de dispositivo.
     const sess = JSON.parse(sessionStorage.getItem('parreira_session') || 'null');
-    const tenantId = sess?.tenantId || user.tenantId || null;
+    let tenantId = sess?.tenantId || sess?.tenant || null;
+    if (!tenantId && typeof Utils !== 'undefined' && Utils.getTenant) {
+        tenantId = Utils.getTenant();
+    }
+    if (!tenantId) {
+        const match = window.location.pathname.match(/\/wms\/([^\/]+)/);
+        if (match) tenantId = match[1].replace('_hml', '');
+    }
     if (tenantId && typeof firebase !== 'undefined') {
         const _ts = (window.getTenantSuffix ? window.getTenantSuffix() : `_${tenantId}`);
         try {
