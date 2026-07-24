@@ -943,8 +943,8 @@ window.renderAmbientes = function renderAmbientes() {
         'dispatch':        { label: 'B\u00FAassola Log',    icon: 'local_shipping',       color: '#3b82f6', prodUrl: (s) => `${PROD}/${s}`,                   hmlUrl: (s) => `${HML}/${s}` },
         'master':          { label: 'Painel Admin',    icon: 'admin_panel_settings', color: '#8b5cf6', prodUrl: ()  => `${PROD}/platform/modules/master/`,hmlUrl: ()  => `${HML}/platform/modules/master/` },
         'erp':             { label: 'ERP',              icon: 'account_balance',      color: '#f59e0b', prodUrl: ()  => `${PROD}/erp`,                    hmlUrl: ()  => `${HML}/erp` },
-        'wms':             { label: 'WMS',              icon: 'warehouse',            color: '#10b981', prodUrl: (s) => `${PROD}/wms?tenant=${s}`,              hmlUrl: (s) => `${HML}/wms?tenant=${s}` },
-        'wms-coletor':     { label: 'WMS Coletor',     icon: 'phone_android',        color: '#06b6d4', prodUrl: (s) => `${PROD}/apk?tenant=${s}`,              hmlUrl: (s) => `${HML}/apk?tenant=${s}` },
+        'wms':             { label: 'WMS',              icon: 'warehouse',            color: '#10b981', prodUrl: (s) => `${PROD}/wms/${s}`,                    hmlUrl: (s) => `${HML}/wms/${s}` },
+        'wms-coletor':     { label: 'WMS Coletor',     icon: 'phone_android',        color: '#06b6d4', prodUrl: (s) => `${PROD}/apk/${s}`,                    hmlUrl: (s) => `${HML}/apk/${s}` },
         'sales-force':     { label: 'For\u00E7a de Vendas', icon: 'storefront',       color: '#ec4899', prodUrl: ()  => `${PROD}/sales`,                  hmlUrl: ()  => `${HML}/sales` },
         'erp-consultoria': { label: 'Consultoria',     icon: 'savings',              color: '#14b8a6', prodUrl: ()  => PROD + '/erp-consultoria',             hmlUrl: ()  => HML + '/erp-consultoria_hml' },
     };
