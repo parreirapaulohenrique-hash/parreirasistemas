@@ -9,7 +9,7 @@ let platformUsers  = JSON.parse(localStorage.getItem('platform_users_registry') 
 
 // MIGRAÃ‡ÃƒO v3.17.5: remove IDs depreciados do localStorage
 // (substituÃ­dos, duplicados ou criados por erro no Firestore)
-const _DEPRECATED = ['altsfix', 'login.html', '01', 'contrapecas'];
+const _DEPRECATED = ['altsfix', 'login.html', '01', 'contrapecas', 'centralpecas_hml'];
 if (dynamicTenants.some(t => _DEPRECATED.includes(t.id))) {
     dynamicTenants = dynamicTenants.filter(t => !_DEPRECATED.includes(t.id));
     localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
