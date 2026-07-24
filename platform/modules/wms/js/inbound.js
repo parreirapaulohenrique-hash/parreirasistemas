@@ -237,6 +237,11 @@
         }
     }
 
+    // Reage dinamicamente a mudanças de integração
+    window.addEventListener('wms-integration-changed', function () {
+        _atualizarStatusConectorLabel();
+    });
+
     // ─── BUSCA NF NO ERP (PROCEDURES) ────────────────────────────────────────
     window._buscarNfEntrada = async function () {
         const input = $('inb-scan-chave');

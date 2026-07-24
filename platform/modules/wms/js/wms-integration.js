@@ -11,7 +11,15 @@
     // Cada tenant tem sua própria configuração de integração:
     // wms_integration_config_<tenantId>
     function _iKey() {
-        return 'wms_integration_config' + (window.getTenantSuffix ? window.getTenantSuffix() : '');
+        if (window.getTenantSuffix) return 'wms_integration_config' + window.getTenantSuffix();
+        const match = window.location.pathname.match(/\/wms\/([^\/]+)/);
+        if (match) {
+            const t = match[1].replace('_hml', '');
+            return 'wms_integration_config_' + t;
+        }
+        const sess = JSON.parse(sessionStorage.getItem('parreira_session') || 'null');
+        const t = sess?.tenantId || sess?.tenant || 'centralpecas';
+        return 'wms_integration_config_' + t;
     }
     const SYNC_LOG_KEY = 'wms_sync_log' + (window.getTenantSuffix ? window.getTenantSuffix() : '');
 
@@ -365,13 +373,37 @@
          * Inicializa com config salva. Chamado uma vez no DOMContentLoaded.
          */
         init(savedConfig) {
-            this._connectorId = (savedConfig && savedConfig.connectorId) || 'standalone';
-            this._config = (savedConfig && savedConfig.connectorConfig) || {};
+            let saved = savedConfig;
+            if (!saved || !saved.connectorId) {
+                try {
+                    saved = JSON.parse(localStorage.getItem(_iKey()) || '{}');
+                } catch(e){}
+            }
+
+            let cId = (saved && saved.connectorId) || 'standalone';
+            let cCfg = (saved && saved.connectorConfig) || {};
+
+            // Fallback inteligente para Central Peças
+            const isCentralPecas = window.location.pathname.includes('centralpecas');
+            if ((!cId || cId === 'standalone') && isCentralPecas) {
+                cId = 'maxdata';
+                cCfg = {
+                    baseUrl: 'http://rds.skytins.com.br:8720/v2',
+                    empId: 5,
+                    terminal: '364F64E6539974C1D75C8A46C14B2D3D'
+                };
+            }
+
+            this._connectorId = cId;
+            this._config = cCfg;
             const connector = connectors[this._connectorId];
             if (connector && connector.init) {
                 connector.init(this._config);
             }
             console.log(`🔗 WMS Integration: ${connector ? connector.name : this._connectorId}`);
+            try {
+                window.dispatchEvent(new CustomEvent('wms-integration-changed', { detail: this.getStatus() }));
+            } catch(e){}
         },
 
         /**
