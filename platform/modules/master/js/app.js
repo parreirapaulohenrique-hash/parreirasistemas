@@ -309,15 +309,46 @@ function renderUsers() {
     const tableBody = document.getElementById('usersTableBody');
     if (!tableBody) return;
 
-    tableBody.innerHTML = '';
+    // Popular select de tenants (apenas uma vez)
+    const sel = document.getElementById('userTenantFilter');
+    if (sel && sel.options.length <= 1) {
+        const tenants = [...new Set(platformUsers.map(u => u.tenant).filter(Boolean))].sort();
+        tenants.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t; opt.textContent = t;
+            sel.appendChild(opt);
+        });
+    }
 
-    platformUsers.forEach(user => {
+    window.filterUsers();
+}
+
+window.filterUsers = function() {
+    const tableBody = document.getElementById('usersTableBody');
+    if (!tableBody) return;
+
+    const q      = (document.getElementById('userSearchInput')?.value || '').toLowerCase();
+    const tenant = (document.getElementById('userTenantFilter')?.value || '').toLowerCase();
+
+    const filtered = platformUsers.filter(u => {
+        const matchQ = !q || (u.name||'').toLowerCase().includes(q) || (u.login||'').toLowerCase().includes(q) || (u.tenant||'').toLowerCase().includes(q);
+        const matchT = !tenant || (u.tenant||'').toLowerCase() === tenant;
+        return matchQ && matchT;
+    });
+
+    if (!filtered.length) {
+        tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--text-secondary);">Nenhum usuário encontrado.</td></tr>`;
+        return;
+    }
+
+    tableBody.innerHTML = '';
+    filtered.forEach(user => {
         const tr = document.createElement('tr');
         const roleClass = user.role === 'admin' ? 'admin' : '';
         tr.innerHTML = `
             <td>
                 <div class="cell-info">
-                    <span class="cell-title">${user.name}</span>
+                    <span class="cell-title">${user.name || user.login}</span>
                     <span class="cell-subtitle">@${user.login}</span>
                 </div>
             </td>
@@ -332,6 +363,7 @@ function renderUsers() {
         tableBody.appendChild(tr);
     });
 }
+
 
 function setupForms() {
     // Tenant Form
