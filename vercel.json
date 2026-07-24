@@ -168,6 +168,10 @@
             "destination": "/platform/modules/erp-consultoria/$1"
         },
         {
+            "source": "/wms",
+            "destination": "/platform/modules/wms/index.html"
+        },
+        {
             "source": "/:tenant",
             "destination": "/platform/modules/dispatch/index.html"
         }
