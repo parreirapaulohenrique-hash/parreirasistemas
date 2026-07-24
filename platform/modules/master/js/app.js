@@ -190,6 +190,9 @@ window.switchView = (viewName) => {
     if (viewName === 'ambientes') {
         renderAmbientes();
     }
+    if (viewName === 'users') {
+        window.loadUsersFromFirestore();
+    }
 };
 
 
@@ -309,15 +312,22 @@ function renderUsers() {
     const tableBody = document.getElementById('usersTableBody');
     if (!tableBody) return;
 
-    // Popular select de tenants (apenas uma vez)
+    // Popular select de tenants com TODOS os tenants (não só os do localStorage)
     const sel = document.getElementById('userTenantFilter');
-    if (sel && sel.options.length <= 1) {
-        const tenants = [...new Set(platformUsers.map(u => u.tenant).filter(Boolean))].sort();
+    if (sel) {
+        const currentVal = sel.value;
+        sel.innerHTML = '<option value="">Todos os tenants</option>';
+        const tenants = [...new Set([
+            ...platformUsers.map(u => u.tenant),
+            ...getAllTenants().filter(t => !t.id.endsWith('_hml')).map(t => t.id)
+        ].filter(Boolean))].sort();
         tenants.forEach(t => {
             const opt = document.createElement('option');
-            opt.value = t; opt.textContent = t;
+            const tData = getAllTenants().find(td => td.id === t);
+            opt.value = t; opt.textContent = tData ? `${tData.name} (${t})` : t;
             sel.appendChild(opt);
         });
+        if (currentVal) sel.value = currentVal;
     }
 
     window.filterUsers();
@@ -345,6 +355,10 @@ window.filterUsers = function() {
     filtered.forEach(user => {
         const tr = document.createElement('tr');
         const roleClass = user.role === 'admin' ? 'admin' : '';
+        const isFire = !!user.fromFirestore;
+        const editFn = isFire
+            ? `window.editFirestoreUser('${user.login}', '${user.tenant}')`
+            : `window.editUser('${user.login}', '${user.tenant}')`;
         tr.innerHTML = `
             <td>
                 <div class="cell-info">
@@ -354,15 +368,135 @@ window.filterUsers = function() {
             </td>
             <td><span class="module-tag" style="background:transparent; border:1px solid var(--border);">${user.tenant}</span></td>
             <td><span class="role-badge ${roleClass}">${formatRole(user.role)}</span></td>
-            <td style="text-align: right;">
-                <button class="action-btn" title="Editar" onclick="window.editUser('${user.login}', '${user.tenant}')">
+            <td style="text-align:right; display:flex; gap:.4rem; justify-content:flex-end;">
+                <button class="action-btn" title="Editar usuário" onclick="${editFn}">
                     <span class="material-icons-round">edit</span>
                 </button>
+                ${isFire ? `<button class="action-btn" title="Redefinir Senha" onclick="window.editFirestoreUser('${user.login}','${user.tenant}')"
+                    style="background:rgba(16,185,129,.15);color:#10b981;">
+                    <span class="material-icons-round">lock_reset</span>
+                </button>` : ''}
             </td>
         `;
         tableBody.appendChild(tr);
     });
 }
+
+// Carrega usuários do Firestore para todos os tenants prod
+window.loadUsersFromFirestore = async function() {
+    const tableBody = document.getElementById('usersTableBody');
+    if (tableBody) tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--text-secondary);"><span class="material-icons-round" style="display:block;font-size:1.5rem;margin-bottom:.5rem;opacity:.6;">sync</span>Carregando usuários...</td></tr>';
+
+    try {
+        const db = ParreiraAuth.getDB();
+        if (!db) { renderUsers(); return; }
+
+        const prodTenants = getAllTenants().filter(t => !t.id.endsWith('_hml'));
+
+        // Remove usuários anteriores do Firestore (evita duplicatas no reload)
+        platformUsers = platformUsers.filter(u => !u.fromFirestore);
+
+        await Promise.all(prodTenants.map(async tenant => {
+            try {
+                const snap = await db.collection('tenants').doc(tenant.id).collection('users').get();
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    const login = d.login || doc.id;
+                    if (!platformUsers.find(u => u.login === login && u.tenant === tenant.id)) {
+                        platformUsers.push({
+                            docId:         doc.id,
+                            tenant:        tenant.id,
+                            tenantName:    tenant.name || tenant.id,
+                            login,
+                            name:          d.nome || d.name || login,
+                            role:          d.role || 'operacional',
+                            ativo:         d.ativo !== false,
+                            fromFirestore: true
+                        });
+                    }
+                });
+            } catch(e) {
+                console.warn(`[Master] Usuários ${tenant.id}:`, e.message);
+            }
+        }));
+
+        localStorage.setItem('platform_users_registry', JSON.stringify(platformUsers));
+        renderUsers();
+    } catch(e) {
+        console.warn('[Master] Erro Firestore usuários:', e);
+        renderUsers();
+    }
+};
+
+// Abrir modal de edição para usuário do Firestore
+window.editFirestoreUser = function(login, tenantId) {
+    const user = platformUsers.find(u => u.login === login && u.tenant === tenantId);
+    if (!user) { alert('Usuário não encontrado!'); return; }
+
+    document.getElementById('fsUserTenant').value  = user.tenantName || user.tenant;
+    document.getElementById('fsUserLogin').value   = user.login;
+    document.getElementById('fsUserName').value    = user.name || '';
+    document.getElementById('fsUserRole').value    = user.role || 'operacional';
+    document.getElementById('fsUserPass').value    = '';
+    document.getElementById('fsUserConfirmPass').value = '';
+    document.getElementById('fsUserErro').textContent  = '';
+
+    const form = document.getElementById('fsUserForm');
+    form.setAttribute('data-login',  login);
+    form.setAttribute('data-tenant', tenantId);
+    form.setAttribute('data-docid',  user.docId || login);
+
+    openModal('editFsUserModal');
+};
+
+// Salvar usuário Firestore (nome + perfil + opcional nova senha)
+window.saveFirestoreUser = async function() {
+    const form     = document.getElementById('fsUserForm');
+    const login    = form.getAttribute('data-login');
+    const tenantId = form.getAttribute('data-tenant');
+    const docId    = form.getAttribute('data-docid');
+
+    const nome         = document.getElementById('fsUserName').value.trim();
+    const role         = document.getElementById('fsUserRole').value;
+    const novaSenha    = document.getElementById('fsUserPass').value;
+    const confirmaSenha= document.getElementById('fsUserConfirmPass').value;
+    const erro         = document.getElementById('fsUserErro');
+    const btn          = document.getElementById('fsUserSaveBtn');
+
+    erro.textContent = '';
+    if (!nome) { erro.textContent = 'Nome é obrigatório.'; return; }
+    if (novaSenha && novaSenha !== confirmaSenha) { erro.textContent = 'Senhas não conferem.'; return; }
+    if (novaSenha && novaSenha.length < 4) { erro.textContent = 'Senha mínima: 4 caracteres.'; return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="material-icons-round">sync</span> Salvando...';
+
+    try {
+        const db = ParreiraAuth.getDB();
+        const updateData = { nome, role, atualizadoEm: new Date().toISOString() };
+
+        if (novaSenha) {
+            const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(novaSenha));
+            updateData.senhaHash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+        }
+
+        await db.collection('tenants').doc(tenantId).collection('users').doc(docId).update(updateData);
+
+        // Atualiza cópia local
+        const idx = platformUsers.findIndex(u => u.login === login && u.tenant === tenantId);
+        if (idx >= 0) { platformUsers[idx].name = nome; platformUsers[idx].role = role; }
+        localStorage.setItem('platform_users_registry', JSON.stringify(platformUsers));
+
+        if (window.showToast) showToast('✅ Usuário atualizado!');
+        else alert('Usuário atualizado com sucesso!');
+        closeModal('editFsUserModal');
+        renderUsers();
+    } catch(e) {
+        erro.textContent = 'Erro ao salvar: ' + (e.message || 'Tente novamente.');
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-icons-round">save</span> Salvar';
+    }
+};
 
 
 function setupForms() {
