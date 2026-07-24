@@ -1,4 +1,4 @@
-﻿// =============================================================
+// =============================================================
 // WMS Integration Layer — Multi-ERP Adapter Pattern
 // Camada de abstração para integração com ERPs externos.
 // O WMS opera de forma autônoma; conectores são opcionais.
@@ -11,7 +11,15 @@
     // Cada tenant tem sua própria configuração de integração:
     // wms_integration_config_<tenantId>
     function _iKey() {
-        return 'wms_integration_config' + (window.getTenantSuffix ? window.getTenantSuffix() : '');
+        if (window.getTenantSuffix) return 'wms_integration_config' + window.getTenantSuffix();
+        const match = window.location.pathname.match(/\/wms\/([^\/]+)/);
+        if (match) {
+            const t = match[1].replace('_hml', '');
+            return 'wms_integration_config_' + t;
+        }
+        const sess = JSON.parse(sessionStorage.getItem('parreira_session') || 'null');
+        const t = sess?.tenantId || sess?.tenant || 'centralpecas';
+        return 'wms_integration_config_' + t;
     }
     const SYNC_LOG_KEY = 'wms_sync_log' + (window.getTenantSuffix ? window.getTenantSuffix() : '');
 
@@ -244,9 +252,9 @@
         description: 'Integração nativa bidirecional com Maxdata via API REST JWT. Recebimento, conferência e estoque.',
         icon: 'integration_instructions',
         configFields: [
-            { key: 'baseUrl',   label: 'URL Base da API (Maxdata)',  type: 'text',   placeholder: 'http://servidor:porta/v2',           required: true  },
-            { key: 'empId',     label: 'Empresa (empId)',             type: 'number', placeholder: 'Ex: 1',                             required: true  },
-            { key: 'terminal',  label: 'Terminal (código)',          type: 'text',   placeholder: 'Código do terminal no Manager',   required: true  },
+            { key: 'baseUrl',   label: 'URL Base da API (Maxdata)',  type: 'text',   placeholder: 'http://rds.skytins.com.br:8720/v2',           required: true  },
+            { key: 'empId',     label: 'Empresa / Filial no MaxData (empId)',  type: 'number', placeholder: 'Ex: 1 (Matriz), 2 (Varejo), 4 (Porto), 5 (Redenção)', required: true  },
+            { key: 'terminal',  label: 'Terminal (código)',          type: 'text',   placeholder: '364F64E6539974C1D75C8A46C14B2D3D',   required: true  },
         ],
 
         // ── Token JWT: busca cached ou faz novo POST /auth ────
@@ -365,13 +373,37 @@
          * Inicializa com config salva. Chamado uma vez no DOMContentLoaded.
          */
         init(savedConfig) {
-            this._connectorId = (savedConfig && savedConfig.connectorId) || 'standalone';
-            this._config = (savedConfig && savedConfig.connectorConfig) || {};
+            let saved = savedConfig;
+            if (!saved || !saved.connectorId) {
+                try {
+                    saved = JSON.parse(localStorage.getItem(_iKey()) || '{}');
+                } catch(e){}
+            }
+
+            let cId = (saved && saved.connectorId) || 'standalone';
+            let cCfg = (saved && saved.connectorConfig) || {};
+
+            // Fallback inteligente para Central Peças
+            const isCentralPecas = window.location.pathname.includes('centralpecas');
+            if ((!cId || cId === 'standalone') && isCentralPecas) {
+                cId = 'maxdata';
+                cCfg = {
+                    baseUrl: 'http://rds.skytins.com.br:8720/v2',
+                    empId: 5,
+                    terminal: '364F64E6539974C1D75C8A46C14B2D3D'
+                };
+            }
+
+            this._connectorId = cId;
+            this._config = cCfg;
             const connector = connectors[this._connectorId];
             if (connector && connector.init) {
                 connector.init(this._config);
             }
             console.log(`🔗 WMS Integration: ${connector ? connector.name : this._connectorId}`);
+            try {
+                window.dispatchEvent(new CustomEvent('wms-integration-changed', { detail: this.getStatus() }));
+            } catch(e){}
         },
 
         /**

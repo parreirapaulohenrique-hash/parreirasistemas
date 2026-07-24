@@ -24,9 +24,9 @@
     if (typeof AcontecAdapter !== 'undefined') {
         ErpRegistry.register('acontec', AcontecAdapter);
     }
-
-    // Futuros provedores (descomente quando implementados):
-    // if (typeof MaxDataAdapter  !== 'undefined') ErpRegistry.register('maxdata',  MaxDataAdapter);
+    if (typeof MaxDataAdapter !== 'undefined') {
+        ErpRegistry.register('maxdata', MaxDataAdapter);
+    }
     // if (typeof SankhyaAdapter  !== 'undefined') ErpRegistry.register('sankhya',  SankhyaAdapter);
     // if (typeof TotvAdapter     !== 'undefined') ErpRegistry.register('totvs',     TotvAdapter);
 

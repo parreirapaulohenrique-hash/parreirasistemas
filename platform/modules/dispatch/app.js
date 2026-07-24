@@ -1906,32 +1906,54 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         async function checkLateDispatchesAndAlert() {
             const history = await Utils.Cloud.getFullDispatchesHistory();
-            const hasLate = history.some(d => window.getDispatchDelayInfo(d).isLate);
+            const lateItems = history.filter(d => window.getDispatchDelayInfo(d).isLate);
+            if (!lateItems.length) return;
 
-            if (hasLate) {
-                const existingModal = document.getElementById('dispatchAlertModal');
-                if (!existingModal) {
-                    const modal = document.createElement('div');
-                    modal.id = 'dispatchAlertModal';
-                    modal.className = 'login-overlay';
-                    modal.style.zIndex = '9999';
-                    modal.innerHTML = `
-                    <div class="login-card" style="text-align: center; max-width: 400px; animation: fadeIn 0.3s ease; border: 1px solid var(--accent-danger);">
-                        <span class="material-icons-round" style="font-size: 3rem; color: var(--accent-danger); margin-bottom: 1rem;">priority_high</span>
-                        <h3 style="margin: 0 0 1rem 0; color: var(--accent-danger);">Atenção: Atrasos Detectados</h3>
-                        <p style="color: var(--text-secondary); margin-bottom: 1.5rem; line-height: 1.5;">
-                            Existem notas fiscais na lista de montagem que <strong>excederam o horário limite</strong> de saída.<br><br>
-                            Verifique os itens com ícone <span class="material-icons-round" style="font-size:1.2rem; vertical-align:middle; color:var(--accent-danger);">alarm_off</span> na coluna de Status.
-                        </p>
-                        <button class="btn btn-primary" onclick="document.getElementById('dispatchAlertModal').style.display='none'" style="width: 100%; justify-content: center; background: var(--accent-danger); border-color: var(--accent-danger);">
-                            Entendido
-                        </button>
-                    </div>
-                `;
-                    document.body.appendChild(modal);
-                } else {
-                    existingModal.style.display = 'flex';
-                }
+            // Fingerprint: IDs/NFFs das NFs em atraso (ordernadas) + data do dia
+            const today = new Date().toISOString().slice(0, 10);
+            const fingerprint = today + ':' + lateItems
+                .map(d => d.id || d.notaFiscal || d.nf || '')
+                .sort()
+                .join(',');
+
+            // Chave por tenant para não misturar alertas de empresas diferentes
+            const tenantKey = (ParreiraAuth && ParreiraAuth.getTenantId && ParreiraAuth.getTenantId()) || 'default';
+            const storageKey = `dispatch_late_seen_${tenantKey}`;
+
+            // Se o usuário já viu e dispensou para ESTAS mesmas NFs hoje → não mostra
+            if (localStorage.getItem(storageKey) === fingerprint) return;
+
+            const existingModal = document.getElementById('dispatchAlertModal');
+            if (!existingModal) {
+                const modal = document.createElement('div');
+                modal.id = 'dispatchAlertModal';
+                modal.className = 'login-overlay';
+                modal.style.zIndex = '9999';
+                modal.innerHTML = `
+                <div class="login-card" style="text-align: center; max-width: 400px; animation: fadeIn 0.3s ease; border: 1px solid var(--accent-danger);">
+                    <span class="material-icons-round" style="font-size: 3rem; color: var(--accent-danger); margin-bottom: 1rem;">priority_high</span>
+                    <h3 style="margin: 0 0 1rem 0; color: var(--accent-danger);">Atenção: Atrasos Detectados</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem; line-height: 1.5;">
+                        Existem notas fiscais na lista de montagem que <strong>excederam o horário limite</strong> de saída.<br><br>
+                        Verifique os itens com ícone <span class="material-icons-round" style="font-size:1.2rem; vertical-align:middle; color:var(--accent-danger);">alarm_off</span> na coluna de Status.
+                    </p>
+                    <button class="btn btn-primary" id="dispatchAlertOkBtn" style="width: 100%; justify-content: center; background: var(--accent-danger); border-color: var(--accent-danger);">
+                        Entendido
+                    </button>
+                </div>
+            `;
+                document.body.appendChild(modal);
+            } else {
+                existingModal.style.display = 'flex';
+            }
+
+            // Bind do botão Entendido — armazena fingerprint para não mostrar de novo para as mesmas NFs
+            const okBtn = document.getElementById('dispatchAlertOkBtn');
+            if (okBtn) {
+                okBtn.onclick = () => {
+                    localStorage.setItem(storageKey, fingerprint);
+                    document.getElementById('dispatchAlertModal').style.display = 'none';
+                };
             }
         }
 

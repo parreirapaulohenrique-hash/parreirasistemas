@@ -74,7 +74,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ─── Firestore: carregar configs WMS do tenant (provisionadas pelo Admin Master) ──
     // Garante que as configurações sobrevivam limpeza de cache e troca de dispositivo.
     const sess = JSON.parse(sessionStorage.getItem('parreira_session') || 'null');
-    const tenantId = sess?.tenantId || user.tenantId || null;
+    let tenantId = sess?.tenantId || sess?.tenant || null;
+    if (!tenantId && typeof Utils !== 'undefined' && Utils.getTenant) {
+        tenantId = Utils.getTenant();
+    }
+    if (!tenantId) {
+        const match = window.location.pathname.match(/\/wms\/([^\/]+)/);
+        if (match) tenantId = match[1].replace('_hml', '');
+    }
     if (tenantId && typeof firebase !== 'undefined') {
         const _ts = (window.getTenantSuffix ? window.getTenantSuffix() : `_${tenantId}`);
         try {
@@ -104,6 +111,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                     console.log(`🔐 [WMS] Configuração Maxdata carregada do Firestore para tenant: ${tenantId}`);
                 }
+            } else if (tenantId && tenantId.startsWith('centralpecas')) {
+                // Fallback automático para Central Peças (Filial Redenção - empId: 5)
+                const defaultConfig = {
+                    connectorId: 'maxdata',
+                    connectorConfig: {
+                        baseUrl: 'http://rds.skytins.com.br:8720/v2',
+                        empId: 5,
+                        terminal: '364F64E6539974C1D75C8A46C14B2D3D'
+                    },
+                    updatedAt: new Date().toISOString()
+                };
+                localStorage.setItem('wms_integration_config' + _ts, JSON.stringify(defaultConfig));
+                if (window.WmsIntegration) {
+                    window.WmsIntegration.init(defaultConfig);
+                    if (window.WmsMaxdataPoller) window.WmsMaxdataPoller.restore();
+                }
+                console.log(`🔐 [WMS] Configuração padrão Maxdata (empId: 5 - Redenção) aplicada para tenant: ${tenantId}`);
             }
 
             // Config geral (CNPJs, etc.)

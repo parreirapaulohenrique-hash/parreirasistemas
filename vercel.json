@@ -108,6 +108,10 @@
             "destination": "/platform/core/$1"
         },
         {
+            "source": "/shared/(.*)",
+            "destination": "/platform/shared/$1"
+        },
+        {
             "source": "/platform/(.*)",
             "destination": "/platform/$1"
         },
