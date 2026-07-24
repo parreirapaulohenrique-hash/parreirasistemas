@@ -15,6 +15,111 @@
 </head>
 
 <body>
+
+    <!-- ⚠️ BANNER DE HOMOLOGAÇÃO -->
+    <div id="stagingBanner" style="
+        display:none; position:fixed; top:0; left:0; right:0; z-index:999999;
+        background:linear-gradient(90deg,#f59e0b,#d97706);
+        color:#000; font-weight:700; font-size:.82rem;
+        text-align:center; padding:6px 12px;
+        letter-spacing:.08em; text-transform:uppercase;
+        box-shadow:0 2px 8px rgba(245,158,11,.5);
+        align-items:center; justify-content:center; gap:8px;">
+        <span>⚠️</span>
+        <span>AMBIENTE DE HOMOLOGAÇÃO — DADOS DE TESTE, NÃO USE EM PRODUÇÃO</span>
+        <span>⚠️</span>
+    </div>
+    <script>
+    (function() {
+        var h = window.location.hostname;
+        if (h.includes('staging') || h.includes('localhost') || h === '127.0.0.1' ||
+            (h.includes('vercel.app') && h !== 'parreirasistemas.vercel.app')) {
+            var b = document.getElementById('stagingBanner');
+            if (b) { b.style.display = 'flex'; document.body.style.paddingTop = '34px'; }
+            document.title = '[HOMOLOG] ' + document.title;
+        }
+    })();
+    </script>
+
+    <!-- LOGIN OVERLAY — mesmo padrão do módulo dispatch -->
+    <div id="wmsLoginOverlay" style="
+        display:none; position:fixed; inset:0; z-index:9999;
+        background:var(--bg-dark,#0f172a);
+        align-items:center; justify-content:center;">
+        <div style="
+            background:var(--bg-card,#1e293b); border-radius:16px;
+            padding:2.5rem; width:100%; max-width:380px;
+            box-shadow:0 25px 60px rgba(0,0,0,.5); border:1px solid var(--border,#334155);">
+
+            <div style="text-align:center; margin-bottom:2rem;">
+                <div style="width:60px;height:60px;background:#10b981;border-radius:12px;
+                    display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+                    <span class="material-icons-round" style="font-size:2rem;color:white;">warehouse</span>
+                </div>
+                <h1 style="font-size:1.5rem;color:var(--text-primary,#f1f5f9);margin-bottom:.5rem;">Bússola WMS</h1>
+                <p id="wmsLoginSubtitle" style="color:var(--text-secondary,#94a3b8);">Faça login para continuar</p>
+            </div>
+
+            <!-- Campo empresa: oculto quando tenant vem da URL -->
+            <div id="wmsLoginTenantGroup" style="display:none; margin-bottom:1rem;">
+                <label style="font-size:.8rem;color:var(--text-secondary,#94a3b8);display:block;margin-bottom:.4rem;">ID da Empresa</label>
+                <input type="text" id="wmsLoginTenantInput"
+                    style="width:100%;padding:.75rem;background:var(--bg-dark,#0f172a);
+                        border:1px solid var(--border,#334155);border-radius:8px;
+                        color:inherit;font-size:.9rem;box-sizing:border-box;text-transform:lowercase;"
+                    placeholder="ex: parreiralog">
+            </div>
+
+            <div style="margin-bottom:1rem;">
+                <label style="font-size:.8rem;color:var(--text-secondary,#94a3b8);display:block;margin-bottom:.4rem;">Usuário</label>
+                <input type="text" id="wmsLoginUser"
+                    style="width:100%;padding:.75rem;background:var(--bg-dark,#0f172a);
+                        border:1px solid var(--border,#334155);border-radius:8px;
+                        color:inherit;font-size:.9rem;box-sizing:border-box;"
+                    placeholder="Seu usuário">
+            </div>
+            <div style="margin-bottom:.75rem;">
+                <label style="font-size:.8rem;color:var(--text-secondary,#94a3b8);display:block;margin-bottom:.4rem;">Senha</label>
+                <input type="password" id="wmsLoginPass"
+                    style="width:100%;padding:.75rem;background:var(--bg-dark,#0f172a);
+                        border:1px solid var(--border,#334155);border-radius:8px;
+                        color:inherit;font-size:.9rem;box-sizing:border-box;"
+                    placeholder="Sua senha"
+                    onkeydown="if(event.key==='Enter') window.wmsDoLogin();">
+            </div>
+
+            <div id="wmsLoginErro" style="color:#ef4444;font-size:.82rem;min-height:1.1rem;margin-bottom:.5rem;"></div>
+
+            <button id="wmsLoginBtn" onclick="window.wmsDoLogin()"
+                style="width:100%;padding:.85rem;background:#10b981;border:none;color:white;
+                    border-radius:8px;font-size:1rem;font-weight:700;cursor:pointer;
+                    display:flex;align-items:center;justify-content:center;gap:.5rem;">
+                <span class="material-icons-round" style="font-size:1.2rem;">login</span>
+                ACESSAR SISTEMA
+            </button>
+
+            <!-- Inline: lê tenant da URL sem piscar -->
+            <script>
+            (function() {
+                var seg = window.location.pathname.split('/').filter(Boolean);
+                // /wms/parreira → seg[0]='wms', seg[1]='parreira'
+                var reserved = ['modules','platform','core','web','admin','tenants','wms'];
+                var tenant = (seg[0] === 'wms' && seg[1] && !reserved.includes(seg[1]))
+                             ? seg[1].trim().toLowerCase() : '';
+                var group    = document.getElementById('wmsLoginTenantGroup');
+                var input    = document.getElementById('wmsLoginTenantInput');
+                var subtitle = document.getElementById('wmsLoginSubtitle');
+                if (tenant) {
+                    if (input)    input.value = tenant;
+                    if (subtitle) subtitle.textContent = 'Acesse sua conta';
+                } else {
+                    if (group) group.style.display = 'block';
+                }
+            })();
+            </script>
+        </div>
+    </div>
+
     <div class="app-container">
         <!-- Sidebar -->
         <aside class="sidebar">
@@ -459,17 +564,44 @@
     </script>
 
     <script>
+        // wmsDoLogin — chamado pelo overlay de login embutido
+        window.wmsDoLogin = async function() {
+            var login  = (document.getElementById('wmsLoginUser')?.value  || '').trim();
+            var senha  =  document.getElementById('wmsLoginPass')?.value  || '';
+            var btn    =  document.getElementById('wmsLoginBtn');
+            var erro   =  document.getElementById('wmsLoginErro');
+            if (erro) erro.textContent = '';
+            if (!login || !senha) { if(erro) erro.textContent='Preencha usuário e senha.'; return; }
+            if (btn) { btn.disabled = true; btn.textContent = 'Entrando...'; }
+            try {
+                await ParreiraAuth.login(login, senha, 'wms');
+                var overlay = document.getElementById('wmsLoginOverlay');
+                if (overlay) overlay.style.display = 'none';
+                var s = ParreiraAuth.getSessao();
+                var nEl = document.getElementById('userName');
+                var tEl = document.getElementById('userTenant');
+                var roleMap = {operator:'Operador',supervisor:'Supervisor',admin:'Admin',master:'Master'};
+                if (nEl) nEl.textContent = s.nome;
+                if (tEl) tEl.textContent = (s.tenantNome||'') + ' · ' + (roleMap[s.role]||s.role);
+            } catch(e) {
+                if (erro) erro.textContent = e.message || 'Usuário ou senha inválidos.';
+                if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons-round" style="font-size:1.2rem;">login</span> ACESSAR SISTEMA'; }
+            }
+        };
+
         // Session Guard
         (function() {
+            var overlay = document.getElementById('wmsLoginOverlay');
             if (!window.ParreiraAuth || !ParreiraAuth.isLogado()) {
-                window.location.href = '../../login.html?redirect=modules/wms/index.html&module=wms';
+                if (overlay) overlay.style.display = 'flex';
                 return;
             }
+            if (overlay) overlay.style.display = 'none';
             const s = ParreiraAuth.getSessao();
             const nEl = document.getElementById('userName');
             const tEl = document.getElementById('userTenant');
             if (nEl) nEl.textContent = s.nome;
-            if (tEl) tEl.textContent = s.tenantNome + ' · ' + ({operator:'Operador',supervisor:'Supervisor',admin:'Admin',master:'Master'}[s.role]||s.role);
+            if (tEl) tEl.textContent = (s.tenantNome||'') + ' · ' + ({operator:'Operador',supervisor:'Supervisor',admin:'Admin',master:'Master'}[s.role]||s.role);
         })();
 
         // Load Version
