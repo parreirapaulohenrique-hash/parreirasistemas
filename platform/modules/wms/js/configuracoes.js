@@ -1,4 +1,4 @@
-﻿// ===========================================
+// ===========================================
 // WMS Configurações
 // cfg-geral, cfg-armazenagem, cfg-separacao,
 // cfg-etiqueta, cfg-integracao
@@ -21,6 +21,18 @@ window.loadConfigView = function (viewId) {
 const WMS_CONFIG_KEY = 'wms_config';
 function getWmsConfig() { return JSON.parse(localStorage.getItem(WMS_CONFIG_KEY) || '{}'); }
 function saveWmsConfig(cfg) { localStorage.setItem(WMS_CONFIG_KEY, JSON.stringify(cfg)); }
+
+function renderCfgIntegracao(container) {
+    if (!container) return;
+    container.innerHTML = `
+        <div style="padding:1rem;">
+            <div id="erp-config-container"></div>
+        </div>
+    `;
+    if (typeof ErpIntegration !== 'undefined') {
+        ErpIntegration.initUI('wms');
+    }
+}
 
 // ========================
 // 1. CONFIGURAÇÕES GERAIS
