@@ -388,6 +388,9 @@ window.loadUsersFromFirestore = async function() {
     if (tableBody) tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--text-secondary);"><span class="material-icons-round" style="display:block;font-size:1.5rem;margin-bottom:.5rem;opacity:.6;">sync</span>Carregando usuários...</td></tr>';
 
     try {
+        // Garante autenticação anônima Firebase antes de queries cross-tenant
+        if (ParreiraAuth.ensureAuth) await ParreiraAuth.ensureAuth();
+
         const prodTenants = getAllTenants().filter(t => !t.id.endsWith('_hml'));
 
         // Remove usuários anteriores do Firestore (evita duplicatas no reload)

@@ -229,6 +229,7 @@ window.ParreiraAuth = (function () {
     }
 
     async function listarUsuarios(tenantId) {
+        await _ensureAuth();
         const db   = _initDB();
         const snap = await db.collection('tenants').doc(tenantId).collection('users').get();
         return snap.docs.map(d => ({ id: d.id, ...d.data(), senhaHash: undefined }));
@@ -255,6 +256,7 @@ window.ParreiraAuth = (function () {
         hasModulo, hasRole, hasRoleMinimo, dataKey, requireAuth,
         criarUsuario, listarUsuarios, atualizarUsuario, desativarUsuario,
         _hash,      // exposto para o setup
+        ensureAuth: _ensureAuth, // exposto para módulos externos
         getDB: _initDB  // exposto para provisioning (inicializa Firebase se necessário)
     };
 })();
