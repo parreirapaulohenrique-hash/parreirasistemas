@@ -1,1 +1,1 @@
-{"version":"1.9.0","date":"2026-07-24","build":"20260724-0030","last_change":"WMS Inbound: Tela de conferencia com scanner de NF-e, card auto-preenchido Maxdata, divergencias com fotos e PIN de supervisor para entrada avulsa (v1.9.0)"}
+{"version":"1.9.1","date":"2026-07-24","build":"20260724-1450","last_change":"WMS Inbound: Fix reatividade do conector Maxdata ERP (empId 5) e resolucao inteligente de tenant (v1.9.1)"}
