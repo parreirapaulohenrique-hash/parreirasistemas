@@ -11,9 +11,12 @@ const WMS_VERSION = '3.4.0';
 window.getTenantSuffix = function () {
     try {
         const sess = JSON.parse(sessionStorage.getItem('parreira_session') || 'null');
-        const tid  = sess?.tenantId || '';
-        return tid ? '_' + tid : '';
-    } catch (e) { return ''; }
+        const tid  = sess?.tenant || sess?.tenantId || (window.ParreiraAuth?.getSessao?.()?.tenant) || '';
+        if (tid) return '_' + tid.replace('_hml', '');
+        const match = window.location.pathname.match(/\/wms\/([^\/]+)/);
+        if (match && !match[1].includes('.')) return '_' + match[1].replace('_hml', '');
+        return '_centralpecas';
+    } catch (e) { return '_centralpecas'; }
 };
 
 // --- Submenu Toggle e SwitchView definidos ANTES do DOMContentLoaded ---

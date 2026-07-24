@@ -1,1 +1,1 @@
-{"build":"20260724-staging-v3.17.3","version":"3.17.3","environment":"staging","change":"v3.17.3 - HOTFIX: WMS Inbound - Fix de inicializacao reativa do conector Maxdata ERP (empId 5) e resolucao inteligente de tenant.","lastUpdate":"2026-07-24","deployedAt":"2026-07-24"}
+{"build":"20260724-staging-v3.17.4","version":"3.17.4","environment":"staging","change":"v3.17.4 - FIX CRITICO: WMS - Corrigido calculo de sufixo de tenant (sess.tenant vs sess.tenantId) e fallback Maxdata empId 5.","lastUpdate":"2026-07-24","deployedAt":"2026-07-24"}

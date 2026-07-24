@@ -1,1 +1,1 @@
-{"version":"1.9.1","date":"2026-07-24","build":"20260724-1450","last_change":"WMS Inbound: Fix reatividade do conector Maxdata ERP (empId 5) e resolucao inteligente de tenant (v1.9.1)"}
+{"version":"1.9.2","date":"2026-07-24","build":"20260724-1455","last_change":"WMS Inbound: Fix sess.tenant vs sess.tenantId property lookup (v1.9.2)"}
