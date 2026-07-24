@@ -388,37 +388,36 @@ window.loadUsersFromFirestore = async function() {
     if (tableBody) tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--text-secondary);"><span class="material-icons-round" style="display:block;font-size:1.5rem;margin-bottom:.5rem;opacity:.6;">sync</span>Carregando usuários...</td></tr>';
 
     try {
-        const db = ParreiraAuth.getDB();
-        if (!db) { renderUsers(); return; }
-
         const prodTenants = getAllTenants().filter(t => !t.id.endsWith('_hml'));
 
         // Remove usuários anteriores do Firestore (evita duplicatas no reload)
         platformUsers = platformUsers.filter(u => !u.fromFirestore);
 
-        await Promise.all(prodTenants.map(async tenant => {
-            try {
-                const snap = await db.collection('tenants').doc(tenant.id).collection('users').get();
-                snap.forEach(doc => {
-                    const d = doc.data();
-                    const login = d.login || doc.id;
-                    if (!platformUsers.find(u => u.login === login && u.tenant === tenant.id)) {
-                        platformUsers.push({
-                            docId:         doc.id,
-                            tenant:        tenant.id,
-                            tenantName:    tenant.name || tenant.id,
-                            login,
-                            name:          d.nome || d.name || login,
-                            role:          d.role || 'operacional',
-                            ativo:         d.ativo !== false,
-                            fromFirestore: true
-                        });
-                    }
-                });
-            } catch(e) {
-                console.warn(`[Master] Usuários ${tenant.id}:`, e.message);
-            }
+        const results = await Promise.allSettled(prodTenants.map(async tenant => {
+            const users = await ParreiraAuth.listarUsuarios(tenant.id);
+            users.forEach(d => {
+                const login = d.login || d.id;
+                if (!platformUsers.find(u => u.login === login && u.tenant === tenant.id)) {
+                    platformUsers.push({
+                        docId:         d.id || login,
+                        tenant:        tenant.id,
+                        tenantName:    tenant.name || tenant.id,
+                        login,
+                        name:          d.nome || d.name || login,
+                        role:          d.role || 'operacional',
+                        ativo:         d.ativo !== false,
+                        fromFirestore: true
+                    });
+                }
+            });
         }));
+
+        // Log erros por tenant (não interrompe o fluxo)
+        results.forEach((r, i) => {
+            if (r.status === 'rejected') {
+                console.warn(`[Master] Erro tenant ${prodTenants[i].id}:`, r.reason?.message || r.reason);
+            }
+        });
 
         localStorage.setItem('platform_users_registry', JSON.stringify(platformUsers));
         renderUsers();
@@ -449,7 +448,7 @@ window.editFirestoreUser = function(login, tenantId) {
     openModal('editFsUserModal');
 };
 
-// Salvar usuário Firestore (nome + perfil + opcional nova senha)
+// Salvar usuário Firestore via ParreiraAuth.atualizarUsuario (hash SHA-256 automático)
 window.saveFirestoreUser = async function() {
     const form     = document.getElementById('fsUserForm');
     const login    = form.getAttribute('data-login');
@@ -472,15 +471,11 @@ window.saveFirestoreUser = async function() {
     btn.innerHTML = '<span class="material-icons-round">sync</span> Salvando...';
 
     try {
-        const db = ParreiraAuth.getDB();
-        const updateData = { nome, role, atualizadoEm: new Date().toISOString() };
+        // ParreiraAuth.atualizarUsuario já faz o hash SHA-256 se senha for fornecida
+        const dados = { nome, role, atualizadoEm: new Date().toISOString() };
+        if (novaSenha) dados.senha = novaSenha;
 
-        if (novaSenha) {
-            const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(novaSenha));
-            updateData.senhaHash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-        }
-
-        await db.collection('tenants').doc(tenantId).collection('users').doc(docId).update(updateData);
+        await ParreiraAuth.atualizarUsuario(tenantId, docId, dados);
 
         // Atualiza cópia local
         const idx = platformUsers.findIndex(u => u.login === login && u.tenant === tenantId);
