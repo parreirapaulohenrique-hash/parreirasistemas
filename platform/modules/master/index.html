@@ -148,7 +148,50 @@
 
         <!-- View: Users -->
         <main class="main-content" id="view-users" style="display: none;">
-            <!-- ... -->
+            <header class="header">
+                <div>
+                    <h2>Usuários do Sistema</h2>
+                    <p>Gerencie os usuários e senhas de acesso de cada cliente.</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="window.openModal('userModal')">
+                        <span class="material-icons-round">person_add</span> Novo Usuário
+                    </button>
+                </div>
+            </header>
+
+            <div class="content-body">
+                <!-- Filtro por tenant -->
+                <div style="display:flex; gap:.75rem; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap;">
+                    <div style="position:relative; flex:1; min-width:200px;">
+                        <span class="material-icons-round" style="position:absolute;left:.75rem;top:50%;transform:translateY(-50%);color:var(--text-secondary);font-size:1.1rem;">search</span>
+                        <input id="userSearchInput" type="text" placeholder="Buscar usuário ou tenant..."
+                            style="width:100%;padding:.6rem .75rem .6rem 2.5rem;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;color:inherit;font-size:.9rem;box-sizing:border-box;"
+                            oninput="window.filterUsers()">
+                    </div>
+                    <select id="userTenantFilter" onchange="window.filterUsers()"
+                        style="padding:.6rem .9rem;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;color:inherit;font-size:.85rem;">
+                        <option value="">Todos os tenants</option>
+                    </select>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Usuário</th>
+                                <th>Tenant</th>
+                                <th>Perfil</th>
+                                <th style="text-align:right;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--text-secondary);">Carregando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <button class="fab-add" onclick="window.openModal('userModal')">
                 <span class="material-icons-round">person_add</span>
             </button>
