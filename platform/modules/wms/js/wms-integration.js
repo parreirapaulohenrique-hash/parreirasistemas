@@ -1,4 +1,4 @@
-﻿// =============================================================
+// =============================================================
 // WMS Integration Layer — Multi-ERP Adapter Pattern
 // Camada de abstração para integração com ERPs externos.
 // O WMS opera de forma autônoma; conectores são opcionais.
@@ -244,9 +244,9 @@
         description: 'Integração nativa bidirecional com Maxdata via API REST JWT. Recebimento, conferência e estoque.',
         icon: 'integration_instructions',
         configFields: [
-            { key: 'baseUrl',   label: 'URL Base da API (Maxdata)',  type: 'text',   placeholder: 'http://servidor:porta/v2',           required: true  },
-            { key: 'empId',     label: 'Empresa (empId)',             type: 'number', placeholder: 'Ex: 1',                             required: true  },
-            { key: 'terminal',  label: 'Terminal (código)',          type: 'text',   placeholder: 'Código do terminal no Manager',   required: true  },
+            { key: 'baseUrl',   label: 'URL Base da API (Maxdata)',  type: 'text',   placeholder: 'http://rds.skytins.com.br:8720/v2',           required: true  },
+            { key: 'empId',     label: 'Empresa / Filial no MaxData (empId)',  type: 'number', placeholder: 'Ex: 1 (Matriz), 2 (Varejo), 4 (Porto), 5 (Redenção)', required: true  },
+            { key: 'terminal',  label: 'Terminal (código)',          type: 'text',   placeholder: '364F64E6539974C1D75C8A46C14B2D3D',   required: true  },
         ],
 
         // ── Token JWT: busca cached ou faz novo POST /auth ────
