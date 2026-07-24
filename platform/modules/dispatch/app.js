@@ -744,10 +744,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         };
 
-        // Helper: Check if current user is supervisor
+        // Helper: Check if current user is supervisor or adm
         window.isSupervisor = () => {
             const storedUser = Utils.getStorage('logged_user');
-            return storedUser && ['supervisor', 'admin', 'master'].includes(storedUser.role);
+            return storedUser && ['supervisor', 'admin', 'master', 'adm'].includes(storedUser.role);
         };
 
         // ──────────────────────────────────────────────────────────────────────────────
@@ -874,99 +874,105 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log('🔐 [Role Check] User:', storedUser);
             console.log('🔐 [Role Check] Role detected:', userRole);
 
-            // 'master' (ParreiraAuth) é mapeado para acesso total igual a 'admin'
-            const isSup = ['supervisor', 'admin', 'master'].includes(userRole);
-            const isMotoboy = userRole === 'motoboy';
+            // 'master' / 'admin' (ParreiraAuth) mapeados para acesso total igual a 'adm'
+            const isAdm  = ['adm', 'admin', 'master'].includes(userRole);
+            const isSup  = userRole === 'supervisor';
+            const isMotoboy   = userRole === 'motoboy';
             const isMotorista = userRole === 'motorista';
             const isDeliveryUser = isMotoboy || isMotorista;
 
-            console.log('🔐 [Role Check] isMotoboy:', isMotoboy, '| isMotorista:', isMotorista);
+            console.log('🔐 [Role Check] isAdm:', isAdm, '| isSup:', isSup, '| isMotoboy:', isMotoboy, '| isMotorista:', isMotorista);
 
             // All navigation items
             const allNavItems = {
-                dashboard: document.querySelector('a[href="#dashboard"]'),
-                quote: document.querySelector('a[href="#quote"]'),
-                dispatch: document.querySelector('a[href="#dispatch"]'),
-                invoice: document.querySelector('a[href="#invoice"]'),
-                moto: document.querySelector('a[href="#moto"]'),
-                carro: document.querySelector('a[href="#carro"]'),
-                rules: document.querySelector('a[href="#rules"]'),
-                reports: document.querySelector('a[href="#reports"]'),
-                configs: document.querySelector('a[href="#configs"]'),
-                acontec: document.querySelector('a[href="#acontec"]'),
-                system: document.querySelector('a[href="#system"]'),
+                dashboard:   document.querySelector('a[href="#dashboard"]'),
+                quote:       document.querySelector('a[href="#quote"]'),
+                dispatch:    document.querySelector('a[href="#dispatch"]'),
+                invoice:     document.querySelector('a[href="#invoice"]'),
+                moto:        document.querySelector('a[href="#moto"]'),
+                carro:       document.querySelector('a[href="#carro"]'),
+                rules:       document.querySelector('a[href="#rules"]'),
+                reports:     document.querySelector('a[href="#reports"]'),
+                configs:     document.querySelector('a[href="#configs"]'),
+                acontec:     document.querySelector('a[href="#acontec"]'),
+                system:      document.querySelector('a[href="#system"]'),
                 appSettings: document.querySelector('a[href="#app-settings"]'),
                 occurrences: document.querySelector('a[href="#occurrences"]'),
-                auditLog: document.querySelector('a[href="#auditLog"]')
+                auditLog:    document.querySelector('a[href="#auditLog"]')
             };
 
-            // MOTOBOY: Show ONLY Moto Entrega
+            // ── MOTOBOY: apenas Moto Entrega ────────────────────────────────────
             if (isMotoboy) {
                 console.log('🏍️ Aplicando restrições de MOTOBOY');
                 Object.entries(allNavItems).forEach(([key, el]) => {
                     if (el) el.style.display = (key === 'moto') ? 'flex' : 'none';
                 });
-                // Auto-show moto section
                 setTimeout(() => window.showSection('moto'), 100);
-                // Add body class
                 document.body.classList.add('is-motoboy', 'is-delivery-user');
-                document.body.classList.remove('is-supervisor', 'is-user', 'is-motorista');
+                document.body.classList.remove('is-supervisor', 'is-user', 'is-motorista', 'is-adm');
                 return;
             }
 
-            // MOTORISTA: Show ONLY Carro Entrega
+            // ── MOTORISTA: apenas Carro Entrega ─────────────────────────────────
             if (isMotorista) {
                 console.log('🚗 Aplicando restrições de MOTORISTA');
                 Object.entries(allNavItems).forEach(([key, el]) => {
                     if (el) el.style.display = (key === 'carro') ? 'flex' : 'none';
                 });
-                // Auto-show carro section
                 setTimeout(() => window.showSection('carro'), 100);
-                // Add body class
                 document.body.classList.add('is-motorista', 'is-delivery-user');
-                document.body.classList.remove('is-supervisor', 'is-user', 'is-motoboy');
+                document.body.classList.remove('is-supervisor', 'is-user', 'is-motoboy', 'is-adm');
                 return;
             }
 
-            // SUPERVISOR/ADMIN: Show all
-            if (isSup) {
+            // ── ADM: acesso total incluindo Integração ERP ──────────────────────
+            if (isAdm) {
+                console.log('🛡️ Aplicando permissões de ADM — acesso total');
                 Object.values(allNavItems).forEach(el => {
                     if (el) el.style.display = 'flex';
                 });
-                document.body.classList.add('is-supervisor');
+                document.body.classList.add('is-adm', 'is-supervisor');
                 document.body.classList.remove('is-user', 'is-motoboy', 'is-motorista', 'is-delivery-user');
-                // Show all cards including admin-only
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
-                // Ocorrências e Log de Auditoria: visível apenas para supervisor/admin
+                return;
+            }
+
+            // ── SUPERVISOR: acesso total, EXCETO Integração ERP ─────────────────
+            if (isSup) {
+                console.log('👔 Aplicando permissões de SUPERVISOR');
+                Object.values(allNavItems).forEach(el => {
+                    if (el) el.style.display = 'flex';
+                });
+                // Integração ERP: exclusivo do ADM
+                if (allNavItems.acontec) allNavItems.acontec.style.display = 'none';
+                document.body.classList.add('is-supervisor');
+                document.body.classList.remove('is-user', 'is-motoboy', 'is-motorista', 'is-delivery-user', 'is-adm');
+                document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
                 if (allNavItems.occurrences) allNavItems.occurrences.style.display = 'flex';
                 if (allNavItems.auditLog)    allNavItems.auditLog.style.display    = 'flex';
                 return;
             }
 
-            // REGULAR USER (Operacional): Hide admin menus, but show moto, carro and system (for client registration)
-            if (allNavItems.reports) allNavItems.reports.style.display = 'none';
-            if (allNavItems.configs) allNavItems.configs.style.display = 'none';
+            // ── OPERACIONAL: menus básicos ───────────────────────────────────────
+            console.log('👷 Aplicando restrições de OPERACIONAL');
+            if (allNavItems.reports)     allNavItems.reports.style.display     = 'none';
+            if (allNavItems.configs)     allNavItems.configs.style.display     = 'none';
             if (allNavItems.appSettings) allNavItems.appSettings.style.display = 'none';
-            if (allNavItems.system) allNavItems.system.style.display = 'flex'; // Show system for client registration
-            if (allNavItems.acontec) allNavItems.acontec.style.display = 'none';
-            if (allNavItems.occurrences) allNavItems.occurrences.style.display = 'none'; // Ocorrências: apenas supervisor
-            if (allNavItems.auditLog)    allNavItems.auditLog.style.display    = 'none'; // Log: apenas supervisor
-            // Moto e Carro agora visíveis para Operacional
-            if (allNavItems.moto) allNavItems.moto.style.display = 'flex';
-            if (allNavItems.carro) allNavItems.carro.style.display = 'flex';
+            if (allNavItems.system)      allNavItems.system.style.display      = 'flex';
+            if (allNavItems.acontec)     allNavItems.acontec.style.display     = 'none';
+            if (allNavItems.occurrences) allNavItems.occurrences.style.display = 'none';
+            if (allNavItems.auditLog)    allNavItems.auditLog.style.display    = 'none';
+            if (allNavItems.moto)        allNavItems.moto.style.display        = 'flex';
+            if (allNavItems.carro)       allNavItems.carro.style.display       = 'flex';
+            if (allNavItems.dashboard)   allNavItems.dashboard.style.display   = 'flex';
+            if (allNavItems.quote)       allNavItems.quote.style.display       = 'flex';
+            if (allNavItems.dispatch)    allNavItems.dispatch.style.display    = 'flex';
+            if (allNavItems.invoice)     allNavItems.invoice.style.display     = 'flex';
+            if (allNavItems.rules)       allNavItems.rules.style.display       = 'flex';
 
-            // Show remaining menus
-            if (allNavItems.dashboard) allNavItems.dashboard.style.display = 'flex';
-            if (allNavItems.quote) allNavItems.quote.style.display = 'flex';
-            if (allNavItems.dispatch) allNavItems.dispatch.style.display = 'flex';
-            if (allNavItems.invoice) allNavItems.invoice.style.display = 'flex'; // Invoice for all users
-            if (allNavItems.rules) allNavItems.rules.style.display = 'flex';
-
-            // Hide admin-only cards (Company Data, User Management) for regular users
             document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
-
             document.body.classList.add('is-user');
-            document.body.classList.remove('is-supervisor', 'is-motoboy', 'is-motorista', 'is-delivery-user');
+            document.body.classList.remove('is-supervisor', 'is-adm', 'is-motoboy', 'is-motorista', 'is-delivery-user');
         };
 
 
