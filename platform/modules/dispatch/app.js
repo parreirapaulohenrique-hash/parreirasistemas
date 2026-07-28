@@ -4604,6 +4604,58 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             list.sort((a, b) => new Date(b.date) - new Date(a.date));
 
+            // FIX v3.17.5: Filtros ativos mas sem resultados — mantém a barra de pesquisa visível
+            if (list.length === 0) {
+                const _colStyleMap = {
+                    status: 'width:40px;min-width:40px;text-align:center;',
+                    invoice: 'width:55px;min-width:50px;',
+                    leadTime: 'width:50px;min-width:45px;text-align:center;',
+                    total: 'width:75px;min-width:70px;text-align:right;',
+                    client: 'width:180px;min-width:140px;max-width:220px;',
+                    city: 'min-width:75px;width:85px;',
+                    carrier: 'min-width:75px;width:85px;max-width:100px;',
+                    createdTime: 'width:50px;min-width:45px;text-align:center;',
+                    dispatchedTime: 'width:50px;min-width:45px;text-align:center;',
+                    actions: 'width:120px;min-width:115px;text-align:center;',
+                    deliveryConfirm: 'width:90px;min-width:84px;text-align:center;'
+                };
+                const noResultsEl = document.createElement('div');
+                noResultsEl.style.overflowX = 'auto';
+                noResultsEl.innerHTML = `
+                    <table class="dispatch-table">
+                        <thead>
+                            <tr>
+                                ${activeCols.map(col => {
+                                    const s = 'padding:8px 5px;' + (_colStyleMap[col] || '');
+                                    return `<th style="${s}">
+                                        <div style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:4px;">${columnMap[col]}</div>
+                                        <input type="text" class="filter-input" placeholder="🔎"
+                                            value="${window.dispatchFilters[col] || ''}"
+                                            onkeyup="window.updateDispatchFilter('${col}', this.value)"
+                                            style="width:100%;">
+                                    </th>`;
+                                }).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="${activeCols.length}" style="text-align:center;padding:2.5rem 1rem;color:var(--text-secondary);">
+                                    <span class="material-icons-round" style="font-size:2.5rem;display:block;margin-bottom:0.5rem;opacity:0.4;">search_off</span>
+                                    <div style="font-weight:600;font-size:1rem;margin-bottom:0.4rem;color:var(--text-primary);">Nenhum resultado encontrado</div>
+                                    <div style="font-size:0.85rem;margin-bottom:1.2rem;">Modifique os campos acima ou limpe os filtros para ver todos os despachos.</div>
+                                    <button onclick="window.clearDispatchFilters()" class="btn btn-secondary" style="font-size:0.85rem;padding:0.4rem 1.2rem;display:inline-flex;align-items:center;gap:0.4rem;">
+                                        <span class="material-icons-round" style="font-size:1rem;">filter_alt_off</span>
+                                        Limpar Filtros
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                `;
+                container.appendChild(noResultsEl);
+                return;
+            }
+
             // Group by Month
             const monthlyGroups = {};
             list.forEach(item => {
@@ -4855,6 +4907,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Debounce render
             if (window.filterTimeout) clearTimeout(window.filterTimeout);
             window.filterTimeout = setTimeout(() => window.renderAppHistory(), 400);
+        };
+
+        // FIX v3.17.5: Limpa todos os filtros e re-renderiza
+        window.clearDispatchFilters = () => {
+            window.dispatchFilters = {};
+            window.renderAppHistory();
         };
 
         // ==========================================

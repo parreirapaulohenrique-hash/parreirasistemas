@@ -1,1 +1,1 @@
-{"version":"1.9.0","date":"2026-07-24","build":"20260724-0030","last_change":"WMS Inbound: Tela de conferencia com scanner de NF-e, card auto-preenchido Maxdata, divergencias com fotos e PIN de supervisor para entrada avulsa (v1.9.0)"}
+{"version":"1.9.2","date":"2026-07-24","build":"20260724-1455","last_change":"WMS Inbound: Fix sess.tenant vs sess.tenantId property lookup (v1.9.2)"}
