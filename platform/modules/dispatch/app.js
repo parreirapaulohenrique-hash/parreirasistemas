@@ -6275,7 +6275,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         <button class="btn-imprimir" onclick="window.printInvoiceReport('${h.id}')" style="background:none;border:1px solid rgba(99,102,241,0.4);border-radius:6px;padding:2px 6px;cursor:pointer;color:var(--accent-primary);font-size:0.72rem;font-family:inherit;display:inline-flex;align-items:center;gap:2px;white-space:nowrap;">
                                             <span class="material-icons-round" style="font-size:0.85rem;">print</span>Imprimir
                                         </button>
-                                        <button class="btn-estornar" data-hid="${h.id}" style="background:none;border:1px solid rgba(239,68,68,0.4);border-radius:6px;padding:2px 6px;cursor:pointer;color:#ef4444;font-size:0.72rem;font-family:inherit;display:inline-flex;align-items:center;gap:2px;white-space:nowrap;">
+                                        <button class="btn-estornar" onclick="event.stopPropagation(); window.showEstornoModal('${h.id}')" data-hid="${h.id}" style="background:none;border:1px solid rgba(239,68,68,0.4);border-radius:6px;padding:2px 6px;cursor:pointer;color:#ef4444;font-size:0.72rem;font-family:inherit;display:inline-flex;align-items:center;gap:2px;white-space:nowrap;">
                                             <span class="material-icons-round" style="font-size:0.85rem;">undo</span>Estornar
                                         </button>
                                     </div>
@@ -6294,12 +6294,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (icon) icon.style.transform = isOpen ? '' : 'rotate(180deg)';
                     };
 
-                    // Event delegation: captura clique nos botões Estornar
+                    // FIX v3.17.5: event delegation mantida como fallback, mas o onclick inline no botão
+                    // é o handler primário (stopPropagation no <td> pai bloqueava a delegação antes)
                     tbody.addEventListener('click', function estornoDelegate(e) {
                         const btn = e.target.closest('.btn-estornar');
                         if (!btn) return;
                         const hid = btn.getAttribute('data-hid');
-                        window.showEstornoModal(hid);
+                        if (hid) window.showEstornoModal(hid);
                     });
                 }
             }
