@@ -94,6 +94,31 @@
             vertical-align: middle !important;
         }
 
+        /* Schedule Builder — Day Chip Buttons */
+        .day-chip-btn {
+            padding: 4px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            letter-spacing: 0.04em;
+        }
+        .day-chip-btn:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+        .day-chip-btn.active {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.35);
+        }
+
         .result-card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
@@ -962,14 +987,22 @@
                                     <input type="number" id="ruleLeadTime" class="form-input" placeholder="Ex: 1">
                                 </div>
                                 <div class="form-group" style="grid-column: span 2;">
-                                    <label class="form-label">Horários de Despacho</label>
-                                    <div style="display: flex; gap: 0.5rem;">
-                                        <input type="text" id="ruleHour1" class="form-input" placeholder="10:00"
-                                            style="flex: 1;">
-                                        <input type="text" id="ruleHour2" class="form-input" placeholder="hora/hora"
-                                            style="flex: 1;">
-                                        <input type="text" id="ruleHour3" class="form-input" placeholder="19:00"
-                                            style="flex: 1;">
+                                    <label class="form-label">Dias e Horários de Coleta</label>
+                                    <div id="scheduleBuilder" style="border:1px solid var(--border-color);border-radius:10px;padding:12px;background:rgba(255,255,255,0.02);">
+                                        <!-- Day chips -->
+                                        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+                                            <button type="button" class="day-chip-btn" data-day="1" onclick="window.toggleScheduleDay(1)">SEG</button>
+                                            <button type="button" class="day-chip-btn" data-day="2" onclick="window.toggleScheduleDay(2)">TER</button>
+                                            <button type="button" class="day-chip-btn" data-day="3" onclick="window.toggleScheduleDay(3)">QUA</button>
+                                            <button type="button" class="day-chip-btn" data-day="4" onclick="window.toggleScheduleDay(4)">QUI</button>
+                                            <button type="button" class="day-chip-btn" data-day="5" onclick="window.toggleScheduleDay(5)">SEX</button>
+                                            <button type="button" class="day-chip-btn" data-day="6" onclick="window.toggleScheduleDay(6)">SAB</button>
+                                        </div>
+                                        <!-- Dynamic day rows -->
+                                        <div id="scheduleDayRows" style="display:flex;flex-direction:column;gap:8px;"></div>
+                                        <div id="scheduleBuilderHint" style="color:var(--text-secondary);font-size:0.78rem;margin-top:4px;">
+                                            Selecione os dias em que esta transportadora faz coleta
+                                        </div>
                                     </div>
                                 </div>
                                 <input type="hidden" id="editingRuleIndex" value="-1">

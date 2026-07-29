@@ -1866,9 +1866,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         window.getDispatchDelayInfo = function(d) {
             if (d.status !== 'Pendente Despacho') return { isLate: false };
-            if (!d.horarios || d.horarios === '-') return { isLate: false };
 
             const now = new Date();
+            const todayDOW = now.getDay(); // 0=Dom, 1=Seg, ..., 6=Sab
+            let horariosStr = '';
+
+            // v3.17.7: Schedule por dia da semana
+            if (d.diasHorarios && Array.isArray(d.diasHorarios) && d.diasHorarios.length > 0) {
+                const todayEntry = d.diasHorarios.find(e => e.dia === todayDOW);
+                if (!todayEntry || !Array.isArray(todayEntry.times) || todayEntry.times.length === 0) {
+                    return { isLate: false }; // Transportadora não opera hoje
+                }
+                horariosStr = todayEntry.times.join(' | ');
+            } else if (d.horarios && d.horarios !== '-') {
+                horariosStr = d.horarios; // Legado: aplica todos os dias
+            } else {
+                return { isLate: false };
+            }
+
             const launchDate = new Date(d.date);
             const launchDayStart = new Date(launchDate); launchDayStart.setHours(0, 0, 0, 0);
             const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
@@ -1878,30 +1893,110 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return { isLate: true, reason: 'Atrasado (Data Passada)' };
             }
 
-            // 2. Mesma data
+            // 2. Mesma data: verifica horários
             if (launchDayStart.getTime() === todayStart.getTime()) {
-                const matches = Array.from(d.horarios.matchAll(/(\d{2}):(\d{2})/g));
+                const matches = Array.from(horariosStr.matchAll(/(\d{2}):(\d{2})/g));
                 if (matches.length > 0) {
                     const times = matches.map(m => {
                         const dl = new Date(now);
                         dl.setHours(parseInt(m[1], 10), parseInt(m[2], 10), 0, 0);
                         return { dl, label: m[0] };
                     }).sort((a, b) => a.dl - b.dl);
-                    
-                    // Encontra o PRIMEIRO horário aplicável, ou seja, onde o pacote foi lançado ANTES do horário de saída
+
                     const eligibleDeadline = times.find(t => launchDate <= t.dl);
-                    
-                    if (eligibleDeadline) {
-                        // O pacote tinha chance de pegar ESSE carro, confirmamos se o carro já foi embora (now > dl)
-                        if (now > eligibleDeadline.dl) {
-                            return { isLate: true, reason: `Atrasado (Limite: ${eligibleDeadline.label})` };
-                        }
+                    if (eligibleDeadline && now > eligibleDeadline.dl) {
+                        return { isLate: true, reason: `Atrasado (Limite: ${eligibleDeadline.label})` };
                     }
-                    // Se não tiver nenhum eligibleDeadline, ele foi postado DEPOIS de todos os despachos do dia.
-                    // Portanto, não está atrasado. Espera o carro do dia seguinte pacificamente.
                 }
             }
             return { isLate: false };
+        };
+
+        // ── SCHEDULE BUILDER ─────────────────────────────────────────────────────
+        // Gerencia o estado do widget de dias e horários de coleta
+        window._scheduleData = {}; // { 1: ["10:00","14:00"], 3: ["10:00"] }
+
+        window.toggleScheduleDay = (day) => {
+            if (window._scheduleData[day]) {
+                delete window._scheduleData[day];
+            } else {
+                window._scheduleData[day] = [''];
+            }
+            const btn = document.querySelector(`.day-chip-btn[data-day="${day}"]`);
+            if (btn) btn.classList.toggle('active', !!window._scheduleData[day]);
+            window._renderScheduleRows();
+        };
+
+        window.addScheduleTime = (day) => {
+            if (!window._scheduleData[day]) return;
+            window._scheduleData[day].push('');
+            window._renderScheduleRows();
+        };
+
+        window.removeScheduleTime = (day, idx) => {
+            if (!window._scheduleData[day]) return;
+            window._scheduleData[day].splice(idx, 1);
+            if (window._scheduleData[day].length === 0) {
+                delete window._scheduleData[day];
+                const btn = document.querySelector(`.day-chip-btn[data-day="${day}"]`);
+                if (btn) btn.classList.remove('active');
+            }
+            window._renderScheduleRows();
+        };
+
+        window.updateScheduleTime = (day, idx, value) => {
+            if (window._scheduleData[day]) window._scheduleData[day][idx] = value;
+        };
+
+        window._renderScheduleRows = () => {
+            const container = document.getElementById('scheduleDayRows');
+            const hint = document.getElementById('scheduleBuilderHint');
+            if (!container) return;
+            const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+            const activeDays = [1, 2, 3, 4, 5, 6].filter(d => window._scheduleData[d]);
+            container.innerHTML = activeDays.length === 0 ? '' : activeDays.map(day => {
+                const times = window._scheduleData[day] || [''];
+                return `<div style="display:flex;align-items:flex-start;gap:8px;padding:8px;background:rgba(var(--primary-rgb),0.06);border-radius:8px;border-left:3px solid var(--primary-color);">
+                    <span style="font-weight:700;color:var(--primary-color);min-width:32px;padding-top:6px;font-size:0.85rem;">${dayNames[day]}</span>
+                    <div style="display:flex;flex-direction:column;gap:6px;flex:1;">
+                        ${times.map((t, idx) => `<div style="display:flex;gap:6px;align-items:center;">
+                            <input type="time" value="${t}" onchange="window.updateScheduleTime(${day},${idx},this.value)"
+                                style="flex:1;padding:5px 8px;background:var(--input-bg,var(--card-bg));border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.88rem;font-family:inherit;">
+                            <button type="button" onclick="window.removeScheduleTime(${day},${idx})"
+                                style="background:none;border:none;cursor:pointer;color:#ef4444;padding:2px;line-height:1;" title="Remover">
+                                <span class="material-icons-round" style="font-size:1.1rem;">remove_circle_outline</span>
+                            </button>
+                        </div>`).join('')}
+                    </div>
+                    <button type="button" onclick="window.addScheduleTime(${day})"
+                        style="background:none;border:none;cursor:pointer;color:var(--primary-color);padding:2px;line-height:1;" title="Add horário">
+                        <span class="material-icons-round" style="font-size:1.2rem;">add_circle_outline</span>
+                    </button>
+                </div>`;
+            }).join('');
+            if (hint) hint.style.display = activeDays.length === 0 ? 'block' : 'none';
+        };
+
+        // Retorna array no formato diasHorarios para salvar na regra
+        window._getScheduleAsArray = () => Object.entries(window._scheduleData)
+            .map(([d, ts]) => ({ dia: parseInt(d), times: ts.filter(t => t && t.trim()) }))
+            .filter(e => e.times.length > 0);
+
+        // Carrega diasHorarios salvo no builder (ex: ao editar regra)
+        window._loadScheduleFromData = (diasHorarios) => {
+            window._scheduleData = {};
+            if (Array.isArray(diasHorarios) && diasHorarios.length > 0) {
+                diasHorarios.forEach(e => {
+                    if (e.dia !== undefined && Array.isArray(e.times) && e.times.length > 0) {
+                        window._scheduleData[e.dia] = [...e.times];
+                    }
+                });
+            }
+            [1, 2, 3, 4, 5, 6].forEach(day => {
+                const btn = document.querySelector(`.day-chip-btn[data-day="${day}"]`);
+                if (btn) btn.classList.toggle('active', !!window._scheduleData[day]);
+            });
+            window._renderScheduleRows();
         };
 
         async function checkLateDispatchesAndAlert() {
@@ -3022,6 +3117,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 minimo: ruleUsed.minimo,
                 redespacho: ruleUsed.redespacho || '-',
                 horarios: ruleUsed.horarios || '-',
+                diasHorarios: ruleUsed.diasHorarios || null,
                 leadTime: ruleUsed.leadTime || '-',
                 baseCalculada: option.details.base,
                 excessoCalculado: option.details.excess,
@@ -3857,10 +3953,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('ruleLeadTime').value = (r.leadTime || '').replace(/^D\+/i, '');
 
 
-            const hParts = (r.horarios || '').split(' | ');
-            document.getElementById('ruleHour1').value = hParts[0] || '';
-            document.getElementById('ruleHour2').value = hParts[1] || '';
-            document.getElementById('ruleHour3').value = hParts[2] || '';
+            // v3.17.7: Carrega schedule builder com diasHorarios salvo
+            window._loadScheduleFromData(r.diasHorarios || []);
 
             // UI Feedback
             const form = document.getElementById('formNewRule');
@@ -3891,6 +3985,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const form = document.getElementById('formNewRule');
             form.reset();
             document.getElementById('editingRuleIndex').value = '-1';
+
+            // Limpa o schedule builder
+            window._loadScheduleFromData([]);
 
             // Reset flag taxa fixa por volume
             const chkVol = document.getElementById('ruleTaxaFixaPorVolume');
@@ -4009,11 +4106,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (!val) return '';
                         return val.toUpperCase().startsWith('D+') ? val.toUpperCase() : 'D+' + val.toUpperCase();
                     })(),
-                    horarios: [
-                        document.getElementById('ruleHour1').value.trim(),
-                        document.getElementById('ruleHour2').value.trim(),
-                        document.getElementById('ruleHour3').value.trim()
-                    ].filter(h => h !== '').join(' | ')
+                    // v3.17.7: Lê do schedule builder
+                    diasHorarios: (() => {
+                        const arr = window._getScheduleAsArray ? window._getScheduleAsArray() : [];
+                        return arr.length > 0 ? arr : undefined;
+                    })(),
+                    horarios: (() => {
+                        const arr = window._getScheduleAsArray ? window._getScheduleAsArray() : [];
+                        if (arr.length === 0) return '';
+                        return [...new Set(arr.flatMap(e => e.times))].sort().join(' | ');
+                    })()
                 };
 
                 if (editIdx > -1) {
