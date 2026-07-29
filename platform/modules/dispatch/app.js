@@ -5999,7 +5999,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 invoiceRef: invoiceRef,
                 invoiceValue: invoiceValue,
                 calculatedValue: totalPaid,
-                difference: totalPaid - invoiceValue,
+                difference: Math.round((totalPaid - invoiceValue) * 100) / 100,  // v3.17.8 FIX: arredonda para evitar 0.0000001 !== 0
                 nfCount: paidCount,
                 nfList: paidNFs,
                 confirmedBy: userName,
@@ -6259,8 +6259,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (d.getFullYear().toString() !== yr ||
                         (d.getMonth() + 1).toString().padStart(2, '0') !== mo) return false;
                 }
-                if (statusVal === 'conforme'     && h.difference !== 0) return false;
-                if (statusVal === 'nao-conforme' && h.difference === 0) return false;
+                if (statusVal === 'conforme'     && Math.abs(h.difference || 0) >= 0.01) return false;
+                if (statusVal === 'nao-conforme' && Math.abs(h.difference || 0)  < 0.01) return false;
                 return true;
             });
 
@@ -6269,10 +6269,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // ── CARDS DE RESUMO ──────────────────────────────
             const total        = filtered.length;
-            const conformes    = filtered.filter(h => h.difference === 0).length;
+            const conformes    = filtered.filter(h => Math.abs(h.difference || 0) < 0.01).length;
             const naoConformes = total - conformes;
             const divTot       = filtered
-                .filter(h => h.difference !== 0)
+                .filter(h => Math.abs(h.difference || 0) >= 0.01)
                 .reduce((s, h) => s + Math.abs(h.difference || 0), 0);
 
             const safeSet = (id, val) => {
@@ -6299,7 +6299,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const _allDispatches = Utils.getStorage('dispatches') || [];
 
                     tbody.innerHTML = filtered.map(h => {
-                        const isConf    = h.difference === 0;
+                        const isConf    = Math.abs(h.difference || 0) < 0.01; // v3.17.8 FIX: tolerância sub-centavo
                         const diffAbs   = Math.abs(h.difference || 0);
                         const diffColor = isConf ? '#10b981' : (h.difference < 0 ? '#ef4444' : '#3b82f6');
                         const diffSign  = (h.difference || 0) > 0 ? '+' : '';
@@ -6408,7 +6408,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             // ── RELATÓRIO DE DIVERGÊNCIA POR TRANSPORTADORA ──
-            const naoConformesArr = filtered.filter(h => h.difference !== 0);
+            const naoConformesArr = filtered.filter(h => Math.abs(h.difference || 0) >= 0.01);
             const divSection = document.getElementById('analysisDivergenceSection');
             if (divSection) divSection.style.display = naoConformesArr.length > 0 ? '' : 'none';
 
