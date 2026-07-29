@@ -4714,8 +4714,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     leadTime: 'width:50px;min-width:45px;text-align:center;',
                     total: 'width:75px;min-width:70px;text-align:right;',
                     client: 'width:180px;min-width:140px;max-width:220px;',
-                    city: 'min-width:75px;width:85px;',
-                    carrier: 'min-width:75px;width:85px;max-width:100px;',
+                    city: 'min-width:105px;width:115px;max-width:130px;',
+                    carrier: 'min-width:100px;width:110px;max-width:130px;',
+                    nfValue: 'width:85px;min-width:80px;text-align:right;',
+                    weight: 'width:62px;min-width:58px;text-align:right;',
+                    volume: 'width:45px;min-width:42px;text-align:center;',
                     createdTime: 'width:50px;min-width:45px;text-align:center;',
                     dispatchedTime: 'width:50px;min-width:45px;text-align:center;',
                     actions: 'width:120px;min-width:115px;text-align:center;',
@@ -4832,8 +4835,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         else if (col === 'leadTime') style += 'width: 50px; min-width: 45px; text-align: center;';
                         else if (col === 'total') style += 'width: 75px; min-width: 70px; text-align: right;';
                         else if (col === 'client') style += 'width: 180px; min-width: 140px; max-width: 220px;';
-                        else if (col === 'city') style += 'min-width: 75px; width: 85px;';
-                        else if (col === 'carrier') style += 'min-width: 75px; width: 85px; max-width: 100px;';
+                        else if (col === 'city') style += 'min-width: 105px; width: 115px; max-width: 130px;';
+                        else if (col === 'carrier') style += 'min-width: 100px; width: 110px; max-width: 130px;';
+                        else if (col === 'nfValue') style += 'width: 85px; min-width: 80px; text-align: right;';
+                        else if (col === 'weight') style += 'width: 62px; min-width: 58px; text-align: right;';
+                        else if (col === 'volume') style += 'width: 45px; min-width: 42px; text-align: center;';
                         else if (col === 'createdTime' || col === 'dispatchedTime') style += 'width: 50px; min-width: 45px; text-align: center;';
                         else if (col === 'actions') style += 'width: 120px; min-width: 115px; text-align: center;';
                         else if (col === 'deliveryConfirm') style += 'width: 90px; min-width: 84px; text-align: center;';
@@ -4970,12 +4976,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     if (col === 'invoice') style += 'width: 55px; min-width: 50px;';
                                     else if (col === 'leadTime') style += 'width: 50px; min-width: 45px; text-align: center;';
                                     else if (col === 'total') style += 'width: 75px; min-width: 70px;';
+                                    else if (col === 'nfValue') style += 'width: 85px; min-width: 80px; text-align: right;';
+                                    else if (col === 'weight') style += 'width: 62px; min-width: 58px; text-align: right;';
+                                    else if (col === 'volume') style += 'width: 45px; min-width: 42px; text-align: center;';
                                     else if (col === 'city') {
-                                        style += 'min-width: 75px; width: 85px; max-width: 90px;';
+                                        style += 'min-width: 105px; width: 115px; max-width: 130px;';
                                         displayVal = `<div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${val}</div>`;
                                     }
                                     else if (col === 'carrier') {
-                                        style += 'min-width: 75px; width: 85px; max-width: 100px;';
+                                        style += 'min-width: 100px; width: 110px; max-width: 130px;';
                                         displayVal = `<div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${val}</div>`;
                                     }
                                     else if (col === 'client') {
