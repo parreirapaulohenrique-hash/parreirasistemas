@@ -309,6 +309,23 @@
                 </div>
 
                 <div class="card-body" style="padding:1.5rem;">
+                    <!-- Status Badges: 2 Etapas MaxData -->
+                    <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:1rem;">
+                        <span style="font-size:0.78rem; font-weight:700; background:${nf.cnpjValido !== false ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.2)'}; color:${nf.cnpjValido !== false ? '#10b981' : '#ef4444'}; padding:.35rem .75rem; border-radius:6px; border:1px solid ${nf.cnpjValido !== false ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.4)'};">
+                            ${nf.cnpjValido !== false ? '✅ DESCARREGAMENTO AUTORIZADO (Tela 102.13 - Destinadas OK)' : '❌ BLOQUEADO: CNPJ Destinatário Incompatível'}
+                        </span>
+
+                        <span style="font-size:0.78rem; font-weight:700; background:${nf.conferenciaItensStatus === 'LIBERADA' ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.2)'}; color:${nf.conferenciaItensStatus === 'LIBERADA' ? '#10b981' : '#f59e0b'}; padding:.35rem .75rem; border-radius:6px; border:1px solid ${nf.conferenciaItensStatus === 'LIBERADA' ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.4)'};">
+                            ${nf.conferenciaItensStatus === 'LIBERADA' ? '🟢 CONFERÊNCIA POR ITEM: LIBERADA (Tela 102 Pendente)' : '🟨 CONFERÊNCIA POR ITEM: AGUARDANDO PRÉ-ENTRADA DO COMPRAS (Tela 102)'}
+                        </span>
+                    </div>
+
+                    ${nf.conferenciaItensStatus !== 'LIBERADA' ? `
+                        <div style="background:rgba(245,158,11,0.1); border-left:4px solid #f59e0b; padding:.75rem 1rem; border-radius:4px; font-size:0.8rem; color:#fbbf24; margin-bottom:1rem;">
+                            ⚠️ <b>Aviso Operacional:</b> A nota consta nas Destinadas (Tela 102.13), permitindo o descarregamento dos volumes na doca. Porém, a pré-entrada ainda não foi lançada no MaxData (Tela 102 Pendente). A conferência de itens ficará pausada até a liberação do setor de Compras.
+                        </div>
+                    ` : ''}
+
                     <!-- Top Info Grid -->
                     <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:1rem; padding:1rem; background:rgba(0,0,0,0.2); border-radius:8px; margin-bottom:1.5rem;">
                         <div>

@@ -173,6 +173,15 @@
         return result;
     }
 
+    function _getWmsFilialCnpj() {
+        try {
+            const cfg = JSON.parse(localStorage.getItem('wms_config' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
+            return cfg.geral?.cnpjFilial || '27.840.027/0001-49';
+        } catch(e) {
+            return '27.840.027/0001-49';
+        }
+    }
+
     async function _buscarNf_maxdata(chave, cnpjs) {
         try {
             const token   = await _maxdataGetToken();
@@ -184,8 +193,32 @@
             });
             if (!match) return { found: false, nf: null, empresa: null, empresas: [], source: 'maxdata' };
             const nf      = _maxdataNorm(match);
-            const empresa = cnpjs.find(c => _cleanCnpj(c.cnpj) === _cleanCnpj(nf.cnpjDestinatario)) || cnpjs[0] || null;
-            return { found: true, nf, empresa, empresas: empresa ? [empresa] : [], source: 'maxdata' };
+            const configuredCnpj = _getWmsFilialCnpj();
+            const nfCnpj = _cleanCnpj(nf.cnpjDestinatario);
+            const matchesFilialCnpj = !configuredCnpj || (nfCnpj === _cleanCnpj(configuredCnpj));
+
+            // Status no MaxData:
+            // 1. Tela 102.13 (Destinadas SEFAZ) -> Descarregamento Autorizado
+            // 2. Tela 102 (Status Pendente no Compras) -> Libera conferência cega de itens
+            const isPendenteNa102 = String(match.status || match.situacao || '').toUpperCase() === 'PENDENTE' || match.jaLancou === true || match.lancouNoSistema === true;
+
+            const empresa = cnpjs.find(c => _cleanCnpj(c.cnpj) === nfCnpj) || cnpjs[0] || null;
+
+            return {
+                found: true,
+                nf,
+                empresa,
+                empresas: empresa ? [empresa] : [],
+                source: 'maxdata',
+                cnpjValido: matchesFilialCnpj,
+                descarregamentoAutorizado: matchesFilialCnpj,
+                conferenciaItensStatus: isPendenteNa102 ? 'LIBERADA' : 'AGUARDANDO_COMPRAS',
+                statusMensagem: !matchesFilialCnpj
+                    ? `❌ CNPJ Destinatário (${nf.cnpjDestinatario}) diverge da Filial Logada (${configuredCnpj})`
+                    : (isPendenteNa102
+                        ? '🟢 Descarregamento e Conferência de Itens Liberados'
+                        : '🟨 Descarregamento Autorizado (Tela 102.13) | ⚠️ Conferência de Itens Bloqueada: Aguardando Pré-Entrada do Compras (MaxData Tela 102)')
+            };
         } catch (err) {
             return { found: false, nf: null, empresa: null, empresas: [], source: 'maxdata', error: err.message };
         }

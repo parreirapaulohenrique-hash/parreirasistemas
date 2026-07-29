@@ -71,6 +71,10 @@ function renderCfgGeral(container) {
                         </select>
                     </div>
                     <div>
+                        <label style="display:block; font-size:0.75rem; color:var(--text-secondary); margin-bottom:0.25rem; font-weight:500;">CNPJ da Filial (Destinatário SEFAZ) *</label>
+                        <input type="text" id="cfgCnpjFilial" class="form-input" style="width:100%; font-family:monospace;" placeholder="27.840.027/0001-49" value="${g.cnpjFilial || '27.840.027/0001-49'}">
+                    </div>
+                    <div>
                         <label style="display:block; font-size:0.75rem; color:var(--text-secondary); margin-bottom:0.25rem; font-weight:500;">Área Total (m²)</label>
                         <input type="number" id="cfgArea" class="form-input" style="width:100%;" value="${g.area || 5000}">
                     </div>
@@ -105,6 +109,7 @@ window.salvarCfgGeral = function () {
         nomeArmazem: document.getElementById('cfgNomeArmazem').value,
         codigoCD: document.getElementById('cfgCodigoCD').value,
         fuso: document.getElementById('cfgFuso').value,
+        cnpjFilial: document.getElementById('cfgCnpjFilial')?.value?.trim() || '',
         area: Number(document.getElementById('cfgArea').value),
         contagemCega: document.getElementById('cfgContagemCega').checked,
         gerarLPN: document.getElementById('cfgGerarLPN').checked,
