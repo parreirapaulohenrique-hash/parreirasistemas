@@ -599,7 +599,7 @@ function setupForms() {
 }
 
 function formatModuleName(code) {
-    const names = { 'dispatch': 'Despacho', 'erp': 'ERP', 'wms': 'WMS', 'sales-force': 'Vendas', 'master': 'Master', 'erp-consultoria': 'Consultoria', 'wms-coletor': 'WMS Coletor' };
+    const names = { 'dispatch': 'Despacho Logístico', 'erp': 'ERP', 'wms': 'WMS', 'sales-force': 'Vendas', 'master': 'Master', 'erp-consultoria': 'Consultoria', 'wms-coletor': 'WMS Coletor' };
     return names[code] || code.toUpperCase();
 }
 
@@ -1104,7 +1104,7 @@ window.renderAmbientes = function renderAmbientes() {
     const HML  = 'https://parreirasistemas-git-staging-paulo-h-parreiras-projects.vercel.app';
 
     const MODULE_CONFIG = {
-        'dispatch':        { label: 'B\u00FAassola Log',    icon: 'local_shipping',       color: '#3b82f6', prodUrl: (s) => `${PROD}/${s}`,                   hmlUrl: (s) => `${HML}/${s}` },
+        'dispatch':        { label: 'Despacho Logístico', icon: 'local_shipping',       color: '#3b82f6', prodUrl: (s) => `${PROD}/${s}`,                   hmlUrl: (s) => `${HML}/${s}` },
         'master':          { label: 'Painel Admin',    icon: 'admin_panel_settings', color: '#8b5cf6', prodUrl: ()  => `${PROD}/platform/modules/master/`,hmlUrl: ()  => `${HML}/platform/modules/master/` },
         'erp':             { label: 'ERP',              icon: 'account_balance',      color: '#f59e0b', prodUrl: ()  => `${PROD}/erp`,                    hmlUrl: ()  => `${HML}/erp` },
         'wms':             { label: 'WMS',              icon: 'warehouse',            color: '#10b981', prodUrl: (s) => `${PROD}/wms/${s}`,                    hmlUrl: (s) => `${HML}/wms/${s}` },

@@ -680,7 +680,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // carregados da nuvem no início da página (Cloud.loadAll() só roda no login).
         window.checkAuth = () => {
             // v3.17.0 BRIDGE: Aceita sessão do Hub (login.html / ParreiraAuth)
-            // Se o usuário já está logado via Hub, não pede login de novo no Bússola Log
+            // Se o usuário já está logado via Hub, não pede login de novo no Despacho Logístico
             const _parreiraSessao = (() => {
                 try { return JSON.parse(sessionStorage.getItem('parreira_session') || 'null'); }
                 catch { return null; }
@@ -9406,7 +9406,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     @media print{button{display:none;}}
                 </style></head><body>
                 <div class="header">
-                    <div><h1>🧭 Bússola Log — Demonstrativo de Frete</h1><h2>Cliente: ${c.nome} · Cidade: ${c.cidade}</h2></div>
+                    <div><h1>🧭 Despacho Logístico — Demonstrativo de Frete</h1><h2>Cliente: ${c.nome} · Cidade: ${c.cidade}</h2></div>
                     <div style="text-align:right;color:#6b7280;font-size:11px;">
                         Gerado em: ${new Date().toLocaleDateString('pt-BR')}<br>
                         Período: ${rows.length>0?fmtD(rows[rows.length-1].date)+' a '+fmtD(rows[0].date):'-'}
@@ -9456,7 +9456,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <button onclick="window.print()" style="padding:8px 20px;background:#1e3a5f;color:#fff;border:none;border-radius:4px;cursor:pointer;">🖨️ Imprimir / Salvar PDF</button>
                 </div>
                 <div style="margin-top:24px;font-size:10px;color:#9ca3af;text-align:center;border-top:1px solid #e5e7eb;padding-top:8px;">
-                    Bússola Log — Gestão Logística Inteligente &bull; ${new Date().toLocaleString('pt-BR')}
+                    Despacho Logístico — Gestão Logística Inteligente &bull; ${new Date().toLocaleString('pt-BR')}
                 </div>
             </body></html>`);
             win.document.close();
