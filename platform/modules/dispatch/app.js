@@ -2658,8 +2658,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Ignore minimum if it's a complement
                 if (!isComplement && baseVal < rule.minimo) baseVal = rule.minimo;
 
-                // v3.11.66: taxa fixa por volume — multiplica pedagio pelo numero de volumes se flag ativa
-                const tollVal = (rule.pedagio || 0) * (rule.taxaFixaPorVolume ? volume : 1);
+                // v3.18.0: TDA (fixo por entrega) + Taxa por Volume (multiplicada) — campos independentes
+                // Compat legado: regras antigas usam pedagio + taxaFixaPorVolume
+                const _taxaTDA    = (rule.taxaTDA    != null) ? (rule.taxaTDA    || 0)
+                                  : (rule.taxaFixaPorVolume ? 0 : (rule.pedagio || 0));
+                const _taxaVolume = (rule.taxaVolume != null) ? (rule.taxaVolume || 0)
+                                  : (rule.taxaFixaPorVolume ? (rule.pedagio || 0) : 0);
+                const tollVal = _taxaTDA + (_taxaVolume * volume);
 
                 // 2. Weight Excess
                 let excessCost = 0;
@@ -3234,9 +3239,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             body.innerHTML = activeRules.map((r) => {
                 const originalIndex = rules.indexOf(r);
-                // Exibe taxa fixa com badge "× vol" se for por volume
-                const taxaFixaDisplay = r.pedagio > 0
-                    ? Utils.formatCurrency(r.pedagio) + (r.taxaFixaPorVolume ? ' <span title="Taxa por volume" style="font-size:0.65rem;background:rgba(var(--primary-rgb),0.15);color:var(--primary-color);border-radius:10px;padding:1px 5px;font-weight:700;vertical-align:middle;">×vol</span>' : '')
+                // v3.18.0: exibe TDA e Taxa/Vol separados — compat legado com pedagio+taxaFixaPorVolume
+                const _rTDA = (r.taxaTDA != null) ? r.taxaTDA
+                            : (r.taxaFixaPorVolume ? 0 : (r.pedagio || 0));
+                const _rVol = (r.taxaVolume != null) ? r.taxaVolume
+                            : (r.taxaFixaPorVolume ? (r.pedagio || 0) : 0);
+                const taxaFixaDisplay = (_rTDA > 0 || _rVol > 0)
+                    ? [
+                        _rTDA > 0 ? `<span title="Taxa TDA - Difícil Acesso" style="display:inline-flex;align-items:center;gap:2px;font-size:0.72rem;"><span style="color:#f59e0b;font-weight:700;">TDA</span> ${Utils.formatCurrency(_rTDA)}</span>` : '',
+                        _rVol > 0 ? `<span title="Taxa por Volume" style="display:inline-flex;align-items:center;gap:2px;font-size:0.72rem;"><span style="color:#6366f1;font-weight:700;">Vol</span> ${Utils.formatCurrency(_rVol)}/vol</span>` : ''
+                      ].filter(Boolean).join('<br>')
                     : '-';
                 return `
             <tr>
@@ -3938,15 +3950,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('ruleMin').value = r.minimo;
             document.getElementById('ruleWeightLimit').value = r.limitePeso;
             document.getElementById('ruleExcess').value = r.valorExcedente;
-            document.getElementById('ruleToll').value = r.pedagio || 0;
-            const chkVol = document.getElementById('ruleTaxaFixaPorVolume');
-            if (chkVol) {
-                chkVol.checked = r.taxaFixaPorVolume || false;
-                const hint = document.getElementById('taxaFixaVolHint');
-                const lbl = document.getElementById('taxaFixaVolLabel');
-                if (hint) hint.style.display = chkVol.checked ? 'block' : 'none';
-                if (lbl) lbl.style.background = chkVol.checked ? 'rgba(var(--primary-rgb),0.18)' : 'rgba(var(--primary-rgb),0.08)';
-            }
+            // v3.18.0: campos separados TDA e Taxa por Volume (compat legado pedagio+taxaFixaPorVolume)
+            const _eTDA = (r.taxaTDA != null) ? r.taxaTDA : (r.taxaFixaPorVolume ? 0 : (r.pedagio || 0));
+            const _eVol = (r.taxaVolume != null) ? r.taxaVolume : (r.taxaFixaPorVolume ? (r.pedagio || 0) : 0);
+            const elTDA = document.getElementById('ruleTaxaTDA');
+            const elVol = document.getElementById('ruleTaxaVolume');
+            if (elTDA) elTDA.value = _eTDA || '';
+            if (elVol) elVol.value = _eVol || '';
             document.getElementById('ruleRedispatch').value = r.redespacho || '';
             document.getElementById('ruleRedispatchPercent').value = r.percentualRedespacho || '';
             document.getElementById('ruleRedispatchMin').value = r.minimoRedespacho || '';
@@ -3989,13 +3999,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Limpa o schedule builder
             window._loadScheduleFromData([]);
 
-            // Reset flag taxa fixa por volume
-            const chkVol = document.getElementById('ruleTaxaFixaPorVolume');
-            if (chkVol) { chkVol.checked = false; }
-            const hint = document.getElementById('taxaFixaVolHint');
-            if (hint) hint.style.display = 'none';
-            const lbl = document.getElementById('taxaFixaVolLabel');
-            if (lbl) lbl.style.background = 'rgba(var(--primary-rgb),0.08)';
+            // v3.18.0: limpa campos TDA e Taxa por Volume
+            const _rTDAel = document.getElementById('ruleTaxaTDA');
+            const _rVOLel = document.getElementById('ruleTaxaVolume');
+            if (_rTDAel) _rTDAel.value = '';
+            if (_rVOLel) _rVOLel.value = '';
 
             const submitBtn = document.getElementById('btnSubmitRule');
             submitBtn.innerHTML = 'SALVAR TABELA';
@@ -4038,18 +4046,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             );
         };
 
-        // --- Toggle hint para taxa fixa por volume ---
-        const chkVolToggle = document.getElementById('ruleTaxaFixaPorVolume');
-        if (chkVolToggle) {
-            chkVolToggle.addEventListener('change', () => {
-                const hint = document.getElementById('taxaFixaVolHint');
-                const lbl = document.getElementById('taxaFixaVolLabel');
-                if (hint) hint.style.display = chkVolToggle.checked ? 'block' : 'none';
-                if (lbl) lbl.style.background = chkVolToggle.checked
-                    ? 'rgba(var(--primary-rgb),0.18)'
-                    : 'rgba(var(--primary-rgb),0.08)';
-            });
-        }
+        // v3.18.0: toggle handler removido (campos TDA e Vol são independentes)
 
         const formNewRule = document.getElementById('formNewRule');
         if (formNewRule) {
@@ -4095,8 +4092,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     minimo: parseFloat(document.getElementById('ruleMin').value),
                     limitePeso: parseFloat(document.getElementById('ruleWeightLimit').value),
                     valorExcedente: parseFloat(document.getElementById('ruleExcess').value),
-                    pedagio: parseFloat(document.getElementById('ruleToll').value) || 0,
-                    taxaFixaPorVolume: document.getElementById('ruleTaxaFixaPorVolume')?.checked || false,
+                    taxaTDA: parseFloat(document.getElementById('ruleTaxaTDA')?.value) || 0,
+                    taxaVolume: parseFloat(document.getElementById('ruleTaxaVolume')?.value) || 0,
                     redespacho: window.normalizeText(document.getElementById('ruleRedispatch').value),
                     percentualRedespacho: parseFloat(document.getElementById('ruleRedispatchPercent').value) || 0,
                     minimoRedespacho: parseFloat(document.getElementById('ruleRedispatchMin').value) || 0,
