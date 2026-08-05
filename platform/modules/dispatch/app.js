@@ -680,7 +680,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // carregados da nuvem no início da página (Cloud.loadAll() só roda no login).
         window.checkAuth = () => {
             // v3.17.0 BRIDGE: Aceita sessão do Hub (login.html / ParreiraAuth)
-            // Se o usuário já está logado via Hub, não pede login de novo no Bússola Log
+            // Se o usuário já está logado via Hub, não pede login de novo no Despacho Logístico
             const _parreiraSessao = (() => {
                 try { return JSON.parse(sessionStorage.getItem('parreira_session') || 'null'); }
                 catch { return null; }
@@ -4714,8 +4714,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     leadTime: 'width:50px;min-width:45px;text-align:center;',
                     total: 'width:75px;min-width:70px;text-align:right;',
                     client: 'width:180px;min-width:140px;max-width:220px;',
-                    city: 'min-width:75px;width:85px;',
-                    carrier: 'min-width:75px;width:85px;max-width:100px;',
+                    city: 'min-width:105px;width:115px;max-width:130px;',
+                    carrier: 'min-width:100px;width:110px;max-width:130px;',
+                    nfValue: 'width:85px;min-width:80px;text-align:right;',
+                    weight: 'width:62px;min-width:58px;text-align:right;',
+                    volume: 'width:45px;min-width:42px;text-align:center;',
                     createdTime: 'width:50px;min-width:45px;text-align:center;',
                     dispatchedTime: 'width:50px;min-width:45px;text-align:center;',
                     actions: 'width:120px;min-width:115px;text-align:center;',
@@ -4832,8 +4835,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         else if (col === 'leadTime') style += 'width: 50px; min-width: 45px; text-align: center;';
                         else if (col === 'total') style += 'width: 75px; min-width: 70px; text-align: right;';
                         else if (col === 'client') style += 'width: 180px; min-width: 140px; max-width: 220px;';
-                        else if (col === 'city') style += 'min-width: 75px; width: 85px;';
-                        else if (col === 'carrier') style += 'min-width: 75px; width: 85px; max-width: 100px;';
+                        else if (col === 'city') style += 'min-width: 105px; width: 115px; max-width: 130px;';
+                        else if (col === 'carrier') style += 'min-width: 100px; width: 110px; max-width: 130px;';
+                        else if (col === 'nfValue') style += 'width: 85px; min-width: 80px; text-align: right;';
+                        else if (col === 'weight') style += 'width: 62px; min-width: 58px; text-align: right;';
+                        else if (col === 'volume') style += 'width: 45px; min-width: 42px; text-align: center;';
                         else if (col === 'createdTime' || col === 'dispatchedTime') style += 'width: 50px; min-width: 45px; text-align: center;';
                         else if (col === 'actions') style += 'width: 120px; min-width: 115px; text-align: center;';
                         else if (col === 'deliveryConfirm') style += 'width: 90px; min-width: 84px; text-align: center;';
@@ -4970,12 +4976,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     if (col === 'invoice') style += 'width: 55px; min-width: 50px;';
                                     else if (col === 'leadTime') style += 'width: 50px; min-width: 45px; text-align: center;';
                                     else if (col === 'total') style += 'width: 75px; min-width: 70px;';
+                                    else if (col === 'nfValue') style += 'width: 85px; min-width: 80px; text-align: right;';
+                                    else if (col === 'weight') style += 'width: 62px; min-width: 58px; text-align: right;';
+                                    else if (col === 'volume') style += 'width: 45px; min-width: 42px; text-align: center;';
                                     else if (col === 'city') {
-                                        style += 'min-width: 75px; width: 85px; max-width: 90px;';
+                                        style += 'min-width: 105px; width: 115px; max-width: 130px;';
                                         displayVal = `<div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${val}</div>`;
                                     }
                                     else if (col === 'carrier') {
-                                        style += 'min-width: 75px; width: 85px; max-width: 100px;';
+                                        style += 'min-width: 100px; width: 110px; max-width: 130px;';
                                         displayVal = `<div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${val}</div>`;
                                     }
                                     else if (col === 'client') {
@@ -9397,7 +9406,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     @media print{button{display:none;}}
                 </style></head><body>
                 <div class="header">
-                    <div><h1>🧭 Bússola Log — Demonstrativo de Frete</h1><h2>Cliente: ${c.nome} · Cidade: ${c.cidade}</h2></div>
+                    <div><h1>🧭 Despacho Logístico — Demonstrativo de Frete</h1><h2>Cliente: ${c.nome} · Cidade: ${c.cidade}</h2></div>
                     <div style="text-align:right;color:#6b7280;font-size:11px;">
                         Gerado em: ${new Date().toLocaleDateString('pt-BR')}<br>
                         Período: ${rows.length>0?fmtD(rows[rows.length-1].date)+' a '+fmtD(rows[0].date):'-'}
@@ -9447,7 +9456,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <button onclick="window.print()" style="padding:8px 20px;background:#1e3a5f;color:#fff;border:none;border-radius:4px;cursor:pointer;">🖨️ Imprimir / Salvar PDF</button>
                 </div>
                 <div style="margin-top:24px;font-size:10px;color:#9ca3af;text-align:center;border-top:1px solid #e5e7eb;padding-top:8px;">
-                    Bússola Log — Gestão Logística Inteligente &bull; ${new Date().toLocaleString('pt-BR')}
+                    Despacho Logístico — Gestão Logística Inteligente &bull; ${new Date().toLocaleString('pt-BR')}
                 </div>
             </body></html>`);
             win.document.close();
