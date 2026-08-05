@@ -351,6 +351,8 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
+| **3.18.0** | 2026-08-05 | FEAT: Tabela de Frete — campo "Taxa Fixa + checkbox ×vol" separado em dois campos independentes e simultâneos: **Taxa TDA** (Difícil Acesso, fixa por entrega, `taxaTDA`) e **Taxa por Volume** (`taxaVolume`, R$/vol × qtd). Municípios como Curuá podem ter as duas taxas ao mesmo tempo. Compat retroativa com regras legadas (`pedagio` + `taxaFixaPorVolume`). |
+| **3.17.9** | 2026-07-29 | STYLE: Montagem de Carga — rebalanceamento de largura de colunas. Vlr NF (85px fixo), Peso (62px), Vol (45px) compactadas; Cidade (115px) e Transportadora (110px) ampliadas. |
 | **3.16.23** | 2026-07-23 | RENAME: Menu lateral do Dispatch — “Integração Acontec” renomeado para “Integração ERP”. Nome genérico para suportar múltiplos ERPs parceiros. |
 | **3.15.0** | 2026-07-07 | ARCH: Camada de integração ERP centralizada em `shared/integrations/`. `ErpAdapter` (contrato genérico), `ErpRegistry` (registro multi-tenant com config no Firestore, token em sessionStorage), adaptadores ERP-específicos em subpastas (`{erp-slug}/adapter.js`), `ErpUI` (interface compartilhada para Dispatch e WMS). Módulos consomem via `ErpIntegration.getActive()` sem acoplamento ao ERP específico. |
 | **3.14.31** | 2026-06-26 | FIX: Restringido o fallback automático da lista de clientes estáticos de data.js apenas para o tenant ltdistribuidora, corrigindo o bug onde a Central Peças e outros tenants carregavam a lista de clientes da LT. |
