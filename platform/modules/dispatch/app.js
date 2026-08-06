@@ -6988,12 +6988,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const depDate = nf.date ? new Date(nf.date).toLocaleDateString('pt-BR') : '-';
                     const clientName = nf.client || 'N/A';
                     const cityBairro = `${nf.city || ''}${nf.neighborhood ? ` / ${nf.neighborhood}` : ''}`;
+                    const sellerStr = nf.sellerName && nf.sellerName !== '-' ? nf.sellerName : '-';
+
+                    // v3.18.0: separa frete base de adicionais (taxas fixas/volume)
+                    const hasBreakdown = nf.baseCalculada != null;
+                    const freteBase  = hasBreakdown
+                        ? Utils.formatCurrency((nf.baseCalculada || 0) + (nf.excessoCalculado || 0))
+                        : '-';
+                    const adicionais = hasBreakdown
+                        ? Utils.formatCurrency((nf.pedagio || 0) + (nf.taxaFixa || 0) + (nf.gris || 0))
+                        : '-';
+
                     rowsHtml += `
                         <tr>
                             <td style="border:1px solid #cbd5e1; padding:8px; font-weight:bold;">${nf.invoice || '#'+nf.id}</td>
                             <td style="border:1px solid #cbd5e1; padding:8px;">${clientName}</td>
                             <td style="border:1px solid #cbd5e1; padding:8px;">${cityBairro}</td>
+                            <td style="border:1px solid #cbd5e1; padding:8px; font-size:0.8em; color:#475569;">${sellerStr}</td>
                             <td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">${depDate}</td>
+                            <td style="border:1px solid #cbd5e1; padding:8px; text-align:right;">${freteBase}</td>
+                            <td style="border:1px solid #cbd5e1; padding:8px; text-align:right; color:#6366f1;">${adicionais}</td>
                             <td style="border:1px solid #cbd5e1; padding:8px; text-align:right; font-weight:600;">${Utils.formatCurrency(nfVal)}</td>
                         </tr>
                     `;
@@ -7074,8 +7088,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     <th style="width:100px;">NF</th>
                                     <th>Cliente</th>
                                     <th>Cidade / Bairro</th>
-                                    <th style="width:120px; text-align:center;">Data Desp.</th>
-                                    <th style="width:120px; text-align:right;">Valor Frete</th>
+                                    <th style="width:90px;">Vendedor</th>
+                                    <th style="width:100px; text-align:center;">Data Desp.</th>
+                                    <th style="width:110px; text-align:right;">Frete Base</th>
+                                    <th style="width:100px; text-align:right;">Adicionais</th>
+                                    <th style="width:110px; text-align:right;">Total</th>
                                 </tr>
                             </thead>
                             <tbody>
