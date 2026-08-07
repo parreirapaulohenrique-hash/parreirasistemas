@@ -9625,12 +9625,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             let fullName = d.client || 'Cliente';
             if (typeof clientObj !== 'undefined' && clientObj && clientObj.nome) fullName = clientObj.nome;
 
-            // v3.18.2: inclui redespacho na mensagem do cliente quando presente
+            // v3.18.2 FIX: preserva texto original. Redespacho acrescenta apenas uma linha extra.
             const redespC = d.redespCarrier || (d.redespacho && d.redespacho !== '-' ? d.redespacho : null);
-            const carrierLine = redespC
-                ? `🚚 Transportadora: ${d.carrier}\n📦 Entrega final via redespacho: ${redespC}`
-                : `🚚 Transportadora: ${d.carrier}`;
-            const msg = `Olá ${fullName}!\nInformamos que seu pedido NF: ${d.invoice} foi despachado.\n${carrierLine}\nPrevisão de Entrega: D+${rawLead} dias.\nLT Distribuidora agradece!\nQualquer dúvida, estamos à disposição!`;
+            const redespLine = redespC ? `\n📦 Entrega final via redespacho: ${redespC}` : '';
+            const msg = `Olá ${fullName}!\nInformamos que seu pedido NF: ${d.invoice} foi despachado via ${d.carrier}.${redespLine}\nPrevisão de Entrega: D+${rawLead} dias.\nLT Distribuidora agradece!\nQualquer dúvida, estamos à disposição!`;
             const url = `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`;
             window.open(url, '_blank');
         };
@@ -10525,19 +10523,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             const leadTime    = d.leadTime    || '';
             const date        = dispatchDate  || new Date().toLocaleDateString('pt-BR');
 
-            // v3.18.2: redespacho — exibe as duas transportadoras quando presente
+            // v3.18.2 FIX: preserva texto original. Redespacho acrescenta apenas uma linha extra.
             const _redespC = d.redespCarrier || (d.redespacho && d.redespacho !== '-' ? d.redespacho : null);
-            const _carrierBlock = _redespC
-                ? `🚚 Transportadora Principal: ${carrier}\n📦 Redespacho (entrega final): ${_redespC}`
-                : `🚚 Transportadora: ${carrier}`;
+            const _redespLine = _redespC ? `\n📦 Redespacho (entrega final): ${_redespC}` : '';
 
             switch (tenant) {
                 case 'altafix':
-                    return `Olá ${sellerName}!\nInformamos que o pedido do cliente ${client}, com nº de NF: ${invoice}, com ${volume} volumes, no valor de ${nfValue}, foi despachado em ${date}.\n${_carrierBlock}\nPrevisão de entrega: ${leadTime} dias.\nAlta Fix Distribuidora de Peças agradece!\nQualquer dúvida, estamos à disposição.`;
+                    return `Olá ${sellerName}!\nInformamos que o pedido do cliente ${client}, com nº de NF: ${invoice}, com ${volume} volumes, no valor de ${nfValue}, foi despachado em ${date} via ${carrier}.${_redespLine}\nPrevisão de entrega: ${leadTime} dias.\nAlta Fix Distribuidora de Peças agradece!\nQualquer dúvida, estamos à disposição.`;
 
                 case 'ltdistribuidora':
                 default:
-                    return `Olá ${sellerName}!\nInformamos que o pedido do cliente ${client}, com nº de NF: ${invoice}, com ${volume} volumes, no valor de ${nfValue}, foi despachado em ${date}.\n${_carrierBlock}\nPrevisão de entrega: ${leadTime} dias.\nLT Distribuidora agradece!\nQualquer dúvida, estamos à disposição.`;
+                    return `Olá ${sellerName}!\nInformamos que o pedido do cliente ${client}, com nº de NF: ${invoice}, com ${volume} volumes, no valor de ${nfValue}, foi despachado em ${date} via ${carrier}.${_redespLine}\nPrevisão de entrega: ${leadTime} dias.\nLT Distribuidora agradece!\nQualquer dúvida, estamos à disposição.`;
             }
         };
         // ──────────────────────────────────────────────────────────────────────────────────────
