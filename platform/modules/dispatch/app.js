@@ -704,7 +704,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Fluxo original: verifica sessão em localStorage
             const storedUser = Utils.getStorage('logged_user');
             if (storedUser && storedUser.login) {
-                // Sessão válida encontrada — restaura sem re-validar senha
+                // v3.18.3 FIX: Re-valida o role do usuário na lista app_users
+                // Garante que mudanças de nível feitas pelo admin (ex: operacional→supervisor)
+                // sejam aplicadas imediatamente, sem exigir re-login do usuário.
+                try {
+                    const appUsers = Utils.getStorage('app_users') || [];
+                    const norm = s => (s || '').toString().toLowerCase().trim();
+                    const freshUser = appUsers.find(u => norm(u.login) === norm(storedUser.login));
+                    if (freshUser && freshUser.role && freshUser.role !== storedUser.role) {
+                        console.log(`[checkAuth] ⬆️ Role atualizado para ${storedUser.login}: ${storedUser.role} → ${freshUser.role}`);
+                        storedUser.role = freshUser.role;
+                        Utils.saveRaw('logged_user', JSON.stringify(storedUser));
+                    }
+                } catch (_e) { console.warn('[checkAuth] Aviso: não foi possível re-validar role:', _e.message); }
+
                 currentUser = storedUser;
                 if (typeof AppState !== 'undefined') AppState.set('currentUser', storedUser);
                 if (loginOverlay) loginOverlay.style.display = 'none';
