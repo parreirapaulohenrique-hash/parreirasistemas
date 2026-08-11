@@ -8202,11 +8202,37 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 });
 
-                // ✅ FIX: Garante que o DOM do print-area seja totalmente pintado antes de abrir o diálogo
-                // de impressão. O window.open() do WhatsApp automático desvia o foco e causava o browser
-                // capturar o conteúdo ANTERIOR do print-area (bug: sempre imprimia o romaneio anterior).
+                // v3.18.5 FIX: Limpa pixels do Canvas (Chart.js BI) antes de imprimir.
+                // O Chromium captura o buffer de pixels do canvas mesmo com display:none no CSS.
+                // A única solução confiável é apagar os pixels via clearRect() + ocultar inline
+                // antes de window.print() e restaurar depois (evento afterprint).
                 requestAnimationFrame(() => {
-                    setTimeout(() => { window.print(); }, 300);
+                    setTimeout(() => {
+                        const allCanvases = document.querySelectorAll('canvas');
+                        // Salva estado e limpa cada canvas
+                        allCanvases.forEach(c => {
+                            try {
+                                const ctx = c.getContext('2d');
+                                if (ctx) ctx.clearRect(0, 0, c.width, c.height);
+                            } catch(_) {}
+                            c.dataset._printDisplay = c.style.display || '';
+                            c.style.setProperty('display', 'none', 'important');
+                            c.style.setProperty('visibility', 'hidden', 'important');
+                            c.style.setProperty('width', '0', 'important');
+                            c.style.setProperty('height', '0', 'important');
+                        });
+                        // Restaura canvas após impressão
+                        window.addEventListener('afterprint', () => {
+                            allCanvases.forEach(c => {
+                                c.style.display = c.dataset._printDisplay || '';
+                                c.style.visibility = '';
+                                c.style.width = '';
+                                c.style.height = '';
+                                delete c.dataset._printDisplay;
+                            });
+                        }, { once: true });
+                        window.print();
+                    }, 300);
                 });
             } catch (err) {
                 console.error('Erro ao gerar romaneio:', err);

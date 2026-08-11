@@ -788,79 +788,95 @@ input[type=number] {
 /* Print Manifest Styles */
 @media print {
 
-    /* Hide everything by default */
-    body>* {
-        display: none !important;
-    }
-
-    /* Only show the print area */
-    body>#print-area {
-        display: block !important;
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        width: 100% !important;
-        height: 100% !important;
+    /* v3.18.5 FIX: html/body com fundo branco garante que TODAS as páginas
+       do romaneio (2, 3, ...) tenham fundo branco.
+       O erro anterior usava position:absolute + height:100% no #print-area,
+       o que cobria apenas a PRIMEIRA página de impressão. */
+    html, body {
         background: white !important;
+        background-color: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
         color: black !important;
-        z-index: 9999;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
 
-    /* Ensure print area children are visible */
-    #print-area * {
-        display: block;
-        /* Defesa para elementos que possam estar hidden */
+    /* Oculta TUDO exceto a área de impressão */
+    body > * {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
+    /* Exibe somente o #print-area — position:static + height:auto para
+       funcionar corretamente em MÚLTIPLAS PÁGINAS */
+    body > #print-area {
+        display: block !important;
         visibility: visible !important;
+        position: static !important;
+        width: 100% !important;
+        height: auto !important;
+        background: white !important;
+        background-color: white !important;
+        color: black !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
 
-    /* Restore specific layouts inside print area */
+    /* Filhos do #print-area visíveis */
+    #print-area,
+    #print-area * {
+        visibility: visible !important;
+        color: black !important;
+        background-color: white;
+    }
+
+    /* Layouts internos */
     .manifest-page {
-        display: flex !important;
-        /* Restore flex for layout */
-        flex-direction: column;
-        height: 48vh;
-        /* Height for 2 items per page approx */
-        padding: 20px;
-        box-sizing: border-box;
-        border-bottom: 1px dashed #000;
+        display: block !important;
+        width: 100% !important;
+        padding: 20px !important;
+        box-sizing: border-box !important;
         background: white !important;
+        background-color: white !important;
         color: black !important;
     }
 
     .manifest-header {
         display: grid !important;
-        /* Restore grid */
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr 1fr !important;
     }
 
     .manifest-table {
         display: table !important;
-        /* Restore table */
     }
 
     .signature-row {
         display: grid !important;
-        /* Restore grid */
     }
 
-    /* Hide background graphics to save ink and ensure clean look */
-    * {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-
-    /* v3.18.4 FIX: Canvas elements (Chart.js BI) retêm pixels renderizados pelo JS e
-       aparecem como blocos pretos durante a impressão mesmo com o pai em display:none.
-       Bug conhecido do Chromium — o único fix confiável é ocultar canvas explicitamente. */
+    /* v3.18.5 FIX CANVAS: Canvas Chart.js retêm pixels no buffer mesmo com
+       o pai oculto (bug Chromium). Ocultar via CSS E via JS antes do print. */
     canvas {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+    }
+
+    /* Modais e overlays fixos */
+    [style*="position:fixed"],
+    [style*="position: fixed"],
+    #modalBiLogistica {
         display: none !important;
         visibility: hidden !important;
     }
 
-    /* Garante que modais/overlays com position:fixed também não apareçam no print */
-    [style*="position:fixed"],
-    [style*="position: fixed"] {
-        display: none !important;
+    /* Força exatidão de cores */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
 }
 
