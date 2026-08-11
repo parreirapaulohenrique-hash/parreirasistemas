@@ -848,6 +848,20 @@ input[type=number] {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
     }
+
+    /* v3.18.4 FIX: Canvas elements (Chart.js BI) retêm pixels renderizados pelo JS e
+       aparecem como blocos pretos durante a impressão mesmo com o pai em display:none.
+       Bug conhecido do Chromium — o único fix confiável é ocultar canvas explicitamente. */
+    canvas {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
+    /* Garante que modais/overlays com position:fixed também não apareçam no print */
+    [style*="position:fixed"],
+    [style*="position: fixed"] {
+        display: none !important;
+    }
 }
 
 .manifest-page:nth-child(even) {
