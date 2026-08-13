@@ -4947,7 +4947,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                                     <span class="material-icons-round" style="font-size: 1.1rem; color: #ffffff;">replay</span>
                                                 </button>
                                                 ${d.sellerPhone ? `
-                                                <button class="btn btn-secondary whatsapp-seller-btn" onclick="window.sendWhatsAppVendedor(${d.id}); this.classList.add('sent')" title="Avisar Vendedor" style="background: rgba(37, 211, 102, 0.18); color: #25D366; border: 1.5px solid rgba(37, 211, 102, 0.65); padding: 0.3rem; min-width: auto; border-radius: 4px;">
+                                                <button class="btn btn-secondary whatsapp-seller-btn ${d.waVendedorSent ? 'sent' : ''}" onclick="window.sendWhatsAppVendedor(${d.id}); this.classList.add('sent')" title="Avisar Vendedor${d.waVendedorSent ? ' ✓ Já enviado' : ''}" style="${d.waVendedorSent ? '' : 'background: rgba(37, 211, 102, 0.18); color: #25D366; border: 1.5px solid rgba(37, 211, 102, 0.65);'} padding: 0.3rem; min-width: auto; border-radius: 4px;">
                                                     <span class="material-icons-round" style="font-size: 1.1rem;">support_agent</span>
                                                 </button>` : ''}
                                                 ` : ''}
@@ -10599,6 +10599,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const url = `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`;
             window.open(url, '_blank');
+
+            // v3.18.6 FIX: Persiste o estado de envio para sobreviver ao reload da página.
+            // Salva waVendedorSent:true no registro do despacho em localStorage e Firestore.
+            try {
+                const history = Utils.getStorage('dispatches') || [];
+                const idx = history.findIndex(i => Number(i.id) === numId);
+                if (idx !== -1) {
+                    history[idx].waVendedorSent = true;
+                    Utils.saveRaw('dispatches', JSON.stringify(history));
+                }
+                // Atualiza cache em memória
+                if (window._dispatchesFullCache) {
+                    const ci = window._dispatchesFullCache.findIndex(i => Number(i.id) === numId);
+                    if (ci !== -1) window._dispatchesFullCache[ci].waVendedorSent = true;
+                }
+                // Sync Firestore (best-effort, não bloqueia)
+                if (Utils.Cloud && Utils.Cloud.hasTenant && Utils.Cloud.hasTenant() && window.db) {
+                    window.db.collection('tenants').doc(Utils.Cloud.tenantId)
+                        .collection('dispatches_db').doc(String(numId))
+                        .update({ waVendedorSent: true })
+                        .catch(e => console.warn('[sendWhatsAppVendedor] Firestore update erro:', e));
+                }
+            } catch(e) { console.warn('[sendWhatsAppVendedor] Erro ao salvar estado sent:', e); }
         };
 
         // Hook para popular seletor no carregamento da seção
