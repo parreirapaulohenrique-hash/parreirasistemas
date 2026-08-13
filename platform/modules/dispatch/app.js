@@ -1,4 +1,4 @@
-﻿// v3.11.71 FIX: Registra _doDispatchLogin NO TOPO DO ARQUIVO, fora do DOMContentLoaded.
+// v3.11.71 FIX: Registra _doDispatchLogin NO TOPO DO ARQUIVO, fora do DOMContentLoaded.
 // O app.js tem 483KB. O browser exibe o HTML (com o botão visível) ANTES de terminar
 // de baixar+executar o app.js. Se o _doDispatchLogin só fosse definido dentro do
 // DOMContentLoaded, o usuário que clica cedo receberia o alert 'Sistema ainda carregando'.
@@ -8035,20 +8035,33 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div style="font-size: 0.8rem;">Emissão: ${new Date().toLocaleString()} | Via ${i + 1}</div>
             </div>
 
-            <table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 9px; color: #000; margin-bottom: 20px; font-weight: bold;">
+            <table style="width: 100%; border-collapse: collapse; table-layout: fixed; font-family: Arial, sans-serif; font-size: 9px; color: #000; margin-bottom: 20px; font-weight: bold;">
+                <colgroup>
+                    <col style="width: 6%;" />   <!-- N&#xBA; NF -->
+                    <col style="width: 17%;" />  <!-- CLIENTE -->
+                    <col style="width: 11%;" />  <!-- TELEFONE -->
+                    <col style="width: 17%;" />  <!-- CIDADE -->
+                    <col style="width: 4%;" />   <!-- RED. -->
+                    <col style="width: 10%;" />  <!-- TRANSP. REDESP. -->
+                    <col style="width: 6%;" />   <!-- COMPL. -->
+                    <col style="width: 6%;" />   <!-- PESO -->
+                    <col style="width: 7%;" />   <!-- QTD VOL. -->
+                    <col style="width: 8%;" />   <!-- VALOR NF -->
+                    <col style="width: 8%;" />   <!-- FRETE -->
+                </colgroup>
                 <thead>
                     <tr style="background: #f0f0f0;">
-                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: center; white-space: nowrap;">N&#xBA; NF</th>
-                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: left;">CLIENTE</th>
-                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: left; white-space: nowrap;">TELEFONE</th>
-                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: left;">CIDADE</th>
-                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: center; white-space: nowrap;">RED.</th>
-                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: left;">TRANSP. REDESP.</th>
-                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: center; white-space: nowrap;">COMPL.</th>
-                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: center; white-space: nowrap;">PESO</th>
-                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: center; white-space: nowrap;">QTD VOL.</th>
-                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: right; white-space: nowrap;">VALOR NF</th>
-                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: right; white-space: nowrap;">FRETE</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: center; overflow: hidden;">N&#xBA; NF</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: left; overflow: hidden;">CLIENTE</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: left; overflow: hidden;">TELEFONE</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: left; overflow: hidden;">CIDADE</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: center; overflow: hidden;">RED.</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: left; overflow: hidden;">TRANSP. REDESP.</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: center; overflow: hidden;">COMPL.</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: center; overflow: hidden;">PESO</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: center; overflow: hidden;">QTD VOL.</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: right; overflow: hidden;">VALOR NF</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: right; overflow: hidden;">FRETE</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -8081,20 +8094,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const _hasRedespRow = (item.redespTotal || 0) > 0 && (item.redespCarrier || (item.redespacho && item.redespacho !== '-'));
                         const _redespRowCarrier = item.redespCarrier || (item.redespacho !== '-' ? item.redespacho : '');
                         const valorDisplay = parseFloat(_mainVal || item.total) > 0 ? parseFloat(_hasRedespRow ? _mainVal : item.total).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) : 'R$ 0,00';
-                        const td = 'border: 1px solid #000; padding: 2px; font-size: 9px; font-weight: bold;';
+                        const td = 'border: 1px solid #000; padding: 2px; font-size: 9px; font-weight: bold; overflow: hidden; word-break: break-word;';
                         return `
                         <tr>
-                            <td style="${td} text-align: center; white-space: nowrap;">${item.invoice}</td>
+                            <td style="${td} text-align: center;">${item.invoice}</td>
                             <td style="${td} text-align: left;">${item.client}</td>
-                            <td style="${td} text-align: left; white-space: nowrap;">${phone}</td>
+                            <td style="${td} text-align: left;">${phone}</td>
                             <td style="${td} text-align: left;">${item.city}</td>
                             <td style="${td} text-align: center;">${redespLabel}</td>
                             <td style="${td} text-align: left;">${redespNF}</td>
                             <td style="${td} text-align: center;">${isCompl}</td>
                             <td style="${td} text-align: center;">${pesoDisplay}</td>
                             <td style="${td} text-align: center;">${item.volume || 1}</td>
-                            <td style="${td} text-align: right; white-space: nowrap;">${nfValueDisplay}</td>
-                            <td style="${td} text-align: right; white-space: nowrap;">${valorDisplay}</td>
+                            <td style="${td} text-align: right;">${nfValueDisplay}</td>
+                            <td style="${td} text-align: right;">${valorDisplay}</td>
                         </tr>
                         ${_hasRedespRow ? `<tr><td colspan="9" style="${td} background:#fffbeb; color:#92400e; font-size:9px;">&#x2197; Redespacho: ${_redespRowCarrier} &mdash; ${(item.redespTotal||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td><td colspan="2" style="${td} background:#fffbeb;"></td></tr>` : ''}`;
                     }).join('')}
