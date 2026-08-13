@@ -4940,7 +4940,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         return `<td style="text-align: center; width: 120px; min-width: 115px;">
                                             <div style="display: flex; justify-content: center; align-items: center; gap: 4px;">
                                                 ${d.status === 'Despachado' ? `
-                                                <button class="btn btn-secondary whatsapp-btn" onclick="window.sendWhatsApp(${d.id}); this.classList.add('sent')" title="WhatsApp">
+                                                <button class="btn btn-secondary whatsapp-btn ${d.waClienteSent ? 'sent' : ''}" onclick="window.sendWhatsApp(${d.id}); this.classList.add('sent')" title="WhatsApp${d.waClienteSent ? ' ✓ Já enviado' : ''}">
                                                     <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
                                                 </button>
                                                 <button class="btn btn-secondary btn-return-dashboard" onclick="window.returnToDashboard(${d.id})" title="Voltar para Painel (Estornar)" style="padding: 0.3rem; min-width: auto; background: var(--primary-color); color: #ffffff; border: 1px solid var(--primary-color);">
@@ -8035,70 +8035,93 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div style="font-size: 0.8rem;">Emissão: ${new Date().toLocaleString()} | Via ${i + 1}</div>
             </div>
 
-            <div style="display: grid !important; grid-template-columns: 45px 1fr 75px 1fr 28px 70px 40px 38px 45px 55px 55px !important; width: 100%; margin-bottom: 20px; font-family: Arial, sans-serif; font-weight: bold; font-size: 9px; color: #000; border: 1px solid #000;">
-                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background: #f0f0f0;">Nº NF</div>
-                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background: #f0f0f0;">CLIENTE</div>
-                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background: #f0f0f0;">TELEFONE</div>
-                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background: #f0f0f0;">CIDADE</div>
-                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background: #f0f0f0;">RED.</div>
-                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background: #f0f0f0;">TRANSP. REDESP.</div>
-                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background: #f0f0f0;">COMPL.</div>
-                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background: #f0f0f0;">PESO</div>
-                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background: #f0f0f0;">QTD VOL.</div>
-                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background: #f0f0f0;">VALOR NF</div>
-                <div style="border-bottom: 1px solid #000; padding: 2px; background: #f0f0f0;">FRETE</div>
-                ${items.map(item => {
-                    // v3.11.33: sanitização on-the-fly — corrige TODOS os campos com 'undefined' string no localStorage
-                    const _s = (v, fb) => (!v || v === 'undefined' || v === 'null' || String(v).trim() === '') ? fb : String(v);
-                    item.client       = _s(item.client,       'NÃO INFORMADO');
-                    item.city         = _s(item.city,         'NÃO INFORMADO');
-                    item.carrier      = _s(item.carrier,      carrierName || 'NÃO INFORMADO');
-                    item.invoice      = _s(item.invoice,      'S/N');
-                    item.neighborhood = _s(item.neighborhood, '-');
-                    // v3.11.33: redespacho — sanitiza antes de checar hasRedesp (previne 'UNDEFINED' no campo)
-                    item.redespacho   = _s(item.redespacho,   '-');
-                    if (item.total  == null || isNaN(item.total))   item.total   = 0;
-                    if (item.nfValue == null || isNaN(item.nfValue)) item.nfValue = 0;
-                    if (item.weight == null || isNaN(item.weight))   item.weight  = 0;
-
-                    const cList = Utils.getStorage('clients') || [];
-                    const norm = (s) => s ? s.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase() : '';
-                    const clientObj = cList.find(c => norm(c.nome) === norm(item.client));
-                    let rawPhone = clientObj && clientObj.telefone ? clientObj.telefone.replace(/\D/g,'') : '';
-                    let phone = rawPhone || '';
-                    if (phone.length > 20) phone = phone.substring(0, 20);
-                    // redespacho já sanitizado acima — '-' significa sem redespacho
-                    const hasRedesp = item.redespacho !== '-';
-                    const redespLabel = hasRedesp ? 'SIM' : 'NÃO';
-                    const redespNF = hasRedesp ? item.redespacho.toUpperCase() : '';
-                    const isCompl = item.isComplement ? 'SIM' : 'NÃO';
-                    const pesoValue = parseFloat(item.weight) || 0;
-                    const pesoDisplay = pesoValue % 1 === 0 ? pesoValue.toString() : pesoValue.toFixed(2);
-                    const nfValueDisplay = parseFloat(item.nfValue) > 0 ? parseFloat(item.nfValue).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) : 'R$ 0,00';
-                    // v3.14.48: mostra mainTotal (sem redespacho) no romaneio da transportadora principal
-                    const _mainVal = item.mainTotal != null ? item.mainTotal : (item.total - (item.redespTotal || 0));
-                    const _hasRedespRow = (item.redespTotal || 0) > 0 && (item.redespCarrier || (item.redespacho && item.redespacho !== '-'));
-                    const _redespRowCarrier = item.redespCarrier || (item.redespacho !== '-' ? item.redespacho : '');
-                    const valorDisplay = parseFloat(_mainVal || item.total) > 0 ? parseFloat(_hasRedespRow ? _mainVal : item.total).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) : 'R$ 0,00';
-                    return `
-                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px;">${item.invoice}</div>
-                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; overflow: hidden; text-overflow: ellipsis;">${item.client}</div>
-                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px;">${phone}</div>
-                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; overflow: hidden; text-overflow: ellipsis;">${item.city}</div>
-                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px;">${redespLabel}</div>
-                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; overflow: hidden; text-overflow: ellipsis;">${redespNF}</div>
-                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px;">${isCompl}</div>
-                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px;">${pesoDisplay}</div>
-                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px;">${item.volume || 1}</div>
-                <div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px;">${nfValueDisplay}</div>
-                <div style="border-bottom: 1px solid #000; padding: 2px;">${valorDisplay}</div>
-                ${_hasRedespRow ? `<div style="grid-column: 1 / 10; border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background:#fffbeb; font-size:9px; color:#92400e;">↗ Redespacho: ${_redespRowCarrier} — ${(item.redespTotal||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div><div style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; background:#fffbeb;"></div>` : ''}`;
-                }).join('')}
-                <div style="grid-column: 1 / 8; border-right: 1px solid #000; padding: 2px; text-align: right;">TOTAIS</div>
-                <div style="border-right: 1px solid #000; padding: 2px;">${totalWeight % 1 === 0 ? totalWeight.toString() : totalWeight.toFixed(2)}</div>
-                <div style="border-right: 1px solid #000; padding: 2px;">${items.reduce((acc, curr) => acc + (parseInt(curr.volume) || 1), 0)}</div>
-                <div style="border-right: 1px solid #000; padding: 2px;">${items.reduce((acc, curr) => acc + (parseFloat(curr.nfValue) || 0), 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</div>
-                <div style="padding: 2px;">${totalFreight > 0 ? totalFreight.toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) : 'R$ 0,00'}</div>
+            <table style="width: 100%; border-collapse: collapse; table-layout: fixed; font-family: Arial, sans-serif; font-size: 9px; color: #000; margin-bottom: 20px; font-weight: bold;">
+                <colgroup>
+                    <col style="width: 6%;" />   <!-- N&#xBA; NF -->
+                    <col style="width: 17%;" />  <!-- CLIENTE -->
+                    <col style="width: 11%;" />  <!-- TELEFONE -->
+                    <col style="width: 17%;" />  <!-- CIDADE -->
+                    <col style="width: 4%;" />   <!-- RED. -->
+                    <col style="width: 10%;" />  <!-- TRANSP. REDESP. -->
+                    <col style="width: 6%;" />   <!-- COMPL. -->
+                    <col style="width: 6%;" />   <!-- PESO -->
+                    <col style="width: 7%;" />   <!-- QTD VOL. -->
+                    <col style="width: 8%;" />   <!-- VALOR NF -->
+                    <col style="width: 8%;" />   <!-- FRETE -->
+                </colgroup>
+                <thead>
+                    <tr style="background: #f0f0f0;">
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: center; overflow: hidden;">N&#xBA; NF</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: left; overflow: hidden;">CLIENTE</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: left; overflow: hidden;">TELEFONE</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: left; overflow: hidden;">CIDADE</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: center; overflow: hidden;">RED.</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: left; overflow: hidden;">TRANSP. REDESP.</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: center; overflow: hidden;">COMPL.</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: center; overflow: hidden;">PESO</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: center; overflow: hidden;">QTD VOL.</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: right; overflow: hidden;">VALOR NF</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: right; overflow: hidden;">FRETE</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${items.map(item => {
+                        // v3.11.33: sanitiza&#231;&#227;o on-the-fly
+                        const _s = (v, fb) => (!v || v === 'undefined' || v === 'null' || String(v).trim() === '') ? fb : String(v);
+                        item.client       = _s(item.client,       'N&#xC3;O INFORMADO');
+                        item.city         = _s(item.city,         'N&#xC3;O INFORMADO');
+                        item.carrier      = _s(item.carrier,      carrierName || 'N&#xC3;O INFORMADO');
+                        item.invoice      = _s(item.invoice,      'S/N');
+                        item.neighborhood = _s(item.neighborhood, '-');
+                        item.redespacho   = _s(item.redespacho,   '-');
+                        if (item.total  == null || isNaN(item.total))   item.total   = 0;
+                        if (item.nfValue == null || isNaN(item.nfValue)) item.nfValue = 0;
+                        if (item.weight == null || isNaN(item.weight))   item.weight  = 0;
+                        const cList = Utils.getStorage('clients') || [];
+                        const norm = (s) => s ? s.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase() : '';
+                        const clientObj = cList.find(c => norm(c.nome) === norm(item.client));
+                        let rawPhone = clientObj && clientObj.telefone ? clientObj.telefone.replace(/\D/g,'') : '';
+                        let phone = rawPhone || '';
+                        if (phone.length > 20) phone = phone.substring(0, 20);
+                        const hasRedesp = item.redespacho !== '-';
+                        const redespLabel = hasRedesp ? 'SIM' : 'N&#xC3;O';
+                        const redespNF = hasRedesp ? item.redespacho.toUpperCase() : '';
+                        const isCompl = item.isComplement ? 'SIM' : 'N&#xC3;O';
+                        const pesoValue = parseFloat(item.weight) || 0;
+                        const pesoDisplay = pesoValue % 1 === 0 ? pesoValue.toString() : pesoValue.toFixed(2);
+                        const nfValueDisplay = parseFloat(item.nfValue) > 0 ? parseFloat(item.nfValue).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) : 'R$ 0,00';
+                        const _mainVal = item.mainTotal != null ? item.mainTotal : (item.total - (item.redespTotal || 0));
+                        const _hasRedespRow = (item.redespTotal || 0) > 0 && (item.redespCarrier || (item.redespacho && item.redespacho !== '-'));
+                        const _redespRowCarrier = item.redespCarrier || (item.redespacho !== '-' ? item.redespacho : '');
+                        const valorDisplay = parseFloat(_mainVal || item.total) > 0 ? parseFloat(_hasRedespRow ? _mainVal : item.total).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) : 'R$ 0,00';
+                        const td = 'border: 1px solid #000; padding: 2px; font-size: 9px; font-weight: bold; overflow: hidden; word-break: break-word;';
+                        return `
+                        <tr>
+                            <td style="${td} text-align: center;">${item.invoice}</td>
+                            <td style="${td} text-align: left;">${item.client}</td>
+                            <td style="${td} text-align: left;">${phone}</td>
+                            <td style="${td} text-align: left;">${item.city}</td>
+                            <td style="${td} text-align: center;">${redespLabel}</td>
+                            <td style="${td} text-align: left;">${redespNF}</td>
+                            <td style="${td} text-align: center;">${isCompl}</td>
+                            <td style="${td} text-align: center;">${pesoDisplay}</td>
+                            <td style="${td} text-align: center;">${item.volume || 1}</td>
+                            <td style="${td} text-align: right;">${nfValueDisplay}</td>
+                            <td style="${td} text-align: right;">${valorDisplay}</td>
+                        </tr>
+                        ${_hasRedespRow ? `<tr><td colspan="9" style="${td} background:#fffbeb; color:#92400e; font-size:9px;">&#x2197; Redespacho: ${_redespRowCarrier} &mdash; ${(item.redespTotal||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td><td colspan="2" style="${td} background:#fffbeb;"></td></tr>` : ''}`;
+                    }).join('')}
+                </tbody>
+                <tfoot>
+                    <tr style="background: #f0f0f0; font-weight: bold;">
+                        <td colspan="7" style="border: 1px solid #000; padding: 2px; text-align: right; font-size: 9px;">TOTAIS</td>
+                        <td style="border: 1px solid #000; padding: 2px; text-align: center; font-size: 9px;">${totalWeight % 1 === 0 ? totalWeight.toString() : totalWeight.toFixed(2)}</td>
+                        <td style="border: 1px solid #000; padding: 2px; text-align: center; font-size: 9px;">${items.reduce((acc, curr) => acc + (parseInt(curr.volume) || 1), 0)}</td>
+                        <td style="border: 1px solid #000; padding: 2px; text-align: right; font-size: 9px; white-space: nowrap;">${items.reduce((acc, curr) => acc + (parseFloat(curr.nfValue) || 0), 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</td>
+                        <td style="border: 1px solid #000; padding: 2px; text-align: right; font-size: 9px; white-space: nowrap;">${totalFreight > 0 ? totalFreight.toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) : 'R$ 0,00'}</td>
+                    </tr>
+                </tfoot>
+            </table>
             </div>
 
             <div style="margin-top: 25px; display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 50px;">
@@ -9670,6 +9693,29 @@ document.addEventListener('DOMContentLoaded', async () => {
             const msg = `Olá ${fullName}!\nInformamos que seu pedido NF: ${d.invoice} foi despachado via ${d.carrier}.${redespLine}\nPrevisão de Entrega: D+${rawLead} dias.\nLT Distribuidora agradece!\nQualquer dúvida, estamos à disposição!`;
             const url = `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`;
             window.open(url, '_blank');
+
+            // v3.18.7 FIX: Persiste o estado de envio para sobreviver ao reload da página.
+            // Salva waClienteSent:true no registro do despacho em localStorage e Firestore.
+            try {
+                const history = Utils.getStorage('dispatches') || [];
+                const idx = history.findIndex(i => Number(i.id) === numId);
+                if (idx !== -1) {
+                    history[idx].waClienteSent = true;
+                    Utils.saveRaw('dispatches', JSON.stringify(history));
+                }
+                // Atualiza cache em memória
+                if (window._dispatchesFullCache) {
+                    const ci = window._dispatchesFullCache.findIndex(i => Number(i.id) === numId);
+                    if (ci !== -1) window._dispatchesFullCache[ci].waClienteSent = true;
+                }
+                // Sync Firestore (best-effort, não bloqueia)
+                if (Utils.Cloud && Utils.Cloud.hasTenant && Utils.Cloud.hasTenant() && window.db) {
+                    window.db.collection('tenants').doc(Utils.Cloud.tenantId)
+                        .collection('dispatches_db').doc(String(numId))
+                        .update({ waClienteSent: true })
+                        .catch(e => console.warn('[sendWhatsApp] Firestore update erro:', e));
+                }
+            } catch(e) { console.warn('[sendWhatsApp] Erro ao salvar estado sent:', e); }
         };
 
         if (window.renderDashboard) window.renderDashboard();
