@@ -1,4 +1,4 @@
-// v3.11.71 FIX: Registra _doDispatchLogin NO TOPO DO ARQUIVO, fora do DOMContentLoaded.
+﻿// v3.11.71 FIX: Registra _doDispatchLogin NO TOPO DO ARQUIVO, fora do DOMContentLoaded.
 // O app.js tem 483KB. O browser exibe o HTML (com o botão visível) ANTES de terminar
 // de baixar+executar o app.js. Se o _doDispatchLogin só fosse definido dentro do
 // DOMContentLoaded, o usuário que clica cedo receberia o alert 'Sistema ainda carregando'.
@@ -8109,7 +8109,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <td style="${td} text-align: right;">${nfValueDisplay}</td>
                             <td style="${td} text-align: right;">${valorDisplay}</td>
                         </tr>
-                        ${_hasRedespRow ? `<tr><td colspan="9" style="${td} background:#fffbeb; color:#92400e; font-size:9px;">&#x2197; Redespacho: ${_redespRowCarrier} &mdash; ${(item.redespTotal||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td><td colspan="2" style="${td} background:#fffbeb;"></td></tr>` : ''}`;
                     }).join('')}
                 </tbody>
                 <tfoot>
@@ -8176,47 +8175,72 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <h2 style="margin:0; text-decoration: underline;">ROMANEIO DE REDESPACHO</h2>
                 <div style="font-size: 0.8rem;">Emissão: ${new Date().toLocaleString()} | Via ${ri + 1}</div>
             </div>
-            <div style="display: grid !important; grid-template-columns: 45px 1fr 75px 1fr 1fr 40px 38px 45px 55px 55px !important; width: 100%; margin-bottom: 20px; font-family: Arial, sans-serif; font-weight: bold; font-size: 9px; color: #000; border: 1px solid #000;">
-                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">Nº NF</div>
-                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">CLIENTE</div>
-                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">TELEFONE</div>
-                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">CIDADE</div>
-                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">TRANSP. PRINCIPAL</div>
-                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">PESO</div>
-                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">VOL.</div>
-                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">VALOR NF</div>
-                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">FR. PRINC.</div>
-                <div style="border-bottom:1px solid #000;padding:2px;background:#f0f0f0;">FR. REDESP.</div>
-                ${rcItems.map(it => {
-                    const cList = Utils.getStorage('clients') || [];
-                    const norm = s => s ? s.toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase() : '';
-                    const cObj = cList.find(c => norm(c.nome) === norm(it.client));
-                    let ph = cObj && cObj.telefone ? cObj.telefone.replace(/\D/g,'') : '';
-                    if (ph.length > 20) ph = ph.substring(0,20);
-                    const nfFmt    = parseFloat(it.nfValue||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-                    const mainFmt  = parseFloat(it.mainTotal != null ? it.mainTotal : (it.total-(it.redespTotal||0))).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-                    const redFmt   = parseFloat(it.redespTotal||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-                    const pw = parseFloat(it.weight)||0;
-                    const pwDisp = pw%1===0?pw.toString():pw.toFixed(2);
-                    return `
-                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;">${it.invoice||'S/N'}</div>
-                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;overflow:hidden;text-overflow:ellipsis;">${it.client||'-'}</div>
-                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;">${ph}</div>
-                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;overflow:hidden;text-overflow:ellipsis;">${it.city||'-'}</div>
-                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;overflow:hidden;text-overflow:ellipsis;">${cleanName}</div>
-                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;">${pwDisp}</div>
-                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;">${it.volume||1}</div>
-                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;">${nfFmt}</div>
-                <div style="border-right:1px solid #000;border-bottom:1px solid #000;padding:2px;">${mainFmt}</div>
-                <div style="border-bottom:1px solid #000;padding:2px;font-weight:bold;">${redFmt}</div>`;
-                }).join('')}
-                <div style="grid-column:1/7;border-right:1px solid #000;padding:2px;text-align:right;">TOTAIS</div>
-                <div style="border-right:1px solid #000;padding:2px;">${rcWeightTotal%1===0?rcWeightTotal.toString():rcWeightTotal.toFixed(2)}</div>
-                <div style="border-right:1px solid #000;padding:2px;">${rcItems.reduce((a,c)=>a+(parseInt(c.volume)||1),0)}</div>
-                <div style="border-right:1px solid #000;padding:2px;">${rcItems.reduce((a,c)=>a+(parseFloat(c.nfValue)||0),0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
-                <div style="border-right:1px solid #000;padding:2px;">-</div>
-                <div style="padding:2px;font-weight:bold;">${rcFreightTotal>0?rcFreightTotal.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'R$ 0,00'}</div>
-            </div>
+            <table style="width: 100%; border-collapse: collapse; table-layout: fixed; font-family: Arial, sans-serif; font-weight: bold; font-size: 9px; color: #000; margin-bottom: 20px;">
+                <colgroup>
+                    <col style="width: 6%;" />
+                    <col style="width: 20%;" />
+                    <col style="width: 11%;" />
+                    <col style="width: 18%;" />
+                    <col style="width: 14%;" />
+                    <col style="width: 6%;" />
+                    <col style="width: 5%;" />
+                    <col style="width: 10%;" />
+                    <col style="width: 5%;" />
+                    <col style="width: 5%;" />
+                </colgroup>
+                <thead>
+                    <tr style="background: #f0f0f0;">
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: center; overflow: hidden;">N&#xBA; NF</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: left; overflow: hidden;">CLIENTE</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: left; overflow: hidden;">TELEFONE</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: left; overflow: hidden;">CIDADE</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: left; overflow: hidden;">TRANSP. PRINCIPAL</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: center; overflow: hidden;">PESO</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: center; overflow: hidden;">VOL.</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: right; overflow: hidden;">VALOR NF</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: right; overflow: hidden;">FR. PRINC.</th>
+                        <th style="border: 1px solid #000; padding: 3px 2px; text-align: right; overflow: hidden;">FR. REDESP.</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rcItems.map(it => {
+                        const cList2 = Utils.getStorage('clients') || [];
+                        const norm2 = s => s ? s.toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase() : '';
+                        const cObj2 = cList2.find(c => norm2(c.nome) === norm2(it.client));
+                        let ph2 = cObj2 && cObj2.telefone ? cObj2.telefone.replace(/[^0-9]/g,'') : '';
+                        if (ph2.length > 20) ph2 = ph2.substring(0,20);
+                        const nfFmt2   = parseFloat(it.nfValue||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+                        const mainFmt2 = parseFloat(it.mainTotal != null ? it.mainTotal : (it.total-(it.redespTotal||0))).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+                        const redFmt2  = parseFloat(it.redespTotal||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+                        const pw2 = parseFloat(it.weight)||0;
+                        const pwDisp2 = pw2%1===0?pw2.toString():pw2.toFixed(2);
+                        const rtd = 'border: 1px solid #000; padding: 2px; font-size: 9px; font-weight: bold; overflow: hidden; word-break: break-word;';
+                        return `
+                        <tr>
+                            <td style="${rtd} text-align: center;">${it.invoice||'S/N'}</td>
+                            <td style="${rtd} text-align: left;">${it.client||'-'}</td>
+                            <td style="${rtd} text-align: left;">${ph2}</td>
+                            <td style="${rtd} text-align: left;">${it.city||'-'}</td>
+                            <td style="${rtd} text-align: left;">${cleanName}</td>
+                            <td style="${rtd} text-align: center;">${pwDisp2}</td>
+                            <td style="${rtd} text-align: center;">${it.volume||1}</td>
+                            <td style="${rtd} text-align: right;">${nfFmt2}</td>
+                            <td style="${rtd} text-align: right;">${mainFmt2}</td>
+                            <td style="${rtd} text-align: right; font-weight: bold;">${redFmt2}</td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+                <tfoot>
+                    <tr style="background: #f0f0f0; font-weight: bold;">
+                        <td colspan="5" style="border: 1px solid #000; padding: 2px; text-align: right; font-size: 9px;">TOTAIS</td>
+                        <td style="border: 1px solid #000; padding: 2px; text-align: center; font-size: 9px;">${rcWeightTotal%1===0?rcWeightTotal.toString():rcWeightTotal.toFixed(2)}</td>
+                        <td style="border: 1px solid #000; padding: 2px; text-align: center; font-size: 9px;">${rcItems.reduce((a,c)=>a+(parseInt(c.volume)||1),0)}</td>
+                        <td style="border: 1px solid #000; padding: 2px; text-align: right; font-size: 9px;">${rcItems.reduce((a,c)=>a+(parseFloat(c.nfValue)||0),0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td>
+                        <td style="border: 1px solid #000; padding: 2px; text-align: right; font-size: 9px;">-</td>
+                        <td style="border: 1px solid #000; padding: 2px; text-align: right; font-size: 9px; font-weight: bold;">${rcFreightTotal>0?rcFreightTotal.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'R$ 0,00'}</td>
+                    </tr>
+                </tfoot>
+            </table>
             <div style="margin-top:25px;display:grid !important;grid-template-columns:1fr 1fr !important;gap:50px;">
                 <div style="border-top:1px solid #000;text-align:center;padding-top:5px;font-size:0.8rem;font-weight:bold;font-family:Arial,sans-serif;">Responsável Expedição</div>
                 <div style="border-top:1px solid #000;text-align:center;padding-top:5px;font-size:0.8rem;font-weight:bold;font-family:Arial,sans-serif;">Conferente / Redespacho</div>
