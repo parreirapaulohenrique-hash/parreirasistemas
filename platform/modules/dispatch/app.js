@@ -8108,7 +8108,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <td style="${td} text-align: center;">${item.volume || 1}</td>
                             <td style="${td} text-align: right;">${nfValueDisplay}</td>
                             <td style="${td} text-align: right;">${valorDisplay}</td>
-                        </tr>
+                        </tr>`;
                     }).join('')}
                 </tbody>
                 <tfoot>
