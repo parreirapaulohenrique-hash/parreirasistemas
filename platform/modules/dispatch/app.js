@@ -1,4 +1,4 @@
-﻿// v3.11.71 FIX: Registra _doDispatchLogin NO TOPO DO ARQUIVO, fora do DOMContentLoaded.
+// v3.11.71 FIX: Registra _doDispatchLogin NO TOPO DO ARQUIVO, fora do DOMContentLoaded.
 // O app.js tem 483KB. O browser exibe o HTML (com o botão visível) ANTES de terminar
 // de baixar+executar o app.js. Se o _doDispatchLogin só fosse definido dentro do
 // DOMContentLoaded, o usuário que clica cedo receberia o alert 'Sistema ainda carregando'.
@@ -6268,6 +6268,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const carrierVal = document.getElementById('analysisCarrierFilter')?.value || '';
             const monthVal   = document.getElementById('analysisMonthFilter')?.value   || '';
             const statusVal  = document.getElementById('analysisStatusFilter')?.value  || '';
+            // v3.19.2: filtro por número de NF — busca em todas as faturas pagas
+            const nfVal      = (document.getElementById('analysisNfFilter')?.value || '').trim();
 
             // Filtra o histórico
             let filtered = history.filter(h => {
@@ -6280,6 +6282,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 if (statusVal === 'conforme'     && Math.abs(h.difference || 0) >= 0.01) return false;
                 if (statusVal === 'nao-conforme' && Math.abs(h.difference || 0)  < 0.01) return false;
+                // v3.19.2: filtra faturas que contêm a NF buscada
+                if (nfVal) {
+                    const nfListStr = (h.nfList || []).map(n => String(n));
+                    if (!nfListStr.some(n => n.includes(nfVal))) return false;
+                }
                 return true;
             });
 
@@ -6404,6 +6411,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </tr>
                             ${subTable}`;
                     }).join('');
+
+                    // v3.19.2: se há filtro de NF, auto-expande as faturas e destaca a NF buscada
+                    if (nfVal) {
+                        filtered.forEach(h => {
+                            const row = document.getElementById(`nfs-expand-${h.id}`);
+                            const icon = document.getElementById(`expand-icon-${h.id}`);
+                            if (row) { row.style.display = ''; }
+                            if (icon) icon.style.transform = 'rotate(180deg)';
+                            // Destaca em amarelo a linha da NF buscada dentro da sub-tabela
+                            if (row) {
+                                row.querySelectorAll('tbody tr').forEach(tr => {
+                                    const nfCell = tr.querySelector('td:first-child');
+                                    if (nfCell && String(nfCell.textContent || '').includes(nfVal)) {
+                                        tr.style.background = 'rgba(251,191,36,0.18)';
+                                        tr.style.outline = '1px solid rgba(251,191,36,0.5)';
+                                    }
+                                });
+                            }
+                        });
+                    }
 
                     // v3.16.6: toggle expand por fatura
                     window.toggleAnalysisNFs = (hid) => {
