@@ -1,4 +1,4 @@
-// app.js Ã¢â‚¬â€ Painel Admin | Parreira Sistemas
+﻿// app.js Ã¢â‚¬â€ Painel Admin | Parreira Sistemas
 // (usa window.mockTenants definido em data.js)
 const mockTenants = window.mockTenants || [];
 
@@ -599,7 +599,7 @@ function setupForms() {
 }
 
 function formatModuleName(code) {
-    const names = { 'dispatch': 'Despacho Logístico', 'erp': 'ERP', 'wms': 'WMS', 'sales-force': 'Vendas', 'master': 'Master', 'erp-consultoria': 'Consultoria', 'wms-coletor': 'WMS Coletor' };
+    const names = { 'dispatch': 'Despacho Logístico', 'erp': 'ERP', 'wms': 'WMS', 'sales-force': 'Vendas', 'master': 'Master', 'erp-consultoria': 'Bússola Gestão', 'wms-coletor': 'WMS Coletor' };
     return names[code] || code.toUpperCase();
 }
 
@@ -674,7 +674,7 @@ window.abrirWmsConfig = async function (tenantId) {
     if (!tenant) { alert('Tenant nÃ£o encontrado.'); return; }
 
     // MÃ³dulos habilitados com nome amigÃ¡vel
-    const modNames = { wms:'WMS', dispatch:'Despacho', erp:'ERP', 'sales-force':'Vendas', master:'Master', 'erp-consultoria': 'Consultoria', 'wms-coletor': 'WMS Coletor' };
+    const modNames = { wms:'WMS', dispatch:'Despacho', erp:'ERP', 'sales-force':'Vendas', master:'Master', 'erp-consultoria': 'Bússola Gestão', 'wms-coletor': 'WMS Coletor' };
     const enabledMods = (tenant.modules || []).map(m => modNames[m] || m);
 
     // Carrega configs existentes do Firestore
@@ -1110,7 +1110,7 @@ window.renderAmbientes = function renderAmbientes() {
         'wms':             { label: 'WMS',              icon: 'warehouse',            color: '#10b981', prodUrl: (s) => `${PROD}/wms/${s}`,                    hmlUrl: (s) => `${HML}/wms/${s}` },
         'wms-coletor':     { label: 'WMS Coletor',     icon: 'phone_android',        color: '#06b6d4', prodUrl: ()  => `${PROD}/apk`,                          hmlUrl: ()  => `${HML}/apk` },
         'sales-force':     { label: 'For\u00E7a de Vendas', icon: 'storefront',       color: '#ec4899', prodUrl: ()  => `${PROD}/sales`,                  hmlUrl: ()  => `${HML}/sales` },
-        'erp-consultoria': { label: 'Consultoria',     icon: 'savings',              color: '#14b8a6', prodUrl: ()  => PROD + '/erp-consultoria',             hmlUrl: ()  => HML + '/erp-consultoria_hml' },
+        'erp-consultoria': { label: 'Bússola Gestão', icon: 'savings',              color: '#14b8a6', prodUrl: ()  => PROD + '/erp-consultoria',             hmlUrl: ()  => HML + '/erp-consultoria_hml' },
     };
 
     const allTenants  = getAllTenants();
