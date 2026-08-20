@@ -8714,129 +8714,253 @@ document.addEventListener('DOMContentLoaded', async () => {
     `;
         }
 
+        // v3.19.3: Relatório Performance VAN — filtros, 6 KPIs, tabela expandida, resumo por transportadora
         async function renderVanPerformanceReport(container) {
             const history = await Utils.Cloud.getFullDispatchesHistory();
-            // Filter only VAN dispatches that were negotiated (vanDiff != 0 or total != originalTotal)
-            // Or simply all VAN carriers to show overview
-            const vanItems = history.filter(d =>
+
+            const allVanItems = history.filter(d =>
                 (d.carrier && d.carrier.toUpperCase().includes('VAN')) &&
-                (d.status === 'Despachado' || d.status === 'concluido')
+                ['Despachado', 'concluido', 'Pago'].includes(d.status)
             );
 
-            if (vanItems.length === 0) {
-                container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-secondary);">Nenhum despacho via VAN encontrado no histórico.</div>`;
+            if (allVanItems.length === 0) {
+                container.innerHTML = `<div style="padding:2rem;text-align:center;color:var(--text-secondary);">Nenhum despacho via VAN encontrado no histórico.</div>`;
                 return;
             }
 
-            // Calculate Totals
-            let totalSavings = 0;
-            let totalExtra = 0;
-            let totalOriginal = 0;
-            let totalFinal = 0;
+            const vanCarriers = [...new Set(allVanItems.map(d => d.carrier))].sort();
+            window._vanAllItems = allVanItems;
 
-            vanItems.forEach(d => {
-                const orig = d.originalTotal || d.total; // Fallback if old data
-                const final = d.total;
-                const diff = (d.vanDiff !== undefined) ? d.vanDiff : (orig - final);
+            window.applyVanFilters = () => {
+                const fStart   = document.getElementById('vanDateStart')?.value  || '';
+                const fEnd     = document.getElementById('vanDateEnd')?.value    || '';
+                const fCarrier = document.getElementById('vanCarrierFilter')?.value || '';
+                const fResult  = document.getElementById('vanResultFilter')?.value  || '';
+                const fSearch  = (document.getElementById('vanSearch')?.value || '').toLowerCase();
 
-                totalOriginal += orig;
-                totalFinal += final;
-
-                if (diff > 0) totalSavings += diff;
-                else if (diff < 0) totalExtra += Math.abs(diff);
-            });
-
-            const netResult = totalSavings - totalExtra;
-            const netColor = netResult >= 0 ? 'var(--accent-success)' : 'var(--accent-danger)';
-
-            container.innerHTML = `
-        <div class="grid-3-col" style="margin-bottom: 2rem; gap: 1rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-            <div class="card" style="padding: 1.5rem; text-align: center;">
-                <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Economia Gerada</div>
-                <div style="font-size: 1.5rem; font-weight: 700; color: var(--accent-success); margin-top: 0.5rem;">${Utils.formatCurrency(totalSavings)}</div>
-            </div>
-            <div class="card" style="padding: 1.5rem; text-align: center;">
-                <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Custo Extra (Acima da Tabela)</div>
-                <div style="font-size: 1.5rem; font-weight: 700; color: var(--accent-danger); margin-top: 0.5rem;">${Utils.formatCurrency(totalExtra)}</div>
-            </div>
-            <div class="card" style="padding: 1.5rem; text-align: center; border: 1px solid ${netColor};">
-                <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Saldo Líquido</div>
-                <div style="font-size: 1.5rem; font-weight: 700; color: ${netColor}; margin-top: 0.5rem;">${Utils.formatCurrency(netResult)}</div>
-            </div>
-        </div>
-
-        <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-bottom: 1rem;" class="no-print">
-            <button class="btn btn-secondary" onclick="window.exportReportToExcel('vanPerformanceTable', 'Relatorio_VAN')" style="display: flex; align-items: center; gap: 0.5rem;">
-                <span class="material-icons-round" style="font-size: 1.2rem;">download</span>
-                Baixar Excel
-            </button>
-            <button class="btn btn-secondary" onclick="window.printReport(null, 'Relatório Performance VAN')" style="display: flex; align-items: center; gap: 0.5rem;">
-                <span class="material-icons-round" style="font-size: 1.2rem;">print</span>
-                Imprimir
-            </button>
-        </div>
-
-        <div class="card">
-            <div class="card-header">
-                <h3>Detalhamento de Despachos (VAN)</h3>
-            </div>
-            <div class="card-body" style="padding: 0; overflow-x: auto;">
-                <table class="dispatch-table" id="vanPerformanceTable">
-                    <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>NF</th>
-                            <th>Cliente</th>
-                            <th>Transportadora</th>
-                            <th style="text-align: right;">Valor Tabela</th>
-                            <th style="text-align: right;">Valor Negociado</th>
-                            <th style="text-align: right;">Resultado</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${vanItems.map(d => {
-                const orig = d.originalTotal || d.total;
-                const final = d.total;
-                const diff = (d.vanDiff !== undefined) ? d.vanDiff : (orig - final);
-
-                let resColor = 'var(--text-secondary)';
-                let resSignal = '';
-                if (diff > 0.01) { resColor = 'var(--accent-success)'; resSignal = '+'; }
-                else if (diff < -0.01) { resColor = 'var(--accent-danger)'; resSignal = ''; } // value is negative
-
-                return `
-                            <tr>
-                                <td>${new Date(d.date).toLocaleDateString()}</td>
-                                <td>${d.invoice}</td>
-                                <td>${d.client}</td>
-                                <td>${d.carrier}</td>
-                                <td style="text-align: right;">${Utils.formatCurrency(orig)}</td>
-                                <td style="text-align: right; font-weight: bold;">${Utils.formatCurrency(final)}</td>
-                                <td style="text-align: right; color: ${resColor}; font-weight: bold;">
-                                    ${resSignal}${Utils.formatCurrency(diff)}
-                                </td>
-                            </tr>
-                            `;
-            }).join('')}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    `;
-
-            window.markAsDispatched = (id) => {
-                const list = Utils.getStorage('dispatches');
-                const idx = list.findIndex(d => d.id === id);
-                if (idx !== -1) {
-                    if (confirm('Confirmar despacho desta mercadoria?')) {
-                        list[idx].status = 'Despachado';
-                        list[idx].dispatchedAt = new Date().toISOString();
-                        Utils.saveRaw('dispatches', JSON.stringify(list));
-                        showToast('✅ Mercadoria marcada como despachada!');
-                        renderAppHistory();
+                let items = (window._vanAllItems || []).filter(d => {
+                    const dt = new Date(d.date);
+                    if (fStart && dt < new Date(fStart + 'T00:00:00')) return false;
+                    if (fEnd   && dt > new Date(fEnd   + 'T23:59:59')) return false;
+                    if (fCarrier && d.carrier !== fCarrier) return false;
+                    if (fSearch) {
+                        const hay = `${d.invoice||''} ${d.client||''} ${d.city||''} ${d.carrier||''}`.toLowerCase();
+                        if (!hay.includes(fSearch)) return false;
                     }
+                    if (fResult) {
+                        const orig = d.originalTotal || d.total;
+                        const diff = (d.vanDiff !== undefined) ? d.vanDiff : (orig - d.total);
+                        if (fResult === 'economia' && diff <= 0.01) return false;
+                        if (fResult === 'extra'    && diff >= -0.01) return false;
+                        if (fResult === 'sem-dif'  && Math.abs(diff) > 0.01) return false;
+                    }
+                    return true;
+                });
+
+                items.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                let totSavings = 0, totExtra = 0, totOriginal = 0, totFinal = 0, totNfValue = 0;
+                items.forEach(d => {
+                    const orig = d.originalTotal || d.total;
+                    const diff = (d.vanDiff !== undefined) ? d.vanDiff : (orig - d.total);
+                    totOriginal += orig; totFinal += d.total; totNfValue += d.nfValue || 0;
+                    if (diff > 0) totSavings += diff;
+                    else if (diff < 0) totExtra += Math.abs(diff);
+                });
+
+                const netResult = totSavings - totExtra;
+                const pctEco    = totOriginal > 0 ? ((totSavings / totOriginal) * 100).toFixed(1) : '0.0';
+                const netColor  = netResult >= 0 ? 'var(--accent-success)' : 'var(--accent-danger)';
+
+                const kpiEl = document.getElementById('vanKpiCards');
+                if (kpiEl) kpiEl.innerHTML = `
+                    <div class="card" style="padding:1.2rem;text-align:center;">
+                        <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;">Total de NFs</div>
+                        <div style="font-size:1.6rem;font-weight:700;color:var(--accent-primary);margin-top:0.3rem;">${items.length}</div>
+                    </div>
+                    <div class="card" style="padding:1.2rem;text-align:center;">
+                        <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;">Economia Gerada</div>
+                        <div style="font-size:1.4rem;font-weight:700;color:var(--accent-success);margin-top:0.3rem;">${Utils.formatCurrency(totSavings)}</div>
+                        <div style="font-size:0.72rem;color:var(--accent-success);margin-top:2px;">${pctEco}% sobre tabela</div>
+                    </div>
+                    <div class="card" style="padding:1.2rem;text-align:center;">
+                        <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;">Custo Extra</div>
+                        <div style="font-size:1.4rem;font-weight:700;color:var(--accent-danger);margin-top:0.3rem;">${Utils.formatCurrency(totExtra)}</div>
+                    </div>
+                    <div class="card" style="padding:1.2rem;text-align:center;border:1px solid ${netColor};">
+                        <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;">Saldo Líquido</div>
+                        <div style="font-size:1.4rem;font-weight:700;color:${netColor};margin-top:0.3rem;">${Utils.formatCurrency(netResult)}</div>
+                    </div>
+                    <div class="card" style="padding:1.2rem;text-align:center;">
+                        <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;">Total Frete Negociado</div>
+                        <div style="font-size:1.4rem;font-weight:700;color:var(--text-primary);margin-top:0.3rem;">${Utils.formatCurrency(totFinal)}</div>
+                    </div>
+                    <div class="card" style="padding:1.2rem;text-align:center;">
+                        <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;">Total Valor NF</div>
+                        <div style="font-size:1.4rem;font-weight:700;color:var(--text-primary);margin-top:0.3rem;">${Utils.formatCurrency(totNfValue)}</div>
+                    </div>`;
+
+                const tbodyEl = document.getElementById('vanTableBody');
+                const tfootEl = document.getElementById('vanTableFoot');
+                if (!tbodyEl) return;
+
+                if (items.length === 0) {
+                    tbodyEl.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-secondary);">Nenhum resultado com os filtros selecionados.</td></tr>`;
+                    if (tfootEl) tfootEl.innerHTML = '';
+                    return;
+                }
+
+                tbodyEl.innerHTML = items.map(d => {
+                    const orig = d.originalTotal || d.total;
+                    const diff = (d.vanDiff !== undefined) ? d.vanDiff : (orig - d.total);
+                    let resColor = 'var(--text-secondary)', resSign = '';
+                    if (diff > 0.01)  { resColor = 'var(--accent-success)'; resSign = '+'; }
+                    if (diff < -0.01) { resColor = 'var(--accent-danger)'; }
+                    const cityStr = [d.city, d.neighborhood].filter(Boolean).join(' / ') || '—';
+                    return `<tr>
+                        <td style="white-space:nowrap;">${new Date(d.date).toLocaleDateString('pt-BR')}</td>
+                        <td style="font-weight:600;">${d.invoice || '—'}</td>
+                        <td style="max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.client||''}">${d.client||'—'}</td>
+                        <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${cityStr}">${cityStr}</td>
+                        <td>${d.carrier||'—'}</td>
+                        <td style="text-align:right;">${d.nfValue ? Utils.formatCurrency(d.nfValue) : '—'}</td>
+                        <td style="text-align:right;">${Utils.formatCurrency(orig)}</td>
+                        <td style="text-align:right;font-weight:600;">${Utils.formatCurrency(d.total)}</td>
+                        <td style="text-align:right;font-weight:700;color:${resColor};">${resSign}${Utils.formatCurrency(diff)}</td>
+                    </tr>`;
+                }).join('');
+
+                if (tfootEl) tfootEl.innerHTML = `<tr style="background:rgba(99,102,241,0.08);font-weight:700;">
+                    <td colspan="5" style="padding:8px 10px;font-size:0.82rem;color:var(--text-secondary);">TOTAIS — ${items.length} NF${items.length !== 1 ? 's' : ''}</td>
+                    <td style="text-align:right;padding:8px 6px;">${Utils.formatCurrency(totNfValue)}</td>
+                    <td style="text-align:right;padding:8px 6px;">${Utils.formatCurrency(totOriginal)}</td>
+                    <td style="text-align:right;padding:8px 6px;">${Utils.formatCurrency(totFinal)}</td>
+                    <td style="text-align:right;padding:8px 6px;color:${netColor};">${netResult >= 0 ? '+' : ''}${Utils.formatCurrency(netResult)}</td>
+                </tr>`;
+
+                // Resumo por transportadora
+                const sumEl = document.getElementById('vanSummaryBody');
+                if (sumEl) {
+                    const byC = {};
+                    items.forEach(d => {
+                        const c = d.carrier || 'Sem Nome';
+                        if (!byC[c]) byC[c] = { nfs: 0, savings: 0, extra: 0, orig: 0, total: 0 };
+                        const orig = d.originalTotal || d.total;
+                        const diff = (d.vanDiff !== undefined) ? d.vanDiff : (orig - d.total);
+                        byC[c].nfs++; byC[c].orig += orig; byC[c].total += d.total;
+                        if (diff > 0) byC[c].savings += diff;
+                        else if (diff < 0) byC[c].extra += Math.abs(diff);
+                    });
+                    sumEl.innerHTML = Object.entries(byC)
+                        .sort((a, b) => (b[1].savings - b[1].extra) - (a[1].savings - a[1].extra))
+                        .map(([c, v]) => {
+                            const saldo = v.savings - v.extra;
+                            const sc = saldo >= 0 ? 'var(--accent-success)' : 'var(--accent-danger)';
+                            return `<tr>
+                                <td style="font-weight:600;">${c}</td>
+                                <td style="text-align:center;">${v.nfs}</td>
+                                <td style="text-align:right;">${Utils.formatCurrency(v.orig)}</td>
+                                <td style="text-align:right;">${Utils.formatCurrency(v.total)}</td>
+                                <td style="text-align:right;color:var(--accent-success);font-weight:600;">${v.savings > 0 ? '+' + Utils.formatCurrency(v.savings) : '—'}</td>
+                                <td style="text-align:right;color:var(--accent-danger);font-weight:600;">${v.extra > 0 ? '-' + Utils.formatCurrency(v.extra) : '—'}</td>
+                                <td style="text-align:right;font-weight:700;color:${sc};">${saldo >= 0 ? '+' : ''}${Utils.formatCurrency(saldo)}</td>
+                            </tr>`;
+                        }).join('');
                 }
             };
+
+            container.innerHTML = `
+                <div class="card no-print" style="margin-bottom:1.5rem;">
+                    <div class="card-body" style="padding:1.2rem;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1.5fr 1.5fr 2fr auto;gap:1rem;align-items:end;">
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label">📅 Data Início</label>
+                                <input type="date" id="vanDateStart" class="form-input" oninput="window.applyVanFilters()">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label">📅 Data Fim</label>
+                                <input type="date" id="vanDateEnd" class="form-input" oninput="window.applyVanFilters()">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label">🚐 Transportadora VAN</label>
+                                <select id="vanCarrierFilter" class="form-input" onchange="window.applyVanFilters()">
+                                    <option value="">Todas as VANs</option>
+                                    ${vanCarriers.map(c => `<option value="${c}">${c}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label">🎯 Resultado</label>
+                                <select id="vanResultFilter" class="form-input" onchange="window.applyVanFilters()">
+                                    <option value="">Todos</option>
+                                    <option value="economia">Somente Economia</option>
+                                    <option value="extra">Somente Custo Extra</option>
+                                    <option value="sem-dif">Sem Diferença</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label">🔍 Busca (NF, Cliente, Cidade)</label>
+                                <input type="text" id="vanSearch" class="form-input" placeholder="Digite para filtrar..." oninput="window.applyVanFilters()">
+                            </div>
+                            <div>
+                                <button class="btn btn-secondary" title="Limpar filtros" style="padding:0.6rem;"
+                                    onclick="['vanDateStart','vanDateEnd','vanSearch'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});['vanCarrierFilter','vanResultFilter'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});window.applyVanFilters();">
+                                    <span class="material-icons-round" style="font-size:1.1rem;">filter_alt_off</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="vanKpiCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:1.5rem;"></div>
+
+                <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-bottom:1rem;" class="no-print">
+                    <button class="btn btn-secondary" onclick="window.exportReportToExcel('vanPerformanceTable','Relatorio_VAN')" style="display:flex;align-items:center;gap:0.5rem;">
+                        <span class="material-icons-round" style="font-size:1.1rem;">download</span>Baixar Excel
+                    </button>
+                    <button class="btn btn-secondary" onclick="window.printReport(null,'Relatório Performance VAN')" style="display:flex;align-items:center;gap:0.5rem;">
+                        <span class="material-icons-round" style="font-size:1.1rem;">print</span>Imprimir
+                    </button>
+                </div>
+
+                <div class="card" style="margin-bottom:1.5rem;">
+                    <div class="card-header">
+                        <h3 style="margin:0;">Detalhamento de Despachos (VAN)</h3>
+                    </div>
+                    <div class="card-body" style="padding:0;overflow-x:auto;">
+                        <table class="dispatch-table" id="vanPerformanceTable">
+                            <thead><tr>
+                                <th>Data</th><th>NF</th><th>Cliente</th>
+                                <th>Cidade / Bairro</th><th>Transportadora</th>
+                                <th style="text-align:right;">Valor NF</th>
+                                <th style="text-align:right;">Valor Tabela</th>
+                                <th style="text-align:right;">Valor Negociado</th>
+                                <th style="text-align:right;">Resultado</th>
+                            </tr></thead>
+                            <tbody id="vanTableBody"></tbody>
+                            <tfoot id="vanTableFoot"></tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h3 style="margin:0;">Resumo por Transportadora VAN</h3></div>
+                    <div class="card-body" style="padding:0;overflow-x:auto;">
+                        <table class="dispatch-table">
+                            <thead><tr>
+                                <th>Transportadora</th>
+                                <th style="text-align:center;">NFs</th>
+                                <th style="text-align:right;">Total Tabela</th>
+                                <th style="text-align:right;">Total Negociado</th>
+                                <th style="text-align:right;">Economia</th>
+                                <th style="text-align:right;">Custo Extra</th>
+                                <th style="text-align:right;">Saldo</th>
+                            </tr></thead>
+                            <tbody id="vanSummaryBody"></tbody>
+                        </table>
+                    </div>
+                </div>`;
+
+            window.applyVanFilters();
         }
 
         // --- RELATÓRIO DE ENTREGAS (Motoboy/Motorista) ---
