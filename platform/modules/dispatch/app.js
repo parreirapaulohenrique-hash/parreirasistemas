@@ -5709,6 +5709,66 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.filterInvoiceByCarrier('');
         };
 
+        // v3.19.3 — ↻ Atualizar Valores: re-busca NFs do Firestore mantendo seleções, filtros e campos preenchidos
+        window.refreshInvoiceValues = async () => {
+            const btn = document.getElementById('btnRefreshInvoice');
+            const currentCarrier = document.getElementById('invoiceCarrierFilter')?.value || '';
+
+            if (!currentCarrier) {
+                showToast('⚠️ Selecione uma transportadora antes de atualizar.', 'warning');
+                return;
+            }
+
+            // 1. Salva IDs das NFs marcadas (a Map é resetada pelo filterInvoiceByCarrier)
+            const savedIds = new Set(window.invoiceSelectedNFs ? window.invoiceSelectedNFs.keys() : []);
+
+            // 2. Feedback visual no botão
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="material-icons-round" style="font-size:1.1rem;animation:spin 1s linear infinite;">sync</span> Atualizando...';
+            }
+
+            try {
+                // 3. Re-executa o filtro com a mesma transportadora
+                //    → busca getFullDispatchesHistory() novamente (dados frescos)
+                //    → recalcula _invoiceValue de cada NF
+                //    → rebuild completo do tbody
+                await window.filterInvoiceByCarrier(currentCarrier);
+
+                // 4. Restaura checkboxes marcados — com os NOVOS valores do data-value
+                //    (se o frete foi recalculado, o valor novo será usado no total)
+                let restored = 0;
+                document.querySelectorAll('.invoice-nf-checkbox').forEach(cb => {
+                    const id = String(cb.dataset.id);
+                    if (savedIds.has(id)) {
+                        cb.checked = true;
+                        const newVal = parseFloat(cb.dataset.value || 0) || 0;
+                        window.invoiceSelectedNFs.set(id, newVal);
+                        restored++;
+                    }
+                });
+
+                // 5. Reagrupa selecionadas no topo e recalcula total/diferença
+                window._sortInvoiceRows?.();
+                window.updateInvoiceComparison();
+
+                const msg = restored > 0
+                    ? `✅ Valores atualizados! ${restored} NF${restored !== 1 ? 's' : ''} restaurada${restored !== 1 ? 's' : ''}.`
+                    : '✅ Valores atualizados do Firestore!';
+                showToast(msg);
+
+            } catch (err) {
+                console.error('[refreshInvoiceValues]', err);
+                showToast('❌ Erro ao atualizar valores. Tente novamente.', 'error');
+            } finally {
+                // 6. Restaura botão
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span class="material-icons-round" style="font-size:1.1rem;">sync</span> Atualizar Valores';
+                }
+            }
+        };
+
         // === v3.11.49: Validação de campos obrigatórios da Conferência ===
         const _invoiceFields = () => [
             {
