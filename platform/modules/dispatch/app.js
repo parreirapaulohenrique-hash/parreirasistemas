@@ -8732,6 +8732,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             window._vanAllItems = allVanItems;
 
             window.applyVanFilters = () => {
+                // Helper: garante número mesmo quando o campo está gravado como string
+                const _n = v => parseFloat(v) || 0;
+
                 const fStart   = document.getElementById('vanDateStart')?.value  || '';
                 const fEnd     = document.getElementById('vanDateEnd')?.value    || '';
                 const fCarrier = document.getElementById('vanCarrierFilter')?.value || '';
@@ -8748,8 +8751,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (!hay.includes(fSearch)) return false;
                     }
                     if (fResult) {
-                        const orig = d.originalTotal || d.total;
-                        const diff = (d.vanDiff !== undefined) ? d.vanDiff : (orig - d.total);
+                        const orig = _n(d.originalTotal) || _n(d.total);
+                        const diff = (d.vanDiff !== undefined) ? _n(d.vanDiff) : (orig - _n(d.total));
                         if (fResult === 'economia' && diff <= 0.01) return false;
                         if (fResult === 'extra'    && diff >= -0.01) return false;
                         if (fResult === 'sem-dif'  && Math.abs(diff) > 0.01) return false;
@@ -8759,11 +8762,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 items.sort((a, b) => new Date(b.date) - new Date(a.date));
 
+                // ── KPI Totals ──────────────────────────────────────────
                 let totSavings = 0, totExtra = 0, totOriginal = 0, totFinal = 0, totNfValue = 0;
                 items.forEach(d => {
-                    const orig = d.originalTotal || d.total;
-                    const diff = (d.vanDiff !== undefined) ? d.vanDiff : (orig - d.total);
-                    totOriginal += orig; totFinal += d.total; totNfValue += d.nfValue || 0;
+                    const orig = _n(d.originalTotal) || _n(d.total);
+                    const diff = (d.vanDiff !== undefined) ? _n(d.vanDiff) : (orig - _n(d.total));
+                    totOriginal += orig;
+                    totFinal    += _n(d.total);
+                    totNfValue  += _n(d.nfValue);
                     if (diff > 0) totSavings += diff;
                     else if (diff < 0) totExtra += Math.abs(diff);
                 });
@@ -8810,9 +8816,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
 
+                // ── Tabela ─────────────────────────────────────────────
                 tbodyEl.innerHTML = items.map(d => {
-                    const orig = d.originalTotal || d.total;
-                    const diff = (d.vanDiff !== undefined) ? d.vanDiff : (orig - d.total);
+                    const orig = _n(d.originalTotal) || _n(d.total);
+                    const diff = (d.vanDiff !== undefined) ? _n(d.vanDiff) : (orig - _n(d.total));
                     let resColor = 'var(--text-secondary)', resSign = '';
                     if (diff > 0.01)  { resColor = 'var(--accent-success)'; resSign = '+'; }
                     if (diff < -0.01) { resColor = 'var(--accent-danger)'; }
@@ -8823,13 +8830,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <td style="max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.client||''}">${d.client||'—'}</td>
                         <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${cityStr}">${cityStr}</td>
                         <td>${d.carrier||'—'}</td>
-                        <td style="text-align:right;">${d.nfValue ? Utils.formatCurrency(d.nfValue) : '—'}</td>
+                        <td style="text-align:right;">${_n(d.nfValue) > 0 ? Utils.formatCurrency(_n(d.nfValue)) : '—'}</td>
                         <td style="text-align:right;">${Utils.formatCurrency(orig)}</td>
-                        <td style="text-align:right;font-weight:600;">${Utils.formatCurrency(d.total)}</td>
+                        <td style="text-align:right;font-weight:600;">${Utils.formatCurrency(_n(d.total))}</td>
                         <td style="text-align:right;font-weight:700;color:${resColor};">${resSign}${Utils.formatCurrency(diff)}</td>
                     </tr>`;
                 }).join('');
 
+                // ── Linha de totais ────────────────────────────────────
                 if (tfootEl) tfootEl.innerHTML = `<tr style="background:rgba(99,102,241,0.08);font-weight:700;">
                     <td colspan="5" style="padding:8px 10px;font-size:0.82rem;color:var(--text-secondary);">TOTAIS — ${items.length} NF${items.length !== 1 ? 's' : ''}</td>
                     <td style="text-align:right;padding:8px 6px;">${Utils.formatCurrency(totNfValue)}</td>
@@ -8838,16 +8846,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <td style="text-align:right;padding:8px 6px;color:${netColor};">${netResult >= 0 ? '+' : ''}${Utils.formatCurrency(netResult)}</td>
                 </tr>`;
 
-                // Resumo por transportadora
+                // ── Resumo por transportadora ─────────────────────────
                 const sumEl = document.getElementById('vanSummaryBody');
                 if (sumEl) {
                     const byC = {};
                     items.forEach(d => {
                         const c = d.carrier || 'Sem Nome';
                         if (!byC[c]) byC[c] = { nfs: 0, savings: 0, extra: 0, orig: 0, total: 0 };
-                        const orig = d.originalTotal || d.total;
-                        const diff = (d.vanDiff !== undefined) ? d.vanDiff : (orig - d.total);
-                        byC[c].nfs++; byC[c].orig += orig; byC[c].total += d.total;
+                        const orig = _n(d.originalTotal) || _n(d.total);
+                        const diff = (d.vanDiff !== undefined) ? _n(d.vanDiff) : (orig - _n(d.total));
+                        byC[c].nfs++;
+                        byC[c].orig  += orig;
+                        byC[c].total += _n(d.total);
                         if (diff > 0) byC[c].savings += diff;
                         else if (diff < 0) byC[c].extra += Math.abs(diff);
                     });
@@ -8868,6 +8878,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }).join('');
                 }
             };
+
 
             container.innerHTML = `
                 <div class="card no-print" style="margin-bottom:1.5rem;">
