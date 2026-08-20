@@ -326,13 +326,11 @@ Abra o terminal do PowerShell na raiz do projeto (`C:\Users\Paulo H Parreira\.ge
 3.  **Controle de Versão Git:** Executa `git add .`, faz um commit com a data/hora exata do deploy, e envia para a branch de homologação (`git push origin staging`).
 4.  **Deploy em Staging**: O Vercel escuta a branch `staging` do GitHub e reconstrói o ambiente de homologação.
 
-> 💡 **Nota:** O Passo 5 (`deploy.ps1`) executa **seu próprio** backup em camadas internamente. Isso significa que o sistema possui **dupla proteção**: backup preventivo (Passo 1) antes de alterar, e backup de deploy (Passo 5) antes de publicar.
-
 ### Passo 6: Validação pelo Usuário e Promoção para Produção (`promote.ps1`)
 > ⚠️ **REGRA DE OURO CRÍTICA: NUNCA DEPLOYE PARA PRODUÇÃO SIMULTANEAMENTE COM HOMOLOGAÇÃO.**
 > O ambiente de homologação (`staging`) existe especificamente para proteger a produção de falhas ou comportamentos inesperados. 
 > 
-> **Fluxo obrigatório:**
+> **Fluxo obrigatório (regra geral):**
 > 1. Execute o deploy em homologação (`deploy.ps1`).
 > 2. Solicite e aguarde a validação de testes do usuário no ambiente de staging.
 > 3. **Apenas após a aprovação/confirmação explícita do usuário**, promova as alterações para produção executando:
@@ -343,7 +341,40 @@ Abra o terminal do PowerShell na raiz do projeto (`C:\Users\Paulo H Parreira\.ge
 
 ---
 
+### 🚦 Política de Deploy por Módulo (EXCEÇÕES AUTORIZADAS)
+
+> ⚠️ As regras abaixo foram definidas explicitamente pelo usuário (Paulo Parreira) e substituem a regra geral acima **apenas para os módulos listados**. Para qualquer módulo **não** listado, aplica-se sempre a regra geral (staging → aprovação → promote).
+
+| Módulo | Slug técnico | Política de deploy | Motivo |
+|---|---|---|---|
+| **Bússola Log** | `dispatch` | 🔴 **Staging obrigatório** — aguardar aprovação explícita antes do `promote.ps1` | Operação logística em tempo real. Bugs afetam clientes e motoristas diretamente. |
+| **Bússola Gestão** | `erp-consultoria` | 🟢 **Deploy direto em produção** — pode rodar `deploy.ps1 + promote.ps1` na mesma sequência sem aprovação intermediária | Módulo de gestão interna, sem impacto operacional imediato. Iterações frequentes autorizadas pelo usuário em 2026-08-20. |
+| **ERP** | `erp` | 🔴 **Staging obrigatório** | Faturamento, NF-e e dados fiscais. Risco alto. |
+| **Master** | `master` | 🔴 **Staging obrigatório** | Gestão de tenants e permissões. Erro pode bloquear acesso de todos os usuários. |
+| **WMS / WMS Coletor** | `wms`, `wms-coletor` | 🔴 **Staging obrigatório** | Operação de armazém em tempo real. |
+| **Sales Force** | `sales-force` | 🟡 **Staging recomendado** — pode ir direto se for ajuste visual/menor | PWA offline-first, mas impacto menor em operação imediata. |
+
+**Como aplicar na prática:**
+
+```powershell
+# ✅ Bússola Gestão (erp-consultoria) — direto em produção (autorizado):
+.\deploy.ps1; .\promote.ps1
+
+# 🔴 Bússola Log (dispatch) — OBRIGATÓRIO aguardar usuário:
+.\deploy.ps1
+# → PARE AQUI. Informe o usuário que o deploy de homologação foi feito.
+# → Aguarde aprovação explícita antes de rodar:
+.\promote.ps1
+```
+
+> 💡 **Dica crítica para o agente:** Ao final de qualquer deploy no módulo **dispatch (Bússola Log)**, sempre pergunte explicitamente ao usuário:
+> *"Deploy em homologação concluído (v3.X.Y). Deseja que eu promova para produção agora?"*
+> **Nunca assuma aprovação implícita para o módulo de despacho.**
+
+---
+
 Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy em camadas, e vamos juntos evoluir a plataforma.
+
 
 ---
 
