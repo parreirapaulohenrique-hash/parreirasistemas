@@ -5443,13 +5443,36 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return (db2 ? db2.getTime() : 0) - (da ? da.getTime() : 0);
             });
 
+
+            // v3.19.5: Detecta "frete negociado" — exibe campo editável de valor real na conferência
+            const _carrierInfoAll = Utils.getStorage('carrier_info_v2') || {};
+            // Busca pela chave exata OU pela comparação normalizada
+            const _hasFreteNegociado = Object.entries(_carrierInfoAll).some(([k, v]) =>
+                k.toUpperCase().trim() === carrier.toUpperCase().trim() && v.freteNegociado === true
+            );
+            if (!window.invoiceVanOriginalValues) window.invoiceVanOriginalValues = new Map();
+
             tbody.innerHTML = filtered.map(d => {
                 const dispatchDate = _getEffectiveDate(d);
                 const invoiceValue = d._invoiceValue != null ? d._invoiceValue : (d.total || 0);
                 const redespBadge = d._isRedesp ? `<span style="font-size:0.65rem;background:var(--accent-warning,#f59e0b);color:#000;border-radius:4px;padding:1px 4px;margin-left:4px;">REDESP</span>` : '';
-                // v3.11.30: badge visual para NFs já pagas — visível mas diferenciado
                 const pagoBadge = d._isPago ? `<span style="font-size:0.62rem;background:rgba(16,185,129,0.18);color:#10b981;border:1px solid rgba(16,185,129,0.35);border-radius:4px;padding:1px 5px;margin-left:4px;font-weight:600;">PAGO</span>` : '';
                 const rowStyle = d._isPago ? ' style="opacity:0.7;background:rgba(16,185,129,0.04);"' : '';
+
+                // v3.19.5: Coluna de frete — editável se freteNegociado, estático caso contrário
+                const freightCell = _hasFreteNegociado && !d._isRedesp
+                    ? `<td style="text-align:right;padding:4px 8px;">
+                            <div style="font-size:0.68rem;color:var(--text-secondary);white-space:nowrap;">Sugerido: ${Utils.formatCurrency(invoiceValue)}</div>
+                            <input type="number" class="van-acerto-input" 
+                                   data-id="${d.id}" data-suggested="${invoiceValue}"
+                                   value="${invoiceValue.toFixed(2)}"
+                                   step="0.01" min="0"
+                                   style="width:90px;text-align:right;padding:3px 6px;font-size:0.85rem;margin-top:2px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:4px;color:var(--accent-success);font-weight:600;"
+                                   oninput="window.onVanFreteAcerto('${d.id}', this)"
+                                   title="Digite o valor real cobrado/pago pela VAN">
+                       </td>`
+                    : `<td style="text-align: right; font-weight: 600; color: var(--accent-success);">${Utils.formatCurrency(invoiceValue)}</td>`;
+
                 return `
                     <tr data-id="${d.id}"${rowStyle}>
                         <td style="text-align: center;">
@@ -5459,7 +5482,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <td><div style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${d.client || ''}">${d.client || '-'}</div></td>
                         <td>${d.city || '-'}</td>
                         <td>${dispatchDate.toLocaleDateString('pt-BR')}</td>
-                        <td style="text-align: right; font-weight: 600; color: var(--accent-success);">${Utils.formatCurrency(invoiceValue)}</td>
+                        ${freightCell}
                     </tr>
                 `;
             }).join('');
@@ -5611,12 +5634,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Toggle single NF selection
         // v3.11.30: armazena o invoiceValue (valor por transportadora) junto com o ID
+        // v3.19.5: para freteNegociado, lê o valor real do input na linha em vez de usar data-value estático
         window.toggleInvoiceNF = (id, checked, value) => {
             const sId = String(id);
             if (checked) {
-                window.invoiceSelectedNFs.set(sId, value || 0);
+                const row = document.querySelector(`tr[data-id="${id}"]`);
+                const vanInput = row?.querySelector('.van-acerto-input');
+                if (vanInput) {
+                    // Frete negociado: usar valor digitado no input (pode diferir do sugerido)
+                    const realVal = parseFloat(String(vanInput.value).replace(',', '.')) || value;
+                    const suggestedVal = parseFloat(vanInput.dataset.suggested || value) || value;
+                    if (!window.invoiceVanOriginalValues) window.invoiceVanOriginalValues = new Map();
+                    window.invoiceVanOriginalValues.set(sId, suggestedVal);
+                    window.invoiceSelectedNFs.set(sId, realVal);
+                } else {
+                    window.invoiceSelectedNFs.set(sId, value || 0);
+                }
             } else {
                 window.invoiceSelectedNFs.delete(sId);
+                if (window.invoiceVanOriginalValues) window.invoiceVanOriginalValues.delete(sId);
             }
             window.updateInvoiceComparison();
             window._sortInvoiceRows(); // ← agrupa selecionadas no topo
@@ -5705,8 +5741,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('invoiceValue').value = '';
             document.getElementById('invoiceRef').value = '';
             window.invoiceSelectedNFs = new Map();
+            window.invoiceVanOriginalValues = new Map(); // v3.19.5
             window.invoiceCurrentCarrier = '';
             window.filterInvoiceByCarrier('');
+        };
+
+        // v3.19.5 — Acerto de Frete VAN: atualiza valor real em tempo real ao digitar
+        window.onVanFreteAcerto = (id, inputEl) => {
+            const sId = String(id);
+            const rawVal = String(inputEl.value || '').replace(',', '.');
+            const realVal = parseFloat(rawVal) || 0;
+            const suggestedVal = parseFloat(inputEl.dataset.suggested || 0) || 0;
+
+            // Sempre guarda o valor sugerido original para o processInvoicePayment
+            if (!window.invoiceVanOriginalValues) window.invoiceVanOriginalValues = new Map();
+            window.invoiceVanOriginalValues.set(sId, suggestedVal);
+
+            // Atualiza o total apenas se a NF estiver marcada
+            if (window.invoiceSelectedNFs.has(sId)) {
+                window.invoiceSelectedNFs.set(sId, realVal);
+                window.updateInvoiceComparison();
+            }
         };
 
         // v3.19.3 — ↻ Atualizar Valores: re-busca NFs do Firestore mantendo seleções, filtros e campos preenchidos
@@ -6007,6 +6062,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const isRedesp = _isRedespPayment(d);
                     console.log(`💳 [Invoice] NF ${d.invoice} (ID: ${d.id}) - ${isRedesp ? '🔄 REDESPACHO' : '⭐ PRINCIPAL'} - valor: ${invoiceVal}`);
                     Object.assign(d, isRedesp ? redespUpdate : paidUpdate);
+
+                    // v3.19.5: Acerto VAN — grava valor real negociado e vanDiff no despacho
+                    if (!isRedesp && window.invoiceVanOriginalValues?.has(sId)) {
+                        const suggestedVal = window.invoiceVanOriginalValues.get(sId);
+                        const realVal = invoiceVal; // Map já contém valor real (atualizado pelo input)
+                        const vDiff = Math.round((suggestedVal - realVal) * 100) / 100;
+                        Object.assign(d, {
+                            originalTotal: suggestedVal,
+                            total: realVal,
+                            vanDiff: vDiff,
+                            vanAcertado: true,
+                            vanAcertadoAt: new Date().toISOString(),
+                            vanAcertadoPor: userName
+                        });
+                        console.log(`💳 [VAN Acerto] NF ${d.invoice} — Sugerido: ${suggestedVal} | Real: ${realVal} | Diff: ${vDiff}`);
+                    }
+
                     paidCount++;
                     totalPaid += invoiceVal;
                     paidNFs.push(d.invoice);
@@ -6064,8 +6136,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 });
             }
-            // Limpa o Map após pagamento
+            // Limpa os Maps após pagamento
             window.invoiceSelectedNFs = new Map();
+            window.invoiceVanOriginalValues = new Map(); // v3.19.5
 
             console.log('💳 [Invoice] Dispatches salvos (localStorage + Firestore + cache)!');
 
