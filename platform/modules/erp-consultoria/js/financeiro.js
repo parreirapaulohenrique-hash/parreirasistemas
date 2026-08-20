@@ -587,216 +587,524 @@ window.filterPisCofins = function () {
 
 window.deletePisCofinsItem = function (id) { if (deleteCadastro('pisCofins', id)) renderPisCofinsGrid(); };
 
-// ===========================================
-// 8. CONTAS A RECEBER
-// ===========================================
+// =============================================
+// HELPER INTERNO — build options do Plano de Contas
+// =============================================
+function _buildContasOpts(selectedCodigo) {
+    try {
+        const plans = loadCadastros('accountPlans');
+        const sint = plans.filter(p=>p.tipo==='Sintética').sort((a,b)=>a.codigo.localeCompare(b.codigo));
+        const anal = plans.filter(p=>p.tipo==='Analítica').sort((a,b)=>a.codigo.localeCompare(b.codigo));
+        let h = '<option value="">-- Selecione a Conta --</option>';
+        sint.forEach(s=>{
+            const f=anal.filter(a=>a.codigo.startsWith(s.codigo+'.'));
+            if(!f.length)return;
+            h+=`<optgroup label="${s.codigo} — ${s.conta}">`;
+            f.forEach(a=>{h+=`<option value="${a.codigo}|${a.conta}" ${selectedCodigo===a.codigo?'selected':''}>${a.codigo} — ${a.conta}</option>`;});
+            h+='</optgroup>';
+        });
+        const sem=anal.filter(a=>!sint.some(s=>a.codigo.startsWith(s.codigo+'.')));
+        if(sem.length){h+='<optgroup label="Outras">';sem.forEach(a=>{h+=`<option value="${a.codigo}|${a.conta}" ${selectedCodigo===a.codigo?'selected':''}>${a.codigo} — ${a.conta}</option>`;});h+='</optgroup>';}
+        return h;
+    } catch(e) { return '<option value="">-- Erro ao carregar --</option>'; }
+}
+
+function _bankOptions() {
+    try {
+        const banks = loadCadastros('banks');
+        return banks.length
+            ? banks.map(b=>`<option value="${b.id}">${b.banco||b.nome||b.name||b.id}</option>`).join('')
+            : '';
+    } catch(e){return '';}
+}
+
+const _FORMAS_PGTO = `
+    <option value="PIX">PIX</option>
+    <option value="Boleto">Boleto</option>
+    <option value="Transferência">Transferência</option>
+    <option value="Cartão">Cartão</option>
+    <option value="Dinheiro">Dinheiro</option>`;
+
+// =============================================
+// 8. CONTAS A RECEBER — v3.19.7
+// =============================================
+window._receberFilter = 'todos';
+
+window.setReceberFilter = function(status) {
+    window._receberFilter = status;
+    ['todos','Aberto','Vencido','Pago'].forEach(s => {
+        const el = document.getElementById('rf-' + s.toLowerCase());
+        if (!el) return;
+        const active = s === status;
+        el.style.fontWeight   = active ? '700' : '400';
+        el.style.borderColor  = active ? 'var(--accent-primary)' : '';
+        el.style.color        = active ? 'var(--accent-primary)' : '';
+    });
+    renderReceberGrid();
+};
+
 window.renderReceberGrid = function () {
     const tbody = document.getElementById('receberTableBody');
     if (!tbody) return;
-    const items = JSON.parse(localStorage.getItem('erp_receber') || '[]');
+    const fmtBRL = v => parseFloat(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
 
-    if (!items.length) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:2rem; color:var(--text-secondary);"><span class="material-icons-round" style="font-size:2rem; vertical-align:middle;">sentiment_dissatisfied</span> Nenhuma conta a receber</td></tr>`;
-        return;
+    let items = JSON.parse(localStorage.getItem('erp_receber') || '[]');
+
+    // Auto-atualiza status Vencido e persiste
+    let changed = false;
+    items = items.map(i => {
+        if (i.status === 'Aberto' && new Date(i.vencimento) < hoje) { changed=true; return {...i, status:'Vencido'}; }
+        return i;
+    });
+    if (changed) localStorage.setItem('erp_receber', JSON.stringify(items));
+
+    // Cards de resumo
+    const totAberto  = items.filter(i=>i.status!=='Pago').reduce((s,i)=>s+parseFloat(i.valor||0),0);
+    const totVencido = items.filter(i=>i.status==='Vencido').reduce((s,i)=>s+parseFloat(i.valor||0),0);
+    const totRecMes  = items.filter(i=>i.status==='Pago'&&i.dataPagamento&&new Date(i.dataPagamento)>=inicioMes)
+                            .reduce((s,i)=>s+parseFloat(i.valorRecebido||i.valor||0),0);
+    const cardsEl = document.getElementById('receber-cards');
+    if (cardsEl) cardsEl.innerHTML = `
+        <div class="stat-card" style="cursor:default;">
+            <div class="stat-icon" style="background:rgba(99,102,241,.15);color:#818cf8;"><span class="material-icons-round">request_quote</span></div>
+            <div><div style="font-size:.75rem;color:var(--text-secondary);">A Receber</div><div style="font-size:1.1rem;font-weight:700;">${fmtBRL(totAberto)}</div></div>
+        </div>
+        <div class="stat-card" style="cursor:default;">
+            <div class="stat-icon" style="background:rgba(239,68,68,.15);color:#ef4444;"><span class="material-icons-round">running_with_errors</span></div>
+            <div><div style="font-size:.75rem;color:var(--text-secondary);">Vencido</div><div style="font-size:1.1rem;font-weight:700;color:#ef4444;">${fmtBRL(totVencido)}</div></div>
+        </div>
+        <div class="stat-card" style="cursor:default;">
+            <div class="stat-icon" style="background:rgba(16,185,129,.15);color:#10b981;"><span class="material-icons-round">account_balance_wallet</span></div>
+            <div><div style="font-size:.75rem;color:var(--text-secondary);">Recebido este Mês</div><div style="font-size:1.1rem;font-weight:700;color:#10b981;">${fmtBRL(totRecMes)}</div></div>
+        </div>`;
+
+    // Filtros
+    const sf       = window._receberFilter || 'todos';
+    const busca    = (document.getElementById('rf-busca')?.value||'').toLowerCase();
+    const dtInicio = document.getElementById('rf-dataInicio')?.value||'';
+    const dtFim    = document.getElementById('rf-dataFim')?.value||'';
+
+    let filtered = items.slice();
+    if (sf !== 'todos')  filtered = filtered.filter(i=>i.status===sf);
+    if (busca) filtered = filtered.filter(i=>(i.cliente||'').toLowerCase().includes(busca)||(i.docNumero||'').toLowerCase().includes(busca));
+    if (dtInicio) filtered = filtered.filter(i=>i.vencimento>=dtInicio);
+    if (dtFim)    filtered = filtered.filter(i=>i.vencimento<=dtFim);
+    filtered.sort((a,b)=>new Date(a.vencimento)-new Date(b.vencimento));
+
+    if (!filtered.length) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-secondary);"><span class="material-icons-round" style="font-size:2rem;vertical-align:middle;">sentiment_dissatisfied</span> Nenhuma conta encontrada</td></tr>`;
+    } else {
+        tbody.innerHTML = filtered.map(i => {
+            const isPago = i.status === 'Pago';
+            const isVencido = i.status === 'Vencido';
+            const vencDate = new Date(i.vencimento + 'T00:00:00');
+            const diffDays = Math.ceil((vencDate - hoje) / 86400000);
+            const venc = vencDate.toLocaleDateString('pt-BR');
+            let rowBg = '';
+            let badgeCls = 'status-pending';
+            if (isPago)          { rowBg='background:rgba(16,185,129,0.05);'; badgeCls='status-shipped'; }
+            else if (isVencido)  { rowBg='background:rgba(239,68,68,0.06);border-left:3px solid #ef4444;'; badgeCls='status-cancelled'; }
+            else if (diffDays<=2){ rowBg='background:rgba(251,191,36,0.06);border-left:3px solid #fbbf24;'; }
+            const dataPgto = isPago && i.dataPagamento ? new Date(i.dataPagamento).toLocaleDateString('pt-BR') : '-';
+            const valor = parseFloat(i.valor||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+            return `<tr style="${rowBg}">
+                <td style="font-weight:600;font-size:.82rem;">${i.id||'-'}</td>
+                <td>
+                    <div style="font-weight:600;">${i.cliente||i.descricao||'-'}</div>
+                    ${i.docNumero?`<div style="font-size:.72rem;color:var(--text-secondary);">Nº ${i.docNumero}</div>`:''}
+                    ${isPago&&i.formaPagamento?`<div style="font-size:.72rem;color:#10b981;">✓ ${i.formaPagamento}</div>`:''}
+                </td>
+                <td style="${isVencido?'color:#ef4444;font-weight:600;':''}">${venc}</td>
+                <td style="font-weight:700;">${valor}</td>
+                <td>${dataPgto}</td>
+                <td><span class="status-badge ${badgeCls}">${i.status}</span></td>
+                <td style="text-align:right;display:flex;gap:.2rem;justify-content:flex-end;">
+                    ${!isPago?`<button class="btn btn-primary btn-icon" onclick="baixarContaReceber('${i.id}')" style="padding:.35rem;background:var(--accent-success);" title="Registrar Recebimento"><span class="material-icons-round" style="font-size:.9rem;">attach_money</span></button>`:''}
+                    <button class="btn btn-secondary btn-icon" onclick="editarReceita('${i.id}')" style="padding:.35rem;" title="Editar"><span class="material-icons-round" style="font-size:.9rem;">edit</span></button>
+                    <button class="btn btn-secondary btn-icon" onclick="excluirReceita('${i.id}')" style="padding:.35rem;" title="Excluir"><span class="material-icons-round" style="font-size:.9rem;color:#ef4444;">delete</span></button>
+                </td>
+            </tr>`;
+        }).join('');
     }
 
-    // Sort by vencimento
-    items.sort((a, b) => new Date(a.vencimento) - new Date(b.vencimento));
-
-    tbody.innerHTML = items.map(i => {
-        const venc = new Date(i.vencimento).toLocaleDateString('pt-BR');
-        const est = i.status === 'Pago' ? 'status-shipped' : (new Date(i.vencimento) < new Date() ? 'status-cancelled' : 'status-pending');
-        const valor = parseFloat(i.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
-        return `<tr>
-            <td style="font-weight:600;">${i.id}</td>
-            <td>${i.cliente}</td>
-            <td>${venc}</td>
-            <td style="font-weight:700;">${valor}</td>
-            <td><span class="status-badge ${est}">${i.status}</span></td>
-            <td style="text-align:right;">
-                ${i.status !== 'Pago' ?
-                `<button class="btn btn-primary btn-icon" style="padding:0.4rem; background:var(--accent-success);" onclick="baixarContaReceber('${i.id}')" title="Baixar/Receber">
-                    <span class="material-icons-round" style="font-size:1rem;">attach_money</span>
-                </button>` :
-                `<span class="material-icons-round" style="color:var(--accent-success);">check_circle</span>`}
-            </td>
-        </tr>`;
-    }).join('');
+    // Rodapé totais
+    const footerEl = document.getElementById('receber-footer');
+    if (footerEl) {
+        const tFilt  = filtered.reduce((s,i)=>s+parseFloat(i.valor||0),0);
+        const tAberto= filtered.filter(i=>i.status!=='Pago').reduce((s,i)=>s+parseFloat(i.valor||0),0);
+        const tPago  = filtered.filter(i=>i.status==='Pago').reduce((s,i)=>s+parseFloat(i.valorRecebido||i.valor||0),0);
+        footerEl.innerHTML = `
+            <span style="color:var(--text-secondary);">📋 ${filtered.length} registro(s)</span>
+            <span>🟡 Em Aberto/Vencido: <strong>${fmtBRL(tAberto)}</strong></span>
+            <span>🟢 Recebido: <strong style="color:#10b981;">${fmtBRL(tPago)}</strong></span>
+            <span>📊 Total filtrado: <strong>${fmtBRL(tFilt)}</strong></span>`;
+    }
 };
 
-window.baixarContaReceber = function (id) {
-    if (!confirm('Confirmar o recebimento desta conta?')) return;
+window.novaReceita = function(editId) {
+    const item = editId ? (JSON.parse(localStorage.getItem('erp_receber')||'[]').find(i=>i.id===editId)) : null;
+    const today = new Date().toISOString().split('T')[0];
+    createDynamicModal('finReceitaModal', item?'Editar Conta a Receber':'Nova Conta a Receber', `
+        ${formRow('Cliente / Origem *', `<input type="text" id="recCliente" class="form-input" value="${item?.cliente||''}" placeholder="Ex: João Silva ou Pedido #123">`)}
+        ${formRow2('Valor (R$) *', `<input type="text" id="recValor" class="form-input" value="${item?parseFloat(item.valor||0).toFixed(2).replace('.',','):''}" placeholder="0,00">`,
+                   'Vencimento *', `<input type="date" id="recVencimento" class="form-input" value="${item?.vencimento||today}">`)}
+        ${formRow2('Nº Documento', `<input type="text" id="recDocNumero" class="form-input" value="${item?.docNumero||''}" placeholder="NF, OS, Contrato...">`,
+                   'Conta (Plano)', `<select id="recCodigoConta" class="form-input">${_buildContasOpts(item?.codigoConta)}</select>`)}
+        ${formRow('Observação', `<textarea id="recObservacao" class="form-input" rows="2" style="resize:vertical;">${item?.observacao||''}</textarea>`)}
+        <input type="hidden" id="recEditId" value="${editId||''}">
+    `, 'salvarReceita()');
+};
 
-    const items = JSON.parse(localStorage.getItem('erp_receber') || '[]');
-    const item = items.find(i => i.id === id);
+window.salvarReceita = function() {
+    const cliente   = (document.getElementById('recCliente')?.value||'').trim();
+    const valor     = parseFloat((document.getElementById('recValor')?.value||'').replace(',','.'));
+    const vencimento= document.getElementById('recVencimento')?.value||'';
+    if (!cliente || isNaN(valor) || !vencimento) { alert('Preencha os campos obrigatórios!'); return; }
+    const docNumero = (document.getElementById('recDocNumero')?.value||'').trim();
+    const contaRaw  = document.getElementById('recCodigoConta')?.value||'';
+    const [codigoConta, conta] = contaRaw ? contaRaw.split('|') : ['',''];
+    const observacao= (document.getElementById('recObservacao')?.value||'').trim();
+    const editId    = document.getElementById('recEditId')?.value||'';
+    const items = JSON.parse(localStorage.getItem('erp_receber')||'[]');
+    if (editId) {
+        const idx = items.findIndex(i=>i.id===editId);
+        if (idx!==-1) items[idx] = {...items[idx], cliente, valor, vencimento, docNumero, codigoConta, conta, observacao, updatedAt:new Date().toISOString()};
+    } else {
+        items.push({id:'CR-'+Date.now(), cliente, valor, vencimento, docNumero, codigoConta, conta, observacao, status:'Aberto', criadoEm:new Date().toISOString()});
+    }
+    localStorage.setItem('erp_receber', JSON.stringify(items));
+    closeModal('finReceitaModal');
+    renderReceberGrid();
+    if (typeof showToast === 'function') showToast(`✅ Conta a receber ${editId?'atualizada':'cadastrada'}!`,'success');
+};
+
+window.editarReceita = function(id) { novaReceita(id); };
+
+window.excluirReceita = function(id) {
+    if (!confirm('Excluir esta conta a receber?')) return;
+    localStorage.setItem('erp_receber', JSON.stringify(JSON.parse(localStorage.getItem('erp_receber')||'[]').filter(i=>i.id!==id)));
+    renderReceberGrid();
+};
+
+window.baixarContaReceber = function(id) {
+    const item = JSON.parse(localStorage.getItem('erp_receber')||'[]').find(i=>i.id===id);
+    if (!item) return;
+    createDynamicModal('finBaixaReceberModal', '💰 Registrar Recebimento', `
+        <div style="background:var(--bg-secondary);border-radius:6px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.88rem;">
+            <div><strong>${item.cliente||'-'}</strong>${item.docNumero?` — Nº ${item.docNumero}`:''}</div>
+            <div style="color:var(--text-secondary);">Valor original: <strong>${parseFloat(item.valor||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</strong> | Venc: ${new Date(item.vencimento+'T00:00:00').toLocaleDateString('pt-BR')}</div>
+        </div>
+        ${formRow2('Data do Recebimento *', `<input type="date" id="brData" class="form-input" value="${new Date().toISOString().split('T')[0]}">`,
+                   'Valor Recebido (R$) *', `<input type="text" id="brValor" class="form-input" value="${parseFloat(item.valor||0).toFixed(2).replace('.',',')}">` )}
+        ${formRow2('Forma de Recebimento', `<select id="brForma" class="form-input">${_FORMAS_PGTO}</select>`,
+                   'Conta Bancária', `<select id="brBanco" class="form-input"><option value="">Não especificado</option>${_bankOptions()}</select>`)}
+        ${formRow('Observação', `<textarea id="brObs" class="form-input" rows="2" style="resize:vertical;" placeholder="Ex: desconto concedido, juros..."></textarea>`)}
+    `, `processarBaixaReceber('${id}')`);
+};
+
+window.processarBaixaReceber = function(id) {
+    const dataRec  = document.getElementById('brData')?.value;
+    const valorRec = parseFloat((document.getElementById('brValor')?.value||'').replace(',','.'));
+    if (!dataRec || isNaN(valorRec)) { alert('Data e valor são obrigatórios!'); return; }
+    const loggedUser = typeof Utils!=='undefined' ? Utils.getStorage('logged_user') : null;
+    const userName   = loggedUser ? (loggedUser.name||loggedUser.login) : 'Sistema';
+    const items = JSON.parse(localStorage.getItem('erp_receber')||'[]');
+    const item  = items.find(i=>i.id===id);
     if (item) {
-        item.status = 'Pago';
-        item.dataPagamento = new Date().toISOString();
+        Object.assign(item, { status:'Pago', dataPagamento:new Date(dataRec).toISOString(), valorRecebido:valorRec,
+            formaPagamento:document.getElementById('brForma')?.value||'', contaBancaria:document.getElementById('brBanco')?.value||'',
+            observacao:(document.getElementById('brObs')?.value||'').trim()||item.observacao,
+            recebidoPor:userName, updatedAt:new Date().toISOString() });
         localStorage.setItem('erp_receber', JSON.stringify(items));
-        renderReceberGrid();
-        alert('Conta recebida com sucesso!');
     }
+    closeModal('finBaixaReceberModal');
+    renderReceberGrid();
+    if (typeof showToast==='function') showToast('✅ Recebimento registrado!','success');
 };
 
-// ===========================================
-// 9. CONTAS A PAGAR
-// ===========================================
+// =============================================
+// 9. CONTAS A PAGAR — v3.19.7
+// =============================================
+window._pagarFilter = 'todos';
+
+window.setPagarFilter = function(status) {
+    window._pagarFilter = status;
+    ['todos','Aberto','Vencido','Pago'].forEach(s => {
+        const el = document.getElementById('pf-' + s.toLowerCase());
+        if (!el) return;
+        const active = s === status;
+        el.style.fontWeight  = active ? '700' : '400';
+        el.style.borderColor = active ? 'var(--accent-primary)' : '';
+        el.style.color       = active ? 'var(--accent-primary)' : '';
+    });
+    renderPagarGrid();
+};
+
+window.togglePagarSelectAll = function(cb) {
+    document.querySelectorAll('.pagar-row-check:not(:disabled)').forEach(el=>{ el.checked=cb.checked; });
+    window._updateBaixarLoteBtn();
+};
+
+window._updateBaixarLoteBtn = function() {
+    const n = document.querySelectorAll('.pagar-row-check:checked').length;
+    const btn = document.getElementById('btnBaixarLote');
+    if (btn) { btn.disabled = n===0; btn.textContent = n>0?`💳 Pagar Selecionadas (${n})`:'💳 Pagar Selecionadas'; }
+};
+
 window.renderPagarGrid = function () {
     const tbody = document.getElementById('pagarTableBody');
     if (!tbody) return;
     const suffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
-    let items = JSON.parse(localStorage.getItem('erp_pagar' + suffix) || '[]');
-
+    const fmtBRL = v => parseFloat(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+    const CCS = { '1':'MATRIZ', '2':'PALMAS', '4':'PORTO' };
     const hoje = new Date(); hoje.setHours(0,0,0,0);
     const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-    const fmtBRL = v => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    const CCS = { '1': 'MATRIZ', '2': 'PALMAS', '4': 'PORTO' };
 
-    // Atualiza status Vencido automaticamente
+    let items = JSON.parse(localStorage.getItem('erp_pagar' + suffix) || '[]');
+
+    // Auto-atualiza Vencido
+    let changed = false;
     items = items.map(i => {
-        if (i.status === 'Aberto' && new Date(i.vencimento) < hoje) return { ...i, status: 'Vencido' };
+        if (i.status==='Aberto' && new Date(i.vencimento) < hoje) { changed=true; return {...i, status:'Vencido'}; }
         return i;
     });
-    localStorage.setItem('erp_pagar' + suffix, JSON.stringify(items)); // persiste status atualizado
+    if (changed) localStorage.setItem('erp_pagar'+suffix, JSON.stringify(items));
 
-    // Cards de resumo
-    const totalPendente = items.filter(i => i.status !== 'Pago').reduce((s,i) => s + parseFloat(i.valor||0), 0);
-    const totalVencido  = items.filter(i => i.status === 'Vencido').reduce((s,i) => s + parseFloat(i.valor||0), 0);
-    const totalPagoMes  = items.filter(i => i.status === 'Pago' && i.dataPagamento && new Date(i.dataPagamento) >= inicioMes)
-                               .reduce((s,i) => s + parseFloat(i.valor||0), 0);
+    // Cards
+    const totPend  = items.filter(i=>i.status!=='Pago').reduce((s,i)=>s+parseFloat(i.valor||0),0);
+    const totVenc  = items.filter(i=>i.status==='Vencido').reduce((s,i)=>s+parseFloat(i.valor||0),0);
+    const totPagoMes = items.filter(i=>i.status==='Pago'&&i.dataPagamento&&new Date(i.dataPagamento)>=inicioMes)
+                            .reduce((s,i)=>s+parseFloat(i.valorPago||i.valor||0),0);
     const cardsEl = document.getElementById('pagar-cards');
     if (cardsEl) cardsEl.innerHTML = `
         <div class="stat-card" style="cursor:default;">
             <div class="stat-icon" style="background:rgba(251,191,36,.15);color:#fbbf24;"><span class="material-icons-round">pending_actions</span></div>
-            <div><div style="font-size:.75rem;color:var(--text-secondary);">Total Pendente</div><div style="font-size:1.1rem;font-weight:700;">${fmtBRL(totalPendente)}</div></div>
+            <div><div style="font-size:.75rem;color:var(--text-secondary);">Total Pendente</div><div style="font-size:1.1rem;font-weight:700;">${fmtBRL(totPend)}</div></div>
         </div>
         <div class="stat-card" style="cursor:default;">
             <div class="stat-icon" style="background:rgba(239,68,68,.15);color:#ef4444;"><span class="material-icons-round">warning</span></div>
-            <div><div style="font-size:.75rem;color:var(--text-secondary);">Vencido</div><div style="font-size:1.1rem;font-weight:700;color:#ef4444;">${fmtBRL(totalVencido)}</div></div>
+            <div><div style="font-size:.75rem;color:var(--text-secondary);">Vencido</div><div style="font-size:1.1rem;font-weight:700;color:#ef4444;">${fmtBRL(totVenc)}</div></div>
         </div>
         <div class="stat-card" style="cursor:default;">
             <div class="stat-icon" style="background:rgba(16,185,129,.15);color:#10b981;"><span class="material-icons-round">check_circle</span></div>
-            <div><div style="font-size:.75rem;color:var(--text-secondary);">Pago este Mês</div><div style="font-size:1.1rem;font-weight:700;color:#10b981;">${fmtBRL(totalPagoMes)}</div></div>
+            <div><div style="font-size:.75rem;color:var(--text-secondary);">Pago este Mês</div><div style="font-size:1.1rem;font-weight:700;color:#10b981;">${fmtBRL(totPagoMes)}</div></div>
         </div>`;
 
-    if (!items.length) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-secondary);"><span class="material-icons-round" style="font-size:2rem;vertical-align:middle;">sentiment_dissatisfied</span> Nenhuma conta a pagar cadastrada</td></tr>`;
-        return;
+    // Filtros da barra
+    const sf    = window._pagarFilter || 'todos';
+    const busca = (document.getElementById('pf-busca')?.value||'').toLowerCase();
+    const dtIni = document.getElementById('pf-dataInicio')?.value||'';
+    const dtFim = document.getElementById('pf-dataFim')?.value||'';
+
+    let filtered = items.slice();
+    if (sf !== 'todos') filtered = filtered.filter(i=>i.status===sf);
+    if (busca) filtered = filtered.filter(i=>(i.descricao||'').toLowerCase().includes(busca)||(i.beneficiario||'').toLowerCase().includes(busca)||(i.docNumero||'').toLowerCase().includes(busca));
+    if (dtIni) filtered = filtered.filter(i=>i.vencimento>=dtIni);
+    if (dtFim) filtered = filtered.filter(i=>i.vencimento<=dtFim);
+    filtered.sort((a,b)=>new Date(a.vencimento)-new Date(b.vencimento));
+
+    if (!filtered.length) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-secondary);"><span class="material-icons-round" style="font-size:2rem;vertical-align:middle;">sentiment_dissatisfied</span> Nenhuma conta encontrada</td></tr>`;
+    } else {
+        tbody.innerHTML = filtered.map(i => {
+            const isPago   = i.status === 'Pago';
+            const isVencido= i.status === 'Vencido';
+            const vencDate = new Date(i.vencimento + 'T00:00:00');
+            const diffDays = Math.ceil((vencDate - hoje) / 86400000);
+            const venc     = vencDate.toLocaleDateString('pt-BR');
+            let rowBg = '';
+            if (isPago)          rowBg = 'background:rgba(16,185,129,0.05);';
+            else if (isVencido)  rowBg = 'background:rgba(239,68,68,0.06);border-left:3px solid #ef4444;';
+            else if (diffDays<=2)rowBg = 'background:rgba(251,191,36,0.06);border-left:3px solid #fbbf24;';
+            const badgeCls = isPago?'status-shipped':isVencido?'status-cancelled':'status-pending';
+            const contaLabel = i.codigoConta?`${i.codigoConta} — ${i.conta||''}`:(i.categoria||'-');
+            const ccLabel    = CCS[i.centroCusto]||'-';
+            const dataPgto   = isPago&&i.dataPagamento?new Date(i.dataPagamento).toLocaleDateString('pt-BR'):'-';
+            return `<tr style="${rowBg}">
+                <td style="text-align:center;"><input type="checkbox" class="pagar-row-check" data-id="${i.id}" onchange="_updateBaixarLoteBtn()" ${isPago?'disabled':''}></td>
+                <td>
+                    <div style="font-weight:600;">${i.descricao}</div>
+                    ${i.beneficiario?`<div style="font-size:.78rem;color:var(--text-secondary);">${i.beneficiario}</div>`:''}
+                    ${isPago&&i.formaPagamento?`<div style="font-size:.72rem;color:#10b981;">✓ ${i.formaPagamento}${dataPgto!=='-'?' em '+dataPgto:''}</div>`:''}
+                </td>
+                <td style="font-size:.8rem;color:var(--text-secondary);">${i.docNumero||'-'}</td>
+                <td style="font-size:.78rem;color:var(--text-secondary);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${contaLabel}">${contaLabel}</td>
+                <td><span class="status-badge" style="background:rgba(99,102,241,.12);color:#818cf8;font-size:.7rem;">${ccLabel}</span></td>
+                <td style="${isVencido?'color:#ef4444;font-weight:600;':''}">${venc}</td>
+                <td style="font-weight:700;">${fmtBRL(i.valor)}</td>
+                <td><span class="status-badge ${badgeCls}">${i.status}</span></td>
+                <td style="text-align:right;display:flex;gap:.2rem;justify-content:flex-end;">
+                    ${!isPago?`<button class="btn btn-primary btn-icon" onclick="baixarContaPagar('${i.id}')" style="padding:.35rem;" title="Registrar Pagamento"><span class="material-icons-round" style="font-size:.9rem;">payment</span></button>`:''}
+                    <button class="btn btn-secondary btn-icon" onclick="editarDespesa('${i.id}')" style="padding:.35rem;" title="Editar"><span class="material-icons-round" style="font-size:.9rem;">edit</span></button>
+                    <button class="btn btn-secondary btn-icon" onclick="_excluirDespesa('${i.id}')" style="padding:.35rem;" title="Excluir"><span class="material-icons-round" style="font-size:.9rem;color:#ef4444;">delete</span></button>
+                </td>
+            </tr>`;
+        }).join('');
     }
 
-    items.sort((a, b) => new Date(a.vencimento) - new Date(b.vencimento));
-    tbody.innerHTML = items.map(i => {
-        const venc = new Date(i.vencimento + 'T00:00:00').toLocaleDateString('pt-BR');
-        const isPago = i.status === 'Pago';
-        const isVencido = i.status === 'Vencido';
-        const est = isPago ? 'status-shipped' : (isVencido ? 'status-cancelled' : 'status-pending');
-        const contaLabel = i.codigoConta ? `${i.codigoConta} — ${i.conta || ''}` : (i.categoria || '-');
-        const ccLabel = CCS[i.centroCusto] || '-';
-        return `<tr>
-            <td>
-                <div style="font-weight:600;">${i.descricao}</div>
-                ${i.beneficiario ? `<div style="font-size:.8rem;color:var(--text-secondary);">${i.beneficiario}</div>` : ''}
-            </td>
-            <td style="font-size:.82rem;color:var(--text-secondary);max-width:180px;overflow:hidden;text-overflow:ellipsis;">${contaLabel}</td>
-            <td><span class="status-badge" style="background:rgba(99,102,241,.12);color:#818cf8;font-size:.7rem;">${ccLabel}</span></td>
-            <td style="${isVencido?'color:#ef4444;':''}">${venc}</td>
-            <td style="font-weight:700;">${(parseFloat(i.valor||0)).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td>
-            <td><span class="status-badge ${est}">${i.status}</span></td>
-            <td style="text-align:right;display:flex;gap:.25rem;justify-content:flex-end;">
-                ${!isPago ? `<button class="btn btn-primary btn-icon" data-pagid="${i.id}" style="padding:.35rem;" title="Baixar/Pagar"><span class="material-icons-round" style="font-size:.95rem;">payment</span></button>` : `<span class="material-icons-round" style="color:var(--accent-success);line-height:2rem;">check_circle</span>`}
-                <button class="btn btn-secondary btn-icon" data-delid="${i.id}" style="padding:.35rem;" title="Excluir"><span class="material-icons-round" style="font-size:.95rem;color:#ef4444;">delete</span></button>
-            </td>
-        </tr>`;
-    }).join('');
-
-    tbody.querySelectorAll('[data-pagid]').forEach(btn =>
-        btn.addEventListener('click', () => baixarContaPagar(btn.dataset.pagid)));
-    tbody.querySelectorAll('[data-delid]').forEach(btn =>
-        btn.addEventListener('click', () => {
-            if (!confirm('Excluir esta conta a pagar?')) return;
-            const it2 = JSON.parse(localStorage.getItem('erp_pagar' + suffix) || '[]').filter(x => x.id !== btn.dataset.delid);
-            localStorage.setItem('erp_pagar' + suffix, JSON.stringify(it2));
-            renderPagarGrid();
-        }));
+    // Rodapé totais
+    const footerEl = document.getElementById('pagar-footer');
+    if (footerEl) {
+        const tFilt  = filtered.reduce((s,i)=>s+parseFloat(i.valor||0),0);
+        const tVenc  = filtered.filter(i=>i.status==='Vencido').reduce((s,i)=>s+parseFloat(i.valor||0),0);
+        const tAberto= filtered.filter(i=>i.status==='Aberto').reduce((s,i)=>s+parseFloat(i.valor||0),0);
+        const tPago  = filtered.filter(i=>i.status==='Pago').reduce((s,i)=>s+parseFloat(i.valorPago||i.valor||0),0);
+        footerEl.innerHTML = `
+            <span style="color:var(--text-secondary);">📋 ${filtered.length} registro(s)</span>
+            <span>🟡 Em Aberto: <strong>${fmtBRL(tAberto)}</strong></span>
+            <span>🔴 Vencido: <strong style="color:#ef4444;">${fmtBRL(tVenc)}</strong></span>
+            <span>🟢 Pago: <strong style="color:#10b981;">${fmtBRL(tPago)}</strong></span>
+            <span>📊 Total: <strong>${fmtBRL(tFilt)}</strong></span>`;
+    }
+    // Reset select-all
+    const sa = document.getElementById('pagarSelectAll'); if (sa) sa.checked=false;
+    window._updateBaixarLoteBtn();
 };
 
-window.novaDespesa = function () {
-    // Popula select de contas a partir do Plano de Contas (somente Analíticas)
-    const plans = loadCadastros('accountPlans');
-    const sinteticas = plans.filter(p => p.tipo === 'Sintética').sort((a,b) => a.codigo.localeCompare(b.codigo));
-    const analiticas = plans.filter(p => p.tipo === 'Analítica').sort((a,b) => a.codigo.localeCompare(b.codigo));
-    let optsHtml = '<option value="">-- Selecione a Conta --</option>';
-    sinteticas.forEach(s => {
-        const filhos = analiticas.filter(a => a.codigo.startsWith(s.codigo + '.'));
-        if (!filhos.length) return;
-        optsHtml += `<optgroup label="${s.codigo} — ${s.conta}">`;
-        filhos.forEach(a => { optsHtml += `<option value="${a.codigo}|${a.conta}">${a.codigo} — ${a.conta}</option>`; });
-        optsHtml += '</optgroup>';
-    });
-    // Analíticas sem pai listado
-    const semPai = analiticas.filter(a => !sinteticas.some(s => a.codigo.startsWith(s.codigo + '.')));
-    if (semPai.length) {
-        optsHtml += '<optgroup label="Outras">';
-        semPai.forEach(a => { optsHtml += `<option value="${a.codigo}|${a.conta}">${a.codigo} — ${a.conta}</option>`; });
-        optsHtml += '</optgroup>';
-    }
-    const selEl = document.getElementById('despesaCodigoConta');
-    if (selEl) selEl.innerHTML = optsHtml;
-
-    // Limpa campos
-    ['despesaDescricao','despesaBeneficiario','despesaValor'].forEach(id => {
-        const el = document.getElementById(id); if (el) el.value = '';
-    });
-    const vencEl = document.getElementById('despesaVencimento');
-    if (vencEl) vencEl.value = new Date().toISOString().split('T')[0];
-    const ccEl = document.getElementById('despesaCentroCusto');
-    if (ccEl) ccEl.value = '';
-    document.getElementById('finDespesaModal').style.display = 'flex';
+window.novaDespesa = function(editId) {
+    const suffix = typeof window.getTenantSuffix==='function' ? window.getTenantSuffix() : '';
+    const item = editId ? (JSON.parse(localStorage.getItem('erp_pagar'+suffix)||'[]').find(i=>i.id===editId)) : null;
+    const today = new Date().toISOString().split('T')[0];
+    createDynamicModal('finDespesaModalDyn', item?'Editar Despesa':'Nova Despesa', `
+        ${formRow('Descrição *', `<input type="text" id="dDesc" class="form-input" value="${item?.descricao||''}" placeholder="Ex: Aluguel de Outubro">`)}
+        ${formRow2('Beneficiário / Fornecedor', `<input type="text" id="dBen" class="form-input" value="${item?.beneficiario||''}" placeholder="Ex: Imobiliária ABC">`,
+                   'Nº Documento', `<input type="text" id="dDoc" class="form-input" value="${item?.docNumero||''}" placeholder="NF, Boleto, Contrato...">`)}
+        ${formRow2('Valor (R$) *', `<input type="text" id="dValor" class="form-input" value="${item?parseFloat(item.valor||0).toFixed(2).replace('.',','):''}" placeholder="0,00">`,
+                   'Vencimento *', `<input type="date" id="dVenc" class="form-input" value="${item?.vencimento||today}">`)}
+        ${formRow2('Conta (Plano de Contas)', `<select id="dConta" class="form-input">${_buildContasOpts(item?.codigoConta)}</select>`,
+                   'Centro de Custo', `<select id="dCC" class="form-input">
+                    <option value="" ${!item?.centroCusto?'selected':''}>-- Selecione --</option>
+                    <option value="1" ${item?.centroCusto==='1'?'selected':''}>1 — MATRIZ</option>
+                    <option value="2" ${item?.centroCusto==='2'?'selected':''}>2 — PALMAS</option>
+                    <option value="4" ${item?.centroCusto==='4'?'selected':''}>4 — PORTO</option>
+                </select>`)}
+        ${formRow('Observação', `<textarea id="dObs" class="form-input" rows="2" style="resize:vertical;">${item?.observacao||''}</textarea>`)}
+        <input type="hidden" id="dEditId" value="${editId||''}">
+    `, 'salvarDespesa()');
 };
 
 window.salvarDespesa = function () {
-    const desc  = (document.getElementById('despesaDescricao')?.value || '').trim();
-    const valor = parseFloat((document.getElementById('despesaValor')?.value || '').replace(',', '.'));
-    const venc  = document.getElementById('despesaVencimento')?.value || '';
-    const contaRaw = document.getElementById('despesaCodigoConta')?.value || '';
-    const cc    = document.getElementById('despesaCentroCusto')?.value || '';
-    const ben   = (document.getElementById('despesaBeneficiario')?.value || '').trim();
+    const desc  = (document.getElementById('dDesc')?.value||'').trim();
+    const valor = parseFloat((document.getElementById('dValor')?.value||'').replace(',','.'));
+    const venc  = document.getElementById('dVenc')?.value||'';
+    if (!desc || isNaN(valor) || !venc) { alert('Preencha Descrição, Valor e Vencimento!'); return; }
+    const contaRaw = document.getElementById('dConta')?.value||'';
+    const [codigoConta, conta] = contaRaw ? contaRaw.split('|') : ['',''];
+    const cc      = document.getElementById('dCC')?.value||'';
+    const ben     = (document.getElementById('dBen')?.value||'').trim();
+    const docNum  = (document.getElementById('dDoc')?.value||'').trim();
+    const obs     = (document.getElementById('dObs')?.value||'').trim();
+    const editId  = document.getElementById('dEditId')?.value||'';
+    const suffix  = typeof window.getTenantSuffix==='function' ? window.getTenantSuffix() : '';
+    const items   = JSON.parse(localStorage.getItem('erp_pagar'+suffix)||'[]');
+    if (editId) {
+        const idx = items.findIndex(i=>i.id===editId);
+        if (idx!==-1) items[idx]={...items[idx],descricao:desc,beneficiario:ben,docNumero:docNum,valor,vencimento:venc,
+            codigoConta:codigoConta||'',conta:conta||'',categoria:conta||'Outros',centroCusto:cc,observacao:obs,updatedAt:new Date().toISOString()};
+    } else {
+        items.push({id:'CP-'+Date.now(),descricao:desc,beneficiario:ben,docNumero:docNum,valor,vencimento:venc,
+            codigoConta:codigoConta||'',conta:conta||'',categoria:conta||'Outros',centroCusto:cc,observacao:obs,
+            status:'Aberto',criadoEm:new Date().toISOString()});
+    }
+    localStorage.setItem('erp_pagar'+suffix, JSON.stringify(items));
+    closeModal('finDespesaModalDyn');
+    // Fecha modal estático se estiver aberto (retrocompat)
+    const staticModal = document.getElementById('finDespesaModal');
+    if (staticModal) staticModal.style.display = 'none';
+    renderPagarGrid();
+    if (typeof showToast==='function') showToast(`✅ Despesa ${editId?'atualizada':'salva'}!`,'success');
+};
 
-    if (!desc || isNaN(valor) || !venc) { alert('Preencha os campos obrigatórios!'); return; }
+window.editarDespesa = function(id) { novaDespesa(id); };
 
-    const [codigoConta, conta] = contaRaw ? contaRaw.split('|') : ['', ''];
-    const suffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
-    const items = JSON.parse(localStorage.getItem('erp_pagar' + suffix) || '[]');
-    items.push({
-        id: 'CP-' + Date.now(),
-        descricao: desc,
-        beneficiario: ben,
-        valor,
-        vencimento: venc,
-        codigoConta: codigoConta || '',
-        conta: conta || '',
-        categoria: conta || 'Outros', // compatibilidade retroativa
-        centroCusto: cc,
-        status: 'Aberto',
-        criadoEm: new Date().toISOString()
-    });
-    localStorage.setItem('erp_pagar' + suffix, JSON.stringify(items));
-    document.getElementById('finDespesaModal').style.display = 'none';
+window._excluirDespesa = function(id) {
+    if (!confirm('Excluir esta conta a pagar?')) return;
+    const suffix = typeof window.getTenantSuffix==='function' ? window.getTenantSuffix() : '';
+    localStorage.setItem('erp_pagar'+suffix, JSON.stringify(JSON.parse(localStorage.getItem('erp_pagar'+suffix)||'[]').filter(i=>i.id!==id)));
     renderPagarGrid();
 };
 
-window.baixarContaPagar = function (id) {
-    if (!confirm('Confirmar o pagamento desta conta?')) return;
-    const suffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
-    const items = JSON.parse(localStorage.getItem('erp_pagar' + suffix) || '[]');
-    const item = items.find(i => i.id === id);
+window.baixarContaPagar = function(id) {
+    const suffix = typeof window.getTenantSuffix==='function' ? window.getTenantSuffix() : '';
+    const item = JSON.parse(localStorage.getItem('erp_pagar'+suffix)||'[]').find(i=>i.id===id);
+    if (!item) return;
+    createDynamicModal('finBaixaPagarModal', '💳 Registrar Pagamento', `
+        <div style="background:var(--bg-secondary);border-radius:6px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.88rem;">
+            <div><strong>${item.descricao}</strong>${item.docNumero?` — Nº ${item.docNumero}`:''}</div>
+            <div style="color:var(--text-secondary);">Valor: <strong>${parseFloat(item.valor||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</strong> | Venc: ${new Date(item.vencimento+'T00:00:00').toLocaleDateString('pt-BR')}</div>
+            ${item.beneficiario?`<div style="color:var(--text-secondary);">Benef.: ${item.beneficiario}</div>`:''}
+        </div>
+        ${formRow2('Data do Pagamento *', `<input type="date" id="bpData" class="form-input" value="${new Date().toISOString().split('T')[0]}">`,
+                   'Valor Pago (R$) *', `<input type="text" id="bpValor" class="form-input" value="${parseFloat(item.valor||0).toFixed(2).replace('.',',')}" placeholder="Pode diferir por juros/desconto">`)}
+        ${formRow2('Forma de Pagamento', `<select id="bpForma" class="form-input">${_FORMAS_PGTO}</select>`,
+                   'Conta Bancária', `<select id="bpBanco" class="form-input"><option value="">Não especificado</option>${_bankOptions()}</select>`)}
+        ${formRow('Observação', `<textarea id="bpObs" class="form-input" rows="2" style="resize:vertical;" placeholder="Ex: pago com desconto, juros aplicados..."></textarea>`)}
+    `, `processarBaixaPagar('${id}')`);
+};
+
+window.processarBaixaPagar = function(id) {
+    const dataPgto = document.getElementById('bpData')?.value;
+    const valorPago= parseFloat((document.getElementById('bpValor')?.value||'').replace(',','.'));
+    if (!dataPgto || isNaN(valorPago)) { alert('Data e valor são obrigatórios!'); return; }
+    const loggedUser = typeof Utils!=='undefined' ? Utils.getStorage('logged_user') : null;
+    const userName   = loggedUser ? (loggedUser.name||loggedUser.login) : 'Sistema';
+    const suffix     = typeof window.getTenantSuffix==='function' ? window.getTenantSuffix() : '';
+    const items      = JSON.parse(localStorage.getItem('erp_pagar'+suffix)||'[]');
+    const item       = items.find(i=>i.id===id);
     if (item) {
-        item.status = 'Pago';
-        item.dataPagamento = new Date().toISOString();
-        localStorage.setItem('erp_pagar' + suffix, JSON.stringify(items));
-        renderPagarGrid();
+        Object.assign(item, { status:'Pago', dataPagamento:new Date(dataPgto).toISOString(), valorPago,
+            formaPagamento:document.getElementById('bpForma')?.value||'PIX',
+            contaBancaria:document.getElementById('bpBanco')?.value||'',
+            observacao:(document.getElementById('bpObs')?.value||'').trim()||item.observacao,
+            paidBy:userName, updatedAt:new Date().toISOString() });
+        localStorage.setItem('erp_pagar'+suffix, JSON.stringify(items));
     }
+    closeModal('finBaixaPagarModal');
+    renderPagarGrid();
+    if (typeof showToast==='function') showToast('✅ Pagamento registrado!','success');
+};
+
+window.baixarMultiplasPagar = function() {
+    const suffix  = typeof window.getTenantSuffix==='function' ? window.getTenantSuffix() : '';
+    const checked = [...document.querySelectorAll('.pagar-row-check:checked')].map(cb=>cb.dataset.id);
+    if (!checked.length) return;
+    createDynamicModal('finBaixaLoteModal', `💳 Pagar ${checked.length} conta(s)`, `
+        <div style="background:var(--bg-secondary);border-radius:6px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.88rem;color:var(--text-secondary);">
+            Aplicar o mesmo pagamento para <strong>${checked.length} contas selecionadas</strong>.<br>O valor individual de cada conta será preservado.
+        </div>
+        ${formRow2('Data do Pagamento *', `<input type="date" id="blData" class="form-input" value="${new Date().toISOString().split('T')[0]}">`,
+                   'Forma de Pagamento', `<select id="blForma" class="form-input">${_FORMAS_PGTO}</select>`)}
+        ${formRow('Conta Bancária', `<select id="blBanco" class="form-input"><option value="">Não especificado</option>${_bankOptions()}</select>`)}
+        ${formRow('Observação', `<textarea id="blObs" class="form-input" rows="2" style="resize:vertical;"></textarea>`)}
+        <input type="hidden" id="blIds" value="${checked.join(',')}">
+    `, 'processarBaixaLote()');
+};
+
+window.processarBaixaLote = function() {
+    const dataPgto = document.getElementById('blData')?.value;
+    if (!dataPgto) { alert('Informe a data de pagamento!'); return; }
+    const forma    = document.getElementById('blForma')?.value||'PIX';
+    const banco    = document.getElementById('blBanco')?.value||'';
+    const obs      = (document.getElementById('blObs')?.value||'').trim();
+    const ids      = (document.getElementById('blIds')?.value||'').split(',').filter(Boolean);
+    const loggedUser = typeof Utils!=='undefined' ? Utils.getStorage('logged_user') : null;
+    const userName   = loggedUser ? (loggedUser.name||loggedUser.login) : 'Sistema';
+    const suffix     = typeof window.getTenantSuffix==='function' ? window.getTenantSuffix() : '';
+    const items      = JSON.parse(localStorage.getItem('erp_pagar'+suffix)||'[]');
+    let count = 0;
+    items.forEach(item => {
+        if (ids.includes(item.id) && item.status!=='Pago') {
+            Object.assign(item,{status:'Pago',dataPagamento:new Date(dataPgto).toISOString(),valorPago:parseFloat(item.valor||0),
+                formaPagamento:forma,contaBancaria:banco,observacao:obs||item.observacao,paidBy:userName,updatedAt:new Date().toISOString()});
+            count++;
+        }
+    });
+    localStorage.setItem('erp_pagar'+suffix, JSON.stringify(items));
+    closeModal('finBaixaLoteModal');
+    renderPagarGrid();
+    if (typeof showToast==='function') showToast(`✅ ${count} conta(s) paga(s) com sucesso!`,'success');
 };
 
 // ===========================================
