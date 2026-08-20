@@ -8963,22 +8963,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.applyVanFilters();
         }
 
-
-            window.markAsDispatched = (id) => {
-                const list = Utils.getStorage('dispatches');
-                const idx = list.findIndex(d => d.id === id);
-                if (idx !== -1) {
-                    if (confirm('Confirmar despacho desta mercadoria?')) {
-                        list[idx].status = 'Despachado';
-                        list[idx].dispatchedAt = new Date().toISOString();
-                        Utils.saveRaw('dispatches', JSON.stringify(list));
-                        showToast('✅ Mercadoria marcada como despachada!');
-                        renderAppHistory();
-                    }
-                }
-            };
-        }
-
         // --- RELATÓRIO DE ENTREGAS (Motoboy/Motorista) ---
         async function renderDeliveryReport(container) {
             // Buscar histórico de entregas
