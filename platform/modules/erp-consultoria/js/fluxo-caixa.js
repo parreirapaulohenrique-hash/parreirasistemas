@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Controlador principal da Aplicação UI e Lógica do Fluxo de Caixa (ERP Consultoria)
  * Integrado como um módulo dentro do ERP Geral.
  */
@@ -2780,7 +2780,7 @@ window.fcApp = {
         const ws = XLSX.utils.aoa_to_sheet(wsData);
         XLSX.utils.book_append_sheet(wb, ws, "Fluxo de Caixa " + year);
         
-        XLSX.writeFile(wb, `ERP_Consultoria_${client.name}_${year}.xlsx`);
+        XLSX.writeFile(wb, `BussolaGestao_${client.name}_${year}.xlsx`);
     },
 
     // --- UTILS ---

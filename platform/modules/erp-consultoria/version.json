@@ -1,9 +1,1 @@
-{
-    "version":  "11.24.15",
-    "name":  "Consultoria ParreiraLog",
-    "last_change":  "FEAT: Adicionada edicao manual para contas de movimento inicial, remapeamento de codigo de conta (1.X -> 0.X) e calculo automatico de saldos inicial/ajustado.",
-    "platform_version":  "11.24.15",
-    "date":  "2026-06-22",
-    "module":  "erp-consultoria",
-    "build":  "20260622.03"
-}
+{"build":"20260820-v3.19.6","version":"3.19.6","environment":"staging","change":"v3.19.6 - REFACTOR: Modulo Consultoria renomeado para Bussola Gestao em todos os labels visiveis ao usuario (sidebar, breadcrumb, nav-divider, headings, title, master, login, gestao-usuarios). Slug tecnico erp-consultoria e nomes de contas contabeis preservados.","lastUpdate":"2026-08-20","deployedAt":"2026-08-20"}
