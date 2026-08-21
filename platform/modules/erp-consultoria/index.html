@@ -92,6 +92,33 @@
     });
     </script>
 
+    <!-- BÚSSOLA GESTÃO — força digitação em maiúsculas no valor real (não só visual via CSS) -->
+    <script>
+    (function() {
+        // Tipos de input que NÃO devem ser convertidos para maiúsculo
+        var SKIP_TYPES = new Set(['date','datetime-local','month','week','time','email','password','number','range','search','color','url','file']);
+
+        function toUpper(el) {
+            if (!el) return;
+            var tag = el.tagName;
+            if (tag !== 'INPUT' && tag !== 'TEXTAREA') return;
+            if (tag === 'INPUT' && SKIP_TYPES.has((el.type || 'text').toLowerCase())) return;
+            // Preserva posição do cursor
+            var start = el.selectionStart;
+            var end   = el.selectionEnd;
+            var upper = el.value.toUpperCase();
+            if (el.value !== upper) {
+                el.value = upper;
+                try { el.setSelectionRange(start, end); } catch(e) {}
+            }
+        }
+
+        // Listener em modo captura no document — captura TODOS os inputs do módulo
+        document.addEventListener('input',  function(e){ toUpper(e.target); }, true);
+        document.addEventListener('change', function(e){ toUpper(e.target); }, true);
+    })();
+    </script>
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -105,6 +132,18 @@
             padding-left: 2.25rem !important;
             display: flex !important;
             align-items: center !important;
+        }
+
+        /* ========================================================
+           BÚSSOLA GESTÃO — DIGITAÇÃO SEMPRE EM MAIÚSCULAS
+           CSS garante exibição imediata; JS (abaixo) grava o valor.
+           Excluído: date, number, email, password, search, select.
+           ======================================================== */
+        input[type="text"].form-input,
+        input[type="tel"].form-input,
+        input:not([type]).form-input,
+        textarea.form-input {
+            text-transform: uppercase;
         }
     </style>
 </head>
