@@ -1,4 +1,4 @@
-﻿// Parreira ERP Core Logic
+// Parreira ERP Core Logic
 
 window.getTenantSuffix = function () {
     try {
@@ -984,3 +984,184 @@ window.renderDashboard = function () {
     const kpiVendas = document.getElementById('kpiVendasMes');
     if (kpiVendas) kpiVendas.textContent = totalMes.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 };
+
+// =============================================================
+// SETORES & CARGOS — Tabelas Pré-definidas pela Gerência
+// =============================================================
+
+const _SETOR_KEY = () => 'erp_setores'  + (window.getTenantSuffix ? window.getTenantSuffix() : '');
+const _CARGO_KEY = () => 'erp_cargos'   + (window.getTenantSuffix ? window.getTenantSuffix() : '');
+
+const _SETORES_SEED = [
+    'ADMINISTRATIVO', 'COMERCIAL', 'COMPRAS', 'DIRETORIA', 'FINANCEIRO',
+    'LOGÍSTICA', 'OPERACIONAL', 'RECURSOS HUMANOS', 'TI'
+];
+const _CARGOS_SEED = [
+    'ANALISTA FINANCEIRO', 'ASSISTENTE ADMINISTRATIVO', 'ASSISTENTE COMERCIAL',
+    'AUXILIAR ADMINISTRATIVO', 'AUXILIAR DE LOGÍSTICA', 'CONFERENTE',
+    'DIRETOR', 'GERENTE', 'MOTORISTA', 'SUPERVISOR',
+    'VENDEDOR EXTERNO', 'VENDEDOR INTERNO'
+];
+
+function _getSetores() {
+    const raw = localStorage.getItem(_SETOR_KEY());
+    if (!raw) {
+        const seeded = _SETORES_SEED.map((n, i) => ({ id: i + 1, nome: n }));
+        localStorage.setItem(_SETOR_KEY(), JSON.stringify(seeded));
+        return seeded;
+    }
+    return JSON.parse(raw);
+}
+function _saveSetores(list) { localStorage.setItem(_SETOR_KEY(), JSON.stringify(list)); }
+
+function _getCargos() {
+    const raw = localStorage.getItem(_CARGO_KEY());
+    if (!raw) {
+        const seeded = _CARGOS_SEED.map((n, i) => ({ id: i + 1, nome: n }));
+        localStorage.setItem(_CARGO_KEY(), JSON.stringify(seeded));
+        return seeded;
+    }
+    return JSON.parse(raw);
+}
+function _saveCargos(list) { localStorage.setItem(_CARGO_KEY(), JSON.stringify(list)); }
+
+// ---- Picker modal compartilhado ----
+function _openPicker(title, items, onSelect, manageCmd) {
+    const existing = document.getElementById('_hrPickerModal');
+    if (existing) existing.remove();
+
+    const rows = items.sort((a, b) => a.nome.localeCompare(b.nome)).map(it =>
+        `<div class="_hp-row" data-nome="${it.nome}"
+              onclick="_hrPickerSelect('${it.nome.replace(/'/g, "\\'")}')"
+              style="padding:.55rem 1.25rem;cursor:pointer;font-size:.88rem;border-bottom:1px solid var(--border-color);"
+              onmouseover="this.style.background='var(--bg-hover)'"
+              onmouseout="this.style.background=''">
+            ${it.nome}
+        </div>`
+    ).join('');
+
+    document.body.insertAdjacentHTML('beforeend', `
+        <div id="_hrPickerModal" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;">
+            <div style="background:var(--bg-card);border-radius:12px;width:440px;max-height:540px;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+                <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;">
+                    <h4 style="margin:0;font-size:.95rem;">${title}</h4>
+                    <button onclick="document.getElementById('_hrPickerModal').remove()" style="background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:1.3rem;line-height:1;">✕</button>
+                </div>
+                <div style="padding:.65rem 1rem;border-bottom:1px solid var(--border-color);">
+                    <input type="text" id="_hrPickerSearch" class="form-input" placeholder="🔍 Buscar..."
+                           oninput="_hrPickerFilter()"
+                           style="width:100%;padding:.45rem .7rem;font-size:.85rem;">
+                </div>
+                <div id="_hrPickerList" style="overflow-y:auto;flex:1;">
+                    ${rows || '<div style="padding:1.5rem;text-align:center;color:var(--text-secondary);font-size:.85rem;">Nenhum item cadastrado.<br>Use "Gerenciar Lista" para adicionar.</div>'}
+                </div>
+                <div style="padding:.7rem 1rem;border-top:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;">
+                    <button onclick="${manageCmd}" class="btn btn-secondary" style="font-size:.78rem;padding:.3rem .75rem;">
+                        <span class="material-icons-round" style="font-size:.9rem;vertical-align:middle;">settings</span> Gerenciar Lista
+                    </button>
+                    <button onclick="document.getElementById('_hrPickerModal').remove()" class="btn btn-secondary" style="font-size:.78rem;">Cancelar</button>
+                </div>
+            </div>
+        </div>`);
+
+    window._hrPickerOnSelect = onSelect;
+    setTimeout(() => { const s = document.getElementById('_hrPickerSearch'); if (s) s.focus(); }, 80);
+}
+
+window._hrPickerFilter = function () {
+    const q = document.getElementById('_hrPickerSearch')?.value.toUpperCase() || '';
+    document.querySelectorAll('#_hrPickerList ._hp-row').forEach(el => {
+        el.style.display = (el.dataset.nome || '').includes(q) ? '' : 'none';
+    });
+};
+
+window._hrPickerSelect = function (nome) {
+    if (window._hrPickerOnSelect) window._hrPickerOnSelect(nome);
+    const m = document.getElementById('_hrPickerModal');
+    if (m) m.remove();
+};
+
+// ---- Picker público: Setor ----
+window.openSetorPicker = function () {
+    _openPicker('Selecionar Setor', _getSetores(),
+        (nome) => { const el = document.getElementById('empSector'); if (el) el.value = nome; },
+        'document.getElementById("_hrPickerModal").remove(); openSetoresManager();'
+    );
+};
+
+// ---- Picker público: Cargo ----
+window.openCargoPicker = function () {
+    _openPicker('Selecionar Cargo', _getCargos(),
+        (nome) => { const el = document.getElementById('empRole'); if (el) el.value = nome; },
+        'document.getElementById("_hrPickerModal").remove(); openCargosManager();'
+    );
+};
+
+// ---- Modal de Gerenciamento (CRUD) — compartilhado ----
+function _openManager(title, getter, saver) {
+    const existing = document.getElementById('_hrManagerModal');
+    if (existing) existing.remove();
+
+    function renderList() {
+        const list = getter().sort((a, b) => a.nome.localeCompare(b.nome));
+        const listEl = document.getElementById('_hrMgrList');
+        if (!listEl) return;
+        listEl.innerHTML = list.length
+            ? list.map(it => `
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:.4rem .9rem;border-bottom:1px solid var(--border-color);font-size:.85rem;">
+                    <span>${it.nome}</span>
+                    <button onclick="_hrMgrDelete(${it.id})" style="background:none;border:none;cursor:pointer;color:#ef4444;padding:.2rem;" title="Excluir">
+                        <span class="material-icons-round" style="font-size:1rem;">delete</span>
+                    </button>
+                </div>`).join('')
+            : '<div style="padding:1.5rem;text-align:center;color:var(--text-secondary);font-size:.85rem;">Nenhum item. Adicione acima.</div>';
+    }
+
+    document.body.insertAdjacentHTML('beforeend', `
+        <div id="_hrManagerModal" style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:10000;display:flex;align-items:center;justify-content:center;">
+            <div style="background:var(--bg-card);border-radius:12px;width:460px;max-height:580px;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+                <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;">
+                    <h4 style="margin:0;font-size:.95rem;">⚙️ ${title}</h4>
+                    <button onclick="document.getElementById('_hrManagerModal').remove()" style="background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:1.3rem;line-height:1;">✕</button>
+                </div>
+                <div style="padding:.65rem 1rem;border-bottom:1px solid var(--border-color);display:flex;gap:.5rem;">
+                    <input type="text" id="_hrMgrInput" class="form-input"
+                           placeholder="Nome do novo item (Enter para adicionar)..."
+                           style="flex:1;padding:.45rem .7rem;font-size:.85rem;"
+                           onkeydown="if(event.key==='Enter'){_hrMgrAdd();event.preventDefault();}">
+                    <button class="btn btn-primary" onclick="_hrMgrAdd()" style="padding:.4rem .9rem;font-size:.82rem;">+ Adicionar</button>
+                </div>
+                <div id="_hrMgrList" style="overflow-y:auto;flex:1;"></div>
+                <div style="padding:.7rem 1rem;border-top:1px solid var(--border-color);text-align:right;">
+                    <button onclick="document.getElementById('_hrManagerModal').remove()" class="btn btn-secondary" style="font-size:.82rem;">Fechar</button>
+                </div>
+            </div>
+        </div>`);
+
+    renderList();
+    setTimeout(() => { const i = document.getElementById('_hrMgrInput'); if (i) i.focus(); }, 80);
+
+    window._hrMgrAdd = function () {
+        const input = document.getElementById('_hrMgrInput');
+        const nome = (input?.value || '').trim().toUpperCase();
+        if (!nome) { alert('Informe o nome do item!'); return; }
+        const list = getter();
+        if (list.some(i => i.nome === nome)) { alert('Este item já existe na lista!'); return; }
+        const maxId = list.reduce((m, i) => Math.max(m, i.id || 0), 0);
+        list.push({ id: maxId + 1, nome });
+        saver(list);
+        if (input) input.value = '';
+        renderList();
+        if (typeof showToast === 'function') showToast(`✅ "${nome}" adicionado!`, 'success');
+    };
+
+    window._hrMgrDelete = function (id) {
+        if (!confirm('Remover este item da lista?')) return;
+        const list = getter().filter(i => i.id !== id);
+        saver(list);
+        renderList();
+    };
+}
+
+window.openSetoresManager = function () { _openManager('Gerenciar Setores', _getSetores, _saveSetores); };
+window.openCargosManager  = function () { _openManager('Gerenciar Cargos',  _getCargos,  _saveCargos);  };

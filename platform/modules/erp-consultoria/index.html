@@ -2900,19 +2900,32 @@
                                         </div>
                                         <div class="form-group col-5">
                                             <label class="form-label">Setor</label>
-                                            <div style="display:flex; gap:0.5rem;">
-                                                <input type="text" id="empSector" class="form-input">
-                                                <button type="button" class="btn btn-secondary btn-icon"><span
-                                                        class="material-icons-round">more_horiz</span></button>
+                                            <div style="display:flex; gap:0.4rem;">
+                                                <input type="text" id="empSector" class="form-input" readonly
+                                                    style="cursor:pointer; flex:1;"
+                                                    placeholder="Clique em ··· para selecionar"
+                                                    onclick="openSetorPicker()" title="Clique para selecionar o setor">
+                                                <button type="button" class="btn btn-secondary btn-icon"
+                                                    onclick="openSetorPicker()" title="Selecionar Setor">
+                                                    <span class="material-icons-round">more_horiz</span>
+                                                </button>
                                             </div>
                                         </div>
                                         <div class="form-group col-3">
                                             <label class="form-label">Cargo</label>
-                                            <input type="text" id="empRole" class="form-input">
+                                            <div style="display:flex; gap:0.4rem;">
+                                                <input type="text" id="empRole" class="form-input" readonly
+                                                    style="cursor:pointer; flex:1;"
+                                                    placeholder="Selecionar..."
+                                                    onclick="openCargoPicker()" title="Clique para selecionar o cargo">
+                                                <button type="button" class="btn btn-secondary btn-icon"
+                                                    onclick="openCargoPicker()" title="Selecionar Cargo">
+                                                    <span class="material-icons-round">more_horiz</span>
+                                                </button>
+                                            </div>
                                         </div>
                                         <div class="form-group col-2">
-                                            <label class="form-label" style="color:var(--accent-warning);">É
-                                                Vendedor?</label>
+                                            <label class="form-label" style="color:var(--accent-warning);">É Vendedor?</label>
                                             <div style="display:flex; align-items:center; height:42px;">
                                                 <label class="check-label"><input type="checkbox" id="empIsSeller"
                                                         onchange="toggleSalesTab()"> Sim, Habilitar Vendas</label>
