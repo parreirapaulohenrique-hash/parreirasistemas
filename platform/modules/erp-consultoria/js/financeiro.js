@@ -997,8 +997,43 @@ window.novaDespesa = function(editId) {
         ${formRow2('Conta (Plano de Contas)', `<select id="dConta" class="form-input">${_buildContasOpts(item?.codigoConta)}</select>`,
                    'Centro de Custo', `<select id="dCC" class="form-input">${typeof window.buildCCOptions==='function'?window.buildCCOptions(item?.centroCusto||''):'<option value="">-- Selecione --</option>'}</select>`)}
         ${formRow('Observação', `<textarea id="dObs" class="form-input" rows="2" style="resize:vertical;">${item?.observacao||''}</textarea>`)}
+        <div style="margin-bottom:1rem;">
+            <label style="display:flex;align-items:center;gap:.6rem;cursor:pointer;font-size:.88rem;color:var(--text-secondary);">
+                <input type="checkbox" id="dJaQuitada" onchange="_toggleQuitadaFields(this)"
+                    ${item?.status==='Pago'?'checked':''}
+                    style="width:1rem;height:1rem;accent-color:#10b981;cursor:pointer;">
+                <span style="font-weight:600;color:${item?.status==='Pago'?'#10b981':'var(--text-secondary)'};">✓ Já Quitada</span>
+            </label>
+        </div>
+        <div id="dQuitadaFields" style="display:${item?.status==='Pago'?'block':'none'};border:1px solid rgba(16,185,129,.25);border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;background:rgba(16,185,129,.04);">
+            ${formRow2('Data de Quitação *',
+                `<input type="date" id="dDataQuit" class="form-input" value="${item?.dataPagamento?new Date(item.dataPagamento).toISOString().split('T')[0]:today}">`,
+                'Forma de Pagamento',
+                `<select id="dFormaQuit" class="form-input">${_FORMAS_PGTO}</select>`
+            )}
+        </div>
         <input type="hidden" id="dEditId" value="${editId||''}">
     `, 'salvarDespesa()');
+    // Set forma correta se editando
+    if (item?.formaPagamento) {
+        setTimeout(() => {
+            const sel = document.getElementById('dFormaQuit');
+            if (sel) sel.value = item.formaPagamento;
+        }, 50);
+    }
+};
+
+window._toggleQuitadaFields = function(cb) {
+    const fields = document.getElementById('dQuitadaFields');
+    if (!fields) return;
+    fields.style.display = cb.checked ? 'block' : 'none';
+    const lbl = cb.parentElement.querySelector('span');
+    if (lbl) lbl.style.color = cb.checked ? '#10b981' : 'var(--text-secondary)';
+    // Preenche data de hoje se ainda estiver vazia
+    if (cb.checked) {
+        const dt = document.getElementById('dDataQuit');
+        if (dt && !dt.value) dt.value = new Date().toISOString().split('T')[0];
+    }
 };
 
 window.salvarDespesa = function () {
@@ -1013,16 +1048,36 @@ window.salvarDespesa = function () {
     const docNum  = (document.getElementById('dDoc')?.value||'').trim();
     const obs     = (document.getElementById('dObs')?.value||'').trim();
     const editId  = document.getElementById('dEditId')?.value||'';
+
+    // Lê opção "Já Quitada"
+    const jaQuitada  = document.getElementById('dJaQuitada')?.checked || false;
+    const dataQuit   = document.getElementById('dDataQuit')?.value || venc;
+    const formaQuit  = document.getElementById('dFormaQuit')?.value || 'PIX';
+    if (jaQuitada && !dataQuit) { alert('Informe a Data de Quitação!'); return; }
+
     const suffix  = typeof window.getTenantSuffix==='function' ? window.getTenantSuffix() : '';
     const items   = JSON.parse(localStorage.getItem('erp_pagar'+suffix)||'[]');
+
+    const baseRecord = {
+        descricao:desc, beneficiario:ben, docNumero:docNum, valor, vencimento:venc,
+        codigoConta:codigoConta||'', conta:conta||'', categoria:conta||'Outros',
+        centroCusto:cc, observacao:obs, updatedAt:new Date().toISOString(),
+        ...(jaQuitada ? {
+            status:'Pago',
+            dataPagamento: new Date(dataQuit).toISOString(),
+            valorPago: valor,
+            formaPagamento: formaQuit
+        } : {})
+    };
+
     if (editId) {
         const idx = items.findIndex(i=>i.id===editId);
-        if (idx!==-1) items[idx]={...items[idx],descricao:desc,beneficiario:ben,docNumero:docNum,valor,vencimento:venc,
-            codigoConta:codigoConta||'',conta:conta||'',categoria:conta||'Outros',centroCusto:cc,observacao:obs,updatedAt:new Date().toISOString()};
+        if (idx!==-1) items[idx] = { ...items[idx], ...baseRecord,
+            ...(!jaQuitada ? { status: items[idx].status==='Pago' ? 'Pago' : 'Aberto' } : {}) };
     } else {
-        items.push({id:'CP-'+Date.now(),descricao:desc,beneficiario:ben,docNumero:docNum,valor,vencimento:venc,
-            codigoConta:codigoConta||'',conta:conta||'',categoria:conta||'Outros',centroCusto:cc,observacao:obs,
-            status:'Aberto',criadoEm:new Date().toISOString()});
+        items.push({ id:'CP-'+Date.now(), ...baseRecord,
+            status: jaQuitada ? 'Pago' : 'Aberto',
+            criadoEm: new Date().toISOString() });
     }
     localStorage.setItem('erp_pagar'+suffix, JSON.stringify(items));
     closeModal('finDespesaModalDyn');
