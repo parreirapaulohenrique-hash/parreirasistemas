@@ -9,8 +9,50 @@ const COLLECTIONS = {
     billing: { name: 'Cobrança', path: 'financial/billing', fields: ['codigo', 'descricao', 'moeda', 'carencia', 'diasProtesto', 'juros'] },
     paymentPlans: { name: 'Plano de Pagamento', path: 'financial/paymentPlans', fields: ['codigo', 'descricao', 'parcelas', 'tipo', 'liberaBloqueado'] },
     banks: { name: 'Caixas e Bancos', path: 'financial/banks', fields: ['codigo', 'empresa', 'nome', 'banco', 'agencia', 'conta', 'digito'] },
+    costCenters: { name: 'Centros de Custo', path: 'financial/costCenters', fields: ['codigo', 'nome'] },
     cfop: { name: 'CFOP', path: 'fiscal/cfop', fields: ['codigo', 'descricao', 'observacao'] },
     icmsParams: { name: 'Parâmetros ICMS', path: 'fiscal/icmsParams', fields: ['codTribut', 'icmsNf', 'icmsSubs', 'baseRed'] }
+};
+
+// -------------------------------------------------------
+// HELPER GLOBAL: getCostCenters()
+// Retorna a lista de Centros de Custo do localStorage.
+// Se ainda não existe, semente com os 3 padrões históricos.
+// -------------------------------------------------------
+window.getCostCenters = function () {
+    const suffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
+    const key    = 'erp_costCenters' + suffix;
+    const raw    = localStorage.getItem(key);
+    if (raw) return JSON.parse(raw);
+    // Seed inicial com os centros já utilizados historicamente
+    const seed = [
+        { id: '1', codigo: '1', nome: 'MATRIZ' },
+        { id: '2', codigo: '2', nome: 'PALMAS' },
+        { id: '4', codigo: '4', nome: 'PORTO'  }
+    ];
+    localStorage.setItem(key, JSON.stringify(seed));
+    return seed;
+};
+
+// Helper para montar options HTML de um select de CC
+window.buildCCOptions = function (selectedCodigo) {
+    const ccs = window.getCostCenters();
+    const blank = `<option value="">-- Selecione --</option>`;
+    return blank + ccs.map(c =>
+        `<option value="${c.codigo}" ${c.codigo === selectedCodigo ? 'selected' : ''}>${c.codigo} — ${c.nome}</option>`
+    ).join('');
+};
+
+// Preenche todos os selects com id "despesaCentroCusto" ou "dCC" que existam no DOM
+window.populateCCSelects = function () {
+    const ccs = window.getCostCenters();
+    ['despesaCentroCusto', 'dCC'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const cur = el.value;
+        el.innerHTML = `<option value="">-- Selecione --</option>` +
+            ccs.map(c => `<option value="${c.codigo}" ${c.codigo === cur ? 'selected' : ''}>${c.codigo} — ${c.nome}</option>`).join('');
+    });
 };
 
 // Estado local para armazenamento

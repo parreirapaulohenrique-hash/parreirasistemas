@@ -260,6 +260,10 @@
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">account_tree</span>Plano de Contas
                         </a>
+                        <a class="nav-sub-item" onclick="switchView('costCenters')">
+                            <span class="material-icons-round"
+                                style="font-size:1rem; margin-right:0.5rem;">corporate_fare</span>Centros de Custo
+                        </a>
                         <a class="nav-sub-item" onclick="switchView('paymentPlans')">
                             <span class="material-icons-round"
                                 style="font-size:1rem; margin-right:0.5rem;">calendar_month</span>Planos de Pagto
@@ -2196,6 +2200,59 @@
                                     <!-- JS Render -->
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Centros de Custo (Financeiro) -->
+                <div id="view-costCenters" class="page-content" style="display:none;">
+                    <div class="card">
+                        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                            <h3>Centros de Custo</h3>
+                            <button class="btn btn-primary" onclick="openCCModal()">
+                                <span class="material-icons-round" style="font-size:1rem;">add</span> Novo Centro de Custo
+                            </button>
+                        </div>
+                        <div class="card-body" style="padding:0;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:100px;">Código</th>
+                                        <th>Nome</th>
+                                        <th style="width:120px;text-align:right;">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="costCentersTableBody">
+                                    <!-- JS Render -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal: Novo/Editar Centro de Custo -->
+                <div id="ccModal" class="modal-overlay" style="display:none;">
+                    <div class="modal-container" style="max-width:420px;">
+                        <div class="modal-header">
+                            <h3 id="ccModalTitle">Novo Centro de Custo</h3>
+                            <button class="modal-close" onclick="closeCCModal()">✕</button>
+                        </div>
+                        <div class="modal-body">
+                            <div style="margin-bottom:1rem;">
+                                <label class="form-label">Código *</label>
+                                <input type="text" id="ccCodigo" class="form-input" placeholder="Ex: 1, 2, 3...">
+                            </div>
+                            <div style="margin-bottom:1rem;">
+                                <label class="form-label">Nome *</label>
+                                <input type="text" id="ccNome" class="form-input" placeholder="Ex: MATRIZ, FILIAL PALMAS...">
+                            </div>
+                            <input type="hidden" id="ccEditId">
+                        </div>
+                        <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:.75rem;">
+                            <button class="btn btn-secondary" onclick="closeCCModal()">Cancelar</button>
+                            <button class="btn btn-primary" onclick="saveCostCenter()">
+                                <span class="material-icons-round" style="font-size:1rem;">save</span> Salvar
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -5555,9 +5612,7 @@
                             <label class="form-label">Centro de Custo</label>
                             <select id="despesaCentroCusto" class="form-input" style="width:100%;">
                                 <option value="">-- Selecione --</option>
-                                <option value="1">1 — CENTRAL ROLAMENTOS MATRIZ</option>
-                                <option value="2">2 — CENTRAL PEÇAS FILIAL PALMAS</option>
-                                <option value="4">4 — CENTRAL ROLAMENTOS FILIAL PORTO</option>
+                                <!-- Populado dinamicamente por populateCCSelects() em financeiro.js -->
                             </select>
                         </div>
 

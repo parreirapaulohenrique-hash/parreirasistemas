@@ -858,7 +858,10 @@ window.renderPagarGrid = function () {
     if (!tbody) return;
     const suffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
     const fmtBRL = v => parseFloat(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-    const CCS = { '1':'MATRIZ', '2':'PALMAS', '4':'PORTO' };
+    const CCS = Object.fromEntries(
+        (typeof window.getCostCenters === 'function' ? window.getCostCenters() : [])
+        .map(c => [c.codigo, c.nome])
+    );
     const hoje = new Date(); hoje.setHours(0,0,0,0);
     const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
 
@@ -974,12 +977,7 @@ window.novaDespesa = function(editId) {
         ${formRow2('Valor (R$) *', `<input type="text" id="dValor" class="form-input" value="${item?parseFloat(item.valor||0).toFixed(2).replace('.',','):''}" placeholder="0,00">`,
                    'Vencimento *', `<input type="date" id="dVenc" class="form-input" value="${item?.vencimento||today}">`)}
         ${formRow2('Conta (Plano de Contas)', `<select id="dConta" class="form-input">${_buildContasOpts(item?.codigoConta)}</select>`,
-                   'Centro de Custo', `<select id="dCC" class="form-input">
-                    <option value="" ${!item?.centroCusto?'selected':''}>-- Selecione --</option>
-                    <option value="1" ${item?.centroCusto==='1'?'selected':''}>1 — MATRIZ</option>
-                    <option value="2" ${item?.centroCusto==='2'?'selected':''}>2 — PALMAS</option>
-                    <option value="4" ${item?.centroCusto==='4'?'selected':''}>4 — PORTO</option>
-                </select>`)}
+                   'Centro de Custo', `<select id="dCC" class="form-input">${typeof window.buildCCOptions==='function'?window.buildCCOptions(item?.centroCusto||''):'<option value="">-- Selecione --</option>'}</select>`)}
         ${formRow('Observação', `<textarea id="dObs" class="form-input" rows="2" style="resize:vertical;">${item?.observacao||''}</textarea>`)}
         <input type="hidden" id="dEditId" value="${editId||''}">
     `, 'salvarDespesa()');
