@@ -947,8 +947,11 @@ window.renderPagarGrid = function () {
                 <td style="${isVencido?'color:#ef4444;font-weight:600;':''}">${venc}</td>
                 <td style="font-weight:700;">${fmtBRL(i.valor)}</td>
                 <td><span class="status-badge ${badgeCls}">${i.status}</span></td>
-                <td style="text-align:right;display:flex;gap:.2rem;justify-content:flex-end;">
-                    ${!isPago?`<button class="btn btn-primary btn-icon" onclick="baixarContaPagar('${i.id}')" style="padding:.35rem;" title="Registrar Pagamento"><span class="material-icons-round" style="font-size:.9rem;">payment</span></button>`:''}
+                <td style="text-align:right;display:flex;gap:.2rem;justify-content:flex-end;align-items:center;">
+                    ${!isPago?`<button class="btn btn-icon" onclick="quitarDespesaRapido('${i.id}')"
+                        style="padding:.3rem .6rem;background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:6px;font-size:.75rem;font-weight:600;display:flex;align-items:center;gap:.2rem;" title="Quitar">
+                        <span class="material-icons-round" style="font-size:.85rem;">check_circle</span>Quitar
+                    </button>`:''}
                     <button class="btn btn-secondary btn-icon" onclick="editarDespesa('${i.id}')" style="padding:.35rem;" title="Editar"><span class="material-icons-round" style="font-size:.9rem;">edit</span></button>
                     <button class="btn btn-secondary btn-icon" onclick="_excluirDespesa('${i.id}')" style="padding:.35rem;" title="Excluir"><span class="material-icons-round" style="font-size:.9rem;color:#ef4444;">delete</span></button>
                 </td>
@@ -1037,6 +1040,50 @@ window._excluirDespesa = function(id) {
     const suffix = typeof window.getTenantSuffix==='function' ? window.getTenantSuffix() : '';
     localStorage.setItem('erp_pagar'+suffix, JSON.stringify(JSON.parse(localStorage.getItem('erp_pagar'+suffix)||'[]').filter(i=>i.id!==id)));
     renderPagarGrid();
+};
+
+// Quitação rápida — mini-modal direto na tela de lançamento
+window.quitarDespesaRapido = function(id) {
+    const suffix = typeof window.getTenantSuffix==='function' ? window.getTenantSuffix() : '';
+    const item = JSON.parse(localStorage.getItem('erp_pagar'+suffix)||'[]').find(i=>i.id===id);
+    if (!item) return;
+    const hoje = new Date().toISOString().split('T')[0];
+    const valorFmt = parseFloat(item.valor||0).toFixed(2).replace('.',',');
+    createDynamicModal('finQuitarRapidoModal', '✅ Quitar Conta', `
+        <div style="background:var(--bg-secondary);border-radius:6px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.88rem;">
+            <div style="font-weight:600;">${item.descricao}${item.docNumero?` — Nº ${item.docNumero}`:''}</div>
+            ${item.beneficiario?`<div style="color:var(--text-secondary);">Fornecedor: ${item.beneficiario}</div>`:''}
+            <div style="color:var(--text-secondary);">Vencimento: ${new Date(item.vencimento+'T00:00:00').toLocaleDateString('pt-BR')}</div>
+        </div>
+        ${formRow2('Data do Pagamento *',
+            `<input type="date" id="qrData" class="form-input" value="${hoje}">`,
+            'Valor Pago (R$) *',
+            `<input type="text" id="qrValor" class="form-input" value="${valorFmt}" onblur="_fmtValorInput(this)" oninput="this.value=this.value.replace(/[^\\d,\\.]/g,'')">`)
+        }
+        ${formRow('Forma de Pagamento', `<select id="qrForma" class="form-input">${_FORMAS_PGTO}</select>`)}
+    `, `_confirmarQuitarRapido('${id}')`);
+};
+
+window._confirmarQuitarRapido = function(id) {
+    const dataPgto = document.getElementById('qrData')?.value;
+    const valorPago = parseFloat((document.getElementById('qrValor')?.value||'').replace(',','.'));
+    const forma = document.getElementById('qrForma')?.value || 'PIX';
+    if (!dataPgto || isNaN(valorPago) || valorPago <= 0) { alert('Preencha data e valor!'); return; }
+    const suffix = typeof window.getTenantSuffix==='function' ? window.getTenantSuffix() : '';
+    const items = JSON.parse(localStorage.getItem('erp_pagar'+suffix)||'[]');
+    const item = items.find(i=>i.id===id);
+    if (item) {
+        Object.assign(item, {
+            status: 'Pago',
+            dataPagamento: new Date(dataPgto).toISOString(),
+            valorPago, formaPagamento: forma,
+            updatedAt: new Date().toISOString()
+        });
+        localStorage.setItem('erp_pagar'+suffix, JSON.stringify(items));
+    }
+    closeModal('finQuitarRapidoModal');
+    renderPagarGrid();
+    if (typeof showToast==='function') showToast('✅ Conta quitada!','success');
 };
 
 window.baixarContaPagar = function(id) {
