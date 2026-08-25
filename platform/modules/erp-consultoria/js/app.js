@@ -1268,3 +1268,72 @@ window.deleteCostCenter = function (id) {
         }
     };
 })();
+
+// =============================================================
+// PICKER DE FORNECEDORES — para o campo Beneficiário / Fornecedor
+// =============================================================
+window.openSupplierPicker = function () {
+    const suffix    = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
+    const stored    = JSON.parse(localStorage.getItem('erp_suppliers' + suffix) || 'null')
+                   || JSON.parse(localStorage.getItem('erp_suppliers') || '[]');
+    // Inclui também clientes/fornecedores cadastrados em suppliers globais (window.suppliers)
+    const all = stored.length ? stored : (window.suppliers || []);
+
+    const existing = document.getElementById('_supplierPickerModal');
+    if (existing) existing.remove();
+
+    const rows = all.slice()
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+        .map(s => {
+            const name = (s.name || s.nome || '').replace(/'/g, "\\'");
+            return `<div class="_sp-row" data-nome="${name}"
+                        onclick="_supplierPickerSelect('${name}')"
+                        style="padding:.55rem 1.25rem;cursor:pointer;font-size:.85rem;border-bottom:1px solid var(--border-color);"
+                        onmouseover="this.style.background='var(--bg-hover)'"
+                        onmouseout="this.style.background=''">
+                        <div style="font-weight:600;">${s.name || s.nome || ''}</div>
+                        <div style="font-size:.75rem;color:var(--text-secondary);">
+                            ${s.fantasy || s.fantasia || ''}
+                            ${s.cnpj ? ' · ' + s.cnpj : ''}
+                        </div>
+                    </div>`;
+        }).join('');
+
+    document.body.insertAdjacentHTML('beforeend', `
+        <div id="_supplierPickerModal" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;">
+            <div style="background:var(--bg-card);border-radius:12px;width:500px;max-height:560px;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+                <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;">
+                    <h4 style="margin:0;font-size:.95rem;">Selecionar Fornecedor</h4>
+                    <button onclick="document.getElementById('_supplierPickerModal').remove()" style="background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:1.3rem;line-height:1;">✕</button>
+                </div>
+                <div style="padding:.65rem 1rem;border-bottom:1px solid var(--border-color);">
+                    <input type="text" id="_spSearch" class="form-input" placeholder="🔍 Buscar por nome, fantasia ou CNPJ..."
+                           oninput="_spFilter()"
+                           style="width:100%;padding:.45rem .7rem;font-size:.85rem;">
+                </div>
+                <div id="_spList" style="overflow-y:auto;flex:1;">
+                    ${rows || '<div style="padding:2rem;text-align:center;color:var(--text-secondary);font-size:.85rem;">Nenhum fornecedor cadastrado.<br>Acesse Cadastros → Fornecedores para adicionar.</div>'}
+                </div>
+                <div style="padding:.7rem 1rem;border-top:1px solid var(--border-color);text-align:right;">
+                    <button onclick="document.getElementById('_supplierPickerModal').remove()" class="btn btn-secondary" style="font-size:.82rem;">Cancelar</button>
+                </div>
+            </div>
+        </div>`);
+
+    setTimeout(() => { const s = document.getElementById('_spSearch'); if (s) s.focus(); }, 80);
+};
+
+window._spFilter = function () {
+    const q = (document.getElementById('_spSearch')?.value || '').toUpperCase();
+    document.querySelectorAll('#_spList ._sp-row').forEach(el => {
+        const txt = el.textContent.toUpperCase();
+        el.style.display = txt.includes(q) ? '' : 'none';
+    });
+};
+
+window._supplierPickerSelect = function (nome) {
+    const el = document.getElementById('dBen');
+    if (el) el.value = nome;
+    const modal = document.getElementById('_supplierPickerModal');
+    if (modal) modal.remove();
+};

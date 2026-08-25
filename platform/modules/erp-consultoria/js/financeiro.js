@@ -972,7 +972,13 @@ window.novaDespesa = function(editId) {
     const today = new Date().toISOString().split('T')[0];
     createDynamicModal('finDespesaModalDyn', item?'Editar Despesa':'Nova Despesa', `
         ${formRow('Descrição *', `<input type="text" id="dDesc" class="form-input" value="${item?.descricao||''}" placeholder="Ex: Aluguel de Outubro">`)}
-        ${formRow2('Beneficiário / Fornecedor', `<input type="text" id="dBen" class="form-input" value="${item?.beneficiario||''}" placeholder="Ex: Imobiliária ABC">`,
+        ${formRow2('Beneficiário / Fornecedor',
+                   `<div style="display:flex;gap:.4rem;">
+                        <input type="text" id="dBen" class="form-input" style="flex:1;" value="${item?.beneficiario||''}" placeholder="Digite ou clique em ··· para selecionar">
+                        <button type="button" class="btn btn-secondary btn-icon" onclick="openSupplierPicker()" title="Selecionar Fornecedor">
+                            <span class="material-icons-round">more_horiz</span>
+                        </button>
+                    </div>`,
                    'Nº Documento', `<input type="text" id="dDoc" class="form-input" value="${item?.docNumero||''}" placeholder="NF, Boleto, Contrato...">`)}
         ${formRow2('Valor (R$) *', `<input type="text" id="dValor" class="form-input" value="${item?parseFloat(item.valor||0).toFixed(2).replace('.',','):''}" placeholder="0,00">`,
                    'Vencimento *', `<input type="date" id="dVenc" class="form-input" value="${item?.vencimento||today}">`)}
