@@ -1,1 +1,1 @@
-{"build":"20260825-v3.20.5","version":"3.20.5","environment":"staging","change":"v3.20.5 - UX: Picker de fornecedores — estado vazio agora exibe botao Cadastrar Fornecedor que fecha o picker e navega direto para Cadastros > Fornecedores.","lastUpdate":"2026-08-25","deployedAt":"2026-08-25"}
+{"build":"20260825-v3.20.6","version":"3.20.6","environment":"staging","change":"v3.20.6 - FIX: Botao Cadastrar Fornecedor agora fecha corretamente o picker E o modal de Nova Despesa antes de navegar para o cadastro de fornecedores.","lastUpdate":"2026-08-25","deployedAt":"2026-08-25"}

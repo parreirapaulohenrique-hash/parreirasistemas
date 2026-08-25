@@ -1316,7 +1316,7 @@ window.openSupplierPicker = function () {
                         <span class="material-icons-round" style="font-size:2.5rem;color:var(--text-secondary);display:block;margin-bottom:.75rem;">store_mall_directory</span>
                         <div style="color:var(--text-secondary);font-size:.85rem;margin-bottom:1.25rem;">Nenhum fornecedor cadastrado.</div>
                         <button class="btn btn-primary" style="font-size:.85rem;"
-                            onclick="document.getElementById('_supplierPickerModal').remove(); if(typeof switchView==='function') switchView('suppliers'); if(typeof toggleSubmenu==='function') toggleSubmenu('sub-cadastros');">
+                            onclick="_irParaCadastroFornecedor()">
                             <span class="material-icons-round" style="font-size:1rem;vertical-align:middle;">add_business</span>
                             Cadastrar Fornecedor
                         </button>
@@ -1344,4 +1344,13 @@ window._supplierPickerSelect = function (nome) {
     if (el) el.value = nome;
     const modal = document.getElementById('_supplierPickerModal');
     if (modal) modal.remove();
+};
+
+window._irParaCadastroFornecedor = function () {
+    // Fecha o picker
+    document.getElementById('_supplierPickerModal')?.remove();
+    // Fecha o modal de Nova Despesa (dinâmico), se estiver aberto
+    document.getElementById('finDespesaModalDyn')?.remove();
+    // Navega para o cadastro de fornecedores
+    if (typeof switchView === 'function') switchView('suppliers');
 };
