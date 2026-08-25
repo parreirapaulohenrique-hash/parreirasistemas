@@ -1460,6 +1460,9 @@ window._irParaCadastroFornecedor = function () {
     document.getElementById('_supplierPickerModal')?.remove();
     // Fecha o modal de Nova Despesa (dinâmico), se estiver aberto
     document.getElementById('finDespesaModalDyn')?.remove();
-    // Navega para o cadastro de fornecedores
+    // Navega para o cadastro de fornecedores e abre o modal de novo cadastro
     if (typeof switchView === 'function') switchView('suppliers');
+    setTimeout(() => {
+        if (typeof window.openSupplierModal === 'function') window.openSupplierModal();
+    }, 200);
 };
