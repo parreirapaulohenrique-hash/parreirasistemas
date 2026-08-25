@@ -1443,7 +1443,11 @@ window.openSupplierPicker = function () {
                         </button>
                     </div>`}
                 </div>
-                <div style="padding:.7rem 1rem;border-top:1px solid var(--border-color);text-align:right;">
+                <div style="padding:.7rem 1rem;border-top:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;">
+                    <button onclick="_irParaCadastroFornecedor()" class="btn btn-secondary" style="font-size:.82rem;display:flex;align-items:center;gap:.3rem;">
+                        <span class="material-icons-round" style="font-size:1rem;">add_business</span>
+                        Novo Fornecedor
+                    </button>
                     <button onclick="document.getElementById('_supplierPickerModal').remove()" class="btn btn-secondary" style="font-size:.82rem;">Cancelar</button>
                 </div>
             </div>
