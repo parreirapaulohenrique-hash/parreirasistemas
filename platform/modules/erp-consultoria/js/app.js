@@ -816,6 +816,18 @@ function _wireSupplierForm() {
         window.renderSuppliers();
         window.closeSupplierModal();
         if (typeof showToast === 'function') showToast('✅ Fornecedor salvo!', 'success');
+
+        // Se veio de Contas a Pagar, retorna e reabre Nova Despesa
+        if (window._supplierOrigin === 'pagar') {
+            window._supplierOrigin = null;
+            setTimeout(() => {
+                if (typeof switchView === 'function') switchView('pagar');
+                setTimeout(() => {
+                    if (typeof window.novaDespesa === 'function') window.novaDespesa();
+                }, 250);
+            }, 150);
+        }
+
     });
 }
 
@@ -1460,6 +1472,8 @@ window._irParaCadastroFornecedor = function () {
     document.getElementById('_supplierPickerModal')?.remove();
     // Fecha o modal de Nova Despesa (dinâmico), se estiver aberto
     document.getElementById('finDespesaModalDyn')?.remove();
+    // Marca origem para retorno após salvar
+    window._supplierOrigin = 'pagar';
     // Navega para o cadastro de fornecedores e abre o modal de novo cadastro
     if (typeof switchView === 'function') switchView('suppliers');
     setTimeout(() => {
