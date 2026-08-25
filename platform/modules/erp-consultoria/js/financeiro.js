@@ -974,7 +974,7 @@ window.novaDespesa = function(editId) {
         ${formRow('Descrição *', `<input type="text" id="dDesc" class="form-input" value="${item?.descricao||''}" placeholder="Ex: Aluguel de Outubro">`)}
         ${formRow2('Beneficiário / Fornecedor',
                    `<div style="display:flex;gap:.4rem;">
-                        <input type="text" id="dBen" class="form-input" style="flex:1;" value="${item?.beneficiario||''}" placeholder="Digite ou clique em ··· para selecionar">
+                        <input type="text" id="dBen" class="form-input" style="flex:1;cursor:pointer;" readonly value="${item?.beneficiario||''}" placeholder="Clique em ··· para selecionar" onclick="openSupplierPicker()">
                         <button type="button" class="btn btn-secondary btn-icon" onclick="openSupplierPicker()" title="Selecionar Fornecedor">
                             <span class="material-icons-round">more_horiz</span>
                         </button>
