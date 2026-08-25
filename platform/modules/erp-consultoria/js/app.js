@@ -1165,3 +1165,106 @@ function _openManager(title, getter, saver) {
 
 window.openSetoresManager = function () { _openManager('Gerenciar Setores', _getSetores, _saveSetores); };
 window.openCargosManager  = function () { _openManager('Gerenciar Cargos',  _getCargos,  _saveCargos);  };
+
+// =============================================================
+// CENTROS DE CUSTO — CRUD
+// =============================================================
+
+window.renderCostCenters = function () {
+    const tbody = document.getElementById('costCentersTableBody');
+    if (!tbody) return;
+    const list = (typeof window.getCostCenters === 'function' ? window.getCostCenters() : [])
+                  .slice().sort((a, b) => String(a.codigo).localeCompare(String(b.codigo), undefined, { numeric: true }));
+    if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="3" class="empty-state">Nenhum centro de custo cadastrado.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = list.map(cc => `
+        <tr>
+            <td style="font-weight:600;">${cc.codigo}</td>
+            <td>${cc.nome}</td>
+            <td style="text-align:right;display:flex;gap:.25rem;justify-content:flex-end;">
+                <button class="btn btn-secondary btn-icon" style="padding:.35rem;" onclick="openCCModal('${cc.id}')" title="Editar">
+                    <span class="material-icons-round" style="font-size:1rem;">edit</span>
+                </button>
+                <button class="btn btn-secondary btn-icon" style="padding:.35rem;" onclick="deleteCostCenter('${cc.id}')" title="Excluir">
+                    <span class="material-icons-round" style="font-size:1rem;color:#ef4444;">delete</span>
+                </button>
+            </td>
+        </tr>`).join('');
+};
+
+window.openCCModal = function (editId) {
+    const modal = document.getElementById('ccModal');
+    if (!modal) return;
+    const title = document.getElementById('ccModalTitle');
+    document.getElementById('ccEditId').value = editId || '';
+    if (editId) {
+        const cc = (window.getCostCenters() || []).find(c => c.id === editId);
+        if (!cc) return;
+        document.getElementById('ccCodigo').value = cc.codigo;
+        document.getElementById('ccNome').value   = cc.nome;
+        if (title) title.textContent = 'Editar Centro de Custo';
+    } else {
+        document.getElementById('ccCodigo').value = '';
+        document.getElementById('ccNome').value   = '';
+        if (title) title.textContent = 'Novo Centro de Custo';
+    }
+    modal.style.display = 'flex';
+};
+
+window.closeCCModal = function () {
+    const modal = document.getElementById('ccModal');
+    if (modal) modal.style.display = 'none';
+};
+
+window.saveCostCenter = function () {
+    const suffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
+    const key    = 'erp_costCenters' + suffix;
+    const codigo = (document.getElementById('ccCodigo')?.value || '').trim().toUpperCase();
+    const nome   = (document.getElementById('ccNome')?.value || '').trim().toUpperCase();
+    const editId = document.getElementById('ccEditId')?.value || '';
+
+    if (!codigo) { alert('Informe o código!'); return; }
+    if (!nome)   { alert('Informe o nome!'); return; }
+
+    let list = window.getCostCenters();
+    if (list.some(c => c.codigo === codigo && c.id !== editId)) {
+        alert(`Já existe um Centro de Custo com o código "${codigo}".`); return;
+    }
+    if (editId) {
+        list = list.map(c => c.id === editId ? { ...c, codigo, nome } : c);
+    } else {
+        list.push({ id: String(Date.now()), codigo, nome });
+    }
+    localStorage.setItem(key, JSON.stringify(list));
+    window.closeCCModal();
+    window.renderCostCenters();
+    if (typeof showToast === 'function') showToast('✅ Centro de Custo salvo!', 'success');
+};
+
+window.deleteCostCenter = function (id) {
+    if (!confirm('Excluir este Centro de Custo?')) return;
+    const suffix = typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '';
+    const key    = 'erp_costCenters' + suffix;
+    const list   = (window.getCostCenters() || []).filter(c => c.id !== id);
+    localStorage.setItem(key, JSON.stringify(list));
+    window.renderCostCenters();
+};
+
+// Intercepta switchView para renderizar CC e popular selects quando necessário
+(function () {
+    const _orig = window.switchView;
+    if (typeof _orig !== 'function') return;
+    window.switchView = function (viewName) {
+        _orig(viewName);
+        if (viewName === 'costCenters') {
+            setTimeout(window.renderCostCenters, 60);
+        }
+        if (['pagar', 'receber', 'costCenters'].includes(viewName)) {
+            setTimeout(() => {
+                if (typeof window.populateCCSelects === 'function') window.populateCCSelects();
+            }, 100);
+        }
+    };
+})();
