@@ -876,6 +876,21 @@ window.renderPagarGrid = function () {
 
     let items = JSON.parse(localStorage.getItem('erp_pagar' + suffix) || '[]');
 
+    // Fallback: se vazio e há dados sem sufixo (ou sufixo alternativo), migra automaticamente
+    if (items.length === 0) {
+        const altKeys = ['erp_pagar', 'erp_pagar_parreira', 'erp_pagar_default'];
+        for (const altKey of altKeys) {
+            if (altKey === 'erp_pagar' + suffix) continue;
+            const alt = JSON.parse(localStorage.getItem(altKey) || '[]');
+            if (alt.length > 0) {
+                console.log('[ERP] Migrando dados de', altKey, '→ erp_pagar' + suffix);
+                localStorage.setItem('erp_pagar' + suffix, JSON.stringify(alt));
+                items = alt;
+                break;
+            }
+        }
+    }
+
     // Auto-atualiza Vencido
     let changed = false;
     items = items.map(i => {
@@ -949,8 +964,8 @@ window.renderPagarGrid = function () {
                 <td><span class="status-badge ${badgeCls}">${i.status}</span></td>
                 <td style="text-align:right;display:flex;gap:.2rem;justify-content:flex-end;align-items:center;">
                     ${!isPago?`<button class="btn btn-icon" onclick="quitarDespesaRapido('${i.id}')"
-                        style="padding:.3rem .6rem;background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:6px;font-size:.75rem;font-weight:600;display:flex;align-items:center;gap:.2rem;" title="Quitar">
-                        <span class="material-icons-round" style="font-size:.85rem;">check_circle</span>Quitar
+                        style="padding:.35rem;background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.25);border-radius:6px;" title="Quitar">
+                        <span class="material-icons-round" style="font-size:.9rem;">check_circle</span>
                     </button>`:''}
                     <button class="btn btn-secondary btn-icon" onclick="editarDespesa('${i.id}')" style="padding:.35rem;" title="Editar"><span class="material-icons-round" style="font-size:.9rem;">edit</span></button>
                     <button class="btn btn-secondary btn-icon" onclick="_excluirDespesa('${i.id}')" style="padding:.35rem;" title="Excluir"><span class="material-icons-round" style="font-size:.9rem;color:#ef4444;">delete</span></button>
