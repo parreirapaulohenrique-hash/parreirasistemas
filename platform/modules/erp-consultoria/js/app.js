@@ -718,26 +718,125 @@ document.addEventListener('DOMContentLoaded', () => {
     if (form) form.addEventListener('submit', window.saveEntity);
 });
 // --- Suppliers Logic ---
-window.openSupplierModal = () => {
-    document.getElementById('supplierModal').style.display = 'flex';
+const _suppKey = () => 'erp_suppliers' + (typeof window.getTenantSuffix === 'function' ? window.getTenantSuffix() : '');
+const _getSuppliers = () => JSON.parse(localStorage.getItem(_suppKey()) || '[]');
+const _saveSuppliers = (list) => localStorage.setItem(_suppKey(), JSON.stringify(list));
+
+window.openSupplierModal = (editId) => {
+    const modal = document.getElementById('supplierModal');
+    if (!modal) return;
+    // Reset form
+    const form = document.getElementById('supplierForm');
+    if (form) form.reset();
+    document.getElementById('supCode').value = '';
+    // Store edit id
+    modal.dataset.editId = editId || '';
+    if (editId) {
+        const s = _getSuppliers().find(x => String(x.id) === String(editId));
+        if (s) {
+            document.getElementById('supCode').value       = s.code   || s.id   || '';
+            document.getElementById('supName').value       = s.name   || '';
+            document.getElementById('supDoc').value        = s.cnpj   || s.doc  || '';
+            document.getElementById('supType').value       = s.type   || 'J';
+            document.getElementById('supFantasy').value    = s.fantasy|| '';
+            document.getElementById('supIe').value         = s.ie     || '';
+            document.getElementById('supZip').value        = s.zip    || '';
+            document.getElementById('supStreet').value     = s.street || '';
+            document.getElementById('supNumber').value     = s.number || '';
+            document.getElementById('supDistrict').value   = s.district|| '';
+            document.getElementById('supCity').value       = s.city   || '';
+            document.getElementById('supState').value      = s.state  || '';
+            document.getElementById('supPhone').value      = s.phone  || '';
+            document.getElementById('supContactName').value= s.contact|| '';
+            document.getElementById('supEmail').value      = s.email  || '';
+            document.getElementById('supBank').value       = s.bank   || '';
+            document.getElementById('supAgency').value     = s.agency || '';
+            document.getElementById('supAccount').value    = s.account|| '';
+            document.getElementById('supBuyerCode').value  = s.buyerCode|| '';
+            document.getElementById('supNotes').value      = s.notes  || '';
+        }
+    }
+    modal.style.display = 'flex';
 };
 
 window.closeSupplierModal = () => {
-    document.getElementById('supplierModal').style.display = 'none';
+    const modal = document.getElementById('supplierModal');
+    if (modal) { modal.style.display = 'none'; modal.dataset.editId = ''; }
 };
 
-window.suppliers = [
-];
+// Submit handler — wired up on DOMContentLoaded
+function _wireSupplierForm() {
+    const form = document.getElementById('supplierForm');
+    if (!form || form._wired) return;
+    form._wired = true;
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = (document.getElementById('supName')?.value || '').trim();
+        const doc  = (document.getElementById('supDoc')?.value  || '').trim();
+        if (!name) { alert('Razão Social é obrigatória!'); return; }
+        if (!doc)  { alert('CNPJ/CPF é obrigatório!'); return; }
+
+        const list   = _getSuppliers();
+        const modal  = document.getElementById('supplierModal');
+        const editId = modal?.dataset.editId || '';
+
+        const record = {
+            id:        editId || String(Date.now()),
+            code:      editId ? (list.find(x => String(x.id) === editId)?.code || '') : String(list.length + 1).padStart(3, '0'),
+            name,
+            cnpj:      doc,
+            doc,
+            type:      document.getElementById('supType')?.value       || 'J',
+            fantasy:   document.getElementById('supFantasy')?.value    || '',
+            ie:        document.getElementById('supIe')?.value         || '',
+            zip:       document.getElementById('supZip')?.value        || '',
+            street:    document.getElementById('supStreet')?.value     || '',
+            number:    document.getElementById('supNumber')?.value     || '',
+            district:  document.getElementById('supDistrict')?.value   || '',
+            city:      document.getElementById('supCity')?.value       || '',
+            state:     document.getElementById('supState')?.value      || '',
+            phone:     document.getElementById('supPhone')?.value      || '',
+            contact:   document.getElementById('supContactName')?.value|| '',
+            email:     document.getElementById('supEmail')?.value      || '',
+            bank:      document.getElementById('supBank')?.value       || '',
+            agency:    document.getElementById('supAgency')?.value     || '',
+            account:   document.getElementById('supAccount')?.value    || '',
+            buyerCode: document.getElementById('supBuyerCode')?.value  || '',
+            notes:     document.getElementById('supNotes')?.value      || '',
+            updatedAt: new Date().toISOString()
+        };
+
+        let updated;
+        if (editId) {
+            updated = list.map(x => String(x.id) === editId ? { ...x, ...record } : x);
+        } else {
+            updated = [...list, record];
+        }
+        _saveSuppliers(updated);
+        window.renderSuppliers();
+        window.closeSupplierModal();
+        if (typeof showToast === 'function') showToast('✅ Fornecedor salvo!', 'success');
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _wireSupplierForm);
+} else {
+    _wireSupplierForm();
+}
+
+window.suppliers = [];
 
 window.renderSuppliers = (filter = '') => {
     const tbody = document.getElementById('suppliersTableBody');
     if (!tbody) return;
 
     tbody.innerHTML = '';
-
-    const filtered = suppliers.filter(s =>
-        s.name.toLowerCase().includes(filter.toLowerCase()) ||
-        s.cnpj.includes(filter)
+    const all = _getSuppliers();
+    const filtered = all.filter(s =>
+        (s.name || '').toLowerCase().includes(filter.toLowerCase()) ||
+        (s.cnpj || s.doc || '').includes(filter) ||
+        (s.fantasy || '').toLowerCase().includes(filter.toLowerCase())
     );
 
     if (filtered.length === 0) {
@@ -747,18 +846,22 @@ window.renderSuppliers = (filter = '') => {
 
     filtered.forEach(s => {
         const tr = document.createElement('tr');
+        const typeLabel = s.type === 'F' ? 'Física' : 'Jurídica';
         tr.innerHTML = `
-            <td style="font-weight:600">${s.code}</td>
+            <td style="font-weight:600">${s.code || ''}</td>
             <td>
                 <div style="font-weight:600; color:var(--text-primary)">${s.name}</div>
-                <div style="font-size:0.8rem; color:var(--text-secondary)">${s.fantasy}</div>
+                <div style="font-size:0.8rem; color:var(--text-secondary)">${s.fantasy || ''}</div>
             </td>
-            <td>${s.cnpj}</td>
-            <td>${s.city}</td>
-            <td><span class="status-badge status-pending" style="color:var(--text-primary); background:rgba(255,255,255,0.1)">${s.type}</span></td>
-            <td style="text-align:right">
-                <button class="btn btn-secondary btn-icon" style="padding:0.4rem;">
+            <td>${s.cnpj || s.doc || ''}</td>
+            <td>${s.city || ''}</td>
+            <td><span class="status-badge status-pending" style="color:var(--text-primary); background:rgba(255,255,255,0.1)">${typeLabel}</span></td>
+            <td style="text-align:right; display:flex; gap:.25rem; justify-content:flex-end;">
+                <button class="btn btn-secondary btn-icon" style="padding:0.4rem;" onclick="openSupplierModal('${s.id}')" title="Editar">
                     <span class="material-icons-round" style="font-size:1rem;">edit</span>
+                </button>
+                <button class="btn btn-secondary btn-icon" style="padding:0.4rem;" onclick="deleteSupplier('${s.id}')" title="Excluir">
+                    <span class="material-icons-round" style="font-size:1rem;color:#ef4444;">delete</span>
                 </button>
             </td>
         `;
@@ -766,8 +869,14 @@ window.renderSuppliers = (filter = '') => {
     });
 };
 
+window.deleteSupplier = (id) => {
+    if (!confirm('Excluir este fornecedor?')) return;
+    _saveSuppliers(_getSuppliers().filter(s => String(s.id) !== String(id)));
+    window.renderSuppliers();
+};
+
 window.filterSuppliers = () => {
-    const term = document.getElementById('supplierSearch').value;
+    const term = document.getElementById('supplierSearch')?.value || '';
     renderSuppliers(term);
 };
 
