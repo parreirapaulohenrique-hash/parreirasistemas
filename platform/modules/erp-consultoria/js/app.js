@@ -1312,7 +1312,15 @@ window.openSupplierPicker = function () {
                            style="width:100%;padding:.45rem .7rem;font-size:.85rem;">
                 </div>
                 <div id="_spList" style="overflow-y:auto;flex:1;">
-                    ${rows || '<div style="padding:2rem;text-align:center;color:var(--text-secondary);font-size:.85rem;">Nenhum fornecedor cadastrado.<br>Acesse Cadastros → Fornecedores para adicionar.</div>'}
+                    ${rows || `<div style="padding:2rem 1.5rem;text-align:center;">
+                        <span class="material-icons-round" style="font-size:2.5rem;color:var(--text-secondary);display:block;margin-bottom:.75rem;">store_mall_directory</span>
+                        <div style="color:var(--text-secondary);font-size:.85rem;margin-bottom:1.25rem;">Nenhum fornecedor cadastrado.</div>
+                        <button class="btn btn-primary" style="font-size:.85rem;"
+                            onclick="document.getElementById('_supplierPickerModal').remove(); if(typeof switchView==='function') switchView('suppliers'); if(typeof toggleSubmenu==='function') toggleSubmenu('sub-cadastros');">
+                            <span class="material-icons-round" style="font-size:1rem;vertical-align:middle;">add_business</span>
+                            Cadastrar Fornecedor
+                        </button>
+                    </div>`}
                 </div>
                 <div style="padding:.7rem 1rem;border-top:1px solid var(--border-color);text-align:right;">
                     <button onclick="document.getElementById('_supplierPickerModal').remove()" class="btn btn-secondary" style="font-size:.82rem;">Cancelar</button>
