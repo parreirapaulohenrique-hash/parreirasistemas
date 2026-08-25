@@ -49,6 +49,15 @@ function formRow(label, inputHTML) {
     return `<div style="margin-bottom:1rem;"><label class="form-label">${label}</label>${inputHTML}</div>`;
 }
 
+// Formata valor monetário digitado pelo usuário: "66" → "66,00", "1500,5" → "1500,50"
+window._fmtValorInput = function (el) {
+    let v = (el.value || '').trim().replace(/[^\d,\.]/g, '');
+    // Aceita vírgula ou ponto como separador decimal
+    v = v.replace(',', '.');
+    const num = parseFloat(v);
+    el.value = isNaN(num) ? '' : num.toFixed(2).replace('.', ',');
+};
+
 function formRow2(label1, input1, label2, input2) {
     return `<div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
         <div><label class="form-label">${label1}</label>${input1}</div>
@@ -748,7 +757,7 @@ window.novaReceita = function(editId) {
     const today = new Date().toISOString().split('T')[0];
     createDynamicModal('finReceitaModal', item?'Editar Conta a Receber':'Nova Conta a Receber', `
         ${formRow('Cliente / Origem *', `<input type="text" id="recCliente" class="form-input" value="${item?.cliente||''}" placeholder="Ex: João Silva ou Pedido #123">`)}
-        ${formRow2('Valor (R$) *', `<input type="text" id="recValor" class="form-input" value="${item?parseFloat(item.valor||0).toFixed(2).replace('.',','):''}" placeholder="0,00">`,
+        ${formRow2('Valor (R$) *', `<input type="text" id="recValor" class="form-input" value="${item?parseFloat(item.valor||0).toFixed(2).replace('.',','):''}" placeholder="0,00" onblur="_fmtValorInput(this)" oninput="this.value=this.value.replace(/[^\\d,\\.]/g,'')">`,
                    'Vencimento *', `<input type="date" id="recVencimento" class="form-input" value="${item?.vencimento||today}">`)}
         ${formRow2('Nº Documento', `<input type="text" id="recDocNumero" class="form-input" value="${item?.docNumero||''}" placeholder="NF, OS, Contrato...">`,
                    'Conta (Plano)', `<select id="recCodigoConta" class="form-input">${_buildContasOpts(item?.codigoConta)}</select>`)}
@@ -980,7 +989,7 @@ window.novaDespesa = function(editId) {
                         </button>
                     </div>`,
                    'Nº Documento', `<input type="text" id="dDoc" class="form-input" value="${item?.docNumero||''}" placeholder="NF, Boleto, Contrato...">`)}
-        ${formRow2('Valor (R$) *', `<input type="text" id="dValor" class="form-input" value="${item?parseFloat(item.valor||0).toFixed(2).replace('.',','):''}" placeholder="0,00">`,
+        ${formRow2('Valor (R$) *', `<input type="text" id="dValor" class="form-input" value="${item?parseFloat(item.valor||0).toFixed(2).replace('.',','):''}" placeholder="0,00" onblur="_fmtValorInput(this)" oninput="this.value=this.value.replace(/[^\\d,\\.]/g,'')">`,
                    'Vencimento *', `<input type="date" id="dVenc" class="form-input" value="${item?.vencimento||today}">`)}
         ${formRow2('Conta (Plano de Contas)', `<select id="dConta" class="form-input">${_buildContasOpts(item?.codigoConta)}</select>`,
                    'Centro de Custo', `<select id="dCC" class="form-input">${typeof window.buildCCOptions==='function'?window.buildCCOptions(item?.centroCusto||''):'<option value="">-- Selecione --</option>'}</select>`)}
@@ -1041,7 +1050,7 @@ window.baixarContaPagar = function(id) {
             ${item.beneficiario?`<div style="color:var(--text-secondary);">Benef.: ${item.beneficiario}</div>`:''}
         </div>
         ${formRow2('Data do Pagamento *', `<input type="date" id="bpData" class="form-input" value="${new Date().toISOString().split('T')[0]}">`,
-                   'Valor Pago (R$) *', `<input type="text" id="bpValor" class="form-input" value="${parseFloat(item.valor||0).toFixed(2).replace('.',',')}" placeholder="Pode diferir por juros/desconto">`)}
+                   'Valor Pago (R$) *', `<input type="text" id="bpValor" class="form-input" value="${parseFloat(item.valor||0).toFixed(2).replace('.',',')}" placeholder="Pode diferir por juros/desconto" onblur="_fmtValorInput(this)" oninput="this.value=this.value.replace(/[^\\d,\\.]/g,'')">`)}
         ${formRow2('Forma de Pagamento', `<select id="bpForma" class="form-input">${_FORMAS_PGTO}</select>`,
                    'Conta Bancária', `<select id="bpBanco" class="form-input"><option value="">Não especificado</option>${_bankOptions()}</select>`)}
         ${formRow('Observação', `<textarea id="bpObs" class="form-input" rows="2" style="resize:vertical;" placeholder="Ex: pago com desconto, juros aplicados..."></textarea>`)}
