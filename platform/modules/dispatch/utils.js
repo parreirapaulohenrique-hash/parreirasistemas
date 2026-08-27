@@ -112,20 +112,17 @@ const Utils = {
 
     setStorage: (key, data) => {
         try {
-            // v3.22.1 FIX: app_romaneios tem 2000+ itens e estoura localStorage.
-            // Mantém TODOS em memória (_memStore) mas grava só os últimos 90 dias no localStorage.
-            // Isso evita o QuotaExceededError que apagava clients/dispatches como efeito colateral.
+            // v3.22.4 FIX: app_romaneios tem 2000+ itens e estoura localStorage.
+            // Mantém TODOS em memória (_memStore) mas grava apenas os 400 mais recentes no localStorage.
+            // (90 dias ainda deixava 1285+ itens na produção LT Distribuidora = ainda estourava)
             let dataToStore = data;
-            if (key === 'app_romaneios' && Array.isArray(data) && data.length > 500) {
-                const cutoff = new Date();
-                cutoff.setDate(cutoff.getDate() - 90);
-                dataToStore = data.filter(r => {
-                    const dt = new Date(r.createdAt || r.date || r.dataRomaneio || 0);
-                    return dt >= cutoff;
-                });
-                if (dataToStore.length < data.length) {
-                    console.log(`📦 [Quota] app_romaneios: ${data.length} total → ${dataToStore.length} nos últimos 90 dias em localStorage (todos em memória).`);
-                }
+            if (key === 'app_romaneios' && Array.isArray(data) && data.length > 400) {
+                dataToStore = [...data].sort((a, b) => {
+                    const da = new Date(b.createdAt || b.date || b.dataRomaneio || 0).getTime();
+                    const db2 = new Date(a.createdAt || a.date || a.dataRomaneio || 0).getTime();
+                    return da - db2;
+                }).slice(0, 400);
+                console.log(`📦 [Quota] app_romaneios: ${data.length} total → 400 mais recentes em localStorage (todos em memória).`);
             }
 
             const serialized = JSON.stringify(dataToStore);
@@ -523,16 +520,15 @@ const Utils = {
                 const data = doc.data();
                 const tenantKey = `tenant_${this.tenantId}_${key}`;
 
-                // v3.22.3 FIX: Helper para prunear app_romaneios antes de salvar no localStorage
+                // v3.22.4 FIX: Prunear app_romaneios — máximo 400 mais recentes no localStorage
                 const _pruneIfRomaneios = (key, arr) => {
-                    if (key !== 'app_romaneios' || arr.length <= 500) return arr;
-                    const cutoff = new Date();
-                    cutoff.setDate(cutoff.getDate() - 90);
-                    const pruned = arr.filter(r => {
-                        const dt = new Date(r.createdAt || r.date || r.dataRomaneio || 0);
-                        return dt >= cutoff;
-                    });
-                    console.log(`📦 [Quota] loadAll app_romaneios: ${arr.length} total → ${pruned.length} últimos 90 dias em localStorage.`);
+                    if (key !== 'app_romaneios' || arr.length <= 400) return arr;
+                    const pruned = [...arr].sort((a, b) => {
+                        const da = new Date(b.createdAt || b.date || b.dataRomaneio || 0).getTime();
+                        const db2 = new Date(a.createdAt || a.date || a.dataRomaneio || 0).getTime();
+                        return da - db2;
+                    }).slice(0, 400);
+                    console.log(`📦 [Quota] loadAll app_romaneios: ${arr.length} total → 400 mais recentes em localStorage.`);
                     Utils._memStore['app_romaneios'] = arr; // todos em memória
                     return pruned;
                 };
@@ -851,19 +847,18 @@ const Utils = {
                             if (window.renderClientsList) window.renderClientsList();
                         } catch(e) { console.warn('[Cloud] Erro ao parsear clients da nuvem:', e); }
                     } else {
-                        // v3.22.3 FIX: Prunear app_romaneios antes de salvar direto no localStorage
+                        // v3.22.4 FIX: Prunear app_romaneios — máximo 400 mais recentes no localStorage
                         let contentToStore = cloudContentString;
                         if (key === 'app_romaneios') {
                             try {
                                 const fullArr = JSON.parse(cloudContentString);
-                                if (fullArr.length > 500) {
-                                    const cutoff = new Date();
-                                    cutoff.setDate(cutoff.getDate() - 90);
-                                    const pruned = fullArr.filter(r => {
-                                        const dt = new Date(r.createdAt || r.date || r.dataRomaneio || 0);
-                                        return dt >= cutoff;
-                                    });
-                                    console.log(`📦 [Quota] onSnapshot app_romaneios: ${fullArr.length} total → ${pruned.length} últimos 90 dias em localStorage.`);
+                                if (fullArr.length > 400) {
+                                    const pruned = [...fullArr].sort((a, b) => {
+                                        const da = new Date(b.createdAt || b.date || b.dataRomaneio || 0).getTime();
+                                        const db2 = new Date(a.createdAt || a.date || a.dataRomaneio || 0).getTime();
+                                        return da - db2;
+                                    }).slice(0, 400);
+                                    console.log(`📦 [Quota] onSnapshot app_romaneios: ${fullArr.length} total → 400 mais recentes em localStorage.`);
                                     Utils._memStore['app_romaneios'] = fullArr; // todos em memória
                                     contentToStore = JSON.stringify(pruned);
                                 }
