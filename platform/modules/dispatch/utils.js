@@ -112,8 +112,24 @@ const Utils = {
 
     setStorage: (key, data) => {
         try {
-            const serialized = JSON.stringify(data);
-            Utils._memStore[key] = data; // Keep memory store in sync!
+            // v3.22.1 FIX: app_romaneios tem 2000+ itens e estoura localStorage.
+            // Mantém TODOS em memória (_memStore) mas grava só os últimos 90 dias no localStorage.
+            // Isso evita o QuotaExceededError que apagava clients/dispatches como efeito colateral.
+            let dataToStore = data;
+            if (key === 'app_romaneios' && Array.isArray(data) && data.length > 500) {
+                const cutoff = new Date();
+                cutoff.setDate(cutoff.getDate() - 90);
+                dataToStore = data.filter(r => {
+                    const dt = new Date(r.createdAt || r.date || r.dataRomaneio || 0);
+                    return dt >= cutoff;
+                });
+                if (dataToStore.length < data.length) {
+                    console.log(`📦 [Quota] app_romaneios: ${data.length} total → ${dataToStore.length} nos últimos 90 dias em localStorage (todos em memória).`);
+                }
+            }
+
+            const serialized = JSON.stringify(dataToStore);
+            Utils._memStore[key] = data; // Memória sempre recebe TODOS
             try {
                 localStorage.setItem(Utils._storageKey(key), serialized);
             } catch (quotaErr) {
