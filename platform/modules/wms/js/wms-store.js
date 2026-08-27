@@ -11,7 +11,10 @@ window.WmsStore = (function () {
     // ─── DB helper ───────────────────────────────────────────────────────────
     function _db() { return firebase.firestore(); }
     function _tid() {
-        const tid = window.ParreiraAuth?.getTenantId?.();
+        // Tenta getTenantId primeiro; fallback para sessão (timing issue no carregamento inicial)
+        const tid = window.ParreiraAuth?.getTenantId?.()
+                 || window.ParreiraAuth?.getSessao?.()?.tenantId
+                 || null;
         if (!tid) throw new Error('WmsStore: usuário não autenticado.');
         return tid;
     }

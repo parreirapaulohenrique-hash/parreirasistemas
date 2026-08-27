@@ -248,7 +248,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } else if (count > 0) {
                     _updateSyncStatus('ok', `${count} end.`);
                 } else {
-                    _updateSyncStatus('warn');
+                    // count < 0: possível timing issue com auth — re-tenta após 2s
+                    console.warn('[WMS] sincronizarEnderecos retornou -1, re-tentando em 2s...');
+                    setTimeout(async () => {
+                        try {
+                            const retryCount = await WmsStore.sincronizarEnderecos();
+                            if (retryCount > 0) {
+                                _updateSyncStatus('ok', `${retryCount} end.`);
+                            } else if (retryCount === 0) {
+                                const res2 = await WmsStore.migrarEnderecos();
+                                _updateSyncStatus('ok', res2.status === 'ok' ? `${res2.count} end. migrados` : 'offline mode');
+                            } else {
+                                _updateSyncStatus('warn');
+                            }
+                        } catch(retryErr) {
+                            console.warn('[WMS] Re-tentativa falhou:', retryErr);
+                            _updateSyncStatus('warn');
+                        }
+                    }, 2000);
                 }
 
                 // Listener tempo real: Firestore → localStorage
