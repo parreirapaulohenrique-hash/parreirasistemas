@@ -1055,6 +1055,7 @@ window.wms3dAutoDetectTipos = function() {
 };
 
 window.wms3dSaveConfig = function() {
+    try {
     // Corredores
     const corredores = [];
     document.querySelectorAll('#wms3d-corredores-tbody tr').forEach(tr => {
@@ -1106,11 +1107,26 @@ window.wms3dSaveConfig = function() {
     };
 
     localStorage.setItem('wms_armazem_config' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(cfg));
+    console.log(`✅ [WMS] Config salva: ${corredores.length} corredor(es) · ${tiposEndereco.length} tipo(s)`);
 
-    const wrap = document.getElementById('wms3d-canvas-wrap');
-    if (wrap && window.WMS3D) { wrap.innerHTML = ''; WMS3D.init(wrap); }
-    document.getElementById('wms3d-cfg-panel').style.display = 'none';
+    // Fecha painel ANTES de reiniciar o 3D (evita referência perdida)
+    const panel = document.getElementById('wms3d-cfg-panel');
+    if (panel) panel.style.display = 'none';
+
+    // Reinicia o 3D — separado em try-catch para não bloquear o fluxo se falhar
+    try {
+        const wrap = document.getElementById('wms3d-canvas-wrap');
+        if (wrap && window.WMS3D) { wrap.innerHTML = ''; WMS3D.init(wrap); }
+    } catch(e3d) {
+        console.warn('[WMS3D] Erro ao re-renderizar 3D após salvar:', e3d.message);
+    }
+
     alert(`✅ Configuração salva!\n${corredores.length} corredor(es) · ${tiposEndereco.length} tipo(s) de endereço`);
+
+    } catch(err) {
+        console.error('[WMS] wms3dSaveConfig ERRO:', err);
+        alert('❌ Erro ao salvar configuração:\n' + err.message + '\n\nVerifique o console (F12) para detalhes.');
+    }
 };
 
 // Export tipos helper (used by locations.js)

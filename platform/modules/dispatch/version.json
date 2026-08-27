@@ -1,1 +1,1 @@
-{"build":"20260827-v3.22.7","version":"3.22.7","environment":"staging","change":"FIX CRITICO: setStorage declaracao restaurada em utils.js. v3.22.5 quebrou Utils por erro de sintaxe (funcao sem declaracao). Despacho voltando ao ar.","lastUpdate":"2026-08-27","deployedAt":"2026-08-27"}
+{"build":"20260827-v3.22.8","version":"3.22.8","change":"FIX WMS: wms3dSaveConfig com try-catch completo - erros agora aparecem em alert. Painel fecha antes do 3D reiniciar. WMS cloud badge fix mantido. utils.js fix v3.22.7 mantido.","lastUpdate":"2026-08-27","deployedAt":"2026-08-27"}
