@@ -110,6 +110,8 @@ const Utils = {
         } catch (e) { console.error(e); }
     },
 
+    setStorage: (key, data) => {
+        try {
             // v3.22.5 FIX DEFINITIVO: app_romaneios NUNCA vai para localStorage.
             // É sempre carregado do Firebase em chunks a cada sessão → caching local só causa QuotaExceededError.
             // Todos os 2070+ itens ficam em _memStore durante a sessão (acesso normal garantido).
