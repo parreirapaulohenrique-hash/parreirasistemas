@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
@@ -89,25 +89,6 @@
                 <span class="module-status master">👑 Administrador</span>
             </div>
 
-            <!-- ERP -->
-            <div class="module-card module-erp" onclick="openModule('erp')">
-                <div class="module-icon">
-                    <span class="material-icons-round">account_balance</span>
-                </div>
-                <h3>ERP</h3>
-                <p>Gestão completa: Financeiro, Fiscal, CRM, Vendas, Cadastros.</p>
-                <span class="module-status active">✅ Disponível</span>
-            </div>
-
-            <!-- Sales Force -->
-            <div class="module-card module-sales" onclick="openModule('sales-force')">
-                <div class="module-icon">
-                    <span class="material-icons-round">phone_android</span>
-                </div>
-                <h3>Força de Vendas</h3>
-                <p>App para vendedores externos com funcionamento offline.</p>
-                <span class="module-status active">✅ Disponível</span>
-            </div>
 
             <!-- WMS -->
             <div class="module-card module-wms" onclick="openModule('wms')">
@@ -406,12 +387,9 @@
         }
 
         function openModule(module) {
-            const card = document.querySelector(`.module-${module === 'sales-force' ? 'sales' : module}`);
+            const card = document.querySelector(`.module-${module}`);
             if (card && card.classList.contains('disabled')) return;
 
-            // v3.14.14: Usa window.location.origin para garantir que cada ambiente
-            // (produção, staging, preview) sempre abre SUA PRÓPRIA versão do módulo.
-            // Antes: path relativo podia cair no ambiente errado dependendo da URL base.
             const base = window.location.origin + '/platform/modules/';
 
             switch (module) {
@@ -424,17 +402,11 @@
                 case 'erp-consultoria':
                     window.open(base + 'erp-consultoria/index.html', '_blank');
                     break;
-                case 'erp':
-                    window.open(base + 'erp/index.html', '_blank');
-                    break;
                 case 'wms':
                     window.open(base + 'wms/index.html', '_blank');
                     break;
                 case 'wms-coletor':
                     window.open(base + 'wms-coletor/index.html', '_blank');
-                    break;
-                case 'sales-force':
-                    window.open(base + 'sales-force/index.html', '_blank');
                     break;
             }
         }
