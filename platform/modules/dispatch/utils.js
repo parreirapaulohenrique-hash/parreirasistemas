@@ -110,22 +110,20 @@ const Utils = {
         } catch (e) { console.error(e); }
     },
 
-    setStorage: (key, data) => {
-        try {
-            // v3.22.4 FIX: app_romaneios tem 2000+ itens e estoura localStorage.
-            // Mantém TODOS em memória (_memStore) mas grava apenas os 400 mais recentes no localStorage.
-            // (90 dias ainda deixava 1285+ itens na produção LT Distribuidora = ainda estourava)
-            let dataToStore = data;
-            if (key === 'app_romaneios' && Array.isArray(data) && data.length > 400) {
-                dataToStore = [...data].sort((a, b) => {
-                    const da = new Date(b.createdAt || b.date || b.dataRomaneio || 0).getTime();
-                    const db2 = new Date(a.createdAt || a.date || a.dataRomaneio || 0).getTime();
-                    return da - db2;
-                }).slice(0, 400);
-                console.log(`📦 [Quota] app_romaneios: ${data.length} total → 400 mais recentes em localStorage (todos em memória).`);
+            // v3.22.5 FIX DEFINITIVO: app_romaneios NUNCA vai para localStorage.
+            // É sempre carregado do Firebase em chunks a cada sessão → caching local só causa QuotaExceededError.
+            // Todos os 2070+ itens ficam em _memStore durante a sessão (acesso normal garantido).
+            if (key === 'app_romaneios') {
+                Utils._memStore[key] = data;
+                console.log(`📦 [Quota] app_romaneios: ${Array.isArray(data) ? data.length : '?'} itens em memória (localStorage ignorado).`);
+                // Ainda sincroniza com Firebase se necessário, mas não grava no localStorage
+                if (Utils.Cloud && Array.isArray(data) && data.length > 0) {
+                    Utils.Cloud.save(key, data);
+                }
+                return;
             }
 
-            const serialized = JSON.stringify(dataToStore);
+            const serialized = JSON.stringify(data);
             Utils._memStore[key] = data; // Memória sempre recebe TODOS
             try {
                 localStorage.setItem(Utils._storageKey(key), serialized);
@@ -163,7 +161,7 @@ const Utils = {
     // v3.11.74: Libera espaço no localStorage removendo chaves grandes não-críticas
     _freeStorageSpace: (keepKey) => {
         const CRITICAL_KEYS = ['carrier_list', 'carrier_configs', 'freight_tables', 'company_data', 'app_users', 'carrier_info_v2'];
-        const EVICTABLE = ['delivery_history', 'invoice_history', 'app_romaneios', 'dispatches'];
+        const EVICTABLE = ['delivery_history', 'invoice_history', 'dispatches']; // app_romaneios removido v3.22.5: nunca vai ao localStorage
         const tenantId = Utils.Cloud && Utils.Cloud.tenantId ? Utils.Cloud.tenantId : '';
         let freed = 0;
         // 1. Tenta remover chaves evictable (históricas/grandes) do tenant
@@ -520,45 +518,37 @@ const Utils = {
                 const data = doc.data();
                 const tenantKey = `tenant_${this.tenantId}_${key}`;
 
-                // v3.22.4 FIX: Prunear app_romaneios — máximo 400 mais recentes no localStorage
-                const _pruneIfRomaneios = (key, arr) => {
-                    if (key !== 'app_romaneios' || arr.length <= 400) return arr;
-                    const pruned = [...arr].sort((a, b) => {
-                        const da = new Date(b.createdAt || b.date || b.dataRomaneio || 0).getTime();
-                        const db2 = new Date(a.createdAt || a.date || a.dataRomaneio || 0).getTime();
-                        return da - db2;
-                    }).slice(0, 400);
-                    console.log(`📦 [Quota] loadAll app_romaneios: ${arr.length} total → 400 mais recentes em localStorage.`);
-                    Utils._memStore['app_romaneios'] = arr; // todos em memória
-                    return pruned;
-                };
-
+                // v3.22.5 FIX DEFINITIVO: app_romaneios NUNCA vai para localStorage.
+                // É sempre carregado do Firebase em chunks a cada sessão → caching local só causa QuotaExceededError.
                 if (data.isChunked) {
                     if (this.loadChunks) {
                         const fullArray = await this.loadChunks(key, data.chunkCount);
-                        const toStore = _pruneIfRomaneios(key, fullArray);
-                        localStorage.setItem(tenantKey, JSON.stringify(toStore));
-                        console.log(`[loadAll] ${key} (chunked): ${fullArray.length} itens carregados.`);
+                        if (key === 'app_romaneios') {
+                            Utils._memStore['app_romaneios'] = fullArray;
+                            console.log(`📦 [Quota] loadAll app_romaneios: ${fullArray.length} itens em memória (localStorage ignorado).`);
+                        } else {
+                            localStorage.setItem(tenantKey, JSON.stringify(fullArray));
+                            console.log(`[loadAll] ${key} (chunked): ${fullArray.length} itens carregados.`);
+                        }
                     }
                 } else if (data.content && data.content.length >= 2) {
-                    try {
-                        let contentToStore = data.content;
-                        if (key === 'app_romaneios') {
-                            try {
-                                const arr = JSON.parse(data.content);
-                                contentToStore = JSON.stringify(_pruneIfRomaneios(key, arr));
-                            } catch(e) {}
-                        }
-                        localStorage.setItem(tenantKey, contentToStore);
-                    } catch (quotaErr) {
-                        if (quotaErr.name === 'QuotaExceededError' || quotaErr.code === 22) {
-                            console.warn(`⚠️ [loadAll/Quota] Sem espaço para '${key}'. Liberando e re-tentando...`);
-                            Utils._freeStorageSpace(key);
-                            try {
-                                localStorage.setItem(tenantKey, data.content);
-                            } catch(e2) {
-                                Utils._memStore[key] = JSON.parse(data.content);
-                                console.warn(`⚠️ [loadAll/Quota] '${key}' salvo em memória.`);
+                    if (key === 'app_romaneios') {
+                        // Armazena somente em memória
+                        try { Utils._memStore['app_romaneios'] = JSON.parse(data.content); } catch(e) {}
+                        console.log(`📦 [Quota] loadAll app_romaneios (non-chunked): em memória (localStorage ignorado).`);
+                    } else {
+                        try {
+                            localStorage.setItem(tenantKey, data.content);
+                        } catch (quotaErr) {
+                            if (quotaErr.name === 'QuotaExceededError' || quotaErr.code === 22) {
+                                console.warn(`⚠️ [loadAll/Quota] Sem espaço para '${key}'. Liberando e re-tentando...`);
+                                Utils._freeStorageSpace(key);
+                                try {
+                                    localStorage.setItem(tenantKey, data.content);
+                                } catch(e2) {
+                                    Utils._memStore[key] = JSON.parse(data.content);
+                                    console.warn(`⚠️ [loadAll/Quota] '${key}' salvo em memória.`);
+                                }
                             }
                         }
                     }
@@ -837,7 +827,7 @@ const Utils = {
                 if (cloudContentString !== localContent) {
                     console.log(`🔄 [SaaS] Atualizando local: ${key}`);
 
-                    // clients vai para memória, não localStorage (evita QuotaExceededError)
+                    // clients vai para memória + localStorage (persistência entre reloads)
                     if (key === 'clients') {
                         try {
                             const parsed = JSON.parse(cloudContentString);
@@ -846,25 +836,15 @@ const Utils = {
                             try { localStorage.setItem(storageKey, cloudContentString); } catch(e) {}
                             if (window.renderClientsList) window.renderClientsList();
                         } catch(e) { console.warn('[Cloud] Erro ao parsear clients da nuvem:', e); }
+                    } else if (key === 'app_romaneios') {
+                        // v3.22.5 FIX DEFINITIVO: app_romaneios NUNCA vai para localStorage
+                        try {
+                            Utils._memStore['app_romaneios'] = JSON.parse(cloudContentString);
+                            console.log(`📦 [Quota] onSnapshot app_romaneios: ${Utils._memStore['app_romaneios'].length} itens em memória (localStorage ignorado).`);
+                        } catch(e) { console.warn('[Cloud] Erro ao parsear app_romaneios:', e); }
+                        if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
                     } else {
-                        // v3.22.4 FIX: Prunear app_romaneios — máximo 400 mais recentes no localStorage
-                        let contentToStore = cloudContentString;
-                        if (key === 'app_romaneios') {
-                            try {
-                                const fullArr = JSON.parse(cloudContentString);
-                                if (fullArr.length > 400) {
-                                    const pruned = [...fullArr].sort((a, b) => {
-                                        const da = new Date(b.createdAt || b.date || b.dataRomaneio || 0).getTime();
-                                        const db2 = new Date(a.createdAt || a.date || a.dataRomaneio || 0).getTime();
-                                        return da - db2;
-                                    }).slice(0, 400);
-                                    console.log(`📦 [Quota] onSnapshot app_romaneios: ${fullArr.length} total → 400 mais recentes em localStorage.`);
-                                    Utils._memStore['app_romaneios'] = fullArr; // todos em memória
-                                    contentToStore = JSON.stringify(pruned);
-                                }
-                            } catch(e) { console.warn('[Quota] Erro ao prunear romaneios no onSnapshot:', e); }
-                        }
-                        localStorage.setItem(storageKey, contentToStore);
+                        localStorage.setItem(storageKey, cloudContentString);
                         // UI Refresh
                         if (key === 'dispatches') {
                             if (window.renderDashboard) window.renderDashboard();
@@ -886,7 +866,6 @@ const Utils = {
                             if (window.populateSellersSelector) window.populateSellersSelector();
                         }
                         if (key === 'app_settings' && window.loadAppSettings) window.loadAppSettings();
-                        if (key === 'app_romaneios' && window.renderBaixaRomaneios) window.renderBaixaRomaneios();
                     }
                 }
             } else {
