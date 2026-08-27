@@ -1106,7 +1106,25 @@ window.wms3dSaveConfig = function() {
         tiposEndereco,
     };
 
-    localStorage.setItem('wms_armazem_config' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(cfg));
+    const cfgKey = 'wms_armazem_config' + (window.getTenantSuffix ? window.getTenantSuffix() : '');
+    const cfgStr = JSON.stringify(cfg);
+    try {
+        localStorage.setItem(cfgKey, cfgStr);
+    } catch(quotaErr) {
+        // localStorage cheio: libera cache do WMS e re-tenta
+        console.warn('[WMS] Quota ao salvar config — liberando cache WMS...');
+        const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+        ['wms_mock_data', 'wms_estoque', 'wms_tarefas', 'wms_pedidos', 'wms_picking'].forEach(k => {
+            const sz = (localStorage.getItem(k + suf) || '').length;
+            if (sz > 0) { localStorage.removeItem(k + suf); console.warn(`🗑️ [WMS Quota] Removido '${k+suf}' (${sz} chars)`); }
+        });
+        try {
+            localStorage.setItem(cfgKey, cfgStr);
+        } catch(e2) {
+            console.error('[WMS] Ainda sem espaço após limpeza:', e2);
+            alert('⚠️ Sem espaço no armazenamento local!\nA configuração foi mantida em memória para esta sessão.\nFeche outras abas ou limpe o cache do navegador para persistir.');
+        }
+    }
     console.log(`✅ [WMS] Config salva: ${corredores.length} corredor(es) · ${tiposEndereco.length} tipo(s)`);
 
     // Fecha painel ANTES de reiniciar o 3D (evita referência perdida)
