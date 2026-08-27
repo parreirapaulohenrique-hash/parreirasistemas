@@ -522,15 +522,38 @@ const Utils = {
                 if (!doc.exists) return false;
                 const data = doc.data();
                 const tenantKey = `tenant_${this.tenantId}_${key}`;
+
+                // v3.22.3 FIX: Helper para prunear app_romaneios antes de salvar no localStorage
+                const _pruneIfRomaneios = (key, arr) => {
+                    if (key !== 'app_romaneios' || arr.length <= 500) return arr;
+                    const cutoff = new Date();
+                    cutoff.setDate(cutoff.getDate() - 90);
+                    const pruned = arr.filter(r => {
+                        const dt = new Date(r.createdAt || r.date || r.dataRomaneio || 0);
+                        return dt >= cutoff;
+                    });
+                    console.log(`📦 [Quota] loadAll app_romaneios: ${arr.length} total → ${pruned.length} últimos 90 dias em localStorage.`);
+                    Utils._memStore['app_romaneios'] = arr; // todos em memória
+                    return pruned;
+                };
+
                 if (data.isChunked) {
                     if (this.loadChunks) {
                         const fullArray = await this.loadChunks(key, data.chunkCount);
-                        localStorage.setItem(tenantKey, JSON.stringify(fullArray));
+                        const toStore = _pruneIfRomaneios(key, fullArray);
+                        localStorage.setItem(tenantKey, JSON.stringify(toStore));
                         console.log(`[loadAll] ${key} (chunked): ${fullArray.length} itens carregados.`);
                     }
                 } else if (data.content && data.content.length >= 2) {
                     try {
-                        localStorage.setItem(tenantKey, data.content);
+                        let contentToStore = data.content;
+                        if (key === 'app_romaneios') {
+                            try {
+                                const arr = JSON.parse(data.content);
+                                contentToStore = JSON.stringify(_pruneIfRomaneios(key, arr));
+                            } catch(e) {}
+                        }
+                        localStorage.setItem(tenantKey, contentToStore);
                     } catch (quotaErr) {
                         if (quotaErr.name === 'QuotaExceededError' || quotaErr.code === 22) {
                             console.warn(`⚠️ [loadAll/Quota] Sem espaço para '${key}'. Liberando e re-tentando...`);
@@ -821,11 +844,32 @@ const Utils = {
                     // clients vai para memória, não localStorage (evita QuotaExceededError)
                     if (key === 'clients') {
                         try {
-                            Utils._memStore.clients = JSON.parse(cloudContentString);
+                            const parsed = JSON.parse(cloudContentString);
+                            Utils._memStore.clients = parsed;
+                            // Salva tb no localStorage para persistir entre reloads
+                            try { localStorage.setItem(storageKey, cloudContentString); } catch(e) {}
                             if (window.renderClientsList) window.renderClientsList();
                         } catch(e) { console.warn('[Cloud] Erro ao parsear clients da nuvem:', e); }
                     } else {
-                        localStorage.setItem(storageKey, cloudContentString);
+                        // v3.22.3 FIX: Prunear app_romaneios antes de salvar direto no localStorage
+                        let contentToStore = cloudContentString;
+                        if (key === 'app_romaneios') {
+                            try {
+                                const fullArr = JSON.parse(cloudContentString);
+                                if (fullArr.length > 500) {
+                                    const cutoff = new Date();
+                                    cutoff.setDate(cutoff.getDate() - 90);
+                                    const pruned = fullArr.filter(r => {
+                                        const dt = new Date(r.createdAt || r.date || r.dataRomaneio || 0);
+                                        return dt >= cutoff;
+                                    });
+                                    console.log(`📦 [Quota] onSnapshot app_romaneios: ${fullArr.length} total → ${pruned.length} últimos 90 dias em localStorage.`);
+                                    Utils._memStore['app_romaneios'] = fullArr; // todos em memória
+                                    contentToStore = JSON.stringify(pruned);
+                                }
+                            } catch(e) { console.warn('[Quota] Erro ao prunear romaneios no onSnapshot:', e); }
+                        }
+                        localStorage.setItem(storageKey, contentToStore);
                         // UI Refresh
                         if (key === 'dispatches') {
                             if (window.renderDashboard) window.renderDashboard();
