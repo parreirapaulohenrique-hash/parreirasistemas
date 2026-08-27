@@ -1,1 +1,1 @@
-{"build":"20260825-v3.21.4","version":"3.21.4","environment":"staging","change":"v3.21.4 - FIX: Botao Quitar agora e icone compacto (sem invadir coluna). FIX CRITICO: Fallback automatico entre chaves localStorage resolve perda de dados ao recarregar.","lastUpdate":"2026-08-25","deployedAt":"2026-08-25"}
+{"build":"20260827-v3.22.0","version":"3.22.0","environment":"staging","change":"v3.22.0 - FEAT: Modulos ERP e Forca de Vendas removidos da plataforma (cards, rotas e pastas eliminados).","lastUpdate":"2026-08-27","deployedAt":"2026-08-27"}
