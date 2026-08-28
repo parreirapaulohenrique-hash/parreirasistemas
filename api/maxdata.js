@@ -16,7 +16,10 @@ module.exports = async function handler(req, res) {
         return res.status(200).end();
     }
 
-    const MAXDATA_BASE = 'http://rds.skytins.com.br:8720/v2';
+    const TARGET_HOSTS = [
+        'http://45.177.248.129:8720/v2',
+        'http://rds.skytins.com.br:8720/v2'
+    ];
 
     // Extrai _path e monta o resto da query
     const url = new URL(req.url, 'http://localhost');
@@ -29,12 +32,12 @@ module.exports = async function handler(req, res) {
     }
 
     const qs = Object.keys(rest).length ? '?' + new URLSearchParams(rest).toString() : '';
-    const targetUrl = `${MAXDATA_BASE}/${endpointPath}${qs}`;
-
-    console.log(`[MaxDataProxy] ${req.method} ${targetUrl}`);
 
     // Cabeçalhos para repassar
-    const headers = { 'Content-Type': 'application/json' };
+    const headers = { 
+        'Content-Type': 'application/json',
+        'Host': 'rds.skytins.com.br:8720'
+    };
     if (req.headers['authorization']) {
         headers['Authorization'] = req.headers['authorization'];
     }
@@ -47,44 +50,40 @@ module.exports = async function handler(req, res) {
             : undefined;
     }
 
-    // Abort controller para timeout de 8s (abaixo do limite de 10s do Vercel)
-    const ac = new AbortController();
-    const timer = setTimeout(() => {
-        ac.abort();
-    }, 8000);
+    let lastError = null;
 
-    try {
-        const response = await fetch(targetUrl, {
-            method: req.method,
-            headers,
-            body,
-            signal: ac.signal
-        });
+    for (const base of TARGET_HOSTS) {
+        const targetUrl = `${base}/${endpointPath}${qs}`;
+        console.log(`[MaxDataProxy] Tentando: ${req.method} ${targetUrl}`);
 
-        clearTimeout(timer);
+        const ac = new AbortController();
+        const timer = setTimeout(() => ac.abort(), 7000);
 
-        const text = await response.text();
-        let data;
-        try { data = JSON.parse(text); } catch { data = { raw: text }; }
-
-        console.log(`[MaxDataProxy] Resposta: ${response.status}`);
-        return res.status(response.status).json(data);
-
-    } catch (e) {
-        clearTimeout(timer);
-
-        if (e.name === 'AbortError') {
-            console.error('[MaxDataProxy] Timeout (8s) ao conectar em:', targetUrl);
-            return res.status(504).json({
-                success: false,
-                message: 'Timeout: o servidor Maxdata não respondeu em 8s. Verifique se a API está acessível na internet.'
+        try {
+            const response = await fetch(targetUrl, {
+                method: req.method,
+                headers,
+                body,
+                signal: ac.signal
             });
-        }
 
-        console.error('[MaxDataProxy] Erro de rede:', e.message, '->', targetUrl);
-        return res.status(502).json({
-            success: false,
-            message: `Erro de rede no proxy: ${e.message}`
-        });
+            clearTimeout(timer);
+
+            const text = await response.text();
+            let data;
+            try { data = JSON.parse(text); } catch { data = { raw: text }; }
+
+            console.log(`[MaxDataProxy] Sucesso em ${base}: ${response.status}`);
+            return res.status(response.status).json(data);
+        } catch (e) {
+            clearTimeout(timer);
+            console.warn(`[MaxDataProxy] Falha ao tentar ${base}:`, e.message);
+            lastError = e;
+        }
     }
+
+    return res.status(504).json({
+        success: false,
+        message: `Timeout ao conectar com a API MaxData: ${lastError?.message || 'Servidor não respondeu a tempo.'}`
+    });
 };
