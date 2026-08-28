@@ -358,10 +358,10 @@ const ErpUI = {
                 $('erp-last-sync-info').textContent = `Última sincronização: ${dt.toLocaleString('pt-BR')}`;
             }
 
-            // Para Maxdata: auto-testa a conexão em background se terminal estiver configurado
+            // Para Maxdata: badge mostra configurado, usuário testa manualmente
             if (config.provider === 'maxdata' && config.terminal && config.enabled) {
-                this._updateStatusBadge(true, false); // mostra "Configurado" enquanto testa
-                setTimeout(() => this._testConnection(true), 800); // silent=true = sem alert em caso de falha
+                this._updateStatusBadge(true, false);
+                this._addLog('info', '🔌 Configuração carregada. Clique em "Testar Conexão" para verificar.');
             } else {
                 const hasToken = ErpRegistry.hasToken(this._tenantId);
                 this._updateStatusBadge(config.enabled, hasToken);
@@ -414,16 +414,10 @@ const ErpUI = {
 
             await ErpRegistry.saveConfig(this._tenantId, config, this._operatorName);
 
-            this._addLog('success', '✅ Configuração salva no Firestore com sucesso');
+            this._addLog('success', '✅ Configuração salva! Clique em "Testar Conexão" para verificar.');
+            this._updateStatusBadge(true, false);
 
-            // Para Maxdata: testa conexão automaticamente após salvar
-            if (provider === 'maxdata' && terminal) {
-                setTimeout(() => this._testConnection(true), 300);
-            } else {
-                this._updateStatusBadge(true, !!config.apiToken || ErpRegistry.hasToken(this._tenantId));
-            }
-
-            if ($('erpApiToken')) $('erpApiToken').value = ''; // Limpa campo por segurança
+            if ($('erpApiToken')) $('erpApiToken').value = '';
 
         } catch (e) {
             this._addLog('error', `❌ Erro ao salvar: ${e.message}`);
@@ -439,13 +433,30 @@ const ErpUI = {
      */
     async _testConnection(silent = false) {
         const btn = document.getElementById('btnTestErpConnection');
-        if (btn) { btn.disabled = true; btn.textContent = '⏳ Testando...'; }
+        // Em modo silent (auto-teste), NÃO desabilita o botão para não travar a UI
+        if (!silent && btn) { btn.disabled = true; btn.textContent = '⏳ Testando...'; }
 
         try {
-            const erp = await ErpRegistry.getAdapter(this._tenantId);
+            // Timeout de segurança: garante que a função sempre termina em até 12s
+            const withTimeout = (promise, ms, msg) => Promise.race([
+                promise,
+                new Promise((_, reject) => setTimeout(() => reject(new Error(msg)), ms))
+            ]);
+
+            const erp = await withTimeout(
+                ErpRegistry.getAdapter(this._tenantId),
+                8000,
+                'Timeout ao buscar configuração ERP. Verifique sua conexão com o Firestore.'
+            );
+
             if (!erp) throw new Error('ERP não configurado. Salve as configurações primeiro e recarregue a página.');
 
-            await erp.testConnection();
+            await withTimeout(
+                erp.testConnection(),
+                12000,
+                'Timeout: API não respondeu em 12s. Verifique se a URL está acessível e se o terminal está ativo.'
+            );
+
             this._connected = true;
 
             this._addLog('success', '✅ Conexão com a API estabelecida com sucesso!');
