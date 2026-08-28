@@ -180,6 +180,10 @@
             "destination": "/platform/modules/wms/index.html"
         },
         {
+            "source": "/fix_admin",
+            "destination": "/platform/fix_admin.html"
+        },
+        {
             "source": "/:tenant",
             "destination": "/platform/modules/dispatch/index.html"
         }

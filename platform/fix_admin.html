@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recuperação de Acesso — Bússola</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 1rem; }
+  .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 2rem; width: 100%; max-width: 420px; }
+  h1 { font-size: 1.3rem; font-weight: 700; color: #f1f5f9; margin-bottom: 0.5rem; }
+  .subtitle { font-size: 0.85rem; color: #94a3b8; margin-bottom: 1.75rem; }
+  label { display: block; font-size: 0.8rem; font-weight: 500; color: #94a3b8; margin-bottom: 0.35rem; }
+  input { width: 100%; padding: 0.65rem 0.85rem; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #f1f5f9; font-size: 0.9rem; outline: none; }
+  input:focus { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,0.2); }
+  .group { margin-bottom: 1rem; }
+  button { width: 100%; padding: 0.75rem; border-radius: 8px; border: none; background: #6366f1; color: #fff; font-size: 0.95rem; font-weight: 600; cursor: pointer; margin-top: 0.5rem; }
+  button:disabled { background: #4338ca; opacity: 0.7; cursor: not-allowed; }
+  .msg { padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.85rem; margin-top: 1rem; display: none; }
+  .msg.ok  { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #6ee7b7; }
+  .msg.err { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
+  .warn { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.25); border-radius: 8px; padding: 0.75rem; font-size: 0.8rem; color: #fcd34d; margin-bottom: 1.5rem; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🔑 Recuperação de Acesso</h1>
+  <p class="subtitle">Redefina a senha do administrador de uma empresa</p>
+
+  <div class="warn">
+    ⚠️ Use somente para recuperar acesso quando a senha foi perdida. A nova senha substituirá a anterior no banco de dados.
+  </div>
+
+  <div class="group">
+    <label>ID da Empresa (tenant)</label>
+    <input type="text" id="tenantId" placeholder="Ex: centralpecas" autocomplete="off">
+  </div>
+  <div class="group">
+    <label>Login do Usuário (geralmente: admin)</label>
+    <input type="text" id="userLogin" value="admin" autocomplete="off">
+  </div>
+  <div class="group">
+    <label>Nome do Usuário</label>
+    <input type="text" id="userName" value="Administrador" autocomplete="off">
+  </div>
+  <div class="group">
+    <label>Nova Senha</label>
+    <input type="password" id="newPass" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+  </div>
+  <div class="group">
+    <label>Confirmar Nova Senha</label>
+    <input type="password" id="confirmPass" placeholder="Repita a nova senha" autocomplete="new-password">
+  </div>
+
+  <button id="btnReset" onclick="resetAdmin()">🔐 Redefinir Senha</button>
+
+  <div id="msgOk" class="msg ok">✅ Senha redefinida com sucesso! Aguarde 5 segundos...</div>
+  <div id="msgErr" class="msg err"></div>
+</div>
+
+<!-- Firebase SDK (mesmo do app) -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script>
+const firebaseConfig = {
+    apiKey:            "AIzaSyDzatCQ8zmH4aQftznf7Y5wdYPwFYSiARc",
+    authDomain:        "parreiralog-91904.firebaseapp.com",
+    projectId:         "parreiralog-91904",
+    messagingSenderId: "527633267616",
+    appId:             "1:527633267616:web:3567e883b31f7fa02882c5"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db   = firebase.firestore();
+const auth = firebase.auth();
+
+// Garante auth anônima antes de qualquer ação
+auth.signInAnonymously().catch(console.error);
+auth.onAuthStateChanged(u => {
+    if (u) console.log('Firebase Auth OK:', u.uid.substr(0,5));
+});
+
+async function sha256(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function resetAdmin() {
+    const btn     = document.getElementById('btnReset');
+    const msgOk   = document.getElementById('msgOk');
+    const msgErr  = document.getElementById('msgErr');
+    const tenant  = document.getElementById('tenantId').value.trim().toLowerCase();
+    const login   = document.getElementById('userLogin').value.trim().toLowerCase();
+    const nome    = document.getElementById('userName').value.trim();
+    const pass    = document.getElementById('newPass').value;
+    const confirm = document.getElementById('confirmPass').value;
+
+    msgOk.style.display = 'none';
+    msgErr.style.display = 'none';
+
+    if (!tenant || !login || !nome) {
+        msgErr.textContent = '❌ Preencha todos os campos.';
+        msgErr.style.display = 'block';
+        return;
+    }
+    if (pass.length < 6) {
+        msgErr.textContent = '❌ A senha deve ter pelo menos 6 caracteres.';
+        msgErr.style.display = 'block';
+        return;
+    }
+    if (pass !== confirm) {
+        msgErr.textContent = '❌ As senhas não coincidem.';
+        msgErr.style.display = 'block';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Aguardando Firebase Auth...';
+
+    // Espera auth estar pronta (máx 5s)
+    try {
+        await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('Timeout: Firebase Auth não disponível')), 5000);
+            auth.onAuthStateChanged(user => {
+                if (user) { clearTimeout(timeout); resolve(user); }
+            });
+        });
+    } catch (e) {
+        btn.disabled = false;
+        btn.textContent = '🔐 Redefinir Senha';
+        msgErr.textContent = '❌ ' + e.message;
+        msgErr.style.display = 'block';
+        return;
+    }
+
+    btn.textContent = '⏳ Verificando empresa...';
+
+    try {
+        // Verifica se o tenant existe
+        const tenantDoc = await db.collection('tenants').doc(tenant).get();
+        if (!tenantDoc.exists) {
+            throw new Error(`Empresa '${tenant}' não encontrada no banco de dados.`);
+        }
+
+        btn.textContent = '⏳ Gravando nova senha...';
+
+        const senhaHash = await sha256(pass);
+        const now       = new Date().toISOString();
+
+        // Grava/atualiza o documento do usuário no Firestore
+        await db.collection('tenants').doc(tenant).collection('users').doc(login).set({
+            nome,
+            login,
+            senhaHash,
+            role:       'adm',
+            ativo:      true,
+            criadoEm:   now,
+            modulos:    [],
+            resetadoEm: now
+        });
+
+        // Também atualiza o índice global
+        await db.collection('users_index').doc(login).set({ tenantId: tenant });
+
+        msgOk.style.display = 'block';
+
+        // Redireciona para o dispatch após 5s
+        setTimeout(() => {
+            window.location.href = '/' + tenant;
+        }, 5000);
+
+    } catch (e) {
+        btn.disabled = false;
+        btn.textContent = '🔐 Redefinir Senha';
+        msgErr.textContent = '❌ Falha: ' + e.message;
+        msgErr.style.display = 'block';
+        console.error('[resetAdmin]', e);
+    }
+}
+</script>
+</body>
+</html>
