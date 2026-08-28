@@ -1,163 +1,267 @@
-/**
- * MaxDataAdapter — Implementação da Integração com ERP MaxData
- * =============================================================
- * Herda de ErpAdapter e implementa a comunicação com a API MaxData v2 (REST JWT).
+﻿/**
+ * MaxDataAdapter — Integração com ERP MaxData
+ * ============================================
+ * Implementa syncClients() paginado via GET /v2/client.
+ * Autenticação JWT via POST /v2/auth (empId + terminal).
  *
- * Suporta:
- *  - Autenticação via POST /auth com empId e terminal
- *  - Busca de Produtos via GET /product
- *  - Busca de Entradas / NFs via GET /entry
- *  - Confirmação de Recebimento / Despacho via PUT /entry/markaschecked
+ * Fase 1: sincronização de catálogo de clientes para uso
+ * na aba Cotação do Dispatch (Central Rolamentos).
  *
- * Versão: 1.0.0
- * Criado: 2026-07-24
- * Parte de: platform/shared/integrations/maxdata/
+ * Configuração salva no Firestore do tenant:
+ *   erp: 'maxdata'
+ *   erpConfig: { baseUrl, empId, terminal }
+ *
+ * Versão: 2.0.0
+ * Atualizado: 2026-08-28
  */
 
 class MaxDataAdapter extends ErpAdapter {
 
-    // ─────────────────────────────────────────────
-    //  AUTENTICAÇÃO & REQUEST HELPER
-    // ─────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────
+    //  AUTENTICAÇÃO — JWT com cache de sessão
+    // ─────────────────────────────────────────────────────────
 
     async _getToken() {
-        const cached = this._tokenCache;
-        if (cached?.value && new Date(cached.expiresAt) > new Date(Date.now() + 60000)) {
-            return cached.value;
+        if (this._tokenCache?.value &&
+            new Date(this._tokenCache.expiresAt) > new Date(Date.now() + 120000)) {
+            return this._tokenCache.value;
         }
 
-        const baseUrl  = (this.config.apiUrl || this.config.baseUrl || 'http://rds.skytins.com.br:8720/v2').replace(/\/$/, '');
+        const baseUrl  = this._baseUrl();
         const empId    = Number(this.config.empId || 1);
-        const terminal = this.config.terminal || '364F64E6539974C1D75C8A46C14B2D3D';
+        const terminal = (this.config.terminal || '').trim();
 
-        this._log('info', `Autenticando no MaxData (${baseUrl}/auth)...`);
+        if (!terminal) throw new Error('Terminal Maxdata não configurado. Acesse Integração ERP → Configurar.');
+
+        this._log('info', `Autenticando no MaxData (${baseUrl}/auth) — empId: ${empId}`);
 
         const resp = await fetch(`${baseUrl}/auth`, {
-            method: 'POST',
+            method:  'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ empId, terminal }),
-            signal: AbortSignal.timeout(12000)
+            body:    JSON.stringify({ empId, terminal }),
+            signal:  AbortSignal.timeout(15000)
         });
 
-        if (!resp.ok) throw new Error(`MaxData Auth: HTTP ${resp.status}`);
+        if (!resp.ok) {
+            const errText = await resp.text().catch(() => resp.statusText);
+            throw new Error(`MaxData Auth falhou (HTTP ${resp.status}): ${errText}`);
+        }
+
         const data = await resp.json();
-        if (!data.token) throw new Error('Token JWT não retornado pelo MaxData.');
+        if (!data.token) throw new Error('Token JWT não retornado pelo MaxData. Verifique o terminal.');
 
         this._tokenCache = {
-            value: data.token,
+            value:     data.token,
             expiresAt: new Date(data.expiration || Date.now() + 86400000)
         };
 
+        this._log('success', `✅ Token JWT obtido — expira: ${this._tokenCache.expiresAt.toLocaleString('pt-BR')}`);
         return data.token;
     }
 
-    async _headers() {
+    async _authHeaders() {
         const token = await this._getToken();
-        return {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        };
+        return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
     }
 
-    // ─────────────────────────────────────────────
+    _baseUrl() {
+        return (this.config.baseUrl || this.config.apiUrl || 'http://rds.skytins.com.br:8720/v2').replace(/\/$/, '');
+    }
+
+    // ─────────────────────────────────────────────────────────
     //  TESTE DE CONEXÃO
-    // ─────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────
 
     async testConnection() {
-        this._log('info', 'Testando autenticação MaxData...');
+        this._log('info', 'Testando conexão com MaxData...');
         try {
             const token = await this._getToken();
             this._log('success', '✅ Conexão MaxData estabelecida com sucesso!');
             return { success: true, token };
         } catch (e) {
-            this._log('error', `Falha ao conectar no MaxData: ${e.message}`);
+            this._log('error', `❌ Falha ao conectar: ${e.message}`);
             throw e;
         }
     }
 
-    // ─────────────────────────────────────────────
-    //  CLIENTES
-    // ─────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────
+    //  CLIENTES — Fase 1
+    // ─────────────────────────────────────────────────────────
 
     async syncClients() {
-        this._log('info', 'Sync de clientes não aplicável diretamente para MaxData (uso em NF/Entry).');
-        return { added: 0, updated: 0, errors: 0 };
-    }
+        this._log('info', '🔄 Iniciando sincronização de clientes MaxData...');
+        const start = Date.now();
 
-    // ─────────────────────────────────────────────
-    //  PRODUTOS
-    // ─────────────────────────────────────────────
-
-    async syncProducts() {
-        this._log('info', '🔄 Buscando produtos do MaxData (GET /product)...');
         try {
-            const headers = await this._headers();
-            const baseUrl = (this.config.apiUrl || this.config.baseUrl || 'http://rds.skytins.com.br:8720/v2').replace(/\/$/, '');
-            const resp = await fetch(`${baseUrl}/product`, { method: 'GET', headers, signal: AbortSignal.timeout(15000) });
-            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-            const data = await resp.json();
-            const raw = Array.isArray(data) ? data : (data.data || data.results || []);
+            const rawClients = await this._fetchAllClients();
+            this._log('info', `${rawClients.length} cliente(s) recebido(s) da API. Normalizando...`);
 
-            this._log('success', `✅ ${raw.length} produto(s) obtido(s) do MaxData.`);
-            return { added: raw.length, updated: 0, errors: 0, products: raw };
+            const current    = this._getLocalClients();
+            const clientsMap = new Map(current.map(c => [String(c.codigo), c]));
+
+            let added = 0, updated = 0, errors = 0;
+
+            for (const raw of rawClients) {
+                try {
+                    const mapped = this._mapClient(raw);
+                    if (!mapped.codigo || !mapped.nome) {
+                        this._log('warning', `Cliente ignorado: sem código ou nome`, raw);
+                        continue;
+                    }
+                    const key = String(mapped.codigo);
+                    if (clientsMap.has(key)) {
+                        clientsMap.set(key, { ...clientsMap.get(key), ...mapped });
+                        updated++;
+                    } else {
+                        clientsMap.set(key, mapped);
+                        added++;
+                    }
+                } catch (e) {
+                    this._log('error', `Erro ao mapear cliente id=${raw?.id}: ${e.message}`);
+                    errors++;
+                }
+            }
+
+            const finalClients = Array.from(clientsMap.values());
+            await this._saveFirestoreClients(finalClients);
+            this._setLocalClients(finalClients);
+
+            const duration = ((Date.now() - start) / 1000).toFixed(2);
+            this._log('success', `✅ Clientes MaxData: ${added} novos, ${updated} atualizados, ${errors} erros — ${duration}s`);
+
+            if (typeof window.renderClientList === 'function') window.renderClientList();
+
+            return { added, updated, errors, total: finalClients.length, duration };
+
         } catch (e) {
-            this._log('error', `Erro ao buscar produtos MaxData: ${e.message}`);
+            this._log('error', `❌ Falha na sincronização: ${e.message}`);
             throw e;
         }
     }
 
-    // ─────────────────────────────────────────────
-    //  PEDIDOS / NFs (ENTRADAS)
-    // ─────────────────────────────────────────────
+    async _fetchAllClients() {
+        const headers = await this._authHeaders();
+        const baseUrl = this._baseUrl();
+        const limit   = 100;
+        let page      = 1;
+        const all     = [];
 
-    async syncOrders() {
-        return this.syncNFs();
-    }
+        while (true) {
+            const url = `${baseUrl}/client?page=${page}&limit=${limit}`;
+            this._log('info', `Buscando página ${page} de clientes...`);
 
-    async syncNFs(filters = {}) {
-        this._log('info', '🔄 Consultando NFs/Entradas no MaxData (GET /entry)...');
-        try {
-            const headers = await this._headers();
-            const baseUrl = (this.config.apiUrl || this.config.baseUrl || 'http://rds.skytins.com.br:8720/v2').replace(/\/$/, '');
-            const resp = await fetch(`${baseUrl}/entry`, { method: 'GET', headers, signal: AbortSignal.timeout(15000) });
-            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-            const data = await resp.json();
-            const raw = Array.isArray(data) ? data : (data.data || data.results || []);
+            const resp = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(20000) });
+            if (!resp.ok) throw new Error(`GET /client pág ${page}: HTTP ${resp.status}`);
 
-            this._log('success', `✅ ${raw.length} entrada(s) localizada(s) no MaxData.`);
-            return raw;
-        } catch (e) {
-            this._log('error', `Erro ao buscar NFs MaxData: ${e.message}`);
-            throw e;
+            const data  = await resp.json();
+            const items = Array.isArray(data) ? data : (data.data || data.results || data.items || []);
+
+            if (!items.length) break;
+            all.push(...items);
+            if (items.length < limit) break;
+            page++;
         }
+
+        return all;
     }
 
-    // ─────────────────────────────────────────────
-    //  CONFIRMAÇÃO / WEBHOCK
-    // ─────────────────────────────────────────────
+    /**
+     * Mapeia dtos.Client (Maxdata) → formato interno do Dispatch.
+     * enderecos: [{ cidade, bairro, uf, cep, endereco, numeroEndereco }]
+     */
+    _mapClient(raw) {
+        const end    = (raw.enderecos && raw.enderecos.length > 0) ? raw.enderecos[0] : {};
+        const nome   = (raw.nome || raw.fantasia || '').toUpperCase().trim();
+        const cidade = (end.cidade || '').toUpperCase().trim();
+        const bairro = (end.bairro || '').toUpperCase().trim();
+        const phone  = (raw.telefone || raw.celular || '').replace(/\D/g, '');
+        const logr   = [end.endereco, end.numeroEndereco].filter(Boolean).join(', ');
 
-    async confirmDispatch(nfData) {
-        this._log('info', `Enviando marcação de conferência para NF ${nfData.numero_nf || nfData.nfNumero}...`);
+        return {
+            codigo:     String(raw.id || ''),
+            nome,
+            fantasia:   (raw.fantasia || nome).toUpperCase().trim(),
+            cidade,
+            bairro,
+            uf:         (end.uf || '').toUpperCase().trim(),
+            cep:        (end.cep || '').replace(/\D/g, ''),
+            endereco:   logr.toUpperCase().trim(),
+            telefone:   phone,
+            cnpj:       (raw.cpfCnpj || '').replace(/\D/g, ''),
+            email:      (raw.email || '').toLowerCase().trim(),
+            vendedorId: raw.vendedorPreferencialId ? String(raw.vendedorPreferencialId) : '',
+            _source:    'maxdata',
+            _syncedAt:  new Date().toISOString()
+        };
+    }
+
+    // ─────────────────────────────────────────────────────────
+    //  STUBS — fora de escopo fase 1
+    // ─────────────────────────────────────────────────────────
+
+    async syncProducts()            { this._log('info', 'syncProducts: fora de escopo fase 1.'); return { added: 0, updated: 0, errors: 0 }; }
+    async syncOrders()              { this._log('info', 'syncOrders: NFs lançadas manualmente.');  return { total: 0 }; }
+    async syncNFs(filters = {})     { this._log('info', 'syncNFs: NFs lançadas manualmente.');     return []; }
+    async confirmDispatch(nfData)   { this._log('info', 'confirmDispatch: fora de escopo.');        return { success: true }; }
+
+    // ─────────────────────────────────────────────────────────
+    //  HELPERS — Firestore + localStorage
+    // ─────────────────────────────────────────────────────────
+
+    async _saveFirestoreClients(clients) {
         try {
-            const headers = await this._headers();
-            const baseUrl = (this.config.apiUrl || this.config.baseUrl || 'http://rds.skytins.com.br:8720/v2').replace(/\/$/, '');
-            const resp = await fetch(`${baseUrl}/entry/markaschecked`, {
-                method: 'PUT',
-                headers,
-                body: JSON.stringify(nfData),
-                signal: AbortSignal.timeout(15000)
-            });
-            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-            this._log('success', `✅ Marcação de conferência enviada ao MaxData.`);
-            return { success: true };
-        } catch (e) {
-            this._log('error', `Erro ao marcar conferência MaxData: ${e.message}`);
-            throw e;
+            if (typeof Utils !== 'undefined' && Utils.Cloud && Utils.Cloud.save) {
+                await Utils.Cloud.save('clients', clients);
+            } else {
+                const db     = firebase.firestore();
+                const chunks = this._chunk(clients, 500);
+                for (const chunk of chunks) {
+                    await db.collection(`tenants/${this.tenantId}/data`).doc('clients')
+                        .set({ items: chunk, updatedAt: new Date().toISOString() }, { merge: true });
+                }
+            }
+        } catch (e) { this._log('warning', `Aviso Firestore: ${e.message}`); }
+    }
+
+    _getLocalClients() {
+        try {
+            if (typeof Utils !== 'undefined' && Utils.getStorage) return Utils.getStorage('clients') || [];
+            const r = localStorage.getItem('clients');
+            return r ? JSON.parse(r) : [];
+        } catch { return []; }
+    }
+
+    _setLocalClients(clients) {
+        try {
+            if (typeof Utils !== 'undefined' && Utils.saveRaw) Utils.saveRaw('clients', JSON.stringify(clients));
+            else localStorage.setItem('clients', JSON.stringify(clients));
+        } catch (e) { this._log('warning', `Aviso localStorage: ${e.message}`); }
+    }
+
+    _chunk(arr, size) {
+        const r = [];
+        for (let i = 0; i < arr.length; i += size) r.push(arr.slice(i, i + size));
+        return r;
+    }
+
+    // ─────────────────────────────────────────────────────────
+    //  LOG
+    // ─────────────────────────────────────────────────────────
+
+    _log(type, message, details = null) {
+        const prefix = `[MaxDataAdapter:${this.tenantId || '?'}]`;
+        if (type === 'error')        console.error(prefix, message, details || '');
+        else if (type === 'warning') console.warn(prefix,  message, details || '');
+        else                         console.log(prefix,   message, details || '');
+
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('erp:log', {
+                detail: { type, message, details, tenant: this.tenantId, provider: 'maxdata' }
+            }));
         }
     }
 }
 
-// Expor globalmente
 if (typeof window !== 'undefined') {
     window.MaxDataAdapter = MaxDataAdapter;
 }
