@@ -1,4 +1,4 @@
-# Ignorar tudo na raiz (mas não recursivamente por padrão para facilitar whitelist)
+﻿# Ignorar tudo na raiz (mas nÃ£o recursivamente por padrÃ£o para facilitar whitelist)
 /*
 
 # Permitir pastas e arquivos do sistema (Recursivo)
@@ -8,11 +8,11 @@
 !/api/**
 !/vercel.json
 
-# Arquivo de verificação TWA (Digital Asset Links)
+# Arquivo de verificaÃ§Ã£o TWA (Digital Asset Links)
 !/.well-known
 !/.well-known/**
 
-# Permitir ferramentas de deploy e documentação básica
+# Permitir ferramentas de deploy e documentaÃ§Ã£o bÃ¡sica
 !/deploy.ps1
 !/.gitignore
 !/index.html
@@ -24,4 +24,3 @@
 ~$*
 *~$*
 
-!/package.json
