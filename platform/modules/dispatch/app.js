@@ -10441,36 +10441,44 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 showToast('🔄 Sincronizando clientes do ERP...', 'info');
 
-                // syncClients() busca todos os clientes paginados e salva no storage do tenant
-                const result = await Promise.race([
-                    erp.syncClients(),
-                    new Promise((_, r) => setTimeout(() => r(new Error('Timeout na sincronização (60s)')), 60000))
-                ]);
-
-                // Merge: preserva taxaRegiao dos clientes já cadastrados manualmente
+                // v3.22.19 FIX: Substituição em vez de merge.
+                // Antes do sync, salva taxaMap das taxas customizadas pelo usuário
+                // e LIMPA o storage para garantir que só entrem clientes do Maxdata.
                 const existing = Utils.getStorage('clients') || [];
                 const taxaMap = {};
                 existing.forEach(c => { if (c.codigo && c.taxaRegiao) taxaMap[c.codigo] = c.taxaRegiao; });
 
+                // Limpa clientes antes do sync para evitar merge com dados antigos
+                try { Utils.saveRaw('clients', '[]'); } catch (_) {}
+                try { sessionStorage.removeItem('_erp_clients_maxdata'); } catch (_) {}
+
+                // syncClients() busca todos os clientes paginados e salva no storage do tenant
+                const result = await Promise.race([
+                    erp.syncClients(),
+                    new Promise((_, r) => setTimeout(() => r(new Error('Timeout na sincronização (90s)')), 90000))
+                ]);
+
+                // Após sync: lê clientes Maxdata, reaplica taxa de região onde havia customização
                 const synced = Utils.getStorage('clients') || [];
-                const merged = synced.map(c => ({
+                // Garantia extra: filtra apenas clientes vindos do Maxdata
+                const maxdataOnly = synced.filter(c => c._source === 'maxdata' || c.codigo);
+                const final = maxdataOnly.map(c => ({
                     ...c,
                     taxaRegiao: taxaMap[c.codigo] ?? c.taxaRegiao ?? ''
                 }));
 
-                // Salva merged com taxa original preservada
-                Utils.saveRaw('clients', JSON.stringify(merged));
+                // Salva resultado final
+                Utils.saveRaw('clients', JSON.stringify(final));
 
                 // Atualiza variável local e re-renderiza a lista
-                clients = merged;
+                clients = final;
                 window.renderClientsList();
 
-                const added   = result?.added   ?? 0;
-                const updated = result?.updated  ?? 0;
-                const total   = result?.total    ?? merged.length;
-                showToast(`✅ ERP sincronizado — ${total} clientes (${added} novos, ${updated} atualizados)`);
+                const added   = result?.added   ?? maxdataOnly.length;
+                const total   = final.length;
+                showToast(`✅ ERP sincronizado — ${total} clientes Maxdata importados`);
 
-                if (Utils.writeLog) Utils.writeLog('ERP_SYNC_CLIENTS', 'Integração ERP', `Sync Maxdata: ${total} clientes`, { added, updated, total }, null);
+                if (Utils.writeLog) Utils.writeLog('ERP_SYNC_CLIENTS', 'Integração ERP', `Sync Maxdata: ${total} clientes`, { added, total }, null);
 
             } catch (e) {
                 console.error('[importClientsFromERP]', e);
