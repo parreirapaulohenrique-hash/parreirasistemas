@@ -108,14 +108,14 @@ const ErpUI = {
             </div>
 
             <!-- Formulário -->
-            <form id="formErpConfig" style="display:grid; gap:1.25rem;">
+            <form id="formErpConfig" style="display:grid; gap:1.25rem;" autocomplete="off">
 
                 <!-- Provedor -->
                 <div>
                     <label style="display:block; font-size:0.85rem; font-weight:500; margin-bottom:0.4rem;">
                         Provedor ERP
                     </label>
-                    <select id="erpProvider" style="width:100%; padding:0.6rem 0.75rem; border:1px solid var(--border-color,#e5e7eb); border-radius:8px; font-size:0.9rem; background:var(--bg-secondary,#f9fafb);">
+                    <select id="erpProvider" autocomplete="off" style="width:100%; padding:0.6rem 0.75rem; border:1px solid var(--border-color,#e5e7eb); border-radius:8px; font-size:0.9rem; background:var(--bg-secondary,#f9fafb);">
                         <option value="">-- Selecione o ERP --</option>
                         ${providers}
                     </select>
@@ -126,7 +126,7 @@ const ErpUI = {
                     <label style="display:block; font-size:0.85rem; font-weight:500; margin-bottom:0.4rem;">
                         URL da API
                     </label>
-                    <input type="url" id="erpApiUrl"
+                    <input type="url" id="erpApiUrl" autocomplete="off"
                         placeholder="http://rds.skytins.com.br:8720/v2"
                         style="width:100%; padding:0.6rem 0.75rem; border:1px solid var(--border-color,#e5e7eb); border-radius:8px; font-size:0.9rem; font-family:monospace; box-sizing:border-box;">
                     <small style="color:var(--text-secondary,#6b7280);">URL base sem barra no final. Fornecida pelo ERP.</small>
@@ -138,7 +138,7 @@ const ErpUI = {
                         <label style="display:block; font-size:0.85rem; font-weight:500; margin-bottom:0.4rem;">
                             Empresa / Filial no MaxData (empId) *
                         </label>
-                        <input type="number" id="erpEmpId" placeholder="Ex: 1 (Matriz), 2 (Varejo), 4 (Porto)" value="1"
+                        <input type="number" id="erpEmpId" autocomplete="off" name="erp-emp-id" placeholder="Ex: 1 (Matriz), 2 (Varejo), 4 (Porto)" value="1"
                             style="width:100%; padding:0.6rem 0.75rem; border:1px solid var(--border-color,#e5e7eb); border-radius:8px; font-size:0.9rem; box-sizing:border-box;">
                         <small style="color:var(--text-secondary,#6b7280);">1: Matriz Palmas Atacado | 2: Palmas Varejo | 4: Porto Varejo | 5: Redenção</small>
                     </div>
@@ -146,7 +146,7 @@ const ErpUI = {
                         <label style="display:block; font-size:0.85rem; font-weight:500; margin-bottom:0.4rem;">
                             Código do Terminal MaxData *
                         </label>
-                        <input type="text" id="erpTerminal" placeholder="364F64E6539974C1D75C8A46C14B2D3D"
+                        <input type="text" id="erpTerminal" autocomplete="off" name="erp-terminal-code" placeholder="364F64E6539974C1D75C8A46C14B2D3D"
                             style="width:100%; padding:0.6rem 0.75rem; border:1px solid var(--border-color,#e5e7eb); border-radius:8px; font-size:0.9rem; font-family:monospace; box-sizing:border-box;">
                         <small style="color:var(--text-secondary,#6b7280);">Terminal cadastrado no MaxData Manager</small>
                     </div>
