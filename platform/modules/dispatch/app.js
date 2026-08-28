@@ -1063,33 +1063,43 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 console.log(`👥 [Login] Buscando usuários do tenant: ${tenantId}...`);
 
-                // v3.12.5 FIX: Busca E MESCLA sistema novo + legado
-                // Antes era if/else: se novo tinha dados, legado era ignorado.
-                // Agora: lê os dois e deduplica por login (novo tem prioridade).
+                // v3.22.17 FIX: Timeout em cada leitura para evitar travamento indefinido do dropdown
+                const _fsTimeout = (ms, label) => new Promise((_, rej) => setTimeout(() => rej(new Error(`Timeout Firestore ${label} (${ms}ms)`)), ms));
+
                 try {
                     let usersFromCloud = [];
 
-                    // 1. Sistema novo: tenants/{id}/users
-                    const usersSnap = await db.collection('tenants').doc(tenantId).collection('users').get();
-                    if (!usersSnap.empty) {
-                        usersFromCloud = usersSnap.docs
-                            .filter(d => d.data().ativo !== false)
-                            .map(d => {
-                                const u = d.data();
-                                return {
-                                    name:      u.nome || u.name || d.id,
-                                    login:     u.login || d.id,
-                                    senhaHash: u.senhaHash || '',
-                                    role:      u.role || 'operator',
-                                    ativo:     u.ativo !== false
-                                };
-                            });
-                        console.log(`✅ [Login] ${usersFromCloud.length} usuário(s) carregado(s) do sistema novo`);
+                    // 1. Sistema novo: tenants/{id}/users — timeout 6s
+                    try {
+                        const usersSnap = await Promise.race([
+                            db.collection('tenants').doc(tenantId).collection('users').get(),
+                            _fsTimeout(6000, 'users')
+                        ]);
+                        if (!usersSnap.empty) {
+                            usersFromCloud = usersSnap.docs
+                                .filter(d => d.data().ativo !== false)
+                                .map(d => {
+                                    const u = d.data();
+                                    return {
+                                        name:      u.nome || u.name || d.id,
+                                        login:     u.login || d.id,
+                                        senhaHash: u.senhaHash || '',
+                                        role:      u.role || 'operator',
+                                        ativo:     u.ativo !== false
+                                    };
+                                });
+                            console.log(`✅ [Login] ${usersFromCloud.length} usuário(s) carregado(s) do sistema novo`);
+                        }
+                    } catch (newSysErr) {
+                        console.warn('[Login] Sistema novo falhou ou timeout:', newSysErr.message);
                     }
 
-                    // 2. Sistema legado: legacy_store/app_users (SEMPRE lê e mescla)
+                    // 2. Sistema legado: legacy_store/app_users — timeout 4s
                     try {
-                        const legacyDoc = await db.collection('tenants').doc(tenantId).collection('legacy_store').doc('app_users').get();
+                        const legacyDoc = await Promise.race([
+                            db.collection('tenants').doc(tenantId).collection('legacy_store').doc('app_users').get(),
+                            _fsTimeout(4000, 'legacy_store')
+                        ]);
                         if (legacyDoc.exists && legacyDoc.data().content) {
                             const legacyUsers = JSON.parse(legacyDoc.data().content);
                             let mergeCount = 0;
@@ -1112,7 +1122,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         console.warn('[Login] Erro ao ler legacy_store (não crítico):', legacyErr.message);
                     }
 
-
                     if (usersFromCloud.length > 0) {
                         // v3.11.86 FIX: Salva com namespace de tenant para evitar contaminação cross-tenant
                         // NÃO usar Utils.saveRaw('app_users') sem prefixo — isso vaza para outros tenants
@@ -1133,6 +1142,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } finally {
                     if (loginUserSelect) loginUserSelect.disabled = false;
                 }
+
             };
 
             // Executar ao sair do campo (blur)
