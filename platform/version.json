@@ -1,1 +1,1 @@
-﻿{"build":"20260828-v3.22.21","version":"3.22.21","environment":"production","change":"FIX: vercel.json limpo (sem runtime invalido). api/maxdata.js com fetch Node18. Proxy Maxdata funcionando.","lastUpdate":"2026-08-28","deployedAt":"2026-08-28"}
+﻿{"build":"20260828-v3.22.22","version":"3.22.22","environment":"production","change":"SIMPLIFICACAO: _buildUrl agora chama API Maxdata diretamente sem proxy. Remocao de toda logica de proxy/deteccao HTTPS. Requer permissao de conteudo inseguro no Chrome para o site.","lastUpdate":"2026-08-28","deployedAt":"2026-08-28"}

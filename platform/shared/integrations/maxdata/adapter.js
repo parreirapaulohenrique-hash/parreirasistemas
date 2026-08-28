@@ -66,29 +66,18 @@ class MaxDataAdapter extends ErpAdapter {
 
     /**
      * Retorna a URL base da API.
-     * Se a página está em HTTPS e a API é HTTP (mixed content), usa o proxy Vercel.
      */
     _baseUrl() {
         return (this.config.baseUrl || this.config.apiUrl || 'http://rds.skytins.com.br:8720/v2').replace(/\/$/, '');
     }
 
     /**
-     * Monta a URL correta para um endpoint.
-     * Em HTTPS com API HTTP → usa proxy /api/maxdata?_path={endpoint}
-     * Em HTTP (local/dev)   → usa URL direta
+     * Monta a URL direta para um endpoint — sem proxy.
+     * O Chrome permite HTTP de páginas HTTPS quando "conteúdo inseguro"
+     * está habilitado nas configurações do site (ícone 🔒 → Configurações do site).
      */
     _buildUrl(endpoint, params = {}) {
         const configUrl = this._baseUrl();
-        const isHttpsPage   = typeof location !== 'undefined' && location.protocol === 'https:';
-        const isHttpApi     = configUrl.startsWith('http://');
-
-        if (isHttpsPage && isHttpApi) {
-            // Usa o proxy Vercel server-side para evitar blocked mixed content
-            const qs = new URLSearchParams({ _path: endpoint, ...params }).toString();
-            return `/api/maxdata?${qs}`;
-        }
-
-        // Direto (rede local ou API com HTTPS)
         const qs = Object.keys(params).length ? '?' + new URLSearchParams(params).toString() : '';
         return `${configUrl}/${endpoint}${qs}`;
     }
