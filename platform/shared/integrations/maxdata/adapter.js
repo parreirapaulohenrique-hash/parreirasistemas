@@ -249,6 +249,10 @@ class MaxDataAdapter extends ErpAdapter {
 
     _getLocalClients() {
         try {
+            // Tenta sessionStorage primeiro (dados do ERP não persistem entre sessões — ok)
+            const ss = sessionStorage.getItem('_erp_clients_maxdata');
+            if (ss) return JSON.parse(ss);
+            // Fallback para Utils.getStorage (localStorage com prefixo de tenant)
             if (typeof Utils !== 'undefined' && Utils.getStorage) return Utils.getStorage('clients') || [];
             const r = localStorage.getItem('clients');
             return r ? JSON.parse(r) : [];
@@ -257,9 +261,18 @@ class MaxDataAdapter extends ErpAdapter {
 
     _setLocalClients(clients) {
         try {
-            if (typeof Utils !== 'undefined' && Utils.saveRaw) Utils.saveRaw('clients', JSON.stringify(clients));
-            else localStorage.setItem('clients', JSON.stringify(clients));
-        } catch (e) { this._log('warning', `Aviso localStorage: ${e.message}`); }
+            // v3.22.17 FIX: Usa sessionStorage para evitar QuotaExceededError no localStorage.
+            // Clientes do Maxdata (até 860+ registros) pesam vários KB e podem encher o quota.
+            // sessionStorage é limpo automaticamente ao fechar o browser — sem problema de acúmulo.
+            sessionStorage.setItem('_erp_clients_maxdata', JSON.stringify(clients));
+
+            // Também tenta salvar em Utils (com catch para não travar se cheio)
+            if (typeof Utils !== 'undefined' && Utils.saveRaw) {
+                try { Utils.saveRaw('clients', JSON.stringify(clients)); } catch (_) { /* quota cheio — silencioso */ }
+            }
+        } catch (e) {
+            this._log('warning', `Aviso ao salvar clientes localmente: ${e.message}`);
+        }
     }
 
     _chunk(arr, size) {

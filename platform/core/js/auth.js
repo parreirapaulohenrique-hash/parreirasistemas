@@ -95,10 +95,32 @@ window.ParreiraAuth = (function () {
             ts:         Date.now()
         };
         sessionStorage.setItem('parreira_session', JSON.stringify(sessao));
-        localStorage.setItem('logged_user', JSON.stringify({
+
+        // v3.22.17 FIX: QuotaExceededError — libera dados grandes antes de salvar sessão
+        function _safeSetItem(key, value) {
+            try {
+                localStorage.setItem(key, value);
+            } catch (e) {
+                if (e.name === 'QuotaExceededError' || e.code === 22 || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+                    console.warn('[Auth] localStorage cheio. Limpando dados grandes para liberar espaço...');
+                    // Remove dados grandes gerados pela integração ERP (clientes, despachos, histórico)
+                    const big = Object.keys(localStorage).filter(k =>
+                        k.includes('_clients') || k.includes('_dispatches') || k.includes('_invoice_history') ||
+                        k.includes('_app_romaneios') || k.includes('_delivery_history')
+                    );
+                    big.forEach(k => localStorage.removeItem(k));
+                    console.warn(`[Auth] ${big.length} chave(s) removida(s). Tentando salvar novamente...`);
+                    try { localStorage.setItem(key, value); } catch (_) {
+                        console.error('[Auth] localStorage ainda cheio mesmo após limpeza.');
+                    }
+                }
+            }
+        }
+
+        _safeSetItem('logged_user', JSON.stringify({
             name: perfil.nome, login: loginKey, role: perfil.role
         }));
-        localStorage.setItem('platform_user_logged', JSON.stringify({
+        _safeSetItem('platform_user_logged', JSON.stringify({
             name: perfil.nome,
             login: loginKey,
             role: perfil.role,
