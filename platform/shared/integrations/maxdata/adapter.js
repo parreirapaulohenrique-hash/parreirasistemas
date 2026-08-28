@@ -72,12 +72,19 @@ class MaxDataAdapter extends ErpAdapter {
     }
 
     /**
-     * Monta a URL direta para um endpoint — sem proxy.
-     * O Chrome permite HTTP de páginas HTTPS quando "conteúdo inseguro"
-     * está habilitado nas configurações do site (ícone 🔒 → Configurações do site).
+     * Monta a URL para um endpoint.
+     * Em HTTPS (produção Vercel), usa o proxy /api/maxdata para evitar mixed-content e CORS.
      */
     _buildUrl(endpoint, params = {}) {
         const configUrl = this._baseUrl();
+        const isHttpsPage = typeof location !== 'undefined' && location.protocol === 'https:';
+        const isHttpApi   = configUrl.startsWith('http://');
+
+        if (isHttpsPage && isHttpApi) {
+            const qs = new URLSearchParams({ _path: endpoint, ...params }).toString();
+            return `/api/maxdata?${qs}`;
+        }
+
         const qs = Object.keys(params).length ? '?' + new URLSearchParams(params).toString() : '';
         return `${configUrl}/${endpoint}${qs}`;
     }
