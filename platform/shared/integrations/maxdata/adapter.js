@@ -148,8 +148,9 @@ class MaxDataAdapter extends ErpAdapter {
             this._setLocalClients(finalClients);
 
             const duration = ((Date.now() - start) / 1000).toFixed(2);
-            this._log('success', `✅ Clientes MaxData: ${added} novos, ${updated} atualizados, ${errors} erros — ${duration}s`);
+            this._log('success', `✅ Clientes MaxData: ${added} novos, ${updated} atualizados, ${errors} erros — Total: ${finalClients.length} (${duration}s)`);
 
+            if (typeof window.renderClientsList === 'function') window.renderClientsList();
             if (typeof window.renderClientList === 'function') window.renderClientList();
 
             return { added, updated, errors, total: finalClients.length, duration };
@@ -174,10 +175,13 @@ class MaxDataAdapter extends ErpAdapter {
             if (!resp.ok) throw new Error(`GET /client pág ${page}: HTTP ${resp.status}`);
 
             const data  = await resp.json();
-            const items = Array.isArray(data) ? data : (data.data || data.results || data.items || []);
+            const items = Array.isArray(data) ? data : (data.docs || data.data || data.results || data.items || []);
 
             if (!items.length) break;
             all.push(...items);
+
+            const totalPages = data.pages || Math.ceil((data.total || 0) / limit);
+            if (totalPages && page >= totalPages) break;
             if (items.length < limit) break;
             page++;
         }

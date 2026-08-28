@@ -618,11 +618,11 @@ const ErpUI = {
             : (details ? ` — ${details}` : '');
 
         const entry = document.createElement('div');
-        entry.style.cssText = 'padding:0.4rem 0.6rem; background:var(--bg-secondary,#f9fafb); border-radius:6px; display:flex; gap:0.5rem; align-items:flex-start;';
+        entry.style.cssText = 'padding:0.5rem 0.75rem; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:6px; display:flex; gap:0.6rem; align-items:center; color:#f8fafc; font-size:0.85rem;';
         entry.innerHTML = `
-            <span>${icons[type] || '⚪'}</span>
-            <span style="color:var(--text-secondary,#6b7280); white-space:nowrap;">${now}</span>
-            <span style="flex:1; word-break:break-word;">${message}${detailText}</span>`;
+            <span style="font-size:0.95rem;">${icons[type] || '⚪'}</span>
+            <span style="color:#94a3b8; font-family:monospace; font-size:0.8rem; white-space:nowrap;">${now}</span>
+            <span style="flex:1; word-break:break-word; color:#f1f5f9; font-weight:500;">${message}${detailText}</span>`;
 
         container.insertBefore(entry, container.firstChild);
 
