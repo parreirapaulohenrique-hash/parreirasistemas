@@ -416,6 +416,33 @@ window.ErpNFQueue = (function() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // v3.22.18 FIX: Limpeza preventiva de localStorage para evitar QuotaExceededError
+    // Os clientes do ERP (860+) podem encher o localStorage (5MB) e impedir qualquer login
+    (function _cleanLargeKeys() {
+        try {
+            // Estima uso atual do localStorage
+            let totalBytes = 0;
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                totalBytes += (k.length + (localStorage.getItem(k) || '').length) * 2;
+            }
+            // Se >3MB, remove as chaves grandes de clientes e histórico
+            if (totalBytes > 3 * 1024 * 1024) {
+                console.warn(`[LS Cleanup] localStorage com ${(totalBytes/1024/1024).toFixed(1)}MB. Limpando chaves grandes...`);
+                const removed = [];
+                for (let i = localStorage.length - 1; i >= 0; i--) {
+                    const k = localStorage.key(i);
+                    if (k && (k.includes('_clients') || k.includes('_delivery_history') ||
+                              k.includes('_invoice_history') || k.includes('_app_romaneios'))) {
+                        localStorage.removeItem(k);
+                        removed.push(k);
+                    }
+                }
+                console.warn(`[LS Cleanup] ${removed.length} chave(s) removida(s):`, removed);
+            }
+        } catch(e) { console.warn('[LS Cleanup] Erro na limpeza:', e.message); }
+    })();
+
     // === SWAP TENANT DETECTED BY URL BEFORE INITIALIZATION ===
     const segments = window.location.pathname.split('/').filter(Boolean);
     const candidate = segments[0] ? segments[0].trim().toLowerCase() : '';
