@@ -1,8 +1,12 @@
 {
+    "installCommand": "",
+    "buildCommand": "",
+    "outputDirectory": ".",
     "functions": {
         "api/maxdata.js": {
             "maxDuration": 10,
-            "memory": 256
+            "memory": 256,
+            "runtime": "nodejs18.x"
         }
     },
     "headers": [
