@@ -4,6 +4,8 @@
 # Permitir pastas e arquivos do sistema (Recursivo)
 !/platform
 !/platform/**
+!/api
+!/api/**
 !/vercel.json
 
 # Arquivo de verificação TWA (Digital Asset Links)
