@@ -1,1 +1,1 @@
-﻿{"build":"20260828-v3.22.21","version":"3.22.21","environment":"production","change":"FIX: api/maxdata.js com fetch Node18 + AbortController 8s. vercel.json simplificado (sem buildCommand/outputDirectory que quebravam o deploy). Proxy funcionando.","lastUpdate":"2026-08-28","deployedAt":"2026-08-28"}
+﻿{"build":"20260828-v3.22.21","version":"3.22.21","environment":"production","change":"FIX: vercel.json limpo (sem runtime invalido). api/maxdata.js com fetch Node18. Proxy Maxdata funcionando.","lastUpdate":"2026-08-28","deployedAt":"2026-08-28"}

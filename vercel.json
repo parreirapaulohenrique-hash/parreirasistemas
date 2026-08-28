@@ -1,9 +1,7 @@
 {
     "functions": {
         "api/maxdata.js": {
-            "maxDuration": 10,
-            "memory": 256,
-            "runtime": "nodejs18.x"
+            "maxDuration": 10
         }
     },
     "headers": [
