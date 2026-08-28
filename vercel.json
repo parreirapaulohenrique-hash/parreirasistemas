@@ -1,7 +1,4 @@
 {
-    "installCommand": "",
-    "buildCommand": "",
-    "outputDirectory": ".",
     "functions": {
         "api/maxdata.js": {
             "maxDuration": 10,
