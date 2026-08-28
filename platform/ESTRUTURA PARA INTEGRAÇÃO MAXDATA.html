@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Estrutura de Funcionamento — Integração myCUBI ↔ MaxData API</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 11pt;
+    color: #1a1a1a;
+    background: #fff;
+    padding: 28mm 22mm 22mm 22mm;
+    max-width: 210mm;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 18pt;
+    color: #003366;
+    border-bottom: 3px solid #003366;
+    padding-bottom: 8px;
+    margin-bottom: 6px;
+  }
+  .subtitle {
+    font-size: 9.5pt;
+    color: #555;
+    margin-bottom: 24px;
+    font-style: italic;
+  }
+  h2 {
+    font-size: 13pt;
+    color: #003366;
+    margin-top: 22px;
+    margin-bottom: 8px;
+    border-left: 4px solid #0066cc;
+    padding-left: 8px;
+  }
+  h3 {
+    font-size: 11pt;
+    color: #004499;
+    margin-top: 14px;
+    margin-bottom: 6px;
+  }
+  p { margin-bottom: 8px; line-height: 1.6; }
+  ul, ol { margin-left: 20px; margin-bottom: 8px; line-height: 1.7; }
+  code {
+    background: #f0f4f8;
+    border: 1px solid #c8d8e8;
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 9.5pt;
+    color: #003366;
+  }
+  pre {
+    background: #f0f4f8;
+    border: 1px solid #c8d8e8;
+    border-radius: 5px;
+    padding: 12px 14px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 9pt;
+    color: #002244;
+    margin: 8px 0 12px 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+    line-height: 1.5;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 14px 0;
+    font-size: 10pt;
+  }
+  thead tr { background: #003366; color: #fff; }
+  thead th { padding: 8px 10px; text-align: left; font-weight: 600; }
+  tbody tr:nth-child(even) { background: #f0f4f8; }
+  tbody td { padding: 6px 10px; border-bottom: 1px solid #dde; }
+  .info-box {
+    background: #e8f0fe;
+    border-left: 4px solid #0066cc;
+    border-radius: 4px;
+    padding: 10px 14px;
+    margin: 10px 0;
+    font-size: 10pt;
+  }
+  .warn-box {
+    background: #fff8e1;
+    border-left: 4px solid #f59e0b;
+    border-radius: 4px;
+    padding: 10px 14px;
+    margin: 10px 0;
+    font-size: 10pt;
+  }
+  .footer {
+    margin-top: 30px;
+    border-top: 1px solid #ccc;
+    padding-top: 8px;
+    font-size: 8.5pt;
+    color: #888;
+    text-align: right;
+  }
+  @media print {
+    body { padding: 0; }
+    h2 { page-break-after: avoid; }
+    table { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<h1>📦 Estrutura de Funcionamento — Integração myCUBI ↔ MaxData API</h1>
+<div class="subtitle">Documento de referência técnica — Baseado na integração implementada e em funcionamento na <strong>Central Peças (ROLAMENTOS-8719)</strong>.<br>
+Pode ser usado como base para novas integrações com outros clientes que também usam MaxData.</div>
+
+<h2>1. Visão Geral</h2>
+<p>A integração conecta a <strong>balança volumétrica myCUBI-50</strong> ao <strong>ERP MaxData</strong>, permitindo que, ao pesar e medir um produto na balança, as dimensões e peso sejam <strong>automaticamente gravados no cadastro do produto</strong> dentro do MaxData.</p>
+<pre>
+┌─────────────────┐     HTTP (PUT)     ┌──────────────────────┐     HTTP (REST)     ┌────────────────────┐
+│  Balança myCUBI │ ──────────────────▶│  INTEGRADORA (Node)  │ ───────────────────▶│   API MaxData      │
+│   (aparelho)    │                   │  rodando na máquina  │                    │ rds.skytins.com.br │
+└─────────────────┘                   └──────────────────────┘                    └────────────────────┘
+</pre>
+
+<h2>2. Componentes da Integração</h2>
+<h3>2.1 A Integradora (middleware local)</h3>
+<p>É um <strong>servidor HTTP local</strong> feito em <strong>Node.js + Express</strong>, instalado em uma máquina da rede do cliente. Ela funciona como "ponte" entre o myCUBI e a API do MaxData.</p>
+<ul>
+  <li><strong>Linguagem:</strong> Node.js (v18+)</li>
+  <li><strong>Framework:</strong> Express</li>
+  <li><strong>Porta padrão:</strong> 3000</li>
+  <li><strong>Roda como:</strong> processo Node no Windows (via cmd ou como serviço)</li>
+</ul>
+
+<h2>3. Pré-requisitos de Rede</h2>
+<div class="info-box">
+  ✅ <strong>Resposta à dúvida: Precisa estar na mesma rede?</strong>
+</div>
+<table>
+  <thead><tr><th>Conexão</th><th>Requisito de rede</th></tr></thead>
+  <tbody>
+    <tr><td><strong>myCUBI ↔ Integradora</strong></td><td>✅ SIM — precisam estar na mesma rede local (LAN). A balança acessa a integradora pelo IP local da máquina.</td></tr>
+    <tr><td><strong>Integradora ↔ API MaxData</strong></td><td>🌐 Apenas acesso à internet (ou VPN/rede do servidor MaxData). A API fica em <code>rds.skytins.com.br:8720</code>.</td></tr>
+    <tr><td><strong>myCUBI precisa de internet?</strong></td><td>❌ NÃO — ela só precisa "ver" a integradora na rede local. É a integradora que fala com a internet.</td></tr>
+  </tbody>
+</table>
+<div class="info-box">
+  <strong>Resumo prático:</strong> A integradora pode ser instalada em <strong>qualquer máquina</strong> que:<br>
+  1. Esteja na <strong>mesma rede local</strong> da balança myCUBI.<br>
+  2. Tenha <strong>saída para internet</strong> (ou acesso ao servidor MaxData via VPN).
+</div>
+
+<h2>4. Fluxo Completo de uma Medição</h2>
+<pre>
+1. Operador pesou/mediu o produto na balança myCUBI
+       │
+       ▼
+2. myCUBI faz chamada HTTP:
+   PUT http://{IP_DA_INTEGRADORA}:3000/products/{EAN}/measurement
+   Header: X-API-Key: {chave-configurada}
+   Body: { width, height, depth, weight, weightType }
+       │
+       ▼
+3. Integradora valida a API Key (segurança)
+       │
+       ▼
+4. Integradora autentica no MaxData:
+   POST http://rds.skytins.com.br:8720/v2/auth
+   Body: { empId: 1, terminal: "364F64E6539974C1D75C8A46C14B2D3D" }
+   Resposta: { token: "JWT...", expiration: "..." }
+       │
+       ▼
+5. Integradora busca o produto no MaxData pelo EAN:
+   GET http://rds.skytins.com.br:8720/v2/product?barCode={EAN}&empId=1
+   Header: Authorization: Bearer {token}
+       │
+       ▼
+6. Converte unidades (myCUBI envia em mm e g → MaxData espera cm e kg)
+       │
+       ▼
+7. Integradora atualiza as medidas no MaxData:
+   PUT http://rds.skytins.com.br:8720/v2/product/measures/{id_produto}
+   Body: { empId, width, height, depth, grossWeight }
+       │
+       ▼
+8. Integradora responde ao myCUBI:
+   HTTP 200 — { done: true, data: null, flag: null }
+</pre>
+
+<h2>5. Autenticação — Dois Níveis</h2>
+<h3>5.1 myCUBI → Integradora (API Key fixa)</h3>
+<p>A balança envia uma chave fixa no header de cada requisição:</p>
+<pre>X-API-Key: central-pecas-2026</pre>
+<ul>
+  <li>Essa chave é <strong>configurada no <code>.env</code></strong> da integradora</li>
+  <li>A <strong>mesma chave</strong> deve ser registrada no painel de configuração do myCUBI</li>
+  <li><strong>Não expira</strong> — é uma string fixa definida pelo instalador</li>
+</ul>
+
+<h3>5.2 Integradora → MaxData (JWT com auto-refresh)</h3>
+<p>O MaxData usa <strong>JWT (JSON Web Token)</strong> com expiração:</p>
+<ul>
+  <li>A integradora autentica via <code>POST /auth</code> com <code>empId</code> + <code>terminal</code></li>
+  <li>O token retornado tem uma <strong>data de expiração</strong> informada na resposta</li>
+  <li>A integradora mantém o token em <strong>cache em memória</strong></li>
+  <li>Antes de cada requisição, verifica se o token ainda é válido</li>
+  <li>Se faltarem menos de <strong>60 segundos</strong> para vencer, renova automaticamente</li>
+  <li>Se receber um <strong>erro 401</strong>, invalida o cache e renova imediatamente</li>
+  <li><strong>Não é necessária nenhuma intervenção manual</strong> — tudo é automático</li>
+</ul>
+
+<h2>6. O Terminal MaxData — O que é e como obter</h2>
+<h3>O que é o Terminal?</h3>
+<p>O <strong>terminal</strong> é um identificador hexadecimal que representa uma "estação" cadastrada no <strong>MAX-Manager</strong> do cliente. A API MaxData exige esse terminal para autenticar — cada máquina/integração deve usar um terminal cadastrado.</p>
+
+<h3>Como foi obtido na Central Peças</h3>
+<p>O terminal da integração da Central Peças foi fornecido pelo <strong>técnico do suporte MaxData</strong>, que identificou o terminal vinculado à máquina <code>ROLAMENTOS-8719</code> no MAX-Manager.</p>
+<pre>Terminal: 364F64E6539974C1D75C8A46C14B2D3D</pre>
+
+<h3>Como obter para um novo cliente</h3>
+<ol>
+  <li><strong>Pedir ao técnico MaxData</strong> — informar o nome da máquina (<code>hostname</code>) e pedir o terminal cadastrado no MAX-Manager</li>
+  <li><strong>Acessar o MAX-Manager</strong> diretamente → menu Terminais</li>
+  <li><strong>Via Swagger da API</strong> → <code>GET /terminal</code> (se disponível)<br>
+    Swagger: <code>http://rds.skytins.com.br:8720/swagger/index.html</code><br>
+    Usuário: <code>maxdata</code> | Senha: <code>max5699</code>
+  </li>
+</ol>
+<div class="warn-box">
+  ⚠️ <strong>Importante:</strong> Cada cliente/empresa tem seus próprios terminais. O terminal <code>364F64E6539974C1D75C8A46C14B2D3D</code> é exclusivo da Central Peças e <strong>não deve ser reutilizado</strong> em outro cliente.
+</div>
+
+<h2>7. Configuração da Integradora (arquivo .env)</h2>
+<pre>
+# Porta onde a integradora vai escutar
+PORT=3000
+
+# Chave de API fixa — configurar o MESMO valor no painel do myCUBI
+MYCUBI_API_KEY=central-pecas-2026
+
+# MaxData — dados fornecidos pelo suporte MaxData ou MAX-Manager
+MAXDATA_BASE_URL=http://rds.skytins.com.br:8720/v2
+MAXDATA_EMP_ID=1
+MAXDATA_TERMINAL=364F64E6539974C1D75C8A46C14B2D3D
+
+# Conversão de unidades (myCUBI envia mm/g → MaxData espera cm/kg)
+UNIT_DIMENSION=cm
+UNIT_WEIGHT=kg
+
+# Nível de log (debug | info | warn | error)
+LOG_LEVEL=info
+</pre>
+
+<h2>8. Endpoints da Integradora</h2>
+<table>
+  <thead><tr><th>Método</th><th>Rota</th><th>Descrição</th></tr></thead>
+  <tbody>
+    <tr><td><code>GET</code></td><td><code>/health</code></td><td>Verifica se a integradora está no ar</td></tr>
+    <tr><td><code>PUT</code></td><td><code>/products/:ean/measurement</code></td><td>Recebe medição do myCUBI e grava no MaxData</td></tr>
+    <tr><td><code>GET</code></td><td><code>/</code></td><td>Informações gerais do serviço</td></tr>
+  </tbody>
+</table>
+
+<h2>9. Endpoints MaxData Utilizados</h2>
+<table>
+  <thead><tr><th>Método</th><th>Endpoint</th><th>Descrição</th></tr></thead>
+  <tbody>
+    <tr><td><code>POST</code></td><td><code>/v2/auth</code></td><td>Autenticação — obtém token JWT</td></tr>
+    <tr><td><code>GET</code></td><td><code>/v2/product?barCode={ean}</code></td><td>Busca produto pelo código de barras EAN</td></tr>
+    <tr><td><code>PUT</code></td><td><code>/v2/product/measures/{id}</code></td><td>Atualiza dimensões e peso do produto</td></tr>
+  </tbody>
+</table>
+
+<h2>10. Instalação Resumida (Windows)</h2>
+<ol>
+  <li>Instalar <strong>Node.js</strong> na máquina (versão 18 ou superior)</li>
+  <li>Copiar a pasta <code>mycubi-maxdata-integrator</code> para a máquina</li>
+  <li>Editar o arquivo <code>.env</code> com os dados do cliente</li>
+  <li>Abrir cmd na pasta do projeto e rodar:
+    <pre>npm install
+node src/index.js</pre>
+  </li>
+  <li>Testar: abrir navegador e acessar <code>http://127.0.0.1:3000/health</code></li>
+  <li>Configurar no myCUBI o IP da máquina + porta 3000 + API Key</li>
+</ol>
+
+<h2>11. Dados da Integração Central Peças (referência)</h2>
+<table>
+  <thead><tr><th>Dado</th><th>Valor</th></tr></thead>
+  <tbody>
+    <tr><td>Máquina</td><td><code>ROLAMENTOS-8719</code></td></tr>
+    <tr><td>Terminal MaxData</td><td><code>364F64E6539974C1D75C8A46C14B2D3D</code></td></tr>
+    <tr><td>Empresa (empId)</td><td><code>1</code></td></tr>
+    <tr><td>URL API MaxData</td><td><code>http://rds.skytins.com.br:8720/v2</code></td></tr>
+    <tr><td>API Key myCUBI</td><td><code>central-pecas-2026</code></td></tr>
+    <tr><td>Porta integradora</td><td><code>3000</code></td></tr>
+  </tbody>
+</table>
+
+<div class="footer">
+  Documento gerado em: 28/08/2026 — Parreira Sistemas
+</div>
+
+</body>
+</html>

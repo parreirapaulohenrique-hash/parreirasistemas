@@ -984,9 +984,9 @@ window.renderUserList = function () {
     tbody.innerHTML = '';
     let users = Utils.getStorage('app_users') || [];
 
-    // Sort: Admin/Supervisor first
+    // Sort: ADM primeiro, depois Supervisor, depois demais
     users.sort((a, b) => {
-        const roles = { 'supervisor': 1, 'admin': 1, 'user': 2, 'motoboy': 3, 'motorista': 3 };
+        const roles = { 'adm': 0, 'supervisor': 1, 'admin': 1, 'user': 2, 'motoboy': 3, 'motorista': 3 };
         return (roles[a.role] || 9) - (roles[b.role] || 9);
     });
 
@@ -1001,6 +1001,7 @@ window.renderUserList = function () {
 
         let roleBadge = '';
         switch (u.role) {
+            case 'adm': roleBadge = '<span style="background: rgba(139,92,246,0.12); color: #7c3aed; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">🛡️ ADM</span>'; break;
             case 'supervisor': roleBadge = '<span style="background: rgba(59,130,246,0.1); color: var(--primary-color); padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">Supervisor</span>'; break;
             case 'motoboy': roleBadge = '<span style="background: rgba(245, 158, 11, 0.1); color: #d97706; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">🏍️ Motoboy</span>'; break;
             case 'motorista': roleBadge = '<span style="background: rgba(16, 185, 129, 0.1); color: #059669; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">🚗 Motorista</span>'; break;
