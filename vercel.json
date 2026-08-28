@@ -1,4 +1,10 @@
 {
+    "functions": {
+        "api/maxdata.js": {
+            "maxDuration": 10,
+            "memory": 256
+        }
+    },
     "headers": [
         {
             "source": "/.well-known/assetlinks.json",
