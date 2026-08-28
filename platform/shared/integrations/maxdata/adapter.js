@@ -1,4 +1,4 @@
-﻿/**
+/**
  * MaxDataAdapter — Integração com ERP MaxData
  * ============================================
  * Implementa syncClients() paginado via GET /v2/client.
@@ -27,19 +27,19 @@ class MaxDataAdapter extends ErpAdapter {
             return this._tokenCache.value;
         }
 
-        const baseUrl  = this._baseUrl();
         const empId    = Number(this.config.empId || 1);
         const terminal = (this.config.terminal || '').trim();
 
         if (!terminal) throw new Error('Terminal Maxdata não configurado. Acesse Integração ERP → Configurar.');
 
-        this._log('info', `Autenticando no MaxData (${baseUrl}/auth) — empId: ${empId}`);
+        this._log('info', `Autenticando no MaxData — empId: ${empId}`);
 
-        const resp = await fetch(`${baseUrl}/auth`, {
+        const url  = this._buildUrl('auth');
+        const resp = await fetch(url, {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify({ empId, terminal }),
-            signal:  AbortSignal.timeout(15000)
+            signal:  AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined
         });
 
         if (!resp.ok) {
@@ -55,7 +55,7 @@ class MaxDataAdapter extends ErpAdapter {
             expiresAt: new Date(data.expiration || Date.now() + 86400000)
         };
 
-        this._log('success', `✅ Token JWT obtido — expira: ${this._tokenCache.expiresAt.toLocaleString('pt-BR')}`);
+        this._log('success', `✅ Token JWT obtido — expira: ${new Date(this._tokenCache.expiresAt).toLocaleString('pt-BR')}`);
         return data.token;
     }
 
@@ -64,8 +64,33 @@ class MaxDataAdapter extends ErpAdapter {
         return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
     }
 
+    /**
+     * Retorna a URL base da API.
+     * Se a página está em HTTPS e a API é HTTP (mixed content), usa o proxy Vercel.
+     */
     _baseUrl() {
         return (this.config.baseUrl || this.config.apiUrl || 'http://rds.skytins.com.br:8720/v2').replace(/\/$/, '');
+    }
+
+    /**
+     * Monta a URL correta para um endpoint.
+     * Em HTTPS com API HTTP → usa proxy /api/maxdata?_path={endpoint}
+     * Em HTTP (local/dev)   → usa URL direta
+     */
+    _buildUrl(endpoint, params = {}) {
+        const configUrl = this._baseUrl();
+        const isHttpsPage   = typeof location !== 'undefined' && location.protocol === 'https:';
+        const isHttpApi     = configUrl.startsWith('http://');
+
+        if (isHttpsPage && isHttpApi) {
+            // Usa o proxy Vercel server-side para evitar blocked mixed content
+            const qs = new URLSearchParams({ _path: endpoint, ...params }).toString();
+            return `/api/maxdata?${qs}`;
+        }
+
+        // Direto (rede local ou API com HTTPS)
+        const qs = Object.keys(params).length ? '?' + new URLSearchParams(params).toString() : '';
+        return `${configUrl}/${endpoint}${qs}`;
     }
 
     // ─────────────────────────────────────────────────────────
@@ -141,16 +166,15 @@ class MaxDataAdapter extends ErpAdapter {
 
     async _fetchAllClients() {
         const headers = await this._authHeaders();
-        const baseUrl = this._baseUrl();
         const limit   = 100;
         let page      = 1;
         const all     = [];
 
         while (true) {
-            const url = `${baseUrl}/client?page=${page}&limit=${limit}`;
+            const url = this._buildUrl('client', { page, limit });
             this._log('info', `Buscando página ${page} de clientes...`);
 
-            const resp = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(20000) });
+            const resp = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout ? AbortSignal.timeout(20000) : undefined });
             if (!resp.ok) throw new Error(`GET /client pág ${page}: HTTP ${resp.status}`);
 
             const data  = await resp.json();
