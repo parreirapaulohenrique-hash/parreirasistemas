@@ -23,3 +23,5 @@
 # Microsoft Office temporary files
 ~$*
 *~$*
+
+!/package.json
