@@ -2248,6 +2248,15 @@
                                                 Importar Excel/CSV
                                             </label>
                                             <input type="file" id="fileClient" hidden accept=".csv, .xlsx, .xls">
+
+                                            <!-- Botão Sincronizar do ERP — visível apenas quando ERP configurado -->
+                                            <button id="btnSyncClientsFromERP"
+                                                onclick="window.importClientsFromERP()"
+                                                title="Importar clientes do ERP integrado (Maxdata)"
+                                                style="display: none; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 600; height: 35px; box-sizing: border-box; border-radius: var(--radius-md); border: 1px solid rgba(139,92,246,0.35); background: rgba(139,92,246,0.1); color: #7c3aed; cursor: pointer; white-space: nowrap; transition: all 0.15s;">
+                                                <span class="material-icons-round" style="font-size: 1rem;">sync</span>
+                                                Sincronizar ERP
+                                            </button>
                                         </div>
                                     </div>
 

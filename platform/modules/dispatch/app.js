@@ -10387,6 +10387,76 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('btnCancelEditClient').style.display = 'none';
         };
 
+        // ── Importar Clientes do ERP (Maxdata) ────────────────────────────
+        window.importClientsFromERP = async () => {
+            const btn = document.getElementById('btnSyncClientsFromERP');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-icons-round" style="font-size:1rem; animation:spin 1s linear infinite;">sync</span> Sincronizando...'; }
+
+            try {
+                const tenantId = (typeof Utils !== 'undefined' && Utils.Cloud?.tenantId) || _parreiraSessao?.tenant || '';
+                if (!tenantId || typeof ErpRegistry === 'undefined') throw new Error('ERP não configurado.');
+
+                const erp = await Promise.race([
+                    ErpRegistry.getAdapter(tenantId),
+                    new Promise((_, r) => setTimeout(() => r(new Error('Timeout ao conectar ao ERP (8s)')), 8000))
+                ]);
+                if (!erp) throw new Error('Integração ERP não configurada. Acesse Integração ERP e salve as configurações.');
+
+                showToast('🔄 Sincronizando clientes do ERP...', 'info');
+
+                // syncClients() busca todos os clientes paginados e salva no storage do tenant
+                const result = await Promise.race([
+                    erp.syncClients(),
+                    new Promise((_, r) => setTimeout(() => r(new Error('Timeout na sincronização (60s)')), 60000))
+                ]);
+
+                // Merge: preserva taxaRegiao dos clientes já cadastrados manualmente
+                const existing = Utils.getStorage('clients') || [];
+                const taxaMap = {};
+                existing.forEach(c => { if (c.codigo && c.taxaRegiao) taxaMap[c.codigo] = c.taxaRegiao; });
+
+                const synced = Utils.getStorage('clients') || [];
+                const merged = synced.map(c => ({
+                    ...c,
+                    taxaRegiao: taxaMap[c.codigo] ?? c.taxaRegiao ?? ''
+                }));
+
+                // Salva merged com taxa original preservada
+                Utils.saveRaw('clients', JSON.stringify(merged));
+
+                // Atualiza variável local e re-renderiza a lista
+                clients = merged;
+                window.renderClientsList();
+
+                const added   = result?.added   ?? 0;
+                const updated = result?.updated  ?? 0;
+                const total   = result?.total    ?? merged.length;
+                showToast(`✅ ERP sincronizado — ${total} clientes (${added} novos, ${updated} atualizados)`);
+
+                if (Utils.writeLog) Utils.writeLog('ERP_SYNC_CLIENTS', 'Integração ERP', `Sync Maxdata: ${total} clientes`, { added, updated, total }, null);
+
+            } catch (e) {
+                console.error('[importClientsFromERP]', e);
+                showToast(`❌ Falha ao sincronizar: ${e.message}`, 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons-round" style="font-size:1rem;">sync</span> Sincronizar ERP'; }
+            }
+        };
+
+        // Exibe botão "Sincronizar ERP" quando ERP está configurado para o tenant
+        (async () => {
+            try {
+                if (typeof ErpRegistry === 'undefined') return;
+                const tenantId = (typeof Utils !== 'undefined' && Utils.Cloud?.tenantId) || _parreiraSessao?.tenant || '';
+                if (!tenantId) return;
+                const config = await ErpRegistry.getConfig(tenantId);
+                if (config && config.enabled && config.provider) {
+                    const btn = document.getElementById('btnSyncClientsFromERP');
+                    if (btn) btn.style.display = 'inline-flex';
+                }
+            } catch (e) { /* silencioso */ }
+        })();
+
         // Formulário de cliente
         const formNewClient = document.getElementById('formNewClient');
         if (formNewClient) {
