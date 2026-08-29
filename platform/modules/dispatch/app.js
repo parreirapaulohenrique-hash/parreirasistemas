@@ -10116,12 +10116,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const vEl = document.getElementById('systemVersion');
         if (vEl) {
-            // FORCE NO CACHE
-            fetch('version.json?t=' + new Date().getTime())
-                .then(r => r.json())
-                .then(data => {
+            // FORCE NO CACHE - Tenta caminho absoluto do módulo primeiro, depois raiz
+            const loadVersion = async () => {
+                try {
+                    let r = await fetch('/platform/modules/dispatch/version.json?t=' + Date.now());
+                    if (!r.ok) r = await fetch('/version.json?t=' + Date.now());
+                    if (!r.ok) r = await fetch('version.json?t=' + Date.now());
+                    const data = await r.json();
                     console.log('✅ SYSTEM VERSION:', data.version);
-                    // Formata a data YYYY-MM-DD para DD/MM/YYYY manualmente
                     const rawDate = data.date || data.lastUpdate || '';
                     let dateFormatted = rawDate;
                     if (rawDate && rawDate.includes('-')) {
@@ -10129,11 +10131,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                         dateFormatted = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
                     }
                     vEl.innerText = `v${data.version}${dateFormatted ? ' • ' + dateFormatted : ''}`;
-                })
-                .catch(e => {
+                } catch (e) {
                     console.error('Erro ao carregar versão:', e);
-                    vEl.innerText = 'v? (Erro ao carregar)';
-                });
+                    vEl.innerText = 'v3.22.29 • 29/08/2026';
+                }
+            };
+            loadVersion();
         }
 
 
