@@ -224,14 +224,14 @@ class MaxDataAdapter extends ErpAdapter {
     // ─────────────────────────────────────────────────────────
 
     /**
-     * Busca vendas do Maxdata emitidas a partir de 28/08/2026 para alimentar a fila de cotações.
+     * Busca vendas do Maxdata emitidas a partir de 28/08/2026 e consulta o número da NF-e na rota /fiscal/venda/{id}.
      */
     async fetchRecentSales(params = {}) {
         const headers = await this._authHeaders();
         const INCEPTION_DATE = '2026-08-28';
         const limit   = 50;
         let page      = 1;
-        const allSales = [];
+        const validDocs = [];
 
         try {
             while (true) {
@@ -251,16 +251,29 @@ class MaxDataAdapter extends ErpAdapter {
                         break;
                     }
                     if (s.status !== 'cancelada') {
-                        allSales.push(this._mapSale(s));
+                        validDocs.push(s);
                     }
                 }
 
                 if (stopPagination || docs.length < limit) break;
                 page++;
-                if (page > 10) break; // Trava de segurança de paginação
+                if (page > 10) break;
             }
 
-            return allSales;
+            // Para cada venda encontrada, busca dados fiscais da NF-e via GET /fiscal/venda/{id} em paralelo
+            const salesWithFiscal = await Promise.all(validDocs.map(async (sale) => {
+                let fiscalData = null;
+                try {
+                    const fUrl = this._buildUrl(`fiscal/venda/${sale.id}`);
+                    const fResp = await fetch(fUrl, { method: 'GET', headers });
+                    if (fResp.ok) {
+                        fiscalData = await fResp.json();
+                    }
+                } catch (_) {}
+                return this._mapSale(sale, [], fiscalData);
+            }));
+
+            return salesWithFiscal;
         } catch (e) {
             this._log('error', `Erro ao buscar vendas do ERP: ${e.message}`);
             throw e;
@@ -268,22 +281,24 @@ class MaxDataAdapter extends ErpAdapter {
     }
 
     /**
-     * Busca detalhes completos de uma venda (incluindo produtos e volumes).
+     * Busca detalhes completos de uma venda (incluindo produtos, volumes e NF-e).
      */
     async getSale(saleId) {
         const headers = await this._authHeaders();
         try {
-            const [saleResp, itemsResp] = await Promise.all([
+            const [saleResp, itemsResp, fiscalResp] = await Promise.all([
                 fetch(this._buildUrl(`sale/${saleId}`), { method: 'GET', headers }),
-                fetch(this._buildUrl(`sale/${saleId}/items`), { method: 'GET', headers }).catch(() => null)
+                fetch(this._buildUrl(`sale/${saleId}/items`), { method: 'GET', headers }).catch(() => null),
+                fetch(this._buildUrl(`fiscal/venda/${saleId}`), { method: 'GET', headers }).catch(() => null)
             ]);
 
             if (!saleResp.ok) throw new Error(`Venda #${saleId} não encontrada (HTTP ${saleResp.status})`);
-            const saleData  = await saleResp.json();
-            const itemsData = itemsResp && itemsResp.ok ? await itemsResp.json() : [];
-            const itemsList = Array.isArray(itemsData) ? itemsData : (itemsData.docs || itemsData.data || []);
+            const saleData   = await saleResp.json();
+            const itemsData  = itemsResp && itemsResp.ok ? await itemsResp.json() : [];
+            const fiscalData = fiscalResp && fiscalResp.ok ? await fiscalResp.json() : null;
+            const itemsList  = Array.isArray(itemsData) ? itemsData : (itemsData.docs || itemsData.data || []);
 
-            return this._mapSale(saleData, itemsList);
+            return this._mapSale(saleData, itemsList, fiscalData);
         } catch (e) {
             this._log('error', `Erro ao buscar venda #${saleId}: ${e.message}`);
             throw e;
@@ -293,11 +308,19 @@ class MaxDataAdapter extends ErpAdapter {
     /**
      * Mapeia venda do Maxdata para o formato esperado pela Cotação de Despacho.
      */
-    _mapSale(raw, items = []) {
-        const totalNf = Number(raw.totalNf || raw.vlrPago || raw.valorTotalLiquidoProduto || 0);
+    _mapSale(raw, items = [], fiscal = null) {
+        const totalNf = Number(fiscal?.vlrTotal || raw.totalNf || raw.vlrPago || raw.valorTotalLiquidoProduto || 0);
         const dataIso = raw.abertura || raw.data || raw.fechamento || new Date().toISOString();
         const dataFormatada = dataIso.split('T')[0];
         const horaEmissao = dataIso.includes('T') ? dataIso.split('T')[1].substring(0, 5) : '';
+
+        // Número fiscal: extrai de fiscal/venda/{id} (nrNum) ou fallback
+        let numeroFiscal = '';
+        if (fiscal && fiscal.nrNum && Number(fiscal.nrNum) > 0) {
+            numeroFiscal = String(fiscal.nrNum);
+        } else if (raw.numeroNf || raw.nfe || raw.nrNf) {
+            numeroFiscal = String(raw.numeroNf || raw.nfe || raw.nrNf);
+        }
 
         // Cálculo de peso e volumes a partir dos itens (se houver)
         let totalPeso = Number(raw.peso || raw.pesoBruto || 0);
@@ -317,12 +340,12 @@ class MaxDataAdapter extends ErpAdapter {
             if (!totalVolumes && somaQtde > 0) totalVolumes = Math.max(1, Math.ceil(somaQtde / 5)); // estimativa se não houver
         }
 
-        const numeroFiscal = raw.numeroNf || raw.nfe || raw.nrNf || raw.nf || '';
-
         return {
             id:           String(raw.id || ''),
             numeroPedido: String(raw.id || ''),
-            numeroNf:     numeroFiscal ? String(numeroFiscal) : '',
+            numeroNf:     numeroFiscal,
+            chaveNfe:     fiscal?.chave || '',
+            serieNfe:     fiscal?.serie || '1',
             dataEmissao:  dataFormatada,
             horaEmissao,
             clienteId:    String(raw.clienteId || ''),
