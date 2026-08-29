@@ -10545,6 +10545,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } catch (_) {}
             },
 
+            _getDiscardedIds() {
+                const tenantId = (typeof Utils !== 'undefined' && Utils.Cloud?.tenantId) || _parreiraSessao?.tenant || localStorage.getItem('app_tenant_id') || '';
+                try {
+                    return JSON.parse(localStorage.getItem(`_discarded_nfs_${tenantId}`) || '[]');
+                } catch (_) { return []; }
+            },
+
+            _addDiscardedId(saleId) {
+                const tenantId = (typeof Utils !== 'undefined' && Utils.Cloud?.tenantId) || _parreiraSessao?.tenant || localStorage.getItem('app_tenant_id') || '';
+                try {
+                    const list = this._getDiscardedIds();
+                    const strId = String(saleId);
+                    if (!list.includes(strId)) {
+                        list.push(strId);
+                        localStorage.setItem(`_discarded_nfs_${tenantId}`, JSON.stringify(list));
+                    }
+                } catch (_) {}
+            },
+
             async refresh() {
                 const tenantId = (typeof Utils !== 'undefined' && Utils.Cloud?.tenantId) || _parreiraSessao?.tenant || localStorage.getItem('app_tenant_id') || '';
                 const loadingEl = document.getElementById('erp-nf-loading');
@@ -10558,8 +10577,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 try {
                     const erp = await ErpRegistry.getAdapter(tenantId);
                     if (!erp || typeof erp.fetchRecentSales !== 'function') return;
-                    const sales = await erp.fetchRecentSales({ limit: 30 });
-                    this._sales = sales || [];
+                    const sales = await erp.fetchRecentSales({ limit: 50 });
+                    const discarded = this._getDiscardedIds();
+                    this._sales = (sales || []).filter(s => !discarded.includes(String(s.id)) && !discarded.includes(String(s.numeroNf)));
                     this.render(this._sales);
                 } catch (e) {
                     console.warn('[ErpNFQueue] Erro ao carregar vendas do ERP:', e.message);
@@ -10568,6 +10588,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 } finally {
                     if (loadingEl) loadingEl.style.display = 'none';
+                }
+            },
+
+            discardSale(saleId) {
+                const sale = this._sales.find(s => String(s.id) === String(saleId));
+                const nfNum = sale?.numeroNf || saleId;
+                if (!confirm(`Deseja descartar a NF #${nfNum} da fila de cotações?`)) return;
+
+                this._addDiscardedId(saleId);
+                this._sales = this._sales.filter(s => String(s.id) !== String(saleId));
+                this.render(this._sales);
+                showToast(`🗑️ NF #${nfNum} descartada da fila.`, 'info');
+
+                if (typeof Utils !== 'undefined' && Utils.writeLog) {
+                    const user = Utils.getStorage('logged_user');
+                    const login = (Array.isArray(user) ? user[0]?.login : user?.login) || 'operador';
+                    Utils.writeLog('AUDIT_NF_DISCARD', 'Cotação Despacho', `NF #${nfNum} descartada da fila por ${login}`, { nf: nfNum, user: login }, null);
                 }
             },
 
@@ -10607,10 +10644,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <td style="padding:0.5rem 0.75rem; text-align:right; font-size:0.8rem;">${pesoFmt}</td>
                             <td style="padding:0.5rem 0.75rem; text-align:right; font-size:0.8rem;">${volFmt}</td>
                             <td style="padding:0.5rem 0.75rem; color:#94a3b8; font-size:0.75rem;">${s.statusEntrega || s.status || ''}</td>
-                            <td style="padding:0.5rem 0.75rem; text-align:center;">
-                                <button type="button" onclick="window.ErpNFQueue.selectSale('${s.id}')" class="btn btn-primary" style="font-size:0.72rem; padding:0.25rem 0.6rem; gap:0.3rem;">
-                                    <span class="material-icons-round" style="font-size:0.85rem;">input</span> Cotar
-                                </button>
+                            <td style="padding:0.5rem 0.75rem; text-align:center; white-space:nowrap;">
+                                <div style="display:inline-flex; gap:0.35rem; align-items:center;">
+                                    <button type="button" onclick="window.ErpNFQueue.selectSale('${s.id}')" class="btn btn-primary" style="font-size:0.72rem; padding:0.25rem 0.6rem; gap:0.25rem;">
+                                        <span class="material-icons-round" style="font-size:0.85rem;">input</span> Cotar
+                                    </button>
+                                    <button type="button" onclick="window.ErpNFQueue.discardSale('${s.id}')" class="btn btn-secondary" title="Descartar esta NF da fila" style="font-size:0.72rem; padding:0.25rem 0.5rem; gap:0.2rem; color:#ef4444; border-color:rgba(239,68,68,0.3); background:rgba(239,68,68,0.06);">
+                                        <span class="material-icons-round" style="font-size:0.85rem;">delete_outline</span> Descartar
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     `;
