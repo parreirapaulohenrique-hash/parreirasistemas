@@ -228,7 +228,7 @@ class MaxDataAdapter extends ErpAdapter {
      */
     async fetchRecentSales(params = {}) {
         const headers = await this._authHeaders();
-        const limit   = params.limit || 30;
+        const limit   = params.limit || 50;
         const page    = params.page  || 1;
         const url     = this._buildUrl('sale', { page, limit, ...params });
 
@@ -239,14 +239,15 @@ class MaxDataAdapter extends ErpAdapter {
             const data  = await resp.json();
             const docs  = Array.isArray(data) ? data : (data.docs || data.data || []);
 
-            // Filtra vendas canceladas e limita estritamente para vendas emitidas a partir de hoje
-            const today = new Date();
-            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            // Filtra vendas canceladas e limita estritamente para vendas emitidas a partir de ontem
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
 
             const validSales = docs.filter(s => {
                 if (s.status === 'cancelada') return false;
                 const saleDate = (s.abertura || s.data || s.fechamento || '').split('T')[0];
-                return saleDate >= todayStr;
+                return saleDate >= yesterdayStr;
             });
 
             return validSales.map(s => this._mapSale(s));
