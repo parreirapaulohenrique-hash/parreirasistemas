@@ -224,35 +224,45 @@ class MaxDataAdapter extends ErpAdapter {
     // ─────────────────────────────────────────────────────────
 
     /**
-     * Busca vendas recentes do Maxdata para alimentar a fila de cotações.
+     * Busca vendas do Maxdata emitidas a partir de 28/08/2026 para alimentar a fila de cotações.
      */
     async fetchRecentSales(params = {}) {
         const headers = await this._authHeaders();
-        const limit   = params.limit || 50;
-        const page    = params.page  || 1;
-        const url     = this._buildUrl('sale', { page, limit, ...params });
+        const INCEPTION_DATE = '2026-08-28';
+        const limit   = 50;
+        let page      = 1;
+        const allSales = [];
 
         try {
-            const resp = await fetch(url, { method: 'GET', headers });
-            if (!resp.ok) throw new Error(`GET /sale HTTP ${resp.status}`);
+            while (true) {
+                const url = this._buildUrl('sale', { page, limit, ...params });
+                const resp = await fetch(url, { method: 'GET', headers });
+                if (!resp.ok) throw new Error(`GET /sale pág ${page} HTTP ${resp.status}`);
 
-            const data  = await resp.json();
-            const docs  = Array.isArray(data) ? data : (data.docs || data.data || []);
+                const data = await resp.json();
+                const docs = Array.isArray(data) ? data : (data.docs || data.data || []);
+                if (!docs.length) break;
 
-            // Filtra vendas canceladas e limita estritamente para vendas emitidas a partir de ontem
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+                let stopPagination = false;
+                for (const s of docs) {
+                    const saleDate = (s.abertura || s.data || s.fechamento || '').split('T')[0];
+                    if (saleDate && saleDate < INCEPTION_DATE) {
+                        stopPagination = true;
+                        break;
+                    }
+                    if (s.status !== 'cancelada') {
+                        allSales.push(this._mapSale(s));
+                    }
+                }
 
-            const validSales = docs.filter(s => {
-                if (s.status === 'cancelada') return false;
-                const saleDate = (s.abertura || s.data || s.fechamento || '').split('T')[0];
-                return saleDate >= yesterdayStr;
-            });
+                if (stopPagination || docs.length < limit) break;
+                page++;
+                if (page > 10) break; // Trava de segurança de paginação
+            }
 
-            return validSales.map(s => this._mapSale(s));
+            return allSales;
         } catch (e) {
-            this._log('error', `Erro ao buscar vendas recentes: ${e.message}`);
+            this._log('error', `Erro ao buscar vendas do ERP: ${e.message}`);
             throw e;
         }
     }
