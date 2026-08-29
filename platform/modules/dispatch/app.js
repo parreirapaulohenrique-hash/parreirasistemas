@@ -10635,8 +10635,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const pesoFmt = s.peso ? `${s.peso} kg` : '<span style="color:var(--text-secondary); opacity:0.6;">-</span>';
                     const volFmt = s.volumes ? s.volumes : '<span style="color:var(--text-secondary); opacity:0.6;">-</span>';
                     const horaFmt = s.horaEmissao ? `🕐 ${s.horaEmissao}` : (s.dataEmissao ? s.dataEmissao.split('-').reverse().slice(0, 2).join('/') : '');
-                    const nfDisplay = s.numeroNf ? `<span style="font-weight:700; color:#38bdf8; font-family:monospace;">#${s.numeroNf}</span>` : `<span style="color:#94a3b8; font-style:italic; font-size:0.75rem;">Digitar NF</span>`;
-                    const pedidoDisplay = `<span style="font-weight:600; color:#cbd5e1; font-family:monospace;">#${s.numeroPedido || s.id}</span>`;
+                    const nfDisplay = s.numeroNf ? `<span style="font-weight:700; color:#38bdf8; font-family:monospace;">${s.numeroNf}</span>` : `<span style="color:#94a3b8; font-style:italic; font-size:0.75rem;">Digitar NF</span>`;
+                    const pedidoDisplay = `<span style="font-weight:600; color:#cbd5e1; font-family:monospace;">${s.numeroPedido || s.id}</span>`;
 
                     return `
                         <tr style="border-bottom:1px solid rgba(255,255,255,0.05); transition:background 0.15s;" onmouseover="this.style.background='rgba(37,99,235,0.1)'" onmouseout="this.style.background='none'">
