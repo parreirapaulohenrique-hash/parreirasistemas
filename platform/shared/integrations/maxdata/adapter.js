@@ -220,13 +220,115 @@ class MaxDataAdapter extends ErpAdapter {
     }
 
     // ─────────────────────────────────────────────────────────
-    //  STUBS — fora de escopo fase 1
+    //  NOTAS FISCAIS / VENDAS — Integração com Cotação
     // ─────────────────────────────────────────────────────────
 
-    async syncProducts()            { this._log('info', 'syncProducts: fora de escopo fase 1.'); return { added: 0, updated: 0, errors: 0 }; }
-    async syncOrders()              { this._log('info', 'syncOrders: NFs lançadas manualmente.');  return { total: 0 }; }
-    async syncNFs(filters = {})     { this._log('info', 'syncNFs: NFs lançadas manualmente.');     return []; }
-    async confirmDispatch(nfData)   { this._log('info', 'confirmDispatch: fora de escopo.');        return { success: true }; }
+    /**
+     * Busca vendas recentes do Maxdata para alimentar a fila de cotações.
+     */
+    async fetchRecentSales(params = {}) {
+        const headers = await this._authHeaders();
+        const limit   = params.limit || 30;
+        const page    = params.page  || 1;
+        const url     = this._buildUrl('sale', { page, limit, ...params });
+
+        try {
+            const resp = await fetch(url, { method: 'GET', headers });
+            if (!resp.ok) throw new Error(`GET /sale HTTP ${resp.status}`);
+
+            const data  = await resp.json();
+            const docs  = Array.isArray(data) ? data : (data.docs || data.data || []);
+
+            // Filtra vendas canceladas
+            const validSales = docs.filter(s => s.status !== 'cancelada');
+            return validSales.map(s => this._mapSale(s));
+        } catch (e) {
+            this._log('error', `Erro ao buscar vendas recentes: ${e.message}`);
+            throw e;
+        }
+    }
+
+    /**
+     * Busca detalhes completos de uma venda (incluindo produtos e volumes).
+     */
+    async getSale(saleId) {
+        const headers = await this._authHeaders();
+        try {
+            const [saleResp, itemsResp] = await Promise.all([
+                fetch(this._buildUrl(`sale/${saleId}`), { method: 'GET', headers }),
+                fetch(this._buildUrl(`sale/${saleId}/items`), { method: 'GET', headers }).catch(() => null)
+            ]);
+
+            if (!saleResp.ok) throw new Error(`Venda #${saleId} não encontrada (HTTP ${saleResp.status})`);
+            const saleData  = await saleResp.json();
+            const itemsData = itemsResp && itemsResp.ok ? await itemsResp.json() : [];
+            const itemsList = Array.isArray(itemsData) ? itemsData : (itemsData.docs || itemsData.data || []);
+
+            return this._mapSale(saleData, itemsList);
+        } catch (e) {
+            this._log('error', `Erro ao buscar venda #${saleId}: ${e.message}`);
+            throw e;
+        }
+    }
+
+    /**
+     * Mapeia venda do Maxdata para o formato esperado pela Cotação de Despacho.
+     */
+    _mapSale(raw, items = []) {
+        const totalNf = Number(raw.totalNf || raw.vlrPago || raw.valorTotalLiquidoProduto || 0);
+        const dataIso = raw.abertura || raw.data || raw.fechamento || new Date().toISOString();
+        const dataFormatada = dataIso.split('T')[0];
+
+        // Cálculo de peso e volumes a partir dos itens (se houver)
+        let totalPeso = Number(raw.peso || raw.pesoBruto || 0);
+        let totalVolumes = Number(raw.volume || raw.volumes || raw.qtdeVolumes || 0);
+
+        if (items.length > 0) {
+            let somaPeso = 0;
+            let somaQtde = 0;
+            items.forEach(it => {
+                const qtde = Number(it.qtde || 1);
+                somaQtde += qtde;
+                if (it.peso || it.pesoBruto || it.pesoLiquido) {
+                    somaPeso += Number(it.peso || it.pesoBruto || it.pesoLiquido) * qtde;
+                }
+            });
+            if (!totalPeso && somaPeso > 0) totalPeso = somaPeso;
+            if (!totalVolumes && somaQtde > 0) totalVolumes = Math.max(1, Math.ceil(somaQtde / 5)); // estimativa se não houver
+        }
+
+        return {
+            id:           String(raw.id || ''),
+            numeroNf:     String(raw.id || ''),
+            dataEmissao:  dataFormatada,
+            clienteId:    String(raw.clienteId || ''),
+            clienteNome:  (raw.clienteNome || '').toUpperCase().trim(),
+            cpfCnpj:      (raw.cpfCnpj || '').replace(/\D/g, ''),
+            telefone:     raw.clienteTelefone || raw.clienteCelular || '',
+            valorTotal:   Number(totalNf.toFixed(2)),
+            peso:         totalPeso > 0 ? Number(totalPeso.toFixed(3)) : null,
+            volumes:      totalVolumes > 0 ? totalVolumes : null,
+            observacoes:  (raw.msg || '').trim(),
+            vendedor:     raw.atendenteId ? String(raw.atendenteId) : (raw.separadorNome || ''),
+            status:       raw.status || 'finalizada',
+            statusEntrega: raw.statusEntrega || '',
+            itens:        items.map(it => ({
+                id:        it.id || it.produtoId,
+                descricao: it.descricaoProduto || '',
+                codigoFab: it.codigoFab || '',
+                qtde:      Number(it.qtde || 1),
+                valor:     Number(it.valor || 0),
+                un:        it.un || 'UN'
+            })),
+            _source:      'maxdata'
+        };
+    }
+
+    async syncProducts()            { this._log('info', 'syncProducts: fora de escopo.'); return { added: 0, updated: 0, errors: 0 }; }
+    async syncOrders()              { return this.fetchRecentSales(); }
+    async syncNFs(filters = {})     { return this.fetchRecentSales(filters); }
+    async confirmDispatch(nfData)   { this._log('info', 'confirmDispatch: fora de escopo.'); return { success: true }; }
+
 
     // ─────────────────────────────────────────────────────────
     //  HELPERS — Firestore + localStorage

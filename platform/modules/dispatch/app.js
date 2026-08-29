@@ -880,17 +880,36 @@ document.addEventListener('DOMContentLoaded', async () => {
             btnOk.parentNode.replaceChild(newOk, btnOk);
             btnCan.parentNode.replaceChild(newCan, btnCan);
 
-            const doConfirm = () => {
+            const doConfirm = async () => {
                 const pass = input.value;
+                if (!pass) return;
                 const allUsers = Utils.getStorage('app_users') || [];
-                const supervisor = allUsers.find(u => u.role === 'supervisor' && u.pass === pass);
-                if (!supervisor) {
-                    errEl.textContent = '❌ Senha incorreta ou sem permissão de supervisor.';
+                const tenantId = (typeof Utils !== 'undefined' && Utils.Cloud?.tenantId) || localStorage.getItem('app_tenant_id') || '';
+                let localUsers = [];
+                try { localUsers = JSON.parse(localStorage.getItem(`_app_users_${tenantId}`) || '[]'); } catch (_) {}
+                const mergedUsers = [...allUsers, ...localUsers];
+
+                let passHash = '';
+                try {
+                    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass));
+                    passHash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+                } catch (_) {}
+
+                const authUser = mergedUsers.find(u => {
+                    const isAdmOrSup = ['adm', 'admin', 'supervisor', 'master'].includes(u.role);
+                    if (!isAdmOrSup) return false;
+                    const passMatch = u.pass === pass;
+                    const hashMatch = u.senhaHash && u.senhaHash === passHash;
+                    return passMatch || hashMatch;
+                });
+
+                if (!authUser) {
+                    errEl.textContent = '❌ Senha incorreta ou sem permissão de Administrador/Supervisor.';
                     input.focus();
                     return;
                 }
                 close();
-                onConfirm(supervisor);
+                onConfirm(authUser);
             };
 
             document.getElementById('supPassConfirm').addEventListener('click', doConfirm);
@@ -1855,6 +1874,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             if (_retWarn) _retWarn.style.display = 'none';
 
+            // Reset lock state if fields were locked from ERP
+            if (window.ErpNFQueue && typeof window.ErpNFQueue.unlockAll === 'function') {
+                window.ErpNFQueue.unlockAll();
+            }
+
             // Focus first field
             document.getElementById('inputInvoiceNumber').focus();
         };
@@ -2132,6 +2156,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (id === 'dashboard') {
                 renderDashboard();
+            }
+            if (id === 'quote' && window.ErpNFQueue && typeof window.ErpNFQueue.init === 'function') {
+                window.ErpNFQueue.init();
             }
             if (id === 'dispatch' && window.renderAppHistory) {
                 window.renderAppHistory();
@@ -2422,8 +2449,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         window.showSection = showSection;
 
-        document.getElementById('inputInvoiceNumber').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') inputClient.focus();
+        document.getElementById('inputInvoiceNumber').addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter') {
+                const val = e.target.value.trim();
+                if (val && window.ErpNFQueue && !window.ErpNFQueue._lockedFields.has('inputInvoiceNumber')) {
+                    const found = window.ErpNFQueue._sales.find(s => String(s.numeroNf) === String(val) || String(s.id) === String(val));
+                    if (found) {
+                        window.ErpNFQueue.selectSale(found.id);
+                        return;
+                    }
+                }
+                inputClient.focus();
+            }
         });
 
         document.getElementById('inputSeller').addEventListener('keypress', (e) => {
@@ -10488,19 +10525,303 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         };
 
-        // Exibe botão "Sincronizar ERP" quando ERP está configurado para o tenant
-        (async () => {
-            try {
-                if (typeof ErpRegistry === 'undefined') return;
-                const tenantId = (typeof Utils !== 'undefined' && Utils.Cloud?.tenantId) || _parreiraSessao?.tenant || '';
-                if (!tenantId) return;
-                const config = await ErpRegistry.getConfig(tenantId);
-                if (config && config.enabled && config.provider) {
-                    const btn = document.getElementById('btnSyncClientsFromERP');
-                    if (btn) btn.style.display = 'inline-flex';
+        // ── FILA DE NFs DO ERP & BLOQUEIO INTELIGENTE (Maxdata) ───────────
+        window.ErpNFQueue = {
+            _sales: [],
+            _lockedFields: new Set(),
+
+            async init() {
+                const tenantId = (typeof Utils !== 'undefined' && Utils.Cloud?.tenantId) || _parreiraSessao?.tenant || localStorage.getItem('app_tenant_id') || '';
+                if (!tenantId || typeof ErpRegistry === 'undefined') return;
+                try {
+                    const config = await ErpRegistry.getConfig(tenantId);
+                    if (config && config.enabled && config.provider) {
+                        const container = document.getElementById('erp-nf-queue');
+                        if (container) container.style.display = 'block';
+                        const btnSync = document.getElementById('btnSyncClientsFromERP');
+                        if (btnSync) btnSync.style.display = 'inline-flex';
+                        this.refresh();
+                    }
+                } catch (_) {}
+            },
+
+            async refresh() {
+                const tenantId = (typeof Utils !== 'undefined' && Utils.Cloud?.tenantId) || _parreiraSessao?.tenant || localStorage.getItem('app_tenant_id') || '';
+                const loadingEl = document.getElementById('erp-nf-loading');
+                const emptyEl = document.getElementById('erp-nf-empty');
+                const tbody = document.getElementById('erp-nf-table-body');
+                const badge = document.getElementById('erp-nf-badge');
+
+                if (loadingEl) loadingEl.style.display = 'block';
+                if (emptyEl) emptyEl.style.display = 'none';
+
+                try {
+                    const erp = await ErpRegistry.getAdapter(tenantId);
+                    if (!erp || typeof erp.fetchRecentSales !== 'function') return;
+                    const sales = await erp.fetchRecentSales({ limit: 30 });
+                    this._sales = sales || [];
+                    this.render(this._sales);
+                } catch (e) {
+                    console.warn('[ErpNFQueue] Erro ao carregar vendas do ERP:', e.message);
+                    if (tbody && (!this._sales || this._sales.length === 0)) {
+                        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:1.2rem; color:#f87171; font-size:0.8rem;">Erro ao conectar com o ERP: ${e.message}</td></tr>`;
+                    }
+                } finally {
+                    if (loadingEl) loadingEl.style.display = 'none';
                 }
-            } catch (e) { /* silencioso */ }
-        })();
+            },
+
+            render(sales) {
+                const tbody = document.getElementById('erp-nf-table-body');
+                const emptyEl = document.getElementById('erp-nf-empty');
+                const badge = document.getElementById('erp-nf-badge');
+                if (!tbody) return;
+
+                if (!sales || sales.length === 0) {
+                    tbody.innerHTML = '';
+                    if (emptyEl) emptyEl.style.display = 'block';
+                    if (badge) badge.style.display = 'none';
+                    return;
+                }
+
+                if (emptyEl) emptyEl.style.display = 'none';
+                if (badge) {
+                    badge.textContent = sales.length;
+                    badge.style.display = 'inline-block';
+                }
+
+                tbody.innerHTML = sales.map(s => {
+                    const valFmt = Number(s.valorTotal || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                    const pesoFmt = s.peso ? `${s.peso} kg` : '<span style="color:var(--text-secondary); opacity:0.6;">-</span>';
+                    const volFmt = s.volumes ? s.volumes : '<span style="color:var(--text-secondary); opacity:0.6;">-</span>';
+                    const dataFmt = s.dataEmissao ? s.dataEmissao.split('-').reverse().slice(0, 2).join('/') : '';
+                    return `
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.05); transition:background 0.15s;" onmouseover="this.style.background='rgba(37,99,235,0.1)'" onmouseout="this.style.background='none'">
+                            <td style="padding:0.5rem 0.75rem; font-weight:700; color:#60a5fa; font-family:monospace; white-space:nowrap;">#${s.numeroNf}</td>
+                            <td style="padding:0.5rem 0.75rem; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${s.clienteNome}">
+                                <div style="font-weight:600; color:#f1f5f9;">${s.clienteNome}</div>
+                                ${s.cpfCnpj ? `<div style="font-size:0.7rem; color:#94a3b8;">${s.cpfCnpj}</div>` : ''}
+                            </td>
+                            <td style="padding:0.5rem 0.75rem; color:#94a3b8; font-size:0.78rem;">${dataFmt}</td>
+                            <td style="padding:0.5rem 0.75rem; text-align:right; font-weight:600; color:#34d399;">${valFmt}</td>
+                            <td style="padding:0.5rem 0.75rem; text-align:right; font-size:0.8rem;">${pesoFmt}</td>
+                            <td style="padding:0.5rem 0.75rem; text-align:right; font-size:0.8rem;">${volFmt}</td>
+                            <td style="padding:0.5rem 0.75rem; color:#94a3b8; font-size:0.75rem;">${s.statusEntrega || s.status || ''}</td>
+                            <td style="padding:0.5rem 0.75rem; text-align:center;">
+                                <button type="button" onclick="window.ErpNFQueue.selectSale('${s.id}')" class="btn btn-primary" style="font-size:0.72rem; padding:0.25rem 0.6rem; gap:0.3rem;">
+                                    <span class="material-icons-round" style="font-size:0.85rem;">input</span> Cotar
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            },
+
+            async selectSale(saleId) {
+                let sale = this._sales.find(s => String(s.id) === String(saleId));
+                const tenantId = (typeof Utils !== 'undefined' && Utils.Cloud?.tenantId) || _parreiraSessao?.tenant || localStorage.getItem('app_tenant_id') || '';
+
+                try {
+                    if (typeof ErpRegistry !== 'undefined') {
+                        const erp = await ErpRegistry.getAdapter(tenantId);
+                        if (erp && typeof erp.getSale === 'function') {
+                            const fullSale = await erp.getSale(saleId);
+                            if (fullSale) sale = fullSale;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[ErpNFQueue] Usando dados resumidos da venda:', e.message);
+                }
+
+                if (!sale) {
+                    showToast('❌ Dados da NF não encontrados.', 'error');
+                    return;
+                }
+
+                this.fillAndLockQuote(sale);
+            },
+
+            fillAndLockQuote(sale) {
+                if (typeof window.resetQuote === 'function') window.resetQuote();
+
+                // 1. Número da NF
+                if (sale.numeroNf) {
+                    const el = document.getElementById('inputInvoiceNumber');
+                    if (el) el.value = sale.numeroNf;
+                }
+
+                // 2. Data do lançamento
+                if (sale.dataEmissao) {
+                    const el = document.getElementById('inputDate');
+                    if (el) el.value = sale.dataEmissao;
+                }
+
+                // 3. Valor da NF
+                if (sale.valorTotal) {
+                    const el = document.getElementById('inputValue');
+                    if (el) el.value = sale.valorTotal;
+                }
+
+                // 4. Peso (se veio na NF)
+                if (sale.peso && Number(sale.peso) > 0) {
+                    const el = document.getElementById('inputWeight');
+                    if (el) el.value = sale.peso;
+                }
+
+                // 5. Volume (se veio na NF)
+                if (sale.volumes && Number(sale.volumes) > 0) {
+                    const el = document.getElementById('inputVolume');
+                    if (el) el.value = sale.volumes;
+                }
+
+                // 6. Observações
+                if (sale.observacoes) {
+                    const notesEl = document.getElementById('inputNotes') || document.getElementById('inputObservations');
+                    if (notesEl) notesEl.value = sale.observacoes;
+                }
+
+                // 7. Cliente: Localiza no cadastro para obter Cidade, Bairro, UF e Taxa de Região
+                if (sale.cpfCnpj || sale.clienteId || sale.clienteNome) {
+                    const allClients = Utils.getStorage('clients') || [];
+                    const foundClient = allClients.find(c =>
+                        (sale.cpfCnpj && c.cnpj && c.cnpj.replace(/\D/g, '') === sale.cpfCnpj.replace(/\D/g, '')) ||
+                        (sale.clienteId && String(c.codigo) === String(sale.clienteId)) ||
+                        (sale.clienteNome && c.nome && c.nome.toUpperCase().trim() === sale.clienteNome.toUpperCase().trim())
+                    );
+
+                    if (foundClient) {
+                        selectedClient = foundClient;
+                        const clientInp = document.getElementById('inputClient');
+                        if (clientInp) clientInp.value = `${foundClient.nome} (${foundClient.codigo || ''})`;
+
+                        // Renderiza resultado do cliente
+                        const clientResult = document.getElementById('clientResult');
+                        if (clientResult) {
+                            clientResult.innerHTML = `
+                                <div style="font-weight: 600;" id="resClientName">${foundClient.nome || 'Cliente'}</div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                                    <span id="resCity">${foundClient.cidade || '-'}</span> - <span id="resNeighborhood">${foundClient.bairro || '-'}</span> (${foundClient.uf || ''})
+                                </div>
+                            `;
+                            clientResult.style.display = 'block';
+                            clientResult.style.borderLeft = '4px solid var(--accent-success, #10b981)';
+                        }
+                    } else {
+                        const clientInp = document.getElementById('inputClient');
+                        if (clientInp) clientInp.value = sale.clienteNome;
+                    }
+                }
+
+                // Aplica regras de bloqueio estrito
+                this.applyFieldLocks(sale);
+
+                showToast(`📥 NF #${sale.numeroNf} carregada do ERP!`, 'success');
+
+                // Se peso e cliente estiverem preenchidos, calcula automaticamente
+                if (sale.peso && Number(sale.peso) > 0 && selectedClient && typeof calculateAndSave === 'function') {
+                    calculateAndSave();
+                } else {
+                    // Foca no primeiro campo livre (geralmente peso ou volumes)
+                    const weightEl = document.getElementById('inputWeight');
+                    if (weightEl && !weightEl.readOnly) weightEl.focus();
+                    else {
+                        const volEl = document.getElementById('inputVolume');
+                        if (volEl && !volEl.readOnly) volEl.focus();
+                    }
+                }
+            },
+
+            applyFieldLocks(sale) {
+                this._lockedFields.clear();
+
+                const lockField = (inputEl, isLocked) => {
+                    if (!inputEl) return;
+                    if (isLocked) {
+                        inputEl.readOnly = true;
+                        inputEl.classList.add('field-locked-erp');
+                        inputEl.style.backgroundColor = 'rgba(15, 23, 42, 0.6)';
+                        inputEl.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+                        inputEl.style.color = '#93c5fd';
+                        inputEl.style.cursor = 'not-allowed';
+                        this._lockedFields.add(inputEl.id);
+                    } else {
+                        inputEl.readOnly = false;
+                        inputEl.classList.remove('field-locked-erp');
+                        inputEl.style.backgroundColor = '';
+                        inputEl.style.borderColor = '';
+                        inputEl.style.color = '';
+                        inputEl.style.cursor = '';
+                    }
+                };
+
+                // Trava os campos que vieram preenchidos da NF
+                lockField(document.getElementById('inputInvoiceNumber'), !!sale.numeroNf);
+                lockField(document.getElementById('inputDate'), !!sale.dataEmissao);
+                lockField(document.getElementById('inputValue'), !!sale.valorTotal);
+                lockField(document.getElementById('inputClient'), !!sale.clienteNome || !!sale.cpfCnpj);
+
+                const btnSearch = document.getElementById('btnSearchClient');
+                if (btnSearch) btnSearch.disabled = (!!sale.clienteNome || !!sale.cpfCnpj);
+
+                // Peso e Volume: travados APENAS se vieram preenchidos da NF
+                lockField(document.getElementById('inputWeight'), (sale.peso && Number(sale.peso) > 0));
+                lockField(document.getElementById('inputVolume'), (sale.volumes && Number(sale.volumes) > 0));
+
+                // Exibe badge e botão de desbloqueio com senha ADM
+                const badge = document.getElementById('erpLockBadge');
+                const unlockBtn = document.getElementById('btnUnlockErpFields');
+                if (badge) badge.style.display = this._lockedFields.size > 0 ? 'inline-flex' : 'none';
+                if (unlockBtn) unlockBtn.style.display = this._lockedFields.size > 0 ? 'inline-flex' : 'none';
+            },
+
+            unlockAll() {
+                const unlockField = (id) => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.readOnly = false;
+                        el.classList.remove('field-locked-erp');
+                        el.style.backgroundColor = '';
+                        el.style.borderColor = '';
+                        el.style.color = '';
+                        el.style.cursor = '';
+                    }
+                };
+
+                ['inputInvoiceNumber', 'inputDate', 'inputValue', 'inputClient', 'inputWeight', 'inputVolume'].forEach(unlockField);
+
+                const btnSearch = document.getElementById('btnSearchClient');
+                if (btnSearch) btnSearch.disabled = false;
+
+                this._lockedFields.clear();
+
+                const badge = document.getElementById('erpLockBadge');
+                const unlockBtn = document.getElementById('btnUnlockErpFields');
+                if (badge) badge.style.display = 'none';
+                if (unlockBtn) unlockBtn.style.display = 'none';
+            }
+        };
+
+        // Event listener do botão de desbloqueio com Senha ADM
+        const btnUnlockErp = document.getElementById('btnUnlockErpFields');
+        if (btnUnlockErp) {
+            btnUnlockErp.addEventListener('click', () => {
+                window.requestSupervisorPassword('🔒 Desbloquear Campos do ERP (Senha ADM)', (authUser) => {
+                    window.ErpNFQueue.unlockAll();
+                    showToast(`🔓 Campos liberados para edição por ${authUser.name || authUser.login}!`, 'success');
+                    if (Utils.writeLog) {
+                        const nfNum = document.getElementById('inputInvoiceNumber')?.value || '';
+                        Utils.writeLog('AUDIT_NF_UNLOCK', 'Cotação Despacho', `Desbloqueio manual dos campos da NF #${nfNum} pelo ADM/Supervisor ${authUser.login}`, { nfNum, user: authUser.login }, null);
+                    }
+                });
+            });
+        }
+
+        // Inicializa Fila de NFs do ERP no startup
+        setTimeout(() => {
+            if (window.ErpNFQueue && typeof window.ErpNFQueue.init === 'function') {
+                window.ErpNFQueue.init();
+            }
+        }, 500);
 
         // Formulário de cliente
         const formNewClient = document.getElementById('formNewClient');
