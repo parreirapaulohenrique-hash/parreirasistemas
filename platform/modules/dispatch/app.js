@@ -10632,10 +10632,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const pesoFmt = s.peso ? `${s.peso} kg` : '<span style="color:var(--text-secondary); opacity:0.6;">-</span>';
                     const volFmt = s.volumes ? s.volumes : '<span style="color:var(--text-secondary); opacity:0.6;">-</span>';
                     const horaFmt = s.horaEmissao ? `🕐 ${s.horaEmissao}` : (s.dataEmissao ? s.dataEmissao.split('-').reverse().slice(0, 2).join('/') : '');
+                    const nfDisplay = s.numeroNf ? `<span style="font-weight:700; color:#38bdf8; font-family:monospace;">#${s.numeroNf}</span>` : `<span style="color:#94a3b8; font-style:italic; font-size:0.75rem;">Digitar NF</span>`;
+                    const pedidoDisplay = `<span style="font-weight:600; color:#cbd5e1; font-family:monospace;">#${s.numeroPedido || s.id}</span>`;
+
                     return `
                         <tr style="border-bottom:1px solid rgba(255,255,255,0.05); transition:background 0.15s;" onmouseover="this.style.background='rgba(37,99,235,0.1)'" onmouseout="this.style.background='none'">
-                            <td style="padding:0.5rem 0.75rem; font-weight:700; color:#60a5fa; font-family:monospace; white-space:nowrap;">#${s.numeroNf}</td>
-                            <td style="padding:0.5rem 0.75rem; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${s.clienteNome}">
+                            <td style="padding:0.5rem 0.75rem; white-space:nowrap;">${nfDisplay}</td>
+                            <td style="padding:0.5rem 0.75rem; white-space:nowrap;">${pedidoDisplay}</td>
+                            <td style="padding:0.5rem 0.75rem; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${s.clienteNome}">
                                 <div style="font-weight:600; color:#f1f5f9;">${s.clienteNome}</div>
                                 ${s.cpfCnpj ? `<div style="font-size:0.7rem; color:#94a3b8;">${s.cpfCnpj}</div>` : ''}
                             </td>
@@ -10686,10 +10690,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             fillAndLockQuote(sale) {
                 if (typeof window.resetQuote === 'function') window.resetQuote();
 
-                // 1. Número da NF
-                if (sale.numeroNf) {
-                    const el = document.getElementById('inputInvoiceNumber');
-                    if (el) el.value = sale.numeroNf;
+                // 1. Número da NF (se tiver NF preenche, se não tiver deixa livre para digitação)
+                const invoiceInp = document.getElementById('inputInvoiceNumber');
+                if (invoiceInp) {
+                    if (sale.numeroNf) {
+                        invoiceInp.value = sale.numeroNf;
+                    } else {
+                        invoiceInp.value = '';
+                        invoiceInp.placeholder = `Ex: Digite o Nº da NF do Pedido #${sale.numeroPedido || sale.id}`;
+                    }
                 }
 
                 // 2. Data do lançamento
@@ -10757,13 +10766,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Aplica regras de bloqueio estrito
                 this.applyFieldLocks(sale);
 
-                showToast(`📥 NF #${sale.numeroNf} carregada do ERP!`, 'success');
+                const refText = sale.numeroNf ? `NF #${sale.numeroNf}` : `Pedido #${sale.numeroPedido || sale.id}`;
+                showToast(`📥 Dados do ERP carregados (${refText})!`, 'success');
 
-                // Se peso e cliente estiverem preenchidos, calcula automaticamente
-                if (sale.peso && Number(sale.peso) > 0 && selectedClient && typeof calculateAndSave === 'function') {
+                // Foco inteligente:
+                const nfInp = document.getElementById('inputInvoiceNumber');
+                if (nfInp && !nfInp.readOnly && !nfInp.value) {
+                    nfInp.focus();
+                } else if (sale.peso && Number(sale.peso) > 0 && selectedClient && typeof calculateAndSave === 'function') {
                     calculateAndSave();
                 } else {
-                    // Foca no primeiro campo livre (geralmente peso ou volumes)
                     const weightEl = document.getElementById('inputWeight');
                     if (weightEl && !weightEl.readOnly) weightEl.focus();
                     else {
@@ -10796,7 +10808,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 };
 
-                // Trava os campos que vieram preenchidos da NF
+                // Trava o Número da NF APENAS se já tiver o número fiscal vindo do ERP
                 lockField(document.getElementById('inputInvoiceNumber'), !!sale.numeroNf);
                 lockField(document.getElementById('inputDate'), !!sale.dataEmissao);
                 lockField(document.getElementById('inputValue'), !!sale.valorTotal);
