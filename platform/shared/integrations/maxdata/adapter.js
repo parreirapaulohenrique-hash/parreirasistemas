@@ -317,9 +317,12 @@ class MaxDataAdapter extends ErpAdapter {
             if (!totalVolumes && somaQtde > 0) totalVolumes = Math.max(1, Math.ceil(somaQtde / 5)); // estimativa se não houver
         }
 
+        const numeroFiscal = raw.numeroNf || raw.nfe || raw.nrNf || raw.nf || '';
+
         return {
             id:           String(raw.id || ''),
-            numeroNf:     String(raw.id || ''),
+            numeroPedido: String(raw.id || ''),
+            numeroNf:     numeroFiscal ? String(numeroFiscal) : '',
             dataEmissao:  dataFormatada,
             horaEmissao,
             clienteId:    String(raw.clienteId || ''),
