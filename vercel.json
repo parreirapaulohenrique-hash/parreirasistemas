@@ -190,6 +190,10 @@
             "destination": "/platform/fix_admin.html"
         },
         {
+            "source": "/version.json",
+            "destination": "/platform/version.json"
+        },
+        {
             "source": "/:tenant",
             "destination": "/platform/modules/dispatch/index.html"
         }
