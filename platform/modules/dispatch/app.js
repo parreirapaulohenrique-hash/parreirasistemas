@@ -10633,9 +10633,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 tbody.innerHTML = sales.map(s => {
                     const valFmt = Number(s.valorTotal || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                     const pesoFmt = s.peso ? `${s.peso} kg` : '<span style="color:var(--text-secondary); opacity:0.6;">-</span>';
-                    const volFmt = s.volumes ? s.volumes : '<span style="color:var(--text-secondary); opacity:0.6;">-</span>';
-                    const horaFmt = s.horaEmissao ? `🕐 ${s.horaEmissao}` : (s.dataEmissao ? s.dataEmissao.split('-').reverse().slice(0, 2).join('/') : '');
-                    const nfDisplay = s.numeroNf ? `<span style="font-weight:700; color:#38bdf8; font-family:monospace;">${s.numeroNf}</span>` : `<span style="color:#94a3b8; font-style:italic; font-size:0.75rem;">Digitar NF</span>`;
+                    const dataFmt = s.dataEmissao ? s.dataEmissao.split('-').reverse().join('/') : '-';
+                    const horaFmt = s.horaEmissao ? `🕐 ${s.horaEmissao}` : '-';
+                    const nfDisplay = s.numeroNf ? `<span style="font-weight:700; color:#38bdf8; font-family:monospace;">${s.numeroNf}</span>` : `<span style="color:#94a3b8; font-style:italic; font-size:0.75rem;">Sem NF</span>`;
                     const pedidoDisplay = `<span style="font-weight:600; color:#cbd5e1; font-family:monospace;">${s.numeroPedido || s.id}</span>`;
 
                     return `
@@ -10646,7 +10646,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <div style="font-weight:600; color:#f1f5f9;">${s.clienteNome}</div>
                                 ${s.cpfCnpj ? `<div style="font-size:0.7rem; color:#94a3b8;">${s.cpfCnpj}</div>` : ''}
                             </td>
-                            <td style="padding:0.5rem 0.75rem; color:#93c5fd; font-size:0.8rem; text-align:center; font-weight:500;">${horaFmt}</td>
+                            <td style="padding:0.5rem 0.75rem; color:#cbd5e1; font-size:0.8rem; text-align:center; white-space:nowrap;">${dataFmt}</td>
+                            <td style="padding:0.5rem 0.75rem; color:#93c5fd; font-size:0.8rem; text-align:center; font-weight:500; white-space:nowrap;">${horaFmt}</td>
                             <td style="padding:0.5rem 0.75rem; text-align:right; font-weight:600; color:#34d399;">${valFmt}</td>
                             <td style="padding:0.5rem 0.75rem; text-align:right; font-size:0.8rem;">${pesoFmt}</td>
                             <td style="padding:0.5rem 0.75rem; text-align:right; font-size:0.8rem;">${volFmt}</td>
