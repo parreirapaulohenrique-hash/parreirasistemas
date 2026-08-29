@@ -239,8 +239,16 @@ class MaxDataAdapter extends ErpAdapter {
             const data  = await resp.json();
             const docs  = Array.isArray(data) ? data : (data.docs || data.data || []);
 
-            // Filtra vendas canceladas
-            const validSales = docs.filter(s => s.status !== 'cancelada');
+            // Filtra vendas canceladas e limita estritamente para vendas emitidas a partir de hoje
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+            const validSales = docs.filter(s => {
+                if (s.status === 'cancelada') return false;
+                const saleDate = (s.abertura || s.data || s.fechamento || '').split('T')[0];
+                return saleDate >= todayStr;
+            });
+
             return validSales.map(s => this._mapSale(s));
         } catch (e) {
             this._log('error', `Erro ao buscar vendas recentes: ${e.message}`);
@@ -278,6 +286,7 @@ class MaxDataAdapter extends ErpAdapter {
         const totalNf = Number(raw.totalNf || raw.vlrPago || raw.valorTotalLiquidoProduto || 0);
         const dataIso = raw.abertura || raw.data || raw.fechamento || new Date().toISOString();
         const dataFormatada = dataIso.split('T')[0];
+        const horaEmissao = dataIso.includes('T') ? dataIso.split('T')[1].substring(0, 5) : '';
 
         // Cálculo de peso e volumes a partir dos itens (se houver)
         let totalPeso = Number(raw.peso || raw.pesoBruto || 0);
@@ -301,6 +310,7 @@ class MaxDataAdapter extends ErpAdapter {
             id:           String(raw.id || ''),
             numeroNf:     String(raw.id || ''),
             dataEmissao:  dataFormatada,
+            horaEmissao,
             clienteId:    String(raw.clienteId || ''),
             clienteNome:  (raw.clienteNome || '').toUpperCase().trim(),
             cpfCnpj:      (raw.cpfCnpj || '').replace(/\D/g, ''),

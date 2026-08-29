@@ -10594,15 +10594,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const valFmt = Number(s.valorTotal || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                     const pesoFmt = s.peso ? `${s.peso} kg` : '<span style="color:var(--text-secondary); opacity:0.6;">-</span>';
                     const volFmt = s.volumes ? s.volumes : '<span style="color:var(--text-secondary); opacity:0.6;">-</span>';
-                    const dataFmt = s.dataEmissao ? s.dataEmissao.split('-').reverse().slice(0, 2).join('/') : '';
+                    const horaFmt = s.horaEmissao ? `🕐 ${s.horaEmissao}` : (s.dataEmissao ? s.dataEmissao.split('-').reverse().slice(0, 2).join('/') : '');
                     return `
                         <tr style="border-bottom:1px solid rgba(255,255,255,0.05); transition:background 0.15s;" onmouseover="this.style.background='rgba(37,99,235,0.1)'" onmouseout="this.style.background='none'">
                             <td style="padding:0.5rem 0.75rem; font-weight:700; color:#60a5fa; font-family:monospace; white-space:nowrap;">#${s.numeroNf}</td>
-                            <td style="padding:0.5rem 0.75rem; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${s.clienteNome}">
+                            <td style="padding:0.5rem 0.75rem; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${s.clienteNome}">
                                 <div style="font-weight:600; color:#f1f5f9;">${s.clienteNome}</div>
                                 ${s.cpfCnpj ? `<div style="font-size:0.7rem; color:#94a3b8;">${s.cpfCnpj}</div>` : ''}
                             </td>
-                            <td style="padding:0.5rem 0.75rem; color:#94a3b8; font-size:0.78rem;">${dataFmt}</td>
+                            <td style="padding:0.5rem 0.75rem; color:#93c5fd; font-size:0.8rem; text-align:center; font-weight:500;">${horaFmt}</td>
                             <td style="padding:0.5rem 0.75rem; text-align:right; font-weight:600; color:#34d399;">${valFmt}</td>
                             <td style="padding:0.5rem 0.75rem; text-align:right; font-size:0.8rem;">${pesoFmt}</td>
                             <td style="padding:0.5rem 0.75rem; text-align:right; font-size:0.8rem;">${volFmt}</td>
