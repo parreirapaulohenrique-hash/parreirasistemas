@@ -1,1 +1,1 @@
-﻿{"build":"20260829-v3.22.31","version":"3.22.31","environment":"production","change":"FEATURE: Integracao com endpoint /fiscal/venda/{id} do Maxdata ERP. Busca automatica do Numero da NF-e (15140, 15141, 15142) e preenchimento travado na cotacao. Removido # do numero do pedido.","lastUpdate":"2026-08-29","deployedAt":"2026-08-29"}
+﻿{"build":"20260829-v3.22.32","version":"3.22.32","environment":"production","change":"UI: Adicionada coluna Data Emissao (DD/MM/YYYY) na fila de NFs importadas do ERP.","lastUpdate":"2026-08-29","deployedAt":"2026-08-29"}
