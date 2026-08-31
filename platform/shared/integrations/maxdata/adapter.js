@@ -250,9 +250,20 @@ class MaxDataAdapter extends ErpAdapter {
                         stopPagination = true;
                         break;
                     }
-                    if (s.status !== 'cancelada') {
-                        validDocs.push(s);
-                    }
+
+                    // Filtros para garantir APENAS operações de SAÍDA / VENDAS:
+                    // 1. Ignorar canceladas
+                    if (s.status === 'cancelada') continue;
+
+                    // 2. Ignorar pedidos de compra de fornecedores e entradas
+                    const statusStr = String(s.status || '').toLowerCase();
+                    if (statusStr.startsWith('pedido_compra') || statusStr.includes('compra') || statusStr.includes('entrada')) continue;
+
+                    // 3. Ignorar CFOPs de entrada (1xxx, 2xxx, 3xxx)
+                    const cfopNum = Number(s.cfop || 0);
+                    if (cfopNum > 0 && cfopNum < 5000) continue;
+
+                    validDocs.push(s);
                 }
 
                 if (stopPagination || docs.length < limit) break;
@@ -273,7 +284,10 @@ class MaxDataAdapter extends ErpAdapter {
                 return this._mapSale(sale, [], fiscalData);
             }));
 
-            return salesWithFiscal;
+            // Filtro final estrito: Fila de Despacho exibe APENAS registros com NF-e emitida e autorizada
+            const outputSalesOnly = salesWithFiscal.filter(s => s.numeroNf && String(s.numeroNf).trim() !== '' && String(s.numeroNf) !== '0');
+
+            return outputSalesOnly;
         } catch (e) {
             this._log('error', `Erro ao buscar vendas do ERP: ${e.message}`);
             throw e;
