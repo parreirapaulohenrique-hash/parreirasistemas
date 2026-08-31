@@ -178,6 +178,18 @@
             "destination": "/platform/modules/erp-consultoria/$1"
         },
         {
+            "source": "/wms-coletor",
+            "destination": "/platform/modules/wms-coletor/index.html"
+        },
+        {
+            "source": "/modules/wms-coletor",
+            "destination": "/platform/modules/wms-coletor/index.html"
+        },
+        {
+            "source": "/modules/wms-coletor/(.*)",
+            "destination": "/platform/modules/wms-coletor/$1"
+        },
+        {
             "source": "/wms",
             "destination": "/platform/modules/wms/index.html"
         },
