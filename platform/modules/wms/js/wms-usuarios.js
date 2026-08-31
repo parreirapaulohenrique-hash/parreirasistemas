@@ -53,10 +53,6 @@ window.WmsUsuarios = (function () {
                             <label class="form-label">Nome Completo *</label>
                             <input type="text" id="mu-nome" class="form-control" placeholder="João da Silva">
                         </div>
-                        <div>
-                            <label class="form-label">E-mail *</label>
-                            <input type="email" id="mu-email" class="form-control" placeholder="joao@empresa.com.br">
-                        </div>
                         <div id="mu-senha-grupo">
                             <label class="form-label">Senha *</label>
                             <input type="password" id="mu-senha" class="form-control" placeholder="Mínimo 6 caracteres">
@@ -117,7 +113,6 @@ window.WmsUsuarios = (function () {
                     <thead>
                         <tr>
                             <th>Nome</th>
-                            <th>E-mail</th>
                             <th>Perfil</th>
                             <th>PIN Coletor</th>
                             <th>Status</th>
@@ -128,7 +123,6 @@ window.WmsUsuarios = (function () {
                         ${usuarios.map(u => `
                         <tr>
                             <td><strong>${u.nome}</strong></td>
-                            <td style="font-size:.82rem;">${u.email}</td>
                             <td>
                                 <span style="background:${roleBadge[u.role] || '#888'}22;color:${roleBadge[u.role] || '#888'};
                                     padding:.2rem .55rem;border-radius:4px;font-size:.75rem;font-weight:600;">
@@ -168,7 +162,6 @@ window.WmsUsuarios = (function () {
         document.getElementById('modal-usuario-titulo').textContent = 'Novo Usuário';
         document.getElementById('mu-uid').value = '';
         document.getElementById('mu-nome').value = '';
-        document.getElementById('mu-email').value = '';
         document.getElementById('mu-senha').value = '';
         document.getElementById('mu-role').value = 'operator';
         document.getElementById('mu-pin').value = '';
@@ -185,7 +178,6 @@ window.WmsUsuarios = (function () {
         document.getElementById('modal-usuario-titulo').textContent = 'Editar Usuário';
         document.getElementById('mu-uid').value = u.uid;
         document.getElementById('mu-nome').value = u.nome;
-        document.getElementById('mu-email').value = u.email;
         document.getElementById('mu-role').value = u.role;
         document.getElementById('mu-pin').value = u.pin || '';
         document.getElementById('mu-ativo').checked = u.ativo;
@@ -203,7 +195,6 @@ window.WmsUsuarios = (function () {
     async function salvar() {
         const uid   = document.getElementById('mu-uid').value;
         const nome  = document.getElementById('mu-nome').value.trim();
-        const email = document.getElementById('mu-email').value.trim();
         const senha = document.getElementById('mu-senha').value;
         const role  = document.getElementById('mu-role').value;
         const pin   = document.getElementById('mu-pin').value.trim();
@@ -215,7 +206,6 @@ window.WmsUsuarios = (function () {
         const showErro = (msg) => { erroEl.textContent = msg; erroEl.style.display = 'block'; };
 
         if (!nome) return showErro('Informe o nome completo.');
-        if (!email) return showErro('Informe o e-mail.');
         if (!uid && !senha) return showErro('Informe uma senha para o novo usuário.');
         if (!uid && senha.length < 6) return showErro('A senha deve ter ao menos 6 caracteres.');
 
@@ -229,7 +219,7 @@ window.WmsUsuarios = (function () {
 
             if (!uid) {
                 // CRIAR
-                await ParreiraAuth.criarUsuario(tenantId, { nome, email, senha, role, pin });
+                await ParreiraAuth.criarUsuario(tenantId, { nome, senha, role, pin });
             } else {
                 // ATUALIZAR
                 await ParreiraAuth.atualizarUsuario(tenantId, uid, { nome, role, pin, ativo });
