@@ -1,1 +1,1 @@
-{"build":"20260831-v3.22.11","version":"3.22.11","change":"FIX: WmsSync re-init apos login - cloud sync ativo para novas sessoes de browser. Fix 'Sem dados cloud' no WMS Central Pecas.","lastUpdate":"2026-08-31","deployedAt":"2026-08-31"}
+{"build":"20260831-v3.22.34","version":"3.22.34","environment":"production","change":"Fix: Filtro estrito na fila de NFs importadas - remove pedidos de compra, entradas e registros sem NF-e autorizada.","lastUpdate":"2026-08-31","deployedAt":"2026-08-31"}
