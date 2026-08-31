@@ -967,7 +967,7 @@ ${emailRemetente ? `<${emailRemetente}>` : ''}
             }
         }
 
-        // ── Maxdata: PUT /entry/markaschecked (com itens conferidos) ─────────
+        // ── Maxdata: PUT /entry/markaschecked (com itens conferidos e status CONCLUIDO) ─
         if (connId === 'maxdata') {
             try {
                 const token = await _maxdataGetToken();
@@ -978,6 +978,9 @@ ${emailRemetente ? `<${emailRemetente}>` : ''}
                     nfNumero:       payload.nfNumero,
                     chaveNfe:       payload.chaveNfe,
                     operador:       payload.operador,
+                    status:         'CONCLUIDO',
+                    situacao:       'CONCLUIDO',
+                    concluido:      true,
                     dataConferencia: payload.fim,
                     comDivergencia:  payload.hasDivergencia,
                     itens: (payload.itens || []).map(it => ({
@@ -995,8 +998,19 @@ ${emailRemetente ? `<${emailRemetente}>` : ''}
                 });
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                 const data = await resp.json().catch(() => ({}));
+
+                // Se houver ID da entrada, chama também update de status direto para garantir alteração de PENDENTE -> CONCLUIDO na Tela 102
+                const entryId = payload._maxdataEntryId || payload._maxdataId;
+                if (entryId) {
+                    await fetch(`${base}/entry/${entryId}`, {
+                        method: 'PUT', headers: _maxdataHdrs(token),
+                        body: JSON.stringify({ status: 'CONCLUIDO', situacao: 'CONCLUIDO' }),
+                        signal: AbortSignal.timeout(8000)
+                    }).catch(() => null);
+                }
+
                 _logSync('proc_enviar_conferencia_maxdata', 'wms→erp', 'ok',
-                    `Maxdata: NF ${payload.nfNumero} conferida. Protocolo: ${data.protocolo || data.id || '—'}`);
+                    `Maxdata: NF ${payload.nfNumero} conferida. Status alterado na Tela 102 de PENDENTE → CONCLUÍDO. Protocolo: ${data.protocolo || data.id || '—'}`);
                 return { ok: true, protocolo: data.protocolo || data.id || '' };
             } catch (e) {
                 _logSync('proc_enviar_conferencia_maxdata', 'wms→erp', 'error', e.message);

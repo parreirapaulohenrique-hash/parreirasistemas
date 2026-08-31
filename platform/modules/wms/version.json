@@ -1,1 +1,1 @@
-{"version":"1.9.3","date":"2026-07-29","build":"20260729-1543","last_change":"WMS Inbound: Validacao de CNPJ da filial destinataria e fluxo de 2 etapas MaxData (Tela 102.13 e Tela 102 Pendente) (v1.9.3)"}
+{"version":"2.0.1","date":"2026-08-31","build":"20260831-1017","last_change":"WMS Inbound: Ajustado o fluxo de 2 etapas do MaxData — Etapa 1 (Chegada Doca / Volumes Tela 102.13) e Etapa 2 (Conferência de Produtos iniciada pela Tela 102 Pendente e finalizada alterando status no MaxData de PENDENTE para CONCLUÍDO) (v2.0.1)"}
