@@ -28,7 +28,7 @@ class MaxDataAdapter extends ErpAdapter {
         }
 
         const empId    = Number(this.config.empId || 1);
-        const terminal = (this.config.terminal || '').trim();
+        const terminal = (this.config.terminal || '364F64E6539974C1D75C8A46C14B2D3D').trim();
 
         if (!terminal) throw new Error('Terminal Maxdata não configurado. Acesse Integração ERP → Configurar.');
 

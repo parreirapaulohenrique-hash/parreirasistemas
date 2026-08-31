@@ -1,1 +1,1 @@
-﻿{"build":"20260829-v3.22.32","version":"3.22.32","environment":"production","change":"UI: Adicionada coluna Data Emissao (DD/MM/YYYY) na fila de NFs importadas do ERP.","lastUpdate":"2026-08-29","deployedAt":"2026-08-29"}
+{"build":"20260831-v3.22.33","version":"3.22.33","environment":"production","change":"Fix: Unificacao do ErpNFQueue no topo do app.js e fallback robusto de credenciais Maxdata.","lastUpdate":"2026-08-31","deployedAt":"2026-08-31"}

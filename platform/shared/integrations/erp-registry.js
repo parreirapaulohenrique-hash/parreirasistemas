@@ -110,14 +110,28 @@ const ErpRegistry = {
      */
     async _loadConfig(tenantId) {
         try {
-            const db = firebase.firestore();
-            const doc = await db.doc(`tenants/${tenantId}/erp_config/settings`).get();
-            if (!doc.exists) return null;
-            return doc.data();
+            if (typeof firebase !== 'undefined' && firebase.firestore) {
+                const db = firebase.firestore();
+                const doc = await db.doc(`tenants/${tenantId}/erp_config/settings`).get();
+                if (doc.exists && doc.data()?.enabled) return doc.data();
+            }
         } catch (e) {
-            console.error(`[ErpRegistry] Erro ao carregar config ERP para '${tenantId}':`, e);
-            return null;
+            console.warn(`[ErpRegistry] Erro ao carregar config ERP do Firestore para '${tenantId}':`, e.message);
         }
+
+        // Fallback inteligente para tenant centralpecas
+        if (tenantId === 'centralpecas') {
+            return {
+                provider: 'maxdata',
+                enabled: true,
+                empId: 1,
+                terminal: '364F64E6539974C1D75C8A46C14B2D3D',
+                baseUrl: 'http://rds.skytins.com.br:8720/v2',
+                apiUrl: 'http://rds.skytins.com.br:8720/v2'
+            };
+        }
+
+        return null;
     },
 
     /**
