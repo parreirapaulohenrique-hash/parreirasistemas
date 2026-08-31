@@ -584,6 +584,24 @@
                 var roleMap = {operator:'Operador',supervisor:'Supervisor',admin:'Admin',master:'Master'};
                 if (nEl) nEl.textContent = s.nome;
                 if (tEl) tEl.textContent = (s.tenantNome||'') + ' · ' + (roleMap[s.role]||s.role);
+
+                // v3.22.11 FIX: Re-inicializa WmsSync após login (DOMContentLoaded roda antes da sessão existir)
+                if (window.WmsSync) {
+                    WmsSync.init().then(async () => {
+                        const syncBadge = document.getElementById('wms-sync-status');
+                        if (window.WmsStore) {
+                            try {
+                                const count = await WmsStore.sincronizarEnderecos();
+                                if (count === 0) {
+                                    const res = await WmsStore.migrarEnderecos();
+                                    if (syncBadge) syncBadge.innerHTML = `<span class="material-icons-round" style="font-size:.9rem;color:#10b981;">cloud_done</span><span style="color:#10b981;font-size:.72rem;">Cloud Sync Ativo</span>`;
+                                } else if (count > 0) {
+                                    if (syncBadge) syncBadge.innerHTML = `<span class="material-icons-round" style="font-size:.9rem;color:#10b981;">cloud_done</span><span style="color:#10b981;font-size:.72rem;">Cloud Sync Ativo</span>`;
+                                }
+                            } catch(syncErr) { console.warn('[WMS] sync pós-login falhou:', syncErr.message); }
+                        }
+                    }).catch(e => console.warn('[WmsSync] init pós-login:', e.message));
+                }
             } catch(e) {
                 if (erro) erro.textContent = e.message || 'Usuário ou senha inválidos.';
                 if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons-round" style="font-size:1.2rem;">login</span> ACESSAR SISTEMA'; }

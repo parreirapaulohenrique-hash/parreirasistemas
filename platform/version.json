@@ -1,1 +1,1 @@
-{"build":"20260831-v3.22.33","version":"3.22.33","environment":"production","change":"Fix: Unificacao do ErpNFQueue no topo do app.js e fallback robusto de credenciais Maxdata.","lastUpdate":"2026-08-31","deployedAt":"2026-08-31"}
+{"build":"20260831-v3.22.11","version":"3.22.11","change":"FIX: WmsSync re-init apos login - cloud sync ativo para novas sessoes de browser. Fix 'Sem dados cloud' no WMS Central Pecas.","lastUpdate":"2026-08-31","deployedAt":"2026-08-31"}
