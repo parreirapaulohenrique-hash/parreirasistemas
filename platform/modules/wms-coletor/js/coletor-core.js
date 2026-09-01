@@ -56,11 +56,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         .then(r => r.json())
         .then(v => {
             const el = document.getElementById('coletor-version-badge');
-            if (el) el.textContent = `WMS Coletor v${v.version}`;
+            if (el) el.textContent = `WMS Coletor v${v.version} ⚙️`;
+            const elCard = document.getElementById('coletor-version-badge-card');
+            if (elCard) elCard.textContent = `v${v.version}`;
         })
         .catch(() => {
             const el = document.getElementById('coletor-version-badge');
-            if (el) el.textContent = `WMS Coletor v${COLETOR_VERSION}`;
+            if (el) el.textContent = `WMS Coletor v${COLETOR_VERSION} ⚙️`;
+            const elCard = document.getElementById('coletor-version-badge-card');
+            if (elCard) elCard.textContent = `v${COLETOR_VERSION}`;
         });
 });
 
@@ -92,7 +96,7 @@ function navigateTo(screenId) {
         // Update bottom nav
         document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
         const tabs = document.querySelectorAll('.nav-tab');
-        const tabMap = ['home', 'recebimento', 'armazenar', 'separar', 'inventario'];
+        const tabMap = ['home', 'recebimento', 'armazenar', 'separar', 'inventario', 'config'];
         const idx = tabMap.indexOf(screenId);
         if (idx >= 0 && tabs[idx]) tabs[idx].classList.add('active');
 

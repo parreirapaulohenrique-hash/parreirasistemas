@@ -73,6 +73,11 @@
                         <span class="home-card-label">Inventário</span>
                         <span class="home-card-badge" id="badgeInventario">0</span>
                     </div>
+                    <div class="home-card" style="border-left: 3px solid #38bdf8;" onclick="navigateTo('config')">
+                        <span class="material-icons-round home-card-icon" style="color:#38bdf8;">settings</span>
+                        <span class="home-card-label">Configurações</span>
+                        <span class="home-card-badge" style="background:#0ea5e9;color:white;display:inline-block;" id="coletor-version-badge-card">v3.18.3</span>
+                    </div>
                 </div>
 
                 <!-- Quick Stats -->
@@ -98,7 +103,7 @@
                                color:var(--text-secondary);opacity:.75;cursor:pointer;
                                background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
                                border-radius:20px;padding:.2rem .65rem;">
-                        WMS Coletor
+                        WMS Coletor v3.18.3 ⚙️
                     </span>
                 </div>
             </div>
@@ -143,6 +148,10 @@
             <button class="nav-tab" onclick="navigateTo('inventario')">
                 <span class="material-icons-round">inventory_2</span>
                 <span>Inventário</span>
+            </button>
+            <button class="nav-tab" onclick="navigateTo('config')">
+                <span class="material-icons-round">settings</span>
+                <span>Config</span>
             </button>
         </nav>
     </div>
