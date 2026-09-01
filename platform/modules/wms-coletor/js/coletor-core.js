@@ -59,12 +59,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (el) el.textContent = `WMS Coletor v${v.version} ⚙️`;
             const elCard = document.getElementById('coletor-version-badge-card');
             if (elCard) elCard.textContent = `v${v.version}`;
+            const elTop = document.getElementById('coletor-top-v-badge');
+            if (elTop) elTop.textContent = `v${v.version}`;
         })
         .catch(() => {
             const el = document.getElementById('coletor-version-badge');
             if (el) el.textContent = `WMS Coletor v${COLETOR_VERSION} ⚙️`;
             const elCard = document.getElementById('coletor-version-badge-card');
             if (elCard) elCard.textContent = `v${COLETOR_VERSION}`;
+            const elTop = document.getElementById('coletor-top-v-badge');
+            if (elTop) elTop.textContent = `v${COLETOR_VERSION}`;
         });
 });
 
