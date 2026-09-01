@@ -1733,8 +1733,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Função auxiliar para verificar cobertura (dentro do escopo para acessar 'rules')
         const checkLogisticsCoverage = (clientCity, clientNeighborhood) => {
             const norm = (s) => String(s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase();
-            const targetCity = norm(clientCity);
-            const n1 = norm(clientNeighborhood);
+            // Remove sufixo de estado entre parênteses: "(PA)", "(MA)" etc.
+            const stripUF = (s) => norm(s).replace(/\s*\([A-Z]{2}\)\s*$/, '').trim();
+            const targetCity = stripUF(clientCity);
+            const n1 = stripUF(clientNeighborhood);
 
             if (!targetCity) return false;
 
@@ -2591,12 +2593,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const cityInput = document.getElementById('inputCity');
-            const city = norm(cityInput ? cityInput.value : (selectedClient ? (selectedClient.cidade || selectedClient.City || selectedClient.city) : ''));
+            const _rawCity = cityInput ? cityInput.value : (selectedClient ? (selectedClient.cidade || selectedClient.City || selectedClient.city) : '');
+            // Remove sufixo de estado "(PA)", "(MA)" etc. que pode vir no campo cidade do cliente
+            const city = norm(_rawCity).replace(/\s*\([A-Z]{2}\)\s*$/, '').trim();
 
             // Bairro do cliente (campo bairro/neighborhood do cadastro)
-            const clientBairro = selectedClient
-                ? norm(selectedClient.bairro || selectedClient.Bairro || selectedClient.neighborhood || selectedClient.Neighborhood || '')
+            const _rawBairro = selectedClient
+                ? (selectedClient.bairro || selectedClient.Bairro || selectedClient.neighborhood || selectedClient.Neighborhood || '')
                 : '';
+            const clientBairro = norm(_rawBairro).replace(/\s*\([A-Z]{2}\)\s*$/, '').trim();
 
             // ── v3.11.35: nova ordem de busca ─────────────────────────────────────────
             // 1ª: BAIRRO — se bairro do cliente bater com r.cidade de alguma tabela,
@@ -2747,7 +2752,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         // Conditional Charge: Only if client matches redispatch city/neighborhood
                         shouldCharge = false;
                         const cityInput = document.getElementById('inputCity');
-                        const targetCity = norm(cityInput ? cityInput.value : (selectedClient ? (selectedClient.cidade || selectedClient.City || selectedClient.city) : ''));
+                        const _rawTargetCity = cityInput ? cityInput.value : (selectedClient ? (selectedClient.cidade || selectedClient.City || selectedClient.city) : '');
+                        const targetCity = norm(_rawTargetCity).replace(/\s*\([A-Z]{2}\)\s*$/, '').trim();
 
 
                         if (rRedespCity === targetCity) shouldCharge = true;
