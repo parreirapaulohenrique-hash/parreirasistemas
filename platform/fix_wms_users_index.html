@@ -1,0 +1,76 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Fix: WMS users_index</title>
+    <style>
+        body { font-family: monospace; background:#0f172a; color:#e2e8f0; padding:2rem; }
+        h1 { color:#10b981; }
+        button { background:#10b981; color:#fff; border:none; padding:.75rem 2rem; border-radius:8px; font-size:1rem; cursor:pointer; margin:.5rem 0; }
+        button:disabled { background:#334155; cursor:not-allowed; }
+        #log { background:#1e293b; border-radius:8px; padding:1rem; margin-top:1rem; white-space:pre-wrap; font-size:.85rem; min-height:200px; }
+        .ok  { color:#10b981; }
+        .err { color:#ef4444; }
+        .info{ color:#93c5fd; }
+        input { background:#1e293b; border:1px solid #334155; color:#e2e8f0; padding:.5rem .75rem; border-radius:6px; font-size:.9rem; width:200px; }
+    </style>
+</head>
+<body>
+    <h1>Fix: WMS users_index</h1>
+    <p>Registra os usuarios de um tenant na colecao global <code>users_index</code>,
+       necessaria para o login do WMS / WMS-Coletor.</p>
+    <label>Tenant ID: <input id="tenantId" type="text" value="centralpecas" /></label>
+    <br><br>
+    <button id="btnFix" onclick="runFix()">Executar Fix</button>
+    <div id="log">Aguardando...</div>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="/platform/modules/dispatch/firebase-config.js"></script>
+    <script>
+    function log(msg, cls) {
+        const el = document.getElementById('log');
+        const line = document.createElement('div');
+        line.className = cls || '';
+        line.textContent = new Date().toLocaleTimeString() + '  ' + msg;
+        el.appendChild(line);
+        el.scrollTop = el.scrollHeight;
+    }
+    async function runFix() {
+        const btn = document.getElementById('btnFix');
+        btn.disabled = true;
+        document.getElementById('log').innerHTML = '';
+        const tenantId = document.getElementById('tenantId').value.trim().toLowerCase();
+        if (!tenantId) { log('Informe o Tenant ID.', 'err'); btn.disabled = false; return; }
+        log('Iniciando fix para tenant: ' + tenantId, 'info');
+        try {
+            await firebase.auth().signInAnonymously();
+            log('Auth anonima OK.', 'ok');
+            const db = firebase.firestore();
+            const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+            if (!tenantDoc.exists) { log('Tenant nao encontrado.', 'err'); btn.disabled = false; return; }
+            log('Tenant encontrado: ' + tenantDoc.data().nome, 'ok');
+            const usersSnap = await db.collection('tenants').doc(tenantId).collection('users').get();
+            log(usersSnap.size + ' usuario(s) encontrado(s).', 'info');
+            let created = 0, skipped = 0;
+            for (const userDoc of usersSnap.docs) {
+                const loginKey = userDoc.id;
+                const indexRef = db.collection('users_index').doc(loginKey);
+                const existing = await indexRef.get();
+                if (existing.exists && existing.data().tenantId === tenantId) {
+                    log('JA EXISTE: users_index/' + loginKey, 'info'); skipped++;
+                } else {
+                    await indexRef.set({ tenantId: tenantId }, { merge: true });
+                    log('CRIADO: users_index/' + loginKey + ' -> tenantId: ' + tenantId, 'ok'); created++;
+                }
+            }
+            log('Fix concluido! Criados: ' + created + ' | Ja existiam: ' + skipped, 'ok');
+            log('Acesse o WMS em: /wms/' + tenantId, 'ok');
+        } catch (e) {
+            log('ERRO: ' + e.message, 'err');
+        }
+        btn.disabled = false;
+    }
+    </script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-{
+﻿{
     "regions": ["gru1"],
     "functions": {
         "api/maxdata.js": {
@@ -200,7 +200,11 @@
         {
             "source": "/fix_admin",
             "destination": "/platform/fix_admin.html"
+        },        {
+            "source": "/fix_wms_index",
+            "destination": "/platform/fix_wms_users_index.html"
         },
+
         {
             "source": "/version.json",
             "destination": "/platform/version.json"
