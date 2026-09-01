@@ -51,7 +51,14 @@ window.WmsUsuarios = (function () {
                         <input type="hidden" id="mu-uid">
                         <div>
                             <label class="form-label">Nome Completo *</label>
-                            <input type="text" id="mu-nome" class="form-control" placeholder="João da Silva">
+                            <input type="text" id="mu-nome" class="form-control" placeholder="João da Silva"
+                                oninput="WmsUsuarios._autoLogin(this.value)">
+                        </div>
+                        <div id="mu-login-grupo">
+                            <label class="form-label">Login * <span style="font-size:.75rem;color:var(--text-secondary);">(usado para acessar o sistema)</span></label>
+                            <input type="text" id="mu-login" class="form-control" placeholder="joao.silva"
+                                oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9._]/g,'')"
+                                autocomplete="off" autocorrect="off" autocapitalize="off">
                         </div>
                         <div id="mu-senha-grupo">
                             <label class="form-label">Senha *</label>
@@ -162,6 +169,9 @@ window.WmsUsuarios = (function () {
         document.getElementById('modal-usuario-titulo').textContent = 'Novo Usuário';
         document.getElementById('mu-uid').value = '';
         document.getElementById('mu-nome').value = '';
+        document.getElementById('mu-login').value = '';
+        document.getElementById('mu-login').readOnly = false;
+        document.getElementById('mu-login-grupo').style.display = 'block';
         document.getElementById('mu-senha').value = '';
         document.getElementById('mu-role').value = 'operator';
         document.getElementById('mu-pin').value = '';
@@ -176,12 +186,15 @@ window.WmsUsuarios = (function () {
     function abrirModalEditar(jsonStr) {
         const u = JSON.parse(jsonStr);
         document.getElementById('modal-usuario-titulo').textContent = 'Editar Usuário';
-        document.getElementById('mu-uid').value = u.uid;
+        document.getElementById('mu-uid').value = u.uid || u.login || u.id;
         document.getElementById('mu-nome').value = u.nome;
+        document.getElementById('mu-login').value = u.login || u.uid || u.id;
+        document.getElementById('mu-login').readOnly = true; // Login não pode ser alterado
+        document.getElementById('mu-login-grupo').style.display = 'block';
         document.getElementById('mu-role').value = u.role;
         document.getElementById('mu-pin').value = u.pin || '';
         document.getElementById('mu-ativo').checked = u.ativo;
-        document.getElementById('mu-senha-grupo').style.display = 'none'; // Sem alterar senha
+        document.getElementById('mu-senha-grupo').style.display = 'none';
         document.getElementById('mu-ativo-grupo').style.display = 'flex';
         document.getElementById('mu-erro').style.display = 'none';
         document.getElementById('modal-usuario').style.display = 'flex';
@@ -191,10 +204,23 @@ window.WmsUsuarios = (function () {
         document.getElementById('modal-usuario').style.display = 'none';
     }
 
+    // ─── Auto-gera login a partir do nome ────────────────────────────────────
+    function _autoLogin(nome) {
+        const loginEl = document.getElementById('mu-login');
+        if (!loginEl || loginEl.readOnly) return;
+        // Só preenche automaticamente se o usuário ainda não digitou manualmente
+        const gerado = nome.toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
+            .replace(/\s+/g, '.')                              // espaço → ponto
+            .replace(/[^a-z0-9.]/g, '');                      // só letras/números/ponto
+        loginEl.value = gerado;
+    }
+
     // ─── SALVAR ──────────────────────────────────────────────────────────────
     async function salvar() {
         const uid   = document.getElementById('mu-uid').value;
         const nome  = document.getElementById('mu-nome').value.trim();
+        const login = document.getElementById('mu-login').value.trim();
         const senha = document.getElementById('mu-senha').value;
         const role  = document.getElementById('mu-role').value;
         const pin   = document.getElementById('mu-pin').value.trim();
@@ -205,7 +231,8 @@ window.WmsUsuarios = (function () {
 
         const showErro = (msg) => { erroEl.textContent = msg; erroEl.style.display = 'block'; };
 
-        if (!nome) return showErro('Informe o nome completo.');
+        if (!nome)  return showErro('Informe o nome completo.');
+        if (!login) return showErro('Informe o login do usuário.');
         if (!uid && !senha) return showErro('Informe uma senha para o novo usuário.');
         if (!uid && senha.length < 6) return showErro('A senha deve ter ao menos 6 caracteres.');
 
@@ -219,7 +246,7 @@ window.WmsUsuarios = (function () {
 
             if (!uid) {
                 // CRIAR
-                await ParreiraAuth.criarUsuario(tenantId, { nome, senha, role, pin });
+                await ParreiraAuth.criarUsuario(tenantId, { nome, login, senha, role, pin });
             } else {
                 // ATUALIZAR
                 await ParreiraAuth.atualizarUsuario(tenantId, uid, { nome, role, pin, ativo });
@@ -249,5 +276,5 @@ window.WmsUsuarios = (function () {
         await _carregarTabela(tenantId);
     }
 
-    return { renderView, abrirModalNovo, abrirModalEditar, fecharModal, salvar, desativar, reativar };
+    return { renderView, abrirModalNovo, abrirModalEditar, fecharModal, salvar, desativar, reativar, _autoLogin };
 })();
