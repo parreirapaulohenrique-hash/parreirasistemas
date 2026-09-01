@@ -1177,6 +1177,109 @@ function updateBadges() {
 // ===================================
 const _originalNavigateTo = window.navigateTo || navigateTo;
 
+// ===================================
+// TELA DE CONFIGURAÇÕES / PARÂMETROS
+// ===================================
+window.initConfigScreen = function (container) {
+    const sessao = (typeof ParreiraAuth !== 'undefined' && ParreiraAuth.getSessao) ? ParreiraAuth.getSessao() : {};
+    const usuario = sessao.nome || sessao.login || 'Operador';
+    const tenantId = sessao.tenantId || 'ltdistribuidora';
+    const isHml = window.location.hostname.includes('staging') || window.location.hostname.includes('localhost');
+    const ambienteLabel = isHml ? 'Homologação (Staging)' : 'Produção';
+    const ambienteClass = isHml ? 'background:rgba(245,158,11,.15);color:#f59e0b;' : 'background:rgba(16,185,129,.15);color:#10b981;';
+
+    container.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:.9rem;padding:.2rem 0;">
+            <!-- Card de Perfil & Tenant -->
+            <div class="m-card" style="border-left:3px solid var(--primary);">
+                <div style="display:flex;align-items:center;gap:.75rem;">
+                    <div style="width:44px;height:44px;border-radius:50%;background:rgba(14,165,233,.2);
+                                border:1px solid rgba(14,165,233,.4);color:var(--primary);
+                                display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;">
+                        ${(usuario.substring(0, 2)).toUpperCase()}
+                    </div>
+                    <div style="flex:1;">
+                        <div style="font-weight:700;font-size:1rem;color:var(--text-primary);">${usuario}</div>
+                        <div style="font-size:.75rem;color:var(--text-secondary);margin-top:.1rem;">
+                            Empresa: <span style="font-family:monospace;color:#38bdf8;">${tenantId}</span>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top:.75rem;display:flex;gap:.5rem;align-items:center;">
+                    <span style="font-size:.68rem;padding:.2rem .6rem;border-radius:12px;font-weight:700;${ambienteClass}">
+                        ● ${ambienteLabel}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Card de Versão do Sistema & Botão de Atualização (CONFIGURAÇÕES) -->
+            <div class="m-card" style="border-left:3px solid #38bdf8;">
+                <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem;">
+                    <span class="material-icons-round" style="color:#38bdf8;font-size:1.3rem;">system_update</span>
+                    <span style="font-weight:700;font-size:.92rem;">Versão & Atualizações</span>
+                </div>
+
+                <div style="background:rgba(15,23,42,.6);border:1px solid var(--border);border-radius:8px;padding:.75rem;margin-bottom:.85rem;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem;">
+                        <span style="font-size:.78rem;color:var(--text-secondary);">Versão do Sistema:</span>
+                        <span id="cfg-version-num" style="font-family:monospace;font-size:.88rem;font-weight:700;color:#38bdf8;">v3.18.2</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <span style="font-size:.75rem;color:var(--text-secondary);">Módulo:</span>
+                        <span style="font-size:.75rem;color:var(--text-primary);">WMS Coletor Mobile</span>
+                    </div>
+                </div>
+
+                <p style="font-size:.76rem;color:var(--text-secondary);line-height:1.35;margin-bottom:.85rem;">
+                    Toque no botão abaixo para forçar o download da versão mais recente do sistema e limpar arquivos antigos salvos na memória do seu celular.
+                </p>
+
+                <button onclick="forcarAtualizacaoColetor()"
+                    style="width:100%;background:#0ea5e9;border:none;color:white;padding:.75rem;
+                           border-radius:8px;font-size:.88rem;font-weight:700;cursor:pointer;
+                           display:flex;align-items:center;justify-content:center;gap:.5rem;
+                           box-shadow:0 4px 12px rgba(14,165,233,.3);">
+                    <span class="material-icons-round" style="font-size:1.1rem;">autorenew</span>
+                    Atualizar para Nova Versão
+                </button>
+            </div>
+
+            <!-- Card de Teste de Som & Operação -->
+            <div class="m-card">
+                <div style="font-weight:700;font-size:.88rem;margin-bottom:.6rem;display:flex;align-items:center;gap:.4rem;">
+                    <span class="material-icons-round" style="font-size:1.1rem;color:#f59e0b;">volume_up</span>
+                    Sinais Sonoros e Beep
+                </div>
+                <div style="display:flex;gap:.5rem;">
+                    <button class="m-btn m-btn-secondary" style="flex:1;font-size:.78rem;" onclick="Feedback.beep('success')">
+                        <span class="material-icons-round" style="font-size:.9rem;color:#10b981;">check_circle</span> Testar Sucesso
+                    </button>
+                    <button class="m-btn m-btn-secondary" style="flex:1;font-size:.78rem;" onclick="Feedback.beep('error')">
+                        <span class="material-icons-round" style="font-size:.9rem;color:#ef4444;">error</span> Testar Erro
+                    </button>
+                </div>
+            </div>
+
+            <!-- Botão Sair -->
+            <button onclick="if(typeof ParreiraAuth!=='undefined')ParreiraAuth.logout()"
+                style="width:100%;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);
+                       color:#ef4444;padding:.7rem;border-radius:8px;font-weight:700;font-size:.82rem;
+                       cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.4rem;margin-top:.4rem;">
+                <span class="material-icons-round" style="font-size:1rem;">logout</span>
+                Sair do Sistema
+            </button>
+        </div>
+    `;
+
+    // Carrega versão dinâmica do platform/version.json
+    fetch('/platform/version.json?t=' + Date.now())
+        .then(r => r.json())
+        .then(v => {
+            const el = document.getElementById('cfg-version-num');
+            if (el) el.textContent = `v${v.version}`;
+        }).catch(() => {});
+};
+
 // Patch navigateTo to use real screens instead of placeholders
 (function patchNavigation() {
     const origNav = window.navigateTo;
@@ -1199,6 +1302,9 @@ const _originalNavigateTo = window.navigateTo || navigateTo;
                 break;
             case 'inventario':
                 initInventarioScreen(container);
+                break;
+            case 'config':
+                initConfigScreen(container);
                 break;
             case 'home':
                 updateBadges();
