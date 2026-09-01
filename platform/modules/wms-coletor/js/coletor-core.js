@@ -67,7 +67,6 @@ function navigateTo(screenId) {
         currentScreen = screenId;
 
         // Init custom screens
-        if (screenId === 'checkin'     && window.initCheckinScreen)           window.initCheckinScreen(target);
         if (screenId === 'conferir'    && window.initConferirScreen)          window.initConferirScreen(target);
         if (screenId === 'config'      && window.initConfigScreen)            window.initConfigScreen(target);
         if (screenId === 'recebimento' && window.initConferenciaItensScreen)  window.initConferenciaItensScreen(target);
@@ -89,7 +88,6 @@ function navigateTo(screenId) {
         const titles = {
             home: 'WMS Coletor',
             recebimento: 'Conferir',
-            checkin: 'Portaria',
             conferir: 'Recebimento Docas',
             armazenar: 'Armazenagem',
             separar: 'Separação',
@@ -148,9 +146,6 @@ function processScan() {
 
     // Dispatch to active screen handler
     switch (currentScreen) {
-        case 'checkin':
-            if (window.handleScanCheckin) window.handleScanCheckin(code);
-            break;
         case 'conferir':
             if (window.handleScanConferir) window.handleScanConferir(code);
             break;

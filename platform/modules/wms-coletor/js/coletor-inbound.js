@@ -1,200 +1,16 @@
-// WMS Coletor — Inbound V2 (Desacoplado)
-// Novo fluxo: Check-in (Portaria) -> Conferência Física (CD)
+// WMS Coletor — Inbound
+// Fluxo unificado: Receber = Scan NF + Dados de Transporte + Conferência
 
-// ===================================
-// 1. CHECK-IN DE PORTARIA
-// ===================================
-
-window.initCheckinScreen = function(container) {
-    window._recNFDados = null;
-    window._recEmpresa = null;
-    window._recIsAvulsa = false;
-    
-    container.innerHTML = `
-        <div class="m-card" style="border-left:3px solid #ec4899;">
-            <div class="m-card-header">
-                <span style="font-weight:600;font-size:.95rem;color:#ec4899;">
-                    <span class="material-icons-round" style="font-size:1.1rem;vertical-align:middle;">how_to_reg</span>
-                    Check-in de Portaria
-                </span>
-            </div>
-            <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:1rem;">
-                Bipe a <strong>chave de acesso NF-e</strong> para registrar a chegada do veículo.
-            </p>
-            <div id="checkin-feedback" style="display:none;margin-bottom:1rem;"></div>
-        </div>
-    `;
-};
-
-window.handleScanCheckin = async function(code) {
-    const clean = code.replace(/\D/g, '');
-    if (clean.length === 44) {
-        await _consultarEIniciarCheckin(clean);
-    } else {
-        _mostrarFeedbackCheckin('warning', 'Digite os 44 dígitos da chave NF-e.');
-    }
-};
-
-function _mostrarFeedbackCheckin(tipo, html) {
-    const fb = document.getElementById('checkin-feedback');
-    if (!fb) return;
-    const bg = tipo === 'warning' ? 'rgba(245,158,11,.1)' : (tipo === 'error' || tipo === 'danger') ? 'rgba(239,68,68,.1)' : 'rgba(14,165,233,.1)';
-    const color = tipo === 'warning' ? '#f59e0b' : (tipo === 'error' || tipo === 'danger') ? '#ef4444' : '#0ea5e9';
-    fb.style.display = 'block';
-    fb.innerHTML = `<div style="background:${bg};color:${color};padding:.6rem .85rem;border-radius:6px;font-size:.82rem;">${html}</div>`;
-}
-
-async function _consultarEIniciarCheckin(chave) {
-    // ── Bloqueia entrada duplicada via Firestore ──────────────────────────────────────
-    _mostrarFeedbackCheckin('loading', 'Verificando registros...');
-    const jaExiste = await WmsStore.verificarNfDuplicada(chave).catch(() => null);
-    if (jaExiste) {
-        const statusLabel = {
-            'AGUARDANDO_CONFERENCIA':    '⏳ Aguardando Conferência Física',
-            'CONFERENCIA_ITENS_PENDENTE':'🔍 Conferência de Itens Pendente',
-            'RECEBIDO':                  '✅ Já Recebida e Conferida',
-            'CANCELADO':                 '🚫 Cancelada',
-        }[jaExiste.status] || jaExiste.status;
-        _mostrarFeedbackCheckin('warning',
-            `🚫 NF <strong>${jaExiste.nfNumero}</strong> já foi registrada.<br>
-             Status atual: <strong>${statusLabel}</strong><br>
-             <small>Chave: ${chave.substring(0,20)}...${chave.slice(-4)}</small>`
-        );
-        Feedback.beep('error'); Feedback.flash('error');
-        return;
-    }
-    // ─────────────────────────────────────────────────────────────────────────
-
-    try {
-        const res = await WmsProcedures.proc_buscar_nf_destinada(chave);
-        if (res.found) {
-            window._recNFDados = res.nf;
-            window._recEmpresa = res.empresa;
-            window._recIsAvulsa = false;
-            Feedback.beep('success'); Feedback.flash('success');
-            _renderizarFormularioCheckin();
-        } else {
-            _mostrarFeedbackCheckin('warning', 'NF não localizada. Operação avulsa indisponível aqui.');
-            Feedback.beep('error'); Feedback.flash('error');
-        }
-    } catch (e) {
-        _mostrarFeedbackCheckin('danger', 'Erro: ' + e.message);
-    }
-}
-
-function _renderizarFormularioCheckin() {
-    const nf = window._recNFDados;
-    const emp = window._recEmpresa;
-    const container = document.getElementById('screen-checkin');
-
-    container.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-            <strong style="font-size:.95rem;">📦 Check-in — NF ${nf.numero}</strong>
-            <button class="m-btn m-btn-outline" onclick="initCheckinScreen(document.getElementById('screen-checkin'))"
-                style="font-size:.75rem;padding:.3rem .65rem;">
-                <span class="material-icons-round" style="font-size:.9rem;">arrow_back</span> Voltar
-            </button>
-        </div>
-
-        <div style="background:rgba(14,165,233,.07);border:1px solid rgba(14,165,233,.2);border-radius:8px;padding:.85rem;margin-bottom:1rem;">
-            <div style="font-size:.65rem;font-weight:700;color:#0ea5e9;text-transform:uppercase;margin-bottom:.6rem;">✅ Dados Básicos</div>
-            <div style="font-size:.82rem;display:flex;flex-direction:column;gap:.3rem;">
-                <div><span style="color:var(--text-secondary);">NF:</span> <strong>${nf.numero} / Série ${nf.serie}</strong></div>
-                <div><span style="color:var(--text-secondary);">Fornecedor:</span> <strong>${nf.razaoSocialEmitente}</strong></div>
-            </div>
-        </div>
-
-        <div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1rem;">
-            <div>
-                <label style="font-size:.72rem;color:var(--text-secondary);display:block;margin-bottom:.25rem;">Doca *</label>
-                <select id="rcheck-doca" class="m-input">${_docasHtml()}</select>
-            </div>
-            <div>
-                <label style="font-size:.72rem;color:var(--text-secondary);display:block;margin-bottom:.25rem;">Placa do Veículo *</label>
-                <input id="rcheck-placa" type="text" class="m-input" placeholder="AAA-0000" oninput="this.value=this.value.toUpperCase()">
-            </div>
-            <div>
-                <label style="font-size:.72rem;color:var(--text-secondary);display:block;margin-bottom:.25rem;">Motorista</label>
-                <input id="rcheck-motorista" type="text" class="m-input" placeholder="Nome completo">
-            </div>
-        </div>
-
-        <button class="m-btn m-btn-success" onclick="salvarCheckin()" style="font-size:.95rem;">
-            <span class="material-icons-round">how_to_reg</span> Confirmar Check-in
-        </button>
-    `;
-}
-
+// === Helper: Docas ===
 function _docasHtml() {
     const cfg = JSON.parse(localStorage.getItem('wms_config') || '{}');
-    const docas = cfg.docas || ['DOCA-01','DOCA-02','DOCA-03'];
+    const docas = cfg.docas || ['DOCA-01', 'DOCA-02', 'DOCA-03'];
     return docas.map(d => `<option value="${d}">${d}</option>`).join('');
 }
 
-window.salvarCheckin = async function() {
-    const doca  = document.getElementById('rcheck-doca')?.value;
-    const placa = document.getElementById('rcheck-placa')?.value?.trim();
-    if (!doca)  { showToast('Selecione a Doca', 'warning'); return; }
-    if (!placa) { showToast('Informe a placa do veículo', 'warning'); return; }
-
-    const nf     = window._recNFDados;
-    const emp    = window._recEmpresa;
-    const sessao = window.ParreiraAuth?.getSessao?.() || {};
-    const btn    = document.querySelector('button.m-btn-success');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-icons-round">hourglass_top</span> Salvando...'; }
-
-    // 1. Salva o check-in com status AGUARDANDO_PRE_ENTRADA (bloqueado até o ERP responder)
-    const payload = {
-        id:            `CHK-${Date.now()}`,
-        chaveNfe:      nf.chaveNfe || '',
-        nfNumero:      nf.numero,
-        nfSerie:       nf.serie,
-        fornecedor:    nf.razaoSocialEmitente,
-        cnpjFornecedor:nf.cnpjEmitente,
-        empresaDestino:emp ? emp.razaoSocial : '',
-        cnpjDestino:   emp ? emp.cnpj : nf.cnpjDestinatario,
-        doca,
-        placa,
-        motorista:     document.getElementById('rcheck-motorista')?.value?.trim() || '',
-        volumesNF:     nf.volumes || 0,
-        itens:         [],      // será preenchido pelo ERP via pré-entrada
-        _leituras:     {},
-        status:        'AGUARDANDO_PRE_ENTRADA',
-        dataCheckin:   new Date().toISOString(),
-        operadorLogin: sessao.login || '',
-        operadorNome:  sessao.nome  || 'Operador'
-    };
-
-    try {
-        await WmsStore.criarRecebimento(payload);
-
-        // 2. Consulta imediata ao ERP se existe pré-entrada
-        if (btn) btn.innerHTML = '<span class="material-icons-round">search</span> Verificando ERP...';
-        const preEntrada = await WmsProcedures.proc_verificar_pre_entrada(payload.chaveNfe);
-
-        if (preEntrada.found) {
-            // 3a. Pré-entrada encontrada → libera para conferência com itens do ERP
-            await WmsStore.atualizarRecebimento(payload.id, {
-                status:        'AGUARDANDO_CONFERENCIA',
-                itens:         preEntrada.itens,
-                pedidoCompra:  preEntrada.pedidoCompra || '',
-                _maxdataEntryId: preEntrada._maxdataEntryId || ''
-            });
-            Feedback.beep('success'); Feedback.flash('success');
-            showToast('✅ Pré-Entrada confirmada! NF liberada para conferência.', 'success');
-        } else {
-            // 3b. Sem pré-entrada → fica bloqueada, o ERP será recontactado automaticamente
-            Feedback.beep('warning');
-            showToast('⏳ Sem Pré-Entrada no ERP. NF aguardando liberação automática.', 'warning');
-        }
-
-        if (window.updateHomeStats) updateHomeStats();
-        setTimeout(() => navigateTo('home'), 1500);
-    } catch(e) {
-        showToast('Erro ao salvar: ' + e.message, 'danger');
-        if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons-round">how_to_reg</span> Confirmar Check-in'; }
-    }
-};
+// ===================================
+// 1. TELA RECEBER (conferir screen)
+// ===================================
 
 
 // ===================================
@@ -202,45 +18,33 @@ window.salvarCheckin = async function() {
 // ===================================
 
 window.initConferirScreen = async function(container) {
-    container.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-secondary);">
-        <span class="material-icons-round" style="font-size:2rem;display:block;opacity:.3;margin-bottom:.4rem;">sync</span>
-        <span style="font-size:.82rem;">Carregando...</span></div>`;
-
+    container.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-secondary);"><span class="material-icons-round" style="font-size:2rem;display:block;opacity:.3;margin-bottom:.4rem;">sync</span><span style="font-size:.82rem;">Carregando...</span></div>`;
     const pending = await WmsStore.listarRecebimentos({ status: 'AGUARDANDO_CONFERENCIA' }).catch(() => []);
-    pending.sort((a, b) => new Date(a.dataCheckin||0) - new Date(b.dataCheckin||0));
-
+    pending.sort((a, b) => new Date(a.criadoEm||0) - new Date(b.criadoEm||0));
     container.innerHTML = `
         <div class="m-card" style="border-left:3px solid #ec4899;margin-bottom:1rem;">
             <div style="font-weight:600;font-size:.9rem;display:flex;align-items:center;gap:.5rem;color:#ec4899;">
                 <span class="material-icons-round">qr_code_scanner</span>
-                Bipe a NF na Doca para Conferir
+                Bipe a chave da NF-e para receber
             </div>
+            <p style="font-size:.78rem;color:var(--text-secondary);margin-top:.4rem;margin-bottom:0;">
+                Escaneie os 44 dígitos ou informe o número da NF na barra acima
+            </p>
         </div>
-
-        <div style="font-size:.85rem;font-weight:600;color:var(--text-secondary);margin-bottom:.75rem;">
-            NFs Aguardando Conferência Física (${pending.length})
-        </div>
-
-        ${pending.length > 0 ? pending.map(r => `
+        ${pending.length > 0 ? `
+        <div style="font-size:.85rem;font-weight:600;color:var(--text-secondary);margin-bottom:.5rem;">NFs na Fila (${pending.length})</div>
+        ${pending.map(r => `
             <div class="m-card" style="padding:.85rem;cursor:pointer;" onclick="iniciarConferenciaFisica('${r.id}')">
                 <div style="display:flex;justify-content:space-between;align-items:start;">
-                    <div>
-                        <strong style="font-size:.9rem;">NF: ${r.nfNumero}</strong><br>
-                        <span style="font-size:.75rem;color:var(--text-secondary);">${r.fornecedor}</span>
-                    </div>
-                    <span class="m-badge" style="background:rgba(236,72,153,.15);color:#ec4899;">DOCA</span>
+                    <div><strong style="font-size:.9rem;">NF: ${r.nfNumero}</strong><br>
+                    <span style="font-size:.75rem;color:var(--text-secondary);">${r.fornecedor}</span></div>
+                    <span class="m-badge" style="background:rgba(236,72,153,.15);color:#ec4899;">FILA</span>
                 </div>
-                <div style="margin-top:.5rem;font-size:.75rem;color:var(--text-secondary);display:flex;gap:1rem;">
-                    <span><span class="material-icons-round" style="font-size:.8rem;vertical-align:middle;">local_shipping</span> ${r.doca}</span>
-                    <span><span class="material-icons-round" style="font-size:.8rem;vertical-align:middle;">format_list_numbered</span> Vol: ${r.volumesNF}</span>
-                </div>
+                ${r.doca ? `<div style="margin-top:.5rem;font-size:.75rem;color:var(--text-secondary);">
+                    <span class="material-icons-round" style="font-size:.8rem;vertical-align:middle;">local_shipping</span>
+                    ${r.doca}${r.placa ? ' · ' + r.placa : ''}</div>` : ''}
             </div>
-        `).join('') : `
-            <div style="text-align:center;padding:2rem 1rem;color:var(--text-secondary);">
-                <span class="material-icons-round" style="font-size:3rem;opacity:.3;">done_all</span>
-                <p style="margin-top:.5rem;">Nenhuma nota aguardando conferência.</p>
-            </div>
-        `}
+        `).join('')}` : ''}
     `;
 };
 
@@ -252,9 +56,133 @@ window.handleScanConferir = async function(code) {
             (clean.length === 44 && (r.chaveNfe||'').replace(/\D/g,'') === clean) ||
             (clean.length < 44  && String(r.nfNumero) === clean)
         );
-        if (target) iniciarConferenciaFisica(target.id);
-        else { Feedback.beep('error'); showToast('NF não encontrada na fila de Doca.', 'danger'); }
+        if (target) { iniciarConferenciaFisica(target.id); return; }
+        if (clean.length === 44) {
+            const dup = await WmsStore.verificarNfDuplicada(clean).catch(() => null);
+            if (dup) { Feedback.beep('error'); showToast(`NF ${dup.nfNumero} já foi recebida (${dup.status}).`, 'warning'); return; }
+            await _exibirFormNovoRecebimento(clean);
+        } else {
+            Feedback.beep('error');
+            showToast('NF não encontrada na fila. Para nova NF, bipe a chave completa (44 dígitos).', 'warning');
+        }
     } catch(e) { showToast('Erro: ' + e.message, 'danger'); }
+};
+
+async function _exibirFormNovoRecebimento(chaveNfe) {
+    const container = document.getElementById('screen-conferir');
+    container.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-secondary);"><span class="material-icons-round" style="font-size:2rem;display:block;animation:spin 1s linear infinite;margin-bottom:.4rem;">sync</span><span style="font-size:.82rem;">Consultando ERP...</span></div>`;
+    try {
+        const res = await WmsProcedures.proc_buscar_nf_destinada(chaveNfe);
+        if (!res || !res.found) {
+            showToast('NF não localizada no ERP.', 'warning'); Feedback.beep('error');
+            initConferirScreen(container); return;
+        }
+        const nf = res.nf;
+        window._recNovaNF = nf; window._recNovaNFChave = chaveNfe; window._confFotosBuffer = [];
+        Feedback.beep('success'); Feedback.flash('success');
+        container.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                <strong style="font-size:.95rem;color:#ec4899;">📦 Recebendo NF ${nf.numero}</strong>
+                <button class="m-btn m-btn-outline" onclick="initConferirScreen(document.getElementById('screen-conferir'))" style="font-size:.75rem;padding:.3rem .65rem;">
+                    <span class="material-icons-round" style="font-size:.9rem;">arrow_back</span> Voltar</button>
+            </div>
+            <div style="background:rgba(236,72,153,.07);border:1px solid rgba(236,72,153,.2);border-radius:8px;padding:.85rem;margin-bottom:1rem;">
+                <div style="font-size:.82rem;display:flex;flex-direction:column;gap:.3rem;">
+                    <div><span style="color:var(--text-secondary);">NF:</span> <strong>${nf.numero} / Série ${nf.serie}</strong></div>
+                    <div><span style="color:var(--text-secondary);">Fornecedor:</span> <strong>${nf.razaoSocialEmitente}</strong></div>
+                </div>
+            </div>
+            <div style="background:rgba(14,165,233,.07);border:1px solid rgba(14,165,233,.2);border-radius:8px;padding:.85rem;margin-bottom:1rem;">
+                <div style="font-size:.65rem;font-weight:700;color:#0ea5e9;text-transform:uppercase;margin-bottom:.65rem;">🚛 Dados de Transporte</div>
+                <div style="display:flex;flex-direction:column;gap:.65rem;">
+                    <div><label style="font-size:.72rem;color:var(--text-secondary);display:block;margin-bottom:.25rem;">Doca *</label><select id="cnov-doca" class="m-input">${_docasHtml()}</select></div>
+                    <div><label style="font-size:.72rem;color:var(--text-secondary);display:block;margin-bottom:.25rem;">Placa do Veículo *</label><input id="cnov-placa" type="text" class="m-input" placeholder="AAA-0000" oninput="this.value=this.value.toUpperCase()"></div>
+                    <div><label style="font-size:.72rem;color:var(--text-secondary);display:block;margin-bottom:.25rem;">Motorista</label><input id="cnov-motorista" type="text" class="m-input" placeholder="Nome do motorista"></div>
+                </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1rem;">
+                <div style="display:flex;gap:.5rem;">
+                    <div style="flex:1;"><label style="font-size:.72rem;color:var(--text-secondary);display:block;margin-bottom:.25rem;">Vol. NF</label><input type="number" id="cnov-vol-nf" class="m-input" value="${nf.volumes||0}" readonly style="background:rgba(0,0,0,.1);"></div>
+                    <div style="flex:1;"><label style="font-size:.72rem;color:var(--text-secondary);display:block;margin-bottom:.25rem;">Vol. Físico *</label><input id="cnov-vol-fis" type="number" class="m-input" min="0" placeholder="0" oninput="checkVolumeDivergencia(${nf.volumes||0},'cnov')"></div>
+                </div>
+                <div id="cnov-vol-indicator" style="display:none;padding:.5rem .75rem;border-radius:8px;font-size:.82rem;font-weight:600;text-align:center;"></div>
+                <div><label style="font-size:.72rem;color:var(--text-secondary);display:block;margin-bottom:.25rem;">Condição da Carga *</label>
+                <select id="cnov-condicao" class="m-input" onchange="toggleDivConf('cnov')">
+                    <option value="OK">✅ OK — Carga íntegra</option>
+                    <option value="FALTA">⚠️ Falta de Volumes</option>
+                    <option value="AVARIA_PARCIAL">⚠️ Avaria Parcial</option>
+                    <option value="AVARIA_TOTAL">🚨 Avaria Total</option>
+                    <option value="EXCESSO">📦 Excesso de Volumes</option>
+                    <option value="LACRE_ROMPIDO">🔓 Lacre Rompido</option>
+                </select></div>
+            </div>
+            <div id="cnov-div-bloco" style="display:none;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:.85rem;margin-bottom:1rem;">
+                <div style="display:flex;gap:.5rem;margin-bottom:.75rem;">
+                    <div style="flex:1;"><label style="font-size:.68rem;">Avariados</label><input id="cnov-avariados" type="number" class="m-input" value="0"></div>
+                    <div style="flex:1;"><label style="font-size:.68rem;">Faltantes</label><input id="cnov-faltantes" type="number" class="m-input" value="0"></div>
+                    <div style="flex:1;"><label style="font-size:.68rem;">Excesso</label><input id="cnov-excesso" type="number" class="m-input" value="0"></div>
+                </div>
+                <textarea id="cnov-desc" class="m-input" rows="2" placeholder="Descreva a ocorrência..."></textarea>
+                <div style="margin-top:.5rem;">
+                    <label for="cnov-fotos" style="cursor:pointer;display:inline-flex;align-items:center;padding:.4rem .7rem;border:1px dashed var(--primary);border-radius:6px;font-size:.78rem;color:var(--primary);"><span class="material-icons-round">add_a_photo</span> Adicionar Foto</label>
+                    <input id="cnov-fotos" type="file" accept="image/*" capture="environment" multiple style="display:none;" onchange="addFotoConf(this)">
+                    <div id="cnov-fotos-preview" style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.4rem;"></div>
+                </div>
+            </div>
+            <div style="margin-bottom:1rem;"><label style="font-size:.72rem;color:var(--text-secondary);display:block;margin-bottom:.25rem;">Observações</label><textarea id="cnov-obs" class="m-input" rows="2" placeholder="Informações adicionais..."></textarea></div>
+            <button class="m-btn m-btn-success" id="cnov-btn" onclick="salvarNovoRecebimento()">
+                <span class="material-icons-round">check_circle</span> Confirmar Recebimento
+            </button>
+        `;
+    } catch(e) { showToast('Erro ao consultar NF: ' + e.message, 'danger'); initConferirScreen(document.getElementById('screen-conferir')); }
+}
+
+window.salvarNovoRecebimento = async function() {
+    const nf = window._recNovaNF;
+    if (!nf) { showToast('Dados da NF não encontrados.', 'danger'); return; }
+    const doca      = document.getElementById('cnov-doca')?.value;
+    const placa     = document.getElementById('cnov-placa')?.value?.trim();
+    const motorista = document.getElementById('cnov-motorista')?.value?.trim() || '';
+    const volFis    = parseInt(document.getElementById('cnov-vol-fis')?.value);
+    const condicao  = document.getElementById('cnov-condicao')?.value || 'OK';
+    const obs       = document.getElementById('cnov-obs')?.value?.trim() || '';
+    if (!doca)         { showToast('Selecione a Doca', 'warning'); return; }
+    if (!placa)        { showToast('Informe a placa do veículo', 'warning'); return; }
+    if (isNaN(volFis)) { showToast('Informe os volumes físicos!', 'warning'); return; }
+    const btn = document.getElementById('cnov-btn');
+    btn.disabled = true; btn.innerHTML = '<span class="material-icons-round" style="animation:spin 1s linear infinite;">sync</span> Salvando...';
+    const sessao = (typeof ParreiraAuth !== 'undefined' && ParreiraAuth.getSessao) ? ParreiraAuth.getSessao() : {};
+    const id = `REC-${Date.now()}`;
+    const divergencia = condicao !== 'OK' ? {
+        tipo: condicao,
+        avariados: parseInt(document.getElementById('cnov-avariados')?.value)||0,
+        faltantes: parseInt(document.getElementById('cnov-faltantes')?.value)||0,
+        excesso:   parseInt(document.getElementById('cnov-excesso')?.value)||0,
+        desc:      document.getElementById('cnov-desc')?.value || '',
+        fotos:     window._confFotosBuffer || []
+    } : null;
+    const payload = {
+        id, chaveNfe: window._recNovaNFChave || '', nfNumero: nf.numero, nfSerie: nf.serie || '1',
+        fornecedor: nf.razaoSocialEmitente, cnpjFornecedor: nf.cnpjEmitente || '',
+        empresaDestino: '', cnpjDestino: nf.cnpjDestinatario || '',
+        doca, placa, motorista,
+        volumesNF: nf.volumes || 0, volumesFisicos: volFis,
+        condicaoCarga: condicao, observacoes: obs, divergenciaMacro: divergencia,
+        itens: [], pedidoCompra: '', status: 'CONFERENCIA_ITENS_PENDENTE',
+        dataCheckin: new Date().toISOString(), dataConferenciaMacro: new Date().toISOString(),
+        operadorLogin: sessao.login || '', operadorNome: sessao.nome || 'Operador'
+    };
+    try {
+        await WmsStore.criarRecebimento(payload);
+        await WmsProcedures.proc_confirmar_recebimento(payload);
+        Feedback.beep('success'); Feedback.flash('success');
+        showToast('✅ Recebimento confirmado!', 'success');
+        if (window.updateHomeStats) updateHomeStats();
+        setTimeout(() => navigateTo('home'), 1200);
+    } catch(e) {
+        showToast(e.message || 'Erro ao salvar.', 'danger');
+        btn.disabled = false; btn.innerHTML = '<span class="material-icons-round">check_circle</span> Confirmar Recebimento';
+    }
 };
 
 window.iniciarConferenciaFisica = async function(id) {
@@ -285,13 +213,19 @@ window.iniciarConferenciaFisica = async function(id) {
             </button>
         </div>
 
-        <div style="background:rgba(236,72,153,.07);border:1px solid rgba(236,72,153,.2);border-radius:8px;padding:.85rem;margin-bottom:1rem;">
+        <div style="background:rgba(236,72,153,.07);border:1px solid rgba(236,72,153,.2);border-radius:8px;padding:.85rem;margin-bottom:.5rem;">
             <div style="font-size:.82rem;display:flex;flex-direction:column;gap:.3rem;">
                 <div><span style="color:var(--text-secondary);">Fornecedor:</span> <strong>${r.fornecedor}</strong></div>
-                <div><span style="color:var(--text-secondary);">Doca:</span> <strong>${r.doca}</strong></div>
-                <div><span style="color:var(--text-secondary);">Placa:</span> ${r.placa}</div>
             </div>
             ${secaoItens}
+        </div>
+        <div style="background:rgba(14,165,233,.07);border:1px solid rgba(14,165,233,.2);border-radius:8px;padding:.85rem;margin-bottom:1rem;">
+            <div style="font-size:.65rem;font-weight:700;color:#0ea5e9;text-transform:uppercase;margin-bottom:.65rem;">🚛 Dados de Transporte</div>
+            <div style="display:flex;flex-direction:column;gap:.5rem;">
+                <div><label style="font-size:.72rem;color:var(--text-secondary);display:block;margin-bottom:.2rem;">Doca *</label><select id="cconf-doca" class="m-input">${_docasHtml()}</select></div>
+                <div><label style="font-size:.72rem;color:var(--text-secondary);display:block;margin-bottom:.2rem;">Placa</label><input id="cconf-placa" class="m-input" value="${r.placa||''}" placeholder="AAA-0000" oninput="this.value=this.value.toUpperCase()"></div>
+                <div><label style="font-size:.72rem;color:var(--text-secondary);display:block;margin-bottom:.2rem;">Motorista</label><input id="cconf-motorista" class="m-input" value="${r.motorista||''}" placeholder="Nome do motorista"></div>
+            </div>
         </div>
 
         <div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1rem;">
@@ -341,19 +275,24 @@ window.iniciarConferenciaFisica = async function(id) {
             <span class="material-icons-round">fact_check</span> Finalizar Conferência
         </button>
     `;
+    // Pre-select doca if already set
+    if (r.doca) {
+        const docaSel = document.getElementById('cconf-doca');
+        if (docaSel) docaSel.value = r.doca;
+    }
 };
 
-window.toggleDivConf = function() {
-    const cond = document.getElementById('cconf-condicao')?.value;
-    const blocoDiv = document.getElementById('cconf-div-bloco');
+window.toggleDivConf = function(prefix = 'cconf') {
+    const cond = document.getElementById(`${prefix}-condicao`)?.value;
+    const blocoDiv = document.getElementById(`${prefix}-div-bloco`);
 
     // Mostra/oculta o bloco de divergência
     blocoDiv.style.display = cond !== 'OK' ? 'block' : 'none';
 
     // Redistribuição inteligente de valores entre os campos
-    const elFaltantes = document.getElementById('cconf-faltantes');
-    const elAvariados = document.getElementById('cconf-avariados');
-    const elExcesso   = document.getElementById('cconf-excesso');
+    const elFaltantes = document.getElementById(`${prefix}-faltantes`);
+    const elAvariados = document.getElementById(`${prefix}-avariados`);
+    const elExcesso   = document.getElementById(`${prefix}-excesso`);
     if (!elFaltantes || !elAvariados) return;
 
     const faltantes = parseInt(elFaltantes.value) || 0;
@@ -387,10 +326,10 @@ window.toggleDivConf = function() {
 };
 
 // v1.1 — Detecção automática de divergência por volume
-window.checkVolumeDivergencia = function(volNF) {
-    const input = document.getElementById('cconf-vol-fis');
-    const indicator = document.getElementById('cconf-vol-indicator');
-    const condicao = document.getElementById('cconf-condicao');
+window.checkVolumeDivergencia = function(volNF, prefix = 'cconf') {
+    const input = document.getElementById(`${prefix}-vol-fis`);
+    const indicator = document.getElementById(`${prefix}-vol-indicator`);
+    const condicao = document.getElementById(`${prefix}-condicao`);
     if (!input || !indicator || !condicao) return;
 
     const volFis = parseInt(input.value);
@@ -409,7 +348,7 @@ window.checkVolumeDivergencia = function(volNF) {
         indicator.style.border = '1px solid rgba(16,185,129,.3)';
         indicator.textContent = `✅ Volumes OK — ${volFis} vol. conferido(s) conforme NF`;
         condicao.value = 'OK';
-        document.getElementById('cconf-div-bloco').style.display = 'none';
+        document.getElementById(`${prefix}-div-bloco`).style.display = 'none';
 
     } else if (diff < 0) {
         // Falta volumes
@@ -419,11 +358,11 @@ window.checkVolumeDivergencia = function(volNF) {
         indicator.style.border = '1px solid rgba(239,68,68,.3)';
         indicator.textContent = `⚠️ FALTA — ${volFis} recebido(s) vs ${volNF} esperado(s) · Diferença: -${faltam} vol.`;
         condicao.value = 'FALTA';
-        document.getElementById('cconf-div-bloco').style.display = 'block';
+        document.getElementById(`${prefix}-div-bloco`).style.display = 'block';
         // Pré-preenche campo Faltantes
-        const fEl = document.getElementById('cconf-faltantes');
+        const fEl = document.getElementById(`${prefix}-faltantes`);
         if (fEl) fEl.value = faltam;
-        const eEl = document.getElementById('cconf-excesso');
+        const eEl = document.getElementById(`${prefix}-excesso`);
         if (eEl) eEl.value = 0;
 
     } else {
@@ -433,11 +372,11 @@ window.checkVolumeDivergencia = function(volNF) {
         indicator.style.border = '1px solid rgba(245,158,11,.3)';
         indicator.textContent = `📦 EXCESSO — ${volFis} recebido(s) vs ${volNF} esperado(s) · Excesso: +${diff} vol.`;
         condicao.value = 'EXCESSO';
-        document.getElementById('cconf-div-bloco').style.display = 'block';
+        document.getElementById(`${prefix}-div-bloco`).style.display = 'block';
         // Pré-preenche campo Excesso
-        const eEl = document.getElementById('cconf-excesso');
+        const eEl = document.getElementById(`${prefix}-excesso`);
         if (eEl) eEl.value = diff;
-        const fEl = document.getElementById('cconf-faltantes');
+        const fEl = document.getElementById(`${prefix}-faltantes`);
         if (fEl) fEl.value = 0;
     }
 };
@@ -460,11 +399,18 @@ window.salvarConferenciaFisica = async function() {
     const volfis = parseInt(document.getElementById('cconf-vol-fis').value);
     if (isNaN(volfis)) { showToast('Informe os volumes físicos!', 'warning'); return; }
 
+    const docaForm      = document.getElementById('cconf-doca')?.value || '';
+    const placaForm     = document.getElementById('cconf-placa')?.value?.trim() || '';
+    const motoristaForm = document.getElementById('cconf-motorista')?.value?.trim() || '';
+
     const update = {
         volumesFisicos:       volfis,
         condicaoCarga:        document.getElementById('cconf-condicao').value,
         dataConferenciaMacro: new Date().toISOString(),
-        status:               'CONFERENCIA_ITENS_PENDENTE'
+        status:               'CONFERENCIA_ITENS_PENDENTE',
+        ...(docaForm      && { doca: docaForm }),
+        ...(placaForm     && { placa: placaForm }),
+        ...(motoristaForm && { motorista: motoristaForm }),
     };
 
     if (update.condicaoCarga !== 'OK') {
@@ -499,9 +445,9 @@ window.salvarConferenciaFisica = async function() {
             pedidoCompra:    r.pedidoCompra || '',
             valorTotalNF:    r.valorTotalNF || 0,
             transportadora:  r.transportadora || '',
-            doca:            r.doca || '',
-            placa:           r.placa || '',
-            motorista:       r.motorista || '',
+            doca:            docaForm      || r.doca || '',
+            placa:           placaForm     || r.placa || '',
+            motorista:       motoristaForm || r.motorista || '',
             volumesNF:       r.volumesNF || 0,
             volumesFisicos:  volfis,
             condicaoCarga:   update.condicaoCarga,
