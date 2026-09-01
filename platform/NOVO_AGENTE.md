@@ -345,13 +345,13 @@ Abra o terminal do PowerShell na raiz do projeto (`C:\Users\Paulo H Parreira\.ge
 
 > ⚠️ As regras abaixo foram definidas explicitamente pelo usuário (Paulo Parreira) e substituem a regra geral acima **apenas para os módulos listados**. Para qualquer módulo **não** listado, aplica-se sempre a regra geral (staging → aprovação → promote).
 
-| Módulo | Slug técnico | Política de deploy | Motivo |
+| Módulo | Pasta | Política de Deploy | Rationale |
 |---|---|---|---|
 | **Bússola Log** | `dispatch` | 🔴 **Staging obrigatório** — aguardar aprovação explícita antes do `promote.ps1` | Operação logística em tempo real. Bugs afetam clientes e motoristas diretamente. |
 | **Bússola Gestão** | `erp-consultoria` | 🟢 **Deploy direto em produção** — pode rodar `deploy.ps1 + promote.ps1` na mesma sequência sem aprovação intermediária | Módulo de gestão interna, sem impacto operacional imediato. Iterações frequentes autorizadas pelo usuário em 2026-08-20. |
+| **WMS / WMS Coletor** | `wms`, `wms-coletor` | 🟢 **Deploy direto em produção** — rodar `deploy.ps1 + promote.ps1` na mesma sequência até segunda ordem | Atualizações e melhorias diretas em produção autorizadas pelo usuário em 2026-09-01. |
 | **ERP** | `erp` | 🔴 **Staging obrigatório** | Faturamento, NF-e e dados fiscais. Risco alto. |
 | **Master** | `master` | 🔴 **Staging obrigatório** | Gestão de tenants e permissões. Erro pode bloquear acesso de todos os usuários. |
-| **WMS / WMS Coletor** | `wms`, `wms-coletor` | 🔴 **Staging obrigatório** | Operação de armazém em tempo real. |
 | **Sales Force** | `sales-force` | 🟡 **Staging recomendado** — pode ir direto se for ajuste visual/menor | PWA offline-first, mas impacto menor em operação imediata. |
 
 **Como aplicar na prática:**
