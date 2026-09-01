@@ -585,6 +585,9 @@ async function saveTenant() {
         for (const u of _editingUsers.filter(u => u._isNew)) {
             const userDoc = { nome: u.nome, login: u.login, pass: u.pass, role: u.role, ativo: true, createdAt: new Date().toISOString() };
             await db.collection('tenants').doc(docId).collection('users').doc(u.login).set(userDoc);
+            // Registra no índice global (obrigatório para login no WMS e WMS-Coletor)
+            await db.collection('users_index').doc(u.login).set({ tenantId: docId }, { merge: true });
+            console.log(`🔑 [Admin] users_index/${u.login} → ${docId}`);
         }
 
         // v3.16.19 FIX: Deleta do Firestore usuários que foram removidos da lista
@@ -593,6 +596,8 @@ async function saveTenant() {
         for (const docIdToDelete of deletedDocIds) {
             try {
                 await db.collection('tenants').doc(docId).collection('users').doc(docIdToDelete).delete();
+                // Remove também do índice global
+                try { await db.collection('users_index').doc(docIdToDelete).delete(); } catch(_) {}
                 console.log(`🗑️ [Admin] Usuário "${docIdToDelete}" deletado do Firestore.`);
             } catch (e) {
                 console.warn(`[Admin] Falha ao deletar usuário "${docIdToDelete}":`, e.message);
