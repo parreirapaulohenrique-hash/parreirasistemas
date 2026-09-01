@@ -2593,7 +2593,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const cityInput = document.getElementById('inputCity');
-            const _rawCity = cityInput ? cityInput.value : (selectedClient ? (selectedClient.cidade || selectedClient.City || selectedClient.city) : '');
+            // CORREÇÃO: cityInput é sempre um DOM element (truthy), checar o VALUE também
+            const _rawCity = (cityInput && cityInput.value.trim())
+                ? cityInput.value
+                : (selectedClient ? (selectedClient.cidade || selectedClient.City || selectedClient.city) : '');
             // Remove sufixo de estado "(PA)", "(MA)" etc. que pode vir no campo cidade do cliente
             const city = norm(_rawCity).replace(/\s*\([A-Z]{2}\)\s*$/, '').trim();
 
@@ -2752,7 +2755,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         // Conditional Charge: Only if client matches redispatch city/neighborhood
                         shouldCharge = false;
                         const cityInput = document.getElementById('inputCity');
-                        const _rawTargetCity = cityInput ? cityInput.value : (selectedClient ? (selectedClient.cidade || selectedClient.City || selectedClient.city) : '');
+                        const _rawTargetCity = (cityInput && cityInput.value.trim()) ? cityInput.value : (selectedClient ? (selectedClient.cidade || selectedClient.City || selectedClient.city) : '');
                         const targetCity = norm(_rawTargetCity).replace(/\s*\([A-Z]{2}\)\s*$/, '').trim();
 
 
