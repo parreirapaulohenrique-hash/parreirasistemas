@@ -4,12 +4,33 @@
 const COLETOR_VERSION = '1.0.0';
 
 // ===== Auth Check =====
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
 
     // Usa sessão real do ParreiraAuth (compartilhada com o WMS)
     if (typeof ParreiraAuth === 'undefined' || !ParreiraAuth.isLogado()) {
-        window.location.href = 'login.html'; // login PIN do coletor
+        window.location.href = 'login.html';
         return;
+    }
+
+    // Aguarda Firebase Auth restaurar a sessão anônima do IndexedDB.
+    // Sem isso, WmsStore faz chamadas Firestore com request.auth=null
+    // e as regras de segurança bloqueiam tudo.
+    try {
+        await new Promise((resolve) => {
+            const unsub = firebase.auth().onAuthStateChanged(user => {
+                unsub();
+                if (user) {
+                    resolve(); // Sessão anônima já ativa
+                } else {
+                    // Re-autentica anonimamente se a sessão expirou
+                    firebase.auth().signInAnonymously()
+                        .then(resolve)
+                        .catch(resolve); // Continua mesmo em erro (rede offline etc.)
+                }
+            });
+        });
+    } catch (e) {
+        console.warn('[COLETOR] Firebase Auth wait failed:', e.message);
     }
 
     const sessao   = ParreiraAuth.getSessao();
