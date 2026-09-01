@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wms-coletor-v3.18.1';
+const CACHE_NAME = 'wms-coletor-v3.18.5-force';
 const ASSETS = [
     './styles/coletor.css',
     'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
@@ -6,17 +6,16 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', e => {
-    e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
     self.skipWaiting();
+    e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
 });
 
 self.addEventListener('activate', e => {
     e.waitUntil(
         caches.keys().then(keys =>
-            Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-        )
+            Promise.all(keys.map(k => caches.delete(k))) // Limpa TODOS os caches antigos obrigatoriamente
+        ).then(() => self.clients.claim())
     );
-    self.clients.claim();
 });
 
 // Network-First para HTML e JS (tenta rede primeiro; se falhar, usa cache offline)
