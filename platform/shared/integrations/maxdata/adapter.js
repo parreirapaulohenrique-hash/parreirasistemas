@@ -271,17 +271,12 @@ class MaxDataAdapter extends ErpAdapter {
                 if (page > 10) break;
             }
 
-            // Para cada venda encontrada, busca dados fiscais da NF-e via GET /fiscal/venda/{id} ou GET /fiscal/{id}
+            // Para cada venda encontrada, busca dados fiscais da NF-e via GET /fiscal/venda/{id} em paralelo
             const salesWithFiscal = await Promise.all(validDocs.map(async (sale) => {
                 let fiscalData = null;
                 try {
-                    let fUrl  = this._buildUrl(`fiscal/venda/${sale.id}`);
-                    let fResp = await fetch(fUrl, { method: 'GET', headers });
-                    if (!fResp.ok) {
-                        // Fallback para GET /fiscal/{id} (conforme Swagger)
-                        fUrl  = this._buildUrl(`fiscal/${sale.id}`);
-                        fResp = await fetch(fUrl, { method: 'GET', headers });
-                    }
+                    const fUrl = this._buildUrl(`fiscal/venda/${sale.id}`);
+                    const fResp = await fetch(fUrl, { method: 'GET', headers });
                     if (fResp.ok) {
                         fiscalData = await fResp.json();
                     }
@@ -305,23 +300,16 @@ class MaxDataAdapter extends ErpAdapter {
     async getSale(saleId) {
         const headers = await this._authHeaders();
         try {
-            const [saleResp, itemsResp] = await Promise.all([
+            const [saleResp, itemsResp, fiscalResp] = await Promise.all([
                 fetch(this._buildUrl(`sale/${saleId}`), { method: 'GET', headers }),
-                fetch(this._buildUrl(`sale/${saleId}/items`), { method: 'GET', headers }).catch(() => null)
+                fetch(this._buildUrl(`sale/${saleId}/items`), { method: 'GET', headers }).catch(() => null),
+                fetch(this._buildUrl(`fiscal/venda/${saleId}`), { method: 'GET', headers }).catch(() => null)
             ]);
-
-            let fiscalData = null;
-            try {
-                let fResp = await fetch(this._buildUrl(`fiscal/venda/${saleId}`), { method: 'GET', headers });
-                if (!fResp.ok) {
-                    fResp = await fetch(this._buildUrl(`fiscal/${saleId}`), { method: 'GET', headers });
-                }
-                if (fResp && fResp.ok) fiscalData = await fResp.json();
-            } catch (_) {}
 
             if (!saleResp.ok) throw new Error(`Venda #${saleId} não encontrada (HTTP ${saleResp.status})`);
             const saleData   = await saleResp.json();
             const itemsData  = itemsResp && itemsResp.ok ? await itemsResp.json() : [];
+            const fiscalData = fiscalResp && fiscalResp.ok ? await fiscalResp.json() : null;
             const itemsList  = Array.isArray(itemsData) ? itemsData : (itemsData.docs || itemsData.data || []);
 
             return this._mapSale(saleData, itemsList, fiscalData);
@@ -335,38 +323,15 @@ class MaxDataAdapter extends ErpAdapter {
      * Mapeia venda do Maxdata para o formato esperado pela Cotação de Despacho.
      */
     _mapSale(raw, items = [], fiscal = null) {
-        // Extrai soma dos itens de fiscal.itens se vlrTotal não vier no objeto pai do /fiscal/{id}
-        let somaItensFiscal = 0;
-        const fiscalItens = fiscal?.itens || fiscal?.items || [];
-        if (Array.isArray(fiscalItens) && fiscalItens.length > 0) {
-            somaItensFiscal = fiscalItens.reduce((acc, it) => {
-                const vIt = Number(it.valorTotal || (Number(it.valor || 0) * Number(it.qtde || 1)) || 0);
-                return acc + vIt;
-            }, 0);
-        }
-
-        const totalNf = Number(
-            fiscal?.vlrTotal ||
-            fiscal?.valorTotal ||
-            fiscal?.vlrTotalNf ||
-            (somaItensFiscal > 0 ? somaItensFiscal : null) ||
-            raw.totalNf ||
-            raw.vlrPago ||
-            raw.valorTotalLiquidoProduto ||
-            raw.total ||
-            0
-        );
-
+        const totalNf = Number(fiscal?.vlrTotal || raw.totalNf || raw.vlrPago || raw.valorTotalLiquidoProduto || 0);
         const dataIso = raw.abertura || raw.data || raw.fechamento || new Date().toISOString();
         const dataFormatada = dataIso.split('T')[0];
         const horaEmissao = dataIso.includes('T') ? dataIso.split('T')[1].substring(0, 5) : '';
 
-        // Número fiscal: extrai de /fiscal/{id} (nrNum) ou fallback
+        // Número fiscal: extrai de fiscal/venda/{id} (nrNum) ou fallback
         let numeroFiscal = '';
         if (fiscal && fiscal.nrNum && Number(fiscal.nrNum) > 0) {
             numeroFiscal = String(fiscal.nrNum);
-        } else if (fiscal && fiscal.numeroNf) {
-            numeroFiscal = String(fiscal.numeroNf);
         } else if (raw.numeroNf || raw.nfe || raw.nrNf) {
             numeroFiscal = String(raw.numeroNf || raw.nfe || raw.nrNf);
         }
@@ -389,17 +354,6 @@ class MaxDataAdapter extends ErpAdapter {
             if (!totalVolumes && somaQtde > 0) totalVolumes = Math.max(1, Math.ceil(somaQtde / 5)); // estimativa se não houver
         }
 
-        // Mapeia itens de sale/items ou de /fiscal/{id} (itens)
-        const rawItemsList = (items && items.length > 0) ? items : (fiscalItens || []);
-        const mappedItens = rawItemsList.map(it => ({
-            id:        it.id || it.produtoId || it.codProduto || String(it.codBarras || ''),
-            descricao: it.descricaoProduto || it.descricao || '',
-            codigoFab: it.codigoFab || it.codBarras || '',
-            qtde:      Number(it.qtde || 1),
-            valor:     Number(it.valorTotal || (Number(it.valor || 0) * Number(it.qtde || 1)) || 0),
-            un:        it.un || 'UN'
-        }));
-
         return {
             id:           String(raw.id || ''),
             numeroPedido: String(raw.id || ''),
@@ -419,7 +373,14 @@ class MaxDataAdapter extends ErpAdapter {
             vendedor:     raw.atendenteId ? String(raw.atendenteId) : (raw.separadorNome || ''),
             status:       raw.status || 'finalizada',
             statusEntrega: raw.statusEntrega || '',
-            itens:        mappedItens,
+            itens:        items.map(it => ({
+                id:        it.id || it.produtoId,
+                descricao: it.descricaoProduto || '',
+                codigoFab: it.codigoFab || '',
+                qtde:      Number(it.qtde || 1),
+                valor:     Number(it.valor || 0),
+                un:        it.un || 'UN'
+            })),
             _source:      'maxdata'
         };
     }
