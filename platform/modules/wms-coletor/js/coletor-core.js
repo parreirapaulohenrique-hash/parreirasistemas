@@ -1,7 +1,7 @@
 // WMS Coletor Ã¢â‚¬â€ Core Logic
 // Navigation, Auth, Scanner, Shared Data Access
 
-const COLETOR_VERSION = '1.0.0';
+const COLETOR_VERSION = '3.22.34';
 
 // ===== Auth Check =====
 document.addEventListener('DOMContentLoaded', async () => {
@@ -50,6 +50,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     }));
 
     updateHomeStats();
+
+    // Exibe versão no badge da home (lê do version.json para refletir deploys automaticamente)
+    fetch('/platform/version.json?t=' + Date.now())
+        .then(r => r.json())
+        .then(v => {
+            const el = document.getElementById('coletor-version-badge');
+            if (el) el.textContent = `WMS Coletor v${v.version}`;
+        })
+        .catch(() => {
+            const el = document.getElementById('coletor-version-badge');
+            if (el) el.textContent = `WMS Coletor v${COLETOR_VERSION}`;
+        });
 });
 
 
