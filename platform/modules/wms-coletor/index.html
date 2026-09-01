@@ -91,15 +91,22 @@
                     </div>
                 </div>
 
-                <!-- Versão -->
-                <div style="text-align:center;padding:.6rem 0 .2rem;margin-top:.25rem;">
+                <!-- Versão + Botão de Atualização -->
+                <div style="text-align:center;padding:.6rem 0 .2rem;margin-top:.25rem;display:flex;flex-direction:column;align-items:center;gap:.4rem;">
                     <span id="coletor-version-badge"
-                        style="display:inline-block;font-size:.62rem;font-weight:600;letter-spacing:.04em;
-                               color:var(--text-secondary);opacity:.55;
+                        style="display:inline-block;font-size:.65rem;font-weight:600;letter-spacing:.04em;
+                               color:var(--text-secondary);opacity:.8;
                                background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
                                border-radius:20px;padding:.2rem .65rem;">
-                        WMS Coletor
+                        WMS Coletor v3.18.1
                     </span>
+                    <button onclick="forcarAtualizacaoColetor()"
+                        style="background:rgba(14,165,233,.15);border:1px solid rgba(14,165,233,.3);color:#38bdf8;
+                               padding:.35rem .8rem;border-radius:6px;font-size:.72rem;font-weight:600;
+                               cursor:pointer;display:flex;align-items:center;gap:.3rem;">
+                        <span class="material-icons-round" style="font-size:.9rem;">refresh</span>
+                        Atualizar para Nova Versão
+                    </button>
                 </div>
             </div>
 
@@ -151,23 +158,43 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-    <script src="../../core/js/session-manager.js"></script>
-    <script src="../../core/js/auth.js"></script>
+    <script src="../../core/js/session-manager.js?v=3.18.1"></script>
+    <script src="../../core/js/auth.js?v=3.18.1"></script>
 
     <!-- Scripts -->
-    <script src="../wms/js/wms-procedures.js"></script>
-    <script src="../wms/js/wms-store.js"></script>
-    <script src="js/coletor-core.js"></script>
-    <script src="js/coletor-screens.js?v=3"></script>
-    <script src="js/coletor-inbound.js?v=1"></script>
-    <script src="js/coletor-conferencia.js?v=5"></script>
-    <script src="js/coletor-putaway.js?v=1"></script>
-    <script src="js/picking-app.js"></script>
+    <script src="../wms/js/wms-procedures.js?v=3.18.1"></script>
+    <script src="../wms/js/wms-store.js?v=3.18.1"></script>
+    <script src="js/coletor-core.js?v=3.18.1"></script>
+    <script src="js/coletor-screens.js?v=3.18.1"></script>
+    <script src="js/coletor-inbound.js?v=3.18.1"></script>
+    <script src="js/coletor-conferencia.js?v=3.18.1"></script>
+    <script src="js/coletor-putaway.js?v=3.18.1"></script>
+    <script src="js/picking-app.js?v=3.18.1"></script>
     <script>
+        // Função para forçar atualização no celular e limpar cache
+        window.forcarAtualizacaoColetor = async function() {
+            if (confirm('Deseja atualizar o WMS Coletor para a versão mais recente?')) {
+                try {
+                    if ('serviceWorker' in navigator) {
+                        const regs = await navigator.serviceWorker.getRegistrations();
+                        for (let reg of regs) await reg.unregister();
+                    }
+                    if ('caches' in window) {
+                        const keys = await caches.keys();
+                        for (let key of keys) await caches.delete(key);
+                    }
+                } catch(e) { console.warn('Erro ao limpar cache:', e); }
+                const ts = Date.now();
+                const url = new URL(window.location.href);
+                url.searchParams.set('_v', ts);
+                window.location.href = url.toString();
+            }
+        };
+
         // Register Service Worker
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js')
-                .then(() => console.log('SW registrado'))
+            navigator.serviceWorker.register('sw.js?v=' + Date.now())
+                .then(() => console.log('SW registrado com sucesso'))
                 .catch(e => console.warn('SW falhou:', e));
         }
     </script>
