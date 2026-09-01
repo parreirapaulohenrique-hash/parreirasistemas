@@ -23,12 +23,18 @@ window.initConferirScreen = async function(container) {
     pending.sort((a, b) => new Date(a.criadoEm||0) - new Date(b.criadoEm||0));
     container.innerHTML = `
         <div class="m-card" style="border-left:3px solid #ec4899;margin-bottom:1rem;">
-            <div style="font-weight:600;font-size:.9rem;display:flex;align-items:center;gap:.5rem;color:#ec4899;">
-                <span class="material-icons-round">qr_code_scanner</span>
-                Bipe a chave da NF-e para receber
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
+                <div style="font-weight:600;font-size:.9rem;display:flex;align-items:center;gap:.5rem;color:#ec4899;">
+                    <span class="material-icons-round">qr_code_scanner</span>
+                    Bipe a chave da NF-e para receber
+                </div>
+                <button onclick="startCameraScanner('scannerInput')" 
+                    style="background:#ec4899;color:white;border:none;padding:.35rem .75rem;border-radius:6px;font-size:.78rem;font-weight:700;display:flex;align-items:center;gap:.3rem;cursor:pointer;">
+                    <span class="material-icons-round" style="font-size:1rem;">photo_camera</span> Bipar Câmera
+                </button>
             </div>
-            <p style="font-size:.78rem;color:var(--text-secondary);margin-top:.4rem;margin-bottom:0;">
-                Escaneie os 44 dígitos ou informe o número da NF na barra acima
+            <p style="font-size:.78rem;color:var(--text-secondary);margin-top:.2rem;margin-bottom:0;">
+                Escaneie os 44 dígitos da chave ou informe o número da NF
             </p>
         </div>
         ${pending.length > 0 ? `

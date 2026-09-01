@@ -13,6 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link rel="stylesheet" href="styles/coletor.css">
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 
 <body>
@@ -36,7 +37,10 @@
             <span class="material-icons-round scanner-icon">qr_code_scanner</span>
             <input type="text" id="scannerInput" class="scanner-input" placeholder="Escanear ou digitar código..."
                 autocomplete="off" autofocus>
-            <button class="scanner-btn" onclick="processScan()">
+            <button class="scanner-btn" onclick="startCameraScanner('scannerInput')" title="Bipar com a Câmera do Celular" style="background:#0284c7;margin-right:2px;display:flex;align-items:center;justify-content:center;">
+                <span class="material-icons-round" style="font-size:1.1rem;">photo_camera</span>
+            </button>
+            <button class="scanner-btn" onclick="processScan()" title="Buscar">
                 <span class="material-icons-round">search</span>
             </button>
         </div>

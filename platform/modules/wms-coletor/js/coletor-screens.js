@@ -72,11 +72,19 @@ function initRecebimentoScreen(container) {
                     <label style="font-size:.72rem;color:var(--text-secondary);display:block;margin-bottom:.3rem;">
                         Chave de Acesso (44 dígitos)
                     </label>
-                    <input id="rec-chave-inp" type="text" class="m-input" maxlength="47"
-                        placeholder="00000 00000 00000 00000 00000 00000 00000 00000 0000"
-                        style="font-family:monospace;font-size:.82rem;"
-                        oninput="recMascaraChave(this)"
-                        onkeydown="if(event.key==='Enter')recConsultarChaveManual()">
+                    <div style="display:flex;gap:.5rem;">
+                        <input id="rec-chave-inp" type="text" class="m-input" maxlength="47"
+                            placeholder="00000 00000 00000 00000 00000 00000 00000 00000 0000"
+                            style="font-family:monospace;font-size:.82rem;flex:1;"
+                            oninput="recMascaraChave(this)"
+                            onkeydown="if(event.key==='Enter')recConsultarChaveManual()">
+                        <button class="m-btn" onclick="startCameraScanner('rec-chave-inp')"
+                            style="background:#0ea5e9;color:white;padding:0 .75rem;border-radius:6px;display:flex;align-items:center;gap:.3rem;font-size:.8rem;white-space:nowrap;font-weight:600;cursor:pointer;"
+                            title="Bipar via Câmera do Celular">
+                            <span class="material-icons-round" style="font-size:1.1rem;">photo_camera</span>
+                            Bipar
+                        </button>
+                    </div>
                 </div>
                 <button class="m-btn m-btn-primary" onclick="recConsultarChaveManual()" id="rec-btn-consultar">
                     <span class="material-icons-round" style="font-size:1rem;">search</span>
