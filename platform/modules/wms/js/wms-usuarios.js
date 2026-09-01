@@ -143,14 +143,15 @@ window.WmsUsuarios = (function () {
                                 </span>
                             </td>
                             <td style="text-align:right;">
-                                <button class="btn btn-sm btn-secondary" onclick="WmsUsuarios.abrirModalEditar(${JSON.stringify(JSON.stringify(u))})"
+                                <button class="btn btn-sm btn-secondary"
+                                    onclick="WmsUsuarios.abrirModalEditar(decodeURIComponent('${encodeURIComponent(JSON.stringify(u))}'))"
                                     style="padding:.25rem .5rem;font-size:.75rem;">
                                     <span class="material-icons-round" style="font-size:.85rem;">edit</span>
                                 </button>
-                                ${u.ativo ? `<button class="btn btn-sm" onclick="WmsUsuarios.desativar('${u.uid}')"
+                                ${u.ativo ? `<button class="btn btn-sm" onclick="WmsUsuarios.desativar('${u.id || u.login || u.uid}')"
                                     style="padding:.25rem .5rem;font-size:.75rem;background:rgba(239,68,68,.1);color:#ef4444;margin-left:.3rem;">
                                     <span class="material-icons-round" style="font-size:.85rem;">block</span>
-                                </button>` : `<button class="btn btn-sm" onclick="WmsUsuarios.reativar('${u.uid}')"
+                                </button>` : `<button class="btn btn-sm" onclick="WmsUsuarios.reativar('${u.id || u.login || u.uid}')"
                                     style="padding:.25rem .5rem;font-size:.75rem;background:rgba(16,185,129,.1);color:#10b981;margin-left:.3rem;">
                                     <span class="material-icons-round" style="font-size:.85rem;">check_circle</span>
                                 </button>`}
