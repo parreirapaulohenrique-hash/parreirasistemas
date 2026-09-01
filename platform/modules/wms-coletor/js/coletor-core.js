@@ -279,5 +279,171 @@ window.Feedback = {
         if (navigator.vibrate) navigator.vibrate(type === 'success' ? 50 : 300);
     }
 };
+
+// ===================================
+// LEITOR DE CÂMERA (MOBILE / WEBCAM)
+// ===================================
+window._cameraScannerInstance = null;
+window._cameraTargetInputId   = null;
+
+window.startCameraScanner = function(targetInputId = null) {
+    window._cameraTargetInputId = targetInputId;
+
+    let modal = document.getElementById('cameraScannerModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'cameraScannerModal';
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15,23,42,0.96); z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+            padding: 1rem; color: white; box-sizing: border-box;
+        `;
+        modal.innerHTML = `
+            <div style="width:100%;max-width:480px;display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;">
+                <span style="font-weight:700;font-size:1rem;display:flex;align-items:center;gap:.4rem;">
+                    <span class="material-icons-round" style="color:#0ea5e9;">photo_camera</span>
+                    Leitor de Código de Barras
+                </span>
+                <button onclick="stopCameraScanner()" style="background:rgba(255,255,255,.15);border:none;color:white;width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+
+            <div style="width:100%;max-width:420px;position:relative;border-radius:12px;overflow:hidden;border:2px solid rgba(14,165,233,.6);box-shadow:0 0 30px rgba(14,165,233,.25);background:#000;">
+                <div id="cameraScannerReader" style="width:100%;min-height:260px;"></div>
+                <div style="position:absolute;top:50%;left:5%;right:5%;height:2px;background:#ef4444;box-shadow:0 0 10px #ef4444;z-index:10;pointer-events:none;"></div>
+            </div>
+
+            <div style="width:100%;max-width:480px;text-align:center;padding:.5rem 0;">
+                <p style="font-size:.82rem;color:#94a3b8;margin-bottom:1rem;line-height:1.35;">
+                    Aproxime a <strong>Chave NF-e (Código de Barras ou QR Code)</strong> do quadro vermelho.
+                </p>
+                <div style="display:flex;gap:.75rem;justify-content:center;">
+                    <button id="btnTorchToggle" onclick="toggleCameraTorch()" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:white;padding:.6rem 1rem;border-radius:20px;font-size:.8rem;font-weight:600;display:flex;align-items:center;gap:.4rem;cursor:pointer;">
+                        <span class="material-icons-round" style="font-size:1.1rem;color:#f59e0b;">flash_on</span> Lanterna
+                    </button>
+                    <button onclick="stopCameraScanner()" style="background:#ef4444;border:none;color:white;padding:.6rem 1.25rem;border-radius:20px;font-size:.8rem;font-weight:700;cursor:pointer;">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    modal.style.display = 'flex';
+
+    if (typeof Html5Qrcode === 'undefined') {
+        alert('Carregando leitor de câmera... Tente novamente em 2 segundos.');
+        return;
+    }
+
+    if (window._cameraScannerInstance) {
+        try { window._cameraScannerInstance.stop().catch(() => {}); } catch(_) {}
+    }
+
+    const html5QrCode = new Html5Qrcode("cameraScannerReader");
+    window._cameraScannerInstance = html5QrCode;
+
+    const config = {
+        fps: 15,
+        qrbox: { width: 320, height: 180 },
+        formatsToSupport: [
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.ITF,
+            Html5QrcodeSupportedFormats.CODE_39
+        ]
+    };
+
+    html5QrCode.start(
+        { facingMode: "environment" },
+        config,
+        (decodedText) => { onCameraCodeDetected(decodedText); },
+        () => {}
+    ).catch(err => {
+        console.warn('Câmera traseira falhou, tentando fallback:', err);
+        html5QrCode.start(
+            { facingMode: "user" },
+            config,
+            (decodedText) => { onCameraCodeDetected(decodedText); },
+            () => {}
+        ).catch(e2 => {
+            alert('Permissão de câmera negada ou câmera não suportada no navegador.');
+            stopCameraScanner();
+        });
+    });
+};
+
+window.stopCameraScanner = function() {
+    if (window._cameraScannerInstance) {
+        window._cameraScannerInstance.stop().then(() => {
+            window._cameraScannerInstance.clear();
+            window._cameraScannerInstance = null;
+        }).catch(() => {
+            window._cameraScannerInstance = null;
+        });
+    }
+    const modal = document.getElementById('cameraScannerModal');
+    if (modal) modal.style.display = 'none';
+};
+
+window.onCameraCodeDetected = function(rawCode) {
+    if (window.Feedback) {
+        window.Feedback.beep('success');
+        window.Feedback.flash('success');
+    }
+    stopCameraScanner();
+
+    let cleanCode = (rawCode || '').trim();
+    const numericOnly = cleanCode.replace(/\D/g, '');
+    if (numericOnly.length === 44) {
+        cleanCode = numericOnly;
+    }
+
+    const targetId = window._cameraTargetInputId;
+    if (targetId) {
+        const inp = document.getElementById(targetId);
+        if (inp) {
+            inp.value = cleanCode;
+            if (targetId === 'rec-chave-inp' && window.recConsultarChaveManual) {
+                window.recConsultarChaveManual();
+            } else if (targetId === 'scannerInput') {
+                processScan();
+            } else {
+                inp.dispatchEvent(new Event('input', { bubbles: true }));
+                inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+            }
+            return;
+        }
+    }
+
+    const scInput = document.getElementById('scannerInput');
+    if (scInput) scInput.value = cleanCode;
+
+    if (currentScreen === 'conferir' && window.handleScanConferir) {
+        window.handleScanConferir(cleanCode);
+    } else if (currentScreen === 'recebimento' && window.handleScanRecebimento) {
+        window.handleScanRecebimento(cleanCode);
+    } else {
+        processScan();
+    }
+};
+
+window.toggleCameraTorch = function() {
+    if (!window._cameraScannerInstance) return;
+    try {
+        const track = window._cameraScannerInstance.getRunningTrack();
+        if (track && track.getCapabilities && track.getCapabilities().torch) {
+            const current = track.getSettings().torch || false;
+            track.applyConstraints({ advanced: [{ torch: !current }] });
+        } else {
+            alert('Lanterna não disponível nesta câmera.');
+        }
+    } catch(e) { console.warn('Torch error:', e); }
+};
 // force deploy
 
