@@ -1,7 +1,7 @@
 // WMS Coletor Ã¢â‚¬â€ Core Logic
 // Navigation, Auth, Scanner, Shared Data Access
 
-const COLETOR_VERSION = '3.22.34';
+const COLETOR_VERSION = '3.18.3';
 
 // ===== Auth Check =====
 document.addEventListener('DOMContentLoaded', async () => {
