@@ -1,4 +1,4 @@
-﻿// =============================================================================
+// =============================================================================
 // licencas.js — Controle de Licenças de Clientes
 // Painel Admin | Parreira Sistemas
 // =============================================================================
@@ -6,12 +6,10 @@
 window.LicencasManager = (function () {
 
     const MODULOS = [
-        { id: 'erp',         label: 'ERP',             icon: 'account_balance' },
-        { id: 'wms',         label: 'WMS',             icon: 'warehouse' },
-        { id: 'wms-coletor', label: 'WMS Coletor',     icon: 'phone_android' },
-        { id: 'dispatch',    label: 'Despacho',        icon: 'local_shipping' },
-        { id: 'sales-force', label: 'Força de Vendas', icon: 'store' },
-        { id: 'consultoria', label: 'Bússola Gestão', icon: 'savings' },
+        { id: 'wms',         label: 'WMS',            icon: 'warehouse'      },
+        { id: 'wms-coletor', label: 'WMS Coletor',    icon: 'phone_android'  },
+        { id: 'dispatch',    label: 'Despacho',       icon: 'local_shipping' },
+        { id: 'consultoria', label: 'Bússola Gestão', icon: 'savings'        },
     ];
 
     const STATUS_CFG = {
