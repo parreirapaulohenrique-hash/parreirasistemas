@@ -5,7 +5,7 @@ window.mockTenants = [
         name: 'Parreira Sistemas',
         cnpj: '00.000.000/0001-00',
         slug: 'parreira',
-        modules: ['master', 'dispatch', 'erp', 'erp-consultoria', 'wms', 'wms-coletor', 'sales-force'],
+        modules: ['master', 'dispatch', 'erp-consultoria', 'wms', 'wms-coletor'],
         status: 'active',
         adminEmail: 'paulo@parreirasistemas.com.br'
     },
@@ -51,7 +51,7 @@ window.mockTenants = [
         name: 'Parreira Sistemas [HML]',
         cnpj: '00.000.000/0001-00',
         slug: 'parreira',
-        modules: ['master', 'dispatch', 'erp', 'erp-consultoria', 'wms', 'wms-coletor', 'sales-force'],
+        modules: ['master', 'dispatch', 'erp-consultoria', 'wms', 'wms-coletor'],
         status: 'active',
         adminEmail: 'paulo@parreirasistemas.com.br'
     },
