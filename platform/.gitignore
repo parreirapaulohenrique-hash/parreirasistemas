@@ -1,5 +1,30 @@
-
-# CHAVE PRIVADA FIREBASE ADMIN SDK — NUNCA COMMITAR
+ï»¿# CHAVE PRIVADA FIREBASE ADMIN SDK - NUNCA COMMITAR
 *firebase-adminsdk*.json
 service-account*.json
 *-credentials.json
+
+# Arquivos de dados temporarios, dumps e backups pontuais locais
+DIPS*
+app_storage*.json
+app_storage*.txt
+*_dump.txt
+*.bak
+*.orig
+*backup_*.json
+*dispatches_backup_*.json
+
+# Planilhas e relatorios de analise temporaria da raiz
+enderecos_import.json
+*.xlsx
+*.xls
+*.pdf
+
+# Scripts de inspecao e debug locais na raiz
+inspect_*.py
+check_*.py
+find_*.py
+write_map.py
+read_files.ps1
+
+# Pacotes zip locais
+*.zip

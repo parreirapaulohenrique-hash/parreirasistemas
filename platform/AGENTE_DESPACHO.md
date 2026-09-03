@@ -1,6 +1,6 @@
 # 🚚 AGENTE DESPACHO — Contexto e Histórico de Melhorias
 > Arquivo de contexto para continuidade do desenvolvimento do Módulo de Despacho
-> **Última atualização:** 2026-04-06 | **Versão atual:** Dispatch v3.8.5 | Platform v11.8.6
+> **Última atualização:** 2026-09-03 | **Versão atual:** Dispatch v3.18.8 | Platform v3.18.8
 
 ---
 
@@ -109,15 +109,15 @@ Cotação (quote)
 
 | Função | Linha aprox. | Descrição |
 |---|---|---|
-| `renderDashboard()` | 4277 | Renderiza cards de transportadoras no painel |
-| `openShipmentModal(carrier)` | 4413 | Abre modal de despacho para uma transportadora |
-| `generateRomaneioAction()` | 4562 | Gera e imprime o romaneio |
-| `printSpecificRomaneio(carrier, items)` | 4725 | Gera o PDF do romaneio |
-| `renderBaixaRomaneios()` | ~6045 | Renderiza tabelas de baixa de romaneios |
-| `reimprimirRomaneio(id)` | ~6019 | Reimprimir romaneio pelo ID |
-| `confirmarBaixaRomaneio(id)` | ~6110 | Arquiva (dá baixa) no romaneio |
-| `sendWhatsAppVendedor(id, silent)` | ~6290 | Abre WhatsApp com mensagem para o vendedor |
-| `onFobCarrierChange(index)` | ~1607 | Consulta horários/prazo ao selecionar transportadora FOB |
+| `renderDashboard()` | dispatch-dashboard.js:99 | Renderiza cards de transportadoras no painel |
+| `openShipmentModal(carrier)` | dispatch-dashboard.js:220 | Abre modal de despacho para uma transportadora |
+| `generateRomaneioAction()` | dispatch-dashboard.js:305 | Gera e imprime o romaneio |
+| `printSpecificRomaneio(carrier, items)` | app.js:8196 | Gera o PDF do romaneio |
+| `renderBaixaRomaneios()` | app.js:10737 | Renderiza tabelas de baixa de romaneios |
+| `reimprimirRomaneio(id)` | app.js:10672 | Reimprimir romaneio pelo ID |
+| `confirmarBaixaRomaneio(id)` | app.js:10816 | Arquiva (dá baixa) no romaneio |
+| `sendWhatsAppVendedor(id, silent)` | app.js:11085 | Abre WhatsApp com mensagem para o vendedor |
+| `onFobCarrierChange(index)` | app.js:3025 | Consulta horários/prazo ao selecionar transportadora FOB |
 
 ---
 
