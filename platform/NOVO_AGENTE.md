@@ -29,6 +29,7 @@ A arquitetura moderna reside na pasta `/platform`. (A antiga subpasta `/web` ain
     *   **sales-force**: Força de Vendas Mobile (PWA para RCA em campo, offline-first com IndexedDB).
     *   **wms**: Warehouse Management System (Gestão de Armazéns).
     *   **wms-coletor**: Versão do WMS estritamente otimizada para coletores móveis (Zebra/Android) utilizados na operação de piso.
+    *   **demanda**: Módulo de Inteligência de Demanda, Pré-venda e Venda Perdida. Tenant: `centralpecas` (Central Rolamentos CTR). Auth via MaxData JWT (usuário + filial). Firestore: `tenants/centralpecas/demanda/`. Stack: Vanilla JS, 5 módulos JS (demanda-states, demanda-db, demanda-import, demanda-search, demanda-app). Adicionado em v3.19.0.
 *   **`platform/shared/integrations/`** (v3.15.0+): Camada centralizada de integração com ERPs externos.
     *   **`erp-adapter.js`**: Contrato genérico (interface). Todo ERP deve implementar `syncClients()`, `syncProducts()`, `syncOrders()`, `syncNFs()`, `confirmDispatch()`.
     *   **`erp-registry.js`**: Registro multi-tenant. Lê do Firestore qual ERP cada tenant usa e instancia o adaptador correto. Token fica em `sessionStorage`.
@@ -347,6 +348,7 @@ Abra o terminal do PowerShell na raiz do projeto (`C:\Users\Paulo H Parreira\.ge
 
 | Módulo | Pasta | Política de Deploy | Rationale |
 |---|---|---|---|
+| **Intelig. Demanda** | `demanda` | 🔴 **Staging obrigatório** — aguardar aprovação antes do `promote.ps1` | Módulo novo, em fase inicial. Integração ativa com ERP MaxData em produção. |
 | **Bússola Log** | `dispatch` | 🔴 **Staging obrigatório** — aguardar aprovação explícita antes do `promote.ps1` | Operação logística em tempo real. Bugs afetam clientes e motoristas diretamente. |
 | **Bússola Gestão** | `erp-consultoria` | 🟢 **Deploy direto em produção** — pode rodar `deploy.ps1 + promote.ps1` na mesma sequência sem aprovação intermediária | Módulo de gestão interna, sem impacto operacional imediato. Iterações frequentes autorizadas pelo usuário em 2026-08-20. |
 | **WMS / WMS Coletor** | `wms`, `wms-coletor` | 🟢 **Deploy direto em produção** — rodar `deploy.ps1 + promote.ps1` na mesma sequência até segunda ordem | Atualizações e melhorias diretas em produção autorizadas pelo usuário em 2026-09-01. |

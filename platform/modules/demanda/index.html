@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inteligência de Demanda | Central Rolamentos</title>
+    <meta name="description" content="Módulo de captura, identificação e rastreamento de demanda comercial — Central Rolamentos CTR.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <!-- SheetJS para importação de Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <!-- Design system da plataforma -->
+    <link rel="stylesheet" href="../../core/styles/portal.css">
+    <!-- Estilos específicos do módulo -->
+    <link rel="stylesheet" href="styles/demanda.css?v=1.0.0">
+</head>
+
+<body>
+    <!-- Banner de homologação -->
+    <div id="stagingBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:999999;background:linear-gradient(90deg,#f59e0b,#d97706);color:#000;font-weight:700;font-size:.82rem;text-align:center;padding:6px 12px;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 2px 8px rgba(245,158,11,.5);">
+        ⚠️ AMBIENTE DE HOMOLOGAÇÃO — DADOS DE TESTE ⚠️
+    </div>
+    <script>
+        (function() {
+            var h = window.location.hostname;
+            if (h.includes('staging') || h.includes('localhost') || h === '127.0.0.1') {
+                document.getElementById('stagingBanner').style.display = 'block';
+                document.body.style.paddingTop = '34px';
+                document.title = '[HOMOLOG] ' + document.title;
+            }
+        })();
+    </script>
+
+    <!-- ── Shell Principal ──────────────────────────────────── -->
+    <div class="demanda-shell" id="appShell" style="display:none">
+
+        <!-- Sidebar -->
+        <aside class="demanda-sidebar">
+            <!-- Logo / Título do módulo -->
+            <div class="sidebar-logo">
+                <div class="sidebar-logo-icon">
+                    <span class="material-icons-round">insights</span>
+                </div>
+                <div class="sidebar-logo-text">
+                    <strong>Intelig. Demanda</strong>
+                    <small>Central Rolamentos</small>
+                </div>
+            </div>
+            <!-- Voltar à plataforma -->
+            <a href="../../index.html" class="sidebar-back">
+                <span class="material-icons-round">arrow_back</span>
+                Voltar ao Portal
+            </a>
+
+            <nav class="sidebar-nav">
+                <div class="sidebar-section-label">Operacional</div>
+                <button class="nav-item active" id="nav-captura" onclick="DemandaApp.switchView('captura')">
+                    <span class="material-icons-round">add_circle</span>
+                    Nova Demanda
+                </button>
+                <button class="nav-item" id="nav-lista" onclick="DemandaApp.switchView('lista')">
+                    <span class="material-icons-round">list_alt</span>
+                    Minhas Demandas
+                </button>
+                <button class="nav-item" id="nav-pesquisa" onclick="DemandaApp.switchView('pesquisa')">
+                    <span class="material-icons-round">manage_search</span>
+                    Pesquisar Peças
+                </button>
+
+                <div class="sidebar-section-label" style="margin-top:.5rem">Gestão</div>
+                <button class="nav-item" id="nav-compras" onclick="DemandaApp.switchView('compras')">
+                    <span class="material-icons-round">shopping_cart</span>
+                    Fila de Compras
+                </button>
+                <button class="nav-item" id="nav-dashboard" onclick="DemandaApp.switchView('dashboard')">
+                    <span class="material-icons-round">bar_chart</span>
+                    Dashboard
+                </button>
+
+                <div class="sidebar-section-label" style="margin-top:.5rem">Base Técnica</div>
+                <button class="nav-item" id="nav-base" onclick="DemandaApp.switchView('base')">
+                    <span class="material-icons-round">hub</span>
+                    Base de Peças
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-user">
+                    <div class="sidebar-avatar" id="sidebarAvatarLetter">?</div>
+                    <div class="sidebar-user-info">
+                        <strong id="sidebarUserName">Carregando...</strong>
+                        <span id="sidebarFilial">—</span>
+                    </div>
+                </div>
+                <div style="font-size:.68rem;opacity:.5;margin-top:.25rem" id="sidebarVersion">v1.0.0</div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="demanda-main">
+
+            <!-- ══════════════════════════════════════════════ -->
+            <!--  VIEW: CENTRAL DE CAPTURA (padrão)            -->
+            <!-- ══════════════════════════════════════════════ -->
+            <div id="view-captura">
+                <!-- Topbar -->
+                <div class="demanda-topbar">
+                    <div>
+                        <span class="topbar-title">📥 Central de Captura</span>
+                        <span id="demandaCodigoTopbar" style="font-size:.75rem;color:var(--text-secondary);margin-left:.5rem"></span>
+                    </div>
+                    <div class="topbar-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="DemandaApp.openImportModal('texto')">
+                            <span class="material-icons-round">content_paste</span> Colar Texto
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="DemandaApp.openImportModal('excel')">
+                            <span class="material-icons-round">table_view</span> Excel/CSV
+                        </button>
+                        <button class="btn btn-primary btn-sm" id="btnSalvarDemanda" onclick="DemandaApp.salvarDemanda()">
+                            <span class="material-icons-round">save</span> Salvar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Layout: Pesquisa (esq) + Itens (dir) -->
+                <div class="captura-layout">
+
+                    <!-- ── Coluna Esquerda: Pesquisa ──── -->
+                    <div class="captura-left">
+
+                        <!-- Barra universal de pesquisa -->
+                        <div class="search-universal">
+                            <div class="search-input-wrap">
+                                <span class="material-icons-round search-icon">search</span>
+                                <input
+                                    id="searchInput"
+                                    type="text"
+                                    placeholder="Referência, descrição, EAN, máquina/modelo... (mín. 3 caracteres)"
+                                    autocomplete="off"
+                                    spellcheck="false"
+                                    oninput="DemandaApp.onSearchInput(this.value)"
+                                >
+                                <button class="search-clear" id="searchClear" onclick="DemandaApp.clearSearch()">
+                                    <span class="material-icons-round" style="font-size:1rem">close</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Barra de importação -->
+                        <div class="import-bar">
+                            <span class="import-bar-label">Importar:</span>
+                            <button class="btn-import" onclick="DemandaApp.openImportModal('texto')">
+                                <span class="material-icons-round">content_paste</span>
+                                Colar Texto / WhatsApp
+                            </button>
+                            <button class="btn-import" onclick="DemandaApp.openImportModal('excel')">
+                                <span class="material-icons-round">table_view</span>
+                                Excel / CSV
+                            </button>
+                            <button class="btn-import" onclick="DemandaApp.openImportModal('pdf')" title="Em breve">
+                                <span class="material-icons-round">picture_as_pdf</span>
+                                PDF
+                            </button>
+                            <button class="btn-import" onclick="DemandaApp.openImportModal('foto')" title="Em breve">
+                                <span class="material-icons-round">photo_camera</span>
+                                Foto / Print
+                            </button>
+                        </div>
+
+                        <!-- Área de resultados da pesquisa -->
+                        <div class="search-results" id="searchResults">
+                            <div class="search-placeholder" id="searchPlaceholder">
+                                <span class="material-icons-round">manage_search</span>
+                                <h4>Pesquise uma peça</h4>
+                                <p>Digite a referência, código, descrição ou nome da máquina para encontrar produtos no ERP e na base técnica.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Coluna Direita: Demanda Atual ─── -->
+                    <div class="captura-right">
+                        <div class="demanda-panel">
+
+                            <!-- Cabeçalho do painel -->
+                            <div class="demanda-panel-header">
+                                <div class="demanda-panel-title">
+                                    <span class="material-icons-round">receipt_long</span>
+                                    Demanda Atual
+                                </div>
+                                <div class="demanda-client-info">
+                                    <!-- Seletor de cliente -->
+                                    <div style="position:relative;flex:1">
+                                        <button class="demanda-client-btn" id="btnSelectCliente"
+                                            onclick="DemandaApp.toggleClienteDropdown()">
+                                            <span class="material-icons-round">person_search</span>
+                                            <span id="clienteLabel">Selecionar cliente</span>
+                                        </button>
+                                        <div class="client-dropdown" id="clienteDropdown">
+                                            <input
+                                                id="clienteSearchInput"
+                                                type="text"
+                                                placeholder="Buscar cliente..."
+                                                style="width:100%;padding:.55rem .8rem;background:var(--bg-dark);border:none;border-bottom:1px solid var(--border);color:var(--text-primary);font-size:.83rem;outline:none;"
+                                                oninput="DemandaApp.searchCliente(this.value)"
+                                                autocomplete="off"
+                                            >
+                                            <div id="clienteDropdownList"></div>
+                                        </div>
+                                    </div>
+                                    <!-- Canal de origem -->
+                                    <select id="selectOrigem" class="form-select"
+                                        style="padding:.3rem .6rem;font-size:.75rem;width:auto;background:var(--bg-dark);"
+                                        title="Canal de origem da demanda">
+                                        <option value="whatsapp">📱 WhatsApp</option>
+                                        <option value="email">📧 Email</option>
+                                        <option value="telefone">📞 Telefone</option>
+                                        <option value="presencial">🏪 Presencial</option>
+                                        <option value="manual">✏️ Manual</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Tabela de itens -->
+                            <div class="itens-table-wrap" id="itensTableWrap">
+                                <table class="itens-table">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Referência</th>
+                                            <th style="min-width:120px">Descrição</th>
+                                            <th>Qtde</th>
+                                            <th>Status</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="itensTbody">
+                                        <tr id="trEmptyState">
+                                            <td colspan="6">
+                                                <div class="empty-state" style="padding:1.5rem">
+                                                    <span class="material-icons-round">add_shopping_cart</span>
+                                                    <p>Pesquise uma peça ou importe uma lista para começar.</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Grade de entrada rápida -->
+                            <div class="grade-input-row" id="gradeInputRow">
+                                <input
+                                    id="gradeRef"
+                                    type="text"
+                                    placeholder="Referência ou descrição"
+                                    autocomplete="off"
+                                    onkeydown="DemandaApp.onGradeKeydown(event)"
+                                >
+                                <input
+                                    id="gradeQtde"
+                                    type="number"
+                                    placeholder="Qtde"
+                                    min="1"
+                                    value="1"
+                                    style="text-align:center"
+                                    onkeydown="DemandaApp.onGradeKeydown(event)"
+                                >
+                                <button class="btn-grade-add" onclick="DemandaApp.addItemGrade()" title="Adicionar (Enter)">
+                                    <span class="material-icons-round">add</span>
+                                </button>
+                            </div>
+
+                            <!-- Rodapé de ações -->
+                            <div class="demanda-panel-footer">
+                                <button class="btn btn-secondary btn-sm" onclick="DemandaApp.limparDemanda()" title="Limpar todos os itens">
+                                    <span class="material-icons-round">delete_sweep</span>
+                                </button>
+                                <button class="btn btn-success btn-sm" style="flex:1" onclick="DemandaApp.salvarDemanda()">
+                                    <span class="material-icons-round">save</span>
+                                    Salvar Demanda
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div><!-- /captura-layout -->
+            </div><!-- /view-captura -->
+
+            <!-- ══════════════════════════════════════════════ -->
+            <!--  VIEW: LISTA DE DEMANDAS                      -->
+            <!-- ══════════════════════════════════════════════ -->
+            <div id="view-lista" style="display:none">
+                <div class="demanda-topbar">
+                    <span class="topbar-title">📋 Minhas Demandas</span>
+                    <div class="topbar-actions">
+                        <button class="btn btn-primary btn-sm" onclick="DemandaApp.switchView('captura')">
+                            <span class="material-icons-round">add</span>
+                            Nova Demanda
+                        </button>
+                    </div>
+                </div>
+                <div style="padding:1rem 1.5rem;border-bottom:1px solid var(--border);">
+                    <div class="filter-row">
+                        <button class="filter-chip active" onclick="DemandaApp.filterDemandas('todas', this)">Todas</button>
+                        <button class="filter-chip" onclick="DemandaApp.filterDemandas('aberta', this)">Abertas</button>
+                        <button class="filter-chip" onclick="DemandaApp.filterDemandas('em_atendimento', this)">Em Atendimento</button>
+                        <button class="filter-chip" onclick="DemandaApp.filterDemandas('encerrada', this)">Encerradas</button>
+                    </div>
+                </div>
+                <div style="flex:1;overflow-y:auto;padding:1rem 1.5rem" id="listaDemandasContainer">
+                    <div class="empty-state">
+                        <span class="material-icons-round">hourglass_empty</span>
+                        <h4>Carregando demandas...</h4>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════ -->
+            <!--  VIEW: PESQUISA AVANÇADA DE PEÇAS             -->
+            <!-- ══════════════════════════════════════════════ -->
+            <div id="view-pesquisa" style="display:none">
+                <div class="demanda-topbar">
+                    <span class="topbar-title">🔍 Pesquisar Peças</span>
+                </div>
+                <div style="flex:1;overflow-y:auto;padding:1.5rem;display:flex;align-items:center;justify-content:center">
+                    <div class="empty-state">
+                        <span class="material-icons-round">manage_search</span>
+                        <h4>Pesquisa Avançada</h4>
+                        <p>Em desenvolvimento — Fase 2</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════ -->
+            <!--  VIEW: FILA DE COMPRAS                        -->
+            <!-- ══════════════════════════════════════════════ -->
+            <div id="view-compras" style="display:none">
+                <div class="demanda-topbar">
+                    <span class="topbar-title">🛒 Fila de Compras</span>
+                </div>
+                <div style="flex:1;overflow-y:auto;padding:1.5rem;display:flex;align-items:center;justify-content:center">
+                    <div class="empty-state">
+                        <span class="material-icons-round">shopping_cart</span>
+                        <h4>Fila de Compras</h4>
+                        <p>Em desenvolvimento — Fase 2</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════ -->
+            <!--  VIEW: DASHBOARD                              -->
+            <!-- ══════════════════════════════════════════════ -->
+            <div id="view-dashboard" style="display:none">
+                <div class="demanda-topbar">
+                    <span class="topbar-title">📊 Dashboard</span>
+                </div>
+                <div style="flex:1;overflow-y:auto;padding:1.5rem;display:flex;align-items:center;justify-content:center">
+                    <div class="empty-state">
+                        <span class="material-icons-round">bar_chart</span>
+                        <h4>Dashboard de Inteligência</h4>
+                        <p>Em desenvolvimento — Fase 3</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════ -->
+            <!--  VIEW: BASE TÉCNICA                           -->
+            <!-- ══════════════════════════════════════════════ -->
+            <div id="view-base" style="display:none">
+                <div class="demanda-topbar">
+                    <span class="topbar-title">🔧 Base Técnica de Peças</span>
+                </div>
+                <div style="flex:1;overflow-y:auto;padding:1.5rem;display:flex;align-items:center;justify-content:center">
+                    <div class="empty-state">
+                        <span class="material-icons-round">hub</span>
+                        <h4>Base de Inteligência Técnica</h4>
+                        <p>Em desenvolvimento — Fase 3</p>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /demanda-main -->
+    </div><!-- /demanda-shell -->
+
+    <!-- ── Tela de Login do Módulo ───────────────────────────── -->
+    <div id="loginScreen" style="
+        position:fixed;inset:0;background:var(--bg-dark);
+        display:flex;align-items:center;justify-content:center;z-index:9999;
+        font-family:'Inter',sans-serif;
+    ">
+        <div style="
+            background:var(--bg-card);border:1px solid var(--border);
+            border-radius:16px;padding:2.5rem 2rem;width:100%;max-width:380px;
+            box-shadow:0 24px 64px rgba(0,0,0,.5);
+        ">
+            <div style="text-align:center;margin-bottom:2rem">
+                <div style="
+                    width:56px;height:56px;border-radius:16px;margin:0 auto .75rem;
+                    background:linear-gradient(135deg,#6366f1,#4f46e5);
+                    display:flex;align-items:center;justify-content:center
+                ">
+                    <span class="material-icons-round" style="font-size:1.75rem;color:#fff">insights</span>
+                </div>
+                <h2 style="font-size:1.2rem;font-weight:700;color:var(--text-primary)">Inteligência de Demanda</h2>
+                <p style="font-size:.8rem;color:var(--text-secondary);margin-top:.25rem">Central Rolamentos — MaxData ERP</p>
+            </div>
+
+            <div id="loginError" style="
+                display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);
+                border-radius:8px;padding:.65rem .9rem;font-size:.82rem;color:#ef4444;margin-bottom:1rem
+            "></div>
+
+            <div class="form-group">
+                <label class="form-label">Usuário MaxData</label>
+                <input id="loginUser" type="text" class="form-input" placeholder="Seu usuário do MaxData"
+                    autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Senha</label>
+                <input id="loginPass" type="password" class="form-input" placeholder="Sua senha"
+                    autocomplete="current-password" onkeydown="if(event.key==='Enter')DemandaApp.doLogin()">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Filial</label>
+                <select id="loginFilial" class="form-select">
+                    <option value="1">1 — CTR MATRIZ PALMAS ATACADO</option>
+                    <option value="2">2 — CTR FILIAL PALMAS VAREJO</option>
+                    <option value="4">4 — CTR PORTO VAREJO</option>
+                    <option value="5">5 — CTR REDENÇÃO</option>
+                </select>
+            </div>
+            <button id="btnLogin" class="btn btn-primary btn-full" onclick="DemandaApp.doLogin()" style="margin-top:.5rem">
+                <span class="material-icons-round">login</span>
+                Entrar
+            </button>
+            <p style="text-align:center;font-size:.72rem;color:var(--text-secondary);margin-top:1rem">
+                Use o mesmo usuário e senha do MaxData ERP
+            </p>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!--  MODAIS                                               -->
+    <!-- ══════════════════════════════════════════════════════ -->
+
+    <!-- Modal: Importar Texto -->
+    <div class="modal-overlay" id="modalTexto">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><span class="material-icons-round" style="color:var(--demanda-accent)">content_paste</span> Colar Texto / WhatsApp</h3>
+                <button class="btn-close" onclick="DemandaApp.closeModal('modalTexto')">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:.83rem;color:var(--text-secondary);margin-bottom:1rem">
+                    Cole o texto recebido do cliente (WhatsApp, email, mensagem). O sistema vai tentar separar os itens automaticamente.
+                </p>
+                <textarea id="textareaImport" class="form-textarea" rows="10"
+                    placeholder="Exemplos:&#10;2 rolamento 6208 / 5 correia plataforma S660 / 10 RE123456&#10;&#10;- 2x 6208 SKF&#10;- 5 correia S660&#10;- 10 unid RE123456"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="DemandaApp.closeModal('modalTexto')">Cancelar</button>
+                <button class="btn btn-primary" onclick="DemandaApp.processImportTexto()">
+                    <span class="material-icons-round">auto_fix_high</span>
+                    Processar e Revisar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Importar Excel -->
+    <div class="modal-overlay" id="modalExcel">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <h3><span class="material-icons-round" style="color:#10b981">table_view</span> Importar Excel / CSV</h3>
+                <button class="btn-close" onclick="DemandaApp.closeModal('modalExcel')">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="excelUploadArea" style="
+                    border:2px dashed var(--border);border-radius:12px;padding:2rem;text-align:center;
+                    cursor:pointer;transition:border-color .2s;
+                " onclick="document.getElementById('excelFileInput').click()"
+                   ondragover="event.preventDefault();this.style.borderColor='var(--demanda-accent)'"
+                   ondragleave="this.style.borderColor='var(--border)'"
+                   ondrop="DemandaApp.onExcelDrop(event)">
+                    <span class="material-icons-round" style="font-size:2.5rem;color:var(--text-secondary)">upload_file</span>
+                    <p style="color:var(--text-secondary);font-size:.85rem;margin-top:.5rem">
+                        Clique para selecionar ou arraste o arquivo aqui<br>
+                        <small style="opacity:.6">Excel (.xlsx, .xls) ou CSV (.csv)</small>
+                    </p>
+                    <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" style="display:none"
+                        onchange="DemandaApp.onExcelFileSelected(this.files[0])">
+                </div>
+                <div id="excelPreviewArea" style="display:none;margin-top:1rem"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="DemandaApp.closeModal('modalExcel')">Cancelar</button>
+                <button class="btn btn-primary" id="btnConfirmExcel" style="display:none" onclick="DemandaApp.confirmExcelImport()">
+                    <span class="material-icons-round">check</span>
+                    Confirmar Importação
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Conferência de Importação -->
+    <div class="modal-overlay" id="modalConferencia">
+        <div class="modal-card modal-xl">
+            <div class="modal-header">
+                <h3><span class="material-icons-round" style="color:var(--warning)">fact_check</span> Conferência de Importação</h3>
+                <button class="btn-close" onclick="DemandaApp.closeModal('modalConferencia')">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div style="display:flex;gap:.75rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
+                    <div id="conferenciaStats" style="font-size:.82rem;color:var(--text-secondary)"></div>
+                    <span style="flex:1"></span>
+                    <button class="btn btn-secondary btn-sm" onclick="DemandaApp.selectAllConferencia()">
+                        <span class="material-icons-round">select_all</span> Selecionar todos
+                    </button>
+                </div>
+                <div style="overflow-x:auto">
+                    <table class="conferencia-table">
+                        <thead>
+                            <tr>
+                                <th style="width:28px"><input type="checkbox" id="chkAllConf" onclick="DemandaApp.toggleAllConferencia(this.checked)"></th>
+                                <th>#</th>
+                                <th>Referência Original</th>
+                                <th>Descrição</th>
+                                <th style="width:70px">Qtde</th>
+                                <th>Obs</th>
+                                <th style="width:80px">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="conferenciaTbody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="DemandaApp.closeModal('modalConferencia')">Cancelar</button>
+                <button class="btn btn-primary" onclick="DemandaApp.confirmConferencia()">
+                    <span class="material-icons-round">add_shopping_cart</span>
+                    Adicionar Selecionados à Demanda
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Detalhes do Item -->
+    <div class="modal-overlay" id="modalItemDetalhes">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <h3><span class="material-icons-round" style="color:var(--demanda-accent)">info</span> Detalhes do Item</h3>
+                <button class="btn-close" onclick="DemandaApp.closeModal('modalItemDetalhes')">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="modal-body" id="modalItemDetalhesBody">
+                <div class="empty-state">
+                    <div class="spinner"></div>
+                    <p>Buscando informações...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="DemandaApp.closeModal('modalItemDetalhes')">Fechar</button>
+                <button class="btn btn-primary" id="btnAddFromDetails" onclick="DemandaApp.addItemFromDetails()">
+                    <span class="material-icons-round">add_shopping_cart</span>
+                    Adicionar à Demanda
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!--  SCRIPTS                                              -->
+    <!-- ══════════════════════════════════════════════════════ -->
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <!-- Config Firebase da plataforma -->
+    <script src="../../modules/master/firebase-config.js"></script>
+
+    <!-- Camada de integração ERP -->
+    <script src="../../shared/integrations/erp-adapter.js"></script>
+    <script src="../../shared/integrations/erp-registry.js"></script>
+    <script src="../../shared/integrations/maxdata/adapter.js"></script>
+    <script src="../../shared/integrations/index.js"></script>
+
+    <!-- Módulo de Demanda -->
+    <script src="js/demanda-states.js?v=1.0.0"></script>
+    <script src="js/demanda-db.js?v=1.0.0"></script>
+    <script src="js/demanda-import.js?v=1.0.0"></script>
+    <script src="js/demanda-search.js?v=1.0.0"></script>
+    <script src="js/demanda-app.js?v=1.0.0"></script>
+
+</body>
+</html>
