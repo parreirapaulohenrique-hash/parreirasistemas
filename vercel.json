@@ -1,8 +1,8 @@
 ﻿{
-    "regions": ["gru1"],
     "functions": {
         "api/maxdata.js": {
-            "maxDuration": 10
+            "maxDuration": 10,
+            "regions": ["gru1"]
         }
     },
     "headers": [
@@ -219,3 +219,4 @@
 
     ]
 }
+
