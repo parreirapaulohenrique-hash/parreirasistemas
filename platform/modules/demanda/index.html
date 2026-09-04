@@ -432,6 +432,15 @@
                 <span class="material-icons-round">login</span>
                 Entrar
             </button>
+            <!-- Botão de acesso demo (útil ao abrir via arquivo local / file://) -->
+            <button id="btnLoginDemo" onclick="DemandaApp.doLoginDemo()" style="
+                width:100%;margin-top:.5rem;padding:.45rem;background:transparent;
+                border:1px dashed rgba(99,102,241,.4);border-radius:8px;cursor:pointer;
+                color:rgba(129,140,248,.8);font-size:.73rem;font-family:'Inter',sans-serif;
+                transition:all .2s;
+            " onmouseover="this.style.background='rgba(99,102,241,.08)'" onmouseout="this.style.background='transparent'">
+                ⚡ Entrar sem ERP (Demo / Homologação)
+            </button>
             <p style="text-align:center;font-size:.72rem;color:var(--text-secondary);margin-top:1rem">
                 Use o mesmo usuário e senha do MaxData ERP
             </p>

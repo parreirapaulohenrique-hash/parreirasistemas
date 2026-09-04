@@ -104,9 +104,11 @@ const DemandaApp = (() => {
     // ─────────────────────────────────────────────────────────
 
     async function doLogin() {
-        const usuario = document.getElementById('loginUser').value.trim();
-        const senha   = document.getElementById('loginPass').value;
+        const usuario  = document.getElementById('loginUser').value.trim();
+        const senha    = document.getElementById('loginPass').value;
         const filialId = parseInt(document.getElementById('loginFilial').value);
+
+        _showLoginError(''); // limpa erro anterior
 
         if (!usuario || !senha) {
             _showLoginError('Informe usuário e senha.');
@@ -178,10 +180,20 @@ const DemandaApp = (() => {
 
         } catch (e) {
             console.error('[DemandaApp] Login error:', e);
-            _showLoginError(e.message.includes('Failed to fetch')
-                ? 'Não foi possível conectar ao ERP. Verifique sua rede.'
-                : e.message
-            );
+            const isCors = e.message.includes('Failed to fetch')
+                        || e.message.includes('NetworkError')
+                        || e.message.includes('CORS')
+                        || e.message.includes('fetch');
+            if (isCors) {
+                _showLoginError(
+                    'Sem acesso ao ERP a partir deste ambiente. ' +
+                    'Isso é normal ao abrir pelo arquivo local (file://). ' +
+                    'Use o botão "Entrar sem ERP (Demo)" para testar a interface, ' +
+                    'ou acesse o módulo pelo servidor (Vercel).'
+                );
+            } else {
+                _showLoginError(e.message || 'Erro desconhecido.');
+            }
         } finally {
             btn.disabled = false;
             btn.innerHTML = '<span class="material-icons-round">login</span> Entrar';
@@ -190,8 +202,31 @@ const DemandaApp = (() => {
 
     function _showLoginError(msg) {
         const el = document.getElementById('loginError');
-        el.style.display = 'block';
-        el.textContent   = msg;
+        if (!el) return;
+        if (!msg) {
+            el.style.display = 'none';
+            el.textContent   = '';
+        } else {
+            el.style.display = 'block';
+            el.innerHTML     = msg;
+        }
+    }
+
+    /** Modo Demo: entra sem ERP, usa dados mock para testar a interface */
+    function doLoginDemo() {
+        const filialId = parseInt(document.getElementById('loginFilial').value) || 1;
+        const user = {
+            nome:       'DEMONSTRAÇÃO',
+            empId:      filialId,
+            filialNome: FILIAIS[filialId] || `Filial ${filialId}`,
+            erpUserId:  'demo',
+            loginEm:    new Date().toISOString(),
+            isDemo:     true,
+        };
+        _session.user     = user;
+        _session.isLogged = true;
+        try { DemandaDB.saveSession('user', user); } catch(_) {}
+        _showApp();
     }
 
     // ─────────────────────────────────────────────────────────
@@ -1032,8 +1067,8 @@ const DemandaApp = (() => {
         abrirDemanda,
         openModal,
         closeModal,
-        // Expõe init para chamada externa se necessário
         init,
+        doLoginDemo,
     };
 
     return publicAPI;
