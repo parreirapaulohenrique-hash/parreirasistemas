@@ -1,11 +1,9 @@
 ﻿{
     "functions": {
         "api/maxdata.js": {
-            "maxDuration": 10,
-            "regions": ["gru1"]
+            "maxDuration": 10
         }
-    },
-    "headers": [
+    },    "headers": [
         {
             "source": "/.well-known/assetlinks.json",
             "headers": [
@@ -219,4 +217,3 @@
 
     ]
 }
-
