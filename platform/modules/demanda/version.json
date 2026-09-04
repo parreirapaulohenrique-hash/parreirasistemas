@@ -1,1 +1,1 @@
-{"build":"20260903-v1.0.0","version":"1.0.0","module":"demanda","name":"Inteligência de Demanda","lastUpdate":"2026-09-03","change":"v1.0.0 — MVP inicial: Central de Captura, pesquisa de produtos MaxData, grade de lançamento, importação de texto e Excel."}
+{"build":"20260903-fix-click","version":"1.0.1","module":"demanda","name":"Inteligência de Demanda","lastUpdate":"2026-09-03","change":"v1.0.1 — fix: corrige inicialização bloqueada (película/click). DOMContentLoaded movido para fora do IIFE, estratégia readyState + rAF, _forceHideOverlays() no init."}
