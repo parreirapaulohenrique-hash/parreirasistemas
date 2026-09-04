@@ -348,7 +348,7 @@ Abra o terminal do PowerShell na raiz do projeto (`C:\Users\Paulo H Parreira\.ge
 
 | Módulo | Pasta | Política de Deploy | Rationale |
 |---|---|---|---|
-| **Intelig. Demanda** | `demanda` | 🔴 **Staging obrigatório** — aguardar aprovação antes do `promote.ps1` | Módulo novo, em fase inicial. Integração ativa com ERP MaxData em produção. |
+| **Intelig. Demanda** | `demanda` | 🟢 **Deploy direto em produção** — pode rodar `deploy.ps1 + promote.ps1` na mesma sequência sem aprovação intermediária | Autorizado pelo usuário em 2026-09-04. Iterações frequentes liberadas. |
 | **Bússola Log** | `dispatch` | 🔴 **Staging obrigatório** — aguardar aprovação explícita antes do `promote.ps1` | Operação logística em tempo real. Bugs afetam clientes e motoristas diretamente. |
 | **Bússola Gestão** | `erp-consultoria` | 🟢 **Deploy direto em produção** — pode rodar `deploy.ps1 + promote.ps1` na mesma sequência sem aprovação intermediária | Módulo de gestão interna, sem impacto operacional imediato. Iterações frequentes autorizadas pelo usuário em 2026-08-20. |
 | **WMS / WMS Coletor** | `wms`, `wms-coletor` | 🟢 **Deploy direto em produção** — rodar `deploy.ps1 + promote.ps1` na mesma sequência até segunda ordem | Atualizações e melhorias diretas em produção autorizadas pelo usuário em 2026-09-01. |

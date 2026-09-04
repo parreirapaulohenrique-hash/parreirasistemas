@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
@@ -290,8 +290,11 @@
             <!--  VIEW: LISTA DE DEMANDAS                      -->
             <!-- ══════════════════════════════════════════════ -->
             <div id="view-lista" style="display:none">
-                <div class="demanda-topbar">
-                    <span class="topbar-title">📋 Minhas Demandas</span>
+                <div class="top-bar">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">list_alt</span>
+                        <span class="current">Minhas Demandas</span>
+                    </div>
                     <div class="topbar-actions">
                         <button class="btn btn-primary btn-sm" onclick="DemandaApp.switchView('captura')">
                             <span class="material-icons-round">add</span>
@@ -299,7 +302,7 @@
                         </button>
                     </div>
                 </div>
-                <div style="padding:1rem 1.5rem;border-bottom:1px solid var(--border);">
+                <div style="padding:0.75rem 1.5rem;border-bottom:1px solid var(--border-color);background:rgba(30,41,59,0.4);flex-shrink:0">
                     <div class="filter-row">
                         <button class="filter-chip active" onclick="DemandaApp.filterDemandas('todas', this)">Todas</button>
                         <button class="filter-chip" onclick="DemandaApp.filterDemandas('aberta', this)">Abertas</button>
