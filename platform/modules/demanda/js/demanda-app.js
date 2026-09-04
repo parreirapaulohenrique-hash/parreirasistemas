@@ -1,10 +1,11 @@
 /**
  * demanda-app.js — Orquestrador Principal do Módulo de Demanda
  * ============================================================
- * Gerencia toda a lógica de UI, eventos e fluxo da Central de Captura.
- * Coordena DemandaDB, DemandaSearch, DemandaImport e DemandaStates.
- *
  * Parreira Sistemas — Módulo de Inteligência de Demanda v1.0.0
+ *
+ * IMPORTANTE: Este script deve ser carregado no final do <body>.
+ * O init() é chamado via window.onload para garantir que todos os
+ * scripts foram carregados antes de tentar inicializar.
  */
 
 const DemandaApp = (() => {
@@ -39,13 +40,28 @@ const DemandaApp = (() => {
         5: 'CTR REDENÇÃO',
     };
 
+    // ── Estado de inicialização ───────────────────────────────
+    let _initialized = false;
+
     // ─────────────────────────────────────────────────────────
     //  INICIALIZAÇÃO
     // ─────────────────────────────────────────────────────────
 
     async function init() {
+        if (_initialized) return;
+        _initialized = true;
+
+        // Garante que loginScreen está visível e sem película
+        _forceHideOverlays();
+
         // Tenta restaurar sessão do sessionStorage
-        const saved = DemandaDB.loadSession('user');
+        let saved = null;
+        try {
+            saved = DemandaDB.loadSession('user');
+        } catch(e) {
+            console.warn('[DemandaApp] DemandaDB.loadSession falhou:', e.message);
+        }
+
         if (saved && saved.empId) {
             _session.user     = saved;
             _session.isLogged = true;
@@ -56,10 +72,31 @@ const DemandaApp = (() => {
 
         // Fecha dropdowns ao clicar fora
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('#clienteDropdown') && !e.target.closest('#btnSelectCliente')) {
-                document.getElementById('clienteDropdown').classList.remove('open');
+            const dd = document.getElementById('clienteDropdown');
+            if (dd && !e.target.closest('#clienteDropdown') && !e.target.closest('#btnSelectCliente')) {
+                dd.classList.remove('open');
             }
         });
+    }
+
+    /**
+     * Remove qualquer elemento que possa estar bloqueando cliques (película).
+     * Chamado sempre antes de mostrar login ou app.
+     */
+    function _forceHideOverlays() {
+        // Oculta todos os modais
+        document.querySelectorAll('.modal-overlay').forEach(m => {
+            m.classList.remove('open');
+            m.style.display = 'none';
+        });
+        // Garante que nenhum elemento fixed de z-index alto está visível sem ser o login
+        const appShell = document.getElementById('appShell');
+        const loginScreen = document.getElementById('loginScreen');
+        if (appShell) appShell.style.display = 'none';
+        if (loginScreen) {
+            loginScreen.style.display = 'flex';
+            loginScreen.style.zIndex  = '9999';
+        }
     }
 
     // ─────────────────────────────────────────────────────────
@@ -995,12 +1032,28 @@ const DemandaApp = (() => {
         abrirDemanda,
         openModal,
         closeModal,
+        // Expõe init para chamada externa se necessário
+        init,
     };
-
-    document.addEventListener('DOMContentLoaded', init);
 
     return publicAPI;
 
 })();
 
-if (typeof window !== 'undefined') window.DemandaApp = DemandaApp;
+// ─── Inicialização robusta ────────────────────────────────────────────────────
+// Scripts carregados no final do <body> podem executar DEPOIS que o
+// DOMContentLoaded já disparou. Por isso usamos a estratégia dupla abaixo.
+if (typeof window !== 'undefined') {
+    window.DemandaApp = DemandaApp;
+
+    // Estratégia: se o DOM já estiver pronto, inicia agora; senão aguarda.
+    if (document.readyState === 'loading') {
+        // DOM ainda não terminou — aguarda DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', () => DemandaApp.init());
+    } else {
+        // DOM já está pronto (readyState === 'interactive' ou 'complete')
+        // Usa requestAnimationFrame para garantir que o layout está pintado
+        requestAnimationFrame(() => DemandaApp.init());
+    }
+}
+
