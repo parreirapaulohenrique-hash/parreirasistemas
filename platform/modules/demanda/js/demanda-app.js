@@ -413,19 +413,6 @@ const DemandaApp = (() => {
     // Armazena resultados da última pesquisa para referência rápida
     let _lastResults = [];
 
-    // Sobrescreve _runSearch para guardar resultados
-    const _origRunSearch = DemandaApp?._runSearch;
-    async function _runSearchWithCache(query) {
-        try {
-            const filialId = _session.user?.empId || 1;
-            const results  = await DemandaSearch.search(query, { filialId });
-            _lastResults   = results;
-            _renderSearchResults(results, query);
-        } catch (e) {
-            _renderSearchError(e.message);
-        }
-    }
-
     function clearSearch() {
         document.getElementById('searchInput').value = '';
         document.getElementById('searchClear').classList.remove('visible');

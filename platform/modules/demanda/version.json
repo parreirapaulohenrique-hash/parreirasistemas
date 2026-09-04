@@ -1,1 +1,1 @@
-{"build":"20260903-demo-mode","version":"1.0.2","module":"demanda","name":"Inteligência de Demanda","lastUpdate":"2026-09-03","change":"v1.0.2 � fix: erro CORS visivel + modo Demo para teste local sem ERP"}
+﻿{"version":"1.0.3","build":"20260903-fix-tdz","module":"demanda","name":"Inteligência de Demanda","lastUpdate":"2026-09-03","change":"v1.0.3 — BUGFIX CRITICO: remove referencia a DemandaApp dentro do proprio IIFE (Temporal Dead Zone). Nenhum botao funcionava."}
