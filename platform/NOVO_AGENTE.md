@@ -310,10 +310,19 @@ Modifique o controle de versão do sistema. Atualize o arquivo `platform/version
 > A versão atual é a fonte da verdade. Incremente a partir dela (ex: `3.16.0` → `3.16.1`).
 > Ignorar esta regra gera commits com versões erradas e histórico inconsistente.
 
-> 🚨 **REGRA OBRIGATÓRIA — SEMPRE INFORMAR A VERSÃO AO USTUÁRIO**
-> Ao concluir qualquer deploy (mesmo pequenos ajustes de UI ou texto), **sempre informe ao usuário a versão gerada** no formato:
-> `📦 Deploy — v3.X.Y | [descrição resumida da melhoria]`
-> Nunca finalize um deploy sem comunicar explicitamente o número da versão.
+> 🚨 **REGRA OBRIGATÓRIA — SEMPRE INFORMAR MÓDULO E VERSÃO AO USUÁRIO**
+> Ao concluir qualquer deploy (mesmo pequenos ajustes de UI ou texto), **sempre informe ao usuário o módulo atualizado e a versão gerada**, no seguinte formato de tabela:
+>
+> | Campo | Valor |
+> |---|---|
+> | **Módulo** | `nome-do-modulo` |
+> | **Arquivo** | `nome-do-arquivo.js` (ou `index.html`, etc.) |
+> | **Versão** | `v1.X.Y` |
+> | **Commit** | `hash curto` |
+> | **Branch** | `staging → main` |
+>
+> Nunca finalize um deploy sem comunicar explicitamente o módulo, o arquivo alterado e o número da versão.
+> Regra registrada em 2026-09-04 a pedido do usuário (Paulo Parreira).
 
 ### Passo 5: Subir Deploy para Homologação (`deploy.ps1`)
 Abra o terminal do PowerShell na raiz do projeto (`C:\Users\Paulo H Parreira\.gemini\antigravity\scratch`) e rode o comando:
