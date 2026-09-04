@@ -36,7 +36,7 @@
     <div class="demanda-shell" id="appShell" style="display:none">
 
         <!-- Sidebar -->
-        <aside class="demanda-sidebar">
+        <aside class="sidebar">
             <!-- Logo / Título do módulo -->
             <div class="sidebar-logo">
                 <div class="sidebar-logo-icon">
@@ -47,14 +47,14 @@
                     <small>Central Rolamentos</small>
                 </div>
             </div>
-            <!-- Voltar à plataforma -->
-            <a href="../../index.html" class="sidebar-back">
+            <!-- Botão Voltar ao Portal -->
+            <a href="../../index.html" class="btn-back-portal">
                 <span class="material-icons-round">arrow_back</span>
                 Voltar ao Portal
             </a>
 
-            <nav class="sidebar-nav">
-                <div class="sidebar-section-label">Operacional</div>
+            <nav class="nav-menu">
+                <div class="nav-section-label">Operacional</div>
                 <button class="nav-item active" id="nav-captura" onclick="DemandaApp.switchView('captura')">
                     <span class="material-icons-round">add_circle</span>
                     Nova Demanda
@@ -68,7 +68,7 @@
                     Pesquisar Peças
                 </button>
 
-                <div class="sidebar-section-label" style="margin-top:.5rem">Gestão</div>
+                <div class="nav-section-label">Gestão</div>
                 <button class="nav-item" id="nav-compras" onclick="DemandaApp.switchView('compras')">
                     <span class="material-icons-round">shopping_cart</span>
                     Fila de Compras
@@ -78,7 +78,7 @@
                     Dashboard
                 </button>
 
-                <div class="sidebar-section-label" style="margin-top:.5rem">Base Técnica</div>
+                <div class="nav-section-label">Base Técnica</div>
                 <button class="nav-item" id="nav-base" onclick="DemandaApp.switchView('base')">
                     <span class="material-icons-round">hub</span>
                     Base de Peças
@@ -86,29 +86,30 @@
             </nav>
 
             <div class="sidebar-footer">
-                <div class="sidebar-user">
-                    <div class="sidebar-avatar" id="sidebarAvatarLetter">?</div>
-                    <div class="sidebar-user-info">
-                        <strong id="sidebarUserName">Carregando...</strong>
-                        <span id="sidebarFilial">—</span>
+                <div class="user-profile">
+                    <div class="avatar" id="sidebarAvatarLetter">?</div>
+                    <div class="user-info">
+                        <span class="name" id="sidebarUserName">Carregando...</span>
+                        <span class="role" id="sidebarFilial">—</span>
                     </div>
                 </div>
-                <div style="font-size:.68rem;opacity:.5;margin-top:.25rem" id="sidebarVersion">v1.0.0</div>
+                <div class="version-badge" id="sidebarVersion">v1.0.3</div>
             </div>
         </aside>
 
         <!-- Main Content -->
-        <div class="demanda-main">
+        <div class="main-content">
 
             <!-- ══════════════════════════════════════════════ -->
             <!--  VIEW: CENTRAL DE CAPTURA (padrão)            -->
             <!-- ══════════════════════════════════════════════ -->
             <div id="view-captura">
-                <!-- Topbar -->
-                <div class="demanda-topbar">
-                    <div>
-                        <span class="topbar-title">📥 Central de Captura</span>
-                        <span id="demandaCodigoTopbar" style="font-size:.75rem;color:var(--text-secondary);margin-left:.5rem"></span>
+                <!-- Topbar — padrão Despacho -->
+                <div class="top-bar">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">inbox</span>
+                        <span>Central de Captura</span>
+                        <span id="demandaCodigoTopbar" style="font-size:.78rem;color:var(--text-secondary)"></span>
                     </div>
                     <div class="topbar-actions">
                         <button class="btn btn-secondary btn-sm" onclick="DemandaApp.openImportModal('texto')">
@@ -454,8 +455,7 @@
                     letter-spacing:.04em;cursor:default;
                 " title="Versão do módulo">
                     <span style="width:6px;height:6px;border-radius:50%;background:#6366f1;display:inline-block"></span>
-                    v1.0.3 — fix/tdz
-                </span>
+                    v1.0.4 — visual</span>
             </div>
         </div>
     </div>

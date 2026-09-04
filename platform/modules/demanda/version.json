@@ -1,1 +1,1 @@
-﻿{"version":"1.0.3","build":"20260903-fix-tdz","module":"demanda","name":"Inteligência de Demanda","lastUpdate":"2026-09-03","change":"v1.0.3 — BUGFIX CRITICO: remove referencia a DemandaApp dentro do proprio IIFE (Temporal Dead Zone). Nenhum botao funcionava."}
+﻿{"version":"1.0.4","build":"20260903-visual-despacho","module":"demanda","name":"Inteligência de Demanda","lastUpdate":"2026-09-03","change":"v1.0.4 — Redesign visual: CSS e classes HTML alinhados ao padrão Despacho Logístico (mesmas variáveis, sidebar, nav-items, top-bar)"}
