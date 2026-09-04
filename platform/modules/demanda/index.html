@@ -83,6 +83,12 @@
                     <span class="material-icons-round">hub</span>
                     Base de Peças
                 </button>
+
+                <div class="nav-section-label">Sistema</div>
+                <button class="nav-item" id="nav-integracaoErp" onclick="DemandaApp.switchView('integracaoErp')">
+                    <span class="material-icons-round">sync</span>
+                    Integração ERP
+                </button>
             </nav>
 
             <div class="sidebar-footer">
@@ -639,6 +645,26 @@
     </div>
 
     <!-- ══════════════════════════════════════════════════════ -->
+    <!--  VIEW: INTEGRAÇÃO ERP (gerenciado por ErpUI)          -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <div id="view-integracaoErp" class="view-section" style="display:none;">
+        <div class="main-content" style="padding:0">
+            <!-- Topbar -->
+            <div class="top-bar" style="position:sticky;top:0;z-index:10">
+                <div class="breadcrumb">
+                    <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">sync</span>
+                    <span>Integração ERP</span>
+                </div>
+            </div>
+            <!-- Container preenchido dinamicamente por ErpUI.init('demanda') -->
+            <div class="content-wrapper" style="padding:2rem">
+                <div id="erp-config-container"></div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════════════════════════ -->
     <!--  SCRIPTS                                              -->
     <!-- ══════════════════════════════════════════════════════ -->
 
@@ -649,11 +675,13 @@
     <!-- Config Firebase da plataforma -->
     <script src="../../modules/master/firebase-config.js"></script>
 
-    <!-- Camada de integração ERP -->
-    <script src="../../shared/integrations/erp-adapter.js"></script>
-    <script src="../../shared/integrations/erp-registry.js"></script>
-    <script src="../../shared/integrations/maxdata/adapter.js"></script>
-    <script src="../../shared/integrations/index.js"></script>
+    <!-- Camada de integração ERP (shared/integrations) -->
+    <script src="../../shared/integrations/erp-adapter.js?v=1.0.6"></script>
+    <script src="../../shared/integrations/erp-registry.js?v=1.0.6"></script>
+    <script src="../../shared/integrations/acontec/adapter.js?v=1.0.6"></script>
+    <script src="../../shared/integrations/maxdata/adapter.js?v=1.0.6"></script>
+    <script src="../../shared/integrations/erp-ui.js?v=1.0.6"></script>
+    <script src="../../shared/integrations/index.js?v=1.0.6"></script>
 
     <!-- Módulo de Demanda -->
     <script src="js/demanda-states.js?v=1.0.0"></script>
