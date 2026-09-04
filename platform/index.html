@@ -250,6 +250,12 @@
                     // Tenants que NÃO são 'parreira' não têm acesso ao hub.
                     // São redirecionados direto para o módulo do seu tenant.
                     if (sessao.tenantId && sessao.tenantId !== 'parreira') {
+                        // Se ha parametro ?redirect= (ex: vindo de um modulo), honra o redirect
+                        const redirectParam = new URLSearchParams(window.location.search).get('redirect');
+                        if (redirectParam) {
+                            window.location.href = redirectParam;
+                            return;
+                        }
                         const allTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
                         const tenant = allTenants.find(t => t.id === sessao.tenantId);
                         const slug = tenant?.slug || sessao.tenantId;
@@ -417,6 +423,9 @@
                     break;
                 case 'wms-coletor':
                     window.open(base + 'wms-coletor/index.html', '_blank');
+                    break;
+                case 'demanda':
+                    window.open(base + 'demanda/index.html', '_blank');
                     break;
             }
         }

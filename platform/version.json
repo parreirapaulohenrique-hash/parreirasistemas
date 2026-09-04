@@ -1,1 +1,8 @@
-{"build":"20260904-v3.19.1","version":"3.19.1","environment":"production","change":"v3.19.1 — STYLE: Módulo Demanda — redesign visual (filter-chip, topbar padrão, sidebar logo margin, search-placeholder h4, --border-color unificado). Política de deploy do módulo demanda alterada para deploy direto em produção.","lastUpdate":"2026-09-04","deployedAt":"2026-09-04"}
+{
+    "build": "20260904-v3.19.2",
+    "version": "3.19.2",
+    "environment": "production",
+    "change": "v3.19.2 — fix(portal): case 'demanda' em openModule() + checkLogin() respeita ?redirect= para tenants não-parreira",
+    "lastUpdate": "2026-09-04",
+    "deployedAt": "2026-09-04"
+}
