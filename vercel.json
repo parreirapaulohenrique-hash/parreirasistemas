@@ -208,6 +208,14 @@
             "destination": "/platform/version.json"
         },
         {
+            "source": "/demanda",
+            "destination": "/platform/modules/demanda/index.html"
+        },
+        {
+            "source": "/demanda/(.*)",
+            "destination": "/platform/modules/demanda/$1"
+        },
+        {
             "source": "/:tenant",
             "destination": "/platform/modules/dispatch/index.html"
         }
