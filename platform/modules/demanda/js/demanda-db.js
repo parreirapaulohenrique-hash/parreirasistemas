@@ -330,6 +330,33 @@ const DemandaDB = (() => {
         try { sessionStorage.removeItem(_sessionKey(key)); } catch (_) {}
     }
 
+    /**
+     * Carrega uma demanda por ID, incluindo seus itens da subcoleção.
+     * @param {string} id - ID do documento da demanda
+     * @returns {Promise<object|null>}
+     */
+    async function getDemanda(id) {
+        const db   = _db();
+        const snap = await db.doc(`${DEMANDS_COL}/${id}`).get();
+        if (!snap.exists) return null;
+
+        const data = { id: snap.id, ...snap.data() };
+
+        // Carrega itens da subcoleção (se existir)
+        try {
+            const itensSnap = await db
+                .collection(`${DEMANDS_COL}/${id}/items`)
+                .orderBy('seq', 'asc')
+                .get();
+            data.itens = itensSnap.docs.map(d => d.data());
+        } catch (_) {
+            // Pode ser que itens estejam embutidos no documento (modo flat)
+            if (!data.itens) data.itens = [];
+        }
+
+        return data;
+    }
+
     return {
         createDemanda, getDemanda, updateDemanda, listDemandas,
         addItens, getItens, updateItem, deleteItem, recalcTotals,

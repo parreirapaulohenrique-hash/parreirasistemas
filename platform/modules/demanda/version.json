@@ -1,1 +1,1 @@
-﻿{"version":"1.0.4","build":"20260903-visual-despacho","module":"demanda","name":"Inteligência de Demanda","lastUpdate":"2026-09-03","change":"v1.0.4 — Redesign visual: CSS e classes HTML alinhados ao padrão Despacho Logístico (mesmas variáveis, sidebar, nav-items, top-bar)"}
+﻿{"version":"1.0.5","build":"20260903-features","module":"demanda","name":"Inteligência de Demanda","lastUpdate":"2026-09-03","change":"v1.0.5 — Implementa abrirDemanda() com modal completo, getDemanda() no DB, PDF/Foto usa modal de texto com instrucoes, views secundarias com top-bar padrao"}

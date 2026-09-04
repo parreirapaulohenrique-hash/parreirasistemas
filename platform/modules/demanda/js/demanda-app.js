@@ -655,7 +655,14 @@ const DemandaApp = (() => {
             _excelParsed = null;
             openModal('modalExcel');
         } else if (tipo === 'pdf' || tipo === 'foto') {
-            _showToast('Esta funcionalidade está em desenvolvimento (Fase 2).', 'info');
+            // Reutiliza o modal de texto: instrui o usuário a copiar o texto do PDF/foto
+            const textarea = document.getElementById('textareaImport');
+            textarea.value = '';
+            textarea.placeholder = tipo === 'pdf'
+                ? 'Cole aqui o texto extraído do PDF (abra o PDF, selecione tudo Ctrl+A, copie Ctrl+C e cole aqui).\n\nFormatos aceitos:\n- Uma referência por linha\n- Lista com quantidades (ex: 6305 x 2)\n- Texto livre de WhatsApp'
+                : 'Cole aqui o texto da foto/print (use um leitor de texto OCR, ou copie manualmente).\n\nFormatos aceitos:\n- Uma referência por linha\n- Lista com quantidades\n- Texto livre';
+            openModal('modalTexto');
+            setTimeout(() => textarea.focus(), 100);
         }
     }
 
@@ -959,9 +966,75 @@ const DemandaApp = (() => {
         _loadListaDemandas();
     }
 
-    function abrirDemanda(id) {
-        // TODO: Fase 2 — tela de detalhe da demanda
-        _showToast(`Detalhes da demanda — em desenvolvimento (Fase 2)`, 'info');
+    async function abrirDemanda(id) {
+        const modal = document.getElementById('modalDemandaDetalhe');
+        const body  = document.getElementById('modalDemandaDetalheBody');
+        if (!modal || !body) return;
+
+        body.innerHTML = `<div class="search-loading"><div class="spinner"></div><span>Carregando demanda...</span></div>`;
+        modal.classList.add('open');
+
+        try {
+            const d = await DemandaDB.getDemanda(id);
+            if (!d) throw new Error('Demanda não encontrada.');
+
+            const data = d.criadoEm?.toDate
+                ? d.criadoEm.toDate().toLocaleString('pt-BR')
+                : (d.criadoEm ? new Date(d.criadoEm).toLocaleString('pt-BR') : '—');
+
+            const statusBadge = DemandaStates.renderBadge(d.status || 'aberta');
+
+            const itensHtml = (d.itens || []).map((item, i) => {
+                const st = DemandaStates.getState(item.status || 'demanda_recebida');
+                return `<tr>
+                    <td style="color:var(--text-secondary);font-size:.7rem">${i+1}</td>
+                    <td class="item-ref-cell">${_escHtml(item.refOriginal || '—')}</td>
+                    <td class="item-desc-cell" title="${_escAttr(item.descOriginal || '')}">${_escHtml(item.descOriginal || 'Item provisório')}</td>
+                    <td style="text-align:right;font-weight:600">${item.qtdeSolicitada || 1}</td>
+                    <td><span style="display:inline-flex;align-items:center;gap:.35rem;font-size:.72rem">
+                        <span class="item-status-dot" style="background:${st.color}"></span>
+                        ${st.label}
+                    </span></td>
+                    <td style="font-size:.75rem;color:var(--text-secondary)">${_escHtml(item.obs || '')}</td>
+                </tr>`;
+            }).join('');
+
+            body.innerHTML = `
+                <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;flex-wrap:wrap">
+                    <div>
+                        <div style="font-size:.7rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.06em">Demanda</div>
+                        <div style="font-size:1rem;font-weight:700;color:var(--primary-color)">${d.codigo || d.id}</div>
+                    </div>
+                    <div style="flex:1">
+                        <div style="font-size:.7rem;color:var(--text-secondary)">Cliente</div>
+                        <div style="font-size:.9rem;font-weight:600">${_escHtml(d.clienteNome || 'Não informado')}</div>
+                    </div>
+                    <div>${statusBadge}</div>
+                </div>
+                <div style="display:flex;gap:1.5rem;margin-bottom:1rem;font-size:.78rem;color:var(--text-secondary)">
+                    <span><b style="color:var(--text-primary)">${d.totalItens || (d.itens || []).length}</b> itens</span>
+                    <span>${_escHtml(d.filialNome || '')}</span>
+                    <span>${data}</span>
+                    ${d.vendedorNome ? `<span>Vendedor: ${_escHtml(d.vendedorNome)}</span>` : ''}
+                </div>
+                <div style="overflow-x:auto;border:1px solid var(--border-color);border-radius:var(--radius-md)">
+                    <table class="itens-table" style="width:100%">
+                        <thead><tr>
+                            <th>#</th><th>Ref</th><th>Descrição</th>
+                            <th style="text-align:right">Qtde</th>
+                            <th>Status</th><th>Obs</th>
+                        </tr></thead>
+                        <tbody>${itensHtml || `<tr><td colspan="6" style="text-align:center;padding:1rem;color:var(--text-secondary)">Nenhum item</td></tr>`}</tbody>
+                    </table>
+                </div>
+                ${d.obs ? `<div style="margin-top:1rem;padding:.75rem;background:rgba(59,130,246,.06);border-radius:var(--radius-md);font-size:.83rem">
+                    <b>Obs. da demanda:</b> ${_escHtml(d.obs)}</div>` : ''}`;
+
+        } catch (e) {
+            body.innerHTML = `<div class="empty-state">
+                <span class="material-icons-round" style="color:var(--accent-danger)">error</span>
+                <p>${_escHtml(e.message)}</p></div>`;
+        }
     }
 
     // ─────────────────────────────────────────────────────────
