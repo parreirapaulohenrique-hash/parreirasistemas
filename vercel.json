@@ -1,4 +1,4 @@
-﻿{
+{
     "functions": {
         "api/maxdata.js": {
             "maxDuration": 10
