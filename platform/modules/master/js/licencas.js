@@ -6,10 +6,11 @@
 window.LicencasManager = (function () {
 
     const MODULOS = [
-        { id: 'wms',         label: 'WMS',            icon: 'warehouse'      },
-        { id: 'wms-coletor', label: 'WMS Coletor',    icon: 'phone_android'  },
-        { id: 'dispatch',    label: 'Despacho',       icon: 'local_shipping' },
-        { id: 'consultoria', label: 'Bússola Gestão', icon: 'savings'        },
+        { id: 'wms',         label: 'WMS',                        icon: 'warehouse'      },
+        { id: 'wms-coletor', label: 'WMS Coletor',                icon: 'phone_android'  },
+        { id: 'dispatch',    label: 'Despacho',                   icon: 'local_shipping' },
+        { id: 'consultoria', label: 'Bússola Gestão',            icon: 'savings'        },
+        { id: 'demanda',     label: 'Inteligência de Demanda',   icon: 'insights'       },
     ];
 
     const STATUS_CFG = {
