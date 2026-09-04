@@ -84,7 +84,7 @@ const DemandaApp = (function() {
         if (typeof ParreiraAuth !== "undefined" && ParreiraAuth.logout) {
             ParreiraAuth.logout();
         } else {
-            window.location.href = "../../index.html";
+            window.location.href = "/platform/index.html";
         }
     }
 
@@ -108,7 +108,7 @@ const DemandaApp = (function() {
         if (typeof ParreiraAuth !== "undefined") {
             if (!ParreiraAuth.isLogado()) {
                 var returnPath = encodeURIComponent(window.location.pathname);
-                window.location.href = "../../index.html?redirect=" + returnPath;
+                window.location.href = "/platform/index.html?redirect=" + returnPath;
                 return;
             }
             // Verifica acesso ao modulo demanda na sessao
