@@ -19,7 +19,7 @@ const DemandaApp = (function() {
     var _erpInitialized = false;
     var _searchTimeout  = null;
 
-    // ─── ROTEAMENTO DE VIEWS ──────────────────────────────────────────────────
+    // --- ROTEAMENTO DE VIEWS ---
 
     function switchView(v) {
         if (!_VIEWS[v]) { console.warn("[DemandaApp] View desconhecida:", v); return; }
@@ -30,7 +30,7 @@ const DemandaApp = (function() {
         if (v === "integracaoErp") _initErpUI();
     }
 
-    // ─── INTEGRACAO ERP ───────────────────────────────────────────────────────
+    // --- INTEGRACAO ERP ---
 
     function _initErpUI() {
         if (_erpInitialized) return;
@@ -44,7 +44,7 @@ const DemandaApp = (function() {
         console.log("[DemandaApp] ErpUI inicializado para modulo demanda");
     }
 
-    // ─── PESQUISA UNIVERSAL ───────────────────────────────────────────────────
+    // --- PESQUISA UNIVERSAL ---
 
     function onSearchInput(value) {
         clearTimeout(_searchTimeout);
@@ -66,14 +66,14 @@ const DemandaApp = (function() {
         if (r) r.innerHTML = "";
     }
 
-    // ─── IMPORTACAO ───────────────────────────────────────────────────────────
+    // --- IMPORTACAO ---
 
     function openImportModal(type) {
         var tipos = { texto: "Colar Texto/WhatsApp", excel: "Importar Excel/CSV", pdf: "Importar PDF" };
         alert("[Fase 2] " + (tipos[type] || type) + " - funcionalidade em implementacao.");
     }
 
-    // ─── DEMANDA — ACOES ──────────────────────────────────────────────────────
+    // --- DEMANDA - ACOES ---
 
     function salvarDemanda() { console.log("[DemandaApp] salvarDemanda - Fase 2"); }
     function closeModal(id) { var el = document.getElementById(id); if (el) el.style.display = "none"; }
@@ -88,7 +88,7 @@ const DemandaApp = (function() {
         }
     }
 
-    // ─── SIDEBAR ──────────────────────────────────────────────────────────────
+    // --- SIDEBAR ---
 
     function _updateUser(s) {
         var n = (s && (s.nome || s.name || s.email)) || "Usuario";
@@ -98,25 +98,37 @@ const DemandaApp = (function() {
         var ea = document.getElementById("sidebarAvatarLetter"); if (ea) ea.textContent = n.charAt(0).toUpperCase();
     }
 
-    // ─── BOOTSTRAP ────────────────────────────────────────────────────────────
+    // --- BOOTSTRAP ---
 
     function init() {
         console.log("[DemandaApp] Inicializando v1.0.8...");
 
-        // Guard: redireciona para portal se nao estiver logado ou sem acesso ao modulo demanda
+        // Guard: redireciona para o portal se nao estiver logado
+        // Usa isLogado() direto (evita requireAuth que gera URL errada de login.html)
         if (typeof ParreiraAuth !== "undefined") {
-            if (!ParreiraAuth.requireAuth("demanda")) return; // requireAuth ja redireciona
+            if (!ParreiraAuth.isLogado()) {
+                var returnPath = encodeURIComponent(window.location.pathname);
+                window.location.href = "../../index.html?redirect=" + returnPath;
+                return;
+            }
+            // Verifica acesso ao modulo demanda na sessao
+            try {
+                var s2   = ParreiraAuth.getSessao ? ParreiraAuth.getSessao() : null;
+                var mods = (s2 && s2.modulos) ? s2.modulos : [];
+                if (mods.length > 0 && mods.indexOf("demanda") === -1) {
+                    alert("Voce nao tem acesso ao modulo Inteligencia de Demanda.\nContate o administrador.");
+                    history.back();
+                    return;
+                }
+            } catch(e) { /* ignora erros de verificacao de modulos */ }
         }
 
         // Preenche sidebar com dados da sessao
         try {
-            var sessao = (typeof ParreiraAuth !== "undefined" && ParreiraAuth.getSessao)
-                ? ParreiraAuth.getSessao()
-                : null;
-            _updateUser(sessao || { nome: "Demo", filial: "Demo" });
-        } catch(e) {
-            _updateUser({ nome: "Demo", filial: "Demo" });
-        }
+            var s = (typeof ParreiraAuth !== "undefined" && ParreiraAuth.getSessao)
+                ? ParreiraAuth.getSessao() : null;
+            _updateUser(s || { nome: "Demo", filial: "Demo" });
+        } catch(e) { _updateUser({ nome: "Demo", filial: "Demo" }); }
 
         // Badge de versao
         fetch("version.json?v=" + Date.now()).then(function(r) { return r.json(); })
@@ -129,28 +141,27 @@ const DemandaApp = (function() {
         var sh = document.getElementById("appShell");
         if (sh) sh.style.display = "flex";
         switchView("captura");
-
         console.log("[DemandaApp] Pronto.");
     }
 
-    // ─── API PUBLICA ──────────────────────────────────────────────────────────
+    // --- API PUBLICA ---
 
     return {
-        init:              init,
-        logout:            logout,
-        switchView:        switchView,
-        onSearchInput:     onSearchInput,
-        clearSearch:       clearSearch,
-        openImportModal:   openImportModal,
-        salvarDemanda:     salvarDemanda,
-        closeModal:        closeModal,
+        init:               init,
+        logout:             logout,
+        switchView:         switchView,
+        onSearchInput:      onSearchInput,
+        clearSearch:        clearSearch,
+        openImportModal:    openImportModal,
+        salvarDemanda:      salvarDemanda,
+        closeModal:         closeModal,
         addItemFromDetails: addItemFromDetails,
         selectSearchResult: selectSearchResult
     };
 
 })();
 
-// Bootstrap — aguarda Firebase + ParreiraAuth antes de inicializar
+// Bootstrap: aguarda ParreiraAuth estar disponivel antes de inicializar
 document.addEventListener("DOMContentLoaded", function() {
     var attempts = 0;
     var t = setInterval(function() {
@@ -160,7 +171,7 @@ document.addEventListener("DOMContentLoaded", function() {
             DemandaApp.init();
             return;
         }
-        // Timeout de segurança apos 4s: tenta mesmo sem ParreiraAuth (demo/dev)
+        // Timeout 4s: inicia mesmo sem ParreiraAuth (dev/offline)
         if (attempts >= 40) {
             clearInterval(t);
             console.warn("[DemandaApp] ParreiraAuth nao disponivel — iniciando sem auth guard");
