@@ -430,83 +430,7 @@
         </div>
     </div>
 
-    <!-- ── Tela de Login do Módulo ───────────────────────────── -->
-    <div id="loginScreen" style="
-        position:fixed;inset:0;background:var(--bg-dark);
-        display:flex;align-items:center;justify-content:center;z-index:9999;
-        font-family:'Inter',sans-serif;
-    ">
-        <div style="
-            background:var(--bg-card);border:1px solid var(--border);
-            border-radius:16px;padding:2.5rem 2rem;width:100%;max-width:380px;
-            box-shadow:0 24px 64px rgba(0,0,0,.5);
-        ">
-            <div style="text-align:center;margin-bottom:2rem">
-                <div style="
-                    width:56px;height:56px;border-radius:16px;margin:0 auto .75rem;
-                    background:linear-gradient(135deg,#6366f1,#4f46e5);
-                    display:flex;align-items:center;justify-content:center
-                ">
-                    <span class="material-icons-round" style="font-size:1.75rem;color:#fff">insights</span>
-                </div>
-                <h2 style="font-size:1.2rem;font-weight:700;color:var(--text-primary)">Inteligência de Demanda</h2>
-                <p style="font-size:.8rem;color:var(--text-secondary);margin-top:.25rem">Central Rolamentos — MaxData ERP</p>
-            </div>
-
-            <div id="loginError" style="
-                display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);
-                border-radius:8px;padding:.65rem .9rem;font-size:.82rem;color:#ef4444;margin-bottom:1rem
-            "></div>
-
-            <div class="form-group">
-                <label class="form-label">Usuário MaxData</label>
-                <input id="loginUser" type="text" class="form-input" placeholder="Seu usuário do MaxData"
-                    autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Senha</label>
-                <input id="loginPass" type="password" class="form-input" placeholder="Sua senha"
-                    autocomplete="current-password" onkeydown="if(event.key==='Enter')DemandaApp.doLogin()">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Filial</label>
-                <select id="loginFilial" class="form-select">
-                    <option value="1">1 — CTR MATRIZ PALMAS ATACADO</option>
-                    <option value="2">2 — CTR FILIAL PALMAS VAREJO</option>
-                    <option value="4">4 — CTR PORTO VAREJO</option>
-                    <option value="5">5 — CTR REDENÇÃO</option>
-                </select>
-            </div>
-            <button id="btnLogin" class="btn btn-primary btn-full" onclick="DemandaApp.doLogin()" style="margin-top:.5rem">
-                <span class="material-icons-round">login</span>
-                Entrar
-            </button>
-            <!-- Botão de acesso demo (útil ao abrir via arquivo local / file://) -->
-            <button id="btnLoginDemo" onclick="DemandaApp.doLoginDemo()" style="
-                width:100%;margin-top:.5rem;padding:.45rem;background:transparent;
-                border:1px dashed rgba(99,102,241,.4);border-radius:8px;cursor:pointer;
-                color:rgba(129,140,248,.8);font-size:.73rem;font-family:'Inter',sans-serif;
-                transition:all .2s;
-            " onmouseover="this.style.background='rgba(99,102,241,.08)'" onmouseout="this.style.background='transparent'">
-                ⚡ Entrar sem ERP (Demo / Homologação)
-            </button>
-            <p style="text-align:center;font-size:.72rem;color:var(--text-secondary);margin-top:1rem">
-                Use o mesmo usuário e senha do MaxData ERP
-            </p>
-            <!-- Badge de versão — atualizado automaticamente via version.json -->
-            <div style="text-align:center;margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)">
-                <span id="loginVersionBadge" style="
-                    display:inline-flex;align-items:center;gap:.35rem;
-                    background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.25);
-                    border-radius:20px;padding:.25rem .75rem;
-                    font-size:.68rem;font-weight:600;color:#818cf8;
-                    letter-spacing:.04em;cursor:default;
-                " title="Versão do módulo">
-                    <span style="width:6px;height:6px;border-radius:50%;background:#6366f1;display:inline-block"></span>
-                    v1.0.5 — features</span>
-            </div>
-        </div>
-    </div>
+    <!-- loginScreen removido v1.0.8: auth via ParreiraAuth (portal Firebase) -->
 
     <!-- ══════════════════════════════════════════════════════ -->
     <!--  MODAIS                                               -->
@@ -674,21 +598,24 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <!-- Config Firebase da plataforma -->
     <script src="../../modules/master/firebase-config.js"></script>
+    <!-- Sessao e Auth da plataforma (ParreiraAuth) -->
+    <script src="../../core/js/session-manager.js"></script>
+    <script src="../../core/js/auth.js"></script>
 
     <!-- Camada de integração ERP (shared/integrations) -->
-    <script src="../../shared/integrations/erp-adapter.js?v=1.0.6"></script>
-    <script src="../../shared/integrations/erp-registry.js?v=1.0.6"></script>
-    <script src="../../shared/integrations/acontec/adapter.js?v=1.0.6"></script>
-    <script src="../../shared/integrations/maxdata/adapter.js?v=1.0.6"></script>
-    <script src="../../shared/integrations/erp-ui.js?v=1.0.6"></script>
-    <script src="../../shared/integrations/index.js?v=1.0.6"></script>
+    <script src="../../shared/integrations/erp-adapter.js?v=1.0.8"></script>
+    <script src="../../shared/integrations/erp-registry.js?v=1.0.8"></script>
+    <script src="../../shared/integrations/acontec/adapter.js?v=1.0.8"></script>
+    <script src="../../shared/integrations/maxdata/adapter.js?v=1.0.8"></script>
+    <script src="../../shared/integrations/erp-ui.js?v=1.0.8"></script>
+    <script src="../../shared/integrations/index.js?v=1.0.8"></script>
 
     <!-- Módulo de Demanda -->
-    <script src="js/demanda-states.js?v=1.0.0"></script>
-    <script src="js/demanda-db.js?v=1.0.0"></script>
-    <script src="js/demanda-import.js?v=1.0.0"></script>
-    <script src="js/demanda-search.js?v=1.0.0"></script>
-    <script src="js/demanda-app.js?v=1.0.0"></script>
+    <script src="js/demanda-states.js?v=1.0.8"></script>
+    <script src="js/demanda-db.js?v=1.0.8"></script>
+    <script src="js/demanda-import.js?v=1.0.8"></script>
+    <script src="js/demanda-search.js?v=1.0.8"></script>
+    <script src="js/demanda-app.js?v=1.0.8"></script>
 
 </body>
 </html>
