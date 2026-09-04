@@ -446,3 +446,34 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 | **11.8.x** | 2026-03 | Dispatch: ferramenta de arquivamento, faixa de status offline/Firebase, sync pendente |
 
 > ✅ **Compromisso do agente:** A partir da v11.10.0, este documento é atualizado a cada deploy junto com o `version.json`. A versão é **por plataforma** (não por módulo). A cada entrega, o agente informa a versão no formato `📦 Deploy — vX.Y.Z`.
+
+---
+
+## 8. Armadilhas Conhecidas (Gotchas)
+
+> ⚠️ Erros que já aconteceram e **não devem se repetir**. Leia antes de editar arquivos críticos.
+
+### 🔴 BOM no vercel.json — quebra todos os deploys
+
+**O que aconteceu:** Em 2026-09-01, o `vercel.json` foi salvo com um BOM (`﻿`, bytes `EF BB BF`) no início do arquivo. O Vercel rejeita qualquer `vercel.json` com BOM com o erro genérico `Invalid vercel.json file provided`. Isso quebrou **todos** os deploys por 3 dias.
+
+**Causa raiz:** PowerShell 5.x (`Set-Content -Encoding UTF8`) adiciona BOM por padrão. Editores como Notepad também adicionam BOM ao salvar JSON.
+
+**Regra:** Nunca escrever arquivos JSON via PowerShell com `Set-Content -Encoding UTF8`. Usar sempre:
+```powershell
+# CORRETO — sem BOM
+$utf8NoBom = New-Object System.Text.UTF8Encoding $false
+[System.IO.File]::WriteAllText("caminho\arquivo.json", $conteudo, $utf8NoBom)
+
+# ERRADO — adiciona BOM
+$conteudo | Set-Content "caminho\arquivo.json" -Encoding UTF8
+```
+
+**Como detectar:** Verificar os primeiros bytes do arquivo. Deve ser `7B` (`{`), não `EF-BB-BF`:
+```powershell
+$bytes = [System.IO.File]::ReadAllBytes("vercel.json")
+[System.BitConverter]::ToString($bytes[0..2])  # deve ser "7B-0A-20"
+```
+
+**Fix aplicado:** 2026-09-04 — commit `dc2c2eb` removeu o BOM e restaurou os deploys.
+
