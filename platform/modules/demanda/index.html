@@ -39,20 +39,15 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <!-- Logo / Título do módulo -->
-            <div class="sidebar-logo">
+            <div class="logo-area">
                 <div class="sidebar-logo-icon">
                     <span class="material-icons-round">insights</span>
                 </div>
                 <div class="sidebar-logo-text">
                     <strong>Intelig. Demanda</strong>
-                    <small>Central Rolamentos</small>
+                    <small id="sidebarFilial">—</small>
                 </div>
             </div>
-            <!-- Botão Voltar ao Portal -->
-            <a href="/platform/index.html" class="btn-back-portal">
-                <span class="material-icons-round">arrow_back</span>
-                Voltar ao Portal
-            </a>
 
             <nav class="nav-menu">
                 <div class="nav-section-label">Operacional</div>
@@ -90,6 +85,16 @@
                     <span class="material-icons-round">sync</span>
                     Integração ERP
                 </button>
+
+                <!-- Ações secundárias — padrão Despacho: margin-top auto empurra para o fundo -->
+                <a href="/platform/index.html" class="nav-item" style="margin-top:auto;color:var(--text-secondary);">
+                    <span class="material-icons-round">arrow_back</span>
+                    Voltar ao Portal
+                </a>
+                <button class="nav-item" onclick="DemandaApp.logout()" style="color:var(--accent-danger);">
+                    <span class="material-icons-round">logout</span>
+                    Sair
+                </button>
             </nav>
 
             <div class="sidebar-footer">
@@ -97,12 +102,13 @@
                     <div class="avatar" id="sidebarAvatarLetter">?</div>
                     <div class="user-info">
                         <span class="name" id="sidebarUserName">Carregando...</span>
-                        <span class="role" id="sidebarFilial">—</span>
+                        <span class="role" id="sidebarRole">—</span>
                     </div>
                 </div>
-                <div class="version-badge" id="sidebarVersion">v1.0.3</div>
+                <div class="version-badge" id="sidebarVersion">v1.0.9</div>
             </div>
         </aside>
+
 
         <!-- Main Content -->
         <div class="main-content">

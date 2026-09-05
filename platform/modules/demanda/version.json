@@ -1,1 +1,1 @@
-{"build":"20260904-v1.0.9","version":"1.0.9","name":"Inteligencia de Demanda","change":"v1.0.9 - fix: base href + paths absolutos para servir modulo via /demanda sem quebrar CSS/JS","lastUpdate":"2026-09-04","module":"demanda"}
+{"version":"1.1.0","build":"20260905-v1.1.0","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-05","change":"v1.1.0 - layout: sidebar padronizado com Despacho - Voltar+Sair no fundo do nav, logo-area, sidebarFilial no titulo"}

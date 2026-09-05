@@ -93,8 +93,10 @@ const DemandaApp = (function() {
     function _updateUser(s) {
         var n = (s && (s.nome || s.name || s.email)) || "Usuario";
         var f = (s && (s.filial || s.tenantNome || s.empresa)) || "Plataforma";
+        var r = (s && s.role) || "";
         var en = document.getElementById("sidebarUserName"); if (en) en.textContent = n;
-        var ef = document.getElementById("sidebarFilial");   if (ef) ef.textContent = f;
+        var ef = document.getElementById("sidebarFilial");   if (ef) ef.textContent = f;  // logo-area small
+        var er = document.getElementById("sidebarRole");     if (er) er.textContent = r || f;
         var ea = document.getElementById("sidebarAvatarLetter"); if (ea) ea.textContent = n.charAt(0).toUpperCase();
     }
 
