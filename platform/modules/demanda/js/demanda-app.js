@@ -21,6 +21,7 @@ const DemandaApp = (function() {
     var _itens             = [];      // Itens da demanda em andamento
     var _clienteAtual      = null;    // { id, nome, cnpj } | null
     var _sessao            = null;    // Cache ParreiraAuth.getSessao()
+    var _demandaAtual      = null;    // { id, data, itens } — demanda aberta no modal de detalhe
     var _erpInitialized    = false;
     var _searchTimeout     = null;
     var _filterAtual       = "todas";
@@ -570,42 +571,193 @@ const DemandaApp = (function() {
         }
         Promise.all([ DemandaDB.getDemanda(id), DemandaDB.getItens(id) ])
             .then(function(res) {
-                var d = res[0], itens = res[1];
-                var SC = { aberta:"#6366f1", em_atendimento:"#f59e0b", encerrada:"#10b981", cancelada:"#6b7280" };
-                var SL = { aberta:"Aberta", em_atendimento:"Em Atendimento", encerrada:"Encerrada", cancelada:"Cancelada" };
-                var cor = SC[d.status] || "#6366f1";
-                var lbl = SL[d.status] || d.status;
-                var dt  = d.criadoEm && d.criadoEm.toDate ? d.criadoEm.toDate().toLocaleDateString("pt-BR") : "—";
-                var itensHtml = itens.length === 0
-                    ? "<tr><td colspan='5' style='text-align:center;padding:2rem;color:var(--text-secondary)'>Nenhum item registrado.</td></tr>"
-                    : itens.map(function(item, i) {
-                        var sc = (typeof DemandaStates !== "undefined" && DemandaStates.get) ? DemandaStates.get(item.status) : null;
-                        var scCor = sc ? sc.color : "#6366f1";
-                        var scLbl = sc ? sc.label : (item.status || "—");
-                        return "<tr>" +
-                            "<td style='color:var(--text-secondary);font-size:.78rem;padding:.45rem .6rem'>" + (i+1) + "</td>" +
-                            "<td style='font-weight:600;font-size:.83rem;padding:.45rem .6rem'>" + _esc(item.refOriginal || item.erpProdutoId || "—") + "</td>" +
-                            "<td style='font-size:.8rem;color:var(--text-secondary);padding:.45rem .6rem'>" + _esc(item.descOriginal || item.erpProdutoDesc || "—") + "</td>" +
-                            "<td style='text-align:center;padding:.45rem .6rem'>" + (item.qtdeSolicitada||1) + "</td>" +
-                            "<td style='padding:.45rem .6rem'><span style='font-size:.72rem;padding:.15rem .5rem;border-radius:10px;background:" + scCor + "22;color:" + scCor + "'>" + _esc(scLbl) + "</span></td>" +
-                            "</tr>";
-                    }).join("");
-                if (body) body.innerHTML =
-                    "<div style='display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;flex-wrap:wrap'>" +
-                    "<span style='font-size:1.1rem;font-weight:700'>" + _esc(d.codigo) + "</span>" +
-                    "<span style='font-size:.72rem;padding:.15rem .55rem;border-radius:10px;background:" + cor + "22;color:" + cor + "'>" + lbl + "</span>" +
-                    "<span style='color:var(--text-secondary);font-size:.8rem;margin-left:auto'>" + dt + "</span></div>" +
-                    (d.clienteNome ? "<div style='font-size:.83rem;margin-bottom:1rem'><strong>Cliente:</strong> " + _esc(d.clienteNome) +
-                        (d.vendedorNome ? " &nbsp;|&nbsp; <strong>Vendedor:</strong> " + _esc(d.vendedorNome) : "") + "</div>" : "") +
-                    "<div style='overflow-x:auto'><table style='width:100%;border-collapse:collapse;font-size:.83rem'>" +
-                    "<thead><tr style='border-bottom:1px solid var(--border-color)'>" +
-                    ["#","Referência","Descrição","Qtd","Status"].map(function(h){
-                        return "<th style='padding:.4rem .6rem;text-align:left;color:var(--text-secondary);font-size:.72rem'>" + h + "</th>";
-                    }).join("") + "</tr></thead><tbody>" + itensHtml + "</tbody></table></div>";
+                _demandaAtual = { id: id, data: res[0], itens: res[1] };
+                _renderDemandaDetalheBody();
             })
             .catch(function(err) {
                 if (body) body.innerHTML = "<p style='color:var(--accent-danger);padding:1rem'>Erro: " + _esc(err.message || String(err)) + "</p>";
             });
+    }
+
+    // ════════════════════════════════════════════════════════
+    // DETALHE DA DEMANDA — RENDERIZAÇÃO COM GESTÃO DE ESTADOS
+    // ════════════════════════════════════════════════════════
+
+    function _renderDemandaDetalheBody() {
+        if (!_demandaAtual) return;
+        var body = document.getElementById("modalDemandaDetalheBody");
+        if (!body) return;
+
+        var d     = _demandaAtual.data;
+        var itens = _demandaAtual.itens;
+        var SC = { aberta:"#6366f1", em_atendimento:"#f59e0b", encerrada:"#10b981", cancelada:"#6b7280" };
+        var SL = { aberta:"Aberta", em_atendimento:"Em Atendimento", encerrada:"Encerrada", cancelada:"Cancelada" };
+        var cor = SC[d.status] || "#6366f1";
+        var lbl = SL[d.status] || d.status;
+        var dt  = d.criadoEm && d.criadoEm.toDate ? d.criadoEm.toDate().toLocaleDateString("pt-BR") : "—";
+
+        // Contadores do progresso
+        var total    = itens.length;
+        var terminal = itens.filter(function(i) { return typeof DemandaStates !== "undefined" && DemandaStates.isTerminal(i.status); }).length;
+        var pct      = total > 0 ? Math.round((terminal / total) * 100) : 0;
+
+        var itensHtml = total === 0
+            ? "<tr><td colspan='6' style='text-align:center;padding:2rem;color:var(--text-secondary)'>Nenhum item registrado.</td></tr>"
+            : itens.map(function(item, i) { return _renderItemRow(item, i); }).join("");
+
+        body.innerHTML =
+            // Cabeçalho com código + status + data
+            "<div style='display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap'>" +
+            "<span style='font-size:1.05rem;font-weight:700'>" + _esc(d.codigo) + "</span>" +
+            "<span style='font-size:.7rem;padding:.15rem .55rem;border-radius:10px;background:" + cor + "22;color:" + cor + "'>" + lbl + "</span>" +
+            "<span style='color:var(--text-secondary);font-size:.78rem;margin-left:auto'>" + dt + "</span>" +
+            "</div>" +
+            // Info cliente / vendedor
+            (d.clienteNome ? "<div style='font-size:.82rem;margin-bottom:.75rem;color:var(--text-secondary)'>" +
+                "<strong style='color:var(--text-primary)'>Cliente:</strong> " + _esc(d.clienteNome) +
+                (d.vendedorNome ? " &nbsp;·&nbsp; <strong style='color:var(--text-primary)'>Vendedor:</strong> " + _esc(d.vendedorNome) : "") +
+                "</div>" : "") +
+            // Barra de progresso dos itens
+            (total > 0 ? "<div style='margin-bottom:1rem'>" +
+                "<div style='display:flex;justify-content:space-between;font-size:.75rem;color:var(--text-secondary);margin-bottom:.3rem'>" +
+                "<span>Progresso dos itens</span><span>" + terminal + "/" + total + " concluídos (" + pct + "%)</span></div>" +
+                "<div style='height:4px;background:var(--border-color);border-radius:4px;overflow:hidden'>" +
+                "<div style='height:100%;width:" + pct + "%;background:var(--accent-success);transition:width .4s'></div></div>" +
+                "</div>" : "") +
+            // Tabela de itens
+            "<div style='overflow-x:auto'>" +
+            "<table style='width:100%;border-collapse:collapse;font-size:.82rem'>" +
+            "<thead><tr style='border-bottom:1px solid var(--border-color)'>" +
+            ["#","Referência","Descrição","Qtd","Status","Ação"].map(function(h) {
+                return "<th style='padding:.4rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em'>" + h + "</th>";
+            }).join("") +
+            "</tr></thead><tbody id='detalheItemsTbody'>" + itensHtml + "</tbody></table></div>";
+    }
+
+    function _renderItemRow(item, i) {
+        var sc     = (typeof DemandaStates !== "undefined") ? DemandaStates.get(item.status) : { label: item.status, color: "#6366f1" };
+        var nexts  = (typeof DemandaStates !== "undefined") ? DemandaStates.nextStates(item.status) : [];
+        var isEnd  = (typeof DemandaStates !== "undefined") && DemandaStates.isTerminal(item.status);
+
+        var acaoHtml;
+        if (isEnd) {
+            acaoHtml = "<span style='font-size:.72rem;color:var(--text-secondary)'>Concluído</span>";
+        } else if (nexts.length === 0) {
+            acaoHtml = "<span style='font-size:.72rem;color:var(--text-secondary)'>—</span>";
+        } else {
+            acaoHtml = "<select onchange=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "',this.value,this)\" " +
+                "style='background:var(--bg-dark);border:1px solid var(--border);border-radius:6px;padding:.2rem .5rem;" +
+                "color:var(--text-primary);font-size:.75rem;cursor:pointer;max-width:150px'>" +
+                "<option value=''>Avançar para...</option>" +
+                nexts.map(function(n) {
+                    return "<option value='" + n.key + "' style='color:" + n.color + "'>" + n.label + "</option>";
+                }).join("") +
+                "</select>";
+        }
+
+        return "<tr style='border-bottom:1px solid rgba(255,255,255,.04)'>" +
+            "<td style='color:var(--text-secondary);font-size:.75rem;padding:.5rem .6rem'>" + (i + 1) + "</td>" +
+            "<td style='font-weight:600;font-size:.82rem;padding:.5rem .6rem'>" + _esc(item.refOriginal || item.erpProdutoId || "—") + "</td>" +
+            "<td style='font-size:.79rem;color:var(--text-secondary);padding:.5rem .6rem;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>" +
+                _esc(item.descOriginal || item.erpProdutoDesc || "—") + "</td>" +
+            "<td style='text-align:center;padding:.5rem .6rem'>" + (item.qtdeSolicitada || 1) + "</td>" +
+            "<td style='padding:.5rem .6rem'><span style='font-size:.7rem;padding:.15rem .5rem;border-radius:10px;background:" +
+                sc.color + "22;color:" + sc.color + ";white-space:nowrap'>" + _esc(sc.label) + "</span></td>" +
+            "<td style='padding:.5rem .6rem'>" + acaoHtml + "</td>" +
+            "</tr>";
+    }
+
+    // ════════════════════════════════════════════════════════
+    // AVANÇAR ESTADO DO ITEM → FIRESTORE
+    // ════════════════════════════════════════════════════════
+
+    function avancarItemStatus(itemId, novoStatus, selectEl) {
+        if (!novoStatus || !_demandaAtual) return;
+        if (selectEl) selectEl.value = ""; // reset imediatamente
+
+        // Encontra o item na memória
+        var item = null;
+        for (var i = 0; i < _demandaAtual.itens.length; i++) {
+            if (_demandaAtual.itens[i].id === itemId) { item = _demandaAtual.itens[i]; break; }
+        }
+        if (!item) { _toast("Item não encontrado.", "error"); return; }
+
+        // Valida transição
+        if (typeof DemandaStates !== "undefined") {
+            var check = DemandaStates.canTransition(item.status, novoStatus);
+            if (!check.valid) { _toast(check.reason, "error"); return; }
+        }
+
+        // Caso especial: venda_perdida → pede motivo
+        if (novoStatus === "venda_perdida") {
+            _confirmarVendaPerdida(itemId, item.status); return;
+        }
+
+        // Persiste
+        _persistirTransicao(itemId, item.status, novoStatus, "");
+    }
+
+    function _persistirTransicao(itemId, deStatus, paraStatus, obs) {
+        if (typeof DemandaDB === "undefined") { _toast("DemandaDB indisponível.", "error"); return; }
+
+        var s = _sessao;
+        var por = s ? (s.login || s.nome || "sistema") : "sistema";
+
+        var timelineEntry = { evento: "status_changed", de: deStatus, para: paraStatus, por: por, obs: obs };
+
+        DemandaDB.updateItem(_demandaAtual.id, itemId, { status: paraStatus }, timelineEntry)
+            .then(function() {
+                // Atualiza memória local
+                for (var i = 0; i < _demandaAtual.itens.length; i++) {
+                    if (_demandaAtual.itens[i].id === itemId) {
+                        _demandaAtual.itens[i].status = paraStatus;
+                        break;
+                    }
+                }
+                var sc  = (typeof DemandaStates !== "undefined") ? DemandaStates.get(paraStatus) : { label: paraStatus };
+                _toast("Status avançado para: " + sc.label, "success");
+                _renderDemandaDetalheBody();
+                // Atualiza a lista de demandas em background
+                loadDemandasLista(_filterAtual);
+            })
+            .catch(function(err) {
+                _toast("Erro ao avançar: " + (err.message || err), "error");
+            });
+    }
+
+    function _confirmarVendaPerdida(itemId, deStatus) {
+        if (typeof DemandaStates === "undefined") { _persistirTransicao(itemId, deStatus, "venda_perdida", ""); return; }
+        var motivos = DemandaStates.MOTIVOS_PERDA;
+        var opts = motivos.map(function(m) { return "<option value='" + m.key + "'>" + m.label + "</option>"; }).join("");
+
+        // Pequeno modal inline via confirm-like approach usando div overlay temporário
+        var overlay = document.createElement("div");
+        overlay.style.cssText = "position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center";
+        overlay.innerHTML =
+            "<div style='background:var(--bg-sidebar);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;width:360px;max-width:90vw'>" +
+            "<h4 style='margin:0 0 1rem;display:flex;align-items:center;gap:.5rem'>" +
+            "<span class='material-icons-round' style='color:var(--accent-danger)'>cancel</span>Registrar Venda Perdida</h4>" +
+            "<label style='font-size:.82rem;color:var(--text-secondary);display:block;margin-bottom:.4rem'>Motivo da perda:</label>" +
+            "<select id='_motivoPerdaSelect' style='width:100%;background:var(--bg-dark);border:1px solid var(--border);border-radius:6px;padding:.45rem .7rem;color:var(--text-primary);margin-bottom:.75rem'>" +
+            opts + "</select>" +
+            "<label style='font-size:.82rem;color:var(--text-secondary);display:block;margin-bottom:.4rem'>Observação (opcional):</label>" +
+            "<input id='_motivoPerdaObs' type='text' placeholder='Detalhes...' " +
+            "style='width:100%;background:var(--bg-dark);border:1px solid var(--border);border-radius:6px;padding:.45rem .7rem;color:var(--text-primary);box-sizing:border-box;margin-bottom:1rem'>" +
+            "<div style='display:flex;gap:.5rem;justify-content:flex-end'>" +
+            "<button onclick='this.closest(\"div[style*=inset]\").remove()' " +
+            "style='background:var(--bg-dark);border:1px solid var(--border);border-radius:6px;padding:.4rem .9rem;color:var(--text-secondary);cursor:pointer'>Cancelar</button>" +
+            "<button id='_btnConfirmarPerda' " +
+            "style='background:var(--accent-danger);border:none;border-radius:6px;padding:.4rem 1rem;color:#fff;cursor:pointer;font-weight:600'>Confirmar Perda</button>" +
+            "</div></div>";
+        document.body.appendChild(overlay);
+
+        document.getElementById("_btnConfirmarPerda").onclick = function() {
+            var motivo = document.getElementById("_motivoPerdaSelect").value;
+            var obs    = (document.getElementById("_motivoPerdaObs").value || "").trim();
+            var obsStr = "Motivo: " + motivo + (obs ? " — " + obs : "");
+            overlay.remove();
+            _persistirTransicao(itemId, deStatus, "venda_perdida", obsStr);
+        };
     }
 
     // ════════════════════════════════════════════════════════
@@ -754,7 +906,8 @@ const DemandaApp = (function() {
         // Lista
         filterDemandas:         filterDemandas,
         loadDemandasLista:      loadDemandasLista,
-        abrirDemanda:           abrirDemanda
+        abrirDemanda:           abrirDemanda,
+        avancarItemStatus:      avancarItemStatus
     };
 
 })();
