@@ -1,1 +1,1 @@
-{"version":"1.5.1","build":"20260905-v1.5.1","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-05","change":"v1.5.1 - fix: redirect auth para login.html direto, evita portal interceptar e abrir despacho"}
+{"version":"1.5.1","build":"20260905-v1.5.1b","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-05","change":"v1.5.1 - fix auth redirect, admin modulos atualizado com wms+erp+demanda, fix script tenant"}

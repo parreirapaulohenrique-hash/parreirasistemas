@@ -1,60 +1,78 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <title>Fix: Adicionar módulo demanda ao tenant centralpecas</title>
-    <style>
-        body { font-family: monospace; background: #0f172a; color: #f1f5f9; padding: 2rem; }
-        h2 { color: #0ea5e9; margin-bottom: 1.5rem; }
-        pre { background: #1e293b; padding: 1rem; border-radius: 8px; overflow: auto; font-size: .85rem; }
-        button { background: #10b981; color: #fff; border: none; border-radius: 8px; padding: .7rem 1.5rem; font-size: 1rem; cursor: pointer; margin: .5rem .5rem 0 0; }
-        .ok { color: #10b981; font-weight: bold; }
-        .err { color: #ef4444; font-weight: bold; }
-        .warn { color: #f59e0b; }
-    </style>
+<meta charset="UTF-8">
+<title>Fix: Modulo demanda - centralpecas</title>
+<style>
+body{font-family:monospace;background:#0f172a;color:#f1f5f9;padding:2rem;max-width:600px}
+h2{color:#0ea5e9;margin-bottom:1rem}
+input{width:100%;background:#1e293b;border:1px solid #334155;border-radius:6px;color:#f1f5f9;padding:.6rem;margin-bottom:.75rem;font-size:.9rem;box-sizing:border-box}
+button{background:#10b981;color:#fff;border:none;border-radius:6px;padding:.65rem 1.4rem;cursor:pointer;margin-right:.5rem;font-size:.9rem}
+button.warn{background:#f59e0b}
+.ok{color:#10b981}.err{color:#ef4444}.warn{color:#f59e0b}
+#log{margin-top:1rem;line-height:1.7}
+pre{background:#1e293b;padding:1rem;border-radius:6px;overflow:auto;font-size:.8rem;margin-top:.5rem}
+</style>
 </head>
 <body>
-<h2>Fix: Modulo Demanda — Tenant centralpecas</h2>
-<p>Adiciona <code>"demanda"</code> ao array <code>modulos[]</code> do tenant <strong>centralpecas</strong> no Firestore.</p>
-<button onclick="verificar()">1. Verificar config atual</button>
-<button onclick="aplicarFix()" style="background:#f59e0b">2. Aplicar Fix</button>
+<h2>Fix: Adicionar "demanda" ao tenant centralpecas</h2>
+<p style="margin-bottom:1rem;color:#94a3b8;font-size:.85rem">Entre com sua conta master para ter permissao de escrita no Firestore.</p>
+<input id="inpLogin" placeholder="Login master (ex: master@parreira)">
+<input id="inpSenha" type="password" placeholder="Senha">
+<button onclick="fazerLogin()">1. Login</button>
+<button class="warn" onclick="aplicarFix()" id="btnFix" disabled>2. Aplicar Fix</button>
 <div id="log"></div>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+<script src="/platform/core/js/session-manager.js"></script>
+<script src="/platform/core/js/auth.js"></script>
 <script>
-    const CFG = {apiKey:"AIzaSyDzatCQ8zmH4aQftznf7Y5wdYPwFYSiARc",authDomain:"parreiralog-91904.firebaseapp.com",projectId:"parreiralog-91904",messagingSenderId:"527633267616",appId:"1:527633267616:web:3567e883b31f7fa02882c5"};
-    if (!firebase.apps.length) firebase.initializeApp(CFG);
-    const db = firebase.firestore();
-    function log(msg, cls) { document.getElementById("log").innerHTML += "<p class='"+(cls||"")+"'>"+msg+"</p>"; }
-    async function ensureAuth() { if (!firebase.auth().currentUser) await firebase.auth().signInAnonymously(); }
-    async function verificar() {
-        document.getElementById("log").innerHTML = "";
-        log("Buscando tenant centralpecas...");
-        try {
-            await ensureAuth();
-            const snap = await db.collection("tenants").doc("centralpecas").get();
-            if (!snap.exists) { log("ERRO: Tenant centralpecas nao encontrado!", "err"); return; }
-            const data = snap.data();
-            log("Tenant encontrado:", "ok");
-            log("<pre>"+JSON.stringify({nome:data.nome,ativo:data.ativo,modulos:data.modulos},null,2)+"</pre>");
-            if ((data.modulos||[]).includes("demanda")) log("demanda JA esta em modulos[]!", "ok");
-            else log("ATENCAO: demanda NAO esta em modulos[]. Clique em Aplicar Fix.", "warn");
-            const usnap = await db.collection("tenants").doc("centralpecas").collection("users").doc("cp@2026").get();
-            if (usnap.exists) { const u=usnap.data(); log("Usuario cp@2026: role="+u.role+" ativo="+u.ativo); }
-            else log("AVISO: Usuario cp@2026 nao encontrado.", "warn");
-        } catch(e) { log("Erro: "+e.message, "err"); }
-    }
-    async function aplicarFix() {
-        document.getElementById("log").innerHTML = "";
-        log("Aplicando fix...");
-        try {
-            await ensureAuth();
-            await db.collection("tenants").doc("centralpecas").update({modulos: firebase.firestore.FieldValue.arrayUnion("demanda")});
-            log("SUCESSO: demanda adicionado a modulos[] de centralpecas!", "ok");
-            await verificar();
-        } catch(e) { log("Erro: "+e.message, "err"); }
-    }
+var db;
+function log(msg,cls){document.getElementById('log').innerHTML+='<p class="'+(cls||'')+'">'+msg+'</p>';}
+function initDB(){
+  var cfg={apiKey:'AIzaSyDzatCQ8zmH4aQftznf7Y5wdYPwFYSiARc',authDomain:'parreiralog-91904.firebaseapp.com',projectId:'parreiralog-91904',messagingSenderId:'527633267616',appId:'1:527633267616:web:3567e883b31f7fa02882c5'};
+  if(!firebase.apps.length) firebase.initializeApp(cfg);
+  db=firebase.firestore();
+  return db;
+}
+
+async function fazerLogin(){
+  initDB();
+  var login=document.getElementById('inpLogin').value.trim();
+  var senha=document.getElementById('inpSenha').value;
+  if(!login||!senha){log('Preencha login e senha.','err');return;}
+  log('Autenticando...');
+  try{
+    var s=await ParreiraAuth.login(login,senha,'master');
+    log('Logado como: '+s.nome+' ('+s.role+')','ok');
+    document.getElementById('btnFix').disabled=false;
+    // Autentica anonimamente no Firebase para ter sessao de escrita
+    await firebase.auth().signInAnonymously();
+    log('Sessao Firebase pronta.','ok');
+    await verificar();
+  }catch(e){log('Erro no login: '+e.message,'err');}
+}
+
+async function verificar(){
+  var snap=await db.collection('tenants').doc('centralpecas').get();
+  var mods=(snap.data().modulos||[]);
+  log('Modulos atuais: '+JSON.stringify(mods));
+  if(mods.includes('demanda')) log('"demanda" ja esta na lista!','ok');
+  else log('"demanda" NAO esta na lista. Clique em Aplicar Fix.','warn');
+}
+
+async function aplicarFix(){
+  log('Aplicando...');
+  try{
+    await db.collection('tenants').doc('centralpecas').update({
+      modulos: firebase.firestore.FieldValue.arrayUnion('demanda'),
+      modules: firebase.firestore.FieldValue.arrayUnion('demanda')
+    });
+    log('SUCESSO! "demanda" adicionado!','ok');
+    await verificar();
+  }catch(e){log('Erro: '+e.message,'err');}
+}
 </script>
 </body>
 </html>
