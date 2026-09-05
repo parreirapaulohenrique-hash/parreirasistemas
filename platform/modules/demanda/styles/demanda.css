@@ -294,6 +294,23 @@ body {
     min-width: 0;
 }
 
+/* Views preenchem o espaço disponível — empurra o footer para o rodapé.
+   display:none via inline style sobrescreve o CSS display quando ocultas. */
+#view-captura,
+#view-lista,
+#view-pesquisa,
+#view-compras,
+#view-dashboard,
+#view-base,
+#view-integracaoErp {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+
 /* Top bar — 64px, igual ao Despacho */
 .top-bar,
 .demanda-topbar {
