@@ -1,8 +1,1 @@
-{
-    "build": "20260904-v3.19.2",
-    "version": "3.19.2",
-    "environment": "production",
-    "change": "v3.19.2 — fix(portal): case 'demanda' em openModule() + checkLogin() respeita ?redirect= para tenants não-parreira",
-    "lastUpdate": "2026-09-04",
-    "deployedAt": "2026-09-04"
-}
+{"build":"20260905-v3.19.4","version":"3.19.4","environment":"production","change":"v3.19.4 - fix(auth): cross-tab session - getSessao fallback para localStorage, resolve redirect loop ao abrir modulos em nova aba","lastUpdate":"2026-09-05","deployedAt":"2026-09-05"}
