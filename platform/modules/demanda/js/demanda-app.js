@@ -1020,7 +1020,10 @@ const DemandaApp = (function() {
         // Guard de autenticação
         if (typeof ParreiraAuth !== "undefined") {
             if (!ParreiraAuth.isLogado()) {
-                window.location.href = "/platform/index.html?redirect=" + encodeURIComponent(window.location.pathname);
+                // ✅ Redireciona para login.html com module=demanda e redirect correto
+                // (antes ia para index.html do portal, que perdia o contexto e abria o despacho)
+                var destPath = encodeURIComponent("modules/demanda/index.html");
+                window.location.href = "/platform/login.html?module=demanda&redirect=" + destPath;
                 return;
             }
             try {
