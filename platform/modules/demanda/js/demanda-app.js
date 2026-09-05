@@ -1028,8 +1028,14 @@ const DemandaApp = (function() {
             }
             try {
                 _sessao = ParreiraAuth.getSessao ? ParreiraAuth.getSessao() : null;
-                var mods = (_sessao && _sessao.modulos) ? _sessao.modulos : [];
-                if (mods.length > 0 && mods.indexOf("demanda") === -1) {
+                var mods   = (_sessao && _sessao.modulos) ? _sessao.modulos : [];
+                var role   = _sessao ? (_sessao.role || "") : "";
+                var tenant = _sessao ? (_sessao.tenantId || "") : "";
+                // Admin/master sempre têm acesso a todos os módulos
+                var isAdmin = (role === "admin" || role === "master");
+                // Tenant centralpecas tem acesso ao módulo (configuração pendente no Firestore)
+                var isCentralPecas = (tenant === "centralpecas");
+                if (!isAdmin && !isCentralPecas && mods.length > 0 && mods.indexOf("demanda") === -1) {
                     alert("Voce nao tem acesso ao modulo Inteligencia de Demanda.\nContate o administrador.");
                     history.back(); return;
                 }

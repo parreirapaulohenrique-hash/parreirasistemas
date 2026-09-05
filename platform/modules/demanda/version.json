@@ -1,1 +1,1 @@
-{"version":"1.5.1","build":"20260905-v1.5.1b","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-05","change":"v1.5.1 - fix auth redirect, admin modulos atualizado com wms+erp+demanda, fix script tenant"}
+{"version":"1.5.2","build":"20260905-v1.5.2","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-05","change":"v1.5.2 - fix: libera acesso ao tenant centralpecas e roles admin/master independente do array modulos"}
