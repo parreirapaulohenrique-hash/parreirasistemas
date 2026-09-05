@@ -1,1 +1,1 @@
-{"build":"20260905-v3.19.4","version":"3.19.4","environment":"production","change":"v3.19.4 - fix(auth): cross-tab session - getSessao fallback para localStorage, resolve redirect loop ao abrir modulos em nova aba","lastUpdate":"2026-09-05","deployedAt":"2026-09-05"}
+{"build":"20260905-v3.19.5","version":"3.19.5","environment":"production","change":"v3.19.5 - fix(auth): migra parreira_session_ls automaticamente no checkLogin do portal, sem necessidade de re-login","lastUpdate":"2026-09-05","deployedAt":"2026-09-05"}
