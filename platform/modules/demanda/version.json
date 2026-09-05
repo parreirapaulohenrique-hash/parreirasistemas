@@ -1,1 +1,1 @@
-{"version":"1.1.0","build":"20260905-v1.1.0","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-05","change":"v1.1.0 - layout: sidebar padronizado com Despacho - Voltar+Sair no fundo do nav, logo-area, sidebarFilial no titulo"}
+{"version":"1.1.1","build":"20260905-v1.1.1","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-05","change":"v1.1.1 - layout: footer LGPD identico ao Despacho, remove version-badge do sidebar"}
