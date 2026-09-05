@@ -41,6 +41,8 @@ const DemandaApp = (function() {
         var ne = document.getElementById(_VIEWS[v]); if (ne) ne.classList.add("active");
         if (v === "integracaoErp") _initErpUI();
         if (v === "lista")         loadDemandasLista(_filterAtual);
+        if (v === "dashboard")     loadDashboard();
+        if (v === "compras")       loadFilaCompras();
     }
 
     // ════════════════════════════════════════════════════════
@@ -760,6 +762,198 @@ const DemandaApp = (function() {
         };
     }
 
+
+    // ════════════════════════════════════════════════════════
+    // VIEW: DASHBOARD — KPIs DE INTELIGÊNCIA
+    // ════════════════════════════════════════════════════════
+
+    function loadDashboard() {
+        var container = document.getElementById("dashboardContainer");
+        if (!container) return;
+        container.innerHTML = "<div style='padding:3rem;text-align:center;color:var(--text-secondary)'>" +
+            "<span class='material-icons-round' style='font-size:2rem;animation:spin 1s linear infinite'>sync</span>" +
+            "<p style='margin-top:.5rem;font-size:.85rem'>Carregando KPIs...</p></div>";
+
+        if (typeof DemandaDB === "undefined") {
+            container.innerHTML = "<p style='padding:2rem;color:var(--accent-danger)'>DemandaDB indisponível.</p>"; return;
+        }
+
+        DemandaDB.getDashboardStats()
+            .then(function(s) {
+                var SL = { aberta: "Abertas", em_atendimento: "Em Atendimento", encerrada: "Encerradas", cancelada: "Canceladas" };
+                var SC = { aberta: "#6366f1", em_atendimento: "#f59e0b", encerrada: "#10b981", cancelada: "#6b7280" };
+
+                // KPI cards
+                var kpis = [
+                    { icon: "receipt_long",  label: "Total Demandas",    val: s.totalDemandas,      color: "#6366f1" },
+                    { icon: "inventory",     label: "Itens Recebidos",   val: s.totalItens,         color: "#3b82f6" },
+                    { icon: "manage_search", label: "Identificados",     val: s.totalIdentificados, color: "#f59e0b" },
+                    { icon: "check_circle",  label: "Com Estoque",       val: s.totalComEstoque,    color: "#10b981" },
+                    { icon: "inventory_2",   label: "Sem Estoque",       val: s.totalSemEstoque,    color: "#ef4444" },
+                    { icon: "cancel",        label: "Venda Perdida",     val: s.totalPerdidos,      color: "#6b7280" },
+                ];
+
+                var kpiHtml = "<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1rem;margin-bottom:2rem'>" +
+                    kpis.map(function(k) {
+                        return "<div style='background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1.1rem 1.25rem;display:flex;flex-direction:column;gap:.4rem'>" +
+                            "<div style='display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem'>" +
+                            "<span class='material-icons-round' style='font-size:1.1rem;color:" + k.color + "'>" + k.icon + "</span>" +
+                            "<span style='font-size:.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em'>" + k.label + "</span>" +
+                            "</div>" +
+                            "<span style='font-size:1.75rem;font-weight:800;color:" + k.color + "'>" + k.val + "</span>" +
+                            "</div>";
+                    }).join("") + "</div>";
+
+                // Taxas como barras de progresso
+                var taxas = [
+                    { label: "Taxa de Identificação", val: s.taxaIdentificacao, color: "#f59e0b", desc: s.totalIdentificados + " de " + s.totalItens + " itens identificados" },
+                    { label: "Taxa de Estoque",       val: s.taxaEstoque,       color: "#10b981", desc: s.totalComEstoque + " de " + s.totalIdentificados + " têm estoque disponível" },
+                    { label: "Taxa de Venda Perdida", val: s.taxaPerda,         color: "#ef4444", desc: s.totalPerdidos + " de " + s.totalItens + " itens perdidos" },
+                ];
+
+                var taxasHtml = "<div style='background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:2rem'>" +
+                    "<h4 style='margin:0 0 1.25rem;font-size:.9rem;color:var(--text-primary)'>Indicadores de Performance</h4>" +
+                    taxas.map(function(t) {
+                        return "<div style='margin-bottom:1.1rem'>" +
+                            "<div style='display:flex;justify-content:space-between;margin-bottom:.3rem'>" +
+                            "<span style='font-size:.82rem;color:var(--text-secondary)'>" + t.label + "</span>" +
+                            "<span style='font-size:.82rem;font-weight:700;color:" + t.color + "'>" + t.val + "%</span>" +
+                            "</div>" +
+                            "<div style='height:6px;background:var(--border-color);border-radius:4px;overflow:hidden'>" +
+                            "<div style='height:100%;width:" + t.val + "%;background:" + t.color + ";border-radius:4px;transition:width .5s'></div></div>" +
+                            "<div style='font-size:.72rem;color:var(--text-secondary);margin-top:.2rem'>" + t.desc + "</div>" +
+                            "</div>";
+                    }).join("") + "</div>";
+
+                // Demandas por status
+                var statusKeys = Object.keys(s.porStatus);
+                var statusHtml = statusKeys.length === 0 ? "" :
+                    "<div style='background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1.25rem'>" +
+                    "<h4 style='margin:0 0 1.25rem;font-size:.9rem;color:var(--text-primary)'>Demandas por Status</h4>" +
+                    "<div style='display:flex;flex-direction:column;gap:.5rem'>" +
+                    statusKeys.map(function(sk) {
+                        var cnt = s.porStatus[sk] || 0;
+                        var pct = s.totalDemandas > 0 ? Math.round((cnt / s.totalDemandas) * 100) : 0;
+                        var cor = SC[sk] || "#6b7280";
+                        var lbl = SL[sk] || sk;
+                        return "<div>" +
+                            "<div style='display:flex;justify-content:space-between;margin-bottom:.25rem'>" +
+                            "<span style='font-size:.82rem;color:var(--text-secondary)'>" + lbl + "</span>" +
+                            "<span style='font-size:.82rem;font-weight:700;color:" + cor + "'>" + cnt + " (" + pct + "%)</span></div>" +
+                            "<div style='height:5px;background:var(--border-color);border-radius:4px;overflow:hidden'>" +
+                            "<div style='height:100%;width:" + pct + "%;background:" + cor + ";border-radius:4px'></div></div>" +
+                            "</div>";
+                    }).join("") + "</div></div>";
+
+                container.innerHTML = kpiHtml + taxasHtml + statusHtml;
+            })
+            .catch(function(err) {
+                container.innerHTML = "<p style='padding:2rem;color:var(--accent-danger)'>Erro ao carregar: " + _esc(err.message || err) + "</p>";
+            });
+    }
+
+    // ════════════════════════════════════════════════════════
+    // VIEW: FILA DE COMPRAS
+    // ════════════════════════════════════════════════════════
+
+    function loadFilaCompras() {
+        var container = document.getElementById("comprasContainer");
+        if (!container) return;
+        container.innerHTML = "<div style='padding:3rem;text-align:center;color:var(--text-secondary)'>" +
+            "<span class='material-icons-round' style='font-size:2rem;animation:spin 1s linear infinite'>sync</span>" +
+            "<p style='margin-top:.5rem;font-size:.85rem'>Carregando fila...</p></div>";
+
+        if (typeof DemandaDB === "undefined") {
+            container.innerHTML = "<p style='padding:2rem;color:var(--accent-danger)'>DemandaDB indisponível.</p>"; return;
+        }
+
+        DemandaDB.listItensFila(80)
+            .then(function(itens) {
+                if (itens.length === 0) {
+                    container.innerHTML =
+                        "<div style='padding:3rem;text-align:center;color:var(--text-secondary)'>" +
+                        "<span class='material-icons-round' style='font-size:3rem;opacity:.3'>shopping_cart</span>" +
+                        "<h4 style='margin:.75rem 0 .25rem;color:var(--text-primary)'>Fila vazia</h4>" +
+                        "<p style='font-size:.85rem'>Nenhum item aguardando compra no momento.</p></div>";
+                    return;
+                }
+
+                var SLBL = { sem_estoque:"Sem Estoque", encaminhado_compras:"Em Compras", cotacao_fornecedor:"Cotando", compra_possivel:"Compra Possível" };
+                var SCOR = { sem_estoque:"#ef4444", encaminhado_compras:"#8b5cf6", cotacao_fornecedor:"#f97316", compra_possivel:"#10b981" };
+
+                // Agrupa por status
+                var grupos = {};
+                itens.forEach(function(item) {
+                    if (!grupos[item.status]) grupos[item.status] = [];
+                    grupos[item.status].push(item);
+                });
+
+                var html = "<div style='padding:1rem 1.5rem'>" +
+                    "<div style='display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;flex-wrap:wrap'>" +
+                    "<span style='font-size:.88rem;font-weight:700'>" + itens.length + " " + (itens.length === 1 ? "item" : "itens") + " na fila</span>" +
+                    "<button class='btn btn-secondary btn-sm' onclick='DemandaApp.loadFilaCompras()' style='margin-left:auto'>" +
+                    "<span class='material-icons-round'>refresh</span> Atualizar</button>" +
+                    "</div>";
+
+                Object.keys(grupos).forEach(function(status) {
+                    var grpItens = grupos[status];
+                    var cor = SCOR[status] || "#6366f1";
+                    var lbl = SLBL[status] || status;
+
+                    html += "<div style='margin-bottom:1.5rem'>" +
+                        "<div style='display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem;padding-bottom:.5rem;border-bottom:1px solid var(--border-color)'>" +
+                        "<span class='material-icons-round' style='color:" + cor + ";font-size:1rem'>shopping_cart</span>" +
+                        "<span style='font-weight:700;color:" + cor + "'>" + lbl + "</span>" +
+                        "<span style='font-size:.75rem;color:var(--text-secondary);margin-left:.25rem'>(" + grpItens.length + ")</span></div>" +
+                        "<div style='overflow-x:auto'><table style='width:100%;border-collapse:collapse;font-size:.82rem'>" +
+                        "<thead><tr style='border-bottom:1px solid var(--border-color)'>" +
+                        ["Referência","Descrição","Qtd Solicitada","Demanda","Ação"].map(function(h) {
+                            return "<th style='padding:.35rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:600;text-transform:uppercase'>" + h + "</th>";
+                        }).join("") + "</tr></thead><tbody>" +
+                        grpItens.map(function(item) {
+                            var nexts = (typeof DemandaStates !== "undefined") ? DemandaStates.nextStates(item.status) : [];
+                            var acaoHtml = nexts.length === 0 ? "—" :
+                                "<select onchange=\"DemandaApp.avancarItemFilaCompras('" + _esc(item.id) + "','" + _esc(item.demandaId) + "',this.value,this)\" " +
+                                "style='background:var(--bg-dark);border:1px solid var(--border);border-radius:5px;padding:.2rem .4rem;color:var(--text-primary);font-size:.73rem;cursor:pointer'>" +
+                                "<option value=''>Avançar...</option>" +
+                                nexts.map(function(n) { return "<option value='" + n.key + "'>" + n.label + "</option>"; }).join("") +
+                                "</select>";
+                            return "<tr style='border-bottom:1px solid rgba(255,255,255,.04)'>" +
+                                "<td style='padding:.4rem .6rem;font-weight:600'>" + _esc(item.refOriginal || "—") + "</td>" +
+                                "<td style='padding:.4rem .6rem;color:var(--text-secondary);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>" + _esc(item.descOriginal || "—") + "</td>" +
+                                "<td style='padding:.4rem .6rem;text-align:center'>" + (item.qtdeSolicitada || 1) + "</td>" +
+                                "<td style='padding:.4rem .6rem'>" +
+                                "<a onclick=\"DemandaApp.abrirDemanda('" + _esc(item.demandaId) + "')\" style='color:var(--primary-color);cursor:pointer;font-size:.78rem;text-decoration:underline'>" +
+                                (item.demandaId ? item.demandaId.substring(0, 8) + "..." : "—") + "</a></td>" +
+                                "<td style='padding:.4rem .6rem'>" + acaoHtml + "</td>" +
+                                "</tr>";
+                        }).join("") +
+                        "</tbody></table></div></div>";
+                });
+                html += "</div>";
+                container.innerHTML = html;
+            })
+            .catch(function(err) {
+                container.innerHTML = "<p style='padding:2rem;color:var(--accent-danger)'>Erro: " + _esc(err.message || err) + "</p>";
+            });
+    }
+
+    // Avança estado de item direto pela fila de compras (sem _demandaAtual)
+    function avancarItemFilaCompras(itemId, demandaId, novoStatus, selectEl) {
+        if (!novoStatus || !demandaId) return;
+        if (selectEl) selectEl.value = "";
+        if (typeof DemandaDB === "undefined") { _toast("DemandaDB indisponível.", "error"); return; }
+        var s = _sessao;
+        var por = s ? (s.login || s.nome || "sistema") : "sistema";
+        DemandaDB.updateItem(demandaId, itemId, { status: novoStatus }, { evento: "status_changed", por: por, obs: "" })
+            .then(function() {
+                var sc = (typeof DemandaStates !== "undefined") ? DemandaStates.get(novoStatus) : { label: novoStatus };
+                _toast("Status avançado: " + sc.label, "success");
+                setTimeout(function() { loadFilaCompras(); }, 300);
+            })
+            .catch(function(err) { _toast("Erro: " + (err.message || err), "error"); });
+    }
+
     // ════════════════════════════════════════════════════════
     // TOAST / NOTIFICAÇÕES
     // ════════════════════════════════════════════════════════
@@ -907,7 +1101,11 @@ const DemandaApp = (function() {
         filterDemandas:         filterDemandas,
         loadDemandasLista:      loadDemandasLista,
         abrirDemanda:           abrirDemanda,
-        avancarItemStatus:      avancarItemStatus
+        avancarItemStatus:      avancarItemStatus,
+        // Dashboard e Compras
+        loadDashboard:          loadDashboard,
+        loadFilaCompras:        loadFilaCompras,
+        avancarItemFilaCompras: avancarItemFilaCompras
     };
 
 })();

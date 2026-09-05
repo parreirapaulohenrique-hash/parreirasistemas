@@ -1,1 +1,1 @@
-{"version":"1.4.0","build":"20260905-v1.4.0","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-05","change":"v1.4.0 - feat: gestao estados itens, avancarItemStatus, barra progresso, modal venda perdida com motivo"}
+{"version":"1.5.0","build":"20260905-v1.5.0","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-05","change":"v1.5.0 - feat: Dashboard KPIs + Fila de Compras com avanco de estado, DemandaDB.getDashboardStats+listItensFila"}

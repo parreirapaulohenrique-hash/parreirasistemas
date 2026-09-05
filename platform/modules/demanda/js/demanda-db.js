@@ -357,10 +357,76 @@ const DemandaDB = (() => {
         return data;
     }
 
+    /**
+     * Busca itens da fila de compras usando collectionGroup.
+     * Estados: sem_estoque, encaminhado_compras, cotacao_fornecedor, compra_possivel
+     * @returns {Promise<Array>}
+     */
+    async function listItensFila(limit = 80) {
+        const FILA_STATES = ['sem_estoque', 'encaminhado_compras', 'cotacao_fornecedor', 'compra_possivel'];
+        const db      = _db();
+        const results = [];
+        const seen    = new Set();
+
+        await Promise.all(FILA_STATES.map(async (status) => {
+            try {
+                const snap = await db.collectionGroup('items')
+                    .where('status', '==', status)
+                    .where('demandaId', '!=', null)
+                    .limit(limit)
+                    .get();
+                snap.docs.forEach(d => {
+                    if (!seen.has(d.id)) {
+                        seen.add(d.id);
+                        results.push(d.data());
+                    }
+                });
+            } catch (e) {
+                console.warn('[DemandaDB] listItensFila status=' + status + ':', e.message);
+            }
+        }));
+
+        // Ordena: sem_estoque primeiro, depois compra_possivel (mais urgente)
+        const ORDER = { sem_estoque: 0, encaminhado_compras: 1, cotacao_fornecedor: 2, compra_possivel: 3 };
+        return results.sort((a, b) => (ORDER[a.status] || 9) - (ORDER[b.status] || 9));
+    }
+
+    /**
+     * Agrega KPIs do dashboard a partir dos totalizadores das demandas.
+     * @returns {Promise<object>}
+     */
+    async function getDashboardStats() {
+        const demandas = await listDemandas({ limit: 200 });
+        const stats = {
+            totalDemandas:      demandas.length,
+            porStatus:          {},
+            totalItens:         0,
+            totalIdentificados: 0,
+            totalComEstoque:    0,
+            totalSemEstoque:    0,
+            totalPerdidos:      0,
+        };
+        demandas.forEach(d => {
+            stats.porStatus[d.status] = (stats.porStatus[d.status] || 0) + 1;
+            stats.totalItens         += (d.totalItens         || 0);
+            stats.totalIdentificados += (d.totalIdentificados || 0);
+            stats.totalComEstoque    += (d.totalComEstoque    || 0);
+            stats.totalSemEstoque    += (d.totalSemEstoque    || 0);
+            stats.totalPerdidos      += (d.totalPerdidos      || 0);
+        });
+        stats.taxaIdentificacao = stats.totalItens > 0
+            ? Math.round((stats.totalIdentificados / stats.totalItens) * 100) : 0;
+        stats.taxaEstoque = stats.totalIdentificados > 0
+            ? Math.round((stats.totalComEstoque / stats.totalIdentificados) * 100) : 0;
+        stats.taxaPerda = stats.totalItens > 0
+            ? Math.round((stats.totalPerdidos / stats.totalItens) * 100) : 0;
+        return stats;
+    }
+
     return {
         createDemanda, getDemanda, updateDemanda, listDemandas,
         addItens, getItens, updateItem, deleteItem, recalcTotals,
-        onItensChanged,
+        onItensChanged, listItensFila, getDashboardStats,
         saveSession, loadSession, clearSession,
         TENANT_ID, DEMANDS_COL
     };

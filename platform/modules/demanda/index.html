@@ -363,14 +363,13 @@
                         <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">shopping_cart</span>
                         <span>Fila de Compras</span>
                     </div>
-                </div>
-                <div style="flex:1;overflow-y:auto;padding:1.5rem;display:flex;align-items:center;justify-content:center">
-                    <div class="empty-state">
-                        <span class="material-icons-round">shopping_cart</span>
-                        <h4>Fila de Compras</h4>
-                        <p>Itens sem estoque das demandas salvas aparecerão aqui para encaminhar ao setor de compras.</p>
+                    <div class="top-bar-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="DemandaApp.loadFilaCompras()">
+                            <span class="material-icons-round">refresh</span> Atualizar
+                        </button>
                     </div>
                 </div>
+                <div id="comprasContainer" style="flex:1;overflow-y:auto;padding:.5rem 0"></div>
             </div>
 
             <!-- ══════════════════════════════════════════════ -->
@@ -383,14 +382,13 @@
                         <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">bar_chart</span>
                         <span>Dashboard</span>
                     </div>
-                </div>
-                <div style="flex:1;overflow-y:auto;padding:1.5rem;display:flex;align-items:center;justify-content:center">
-                    <div class="empty-state">
-                        <span class="material-icons-round">bar_chart</span>
-                        <h4>Dashboard de Inteligência</h4>
-                        <p>Métricas de demandas, taxa de identificação, venda perdida e eficiência por vendedor.</p>
+                    <div class="top-bar-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="DemandaApp.loadDashboard()">
+                            <span class="material-icons-round">refresh</span> Atualizar
+                        </button>
                     </div>
                 </div>
+                <div id="dashboardContainer" style="flex:1;overflow-y:auto;padding:1.5rem"></div>
             </div>
 
             <!-- ══════════════════════════════════════════════ -->
