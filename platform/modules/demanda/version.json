@@ -1,1 +1,1 @@
-{"version":"1.1.2","build":"20260905-v1.1.2","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-05","change":"v1.1.2 - fix: footer fixo no rodape - views com flex:1 preenchem espaco disponivel"}
+{"version":"1.2.0","build":"20260905-v1.2.0","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-05","change":"v1.2.0 - feat: salvarDemanda Firestore, addItemGrade, limparDemanda, filterDemandas, loadDemandasLista, clienteDropdown, toast, version badge"}
