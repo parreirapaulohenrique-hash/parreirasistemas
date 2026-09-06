@@ -1518,7 +1518,7 @@ const DemandaApp = (function() {
                     "<td style='padding:.28rem .5rem;font-size:.8rem'>" + (pc?"R$ "+pc.toFixed(2).replace(".",","):"\u2014") + "</td>" +
                     "<td style='padding:.28rem .5rem;font-size:.8rem'>" + (pm?"R$ "+pm.toFixed(2).replace(".",","):"\u2014") + "</td>" +
                     "<td style='padding:.28rem .5rem;font-size:.78rem;font-weight:700;color:"+cor+"'>" +
-                        (d!==null?"R$ "+d.toFixed(2).replace(".",",")+(pct?" ("+(d>0?"+":"")+pct+"%)"):"\u2014")+
+                        (d!==null?"R$ "+d.toFixed(2).replace(".",",")+(pct?" ("+(d>0?"+":"")+pct+"%)":""):"\u2014")+
                     "</td></tr>";
             }).join("");
             var cid = _esc(c.id||"");
