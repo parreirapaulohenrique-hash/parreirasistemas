@@ -73,6 +73,10 @@
                     <span class="material-icons-round">description</span>
                     Orçamentos
                 </button>
+                <button class="nav-item" id="nav-concorrente" onclick="DemandaApp.switchView('concorrente')">
+                    <span class="material-icons-round">trending_up</span>
+                    Cotação Concorrente
+                </button>
                 <button class="nav-item" id="nav-dashboard" onclick="DemandaApp.switchView('dashboard')">
                     <span class="material-icons-round">bar_chart</span>
                     Dashboard
@@ -434,6 +438,27 @@
                 </div>
             </div>
 
+            <!-- VIEW: Cotação do Concorrente -->
+            <div id="view-concorrente" style="display:none;flex-direction:column">
+                <div class="top-bar">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1rem;color:#f59e0b">trending_up</span>
+                        <span>Cotação do Concorrente</span>
+                    </div>
+                </div>
+                <div style="flex:1;overflow-y:auto;padding:1.25rem;display:flex;flex-direction:column;gap:1.25rem">
+                    <!-- Form nova cotação -->
+                    <div id="concFormContainer">
+                        <div style="padding:3rem;text-align:center;color:var(--text-secondary)">
+                            <span class="material-icons-round" style="font-size:2rem;opacity:.4">trending_up</span>
+                            <p style="margin-top:.5rem;font-size:.85rem">Clique em "Cotação Concorrente" na sidebar para carregar o formulário.</p>
+                        </div>
+                    </div>
+                    <!-- Histórico de cotações -->
+                    <div id="concHistoricoContainer"></div>
+                </div>
+            </div>
+
 
             <footer style="padding:1rem 2rem;border-top:1px solid var(--border-color);font-size:0.75rem;color:var(--text-secondary);display:flex;justify-content:space-between;align-items:center;background:var(--bg-card);flex-shrink:0;">
                 <div>
@@ -680,11 +705,11 @@
     <script src="/platform/shared/integrations/index.js?v=2.0.0"></script>
 
     <!-- Módulo de Demanda -->
-    <script src="js/demanda-states.js?v=2.0.0"></script>
-    <script src="js/demanda-db.js?v=2.0.0"></script>
-    <script src="js/demanda-import.js?v=2.0.0"></script>
-    <script src="js/demanda-search.js?v=2.0.0"></script>
-    <script src="js/demanda-app.js?v=2.0.0"></script>
+    <script src="js/demanda-states.js?v=2.1.0"></script>
+    <script src="js/demanda-db.js?v=2.1.0"></script>
+    <script src="js/demanda-import.js?v=2.1.0"></script>
+    <script src="js/demanda-search.js?v=2.1.0"></script>
+    <script src="js/demanda-app.js?v=2.1.0"></script>
 
 </body>
 </html>

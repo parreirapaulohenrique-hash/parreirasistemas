@@ -14,6 +14,7 @@ const DemandaApp = (function() {
         compras:       "nav-compras",
         dashboard:     "nav-dashboard",
         orcamento:     "nav-orcamento",
+        concorrente:   "nav-concorrente",
         base:          "nav-base",
         integracaoErp: "nav-integracaoErp"
     };
@@ -45,6 +46,7 @@ const DemandaApp = (function() {
         if (v === "dashboard")     loadDashboard();
         if (v === "compras")       loadFilaCompras();
         if (v === "orcamento")     loadOrcamento();
+        if (v === "concorrente")   loadConcorrente();
     }
 
     // ════════════════════════════════════════════════════════
@@ -1327,6 +1329,255 @@ const DemandaApp = (function() {
     }
 
     // ════════════════════════════════════════════════════════
+    // VIEW: COTAÇÃO DO CONCORRENTE
+    // ════════════════════════════════════════════════════════
+
+    var _concItens = [];
+    var _CONC_INP  = "width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:5px;padding:.3rem .55rem;color:var(--text-primary);font-size:.8rem;box-sizing:border-box";
+
+    function _concDB() {
+        if (typeof firebase === "undefined" || typeof DemandaDB === "undefined") return null;
+        return firebase.firestore().collection("tenants").doc(DemandaDB.TENANT_ID).collection("cotacoes_concorrente");
+    }
+
+    function loadConcorrente() {
+        if (_concItens.length === 0) _concAddItem();
+        _renderConcorrenteForm();
+        _loadHistoricoConcorrente();
+    }
+
+    function _renderConcorrenteForm() {
+        var fc = document.getElementById("concFormContainer");
+        if (!fc) return;
+        fc.innerHTML =
+            "<div style='background:var(--bg-sidebar);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1.25rem'>" +
+            "<h3 style='margin:0 0 1rem;font-size:.95rem;display:flex;align-items:center;gap:.5rem'>" +
+            "<span class='material-icons-round' style='color:#f59e0b'>trending_up</span>Nova Cota\u00e7\u00e3o do Concorrente</h3>" +
+            "<div style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem;margin-bottom:.75rem'>" +
+            _concField("concNome", "Concorrente *", "text", "Ex: Distribuidora ABC", "list='concNomeSugestoes'") +
+            _concField("concCliente", "Cliente (refer\u00eancia)", "text", "Quem trouxe a cota\u00e7\u00e3o", "") +
+            _concField("concObs", "Observa\u00e7\u00e3o", "text", "Contexto opcional", "") +
+            "</div>" +
+            "<datalist id='concNomeSugestoes'></datalist>" +
+            "<div style='overflow-x:auto;margin-bottom:.75rem'>" +
+            "<table style='width:100%;border-collapse:collapse;font-size:.8rem'>" +
+            "<thead><tr style='border-bottom:1px solid var(--border-color)'>" +
+            ["#","Refer\u00eancia","Descri\u00e7\u00e3o","Qtde","Pre\u00e7o Concorrente","Pre\u00e7o Nosso","Diferen\u00e7a",""].map(function(h) {
+                return "<th style='padding:.35rem .4rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:600;text-transform:uppercase;white-space:nowrap'>" + h + "</th>";
+            }).join("") +
+            "</tr></thead>" +
+            "<tbody id='concTbody'></tbody>" +
+            "</table></div>" +
+            "<div style='display:flex;gap:.5rem;align-items:center;flex-wrap:wrap'>" +
+            "<button onclick='DemandaApp._concAddItem()' style='background:transparent;border:1px dashed var(--border-color);border-radius:6px;padding:.3rem .75rem;color:var(--text-secondary);cursor:pointer;font-size:.8rem'>" +
+            "<span class='material-icons-round' style='font-size:.9rem;vertical-align:middle'>add</span> Adicionar item</button>" +
+            "<button onclick='DemandaApp._salvarCotacaoConcorrente()' style='margin-left:auto;background:var(--accent-primary);color:#fff;border:none;border-radius:6px;padding:.4rem 1.1rem;font-size:.85rem;cursor:pointer;font-weight:600'>" +
+            "<span class='material-icons-round' style='font-size:.9rem;vertical-align:middle'>save</span> Salvar Cota\u00e7\u00e3o</button>" +
+            "</div></div>";
+        _renderConcTbody();
+        _populateConcSugestoes();
+    }
+
+    function _concField(id, label, type, ph, extra) {
+        return "<div><label style='font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.3rem'>" + label + "</label>" +
+            "<input id='" + id + "' type='" + type + "' placeholder='" + ph + "' " + (extra||'') + " style='" + _CONC_INP + "'></div>";
+    }
+
+    function _renderConcTbody() {
+        var tbody = document.getElementById("concTbody");
+        if (!tbody) return;
+        tbody.innerHTML = _concItens.map(function(item, i) {
+            var pc  = parseFloat(item.precoConcorrente) || 0;
+            var pm  = parseFloat(item.precoMeu) || 0;
+            var d   = (pc && pm) ? (pm - pc) : null;
+            var pct = (pc && d !== null) ? ((d / pc) * 100).toFixed(1) : null;
+            var cor = d !== null ? (d > 0 ? "#10b981" : d < 0 ? "#ef4444" : "var(--text-secondary)") : "var(--text-secondary)";
+            var dTxt = d !== null
+                ? "R$ " + d.toFixed(2).replace(".",",") + (pct ? " <span style='font-size:.7rem;opacity:.8'>(" + (d>0?"+":"") + pct + "%)</span>" : "")
+                : "\u2014";
+            return "<tr style='border-bottom:1px solid rgba(255,255,255,.04)'>" +
+                "<td style='padding:.3rem .4rem;color:var(--text-secondary);font-size:.72rem'>" + (i+1) + "</td>" +
+                "<td style='padding:.3rem .4rem'><input value='" + _escAttr(item.ref||'') + "' oninput=\"DemandaApp._concUpdateItem(" + i + ",'ref',this.value)\" placeholder='Ref.' style='" + _CONC_INP + "min-width:90px'></td>" +
+                "<td style='padding:.3rem .4rem'><input value='" + _escAttr(item.desc||'') + "' oninput=\"DemandaApp._concUpdateItem(" + i + ",'desc',this.value)\" placeholder='Descri\u00e7\u00e3o' style='" + _CONC_INP + "min-width:140px'></td>" +
+                "<td style='padding:.3rem .4rem'><input type='number' min='1' value='" + (item.qtde||1) + "' oninput=\"DemandaApp._concUpdateItem(" + i + ",'qtde',this.value)\" style='" + _CONC_INP + "width:55px;text-align:center'></td>" +
+                "<td style='padding:.3rem .4rem'><input type='number' step='0.01' min='0' value='" + (item.precoConcorrente||'') + "' oninput=\"DemandaApp._concUpdateItem(" + i + ",'precoConcorrente',this.value)\" placeholder='0,00' style='" + _CONC_INP + "width:90px'></td>" +
+                "<td style='padding:.3rem .4rem'><input type='number' step='0.01' min='0' value='" + (item.precoMeu||'') + "' oninput=\"DemandaApp._concUpdateItem(" + i + ",'precoMeu',this.value)\" placeholder='0,00' style='" + _CONC_INP + "width:90px'></td>" +
+                "<td style='padding:.3rem .4rem;font-size:.78rem;font-weight:700;color:" + cor + ";white-space:nowrap'>" + dTxt + "</td>" +
+                "<td style='padding:.3rem .4rem'><button onclick=\"DemandaApp._concRemoveItem(" + i + ")\" style='background:transparent;border:none;color:var(--accent-danger);cursor:pointer;padding:.1rem'><span class='material-icons-round' style='font-size:1rem'>close</span></button></td>" +
+                "</tr>";
+        }).join("");
+    }
+
+    function _escAttr(str) {
+        if (!str) return "";
+        return String(str).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    }
+
+    function _concAddItem() {
+        _concItens.push({ id: Date.now(), ref:"", desc:"", qtde:1, precoConcorrente:"", precoMeu:"" });
+        _renderConcTbody();
+    }
+
+    function _concRemoveItem(idx) {
+        _concItens.splice(idx, 1);
+        if (_concItens.length === 0) _concAddItem();
+        else _renderConcTbody();
+    }
+
+    function _concUpdateItem(idx, field, value) {
+        if (!_concItens[idx]) return;
+        _concItens[idx][field] = value;
+        // Atualiza somente a coluna diferença sem re-renderizar tudo
+        var tbody = document.getElementById("concTbody");
+        if (tbody) _renderConcTbody();
+    }
+
+    function _salvarCotacaoConcorrente() {
+        var db = _concDB();
+        if (!db) { _toast("Firebase n\u00e3o dispon\u00edvel.", "error"); return; }
+        var concNome = (document.getElementById("concNome") || {}).value || "";
+        if (!concNome.trim()) { _toast("Informe o nome do concorrente.", "warning"); return; }
+        var itens = _concItens.filter(function(it) { return it.ref || it.desc; });
+        if (itens.length === 0) { _toast("Adicione ao menos um item.", "warning"); return; }
+        var por = _sessao ? (_sessao.login || _sessao.nome || "sistema") : "sistema";
+        var doc = {
+            concorrente:  concNome.trim(),
+            clienteRef:   (document.getElementById("concCliente") || {}).value || "",
+            obs:          (document.getElementById("concObs") || {}).value || "",
+            vendedorNome: por,
+            criadoEm:     firebase.firestore.FieldValue.serverTimestamp(),
+            status:       "ativa",
+            itens:        itens.map(function(it) {
+                return { id: String(it.id), ref: it.ref||'', desc: it.desc||'',
+                    qtde: parseFloat(it.qtde)||1,
+                    precoConcorrente: parseFloat(it.precoConcorrente)||0,
+                    precoMeu:         parseFloat(it.precoMeu)||0 };
+            })
+        };
+        db.add(doc)
+            .then(function(ref) {
+                return ref.update({ id: ref.id });
+            })
+            .then(function() {
+                _toast("Cota\u00e7\u00e3o de " + concNome + " salva!", "success");
+                _concItens = [];
+                _concAddItem();
+                _renderConcorrenteForm();
+                _loadHistoricoConcorrente();
+            })
+            .catch(function(e) { _toast("Erro ao salvar: " + (e.message||e), "error"); });
+    }
+
+    function _loadHistoricoConcorrente() {
+        var hc = document.getElementById("concHistoricoContainer");
+        if (!hc) return;
+        hc.innerHTML = "<div style='text-align:center;padding:1.5rem;color:var(--text-secondary)'>" +
+            "<span class='material-icons-round' style='animation:spin 1s linear infinite'>sync</span></div>";
+        var db = _concDB();
+        if (!db) { hc.innerHTML = "<p style='color:var(--accent-danger);font-size:.83rem'>Firebase n\u00e3o dispon\u00edvel.</p>"; return; }
+        db.where("status","==","ativa").orderBy("criadoEm","desc").limit(40).get()
+            .then(function(snap) { _renderHistoricoConcorrente(snap.docs.map(function(d){return d.data();})); })
+            .catch(function(err) {
+                hc.innerHTML = "<p style='color:var(--accent-danger);font-size:.83rem'>Erro: " + _esc(err.message||String(err)) + "</p>";
+            });
+    }
+
+    function _renderHistoricoConcorrente(cotacoes) {
+        var hc = document.getElementById("concHistoricoContainer");
+        if (!hc) return;
+        if (cotacoes.length === 0) {
+            hc.innerHTML = "<div style='text-align:center;padding:2rem;color:var(--text-secondary)'>" +
+                "<span class='material-icons-round' style='font-size:2rem;opacity:.4'>trending_up</span>" +
+                "<p style='margin-top:.5rem;font-size:.85rem'>Nenhuma cota\u00e7\u00e3o registrada ainda.</p></div>";
+            return;
+        }
+        var header = "<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem'>" +
+            "<h3 style='margin:0;font-size:.88rem;color:var(--text-secondary);font-weight:600;text-transform:uppercase;letter-spacing:.04em'>Hist\u00f3rico (" + cotacoes.length + ") cota\u00e7\u00f5es</h3>" +
+            "<button onclick='DemandaApp._loadHistoricoConcorrente()' title='Atualizar' style='background:transparent;border:none;color:var(--accent-primary);cursor:pointer'>" +
+            "<span class='material-icons-round' style='font-size:1rem'>refresh</span></button></div>";
+        var cards = cotacoes.map(function(c) {
+            var dt = c.criadoEm && c.criadoEm.toDate
+                ? c.criadoEm.toDate().toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"})
+                : "\u2014";
+            var itens = c.itens || [];
+            var totalC = itens.reduce(function(a,it){return a+((it.precoConcorrente||0)*(it.qtde||1));},0);
+            var totalM = itens.reduce(function(a,it){return a+((it.precoMeu||0)*(it.qtde||1));},0);
+            var diff   = totalM - totalC;
+            var bCor   = diff > 0 ? "#ef4444" : diff < 0 ? "#10b981" : "#6366f1";
+            var bTxt   = (totalC && totalM) ? (diff > 0 ? "Concorrente mais barato" : diff < 0 ? "N\u00f3s somos mais baratos" : "Mesmo pre\u00e7o") : "";
+            var rows = itens.map(function(it,i) {
+                var pc = it.precoConcorrente||0; var pm = it.precoMeu||0;
+                var d  = (pc && pm) ? (pm - pc) : null;
+                var pct= (pc && d!==null) ? ((d/pc)*100).toFixed(1) : null;
+                var cor= d!==null ? (d>0?"#10b981":d<0?"#ef4444":"var(--text-secondary)") : "var(--text-secondary)";
+                return "<tr style='border-bottom:1px solid rgba(255,255,255,.04)'>" +
+                    "<td style='padding:.28rem .5rem;font-size:.72rem;color:var(--text-secondary)'>" + (i+1) + "</td>" +
+                    "<td style='padding:.28rem .5rem;font-weight:600;font-size:.8rem'>" + _esc(it.ref||"\u2014") + "</td>" +
+                    "<td style='padding:.28rem .5rem;font-size:.78rem;color:var(--text-secondary);max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>" + _esc(it.desc||"\u2014") + "</td>" +
+                    "<td style='padding:.28rem .5rem;text-align:center;font-size:.8rem'>" + (it.qtde||1) + "</td>" +
+                    "<td style='padding:.28rem .5rem;font-size:.8rem'>" + (pc?"R$ "+pc.toFixed(2).replace(".",","):"\u2014") + "</td>" +
+                    "<td style='padding:.28rem .5rem;font-size:.8rem'>" + (pm?"R$ "+pm.toFixed(2).replace(".",","):"\u2014") + "</td>" +
+                    "<td style='padding:.28rem .5rem;font-size:.78rem;font-weight:700;color:"+cor+"'>" +
+                        (d!==null?"R$ "+d.toFixed(2).replace(".",",")+(pct?" ("+(d>0?"+":"")+pct+"%)"):"\u2014")+
+                    "</td></tr>";
+            }).join("");
+            var cid = _esc(c.id||"");
+            return "<div style='background:var(--bg-sidebar);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1.1rem;margin-bottom:.75rem'>" +
+                "<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;cursor:pointer' onclick=\"DemandaApp._toggleConcCard('" + cid + "')\">" +
+                "<div><div style='font-weight:700;font-size:.93rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap'>" +
+                "<span class='material-icons-round' style='font-size:1rem;color:#f59e0b'>trending_up</span>" + _esc(c.concorrente) +
+                (bTxt?"<span style='font-size:.68rem;padding:.12rem .4rem;border-radius:6px;background:"+bCor+"22;color:"+bCor+"'>"+bTxt+"</span>":"") +
+                "</div><div style='font-size:.77rem;color:var(--text-secondary);margin-top:.2rem'>" + dt +
+                (c.clienteRef?" \u00b7 "+_esc(c.clienteRef):"") + " \u00b7 " + _esc(c.vendedorNome||"") + "</div></div>" +
+                "<div style='display:flex;align-items:center;gap:.75rem'>" +
+                (totalC?"<div style='text-align:right'><div style='font-size:.68rem;color:var(--text-secondary)'>Total concorrente</div><div style='font-weight:700;font-size:.88rem'>R$ "+totalC.toFixed(2).replace(".",",")+"</div></div>":"") +
+                "<span class='material-icons-round' id='concCardIcon_"+cid+"' style='color:var(--text-secondary);font-size:1.1rem'>expand_more</span>" +
+                "</div></div>" +
+                "<div id='concCardBody_"+cid+"' style='display:none;margin-top:.75rem'>" +
+                (c.obs?"<div style='font-size:.78rem;color:var(--text-secondary);margin-bottom:.5rem;font-style:italic'>"+_esc(c.obs)+"</div>":"") +
+                "<div style='overflow-x:auto'><table style='width:100%;border-collapse:collapse;font-size:.8rem'>" +
+                "<thead><tr style='border-bottom:1px solid var(--border-color)'>" +
+                ["#","Ref.","Descri\u00e7\u00e3o","Qtde","Pre\u00e7o Concorrente","Pre\u00e7o Nosso","Diferen\u00e7a"].map(function(h){
+                    return "<th style='padding:.28rem .5rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:600;text-transform:uppercase'>" + h + "</th>";
+                }).join("") + "</tr></thead><tbody>" + rows + "</tbody></table></div>" +
+                "<div style='margin-top:.75rem;text-align:right'>" +
+                "<button onclick=\"DemandaApp._arquivarCotacaoConcorrente('" + cid + "')\" style='background:transparent;border:1px solid var(--border-color);border-radius:6px;padding:.25rem .65rem;color:var(--text-secondary);cursor:pointer;font-size:.75rem'>Arquivar</button>" +
+                "</div></div></div>";
+        }).join("");
+        hc.innerHTML = header + cards;
+    }
+
+    function _toggleConcCard(id) {
+        var body = document.getElementById("concCardBody_" + id);
+        var icon = document.getElementById("concCardIcon_" + id);
+        if (!body) return;
+        var open = body.style.display !== "none";
+        body.style.display = open ? "none" : "";
+        if (icon) icon.textContent = open ? "expand_more" : "expand_less";
+    }
+
+    function _arquivarCotacaoConcorrente(id) {
+        if (!id || !confirm("Arquivar esta cota\u00e7\u00e3o do concorrente?")) return;
+        var db = _concDB();
+        if (!db) return;
+        db.doc(id).update({ status: "arquivada" })
+            .then(function() { _toast("Cota\u00e7\u00e3o arquivada.", "info"); _loadHistoricoConcorrente(); })
+            .catch(function(e) { _toast("Erro: " + e.message, "error"); });
+    }
+
+    function _populateConcSugestoes() {
+        var dl = document.getElementById("concNomeSugestoes");
+        if (!dl) return;
+        var db = _concDB(); if (!db) return;
+        db.orderBy("criadoEm","desc").limit(30).get()
+            .then(function(snap) {
+                var nomes = snap.docs.map(function(d){return d.data().concorrente;}).filter(Boolean);
+                var uniq  = nomes.filter(function(v,i,a){return a.indexOf(v)===i;});
+                dl.innerHTML = uniq.map(function(n){return "<option value='" + _escAttr(n) + "'>";}).join("");
+            }).catch(function(){});
+    }
+
+    // ════════════════════════════════════════════════════════
     // TOAST / NOTIFICAÇÕES
     // ════════════════════════════════════════════════════════
 
@@ -1499,7 +1750,16 @@ const DemandaApp = (function() {
         _vincularProduto:       _vincularProduto,
         // Devolutiva Compras
         _abrirDevolutivaCompras:  _abrirDevolutivaCompras,
-        _confirmarDevolutiva:     _confirmarDevolutiva
+        _confirmarDevolutiva:     _confirmarDevolutiva,
+        // Cota\u00e7\u00e3o Concorrente
+        loadConcorrente:              loadConcorrente,
+        _concAddItem:                 _concAddItem,
+        _concRemoveItem:              _concRemoveItem,
+        _concUpdateItem:              _concUpdateItem,
+        _salvarCotacaoConcorrente:    _salvarCotacaoConcorrente,
+        _loadHistoricoConcorrente:    _loadHistoricoConcorrente,
+        _toggleConcCard:              _toggleConcCard,
+        _arquivarCotacaoConcorrente:  _arquivarCotacaoConcorrente
     };
 
 })();
