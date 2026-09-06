@@ -296,6 +296,56 @@ const DemandaDB = (() => {
         return totals;
     }
 
+    /**
+     * Divide um item em dois: o original com qtdeAtendida, e um novo com qtdeFaltante.
+     * Útil para atendimento parcial de estoque.
+     */
+    async function splitItem(demandaId, itemId, qtdeAtendida, qtdeFaltante) {
+        const db   = _db();
+        const snap = await db.doc(`${DEMANDS_COL}/${demandaId}/items/${itemId}`).get();
+        if (!snap.exists) throw new Error(`Item ${itemId} não encontrado.`);
+        const original = snap.data();
+
+        // Atualiza o item original com a quantidade atendida
+        await db.doc(`${DEMANDS_COL}/${demandaId}/items/${itemId}`).update({
+            qtdeSolicitada: qtdeAtendida,
+            atualizadoEm:   firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        // Cria novo item com a quantidade faltante, voltando para demanda_recebida
+        const novoId  = `${itemId}_split_${Date.now()}`;
+        const novoSeq = (original.seq || 0) + 0.5;
+        const novoItem = {
+            id:             novoId,
+            demandaId:      demandaId,
+            seq:            novoSeq,
+            refOriginal:    original.refOriginal || '',
+            descOriginal:   original.descOriginal || '',
+            qtdeSolicitada: qtdeFaltante,
+            status:         'demanda_recebida',
+            origemSplit:    itemId,
+            criadoEm:       firebase.firestore.FieldValue.serverTimestamp(),
+            atualizadoEm:   firebase.firestore.FieldValue.serverTimestamp(),
+            timeline:       [{
+                evento: 'split_criado',
+                para:   'demanda_recebida',
+                por:    'sistema',
+                obs:    `Item criado por split de ${itemId} (${qtdeFaltante} unidades restantes)`,
+                em:     new Date().toISOString()
+            }]
+        };
+        await db.doc(`${DEMANDS_COL}/${demandaId}/items/${novoId}`).set(novoItem);
+
+        // Incrementa o contador de itens da demanda
+        await db.doc(`${DEMANDS_COL}/${demandaId}`).update({
+            totalItens:   firebase.firestore.FieldValue.increment(1),
+            atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        return novoId;
+    }
+
+
     // ── OUVINTE REALTIME ─────────────────────────────────────
 
     /**
@@ -425,7 +475,7 @@ const DemandaDB = (() => {
 
     return {
         createDemanda, getDemanda, updateDemanda, listDemandas,
-        addItens, getItens, updateItem, deleteItem, recalcTotals,
+        addItens, getItens, updateItem, deleteItem, recalcTotals, splitItem,
         onItensChanged, listItensFila, getDashboardStats,
         saveSession, loadSession, clearSession,
         TENANT_ID, DEMANDS_COL

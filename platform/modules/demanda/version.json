@@ -1,1 +1,1 @@
-{"version":"1.5.2","build":"20260905-v1.5.2","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-05","change":"v1.5.2 - fix: libera acesso ao tenant centralpecas e roles admin/master independente do array modulos"}
+{"version":"2.0.0","build":"20260906-v2.0.0","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-06","change":"v2.0.0 - autosave, timeline visual, identificar via ERP, devolutiva compras, quantidade parcial, orcamento basico"}

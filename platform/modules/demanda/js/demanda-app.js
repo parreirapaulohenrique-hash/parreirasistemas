@@ -13,6 +13,7 @@ const DemandaApp = (function() {
         pesquisa:      "nav-pesquisa",
         compras:       "nav-compras",
         dashboard:     "nav-dashboard",
+        orcamento:     "nav-orcamento",
         base:          "nav-base",
         integracaoErp: "nav-integracaoErp"
     };
@@ -43,6 +44,7 @@ const DemandaApp = (function() {
         if (v === "lista")         loadDemandasLista(_filterAtual);
         if (v === "dashboard")     loadDashboard();
         if (v === "compras")       loadFilaCompras();
+        if (v === "orcamento")     loadOrcamento();
     }
 
     // ════════════════════════════════════════════════════════
@@ -640,33 +642,50 @@ const DemandaApp = (function() {
         var sc     = (typeof DemandaStates !== "undefined") ? DemandaStates.get(item.status) : { label: item.status, color: "#6366f1" };
         var nexts  = (typeof DemandaStates !== "undefined") ? DemandaStates.nextStates(item.status) : [];
         var isEnd  = (typeof DemandaStates !== "undefined") && DemandaStates.isTerminal(item.status);
+        var needsId = (item.status === "demanda_recebida" || item.status === "em_identificacao") && !item.erpProdutoId;
 
         var acaoHtml;
         if (isEnd) {
-            acaoHtml = "<span style='font-size:.72rem;color:var(--text-secondary)'>Concluído</span>";
+            acaoHtml = "<span style='font-size:.72rem;color:var(--text-secondary)'>Conclu\u00eddo</span>";
         } else if (nexts.length === 0) {
-            acaoHtml = "<span style='font-size:.72rem;color:var(--text-secondary)'>—</span>";
+            acaoHtml = "<span style='font-size:.72rem;color:var(--text-secondary)'>\u2014</span>";
         } else {
             acaoHtml = "<select onchange=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "',this.value,this)\" " +
                 "style='background:var(--bg-dark);border:1px solid var(--border);border-radius:6px;padding:.2rem .5rem;" +
                 "color:var(--text-primary);font-size:.75rem;cursor:pointer;max-width:150px'>" +
-                "<option value=''>Avançar para...</option>" +
-                nexts.map(function(n) {
-                    return "<option value='" + n.key + "' style='color:" + n.color + "'>" + n.label + "</option>";
-                }).join("") +
+                "<option value=''>Avan\u00e7ar para...</option>" +
+                nexts.map(function(n) { return "<option value='" + n.key + "' style='color:" + n.color + "'>" + n.label + "</option>"; }).join("") +
                 "</select>";
         }
 
-        return "<tr style='border-bottom:1px solid rgba(255,255,255,.04)'>" +
-            "<td style='color:var(--text-secondary);font-size:.75rem;padding:.5rem .6rem'>" + (i + 1) + "</td>" +
-            "<td style='font-weight:600;font-size:.82rem;padding:.5rem .6rem'>" + _esc(item.refOriginal || item.erpProdutoId || "—") + "</td>" +
+        var identificarBtn = needsId
+            ? "<br><button onclick=\"DemandaApp._abrirBuscaERP('" + _esc(item.id) + "')\" " +
+              "style='margin-top:.3rem;background:transparent;border:1px solid var(--accent-primary);border-radius:4px;" +
+              "padding:.15rem .5rem;color:var(--accent-primary);font-size:.7rem;cursor:pointer'>" +
+              "<span class='material-icons-round' style='font-size:.8rem;vertical-align:middle'>search</span> Identificar</button>"
+            : "";
+
+        var tlBtn = "<button id='btnTimeline_" + _esc(item.id) + "' title='Hist\u00f3rico' onclick=\"DemandaApp.toggleItemTimeline('" + _esc(item.id) + "')\" " +
+            "style='background:transparent;border:none;color:var(--text-secondary);cursor:pointer;padding:.1rem;vertical-align:middle'>" +
+            "<span class='material-icons-round' style='font-size:.95rem'>history</span></button>";
+
+        var timelineRow = "<tr id='timeline_" + _esc(item.id) + "' style='display:none'>" +
+            "<td colspan='6' style='padding:.5rem .6rem 1rem 2.5rem;border-bottom:1px solid rgba(255,255,255,.06)'>" +
+            "<div style='font-size:.7rem;font-weight:600;color:var(--text-secondary);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em'>Hist\u00f3rico do Item</div>" +
+            _renderTimeline(item) + "</td></tr>";
+
+        var mainRow = "<tr style='border-bottom:1px solid rgba(255,255,255,.04)'>" +
+            "<td style='color:var(--text-secondary);font-size:.75rem;padding:.5rem .6rem'>" + (i + 1) + " " + tlBtn + "</td>" +
+            "<td style='font-weight:600;font-size:.82rem;padding:.5rem .6rem'>" + _esc(item.refOriginal || item.erpProdutoId || "\u2014") + "</td>" +
             "<td style='font-size:.79rem;color:var(--text-secondary);padding:.5rem .6rem;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>" +
-                _esc(item.descOriginal || item.erpProdutoDesc || "—") + "</td>" +
+                _esc(item.descOriginal || item.erpProdutoDesc || "\u2014") + "</td>" +
             "<td style='text-align:center;padding:.5rem .6rem'>" + (item.qtdeSolicitada || 1) + "</td>" +
             "<td style='padding:.5rem .6rem'><span style='font-size:.7rem;padding:.15rem .5rem;border-radius:10px;background:" +
                 sc.color + "22;color:" + sc.color + ";white-space:nowrap'>" + _esc(sc.label) + "</span></td>" +
-            "<td style='padding:.5rem .6rem'>" + acaoHtml + "</td>" +
+            "<td style='padding:.5rem .6rem'>" + acaoHtml + identificarBtn + "</td>" +
             "</tr>";
+
+        return mainRow + timelineRow;
     }
 
     // ════════════════════════════════════════════════════════
@@ -693,6 +712,11 @@ const DemandaApp = (function() {
         // Caso especial: venda_perdida → pede motivo
         if (novoStatus === "venda_perdida") {
             _confirmarVendaPerdida(itemId, item.status); return;
+        }
+
+        // Caso especial: estoque_disponivel ou estoque_parcial → verifica quantidade
+        if ((novoStatus === "estoque_disponivel" || novoStatus === "estoque_parcial") && (item.qtdeSolicitada || 1) > 1) {
+            _confirmarQuantidadeParcial(itemId, item.status, novoStatus); return;
         }
 
         // Persiste
@@ -955,6 +979,354 @@ const DemandaApp = (function() {
     }
 
     // ════════════════════════════════════════════════════════
+    // AUTOSAVE DE RASCUNHO
+    // ════════════════════════════════════════════════════════
+
+    var _RASCUNHO_KEY = "demanda_rascunho";
+
+    function _autosave() {
+        try {
+            var tid = _sessao ? (_sessao.tenantId || "default") : "default";
+            sessionStorage.setItem(_RASCUNHO_KEY + "_" + tid, JSON.stringify({
+                itens: _itens, cliente: _clienteAtual, ts: Date.now()
+            }));
+        } catch(e) {}
+    }
+
+    function _restoreRascunho() {
+        try {
+            var tid = _sessao ? (_sessao.tenantId || "default") : "default";
+            var raw = sessionStorage.getItem(_RASCUNHO_KEY + "_" + tid);
+            if (!raw) return;
+            var data = JSON.parse(raw);
+            if (!data || !data.itens || data.itens.length === 0) return;
+            if (Date.now() - data.ts > 24 * 60 * 60 * 1000) return;
+            if (confirm("H\u00e1 um rascunho salvo com " + data.itens.length + " item(s). Deseja restaurar?")) {
+                _itens = data.itens;
+                if (data.cliente) {
+                    _clienteAtual = data.cliente;
+                    var elNome = document.getElementById("clienteNome");
+                    if (elNome) elNome.value = data.cliente.nome || "";
+                }
+                renderItens();
+                _toast("Rascunho restaurado com " + _itens.length + " item(s).", "success");
+            }
+        } catch(e) {}
+    }
+
+    function _limparRascunho() {
+        try {
+            var tid = _sessao ? (_sessao.tenantId || "default") : "default";
+            sessionStorage.removeItem(_RASCUNHO_KEY + "_" + tid);
+        } catch(e) {}
+    }
+
+    // ════════════════════════════════════════════════════════
+    // TIMELINE VISUAL POR ITEM
+    // ════════════════════════════════════════════════════════
+
+    function _renderTimeline(item) {
+        var tl = item.timeline || [];
+        if (tl.length === 0) return "<p style='color:var(--text-secondary);font-size:.8rem;padding:.3rem 0'>Nenhum evento registrado.</p>";
+        var html = "<div style='position:relative;padding-left:1.1rem;border-left:2px solid var(--border-color)'>";
+        tl.slice().reverse().forEach(function(e) {
+            var sc = (typeof DemandaStates !== "undefined" && e.para) ? DemandaStates.get(e.para) : { label: e.para || "?", color: "#6366f1" };
+            var dt = e.em ? new Date(e.em).toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" }) : "";
+            html += "<div style='position:relative;margin-bottom:.65rem'>" +
+                "<div style='position:absolute;left:-1.32rem;top:.3rem;width:.55rem;height:.55rem;border-radius:50%;background:" + sc.color + "'></div>" +
+                "<div style='font-size:.72rem;color:var(--text-secondary)'>" + _esc(dt) + (e.por ? " \u00b7 " + _esc(e.por) : "") + "</div>" +
+                "<div style='font-size:.78rem;font-weight:600;color:" + sc.color + "'>" + _esc(sc.label || e.para || "?") + "</div>" +
+                (e.obs ? "<div style='font-size:.75rem;color:var(--text-secondary);margin-top:.1rem'>" + _esc(e.obs) + "</div>" : "") +
+                "</div>";
+        });
+        return html + "</div>";
+    }
+
+    function toggleItemTimeline(itemId) {
+        var el  = document.getElementById("timeline_" + itemId);
+        if (!el) return;
+        var open = el.style.display !== "none";
+        el.style.display = open ? "none" : "";
+        var btn = document.getElementById("btnTimeline_" + itemId);
+        if (btn) btn.querySelector(".material-icons-round").textContent = open ? "history" : "expand_less";
+    }
+
+    // ════════════════════════════════════════════════════════
+    // IDENTIFICAR ITEM VIA ERP
+    // ════════════════════════════════════════════════════════
+
+    var _buscaErpItemId = null;
+
+    function _abrirBuscaERP(itemId) {
+        _buscaErpItemId = itemId;
+        var modal = document.getElementById("modalBuscaERP");
+        if (!modal) { _toast("Modal ERP n\u00e3o encontrado.", "error"); return; }
+        var inp = document.getElementById("inpBuscaERP");
+        if (inp) { inp.value = ""; setTimeout(function(){ inp.focus(); }, 100); }
+        var res = document.getElementById("buscaERPResultados");
+        if (res) res.innerHTML = "<p style='color:var(--text-secondary);font-size:.83rem;padding:.5rem 0'>Digite uma refer\u00eancia ou descri\u00e7\u00e3o para buscar.</p>";
+        modal.style.display = "flex";
+    }
+
+    function _fecharBuscaERP() {
+        var modal = document.getElementById("modalBuscaERP");
+        if (modal) modal.style.display = "none";
+        _buscaErpItemId = null;
+    }
+
+    function _executarBuscaERP() {
+        var inp = document.getElementById("inpBuscaERP");
+        var q   = inp ? inp.value.trim() : "";
+        if (q.length < 2) { _toast("Digite ao menos 2 caracteres.", "warning"); return; }
+        var res = document.getElementById("buscaERPResultados");
+        if (res) res.innerHTML = "<div style='padding:1.5rem;text-align:center;color:var(--text-secondary)'>" +
+            "<span class='material-icons-round' style='animation:spin 1s linear infinite'>sync</span>" +
+            "<br><small>Buscando no ERP...</small></div>";
+        if (typeof DemandaSearch === "undefined") {
+            if (res) res.innerHTML = "<p style='color:var(--accent-danger);font-size:.83rem'>DemandaSearch n\u00e3o dispon\u00edvel. Configure a integra\u00e7\u00e3o ERP.</p>";
+            return;
+        }
+        DemandaSearch.search(q)
+            .then(function(resultados) {
+                if (!resultados || resultados.length === 0) {
+                    if (res) res.innerHTML = "<p style='color:var(--text-secondary);font-size:.83rem;padding:.5rem'>Nenhum produto encontrado para \"" + _esc(q) + "\".</p>";
+                    return;
+                }
+                var html = resultados.slice(0, 15).map(function(p) {
+                    var estoque = p.estoqueFilial !== undefined ? p.estoqueFilial : (p.saldo !== undefined ? p.saldo : null);
+                    var badge   = (estoque !== null && estoque > 0) ? "#10b981" : "#ef4444";
+                    var estoqTxt = estoque !== null ? (estoque > 0 ? "Estoque: " + estoque : "Sem estoque") : "";
+                    var pid = JSON.stringify({ erpId: p.erpId || p.referencia || p.codigo || "", desc: p.descricao || p.nome || "", fabricante: p.fabricante || "", estoque: estoque, preco: p.preco || 0 });
+                    return "<div style='border:1px solid var(--border-color);border-radius:8px;padding:.7rem;margin-bottom:.5rem'>" +
+                        "<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem'>" +
+                        "<div><div style='font-weight:700;font-size:.84rem'>" + _esc(p.referencia || p.codigo || p.erpId || "?") + "</div>" +
+                        "<div style='font-size:.77rem;color:var(--text-secondary)'>" + _esc(p.descricao || p.nome || "\u2014") + "</div>" +
+                        (p.fabricante ? "<div style='font-size:.7rem;color:var(--text-secondary)'>" + _esc(p.fabricante) + "</div>" : "") + "</div>" +
+                        "<div style='text-align:right;flex-shrink:0'>" +
+                        (estoqTxt ? "<span style='font-size:.7rem;padding:.12rem .4rem;border-radius:6px;background:" + badge + "22;color:" + badge + "'>" + estoqTxt + "</span>" : "") +
+                        (p.preco ? "<div style='font-size:.72rem;color:var(--text-secondary);margin-top:.2rem'>R$ " + Number(p.preco).toFixed(2).replace(".",",") + "</div>" : "") +
+                        "</div></div>" +
+                        "<button onclick=\"DemandaApp._vincularProduto(" + pid.replace(/\"/g, "&quot;") + ")\" " +
+                        "style='margin-top:.45rem;background:var(--accent-primary);color:#fff;border:none;border-radius:5px;padding:.28rem .75rem;font-size:.75rem;cursor:pointer;width:100%'>Vincular este produto</button>" +
+                        "</div>";
+                }).join("");
+                if (res) res.innerHTML = html;
+            })
+            .catch(function(err) {
+                if (res) res.innerHTML = "<p style='color:var(--accent-danger);font-size:.83rem'>Erro: " + _esc(err.message || String(err)) + "</p>";
+            });
+    }
+
+    function _vincularProduto(produto) {
+        if (!_buscaErpItemId || !_demandaAtual) { _toast("Contexto perdido. Reabra a demanda.", "error"); return; }
+        if (typeof produto === "string") { try { produto = JSON.parse(produto); } catch(e) { _toast("Erro ao processar produto.", "error"); return; } }
+        var itemId = _buscaErpItemId;
+        var por    = _sessao ? (_sessao.login || _sessao.nome || "sistema") : "sistema";
+        var fields = {
+            erpProdutoId:   produto.erpId || "",
+            erpProdutoDesc: produto.desc  || "",
+            fabricante:     produto.fabricante || "",
+            estoqueFilial:  produto.estoque !== undefined ? produto.estoque : null,
+            preco:          produto.preco  || null,
+            status:         "identificado"
+        };
+        var tl = { evento: "produto_vinculado", para: "identificado", por: por, obs: "ERP: " + (produto.erpId || "") };
+        DemandaDB.updateItem(_demandaAtual.id, itemId, fields, tl)
+            .then(function() {
+                for (var i = 0; i < _demandaAtual.itens.length; i++) {
+                    if (_demandaAtual.itens[i].id === itemId) { Object.assign(_demandaAtual.itens[i], fields); break; }
+                }
+                _fecharBuscaERP();
+                _renderDemandaDetalheBody();
+                loadDemandasLista(_filterAtual);
+                _toast("Produto " + (produto.erpId || "") + " vinculado!", "success");
+            })
+            .catch(function(err) { _toast("Erro ao vincular: " + (err.message || err), "error"); });
+    }
+
+    // ════════════════════════════════════════════════════════
+    // QUANTIDADE PARCIAL — SPLIT DE ITEM
+    // ════════════════════════════════════════════════════════
+
+    function _confirmarQuantidadeParcial(itemId, deStatus, paraStatus) {
+        var item = null;
+        for (var i = 0; i < _demandaAtual.itens.length; i++) {
+            if (_demandaAtual.itens[i].id === itemId) { item = _demandaAtual.itens[i]; break; }
+        }
+        var qtdeSol = item ? (item.qtdeSolicitada || 1) : 1;
+        var overlay = document.createElement("div");
+        overlay.style.cssText = "position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center";
+        overlay.innerHTML =
+            "<div style='background:var(--bg-sidebar);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;width:360px;max-width:90vw'>" +
+            "<h4 style='margin:0 0 .75rem;display:flex;align-items:center;gap:.5rem'>" +
+            "<span class='material-icons-round' style='color:var(--accent-primary)'>call_split</span>Quantidade Dispon\u00edvel</h4>" +
+            "<p style='font-size:.83rem;color:var(--text-secondary);margin-bottom:1rem'>Qtde solicitada: <strong style='color:var(--text-primary)'>" + qtdeSol + "</strong></p>" +
+            "<label style='font-size:.82rem;color:var(--text-secondary);display:block;margin-bottom:.4rem'>Qtde atendida pelo estoque:</label>" +
+            "<input id='_qtdeAtendidaInp' type='number' min='1' max='" + qtdeSol + "' value='" + qtdeSol + "' " +
+            "style='width:100%;background:var(--bg-dark);border:1px solid var(--border);border-radius:6px;padding:.45rem .7rem;color:var(--text-primary);box-sizing:border-box;margin-bottom:.5rem'>" +
+            "<p style='font-size:.74rem;color:var(--text-secondary);margin-bottom:1rem'>Se menor que " + qtdeSol + ", a qtde faltante retorna como nova demanda pendente.</p>" +
+            "<div style='display:flex;gap:.5rem;justify-content:flex-end'>" +
+            "<button onclick='this.closest(\"div[style*=inset]\").remove()' style='background:var(--bg-dark);border:1px solid var(--border);border-radius:6px;padding:.4rem .9rem;color:var(--text-secondary);cursor:pointer'>Cancelar</button>" +
+            "<button id='_btnConfirmarQtde' style='background:var(--accent-success);border:none;border-radius:6px;padding:.4rem 1rem;color:#fff;cursor:pointer;font-weight:600'>Confirmar</button>" +
+            "</div></div>";
+        document.body.appendChild(overlay);
+        document.getElementById("_btnConfirmarQtde").onclick = function() {
+            var qtdeAtendida = parseInt(document.getElementById("_qtdeAtendidaInp").value, 10) || qtdeSol;
+            overlay.remove();
+            _persistirTransicao(itemId, deStatus, paraStatus, "");
+            if (qtdeAtendida < qtdeSol && typeof DemandaDB !== "undefined" && DemandaDB.splitItem) {
+                var faltante = qtdeSol - qtdeAtendida;
+                DemandaDB.splitItem(_demandaAtual.id, itemId, qtdeAtendida, faltante)
+                    .then(function() {
+                        _toast(qtdeAtendida + " atendidos; " + faltante + " retornam como nova demanda.", "info");
+                        abrirDemanda(_demandaAtual.id);
+                    })
+                    .catch(function(e) { _toast("Erro no split: " + e.message, "error"); });
+            }
+        };
+    }
+
+    // ════════════════════════════════════════════════════════
+    // DEVOLUTIVA DE COMPRAS
+    // ════════════════════════════════════════════════════════
+
+    function _abrirDevolutivaCompras(itemId, demandaId) {
+        var old = document.getElementById("overlayDevolutiva"); if (old) old.remove();
+        var overlay = document.createElement("div");
+        overlay.id = "overlayDevolutiva";
+        overlay.style.cssText = "position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center";
+        var fi = function(lbl, id, type, ph) {
+            return "<div><label style='font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.25rem'>" + lbl + "</label>" +
+                "<input id='" + id + "' type='" + type + "' placeholder='" + ph + "' " +
+                "style='width:100%;background:var(--bg-dark);border:1px solid var(--border);border-radius:6px;padding:.4rem .65rem;color:var(--text-primary);box-sizing:border-box'></div>";
+        };
+        overlay.innerHTML =
+            "<div style='background:var(--bg-sidebar);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;width:400px;max-width:90vw;max-height:90vh;overflow-y:auto'>" +
+            "<h4 style='margin:0 0 1rem;display:flex;align-items:center;gap:.5rem'>" +
+            "<span class='material-icons-round' style='color:var(--accent-primary)'>local_shipping</span>Devolutiva de Compras</h4>" +
+            "<div style='display:grid;gap:.6rem'>" +
+            fi("Fornecedor *", "_devFornecedor", "text", "Ex: Rolamentos Irm\u00e3os") +
+            fi("Marca / Fabricante", "_devMarca", "text", "Ex: SKF, NSK, FAG") +
+            fi("Custo unit\u00e1rio (R$)", "_devCusto", "number", "0.00") +
+            fi("Qtde dispon\u00edvel", "_devQtde", "number", "1") +
+            fi("Prazo estimado (dias)", "_devPrazo", "number", "7") +
+            fi("Observa\u00e7\u00e3o", "_devObs", "text", "Opcional") +
+            "</div>" +
+            "<div style='display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem'>" +
+            "<button onclick=\"document.getElementById('overlayDevolutiva').remove()\" " +
+            "style='background:var(--bg-dark);border:1px solid var(--border);border-radius:6px;padding:.4rem .9rem;color:var(--text-secondary);cursor:pointer'>Cancelar</button>" +
+            "<button onclick=\"DemandaApp._confirmarDevolutiva('" + itemId + "','" + demandaId + "')\" " +
+            "style='background:var(--accent-primary);border:none;border-radius:6px;padding:.4rem 1rem;color:#fff;cursor:pointer;font-weight:600'>Confirmar</button>" +
+            "</div></div>";
+        document.body.appendChild(overlay);
+    }
+
+    function _confirmarDevolutiva(itemId, demandaId) {
+        var g = function(id) { return (document.getElementById(id) || {}).value || ""; };
+        var fornecedor = g("_devFornecedor");
+        if (!fornecedor) { _toast("Informe o fornecedor.", "warning"); return; }
+        var por = _sessao ? (_sessao.login || _sessao.nome || "sistema") : "sistema";
+        var fields = {
+            compraFornecedor: fornecedor, compraMarca: g("_devMarca"),
+            compraCusto: parseFloat(g("_devCusto")) || 0,
+            compraQtde:  parseInt(g("_devQtde"), 10) || 1,
+            compraPrazo: parseInt(g("_devPrazo"), 10) || 0,
+            status: "cotacao_fornecedor"
+        };
+        var tl = { evento: "devolutiva_compras", para: "cotacao_fornecedor", por: por,
+            obs: "Forn.: " + fornecedor + (g("_devObs") ? " \u2014 " + g("_devObs") : "") };
+        DemandaDB.updateItem(demandaId, itemId, fields, tl)
+            .then(function() {
+                var el = document.getElementById("overlayDevolutiva"); if (el) el.remove();
+                _toast("Devolutiva registrada: " + fornecedor, "success");
+                loadFilaCompras();
+            })
+            .catch(function(err) { _toast("Erro: " + (err.message || err), "error"); });
+    }
+
+    // ════════════════════════════════════════════════════════
+    // VIEW: OR\u00c7AMENTO B\u00c1SICO
+    // ════════════════════════════════════════════════════════
+
+    function loadOrcamento() {
+        var container = document.getElementById("orcamentoContainer");
+        if (!container) return;
+        container.innerHTML = "<div style='padding:3rem;text-align:center;color:var(--text-secondary)'>" +
+            "<span class='material-icons-round' style='font-size:2rem;animation:spin 1s linear infinite'>sync</span>" +
+            "<p style='margin-top:.5rem;font-size:.85rem'>Carregando or\u00e7amentos...</p></div>";
+        if (typeof DemandaDB === "undefined") { container.innerHTML = "<p style='padding:2rem;color:var(--accent-danger)'>DemandaDB indispon\u00edvel.</p>"; return; }
+        var STATUS_ORC = ["proposta_enviada", "aguardando_cliente", "venda_aprovada"];
+        DemandaDB.listDemandas({ status: "todas", limit: 60 })
+            .then(function(demandas) {
+                return Promise.all(demandas.map(function(d) {
+                    return DemandaDB.getItens(d.id).then(function(itens) { return { demanda: d, itens: itens }; });
+                }));
+            })
+            .then(function(todos) {
+                var comItens = todos.filter(function(t) {
+                    return t.itens.some(function(i) { return STATUS_ORC.indexOf(i.status) >= 0; });
+                });
+                if (comItens.length === 0) {
+                    container.innerHTML = "<div style='padding:3rem;text-align:center;color:var(--text-secondary)'>" +
+                        "<span class='material-icons-round' style='font-size:2.5rem;opacity:.4'>description</span>" +
+                        "<p style='margin-top:.75rem'>Nenhum item em or\u00e7amento.</p>" +
+                        "<small>Itens em Proposta Enviada, Aguardando Cliente ou Venda Aprovada aparecem aqui.</small></div>";
+                    return;
+                }
+                var html = comItens.map(function(t) {
+                    var d = t.demanda;
+                    var itensOrc = t.itens.filter(function(i) { return STATUS_ORC.indexOf(i.status) >= 0; });
+                    var total = itensOrc.reduce(function(acc, i) { return acc + ((i.preco || 0) * (i.qtdeSolicitada || 1)); }, 0);
+                    var dt = d.criadoEm && d.criadoEm.toDate ? d.criadoEm.toDate().toLocaleDateString("pt-BR") : "\u2014";
+                    var rows = itensOrc.map(function(item) {
+                        var sc = (typeof DemandaStates !== "undefined") ? DemandaStates.get(item.status) : { label: item.status, color: "#6366f1" };
+                        var btnAprovar = item.status !== "venda_aprovada"
+                            ? "<button onclick=\"DemandaApp._aprovarItemOrcamento('" + d.id + "','" + item.id + "')\" " +
+                              "style='background:var(--accent-success);color:#fff;border:none;border-radius:4px;padding:.2rem .55rem;font-size:.72rem;cursor:pointer;margin-right:.3rem'>Aprovar</button>" : "";
+                        var btnPerder = "<button onclick=\"DemandaApp._perderItemOrcamento('" + d.id + "','" + item.id + "','" + item.status + "')\" " +
+                            "style='background:var(--accent-danger);color:#fff;border:none;border-radius:4px;padding:.2rem .55rem;font-size:.72rem;cursor:pointer'>Perder</button>";
+                        return "<tr style='border-bottom:1px solid rgba(255,255,255,.04)'>" +
+                            "<td style='padding:.38rem .5rem;font-weight:600;font-size:.8rem'>" + _esc(item.refOriginal || item.erpProdutoId || "\u2014") + "</td>" +
+                            "<td style='padding:.38rem .5rem;color:var(--text-secondary);font-size:.78rem;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>" + _esc(item.descOriginal || item.erpProdutoDesc || "\u2014") + "</td>" +
+                            "<td style='padding:.38rem .5rem;text-align:center'>" + (item.qtdeSolicitada || 1) + "</td>" +
+                            "<td style='padding:.38rem .5rem'><span style='font-size:.7rem;padding:.12rem .45rem;border-radius:8px;background:" + sc.color + "22;color:" + sc.color + "'>" + _esc(sc.label) + "</span></td>" +
+                            "<td style='padding:.38rem .5rem'>" + (item.preco ? "R$ " + Number(item.preco).toFixed(2).replace(".",",") : "\u2014") + "</td>" +
+                            "<td style='padding:.38rem .5rem'>" + btnAprovar + btnPerder + "</td></tr>";
+                    }).join("");
+                    return "<div style='background:var(--bg-sidebar);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1rem'>" +
+                        "<div style='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem'>" +
+                        "<div><div style='font-weight:700;font-size:.95rem'>" + _esc(d.codigo) + "</div>" +
+                        "<div style='font-size:.8rem;color:var(--text-secondary)'>" + _esc(d.clienteNome || "\u2014") + " \u00b7 " + dt + "</div></div>" +
+                        (total > 0 ? "<div style='text-align:right'><div style='font-size:.7rem;color:var(--text-secondary)'>Total estimado</div>" +
+                            "<div style='font-weight:700;color:var(--accent-success)'>R$ " + total.toFixed(2).replace(".",",") + "</div></div>" : "") + "</div>" +
+                        "<div style='overflow-x:auto'><table style='width:100%;border-collapse:collapse;font-size:.8rem'>" +
+                        "<thead><tr style='border-bottom:1px solid var(--border-color)'>" +
+                        ["Refer\u00eancia","Descri\u00e7\u00e3o","Qtd","Status","Pre\u00e7o","A\u00e7\u00e3o"].map(function(h) {
+                            return "<th style='padding:.35rem .5rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:600;text-transform:uppercase'>" + h + "</th>";
+                        }).join("") + "</tr></thead><tbody>" + rows + "</tbody></table></div>" +
+                        "<div style='margin-top:.75rem;text-align:right'>" +
+                        "<button onclick='window.print()' style='background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.3rem .8rem;color:var(--text-secondary);cursor:pointer;font-size:.78rem'>" +
+                        "<span class='material-icons-round' style='font-size:.9rem;vertical-align:middle'>print</span> Imprimir</button></div></div>";
+                }).join("");
+                container.innerHTML = html;
+            })
+            .catch(function(err) { container.innerHTML = "<p style='padding:2rem;color:var(--accent-danger)'>Erro: " + _esc(err.message || String(err)) + "</p>"; });
+    }
+
+    function _aprovarItemOrcamento(demandaId, itemId) {
+        var por = _sessao ? (_sessao.login || _sessao.nome || "sistema") : "sistema";
+        DemandaDB.updateItem(demandaId, itemId, { status: "venda_aprovada" },
+            { evento: "status_changed", para: "venda_aprovada", por: por, obs: "Aprovado no or\u00e7amento" })
+            .then(function() { _toast("Venda aprovada!", "success"); loadOrcamento(); })
+            .catch(function(e) { _toast("Erro: " + e.message, "error"); });
+    }
+
+    function _perderItemOrcamento(demandaId, itemId, deStatus) {
+        _demandaAtual = { id: demandaId, data: {}, itens: [{ id: itemId, status: deStatus }] };
+        _confirmarVendaPerdida(itemId, deStatus);
+    }
+
+    // ════════════════════════════════════════════════════════
     // TOAST / NOTIFICAÇÕES
     // ════════════════════════════════════════════════════════
 
@@ -1111,10 +1483,23 @@ const DemandaApp = (function() {
         loadDemandasLista:      loadDemandasLista,
         abrirDemanda:           abrirDemanda,
         avancarItemStatus:      avancarItemStatus,
+        toggleItemTimeline:     toggleItemTimeline,
         // Dashboard e Compras
         loadDashboard:          loadDashboard,
         loadFilaCompras:        loadFilaCompras,
-        avancarItemFilaCompras: avancarItemFilaCompras
+        avancarItemFilaCompras: avancarItemFilaCompras,
+        // Orçamento
+        loadOrcamento:          loadOrcamento,
+        _aprovarItemOrcamento:  _aprovarItemOrcamento,
+        _perderItemOrcamento:   _perderItemOrcamento,
+        // Busca ERP
+        _abrirBuscaERP:         _abrirBuscaERP,
+        _fecharBuscaERP:        _fecharBuscaERP,
+        _executarBuscaERP:      _executarBuscaERP,
+        _vincularProduto:       _vincularProduto,
+        // Devolutiva Compras
+        _abrirDevolutivaCompras:  _abrirDevolutivaCompras,
+        _confirmarDevolutiva:     _confirmarDevolutiva
     };
 
 })();
