@@ -265,10 +265,98 @@ const DemandaApp = (function() {
             var btn  = document.getElementById("btnConfirmExcel");  if (btn) btn.style.display = "none";
             var up   = document.getElementById("excelUploadArea");  if (up)  up.style.display = "";
             _openModal("modalExcel");
-        } else {
-            _toast((type === "pdf" ? "PDF" : "Foto/Print") + " — em implementação", "info");
+        } else if (type === "pdf") {
+            _abrirImportPDF();
+        } else if (type === "foto") {
+            _abrirImportFoto();
         }
     }
+
+    // ════════════════════════════════════════════════════════
+    // IMPORT PDF (iframe nativo do browser)
+    // ════════════════════════════════════════════════════════
+
+    function _abrirImportPDF() {
+        var inp = document.createElement("input");
+        inp.type = "file";
+        inp.accept = ".pdf,application/pdf";
+        inp.style.display = "none";
+        document.body.appendChild(inp);
+        inp.onchange = function() {
+            var file = inp.files[0];
+            document.body.removeChild(inp);
+            if (!file) return;
+            var url = URL.createObjectURL(file);
+            var modal  = document.getElementById("modalImportPDF");
+            var iframe = document.getElementById("pdfIframe");
+            var fname  = document.getElementById("pdfFileName");
+            if (!modal || !iframe) { _toast("Modal PDF nao encontrado.", "error"); return; }
+            if (fname) fname.textContent = file.name;
+            iframe.src = url;
+            modal.style.display = "flex";
+            _toast("PDF carregado! Selecione o texto e copie para importar.", "info");
+        };
+        inp.click();
+    }
+
+    function _fecharImportPDF() {
+        var modal  = document.getElementById("modalImportPDF");
+        var iframe = document.getElementById("pdfIframe");
+        if (iframe) { try { URL.revokeObjectURL(iframe.src); } catch(_) {} iframe.src = ""; }
+        if (modal) modal.style.display = "none";
+    }
+
+    function _copiarDoPDF() {
+        _fecharImportPDF();
+        var ta = document.getElementById("textareaImport"); if (ta) ta.value = "";
+        _openModal("modalTexto");
+        _toast("Cole aqui o texto copiado do PDF e clique em Processar.", "info");
+    }
+
+    // ════════════════════════════════════════════════════════
+    // IMPORT FOTO / PRINT (camera ou galeria + transcricao)
+    // ════════════════════════════════════════════════════════
+
+    function _abrirImportFoto() {
+        var inp = document.createElement("input");
+        inp.type = "file";
+        inp.accept = "image/*";
+        inp.style.display = "none";
+        document.body.appendChild(inp);
+        inp.onchange = function() {
+            var file = inp.files[0];
+            document.body.removeChild(inp);
+            if (!file) return;
+            var url   = URL.createObjectURL(file);
+            var modal = document.getElementById("modalImportFoto");
+            var img   = document.getElementById("fotoPreview");
+            var ta    = document.getElementById("fotoTranscricao");
+            if (!modal || !img) { _toast("Modal Foto nao encontrado.", "error"); return; }
+            img.src = url;
+            if (ta) ta.value = "";
+            modal.style.display = "flex";
+        };
+        inp.click();
+    }
+
+    function _fecharImportFoto() {
+        var modal = document.getElementById("modalImportFoto");
+        var img   = document.getElementById("fotoPreview");
+        if (img) { try { URL.revokeObjectURL(img.src); } catch(_) {} img.src = ""; }
+        if (modal) modal.style.display = "none";
+    }
+
+    function _processarFotoTranscricao() {
+        var ta = document.getElementById("fotoTranscricao");
+        if (!ta || !ta.value.trim()) { _toast("Digite os itens da foto antes de processar.", "warning"); return; }
+        var texto = ta.value.trim();
+        _fecharImportFoto();
+        var taImport = document.getElementById("textareaImport");
+        if (taImport) taImport.value = texto;
+        _openModal("modalTexto");
+        _toast("Texto carregado! Clique em Processar.", "info");
+    }
+
 
     function closeModal(id) { var el = document.getElementById(id); if (el) el.style.display = "none"; }
     function addItemFromDetails() { closeModal("modalItemDetalhes"); }
@@ -1710,6 +1798,14 @@ const DemandaApp = (function() {
         closeModal:             closeModal,
         addItemFromDetails:     addItemFromDetails,
         processImportTexto:     processImportTexto,
+        // Import PDF
+        _abrirImportPDF:        _abrirImportPDF,
+        _fecharImportPDF:       _fecharImportPDF,
+        _copiarDoPDF:           _copiarDoPDF,
+        // Import Foto
+        _abrirImportFoto:       _abrirImportFoto,
+        _fecharImportFoto:      _fecharImportFoto,
+        _processarFotoTranscricao: _processarFotoTranscricao,
         onExcelDrop:            onExcelDrop,
         onExcelFileSelected:    onExcelFileSelected,
         confirmExcelImport:     confirmExcelImport,
