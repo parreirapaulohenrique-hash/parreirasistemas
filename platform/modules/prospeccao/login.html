@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#e11d48">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>MAXCRM Campo — Login</title>
+    <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <link rel="stylesheet" href="styles/maxcrm.css">
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <!-- ParreiraAuth -->
+    <script src="/platform/core/js/session-manager.js"></script>
+    <script src="/platform/core/js/auth.js"></script>
+</head>
+<body>
+<div class="login-page">
+    <div class="login-logo">MX</div>
+    <div class="login-title">MAXCRM</div>
+    <div class="login-sub">Prospecção Comercial em Campo<br>Parreira Sistemas</div>
+
+    <form class="login-form" id="loginForm" onsubmit="return false;">
+        <div class="form-group">
+            <label class="form-label required">Login</label>
+            <input type="text" class="form-input" id="loginInput" placeholder="Seu login"
+                autocomplete="username" autocapitalize="none" autocorrect="off">
+        </div>
+        <div class="form-group">
+            <label class="form-label required">Senha</label>
+            <div class="form-input-group">
+                <input type="password" class="form-input" id="senhaInput" placeholder="Sua senha"
+                    autocomplete="current-password">
+                <button type="button" class="btn btn-secondary btn-sm btn-icon"
+                    onclick="toggleSenha()" title="Mostrar/ocultar senha">
+                    <span class="material-icons-round" id="eyeIcon">visibility</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="loginErro" style="display:none;color:var(--error);background:var(--error-bg);padding:12px;border-radius:8px;font-size:0.85rem;margin-bottom:12px;text-align:center"></div>
+
+        <button type="submit" class="btn btn-primary" id="loginBtn" onclick="fazerLogin()">
+            <span class="material-icons-round">login</span> Entrar
+        </button>
+    </form>
+
+    <div style="margin-top:32px;text-align:center;color:var(--text-muted);font-size:0.72rem">
+        MAXCRM Campo v1.0.0 • Parreira Sistemas
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+function toggleSenha() {
+    var inp = document.getElementById('senhaInput');
+    var ico = document.getElementById('eyeIcon');
+    if (inp.type === 'password') { inp.type = 'text'; ico.textContent = 'visibility_off'; }
+    else { inp.type = 'password'; ico.textContent = 'visibility'; }
+}
+
+async function fazerLogin() {
+    var login = (document.getElementById('loginInput').value || '').trim();
+    var senha = document.getElementById('senhaInput').value || '';
+    var btn   = document.getElementById('loginBtn');
+    var erro  = document.getElementById('loginErro');
+
+    if (!login || !senha) {
+        erro.textContent = 'Informe login e senha.';
+        erro.style.display = 'block';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="material-icons-round" style="animation:spin 0.7s linear infinite">autorenew</span> Entrando...';
+    erro.style.display = 'none';
+
+    try {
+        await ParreiraAuth.login(login, senha, 'prospeccao');
+        window.location.href = 'index.html';
+    } catch(e) {
+        erro.textContent = e.message || 'Erro ao fazer login.';
+        erro.style.display = 'block';
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-icons-round">login</span> Entrar';
+    }
+}
+
+// Enter no form
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') fazerLogin();
+});
+
+// Redireciona se já logado
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof ParreiraAuth !== 'undefined' && ParreiraAuth.isLogado()) {
+        window.location.href = 'index.html';
+    }
+});
+</script>
+</body>
+</html>
