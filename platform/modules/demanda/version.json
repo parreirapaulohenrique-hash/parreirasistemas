@@ -1,1 +1,1 @@
-{"version":"2.2.6","build":"20260906-v2.2.6","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-06","change":"v2.2.6 - OCR: auto-processa texto e vai direto para conferencia sem passos intermediarios"}
+{"version":"2.2.7","build":"20260906-v2.2.7","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-06","change":"v2.2.7 - Parser tabular: detecta colunas Cod Item / Denominacao / Qtde do OCR"}

@@ -16,72 +16,144 @@
 
 const DemandaImport = (() => {
 
-    // ── Parser de texto colado ────────────────────────────────
-    /**
-     * Tenta separar itens de um bloco de texto livre.
-     * Suporta padrões como:
-     *   "2 rolamento 6208 / 5 correia plataforma S660 / 10 RE123456"
-     *   "2x 6208\n5 correia S660\n10 RE123456"
-     *   "- 2 pcs 6208 skf"
-     */
+    // Palavras que indicam linha de cabeçalho / título — devem ser ignoradas
+    const SKIP_PATTERNS = /^(cod\.?\s*item|denominação|denomina|quantidade|qtde?|referencia|descrição|descri|titulo|título|peças|pecas|trator|produto|marca|obs|n[°º]|item|ref|seq|#)$/i;
+
     function parseText(text) {
         if (!text || !text.trim()) return [];
 
-        const itens = [];
-
-        // Divide por separadores comuns: nova linha, /, ;
         const linhas = text
-            .split(/[\/;\n\r]+/)
+            .split(/[\n\r]+/)
             .map(l => l.trim())
-            .filter(l => l.length > 2);
+            .filter(l => l.length > 1);
 
+        // Tenta primeiro detectar tabela em formato "linha por linha" com colunas separadas
+        // (OCR de tabelas costuma emitir: código, descrição, número — uma por linha)
+        const tableItens = _tryParseTableLines(linhas);
+        if (tableItens.length > 0) return tableItens;
+
+        // Fallback: processa linha a linha (WhatsApp, texto livre)
+        const itens = [];
         for (const linha of linhas) {
             const item = _parseLinha(linha);
             if (item) itens.push(item);
         }
 
-        // Fallback: se nenhuma linha produziu item, tenta tratar o texto todo como 1 item
         if (itens.length === 0 && text.trim()) {
-            itens.push({
-                refOriginal:    '',
-                descOriginal:   text.trim(),
-                qtdeSolicitada: 1,
-                obs:            '',
-                incerteza:      true,
-            });
+            itens.push({ refOriginal: '', descOriginal: text.trim(), qtdeSolicitada: 1, obs: '', incerteza: true });
         }
 
         return itens;
     }
 
     /**
+     * Tenta interpretar linhas como tabela com colunas (Código | Descrição | Qtde).
+     * Suporta dois sub-formatos:
+     *   A) Uma linha por registro: "DZ126340 Junta 1"
+     *   B) Três linhas por registro: "DZ126340" / "Junta" / "1"
+     */
+    function _tryParseTableLines(linhas) {
+        // Filtra cabeçalhos e linhas muito curtas
+        const util = linhas.filter(l => !SKIP_PATTERNS.test(l) && l.length > 1);
+
+        // ─── Formato A: cada linha tem código + descrição + qtde ───
+        // Detecta se há pelo menos 3 linhas com padrão "COD DESC NUM" na linha inteira
+        const formatA = util.filter(l => _isFormatALine(l));
+        if (formatA.length >= 3 || (formatA.length >= 1 && formatA.length >= util.length * 0.5)) {
+            return formatA
+                .map(l => _parseFormatALine(l))
+                .filter(Boolean);
+        }
+
+        // ─── Formato B: linhas alternadas Código / Descrição / Qtde ───
+        // Detecta se temos padrão repetido: código puro → texto → número
+        const codLines = util.filter(l => _isPartCode(l) && !_isOnlyNumber(l));
+        if (codLines.length >= 2 && codLines.length >= util.length * 0.25) {
+            return _parseFormatBLines(util);
+        }
+
+        return []; // não detectou tabela
+    }
+
+    /** Linha no formato A: começa com código, termina com número, tem descrição no meio */
+    function _isFormatALine(l) {
+        // "DZ126340 Junta 1" ou "R518255 Engrenagem 1"
+        return /^[A-Z0-9]{3,}[\s\-\/][^\d].*\s+\d+\s*$/i.test(l)
+            || /^[A-Z]{1,4}\d{3,}\S*\s+.+\s+\d+$/i.test(l);
+    }
+
+    function _parseFormatALine(linha) {
+        // Tenta extrair: CÓDIGO(s1) DESCRIÇÃO(s*) QTDE(último token)
+        const m = linha.match(/^(\S+)\s+(.+?)\s+(\d+(?:[.,]\d+)?)\s*$/);
+        if (!m) return null;
+        const ref  = m[1].toUpperCase().trim();
+        const desc = m[2].trim();
+        const qtde = parseFloat(m[3].replace(',', '.')) || 1;
+        return { refOriginal: ref, descOriginal: desc || ref, qtdeSolicitada: qtde, obs: '', incerteza: !ref };
+    }
+
+    /** Formato B: linhas agrupadas Código / Descrição / Número */
+    function _parseFormatBLines(util) {
+        const itens = [];
+        let i = 0;
+        while (i < util.length) {
+            const l = util[i];
+            if (_isPartCode(l) && !_isOnlyNumber(l)) {
+                const ref  = l.toUpperCase().trim();
+                const desc = (i + 1 < util.length && !_isPartCode(util[i+1]) && !_isOnlyNumber(util[i+1])) ? util[i+1].trim() : ref;
+                const hasDesc = (desc !== ref);
+                let qtde = 1;
+                let skipCount = hasDesc ? 2 : 1;
+                // Próximo após descrição pode ser número
+                if (i + skipCount < util.length && _isOnlyNumber(util[i + skipCount])) {
+                    qtde = parseFloat(util[i + skipCount].replace(',', '.')) || 1;
+                    skipCount++;
+                }
+                itens.push({ refOriginal: ref, descOriginal: desc, qtdeSolicitada: qtde, obs: '', incerteza: false });
+                i += skipCount;
+            } else {
+                i++;
+            }
+        }
+        return itens;
+    }
+
+    function _isPartCode(s) {
+        return /^[A-Z]{1,4}[-\s]?\d{3,}[A-Z0-9\-\/]*$/i.test(s.trim())
+            || /^\d{3,}[A-Z]{2,}/i.test(s.trim());
+    }
+
+    function _isOnlyNumber(s) {
+        return /^\d+([.,]\d+)?$/.test(s.trim());
+    }
+
+    /**
      * Tenta extrair ref, qtde e desc de uma única linha de texto.
+     * Suporta quantidade no início OU no final da linha.
      */
     function _parseLinha(linha) {
-        // Remove prefixos comuns: "- ", "• ", "* ", números de lista "1.", "1)"
         linha = linha.replace(/^[-•*·]\s*/, '').replace(/^\d+[.)]\s*/, '').trim();
-        if (!linha) return null;
+        if (!linha || SKIP_PATTERNS.test(linha)) return null;
 
-        // Tenta detectar quantidade no início: "2 rolamento", "2x rolamento", "2 pcs rolamento"
-        const qtdMatch = linha.match(/^(\d+(?:[.,]\d+)?)\s*(?:x|pcs?|un|unid\.?|peças?)?\s+(.+)$/i);
         let qtde = 1;
         let resto = linha;
 
-        if (qtdMatch) {
-            qtde  = parseFloat(qtdMatch[1].replace(',', '.')) || 1;
-            resto = qtdMatch[2].trim();
+        // Quantidade no início: "2 rolamento 6208"
+        const qtdInicio = linha.match(/^(\d+(?:[.,]\d+)?)\s*(?:x|pcs?|un|unid\.?|peças?|pç)?\s+(.+)$/i);
+        if (qtdInicio) {
+            qtde  = parseFloat(qtdInicio[1].replace(',', '.')) || 1;
+            resto = qtdInicio[2].trim();
         }
 
-        // Tenta detectar referência: sequência alfanumérica sem espaços com pelo menos 4 chars
-        // Padrões: RE123456, 6208-2Z, 25B-3300, SKF6208, etc.
+        // Detecta referência
         const refPatterns = [
-            /\b([A-Z]{1,4}[-\s]?\d{3,}[A-Z0-9\-\/]*)\b/i,   // RE123456, SKF 6208
-            /\b(\d{3,}[A-Z0-9\-\/]{2,})\b/i,                  // 6208-2Z, 25B-3300
-            /\b([A-Z]{2,}\d{3,})\b/i,                          // SKF6208
+            /\b([A-Z]{1,4}[-\s]?\d{3,}[A-Z0-9\-\/]*)\b/i,
+            /\b(\d{3,}[A-Z0-9\-\/]{2,})\b/i,
+            /\b([A-Z]{2,}\d{3,})\b/i,
         ];
 
-        let ref   = '';
-        let desc  = resto;
+        let ref  = '';
+        let desc = resto;
 
         for (const pat of refPatterns) {
             const m = resto.match(pat);
@@ -92,7 +164,15 @@ const DemandaImport = (() => {
             }
         }
 
-        // Se a referência for o texto todo (sem descrição adicional), assume como desc também
+        // Quantidade no FINAL da descrição: "Junta 1" → desc=Junta, qtde=1
+        if (!qtdInicio && desc) {
+            const qtdFinal = desc.match(/^(.+?)\s+(\d+(?:[.,]\d+)?)\s*$/);
+            if (qtdFinal) {
+                desc = qtdFinal[1].trim();
+                qtde = parseFloat(qtdFinal[2].replace(',', '.')) || 1;
+            }
+        }
+
         if (ref && !desc) desc = ref;
 
         return {
@@ -100,7 +180,7 @@ const DemandaImport = (() => {
             descOriginal:   desc || resto,
             qtdeSolicitada: qtde,
             obs:            '',
-            incerteza:      !ref, // incerto se não encontrou referência
+            incerteza:      !ref,
         };
     }
 
