@@ -807,11 +807,116 @@
     <script src="/platform/shared/integrations/index.js?v=2.0.0"></script>
 
     <!-- Módulo de Demanda -->
-    <script src="js/demanda-states.js?v=2.3.2"></script>
-    <script src="js/demanda-db.js?v=2.3.2"></script>
-    <script src="js/demanda-import.js?v=2.3.2"></script>
-    <script src="js/demanda-search.js?v=2.3.2"></script>
-    <script src="js/demanda-app.js?v=2.3.2"></script>
+    <script src="js/demanda-states.js?v=2.4.0"></script>
+    <script src="js/demanda-db.js?v=2.4.0"></script>
+    <script src="js/demanda-import.js?v=2.4.0"></script>
+    <script src="js/demanda-search.js?v=2.4.0"></script>
+    <script src="js/demanda-lookup.js?v=2.4.0"></script>
+    <script src="js/demanda-pdf.js?v=2.4.0"></script>
+    <script src="js/demanda-app.js?v=2.4.0"></script>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         MODAL: Administração da Base Técnica de Peças
+         ═══════════════════════════════════════════════════════════ -->
+    <div id="modalBaseTecnica" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center;">
+      <div style="background:var(--surface);border-radius:12px;padding:2rem;width:min(700px,95vw);max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+          <h2 style="margin:0;font-size:1.1rem;color:var(--text-primary);">🗄️ Base Técnica de Peças Agrícolas</h2>
+          <button onclick="document.getElementById('modalBaseTecnica').style.display='none'"
+                  style="background:none;border:none;color:var(--text-secondary);font-size:1.4rem;cursor:pointer;">✕</button>
+        </div>
+
+        <!-- Estatísticas -->
+        <div id="btStats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;">
+          <div style="background:var(--bg-secondary);border-radius:8px;padding:1rem;text-align:center;">
+            <div id="btCountTotal" style="font-size:1.6rem;font-weight:700;color:var(--accent-primary);">—</div>
+            <div style="font-size:.75rem;color:var(--text-secondary);">Peças na Base</div>
+          </div>
+          <div style="background:var(--bg-secondary);border-radius:8px;padding:1rem;text-align:center;">
+            <div id="btCountErp" style="font-size:1.6rem;font-weight:700;color:var(--accent-success);">—</div>
+            <div style="font-size:.75rem;color:var(--text-secondary);">Com Cadastro ERP</div>
+          </div>
+          <div style="background:var(--bg-secondary);border-radius:8px;padding:1rem;text-align:center;">
+            <div id="btCountPdf" style="font-size:1.6rem;font-weight:700;color:#60a5fa;">—</div>
+            <div style="font-size:.75rem;color:var(--text-secondary);">Via Catálogo PDF</div>
+          </div>
+        </div>
+
+        <!-- Seção 1: Sync Maxdata -->
+        <div style="border:1px solid var(--border);border-radius:8px;padding:1.25rem;margin-bottom:1.25rem;">
+          <div style="font-weight:600;color:var(--text-primary);margin-bottom:.5rem;">
+            🔄 Sincronizar ERP (Maxdata)
+          </div>
+          <p style="font-size:.82rem;color:var(--text-secondary);margin:.25rem 0 .75rem;">
+            Importa todos os produtos agrícolas cadastrados no Maxdata para a base técnica,
+            permitindo que o sistema reconheça peças mesmo quando o ERP estiver offline.
+          </p>
+          <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;">
+            <button id="btBtnSync" onclick="DemandaApp.syncMaxdataTechbase()"
+                    style="background:var(--accent-primary);color:#fff;border:none;border-radius:6px;padding:.5rem 1.25rem;cursor:pointer;font-size:.85rem;">
+              Sincronizar Maxdata
+            </button>
+            <span id="btSyncStatus" style="font-size:.8rem;color:var(--text-secondary);">Clique para iniciar</span>
+          </div>
+          <div id="btSyncBar" style="display:none;margin-top:.75rem;background:var(--bg-secondary);border-radius:4px;height:6px;overflow:hidden;">
+            <div id="btSyncBarFill" style="height:100%;background:var(--accent-primary);width:0%;transition:width .3s;"></div>
+          </div>
+        </div>
+
+        <!-- Seção 2: Import PDF -->
+        <div style="border:1px solid var(--border);border-radius:8px;padding:1.25rem;">
+          <div style="font-weight:600;color:var(--text-primary);margin-bottom:.5rem;">
+            📄 Importar Catálogo PDF (OEM)
+          </div>
+          <p style="font-size:.82rem;color:var(--text-secondary);margin:.25rem 0 .75rem;">
+            Carregue PDFs de catálogos oficiais das fabricantes (John Deere, New Holland, Case IH, Massey Ferguson).
+            O sistema extrai automaticamente os códigos de peça e alimenta a base técnica.
+          </p>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem;">
+            <div>
+              <label style="font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.25rem;">Fabricante</label>
+              <select id="btPdfFabricante" style="width:100%;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:.4rem .75rem;color:var(--text-primary);font-size:.85rem;">
+                <option value="">Detectar automaticamente</option>
+                <option value="JOHN DEERE">John Deere</option>
+                <option value="NEW HOLLAND">New Holland</option>
+                <option value="CASE">Case IH</option>
+                <option value="MASSEY FERGUSON">Massey Ferguson</option>
+                <option value="VALTRA">Valtra</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.25rem;">Equipamento</label>
+              <select id="btPdfEquipamento" style="width:100%;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:.4rem .75rem;color:var(--text-primary);font-size:.85rem;">
+                <option value="">Detectar automaticamente</option>
+                <option value="COLHEITADEIRA">Colheitadeira</option>
+                <option value="PLANTADEIRA">Plantadeira</option>
+                <option value="PULVERIZADOR">Pulverizador</option>
+                <option value="TRATOR">Trator</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-bottom:.75rem;">
+            <label style="font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.25rem;">Modelo (opcional, ex: S680, 8400R)</label>
+            <input id="btPdfModelo" type="text" placeholder="Ex: S680, 8400R, P2075..."
+                   style="width:100%;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:.4rem .75rem;color:var(--text-primary);font-size:.85rem;box-sizing:border-box;">
+          </div>
+
+          <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;">
+            <label style="background:var(--accent-primary);color:#fff;border-radius:6px;padding:.5rem 1.25rem;cursor:pointer;font-size:.85rem;display:inline-block;">
+              📂 Selecionar PDF
+              <input id="btPdfInput" type="file" accept=".pdf" style="display:none;" onchange="DemandaApp.importarCatalogoPDF(this.files[0])">
+            </label>
+            <span id="btPdfStatus" style="font-size:.8rem;color:var(--text-secondary);">Nenhum arquivo selecionado</span>
+          </div>
+
+          <div id="btPdfBar" style="display:none;margin-top:.75rem;background:var(--bg-secondary);border-radius:4px;height:6px;overflow:hidden;">
+            <div id="btPdfBarFill" style="height:100%;background:#60a5fa;width:0%;transition:width .3s;"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
 
 </body>
 </html>

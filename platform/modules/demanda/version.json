@@ -1,1 +1,1 @@
-{"version":"2.3.4","build":"20260907-v2.3.4","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-07","change":"v2.3.4 - Maxdata: busca por codigoBarras+descricao, mapeamento completo (aplicacao, localizador, multiloja preco)"}
+{"version":"2.4.0","build":"20260907-v2.4.0","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-07","change":"v2.4.0 - Base Tecnica: DemandaLookup + DemandaPDF + sync Maxdata + import catalogo PDF OEM"}

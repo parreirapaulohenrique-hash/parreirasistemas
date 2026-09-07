@@ -1985,8 +1985,94 @@ const DemandaApp = (function() {
         _salvarCotacaoConcorrente:    _salvarCotacaoConcorrente,
         _loadHistoricoConcorrente:    _loadHistoricoConcorrente,
         _toggleConcCard:              _toggleConcCard,
-        _arquivarCotacaoConcorrente:  _arquivarCotacaoConcorrente
+        _arquivarCotacaoConcorrente:  _arquivarCotacaoConcorrente,
+        // Base Técnica
+        abrirBaseTecnica:             abrirBaseTecnica,
+        syncMaxdataTechbase:          syncMaxdataTechbase,
+        importarCatalogoPDF:          importarCatalogoPDF,
     };
+
+    // ── Base Técnica ───────────────────────────────────────────
+    function abrirBaseTecnica() {
+        var modal = document.getElementById('modalBaseTecnica');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        _loadBaseTecnicaStats();
+    }
+
+    function _loadBaseTecnicaStats() {
+        if (typeof firebase === 'undefined') return;
+        var db  = firebase.firestore();
+        var col = db.collection('tenants/centralpecas/demanda/techbase/products');
+        col.get().then(function(snap) {
+            var total = snap.size;
+            var erp   = snap.docs.filter(function(d) { return d.data().hasErpRecord; }).length;
+            var pdf   = snap.docs.filter(function(d) { return d.data().origem === 'pdf_catalog'; }).length;
+            var el;
+            el = document.getElementById('btCountTotal'); if (el) el.textContent = total.toLocaleString('pt-BR');
+            el = document.getElementById('btCountErp');   if (el) el.textContent = erp.toLocaleString('pt-BR');
+            el = document.getElementById('btCountPdf');   if (el) el.textContent = pdf.toLocaleString('pt-BR');
+        }).catch(function() {});
+    }
+
+    function syncMaxdataTechbase() {
+        if (typeof DemandaLookup === 'undefined') { _toast('DemandaLookup não carregado.', 'error'); return; }
+        var btn  = document.getElementById('btBtnSync');
+        var stat = document.getElementById('btSyncStatus');
+        var bar  = document.getElementById('btSyncBar');
+        var fill = document.getElementById('btSyncBarFill');
+        if (btn)  btn.disabled = true;
+        if (bar)  bar.style.display = 'block';
+        if (fill) fill.style.width  = '5%';
+        if (stat) stat.textContent  = 'Conectando ao Maxdata...';
+        DemandaLookup.syncMaxdataToTechbase(1, function(salvo, pagina) {
+            if (stat) stat.textContent = 'Sincronizando... ' + salvo + ' peças (pág. ' + (pagina || '?') + ')';
+            if (fill) fill.style.width = Math.min(95, 5 + salvo / 10) + '%';
+        }).then(function(total) {
+            if (fill) fill.style.width  = '100%';
+            if (stat) stat.textContent  = '✓ ' + total + ' peças agrícolas sincronizadas!';
+            _toast(total + ' peças salvas na base técnica.', 'success');
+            _loadBaseTecnicaStats();
+        }).catch(function(e) {
+            if (stat) stat.textContent = '✗ Erro: ' + (e.message || e);
+            _toast('Erro na sincronização: ' + (e.message || e), 'error');
+        }).finally(function() {
+            if (btn) btn.disabled = false;
+        });
+    }
+
+    function importarCatalogoPDF(file) {
+        if (!file) return;
+        if (typeof DemandaPDF === 'undefined') { _toast('DemandaPDF não carregado.', 'error'); return; }
+        var stat = document.getElementById('btPdfStatus');
+        var bar  = document.getElementById('btPdfBar');
+        var fill = document.getElementById('btPdfBarFill');
+        if (stat) stat.textContent = 'Processando: ' + file.name;
+        if (bar)  bar.style.display = 'block';
+        if (fill) fill.style.width  = '5%';
+        var meta = {
+            fabricante:  (document.getElementById('btPdfFabricante')  || {}).value || '',
+            equipamento: (document.getElementById('btPdfEquipamento') || {}).value || '',
+            modelo:      (document.getElementById('btPdfModelo')      || {}).value || '',
+        };
+        DemandaPDF.importCatalogPDF(file, meta, function(fase, atual, total, msg) {
+            if (stat) stat.textContent = msg || (fase + ' ' + atual + '/' + total);
+            var pct = total > 0 ? Math.round((atual / total) * 90) + 5 : 50;
+            if (fill) fill.style.width = pct + '%';
+        }).then(function(result) {
+            if (fill) fill.style.width = '100%';
+            if (stat) stat.textContent = '✓ ' + result.totalRefs + ' referências de ' + result.totalPaginas +
+                ' páginas | ' + result.fabricante + ' ' + result.equipamento;
+            _toast(result.totalRefs + ' peças importadas do PDF!', 'success');
+            _loadBaseTecnicaStats();
+        }).catch(function(e) {
+            if (stat) stat.textContent = '✗ Erro: ' + (e.message || e);
+            _toast('Erro ao importar PDF: ' + (e.message || e), 'error');
+        }).finally(function() {
+            var inp = document.getElementById('btPdfInput');
+            if (inp) inp.value = '';
+        });
+    }
 
 })();
 

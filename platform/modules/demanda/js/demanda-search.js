@@ -341,6 +341,7 @@ const DemandaSearch = (() => {
         getProductDetails,
         searchClients,
         clearCache,
+        getAdapter: _getAdapter,   // exposto para DemandaLookup.syncMaxdataToTechbase
     };
 
 })();
