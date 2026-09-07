@@ -126,26 +126,35 @@ const DemandaSearch = (() => {
 
     // ── Busca por referência exata no ERP ─────────────────────
     async function _searchErpByRef(query, filialId) {
-        const adapter  = _getAdapter();
-        const normRef  = DemandaImport ? DemandaImport.normalizeRef(query) : query.toUpperCase().replace(/[\s\-]/g, '');
-
-        // Tenta /product?codigoFab=X (código do fabricante)
+        const adapter = _getAdapter();
+        const normRef = DemandaImport ? DemandaImport.normalizeRef(query) : query.toUpperCase().replace(/[\s\-]/g, '');
         const headers = await adapter._authHeaders();
         const results = [];
 
+        // Maxdata GET /product aceita: codigoBarras (barcode) e descricao (texto)
+        // Não tem parâmetro codigoFab — tentamos codigoBarras primeiro, depois descricao
         const attempts = [
-            adapter._buildUrl('product', { codigoFab: normRef, limit: 10 }),
-            adapter._buildUrl('product', { codigoFab: query.toUpperCase(), limit: 10 }),
+            adapter._buildUrl('product', { codigoBarras: normRef, limit: 10, sincronizacao: true }),
+            adapter._buildUrl('product', { codigoBarras: query.toUpperCase(), limit: 10, sincronizacao: true }),
+            adapter._buildUrl('product', { descricao: normRef, limit: 20, sincronizacao: true }),
         ];
 
         for (const url of attempts) {
             try {
-                const resp = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(8000) });
+                const resp  = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(8000) });
                 if (!resp.ok) continue;
                 const data  = await resp.json();
                 const items = Array.isArray(data) ? data : (data.docs || data.data || []);
                 for (const item of items) {
-                    results.push(_mapErpProduct(item, filialId));
+                    // Filtra: prefere itens cujo codigoFab bate com a busca
+                    const fab = (item.codigoFab || item.codigoOriginal || '').toUpperCase().replace(/[\s\-]/g, '');
+                    if (fab.includes(normRef) || normRef.includes(fab)) {
+                        results.push(_mapErpProduct(item, filialId));
+                    }
+                }
+                if (results.length === 0 && items.length > 0) {
+                    // Fallback: retorna todos os resultados mesmo sem filtro exato
+                    items.slice(0, 5).forEach(item => results.push(_mapErpProduct(item, filialId)));
                 }
                 if (results.length > 0) break;
             } catch (_) { continue; }
@@ -170,7 +179,7 @@ const DemandaSearch = (() => {
     async function _searchErpByText(query, filialId, limit = 25) {
         const adapter = _getAdapter();
         const headers = await adapter._authHeaders();
-        const url     = adapter._buildUrl('product', { descricao: query, limit });
+        const url     = adapter._buildUrl('product', { descricao: query, limit, sincronizacao: true });
         const resp    = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(10000) });
         if (!resp.ok) return [];
         const data  = await resp.json();
@@ -235,28 +244,46 @@ const DemandaSearch = (() => {
             .map(f => ({
                 empId:   f.empId,
                 nome:    outrasFiliaisMap[f.empId] || `Filial ${f.empId}`,
-                estoque: Number(f.qtde ?? f.estoque ?? 0),
+                estoque: Number(f.estoque ?? 0),
+                preco:   Number(f.valorVenda ?? 0),
             }));
 
-        // Preço: usa valorVenda como padrão
-        const preco = Number(raw.valorVenda || raw.preco || raw.valor || 0);
+        // Preço: prefere preço da filial via multiloja, fallback no produto
+        const preco = Number(
+            filialData.valorVenda ??
+            raw.valorVenda ??
+            raw.valorAtacado ??
+            raw.valorCusto ??
+            0
+        );
+
+        // Barcodes: codBarras é array no schema Maxdata
+        const barcodes = Array.isArray(raw.codBarras) ? raw.codBarras.join(', ') : (raw.codBarras || '');
 
         return {
-            erpProdutoId:    raw.id,
-            erpProdutoDesc:  (raw.descricao || raw.nome || '').trim(),
-            erpCodigoFab:    (raw.codigoFab || raw.referencia || raw.codigo || '').trim(),
-            erpGrupo:        (raw.grupo?.descricao || raw.grupoDesc || '').trim(),
-            fabricante:      (raw.marcaDesc || raw.marca || raw.fabricante || '').trim(),
-            unidade:         raw.un || raw.unidade || 'UN',
-            ean:             raw.ean || raw.codigoBarras || '',
+            erpProdutoId:         raw.id,
+            erpProdutoDesc:       (raw.descricao || raw.descPdv || '').trim(),
+            erpCodigoFab:         (raw.codigoFab  || raw.codigoOriginal || '').trim(),
+            erpCodigoOriginal:    (raw.codigoOriginal || '').trim(),
+            erpGrupo:             (raw.grupo    || '').trim(),
+            erpSubGrupo:          (raw.subGrupo || '').trim(),
+            fabricante:           (raw.fabricante || '').trim(),
+            fabricanteId:         raw.fabricanteId || null,
+            unidade:              raw.un || 'UN',
+            aplicacao:            (raw.aplicacao || '').trim(),    // equipamento compatível
+            localizador:          (raw.localizador || raw.prateleira || '').trim(),
+            ean:                  barcodes,
             estoqueFilial,
             estoqueOutrasFiliais,
-            estoqueTotal:    Number(raw.qtde || 0),
+            estoqueTotal:         Number(raw.estoque ?? 0),
             preco,
-            confidencia:     'erp', // produto no ERP = dado confirmado
-            parteMestreId:   null,
-            _temEstoque:     estoqueFilial > 0,
-            _temEstoqueOutro: estoqueOutrasFiliais.some(f => f.estoque > 0),
+            valorAtacado:         Number(raw.valorAtacado ?? 0),
+            valorCusto:           Number(raw.valorCusto ?? 0),
+            confidencia:          'erp',
+            parteMestreId:        null,
+            _temEstoque:          estoqueFilial > 0,
+            _temEstoqueOutro:     estoqueOutrasFiliais.some(f => f.estoque > 0),
+            _source:              'erp',
         };
     }
 

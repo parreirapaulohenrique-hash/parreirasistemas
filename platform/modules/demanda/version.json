@@ -1,1 +1,1 @@
-{"version":"2.3.3","build":"20260907-v2.3.3","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-07","change":"v2.3.3 - cache-busting: scripts atualizados para v2.3.2 no index.html"}
+{"version":"2.3.4","build":"20260907-v2.3.4","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-07","change":"v2.3.4 - Maxdata: busca por codigoBarras+descricao, mapeamento completo (aplicacao, localizador, multiloja preco)"}
