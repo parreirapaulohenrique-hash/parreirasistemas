@@ -1,1 +1,1 @@
-{"version":"2.3.0","build":"20260907-v2.3.0","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-07","change":"v2.3.0 - fix: imagem invalida falso positivo + qtde 2,00000 na desc + btn Desmarcar Incertos"}
+{"version":"2.3.1","build":"20260907-v2.3.1","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-07","change":"v2.3.1 - btn Desmarcar Incertos: funcao JS + exposta no DemandaApp"}

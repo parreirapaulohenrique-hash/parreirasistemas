@@ -580,6 +580,21 @@ const DemandaApp = (function() {
         document.querySelectorAll(".conf-chk").forEach(function(c) { c.checked = checked; });
     }
 
+    function desmarcarIncertosConferencia() {
+        var count = 0;
+        document.querySelectorAll(".conf-chk").forEach(function(chk) {
+            var idx = parseInt(chk.getAttribute("data-idx"), 10);
+            if (_importItensTemp[idx] && _importItensTemp[idx].incerteza) {
+                chk.checked = false;
+                count++;
+            }
+        });
+        _toast(count > 0
+            ? count + " incerto" + (count > 1 ? "s" : "") + " desmarcado" + (count > 1 ? "s" : "") + "."
+            : "Nenhum item incerto encontrado.",
+            count > 0 ? "info" : "warning");
+    }
+
     function confirmConferencia() {
         var selecionados = [];
         document.querySelectorAll(".conf-chk").forEach(function(chk) {
@@ -1903,9 +1918,10 @@ const DemandaApp = (function() {
         onExcelFileSelected:    onExcelFileSelected,
         confirmExcelImport:     confirmExcelImport,
         updateConferenciaItem:  updateConferenciaItem,
-        selectAllConferencia:   selectAllConferencia,
-        toggleAllConferencia:   toggleAllConferencia,
-        confirmConferencia:     confirmConferencia,
+        selectAllConferencia:          selectAllConferencia,
+        toggleAllConferencia:          toggleAllConferencia,
+        desmarcarIncertosConferencia:  desmarcarIncertosConferencia,
+        confirmConferencia:            confirmConferencia,
         // Grade de entrada
         addItemGrade:           addItemGrade,
         onGradeKeydown:         onGradeKeydown,
