@@ -1,1 +1,1 @@
-{"version":"2.2.9","build":"20260907-v2.2.9","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-07","change":"v2.2.9 - Parser: padrao DESCRICAO/CODIGO, filtro UN/.100.997, qtde 2,00000"}
+{"version":"2.3.0","build":"20260907-v2.3.0","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-07","change":"v2.3.0 - fix: imagem invalida falso positivo + qtde 2,00000 na desc + btn Desmarcar Incertos"}

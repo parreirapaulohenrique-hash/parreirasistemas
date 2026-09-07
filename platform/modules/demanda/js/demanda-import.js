@@ -168,9 +168,14 @@ const DemandaImport = (() => {
         if (qtdInicio) {
             const qv = parseFloat(qtdInicio[1].replace(',', '.'));
             if (qv > 0 && qv < 10000) {
-                qtde  = Math.round(qv) || 1;   // 2,00000 → 2
-                // so usa como quantidade se nao parseou via slash
-                if (!ref) desc = qtdInicio[2].trim();
+                qtde = Math.round(qv) || 1;   // 2,00000 → 2
+                if (!ref) {
+                    desc = qtdInicio[2].trim();
+                } else {
+                    // ref ja extraida via slash — ainda remove prefixo numerico da desc
+                    // ex: "2,00000 ROLAMENTO;JOHN DEERE" → "ROLAMENTO;JOHN DEERE" → "ROLAMENTO"
+                    desc = desc.replace(/^\d+(?:[.,]\d+)?\s+/, '').trim();
+                }
             }
         }
 

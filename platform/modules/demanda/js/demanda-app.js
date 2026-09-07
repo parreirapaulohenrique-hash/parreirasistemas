@@ -423,7 +423,8 @@ const DemandaApp = (function() {
         var modal  = document.getElementById("modalImportFoto");
         var img    = document.getElementById("fotoPreview");
         var status = document.getElementById("fotoOcrStatus");
-        if (img)    { try { URL.revokeObjectURL(img.src); } catch(_) {} img.src = ""; }
+        // Limpa onerror ANTES de apagar src — evita toast falso "Imagem invalida"
+        if (img)    { img.onerror = null; img.onload = null; try { URL.revokeObjectURL(img.src); } catch(_) {} img.src = ""; }
         if (status) status.style.display = "none";
         if (modal)  modal.style.display = "none";
     }
