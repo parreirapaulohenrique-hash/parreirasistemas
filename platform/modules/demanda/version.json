@@ -1,1 +1,1 @@
-{"version":"2.2.4","build":"20260906-v2.2.4","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-06","change":"v2.2.4 - OCR via proxy /api/ocr (Vercel serverless, sem CORS)"}
+{"version":"2.2.5","build":"20260906-v2.2.5","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-06","change":"v2.2.5 - OCR: maxDim 480px (limite helloworld), Engine=1+scale=true"}

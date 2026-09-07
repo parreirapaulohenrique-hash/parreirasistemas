@@ -1,9 +1,5 @@
 /**
  * api/ocr.js - Proxy OCR server-side (sem CORS)
- * ================================================
- * Recebe: POST { base64: "data:image/jpeg;base64,..." }
- * Retorna: { text: "...", error: null }
- * Chama OCR.space server-to-server - resolve bloqueio CORS do browser.
  */
 
 const OCR_API_KEY  = "helloworld";
@@ -17,53 +13,56 @@ module.exports = async function handler(req, res) {
     if (req.method === "OPTIONS") return res.status(200).end();
     if (req.method !== "POST")   return res.status(405).json({ error: "Method not allowed" });
 
-    let body = "";
+    const chunks = [];
     try {
-        const chunks = [];
         for await (const chunk of req) chunks.push(chunk);
-        body = Buffer.concat(chunks).toString("utf8");
     } catch (e) {
-        return res.status(400).json({ error: "Erro ao ler body: " + e.message });
+        return res.status(400).json({ error: "Erro ao ler body" });
     }
 
     let parsed;
-    try { parsed = JSON.parse(body); }
+    try { parsed = JSON.parse(Buffer.concat(chunks).toString("utf8")); }
     catch (e) { return res.status(400).json({ error: "JSON invalido" }); }
 
     const base64Image = parsed.base64;
     if (!base64Image || !base64Image.startsWith("data:image")) {
-        return res.status(400).json({ error: "Campo base64 invalido ou ausente" });
+        return res.status(400).json({ error: "Imagem base64 invalida" });
     }
 
-    const formData = new URLSearchParams();
-    formData.append("base64Image", base64Image);
-    formData.append("apikey",      OCR_API_KEY);
-    formData.append("language",    "por");
-    formData.append("isTable",     "true");
-    formData.append("OCREngine",   "2");
+    // URLSearchParams para enviar ao OCR.space
+    const form = new URLSearchParams();
+    form.append("base64Image", base64Image);
+    form.append("apikey",      OCR_API_KEY);
+    form.append("language",    "por");
+    form.append("OCREngine",   "1");      // Engine 1 - gratuito e compativel
+    form.append("detectOrientation", "true");
+    form.append("scale",       "true");   // melhora leitura de imagens pequenas
 
-    let ocrResponse;
+    let ocrResp;
     try {
-        ocrResponse = await fetch(OCR_ENDPOINT, {
+        ocrResp = await fetch(OCR_ENDPOINT, {
             method:  "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body:    formData.toString()
+            body:    form.toString()
         });
     } catch (e) {
-        return res.status(502).json({ error: "Falha ao conectar OCR.space: " + e.message });
+        return res.status(502).json({ error: "Falha ao contactar OCR.space: " + e.message });
     }
 
     let ocrData;
-    try { ocrData = await ocrResponse.json(); }
+    try { ocrData = await ocrResp.json(); }
     catch (e) { return res.status(502).json({ error: "Resposta OCR invalida" }); }
 
+    console.log("[OCR] status:", ocrData.OCRExitCode, "errored:", ocrData.IsErroredOnProcessing);
+
     if (ocrData.IsErroredOnProcessing) {
-        return res.status(422).json({ error: ocrData.ErrorMessage || "OCR.space erro" });
+        const msg = Array.isArray(ocrData.ErrorMessage) ? ocrData.ErrorMessage.join("; ") : (ocrData.ErrorMessage || "Erro OCR");
+        return res.status(422).json({ error: msg });
     }
 
     const text = (ocrData.ParsedResults && ocrData.ParsedResults[0])
         ? (ocrData.ParsedResults[0].ParsedText || "").trim()
         : "";
 
-    return res.status(200).json({ text });
+    return res.status(200).json({ text, exitCode: ocrData.OCRExitCode });
 };

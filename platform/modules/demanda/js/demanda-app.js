@@ -357,14 +357,14 @@ const DemandaApp = (function() {
                 var dataUrl = ev.target.result;
                 imgEl.src = dataUrl;
                 imgEl.onload = function() {
-                    var maxDim = 1200;
+                    var maxDim = 480;
                     var w = imgEl.naturalWidth || 800, h = imgEl.naturalHeight || 600;
                     var ratio = Math.min(maxDim / w, maxDim / h, 1);
                     var cv = document.createElement("canvas");
                     cv.width  = Math.round(w * ratio);
                     cv.height = Math.round(h * ratio);
                     cv.getContext("2d").drawImage(imgEl, 0, 0, cv.width, cv.height);
-                    var base64 = cv.toDataURL("image/jpeg", 0.85);
+                    var base64 = cv.toDataURL("image/jpeg", 0.75);
 
                     // Envia para proxy local /api/ocr (resolve CORS)
                     fetch("/api/ocr", {
