@@ -1,1 +1,1 @@
-{"version":"2.2.3","build":"20260906-v2.2.3","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-06","change":"v2.2.3 - OCR via OCR.space API REST (remove Tesseract.js/WebWorker)"}
+{"version":"2.2.4","build":"20260906-v2.2.4","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-06","change":"v2.2.4 - OCR via proxy /api/ocr (Vercel serverless, sem CORS)"}

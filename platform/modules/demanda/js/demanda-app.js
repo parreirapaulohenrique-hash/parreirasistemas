@@ -366,30 +366,19 @@ const DemandaApp = (function() {
                     cv.getContext("2d").drawImage(imgEl, 0, 0, cv.width, cv.height);
                     var base64 = cv.toDataURL("image/jpeg", 0.85);
 
-                    // OCR.space API - REST, sem Web Worker, sem WASM
-                    var formData = new FormData();
-                    formData.append("base64Image", base64);
-                    formData.append("apikey",  "helloworld");
-                    formData.append("language", "por");
-                    formData.append("isTable",  "true");
-                    formData.append("OCREngine", "2");
-
-                    fetch("https://api.ocr.space/parse/image", {
-                        method: "POST",
-                        body: formData
+                    // Envia para proxy local /api/ocr (resolve CORS)
+                    fetch("/api/ocr", {
+                        method:  "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body:    JSON.stringify({ base64: base64 })
                     }).then(function(r) { return r.json(); }).then(function(data) {
                         if (status) status.style.display = "none";
-                        if (data.IsErroredOnProcessing) {
-                            throw new Error(data.ErrorMessage || "OCR retornou erro");
-                        }
-                        var texto = "";
-                        if (data.ParsedResults && data.ParsedResults.length > 0) {
-                            texto = (data.ParsedResults[0].ParsedText || "").trim();
-                        }
+                        if (data.error) throw new Error(data.error);
+                        var texto = (data.text || "").trim();
                         if (ta) { ta.value = texto; ta.placeholder = ""; }
-                        _toast(texto.length > 5 ? "\u2713 Texto extraido! Revise e clique em Processar." : "Texto extraido com baixa confianca. Revise.", texto.length > 5 ? "success" : "warning");
+                        _toast(texto.length > 5 ? "\u2713 Texto extraido! Revise e clique em Processar." : "Pouco texto reconhecido. Revise.", texto.length > 5 ? "success" : "warning");
                     }).catch(function(err) {
-                        console.error("[OCR.space]", err);
+                        console.error("[OCR]", err);
                         if (status) status.style.display = "none";
                         if (ta) { ta.value = ""; ta.placeholder = "Falha no OCR. Digite o texto manualmente."; }
                         _toast("Falha OCR: " + (err.message || "verifique a conexao"), "error");
