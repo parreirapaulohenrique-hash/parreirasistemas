@@ -1,1 +1,1 @@
-{"version":"2.2.7","build":"20260906-v2.2.7","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-06","change":"v2.2.7 - Parser tabular: detecta colunas Cod Item / Denominacao / Qtde do OCR"}
+{"version":"2.2.8","build":"20260906-v2.2.8","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-06","change":"v2.2.8 - fix Firestore path: CONFIG_COL/sequence (5 seg) -> CONFIG_COL (4 seg)"}

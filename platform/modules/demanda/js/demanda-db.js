@@ -30,7 +30,7 @@ const DemandaDB = (() => {
     // ── Geração de código sequencial legível ─────────────────
     async function _nextCodigo() {
         const db    = _db();
-        const ref   = db.doc(`${CONFIG_COL}/sequence`);
+        const ref   = db.doc(`${CONFIG_COL}`);  // 4 segmentos — documento valido
         const snap  = await ref.get();
         const next  = ((snap.exists ? snap.data().lastDemanda : 0) || 0) + 1;
         await ref.set({ lastDemanda: next }, { merge: true });
