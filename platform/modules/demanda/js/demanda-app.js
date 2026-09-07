@@ -291,15 +291,16 @@ const DemandaApp = (function() {
             // Revoga URL anterior se existir
             if (_pdfBlobUrl) { try { URL.revokeObjectURL(_pdfBlobUrl); } catch(_) {} }
             _pdfBlobUrl = URL.createObjectURL(file);
-            // Abre o PDF em nova aba (sem restrições CSP de blob:)
-            window.open(_pdfBlobUrl, "_blank");
-            // Mostra modal com campo de cole
+            // Mostra modal com botão para abrir em nova aba
             var modal = document.getElementById("modalImportPDF");
             var fname = document.getElementById("pdfFileName");
             var ta    = document.getElementById("pdfTextoColar");
+            var btn   = document.getElementById("btnAbrirPdfNovaAba");
             if (!modal) { _toast("Modal PDF nao encontrado.", "error"); return; }
             if (fname) fname.textContent = file.name;
             if (ta)    ta.value = "";
+            // Atualiza o href do botão âncora diretamente (não abre automaticamente)
+            if (btn) { btn.href = _pdfBlobUrl; }
             modal.style.display = "flex";
         };
         inp.click();

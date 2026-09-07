@@ -671,15 +671,21 @@
             <div class="modal-body" style="padding:1.25rem;display:grid;grid-template-columns:1fr 1.4fr;gap:1rem;align-items:start">
                 <div style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:10px;padding:1.5rem;text-align:center">
                     <span class="material-icons-round" style="font-size:3rem;color:#ef4444;display:block;margin-bottom:.75rem">picture_as_pdf</span>
-                    <p style="font-size:.88rem;font-weight:600;color:var(--text-primary);margin:0 0 .5rem">PDF aberto em nova aba</p>
-                    <p style="font-size:.78rem;color:var(--text-secondary);margin:0 0 1rem">Use Ctrl+A para selecionar tudo, depois Ctrl+C para copiar o texto.</p>
+                    <p style="font-size:.88rem;font-weight:600;color:var(--text-primary);margin:0 0 .75rem">PDF selecionado</p>
+                    <!-- Botao ancora: unico jeito confiavel de abrir nova aba sem popup-blocker -->
+                    <a id="btnAbrirPdfNovaAba" href="#" target="_blank" rel="noopener"
+                       style="display:inline-flex;align-items:center;gap:.4rem;padding:.55rem 1rem;background:#ef4444;color:#fff;border-radius:8px;font-size:.83rem;font-weight:600;text-decoration:none;margin-bottom:1rem">
+                        <span class="material-icons-round" style="font-size:.95rem">open_in_new</span>
+                        Abrir PDF em nova aba
+                    </a>
                     <div style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:.65rem;font-size:.75rem;color:#a5b4fc;text-align:left;line-height:1.6">
-                        <strong>Passo a passo:</strong><br>
-                        1. Na nova aba, selecione o texto (Ctrl+A)<br>
+                        <strong>Apos abrir o PDF:</strong><br>
+                        1. Selecione o texto (Ctrl+A)<br>
                         2. Copie (Ctrl+C)<br>
                         3. Cole no campo ao lado<br>
                         4. Clique em <strong>Processar Itens</strong>
                     </div>
+                </div>
                 </div>
                 <div style="display:flex;flex-direction:column;gap:.5rem">
                     <label for="pdfTextoColar" style="font-size:.78rem;color:var(--text-secondary);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Cole o texto do PDF aqui</label>
