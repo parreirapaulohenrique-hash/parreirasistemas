@@ -1,1 +1,1 @@
-{"version":"2.2.8","build":"20260906-v2.2.8","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-06","change":"v2.2.8 - fix Firestore path: CONFIG_COL/sequence (5 seg) -> CONFIG_COL (4 seg)"}
+{"version":"2.2.9","build":"20260907-v2.2.9","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-07","change":"v2.2.9 - Parser: padrao DESCRICAO/CODIGO, filtro UN/.100.997, qtde 2,00000"}

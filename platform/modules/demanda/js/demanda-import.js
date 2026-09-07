@@ -17,7 +17,17 @@
 const DemandaImport = (() => {
 
     // Palavras que indicam linha de cabeçalho / título — devem ser ignoradas
-    const SKIP_PATTERNS = /^(cod\.?\s*item|denominação|denomina|quantidade|qtde?|referencia|descrição|descri|titulo|título|peças|pecas|trator|produto|marca|obs|n[°º]|item|ref|seq|#)$/i;
+    // Linhas a ignorar: cabecalhos, unidades (UN), codigos de centro de custo (.100.997), pontos isolados
+    const SKIP_PATTERNS = /^(cod\.?\s*item|denominação|denomina|quantidade|qtde?|referencia|descrição|descri|titulo|título|peças|pecas|trator|produto|marca|obs|n[°º]|item|ref|seq|#|un|und|unid\.?)$/i;
+    // Padrao de centro de custo ERP: .100.997, 100.997, :100.997 — linha de ruido
+    function _isNoiseLine(s) {
+        s = s.trim();
+        if (SKIP_PATTERNS.test(s))     return true;   // cabecalho
+        if (/^[.:,]?\d{3}[.,]\d{3}$/.test(s)) return true; // .100.997 / 100,997
+        if (/^[.:,]?\d+([.,]\d+)+$/.test(s) && s.length <= 12) return true; // numeros isolados tipo preco
+        if (/^\.$/.test(s))            return true;   // ponto isolado
+        return false;
+    }
 
     function parseText(text) {
         if (!text || !text.trim()) return [];
@@ -133,43 +143,63 @@ const DemandaImport = (() => {
      */
     function _parseLinha(linha) {
         linha = linha.replace(/^[-•*·]\s*/, '').replace(/^\d+[.)]\s*/, '').trim();
-        if (!linha || SKIP_PATTERNS.test(linha)) return null;
+        if (!linha || _isNoiseLine(linha)) return null;
 
         let qtde = 1;
-        let resto = linha;
-
-        // Quantidade no início: "2 rolamento 6208"
-        const qtdInicio = linha.match(/^(\d+(?:[.,]\d+)?)\s*(?:x|pcs?|un|unid\.?|peças?|pç)?\s+(.+)$/i);
-        if (qtdInicio) {
-            qtde  = parseFloat(qtdInicio[1].replace(',', '.')) || 1;
-            resto = qtdInicio[2].trim();
-        }
-
-        // Detecta referência
-        const refPatterns = [
-            /\b([A-Z]{1,4}[-\s]?\d{3,}[A-Z0-9\-\/]*)\b/i,
-            /\b(\d{3,}[A-Z0-9\-\/]{2,})\b/i,
-            /\b([A-Z]{2,}\d{3,})\b/i,
-        ];
-
         let ref  = '';
-        let desc = resto;
+        let desc = linha;
 
-        for (const pat of refPatterns) {
-            const m = resto.match(pat);
-            if (m) {
-                ref  = m[1].toUpperCase().trim();
-                desc = resto.replace(m[0], '').trim().replace(/^[,\s]+/, '').replace(/[,\s]+$/, '');
-                break;
+        // ── Padrao John Deere: "DESCRICAO;MARCA/CODIGO" ou "DESCRICAO/CODIGO" ──
+        // Referencia eh o segmento apos a ULTIMA barra, se parecer um codigo de peca
+        const slashIdx = linha.lastIndexOf('/');
+        if (slashIdx > 0) {
+            const candidateRef = linha.slice(slashIdx + 1).trim();
+            if (candidateRef.length >= 3 && /^[A-Z0-9][A-Z0-9\-]{2,}$/i.test(candidateRef)) {
+                ref  = candidateRef.toUpperCase();
+                desc = linha.slice(0, slashIdx).trim();
+                // remove sufixo de marca tipo ";JOHN DEERE" do final da descricao
+                desc = desc.replace(/[;,]\s*john\s*deere\s*$/i, '').trim();
             }
         }
 
-        // Quantidade no FINAL da descrição: "Junta 1" → desc=Junta, qtde=1
+        // ── Quantidade no INICIO: "2,00000 ROLAMENTO" ou "2 rolamento" ──
+        // Formato ERP: 2,00000 (virgula decimal + zeros) — normaliza para inteiro
+        const qtdInicio = linha.match(/^(\d+(?:[.,]\d+)?)\s*(?:x|pcs?|un(?:id)?|peças?|pç)?\s+(.+)$/i);
+        if (qtdInicio) {
+            const qv = parseFloat(qtdInicio[1].replace(',', '.'));
+            if (qv > 0 && qv < 10000) {
+                qtde  = Math.round(qv) || 1;   // 2,00000 → 2
+                // so usa como quantidade se nao parseou via slash
+                if (!ref) desc = qtdInicio[2].trim();
+            }
+        }
+
+        // ── Fallback: detecta referencia por padrao alfanumerico ──
+        if (!ref) {
+            const refPatterns = [
+                /\b([A-Z]{1,4}[-\s]?\d{3,}[A-Z0-9\-]*)\b/i,
+                /\b(\d{3,}[A-Z0-9\-]{2,})\b/i,
+                /\b([A-Z]{2,}\d{3,})\b/i,
+            ];
+            for (const pat of refPatterns) {
+                const m = desc.match(pat);
+                if (m) {
+                    ref  = m[1].toUpperCase().trim();
+                    desc = desc.replace(m[0], '').trim().replace(/^[,\s]+/, '').replace(/[,\s]+$/, '');
+                    break;
+                }
+            }
+        }
+
+        // Quantidade no FINAL da descricao (tabela foto): "Junta 1"
         if (!qtdInicio && desc) {
             const qtdFinal = desc.match(/^(.+?)\s+(\d+(?:[.,]\d+)?)\s*$/);
-            if (qtdFinal) {
-                desc = qtdFinal[1].trim();
-                qtde = parseFloat(qtdFinal[2].replace(',', '.')) || 1;
+            if (qtdFinal && !_isNoiseLine(qtdFinal[1])) {
+                const qf = parseFloat(qtdFinal[2].replace(',', '.'));
+                if (qf > 0 && qf < 10000) {
+                    desc = qtdFinal[1].trim();
+                    qtde = Math.round(qf) || 1;
+                }
             }
         }
 
@@ -177,7 +207,7 @@ const DemandaImport = (() => {
 
         return {
             refOriginal:    ref,
-            descOriginal:   desc || resto,
+            descOriginal:   desc || linha,
             qtdeSolicitada: qtde,
             obs:            '',
             incerteza:      !ref,
