@@ -276,6 +276,8 @@ const DemandaApp = (function() {
     // IMPORT PDF (iframe nativo do browser)
     // ════════════════════════════════════════════════════════
 
+    var _pdfBlobUrl = null;
+
     function _abrirImportPDF() {
         var inp = document.createElement("input");
         inp.type = "file";
@@ -286,32 +288,39 @@ const DemandaApp = (function() {
             var file = inp.files[0];
             document.body.removeChild(inp);
             if (!file) return;
-            var url = URL.createObjectURL(file);
-            var modal  = document.getElementById("modalImportPDF");
-            var iframe = document.getElementById("pdfIframe");
-            var fname  = document.getElementById("pdfFileName");
-            if (!modal || !iframe) { _toast("Modal PDF nao encontrado.", "error"); return; }
+            // Revoga URL anterior se existir
+            if (_pdfBlobUrl) { try { URL.revokeObjectURL(_pdfBlobUrl); } catch(_) {} }
+            _pdfBlobUrl = URL.createObjectURL(file);
+            // Abre o PDF em nova aba (sem restrições CSP de blob:)
+            window.open(_pdfBlobUrl, "_blank");
+            // Mostra modal com campo de cole
+            var modal = document.getElementById("modalImportPDF");
+            var fname = document.getElementById("pdfFileName");
+            var ta    = document.getElementById("pdfTextoColar");
+            if (!modal) { _toast("Modal PDF nao encontrado.", "error"); return; }
             if (fname) fname.textContent = file.name;
-            iframe.src = url;
+            if (ta)    ta.value = "";
             modal.style.display = "flex";
-            _toast("PDF carregado! Selecione o texto e copie para importar.", "info");
         };
         inp.click();
     }
 
     function _fecharImportPDF() {
-        var modal  = document.getElementById("modalImportPDF");
-        var iframe = document.getElementById("pdfIframe");
-        if (iframe) { try { URL.revokeObjectURL(iframe.src); } catch(_) {} iframe.src = ""; }
+        var modal = document.getElementById("modalImportPDF");
         if (modal) modal.style.display = "none";
     }
 
     function _copiarDoPDF() {
+        var ta = document.getElementById("pdfTextoColar");
+        if (!ta || !ta.value.trim()) { _toast("Cole o texto do PDF antes de processar.", "warning"); return; }
+        var texto = ta.value.trim();
         _fecharImportPDF();
-        var ta = document.getElementById("textareaImport"); if (ta) ta.value = "";
+        var taImport = document.getElementById("textareaImport");
+        if (taImport) taImport.value = texto;
         _openModal("modalTexto");
-        _toast("Cole aqui o texto copiado do PDF e clique em Processar.", "info");
+        _toast("Texto do PDF carregado! Clique em Processar.", "info");
     }
+
 
     // ════════════════════════════════════════════════════════
     // IMPORT FOTO / PRINT (camera ou galeria + transcricao)
