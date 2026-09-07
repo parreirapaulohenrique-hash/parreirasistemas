@@ -337,61 +337,67 @@ const DemandaApp = (function() {
             var file = inp.files[0];
             document.body.removeChild(inp);
             if (!file) return;
-
             var modal  = document.getElementById("modalImportFoto");
-            var img    = document.getElementById("fotoPreview");
+            var imgEl  = document.getElementById("fotoPreview");
             var ta     = document.getElementById("fotoTranscricao");
             var status = document.getElementById("fotoOcrStatus");
             var msg    = document.getElementById("fotoOcrMsg");
             var pct    = document.getElementById("fotoOcrPct");
-            if (!modal || !img) { _toast("Modal Foto nao encontrado.", "error"); return; }
-
-            // Converte para data URL (base64) — unico formato que funciona no Web Worker do Tesseract
+            if (!modal || !imgEl) { _toast("Modal Foto nao encontrado.", "error"); return; }
+            if (ta)  { ta.value = ""; ta.placeholder = "Carregando imagem..."; }
+            modal.style.display = "flex";
             var reader = new FileReader();
+            reader.onerror = function() { _toast("Erro ao ler arquivo.", "error"); };
             reader.onload = function(ev) {
                 var dataUrl = ev.target.result;
-                img.src = dataUrl;
-                if (ta)  { ta.value = ""; ta.placeholder = "Extraindo texto da imagem..."; }
-                modal.style.display = "flex";
-
-                // Verifica disponibilidade do Tesseract
-                if (typeof Tesseract === "undefined") {
-                    if (ta) { ta.placeholder = "OCR indisponivel. Digite o texto manualmente."; }
-                    if (status) status.style.display = "none";
-                    _toast("OCR nao carregado. Verifique a conexao.", "warning");
-                    return;
-                }
-
-                // Mostra progress
-                if (status) status.style.display = "flex";
-                if (msg) msg.textContent = "Inicializando OCR...";
-                if (pct) pct.textContent = "0%";
-
-                // OCR com ingles (mais estavel; le codigos alfanumericos e descricoes bem)
-                Tesseract.recognize(dataUrl, "eng", {
-                    logger: function(m) {
-                        if (!msg || !pct) return;
-                        if (m.status === "loading tesseract core")       { msg.textContent = "Carregando motor..."; }
-                        else if (m.status === "loading language traineddata") { msg.textContent = "Carregando idioma..."; }
-                        else if (m.status === "recognizing text") {
-                            msg.textContent = "Lendo imagem...";
-                            pct.textContent = Math.round((m.progress||0)*100) + "%";
-                        }
+                imgEl.onload = function() {
+                    var maxDim = 1200;
+                    var w = imgEl.naturalWidth || 800;
+                    var h = imgEl.naturalHeight || 600;
+                    var ratio = Math.min(maxDim / w, maxDim / h, 1);
+                    var cv = document.createElement("canvas");
+                    cv.width  = Math.round(w * ratio);
+                    cv.height = Math.round(h * ratio);
+                    cv.getContext("2d").drawImage(imgEl, 0, 0, cv.width, cv.height);
+                    var imgComp = cv.toDataURL("image/jpeg", 0.85);
+                    if (typeof Tesseract === "undefined") {
+                        if (ta) ta.placeholder = "OCR nao carregado. Digite manualmente.";
+                        _toast("Tesseract nao disponivel.", "warning");
+                        return;
                     }
-                }).then(function(result) {
-                    var texto = (result.data && result.data.text) ? result.data.text.trim() : "";
-                    if (ta) { ta.value = texto; ta.placeholder = ""; }
-                    if (status) status.style.display = "none";
-                    _toast(texto.length > 5 ? "\u2713 Texto extra\u00eddo! Revise e clique em Processar." : "Pouco texto reconhecido. Edite manualmente.", texto.length > 5 ? "success" : "warning");
-                }).catch(function(err) {
-                    console.error("[OCR erro]", err);
-                    if (status) status.style.display = "none";
-                    if (ta) { ta.value = ""; ta.placeholder = "Falha no OCR. Digite o texto manualmente."; }
-                    _toast("Falha no OCR. Digite o texto manualmente.", "error");
-                });
+                    if (status) status.style.display = "flex";
+                    if (msg) msg.textContent = "Inicializando OCR...";
+                    if (pct) pct.textContent = "0%";
+                    if (ta)  ta.placeholder = "Extraindo texto...";
+                    Tesseract.recognize(imgComp, "eng", {
+                        workerPath: "https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/worker.min.js",
+                        langPath:   "https://cdn.jsdelivr.net/gh/naptha/tessdata@gh-pages/4.0.0/",
+                        corePath:   "https://cdn.jsdelivr.net/npm/tesseract.js-core@4/tesseract-core.wasm.js",
+                        logger: function(m) {
+                            if (!msg || !pct) return;
+                            if (m.status === "loading tesseract core")           { msg.textContent = "Carregando motor..."; }
+                            else if (m.status === "loading language traineddata") { msg.textContent = "Carregando idioma..."; }
+                            else if (m.status === "recognizing text") {
+                                msg.textContent = "Lendo imagem...";
+                                pct.textContent = Math.round((m.progress||0)*100) + "%";
+                            }
+                        }
+                    }).then(function(result) {
+                        var texto = (result.data && result.data.text) ? result.data.text.trim() : "";
+                        if (ta) { ta.value = texto; ta.placeholder = ""; }
+                        if (status) status.style.display = "none";
+                        _toast(texto.length > 5 ? "\u2713 Texto extraido!" : "Texto com baixa confianca. Revise.", texto.length > 5 ? "success" : "warning");
+                    }).catch(function(err) {
+                        console.error("[OCR]", err);
+                        if (status) status.style.display = "none";
+                        if (ta) { ta.value = ""; ta.placeholder = "Falha: " + (err.message||"OCR indisponivel") + ". Digite manualmente."; }
+                        _toast("Falha OCR: " + (err.message || "erro desconhecido"), "error");
+                    });
+                };
+                imgEl.onerror = function() { _toast("Imagem invalida.", "error"); };
+                imgEl.src = dataUrl;
             };
-            reader.onerror = function() { _toast("Erro ao ler o arquivo de imagem.", "error"); };
-            reader.readAsDataURL(file);  // <- base64, sem blob:
+            reader.readAsDataURL(file);
         };
         inp.click();
     }
