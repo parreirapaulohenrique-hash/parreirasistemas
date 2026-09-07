@@ -1,0 +1,1 @@
+{"version":"2.4.2","build":"20260907-v2.4.2","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-07","change":"v2.4.2 - fix critico: DEMANDS_COL corrigido para 5 segmentos (colecao Firestore valida)"}

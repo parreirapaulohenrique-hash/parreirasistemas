@@ -95,6 +95,8 @@ window.ParreiraAuth = (function () {
             ts:         Date.now()
         };
         sessionStorage.setItem('parreira_session', JSON.stringify(sessao));
+        // Fix cross-tab: salva tambem no localStorage para abas abertas via window.open
+        try { localStorage.setItem('parreira_session_ls', JSON.stringify(sessao)); } catch(_) {}
 
         // v3.22.17 FIX: QuotaExceededError — libera dados grandes antes de salvar sessão
         function _safeSetItem(key, value) {
@@ -146,6 +148,7 @@ window.ParreiraAuth = (function () {
             } catch(e) {}
         }
         sessionStorage.removeItem('parreira_session');
+        try { localStorage.removeItem('parreira_session_ls'); } catch(_) {}
         localStorage.removeItem('logged_user');
         localStorage.removeItem('platform_user_logged');
         // Redireciona preservando o módulo correto
@@ -154,8 +157,19 @@ window.ParreiraAuth = (function () {
 
     // ─── SESSÃO ───────────────────────────────────────────────────────────────
     function getSessao() {
-        try { return JSON.parse(sessionStorage.getItem('parreira_session') || 'null'); }
-        catch { return null; }
+        try {
+            // Tenta sessionStorage primeiro (sessão da aba atual)
+            const ss = JSON.parse(sessionStorage.getItem('parreira_session') || 'null');
+            if (ss) return ss;
+            // Fallback: localStorage (nova aba aberta via window.open)
+            const ls = JSON.parse(localStorage.getItem('parreira_session_ls') || 'null');
+            if (ls) {
+                // Replica para sessionStorage desta aba
+                sessionStorage.setItem('parreira_session', JSON.stringify(ls));
+                return ls;
+            }
+            return null;
+        } catch { return null; }
     }
 
     function isLogado() {

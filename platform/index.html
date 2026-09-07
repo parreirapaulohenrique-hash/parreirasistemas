@@ -129,6 +129,26 @@
                 <p>Gestão financeira, dashboard, importação Maxdata e projeções.</p>
                 <span class="module-status active">✅ Disponível</span>
             </div>
+
+            <!-- Inteligência de Demanda — NOVO -->
+            <div class="module-card" onclick="openModule('demanda')" style="border-color:rgba(99,102,241,.3)">
+                <div class="module-icon" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">
+                    <span class="material-icons-round">insights</span>
+                </div>
+                <h3>Intelig. Demanda</h3>
+                <p>Captura, rastreamento e inteligência de demanda comercial e pré-venda.</p>
+                <span class="module-status active">✅ Disponível</span>
+            </div>
+
+            <!-- MAXCRM Campo — NOVO -->
+            <div class="module-card module-maxcrm" onclick="openModule('prospeccao')" style="border-color:rgba(225,29,72,.3)">
+                <div class="module-icon" style="background: linear-gradient(135deg, #e11d48 0%, #9f1239 100%);">
+                    <span class="material-icons-round">add_location_alt</span>
+                </div>
+                <h3>MAXCRM Campo</h3>
+                <p>Prospecção presencial, visitas a campo, CRM e inteligência comercial territorial.</p>
+                <span class="module-status active" style="background:rgba(225,29,72,.15);color:#e11d48">🎯 Disponível</span>
+            </div>
         </div>
     </main>
 
@@ -240,6 +260,12 @@
                     // Tenants que NÃO são 'parreira' não têm acesso ao hub.
                     // São redirecionados direto para o módulo do seu tenant.
                     if (sessao.tenantId && sessao.tenantId !== 'parreira') {
+                        // Se ha parametro ?redirect= (ex: vindo de um modulo), honra o redirect
+                        const redirectParam = new URLSearchParams(window.location.search).get('redirect');
+                        if (redirectParam) {
+                            window.location.href = redirectParam;
+                            return;
+                        }
                         const allTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
                         const tenant = allTenants.find(t => t.id === sessao.tenantId);
                         const slug = tenant?.slug || sessao.tenantId;
@@ -252,6 +278,8 @@
                     // SEMPRE sincroniza localStorage com a sessão ParreiraAuth
                     localStorage.setItem('logged_user', JSON.stringify({ name: sessao.nome, role: sessao.role, login: sessao.login }));
                     localStorage.setItem('app_tenant_id', sessao.tenantId);
+                    // Fix cross-tab: garante parreira_session_ls para módulos em nova aba
+                    try { localStorage.setItem('parreira_session_ls', JSON.stringify(sessao)); } catch(_) {}
 
                     // Painel Admin: visível apenas para role admin ou master
                     const isMasterRole = ['admin', 'master'].includes((sessao.role || '').toLowerCase());
@@ -273,6 +301,12 @@
                     return;
                 }
                 renderUserInfo(user);
+                // Fix cross-tab: recria parreira_session_ls a partir do localStorage para sessões antigas
+                if (!localStorage.getItem('parreira_session_ls')) {
+                    const ls_sessao = { login: user.login || user.name, nome: user.name, role: user.role,
+                        pin: '', tenantId: tenant, tenantNome: tenant, modulos: [], moduloAtivo: 'portal', ts: Date.now() };
+                    try { localStorage.setItem('parreira_session_ls', JSON.stringify(ls_sessao)); } catch(_) {}
+                }
                 // Painel Admin: oculto se não for admin/master
                 const isMasterRole = ['admin', 'master'].includes((user.role || '').toLowerCase());
                 const masterCard = document.querySelector('.module-master');
@@ -333,6 +367,8 @@
                     ts:         Date.now()
                 };
                 sessionStorage.setItem('parreira_session', JSON.stringify(sessao));
+                // Fix cross-tab: módulos abertos em nova aba (window.open) precisam de localStorage
+                try { localStorage.setItem('parreira_session_ls', JSON.stringify(sessao)); } catch(_) {}
 
                 // Show UI
                 document.getElementById('loginOverlay').style.display = 'none';
@@ -407,6 +443,12 @@
                     break;
                 case 'wms-coletor':
                     window.open(base + 'wms-coletor/index.html', '_blank');
+                    break;
+                case 'demanda':
+                    window.open(window.location.origin + '/demanda', '_blank');
+                    break;
+                case 'prospeccao':
+                    window.open(base + 'prospeccao/index.html', '_blank');
                     break;
             }
         }

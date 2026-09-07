@@ -1,8 +1,8 @@
-{
+﻿{
     "module": "wms-coletor",
     "name": "Parreira WMS Coletor",
-    "version": "1.1.0",
-    "date": "2026-02-12",
-    "last_change": "4 telas funcionais: Recebimento, Armazenar, Separar, Inventário",
-    "build": "20260212.01"
+    "version": "3.18.8",
+    "date": "2026-09-01",
+    "last_change": "v3.18.8 - Adicionado Botao de Atualizacao Rapida diretamente no cabecalho (Top Bar) e Banner em Destaque no topo da Home.",
+    "build": "20260901.01"
 }

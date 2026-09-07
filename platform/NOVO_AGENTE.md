@@ -29,6 +29,7 @@ A arquitetura moderna reside na pasta `/platform`. (A antiga subpasta `/web` ain
     *   **sales-force**: Força de Vendas Mobile (PWA para RCA em campo, offline-first com IndexedDB).
     *   **wms**: Warehouse Management System (Gestão de Armazéns).
     *   **wms-coletor**: Versão do WMS estritamente otimizada para coletores móveis (Zebra/Android) utilizados na operação de piso.
+    *   **demanda**: Módulo de Inteligência de Demanda, Pré-venda e Venda Perdida. Tenant: `centralpecas` (Central Rolamentos CTR). Auth via MaxData JWT (usuário + filial). Firestore: `tenants/centralpecas/demanda/`. Stack: Vanilla JS, 5 módulos JS (demanda-states, demanda-db, demanda-import, demanda-search, demanda-app). Adicionado em v3.19.0.
 *   **`platform/shared/integrations/`** (v3.15.0+): Camada centralizada de integração com ERPs externos.
     *   **`erp-adapter.js`**: Contrato genérico (interface). Todo ERP deve implementar `syncClients()`, `syncProducts()`, `syncOrders()`, `syncNFs()`, `confirmDispatch()`.
     *   **`erp-registry.js`**: Registro multi-tenant. Lê do Firestore qual ERP cada tenant usa e instancia o adaptador correto. Token fica em `sessionStorage`.
@@ -309,10 +310,19 @@ Modifique o controle de versão do sistema. Atualize o arquivo `platform/version
 > A versão atual é a fonte da verdade. Incremente a partir dela (ex: `3.16.0` → `3.16.1`).
 > Ignorar esta regra gera commits com versões erradas e histórico inconsistente.
 
-> 🚨 **REGRA OBRIGATÓRIA — SEMPRE INFORMAR A VERSÃO AO USTUÁRIO**
-> Ao concluir qualquer deploy (mesmo pequenos ajustes de UI ou texto), **sempre informe ao usuário a versão gerada** no formato:
-> `📦 Deploy — v3.X.Y | [descrição resumida da melhoria]`
-> Nunca finalize um deploy sem comunicar explicitamente o número da versão.
+> 🚨 **REGRA OBRIGATÓRIA — SEMPRE INFORMAR MÓDULO E VERSÃO AO USUÁRIO**
+> Ao concluir qualquer deploy (mesmo pequenos ajustes de UI ou texto), **sempre informe ao usuário o módulo atualizado e a versão gerada**, no seguinte formato de tabela:
+>
+> | Campo | Valor |
+> |---|---|
+> | **Módulo** | `nome-do-modulo` |
+> | **Arquivo** | `nome-do-arquivo.js` (ou `index.html`, etc.) |
+> | **Versão** | `v1.X.Y` |
+> | **Commit** | `hash curto` |
+> | **Branch** | `staging → main` |
+>
+> Nunca finalize um deploy sem comunicar explicitamente o módulo, o arquivo alterado e o número da versão.
+> Regra registrada em 2026-09-04 a pedido do usuário (Paulo Parreira).
 
 ### Passo 5: Subir Deploy para Homologação (`deploy.ps1`)
 Abra o terminal do PowerShell na raiz do projeto (`C:\Users\Paulo H Parreira\.gemini\antigravity\scratch`) e rode o comando:
@@ -347,6 +357,7 @@ Abra o terminal do PowerShell na raiz do projeto (`C:\Users\Paulo H Parreira\.ge
 
 | Módulo | Pasta | Política de Deploy | Rationale |
 |---|---|---|---|
+| **Intelig. Demanda** | `demanda` | 🟢 **Deploy direto em produção** — pode rodar `deploy.ps1 + promote.ps1` na mesma sequência sem aprovação intermediária | Autorizado pelo usuário em 2026-09-04. Iterações frequentes liberadas. |
 | **Bússola Log** | `dispatch` | 🔴 **Staging obrigatório** — aguardar aprovação explícita antes do `promote.ps1` | Operação logística em tempo real. Bugs afetam clientes e motoristas diretamente. |
 | **Bússola Gestão** | `erp-consultoria` | 🟢 **Deploy direto em produção** — pode rodar `deploy.ps1 + promote.ps1` na mesma sequência sem aprovação intermediária | Módulo de gestão interna, sem impacto operacional imediato. Iterações frequentes autorizadas pelo usuário em 2026-08-20. |
 | **WMS / WMS Coletor** | `wms`, `wms-coletor` | 🟢 **Deploy direto em produção** — rodar `deploy.ps1 + promote.ps1` na mesma sequência até segunda ordem | Atualizações e melhorias diretas em produção autorizadas pelo usuário em 2026-09-01. |
@@ -444,3 +455,34 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 | **11.8.x** | 2026-03 | Dispatch: ferramenta de arquivamento, faixa de status offline/Firebase, sync pendente |
 
 > ✅ **Compromisso do agente:** A partir da v11.10.0, este documento é atualizado a cada deploy junto com o `version.json`. A versão é **por plataforma** (não por módulo). A cada entrega, o agente informa a versão no formato `📦 Deploy — vX.Y.Z`.
+
+---
+
+## 8. Armadilhas Conhecidas (Gotchas)
+
+> ⚠️ Erros que já aconteceram e **não devem se repetir**. Leia antes de editar arquivos críticos.
+
+### 🔴 BOM no vercel.json — quebra todos os deploys
+
+**O que aconteceu:** Em 2026-09-01, o `vercel.json` foi salvo com um BOM (`﻿`, bytes `EF BB BF`) no início do arquivo. O Vercel rejeita qualquer `vercel.json` com BOM com o erro genérico `Invalid vercel.json file provided`. Isso quebrou **todos** os deploys por 3 dias.
+
+**Causa raiz:** PowerShell 5.x (`Set-Content -Encoding UTF8`) adiciona BOM por padrão. Editores como Notepad também adicionam BOM ao salvar JSON.
+
+**Regra:** Nunca escrever arquivos JSON via PowerShell com `Set-Content -Encoding UTF8`. Usar sempre:
+```powershell
+# CORRETO — sem BOM
+$utf8NoBom = New-Object System.Text.UTF8Encoding $false
+[System.IO.File]::WriteAllText("caminho\arquivo.json", $conteudo, $utf8NoBom)
+
+# ERRADO — adiciona BOM
+$conteudo | Set-Content "caminho\arquivo.json" -Encoding UTF8
+```
+
+**Como detectar:** Verificar os primeiros bytes do arquivo. Deve ser `7B` (`{`), não `EF-BB-BF`:
+```powershell
+$bytes = [System.IO.File]::ReadAllBytes("vercel.json")
+[System.BitConverter]::ToString($bytes[0..2])  # deve ser "7B-0A-20"
+```
+
+**Fix aplicado:** 2026-09-04 — commit `dc2c2eb` removeu o BOM e restaurou os deploys.
+

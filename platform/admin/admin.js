@@ -15,18 +15,22 @@ const FIREBASE_CONFIG = {
 
 // Módulos disponíveis na plataforma
 const ALL_MODULES = [
-    { id: 'dashboard',      label: 'Painel de Despacho',   icon: 'dashboard' },
-    { id: 'quote',          label: 'Cotação de Fretes',    icon: 'request_quote' },
-    { id: 'dispatch',       label: 'Montagem de Carga',    icon: 'local_shipping' },
-    { id: 'invoice',        label: 'Conferência Fatura',   icon: 'receipt_long' },
-    { id: 'delivery_moto',  label: 'Moto Entrega',         icon: 'two_wheeler' },
-    { id: 'delivery_carro', label: 'Carro Entrega',        icon: 'directions_car' },
-    { id: 'romaneio',       label: 'Baixa de Romaneio',    icon: 'assignment_turned_in' },
-    { id: 'freight_tables', label: 'Tabelas de Frete',     icon: 'table_chart' },
-    { id: 'reports',        label: 'Relatórios & KPIs',    icon: 'bar_chart' },
-    { id: 'registrations',  label: 'Cadastros',            icon: 'people' },
-    { id: 'settings',       label: 'Configurações',        icon: 'settings' },
-    { id: 'acontec',        label: 'Integração Acontec',   icon: 'link' },
+    { id: 'dashboard',      label: 'Painel de Despacho',       icon: 'dashboard' },
+    { id: 'quote',          label: 'Cotação de Fretes',         icon: 'request_quote' },
+    { id: 'dispatch',       label: 'Montagem de Carga',         icon: 'local_shipping' },
+    { id: 'invoice',        label: 'Conferência Fatura',        icon: 'receipt_long' },
+    { id: 'delivery_moto',  label: 'Moto Entrega',              icon: 'two_wheeler' },
+    { id: 'delivery_carro', label: 'Carro Entrega',             icon: 'directions_car' },
+    { id: 'romaneio',       label: 'Baixa de Romaneio',         icon: 'assignment_turned_in' },
+    { id: 'freight_tables', label: 'Tabelas de Frete',          icon: 'table_chart' },
+    { id: 'reports',        label: 'Relatórios & KPIs',         icon: 'bar_chart' },
+    { id: 'registrations',  label: 'Cadastros',                 icon: 'people' },
+    { id: 'settings',       label: 'Configurações',             icon: 'settings' },
+    { id: 'acontec',        label: 'Integração Acontec',        icon: 'link' },
+    { id: 'wms',            label: 'WMS',                       icon: 'warehouse' },
+    { id: 'wms-coletor',    label: 'WMS Coletor',               icon: 'barcode_reader' },
+    { id: 'erp-consultoria',label: 'Bússola Gestão',            icon: 'analytics' },
+    { id: 'demanda',        label: 'Inteligência de Demanda',   icon: 'inventory_2' },
 ];
 
 // ── Estado ──

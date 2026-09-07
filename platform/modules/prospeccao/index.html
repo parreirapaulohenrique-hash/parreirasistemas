@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#e11d48">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>MAXCRM Campo</title>
+    <meta name="description" content="Prospecção Comercial em Campo — Parreira Sistemas">
+    <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <link rel="stylesheet" href="styles/maxcrm.css">
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <!-- ParreiraAuth -->
+    <script src="/platform/core/js/security-guard.js"></script>
+    <script src="/platform/core/js/session-manager.js"></script>
+    <script src="/platform/core/js/auth.js"></script>
+</head>
+<body>
+<div id="app">
+
+    <!-- ═══ TOP BAR ═══════════════════════════════════════════════════════ -->
+    <header class="top-bar">
+        <div class="top-bar-left">
+            <div class="top-bar-logo">MX</div>
+            <div>
+                <div class="top-bar-title" id="screenTitle">MAXCRM Campo</div>
+            </div>
+        </div>
+        <div class="top-bar-right">
+            <div class="gps-badge loading" id="gpsBadge">
+                <span class="material-icons-round" style="font-size:.9rem">gps_not_fixed</span> GPS...
+            </div>
+            <div class="user-badge" id="userBadge" onclick="navigateTo('perfil')">OP</div>
+        </div>
+    </header>
+
+    <!-- ═══ BARRA DE PROGRESSO DA VISITA ══════════════════════════════════ -->
+    <div class="visit-progress-bar" id="visitProgressBar">
+        <div class="visit-progress-header">
+            <span class="visit-progress-label" style="font-size:0.7rem">MODO VISITA</span>
+            <span class="visit-progress-step">1 de 12</span>
+        </div>
+        <div class="visit-progress-track">
+            <div class="visit-progress-fill" style="width:8%"></div>
+        </div>
+    </div>
+
+    <!-- ═══ STATUS DE SINCRONIZAÇÃO ═══════════════════════════════════════ -->
+    <div class="sync-status-bar" id="syncStatusBar"></div>
+
+    <!-- ═══ CONTEÚDO DAS TELAS ════════════════════════════════════════════ -->
+    <main class="screen-content">
+
+        <!-- ▌ HOME ▌──────────────────────────────────────────────────────── -->
+        <div id="screen-home" class="screen active">
+
+            <!-- Nova Visita (destaque máximo) -->
+            <button class="btn-nova-visita" onclick="navigateTo('buscar')">
+                <span class="material-icons-round">add_location_alt</span>
+                <div style="flex:1;text-align:left">
+                    <div>NOVA VISITA</div>
+                    <div style="font-size:0.72rem;font-weight:500;opacity:0.85">Localizar ou cadastrar empresa</div>
+                </div>
+                <span class="material-icons-round" style="font-size:1.2rem">arrow_forward_ios</span>
+            </button>
+
+            <!-- Grid de atalhos -->
+            <div class="home-grid">
+                <div class="home-card" onclick="navigateTo('minhas_visitas')">
+                    <span class="material-icons-round home-card-icon">assignment</span>
+                    <span class="home-card-label">Minhas Visitas</span>
+                    <span class="home-card-badge hidden" id="badgeVisitasHoje">0</span>
+                </div>
+                <div class="home-card" onclick="navigateTo('retornos')">
+                    <span class="material-icons-round home-card-icon" style="color:#f59e0b">event_available</span>
+                    <span class="home-card-label">Retornos Hoje</span>
+                    <span class="home-card-badge hidden" id="badgeRetornos" style="background:#f59e0b">0</span>
+                </div>
+                <div class="home-card" onclick="navigateTo('buscar')">
+                    <span class="material-icons-round home-card-icon" style="color:#3b82f6">search</span>
+                    <span class="home-card-label">Empresas</span>
+                    <span class="home-card-badge hidden" id="badgeEmpresas" style="background:#3b82f6">0</span>
+                </div>
+                <div class="home-card" onclick="sincronizarAgora()">
+                    <span class="material-icons-round home-card-icon" style="color:#f59e0b">sync</span>
+                    <span class="home-card-label">Pendentes</span>
+                    <span class="home-card-badge hidden" id="badgePendentes" style="background:#f59e0b">0</span>
+                </div>
+            </div>
+
+            <!-- Info do promotor -->
+            <div class="card" style="margin-top:8px">
+                <div style="display:flex;align-items:center;gap:12px">
+                    <div style="width:44px;height:44px;background:var(--grad-primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;color:white;flex-shrink:0" id="homeUserAvatar">OP</div>
+                    <div>
+                        <div style="font-weight:700;font-size:0.95rem" id="homeUserNome">Promotor</div>
+                        <div style="font-size:0.72rem;color:var(--text-secondary)" id="homeUserData"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ▌ BUSCAR EMPRESA ▌─────────────────────────────────────────────── -->
+        <div id="screen-buscar" class="screen">
+            <div class="section-header">
+                <div class="section-title">Pesquisar Empresa</div>
+                <div class="section-subtitle">CNPJ, nome, telefone ou cidade</div>
+            </div>
+            <div class="form-input-group" style="margin-bottom:12px">
+                <input type="search" class="form-input" id="buscarInput"
+                    placeholder="Buscar empresa..."
+                    autocomplete="off" autocorrect="off">
+            </div>
+            <button class="btn btn-secondary" id="btnNovaEmpresa" onclick="navigateTo('nova_empresa')" style="display:none;margin-bottom:12px">
+                <span class="material-icons-round">add_business</span> Cadastrar Nova Empresa
+            </button>
+            <div id="buscarResultados"></div>
+            <div style="height:12px"></div>
+            <button class="btn btn-secondary" onclick="navigateTo('nova_empresa')">
+                <span class="material-icons-round">add_business</span> Cadastrar Nova Empresa
+            </button>
+        </div>
+
+        <!-- ▌ NOVA EMPRESA ▌──────────────────────────────────────────────── -->
+        <div id="screen-nova_empresa" class="screen">
+            <div class="section-header">
+                <div class="section-title">Nova Empresa</div>
+                <div class="section-subtitle">Cadastre o prospect rapidamente</div>
+            </div>
+
+            <div class="card">
+                <div class="form-group">
+                    <label class="form-label">CNPJ</label>
+                    <div class="form-input-group">
+                        <input type="text" class="form-input" id="neCNPJ" placeholder="00.000.000/0000-00" maxlength="18">
+                        <button class="btn btn-secondary btn-sm" onclick="buscarCNPJ()" style="white-space:nowrap">
+                            <span class="material-icons-round" style="font-size:1rem">search</span> Buscar
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label required">Razão Social</label>
+                    <input type="text" class="form-input" id="neRazaoSocial" placeholder="Razão Social">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nome Fantasia</label>
+                    <input type="text" class="form-input" id="neNomeFantasia" placeholder="Nome Fantasia">
+                </div>
+                <div class="form-input-group" style="gap:8px;margin-bottom:14px">
+                    <div style="flex:2">
+                        <label class="form-label">Cidade</label>
+                        <input type="text" class="form-input" id="neCidade" placeholder="Cidade">
+                    </div>
+                    <div style="flex:0 0 70px">
+                        <label class="form-label">UF</label>
+                        <input type="text" class="form-input" id="neUF" placeholder="PA" maxlength="2">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Telefone</label>
+                    <input type="tel" class="form-input" id="neTelefone" placeholder="(00) 00000-0000">
+                </div>
+            </div>
+
+            <button class="btn btn-primary" onclick="cadastrarEIniciarVisita()">
+                <span class="material-icons-round">play_circle</span> Cadastrar e Iniciar Visita
+            </button>
+            <div style="height:10px"></div>
+            <button class="btn btn-secondary" onclick="apenasCADastrar()">
+                <span class="material-icons-round">save</span> Apenas Cadastrar (sem visita)
+            </button>
+            <div style="height:12px"></div>
+            <button class="btn btn-ghost" onclick="voltar()" style="width:100%">← Voltar</button>
+        </div>
+
+        <!-- ▌ TELAS DO MODO VISITA (geradas dinamicamente) ▌──────────────── -->
+        <div id="screen-visita_contato"   class="screen"></div>
+        <div id="screen-visita_perfil"    class="screen"></div>
+        <div id="screen-visita_erp"       class="screen"></div>
+        <div id="screen-visita_pontos"    class="screen"></div>
+        <div id="screen-visita_dores"     class="screen"></div>
+        <div id="screen-visita_mudancas"  class="screen"></div>
+        <div id="screen-visita_intencao"  class="screen"></div>
+        <div id="screen-visita_barreiras" class="screen"></div>
+        <div id="screen-visita_interesse" class="screen"></div>
+        <div id="screen-visita_timing"    class="screen"></div>
+        <div id="screen-visita_acao"      class="screen"></div>
+
+        <!-- ▌ RESUMO DA VISITA ▌──────────────────────────────────────────── -->
+        <div id="screen-visita_resumo" class="screen">
+            <div class="section-header">
+                <div class="section-title">Resumo da Visita</div>
+                <div class="section-subtitle">Confirme os dados antes de finalizar</div>
+            </div>
+            <div class="card">
+                <div id="conteudoResumo"></div>
+            </div>
+            <button class="btn btn-primary" style="background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 4px 20px rgba(34,197,94,0.3)" onclick="finalizarVisitaAtual()">
+                <span class="material-icons-round">check_circle</span> FINALIZAR VISITA
+            </button>
+            <div style="height:12px"></div>
+            <button class="btn btn-ghost" onclick="voltar()" style="width:100%">← Voltar e Corrigir</button>
+        </div>
+
+        <!-- ▌ MINHAS VISITAS ▌─────────────────────────────────────────────── -->
+        <div id="screen-minhas_visitas" class="screen">
+            <div class="section-header">
+                <div class="section-title">Minhas Visitas</div>
+                <div class="section-subtitle">Histórico de visitas realizadas</div>
+            </div>
+            <div id="listaMinhasVisitas">
+                <div class="loading-spinner"></div>
+            </div>
+        </div>
+
+        <!-- ▌ RETORNOS ▌───────────────────────────────────────────────────── -->
+        <div id="screen-retornos" class="screen">
+            <div class="section-header">
+                <div class="section-title">Retornos de Hoje</div>
+                <div class="section-subtitle">Ações agendadas para hoje</div>
+            </div>
+            <div id="listaRetornos">
+                <div class="empty-state">
+                    <span class="material-icons-round">event_available</span>
+                    <div class="empty-state-title">Nenhum retorno para hoje</div>
+                    <div class="empty-state-sub">Suas próximas ações aparecerão aqui</div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ═══ BOTTOM NAVIGATION ═════════════════════════════════════════════ -->
+    <nav class="bottom-nav">
+        <div class="bottom-nav-item active" data-tela="home" onclick="navigateTo('home')">
+            <span class="material-icons-round">home</span>
+            <span>Início</span>
+        </div>
+        <div class="bottom-nav-item" data-tela="buscar" onclick="navigateTo('buscar')">
+            <span class="material-icons-round">search</span>
+            <span>Empresas</span>
+        </div>
+        <div class="bottom-nav-item" style="position:relative" onclick="navigateTo('buscar')">
+            <!-- Botão central destacado -->
+            <div style="position:absolute;top:-18px;width:54px;height:54px;background:var(--grad-primary);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-primary);border:3px solid var(--bg-app)">
+                <span class="material-icons-round" style="color:white;font-size:1.5rem">add_location_alt</span>
+            </div>
+            <span style="margin-top:20px;font-size:0.62rem;font-weight:700;color:var(--primary)">Visita</span>
+        </div>
+        <div class="bottom-nav-item" data-tela="minhas_visitas" onclick="navigateTo('minhas_visitas')">
+            <span class="material-icons-round">assignment</span>
+            <span>Visitas</span>
+        </div>
+        <div class="bottom-nav-item" data-tela="retornos" onclick="navigateTo('retornos')">
+            <span class="material-icons-round">event_available</span>
+            <span>Retornos</span>
+        </div>
+    </nav>
+
+</div>
+
+<!-- Toast global -->
+<div id="toast"></div>
+<!-- Scripts -->
+<script src="js/cnpj-lookup.js"></script>
+<script src="js/maxcrm-db.js"></script>
+<script src="js/maxcrm-sync.js"></script>
+<script src="js/maxcrm-core.js"></script>
+<script src="js/maxcrm-visit.js"></script>
+
+<script>
+// ─── Callbacks extras da index ─────────────────────────────────────────────
+
+// Atualizar info do promotor na home
+document.addEventListener('DOMContentLoaded', function() {
+    var sessao = typeof ParreiraAuth !== 'undefined' ? ParreiraAuth.getSessao() : null;
+    if (sessao) {
+        var nomEl = document.getElementById('homeUserNome');
+        var avEl  = document.getElementById('homeUserAvatar');
+        var dtEl  = document.getElementById('homeUserData');
+        if (nomEl) nomEl.textContent = sessao.nome || sessao.login;
+        if (avEl)  avEl.textContent  = (sessao.nome || sessao.login || 'OP').substring(0,2).toUpperCase();
+        if (dtEl)  dtEl.textContent  = new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long' });
+    }
+});
+
+// CNPJ Lookup na tela de nova empresa
+window.buscarCNPJ = function() {
+    var cnpjEl = document.getElementById('neCNPJ');
+    var cnpj = cnpjEl ? cnpjEl.value.trim() : '';
+    if (!cnpj) {
+        window.CNPJLookup.showLookupModal(function(data) {
+            preencherFormEmpresa(data);
+        }, 'Buscar por CNPJ');
+        return;
+    }
+    if (window.CNPJLookup.isValidFormat(cnpj)) {
+        window.CNPJLookup.lookup(cnpj).then(function(data) {
+            preencherFormEmpresa(data);
+            showToast('Dados preenchidos automaticamente');
+        }).catch(function(e) {
+            showToast('CNPJ não encontrado: ' + e.message, 'error');
+        });
+    } else {
+        showToast('CNPJ inválido', 'error');
+    }
+};
+
+function preencherFormEmpresa(data) {
+    if (data.cnpj)         document.getElementById('neCNPJ').value         = data.cnpj;
+    if (data.razaoSocial)  document.getElementById('neRazaoSocial').value  = data.razaoSocial;
+    if (data.nomeFantasia) document.getElementById('neNomeFantasia').value = data.nomeFantasia;
+    if (data.cidade)       document.getElementById('neCidade').value       = data.cidade;
+    if (data.uf)           document.getElementById('neUF').value           = data.uf;
+    if (data.telefone)     document.getElementById('neTelefone').value     = data.telefone;
+}
+
+window.cadastrarEIniciarVisita = async function() {
+    var form = document.querySelector('#screen-nova_empresa');
+    var dados = {
+        cnpj:         (document.getElementById('neCNPJ')         || {}).value || '',
+        razaoSocial:  (document.getElementById('neRazaoSocial')  || {}).value || '',
+        nomeFantasia: (document.getElementById('neNomeFantasia') || {}).value || '',
+        cidade:       (document.getElementById('neCidade')       || {}).value || '',
+        uf:           (document.getElementById('neUF')           || {}).value || '',
+        telefone:     (document.getElementById('neTelefone')     || {}).value || ''
+    };
+    if (!dados.razaoSocial.trim()) { showToast('Informe a Razão Social', 'error'); return; }
+    try {
+        var empresa = await MaxCRMDB.salvarEmpresa(dados);
+        showToast('Empresa cadastrada!', 'success');
+        iniciarNovaVisita(empresa.id);
+    } catch(e) {
+        showToast('Erro ao cadastrar: ' + e.message, 'error');
+    }
+};
+
+window.apenasCADastrar = async function() {
+    var dados = {
+        cnpj:         (document.getElementById('neCNPJ')         || {}).value || '',
+        razaoSocial:  (document.getElementById('neRazaoSocial')  || {}).value || '',
+        nomeFantasia: (document.getElementById('neNomeFantasia') || {}).value || '',
+        cidade:       (document.getElementById('neCidade')       || {}).value || '',
+        uf:           (document.getElementById('neUF')           || {}).value || '',
+        telefone:     (document.getElementById('neTelefone')     || {}).value || ''
+    };
+    if (!dados.razaoSocial.trim()) { showToast('Informe a Razão Social', 'error'); return; }
+    try {
+        await MaxCRMDB.salvarEmpresa(dados);
+        showToast('Empresa cadastrada!', 'success');
+        navigateTo('buscar');
+    } catch(e) {
+        showToast('Erro: ' + e.message, 'error');
+    }
+};
+
+window.sincronizarAgora = async function() {
+    showToast('Sincronizando...');
+    var r = await MaxCRMSync.processar();
+    if (r.erros > 0) showToast(r.ok + ' sincronizados, ' + r.erros + ' erros', 'error');
+    else showToast(r.ok + ' itens sincronizados com sucesso', 'success');
+    atualizarHome();
+};
+
+// Retomar visita em andamento ao abrir
+document.addEventListener('DOMContentLoaded', async function() {
+    if (typeof MaxCRMDB === 'undefined') return;
+    // Aguarda DB inicializar
+    await new Promise(function(r) { setTimeout(r, 500); });
+    var visita = await verificarVisitaEmAndamento();
+    if (visita) {
+        var empresa = MaxCRMState.empresaAtual;
+        var nomeEmp = empresa ? (empresa.nomeFantasia || empresa.razaoSocial) : 'empresa';
+        // Banner de retomada
+        var banner = document.createElement('div');
+        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9990;background:#1a1a1a;border-bottom:2px solid var(--primary);padding:12px 16px;display:flex;align-items:center;gap:12px';
+        banner.innerHTML = '<span class="material-icons-round" style="color:var(--primary)">play_circle</span>' +
+            '<div style="flex:1"><div style="font-size:0.88rem;font-weight:700">Visita em andamento: ' + nomeEmp + '</div>' +
+            '<div style="font-size:0.72rem;color:var(--text-secondary)">Toque para continuar</div></div>' +
+            '<button class="btn btn-primary btn-sm" onclick="retornarVisita()">Continuar</button>' +
+            '<button class="btn btn-ghost btn-sm" onclick="this.parentElement.remove()">×</button>';
+        document.body.prepend(banner);
+    }
+});
+
+window.retornarVisita = function() {
+    document.querySelector('[style*="position:fixed"]') && document.querySelector('[style*="position:fixed"]').remove();
+    var etapa = (MaxCRMState.visitaAtual && MaxCRMState.visitaAtual.etapaAtual) || 'visita_contato';
+    navigateTo(etapa);
+};
+</script>
+
+</body>
+</html>
