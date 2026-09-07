@@ -375,8 +375,37 @@ const DemandaApp = (function() {
                         if (status) status.style.display = "none";
                         if (data.error) throw new Error(data.error);
                         var texto = (data.text || "").trim();
-                        if (ta) { ta.value = texto; ta.placeholder = ""; }
-                        _toast(texto.length > 5 ? "\u2713 Texto extraido! Revise e clique em Processar." : "Pouco texto reconhecido. Revise.", texto.length > 5 ? "success" : "warning");
+                        if (texto.length > 5) {
+                            // Texto suficiente: processa automaticamente e vai para conferencia
+                            _fecharImportFoto();
+                            if (typeof DemandaImport !== "undefined") {
+                                var parsed    = DemandaImport.parseText(texto);
+                                var validados = DemandaImport.validateItens(parsed);
+                                if (validados.length > 0) {
+                                    _showConferencia(validados);
+                                    _toast("\u2713 " + validados.length + " " + (validados.length === 1 ? "item" : "itens") + " reconhecidos do OCR!", "success");
+                                } else {
+                                    // Parser nao encontrou itens: mostra texto no modal de texto para revisao
+                                    if (ta) { ta.value = texto; ta.placeholder = ""; }
+                                    _fecharImportFoto();
+                                    var taImport = document.getElementById("textareaImport");
+                                    if (taImport) taImport.value = texto;
+                                    _openModal("modalTexto");
+                                    _toast("Texto extraido, mas nao foram encontrados itens no formato esperado. Revise.", "warning");
+                                }
+                            } else {
+                                // DemandaImport nao disponivel: cai no modal de texto
+                                var taImport = document.getElementById("textareaImport");
+                                if (taImport) taImport.value = texto;
+                                _fecharImportFoto();
+                                _openModal("modalTexto");
+                                _toast("Texto extraido! Revise e clique em Processar.", "info");
+                            }
+                        } else {
+                            // Pouco texto: mantém modal aberto para edicao manual
+                            if (ta) { ta.value = texto; ta.placeholder = texto.length === 0 ? "OCR nao reconheceu texto. Digite manualmente." : ""; }
+                            _toast("Pouco texto reconhecido. Revise o campo e clique em Processar.", "warning");
+                        }
                     }).catch(function(err) {
                         console.error("[OCR]", err);
                         if (status) status.style.display = "none";
@@ -404,6 +433,16 @@ const DemandaApp = (function() {
         if (!ta || !ta.value.trim()) { _toast("Aguarde o OCR ou edite o texto antes de processar.", "warning"); return; }
         var texto = ta.value.trim();
         _fecharImportFoto();
+        if (typeof DemandaImport !== "undefined") {
+            var parsed    = DemandaImport.parseText(texto);
+            var validados = DemandaImport.validateItens(parsed);
+            if (validados.length > 0) {
+                _showConferencia(validados);
+                _toast("\u2713 " + validados.length + " " + (validados.length === 1 ? "item" : "itens") + " encontrados!", "success");
+                return;
+            }
+        }
+        // Fallback: abre modal de texto
         var taImport = document.getElementById("textareaImport");
         if (taImport) taImport.value = texto;
         _openModal("modalTexto");

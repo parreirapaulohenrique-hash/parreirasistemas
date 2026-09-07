@@ -1,1 +1,1 @@
-{"version":"2.2.5","build":"20260906-v2.2.5","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-06","change":"v2.2.5 - OCR: maxDim 480px (limite helloworld), Engine=1+scale=true"}
+{"version":"2.2.6","build":"20260906-v2.2.6","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-06","change":"v2.2.6 - OCR: auto-processa texto e vai direto para conferencia sem passos intermediarios"}
