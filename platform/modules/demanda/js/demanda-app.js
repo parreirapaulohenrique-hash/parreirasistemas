@@ -337,34 +337,84 @@ const DemandaApp = (function() {
             var file = inp.files[0];
             document.body.removeChild(inp);
             if (!file) return;
-            var url   = URL.createObjectURL(file);
-            var modal = document.getElementById("modalImportFoto");
-            var img   = document.getElementById("fotoPreview");
-            var ta    = document.getElementById("fotoTranscricao");
+            var url    = URL.createObjectURL(file);
+            var modal  = document.getElementById("modalImportFoto");
+            var img    = document.getElementById("fotoPreview");
+            var ta     = document.getElementById("fotoTranscricao");
+            var status = document.getElementById("fotoOcrStatus");
+            var msg    = document.getElementById("fotoOcrMsg");
+            var pct    = document.getElementById("fotoOcrPct");
             if (!modal || !img) { _toast("Modal Foto nao encontrado.", "error"); return; }
             img.src = url;
-            if (ta) ta.value = "";
+            if (ta)  { ta.value = ""; ta.placeholder = "Extraindo texto da imagem..."; }
             modal.style.display = "flex";
+
+            // Verifica se Tesseract esta disponivel
+            if (typeof Tesseract === "undefined") {
+                if (ta) ta.placeholder = "OCR nao carregado. Digite o texto manualmente.";
+                _toast("Tesseract nao carregado. Verifique a conexao.", "warning");
+                return;
+            }
+
+            // Mostra barra de progresso
+            if (status) status.style.display = "flex";
+            if (msg)    msg.textContent = "Inicializando OCR...";
+            if (pct)    pct.textContent = "0%";
+
+            // Executa OCR (Portuguese + English para codigos e descricoes)
+            Tesseract.recognize(url, "por+eng", {
+                logger: function(m) {
+                    if (!msg || !pct) return;
+                    if (m.status === "loading tesseract core") {
+                        msg.textContent = "Carregando motor OCR...";
+                    } else if (m.status === "loading language traineddata") {
+                        msg.textContent = "Carregando idioma...";
+                    } else if (m.status === "recognizing text") {
+                        var p = Math.round((m.progress || 0) * 100);
+                        msg.textContent = "Lendo texto da imagem...";
+                        pct.textContent = p + "%";
+                    }
+                }
+            }).then(function(result) {
+                var texto = (result.data && result.data.text) ? result.data.text.trim() : "";
+                if (ta) {
+                    ta.value = texto;
+                    ta.placeholder = "";
+                }
+                if (status) status.style.display = "none";
+                if (texto.length > 5) {
+                    _toast("\u2713 Texto extra\u00eddo! Revise e clique em Processar.", "success");
+                } else {
+                    _toast("Pouco texto reconhecido. Edite manualmente se necessario.", "warning");
+                }
+            }).catch(function(err) {
+                console.error("[OCR]", err);
+                if (status) status.style.display = "none";
+                if (ta) ta.placeholder = "Erro no OCR. Digite o texto manualmente.";
+                _toast("Erro ao ler imagem. Tente outra foto ou digite manualmente.", "error");
+            });
         };
         inp.click();
     }
 
     function _fecharImportFoto() {
-        var modal = document.getElementById("modalImportFoto");
-        var img   = document.getElementById("fotoPreview");
-        if (img) { try { URL.revokeObjectURL(img.src); } catch(_) {} img.src = ""; }
-        if (modal) modal.style.display = "none";
+        var modal  = document.getElementById("modalImportFoto");
+        var img    = document.getElementById("fotoPreview");
+        var status = document.getElementById("fotoOcrStatus");
+        if (img)    { try { URL.revokeObjectURL(img.src); } catch(_) {} img.src = ""; }
+        if (status) status.style.display = "none";
+        if (modal)  modal.style.display = "none";
     }
 
     function _processarFotoTranscricao() {
         var ta = document.getElementById("fotoTranscricao");
-        if (!ta || !ta.value.trim()) { _toast("Digite os itens da foto antes de processar.", "warning"); return; }
+        if (!ta || !ta.value.trim()) { _toast("Aguarde o OCR ou edite o texto antes de processar.", "warning"); return; }
         var texto = ta.value.trim();
         _fecharImportFoto();
         var taImport = document.getElementById("textareaImport");
         if (taImport) taImport.value = texto;
         _openModal("modalTexto");
-        _toast("Texto carregado! Clique em Processar.", "info");
+        _toast("Texto carregado! Revise e clique em Processar.", "info");
     }
 
 
