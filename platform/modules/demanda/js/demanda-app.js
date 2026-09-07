@@ -344,64 +344,63 @@ const DemandaApp = (function() {
             var msg    = document.getElementById("fotoOcrMsg");
             var pct    = document.getElementById("fotoOcrPct");
             if (!modal || !imgEl) { _toast("Modal Foto nao encontrado.", "error"); return; }
-            if (ta)  { ta.value = ""; ta.placeholder = "Carregando imagem..."; }
+            if (ta) { ta.value = ""; ta.placeholder = "Aguardando leitura OCR..."; }
             modal.style.display = "flex";
+            if (status) { status.style.display = "flex"; }
+            if (msg) msg.textContent = "Lendo imagem via OCR...";
+            if (pct) pct.textContent = "";
+
+            // Comprime imagem via Canvas (max 1200px) antes de enviar
             var reader = new FileReader();
             reader.onerror = function() { _toast("Erro ao ler arquivo.", "error"); };
             reader.onload = function(ev) {
                 var dataUrl = ev.target.result;
+                imgEl.src = dataUrl;
                 imgEl.onload = function() {
                     var maxDim = 1200;
-                    var w = imgEl.naturalWidth || 800;
-                    var h = imgEl.naturalHeight || 600;
+                    var w = imgEl.naturalWidth || 800, h = imgEl.naturalHeight || 600;
                     var ratio = Math.min(maxDim / w, maxDim / h, 1);
                     var cv = document.createElement("canvas");
                     cv.width  = Math.round(w * ratio);
                     cv.height = Math.round(h * ratio);
                     cv.getContext("2d").drawImage(imgEl, 0, 0, cv.width, cv.height);
-                    var imgComp = cv.toDataURL("image/jpeg", 0.85);
-                    if (typeof Tesseract === "undefined") {
-                        if (ta) ta.placeholder = "OCR nao carregado. Digite manualmente.";
-                        _toast("Tesseract nao disponivel.", "warning");
-                        return;
-                    }
-                    if (status) status.style.display = "flex";
-                    if (msg) msg.textContent = "Inicializando OCR...";
-                    if (pct) pct.textContent = "0%";
-                    if (ta)  ta.placeholder = "Extraindo texto...";
-                    Tesseract.recognize(imgComp, "eng", {
-                        workerPath: "https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/worker.min.js",
-                        langPath:   "https://cdn.jsdelivr.net/gh/naptha/tessdata@gh-pages/4.0.0/",
-                        corePath:   "https://cdn.jsdelivr.net/npm/tesseract.js-core@4/tesseract-core.wasm.js",
-                        logger: function(m) {
-                            if (!msg || !pct) return;
-                            if (m.status === "loading tesseract core")           { msg.textContent = "Carregando motor..."; }
-                            else if (m.status === "loading language traineddata") { msg.textContent = "Carregando idioma..."; }
-                            else if (m.status === "recognizing text") {
-                                msg.textContent = "Lendo imagem...";
-                                pct.textContent = Math.round((m.progress||0)*100) + "%";
-                            }
+                    var base64 = cv.toDataURL("image/jpeg", 0.85);
+
+                    // OCR.space API - REST, sem Web Worker, sem WASM
+                    var formData = new FormData();
+                    formData.append("base64Image", base64);
+                    formData.append("apikey",  "helloworld");
+                    formData.append("language", "por");
+                    formData.append("isTable",  "true");
+                    formData.append("OCREngine", "2");
+
+                    fetch("https://api.ocr.space/parse/image", {
+                        method: "POST",
+                        body: formData
+                    }).then(function(r) { return r.json(); }).then(function(data) {
+                        if (status) status.style.display = "none";
+                        if (data.IsErroredOnProcessing) {
+                            throw new Error(data.ErrorMessage || "OCR retornou erro");
                         }
-                    }).then(function(result) {
-                        var texto = (result.data && result.data.text) ? result.data.text.trim() : "";
+                        var texto = "";
+                        if (data.ParsedResults && data.ParsedResults.length > 0) {
+                            texto = (data.ParsedResults[0].ParsedText || "").trim();
+                        }
                         if (ta) { ta.value = texto; ta.placeholder = ""; }
-                        if (status) status.style.display = "none";
-                        _toast(texto.length > 5 ? "\u2713 Texto extraido!" : "Texto com baixa confianca. Revise.", texto.length > 5 ? "success" : "warning");
+                        _toast(texto.length > 5 ? "\u2713 Texto extraido! Revise e clique em Processar." : "Texto extraido com baixa confianca. Revise.", texto.length > 5 ? "success" : "warning");
                     }).catch(function(err) {
-                        console.error("[OCR]", err);
+                        console.error("[OCR.space]", err);
                         if (status) status.style.display = "none";
-                        if (ta) { ta.value = ""; ta.placeholder = "Falha: " + (err.message||"OCR indisponivel") + ". Digite manualmente."; }
-                        _toast("Falha OCR: " + (err.message || "erro desconhecido"), "error");
+                        if (ta) { ta.value = ""; ta.placeholder = "Falha no OCR. Digite o texto manualmente."; }
+                        _toast("Falha OCR: " + (err.message || "verifique a conexao"), "error");
                     });
                 };
                 imgEl.onerror = function() { _toast("Imagem invalida.", "error"); };
-                imgEl.src = dataUrl;
             };
             reader.readAsDataURL(file);
         };
         inp.click();
     }
-
     function _fecharImportFoto() {
         var modal  = document.getElementById("modalImportFoto");
         var img    = document.getElementById("fotoPreview");
