@@ -541,10 +541,10 @@ const DemandaApp = (function() {
             var incert = item.incerteza;
             var rowStyle = hasErr ? "opacity:.75" : "";
             var statusHtml = hasErr
-                ? "<span style='color:var(--accent-danger);font-size:.72rem' title='" + _esc((item._erros || []).join(", ")) + "'>&#9888; Alerta</span>"
+                ? "<span id='conf-status-" + i + "' style='color:var(--accent-danger);font-size:.72rem' title='" + _esc((item._erros || []).join(", ")) + "'>&#9888; Alerta</span>"
                 : incert
-                    ? "<span style='color:var(--accent-warning);font-size:.72rem'>? Incerto</span>"
-                    : "<span style='color:var(--accent-success);font-size:.72rem'>&#10003; Ok</span>";
+                    ? "<span id='conf-status-" + i + "' style='color:var(--accent-warning);font-size:.72rem'>? Incerto</span>"
+                    : "<span id='conf-status-" + i + "' style='color:var(--accent-success);font-size:.72rem'>&#10003; Ok</span>";
             return "<tr style='" + rowStyle + "'>" +
                 "<td><input type='checkbox' class='conf-chk' data-idx='" + i + "' " + (!hasErr ? "checked" : "") + "></td>" +
                 "<td style='color:var(--text-secondary);font-size:.78rem'>" + (i + 1) + "</td>" +
@@ -569,6 +569,27 @@ const DemandaApp = (function() {
         if (field === "ref")  _importItensTemp[idx].refOriginal    = value;
         if (field === "desc") _importItensTemp[idx].descOriginal   = value;
         if (field === "qtde") _importItensTemp[idx].qtdeSolicitada = Math.max(1, value || 1);
+
+        // Quando referencia muda, recalcula incerteza e atualiza badge de status
+        if (field === "ref") {
+            var temRef = value && value.trim().length > 0;
+            _importItensTemp[idx].incerteza = !temRef;
+            var badge = document.getElementById("conf-status-" + idx);
+            if (badge) {
+                if (temRef) {
+                    badge.style.color = "var(--accent-success)";
+                    badge.textContent = "\u2713 Ok";
+                } else {
+                    badge.style.color = "var(--accent-warning)";
+                    badge.textContent = "? Incerto";
+                }
+            }
+            // Marca o checkbox automaticamente quando o usuario define uma referencia
+            if (temRef) {
+                var chk = document.querySelector(".conf-chk[data-idx='" + idx + "']");
+                if (chk) chk.checked = true;
+            }
+        }
     }
 
     function selectAllConferencia() {
