@@ -337,7 +337,7 @@ const DemandaApp = (function() {
             var file = inp.files[0];
             document.body.removeChild(inp);
             if (!file) return;
-            var url    = URL.createObjectURL(file);
+
             var modal  = document.getElementById("modalImportFoto");
             var img    = document.getElementById("fotoPreview");
             var ta     = document.getElementById("fotoTranscricao");
@@ -345,54 +345,53 @@ const DemandaApp = (function() {
             var msg    = document.getElementById("fotoOcrMsg");
             var pct    = document.getElementById("fotoOcrPct");
             if (!modal || !img) { _toast("Modal Foto nao encontrado.", "error"); return; }
-            img.src = url;
-            if (ta)  { ta.value = ""; ta.placeholder = "Extraindo texto da imagem..."; }
-            modal.style.display = "flex";
 
-            // Verifica se Tesseract esta disponivel
-            if (typeof Tesseract === "undefined") {
-                if (ta) ta.placeholder = "OCR nao carregado. Digite o texto manualmente.";
-                _toast("Tesseract nao carregado. Verifique a conexao.", "warning");
-                return;
-            }
+            // Converte para data URL (base64) — unico formato que funciona no Web Worker do Tesseract
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                var dataUrl = ev.target.result;
+                img.src = dataUrl;
+                if (ta)  { ta.value = ""; ta.placeholder = "Extraindo texto da imagem..."; }
+                modal.style.display = "flex";
 
-            // Mostra barra de progresso
-            if (status) status.style.display = "flex";
-            if (msg)    msg.textContent = "Inicializando OCR...";
-            if (pct)    pct.textContent = "0%";
+                // Verifica disponibilidade do Tesseract
+                if (typeof Tesseract === "undefined") {
+                    if (ta) { ta.placeholder = "OCR indisponivel. Digite o texto manualmente."; }
+                    if (status) status.style.display = "none";
+                    _toast("OCR nao carregado. Verifique a conexao.", "warning");
+                    return;
+                }
 
-            // Executa OCR (Portuguese + English para codigos e descricoes)
-            Tesseract.recognize(url, "por+eng", {
-                logger: function(m) {
-                    if (!msg || !pct) return;
-                    if (m.status === "loading tesseract core") {
-                        msg.textContent = "Carregando motor OCR...";
-                    } else if (m.status === "loading language traineddata") {
-                        msg.textContent = "Carregando idioma...";
-                    } else if (m.status === "recognizing text") {
-                        var p = Math.round((m.progress || 0) * 100);
-                        msg.textContent = "Lendo texto da imagem...";
-                        pct.textContent = p + "%";
+                // Mostra progress
+                if (status) status.style.display = "flex";
+                if (msg) msg.textContent = "Inicializando OCR...";
+                if (pct) pct.textContent = "0%";
+
+                // OCR com ingles (mais estavel; le codigos alfanumericos e descricoes bem)
+                Tesseract.recognize(dataUrl, "eng", {
+                    logger: function(m) {
+                        if (!msg || !pct) return;
+                        if (m.status === "loading tesseract core")       { msg.textContent = "Carregando motor..."; }
+                        else if (m.status === "loading language traineddata") { msg.textContent = "Carregando idioma..."; }
+                        else if (m.status === "recognizing text") {
+                            msg.textContent = "Lendo imagem...";
+                            pct.textContent = Math.round((m.progress||0)*100) + "%";
+                        }
                     }
-                }
-            }).then(function(result) {
-                var texto = (result.data && result.data.text) ? result.data.text.trim() : "";
-                if (ta) {
-                    ta.value = texto;
-                    ta.placeholder = "";
-                }
-                if (status) status.style.display = "none";
-                if (texto.length > 5) {
-                    _toast("\u2713 Texto extra\u00eddo! Revise e clique em Processar.", "success");
-                } else {
-                    _toast("Pouco texto reconhecido. Edite manualmente se necessario.", "warning");
-                }
-            }).catch(function(err) {
-                console.error("[OCR]", err);
-                if (status) status.style.display = "none";
-                if (ta) ta.placeholder = "Erro no OCR. Digite o texto manualmente.";
-                _toast("Erro ao ler imagem. Tente outra foto ou digite manualmente.", "error");
-            });
+                }).then(function(result) {
+                    var texto = (result.data && result.data.text) ? result.data.text.trim() : "";
+                    if (ta) { ta.value = texto; ta.placeholder = ""; }
+                    if (status) status.style.display = "none";
+                    _toast(texto.length > 5 ? "\u2713 Texto extra\u00eddo! Revise e clique em Processar." : "Pouco texto reconhecido. Edite manualmente.", texto.length > 5 ? "success" : "warning");
+                }).catch(function(err) {
+                    console.error("[OCR erro]", err);
+                    if (status) status.style.display = "none";
+                    if (ta) { ta.value = ""; ta.placeholder = "Falha no OCR. Digite o texto manualmente."; }
+                    _toast("Falha no OCR. Digite o texto manualmente.", "error");
+                });
+            };
+            reader.onerror = function() { _toast("Erro ao ler o arquivo de imagem.", "error"); };
+            reader.readAsDataURL(file);  // <- base64, sem blob:
         };
         inp.click();
     }

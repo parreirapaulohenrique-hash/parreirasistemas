@@ -1,1 +1,1 @@
-{"version":"2.2.0","build":"20260906-v2.2.0","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-06","change":"v2.2.0 - OCR automatico com Tesseract.js para importacao de foto/print"}
+{"version":"2.2.1","build":"20260906-v2.2.1","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-06","change":"v2.2.1 - fix OCR: usa FileReader base64 em vez de blob URL, lang=eng"}
