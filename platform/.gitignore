@@ -2,6 +2,19 @@
 *firebase-adminsdk*.json
 service-account*.json
 *-credentials.json
+serviceAccountKey.json
+tools/serviceAccountKey.json
+
+# Executaveis e instaladores
+*.exe
+
+# Pastas de backup pontual de modulos
+modules/*_backup_*/
+modules/*_bk_*/
+
+# Arquivos de teste e probe de ferramentas internas
+tools/_*.py
+tools/api_test.py
 
 # Arquivos de dados temporarios, dumps e backups pontuais locais
 DIPS*

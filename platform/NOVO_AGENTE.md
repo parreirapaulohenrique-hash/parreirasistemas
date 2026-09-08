@@ -29,7 +29,8 @@ A arquitetura moderna reside na pasta `/platform`. (A antiga subpasta `/web` ain
     *   **sales-force**: Força de Vendas Mobile (PWA para RCA em campo, offline-first com IndexedDB).
     *   **wms**: Warehouse Management System (Gestão de Armazéns).
     *   **wms-coletor**: Versão do WMS estritamente otimizada para coletores móveis (Zebra/Android) utilizados na operação de piso.
-    *   **demanda**: Módulo de Inteligência de Demanda, Pré-venda e Venda Perdida. Tenant: `centralpecas` (Central Rolamentos CTR). Auth via MaxData JWT (usuário + filial). Firestore: `tenants/centralpecas/demanda/`. Stack: Vanilla JS, 5 módulos JS (demanda-states, demanda-db, demanda-import, demanda-search, demanda-app). Adicionado em v3.19.0.
+    *   **demanda**: Módulo de Inteligência de Demanda, Pré-venda e Venda Perdida (v2.4.5). Tenant: centralpecas (Central Rolamentos CTR). Integrado com ParreiraAuth/Firebase + busca MaxData + Firestore primário (produtos e clientes) + OCR serverless (/api/ocr). Adicionado em v3.19.0.
+    *   **prospeccao (MAXCRM Campo)**: PWA Mobile Offline-first para prospecção comercial externa (v1.0.0). Check-in de visitas com geolocalização, busca de CNPJ e sync Firestore multi-tenant isolado.
 *   **`platform/shared/integrations/`** (v3.15.0+): Camada centralizada de integração com ERPs externos.
     *   **`erp-adapter.js`**: Contrato genérico (interface). Todo ERP deve implementar `syncClients()`, `syncProducts()`, `syncOrders()`, `syncNFs()`, `confirmDispatch()`.
     *   **`erp-registry.js`**: Registro multi-tenant. Lê do Firestore qual ERP cada tenant usa e instancia o adaptador correto. Token fica em `sessionStorage`.
@@ -393,6 +394,8 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
+| **3.20.0** | 2026-09-08 | FEAT: MAXCRM Campo (PWA Prospeccao Comercial) v1.0.0 + Landing Page e coluna de Download PWA no Master Panel (WMS Coletor e MAXCRM). Rotas no Vercel e novas politicas de cache-control. |
+| **3.19.x** | 2026-09-04..08 | FEAT: Modulo Inteligencia de Demanda (v1.0.0 -> v2.4.5). OCR Serverless (/api/ocr via ocr.space), cruzamento OEM/PDF, base Firestore com 18.6k produtos sincronizados, conferencia de cotacoes concorrentes e cross-tab auth. |
 | **3.18.0** | 2026-08-05 | FEAT: Tabela de Frete — campo "Taxa Fixa + checkbox ×vol" separado em dois campos independentes e simultâneos: **Taxa TDA** (Difícil Acesso, fixa por entrega, `taxaTDA`) e **Taxa por Volume** (`taxaVolume`, R$/vol × qtd). Municípios como Curuá podem ter as duas taxas ao mesmo tempo. Compat retroativa com regras legadas (`pedagio` + `taxaFixaPorVolume`). |
 | **3.17.9** | 2026-07-29 | STYLE: Montagem de Carga — rebalanceamento de largura de colunas. Vlr NF (85px fixo), Peso (62px), Vol (45px) compactadas; Cidade (115px) e Transportadora (110px) ampliadas. |
 | **3.16.23** | 2026-07-23 | RENAME: Menu lateral do Dispatch — “Integração Acontec” renomeado para “Integração ERP”. Nome genérico para suportar múltiplos ERPs parceiros. |
