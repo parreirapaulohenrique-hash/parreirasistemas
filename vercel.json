@@ -1,8 +1,6 @@
-{
+﻿{
     "functions": {
-        "api/maxdata.js": {
-            "maxDuration": 10
-        }
+        "api/maxdata.js": { "maxDuration": 30 }, "api/ocr.js": { "maxDuration": 30 }
     },    "headers": [
         {
             "source": "/.well-known/assetlinks.json",

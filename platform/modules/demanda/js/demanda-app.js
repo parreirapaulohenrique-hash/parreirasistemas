@@ -1,4 +1,4 @@
-/* demanda-app.js — Controlador Principal | Inteligência de Demanda v1.1.0
+﻿/* demanda-app.js â€” Controlador Principal | InteligÃªncia de Demanda v1.1.0
  * Parreira Sistemas
  * Fase 2: salvarDemanda, filterDemandas, addItemGrade, clienteDropdown, toast
  */
@@ -6,7 +6,7 @@
 
 const DemandaApp = (function() {
 
-    // ── Mapeamento views → nav-item IDs ──────────────────────
+    // â”€â”€ Mapeamento views â†’ nav-item IDs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     var _VIEWS = {
         captura:       "nav-captura",
         lista:         "nav-lista",
@@ -16,24 +16,25 @@ const DemandaApp = (function() {
         orcamento:     "nav-orcamento",
         concorrente:   "nav-concorrente",
         base:          "nav-base",
-        integracaoErp: "nav-integracaoErp"
+        integracaoErp: "nav-integracaoErp",
+        clientes:     "nav-clientes"
     };
 
-    // ── Estado global ─────────────────────────────────────────
+    // â”€â”€ Estado global â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     var _itens             = [];      // Itens da demanda em andamento
     var _clienteAtual      = null;    // { id, nome, cnpj } | null
     var _sessao            = null;    // Cache ParreiraAuth.getSessao()
-    var _demandaAtual      = null;    // { id, data, itens } — demanda aberta no modal de detalhe
+    var _demandaAtual      = null;    // { id, data, itens } â€” demanda aberta no modal de detalhe
     var _erpInitialized    = false;
     var _searchTimeout     = null;
     var _filterAtual       = "todas";
     var _clientesCache     = [];      // Lista de clientes para o dropdown
-    var _importItensTemp   = [];      // Itens parsed aguardando conferência
+    var _importItensTemp   = [];      // Itens parsed aguardando conferÃªncia
     var _excelItensTemp    = [];      // Itens do Excel antes de confirmar
 
-    // ════════════════════════════════════════════════════════
-    // NAVEGAÇÃO DE VIEWS
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // NAVEGAÃ‡ÃƒO DE VIEWS
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function switchView(v) {
         if (!_VIEWS[v]) { console.warn("[DemandaApp] View desconhecida:", v); return; }
@@ -42,6 +43,7 @@ const DemandaApp = (function() {
         var ve = document.getElementById("view-" + v); if (ve) ve.style.display = "";
         var ne = document.getElementById(_VIEWS[v]); if (ne) ne.classList.add("active");
         if (v === "integracaoErp") _initErpUI();
+        if (v === "clientes")     _initClientes();
         if (v === "lista")         loadDemandasLista(_filterAtual);
         if (v === "dashboard")     loadDashboard();
         if (v === "compras")       loadFilaCompras();
@@ -49,9 +51,18 @@ const DemandaApp = (function() {
         if (v === "concorrente")   loadConcorrente();
     }
 
-    // ════════════════════════════════════════════════════════
-    // ERP UI (Integração)
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ERP UI (IntegraÃ§Ã£o)
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+    function _initClientes() {
+        if (typeof DemandaClientes === 'undefined') {
+            var c = document.getElementById('view-clientes-content');
+            if (c) c.innerHTML = '<p style="color:var(--text-secondary);padding:2rem">Modulo de clientes nao carregado.</p>';
+            return;
+        }
+        DemandaClientes.renderView('view-clientes-content');
+    }
 
     function _initErpUI() {
         if (_erpInitialized) return;
@@ -65,9 +76,9 @@ const DemandaApp = (function() {
         console.log("[DemandaApp] ErpUI inicializado.");
     }
 
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // PESQUISA UNIVERSAL (coluna esquerda)
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function onSearchInput(value) {
         clearTimeout(_searchTimeout);
@@ -86,7 +97,7 @@ const DemandaApp = (function() {
             // TODO Fase 3: integrar DemandaSearch com ERP
             r.innerHTML = "<div style='padding:2rem;text-align:center;color:var(--text-secondary)'>" +
                 "<span class='material-icons-round' style='font-size:2rem;opacity:.4'>manage_search</span>" +
-                "<p style='margin-top:.5rem;font-size:.85rem'>Pesquisa no ERP em implementação.<br>Use a entrada rápida (→) para adicionar itens manualmente.</p>" +
+                "<p style='margin-top:.5rem;font-size:.85rem'>Pesquisa no ERP em implementaÃ§Ã£o.<br>Use a entrada rÃ¡pida (â†’) para adicionar itens manualmente.</p>" +
                 "</div>";
         }, 350);
     }
@@ -107,9 +118,9 @@ const DemandaApp = (function() {
         console.log("[DemandaApp] selectSearchResult:", id);
     }
 
-    // ════════════════════════════════════════════════════════
-    // GRADE DE ENTRADA RÁPIDA (painel direito)
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // GRADE DE ENTRADA RÃPIDA (painel direito)
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function addItemGrade() {
         var refEl  = document.getElementById("gradeRef");
@@ -154,7 +165,7 @@ const DemandaApp = (function() {
             return "<tr>" +
                 "<td style='color:var(--text-secondary);font-size:.8rem'>" + (i + 1) + "</td>" +
                 "<td style='font-weight:600;font-size:.83rem'>" + _esc(item.refOriginal) + "</td>" +
-                "<td style='font-size:.8rem;color:var(--text-secondary)'>" + (_esc(item.descOriginal) || "—") + "</td>" +
+                "<td style='font-size:.8rem;color:var(--text-secondary)'>" + (_esc(item.descOriginal) || "â€”") + "</td>" +
                 "<td style='text-align:center'>" + item.qtdeSolicitada + "</td>" +
                 "<td><span style='font-size:.72rem;padding:.15rem .5rem;border-radius:10px;" +
                     "background:rgba(99,102,241,.15);color:#6366f1'>Recebida</span></td>" +
@@ -166,7 +177,7 @@ const DemandaApp = (function() {
         tbody.innerHTML = html;
 
         var ct = document.getElementById("demandaCodigoTopbar");
-        if (ct) ct.textContent = "— " + _itens.length + (_itens.length === 1 ? " item" : " itens");
+        if (ct) ct.textContent = "â€” " + _itens.length + (_itens.length === 1 ? " item" : " itens");
     }
 
     function limparDemanda() {
@@ -178,9 +189,9 @@ const DemandaApp = (function() {
         renderItens();
     }
 
-    // ════════════════════════════════════════════════════════
-    // SELEÇÃO DE CLIENTE
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // SELEÃ‡ÃƒO DE CLIENTE
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function toggleClienteDropdown() {
         var dd  = document.getElementById("clienteDropdown");
@@ -248,9 +259,9 @@ const DemandaApp = (function() {
         return [];
     }
 
-    // ════════════════════════════════════════════════════════
-    // IMPORTAÇÃO
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // IMPORTAÃ‡ÃƒO
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function _openModal(id) {
         var el = document.getElementById(id); if (el) el.style.display = "flex";
@@ -272,9 +283,9 @@ const DemandaApp = (function() {
         }
     }
 
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // IMPORT PDF (iframe nativo do browser)
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     var _pdfBlobUrl = null;
 
@@ -291,7 +302,7 @@ const DemandaApp = (function() {
             // Revoga URL anterior se existir
             if (_pdfBlobUrl) { try { URL.revokeObjectURL(_pdfBlobUrl); } catch(_) {} }
             _pdfBlobUrl = URL.createObjectURL(file);
-            // Mostra modal com botão para abrir em nova aba
+            // Mostra modal com botÃ£o para abrir em nova aba
             var modal = document.getElementById("modalImportPDF");
             var fname = document.getElementById("pdfFileName");
             var ta    = document.getElementById("pdfTextoColar");
@@ -299,7 +310,7 @@ const DemandaApp = (function() {
             if (!modal) { _toast("Modal PDF nao encontrado.", "error"); return; }
             if (fname) fname.textContent = file.name;
             if (ta)    ta.value = "";
-            // Atualiza o href do botão âncora diretamente (não abre automaticamente)
+            // Atualiza o href do botÃ£o Ã¢ncora diretamente (nÃ£o abre automaticamente)
             if (btn) { btn.href = _pdfBlobUrl; }
             modal.style.display = "flex";
         };
@@ -323,9 +334,9 @@ const DemandaApp = (function() {
     }
 
 
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // IMPORT FOTO / PRINT (camera ou galeria + transcricao)
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function _abrirImportFoto() {
         var inp = document.createElement("input");
@@ -402,7 +413,7 @@ const DemandaApp = (function() {
                                 _toast("Texto extraido! Revise e clique em Processar.", "info");
                             }
                         } else {
-                            // Pouco texto: mantém modal aberto para edicao manual
+                            // Pouco texto: mantÃ©m modal aberto para edicao manual
                             if (ta) { ta.value = texto; ta.placeholder = texto.length === 0 ? "OCR nao reconheceu texto. Digite manualmente." : ""; }
                             _toast("Pouco texto reconhecido. Revise o campo e clique em Processar.", "warning");
                         }
@@ -423,7 +434,7 @@ const DemandaApp = (function() {
         var modal  = document.getElementById("modalImportFoto");
         var img    = document.getElementById("fotoPreview");
         var status = document.getElementById("fotoOcrStatus");
-        // Limpa onerror ANTES de apagar src — evita toast falso "Imagem invalida"
+        // Limpa onerror ANTES de apagar src â€” evita toast falso "Imagem invalida"
         if (img)    { img.onerror = null; img.onload = null; try { URL.revokeObjectURL(img.src); } catch(_) {} img.src = ""; }
         if (status) status.style.display = "none";
         if (modal)  modal.style.display = "none";
@@ -454,14 +465,14 @@ const DemandaApp = (function() {
     function closeModal(id) { var el = document.getElementById(id); if (el) el.style.display = "none"; }
     function addItemFromDetails() { closeModal("modalItemDetalhes"); }
 
-    // ════════════════════════════════════════════════════════
-    // IMPORTAÇÃO TEXTO / WHATSAPP
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // IMPORTAÃ‡ÃƒO TEXTO / WHATSAPP
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function processImportTexto() {
         var ta = document.getElementById("textareaImport");
         if (!ta || !ta.value.trim()) { _toast("Cole um texto antes de processar.", "error"); return; }
-        if (typeof DemandaImport === "undefined") { _toast("DemandaImport não disponível.", "error"); return; }
+        if (typeof DemandaImport === "undefined") { _toast("DemandaImport nÃ£o disponÃ­vel.", "error"); return; }
         var parsed    = DemandaImport.parseText(ta.value);
         var validados = DemandaImport.validateItens(parsed);
         if (validados.length === 0) { _toast("Nenhum item encontrado no texto.", "error"); return; }
@@ -469,9 +480,9 @@ const DemandaApp = (function() {
         _showConferencia(validados);
     }
 
-    // ════════════════════════════════════════════════════════
-    // IMPORTAÇÃO EXCEL / CSV
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // IMPORTAÃ‡ÃƒO EXCEL / CSV
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function onExcelDrop(ev) {
         ev.preventDefault();
@@ -483,7 +494,7 @@ const DemandaApp = (function() {
     function onExcelFileSelected(file) {
         if (!file) return;
         if (typeof DemandaImport === "undefined" || typeof XLSX === "undefined") {
-            _toast("SheetJS não carregado. Importe via texto por enquanto.", "error"); return;
+            _toast("SheetJS nÃ£o carregado. Importe via texto por enquanto.", "error"); return;
         }
         var area = document.getElementById("excelUploadArea"); if (area) area.style.display = "none";
         var prev = document.getElementById("excelPreviewArea");
@@ -517,9 +528,9 @@ const DemandaApp = (function() {
         _showConferencia(DemandaImport.validateItens(_excelItensTemp));
     }
 
-    // ════════════════════════════════════════════════════════
-    // MODAL DE CONFERÊNCIA — revisão antes de adicionar
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // MODAL DE CONFERÃŠNCIA â€” revisÃ£o antes de adicionar
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function _showConferencia(itens) {
         _importItensTemp = itens;
@@ -532,8 +543,8 @@ const DemandaApp = (function() {
         var err = itens.length - ok;
         if (stats) stats.innerHTML =
             "<span style='color:var(--accent-success)'><strong>" + ok + "</strong> ok</span>" +
-            (err > 0 ? " &nbsp;·&nbsp; <span style='color:var(--accent-warning)'><strong>" + err + "</strong> com alerta</span>" : "") +
-            " &nbsp;·&nbsp; " + itens.length + " total";
+            (err > 0 ? " &nbsp;Â·&nbsp; <span style='color:var(--accent-warning)'><strong>" + err + "</strong> com alerta</span>" : "") +
+            " &nbsp;Â·&nbsp; " + itens.length + " total";
         if (chkAll) chkAll.checked = true;
 
         tbody.innerHTML = itens.map(function(item, i) {
@@ -630,20 +641,20 @@ const DemandaApp = (function() {
         });
         renderItens();
         closeModal("modalConferencia");
-        _toast(selecionados.length + " " + (selecionados.length === 1 ? "item adicionado" : "itens adicionados") + " à demanda.", "success");
+        _toast(selecionados.length + " " + (selecionados.length === 1 ? "item adicionado" : "itens adicionados") + " Ã  demanda.", "success");
         _importItensTemp = [];
     }
 
-    // ════════════════════════════════════════════════════════
-    // SALVAR DEMANDA → FIRESTORE
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // SALVAR DEMANDA â†’ FIRESTORE
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function salvarDemanda() {
         if (_itens.length === 0) {
             _toast("Adicione ao menos um item antes de salvar.", "error"); return;
         }
         if (typeof DemandaDB === "undefined") {
-            _toast("Erro: DemandaDB não disponível.", "error"); return;
+            _toast("Erro: DemandaDB nÃ£o disponÃ­vel.", "error"); return;
         }
 
         var s = _sessao;
@@ -662,7 +673,7 @@ const DemandaApp = (function() {
             criadoPor:    s ? (s.login || s.email || "sistema"): "sistema"
         };
 
-        // Feedback visual: desabilita ambos os botões salvar
+        // Feedback visual: desabilita ambos os botÃµes salvar
         var btnSalvar  = document.getElementById("btnSalvarDemanda");
         var btnSalvar2 = document.getElementById("btnSalvarDemandaPanel");
         function _setBtnSaving(saving) {
@@ -689,9 +700,9 @@ const DemandaApp = (function() {
             .finally(function() { _setBtnSaving(false); });
     }
 
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // LISTA DE DEMANDAS (view-lista)
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function filterDemandas(filtro, el) {
         _filterAtual = filtro;
@@ -709,7 +720,7 @@ const DemandaApp = (function() {
             "<p style='margin-top:.5rem;font-size:.85rem'>Carregando demandas...</p></div>";
 
         if (typeof DemandaDB === "undefined") {
-            container.innerHTML = "<div style='padding:2rem;text-align:center;color:var(--accent-danger)'>DemandaDB não disponível.</div>";
+            container.innerHTML = "<div style='padding:2rem;text-align:center;color:var(--accent-danger)'>DemandaDB nÃ£o disponÃ­vel.</div>";
             return;
         }
 
@@ -747,7 +758,7 @@ const DemandaApp = (function() {
         var lbl = STATUS_LABEL[d.status] || d.status;
         var dt  = d.criadoEm && d.criadoEm.toDate
             ? d.criadoEm.toDate().toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" })
-            : "—";
+            : "â€”";
 
         return "<div onclick='DemandaApp.abrirDemanda(\"" + _esc(d.id) + "\")'" +
             " style='background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);" +
@@ -758,12 +769,12 @@ const DemandaApp = (function() {
             // Info principal
             "<div style='flex:1;min-width:0'>" +
             "<div style='display:flex;align-items:center;gap:.5rem;margin-bottom:.25rem'>" +
-            "<span style='font-weight:700;font-size:.9rem'>" + _esc(d.codigo || "—") + "</span>" +
+            "<span style='font-weight:700;font-size:.9rem'>" + _esc(d.codigo || "â€”") + "</span>" +
             "<span style='font-size:.7rem;padding:.1rem .5rem;border-radius:10px;background:" + cor + "22;color:" + cor + ";font-weight:600'>" + lbl + "</span>" +
             "</div>" +
             "<div style='font-size:.78rem;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>" +
-            (d.clienteNome ? "<span style='color:var(--text-primary)'>" + _esc(d.clienteNome) + "</span> · " : "") +
-            (d.vendedorNome ? "Vend.: " + _esc(d.vendedorNome) + " · " : "") +
+            (d.clienteNome ? "<span style='color:var(--text-primary)'>" + _esc(d.clienteNome) + "</span> Â· " : "") +
+            (d.vendedorNome ? "Vend.: " + _esc(d.vendedorNome) + " Â· " : "") +
             dt +
             "</div>" +
             "</div>" +
@@ -790,7 +801,7 @@ const DemandaApp = (function() {
         if (body) body.innerHTML = "<div class='search-loading'><div class='spinner'></div><span>Carregando...</span></div>";
         _openModal("modalDemandaDetalhe");
         if (typeof DemandaDB === "undefined") {
-            if (body) body.innerHTML = "<p style='color:var(--accent-danger)'>DemandaDB indisponível.</p>"; return;
+            if (body) body.innerHTML = "<p style='color:var(--accent-danger)'>DemandaDB indisponÃ­vel.</p>"; return;
         }
         Promise.all([ DemandaDB.getDemanda(id), DemandaDB.getItens(id) ])
             .then(function(res) {
@@ -802,9 +813,9 @@ const DemandaApp = (function() {
             });
     }
 
-    // ════════════════════════════════════════════════════════
-    // DETALHE DA DEMANDA — RENDERIZAÇÃO COM GESTÃO DE ESTADOS
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // DETALHE DA DEMANDA â€” RENDERIZAÃ‡ÃƒO COM GESTÃƒO DE ESTADOS
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function _renderDemandaDetalheBody() {
         if (!_demandaAtual) return;
@@ -817,7 +828,7 @@ const DemandaApp = (function() {
         var SL = { aberta:"Aberta", em_atendimento:"Em Atendimento", encerrada:"Encerrada", cancelada:"Cancelada" };
         var cor = SC[d.status] || "#6366f1";
         var lbl = SL[d.status] || d.status;
-        var dt  = d.criadoEm && d.criadoEm.toDate ? d.criadoEm.toDate().toLocaleDateString("pt-BR") : "—";
+        var dt  = d.criadoEm && d.criadoEm.toDate ? d.criadoEm.toDate().toLocaleDateString("pt-BR") : "â€”";
 
         // Contadores do progresso
         var total    = itens.length;
@@ -829,7 +840,7 @@ const DemandaApp = (function() {
             : itens.map(function(item, i) { return _renderItemRow(item, i); }).join("");
 
         body.innerHTML =
-            // Cabeçalho com código + status + data
+            // CabeÃ§alho com cÃ³digo + status + data
             "<div style='display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap'>" +
             "<span style='font-size:1.05rem;font-weight:700'>" + _esc(d.codigo) + "</span>" +
             "<span style='font-size:.7rem;padding:.15rem .55rem;border-radius:10px;background:" + cor + "22;color:" + cor + "'>" + lbl + "</span>" +
@@ -838,12 +849,12 @@ const DemandaApp = (function() {
             // Info cliente / vendedor
             (d.clienteNome ? "<div style='font-size:.82rem;margin-bottom:.75rem;color:var(--text-secondary)'>" +
                 "<strong style='color:var(--text-primary)'>Cliente:</strong> " + _esc(d.clienteNome) +
-                (d.vendedorNome ? " &nbsp;·&nbsp; <strong style='color:var(--text-primary)'>Vendedor:</strong> " + _esc(d.vendedorNome) : "") +
+                (d.vendedorNome ? " &nbsp;Â·&nbsp; <strong style='color:var(--text-primary)'>Vendedor:</strong> " + _esc(d.vendedorNome) : "") +
                 "</div>" : "") +
             // Barra de progresso dos itens
             (total > 0 ? "<div style='margin-bottom:1rem'>" +
                 "<div style='display:flex;justify-content:space-between;font-size:.75rem;color:var(--text-secondary);margin-bottom:.3rem'>" +
-                "<span>Progresso dos itens</span><span>" + terminal + "/" + total + " concluídos (" + pct + "%)</span></div>" +
+                "<span>Progresso dos itens</span><span>" + terminal + "/" + total + " concluÃ­dos (" + pct + "%)</span></div>" +
                 "<div style='height:4px;background:var(--border-color);border-radius:4px;overflow:hidden'>" +
                 "<div style='height:100%;width:" + pct + "%;background:var(--accent-success);transition:width .4s'></div></div>" +
                 "</div>" : "") +
@@ -851,7 +862,7 @@ const DemandaApp = (function() {
             "<div style='overflow-x:auto'>" +
             "<table style='width:100%;border-collapse:collapse;font-size:.82rem'>" +
             "<thead><tr style='border-bottom:1px solid var(--border-color)'>" +
-            ["#","Referência","Descrição","Qtd","Status","Ação"].map(function(h) {
+            ["#","ReferÃªncia","DescriÃ§Ã£o","Qtd","Status","AÃ§Ã£o"].map(function(h) {
                 return "<th style='padding:.4rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em'>" + h + "</th>";
             }).join("") +
             "</tr></thead><tbody id='detalheItemsTbody'>" + itensHtml + "</tbody></table></div>";
@@ -907,33 +918,33 @@ const DemandaApp = (function() {
         return mainRow + timelineRow;
     }
 
-    // ════════════════════════════════════════════════════════
-    // AVANÇAR ESTADO DO ITEM → FIRESTORE
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // AVANÃ‡AR ESTADO DO ITEM â†’ FIRESTORE
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function avancarItemStatus(itemId, novoStatus, selectEl) {
         if (!novoStatus || !_demandaAtual) return;
         if (selectEl) selectEl.value = ""; // reset imediatamente
 
-        // Encontra o item na memória
+        // Encontra o item na memÃ³ria
         var item = null;
         for (var i = 0; i < _demandaAtual.itens.length; i++) {
             if (_demandaAtual.itens[i].id === itemId) { item = _demandaAtual.itens[i]; break; }
         }
-        if (!item) { _toast("Item não encontrado.", "error"); return; }
+        if (!item) { _toast("Item nÃ£o encontrado.", "error"); return; }
 
-        // Valida transição
+        // Valida transiÃ§Ã£o
         if (typeof DemandaStates !== "undefined") {
             var check = DemandaStates.canTransition(item.status, novoStatus);
             if (!check.valid) { _toast(check.reason, "error"); return; }
         }
 
-        // Caso especial: venda_perdida → pede motivo
+        // Caso especial: venda_perdida â†’ pede motivo
         if (novoStatus === "venda_perdida") {
             _confirmarVendaPerdida(itemId, item.status); return;
         }
 
-        // Caso especial: estoque_disponivel ou estoque_parcial → verifica quantidade
+        // Caso especial: estoque_disponivel ou estoque_parcial â†’ verifica quantidade
         if ((novoStatus === "estoque_disponivel" || novoStatus === "estoque_parcial") && (item.qtdeSolicitada || 1) > 1) {
             _confirmarQuantidadeParcial(itemId, item.status, novoStatus); return;
         }
@@ -943,7 +954,7 @@ const DemandaApp = (function() {
     }
 
     function _persistirTransicao(itemId, deStatus, paraStatus, obs) {
-        if (typeof DemandaDB === "undefined") { _toast("DemandaDB indisponível.", "error"); return; }
+        if (typeof DemandaDB === "undefined") { _toast("DemandaDB indisponÃ­vel.", "error"); return; }
 
         var s = _sessao;
         var por = s ? (s.login || s.nome || "sistema") : "sistema";
@@ -952,7 +963,7 @@ const DemandaApp = (function() {
 
         DemandaDB.updateItem(_demandaAtual.id, itemId, { status: paraStatus }, timelineEntry)
             .then(function() {
-                // Atualiza memória local
+                // Atualiza memÃ³ria local
                 for (var i = 0; i < _demandaAtual.itens.length; i++) {
                     if (_demandaAtual.itens[i].id === itemId) {
                         _demandaAtual.itens[i].status = paraStatus;
@@ -960,13 +971,13 @@ const DemandaApp = (function() {
                     }
                 }
                 var sc  = (typeof DemandaStates !== "undefined") ? DemandaStates.get(paraStatus) : { label: paraStatus };
-                _toast("Status avançado para: " + sc.label, "success");
+                _toast("Status avanÃ§ado para: " + sc.label, "success");
                 _renderDemandaDetalheBody();
                 // Atualiza a lista de demandas em background
                 loadDemandasLista(_filterAtual);
             })
             .catch(function(err) {
-                _toast("Erro ao avançar: " + (err.message || err), "error");
+                _toast("Erro ao avanÃ§ar: " + (err.message || err), "error");
             });
     }
 
@@ -975,7 +986,7 @@ const DemandaApp = (function() {
         var motivos = DemandaStates.MOTIVOS_PERDA;
         var opts = motivos.map(function(m) { return "<option value='" + m.key + "'>" + m.label + "</option>"; }).join("");
 
-        // Pequeno modal inline via confirm-like approach usando div overlay temporário
+        // Pequeno modal inline via confirm-like approach usando div overlay temporÃ¡rio
         var overlay = document.createElement("div");
         overlay.style.cssText = "position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center";
         overlay.innerHTML =
@@ -985,7 +996,7 @@ const DemandaApp = (function() {
             "<label style='font-size:.82rem;color:var(--text-secondary);display:block;margin-bottom:.4rem'>Motivo da perda:</label>" +
             "<select id='_motivoPerdaSelect' style='width:100%;background:var(--bg-dark);border:1px solid var(--border);border-radius:6px;padding:.45rem .7rem;color:var(--text-primary);margin-bottom:.75rem'>" +
             opts + "</select>" +
-            "<label style='font-size:.82rem;color:var(--text-secondary);display:block;margin-bottom:.4rem'>Observação (opcional):</label>" +
+            "<label style='font-size:.82rem;color:var(--text-secondary);display:block;margin-bottom:.4rem'>ObservaÃ§Ã£o (opcional):</label>" +
             "<input id='_motivoPerdaObs' type='text' placeholder='Detalhes...' " +
             "style='width:100%;background:var(--bg-dark);border:1px solid var(--border);border-radius:6px;padding:.45rem .7rem;color:var(--text-primary);box-sizing:border-box;margin-bottom:1rem'>" +
             "<div style='display:flex;gap:.5rem;justify-content:flex-end'>" +
@@ -999,16 +1010,16 @@ const DemandaApp = (function() {
         document.getElementById("_btnConfirmarPerda").onclick = function() {
             var motivo = document.getElementById("_motivoPerdaSelect").value;
             var obs    = (document.getElementById("_motivoPerdaObs").value || "").trim();
-            var obsStr = "Motivo: " + motivo + (obs ? " — " + obs : "");
+            var obsStr = "Motivo: " + motivo + (obs ? " â€” " + obs : "");
             overlay.remove();
             _persistirTransicao(itemId, deStatus, "venda_perdida", obsStr);
         };
     }
 
 
-    // ════════════════════════════════════════════════════════
-    // VIEW: DASHBOARD — KPIs DE INTELIGÊNCIA
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // VIEW: DASHBOARD â€” KPIs DE INTELIGÃŠNCIA
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function loadDashboard() {
         var container = document.getElementById("dashboardContainer");
@@ -1018,7 +1029,7 @@ const DemandaApp = (function() {
             "<p style='margin-top:.5rem;font-size:.85rem'>Carregando KPIs...</p></div>";
 
         if (typeof DemandaDB === "undefined") {
-            container.innerHTML = "<p style='padding:2rem;color:var(--accent-danger)'>DemandaDB indisponível.</p>"; return;
+            container.innerHTML = "<p style='padding:2rem;color:var(--accent-danger)'>DemandaDB indisponÃ­vel.</p>"; return;
         }
 
         DemandaDB.getDashboardStats()
@@ -1049,8 +1060,8 @@ const DemandaApp = (function() {
 
                 // Taxas como barras de progresso
                 var taxas = [
-                    { label: "Taxa de Identificação", val: s.taxaIdentificacao, color: "#f59e0b", desc: s.totalIdentificados + " de " + s.totalItens + " itens identificados" },
-                    { label: "Taxa de Estoque",       val: s.taxaEstoque,       color: "#10b981", desc: s.totalComEstoque + " de " + s.totalIdentificados + " têm estoque disponível" },
+                    { label: "Taxa de IdentificaÃ§Ã£o", val: s.taxaIdentificacao, color: "#f59e0b", desc: s.totalIdentificados + " de " + s.totalItens + " itens identificados" },
+                    { label: "Taxa de Estoque",       val: s.taxaEstoque,       color: "#10b981", desc: s.totalComEstoque + " de " + s.totalIdentificados + " tÃªm estoque disponÃ­vel" },
                     { label: "Taxa de Venda Perdida", val: s.taxaPerda,         color: "#ef4444", desc: s.totalPerdidos + " de " + s.totalItens + " itens perdidos" },
                 ];
 
@@ -1095,9 +1106,9 @@ const DemandaApp = (function() {
             });
     }
 
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // VIEW: FILA DE COMPRAS
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function loadFilaCompras() {
         var container = document.getElementById("comprasContainer");
@@ -1107,7 +1118,7 @@ const DemandaApp = (function() {
             "<p style='margin-top:.5rem;font-size:.85rem'>Carregando fila...</p></div>";
 
         if (typeof DemandaDB === "undefined") {
-            container.innerHTML = "<p style='padding:2rem;color:var(--accent-danger)'>DemandaDB indisponível.</p>"; return;
+            container.innerHTML = "<p style='padding:2rem;color:var(--accent-danger)'>DemandaDB indisponÃ­vel.</p>"; return;
         }
 
         DemandaDB.listItensFila(80)
@@ -1121,7 +1132,7 @@ const DemandaApp = (function() {
                     return;
                 }
 
-                var SLBL = { sem_estoque:"Sem Estoque", encaminhado_compras:"Em Compras", cotacao_fornecedor:"Cotando", compra_possivel:"Compra Possível" };
+                var SLBL = { sem_estoque:"Sem Estoque", encaminhado_compras:"Em Compras", cotacao_fornecedor:"Cotando", compra_possivel:"Compra PossÃ­vel" };
                 var SCOR = { sem_estoque:"#ef4444", encaminhado_compras:"#8b5cf6", cotacao_fornecedor:"#f97316", compra_possivel:"#10b981" };
 
                 // Agrupa por status
@@ -1150,24 +1161,24 @@ const DemandaApp = (function() {
                         "<span style='font-size:.75rem;color:var(--text-secondary);margin-left:.25rem'>(" + grpItens.length + ")</span></div>" +
                         "<div style='overflow-x:auto'><table style='width:100%;border-collapse:collapse;font-size:.82rem'>" +
                         "<thead><tr style='border-bottom:1px solid var(--border-color)'>" +
-                        ["Referência","Descrição","Qtd Solicitada","Demanda","Ação"].map(function(h) {
+                        ["ReferÃªncia","DescriÃ§Ã£o","Qtd Solicitada","Demanda","AÃ§Ã£o"].map(function(h) {
                             return "<th style='padding:.35rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:600;text-transform:uppercase'>" + h + "</th>";
                         }).join("") + "</tr></thead><tbody>" +
                         grpItens.map(function(item) {
                             var nexts = (typeof DemandaStates !== "undefined") ? DemandaStates.nextStates(item.status) : [];
-                            var acaoHtml = nexts.length === 0 ? "—" :
+                            var acaoHtml = nexts.length === 0 ? "â€”" :
                                 "<select onchange=\"DemandaApp.avancarItemFilaCompras('" + _esc(item.id) + "','" + _esc(item.demandaId) + "',this.value,this)\" " +
                                 "style='background:var(--bg-dark);border:1px solid var(--border);border-radius:5px;padding:.2rem .4rem;color:var(--text-primary);font-size:.73rem;cursor:pointer'>" +
-                                "<option value=''>Avançar...</option>" +
+                                "<option value=''>AvanÃ§ar...</option>" +
                                 nexts.map(function(n) { return "<option value='" + n.key + "'>" + n.label + "</option>"; }).join("") +
                                 "</select>";
                             return "<tr style='border-bottom:1px solid rgba(255,255,255,.04)'>" +
-                                "<td style='padding:.4rem .6rem;font-weight:600'>" + _esc(item.refOriginal || "—") + "</td>" +
-                                "<td style='padding:.4rem .6rem;color:var(--text-secondary);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>" + _esc(item.descOriginal || "—") + "</td>" +
+                                "<td style='padding:.4rem .6rem;font-weight:600'>" + _esc(item.refOriginal || "â€”") + "</td>" +
+                                "<td style='padding:.4rem .6rem;color:var(--text-secondary);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>" + _esc(item.descOriginal || "â€”") + "</td>" +
                                 "<td style='padding:.4rem .6rem;text-align:center'>" + (item.qtdeSolicitada || 1) + "</td>" +
                                 "<td style='padding:.4rem .6rem'>" +
                                 "<a onclick=\"DemandaApp.abrirDemanda('" + _esc(item.demandaId) + "')\" style='color:var(--primary-color);cursor:pointer;font-size:.78rem;text-decoration:underline'>" +
-                                (item.demandaId ? item.demandaId.substring(0, 8) + "..." : "—") + "</a></td>" +
+                                (item.demandaId ? item.demandaId.substring(0, 8) + "..." : "â€”") + "</a></td>" +
                                 "<td style='padding:.4rem .6rem'>" + acaoHtml + "</td>" +
                                 "</tr>";
                         }).join("") +
@@ -1181,25 +1192,25 @@ const DemandaApp = (function() {
             });
     }
 
-    // Avança estado de item direto pela fila de compras (sem _demandaAtual)
+    // AvanÃ§a estado de item direto pela fila de compras (sem _demandaAtual)
     function avancarItemFilaCompras(itemId, demandaId, novoStatus, selectEl) {
         if (!novoStatus || !demandaId) return;
         if (selectEl) selectEl.value = "";
-        if (typeof DemandaDB === "undefined") { _toast("DemandaDB indisponível.", "error"); return; }
+        if (typeof DemandaDB === "undefined") { _toast("DemandaDB indisponÃ­vel.", "error"); return; }
         var s = _sessao;
         var por = s ? (s.login || s.nome || "sistema") : "sistema";
         DemandaDB.updateItem(demandaId, itemId, { status: novoStatus }, { evento: "status_changed", por: por, obs: "" })
             .then(function() {
                 var sc = (typeof DemandaStates !== "undefined") ? DemandaStates.get(novoStatus) : { label: novoStatus };
-                _toast("Status avançado: " + sc.label, "success");
+                _toast("Status avanÃ§ado: " + sc.label, "success");
                 setTimeout(function() { loadFilaCompras(); }, 300);
             })
             .catch(function(err) { _toast("Erro: " + (err.message || err), "error"); });
     }
 
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // AUTOSAVE DE RASCUNHO
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     var _RASCUNHO_KEY = "demanda_rascunho";
 
@@ -1240,9 +1251,9 @@ const DemandaApp = (function() {
         } catch(e) {}
     }
 
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // TIMELINE VISUAL POR ITEM
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function _renderTimeline(item) {
         var tl = item.timeline || [];
@@ -1270,9 +1281,9 @@ const DemandaApp = (function() {
         if (btn) btn.querySelector(".material-icons-round").textContent = open ? "history" : "expand_less";
     }
 
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // IDENTIFICAR ITEM VIA ERP
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     var _buscaErpItemId = null;
 
@@ -1363,9 +1374,9 @@ const DemandaApp = (function() {
             .catch(function(err) { _toast("Erro ao vincular: " + (err.message || err), "error"); });
     }
 
-    // ════════════════════════════════════════════════════════
-    // QUANTIDADE PARCIAL — SPLIT DE ITEM
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // QUANTIDADE PARCIAL â€” SPLIT DE ITEM
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function _confirmarQuantidadeParcial(itemId, deStatus, paraStatus) {
         var item = null;
@@ -1405,9 +1416,9 @@ const DemandaApp = (function() {
         };
     }
 
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // DEVOLUTIVA DE COMPRAS
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function _abrirDevolutivaCompras(itemId, demandaId) {
         var old = document.getElementById("overlayDevolutiva"); if (old) old.remove();
@@ -1463,9 +1474,9 @@ const DemandaApp = (function() {
             .catch(function(err) { _toast("Erro: " + (err.message || err), "error"); });
     }
 
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // VIEW: OR\u00c7AMENTO B\u00c1SICO
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function loadOrcamento() {
         var container = document.getElementById("orcamentoContainer");
@@ -1545,9 +1556,9 @@ const DemandaApp = (function() {
         _confirmarVendaPerdida(itemId, deStatus);
     }
 
-    // ════════════════════════════════════════════════════════
-    // VIEW: COTAÇÃO DO CONCORRENTE
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // VIEW: COTAÃ‡ÃƒO DO CONCORRENTE
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     var _concItens = [];
     var _CONC_INP  = "width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:5px;padding:.3rem .55rem;color:var(--text-primary);font-size:.8rem;box-sizing:border-box";
@@ -1644,7 +1655,7 @@ const DemandaApp = (function() {
     function _concUpdateItem(idx, field, value) {
         if (!_concItens[idx]) return;
         _concItens[idx][field] = value;
-        // Atualiza somente a coluna diferença sem re-renderizar tudo
+        // Atualiza somente a coluna diferenÃ§a sem re-renderizar tudo
         var tbody = document.getElementById("concTbody");
         if (tbody) _renderConcTbody();
     }
@@ -1794,9 +1805,9 @@ const DemandaApp = (function() {
             }).catch(function(){});
     }
 
-    // ════════════════════════════════════════════════════════
-    // TOAST / NOTIFICAÇÕES
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // TOAST / NOTIFICAÃ‡Ã•ES
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function _toast(msg, type) {
         var COLORS = { success: "#10b981", error: "#ef4444", info: "#3b82f6", warning: "#f59e0b" };
@@ -1820,9 +1831,9 @@ const DemandaApp = (function() {
         }, 3200);
     }
 
-    // ════════════════════════════════════════════════════════
-    // UTILITÁRIOS
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // UTILITÃRIOS
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function _esc(str) {
         if (!str && str !== 0) return "";
@@ -1831,9 +1842,9 @@ const DemandaApp = (function() {
             .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
 
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // AUTH / SIDEBAR
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function _updateUser(s) {
         var n = (s && (s.nome || s.name || s.email)) || "Usuario";
@@ -1850,17 +1861,17 @@ const DemandaApp = (function() {
         else { window.location.href = "/platform/index.html"; }
     }
 
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // BOOTSTRAP
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function init() {
         console.log("[DemandaApp] Inicializando v1.1.0...");
 
-        // Guard de autenticação
+        // Guard de autenticaÃ§Ã£o
         if (typeof ParreiraAuth !== "undefined") {
             if (!ParreiraAuth.isLogado()) {
-                // ✅ Redireciona para login.html com module=demanda e redirect correto
+                // âœ… Redireciona para login.html com module=demanda e redirect correto
                 // (antes ia para index.html do portal, que perdia o contexto e abria o despacho)
                 var destPath = encodeURIComponent("modules/demanda/index.html");
                 window.location.href = "/platform/login.html?module=demanda&redirect=" + destPath;
@@ -1871,9 +1882,9 @@ const DemandaApp = (function() {
                 var mods   = (_sessao && _sessao.modulos) ? _sessao.modulos : [];
                 var role   = _sessao ? (_sessao.role || "") : "";
                 var tenant = _sessao ? (_sessao.tenantId || "") : "";
-                // Admin/master sempre têm acesso a todos os módulos
+                // Admin/master sempre tÃªm acesso a todos os mÃ³dulos
                 var isAdmin = (role === "admin" || role === "master");
-                // Tenant centralpecas tem acesso ao módulo (configuração pendente no Firestore)
+                // Tenant centralpecas tem acesso ao mÃ³dulo (configuraÃ§Ã£o pendente no Firestore)
                 var isCentralPecas = (tenant === "centralpecas");
                 if (!isAdmin && !isCentralPecas && mods.length > 0 && mods.indexOf("demanda") === -1) {
                     alert("Voce nao tem acesso ao modulo Inteligencia de Demanda.\nContate o administrador.");
@@ -1885,7 +1896,7 @@ const DemandaApp = (function() {
         // Preenche sidebar
         try { _updateUser(_sessao || { nome: "Demo", filial: "Demo" }); } catch(e) {}
 
-        // Versão no footer
+        // VersÃ£o no footer
         fetch("version.json?v=" + Date.now())
             .then(function(r) { return r.json(); })
             .then(function(d) {
@@ -1910,9 +1921,9 @@ const DemandaApp = (function() {
         console.log("[DemandaApp] Pronto v1.1.0.");
     }
 
-    // ════════════════════════════════════════════════════════
-    // API PÚBLICA
-    // ════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // API PÃšBLICA
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     return {
         init:                   init,
@@ -1922,7 +1933,7 @@ const DemandaApp = (function() {
         onSearchInput:          onSearchInput,
         clearSearch:            clearSearch,
         selectSearchResult:     selectSearchResult,
-        // Importação
+        // ImportaÃ§Ã£o
         openImportModal:        openImportModal,
         closeModal:             closeModal,
         addItemFromDetails:     addItemFromDetails,
@@ -1965,7 +1976,7 @@ const DemandaApp = (function() {
         loadDashboard:          loadDashboard,
         loadFilaCompras:        loadFilaCompras,
         avancarItemFilaCompras: avancarItemFilaCompras,
-        // Orçamento
+        // OrÃ§amento
         loadOrcamento:          loadOrcamento,
         _aprovarItemOrcamento:  _aprovarItemOrcamento,
         _perderItemOrcamento:   _perderItemOrcamento,
@@ -1986,13 +1997,13 @@ const DemandaApp = (function() {
         _loadHistoricoConcorrente:    _loadHistoricoConcorrente,
         _toggleConcCard:              _toggleConcCard,
         _arquivarCotacaoConcorrente:  _arquivarCotacaoConcorrente,
-        // Base Técnica
+        // Base TÃ©cnica
         abrirBaseTecnica:             abrirBaseTecnica,
         syncMaxdataTechbase:          syncMaxdataTechbase,
         importarCatalogoPDF:          importarCatalogoPDF,
     };
 
-    // ── Base Técnica ───────────────────────────────────────────
+    // â”€â”€ Base TÃ©cnica â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function abrirBaseTecnica() {
         var modal = document.getElementById('modalBaseTecnica');
         if (!modal) return;
@@ -2016,7 +2027,7 @@ const DemandaApp = (function() {
     }
 
     function syncMaxdataTechbase() {
-        if (typeof DemandaLookup === 'undefined') { _toast('DemandaLookup não carregado.', 'error'); return; }
+        if (typeof DemandaLookup === 'undefined') { _toast('DemandaLookup nÃ£o carregado.', 'error'); return; }
         var btn  = document.getElementById('btBtnSync');
         var stat = document.getElementById('btSyncStatus');
         var bar  = document.getElementById('btSyncBar');
@@ -2026,16 +2037,16 @@ const DemandaApp = (function() {
         if (fill) fill.style.width  = '5%';
         if (stat) stat.textContent  = 'Conectando ao Maxdata...';
         DemandaLookup.syncMaxdataToTechbase(1, function(salvo, pagina) {
-            if (stat) stat.textContent = 'Sincronizando... ' + salvo + ' peças (pág. ' + (pagina || '?') + ')';
+            if (stat) stat.textContent = 'Sincronizando... ' + salvo + ' peÃ§as (pÃ¡g. ' + (pagina || '?') + ')';
             if (fill) fill.style.width = Math.min(95, 5 + salvo / 10) + '%';
         }).then(function(total) {
             if (fill) fill.style.width  = '100%';
-            if (stat) stat.textContent  = '✓ ' + total + ' peças agrícolas sincronizadas!';
-            _toast(total + ' peças salvas na base técnica.', 'success');
+            if (stat) stat.textContent  = 'âœ“ ' + total + ' peÃ§as agrÃ­colas sincronizadas!';
+            _toast(total + ' peÃ§as salvas na base tÃ©cnica.', 'success');
             _loadBaseTecnicaStats();
         }).catch(function(e) {
-            if (stat) stat.textContent = '✗ Erro: ' + (e.message || e);
-            _toast('Erro na sincronização: ' + (e.message || e), 'error');
+            if (stat) stat.textContent = 'âœ— Erro: ' + (e.message || e);
+            _toast('Erro na sincronizaÃ§Ã£o: ' + (e.message || e), 'error');
         }).finally(function() {
             if (btn) btn.disabled = false;
         });
@@ -2043,7 +2054,7 @@ const DemandaApp = (function() {
 
     function importarCatalogoPDF(file) {
         if (!file) return;
-        if (typeof DemandaPDF === 'undefined') { _toast('DemandaPDF não carregado.', 'error'); return; }
+        if (typeof DemandaPDF === 'undefined') { _toast('DemandaPDF nÃ£o carregado.', 'error'); return; }
         var stat = document.getElementById('btPdfStatus');
         var bar  = document.getElementById('btPdfBar');
         var fill = document.getElementById('btPdfBarFill');
@@ -2061,12 +2072,12 @@ const DemandaApp = (function() {
             if (fill) fill.style.width = pct + '%';
         }).then(function(result) {
             if (fill) fill.style.width = '100%';
-            if (stat) stat.textContent = '✓ ' + result.totalRefs + ' referências de ' + result.totalPaginas +
-                ' páginas | ' + result.fabricante + ' ' + result.equipamento;
-            _toast(result.totalRefs + ' peças importadas do PDF!', 'success');
+            if (stat) stat.textContent = 'âœ“ ' + result.totalRefs + ' referÃªncias de ' + result.totalPaginas +
+                ' pÃ¡ginas | ' + result.fabricante + ' ' + result.equipamento;
+            _toast(result.totalRefs + ' peÃ§as importadas do PDF!', 'success');
             _loadBaseTecnicaStats();
         }).catch(function(e) {
-            if (stat) stat.textContent = '✗ Erro: ' + (e.message || e);
+            if (stat) stat.textContent = 'âœ— Erro: ' + (e.message || e);
             _toast('Erro ao importar PDF: ' + (e.message || e), 'error');
         }).finally(function() {
             var inp = document.getElementById('btPdfInput');
@@ -2076,7 +2087,7 @@ const DemandaApp = (function() {
 
 })();
 
-// ── Bootstrap: aguarda ParreiraAuth antes de inicializar ─────
+// â”€â”€ Bootstrap: aguarda ParreiraAuth antes de inicializar â”€â”€â”€â”€â”€
 document.addEventListener("DOMContentLoaded", function() {
     var attempts = 0;
     var t = setInterval(function() {
@@ -2084,7 +2095,7 @@ document.addEventListener("DOMContentLoaded", function() {
         if (typeof ParreiraAuth !== "undefined") { clearInterval(t); DemandaApp.init(); return; }
         if (attempts >= 40) {
             clearInterval(t);
-            console.warn("[DemandaApp] ParreiraAuth indisponivel — iniciando sem auth guard.");
+            console.warn("[DemandaApp] ParreiraAuth indisponivel â€” iniciando sem auth guard.");
             DemandaApp.init();
         }
     }, 100);

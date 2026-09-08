@@ -1,8 +1,8 @@
-/**
- * api/maxdata.js — Vercel Serverless Proxy para API Maxdata
+﻿/**
+ * api/maxdata.js â€” Vercel Serverless Proxy para API Maxdata
  * ===========================================================
  * Node.js 18+ com fetch global nativo. CommonJS (module.exports).
- * Resolve Mixed Content: browser HTTPS → proxy HTTPS → Maxdata HTTP.
+ * Resolve Mixed Content: browser HTTPS â†’ proxy HTTPS â†’ Maxdata HTTP.
  */
 
 module.exports = async function handler(req, res) {
@@ -28,12 +28,12 @@ module.exports = async function handler(req, res) {
     const endpointPath = (_path || '').replace(/^\/+/, '');
 
     if (!endpointPath) {
-        return res.status(400).json({ success: false, message: 'Parâmetro _path ausente.' });
+        return res.status(400).json({ success: false, message: 'ParÃ¢metro _path ausente.' });
     }
 
     const qs = Object.keys(rest).length ? '?' + new URLSearchParams(rest).toString() : '';
 
-    // Cabeçalhos para repassar
+    // CabeÃ§alhos para repassar
     const headers = { 
         'Content-Type': 'application/json',
         'Host': 'rds.skytins.com.br:8720'
@@ -57,7 +57,7 @@ module.exports = async function handler(req, res) {
         console.log(`[MaxDataProxy] Tentando: ${req.method} ${targetUrl}`);
 
         const ac = new AbortController();
-        const timer = setTimeout(() => ac.abort(), 7000);
+        const timer = setTimeout(() => ac.abort(), 4500);
 
         try {
             const response = await fetch(targetUrl, {
@@ -84,6 +84,6 @@ module.exports = async function handler(req, res) {
 
     return res.status(504).json({
         success: false,
-        message: `Timeout ao conectar com a API MaxData: ${lastError?.message || 'Servidor não respondeu a tempo.'}`
+        message: `Timeout ao conectar com a API MaxData: ${lastError?.message || 'Servidor nÃ£o respondeu a tempo.'}`
     });
 };
