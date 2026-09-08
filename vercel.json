@@ -253,6 +253,14 @@
             "destination": "/platform/modules/demanda/$1"
         },
         {
+            "source": "/prospeccao",
+            "destination": "/platform/modules/prospeccao/index.html"
+        },
+        {
+            "source": "/prospeccao/(.*)",
+            "destination": "/platform/modules/prospeccao/$1"
+        },
+        {
             "source": "/:tenant",
             "destination": "/platform/modules/dispatch/index.html"
         }
