@@ -48,7 +48,7 @@ const DemandaSearch = (() => {
     // ── Busca principal (rota multi-camada) ───────────────────
     /**
      * Busca um produto por qualquer informação disponível.
-     * Tenta em cascata: ERP exato → base técnica → ERP textual → fuzzy.
+     * Cascata: Firestore synced → base técnica → ERP (opcional)
      *
      * @param {string} query - Texto digitado pelo vendedor
      * @param {object} opts  - { filialId, limit, forceRefresh }
@@ -67,33 +67,22 @@ const DemandaSearch = (() => {
         }
 
         const results = [];
-        const seen    = new Set(); // evita duplicatas por erpProdutoId ou techbaseId
+        const seen    = new Set();
 
-        // Camada 1: Busca exata no ERP por referência normalizada
+        // CAMADA 0 (PRIMÁRIA): Produtos sincronizados no Firestore (maxdata_sync.py)
+        // Sempre funciona, independente de acesso ao ERP.
         try {
-            const erpRef = await _searchErpByRef(q, filialId);
-            for (const r of erpRef) {
-                if (!seen.has(`erp:${r.erpProdutoId}`)) {
-                    seen.add(`erp:${r.erpProdutoId}`);
-                    results.push({ ...r, _fonte: 'erp_ref_exata', _rank: 100 });
+            const fsProducts = await _searchFirestoreProducts(q, filialId);
+            for (const r of fsProducts) {
+                const key = `fs:${r.erpProdutoId || r._firestoreId}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    results.push({ ...r, _fonte: 'firestore_sync', _rank: r._rank || 90 });
                 }
             }
-        } catch (e) { console.warn('[DemandaSearch] ERP ref exata falhou:', e.message); }
+        } catch (e) { console.warn('[DemandaSearch] Firestore products falhou:', e.message); }
 
-        // Camada 2: Busca por EAN
-        if (results.length === 0 && /^\d{8,14}$/.test(q.replace(/\s/g, ''))) {
-            try {
-                const erpEan = await _searchErpByEAN(q.replace(/\s/g, ''), filialId);
-                for (const r of erpEan) {
-                    if (!seen.has(`erp:${r.erpProdutoId}`)) {
-                        seen.add(`erp:${r.erpProdutoId}`);
-                        results.push({ ...r, _fonte: 'erp_ean', _rank: 95 });
-                    }
-                }
-            } catch (e) { /* silencioso */ }
-        }
-
-        // Camada 3: Base técnica (referências cruzadas)
+        // CAMADA 1: Base técnica Firestore (referências cruzadas OEM)
         try {
             const techResults = await _searchTechbase(q, filialId);
             for (const r of techResults) {
@@ -105,8 +94,21 @@ const DemandaSearch = (() => {
             }
         } catch (e) { console.warn('[DemandaSearch] Base técnica falhou:', e.message); }
 
-        // Camada 4: Busca textual no ERP por descrição
+        // CAMADA 2: ERP em tempo real (opcional — falha silenciosa se inacessível)
         if (results.length < 5) {
+            try {
+                const erpRef = await _searchErpByRef(q, filialId);
+                for (const r of erpRef) {
+                    if (!seen.has(`erp:${r.erpProdutoId}`)) {
+                        seen.add(`erp:${r.erpProdutoId}`);
+                        results.push({ ...r, _fonte: 'erp_ref_exata', _rank: 100 });
+                    }
+                }
+            } catch (_) { /* ERP inacessível — ignora */ }
+        }
+
+        // CAMADA 3: Busca textual ERP (última opção)
+        if (results.length < 3) {
             try {
                 const erpText = await _searchErpByText(q, filialId, limit);
                 for (const r of erpText) {
@@ -115,13 +117,112 @@ const DemandaSearch = (() => {
                         results.push({ ...r, _fonte: 'erp_texto', _rank: 60 });
                     }
                 }
-            } catch (e) { console.warn('[DemandaSearch] ERP texto falhou:', e.message); }
+            } catch (_) { /* ERP inacessível — ignora */ }
         }
 
-        // Ordena por rank e limita
         const sorted = results.sort((a, b) => b._rank - a._rank).slice(0, limit);
         _setCache(cacheKey, sorted);
         return sorted;
+    }
+
+    // ── Busca no Firestore (techbase/products — coleção sincronizada) ─────
+    /**
+     * Busca produtos no Firestore usando prefix range queries.
+     * Funciona para: código exato, prefixo de referência, prefixo de descrição.
+     */
+    async function _searchFirestoreProducts(query, filialId) {
+        if (typeof firebase === 'undefined') return [];
+        const db  = firebase.firestore();
+        const col = `tenants/${TENANT_ID}/demanda/techbase/products`;
+
+        const qUp = query.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+        const end = qUp + '\uf8ff';
+        const results = [];
+        const seen = new Set();
+
+        const addItem = (doc) => {
+            if (seen.has(doc.id)) return;
+            seen.add(doc.id);
+            const d = doc.data();
+            results.push(_mapFirestoreProduct(d, doc.id, filialId, qUp));
+        };
+
+        // Busca por referência (codigoFab) — mais precisa
+        try {
+            const refSnap = await db.collection(col)
+                .where('referencia', '>=', qUp).where('referencia', '<=', end)
+                .where('ativo', '==', true).limit(15).get();
+            refSnap.docs.forEach(d => addItem(d));
+        } catch (_) {}
+
+        // Busca por código ERP exato (numérico)
+        if (/^\d+$/.test(query)) {
+            try {
+                const codeSnap = await db.collection(col)
+                    .where('codigoErp', '==', query)
+                    .limit(5).get();
+                codeSnap.docs.forEach(d => addItem(d));
+            } catch (_) {}
+        }
+
+        // Busca por descrição (prefix) — complementa referência
+        if (results.length < 10) {
+            try {
+                const descSnap = await db.collection(col)
+                    .where('descNorm', '>=', qUp).where('descNorm', '<=', end)
+                    .where('ativo', '==', true).limit(15).get();
+                descSnap.docs.forEach(d => addItem(d));
+            } catch (_) {
+                // descNorm pode não existir nos docs antigos — tenta descricao
+                try {
+                    const descSnap2 = await db.collection(col)
+                        .where('descricao', '>=', query).where('descricao', '<=', query + '\uf8ff')
+                        .where('ativo', '==', true).limit(10).get();
+                    descSnap2.docs.forEach(d => addItem(d));
+                } catch (_2) {}
+            }
+        }
+
+        return results;
+    }
+
+    // ── Mapeamento Firestore product → ResultadoBusca ─────────
+    function _mapFirestoreProduct(d, docId, filialId, queryNorm) {
+        const ref  = (d.referencia || '').toUpperCase();
+        const desc = (d.descricao  || '').toUpperCase();
+        // Rank: referência exata = 100, prefixo ref = 90, descrição = 75
+        let rank = 75;
+        if (ref === queryNorm)         rank = 100;
+        else if (ref.startsWith(queryNorm)) rank = 90;
+        else if (desc.startsWith(queryNorm)) rank = 80;
+
+        return {
+            _firestoreId:       docId,
+            erpProdutoId:       d.codigoErp || null,
+            erpProdutoDesc:     (d.descricao || d.descPdv || '').trim(),
+            erpCodigoFab:       (d.referencia || '').trim(),
+            erpCodigoOriginal:  (d.referencia || '').trim(),
+            erpGrupo:           (d.grupo || '').trim(),
+            erpSubGrupo:        '',
+            fabricante:         (d.fabricante || '').trim(),
+            fabricanteId:       null,
+            unidade:            'UN',
+            aplicacao:          (d.aplicacao || '').trim(),
+            localizador:        '',
+            ean:                (d.barcode || '').trim(),
+            estoqueFilial:      Number(d.estoque || 0),
+            estoqueOutrasFiliais: [],
+            estoqueTotal:       Number(d.estoque || 0),
+            preco:              Number(d.preco || 0),
+            valorAtacado:       0,
+            valorCusto:         0,
+            confidencia:        'erp',
+            parteMestreId:      null,
+            _temEstoque:        Number(d.estoque || 0) > 0,
+            _temEstoqueOutro:   false,
+            _source:            'firestore',
+            _rank:              rank,
+        };
     }
 
     // ── Busca por referência exata no ERP ─────────────────────
@@ -302,35 +403,41 @@ const DemandaSearch = (() => {
         return _mapErpProduct(raw, filialId);
     }
 
-    // ── Busca de clientes ERP ─────────────────────────────────
+    // ── Busca de clientes ──────────────────────────────────────
     /**
-     * Busca clientes do sessionStorage (sincronizados pelo adapter).
-     * Filtragem local por nome, fantasia ou CNPJ.
+     * Busca clientes. Usa Firestore (DemandaClientes) como fonte primária.
+     * Fallback: sessionStorage (sincronização legada).
      */
-    function searchClients(query) {
-        const q = (query || '').trim().toLowerCase();
+    async function searchClients(query) {
+        const q = (query || '').trim();
         if (q.length < 2) return [];
 
-        // Tenta sessionStorage (_erp_clients_maxdata) primeiro
+        // PRIMÁRIO: Firestore via DemandaClientes (767 clientes sincronizados)
+        if (typeof DemandaClientes !== 'undefined') {
+            try {
+                const fsClients = await DemandaClientes.buscar(q);
+                if (fsClients.length > 0) return fsClients.slice(0, 15);
+            } catch (_) {}
+        }
+
+        // FALLBACK: sessionStorage (legado)
         let clients = [];
         try {
             const ss = sessionStorage.getItem('_erp_clients_maxdata');
             if (ss) clients = JSON.parse(ss);
         } catch (_) {}
 
-        // Fallback: Utils.getStorage
         if (clients.length === 0 && typeof Utils !== 'undefined' && Utils.getStorage) {
             clients = Utils.getStorage('clients') || [];
         }
 
-        return clients
-            .filter(c => {
-                const nome     = (c.nome || '').toLowerCase();
-                const fantasia = (c.fantasia || '').toLowerCase();
-                const cnpj     = (c.cnpj || '').replace(/\D/g, '');
-                return nome.includes(q) || fantasia.includes(q) || cnpj.includes(q);
-            })
-            .slice(0, 15);
+        const qLow = q.toLowerCase();
+        return clients.filter(c => {
+            const nome     = (c.nome || '').toLowerCase();
+            const fantasia = (c.fantasia || c.nomeFantasia || '').toLowerCase();
+            const cnpj     = (c.cnpj || c.documento || '').replace(/\D/g, '');
+            return nome.includes(qLow) || fantasia.includes(qLow) || cnpj.includes(qLow);
+        }).slice(0, 15);
     }
 
     // ── Limpar cache ──────────────────────────────────────────
