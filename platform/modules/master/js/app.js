@@ -599,7 +599,7 @@ function setupForms() {
 }
 
 function formatModuleName(code) {
-    const names = { 'dispatch': 'Despacho Logístico', 'wms': 'WMS', 'master': 'Master', 'erp-consultoria': 'Bússola Gestão', 'wms-coletor': 'WMS Coletor', 'demanda': 'Inteligência de Demanda' };
+    const names = { 'dispatch': 'Despacho Logístico', 'wms': 'WMS', 'master': 'Master', 'erp-consultoria': 'Bússola Gestão', 'wms-coletor': 'WMS Coletor', 'demanda': 'Inteligência de Demanda', 'prospeccao': 'MAXCRM Campo' };
     return names[code] || code.toUpperCase();
 }
 
@@ -674,7 +674,7 @@ window.abrirWmsConfig = async function (tenantId) {
     if (!tenant) { alert('Tenant nÃ£o encontrado.'); return; }
 
     // MÃ³dulos habilitados com nome amigÃ¡vel
-    const modNames = { wms:'WMS', dispatch:'Despacho', master:'Master', 'erp-consultoria': 'Bússola Gestão', 'wms-coletor': 'WMS Coletor', 'demanda': 'Inteligência de Demanda' };
+    const modNames = { wms:'WMS', dispatch:'Despacho', master:'Master', 'erp-consultoria': 'Bússola Gestão', 'wms-coletor': 'WMS Coletor', 'demanda': 'Inteligência de Demanda', 'prospeccao': 'MAXCRM Campo' };
     const enabledMods = (tenant.modules || []).map(m => modNames[m] || m);
 
     // Carrega configs existentes do Firestore
@@ -1110,6 +1110,7 @@ window.renderAmbientes = function renderAmbientes() {
         'wms-coletor':     { label: 'WMS Coletor',     icon: 'phone_android',        color: '#06b6d4', prodUrl: ()  => `${PROD}/apk`,                          hmlUrl: ()  => `${HML}/apk` },
         'erp-consultoria': { label: 'Bússola Gestão', icon: 'savings',              color: '#14b8a6', prodUrl: ()  => PROD + '/erp-consultoria',             hmlUrl: ()  => HML + '/erp-consultoria_hml' },
         'demanda':         { label: 'Intelig. Demanda', icon: 'insights',            color: '#8b5cf6', prodUrl: (s) => `${PROD}/platform/modules/demanda/`,   hmlUrl: (s) => `${HML}/platform/modules/demanda/` },
+        'prospeccao':      { label: 'MAXCRM Campo',     icon: 'explore',             color: '#e11d48', prodUrl: ()  => `${PROD}/prospeccao`,                       hmlUrl: ()  => `${HML}/prospeccao` },
     };
 
     const allTenants  = getAllTenants();
