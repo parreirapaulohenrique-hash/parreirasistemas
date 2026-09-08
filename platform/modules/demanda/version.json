@@ -1,1 +1,1 @@
-{"version":"2.4.2","build":"20260907-v2.4.2","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-07","change":"v2.4.2 - fix critico: DEMANDS_COL corrigido para 5 segmentos (colecao Firestore valida)"}
+﻿{"version":"2.4.3","build":"20260908-v2.4.3","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-08","change":"v2.4.3 - fix critico: view-integracaoErp movido para dentro do main-content; ERP e integracoes agora visiveis"}
