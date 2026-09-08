@@ -1,38 +1,77 @@
-﻿{
+{
     "functions": {
-        "api/maxdata.js": { "maxDuration": 30 }, "api/ocr.js": { "maxDuration": 30 }
-    },    "headers": [
+        "api/maxdata.js": {
+            "maxDuration": 30
+        },
+        "api/ocr.js": {
+            "maxDuration": 30
+        }
+    },
+    "headers": [
+        {
+            "source": "/(.*).html",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "no-cache, no-store, must-revalidate"
+                }
+            ]
+        },
         {
             "source": "/.well-known/assetlinks.json",
             "headers": [
-                { "key": "Content-Type",                "value": "application/json" },
-                { "key": "Access-Control-Allow-Origin", "value": "*" },
-                { "key": "Cache-Control",               "value": "public, max-age=3600" }
+                {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                },
+                {
+                    "key": "Access-Control-Allow-Origin",
+                    "value": "*"
+                },
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=3600"
+                }
             ]
         },
         {
             "source": "/platform/download/(.*).apk",
             "headers": [
-                { "key": "Content-Type",        "value": "application/vnd.android.package-archive" },
-                { "key": "Content-Disposition", "value": "attachment; filename=\"ParreiraLog-WMS-Coletor.apk\"" }
+                {
+                    "key": "Content-Type",
+                    "value": "application/vnd.android.package-archive"
+                },
+                {
+                    "key": "Content-Disposition",
+                    "value": "attachment; filename=\"ParreiraLog-WMS-Coletor.apk\""
+                }
             ]
         },
         {
             "source": "/(.*).js",
             "headers": [
-                { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+                {
+                    "key": "Cache-Control",
+                    "value": "no-cache, no-store, must-revalidate"
+                }
             ]
         },
         {
             "source": "/(.*).css",
             "headers": [
-                { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+                {
+                    "key": "Cache-Control",
+                    "value": "no-cache, no-store, must-revalidate"
+                }
             ]
         },
         {
             "source": "/(.*).json",
             "headers": [
-                { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+                {
+                    "key": "Cache-Control",
+                    "value": "no-cache, no-store, must-revalidate"
+                }
             ]
         },
         {
@@ -196,11 +235,11 @@
         {
             "source": "/fix_admin",
             "destination": "/platform/fix_admin.html"
-        },        {
+        },
+        {
             "source": "/fix_wms_index",
             "destination": "/platform/fix_wms_users_index.html"
         },
-
         {
             "source": "/version.json",
             "destination": "/platform/version.json"
@@ -217,9 +256,5 @@
             "source": "/:tenant",
             "destination": "/platform/modules/dispatch/index.html"
         }
-
-
-
-
     ]
 }
