@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0d0d0d">
+    <title>Instalar MAXCRM Campo — Prospecção Comercial & CRM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <link rel="manifest" href="/platform/modules/prospeccao/manifest.json">
+    <link rel="icon" type="image/png" href="/platform/modules/prospeccao/icons/icon-192.png">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0d0d0d;
+            color: #f4f4f5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background-image:
+                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(225, 29, 72, 0.22) 0%, transparent 70%),
+                radial-gradient(ellipse 50% 50% at 50% 120%, rgba(15, 23, 42, 0.6) 0%, transparent 80%);
+        }
+
+        .card {
+            background: rgba(24, 24, 27, 0.88);
+            border: 1px solid rgba(225, 29, 72, 0.25);
+            backdrop-filter: blur(16px);
+            border-radius: 22px;
+            padding: 2.5rem 2rem;
+            max-width: 440px;
+            width: 100%;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), 0 0 35px rgba(225, 29, 72, 0.1);
+            text-align: center;
+        }
+
+        .app-icon {
+            width: 90px;
+            height: 90px;
+            border-radius: 24px;
+            background: linear-gradient(135deg, #e11d48, #be123c, #881337);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.25rem;
+            box-shadow: 0 10px 25px rgba(225, 29, 72, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .app-icon span { font-size: 2.8rem; color: #fff; }
+
+        .app-name {
+            font-size: 1.6rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff, #fda4af);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: .35rem;
+            letter-spacing: -0.02em;
+        }
+
+        .app-sub {
+            font-size: .88rem;
+            color: #a1a1aa;
+            margin-bottom: 1.5rem;
+            line-height: 1.4;
+        }
+
+        .badges {
+            display: flex;
+            justify-content: center;
+            gap: .5rem;
+            margin-bottom: 1.8rem;
+            flex-wrap: wrap;
+        }
+        .badge {
+            font-size: .72rem;
+            font-weight: 600;
+            padding: .3rem .75rem;
+            border-radius: 20px;
+            letter-spacing: .02em;
+        }
+        .badge-rose  { background: rgba(225, 29, 72, 0.15); color: #fb7185; border: 1px solid rgba(225, 29, 72, 0.35); }
+        .badge-green { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge-dark  { background: rgba(255, 255, 255, 0.06); color: #d4d4d8; border: 1px solid rgba(255, 255, 255, 0.1); }
+
+        .btn-install {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .75rem;
+            width: 100%;
+            padding: 1.05rem 1.5rem;
+            background: linear-gradient(135deg, #e11d48, #be123c);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 14px;
+            font-size: 1.02rem;
+            font-weight: 700;
+            letter-spacing: .01em;
+            box-shadow: 0 8px 24px rgba(225, 29, 72, 0.45);
+            transition: transform .15s, box-shadow .15s, opacity .15s;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-install:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(225, 29, 72, 0.55); }
+        .btn-install:active { transform: translateY(0); opacity: .9; }
+        .btn-install .material-icons-round { font-size: 1.4rem; }
+
+        .btn-portal {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+            width: 100%;
+            padding: .75rem 1.25rem;
+            background: transparent;
+            color: #a1a1aa;
+            text-decoration: none;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            font-size: .85rem;
+            font-weight: 500;
+            transition: border-color .15s, color .15s;
+            margin-bottom: 2rem;
+        }
+        .btn-portal:hover { border-color: rgba(225, 29, 72, 0.5); color: #fb7185; }
+        .btn-portal .material-icons-round { font-size: 1.1rem; }
+
+        .steps {
+            text-align: left;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding-top: 1.5rem;
+        }
+        .steps-title {
+            font-size: .75rem;
+            font-weight: 700;
+            color: #71717a;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            margin-bottom: 1rem;
+        }
+        .step {
+            display: flex;
+            gap: .75rem;
+            align-items: flex-start;
+            margin-bottom: .95rem;
+        }
+        .step-num {
+            min-width: 26px;
+            height: 26px;
+            background: rgba(225, 29, 72, 0.15);
+            border: 1px solid rgba(225, 29, 72, 0.35);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .75rem;
+            font-weight: 700;
+            color: #fb7185;
+            margin-top: .1rem;
+        }
+        .step-text {
+            font-size: .83rem;
+            color: #a1a1aa;
+            line-height: 1.5;
+        }
+        .step-text strong { color: #f4f4f5; }
+
+        .footer {
+            margin-top: 1.75rem;
+            font-size: .75rem;
+            color: #52525b;
+        }
+        .footer a { color: #a1a1aa; text-decoration: none; }
+        .footer a:hover { color: #fb7185; }
+
+        .qr-section {
+            margin-top: 1.5rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            text-align: center;
+        }
+        .qr-box {
+            display: inline-block;
+            padding: 10px;
+            background: #18181b;
+            border: 1px solid rgba(225, 29, 72, 0.3);
+            border-radius: 14px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <!-- Ícone do App -->
+        <div class="app-icon">
+            <span class="material-icons-round">explore</span>
+        </div>
+
+        <!-- Nome -->
+        <div class="app-name">MAXCRM Campo</div>
+        <div class="app-sub">Prospecção Presencial · CRM &amp; Inteligência Territorial</div>
+
+        <!-- Badges -->
+        <div class="badges">
+            <span class="badge badge-rose">PWA Mobile</span>
+            <span class="badge badge-green">100% Offline-Ready</span>
+            <span class="badge badge-dark">Android &amp; iOS</span>
+        </div>
+
+        <!-- Botão Abrir / Instalar -->
+        <a href="https://parreirasistemas.vercel.app/prospeccao"
+           class="btn-install"
+           id="btn-install">
+            <span class="material-icons-round">install_mobile</span>
+            Abrir &amp; Instalar App
+        </a>
+
+        <!-- Botão Voltar ao Portal -->
+        <a href="https://parreirasistemas.vercel.app"
+           class="btn-portal"
+           id="btn-portal">
+            <span class="material-icons-round">home</span>
+            Voltar ao Portal Parreira Sistemas
+        </a>
+
+        <!-- Passos de instalação -->
+        <div class="steps">
+            <div class="steps-title">Como instalar no seu celular</div>
+
+            <div class="step">
+                <div class="step-num">🤖</div>
+                <div class="step-text">
+                    <strong>Android (Chrome):</strong> Abra o app pelo botão acima. Toque nos <strong>três pontinhos (⋮)</strong> no topo do navegador e selecione <strong>"Instalar aplicativo"</strong> ou <strong>"Adicionar à tela inicial"</strong>.
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">🍎</div>
+                <div class="step-text">
+                    <strong>iPhone / iPad (Safari):</strong> Abra no navegador Safari. Toque no ícone de <strong>Compartilhar</strong> (quadrado com seta para cima) e escolha <strong>"Adicionar à Tela de Início"</strong>.
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">⚡</div>
+                <div class="step-text">
+                    <strong>Acesso em Campo:</strong> Uma vez adicionado, o aplicativo funciona com visual nativo em tela cheia e grava coletas <strong>mesmo sem sinal de internet</strong>!
+                </div>
+            </div>
+        </div>
+
+        <!-- QR Code para escanear com a câmera do celular -->
+        <div class="qr-section">
+            <div style="font-size:.7rem;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.75rem;">
+                📲 Escanear no Celular
+            </div>
+            <div class="qr-box">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=https://parreirasistemas.vercel.app/prospeccao&bgcolor=18181b&color=fb7185&margin=6"
+                     alt="QR Code MAXCRM Campo"
+                     style="border-radius:8px;width:140px;height:140px;display:block;">
+            </div>
+            <div style="margin-top:.6rem;font-size:.72rem;color:#71717a;">
+                parreirasistemas.vercel.app<strong style="color:#fb7185;">/prospeccao</strong>
+            </div>
+        </div>
+
+        <div class="footer">
+            Parreira Sistemas ·
+            <a href="https://parreirasistemas.vercel.app">parreirasistemas.vercel.app</a>
+        </div>
+    </div>
+
+    <script>
+        // Suporte a PWA Install Prompt direto se o navegador disparar
+        let deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const btn = document.getElementById('btn-install');
+            if (btn) {
+                btn.innerHTML = '<span class="material-icons-round">download</span> Instalar Aplicativo Agora';
+                btn.onclick = async (ev) => {
+                    ev.preventDefault();
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        const { outcome } = await deferredPrompt.userChoice;
+                        deferredPrompt = null;
+                        if (outcome === 'accepted') {
+                            window.location.href = '/prospeccao';
+                        }
+                    } else {
+                        window.location.href = '/prospeccao';
+                    }
+                };
+            }
+        });
+    </script>
+</body>
+</html>

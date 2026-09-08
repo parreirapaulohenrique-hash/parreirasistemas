@@ -253,10 +253,10 @@ function renderTenants() {
     const allTenants = getAllTenants();
 
     if (allTenants.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-secondary); padding:2rem;">
+        tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-secondary); padding:2rem;">
             <span class="material-icons-round" style="font-size:2rem;display:block;margin-bottom:.5rem;opacity:.4;">business_off</span>
             Nenhum cliente cadastrado.<br>
-            <small style="opacity:.6;">Se os clientes sumiram, recarregue a pÃ¡gina (F5).</small>
+            <small style="opacity:.6;">Se os clientes sumiram, recarregue a página (F5).</small>
         </td></tr>`;
         return;
     }
@@ -265,7 +265,9 @@ function renderTenants() {
         const tr = document.createElement('tr');
         const isDynamic = tenant.isDynamic;
         const statusClass = tenant.status === 'active' ? 'active' : 'inactive';
-        const modules = tenant.modules || []; // ProteÃ§Ã£o: evita crash se modules for undefined
+        const modules = tenant.modules || []; // Proteção: evita crash se modules for undefined
+
+        const hasPwa = modules.includes('wms-coletor') || modules.includes('prospeccao');
 
         tr.innerHTML = `
             <td>
@@ -278,14 +280,28 @@ function renderTenants() {
             <td>
                 ${modules.length > 0
                     ? modules.map(mod => `<span class="module-tag">${formatModuleName(mod)}</span>`).join('')
-                    : '<span style="color:var(--text-secondary);font-size:.8rem;">â€”</span>'
+                    : '<span style="color:var(--text-secondary);font-size:.8rem;">—</span>'
                 }
+            </td>
+            <td>
+                ${hasPwa ? `
+                    <div class="pwa-download-group">
+                        ${modules.includes('wms-coletor') ? `
+                            <a href="/platform/download/wms-coletor.html" target="_blank" class="pwa-download-badge pwa-badge-coletor" title="Baixar App / PWA WMS Coletor">
+                                <span class="material-icons-round">phone_android</span> Coletor
+                            </a>` : ''}
+                        ${modules.includes('prospeccao') ? `
+                            <a href="/platform/download/maxcrm.html" target="_blank" class="pwa-download-badge pwa-badge-crm" title="Baixar / Instalar App PWA MAXCRM Campo">
+                                <span class="material-icons-round">explore</span> MAXCRM
+                            </a>` : ''}
+                    </div>
+                ` : '<span style="color:var(--text-secondary);font-size:.8rem;opacity:.4;">—</span>'}
             </td>
             <td>
                 <span class="status-badge ${statusClass}">Ativo</span>
             </td>
             <td style="text-align: right; display:flex; gap:.5rem; justify-content:flex-end;">
-                <button class="action-btn" title="Editar LiberaÃ§Ãµes" onclick="window.editTenant('${tenant.id}')">
+                <button class="action-btn" title="Editar Liberações" onclick="window.editTenant('${tenant.id}')">
                     <span class="material-icons-round">edit</span>
                 </button>
                 ${modules.includes('dispatch') ? `
@@ -1107,10 +1123,10 @@ window.renderAmbientes = function renderAmbientes() {
         'dispatch':        { label: 'Despacho Logístico', icon: 'local_shipping',       color: '#3b82f6', prodUrl: (s) => `${PROD}/${s}`,                   hmlUrl: (s) => `${HML}/${s}` },
         'master':          { label: 'Painel Admin',    icon: 'admin_panel_settings', color: '#8b5cf6', prodUrl: ()  => `${PROD}/platform/modules/master/`,hmlUrl: ()  => `${HML}/platform/modules/master/` },
         'wms':             { label: 'WMS',              icon: 'warehouse',            color: '#10b981', prodUrl: (s) => `${PROD}/wms/${s}`,                    hmlUrl: (s) => `${HML}/wms/${s}` },
-        'wms-coletor':     { label: 'WMS Coletor',     icon: 'phone_android',        color: '#06b6d4', prodUrl: ()  => `${PROD}/apk`,                          hmlUrl: ()  => `${HML}/apk` },
+        'wms-coletor':     { label: 'WMS Coletor',     icon: 'phone_android',        color: '#06b6d4', prodUrl: ()  => `${PROD}/modules/wms-coletor/`,       hmlUrl: ()  => `${HML}/modules/wms-coletor/`, pwaUrl: () => `${PROD}/platform/download/wms-coletor.html`, isPwa: true },
         'erp-consultoria': { label: 'Bússola Gestão', icon: 'savings',              color: '#14b8a6', prodUrl: ()  => PROD + '/erp-consultoria',             hmlUrl: ()  => HML + '/erp-consultoria_hml' },
         'demanda':         { label: 'Intelig. Demanda', icon: 'insights',            color: '#8b5cf6', prodUrl: (s) => `${PROD}/platform/modules/demanda/`,   hmlUrl: (s) => `${HML}/platform/modules/demanda/` },
-        'prospeccao':      { label: 'MAXCRM Campo',     icon: 'explore',             color: '#e11d48', prodUrl: ()  => `${PROD}/prospeccao`,                       hmlUrl: ()  => `${HML}/prospeccao` },
+        'prospeccao':      { label: 'MAXCRM Campo',     icon: 'explore',             color: '#e11d48', prodUrl: ()  => `${PROD}/prospeccao`,                  hmlUrl: ()  => `${HML}/prospeccao`, pwaUrl: () => `${PROD}/platform/download/maxcrm.html`, isPwa: true },
     };
 
     const allTenants  = getAllTenants();
@@ -1146,13 +1162,17 @@ window.renderAmbientes = function renderAmbientes() {
                     ${cfg.label}
                 </div>
                 <div class="amb-mod-actions">
-                    <a href="${pUrl}" target="_blank" class="amb-btn amb-btn-prod" title="Abrir em Produ\u00E7\u00E3o">
+                    ${cfg.isPwa && cfg.pwaUrl ? `
+                    <a href="${cfg.pwaUrl()}" target="_blank" class="amb-btn amb-btn-pwa" title="Baixar App / Instalar PWA">
+                        <span class="material-icons-round">install_mobile</span> App PWA
+                    </a>` : ''}
+                    <a href="${pUrl}" target="_blank" class="amb-btn amb-btn-prod" title="Abrir em Produção">
                         <span class="material-icons-round">open_in_new</span> PROD
                     </a>
-                    <a href="${hUrl}" target="_blank" class="amb-btn amb-btn-hml" title="Abrir em Homologa\u00E7\u00E3o">
+                    <a href="${hUrl}" target="_blank" class="amb-btn amb-btn-hml" title="Abrir em Homologação">
                         <span class="material-icons-round">science</span> HML
                     </a>
-                    <button class="amb-btn-copy" onclick="navigator.clipboard.writeText('${pUrl}').then(()=>showToast('\u2705 URL copiada!'))" title="Copiar URL de Produ\u00E7\u00E3o">
+                    <button class="amb-btn-copy" onclick="navigator.clipboard.writeText('${pUrl}').then(()=>showToast('✅ URL copiada!'))" title="Copiar URL de Produção">
                         <span class="material-icons-round">content_copy</span>
                     </button>
                 </div>

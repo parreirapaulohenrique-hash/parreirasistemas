@@ -544,3 +544,15 @@
 .amb-btn-copy:hover { opacity:1;color:var(--text-primary); }
 .amb-btn-copy .material-icons-round { font-size:.85rem; }
 .amb-no-hml { font-size:.65rem;color:var(--text-secondary);opacity:.45; }
+.amb-btn-pwa { background:rgba(14,165,233,.12);color:#38bdf8;border:1px solid rgba(14,165,233,.3); }
+.amb-btn-pwa:hover { background:rgba(14,165,233,.22);color:#7dd3fc; }
+
+/* PWA Download Badges in Tenants Table */
+.pwa-download-group { display:flex;flex-wrap:wrap;gap:.35rem;align-items:center; }
+.pwa-download-badge { display:inline-flex;align-items:center;gap:4px;font-size:.72rem;font-weight:600;padding:3px 8px;border-radius:6px;text-decoration:none;transition:all .15s ease;line-height:1.2; }
+.pwa-download-badge:hover { transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,.2); }
+.pwa-download-badge .material-icons-round { font-size:.85rem; }
+.pwa-badge-coletor { background:rgba(6,182,212,.12);color:#22d3ee;border:1px solid rgba(6,182,212,.3); }
+.pwa-badge-coletor:hover { background:rgba(6,182,212,.22);color:#67e8f9; }
+.pwa-badge-crm { background:rgba(225,29,72,.12);color:#fb7185;border:1px solid rgba(225,29,72,.3); }
+.pwa-badge-crm:hover { background:rgba(225,29,72,.22);color:#fda4af; }

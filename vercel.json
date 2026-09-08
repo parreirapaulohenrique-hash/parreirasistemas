@@ -261,6 +261,26 @@
             "destination": "/platform/modules/prospeccao/$1"
         },
         {
+            "source": "/apk",
+            "destination": "/platform/download/wms-coletor.html"
+        },
+        {
+            "source": "/download/(.*)",
+            "destination": "/platform/download/$1"
+        },
+        {
+            "source": "/maxcrm",
+            "destination": "/platform/modules/prospeccao/index.html"
+        },
+        {
+            "source": "/maxcrm-app",
+            "destination": "/platform/download/maxcrm.html"
+        },
+        {
+            "source": "/maxcrm/(.*)",
+            "destination": "/platform/modules/prospeccao/$1"
+        },
+        {
             "source": "/:tenant",
             "destination": "/platform/modules/dispatch/index.html"
         }
