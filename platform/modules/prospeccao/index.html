@@ -16,8 +16,8 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    <!-- ParreiraAuth -->
-    <script src="/platform/core/js/security-guard.js"></script>
+    <!-- ParreiraAuth — security-guard NÃO é carregado aqui: o maxcrm-core.js
+         faz seu próprio guard com verificação de tenant=parreira -->
     <script src="/platform/core/js/session-manager.js"></script>
     <script src="/platform/core/js/auth.js"></script>
 </head>

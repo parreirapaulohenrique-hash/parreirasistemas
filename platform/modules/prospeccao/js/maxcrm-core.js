@@ -19,8 +19,19 @@ const MaxCRMState = {
 // ── Inicialização ─────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
 
-    // 1. Verificar autenticação
+    // 1. Verificar autenticação e tenant
     if (typeof ParreiraAuth === 'undefined' || !ParreiraAuth.isLogado()) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    // 1b. Garantir que é tenant parreira — outros tenants não têm acesso a este módulo
+    const _sessaoCheck = ParreiraAuth.getSessao();
+    if (!_sessaoCheck || _sessaoCheck.tenantId !== 'parreira') {
+        // Sessão de outro tenant detectada — não redireciona para login desse tenant,
+        // vai para o login próprio do MAXCRM sem destruir a sessão do outro módulo.
+        // Usa sessionStorage local para flag de redirecionamento.
+        sessionStorage.removeItem('parreira_session');
         window.location.href = 'login.html';
         return;
     }
