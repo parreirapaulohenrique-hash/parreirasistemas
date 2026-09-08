@@ -31,6 +31,7 @@ const ALL_MODULES = [
     { id: 'wms-coletor',    label: 'WMS Coletor',               icon: 'barcode_reader' },
     { id: 'erp-consultoria',label: 'Bússola Gestão',            icon: 'analytics' },
     { id: 'demanda',        label: 'Inteligência de Demanda',   icon: 'inventory_2' },
+    { id: 'prospeccao',     label: 'MAXCRM',                    icon: 'explore' },
 ];
 
 // ── Estado ──

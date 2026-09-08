@@ -615,7 +615,7 @@ function setupForms() {
 }
 
 function formatModuleName(code) {
-    const names = { 'dispatch': 'Despacho Logístico', 'wms': 'WMS', 'master': 'Master', 'erp-consultoria': 'Bússola Gestão', 'wms-coletor': 'WMS Coletor', 'demanda': 'Inteligência de Demanda', 'prospeccao': 'MAXCRM Campo' };
+    const names = { 'dispatch': 'Despacho Logístico', 'wms': 'WMS', 'master': 'Master', 'erp-consultoria': 'Bússola Gestão', 'wms-coletor': 'WMS Coletor', 'demanda': 'Inteligência de Demanda', 'prospeccao': 'MAXCRM' };
     return names[code] || code.toUpperCase();
 }
 
@@ -1126,7 +1126,7 @@ window.renderAmbientes = function renderAmbientes() {
         'wms-coletor':     { label: 'WMS Coletor',     icon: 'phone_android',        color: '#06b6d4', prodUrl: ()  => `${PROD}/modules/wms-coletor/`,       hmlUrl: ()  => `${HML}/modules/wms-coletor/`, pwaUrl: () => `${PROD}/platform/download/wms-coletor.html`, isPwa: true },
         'erp-consultoria': { label: 'Bússola Gestão', icon: 'savings',              color: '#14b8a6', prodUrl: ()  => PROD + '/erp-consultoria',             hmlUrl: ()  => HML + '/erp-consultoria_hml' },
         'demanda':         { label: 'Intelig. Demanda', icon: 'insights',            color: '#8b5cf6', prodUrl: (s) => `${PROD}/platform/modules/demanda/`,   hmlUrl: (s) => `${HML}/platform/modules/demanda/` },
-        'prospeccao':      { label: 'MAXCRM Campo',     icon: 'explore',             color: '#e11d48', prodUrl: ()  => `${PROD}/prospeccao`,                  hmlUrl: ()  => `${HML}/prospeccao`, pwaUrl: () => `${PROD}/platform/download/maxcrm.html`, isPwa: true },
+        'prospeccao':      { label: 'MAXCRM',           icon: 'explore',             color: '#e11d48', prodUrl: ()  => `${PROD}/prospeccao`,                  hmlUrl: ()  => `${HML}/prospeccao`, pwaUrl: () => `${PROD}/platform/download/maxcrm.html`, isPwa: true },
     };
 
     const allTenants  = getAllTenants();

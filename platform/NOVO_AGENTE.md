@@ -30,7 +30,7 @@ A arquitetura moderna reside na pasta `/platform`. (A antiga subpasta `/web` ain
     *   **wms**: Warehouse Management System (Gestão de Armazéns).
     *   **wms-coletor**: Versão do WMS estritamente otimizada para coletores móveis (Zebra/Android) utilizados na operação de piso.
     *   **demanda**: Módulo de Inteligência de Demanda, Pré-venda e Venda Perdida (v2.4.5). Tenant: centralpecas (Central Rolamentos CTR). Integrado com ParreiraAuth/Firebase + busca MaxData + Firestore primário (produtos e clientes) + OCR serverless (/api/ocr). Adicionado em v3.19.0.
-    *   **prospeccao (MAXCRM Campo)**: PWA Mobile Offline-first para prospecção comercial externa (v1.0.0). Check-in de visitas com geolocalização, busca de CNPJ e sync Firestore multi-tenant isolado.
+    *   **prospeccao (MAXCRM)**: PWA Mobile Offline-first para prospecção comercial externa (v1.1.0). Check-in de visitas com geolocalização, busca de CNPJ, questionário guiado de 12 etapas, Painel Web do Gestor (painel.html) com inteligência concorrencial territorial, exportação CSV e sync Firestore multi-tenant isolado.
 *   **`platform/shared/integrations/`** (v3.15.0+): Camada centralizada de integração com ERPs externos.
     *   **`erp-adapter.js`**: Contrato genérico (interface). Todo ERP deve implementar `syncClients()`, `syncProducts()`, `syncOrders()`, `syncNFs()`, `confirmDispatch()`.
     *   **`erp-registry.js`**: Registro multi-tenant. Lê do Firestore qual ERP cada tenant usa e instancia o adaptador correto. Token fica em `sessionStorage`.

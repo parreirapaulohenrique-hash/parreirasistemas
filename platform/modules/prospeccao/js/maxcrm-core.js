@@ -4,7 +4,7 @@
  * Parreira Sistemas — MAXCRM Campo v1.0.0
  */
 
-const MAXCRM_VERSION = '1.0.0';
+const MAXCRM_VERSION = '1.1.0';
 
 // ── Estado Global ────────────────────────────────────────────────────────────
 const MaxCRMState = {
@@ -25,12 +25,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // 1b. Garantir que é tenant parreira — outros tenants não têm acesso a este módulo
+    // 1b. Garantir que é tenant parreira ou master
     const _sessaoCheck = ParreiraAuth.getSessao();
-    if (!_sessaoCheck || _sessaoCheck.tenantId !== 'parreira') {
-        // Sessão de outro tenant detectada — não redireciona para login desse tenant,
-        // vai para o login próprio do MAXCRM sem destruir a sessão do outro módulo.
-        // Usa sessionStorage local para flag de redirecionamento.
+    const isAllowedTenant = _sessaoCheck && (
+        _sessaoCheck.tenantId === 'parreira' ||
+        _sessaoCheck.tenantId === 'master' ||
+        _sessaoCheck.isMaster ||
+        _sessaoCheck.role === 'master' ||
+        _sessaoCheck.role === 'admin'
+    );
+    if (!isAllowedTenant) {
+        // Sessão de outro tenant detectada — vai para o login próprio do MAXCRM
         sessionStorage.removeItem('parreira_session');
         window.location.href = 'login.html';
         return;

@@ -11,6 +11,7 @@ window.LicencasManager = (function () {
         { id: 'dispatch',    label: 'Despacho',                   icon: 'local_shipping' },
         { id: 'consultoria', label: 'Bússola Gestão',            icon: 'savings'        },
         { id: 'demanda',     label: 'Inteligência de Demanda',   icon: 'insights'       },
+        { id: 'prospeccao',  label: 'MAXCRM',                     icon: 'explore'        },
     ];
 
     const STATUS_CFG = {
