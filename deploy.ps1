@@ -11,7 +11,7 @@ Write-Host "  DEPLOY AUTOMATICO - ParreiraLog"        -ForegroundColor Cyan
 Write-Host "========================================"  -ForegroundColor Cyan
 Write-Host ""
 
-$projectPath = "C:\Users\Paulo H Parreira\.gemini\antigravity\scratch"
+$projectPath = if (Test-Path "Z:\antigravity\scratch") { "Z:\antigravity\scratch" } elseif ($PSScriptRoot) { $PSScriptRoot } else { "C:\Users\Paulo H Parreira\.gemini\antigravity\scratch" }
 
 # Navegar para a pasta do projeto
 Set-Location $projectPath
@@ -21,24 +21,19 @@ Set-Location $projectPath
 # ============================================
 Write-Host "[1/5] Fazendo backup em camadas..." -ForegroundColor Yellow
 
-Write-Host "  -> WEB BACKUP 1 -> WEB BACKUP 2" -ForegroundColor Gray
-Remove-Item -Path "$projectPath\WEB BACKUP 2\*" -Recurse -Force -ErrorAction SilentlyContinue
-Copy-Item -Path "$projectPath\web\*" -Destination "$projectPath\WEB BACKUP 2\" -Recurse -Force -ErrorAction SilentlyContinue
+Write-Host "  -> Sincronizando backup em camadas (demanda + platform)..." -ForegroundColor Gray
+python -c "import shutil, os; p = r'$projectPath'; src = os.path.join(p, 'platform', 'modules', 'demanda'); b1 = os.path.join(p, 'platform backup 1', 'modules', 'demanda'); b2 = os.path.join(p, 'platform backup 2', 'modules', 'demanda'); shutil.copytree(b1, b2, dirs_exist_ok=True) if os.path.exists(b1) else None; shutil.copytree(src, b1, dirs_exist_ok=True); shutil.copy2(os.path.join(p, 'platform', 'version.json'), os.path.join(p, 'platform backup 1', 'version.json'))"
 
-Write-Host "  -> WEB -> WEB BACKUP 1" -ForegroundColor Gray
-Remove-Item -Path "$projectPath\WEB BACKUP 1\*" -Recurse -Force -ErrorAction SilentlyContinue
-Copy-Item -Path "$projectPath\web\*" -Destination "$projectPath\WEB BACKUP 1\" -Recurse -Force -ErrorAction SilentlyContinue
-
-Write-Host "  -> PLATFORM BACKUP 1 -> PLATFORM BACKUP 2" -ForegroundColor Gray
-Remove-Item -Path "$projectPath\platform backup 2\*" -Recurse -Force -ErrorAction SilentlyContinue
-Copy-Item -Path "$projectPath\platform backup 1\*" -Destination "$projectPath\platform backup 2\" -Recurse -Force -ErrorAction SilentlyContinue
-
-Write-Host "  -> PLATFORM -> PLATFORM BACKUP 1" -ForegroundColor Gray
-Remove-Item -Path "$projectPath\platform backup 1\*" -Recurse -Force -ErrorAction SilentlyContinue
-Copy-Item -Path "$projectPath\platform\*" -Destination "$projectPath\platform backup 1\" -Recurse -Force -ErrorAction SilentlyContinue
-
-Write-Host "  OK Backup (Web + Platform) concluido!" -ForegroundColor Green
+Write-Host "  OK Backup concluido com sucesso!" -ForegroundColor Green
 Write-Host ""
+
+# ETAPA 1.5: GARANTIR BRANCH STAGING
+# ============================================
+$currentBranch = git rev-parse --abbrev-ref HEAD
+if ($currentBranch -ne "staging") {
+    git checkout staging
+    Write-Host "  -> Mudou para branch staging" -ForegroundColor Gray
+}
 
 # ============================================
 # ETAPA 2: ADICIONAR ARQUIVOS

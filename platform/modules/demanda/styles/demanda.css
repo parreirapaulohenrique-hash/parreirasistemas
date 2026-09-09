@@ -310,6 +310,28 @@ body {
     flex-direction: column;
 }
 
+/* ── Content Wrapper & Card (Padrão Despacho) ── */
+.content-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    padding: 2rem;
+    min-height: 0;
+}
+
+.card {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+}
+
+@media screen and (max-width: 768px) {
+    .content-wrapper {
+        padding: 1rem;
+    }
+}
+
+
 
 /* Top bar — 64px, igual ao Despacho */
 .top-bar,

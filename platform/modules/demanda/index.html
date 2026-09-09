@@ -14,7 +14,7 @@
     <!-- Design system da plataforma -->
     <link rel="stylesheet" href="/platform/core/styles/portal.css">
     <!-- Estilos específicos do módulo -->
-    <link rel="stylesheet" href="styles/demanda.css?v=1.0.9">
+    <link rel="stylesheet" href="styles/demanda.css?v=2.4.9">
 </head>
 
 <body>
@@ -467,18 +467,7 @@
             </div>
 
 
-            <footer style="padding:1rem 2rem;border-top:1px solid var(--border-color);font-size:0.75rem;color:var(--text-secondary);display:flex;justify-content:space-between;align-items:center;background:var(--bg-card);flex-shrink:0;">
-                <div>
-                    <strong>&copy; 2026 Inteligência de Demanda</strong> · Parreira Sistemas
-                </div>
-                <div style="display:flex;align-items:center;gap:0.5rem;">
-                    <span class="material-icons-round" style="font-size:1rem;color:var(--accent-success);">security</span>
-                    <span>Ambiente Seguro: Dados processados em conformidade com a LGPD.</span>
-                </div>
-                <div id="demandaFooterVersion" style="font-size:0.8rem;color:#666;">v1.1.0</div>
-            </footer>
-        
-            <!-- ======================================================= -->
+                        <!-- ======================================================= -->
             <!--  VIEW: CLIENTES (Gerenciamento de Clientes)             -->
             <!-- ======================================================= -->
             <div id="view-clientes" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:auto;padding:1.5rem;">
@@ -489,18 +478,32 @@
             <!--  VIEW: INTEGRAÇÃO ERP (gerenciado por ErpUI)          -->
             <!-- ======================================================= -->
             <div id="view-integracaoErp" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
-                <!-- Topbar -->
-                <div class="top-bar" style="position:sticky;top:0;z-index:10">
+                <!-- Topbar — padrão Despacho -->
+                <div class="top-bar">
                     <div class="breadcrumb">
                         <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">sync</span>
                         <span>Integração ERP</span>
                     </div>
                 </div>
                 <!-- Container preenchido dinamicamente por ErpUI.init('demanda') -->
-                <div class="content-wrapper" style="padding:2rem">
-                    <div id="erp-config-container"></div>
+                <div class="content-wrapper">
+                    <div class="card">
+                        <div id="erp-config-container"></div>
+                    </div>
                 </div>
             </div>
+
+            <!-- Footer / LGPD Notice — padrão Despacho (no rodapé do main-content) -->
+            <footer style="padding:1rem 2rem;border-top:1px solid var(--border-color);font-size:0.75rem;color:var(--text-secondary);display:flex;justify-content:space-between;align-items:center;background:var(--bg-card);flex-shrink:0;">
+                <div>
+                    <strong>&copy; 2026 Inteligência de Demanda</strong> · Parreira Sistemas
+                </div>
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <span class="material-icons-round" style="font-size:1rem;color:var(--accent-success);">security</span>
+                    <span>Ambiente Seguro: Dados processados em conformidade com a LGPD.</span>
+                </div>
+                <div id="demandaFooterVersion" style="font-size:0.8rem;color:#666;">v2.4.9</div>
+            </footer>
 
         </div><!-- /main-content -->
     </div><!-- /demanda-shell -->
@@ -666,24 +669,7 @@
         </div>
     </div>
 
-    <!-- ══════════════════════════════════════════════════════ -->
-    <!--  VIEW: INTEGRAÇÃO ERP (gerenciado por ErpUI)          -->
-    <!-- ══════════════════════════════════════════════════════ -->
-    <div id="view-integracaoErp" class="view-section" style="display:none;">
-        <div class="main-content" style="padding:0">
-            <!-- Topbar -->
-            <div class="top-bar" style="position:sticky;top:0;z-index:10">
-                <div class="breadcrumb">
-                    <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">sync</span>
-                    <span>Integração ERP</span>
-                </div>
-            </div>
-            <!-- Container preenchido dinamicamente por ErpUI.init('demanda') -->
-            <div class="content-wrapper" style="padding:2rem">
-                <div id="erp-config-container"></div>
-            </div>
-        </div>
-    </div>
+
 
 
     <!-- ══════════════════════════════════════════════════════ -->
@@ -742,7 +728,6 @@
     </div>
 
     <!-- Modal: Import Foto / Print -->
-    <div id="modalImportFoto" class="modal-overlay" style="display:none">
     <div id="modalImportFoto" class="modal-overlay" style="display:none">
         <div class="modal-container" style="max-width:820px;width:97%">
             <div class="modal-header">
@@ -835,7 +820,7 @@
     <script src="/platform/shared/integrations/erp-registry.js?v=2.0.0"></script>
     <script src="/platform/shared/integrations/acontec/adapter.js?v=2.0.0"></script>
     <script src="/platform/shared/integrations/maxdata/adapter.js?v=2.4.8"></script>
-    <script src="/platform/shared/integrations/erp-ui.js?v=2.4.8"></script>
+    <script src="/platform/shared/integrations/erp-ui.js?v=2.4.9"></script>
     <script src="/platform/shared/integrations/index.js?v=2.0.0"></script>
 
     <!-- Módulo de Demanda -->

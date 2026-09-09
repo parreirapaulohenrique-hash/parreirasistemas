@@ -394,6 +394,7 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
+| **3.20.7** | 2026-09-09 | Demanda (v2.4.9): Alinhamento visual da tela de Integração ERP com o padrão do módulo Despacho. Correção do container `.content-wrapper` com rolagem vertical nativa da tela inteira, encapsulamento do formulário no container `.card`, posicionamento do rodapé ao final do `main-content` e remoção de blocos/IDs duplicados. |
 | **3.20.0** | 2026-09-08 | FEAT: MAXCRM Campo (PWA Prospeccao Comercial) v1.0.0 + Landing Page e coluna de Download PWA no Master Panel (WMS Coletor e MAXCRM). Rotas no Vercel e novas politicas de cache-control. |
 | **3.19.x** | 2026-09-04..08 | FEAT: Modulo Inteligencia de Demanda (v1.0.0 -> v2.4.5). OCR Serverless (/api/ocr via ocr.space), cruzamento OEM/PDF, base Firestore com 18.6k produtos sincronizados, conferencia de cotacoes concorrentes e cross-tab auth. |
 | **3.18.0** | 2026-08-05 | FEAT: Tabela de Frete — campo "Taxa Fixa + checkbox ×vol" separado em dois campos independentes e simultâneos: **Taxa TDA** (Difícil Acesso, fixa por entrega, `taxaTDA`) e **Taxa por Volume** (`taxaVolume`, R$/vol × qtd). Municípios como Curuá podem ter as duas taxas ao mesmo tempo. Compat retroativa com regras legadas (`pedagio` + `taxaFixaPorVolume`). |

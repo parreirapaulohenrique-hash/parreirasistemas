@@ -1,8 +1,8 @@
 {
-  "build": "20260909-v3.20.6",
-  "version": "3.20.6",
+  "build": "20260909-v3.20.7",
+  "version": "3.20.7",
   "environment": "production",
-  "change": "v3.20.6 - fix(erp-ui): correcao de sintaxe e carregamento do componente ErpUI",
+  "change": "v3.20.7 - fix(demanda): correcao do layout e scrollbar da tela de integracao ERP para padrao identico ao Despacho",
   "lastUpdate": "2026-09-09",
   "deployedAt": "2026-09-09"
 }

@@ -1,8 +1,8 @@
 {
-  "version": "2.4.8",
-  "build": "20260909-v2.4.8",
+  "version": "2.4.9",
+  "build": "20260909-v2.4.9",
   "module": "demanda",
   "name": "Inteligência de Demanda",
   "lastUpdate": "2026-09-09",
-  "change": "v2.4.8 - fix(erp-ui): correcao de sintaxe e carregamento do ErpUI"
+  "change": "v2.4.9 - fix(demanda): ajuste de layout na integracao ERP (content-wrapper com scrollbar nativa, card e footer alinhados ao Despacho)"
 }
