@@ -1,26 +1,26 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <base href="/platform/modules/demanda/">
-    <title>InteligÃƒÂªncia de Demanda | Central Rolamentos</title>
-    <meta name="description" content="MÃƒÂ³dulo de captura, identificaÃƒÂ§ÃƒÂ£o e rastreamento de demanda comercial Ã¢â‚¬â€ Central Rolamentos CTR.">
+    <title>Inteligência de Demanda | Central Rolamentos</title>
+    <meta name="description" content="Módulo de captura, identificação e rastreamento de demanda comercial — Central Rolamentos CTR.">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-    <!-- SheetJS para importaÃƒÂ§ÃƒÂ£o de Excel -->
+    <!-- SheetJS para importação de Excel -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <!-- Design system da plataforma -->
     <link rel="stylesheet" href="/platform/core/styles/portal.css">
-    <!-- Estilos especÃƒÂ­ficos do mÃƒÂ³dulo -->
+    <!-- Estilos específicos do módulo -->
     <link rel="stylesheet" href="styles/demanda.css?v=1.0.9">
 </head>
 
 <body>
-    <!-- Banner de homologaÃƒÂ§ÃƒÂ£o -->
+    <!-- Banner de homologação -->
     <div id="stagingBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:999999;background:linear-gradient(90deg,#f59e0b,#d97706);color:#000;font-weight:700;font-size:.82rem;text-align:center;padding:6px 12px;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 2px 8px rgba(245,158,11,.5);">
-        Ã¢Å¡Â Ã¯Â¸Â AMBIENTE DE HOMOLOGAÃƒâ€¡ÃƒÆ’O Ã¢â‚¬â€ DADOS DE TESTE Ã¢Å¡Â Ã¯Â¸Â
+        ⚠️ AMBIENTE DE HOMOLOGAÇÃO — DADOS DE TESTE ⚠️
     </div>
     <script>
         (function() {
@@ -33,19 +33,19 @@
         })();
     </script>
 
-    <!-- Ã¢â€â‚¬Ã¢â€â‚¬ Shell Principal Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ -->
+    <!-- ── Shell Principal ──────────────────────────────────── -->
     <div class="demanda-shell" id="appShell" style="display:none">
 
         <!-- Sidebar -->
         <aside class="sidebar">
-            <!-- Logo / TÃƒÂ­tulo do mÃƒÂ³dulo -->
+            <!-- Logo / Título do módulo -->
             <div class="logo-area">
                 <div class="sidebar-logo-icon">
                     <span class="material-icons-round">insights</span>
                 </div>
                 <div class="sidebar-logo-text">
                     <strong>Intelig. Demanda</strong>
-                    <small id="sidebarFilial">Ã¢â‚¬â€</small>
+                    <small id="sidebarFilial">—</small>
                 </div>
             </div>
 
@@ -61,33 +61,34 @@
                 </button>
                 <button class="nav-item" id="nav-pesquisa" onclick="DemandaApp.switchView('pesquisa')">
                     <span class="material-icons-round">manage_search</span>
-                    Pesquisar PeÃƒÂ§as
+                    Pesquisar Peças
                 </button>
 
-                <div class="nav-section-label">GestÃƒÂ£o</div>
+                <div class="nav-section-label">Gestão</div>
                 <button class="nav-item" id="nav-compras" onclick="DemandaApp.switchView('compras')">
-                    <span class="material-icons-round">shopping_cart</span> Fila de Compras
+                    <span class="material-icons-round">shopping_cart</span>
+                    Fila de Compras
                 </button>
                 <button class="nav-item" id="nav-clientes" onclick="DemandaApp.switchView('clientes')">
                     <span class="material-icons-round">people</span> Clientes
                 </button>
                 <button class="nav-item" id="nav-orcamento" onclick="DemandaApp.switchView('orcamento')">
                     <span class="material-icons-round">description</span>
-                    OrÃƒÂ§amentos
+                    Orçamentos
                 </button>
                 <button class="nav-item" id="nav-concorrente" onclick="DemandaApp.switchView('concorrente')">
                     <span class="material-icons-round">trending_up</span>
-                    CotaÃƒÂ§ÃƒÂ£o Concorrente
+                    Cotação Concorrente
                 </button>
                 <button class="nav-item" id="nav-dashboard" onclick="DemandaApp.switchView('dashboard')">
                     <span class="material-icons-round">bar_chart</span>
                     Dashboard
                 </button>
 
-                <div class="nav-section-label">Base TÃƒÂ©cnica</div>
+                <div class="nav-section-label">Base Técnica</div>
                 <button class="nav-item" id="nav-base" onclick="DemandaApp.switchView('base')">
                     <span class="material-icons-round">hub</span>
-                    Base de PeÃƒÂ§as
+                    Base de Peças
                 </button>
                 <button class="nav-item" id="nav-base-admin" onclick="DemandaApp.abrirBaseTecnica()" style="font-size:.78rem;opacity:.85;">
                     <span class="material-icons-round">manage_search</span>
@@ -97,10 +98,10 @@
                 <div class="nav-section-label">Sistema</div>
                 <button class="nav-item" id="nav-integracaoErp" onclick="DemandaApp.switchView('integracaoErp')">
                     <span class="material-icons-round">sync</span>
-                    IntegraÃƒÂ§ÃƒÂ£o ERP
+                    Integração ERP
                 </button>
 
-                <!-- AÃƒÂ§ÃƒÂµes secundÃƒÂ¡rias Ã¢â‚¬â€ padrÃƒÂ£o Despacho: margin-top auto empurra para o fundo -->
+                <!-- Ações secundárias — padrão Despacho: margin-top auto empurra para o fundo -->
                 <a href="/platform/index.html" class="nav-item" style="margin-top:auto;color:var(--text-secondary);">
                     <span class="material-icons-round">arrow_back</span>
                     Voltar ao Portal
@@ -116,7 +117,7 @@
                     <div class="avatar" id="sidebarAvatarLetter">?</div>
                     <div class="user-info">
                         <span class="name" id="sidebarUserName">Carregando...</span>
-                        <span class="role" id="sidebarRole">Ã¢â‚¬â€</span>
+                        <span class="role" id="sidebarRole">—</span>
                     </div>
                 </div>
             </div>
@@ -126,11 +127,11 @@
         <!-- Main Content -->
         <div class="main-content">
 
-            <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
-            <!--  VIEW: CENTRAL DE CAPTURA (padrÃƒÂ£o)            -->
-            <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
+            <!-- ══════════════════════════════════════════════ -->
+            <!--  VIEW: CENTRAL DE CAPTURA (padrão)            -->
+            <!-- ══════════════════════════════════════════════ -->
             <div id="view-captura">
-                <!-- Topbar Ã¢â‚¬â€ padrÃƒÂ£o Despacho -->
+                <!-- Topbar — padrão Despacho -->
                 <div class="top-bar">
                     <div class="breadcrumb">
                         <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">inbox</span>
@@ -153,7 +154,7 @@
                 <!-- Layout: Pesquisa (esq) + Itens (dir) -->
                 <div class="captura-layout">
 
-                    <!-- Ã¢â€â‚¬Ã¢â€â‚¬ Coluna Esquerda: Pesquisa Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ -->
+                    <!-- ── Coluna Esquerda: Pesquisa ──── -->
                     <div class="captura-left">
 
                         <!-- Barra universal de pesquisa -->
@@ -163,7 +164,7 @@
                                 <input
                                     id="searchInput"
                                     type="text"
-                                    placeholder="ReferÃƒÂªncia, descriÃƒÂ§ÃƒÂ£o, EAN, mÃƒÂ¡quina/modelo... (mÃƒÂ­n. 3 caracteres)"
+                                    placeholder="Referência, descrição, EAN, máquina/modelo... (mín. 3 caracteres)"
                                     autocomplete="off"
                                     spellcheck="false"
                                     oninput="DemandaApp.onSearchInput(this.value)"
@@ -174,7 +175,7 @@
                             </div>
                         </div>
 
-                        <!-- Barra de importaÃƒÂ§ÃƒÂ£o -->
+                        <!-- Barra de importação -->
                         <div class="import-bar">
                             <span class="import-bar-label">Importar:</span>
                             <button class="btn-import" onclick="DemandaApp.openImportModal('texto')">
@@ -195,21 +196,21 @@
                             </button>
                         </div>
 
-                        <!-- ÃƒÂrea de resultados da pesquisa -->
+                        <!-- Área de resultados da pesquisa -->
                         <div class="search-results" id="searchResults">
                             <div class="search-placeholder" id="searchPlaceholder">
                                 <span class="material-icons-round">manage_search</span>
-                                <h4>Pesquise uma peÃƒÂ§a</h4>
-                                <p>Digite a referÃƒÂªncia, cÃƒÂ³digo, descriÃƒÂ§ÃƒÂ£o ou nome da mÃƒÂ¡quina para encontrar produtos no ERP e na base tÃƒÂ©cnica.</p>
+                                <h4>Pesquise uma peça</h4>
+                                <p>Digite a referência, código, descrição ou nome da máquina para encontrar produtos no ERP e na base técnica.</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Ã¢â€â‚¬Ã¢â€â‚¬ Coluna Direita: Demanda Atual Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ -->
+                    <!-- ── Coluna Direita: Demanda Atual ─── -->
                     <div class="captura-right">
                         <div class="demanda-panel">
 
-                            <!-- CabeÃƒÂ§alho do painel -->
+                            <!-- Cabeçalho do painel -->
                             <div class="demanda-panel-header">
                                 <div class="demanda-panel-title">
                                     <span class="material-icons-round">receipt_long</span>
@@ -239,11 +240,11 @@
                                     <select id="selectOrigem" class="form-select"
                                         style="padding:.3rem .6rem;font-size:.75rem;width:auto;background:var(--bg-dark);"
                                         title="Canal de origem da demanda">
-                                        <option value="whatsapp">Ã°Å¸â€œÂ± WhatsApp</option>
-                                        <option value="email">Ã°Å¸â€œÂ§ Email</option>
-                                        <option value="telefone">Ã°Å¸â€œÅ¾ Telefone</option>
-                                        <option value="presencial">Ã°Å¸ÂÂª Presencial</option>
-                                        <option value="manual">Ã¢Å“ÂÃ¯Â¸Â Manual</option>
+                                        <option value="whatsapp">📱 WhatsApp</option>
+                                        <option value="email">📧 Email</option>
+                                        <option value="telefone">📞 Telefone</option>
+                                        <option value="presencial">🏪 Presencial</option>
+                                        <option value="manual">✏️ Manual</option>
                                     </select>
                                 </div>
                             </div>
@@ -254,8 +255,8 @@
                                     <thead>
                                         <tr>
                                             <th>#</th>
-                                            <th>ReferÃƒÂªncia</th>
-                                            <th style="min-width:120px">DescriÃƒÂ§ÃƒÂ£o</th>
+                                            <th>Referência</th>
+                                            <th style="min-width:120px">Descrição</th>
                                             <th>Qtde</th>
                                             <th>Status</th>
                                             <th></th>
@@ -266,7 +267,7 @@
                                             <td colspan="6">
                                                 <div class="empty-state" style="padding:1.5rem">
                                                     <span class="material-icons-round">add_shopping_cart</span>
-                                                    <p>Pesquise uma peÃƒÂ§a ou importe uma lista para comeÃƒÂ§ar.</p>
+                                                    <p>Pesquise uma peça ou importe uma lista para começar.</p>
                                                 </div>
                                             </td>
                                         </tr>
@@ -274,12 +275,12 @@
                                 </table>
                             </div>
 
-                            <!-- Grade de entrada rÃƒÂ¡pida -->
+                            <!-- Grade de entrada rápida -->
                             <div class="grade-input-row" id="gradeInputRow">
                                 <input
                                     id="gradeRef"
                                     type="text"
-                                    placeholder="ReferÃƒÂªncia ou descriÃƒÂ§ÃƒÂ£o"
+                                    placeholder="Referência ou descrição"
                                     autocomplete="off"
                                     onkeydown="DemandaApp.onGradeKeydown(event)"
                                 >
@@ -297,7 +298,7 @@
                                 </button>
                             </div>
 
-                            <!-- RodapÃƒÂ© de aÃƒÂ§ÃƒÂµes -->
+                            <!-- Rodapé de ações -->
                             <div class="demanda-panel-footer">
                                 <button class="btn btn-secondary btn-sm" onclick="DemandaApp.limparDemanda()" title="Limpar todos os itens">
                                     <span class="material-icons-round">delete_sweep</span>
@@ -312,9 +313,9 @@
                 </div><!-- /captura-layout -->
             </div><!-- /view-captura -->
 
-            <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
+            <!-- ══════════════════════════════════════════════ -->
             <!--  VIEW: LISTA DE DEMANDAS                      -->
-            <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
+            <!-- ══════════════════════════════════════════════ -->
             <div id="view-lista" style="display:none">
                 <div class="top-bar">
                     <div class="breadcrumb">
@@ -344,22 +345,22 @@
                 </div>
             </div>
 
-            <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
-            <!--  VIEW: PESQUISA AVANÃƒâ€¡ADA DE PEÃƒâ€¡AS             -->
-            <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
-            <!-- VIEW: PESQUISA AVANÃƒâ€¡ADA -->
+            <!-- ══════════════════════════════════════════════ -->
+            <!--  VIEW: PESQUISA AVANÇADA DE PEÇAS             -->
+            <!-- ══════════════════════════════════════════════ -->
+            <!-- VIEW: PESQUISA AVANÇADA -->
             <div id="view-pesquisa" style="display:none;flex-direction:column">
                 <div class="top-bar">
                     <div class="breadcrumb">
                         <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">manage_search</span>
-                        <span>Pesquisar PeÃƒÂ§as</span>
+                        <span>Pesquisar Peças</span>
                     </div>
                 </div>
                 <div style="flex:1;overflow-y:auto;padding:1.5rem;display:flex;align-items:center;justify-content:center">
                     <div class="empty-state">
                         <span class="material-icons-round">manage_search</span>
-                        <h4>Pesquisa AvanÃƒÂ§ada</h4>
-                        <p>Pesquise qualquer peÃƒÂ§a pelo cÃƒÂ³digo, descriÃƒÂ§ÃƒÂ£o, EAN ou mÃƒÂ¡quina.<br>Use a Central de Captura para pesquisas durante o atendimento.</p>
+                        <h4>Pesquisa Avançada</h4>
+                        <p>Pesquise qualquer peça pelo código, descrição, EAN ou máquina.<br>Use a Central de Captura para pesquisas durante o atendimento.</p>
                         <button class="btn btn-primary btn-sm" style="margin-top:.75rem" onclick="DemandaApp.switchView('captura')">
                             <span class="material-icons-round">arrow_back</span> Ir para Central de Captura
                         </button>
@@ -367,9 +368,9 @@
                 </div>
             </div>
 
-            <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
+            <!-- ══════════════════════════════════════════════ -->
             <!--  VIEW: FILA DE COMPRAS                        -->
-            <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
+            <!-- ══════════════════════════════════════════════ -->
             <!-- VIEW: FILA DE COMPRAS -->
             <div id="view-compras" style="display:none;flex-direction:column">
                 <div class="top-bar">
@@ -386,9 +387,9 @@
                 <div id="comprasContainer" style="flex:1;overflow-y:auto;padding:.5rem 0"></div>
             </div>
 
-            <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
+            <!-- ══════════════════════════════════════════════ -->
             <!--  VIEW: DASHBOARD                              -->
-            <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
+            <!-- ══════════════════════════════════════════════ -->
             <!-- VIEW: DASHBOARD -->
             <div id="view-dashboard" style="display:none;flex-direction:column">
                 <div class="top-bar">
@@ -405,32 +406,32 @@
                 <div id="dashboardContainer" style="flex:1;overflow-y:auto;padding:1.5rem"></div>
             </div>
 
-            <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
-            <!--  VIEW: BASE TÃƒâ€°CNICA                           -->
-            <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
-            <!-- VIEW: BASE TÃƒâ€°CNICA -->
+            <!-- ══════════════════════════════════════════════ -->
+            <!--  VIEW: BASE TÉCNICA                           -->
+            <!-- ══════════════════════════════════════════════ -->
+            <!-- VIEW: BASE TÉCNICA -->
             <div id="view-base" style="display:none;flex-direction:column">
                 <div class="top-bar">
                     <div class="breadcrumb">
                         <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">hub</span>
-                        <span>Base TÃƒÂ©cnica de PeÃƒÂ§as</span>
+                        <span>Base Técnica de Peças</span>
                     </div>
                 </div>
                 <div style="flex:1;overflow-y:auto;padding:1.5rem;display:flex;align-items:center;justify-content:center">
                     <div class="empty-state">
                         <span class="material-icons-round">hub</span>
-                        <h4>Base de InteligÃƒÂªncia TÃƒÂ©cnica</h4>
-                        <p>CompatÃƒÂ­veis, substitutos, aplicaÃƒÂ§ÃƒÂµes por mÃƒÂ¡quina e histÃƒÂ³rico de demanda por peÃƒÂ§a.</p>
+                        <h4>Base de Inteligência Técnica</h4>
+                        <p>Compatíveis, substitutos, aplicações por máquina e histórico de demanda por peça.</p>
                     </div>
                 </div>
             </div>
 
-            <!-- VIEW: OrÃƒÂ§amento BÃƒÂ¡sico -->
+            <!-- VIEW: Orçamento Básico -->
             <div id="view-orcamento" style="display:none;flex-direction:column">
                 <div class="top-bar">
                     <div class="breadcrumb">
                         <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">description</span>
-                        <span>OrÃƒÂ§amentos</span>
+                        <span>Orçamentos</span>
                     </div>
                     <button class="btn btn-sm" onclick="DemandaApp.loadOrcamento()" style="margin-left:auto">
                         <span class="material-icons-round" style="font-size:.9rem">refresh</span> Atualizar
@@ -439,51 +440,36 @@
                 <div style="flex:1;overflow-y:auto;padding:1.25rem" id="orcamentoContainer">
                     <div style="padding:3rem;text-align:center;color:var(--text-secondary)">
                         <span class="material-icons-round" style="font-size:2.5rem;opacity:.4">description</span>
-                        <p style="margin-top:.75rem">Clique em "OrÃƒÂ§amentos" na sidebar para carregar.</p>
+                        <p style="margin-top:.75rem">Clique em "Orçamentos" na sidebar para carregar.</p>
                     </div>
                 </div>
             </div>
 
-            <!-- VIEW: CotaÃƒÂ§ÃƒÂ£o do Concorrente -->
+            <!-- VIEW: Cotação do Concorrente -->
             <div id="view-concorrente" style="display:none;flex-direction:column">
                 <div class="top-bar">
                     <div class="breadcrumb">
                         <span class="material-icons-round" style="font-size:1rem;color:#f59e0b">trending_up</span>
-                        <span>CotaÃƒÂ§ÃƒÂ£o do Concorrente</span>
+                        <span>Cotação do Concorrente</span>
                     </div>
                 </div>
                 <div style="flex:1;overflow-y:auto;padding:1.25rem;display:flex;flex-direction:column;gap:1.25rem">
-                    <!-- Form nova cotaÃƒÂ§ÃƒÂ£o -->
+                    <!-- Form nova cotação -->
                     <div id="concFormContainer">
                         <div style="padding:3rem;text-align:center;color:var(--text-secondary)">
                             <span class="material-icons-round" style="font-size:2rem;opacity:.4">trending_up</span>
-                            <p style="margin-top:.5rem;font-size:.85rem">Clique em "CotaÃƒÂ§ÃƒÂ£o Concorrente" na sidebar para carregar o formulÃƒÂ¡rio.</p>
+                            <p style="margin-top:.5rem;font-size:.85rem">Clique em "Cotação Concorrente" na sidebar para carregar o formulário.</p>
                         </div>
                     </div>
-                    <!-- HistÃƒÂ³rico de cotaÃƒÂ§ÃƒÂµes -->
+                    <!-- Histórico de cotações -->
                     <div id="concHistoricoContainer"></div>
                 </div>
             </div>
 
 
-            <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
-            <!--  VIEW: INTEGRAÃƒâ€¡ÃƒÆ’O ERP (gerenciado por ErpUI)    -->
-            <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
-            <div id="view-integracaoErp" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
-                <div class="top-bar" style="position:sticky;top:0;z-index:10;flex-shrink:0">
-                    <div class="breadcrumb">
-                        <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">sync</span>
-                        <span>IntegraÃƒÂ§ÃƒÂ£o ERP</span>
-                    </div>
-                </div>
-                <div style="padding:2rem;flex:1;overflow-y:auto">
-                    <div id="erp-config-container"></div>
-                </div>
-            </div>
-
             <footer style="padding:1rem 2rem;border-top:1px solid var(--border-color);font-size:0.75rem;color:var(--text-secondary);display:flex;justify-content:space-between;align-items:center;background:var(--bg-card);flex-shrink:0;">
                 <div>
-                    <strong>&copy; 2026 InteligÃƒÂªncia de Demanda</strong> Ã‚Â· Parreira Sistemas
+                    <strong>&copy; 2026 Inteligência de Demanda</strong> · Parreira Sistemas
                 </div>
                 <div style="display:flex;align-items:center;gap:0.5rem;">
                     <span class="material-icons-round" style="font-size:1rem;color:var(--accent-success);">security</span>
@@ -491,6 +477,31 @@
                 </div>
                 <div id="demandaFooterVersion" style="font-size:0.8rem;color:#666;">v1.1.0</div>
             </footer>
+        
+            <!-- ======================================================= -->
+            <!--  VIEW: CLIENTES (Gerenciamento de Clientes)             -->
+            <!-- ======================================================= -->
+            <div id="view-clientes" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:auto;padding:1.5rem;">
+                <div id="view-clientes-content"></div>
+            </div>
+
+            <!-- ======================================================= -->
+            <!--  VIEW: INTEGRAÇÃO ERP (gerenciado por ErpUI)          -->
+            <!-- ======================================================= -->
+            <div id="view-integracaoErp" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
+                <!-- Topbar -->
+                <div class="top-bar" style="position:sticky;top:0;z-index:10">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">sync</span>
+                        <span>Integração ERP</span>
+                    </div>
+                </div>
+                <!-- Container preenchido dinamicamente por ErpUI.init('demanda') -->
+                <div class="content-wrapper" style="padding:2rem">
+                    <div id="erp-config-container"></div>
+                </div>
+            </div>
+
         </div><!-- /main-content -->
     </div><!-- /demanda-shell -->
 
@@ -516,9 +527,9 @@
 
     <!-- loginScreen removido v1.0.8: auth via ParreiraAuth (portal Firebase) -->
 
-    <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
+    <!-- ══════════════════════════════════════════════════════ -->
     <!--  MODAIS                                               -->
-    <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
+    <!-- ══════════════════════════════════════════════════════ -->
 
     <!-- Modal: Importar Texto -->
     <div class="modal-overlay" id="modalTexto">
@@ -577,17 +588,17 @@
                 <button class="btn btn-secondary" onclick="DemandaApp.closeModal('modalExcel')">Cancelar</button>
                 <button class="btn btn-primary" id="btnConfirmExcel" style="display:none" onclick="DemandaApp.confirmExcelImport()">
                     <span class="material-icons-round">check</span>
-                    Confirmar ImportaÃƒÂ§ÃƒÂ£o
+                    Confirmar Importação
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Modal: ConferÃƒÂªncia de ImportaÃƒÂ§ÃƒÂ£o -->
+    <!-- Modal: Conferência de Importação -->
     <div class="modal-overlay" id="modalConferencia">
         <div class="modal-card modal-xl">
             <div class="modal-header">
-                <h3><span class="material-icons-round" style="color:var(--warning)">fact_check</span> ConferÃƒÂªncia de ImportaÃƒÂ§ÃƒÂ£o</h3>
+                <h3><span class="material-icons-round" style="color:var(--warning)">fact_check</span> Conferência de Importação</h3>
                 <button class="btn-close" onclick="DemandaApp.closeModal('modalConferencia')">
                     <span class="material-icons-round">close</span>
                 </button>
@@ -596,7 +607,7 @@
                 <div style="display:flex;gap:.75rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
                     <div id="conferenciaStats" style="font-size:.82rem;color:var(--text-secondary)"></div>
                     <span style="flex:1"></span>
-                    <button class="btn btn-secondary btn-sm" onclick="DemandaApp.desmarcarIncertosConferencia()" title="Remove a seleÃƒÂ§ÃƒÂ£o de todos os itens marcados como Incerto">
+                    <button class="btn btn-secondary btn-sm" onclick="DemandaApp.desmarcarIncertosConferencia()" title="Remove a seleção de todos os itens marcados como Incerto">
                         <span class="material-icons-round" style="font-size:1rem">help_outline</span> Desmarcar Incertos
                     </button>
                     <button class="btn btn-secondary btn-sm" onclick="DemandaApp.selectAllConferencia()">
@@ -609,8 +620,8 @@
                             <tr>
                                 <th style="width:28px"><input type="checkbox" id="chkAllConf" onclick="DemandaApp.toggleAllConferencia(this.checked)"></th>
                                 <th>#</th>
-                                <th>ReferÃƒÂªncia Original</th>
-                                <th>DescriÃƒÂ§ÃƒÂ£o</th>
+                                <th>Referência Original</th>
+                                <th>Descrição</th>
                                 <th style="width:70px">Qtde</th>
                                 <th>Obs</th>
                                 <th style="width:80px">Status</th>
@@ -624,7 +635,7 @@
                 <button class="btn btn-secondary" onclick="DemandaApp.closeModal('modalConferencia')">Cancelar</button>
                 <button class="btn btn-primary" onclick="DemandaApp.confirmConferencia()">
                     <span class="material-icons-round">add_shopping_cart</span>
-                    Adicionar Selecionados ÃƒÂ  Demanda
+                    Adicionar Selecionados à Demanda
                 </button>
             </div>
         </div>
@@ -642,24 +653,42 @@
             <div class="modal-body" id="modalItemDetalhesBody">
                 <div class="empty-state">
                     <div class="spinner"></div>
-                    <p>Buscando informaÃƒÂ§ÃƒÂµes...</p>
+                    <p>Buscando informações...</p>
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="DemandaApp.closeModal('modalItemDetalhes')">Fechar</button>
                 <button class="btn btn-primary" id="btnAddFromDetails" onclick="DemandaApp.addItemFromDetails()">
                     <span class="material-icons-round">add_shopping_cart</span>
-                    Adicionar ÃƒÂ  Demanda
+                    Adicionar à Demanda
                 </button>
             </div>
         </div>
     </div>
 
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!--  VIEW: INTEGRAÇÃO ERP (gerenciado por ErpUI)          -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <div id="view-integracaoErp" class="view-section" style="display:none;">
+        <div class="main-content" style="padding:0">
+            <!-- Topbar -->
+            <div class="top-bar" style="position:sticky;top:0;z-index:10">
+                <div class="breadcrumb">
+                    <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">sync</span>
+                    <span>Integração ERP</span>
+                </div>
+            </div>
+            <!-- Container preenchido dinamicamente por ErpUI.init('demanda') -->
+            <div class="content-wrapper" style="padding:2rem">
+                <div id="erp-config-container"></div>
+            </div>
+        </div>
+    </div>
 
 
-    <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
+    <!-- ══════════════════════════════════════════════════════ -->
     <!--  SCRIPTS                                              -->
-    <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
+    <!-- ══════════════════════════════════════════════════════ -->
 
     <!-- Modal: Import PDF -->
     <div id="modalImportPDF" class="modal-overlay" style="display:none">
@@ -774,7 +803,7 @@
             </div>
             <div class="modal-body" style="padding:1.25rem">
                 <div style="display:flex;gap:.5rem;margin-bottom:1rem">
-                    <input id="inpBuscaERP" type="text" placeholder="ReferÃƒÂªncia, descriÃƒÂ§ÃƒÂ£o ou fabricante..."
+                    <input id="inpBuscaERP" type="text" placeholder="Referência, descrição ou fabricante..."
                         onkeydown="if(event.key==='Enter') DemandaApp._executarBuscaERP()"
                         style="flex:1;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.55rem .85rem;color:var(--text-primary);font-size:.87rem">
                     <button class="btn btn-primary" onclick="DemandaApp._executarBuscaERP()" style="white-space:nowrap">
@@ -782,7 +811,7 @@
                     </button>
                 </div>
                 <div id="buscaERPResultados" style="max-height:380px;overflow-y:auto">
-                    <p style="color:var(--text-secondary);font-size:.83rem;padding:.5rem 0">Digite uma referÃƒÂªncia ou descriÃƒÂ§ÃƒÂ£o para buscar.</p>
+                    <p style="color:var(--text-secondary);font-size:.83rem;padding:.5rem 0">Digite uma referência ou descrição para buscar.</p>
                 </div>
             </div>
             <div class="modal-footer" style="padding:.75rem 1.25rem">
@@ -801,7 +830,7 @@
     <script src="/platform/core/js/session-manager.js"></script>
     <script src="/platform/core/js/auth.js"></script>
 
-    <!-- Camada de integraÃƒÂ§ÃƒÂ£o ERP (shared/integrations) -->
+    <!-- Camada de integração ERP (shared/integrations) -->
     <script src="/platform/shared/integrations/erp-adapter.js?v=2.0.0"></script>
     <script src="/platform/shared/integrations/erp-registry.js?v=2.0.0"></script>
     <script src="/platform/shared/integrations/acontec/adapter.js?v=2.0.0"></script>
@@ -809,51 +838,51 @@
     <script src="/platform/shared/integrations/erp-ui.js?v=2.0.0"></script>
     <script src="/platform/shared/integrations/index.js?v=2.0.0"></script>
 
-    <!-- MÃƒÂ³dulo de Demanda -->
-    <script src="js/demanda-states.js?v=2.4.5"></script>
-    <script src="js/demanda-db.js?v=2.4.5"></script>
-    <script src="js/demanda-import.js?v=2.4.5"></script>
-    <script src="js/demanda-search.js?v=2.4.5"></script>
-    <script src="js/demanda-lookup.js?v=2.4.5"></script>
-    <script src="js/demanda-pdf.js?v=2.4.5"></script>
-    <script src="js/demanda-clientes.js?v=2.4.5"></script>
-    <script src="js/demanda-app.js?v=2.4.5"></script>
+    <!-- Módulo de Demanda -->
+    <script src="js/demanda-states.js?v=2.4.6"></script>
+    <script src="js/demanda-db.js?v=2.4.6"></script>
+    <script src="js/demanda-import.js?v=2.4.6"></script>
+    <script src="js/demanda-search.js?v=2.4.6"></script>
+    <script src="js/demanda-lookup.js?v=2.4.6"></script>
+    <script src="js/demanda-pdf.js?v=2.4.6"></script>
+    <script src="js/demanda-clientes.js?v=2.4.6"></script>
+    <script src="js/demanda-app.js?v=2.4.6"></script>
 
-    <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
-         MODAL: AdministraÃƒÂ§ÃƒÂ£o da Base TÃƒÂ©cnica de PeÃƒÂ§as
-         Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
+    <!-- ═══════════════════════════════════════════════════════════
+         MODAL: Administração da Base Técnica de Peças
+         ═══════════════════════════════════════════════════════════ -->
     <div id="modalBaseTecnica" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center;">
       <div style="background:var(--surface);border-radius:12px;padding:2rem;width:min(700px,95vw);max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.5);">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
-          <h2 style="margin:0;font-size:1.1rem;color:var(--text-primary);">Ã°Å¸â€”â€žÃ¯Â¸Â Base TÃƒÂ©cnica de PeÃƒÂ§as AgrÃƒÂ­colas</h2>
+          <h2 style="margin:0;font-size:1.1rem;color:var(--text-primary);">🗄️ Base Técnica de Peças Agrícolas</h2>
           <button onclick="document.getElementById('modalBaseTecnica').style.display='none'"
-                  style="background:none;border:none;color:var(--text-secondary);font-size:1.4rem;cursor:pointer;">Ã¢Å“â€¢</button>
+                  style="background:none;border:none;color:var(--text-secondary);font-size:1.4rem;cursor:pointer;">✕</button>
         </div>
 
-        <!-- EstatÃƒÂ­sticas -->
+        <!-- Estatísticas -->
         <div id="btStats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;">
           <div style="background:var(--bg-secondary);border-radius:8px;padding:1rem;text-align:center;">
-            <div id="btCountTotal" style="font-size:1.6rem;font-weight:700;color:var(--accent-primary);">Ã¢â‚¬â€</div>
-            <div style="font-size:.75rem;color:var(--text-secondary);">PeÃƒÂ§as na Base</div>
+            <div id="btCountTotal" style="font-size:1.6rem;font-weight:700;color:var(--accent-primary);">—</div>
+            <div style="font-size:.75rem;color:var(--text-secondary);">Peças na Base</div>
           </div>
           <div style="background:var(--bg-secondary);border-radius:8px;padding:1rem;text-align:center;">
-            <div id="btCountErp" style="font-size:1.6rem;font-weight:700;color:var(--accent-success);">Ã¢â‚¬â€</div>
+            <div id="btCountErp" style="font-size:1.6rem;font-weight:700;color:var(--accent-success);">—</div>
             <div style="font-size:.75rem;color:var(--text-secondary);">Com Cadastro ERP</div>
           </div>
           <div style="background:var(--bg-secondary);border-radius:8px;padding:1rem;text-align:center;">
-            <div id="btCountPdf" style="font-size:1.6rem;font-weight:700;color:#60a5fa;">Ã¢â‚¬â€</div>
-            <div style="font-size:.75rem;color:var(--text-secondary);">Via CatÃƒÂ¡logo PDF</div>
+            <div id="btCountPdf" style="font-size:1.6rem;font-weight:700;color:#60a5fa;">—</div>
+            <div style="font-size:.75rem;color:var(--text-secondary);">Via Catálogo PDF</div>
           </div>
         </div>
 
-        <!-- SeÃƒÂ§ÃƒÂ£o 1: Sync Maxdata -->
+        <!-- Seção 1: Sync Maxdata -->
         <div style="border:1px solid var(--border);border-radius:8px;padding:1.25rem;margin-bottom:1.25rem;">
           <div style="font-weight:600;color:var(--text-primary);margin-bottom:.5rem;">
-            Ã°Å¸â€â€ž Sincronizar ERP (Maxdata)
+            🔄 Sincronizar ERP (Maxdata)
           </div>
           <p style="font-size:.82rem;color:var(--text-secondary);margin:.25rem 0 .75rem;">
-            Importa todos os produtos agrÃƒÂ­colas cadastrados no Maxdata para a base tÃƒÂ©cnica,
-            permitindo que o sistema reconheÃƒÂ§a peÃƒÂ§as mesmo quando o ERP estiver offline.
+            Importa todos os produtos agrícolas cadastrados no Maxdata para a base técnica,
+            permitindo que o sistema reconheça peças mesmo quando o ERP estiver offline.
           </p>
           <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;">
             <button id="btBtnSync" onclick="DemandaApp.syncMaxdataTechbase()"
@@ -867,14 +896,14 @@
           </div>
         </div>
 
-        <!-- SeÃƒÂ§ÃƒÂ£o 2: Import PDF -->
+        <!-- Seção 2: Import PDF -->
         <div style="border:1px solid var(--border);border-radius:8px;padding:1.25rem;">
           <div style="font-weight:600;color:var(--text-primary);margin-bottom:.5rem;">
-            Ã°Å¸â€œâ€ž Importar CatÃƒÂ¡logo PDF (OEM)
+            📄 Importar Catálogo PDF (OEM)
           </div>
           <p style="font-size:.82rem;color:var(--text-secondary);margin:.25rem 0 .75rem;">
-            Carregue PDFs de catÃƒÂ¡logos oficiais das fabricantes (John Deere, New Holland, Case IH, Massey Ferguson).
-            O sistema extrai automaticamente os cÃƒÂ³digos de peÃƒÂ§a e alimenta a base tÃƒÂ©cnica.
+            Carregue PDFs de catálogos oficiais das fabricantes (John Deere, New Holland, Case IH, Massey Ferguson).
+            O sistema extrai automaticamente os códigos de peça e alimenta a base técnica.
           </p>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem;">
@@ -908,7 +937,7 @@
 
           <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;">
             <label style="background:var(--accent-primary);color:#fff;border-radius:6px;padding:.5rem 1.25rem;cursor:pointer;font-size:.85rem;display:inline-block;">
-              Ã°Å¸â€œâ€š Selecionar PDF
+              📂 Selecionar PDF
               <input id="btPdfInput" type="file" accept=".pdf" style="display:none;" onchange="DemandaApp.importarCatalogoPDF(this.files[0])">
             </label>
             <span id="btPdfStatus" style="font-size:.8rem;color:var(--text-secondary);">Nenhum arquivo selecionado</span>
@@ -924,4 +953,3 @@
 
 </body>
 </html>
-

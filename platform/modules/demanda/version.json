@@ -1,1 +1,8 @@
-﻿{"version":"2.4.3","build":"20260908-v2.4.3","module":"demanda","name":"Inteligencia de Demanda","lastUpdate":"2026-09-08","change":"v2.4.3 - fix critico: view-integracaoErp movido para dentro do main-content; ERP e integracoes agora visiveis"}
+{
+  "version": "2.4.6",
+  "build": "20260909-v2.4.6",
+  "module": "demanda",
+  "name": "Inteligência de Demanda",
+  "lastUpdate": "2026-09-09",
+  "change": "v2.4.6 - fix(encoding): restauração completa de UTF-8 em todos os textos e acentos do módulo + suporte limpo à view de Clientes"
+}

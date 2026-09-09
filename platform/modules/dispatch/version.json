@@ -1,1 +1,8 @@
-{"build":"20260901-staging-v3.18.8","version":"3.18.8","environment":"staging","change":"v3.18.8 - WMS Coletor: Adicionado Botao de Atualização Rapida '🔄 Atualizar' diretamente no cabecalho (Top Bar - visivel em todas as telas) e Banner em Destaque no topo da Home.","lastUpdate":"2026-09-01","deployedAt":"2026-09-01"}
+{
+  "build": "20260909-v3.20.3",
+  "version": "3.20.3",
+  "environment": "production",
+  "change": "v3.20.3 - fix(demanda): correção completa de codificação UTF-8 dos acentos e suporte à view de Clientes no módulo Demanda v2.4.6",
+  "lastUpdate": "2026-09-09",
+  "deployedAt": "2026-09-09"
+}
