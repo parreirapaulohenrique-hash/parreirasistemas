@@ -1250,11 +1250,14 @@
         }
 
         window.fazerLogout = function() {
-            if (typeof ParreiraAuth !== 'undefined' && ParreiraAuth.logout) {
-                ParreiraAuth.logout();
-            } else {
-                sessionStorage.clear();
-                window.location.href = 'login.html';
+            if (confirm('Deseja realmente sair da sua conta no MAXCRM?')) {
+                if (typeof ParreiraAuth !== 'undefined' && ParreiraAuth.logout) {
+                    ParreiraAuth.logout();
+                } else {
+                    sessionStorage.clear();
+                    localStorage.removeItem('parreira_session');
+                    window.location.href = 'login.html';
+                }
             }
         };
 

@@ -164,6 +164,27 @@ html, body {
 }
 .user-badge:active { transform: scale(0.92); }
 
+.btn-logout-header {
+    width: 34px;
+    height: 34px;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #f87171;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s;
+}
+.btn-logout-header:hover {
+    background: rgba(239, 68, 68, 0.25);
+    color: #fff;
+    border-color: rgba(239, 68, 68, 0.4);
+}
+.btn-logout-header:active { transform: scale(0.92); }
+
 /* ── Barra de Progresso da Visita ──────────────────────────────────────── */
 .visit-progress-bar {
     display: none;

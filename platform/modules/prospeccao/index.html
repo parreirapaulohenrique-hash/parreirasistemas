@@ -37,7 +37,10 @@
             <div class="gps-badge loading" id="gpsBadge">
                 <span class="material-icons-round" style="font-size:.9rem">gps_not_fixed</span> GPS...
             </div>
-            <div class="user-badge" id="userBadge" onclick="navigateTo('perfil')">OP</div>
+            <div class="user-badge" id="userBadge" onclick="abrirModalPerfil()" title="Perfil do Usuário">OP</div>
+            <button class="btn-logout-header" onclick="fazerLogout()" title="Sair da Conta">
+                <span class="material-icons-round" style="font-size:1.15rem">logout</span>
+            </button>
         </div>
     </header>
 
@@ -106,6 +109,9 @@
                     <a href="painel.html" title="Painel de Gestão" style="display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:10px;background:rgba(225,29,72,0.15);border:1px solid rgba(225,29,72,0.3);color:#fb7185;text-decoration:none;">
                         <span class="material-icons-round" style="font-size:1.15rem">dashboard</span>
                     </a>
+                    <button onclick="fazerLogout()" title="Sair da Conta" style="display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:10px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;cursor:pointer;">
+                        <span class="material-icons-round" style="font-size:1.15rem">logout</span>
+                    </button>
                 </div>
             </div>
 
@@ -404,7 +410,53 @@ window.retornarVisita = function() {
     var etapa = (MaxCRMState.visitaAtual && MaxCRMState.visitaAtual.etapaAtual) || 'visita_contato';
     navigateTo(etapa);
 };
+
+// ── Funções de Perfil e Logout ──
+window.abrirModalPerfil = function() {
+    var sessao = typeof ParreiraAuth !== 'undefined' ? ParreiraAuth.getSessao() : null;
+    if (sessao) {
+        var nome = sessao.nome || sessao.login || 'Usuário';
+        document.getElementById('modalPerfilNome').textContent = nome;
+        document.getElementById('modalPerfilAvatar').textContent = nome.substring(0, 2).toUpperCase();
+        document.getElementById('modalPerfilLogin').textContent = 'Usuário: ' + (sessao.login || '—');
+        document.getElementById('modalPerfilRole').textContent = 'Perfil: ' + (sessao.role || 'promotor') + ' · Tenant: ' + (sessao.tenantId || 'parreira');
+    }
+    document.getElementById('modalPerfil').style.display = 'flex';
+};
+
+window.fecharModalPerfil = function() {
+    document.getElementById('modalPerfil').style.display = 'none';
+};
+
+window.fazerLogout = function() {
+    if (confirm('Deseja realmente sair da sua conta no MAXCRM?')) {
+        if (typeof ParreiraAuth !== 'undefined' && ParreiraAuth.logout) {
+            ParreiraAuth.logout();
+        } else {
+            sessionStorage.clear();
+            localStorage.removeItem('parreira_session');
+            window.location.href = 'login.html';
+        }
+    }
+};
 </script>
+
+<!-- Modal Perfil & Sair -->
+<div id="modalPerfil" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);align-items:center;justify-content:center;z-index:9999;padding:16px;">
+    <div class="card" style="max-width:340px;width:100%;padding:24px;border:1px solid rgba(225,29,72,0.3);text-align:center;">
+        <div style="width:60px;height:60px;border-radius:50%;background:var(--grad-primary);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:1.4rem;font-weight:800;color:#fff;" id="modalPerfilAvatar">OP</div>
+        <div style="font-size:1.15rem;font-weight:800;color:#fff;margin-bottom:4px;" id="modalPerfilNome">Usuário</div>
+        <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;" id="modalPerfilLogin">login</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:20px;" id="modalPerfilRole">Promotor · Tenant: parreira</div>
+        
+        <button class="btn btn-primary" onclick="fazerLogout()" style="width:100%;margin-bottom:8px;background:linear-gradient(135deg, #ef4444, #b91c1c);display:flex;align-items:center;justify-content:center;gap:8px;">
+            <span class="material-icons-round">logout</span> Sair da Conta
+        </button>
+        <button class="btn btn-secondary" onclick="fecharModalPerfil()" style="width:100%;">
+            Fechar
+        </button>
+    </div>
+</div>
 
 </body>
 </html>
