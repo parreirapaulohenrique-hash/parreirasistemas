@@ -1,8 +1,8 @@
 {
-  "version": "2.4.7",
-  "build": "20260909-v2.4.7",
+  "version": "2.4.8",
+  "build": "20260909-v2.4.8",
   "module": "demanda",
   "name": "Inteligência de Demanda",
   "lastUpdate": "2026-09-09",
-  "change": "v2.4.7 - fix(maxdata): correcao de regiao Vercel (gru1), timeout proxy 12s, sanitizacao de URL e suporte a _apiUrl"
+  "change": "v2.4.8 - fix(erp-ui): correcao de sintaxe e carregamento do ErpUI"
 }

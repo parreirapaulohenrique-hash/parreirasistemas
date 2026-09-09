@@ -1,8 +1,8 @@
 {
-  "build": "20260909-v3.20.5",
-  "version": "3.20.5",
+  "build": "20260909-v3.20.6",
+  "version": "3.20.6",
   "environment": "production",
-  "change": "v3.20.5 - fix(maxdata): proxy gru1 (Sao Paulo), timeout ampliado e sanitizacao de conexao ERP MaxData",
+  "change": "v3.20.6 - fix(erp-ui): correcao de sintaxe e carregamento do componente ErpUI",
   "lastUpdate": "2026-09-09",
   "deployedAt": "2026-09-09"
 }

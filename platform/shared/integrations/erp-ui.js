@@ -449,8 +449,9 @@ const ErpUI = {
                 new Promise((_, reject) => setTimeout(() => reject(new Error(msg)), ms))
             ]);
 
-            if ($(\'erpApiUrl\') && $(\'erpApiUrl\').value.includes(\'.con.br\')) {
-                $(\'erpApiUrl\').value = $(\'erpApiUrl\').value.replace(/\.con\.br/gi, \'.com.br\');
+            const inputUrl = document.getElementById('erpApiUrl');
+            if (inputUrl && inputUrl.value.includes('.con.br')) {
+                inputUrl.value = inputUrl.value.replace(/\.con\.br/gi, '.com.br');
             }
 
             const erp = await withTimeout(
