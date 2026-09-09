@@ -242,6 +242,7 @@ window.ParreiraAuth = (function () {
 
     // ─── CRUD DE USUÁRIOS (chamado pelo WMS admin) ────────────────────────────
     async function criarUsuario(tenantId, dados) {
+        await _ensureAuth();
         const db = _initDB();
         const { nome, login: lg, senha, role, pin } = dados;
         const loginKey  = lg.trim().toLowerCase();
@@ -272,6 +273,7 @@ window.ParreiraAuth = (function () {
     }
 
     async function atualizarUsuario(tenantId, loginKey, dados) {
+        await _ensureAuth();
         const db      = _initDB();
         const update  = { ...dados };
         if (dados.senha) {
@@ -282,6 +284,7 @@ window.ParreiraAuth = (function () {
     }
 
     async function desativarUsuario(tenantId, loginKey) {
+        await _ensureAuth();
         return atualizarUsuario(tenantId, loginKey, { ativo: false });
     }
 

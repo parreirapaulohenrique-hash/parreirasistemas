@@ -409,6 +409,40 @@ window.loadUsersFromFirestore = async function() {
 
         const prodTenants = getAllTenants().filter(t => !t.id.endsWith('_hml'));
 
+        // Auto-sincroniza usuários criados localmente no browser que ainda não estão no Firestore (ex: Maisa)
+        const unsynced = platformUsers.filter(u => !u.fromFirestore && u.login && u.tenant);
+        if (unsynced.length > 0) {
+            console.log(`[Master] Sincronizando ${unsynced.length} usuários locais com Firestore:`, unsynced.map(u => u.login));
+            const db = ParreiraAuth.getDB();
+            for (const u of unsynced) {
+                try {
+                    const loginKey = u.login.trim().toLowerCase();
+                    const tenantId = u.tenant.trim().toLowerCase();
+                    const batch = db.batch();
+                    batch.set(db.collection('users_index').doc(loginKey), { tenantId }, { merge: true });
+                    const uDoc = {
+                        nome: u.name || u.login,
+                        login: loginKey,
+                        tenant: tenantId,
+                        role: u.role || 'operacional',
+                        ativo: true,
+                        modulos: ['prospeccao', 'dispatch', 'demanda', 'wms'],
+                        atualizadoEm: new Date().toISOString()
+                    };
+                    if (u.pass) {
+                        uDoc.senhaHash = await ParreiraAuth._hash(u.pass);
+                        uDoc.pass = u.pass;
+                    }
+                    batch.set(db.collection('tenants').doc(tenantId).collection('users').doc(loginKey), uDoc, { merge: true });
+                    await batch.commit();
+                    u.fromFirestore = true;
+                    console.log(`[Master] Usuário @${loginKey} sincronizado com Firestore com sucesso.`);
+                } catch(syncErr) {
+                    console.warn(`[Master] Falha ao sincronizar @${u.login}:`, syncErr);
+                }
+            }
+        }
+
         // Remove usuários anteriores do Firestore (evita duplicatas no reload)
         platformUsers = platformUsers.filter(u => !u.fromFirestore);
 
@@ -569,47 +603,116 @@ function setupForms() {
     // User Form
     const userForm = document.getElementById('userForm');
     if (userForm) {
-        userForm.addEventListener('submit', (e) => {
+        userForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const login = document.getElementById('userLogin').value.trim();
+            const submitBtn = userForm.querySelector('button[type="submit"]');
+            const origHtml = submitBtn ? submitBtn.innerHTML : 'Salvar';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="material-icons-round" style="animation:spin 0.8s linear infinite">sync</span> Salvando no banco...';
+            }
+
+            const login = document.getElementById('userLogin').value.trim().toLowerCase().replace(/\s+/g, '');
             const pass = document.getElementById('userPass').value;
             const tenant = document.getElementById('userTenant').value;
-
-            const newUser = {
-                login,
-                pass,
-                tenant,
-                name: document.getElementById('userNameInput').value,
-                role: document.getElementById('userRole').value
-            };
+            const name = document.getElementById('userNameInput').value.trim();
+            const role = document.getElementById('userRole').value;
 
             // Check if edit mode
             const form = document.getElementById('userForm');
             const isEdit = form.getAttribute('data-edit-mode') === 'true';
 
-            if (isEdit) {
-                const editLogin = form.getAttribute('data-edit-login');
-                const editTenant = form.getAttribute('data-edit-tenant');
-                const idx = platformUsers.findIndex(u => u.login === editLogin && u.tenant === editTenant);
-                if (idx !== -1) {
-                    platformUsers[idx] = { ...platformUsers[idx], ...newUser };
-                }
-                form.removeAttribute('data-edit-mode');
-                form.removeAttribute('data-edit-login');
-                form.removeAttribute('data-edit-tenant');
-                document.getElementById('userLogin').removeAttribute('readonly');
-            } else {
-                if (platformUsers.find(u => u.login === login && u.tenant === tenant)) {
-                    alert('UsuÃ¡rio jÃ¡ existe nesta empresa!');
-                    return;
-                }
-                platformUsers.push(newUser);
-            }
+            try {
+                // 1. Grava no Firestore
+                if (ParreiraAuth.ensureAuth) await ParreiraAuth.ensureAuth();
+                const db = ParreiraAuth.getDB();
 
-            localStorage.setItem('platform_users_registry', JSON.stringify(platformUsers));
-            alert(isEdit ? 'UsuÃ¡rio atualizado com sucesso!' : 'UsuÃ¡rio cadastrado com sucesso!');
-            closeModal('userModal');
-            renderUsers();
+                if (db) {
+                    const batch = db.batch();
+                    const indexRef = db.collection('users_index').doc(login);
+                    const userRef  = db.collection('tenants').doc(tenant).collection('users').doc(login);
+
+                    batch.set(indexRef, { tenantId: tenant }, { merge: true });
+
+                    const fireData = {
+                        nome: name,
+                        login: login,
+                        tenant: tenant,
+                        role: role,
+                        ativo: true,
+                        atualizadoEm: new Date().toISOString()
+                    };
+
+                    if (pass) {
+                        fireData.senhaHash = await ParreiraAuth._hash(pass);
+                        fireData.pass = pass;
+                    }
+
+                    if (!isEdit) {
+                        fireData.criadoEm = new Date().toISOString();
+                        fireData.pin = '';
+                        fireData.modulos = ['prospeccao', 'dispatch', 'demanda', 'wms'];
+                    }
+
+                    batch.set(userRef, fireData, { merge: true });
+                    await batch.commit();
+
+                    // Compatibilidade legado para Despacho (legacy_store)
+                    try {
+                        const legacyRef = db.collection('tenants').doc(tenant).collection('legacy_store').doc('app_users');
+                        const snap = await legacyRef.get();
+                        let usersList = snap.exists ? JSON.parse(snap.data().content || '[]') : [];
+                        const uIdx = usersList.findIndex(u => u.login === login);
+                        const uItem = { name, login, pass: pass || (uIdx >= 0 ? usersList[uIdx].pass : ''), role: role === 'admin' ? 'admin' : 'supervisor' };
+                        if (uIdx >= 0) usersList[uIdx] = { ...usersList[uIdx], ...uItem };
+                        else usersList.push(uItem);
+                        await legacyRef.set({ content: JSON.stringify(usersList) });
+                    } catch(_) {}
+                }
+
+                const newUser = {
+                    login,
+                    pass,
+                    tenant,
+                    name,
+                    role,
+                    ativo: true,
+                    fromFirestore: true
+                };
+
+                if (isEdit) {
+                    const editLogin = form.getAttribute('data-edit-login');
+                    const editTenant = form.getAttribute('data-edit-tenant');
+                    const idx = platformUsers.findIndex(u => u.login === editLogin && u.tenant === editTenant);
+                    if (idx !== -1) {
+                        platformUsers[idx] = { ...platformUsers[idx], ...newUser };
+                    }
+                    form.removeAttribute('data-edit-mode');
+                    form.removeAttribute('data-edit-login');
+                    form.removeAttribute('data-edit-tenant');
+                    document.getElementById('userLogin').removeAttribute('readonly');
+                } else {
+                    const existing = platformUsers.findIndex(u => u.login === login && u.tenant === tenant);
+                    if (existing >= 0) {
+                        platformUsers[existing] = { ...platformUsers[existing], ...newUser };
+                    } else {
+                        platformUsers.push(newUser);
+                    }
+                }
+
+                localStorage.setItem('platform_users_registry', JSON.stringify(platformUsers));
+                alert(isEdit ? 'Usuário atualizado com sucesso no banco de dados!' : 'Usuário cadastrado com sucesso no banco de dados!');
+                closeModal('userModal');
+                renderUsers();
+            } catch(err) {
+                console.error('[Master] Erro ao salvar usuário:', err);
+                alert('Erro ao salvar no banco de dados: ' + (err.message || 'Tente novamente.'));
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = origHtml;
+                }
+            }
         });
     }
 }
