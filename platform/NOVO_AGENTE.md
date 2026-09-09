@@ -490,3 +490,45 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
 
 **Fix aplicado:** 2026-09-04 — commit `dc2c2eb` removeu o BOM e restaurou os deploys.
 
+---
+
+## 9. Modo de Trabalho Otimizado (Ambiente de Rede Z:\ e Alta Performance)
+
+> ⚡ **DIRETRIZ OBRIGATÓRIA PARA TODO AGENTE / DESENVOLVEDOR:**
+> O workspace da plataforma opera no disco de rede **`Z:\`** mapeado via VPN Radmin com latência média de **~480ms por pacote**. 
+> Em discos com essa latência, operações ingênuas de disco e comandos globais do Git causam travamentos de 2 a 5 minutos.
+> O agente DEVE seguir impreterivelmente as regras abaixo:
+
+### 9.1. Regra de Agrupamento em Lote (Batching)
+* **Nunca commitar a cada arquivo individual:** Realize todas as alterações de código, estilizações e integrações do módulo em sequência contínua.
+* **Teste e validação antes do Git:** Valide a sintaxe e o funcionamento da alteração antes de iniciar o processo de commit e deploy.
+* **Um único commit por entrega funcional:** Reúna as alterações relacionadas em um único commit bem descrito, evitando múltiplos ciclos de espera de rede.
+
+### 9.2. Git Scoped (Comandos Estritamente Direcionados)
+* **NUNCA rodar comandos globais sem caminho:** Comandos como `git status`, `git add .` ou `git diff` sem parâmetros varrem o repositório inteiro pela VPN, levando minutos.
+* **Sempre especificar os arquivos ou a pasta exata do módulo:**
+  ```powershell
+  # ✅ CORRETO: Direcionado apenas aos arquivos modificados
+  git add modules/<modulo>/ version.json
+  git commit -m "feat(<modulo>): descricao clara da melhoria"
+
+  # ❌ PROIBIDO: Varrer o repositório inteiro
+  git add .
+  git add -A
+  ```
+
+### 9.3. Prevenção de Concorrência e Conflito de Locks (`index.lock`)
+* O Antigravity IDE / VS Code possui processos em segundo plano que inspecionam o Git e podem manter bloqueios (`.git/index.lock`) abertos por conta do ping de rede.
+* Antes de rodar comandos de escrita no Git (`add`, `commit`, `checkout`), o agente deve garantir a liberação do índice:
+  ```powershell
+  Stop-Process -Name git -Force -ErrorAction SilentlyContinue
+  Start-Sleep -Milliseconds 300
+  Remove-Item 'z:\antigravity\scratch\.git\index.lock' -Force -ErrorAction SilentlyContinue
+  ```
+
+### 9.4. Deploy Consolidado e Ágil
+* 🟢 **Módulo Demanda Direto em Produção (Até segunda ordem):** Conforme determinação expressa do usuário em 2026-09-09, o módulo **Inteligência de Demanda** (platform/modules/demanda) tem publicação direta em produção autorizada sem necessidade de aprovação intermediária em staging.
+* Execute o push de forma direcionada (`git push origin main; git push origin main:staging`).
+* Utilize scripts com medição de tempo e saída limpa, mantendo o usuário informado em tempo real sem loops cegos de polling.
+* Atualize sempre o `version.json` do módulo e o `platform/version.json` no mesmo pacote de entrega.
+
