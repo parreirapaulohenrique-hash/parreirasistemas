@@ -380,8 +380,14 @@ const ErpUI = {
 
         try {
             const provider  = ($('erpProvider')?.value || '').toLowerCase();
-            const urlVal    = $('erpApiUrl')?.value?.trim() || '';
+            let urlVal      = $('erpApiUrl')?.value?.trim() || '';
             const terminal  = $('erpTerminal')?.value?.trim() || '';
+
+            // Auto-correção de erro comum de digitação (.con.br -> .com.br)
+            if (urlVal.includes('.con.br')) {
+                urlVal = urlVal.replace(/\.con\.br/gi, '.com.br');
+                if ($('erpApiUrl')) $('erpApiUrl').value = urlVal;
+            }
 
             if (!provider) {
                 alert('Selecione o Provedor ERP.');
@@ -442,6 +448,10 @@ const ErpUI = {
                 promise,
                 new Promise((_, reject) => setTimeout(() => reject(new Error(msg)), ms))
             ]);
+
+            if ($(\'erpApiUrl\') && $(\'erpApiUrl\').value.includes(\'.con.br\')) {
+                $(\'erpApiUrl\').value = $(\'erpApiUrl\').value.replace(/\.con\.br/gi, \'.com.br\');
+            }
 
             const erp = await withTimeout(
                 ErpRegistry.getAdapter(this._tenantId),

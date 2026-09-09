@@ -68,7 +68,9 @@ class MaxDataAdapter extends ErpAdapter {
      * Retorna a URL base da API.
      */
     _baseUrl() {
-        return (this.config.baseUrl || this.config.apiUrl || 'http://rds.skytins.com.br:8720/v2').replace(/\/$/, '');
+        let raw = (this.config.baseUrl || this.config.apiUrl || 'http://rds.skytins.com.br:8720/v2').trim();
+        raw = raw.replace(/\.con\.br/gi, '.com.br');
+        return raw.replace(/\/+$/, '');
     }
 
     /**
@@ -81,7 +83,7 @@ class MaxDataAdapter extends ErpAdapter {
         const isHttpApi   = configUrl.startsWith('http://');
 
         if (isHttpsPage && isHttpApi) {
-            const qs = new URLSearchParams({ _path: endpoint, ...params }).toString();
+            const qs = new URLSearchParams({ _path: endpoint, _apiUrl: configUrl, ...params }).toString();
             return `/api/maxdata?${qs}`;
         }
 

@@ -1,8 +1,8 @@
 {
-  "build": "20260909-v3.20.4",
-  "version": "3.20.4",
+  "build": "20260909-v3.20.5",
+  "version": "3.20.5",
   "environment": "production",
-  "change": "v3.20.4 - fix(auth): persistência direta no Firestore para criação/edição de usuários no Master, provisionamento de maisa e auto-sync de usuários locais",
+  "change": "v3.20.5 - fix(maxdata): proxy gru1 (Sao Paulo), timeout ampliado e sanitizacao de conexao ERP MaxData",
   "lastUpdate": "2026-09-09",
   "deployedAt": "2026-09-09"
 }

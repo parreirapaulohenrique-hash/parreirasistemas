@@ -284,5 +284,8 @@
             "source": "/:tenant",
             "destination": "/platform/modules/dispatch/index.html"
         }
+    ],
+    "regions": [
+        "gru1"
     ]
 }

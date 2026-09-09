@@ -1,8 +1,8 @@
-﻿/**
- * api/maxdata.js â€” Vercel Serverless Proxy para API Maxdata
+/**
+ * api/maxdata.js — Vercel Serverless Proxy para API Maxdata
  * ===========================================================
  * Node.js 18+ com fetch global nativo. CommonJS (module.exports).
- * Resolve Mixed Content: browser HTTPS â†’ proxy HTTPS â†’ Maxdata HTTP.
+ * Resolve Mixed Content: browser HTTPS → proxy HTTPS → Maxdata HTTP.
  */
 
 module.exports = async function handler(req, res) {
@@ -16,27 +16,46 @@ module.exports = async function handler(req, res) {
         return res.status(200).end();
     }
 
-    const TARGET_HOSTS = [
-        'http://45.177.248.129:8720/v2',
-        'http://rds.skytins.com.br:8720/v2'
-    ];
-
-    // Extrai _path e monta o resto da query
+    // Extrai _path, _apiUrl e monta o resto da query
     const url = new URL(req.url, 'http://localhost');
     const params = Object.fromEntries(url.searchParams.entries());
-    const { _path, ...rest } = params;
+    const { _path, _apiUrl, ...rest } = params;
     const endpointPath = (_path || '').replace(/^\/+/, '');
 
     if (!endpointPath) {
-        return res.status(400).json({ success: false, message: 'ParÃ¢metro _path ausente.' });
+        return res.status(400).json({ success: false, message: 'Parâmetro _path ausente.' });
+    }
+
+    // Monta lista de hosts candidatos
+    const candidateHosts = [];
+
+    // Se o frontend passou uma URL customizada / configurada pelo tenant
+    if (_apiUrl) {
+        let clean = decodeURIComponent(_apiUrl).trim().replace(/\/+$/, '');
+        // Sanitiza erros comuns de digitação como .con.br -> .com.br
+        clean = clean.replace(/\.con\.br/gi, '.com.br');
+        if (clean && !candidateHosts.includes(clean)) {
+            candidateHosts.push(clean);
+        }
+    }
+
+    // Hosts padrão conhecidos (hostname primeiro, depois fallback via IP)
+    const defaults = [
+        'http://rds.skytins.com.br:8720/v2',
+        'http://45.177.248.129:8720/v2'
+    ];
+
+    for (const h of defaults) {
+        if (!candidateHosts.includes(h)) {
+            candidateHosts.push(h);
+        }
     }
 
     const qs = Object.keys(rest).length ? '?' + new URLSearchParams(rest).toString() : '';
 
-    // CabeÃ§alhos para repassar
+    // Cabeçalhos para repassar (não forçamos Host manual para evitar conflitos no fetch)
     const headers = { 
-        'Content-Type': 'application/json',
-        'Host': 'rds.skytins.com.br:8720'
+        'Content-Type': 'application/json'
     };
     if (req.headers['authorization']) {
         headers['Authorization'] = req.headers['authorization'];
@@ -52,12 +71,13 @@ module.exports = async function handler(req, res) {
 
     let lastError = null;
 
-    for (const base of TARGET_HOSTS) {
-        const targetUrl = `${base}/${endpointPath}${qs}`;
-        console.log(`[MaxDataProxy] Tentando: ${req.method} ${targetUrl}`);
+    for (const base of candidateHosts) {
+        const targetUrl = ${base}/;
+        console.log([MaxDataProxy] Tentando:  );
 
         const ac = new AbortController();
-        const timer = setTimeout(() => ac.abort(), 4500);
+        // 12s por tentativa (maxDuration é 30s)
+        const timer = setTimeout(() => ac.abort(), 12000);
 
         try {
             const response = await fetch(targetUrl, {
@@ -73,17 +93,17 @@ module.exports = async function handler(req, res) {
             let data;
             try { data = JSON.parse(text); } catch { data = { raw: text }; }
 
-            console.log(`[MaxDataProxy] Sucesso em ${base}: ${response.status}`);
+            console.log([MaxDataProxy] Sucesso em : );
             return res.status(response.status).json(data);
         } catch (e) {
             clearTimeout(timer);
-            console.warn(`[MaxDataProxy] Falha ao tentar ${base}:`, e.message);
+            console.warn([MaxDataProxy] Falha ao tentar :, e.message);
             lastError = e;
         }
     }
 
     return res.status(504).json({
         success: false,
-        message: `Timeout ao conectar com a API MaxData: ${lastError?.message || 'Servidor nÃ£o respondeu a tempo.'}`
+        message: Timeout ao conectar com a API MaxData: 
     });
 };
