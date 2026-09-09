@@ -2,7 +2,7 @@
  * api/maxdata.js — Vercel Serverless Proxy para API Maxdata
  * ===========================================================
  * Node.js 18+ com fetch global nativo. CommonJS (module.exports).
- * Resolve Mixed Content: browser HTTPS → proxy HTTPS → Maxdata HTTP.
+ * Resolve Mixed Content: browser HTTPS -> proxy HTTPS -> Maxdata HTTP.
  */
 
 module.exports = async function handler(req, res) {
@@ -72,8 +72,8 @@ module.exports = async function handler(req, res) {
     let lastError = null;
 
     for (const base of candidateHosts) {
-        const targetUrl = ${base}/;
-        console.log([MaxDataProxy] Tentando:  );
+        const targetUrl = base + '/' + endpointPath + qs;
+        console.log('[MaxDataProxy] Tentando: ' + req.method + ' ' + targetUrl);
 
         const ac = new AbortController();
         // 12s por tentativa (maxDuration é 30s)
@@ -82,8 +82,8 @@ module.exports = async function handler(req, res) {
         try {
             const response = await fetch(targetUrl, {
                 method: req.method,
-                headers,
-                body,
+                headers: headers,
+                body: body,
                 signal: ac.signal
             });
 
@@ -91,19 +91,20 @@ module.exports = async function handler(req, res) {
 
             const text = await response.text();
             let data;
-            try { data = JSON.parse(text); } catch { data = { raw: text }; }
+            try { data = JSON.parse(text); } catch (_) { data = { raw: text }; }
 
-            console.log([MaxDataProxy] Sucesso em : );
+            console.log('[MaxDataProxy] Sucesso em ' + base + ': ' + response.status);
             return res.status(response.status).json(data);
         } catch (e) {
             clearTimeout(timer);
-            console.warn([MaxDataProxy] Falha ao tentar :, e.message);
+            console.warn('[MaxDataProxy] Falha ao tentar ' + base + ':', e.message);
             lastError = e;
         }
     }
 
+    const errMsg = lastError ? lastError.message : 'Servidor não respondeu a tempo.';
     return res.status(504).json({
         success: false,
-        message: Timeout ao conectar com a API MaxData: 
+        message: 'Timeout ao conectar com a API MaxData: ' + errMsg
     });
 };
