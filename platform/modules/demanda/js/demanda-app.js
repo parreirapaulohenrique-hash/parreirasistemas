@@ -613,56 +613,80 @@ const DemandaApp = (function() {
         }
     }
 
-    // ════════════════════════════════════════════════════════
-    // IMPORT PDF (iframe nativo do browser)
-    // ════════════════════════════════════════════════════════
 
-    var _pdfBlobUrl = null;
+    // ════════════════════════════════════════════════════════
+    // IMPORT PDF DIRETO (Leitura estruturada via PDF.js)
+    // ════════════════════════════════════════════════════════
 
     function _abrirImportPDF() {
-        var inp = document.createElement("input");
-        inp.type = "file";
-        inp.accept = ".pdf,application/pdf";
-        inp.style.display = "none";
-        document.body.appendChild(inp);
-        inp.onchange = function() {
-            var file = inp.files[0];
-            document.body.removeChild(inp);
-            if (!file) return;
-            // Revoga URL anterior se existir
-            if (_pdfBlobUrl) { try { URL.revokeObjectURL(_pdfBlobUrl); } catch(_) {} }
-            _pdfBlobUrl = URL.createObjectURL(file);
-            // Mostra modal com botão para abrir em nova aba
-            var modal = document.getElementById("modalImportPDF");
-            var fname = document.getElementById("pdfFileName");
-            var ta    = document.getElementById("pdfTextoColar");
-            var btn   = document.getElementById("btnAbrirPdfNovaAba");
-            if (!modal) { _toast("Modal PDF nao encontrado.", "error"); return; }
-            if (fname) fname.textContent = file.name;
-            if (ta)    ta.value = "";
-            // Atualiza o href do botão âncora diretamente (não abre automaticamente)
-            if (btn) { btn.href = _pdfBlobUrl; }
-            modal.style.display = "flex";
-        };
-        inp.click();
+        var modal = document.getElementById("modalImportPDF");
+        var up = document.getElementById("pdfUploadArea");
+        var proc = document.getElementById("pdfProcessingArea");
+        if (up) up.style.display = "block";
+        if (proc) proc.style.display = "none";
+        if (modal) modal.style.display = "flex";
     }
 
     function _fecharImportPDF() {
         var modal = document.getElementById("modalImportPDF");
         if (modal) modal.style.display = "none";
+        var inp = document.getElementById("pdfDirectFileInput");
+        if (inp) inp.value = "";
     }
 
-    function _copiarDoPDF() {
-        var ta = document.getElementById("pdfTextoColar");
-        if (!ta || !ta.value.trim()) { _toast("Cole o texto do PDF antes de processar.", "warning"); return; }
-        var texto = ta.value.trim();
-        _fecharImportPDF();
-        var taImport = document.getElementById("textareaImport");
-        if (taImport) taImport.value = texto;
-        _openModal("modalTexto");
-        _toast("Texto do PDF carregado! Clique em Processar.", "info");
+    function onPdfDrop(ev) {
+        ev.preventDefault();
+        var area = document.getElementById("pdfUploadArea");
+        if (area) area.style.borderColor = "var(--border)";
+        var file = ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0];
+        if (file && file.type === "application/pdf") onPdfFileSelected(file);
+        else if (file) _toast("Selecione um arquivo PDF válido.", "warning");
     }
 
+    function onPdfFileSelected(file) {
+        if (!file) return;
+        if (typeof DemandaPDF === "undefined" || typeof DemandaPDF.parseCotacaoPDF !== "function") {
+            _toast("Módulo DemandaPDF não carregado.", "error");
+            return;
+        }
+
+        var up   = document.getElementById("pdfUploadArea");
+        var proc = document.getElementById("pdfProcessingArea");
+        var msg  = document.getElementById("pdfProcessingMsg");
+        var bar  = document.getElementById("pdfProgressBar");
+
+        if (up) up.style.display = "none";
+        if (proc) proc.style.display = "block";
+        if (msg) msg.textContent = "Abrindo " + file.name + "...";
+        if (bar) bar.style.width = "10%";
+
+        DemandaPDF.parseCotacaoPDF(file, function(paginaAtual, totalPaginas) {
+            if (msg) msg.textContent = "Processando página " + paginaAtual + " de " + totalPaginas + "...";
+            var pct = Math.round((paginaAtual / totalPaginas) * 85) + 10;
+            if (bar) bar.style.width = pct + "%";
+        }).then(function(itensExtraidos) {
+            if (bar) bar.style.width = "100%";
+            _fecharImportPDF();
+
+            if (!itensExtraidos || itensExtraidos.length === 0) {
+                _toast("Nenhum item reconhecido no PDF. Verifique o layout do arquivo.", "warning");
+                return;
+            }
+
+            // Valida e envia direto para a Conferência de Importação
+            var validados = (typeof DemandaImport !== "undefined")
+                ? DemandaImport.validateItens(itensExtraidos)
+                : itensExtraidos;
+
+            _showConferencia(validados);
+            _toast("✓ " + itensExtraidos.length + " peças extraídas com sucesso do PDF!", "success");
+        }).catch(function(err) {
+            console.error("[DemandaApp] Erro na leitura do PDF:", err);
+            if (up) up.style.display = "block";
+            if (proc) proc.style.display = "none";
+            _toast("Erro ao ler PDF: " + (err.message || err), "error");
+        });
+    }
 
     // ════════════════════════════════════════════════════════
     // IMPORT FOTO / PRINT (camera ou galeria + transcricao)
@@ -3056,9 +3080,10 @@ const DemandaApp = (function() {
         addItemFromDetails:     addItemFromDetails,
         processImportTexto:     processImportTexto,
         // Import PDF
+        onPdfDrop:                      onPdfDrop,
+        onPdfFileSelected:              onPdfFileSelected,
         _abrirImportPDF:        _abrirImportPDF,
         _fecharImportPDF:       _fecharImportPDF,
-        _copiarDoPDF:           _copiarDoPDF,
         // Import Foto
         _abrirImportFoto:       _abrirImportFoto,
         _fecharImportFoto:      _fecharImportFoto,

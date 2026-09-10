@@ -166,14 +166,8 @@
                         <span id="demandaCodigoTopbar" style="font-size:.78rem;color:var(--text-secondary)"></span>
                     </div>
                     <div class="topbar-actions">
-                        <button class="btn btn-secondary btn-sm" onclick="DemandaApp.openImportModal('texto')">
-                            <span class="material-icons-round">content_paste</span> Colar Texto
-                        </button>
-                        <button class="btn btn-secondary btn-sm" onclick="DemandaApp.openImportModal('excel')">
-                            <span class="material-icons-round">table_view</span> Excel/CSV
-                        </button>
                         <button class="btn btn-primary btn-sm" id="btnSalvarDemanda" onclick="DemandaApp.salvarDemanda()">
-                            <span class="material-icons-round">save</span> Salvar
+                            <span class="material-icons-round">save</span> Salvar Cotação
                         </button>
                     </div>
                 </div>
@@ -753,53 +747,49 @@
     <!--  SCRIPTS                                              -->
     <!-- ══════════════════════════════════════════════════════ -->
 
-    <!-- Modal: Import PDF -->
+    <!-- Modal: Importar Cotação em PDF (Leitura Estruturada Direta) -->
     <div id="modalImportPDF" class="modal-overlay" style="display:none">
-        <div class="modal-container" style="max-width:720px;width:97%">
+        <div class="modal-card modal-lg">
             <div class="modal-header">
-                <span style="font-weight:700;display:flex;align-items:center;gap:.5rem">
+                <h3>
                     <span class="material-icons-round" style="color:#ef4444">picture_as_pdf</span>
-                    Importar de PDF
-                    <span id="pdfFileName" style="font-size:.78rem;font-weight:400;color:var(--text-secondary);margin-left:.25rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
-                </span>
+                    Importar Cotação / Orçamento em PDF
+                </h3>
                 <button class="btn-close" onclick="DemandaApp._fecharImportPDF()">
                     <span class="material-icons-round">close</span>
                 </button>
             </div>
-            <div class="modal-body" style="padding:1.25rem;display:grid;grid-template-columns:1fr 1.4fr;gap:1rem;align-items:start">
-                <div style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:10px;padding:1.5rem;text-align:center">
-                    <span class="material-icons-round" style="font-size:3rem;color:#ef4444;display:block;margin-bottom:.75rem">picture_as_pdf</span>
-                    <p style="font-size:.88rem;font-weight:600;color:var(--text-primary);margin:0 0 .75rem">PDF selecionado</p>
-                    <!-- Botao ancora: unico jeito confiavel de abrir nova aba sem popup-blocker -->
-                    <a id="btnAbrirPdfNovaAba" href="#" target="_blank" rel="noopener"
-                       style="display:inline-flex;align-items:center;gap:.4rem;padding:.55rem 1rem;background:#ef4444;color:#fff;border-radius:8px;font-size:.83rem;font-weight:600;text-decoration:none;margin-bottom:1rem">
-                        <span class="material-icons-round" style="font-size:.95rem">open_in_new</span>
-                        Abrir PDF em nova aba
-                    </a>
-                    <div style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:.65rem;font-size:.75rem;color:#a5b4fc;text-align:left;line-height:1.6">
-                        <strong>Apos abrir o PDF:</strong><br>
-                        1. Selecione o texto (Ctrl+A)<br>
-                        2. Copie (Ctrl+C)<br>
-                        3. Cole no campo ao lado<br>
-                        4. Clique em <strong>Processar Itens</strong>
+            <div class="modal-body" style="padding:1.5rem">
+                <div id="pdfUploadArea" style="
+                    border:2px dashed var(--border);border-radius:12px;padding:2.5rem 1.5rem;text-align:center;
+                    cursor:pointer;transition:border-color .2s;background:rgba(255,255,255,.02);
+                " onclick="document.getElementById('pdfDirectFileInput').click()"
+                   ondragover="event.preventDefault();this.style.borderColor='var(--accent-primary)'"
+                   ondragleave="this.style.borderColor='var(--border)'"
+                   ondrop="DemandaApp.onPdfDrop(event)">
+                    <span class="material-icons-round" style="font-size:3.5rem;color:#ef4444;display:block;margin-bottom:.5rem">picture_as_pdf</span>
+                    <p style="color:var(--text-primary);font-size:.95rem;font-weight:600;margin:0 0 .35rem">
+                        Clique para selecionar ou arraste o PDF da cotação aqui
+                    </p>
+                    <p style="color:var(--text-secondary);font-size:.82rem;margin:0">
+                        O sistema faz a leitura direta da tabela de peças e quantidades (John Deere, Case, New Holland, etc.)
+                    </p>
+                    <input type="file" id="pdfDirectFileInput" accept=".pdf,application/pdf" style="display:none"
+                        onchange="DemandaApp.onPdfFileSelected(this.files[0])">
+                </div>
+
+                <div id="pdfProcessingArea" style="display:none;margin-top:1.5rem;text-align:center;padding:1.5rem;background:var(--bg-dark);border-radius:10px;border:1px solid var(--border)">
+                    <span class="material-icons-round" style="animation:spin 1s linear infinite;font-size:2.2rem;color:var(--accent-primary)">sync</span>
+                    <p id="pdfProcessingMsg" style="margin-top:.75rem;font-size:.88rem;font-weight:600;color:var(--text-primary)">
+                        Lendo PDF e identificando referências...
+                    </p>
+                    <div style="background:rgba(255,255,255,.1);border-radius:6px;height:8px;overflow:hidden;margin-top:.75rem;max-width:320px;margin-left:auto;margin-right:auto">
+                        <div id="pdfProgressBar" style="height:100%;width:15%;background:var(--accent-primary);transition:width .2s"></div>
                     </div>
                 </div>
-                </div>
-                <div style="display:flex;flex-direction:column;gap:.5rem">
-                    <label for="pdfTextoColar" style="font-size:.78rem;color:var(--text-secondary);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Cole o texto do PDF aqui</label>
-                    <textarea id="pdfTextoColar" rows="12" placeholder="Cole aqui o texto copiado do PDF"
-                        style="resize:vertical;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.65rem .85rem;color:var(--text-primary);font-size:.83rem;font-family:inherit;min-height:220px;box-sizing:border-box;width:100%"></textarea>
-                    <p style="font-size:.76rem;color:var(--text-secondary);margin:0">
-                        <span class="material-icons-round" style="font-size:.85rem;vertical-align:middle;color:#f59e0b">info</span>
-                        O sistema detecta referencias, descricoes e quantidades automaticamente.
-                    </p>
-                </div>
             </div>
-            <div class="modal-footer" style="padding:.75rem 1.25rem;display:flex;justify-content:flex-end;gap:.75rem">
+            <div class="modal-footer" style="padding:.75rem 1.25rem;border-top:1px solid var(--border-color);display:flex;justify-content:flex-end">
                 <button class="btn btn-secondary" onclick="DemandaApp._fecharImportPDF()">Cancelar</button>
-                <button class="btn btn-primary" onclick="DemandaApp._copiarDoPDF()">
-                    <span class="material-icons-round" style="font-size:.9rem">send</span> Processar Itens
-                </button>
             </div>
         </div>
     </div>
@@ -908,7 +898,7 @@
     <script src="js/demanda-lookup.js?v=2.5.2"></script>
     <script src="js/demanda-pdf.js?v=2.5.1"></script>
     <script src="js/demanda-clientes.js?v=2.5.1"></script>
-    <script src="js/demanda-app.js?v=3.21.4"></script>
+    <script src="js/demanda-app.js?v=3.21.5"></script>
 
     <!-- ═══════════════════════════════════════════════════════════
          MODAL: Administração da Base Técnica de Peças

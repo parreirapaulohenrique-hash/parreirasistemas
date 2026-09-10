@@ -231,7 +231,138 @@ const DemandaPDF = (() => {
             });
         }
 
-        return {
+    
+    // ═══════════════════════════════════════════════════════════
+    // PARSER ESTRUTURADO DE COTAÇÕES / ORÇAMENTOS OEM EM PDF
+    // Extrai tabelas respeitando coordenadas geométricas X / Y
+    // ═══════════════════════════════════════════════════════════
+
+    async function parseCotacaoPDF(file, onProgress) {
+        const pdfLib = await _loadPDFjs();
+        const buffer = await file.arrayBuffer();
+        const pdf    = await pdfLib.getDocument({ data: buffer }).promise;
+        const totalPaginas = pdf.numPages;
+        const itensEncontrados = [];
+
+        // Termos que indicam cabeçalhos ou rodapés a serem descartados
+        const IGNORE_PATTERNS = /^(número\s*de\s*peça|numero\s*de\s*peca|part\s*number|item\s*code|código|codigo|qtde?|quantidade|qty|descrição|descricao|description|comentário|comentario|pin|copyright|todos\s*os\s*direitos|page\s*\d+|página\s*\d+|a\s*pronta\s*entrega|em\s*cotação|um\s*pouco\s*mais|orçamento|deere\s*&\s*company)/i;
+
+        for (let p = 1; p <= totalPaginas; p++) {
+            if (onProgress) onProgress(p, totalPaginas);
+            const page = await pdf.getPage(p);
+            const content = await page.getTextContent();
+
+            // 1. Coleta itens com coordenadas X e Y
+            const rawItems = content.items.map(it => ({
+                text: (it.str || '').trim(),
+                x: it.transform[4],
+                y: it.transform[5],
+                width: it.width,
+                height: it.height
+            })).filter(it => it.text.length > 0);
+
+            // 2. Agrupa itens com Y próximo (mesma linha da tabela, tolerância 4px)
+            const rowsMap = [];
+            rawItems.forEach(item => {
+                let row = rowsMap.find(r => Math.abs(r.y - item.y) <= 4.5);
+                if (!row) {
+                    row = { y: item.y, items: [] };
+                    rowsMap.push(row);
+                }
+                row.items.push(item);
+            });
+
+            // Ordena as linhas do topo para o rodapé (Y decrescente)
+            rowsMap.sort((a, b) => b.y - a.y);
+
+            // 3. Processa cada linha de itens da esquerda para a direita (X crescente)
+            rowsMap.forEach(row => {
+                row.items.sort((a, b) => a.x - b.x);
+                const lineFullText = row.items.map(it => it.text).join(' ').trim();
+
+                if (!lineFullText || IGNORE_PATTERNS.test(lineFullText) || lineFullText.length < 3) {
+                    return;
+                }
+
+                // Remove marcas de conferência comuns (✓, X, —, etc.)
+                const tokens = row.items
+                    .map(it => it.text)
+                    .filter(t => t !== '✓' && t !== 'X' && t !== 'x' && t !== '—' && t !== '-' && t !== '.' && t !== ':');
+
+                if (tokens.length === 0) return;
+
+                let ref = '';
+                let qtde = 1;
+                let desc = '';
+                let obs = '';
+
+                // Regex para referências OEM: 1-4 letras + 4-10 dígitos + sufixo opcional (ex: AKK23814, RE196945, N305594, TY26372, AN208074, 14M7594)
+                const partRegex = /^[A-Z0-9]{1,4}\d{4,}[A-Z0-9]*$/i;
+                let refIdx = -1;
+
+                for (let i = 0; i < tokens.length; i++) {
+                    const tk = tokens[i].replace(/[.,:;]/g, '').trim();
+                    if (partRegex.test(tk) && !/^\d{1,3}$/.test(tk)) {
+                        ref = tk.toUpperCase();
+                        refIdx = i;
+                        break;
+                    }
+                }
+
+                // Fallback: se não pegou por regex estrito, analisa primeiro token
+                if (!ref && tokens.length > 0) {
+                    const first = tokens[0].replace(/[.,:;]/g, '').trim();
+                    if (first.length >= 4 && !/^\d{1,3}$/.test(first)) {
+                        ref = first.toUpperCase();
+                        refIdx = 0;
+                    }
+                }
+
+                if (!ref) return;
+
+                const restTokens = tokens.slice(refIdx + 1);
+
+                // Detecta quantidade (número inteiro 1 a 99999)
+                let qtdeIdx = -1;
+                for (let j = 0; j < restTokens.length; j++) {
+                    const t = restTokens[j];
+                    if (/^\d{1,5}$/.test(t) && Number(t) > 0 && Number(t) <= 50000) {
+                        qtde = parseInt(t, 10);
+                        qtdeIdx = j;
+                        break;
+                    }
+                }
+
+                const descTokens = [];
+                const obsTokens = [];
+
+                restTokens.forEach((t, j) => {
+                    if (j === qtdeIdx) return;
+                    if (t.toLowerCase() === 'agricultura') return;
+                    if (/^m\d{3,4}/i.test(t) || /pulverizador|colheitadeira|trator|plantadeira/i.test(t)) {
+                        obsTokens.push(t);
+                    } else {
+                        descTokens.push(t);
+                    }
+                });
+
+                desc = descTokens.join(' ').trim();
+                obs  = obsTokens.join(' ').trim();
+
+                itensEncontrados.push({
+                    refOriginal: ref,
+                    descOriginal: desc || ('Peça ' + ref),
+                    qtdeSolicitada: qtde || 1,
+                    obs: obs,
+                    incerteza: false
+                });
+            });
+        }
+
+        return itensEncontrados;
+    }
+
+    return {
             totalPaginas: pages.length,
             totalRefs:    produtos.length,
             totalSalvo,
@@ -239,6 +370,137 @@ const DemandaPDF = (() => {
             equipamento,
             modelo,
         };
+    }
+
+
+    // ═══════════════════════════════════════════════════════════
+    // PARSER ESTRUTURADO DE COTAÇÕES / ORÇAMENTOS OEM EM PDF
+    // Extrai tabelas respeitando coordenadas geométricas X / Y
+    // ═══════════════════════════════════════════════════════════
+
+    async function parseCotacaoPDF(file, onProgress) {
+        const pdfLib = await _loadPDFjs();
+        const buffer = await file.arrayBuffer();
+        const pdf    = await pdfLib.getDocument({ data: buffer }).promise;
+        const totalPaginas = pdf.numPages;
+        const itensEncontrados = [];
+
+        // Termos que indicam cabeçalhos ou rodapés a serem descartados
+        const IGNORE_PATTERNS = /^(número\s*de\s*peça|numero\s*de\s*peca|part\s*number|item\s*code|código|codigo|qtde?|quantidade|qty|descrição|descricao|description|comentário|comentario|pin|copyright|todos\s*os\s*direitos|page\s*\d+|página\s*\d+|a\s*pronta\s*entrega|em\s*cotação|um\s*pouco\s*mais|orçamento|deere\s*&\s*company)/i;
+
+        for (let p = 1; p <= totalPaginas; p++) {
+            if (onProgress) onProgress(p, totalPaginas);
+            const page = await pdf.getPage(p);
+            const content = await page.getTextContent();
+
+            // 1. Coleta itens com coordenadas X e Y
+            const rawItems = content.items.map(it => ({
+                text: (it.str || '').trim(),
+                x: it.transform[4],
+                y: it.transform[5],
+                width: it.width,
+                height: it.height
+            })).filter(it => it.text.length > 0);
+
+            // 2. Agrupa itens com Y próximo (mesma linha da tabela, tolerância 4px)
+            const rowsMap = [];
+            rawItems.forEach(item => {
+                let row = rowsMap.find(r => Math.abs(r.y - item.y) <= 4.5);
+                if (!row) {
+                    row = { y: item.y, items: [] };
+                    rowsMap.push(row);
+                }
+                row.items.push(item);
+            });
+
+            // Ordena as linhas do topo para o rodapé (Y decrescente)
+            rowsMap.sort((a, b) => b.y - a.y);
+
+            // 3. Processa cada linha de itens da esquerda para a direita (X crescente)
+            rowsMap.forEach(row => {
+                row.items.sort((a, b) => a.x - b.x);
+                const lineFullText = row.items.map(it => it.text).join(' ').trim();
+
+                if (!lineFullText || IGNORE_PATTERNS.test(lineFullText) || lineFullText.length < 3) {
+                    return;
+                }
+
+                // Remove marcas de conferência comuns (✓, X, —, etc.)
+                const tokens = row.items
+                    .map(it => it.text)
+                    .filter(t => t !== '✓' && t !== 'X' && t !== 'x' && t !== '—' && t !== '-' && t !== '.' && t !== ':');
+
+                if (tokens.length === 0) return;
+
+                let ref = '';
+                let qtde = 1;
+                let desc = '';
+                let obs = '';
+
+                // Regex para referências OEM: 1-4 letras + 4-10 dígitos + sufixo opcional (ex: AKK23814, RE196945, N305594, TY26372, AN208074, 14M7594)
+                const partRegex = /^[A-Z0-9]{1,4}\d{4,}[A-Z0-9]*$/i;
+                let refIdx = -1;
+
+                for (let i = 0; i < tokens.length; i++) {
+                    const tk = tokens[i].replace(/[.,:;]/g, '').trim();
+                    if (partRegex.test(tk) && !/^\d{1,3}$/.test(tk)) {
+                        ref = tk.toUpperCase();
+                        refIdx = i;
+                        break;
+                    }
+                }
+
+                // Fallback: se não pegou por regex estrito, analisa primeiro token
+                if (!ref && tokens.length > 0) {
+                    const first = tokens[0].replace(/[.,:;]/g, '').trim();
+                    if (first.length >= 4 && !/^\d{1,3}$/.test(first)) {
+                        ref = first.toUpperCase();
+                        refIdx = 0;
+                    }
+                }
+
+                if (!ref) return;
+
+                const restTokens = tokens.slice(refIdx + 1);
+
+                // Detecta quantidade (número inteiro 1 a 99999)
+                let qtdeIdx = -1;
+                for (let j = 0; j < restTokens.length; j++) {
+                    const t = restTokens[j];
+                    if (/^\d{1,5}$/.test(t) && Number(t) > 0 && Number(t) <= 50000) {
+                        qtde = parseInt(t, 10);
+                        qtdeIdx = j;
+                        break;
+                    }
+                }
+
+                const descTokens = [];
+                const obsTokens = [];
+
+                restTokens.forEach((t, j) => {
+                    if (j === qtdeIdx) return;
+                    if (t.toLowerCase() === 'agricultura') return;
+                    if (/^m\d{3,4}/i.test(t) || /pulverizador|colheitadeira|trator|plantadeira/i.test(t)) {
+                        obsTokens.push(t);
+                    } else {
+                        descTokens.push(t);
+                    }
+                });
+
+                desc = descTokens.join(' ').trim();
+                obs  = obsTokens.join(' ').trim();
+
+                itensEncontrados.push({
+                    refOriginal: ref,
+                    descOriginal: desc || ('Peça ' + ref),
+                    qtdeSolicitada: qtde || 1,
+                    obs: obs,
+                    incerteza: false
+                });
+            });
+        }
+
+        return itensEncontrados;
     }
 
     return { importCatalogPDF };
