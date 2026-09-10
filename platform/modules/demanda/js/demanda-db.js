@@ -131,6 +131,80 @@ const DemandaDB = (() => {
         return snap.docs.map(d => d.data());
     }
 
+    /**
+     * Exclui uma demanda e todos os seus itens permanentemente.
+     */
+    async function deleteDemanda(demandaId) {
+        const db = _db();
+        const itemsSnap = await db.collection(`${DEMANDS_COL}/${demandaId}/items`).get();
+        const batch = db.batch();
+        itemsSnap.docs.forEach(doc => batch.delete(doc.ref));
+        batch.delete(db.doc(`${DEMANDS_COL}/${demandaId}`));
+        await batch.commit();
+        return true;
+    }
+
+    /**
+     * Estorna (cancela) uma cotação e seus itens pendentes.
+     */
+    async function estornarDemanda(demandaId, motivo = '', usuario = 'sistema') {
+        const db = _db();
+        const now = firebase.firestore.FieldValue.serverTimestamp();
+        
+        await db.doc(`${DEMANDS_COL}/${demandaId}`).update({
+            status: 'cancelada',
+            estornadoEm: now,
+            estornadoPor: usuario,
+            motivoEstorno: motivo || 'Cotação estornada',
+            canceladoEm: now,
+            atualizadoEm: now
+        });
+
+        const itemsSnap = await db.collection(`${DEMANDS_COL}/${demandaId}/items`).get();
+        const batch = db.batch();
+        itemsSnap.docs.forEach(doc => {
+            const data = doc.data();
+            if (data.status !== 'faturado' && data.status !== 'venda_perdida') {
+                batch.update(doc.ref, {
+                    status: 'cancelado',
+                    motivoCancelamento: motivo || 'Demanda estornada',
+                    atualizadoEm: now
+                });
+            }
+        });
+        await batch.commit();
+        return true;
+    }
+
+    /**
+     * Reabre uma cotação previamente cancelada/estornada.
+     */
+    async function reabrirDemanda(demandaId, usuario = 'sistema') {
+        const db = _db();
+        const now = firebase.firestore.FieldValue.serverTimestamp();
+        
+        await db.doc(`${DEMANDS_COL}/${demandaId}`).update({
+            status: 'aberta',
+            reabertoEm: now,
+            reabertoPor: usuario,
+            atualizadoEm: now
+        });
+
+        const itemsSnap = await db.collection(`${DEMANDS_COL}/${demandaId}/items`).get();
+        const batch = db.batch();
+        itemsSnap.docs.forEach(doc => {
+            const data = doc.data();
+            if (data.status === 'cancelado') {
+                batch.update(doc.ref, {
+                    status: 'demanda_recebida',
+                    atualizadoEm: now
+                });
+            }
+        });
+        await batch.commit();
+        return true;
+    }
+
     // ── ITENS ─────────────────────────────────────────────────
 
     /**
@@ -718,7 +792,7 @@ const DemandaDB = (() => {
     }
 
     return {
-        createDemanda, getDemanda, updateDemanda, listDemandas,
+        createDemanda, getDemanda, updateDemanda, listDemandas, deleteDemanda, estornarDemanda, reabrirDemanda,
         addItens, getItens, updateItem, deleteItem, recalcTotals, splitItem,
         onItensChanged, listItensFila, getDashboardStats, getRelatoriosData,
         saveSession, loadSession, clearSession,

@@ -1,8 +1,8 @@
 {
-  "build": "20260910-v3.21.1",
-  "version": "3.21.1",
+  "build": "20260910-v3.21.2",
+  "version": "3.21.2",
   "environment": "production",
-  "change": "v3.21.1 - fix(cotacao): correcao de erro de sintaxe e inicializacao do modulo cotacao",
+  "change": "v3.21.2 - feat(cotacao): opcoes de excluir permanentemente, estornar e reabrir cotacoes",
   "lastUpdate": "2026-09-10",
   "deployedAt": "2026-09-10"
 }

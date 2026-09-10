@@ -1069,6 +1069,7 @@ const DemandaApp = (function() {
         if (filtro === "aberta")         filters.status = "aberta";
         if (filtro === "em_atendimento") filters.status = "em_atendimento";
         if (filtro === "encerrada")      filters.status = "encerrada";
+        if (filtro === "cancelada")      filters.status = "cancelada";
 
         DemandaDB.listDemandas(filters)
             .then(function(demandas) {
@@ -1134,6 +1135,75 @@ const DemandaApp = (function() {
             "<div style='font-size:1rem;font-weight:700;color:" + color + "'>" + val + "</div>" +
             "<div style='font-size:.62rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.06em'>" + label + "</div>" +
             "</div>";
+    }
+
+
+    function excluirDemanda(demandaId, codigo) {
+        if (!demandaId) return;
+        var msg = "Tem certeza que deseja EXCLUIR permanentemente a cotação " + (codigo ? "(" + codigo + ")" : "") + "?\n\nEsta ação apagará a cotação e todos os itens dela do sistema.";
+        if (!confirm(msg)) return;
+
+        if (typeof DemandaDB === "undefined" || typeof DemandaDB.deleteDemanda !== "function") {
+            _toast("DemandaDB indisponível.", "error");
+            return;
+        }
+
+        DemandaDB.deleteDemanda(demandaId)
+            .then(function() {
+                _toast("Cotação excluída com sucesso!", "success");
+                closeModal("modalDemandaDetalhe");
+                loadDemandasLista(_filterAtual);
+            })
+            .catch(function(err) {
+                console.error("[DemandaApp] Erro ao excluir demanda:", err);
+                _toast("Erro ao excluir: " + (err.message || err), "error");
+            });
+    }
+
+    function estornarDemanda(demandaId, codigo) {
+        if (!demandaId) return;
+        var motivo = prompt("Informe o motivo do estorno da cotação " + (codigo ? "(" + codigo + ")" : "") + ":", "Cancelamento a pedido do cliente");
+        if (motivo === null) return;
+
+        if (typeof DemandaDB === "undefined" || typeof DemandaDB.estornarDemanda !== "function") {
+            _toast("DemandaDB indisponível.", "error");
+            return;
+        }
+
+        var usuario = (_sessao && (_sessao.nome || _sessao.name)) || "Operador";
+        DemandaDB.estornarDemanda(demandaId, motivo, usuario)
+            .then(function() {
+                _toast("Cotação estornada com sucesso!", "success");
+                closeModal("modalDemandaDetalhe");
+                loadDemandasLista(_filterAtual);
+            })
+            .catch(function(err) {
+                console.error("[DemandaApp] Erro ao estornar demanda:", err);
+                _toast("Erro ao estornar: " + (err.message || err), "error");
+            });
+    }
+
+    function reabrirDemanda(demandaId, codigo) {
+        if (!demandaId) return;
+        var msg = "Deseja reabrir a cotação " + (codigo ? "(" + codigo + ")" : "") + " para dar andamento novamente?";
+        if (!confirm(msg)) return;
+
+        if (typeof DemandaDB === "undefined" || typeof DemandaDB.reabrirDemanda !== "function") {
+            _toast("DemandaDB indisponível.", "error");
+            return;
+        }
+
+        var usuario = (_sessao && (_sessao.nome || _sessao.name)) || "Operador";
+        DemandaDB.reabrirDemanda(demandaId, usuario)
+            .then(function() {
+                _toast("Cotação reaberta com sucesso!", "success");
+                closeModal("modalDemandaDetalhe");
+                loadDemandasLista(_filterAtual);
+            })
+            .catch(function(err) {
+                console.error("[DemandaApp] Erro ao reabrir demanda:", err);
+                _toast("Erro ao reabrir: " + (err.message || err), "error");
+            });
     }
 
     function abrirDemanda(id) {
@@ -2851,6 +2921,9 @@ const DemandaApp = (function() {
         carregarClientes:       _carregarClientesAsync,
         // Lista
         filterDemandas:         filterDemandas,
+        excluirDemanda:         excluirDemanda,
+        estornarDemanda:        estornarDemanda,
+        reabrirDemanda:         reabrirDemanda,
         loadDemandasLista:      loadDemandasLista,
         abrirDemanda:           abrirDemanda,
         avancarItemStatus:      avancarItemStatus,
