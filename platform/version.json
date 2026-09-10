@@ -1,8 +1,8 @@
 {
-  "build": "20260910-v3.21.4",
-  "version": "3.21.4",
+  "build": "20260910-v3.21.5",
+  "version": "3.21.5",
   "environment": "production",
-  "change": "v3.21.4 - fix(vercel): rota /centralpecas apontada para modulo demanda (antes ia para dispatch via /:tenant generico)",
+  "change": "v3.21.5 - fix(master): centralpecas modulo corrigido de dispatch para demanda no registro de tenants (data.js)",
   "lastUpdate": "2026-09-10",
   "deployedAt": "2026-09-10"
 }

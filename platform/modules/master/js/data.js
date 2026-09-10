@@ -20,11 +20,11 @@ window.mockTenants = [
     },
     {
         id: 'centralpecas',
-        name: 'Central Peças',
+        name: 'Central Rolamentos CTR',
         cnpj: '12.987.654/0001-11',
         slug: 'centralpecas',
         adminEmail: 'admin@centralpecas.com.br',
-        modules: ['dispatch'],
+        modules: ['demanda'],
         status: 'active',
         createdAt: '2026-01-31'
     },

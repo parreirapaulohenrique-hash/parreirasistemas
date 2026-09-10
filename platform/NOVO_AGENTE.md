@@ -394,6 +394,7 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
+| **3.21.5** | 2026-09-10 | Master (data.js): tenant `centralpecas` — módulo corrigido de `dispatch` para `demanda`; nome atualizado para 'Central Rolamentos CTR'. |
 | **3.21.4** | 2026-09-10 | Vercel: rota `/centralpecas` adicionada antes do `/:tenant` genérico, apontando para o módulo Demanda. Corrige redirect errado: login → platform/index.html → /centralpecas → dispatch. |
 | **3.20.11** | 2026-09-10 | Dispatch (v3.20.11): Configuração de impressão do romaneio ajustada para A4 retrato com margens de 9mm em todos os lados, área útil ~192mm × 279mm e cada romaneio limitado a ~192mm × 131–134mm (2 por folha A4). |
 | **3.20.10** | 2026-09-10 | Demanda (v2.5.2): Implementação real da sincronização de produtos ativos do MaxData (`syncProducts()`) via `GET /v2/product?desativado=false&limit=200` com paginação automática, normalização completa de campos (`referencia`, `codigoNorm`, `descNorm`, `ativo`, `estoque`, `preco`, etc.) e gravação em lotes na coleção Firestore `tenants/centralpecas/demanda/techbase/products`. Suporte a log em tempo real na tela de Integração ERP e integração direta com DemandaSearch e DemandaLookup. |
