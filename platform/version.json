@@ -1,8 +1,8 @@
 {
-  "build": "20260910-v3.21.2",
-  "version": "3.21.2",
+  "build": "20260910-v3.21.3",
+  "version": "3.21.3",
   "environment": "production",
-  "change": "v3.21.2 - feat(cotacao): opcoes de excluir permanentemente, estornar e reabrir cotacoes",
+  "change": "v3.21.3 - feat(cotacao): exibicao dos botoes de estornar e excluir no card e no modal de detalhes",
   "lastUpdate": "2026-09-10",
   "deployedAt": "2026-09-10"
 }

@@ -1126,6 +1126,14 @@ const DemandaApp = (function() {
             _miniStat("Estoque", d.totalComEstoque  || 0, "var(--accent-success)") +
             _miniStat("Faltam",  d.totalSemEstoque  || 0, (d.totalSemEstoque || 0) > 0 ? "var(--accent-danger)" : "var(--text-secondary)") +
             "</div>" +
+            // Ações rápidas (Estornar / Reabrir / Excluir)
+            "<div style='display:flex;gap:.35rem;align-items:center;margin-left:.5rem;flex-shrink:0'>" +
+            (d.status === "cancelada"
+                ? "<button onclick='event.stopPropagation(); DemandaApp.reabrirDemanda(\"" + _esc(d.id) + "\", \"" + _esc(d.codigo || '') + "\")' title='Reabrir Cotação' style='background:rgba(59,130,246,.15);color:#3b82f6;border:1px solid rgba(59,130,246,.3);border-radius:6px;padding:.3rem .55rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;font-size:.72rem;font-weight:600'><span class='material-icons-round' style='font-size:.9rem'>restore</span> Reabrir</button>"
+                : "<button onclick='event.stopPropagation(); DemandaApp.estornarDemanda(\"" + _esc(d.id) + "\", \"" + _esc(d.codigo || '') + "\")' title='Estornar Cotação' style='background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);border-radius:6px;padding:.3rem .55rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;font-size:.72rem;font-weight:600'><span class='material-icons-round' style='font-size:.9rem'>undo</span> Estornar</button>"
+            ) +
+            "<button onclick='event.stopPropagation(); DemandaApp.excluirDemanda(\"" + _esc(d.id) + "\", \"" + _esc(d.codigo || '') + "\")' title='Excluir Cotação' style='background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:.3rem .45rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center'><span class='material-icons-round' style='font-size:1rem'>delete_outline</span></button>" +
+            "</div>" +
             "<span class='material-icons-round' style='color:var(--text-secondary);font-size:1.1rem'>chevron_right</span>" +
             "</div>";
     }
@@ -1252,10 +1260,18 @@ const DemandaApp = (function() {
 
         body.innerHTML =
             // Cabeçalho com código + status + data
-            "<div style='display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap'>" +
+            "<div style='display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem;flex-wrap:wrap'>" +
             "<span style='font-size:1.05rem;font-weight:700'>" + _esc(d.codigo) + "</span>" +
             "<span style='font-size:.7rem;padding:.15rem .55rem;border-radius:10px;background:" + cor + "22;color:" + cor + "'>" + lbl + "</span>" +
             "<span style='color:var(--text-secondary);font-size:.78rem;margin-left:auto'>" + dt + "</span>" +
+            "</div>" +
+            // Barra de ações (Estornar / Reabrir / Excluir)
+            "<div style='display:flex;gap:.5rem;align-items:center;justify-content:flex-end;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border-color)'>" +
+            (d.status === "cancelada"
+                ? "<button onclick='DemandaApp.reabrirDemanda(\"" + _esc(d.id) + "\", \"" + _esc(d.codigo || "") + "\")' style='background:rgba(59,130,246,.15);color:#3b82f6;border:1px solid rgba(59,130,246,.3);border-radius:6px;padding:.35rem .75rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'><span class='material-icons-round' style='font-size:.95rem'>restore</span> Reabrir Cotação</button>"
+                : "<button onclick='DemandaApp.estornarDemanda(\"" + _esc(d.id) + "\", \"" + _esc(d.codigo || "") + "\")' style='background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);border-radius:6px;padding:.35rem .75rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'><span class='material-icons-round' style='font-size:.95rem'>undo</span> Estornar Cotação</button>"
+            ) +
+            "<button onclick='DemandaApp.excluirDemanda(\"" + _esc(d.id) + "\", \"" + _esc(d.codigo || "") + "\")' style='background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:.35rem .75rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'><span class='material-icons-round' style='font-size:.95rem'>delete_forever</span> Excluir Cotação</button>" +
             "</div>" +
             // Info cliente / vendedor
             (d.clienteNome ? "<div style='font-size:.82rem;margin-bottom:.75rem;color:var(--text-secondary)'>" +
