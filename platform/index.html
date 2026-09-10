@@ -257,17 +257,23 @@
                 const sessao = ParreiraAuth.getSessao ? ParreiraAuth.getSessao() : null;
                 if (sessao) {
                     // ── CONTROLE DE ACESSO POR TENANT ───────────────────────────────────
-                    // fix(hub): todos os tenants podem acessar o hub da plataforma.
-                    // Módulos são filtrados/exibidos conforme permissões do tenant.
-                    // Se há parâmetro ?redirect= (ex: vindo de um módulo), honra o redirect
-                    if (sessao.tenantId) {
+                    // Tenants que NÃO são 'parreira' não têm acesso ao hub.
+                    // São redirecionados direto para o módulo do seu tenant.
+                    if (sessao.tenantId && sessao.tenantId !== 'parreira') {
+                        // Se ha parametro ?redirect= (ex: vindo de um modulo), honra o redirect
                         const redirectParam = new URLSearchParams(window.location.search).get('redirect');
                         if (redirectParam) {
                             window.location.href = redirectParam;
                             return;
                         }
+                        const allTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
+                        const tenant = allTenants.find(t => t.id === sessao.tenantId);
+                        const slug = tenant?.slug || sessao.tenantId;
+                        console.log(`[Hub] Tenant externo detectado: ${sessao.tenantId} → redirecionando para /${slug}`);
+                        window.location.href = `/${slug}`;
+                        return;
                     }
-                    // ── Mostra hub para todos os tenants ─────────────────────────────────
+                    // ── TENANT PARREIRA: mostra hub ──────────────────────────────────────
                     renderUserInfo({ name: sessao.nome, role: sessao.role, login: sessao.login });
                     // SEMPRE sincroniza localStorage com a sessão ParreiraAuth
                     localStorage.setItem('logged_user', JSON.stringify({ name: sessao.nome, role: sessao.role, login: sessao.login }));
@@ -286,7 +292,14 @@
             const user = JSON.parse(localStorage.getItem('logged_user') || 'null');
             const tenant = localStorage.getItem('app_tenant_id');
             if (user && tenant) {
-                // fix(hub): todos os tenants podem ver o hub — sem redirect automático
+                // Aplica bypass para não-parreira também via localStorage
+                if (tenant !== 'parreira') {
+                    const allTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
+                    const t = allTenants.find(x => x.id === tenant);
+                    const slug = t?.slug || tenant;
+                    window.location.href = `/${slug}`;
+                    return;
+                }
                 renderUserInfo(user);
                 // Fix cross-tab: recria parreira_session_ls a partir do localStorage para sessões antigas
                 if (!localStorage.getItem('parreira_session_ls')) {
@@ -441,12 +454,21 @@
         }
 
         function logout() {
+            // Limpa TODO sessionStorage (sessão ativa)
+            sessionStorage.clear();
+            // Limpa TODOS os vestígios de sessão do localStorage
             localStorage.removeItem('logged_user');
             localStorage.removeItem('platform_user_logged');
             localStorage.removeItem('app_tenant_id');
-            sessionStorage.removeItem('parreira_session');
-            sessionStorage.clear();
-            location.reload();
+            localStorage.removeItem('parreira_session_ls'); // ← bug fix: restaurava sessão no reload
+            localStorage.removeItem('app_tenant');
+            // Usa ParreiraAuth.logout se disponível (limpa Firebase/Firestore)
+            if (typeof ParreiraAuth !== 'undefined' && ParreiraAuth.logout) {
+                ParreiraAuth.logout();
+            } else {
+                // Redirect direto para login — NÃO faz reload (reload restaurava sessão)
+                window.location.href = '/platform/login.html';
+            }
         }
     </script>
 </body>

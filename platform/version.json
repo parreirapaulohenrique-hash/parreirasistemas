@@ -1,8 +1,8 @@
 {
-  "build": "20260910-v3.21.5",
-  "version": "3.21.5",
+  "build": "20260910-v3.21.6",
+  "version": "3.21.6",
   "environment": "production",
-  "change": "v3.21.5 - fix(hub): todos os tenants podem acessar o hub da plataforma sem redirect automatico. login.html revertido para comportamento padrao",
+  "change": "v3.21.6 - fix(hub): revert redirect parreira-only + fix logout remove parreira_session_ls e redireciona para login.html em vez de reload",
   "lastUpdate": "2026-09-10",
   "deployedAt": "2026-09-10"
 }
