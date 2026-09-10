@@ -94,7 +94,11 @@ const DemandaLookup = (() => {
         // ── 2. Tenta Firestore techbase ──────────────────────────
         if (refNorm && typeof firebase !== 'undefined') {
             try {
-                const snap = await _db().collection(PRODUCTS_COL).doc(refNorm).get();
+                let snap = await _db().collection(PRODUCTS_COL).doc(refNorm).get();
+                if (!snap.exists) {
+                    const qSnap = await _db().collection(PRODUCTS_COL).where('codigoNorm', '==', refNorm).limit(1).get();
+                    if (!qSnap.empty) snap = qSnap.docs[0];
+                }
                 if (snap.exists) {
                     return {
                         status:       STATUS.CATALOGADO,
@@ -221,14 +225,23 @@ const DemandaLookup = (() => {
         const adapter = DemandaSearch.getAdapter();
         if (!adapter) throw new Error('ERP não configurado. Acesse Integração ERP → Configurar.');
 
+        if (typeof adapter.syncProducts === 'function') {
+            const res = await adapter.syncProducts({
+                onProgress: (salvo, pagina, totalPaginas) => {
+                    if (onProgress) onProgress(salvo, pagina, 200);
+                }
+            });
+            return res.added || res.total || 0;
+        }
+
         const headers   = await adapter._authHeaders();
-        const limit     = 100;
+        const limit     = 200;
         let   pagina    = 1;
         let   totalSalvo = 0;
         let   continuar  = true;
 
         while (continuar) {
-            const url  = adapter._buildUrl('product', { page: pagina, limit, sincronizacao: true });
+            const url  = adapter._buildUrl('product', { page: pagina, limit, desativado: 'false' });
             const resp = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(30000) });
             if (!resp.ok) break;
 
@@ -236,16 +249,11 @@ const DemandaLookup = (() => {
             const items = Array.isArray(data) ? data : (data.docs || data.data || []);
             if (items.length === 0) break;
 
-            // Filtra marcas agrícolas
-            const agri = items.filter(p => {
-                const fab = (p.fabricante || '').toUpperCase();
-                return MARCAS_AGRI.some(m => fab.includes(m));
-            });
-
-            if (agri.length > 0) {
-                await saveBatchToTechbase(agri, 'maxdata');
-                totalSalvo += agri.length;
-                if (onProgress) onProgress(totalSalvo, pagina, agri.length);
+            const ativos = items.filter(p => !p.desativado && p.desativado !== true);
+            if (ativos.length > 0) {
+                await saveBatchToTechbase(ativos, 'maxdata');
+                totalSalvo += ativos.length;
+                if (onProgress) onProgress(totalSalvo, pagina, ativos.length);
             }
 
             continuar = items.length >= limit;
@@ -265,6 +273,8 @@ const DemandaLookup = (() => {
         if (refNorm) {
             const snap = await db.collection(PRODUCTS_COL).doc(refNorm).get();
             if (snap.exists) return [snap.data()];
+            const q = await db.collection(PRODUCTS_COL).where('codigoNorm', '==', refNorm).limit(limit).get();
+            if (!q.empty) return q.docs.map(d => d.data());
         }
 
         // Busca por prefixo de código (range query)

@@ -1,8 +1,8 @@
 {
-  "build": "20260910-v3.20.9",
-  "version": "3.20.9",
+  "build": "20260910-v3.20.10",
+  "version": "3.20.10",
   "environment": "production",
-  "change": "v3.20.9 - feat(demanda): cliente obrigatorio para salvar demandas e cotacoes concorrentes (v2.5.1)",
+  "change": "v3.20.10 - feat(maxdata): sincronizacao de catalogo de produtos ativos no Firestore para modulo Demanda (v2.5.2)",
   "lastUpdate": "2026-09-10",
-  "deployedAt": "2026-09-09"
+  "deployedAt": "2026-09-10"
 }

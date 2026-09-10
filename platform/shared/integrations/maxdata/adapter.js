@@ -387,7 +387,172 @@ class MaxDataAdapter extends ErpAdapter {
         };
     }
 
-    async syncProducts()            { this._log('info', 'syncProducts: fora de escopo.'); return { added: 0, updated: 0, errors: 0 }; }
+    /**
+     * Sincroniza catálogo de produtos ativos do MaxData → Firestore.
+     * Salva na coleção: tenants/${tenantId}/demanda/techbase/products
+     * Permite busca por referência, código ERP, descrição e estoque.
+     */
+    async syncProducts(options = {}) {
+        this._log('info', '🔄 Iniciando sincronização de produtos ativos MaxData...');
+        const start = Date.now();
+
+        try {
+            if (typeof firebase === 'undefined' || !firebase.firestore) {
+                throw new Error('Firebase Firestore não disponível.');
+            }
+
+            const db = firebase.firestore();
+            const tenant = this.tenantId || 'centralpecas';
+            const colPath = `tenants/${tenant}/demanda/techbase/products`;
+            const headers = await this._authHeaders();
+
+            const limit = Number(options.limit || 200);
+            let page = Number(options.page || 1);
+            let totalSaved = 0;
+            let totalPages = null;
+            let totalRecords = null;
+            let errors = 0;
+            const maxPages = options.maxPages || null;
+
+            while (true) {
+                const url = this._buildUrl('product', { page, limit, desativado: 'false' });
+                this._log('info', `Buscando página ${page}${totalPages ? '/' + totalPages : ''} de produtos ativos...`);
+
+                let resp;
+                let retries = 0;
+                while (retries < 2) {
+                    try {
+                        resp = await fetch(url, {
+                            method: 'GET',
+                            headers,
+                            signal: AbortSignal.timeout ? AbortSignal.timeout(30000) : undefined
+                        });
+                        if (resp.ok) break;
+                    } catch (netErr) {
+                        retries++;
+                        if (retries >= 2) throw netErr;
+                        await new Promise(r => setTimeout(r, 1000));
+                    }
+                }
+
+                if (!resp || !resp.ok) {
+                    throw new Error(`GET /product pág ${page}: HTTP ${resp ? resp.status : 'timeout'}`);
+                }
+
+                const data = await resp.json();
+                const items = Array.isArray(data) ? data : (data.docs || data.data || data.results || data.items || []);
+
+                if (totalPages === null) {
+                    totalPages = data.pages || Math.ceil((data.total || 0) / limit) || 1;
+                    totalRecords = data.total || items.length;
+                    this._log('info', `Total encontrado: ${totalRecords} produtos ativos em ${totalPages} página(s).`);
+                }
+
+                if (!items.length) break;
+
+                // Filtra e normaliza produtos ativos
+                const mappedList = [];
+                for (const raw of items) {
+                    if (raw.desativado === true || raw.desativado === 'true') continue;
+
+                    try {
+                        const mapped = this._mapProduct(raw);
+                        if (mapped && mapped.id) {
+                            mappedList.push(mapped);
+                        }
+                    } catch (mapErr) {
+                        errors++;
+                    }
+                }
+
+                // Salva no Firestore em lotes (máximo 450 por batch)
+                const chunks = this._chunk(mappedList, 450);
+                for (const chunk of chunks) {
+                    const batch = db.batch();
+                    for (const prod of chunk) {
+                        const docRef = db.collection(colPath).doc(String(prod.id));
+                        batch.set(docRef, prod, { merge: true });
+                    }
+                    await batch.commit();
+                    totalSaved += chunk.length;
+                }
+
+                this._log('info', `Página ${page}/${totalPages} processada (${totalSaved} produtos ativos salvos)...`);
+
+                if (options.onProgress) {
+                    try { options.onProgress(totalSaved, page, totalPages); } catch (_) {}
+                }
+
+                if (maxPages && page >= maxPages) break;
+                if (totalPages && page >= totalPages) break;
+                if (items.length < limit) break;
+                page++;
+            }
+
+            const duration = ((Date.now() - start) / 1000).toFixed(2);
+            this._log('success', `✅ Produtos MaxData: ${totalSaved} produtos ativos sincronizados (${duration}s)`);
+
+            // Dispara evento para atualização de componentes
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('erp:products-synced', {
+                    detail: { total: totalSaved, tenant, duration }
+                }));
+            }
+
+            return { added: totalSaved, updated: 0, errors, total: totalSaved, duration };
+
+        } catch (e) {
+            this._log('error', `❌ Falha na sincronização de produtos: ${e.message}`);
+            throw e;
+        }
+    }
+
+    _mapProduct(raw) {
+        const code = (raw.codigoFab || raw.codigoOriginal || '').trim();
+        const key = this._normalizeRef(code);
+        const desc = (raw.descricao || raw.descPdv || '').trim();
+        const descNorm = desc.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+
+        return {
+            id:            raw.id,
+            codigoErp:     String(raw.id || ''),
+            erpProdutoId:  raw.id || null,
+            referencia:    code.toUpperCase(),
+            codigoFab:     code,
+            codigoNorm:    key,
+            codigoOriginal:(raw.codigoOriginal || '').trim(),
+            descricao:     desc,
+            descNorm:      descNorm,
+            fabricante:    (raw.fabricante || '').toUpperCase().trim(),
+            fabricanteId:  raw.fabricanteId || null,
+            grupo:         (raw.grupo || '').trim(),
+            subGrupo:      (raw.subGrupo || '').trim(),
+            estoque:       Number(raw.estoque || 0),
+            estoqueFilial: Number(raw.estoque || 0),
+            estoqueTotal:  Number(raw.estoque || 0),
+            preco:         Number(raw.valorVenda || raw.preco || 0),
+            valorVenda:    Number(raw.valorVenda || 0),
+            valorCusto:    Number(raw.valorCusto || 0),
+            valorAtacado:  Number(raw.valorAtacado || 0),
+            unidade:       (raw.un || 'UN').toUpperCase().trim(),
+            un:            (raw.un || 'UN').toUpperCase().trim(),
+            aplicacao:     (raw.aplicacao || '').trim(),
+            localizador:   (raw.localizador || '').trim(),
+            ativo:         !raw.desativado && raw.desativado !== true,
+            desativado:    false,
+            hasErpRecord:  true,
+            origem:        'maxdata',
+            _source:       'maxdata',
+            updatedAt:     typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue 
+                           ? firebase.firestore.FieldValue.serverTimestamp() 
+                           : new Date().toISOString(),
+            _syncedAt:     new Date().toISOString()
+        };
+    }
+
+    _normalizeRef(ref) {
+        return (ref || '').toUpperCase().replace(/[\s\-\.\/]/g, '');
+    }
     async syncOrders()              { return this.fetchRecentSales(); }
     async syncNFs(filters = {})     { return this.fetchRecentSales(filters); }
     async confirmDispatch(nfData)   { this._log('info', 'confirmDispatch: fora de escopo.'); return { success: true }; }
