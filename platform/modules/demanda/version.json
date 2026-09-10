@@ -1,8 +1,8 @@
 {
-  "version": "2.5.0",
-  "build": "20260910-v2.5.0",
+  "version": "2.5.1",
+  "build": "20260910-v2.5.1",
   "module": "demanda",
   "name": "Inteligência de Demanda",
   "lastUpdate": "2026-09-10",
-  "change": "v2.5.0 - feat(demanda): busca e selecao rapida de clientes em Nova Demanda e Cotacao Concorrente com cache cascata e autocomplete; remocao da aba Clientes da sidebar"
+  "change": "v2.5.1 - feat(demanda): cliente obrigatorio em Nova Demanda e Cotacao Concorrente com validacao visual e suporte a cliente avulso"
 }

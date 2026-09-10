@@ -405,22 +405,31 @@ const DemandaApp = (function() {
 
         _clientesCache = filtrados;
 
+        var htmlItens = "";
         if (filtrados.length === 0) {
             var msgVazio = todos.length === 0
                 ? "Nenhum cliente sincronizado. <a href='javascript:void(0)' onclick='DemandaApp.switchView(\"integracaoErp\")' style='color:var(--accent-primary)'>Sincronizar no ERP</a>"
                 : "Nenhum resultado para \"" + _esc(qTerm) + "\".";
-            list.innerHTML = "<div style='padding:.75rem 1rem;color:var(--text-secondary);font-size:.82rem'>" + msgVazio + "</div>";
-            return;
+            htmlItens = "<div style='padding:.75rem 1rem;color:var(--text-secondary);font-size:.82rem'>" + msgVazio + "</div>";
+        } else {
+            htmlItens = filtrados.map(function(c, i) {
+                var nome = c.nome || "Cliente " + (i+1);
+                var detalhe = [c.cnpj || c.cpf || "", c.codigo ? "Cód: " + c.codigo : "", c.cidade || ""].filter(Boolean).join(" • ");
+                return "<div class='client-dropdown-item' onclick='DemandaApp.selectClienteIdx(" + i + ")'>" +
+                       "<strong>" + _esc(nome) + "</strong>" +
+                       (detalhe ? "<span>" + _esc(detalhe) + "</span>" : "") +
+                       "</div>";
+            }).join("");
         }
 
-        list.innerHTML = filtrados.map(function(c, i) {
-            var nome = c.nome || "Cliente " + (i+1);
-            var detalhe = [c.cnpj || c.cpf || "", c.codigo ? "Cód: " + c.codigo : "", c.cidade || ""].filter(Boolean).join(" • ");
-            return "<div class='client-dropdown-item' onclick='DemandaApp.selectClienteIdx(" + i + ")'>" +
-                   "<strong>" + _esc(nome) + "</strong>" +
-                   (detalhe ? "<span>" + _esc(detalhe) + "</span>" : "") +
-                   "</div>";
-        }).join("");
+        if (qTerm.length >= 2) {
+            htmlItens += "<div class='client-dropdown-item' style='border-top:1px dashed var(--border-color);background:rgba(59,130,246,.08);color:var(--accent-primary);font-weight:600' onclick='DemandaApp.usarClienteAvulso(\"" + _escAttr(qTerm) + "\")'>" +
+                "<span class='material-icons-round' style='font-size:.9rem;vertical-align:middle;margin-right:.3rem'>add_circle_outline</span>" +
+                "Usar \"" + _esc(qTerm) + "\" como cliente" +
+                "</div>";
+        }
+
+        list.innerHTML = htmlItens;
     }
 
     function selectClienteIdx(i) {
@@ -431,10 +440,39 @@ const DemandaApp = (function() {
         var btn = document.getElementById("btnSelectCliente");
         var btnClear = document.getElementById("btnClearCliente");
         if (lbl) lbl.textContent = _clienteAtual.nome;
-        if (btn) btn.classList.add("selected");
+        if (btn) { btn.classList.add("selected"); btn.style.borderColor = ""; }
         if (btnClear) btnClear.style.display = "inline-flex";
         var dd  = document.getElementById("clienteDropdown");
         if (dd) dd.style.display = "none";
+    }
+
+    function usarClienteAvulso(nome) {
+        if (!nome || !nome.trim()) return;
+        var n = nome.trim();
+        _clienteAtual = { id: null, codigo: "", nome: n, cnpj: "", cidade: "", avulso: true };
+        var lbl = document.getElementById("clienteLabel");
+        var btn = document.getElementById("btnSelectCliente");
+        var btnClear = document.getElementById("btnClearCliente");
+        if (lbl) lbl.textContent = n;
+        if (btn) { btn.classList.add("selected"); btn.style.borderColor = ""; }
+        if (btnClear) btnClear.style.display = "inline-flex";
+        var dd  = document.getElementById("clienteDropdown");
+        if (dd) dd.style.display = "none";
+    }
+
+    function onClienteSearchEnter(val) {
+        if (_clientesCache && _clientesCache.length === 1) {
+            selectClienteIdx(0);
+        } else if (val && val.trim().length >= 2) {
+            var exatoIdx = -1;
+            for (var i = 0; i < (_clientesCache || []).length; i++) {
+                if ((_clientesCache[i].nome || "").toLowerCase() === val.trim().toLowerCase()) {
+                    exatoIdx = i; break;
+                }
+            }
+            if (exatoIdx >= 0) selectClienteIdx(exatoIdx);
+            else usarClienteAvulso(val);
+        }
     }
 
     function limparClienteSelecionado(ev) {
@@ -443,8 +481,8 @@ const DemandaApp = (function() {
         var lbl = document.getElementById("clienteLabel");
         var btn = document.getElementById("btnSelectCliente");
         var btnClear = document.getElementById("btnClearCliente");
-        if (lbl) lbl.textContent = "Selecionar cliente";
-        if (btn) btn.classList.remove("selected");
+        if (lbl) lbl.innerHTML = "Selecionar cliente <span style='color:var(--accent-danger);font-weight:bold;'>*</span>";
+        if (btn) { btn.classList.remove("selected"); btn.style.borderColor = ""; }
         if (btnClear) btnClear.style.display = "none";
         var dd  = document.getElementById("clienteDropdown");
         if (dd) dd.style.display = "none";
@@ -849,6 +887,17 @@ const DemandaApp = (function() {
     function salvarDemanda() {
         if (_itens.length === 0) {
             _toast("Adicione ao menos um item antes de salvar.", "error"); return;
+        }
+        if (!_clienteAtual || !_clienteAtual.nome || !_clienteAtual.nome.trim()) {
+            _toast("Obrigatório selecionar ou informar o cliente antes de salvar a demanda.", "warning");
+            var btnCli = document.getElementById("btnSelectCliente");
+            if (btnCli) {
+                btnCli.style.borderColor = "var(--accent-danger)";
+                btnCli.style.animation = "shake 0.4s ease";
+                setTimeout(function() { if (btnCli) btnCli.style.animation = ""; }, 500);
+            }
+            toggleClienteDropdown();
+            return;
         }
         if (typeof DemandaDB === "undefined") {
             _toast("Erro: DemandaDB não disponível.", "error"); return;
@@ -1782,9 +1831,9 @@ const DemandaApp = (function() {
             "<div style='display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:.75rem;margin-bottom:.75rem'>" +
             _concField("concNome", "Concorrente *", "text", "Ex: Distribuidora ABC", "list='concNomeSugestoes'") +
             "<div>" +
-                "<label style='font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.3rem'>Cliente (referência)</label>" +
+                "<label style='font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.3rem'>Cliente <span style=\'color:var(--accent-danger);font-weight:bold;\'>*</span></label>" +
                 "<div style='position:relative'>" +
-                    "<input id='concCliente' type='text' placeholder='Buscar ou digitar cliente...' list='concClienteSugestoes' autocomplete='off' style='" + _CONC_INP + "' oninput='DemandaApp._onConcClienteInput(this.value)' onfocus='DemandaApp._onConcClienteFocus(this)'>" +
+                    "<input id='concCliente' type='text' placeholder='Buscar ou digitar cliente (obrigat\u00f3rio)...' list='concClienteSugestoes' autocomplete='off' style='" + _CONC_INP + "' oninput='this.style.borderColor=\'\';DemandaApp._onConcClienteInput(this.value)' onfocus='DemandaApp._onConcClienteFocus(this)'>" +
                     "<div id='concClienteDropdown' class='client-dropdown' style='width:100%;left:0;right:0;top:100%;'></div>" +
                 "</div>" +
             "</div>" +
@@ -1936,6 +1985,18 @@ const DemandaApp = (function() {
         if (!db) { _toast("Firebase n\u00e3o dispon\u00edvel.", "error"); return; }
         var concNome = (document.getElementById("concNome") || {}).value || "";
         if (!concNome.trim()) { _toast("Informe o nome do concorrente.", "warning"); return; }
+        var concClienteVal = (document.getElementById("concCliente") || {}).value || "";
+        if (!concClienteVal.trim()) {
+            _toast("Obrigatório informar o cliente antes de salvar a cotação.", "warning");
+            var cliInp = document.getElementById("concCliente");
+            if (cliInp) {
+                cliInp.focus();
+                cliInp.style.borderColor = "var(--accent-danger)";
+                cliInp.style.animation = "shake 0.4s ease";
+                setTimeout(function() { if (cliInp) cliInp.style.animation = ""; }, 500);
+            }
+            return;
+        }
         var itens = _concItens.filter(function(it) { return it.ref || it.desc; });
         if (itens.length === 0) { _toast("Adicione ao menos um item.", "warning"); return; }
         var por = _sessao ? (_sessao.login || _sessao.nome || "sistema") : "sistema";
@@ -2253,6 +2314,8 @@ const DemandaApp = (function() {
         searchCliente:          searchCliente,
         selectClienteIdx:       selectClienteIdx,
         limparClienteSelecionado: limparClienteSelecionado,
+        usarClienteAvulso:      usarClienteAvulso,
+        onClienteSearchEnter:   onClienteSearchEnter,
         _onConcClienteInput:    _onConcClienteInput,
         _onConcClienteFocus:    _onConcClienteFocus,
         _selectConcCliente:     _selectConcCliente,

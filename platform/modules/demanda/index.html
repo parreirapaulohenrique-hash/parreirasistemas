@@ -219,7 +219,7 @@
                                         <button class="demanda-client-btn" id="btnSelectCliente"
                                             onclick="DemandaApp.toggleClienteDropdown()" type="button">
                                             <span class="material-icons-round">person_search</span>
-                                            <span id="clienteLabel">Selecionar cliente</span>
+                                            <span id="clienteLabel">Selecionar cliente <span style="color:var(--accent-danger);font-weight:bold;">*</span></span>
                                             <span id="btnClearCliente" title="Remover cliente" onclick="DemandaApp.limparClienteSelecionado(event)" style="display:none;margin-left:auto;padding:0 4px;cursor:pointer;color:var(--accent-danger);font-size:.85rem;font-weight:bold">✕</span>
                                         </button>
                                         <div class="client-dropdown" id="clienteDropdown">
@@ -229,6 +229,7 @@
                                                 placeholder="Buscar cliente..."
                                                 style="width:100%;padding:.55rem .8rem;background:var(--bg-dark);border:none;border-bottom:1px solid var(--border);color:var(--text-primary);font-size:.83rem;outline:none;"
                                                 oninput="DemandaApp.searchCliente(this.value)"
+                                                onkeydown="if(event.key==='Enter'){event.preventDefault();DemandaApp.onClienteSearchEnter(this.value);}"
                                                 autocomplete="off"
                                             >
                                             <div id="clienteDropdownList"></div>
@@ -822,14 +823,14 @@
     <script src="/platform/shared/integrations/index.js?v=2.0.0"></script>
 
     <!-- Módulo de Demanda -->
-    <script src="js/demanda-states.js?v=2.5.0"></script>
-    <script src="js/demanda-db.js?v=2.5.0"></script>
-    <script src="js/demanda-import.js?v=2.5.0"></script>
-    <script src="js/demanda-search.js?v=2.5.0"></script>
-    <script src="js/demanda-lookup.js?v=2.5.0"></script>
-    <script src="js/demanda-pdf.js?v=2.5.0"></script>
-    <script src="js/demanda-clientes.js?v=2.5.0"></script>
-    <script src="js/demanda-app.js?v=2.5.0"></script>
+    <script src="js/demanda-states.js?v=2.5.1"></script>
+    <script src="js/demanda-db.js?v=2.5.1"></script>
+    <script src="js/demanda-import.js?v=2.5.1"></script>
+    <script src="js/demanda-search.js?v=2.5.1"></script>
+    <script src="js/demanda-lookup.js?v=2.5.1"></script>
+    <script src="js/demanda-pdf.js?v=2.5.1"></script>
+    <script src="js/demanda-clientes.js?v=2.5.1"></script>
+    <script src="js/demanda-app.js?v=2.5.1"></script>
 
     <!-- ═══════════════════════════════════════════════════════════
          MODAL: Administração da Base Técnica de Peças

@@ -394,6 +394,7 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
+| **3.20.9** | 2026-09-10 | Demanda (v2.5.1): Validação obrigatória de cliente ao lançar Nova Demanda e Cotação Concorrente. Feedback visual (borda de alerta, animação shake e abertura automática do seletor), suporte a cliente avulso com Enter e marcação de campo obrigatório (*). |
 | **3.20.8** | 2026-09-10 | Demanda (v2.5.0): Integração completa de clientes nas telas de Nova Demanda e Cotação Concorrente com busca dinâmica, cache cascata (sessionStorage, localStorage e Firestore) e autocomplete nativo. Remoção da aba redundante de Clientes na barra lateral conforme solicitação do usuário. |
 | **3.20.7** | 2026-09-09 | Demanda (v2.4.9): Alinhamento visual da tela de Integração ERP com o padrão do módulo Despacho. Correção do container `.content-wrapper` com rolagem vertical nativa da tela inteira, encapsulamento do formulário no container `.card`, posicionamento do rodapé ao final do `main-content` e remoção de blocos/IDs duplicados. |
 | **3.20.0** | 2026-09-08 | FEAT: MAXCRM Campo (PWA Prospeccao Comercial) v1.0.0 + Landing Page e coluna de Download PWA no Master Panel (WMS Coletor e MAXCRM). Rotas no Vercel e novas politicas de cache-control. |
