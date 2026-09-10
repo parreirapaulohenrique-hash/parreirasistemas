@@ -1,1 +1,8 @@
-{"version":"1.1.1","build":"20260909-v1.1.1","environment":"production","change":"v1.1.1 - FEAT: Botão de logout no topo, card do promotor e modal de perfil no MAXCRM","lastUpdate":"2026-09-09","deployedAt":"2026-09-09"}
+{
+  "version": "1.1.2",
+  "build": "20260909-v1.1.1",
+  "environment": "production",
+  "change": "v1.1.2 - feat(maxcrm): gerente e admin visualizam todos os lancamentos via Firestore. Promotorores continuam vendo apenas seus proprios lancamentos",
+  "lastUpdate": "2026-09-09",
+  "deployedAt": "2026-09-09"
+}

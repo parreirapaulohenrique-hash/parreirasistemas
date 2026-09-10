@@ -13,7 +13,9 @@ const MaxCRMState = {
     empresaAtual:  null,   // empresa da visita
     gpsCoords:     null,   // { lat, lng, accuracy }
     gpsStatus:     'idle', // idle | loading | ok | error
-    telaAnterior:  'home'
+    telaAnterior:  'home',
+    isGestor:      false,  // true se role = gerente | admin | master
+    db:            null    // referência Firestore (gestor mode)
 };
 
 // ── Inicialização ─────────────────────────────────────────────────────────────
@@ -58,6 +60,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 3. Carregar sessão
     MaxCRMState.sessao = ParreiraAuth.getSessao();
     const nome = MaxCRMState.sessao.nome || MaxCRMState.sessao.login || 'OP';
+
+    // 3b. Detectar perfil gestor (gerente | admin | master)
+    const _role = (MaxCRMState.sessao.role || '').toLowerCase();
+    MaxCRMState.isGestor = ['gerente', 'admin', 'master'].includes(_role);
+    if (MaxCRMState.isGestor && typeof firebase !== 'undefined') {
+        if (!firebase.apps.length) firebase.initializeApp(window.FIREBASE_CONFIG || {});
+        MaxCRMState.db = firebase.firestore();
+        console.log(`[MAXCRM] Modo Gestor ativado (role: ${_role})`);
+    }
 
     // Atualizar badge do usuário
     const badge = document.getElementById('userBadge');
@@ -265,11 +276,29 @@ function _atualizarProgressBar(telaId) {
 // ── Home Stats ────────────────────────────────────────────────────────────────
 async function atualizarHome() {
     try {
-        const visitas  = await MaxCRMDB.listarVisitas(200);
-        const empresas = await MaxCRMDB.listarEmpresas();
+        let visitas, empresas;
+
+        if (MaxCRMState.isGestor && MaxCRMState.db) {
+            // ── GESTOR: busca todos os lançamentos do Firestore ──────────────
+            const vSnap = await MaxCRMState.db
+                .collection('tenants/parreira/prospeccao/visitas')
+                .orderBy('criadoEm', 'desc')
+                .limit(500)
+                .get();
+            visitas = vSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            const eSnap = await MaxCRMState.db
+                .collection('tenants/parreira/prospeccao/empresas')
+                .limit(500)
+                .get();
+            empresas = eSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        } else {
+            // ── PROMOTOR: lê do IndexedDB local ─────────────────────────────
+            visitas  = await MaxCRMDB.listarVisitas(200);
+            empresas = await MaxCRMDB.listarEmpresas();
+        }
 
         const hoje = new Date().toISOString().split('T')[0];
-        const visitasHoje = visitas.filter(v => v.data === hoje);
+        const visitasHoje = visitas.filter(v => (v.data || '').startsWith(hoje));
         const pendentes   = visitas.filter(v => v.syncStatus === 'pending');
         const retornos    = visitas.filter(v =>
             v.respostas?.proximaAcao?.data === hoje && v.status === 'finalizada'
@@ -470,7 +499,25 @@ async function carregarMinhasVisitas() {
     if (!lista) return;
     lista.innerHTML = '<div class="loading-spinner"></div>';
 
-    const visitas = await MaxCRMDB.listarVisitas(50);
+    let visitas;
+    if (MaxCRMState.isGestor && MaxCRMState.db) {
+        // ── GESTOR: busca todos os lançamentos do Firestore ──────────────────
+        try {
+            const snap = await MaxCRMState.db
+                .collection('tenants/parreira/prospeccao/visitas')
+                .orderBy('criadoEm', 'desc')
+                .limit(200)
+                .get();
+            visitas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        } catch(e) {
+            console.warn('[MAXCRM Gestor] Firestore offline:', e.message);
+            visitas = await MaxCRMDB.listarVisitas(50);
+        }
+    } else {
+        // ── PROMOTOR: lê somente os próprios lançamentos do IndexedDB ────────
+        visitas = await MaxCRMDB.listarVisitas(50);
+    }
+
     if (visitas.length === 0) {
         lista.innerHTML = `
             <div class="empty-state">
@@ -484,7 +531,11 @@ async function carregarMinhasVisitas() {
     lista.innerHTML = visitas.map(v => {
         const d = new Date(v.criadoEm);
         const dataFmt = d.toLocaleDateString('pt-BR');
-        const syncIcon = v.syncStatus === 'synced' ? '☁️' : '⏳';
+        const syncIcon = v.syncStatus === 'synced' ? '☁️' : (v.syncStatus === 'pending' ? '⏳' : '☁️');
+        // Gestor: mostra o promotor responsável pelo lançamento
+        const promotorTag = MaxCRMState.isGestor && (v.promotorNome || v.promotorId)
+            ? `<span style="font-size:0.7rem;color:var(--text-muted);margin-left:6px;">👤 ${v.promotorNome || v.promotorId}</span>`
+            : '';
         return `
             <div class="list-item">
                 <div class="list-item-icon" style="background:var(--primary-bg)">
@@ -492,7 +543,7 @@ async function carregarMinhasVisitas() {
                 </div>
                 <div class="list-item-content">
                     <div class="list-item-title">${v.empresaNome || 'Empresa'}</div>
-                    <div class="list-item-sub">${dataFmt} • ${_labelStatusVisita(v.status)} ${syncIcon}</div>
+                    <div class="list-item-sub">${dataFmt} • ${_labelStatusVisita(v.status)} ${syncIcon}${promotorTag}</div>
                 </div>
                 <span class="material-icons-round list-item-arrow">chevron_right</span>
             </div>`;

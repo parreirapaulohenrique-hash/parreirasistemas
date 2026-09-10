@@ -1,8 +1,8 @@
 {
-  "build": "20260910-v3.21.6",
-  "version": "3.21.6",
+  "build": "20260910-v3.21.7",
+  "version": "3.21.7",
   "environment": "production",
-  "change": "v3.21.6 - fix(hub): tenant nao-parreira limpa sessao e redireciona para login em vez de redirecionar para modulo. Resolve conflito de sessao entre abas",
+  "change": "v3.21.7 - feat(maxcrm): gerente e admin enxergam todos os lancamentos no MAXCRM via Firestore",
   "lastUpdate": "2026-09-10",
   "deployedAt": "2026-09-10"
 }
