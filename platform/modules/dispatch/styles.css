@@ -788,8 +788,11 @@ input[type=number] {
 @media print {
 
     @page {
-        size: A4 portrait;
-        margin: 5mm 6mm; /* Aproveitamento total da folha A4 com margem mínima segura */
+        size: A4 portrait;  /* 210mm × 297mm retrato */
+        /* Margens A4: Superior 9mm | Inferior 9mm | Esquerda 9mm | Direita 9mm
+           Área útil resultante: ~192mm × 279mm
+           Cada romaneio (2 por folha): ~192mm × 130-135mm */
+        margin: 9mm;
     }
 
     /* v3.18.5 FIX: html/body com fundo branco garante que TODAS as páginas
@@ -833,18 +836,22 @@ input[type=number] {
         background-color: white;
     }
 
-    /* Layouts internos com aproveitamento total da página */
+    /* Layouts internos — A4 (210×297mm) com margens 9mm
+       Área útil: ~192mm × 279mm | Cada romaneio: ~192mm × 131mm (2 por folha) */
     .manifest-page {
         display: block !important;
         width: 100% !important;
-        max-width: 100% !important;
-        padding: 3mm 1mm !important;
+        max-width: 192mm !important;
+        min-height: 127mm !important;
+        max-height: 134mm !important;
+        padding: 3mm 2mm !important;
         box-sizing: border-box !important;
         background: white !important;
         background-color: white !important;
         color: black !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
+        overflow: hidden !important;
     }
 
     .manifest-page.page-break-after {

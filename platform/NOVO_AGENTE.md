@@ -394,6 +394,7 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
+| **3.20.11** | 2026-09-10 | Dispatch (v3.20.11): Configuração de impressão do romaneio ajustada para A4 retrato com margens de 9mm em todos os lados, área útil ~192mm × 279mm e cada romaneio limitado a ~192mm × 131–134mm (2 por folha A4). |
 | **3.20.10** | 2026-09-10 | Demanda (v2.5.2): Implementação real da sincronização de produtos ativos do MaxData (`syncProducts()`) via `GET /v2/product?desativado=false&limit=200` com paginação automática, normalização completa de campos (`referencia`, `codigoNorm`, `descNorm`, `ativo`, `estoque`, `preco`, etc.) e gravação em lotes na coleção Firestore `tenants/centralpecas/demanda/techbase/products`. Suporte a log em tempo real na tela de Integração ERP e integração direta com DemandaSearch e DemandaLookup. |
 | **3.20.9** | 2026-09-10 | Demanda (v2.5.1): Validação obrigatória de cliente ao lançar Nova Demanda e Cotação Concorrente. Feedback visual (borda de alerta, animação shake e abertura automática do seletor), suporte a cliente avulso com Enter e marcação de campo obrigatório (*). |
 | **3.20.8** | 2026-09-10 | Demanda (v2.5.0): Integração completa de clientes nas telas de Nova Demanda e Cotação Concorrente com busca dinâmica, cache cascata (sessionStorage, localStorage e Firestore) e autocomplete nativo. Remoção da aba redundante de Clientes na barra lateral conforme solicitação do usuário. |
