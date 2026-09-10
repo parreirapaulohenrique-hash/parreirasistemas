@@ -1,8 +1,8 @@
 {
-  "build": "20260910-v3.20.10",
-  "version": "3.20.10",
+  "build": "20260910-v3.20.9",
+  "version": "3.20.9",
   "environment": "production",
-  "change": "v3.20.10 - feat(maxdata): sincronizacao de catalogo de produtos ativos no Firestore para modulo Demanda (v2.5.2)",
+  "change": "v3.20.9 - feat(cotacao): renomeacao do modulo de Intelig. Demanda para Cotacao e atualizacao textual completa em toda a interface",
   "lastUpdate": "2026-09-10",
   "deployedAt": "2026-09-10"
 }

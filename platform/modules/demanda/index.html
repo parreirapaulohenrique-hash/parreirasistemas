@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <base href="/platform/modules/demanda/">
-    <title>Inteligência de Demanda | Central Rolamentos</title>
-    <meta name="description" content="Módulo de captura, identificação e rastreamento de demanda comercial — Central Rolamentos CTR.">
+    <title>Cotação | Central Rolamentos</title>
+    <meta name="description" content="Módulo de captura, identificação e rastreamento de cotações comerciais — Central Rolamentos CTR.">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <!-- SheetJS para importação de Excel -->
@@ -44,7 +44,7 @@
                     <span class="material-icons-round">insights</span>
                 </div>
                 <div class="sidebar-logo-text">
-                    <strong>Intelig. Demanda</strong>
+                    <strong>Cotação</strong>
                     <small id="sidebarFilial">—</small>
                 </div>
             </div>
@@ -53,11 +53,11 @@
                 <div class="nav-section-label">Operacional</div>
                 <button class="nav-item active" id="nav-captura" onclick="DemandaApp.switchView('captura')">
                     <span class="material-icons-round">add_circle</span>
-                    Nova Demanda
+                    Nova Cotação
                 </button>
                 <button class="nav-item" id="nav-lista" onclick="DemandaApp.switchView('lista')">
                     <span class="material-icons-round">list_alt</span>
-                    Minhas Demandas
+                    Minhas Cotações
                 </button>
                 <button class="nav-item" id="nav-pesquisa" onclick="DemandaApp.switchView('pesquisa')">
                     <span class="material-icons-round">manage_search</span>
@@ -203,7 +203,7 @@
                         </div>
                     </div>
 
-                    <!-- ── Coluna Direita: Demanda Atual ─── -->
+                    <!-- ── Coluna Direita: Cotação Atual ─── -->
                     <div class="captura-right">
                         <div class="demanda-panel">
 
@@ -211,7 +211,7 @@
                             <div class="demanda-panel-header">
                                 <div class="demanda-panel-title">
                                     <span class="material-icons-round">receipt_long</span>
-                                    Demanda Atual
+                                    Cotação Atual
                                 </div>
                                 <div class="demanda-client-info">
                                     <!-- Seletor de cliente -->
@@ -238,7 +238,7 @@
                                     <!-- Canal de origem -->
                                     <select id="selectOrigem" class="form-select"
                                         style="padding:.3rem .6rem;font-size:.75rem;width:auto;background:var(--bg-dark);"
-                                        title="Canal de origem da demanda">
+                                        title="Canal de origem da cotação">
                                         <option value="whatsapp">📱 WhatsApp</option>
                                         <option value="email">📧 Email</option>
                                         <option value="telefone">📞 Telefone</option>
@@ -304,7 +304,7 @@
                                 </button>
                                 <button class="btn btn-success btn-sm" id="btnSalvarDemandaPanel" style="flex:1" onclick="DemandaApp.salvarDemanda()">
                                     <span class="material-icons-round">save</span>
-                                    Salvar Demanda
+                                    Salvar Cotação
                                 </button>
                             </div>
                         </div>
@@ -319,12 +319,12 @@
                 <div class="top-bar">
                     <div class="breadcrumb">
                         <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">list_alt</span>
-                        <span class="current">Minhas Demandas</span>
+                        <span class="current">Minhas Cotações</span>
                     </div>
                     <div class="topbar-actions">
                         <button class="btn btn-primary btn-sm" onclick="DemandaApp.switchView('captura')">
                             <span class="material-icons-round">add</span>
-                            Nova Demanda
+                            Nova Cotação
                         </button>
                     </div>
                 </div>
@@ -339,7 +339,7 @@
                 <div style="flex:1;overflow-y:auto;padding:1rem 1.5rem" id="listaDemandasContainer">
                     <div class="empty-state">
                         <span class="material-icons-round">hourglass_empty</span>
-                        <h4>Carregando demandas...</h4>
+                        <h4>Carregando cotações...</h4>
                     </div>
                 </div>
             </div>
@@ -420,7 +420,7 @@
                     <div class="empty-state">
                         <span class="material-icons-round">hub</span>
                         <h4>Base de Inteligência Técnica</h4>
-                        <p>Compatíveis, substitutos, aplicações por máquina e histórico de demanda por peça.</p>
+                        <p>Compatíveis, substitutos, aplicações por máquina e histórico de cotação por peça.</p>
                     </div>
                 </div>
             </div>
@@ -495,7 +495,7 @@
             <!-- Footer / LGPD Notice — padrão Despacho (no rodapé do main-content) -->
             <footer style="padding:1rem 2rem;border-top:1px solid var(--border-color);font-size:0.75rem;color:var(--text-secondary);display:flex;justify-content:space-between;align-items:center;background:var(--bg-card);flex-shrink:0;">
                 <div>
-                    <strong>&copy; 2026 Inteligência de Demanda</strong> · Parreira Sistemas
+                    <strong>&copy; 2026 Cotação</strong> · Parreira Sistemas
                 </div>
                 <div style="display:flex;align-items:center;gap:0.5rem;">
                     <span class="material-icons-round" style="font-size:1rem;color:var(--accent-success);">security</span>
@@ -511,7 +511,7 @@
     <div class="modal-overlay" id="modalDemandaDetalhe">
         <div class="modal-card modal-lg">
             <div class="modal-header">
-                <h3><span class="material-icons-round">receipt_long</span> Detalhe da Demanda</h3>
+                <h3><span class="material-icons-round">receipt_long</span> Detalhe da Cotação</h3>
                 <button class="btn-close" onclick="DemandaApp.closeModal('modalDemandaDetalhe')">
                     <span class="material-icons-round">close</span>
                 </button>
@@ -637,7 +637,7 @@
                 <button class="btn btn-secondary" onclick="DemandaApp.closeModal('modalConferencia')">Cancelar</button>
                 <button class="btn btn-primary" onclick="DemandaApp.confirmConferencia()">
                     <span class="material-icons-round">add_shopping_cart</span>
-                    Adicionar Selecionados à Demanda
+                    Adicionar Selecionados à Cotação
                 </button>
             </div>
         </div>
@@ -662,7 +662,7 @@
                 <button class="btn btn-secondary" onclick="DemandaApp.closeModal('modalItemDetalhes')">Fechar</button>
                 <button class="btn btn-primary" id="btnAddFromDetails" onclick="DemandaApp.addItemFromDetails()">
                     <span class="material-icons-round">add_shopping_cart</span>
-                    Adicionar à Demanda
+                    Adicionar à Cotação
                 </button>
             </div>
         </div>

@@ -100,7 +100,7 @@ const DemandaDB = (() => {
      */
     async function getDemanda(demandaId) {
         const snap = await _db().doc(`${DEMANDS_COL}/${demandaId}`).get();
-        if (!snap.exists) throw new Error(`Demanda ${demandaId} não encontrada.`);
+        if (!snap.exists) throw new Error(`Cotação ${demandaId} não encontrada.`);
         return snap.data();
     }
 

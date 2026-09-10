@@ -134,7 +134,7 @@ const DemandaClientes = (() => {
           <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
             <div style="flex:1">
               <h2 style="margin:0;font-size:1.1rem;font-weight:700;color:var(--text-primary)">👥 Cadastro de Clientes</h2>
-              <p style="margin:.25rem 0 0;font-size:.8rem;color:var(--text-secondary)">Clientes disponíveis para seleção nas demandas</p>
+              <p style="margin:.25rem 0 0;font-size:.8rem;color:var(--text-secondary)">Clientes disponíveis para seleção nas cotações</p>
             </div>
             <button onclick="DemandaClientes._abrirForm()" style="background:var(--accent-primary);color:#fff;border:none;border-radius:8px;padding:.55rem 1.2rem;cursor:pointer;font-size:.85rem;font-weight:600;display:flex;align-items:center;gap:.4rem;">
               <span class="material-icons-round" style="font-size:1rem">person_add</span> Novo Cliente
