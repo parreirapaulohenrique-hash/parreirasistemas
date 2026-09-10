@@ -1146,72 +1146,227 @@ const DemandaApp = (function() {
     }
 
 
-    function excluirDemanda(demandaId, codigo) {
-        if (!demandaId) return;
-        var msg = "Tem certeza que deseja EXCLUIR permanentemente a cotação " + (codigo ? "(" + codigo + ")" : "") + "?\n\nEsta ação apagará a cotação e todos os itens dela do sistema.";
-        if (!confirm(msg)) return;
 
-        if (typeof DemandaDB === "undefined" || typeof DemandaDB.deleteDemanda !== "function") {
-            _toast("DemandaDB indisponível.", "error");
+    // ════════════════════════════════════════════════════════
+    // AUTORIZAÇÃO DE SUPERVISÃO / ADM
+    // ════════════════════════════════════════════════════════
+
+    var _acaoPendenteSupervisao = null;
+
+    async function _hashSenha(str) {
+        var buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+        return Array.from(new Uint8Array(buf)).map(function(b) { return b.toString(16).padStart(2, "0"); }).join("");
+    }
+
+    function _abrirModalSupervisao(dados) {
+        _acaoPendenteSupervisao = dados;
+        var modal = document.getElementById("modalAutorizacaoSupervisao");
+        if (!modal) return;
+
+        var elTitulo = document.getElementById("supModalTitulo");
+        var elDesc   = document.getElementById("supAcaoDescricao");
+        var elMotivo = document.getElementById("supCampoMotivo");
+        var inpMotivo = document.getElementById("supInputMotivo");
+        var inpLogin = document.getElementById("supInputLogin");
+        var inpSenha = document.getElementById("supInputSenha");
+        var elErro   = document.getElementById("supMsgErro");
+        var btnConf  = document.getElementById("btnConfirmarSup");
+
+        if (elTitulo) elTitulo.textContent = dados.titulo || "Autorização de Supervisão";
+        if (elDesc) elDesc.innerHTML = dados.descricao || "Esta operação requer autorização de supervisão.";
+        if (elErro) { elErro.style.display = "none"; elErro.textContent = ""; }
+
+        if (inpMotivo) inpMotivo.value = "";
+        if (inpSenha) inpSenha.value = "";
+
+        if (elMotivo) {
+            elMotivo.style.display = (dados.tipo === "estornar") ? "block" : "none";
+        }
+
+        // Sugere o login do usuário logado se for admin/master/supervisor
+        var loginLogado = (_sessao && (_sessao.login || _sessao.email)) || "";
+        var roleLogado  = ((_sessao && _sessao.role) || "").toLowerCase();
+        var isSup       = ["admin", "master", "supervisor", "gerente"].includes(roleLogado);
+        if (inpLogin) {
+            inpLogin.value = isSup ? loginLogado : "";
+            if (!isSup) inpLogin.focus();
+            else if (inpSenha) inpSenha.focus();
+        }
+
+        if (btnConf) {
+            btnConf.style.background = dados.corBtn || "var(--warning)";
+            btnConf.innerHTML = "<span class='material-icons-round' style='font-size:.95rem'>lock_open</span> " + (dados.textoBtn || "Autorizar e Confirmar");
+        }
+
+        modal.style.display = "flex";
+        setTimeout(function() {
+            if (isSup && inpSenha) inpSenha.focus();
+            else if (inpLogin) inpLogin.focus();
+        }, 100);
+    }
+
+    function _fecharModalSupervisao() {
+        var modal = document.getElementById("modalAutorizacaoSupervisao");
+        if (modal) modal.style.display = "none";
+        _acaoPendenteSupervisao = null;
+    }
+
+    function _toggleVisibilidadeSenhaSupervisao() {
+        var inp = document.getElementById("supInputSenha");
+        var btn = document.getElementById("supToggleVisBtn");
+        if (!inp) return;
+        if (inp.type === "password") {
+            inp.type = "text";
+            if (btn) btn.textContent = "visibility_off";
+        } else {
+            inp.type = "password";
+            if (btn) btn.textContent = "visibility";
+        }
+    }
+
+    async function _validarCredencialSupervisor(loginStr, senhaStr) {
+        if (!loginStr || !senhaStr) throw new Error("Informe o login e a senha do supervisor.");
+        if (typeof firebase === "undefined") throw new Error("Firebase não inicializado.");
+
+        var db = firebase.firestore();
+        var tenantId = (_sessao && _sessao.tenantId) || (typeof DemandaDB !== "undefined" && DemandaDB.TENANT_ID) || "centralpecas";
+        var loginKey = loginStr.trim().toLowerCase();
+
+        // 1. Tenta carregar documento do usuário
+        var docSnap = await db.collection("tenants").doc(tenantId).collection("users").doc(loginKey).get();
+        if (!docSnap.exists && tenantId !== "centralpecas") {
+            docSnap = await db.collection("tenants").doc("centralpecas").collection("users").doc(loginKey).get();
+        }
+
+        if (!docSnap.exists) {
+            throw new Error("Usuário supervisor '" + loginKey + "' não encontrado.");
+        }
+
+        var user = docSnap.data();
+        if (user.ativo === false) {
+            throw new Error("O usuário supervisor '" + (user.nome || loginKey) + "' está inativo.");
+        }
+
+        var role = (user.role || "").toLowerCase();
+        var rolesPermitidas = ["admin", "master", "supervisor", "gerente"];
+        if (!rolesPermitidas.includes(role)) {
+            throw new Error("O usuário '" + (user.nome || loginKey) + "' não possui perfil de supervisor ou administrador (perfil: " + (user.role || "operador") + ").");
+        }
+
+        // 2. Valida hash SHA-256 ou PIN
+        var senhaHash = await _hashSenha(senhaStr);
+        var senhaValida = (user.senhaHash && user.senhaHash === senhaHash) ||
+                          (user.pin && String(user.pin).trim() === senhaStr.trim());
+
+        if (!senhaValida) {
+            throw new Error("Senha ou PIN incorreto para o supervisor " + (user.nome || loginKey) + ".");
+        }
+
+        return {
+            login: loginKey,
+            nome: user.nome || loginKey,
+            role: user.role || "supervisor"
+        };
+    }
+
+    async function _confirmarAutorizacaoSupervisao() {
+        var errEl = document.getElementById("supMsgErro");
+        var btn = document.getElementById("btnConfirmarSup");
+        if (errEl) { errEl.style.display = "none"; errEl.textContent = ""; }
+
+        var login = (document.getElementById("supInputLogin") || {}).value || "";
+        var senha = (document.getElementById("supInputSenha") || {}).value || "";
+        var motivo = (document.getElementById("supInputMotivo") || {}).value || "";
+
+        if (_acaoPendenteSupervisao && _acaoPendenteSupervisao.tipo === "estornar" && !motivo.trim()) {
+            if (errEl) { errEl.textContent = "Por favor, informe o motivo do estorno."; errEl.style.display = "block"; }
             return;
         }
 
-        DemandaDB.deleteDemanda(demandaId)
-            .then(function() {
-                _toast("Cotação excluída com sucesso!", "success");
+        if (!login.trim() || !senha.trim()) {
+            if (errEl) { errEl.textContent = "Informe o login e a senha/PIN de supervisão."; errEl.style.display = "block"; }
+            return;
+        }
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = "<span class='material-icons-round' style='font-size:.95rem;animation:spin 1s linear infinite'>sync</span> Validando...";
+        }
+
+        try {
+            var supervisor = await _validarCredencialSupervisor(login, senha);
+            var pendente = _acaoPendenteSupervisao;
+            _fecharModalSupervisao();
+
+            if (!pendente) return;
+
+            if (pendente.tipo === "excluir") {
+                await DemandaDB.deleteDemanda(pendente.demandaId);
+                _toast("Cotação " + (pendente.codigo || "") + " excluída com sucesso! (Autorizado por " + supervisor.nome + ")", "success");
                 closeModal("modalDemandaDetalhe");
                 loadDemandasLista(_filterAtual);
-            })
-            .catch(function(err) {
-                console.error("[DemandaApp] Erro ao excluir demanda:", err);
-                _toast("Erro ao excluir: " + (err.message || err), "error");
-            });
+            } else if (pendente.tipo === "estornar") {
+                await DemandaDB.estornarDemanda(pendente.demandaId, motivo, supervisor.nome);
+                _toast("Cotação " + (pendente.codigo || "") + " estornada com sucesso! (Autorizado por " + supervisor.nome + ")", "success");
+                closeModal("modalDemandaDetalhe");
+                loadDemandasLista(_filterAtual);
+            } else if (pendente.tipo === "reabrir") {
+                await DemandaDB.reabrirDemanda(pendente.demandaId, supervisor.nome);
+                _toast("Cotação " + (pendente.codigo || "") + " reaberta com sucesso! (Autorizado por " + supervisor.nome + ")", "success");
+                closeModal("modalDemandaDetalhe");
+                loadDemandasLista(_filterAtual);
+            }
+        } catch(e) {
+            console.warn("[DemandaApp] Falha na autorização:", e);
+            if (errEl) {
+                errEl.textContent = e.message || String(e);
+                errEl.style.display = "block";
+            }
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = "<span class='material-icons-round' style='font-size:.95rem'>lock_open</span> Autorizar e Confirmar";
+            }
+        }
+    }
+
+    function excluirDemanda(demandaId, codigo) {
+        if (!demandaId) return;
+        _abrirModalSupervisao({
+            tipo: "excluir",
+            demandaId: demandaId,
+            codigo: codigo,
+            titulo: "Exclusão Permanente de Cotação",
+            descricao: "Esta ação apagará permanentemente a cotação <strong>" + _esc(codigo || demandaId) + "</strong> e todos os seus itens do banco de dados.<br><br>Para continuar, é necessária a <strong>autorização expressa com senha</strong> de um supervisor ou administrador.",
+            corBtn: "var(--accent-danger)",
+            textoBtn: "Confirmar Exclusão"
+        });
     }
 
     function estornarDemanda(demandaId, codigo) {
         if (!demandaId) return;
-        var motivo = prompt("Informe o motivo do estorno da cotação " + (codigo ? "(" + codigo + ")" : "") + ":", "Cancelamento a pedido do cliente");
-        if (motivo === null) return;
-
-        if (typeof DemandaDB === "undefined" || typeof DemandaDB.estornarDemanda !== "function") {
-            _toast("DemandaDB indisponível.", "error");
-            return;
-        }
-
-        var usuario = (_sessao && (_sessao.nome || _sessao.name)) || "Operador";
-        DemandaDB.estornarDemanda(demandaId, motivo, usuario)
-            .then(function() {
-                _toast("Cotação estornada com sucesso!", "success");
-                closeModal("modalDemandaDetalhe");
-                loadDemandasLista(_filterAtual);
-            })
-            .catch(function(err) {
-                console.error("[DemandaApp] Erro ao estornar demanda:", err);
-                _toast("Erro ao estornar: " + (err.message || err), "error");
-            });
+        _abrirModalSupervisao({
+            tipo: "estornar",
+            demandaId: demandaId,
+            codigo: codigo,
+            titulo: "Estorno de Cotação",
+            descricao: "Você está estornando a cotação <strong>" + _esc(codigo || demandaId) + "</strong>. Os itens pendentes serão cancelados.<br><br>Informe o motivo e a <strong>senha de supervisão ou administração</strong> para autorizar.",
+            corBtn: "var(--warning)",
+            textoBtn: "Confirmar Estorno"
+        });
     }
 
     function reabrirDemanda(demandaId, codigo) {
         if (!demandaId) return;
-        var msg = "Deseja reabrir a cotação " + (codigo ? "(" + codigo + ")" : "") + " para dar andamento novamente?";
-        if (!confirm(msg)) return;
-
-        if (typeof DemandaDB === "undefined" || typeof DemandaDB.reabrirDemanda !== "function") {
-            _toast("DemandaDB indisponível.", "error");
-            return;
-        }
-
-        var usuario = (_sessao && (_sessao.nome || _sessao.name)) || "Operador";
-        DemandaDB.reabrirDemanda(demandaId, usuario)
-            .then(function() {
-                _toast("Cotação reaberta com sucesso!", "success");
-                closeModal("modalDemandaDetalhe");
-                loadDemandasLista(_filterAtual);
-            })
-            .catch(function(err) {
-                console.error("[DemandaApp] Erro ao reabrir demanda:", err);
-                _toast("Erro ao reabrir: " + (err.message || err), "error");
-            });
+        _abrirModalSupervisao({
+            tipo: "reabrir",
+            demandaId: demandaId,
+            codigo: codigo,
+            titulo: "Reabertura de Cotação Estornada",
+            descricao: "Deseja reabrir a cotação <strong>" + _esc(codigo || demandaId) + "</strong> para dar andamento comercial novamente?<br><br>Informe a <strong>senha de supervisão ou administração</strong>.",
+            corBtn: "var(--primary-color)",
+            textoBtn: "Confirmar Reabertura"
+        });
     }
 
     function abrirDemanda(id) {

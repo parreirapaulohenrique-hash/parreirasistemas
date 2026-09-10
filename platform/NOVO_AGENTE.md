@@ -394,6 +394,8 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 
 | Versão | Data | Mudanças Principais |
 |---|---|---|
+| **3.21.6** | 2026-09-10 | Login: tenants externos (não-parreira) redirecionados diretamente para `/{tenantId}` ao detectar sessão ativa, pulando o hub. Elimina cadeia: `login → hub → /slug → módulo`. |
+| **3.21.5** | 2026-09-10 | Hub (`platform/index.html`): removido redirect automático para tenants externos. Todos os tenants agora podem acessar o hub da plataforma. login.html mantém comportamento padrão (`_redirect`). |
 | **3.21.5** | 2026-09-10 | Master (data.js): tenant `centralpecas` — módulo corrigido de `dispatch` para `demanda`; nome atualizado para 'Central Rolamentos CTR'. |
 | **3.21.4** | 2026-09-10 | Vercel: rota `/centralpecas` adicionada antes do `/:tenant` genérico, apontando para o módulo Demanda. Corrige redirect errado: login → platform/index.html → /centralpecas → dispatch. |
 | **3.20.11** | 2026-09-10 | Dispatch (v3.20.11): Configuração de impressão do romaneio ajustada para A4 retrato com margens de 9mm em todos os lados, área útil ~192mm × 279mm e cada romaneio limitado a ~192mm × 131–134mm (2 por folha A4). |
