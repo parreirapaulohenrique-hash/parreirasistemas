@@ -258,7 +258,8 @@
                 if (sessao) {
                     // ── CONTROLE DE ACESSO POR TENANT ───────────────────────────────────
                     // Tenants que NÃO são 'parreira' não têm acesso ao hub.
-                    // São redirecionados direto para o módulo do seu tenant.
+                    // fix: redireciona para LOGIN (não para o módulo do tenant)
+                    // Isso permite trocar de conta mesmo com outra aba aberta (ex: cotação/centralpecas)
                     if (sessao.tenantId && sessao.tenantId !== 'parreira') {
                         // Se ha parametro ?redirect= (ex: vindo de um modulo), honra o redirect
                         const redirectParam = new URLSearchParams(window.location.search).get('redirect');
@@ -266,11 +267,13 @@
                             window.location.href = redirectParam;
                             return;
                         }
-                        const allTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
-                        const tenant = allTenants.find(t => t.id === sessao.tenantId);
-                        const slug = tenant?.slug || sessao.tenantId;
-                        console.log(`[Hub] Tenant externo detectado: ${sessao.tenantId} → redirecionando para /${slug}`);
-                        window.location.href = `/${slug}`;
+                        // Limpa sessão não-parreira e manda para login para trocar de conta
+                        console.log(`[Hub] Tenant externo (${sessao.tenantId}) tentou acessar o hub → redirecionando para login`);
+                        sessionStorage.removeItem('parreira_session');
+                        localStorage.removeItem('parreira_session_ls');
+                        localStorage.removeItem('logged_user');
+                        localStorage.removeItem('app_tenant_id');
+                        window.location.href = '/platform/login.html';
                         return;
                     }
                     // ── TENANT PARREIRA: mostra hub ──────────────────────────────────────
@@ -292,12 +295,13 @@
             const user = JSON.parse(localStorage.getItem('logged_user') || 'null');
             const tenant = localStorage.getItem('app_tenant_id');
             if (user && tenant) {
-                // Aplica bypass para não-parreira também via localStorage
+                // fix: tenant não-parreira via localStorage → limpa e vai para login
                 if (tenant !== 'parreira') {
-                    const allTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
-                    const t = allTenants.find(x => x.id === tenant);
-                    const slug = t?.slug || tenant;
-                    window.location.href = `/${slug}`;
+                    sessionStorage.removeItem('parreira_session');
+                    localStorage.removeItem('parreira_session_ls');
+                    localStorage.removeItem('logged_user');
+                    localStorage.removeItem('app_tenant_id');
+                    window.location.href = '/platform/login.html';
                     return;
                 }
                 renderUserInfo(user);
