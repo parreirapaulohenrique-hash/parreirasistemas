@@ -1,291 +1,299 @@
 {
-    "functions": {
-        "api/maxdata.js": {
-            "maxDuration": 30
-        },
-        "api/ocr.js": {
-            "maxDuration": 30
-        }
+  "functions": {
+    "api/maxdata.js": {
+      "maxDuration": 30
     },
-    "headers": [
+    "api/ocr.js": {
+      "maxDuration": 30
+    }
+  },
+  "headers": [
+    {
+      "source": "/(.*).html",
+      "headers": [
         {
-            "source": "/(.*).html",
-            "headers": [
-                {
-                    "key": "Cache-Control",
-                    "value": "no-cache, no-store, must-revalidate"
-                }
-            ]
-        },
-        {
-            "source": "/.well-known/assetlinks.json",
-            "headers": [
-                {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                },
-                {
-                    "key": "Access-Control-Allow-Origin",
-                    "value": "*"
-                },
-                {
-                    "key": "Cache-Control",
-                    "value": "public, max-age=3600"
-                }
-            ]
-        },
-        {
-            "source": "/platform/download/(.*).apk",
-            "headers": [
-                {
-                    "key": "Content-Type",
-                    "value": "application/vnd.android.package-archive"
-                },
-                {
-                    "key": "Content-Disposition",
-                    "value": "attachment; filename=\"ParreiraLog-WMS-Coletor.apk\""
-                }
-            ]
-        },
-        {
-            "source": "/(.*).js",
-            "headers": [
-                {
-                    "key": "Cache-Control",
-                    "value": "no-cache, no-store, must-revalidate"
-                }
-            ]
-        },
-        {
-            "source": "/(.*).css",
-            "headers": [
-                {
-                    "key": "Cache-Control",
-                    "value": "no-cache, no-store, must-revalidate"
-                }
-            ]
-        },
-        {
-            "source": "/(.*).json",
-            "headers": [
-                {
-                    "key": "Cache-Control",
-                    "value": "no-cache, no-store, must-revalidate"
-                }
-            ]
-        },
-        {
-            "source": "/(.*)",
-            "headers": [
-                {
-                    "key": "X-Frame-Options",
-                    "value": "SAMEORIGIN"
-                },
-                {
-                    "key": "X-Content-Type-Options",
-                    "value": "nosniff"
-                },
-                {
-                    "key": "X-XSS-Protection",
-                    "value": "1; mode=block"
-                },
-                {
-                    "key": "Referrer-Policy",
-                    "value": "strict-origin-when-cross-origin"
-                },
-                {
-                    "key": "Permissions-Policy",
-                    "value": "camera=(), microphone=(), geolocation=(self), payment=()"
-                },
-                {
-                    "key": "Strict-Transport-Security",
-                    "value": "max-age=63072000; includeSubDomains; preload"
-                },
-                {
-                    "key": "Content-Security-Policy",
-                    "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://apis.google.com https://www.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com wss://*.firebaseio.com https://*.gstatic.com https://cdn.jsdelivr.net; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
-                }
-            ]
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
         }
-    ],
-    "redirects": [
+      ]
+    },
+    {
+      "source": "/.well-known/assetlinks.json",
+      "headers": [
         {
-            "source": "/apk",
-            "destination": "/platform/download/wms-coletor.html",
-            "permanent": false
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
         }
-    ],
-    "rewrites": [
+      ]
+    },
+    {
+      "source": "/platform/download/(.*).apk",
+      "headers": [
         {
-            "source": "/.well-known/(.*)",
-            "destination": "/.well-known/$1"
+          "key": "Content-Type",
+          "value": "application/vnd.android.package-archive"
         },
         {
-            "source": "/admin",
-            "destination": "/platform/admin/index.html"
-        },
-        {
-            "source": "/admin/(.*)",
-            "destination": "/platform/admin/$1"
-        },
-        {
-            "source": "/tenants",
-            "destination": "/platform/admin/index.html"
-        },
-        {
-            "source": "/tenants/(.*)",
-            "destination": "/platform/admin/$1"
-        },
-        {
-            "source": "/",
-            "destination": "/platform/index.html"
-        },
-        {
-            "source": "/modules/(.*)",
-            "destination": "/platform/modules/$1"
-        },
-        {
-            "source": "/core/(.*)",
-            "destination": "/platform/core/$1"
-        },
-        {
-            "source": "/shared/(.*)",
-            "destination": "/platform/shared/$1"
-        },
-        {
-            "source": "/platform/(.*)",
-            "destination": "/platform/$1"
-        },
-        {
-            "source": "/fix_romaneios.html",
-            "destination": "/platform/fix_romaneios.html"
-        },
-        {
-            "source": "/fix_viopex",
-            "destination": "/platform/fix_viopex.html"
-        },
-        {
-            "source": "/fix_frete",
-            "destination": "/platform/fix_recalculo_frete.html"
-        },
-        {
-            "source": "/fix_clients",
-            "destination": "/platform/fix_clients_migration.html"
-        },
-        {
-            "source": "/web/(.*)",
-            "destination": "/web/$1"
-        },
-        {
-            "source": "/login.html",
-            "destination": "/platform/login.html"
-        },
-        {
-            "source": "/consultoria",
-            "destination": "/platform/modules/erp-consultoria/index.html"
-        },
-        {
-            "source": "/consultoria_hml",
-            "destination": "/platform/modules/erp-consultoria/index.html"
-        },
-        {
-            "source": "/consultoria/(.*)",
-            "destination": "/platform/modules/erp-consultoria/$1"
-        },
-        {
-            "source": "/consultoria_hml/(.*)",
-            "destination": "/platform/modules/erp-consultoria/$1"
-        },
-        {
-            "source": "/erp-consultoria",
-            "destination": "/platform/modules/erp-consultoria/index.html"
-        },
-        {
-            "source": "/erp-consultoria_hml",
-            "destination": "/platform/modules/erp-consultoria/index.html"
-        },
-        {
-            "source": "/erp-consultoria/(.*)",
-            "destination": "/platform/modules/erp-consultoria/$1"
-        },
-        {
-            "source": "/erp-consultoria_hml/(.*)",
-            "destination": "/platform/modules/erp-consultoria/$1"
-        },
-        {
-            "source": "/wms-coletor",
-            "destination": "/platform/modules/wms-coletor/index.html"
-        },
-        {
-            "source": "/modules/wms-coletor",
-            "destination": "/platform/modules/wms-coletor/index.html"
-        },
-        {
-            "source": "/modules/wms-coletor/(.*)",
-            "destination": "/platform/modules/wms-coletor/$1"
-        },
-        {
-            "source": "/wms",
-            "destination": "/platform/modules/wms/index.html"
-        },
-        {
-            "source": "/wms/:tenant",
-            "destination": "/platform/modules/wms/index.html"
-        },
-        {
-            "source": "/fix_admin",
-            "destination": "/platform/fix_admin.html"
-        },
-        {
-            "source": "/fix_wms_index",
-            "destination": "/platform/fix_wms_users_index.html"
-        },
-        {
-            "source": "/version.json",
-            "destination": "/platform/version.json"
-        },
-        {
-            "source": "/demanda",
-            "destination": "/platform/modules/demanda/index.html"
-        },
-        {
-            "source": "/demanda/(.*)",
-            "destination": "/platform/modules/demanda/$1"
-        },
-        {
-            "source": "/prospeccao",
-            "destination": "/platform/modules/prospeccao/index.html"
-        },
-        {
-            "source": "/prospeccao/(.*)",
-            "destination": "/platform/modules/prospeccao/$1"
-        },
-        {
-            "source": "/apk",
-            "destination": "/platform/download/wms-coletor.html"
-        },
-        {
-            "source": "/download/(.*)",
-            "destination": "/platform/download/$1"
-        },
-        {
-            "source": "/maxcrm",
-            "destination": "/platform/modules/prospeccao/index.html"
-        },
-        {
-            "source": "/maxcrm-app",
-            "destination": "/platform/download/maxcrm.html"
-        },
-        {
-            "source": "/maxcrm/(.*)",
-            "destination": "/platform/modules/prospeccao/$1"
-        },
-        {
-            "source": "/:tenant",
-            "destination": "/platform/modules/dispatch/index.html"
+          "key": "Content-Disposition",
+          "value": "attachment; filename=\"ParreiraLog-WMS-Coletor.apk\""
         }
-    ],
-    "regions": [
-        "gru1"
-    ]
+      ]
+    },
+    {
+      "source": "/(.*).js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/(.*).css",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/(.*).json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=(self), payment=()"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains; preload"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://apis.google.com https://www.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com wss://*.firebaseio.com https://*.gstatic.com https://cdn.jsdelivr.net; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/apk",
+      "destination": "/platform/download/wms-coletor.html",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/.well-known/(.*)",
+      "destination": "/.well-known/$1"
+    },
+    {
+      "source": "/admin",
+      "destination": "/platform/admin/index.html"
+    },
+    {
+      "source": "/admin/(.*)",
+      "destination": "/platform/admin/$1"
+    },
+    {
+      "source": "/tenants",
+      "destination": "/platform/admin/index.html"
+    },
+    {
+      "source": "/tenants/(.*)",
+      "destination": "/platform/admin/$1"
+    },
+    {
+      "source": "/",
+      "destination": "/platform/index.html"
+    },
+    {
+      "source": "/modules/(.*)",
+      "destination": "/platform/modules/$1"
+    },
+    {
+      "source": "/core/(.*)",
+      "destination": "/platform/core/$1"
+    },
+    {
+      "source": "/shared/(.*)",
+      "destination": "/platform/shared/$1"
+    },
+    {
+      "source": "/platform/(.*)",
+      "destination": "/platform/$1"
+    },
+    {
+      "source": "/fix_romaneios.html",
+      "destination": "/platform/fix_romaneios.html"
+    },
+    {
+      "source": "/fix_viopex",
+      "destination": "/platform/fix_viopex.html"
+    },
+    {
+      "source": "/fix_frete",
+      "destination": "/platform/fix_recalculo_frete.html"
+    },
+    {
+      "source": "/fix_clients",
+      "destination": "/platform/fix_clients_migration.html"
+    },
+    {
+      "source": "/web/(.*)",
+      "destination": "/web/$1"
+    },
+    {
+      "source": "/login.html",
+      "destination": "/platform/login.html"
+    },
+    {
+      "source": "/consultoria",
+      "destination": "/platform/modules/erp-consultoria/index.html"
+    },
+    {
+      "source": "/consultoria_hml",
+      "destination": "/platform/modules/erp-consultoria/index.html"
+    },
+    {
+      "source": "/consultoria/(.*)",
+      "destination": "/platform/modules/erp-consultoria/$1"
+    },
+    {
+      "source": "/consultoria_hml/(.*)",
+      "destination": "/platform/modules/erp-consultoria/$1"
+    },
+    {
+      "source": "/erp-consultoria",
+      "destination": "/platform/modules/erp-consultoria/index.html"
+    },
+    {
+      "source": "/erp-consultoria_hml",
+      "destination": "/platform/modules/erp-consultoria/index.html"
+    },
+    {
+      "source": "/erp-consultoria/(.*)",
+      "destination": "/platform/modules/erp-consultoria/$1"
+    },
+    {
+      "source": "/erp-consultoria_hml/(.*)",
+      "destination": "/platform/modules/erp-consultoria/$1"
+    },
+    {
+      "source": "/wms-coletor",
+      "destination": "/platform/modules/wms-coletor/index.html"
+    },
+    {
+      "source": "/modules/wms-coletor",
+      "destination": "/platform/modules/wms-coletor/index.html"
+    },
+    {
+      "source": "/modules/wms-coletor/(.*)",
+      "destination": "/platform/modules/wms-coletor/$1"
+    },
+    {
+      "source": "/wms",
+      "destination": "/platform/modules/wms/index.html"
+    },
+    {
+      "source": "/wms/:tenant",
+      "destination": "/platform/modules/wms/index.html"
+    },
+    {
+      "source": "/fix_admin",
+      "destination": "/platform/fix_admin.html"
+    },
+    {
+      "source": "/fix_wms_index",
+      "destination": "/platform/fix_wms_users_index.html"
+    },
+    {
+      "source": "/version.json",
+      "destination": "/platform/version.json"
+    },
+    {
+      "source": "/demanda",
+      "destination": "/platform/modules/demanda/index.html"
+    },
+    {
+      "source": "/demanda/(.*)",
+      "destination": "/platform/modules/demanda/$1"
+    },
+    {
+      "source": "/prospeccao",
+      "destination": "/platform/modules/prospeccao/index.html"
+    },
+    {
+      "source": "/prospeccao/(.*)",
+      "destination": "/platform/modules/prospeccao/$1"
+    },
+    {
+      "source": "/apk",
+      "destination": "/platform/download/wms-coletor.html"
+    },
+    {
+      "source": "/download/(.*)",
+      "destination": "/platform/download/$1"
+    },
+    {
+      "source": "/maxcrm",
+      "destination": "/platform/modules/prospeccao/index.html"
+    },
+    {
+      "source": "/maxcrm-app",
+      "destination": "/platform/download/maxcrm.html"
+    },
+    {
+      "source": "/maxcrm/(.*)",
+      "destination": "/platform/modules/prospeccao/$1"
+    },
+    {
+      "source": "/centralpecas",
+      "destination": "/platform/modules/demanda/index.html"
+    },
+    {
+      "source": "/centralpecas/(.*)",
+      "destination": "/platform/modules/demanda/$1"
+    },
+    {
+      "source": "/:tenant",
+      "destination": "/platform/modules/dispatch/index.html"
+    }
+  ],
+  "regions": [
+    "gru1"
+  ]
 }
