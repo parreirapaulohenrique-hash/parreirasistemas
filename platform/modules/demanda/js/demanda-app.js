@@ -1373,12 +1373,14 @@ const DemandaApp = (function() {
             "style='width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.45rem .65rem;color:var(--text-primary);box-sizing:border-box;margin-bottom:1.2rem;font-size:.82rem'>" +
 
             "<div style='display:flex;gap:.5rem;justify-content:flex-end'>" +
-            "<button onclick='this.closest("div[style*=inset]").remove()' " +
+            "<button id='_btnCancelarPerda' " +
             "style='background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.45rem 1rem;color:var(--text-secondary);cursor:pointer;font-size:.82rem'>Cancelar</button>" +
             "<button id='_btnConfirmarPerda' " +
             "style='background:var(--accent-danger);border:none;border-radius:6px;padding:.45rem 1.2rem;color:#fff;cursor:pointer;font-weight:700;font-size:.82rem'>Confirmar Perda</button>" +
             "</div></div>";
         document.body.appendChild(overlay);
+
+        document.getElementById("_btnCancelarPerda").onclick = function() { overlay.remove(); };
 
         document.getElementById("_btnConfirmarPerda").onclick = function() {
             var motivo = document.getElementById("_motivoPerdaSelect").value;
@@ -1917,7 +1919,171 @@ const DemandaApp = (function() {
         DemandaDB.listDemandas({ status: "todas", limit: 60 })
             .then(function(demandas) {
                 return Promise.all(demandas.map(function(d) {
-                    return DemandaDB.getItens(d.id).then(function(itens) { 
+                    return DemandaDB.getItens(d.id).then(function(itens) { return { demanda: d, itens: itens }; });
+                }));
+            })
+            .then(function(todos) {
+                var comItens = todos.filter(function(t) {
+                    return t.itens.some(function(i) { return STATUS_ORC.indexOf(i.status) >= 0; });
+                });
+                if (comItens.length === 0) {
+                    container.innerHTML = "<div style='padding:3rem;text-align:center;color:var(--text-secondary)'>" +
+                        "<span class='material-icons-round' style='font-size:2.5rem;opacity:.4'>description</span>" +
+                        "<p style='margin-top:.75rem'>Nenhum item em orçamento.</p>" +
+                        "<small>Itens em Compra Possível, Proposta Enviada, Aguardando Cliente ou Venda Aprovada aparecem aqui.</small></div>";
+                    return;
+                }
+                var html = comItens.map(function(t) {
+                    var d = t.demanda;
+                    var itensOrc = t.itens.filter(function(i) { return STATUS_ORC.indexOf(i.status) >= 0; });
+                    var total = itensOrc.reduce(function(acc, i) { return acc + ((i.preco || i.precoUnitario || 0) * (i.qtdeSolicitada || 1)); }, 0);
+                    var dt = d.criadoEm && d.criadoEm.toDate ? d.criadoEm.toDate().toLocaleDateString("pt-BR") : "—";
+                    var hasApproved = itensOrc.some(function(i) { return i.status === "venda_aprovada"; });
+
+                    var rows = itensOrc.map(function(item) {
+                        var sc = (typeof DemandaStates !== "undefined") ? DemandaStates.get(item.status) : { label: item.status, color: "#6366f1" };
+                        var btnAprovar = (!["venda_aprovada", "pedido_criado_erp"].includes(item.status))
+                            ? "<button onclick=\"DemandaApp._aprovarItemOrcamento('" + d.id + "','" + item.id + "')\" " +
+                              "style='background:var(--accent-success);color:#fff;border:none;border-radius:4px;padding:.2rem .55rem;font-size:.72rem;cursor:pointer;margin-right:.3rem'>Aprovar</button>" : "";
+                        var btnPerder = item.status !== "pedido_criado_erp" ? "<button onclick=\"DemandaApp._perderItemOrcamento('" + d.id + "','" + item.id + "','" + item.status + "')\" " +
+                            "style='background:var(--accent-danger);color:#fff;border:none;border-radius:4px;padding:.2rem .55rem;font-size:.72rem;cursor:pointer'>Perder</button>" : "";
+
+                        var compraTag = "";
+                        if (item.compraFornecedor) {
+                            compraTag = "<div style='font-size:.7rem;color:var(--accent-success)'>Forn: " + _esc(item.compraFornecedor) + " (" + (item.compraPrazoDias || 0) + "d)</div>";
+                        }
+
+                        var prcVal = item.preco || item.precoUnitario || (item.compraCusto ? item.compraCusto * 1.35 : 0);
+
+                        return "<tr style='border-bottom:1px solid rgba(255,255,255,.04)'>" +
+                            "<td style='padding:.38rem .5rem;font-weight:600;font-size:.8rem'>" + _esc(item.refOriginal || item.erpProdutoId || "—") + compraTag + "</td>" +
+                            "<td style='padding:.38rem .5rem;color:var(--text-secondary);font-size:.78rem;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>" + _esc(item.descOriginal || item.erpProdutoDesc || "—") + "</td>" +
+                            "<td style='padding:.38rem .5rem;text-align:center'>" + (item.qtdeSolicitada || 1) + "</td>" +
+                            "<td style='padding:.38rem .5rem'><span style='font-size:.7rem;padding:.12rem .45rem;border-radius:8px;background:" + sc.color + "22;color:" + sc.color + "'>" + _esc(sc.label) + "</span></td>" +
+                            "<td style='padding:.38rem .5rem'>" + (prcVal ? "R$ " + Number(prcVal).toFixed(2).replace(".",",") : "Consulte") + "</td>" +
+                            "<td style='padding:.38rem .5rem'>" + btnAprovar + btnPerder + "</td></tr>";
+                    }).join("");
+
+                    var erpStatusBadge = d.erpSaleId
+                        ? "<span style='padding:.25rem .6rem;border-radius:6px;background:rgba(16,185,129,.15);color:#10b981;font-size:.78rem;font-weight:700;display:inline-flex;align-items:center;gap:.3rem'>" +
+                          "<span class='material-icons-round' style='font-size:.9rem'>receipt_long</span> Pedido ERP #" + _esc(d.erpSaleId) + "</span>"
+                        : "";
+
+                    var btnGerarPedido = (!d.erpSaleId && hasApproved)
+                        ? "<button onclick=\"DemandaApp._gerarPedidoERP('" + d.id + "')\" " +
+                          "style='background:var(--accent-primary);color:#fff;border:none;border-radius:6px;padding:.35rem .9rem;font-size:.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem'>" +
+                          "<span class='material-icons-round' style='font-size:.9rem'>shopping_bag</span> Gerar Pedido no ERP</button>"
+                        : "";
+
+                    return "<div style='background:var(--bg-sidebar);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1rem'>" +
+                        "<div style='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem'>" +
+                        "<div><div style='font-weight:700;font-size:.95rem'>" + _esc(d.codigo) + "</div>" +
+                        "<div style='font-size:.8rem;color:var(--text-secondary)'>" + _esc(d.clienteNome || "Cliente Avulso") + " · " + dt + "</div></div>" +
+                        (total > 0 ? "<div style='text-align:right'><div style='font-size:.7rem;color:var(--text-secondary)'>Total estimado</div>" +
+                            "<div style='font-weight:700;color:var(--accent-success)'>R$ " + total.toFixed(2).replace(".",",") + "</div></div>" : "") + "</div>" +
+                        "<div style='overflow-x:auto'><table style='width:100%;border-collapse:collapse;font-size:.8rem'>" +
+                        "<thead><tr style='border-bottom:1px solid var(--border-color)'>" +
+                        ["Referência","Descrição","Qtd","Status","Preço","Ação"].map(function(h) {
+                            return "<th style='padding:.35rem .5rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:600;text-transform:uppercase'>" + h + "</th>";
+                        }).join("") + "</tr></thead><tbody>" + rows + "</tbody></table></div>" +
+                        "<div style='margin-top:.75rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem'>" +
+                        "<div>" + erpStatusBadge + "</div>" +
+                        "<div style='display:flex;gap:.5rem'>" +
+                        btnGerarPedido +
+                        "<button onclick='window.print()' style='background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.3rem .8rem;color:var(--text-secondary);cursor:pointer;font-size:.78rem'>" +
+                        "<span class='material-icons-round' style='font-size:.9rem;vertical-align:middle'>print</span> Imprimir Proposta</button></div></div></div>";
+                }).join("");
+                container.innerHTML = html;
+            })
+            .catch(function(err) { container.innerHTML = "<p style='padding:2rem;color:var(--accent-danger)'>Erro: " + _esc(err.message || String(err)) + "</p>"; });
+    }
+
+    function _aprovarItemOrcamento(demandaId, itemId) {
+        var por = _sessao ? (_sessao.login || _sessao.nome || "sistema") : "sistema";
+        DemandaDB.updateItem(demandaId, itemId, { status: "venda_aprovada" },
+            { evento: "status_changed", para: "venda_aprovada", por: por, obs: "Aprovado no orçamento" })
+            .then(function() { _toast("Venda aprovada!", "success"); loadOrcamento(); })
+            .catch(function(e) { _toast("Erro: " + e.message, "error"); });
+    }
+
+    function _gerarPedidoERP(demandaId) {
+        if (!confirm("Deseja emitir o Pedido de Venda no ERP MaxData para os itens aprovados?")) return;
+
+        _toast("Comunicando com a API do ERP MaxData...", "info");
+
+        DemandaDB.getDemanda(demandaId)
+            .then(function(demanda) {
+                if (!demanda) throw new Error("Cotação não encontrada.");
+                var itens = demanda.itens || [];
+                var itensAprovados = itens.filter(function(i) {
+                    return i.status === "venda_aprovada" || i.status === "estoque_disponivel";
+                });
+
+                if (itensAprovados.length === 0) {
+                    throw new Error("Nenhum item com status 'Aprovado' para gerar pedido no ERP.");
+                }
+
+                var adapter = null;
+                if (window.ErpIntegration && ErpIntegration.getActive) {
+                    adapter = ErpIntegration.getActive();
+                } else if (window.MaxDataAdapter) {
+                    var cfg = JSON.parse(sessionStorage.getItem("_demanda_erp_config") || "{}");
+                    adapter = new MaxDataAdapter("centralpecas", cfg);
+                }
+
+                if (!adapter || typeof adapter.createSale !== "function") {
+                    throw new Error("Adapter do MaxData não suporta createSale ou não está carregado.");
+                }
+
+                var saleData = {
+                    clienteId: demanda.clienteId || 1,
+                    vendedorId: (_sessao && _sessao.filialId) ? _sessao.filialId : 1,
+                    demandaCodigo: demanda.codigo,
+                    obs: demanda.obs || ""
+                };
+
+                return adapter.createSale(saleData, itensAprovados)
+                    .then(function(res) {
+                        var vendaId = res.vendaId;
+                        _toast("Pedido de Venda #" + vendaId + " gerado no MaxData com sucesso!", "success");
+
+                        var por = _sessao ? (_sessao.login || _sessao.nome || "sistema") : "sistema";
+                        var promises = itensAprovados.map(function(item) {
+                            return DemandaDB.updateItem(demandaId, item.id, {
+                                status: "pedido_criado_erp",
+                                erpSaleId: String(vendaId)
+                            }, {
+                                evento: "pedido_erp_criado",
+                                para: "pedido_criado_erp",
+                                por: por,
+                                obs: "Pedido MaxData #" + vendaId
+                            });
+                        });
+
+                        promises.push(DemandaDB.updateDemanda(demandaId, {
+                            erpSaleId: String(vendaId),
+                            status: "encerrada"
+                        }));
+
+                        return Promise.all(promises);
+                    });
+            })
+            .then(function() {
+                loadOrcamento();
+                loadDemandasLista(_filterAtual);
+            })
+            .catch(function(err) {
+                console.error("[DemandaApp] Erro ao gerar pedido no ERP:", err);
+                _toast("Erro ao gerar pedido no ERP: " + (err.message || err), "error");
+            });
+    }
+
+    function _perderItemOrcamento(demandaId, itemId, deStatus) {
+        _demandaAtual = { id: demandaId, data: {}, itens: [{ id: itemId, status: deStatus }] };
+        _confirmarVendaPerdida(itemId, deStatus);
+    }
+
+
     // ════════════════════════════════════════════════════════
     // VIEW: RELATÓRIOS GERENCIAIS & INTELIGÊNCIA COMERCIAL
     // ════════════════════════════════════════════════════════
@@ -2164,177 +2330,6 @@ const DemandaApp = (function() {
         _toast("Arquivo CSV exportado com sucesso!", "success");
     }
 
-    return { demanda: d, itens: itens 
-        // Métodos de Integração, Compras, Pedido ERP e Relatórios
-        adicionarItemDaBusca:        adicionarItemDaBusca,
-        _gerarPedidoERP:             _gerarPedidoERP,
-        loadRelatorios:              loadRelatorios,
-        switchRelatorioTab:          switchRelatorioTab,
-        imprimirRelatorio:           imprimirRelatorio,
-        exportarRelatorioCSV:        exportarRelatorioCSV,
-}; });
-                }));
-            })
-            .then(function(todos) {
-                var comItens = todos.filter(function(t) {
-                    return t.itens.some(function(i) { return STATUS_ORC.indexOf(i.status) >= 0; });
-                });
-                if (comItens.length === 0) {
-                    container.innerHTML = "<div style='padding:3rem;text-align:center;color:var(--text-secondary)'>" +
-                        "<span class='material-icons-round' style='font-size:2.5rem;opacity:.4'>description</span>" +
-                        "<p style='margin-top:.75rem'>Nenhum item em orçamento.</p>" +
-                        "<small>Itens em Compra Possível, Proposta Enviada, Aguardando Cliente ou Venda Aprovada aparecem aqui.</small></div>";
-                    return;
-                }
-                var html = comItens.map(function(t) {
-                    var d = t.demanda;
-                    var itensOrc = t.itens.filter(function(i) { return STATUS_ORC.indexOf(i.status) >= 0; });
-                    var total = itensOrc.reduce(function(acc, i) { return acc + ((i.preco || i.precoUnitario || 0) * (i.qtdeSolicitada || 1)); }, 0);
-                    var dt = d.criadoEm && d.criadoEm.toDate ? d.criadoEm.toDate().toLocaleDateString("pt-BR") : "—";
-                    var hasApproved = itensOrc.some(function(i) { return i.status === "venda_aprovada"; });
-
-                    var rows = itensOrc.map(function(item) {
-                        var sc = (typeof DemandaStates !== "undefined") ? DemandaStates.get(item.status) : { label: item.status, color: "#6366f1" };
-                        var btnAprovar = (!["venda_aprovada", "pedido_criado_erp"].includes(item.status))
-                            ? "<button onclick=\"DemandaApp._aprovarItemOrcamento('" + d.id + "','" + item.id + "')\" " +
-                              "style='background:var(--accent-success);color:#fff;border:none;border-radius:4px;padding:.2rem .55rem;font-size:.72rem;cursor:pointer;margin-right:.3rem'>Aprovar</button>" : "";
-                        var btnPerder = item.status !== "pedido_criado_erp" ? "<button onclick=\"DemandaApp._perderItemOrcamento('" + d.id + "','" + item.id + "','" + item.status + "')\" " +
-                            "style='background:var(--accent-danger);color:#fff;border:none;border-radius:4px;padding:.2rem .55rem;font-size:.72rem;cursor:pointer'>Perder</button>" : "";
-
-                        var compraTag = "";
-                        if (item.compraFornecedor) {
-                            compraTag = "<div style='font-size:.7rem;color:var(--accent-success)'>Forn: " + _esc(item.compraFornecedor) + " (" + (item.compraPrazoDias || 0) + "d)</div>";
-                        }
-
-                        var prcVal = item.preco || item.precoUnitario || (item.compraCusto ? item.compraCusto * 1.35 : 0);
-
-                        return "<tr style='border-bottom:1px solid rgba(255,255,255,.04)'>" +
-                            "<td style='padding:.38rem .5rem;font-weight:600;font-size:.8rem'>" + _esc(item.refOriginal || item.erpProdutoId || "—") + compraTag + "</td>" +
-                            "<td style='padding:.38rem .5rem;color:var(--text-secondary);font-size:.78rem;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>" + _esc(item.descOriginal || item.erpProdutoDesc || "—") + "</td>" +
-                            "<td style='padding:.38rem .5rem;text-align:center'>" + (item.qtdeSolicitada || 1) + "</td>" +
-                            "<td style='padding:.38rem .5rem'><span style='font-size:.7rem;padding:.12rem .45rem;border-radius:8px;background:" + sc.color + "22;color:" + sc.color + "'>" + _esc(sc.label) + "</span></td>" +
-                            "<td style='padding:.38rem .5rem'>" + (prcVal ? "R$ " + Number(prcVal).toFixed(2).replace(".",",") : "Consulte") + "</td>" +
-                            "<td style='padding:.38rem .5rem'>" + btnAprovar + btnPerder + "</td></tr>";
-                    }).join("");
-
-                    var erpStatusBadge = d.erpSaleId
-                        ? "<span style='padding:.25rem .6rem;border-radius:6px;background:rgba(16,185,129,.15);color:#10b981;font-size:.78rem;font-weight:700;display:inline-flex;align-items:center;gap:.3rem'>" +
-                          "<span class='material-icons-round' style='font-size:.9rem'>receipt_long</span> Pedido ERP #" + _esc(d.erpSaleId) + "</span>"
-                        : "";
-
-                    var btnGerarPedido = (!d.erpSaleId && hasApproved)
-                        ? "<button onclick=\"DemandaApp._gerarPedidoERP('" + d.id + "')\" " +
-                          "style='background:var(--accent-primary);color:#fff;border:none;border-radius:6px;padding:.35rem .9rem;font-size:.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem'>" +
-                          "<span class='material-icons-round' style='font-size:.9rem'>shopping_bag</span> Gerar Pedido no ERP</button>"
-                        : "";
-
-                    return "<div style='background:var(--bg-sidebar);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1rem'>" +
-                        "<div style='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem'>" +
-                        "<div><div style='font-weight:700;font-size:.95rem'>" + _esc(d.codigo) + "</div>" +
-                        "<div style='font-size:.8rem;color:var(--text-secondary)'>" + _esc(d.clienteNome || "Cliente Avulso") + " · " + dt + "</div></div>" +
-                        (total > 0 ? "<div style='text-align:right'><div style='font-size:.7rem;color:var(--text-secondary)'>Total estimado</div>" +
-                            "<div style='font-weight:700;color:var(--accent-success)'>R$ " + total.toFixed(2).replace(".",",") + "</div></div>" : "") + "</div>" +
-                        "<div style='overflow-x:auto'><table style='width:100%;border-collapse:collapse;font-size:.8rem'>" +
-                        "<thead><tr style='border-bottom:1px solid var(--border-color)'>" +
-                        ["Referência","Descrição","Qtd","Status","Preço","Ação"].map(function(h) {
-                            return "<th style='padding:.35rem .5rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:600;text-transform:uppercase'>" + h + "</th>";
-                        }).join("") + "</tr></thead><tbody>" + rows + "</tbody></table></div>" +
-                        "<div style='margin-top:.75rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem'>" +
-                        "<div>" + erpStatusBadge + "</div>" +
-                        "<div style='display:flex;gap:.5rem'>" +
-                        btnGerarPedido +
-                        "<button onclick='window.print()' style='background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.3rem .8rem;color:var(--text-secondary);cursor:pointer;font-size:.78rem'>" +
-                        "<span class='material-icons-round' style='font-size:.9rem;vertical-align:middle'>print</span> Imprimir Proposta</button></div></div></div>";
-                }).join("");
-                container.innerHTML = html;
-            })
-            .catch(function(err) { container.innerHTML = "<p style='padding:2rem;color:var(--accent-danger)'>Erro: " + _esc(err.message || String(err)) + "</p>"; });
-    }
-
-    function _aprovarItemOrcamento(demandaId, itemId) {
-        var por = _sessao ? (_sessao.login || _sessao.nome || "sistema") : "sistema";
-        DemandaDB.updateItem(demandaId, itemId, { status: "venda_aprovada" },
-            { evento: "status_changed", para: "venda_aprovada", por: por, obs: "Aprovado no orçamento" })
-            .then(function() { _toast("Venda aprovada!", "success"); loadOrcamento(); })
-            .catch(function(e) { _toast("Erro: " + e.message, "error"); });
-    }
-
-    function _gerarPedidoERP(demandaId) {
-        if (!confirm("Deseja emitir o Pedido de Venda no ERP MaxData para os itens aprovados?")) return;
-
-        _toast("Comunicando com a API do ERP MaxData...", "info");
-
-        DemandaDB.getDemanda(demandaId)
-            .then(function(demanda) {
-                if (!demanda) throw new Error("Cotação não encontrada.");
-                var itens = demanda.itens || [];
-                var itensAprovados = itens.filter(function(i) {
-                    return i.status === "venda_aprovada" || i.status === "estoque_disponivel";
-                });
-
-                if (itensAprovados.length === 0) {
-                    throw new Error("Nenhum item com status 'Aprovado' para gerar pedido no ERP.");
-                }
-
-                var adapter = null;
-                if (window.ErpIntegration && ErpIntegration.getActive) {
-                    adapter = ErpIntegration.getActive();
-                } else if (window.MaxDataAdapter) {
-                    var cfg = JSON.parse(sessionStorage.getItem("_demanda_erp_config") || "{}");
-                    adapter = new MaxDataAdapter("centralpecas", cfg);
-                }
-
-                if (!adapter || typeof adapter.createSale !== "function") {
-                    throw new Error("Adapter do MaxData não suporta createSale ou não está carregado.");
-                }
-
-                var saleData = {
-                    clienteId: demanda.clienteId || 1,
-                    vendedorId: (_sessao && _sessao.filialId) ? _sessao.filialId : 1,
-                    demandaCodigo: demanda.codigo,
-                    obs: demanda.obs || ""
-                };
-
-                return adapter.createSale(saleData, itensAprovados)
-                    .then(function(res) {
-                        var vendaId = res.vendaId;
-                        _toast("Pedido de Venda #" + vendaId + " gerado no MaxData com sucesso!", "success");
-
-                        var por = _sessao ? (_sessao.login || _sessao.nome || "sistema") : "sistema";
-                        var promises = itensAprovados.map(function(item) {
-                            return DemandaDB.updateItem(demandaId, item.id, {
-                                status: "pedido_criado_erp",
-                                erpSaleId: String(vendaId)
-                            }, {
-                                evento: "pedido_erp_criado",
-                                para: "pedido_criado_erp",
-                                por: por,
-                                obs: "Pedido MaxData #" + vendaId
-                            });
-                        });
-
-                        promises.push(DemandaDB.updateDemanda(demandaId, {
-                            erpSaleId: String(vendaId),
-                            status: "encerrada"
-                        }));
-
-                        return Promise.all(promises);
-                    });
-            })
-            .then(function() {
-                loadOrcamento();
-                loadDemandasLista(_filterAtual);
-            })
-            .catch(function(err) {
-                console.error("[DemandaApp] Erro ao gerar pedido no ERP:", err);
-                _toast("Erro ao gerar pedido no ERP: " + (err.message || err), "error");
-            });
-    }
-
-    function _perderItemOrcamento(demandaId, itemId, deStatus) {
-        _demandaAtual = { id: demandaId, data: {}, itens: [{ id: itemId, status: deStatus }] };
-        _confirmarVendaPerdida(itemId, deStatus);
-    }
 
     // ════════════════════════════════════════════════════════
     // VIEW: COTAÇÃO DO CONCORRENTE
@@ -2885,6 +2880,13 @@ const DemandaApp = (function() {
         _loadHistoricoConcorrente:    _loadHistoricoConcorrente,
         _toggleConcCard:              _toggleConcCard,
         _arquivarCotacaoConcorrente:  _arquivarCotacaoConcorrente,
+        // Métodos de Integração, Compras, Pedido ERP e Relatórios
+        adicionarItemDaBusca:        adicionarItemDaBusca,
+        _gerarPedidoERP:             _gerarPedidoERP,
+        loadRelatorios:              loadRelatorios,
+        switchRelatorioTab:          switchRelatorioTab,
+        imprimirRelatorio:           imprimirRelatorio,
+        exportarRelatorioCSV:        exportarRelatorioCSV,
         // Base Técnica
         abrirBaseTecnica:             abrirBaseTecnica,
         syncMaxdataTechbase:          syncMaxdataTechbase,

@@ -1,8 +1,8 @@
 {
-  "build": "20260910-v3.20.11",
-  "version": "3.20.11",
+  "build": "20260910-v3.21.1",
+  "version": "3.21.1",
   "environment": "production",
-  "change": "v3.20.11 - fix(dispatch): configuracao de impressao do romaneio para A4 retrato com margens 9mm",
+  "change": "v3.21.1 - fix(cotacao): correcao de erro de sintaxe e inicializacao do modulo cotacao",
   "lastUpdate": "2026-09-10",
   "deployedAt": "2026-09-10"
 }
