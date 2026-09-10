@@ -1,8 +1,8 @@
 {
-  "build": "20260909-v3.20.8",
+  "build": "20260910-v3.20.8",
   "version": "3.20.8",
   "environment": "production",
-  "change": "v3.20.8 - fix(despacho): restauracao e otimizacao do aproveitamento completo da pagina na impressao do romaneio (A4 portrait com margens minimas, suporte a 2 vias compactas e tabela full-width)",
-  "lastUpdate": "2026-09-09",
+  "change": "v3.20.8 - feat(demanda): integracao completa de clientes em Nova Demanda e Cotacao Concorrente (v2.5.0)",
+  "lastUpdate": "2026-09-10",
   "deployedAt": "2026-09-09"
 }

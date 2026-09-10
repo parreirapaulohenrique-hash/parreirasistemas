@@ -69,9 +69,6 @@
                     <span class="material-icons-round">shopping_cart</span>
                     Fila de Compras
                 </button>
-                <button class="nav-item" id="nav-clientes" onclick="DemandaApp.switchView('clientes')">
-                    <span class="material-icons-round">people</span> Clientes
-                </button>
                 <button class="nav-item" id="nav-orcamento" onclick="DemandaApp.switchView('orcamento')">
                     <span class="material-icons-round">description</span>
                     Orçamentos
@@ -220,9 +217,10 @@
                                     <!-- Seletor de cliente -->
                                     <div style="position:relative;flex:1">
                                         <button class="demanda-client-btn" id="btnSelectCliente"
-                                            onclick="DemandaApp.toggleClienteDropdown()">
+                                            onclick="DemandaApp.toggleClienteDropdown()" type="button">
                                             <span class="material-icons-round">person_search</span>
                                             <span id="clienteLabel">Selecionar cliente</span>
+                                            <span id="btnClearCliente" title="Remover cliente" onclick="DemandaApp.limparClienteSelecionado(event)" style="display:none;margin-left:auto;padding:0 4px;cursor:pointer;color:var(--accent-danger);font-size:.85rem;font-weight:bold">✕</span>
                                         </button>
                                         <div class="client-dropdown" id="clienteDropdown">
                                             <input
@@ -824,14 +822,14 @@
     <script src="/platform/shared/integrations/index.js?v=2.0.0"></script>
 
     <!-- Módulo de Demanda -->
-    <script src="js/demanda-states.js?v=2.4.6"></script>
-    <script src="js/demanda-db.js?v=2.4.6"></script>
-    <script src="js/demanda-import.js?v=2.4.6"></script>
-    <script src="js/demanda-search.js?v=2.4.6"></script>
-    <script src="js/demanda-lookup.js?v=2.4.6"></script>
-    <script src="js/demanda-pdf.js?v=2.4.6"></script>
-    <script src="js/demanda-clientes.js?v=2.4.6"></script>
-    <script src="js/demanda-app.js?v=2.4.6"></script>
+    <script src="js/demanda-states.js?v=2.5.0"></script>
+    <script src="js/demanda-db.js?v=2.5.0"></script>
+    <script src="js/demanda-import.js?v=2.5.0"></script>
+    <script src="js/demanda-search.js?v=2.5.0"></script>
+    <script src="js/demanda-lookup.js?v=2.5.0"></script>
+    <script src="js/demanda-pdf.js?v=2.5.0"></script>
+    <script src="js/demanda-clientes.js?v=2.5.0"></script>
+    <script src="js/demanda-app.js?v=2.5.0"></script>
 
     <!-- ═══════════════════════════════════════════════════════════
          MODAL: Administração da Base Técnica de Peças

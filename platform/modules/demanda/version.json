@@ -1,8 +1,8 @@
 {
-  "version": "2.4.9",
-  "build": "20260909-v2.4.9",
+  "version": "2.5.0",
+  "build": "20260910-v2.5.0",
   "module": "demanda",
   "name": "Inteligência de Demanda",
-  "lastUpdate": "2026-09-09",
-  "change": "v2.4.9 - fix(demanda): ajuste de layout na integracao ERP (content-wrapper com scrollbar nativa, card e footer alinhados ao Despacho)"
+  "lastUpdate": "2026-09-10",
+  "change": "v2.5.0 - feat(demanda): busca e selecao rapida de clientes em Nova Demanda e Cotacao Concorrente com cache cascata e autocomplete; remocao da aba Clientes da sidebar"
 }

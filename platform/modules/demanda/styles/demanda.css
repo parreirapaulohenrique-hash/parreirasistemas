@@ -974,21 +974,40 @@ body {
     top: 100%;
     left: 0;
     right: 0;
+    min-width: 280px;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
-    z-index: 100;
-    max-height: 220px;
+    z-index: 1050;
+    max-height: 250px;
     overflow-y: auto;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     margin-top: 4px;
     display: none;
 }
 .client-dropdown.open { display: block; }
-.client-dropdown-item { padding: 0.55rem 0.85rem; cursor: pointer; transition: background 0.1s; }
-.client-dropdown-item:hover { background: rgba(59,130,246,0.06); }
-.client-dropdown-item strong { display: block; font-size: 0.825rem; color: var(--text-primary); }
-.client-dropdown-item span   { font-size: 0.7rem; color: var(--text-secondary); }
+.client-dropdown-item {
+    padding: 0.55rem 0.85rem;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.client-dropdown-item:last-child {
+    border-bottom: none;
+}
+.client-dropdown-item:hover {
+    background: rgba(59,130,246,0.12);
+}
+.client-dropdown-item strong {
+    display: block;
+    font-size: 0.825rem;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+.client-dropdown-item span {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+}
 
 /* ══════════════════════════════════════════════════════════
    TELA: CONFERÊNCIA DE IMPORTAÇÃO

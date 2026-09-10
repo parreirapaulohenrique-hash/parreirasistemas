@@ -22,7 +22,9 @@ const DemandaApp = (function() {
 
     // ── Estado global ─────────────────────────────────────────
     var _itens             = [];      // Itens da demanda em andamento
-    var _clienteAtual      = null;    // { id, nome, cnpj } | null
+    var _clienteAtual      = null;
+    var _concClientesCache = [];
+    var _concClienteSelecionado = null;    // { id, nome, cnpj } | null
     var _sessao            = null;    // Cache ParreiraAuth.getSessao()
     var _demandaAtual      = null;    // { id, data, itens } — demanda aberta no modal de detalhe
     var _erpInitialized    = false;
@@ -190,8 +192,176 @@ const DemandaApp = (function() {
     }
 
     // ════════════════════════════════════════════════════════
-    // SELEÇÃO DE CLIENTE
+    // SELEÇÃO E GERENCIAMENTO DE CLIENTES
     // ════════════════════════════════════════════════════════
+
+    var _todosClientesCache      = null;   // Cache global normalizado em memória
+    var _carregandoClientes      = false;  // Flag de requisição assíncrona
+
+    function _extrairClientesLocais() {
+        var lista = [];
+        var chaves = [
+            "_erp_clients_maxdata", // sessionStorage
+            "centralpecas_clients", // localStorage
+            "clients",              // localStorage / sessionStorage
+            "app_clients"
+        ];
+
+        // 1. Tenta sessionStorage (onde o MaxData salva)
+        for (var i = 0; i < chaves.length; i++) {
+            try {
+                var s = sessionStorage.getItem(chaves[i]);
+                if (s) {
+                    var parsedS = JSON.parse(s);
+                    if (Array.isArray(parsedS) && parsedS.length > 0) {
+                        lista = parsedS;
+                        break;
+                    }
+                }
+            } catch(e) {}
+        }
+
+        // 2. Se não achou em sessionStorage, tenta localStorage
+        if (!lista || lista.length === 0) {
+            for (var j = 0; j < chaves.length; j++) {
+                try {
+                    var l = localStorage.getItem(chaves[j]);
+                    if (l) {
+                        var parsedL = JSON.parse(l);
+                        if (Array.isArray(parsedL) && parsedL.length > 0) {
+                            lista = parsedL;
+                            break;
+                        }
+                    }
+                } catch(e) {}
+            }
+        }
+
+        // 3. Fallback para Utils.getStorage se disponível
+        if ((!lista || lista.length === 0) && typeof Utils !== "undefined" && Utils.getStorage) {
+            try {
+                var u = Utils.getStorage("clients");
+                if (Array.isArray(u) && u.length > 0) lista = u;
+            } catch(e) {}
+        }
+
+        return _normalizarListaClientes(lista || []);
+    }
+
+    function _normalizarListaClientes(lista) {
+        if (!Array.isArray(lista)) return [];
+        var map = {};
+        var resultado = [];
+        for (var i = 0; i < lista.length; i++) {
+            var c = lista[i];
+            if (!c) continue;
+            var nome = (c.nome || c.razaoSocial || c.nomeFantasia || c.cliente || "").toString().trim();
+            if (!nome) continue;
+            var doc = (c.cnpj || c.cpf || c.documento || "").toString().trim();
+            var cod = (c.codigo || c.id || "").toString().trim();
+            var chave = (cod ? "C:" + cod : "") + "|" + (doc ? "D:" + doc : "") + "|" + nome.toUpperCase();
+            if (map[chave]) continue;
+            map[chave] = true;
+
+            resultado.push({
+                id: c.id || cod || null,
+                codigo: cod,
+                nome: nome,
+                razaoSocial: c.razaoSocial || nome,
+                cnpj: doc,
+                cpf: c.cpf || "",
+                cidade: (c.cidade || "").toString().trim(),
+                estado: (c.estado || c.uf || "").toString().trim(),
+                telefone: (c.telefone || c.celular || "").toString().trim(),
+                email: (c.email || "").toString().trim()
+            });
+        }
+        return resultado;
+    }
+
+    async function _carregarClientesAsync(forcar) {
+        if (!forcar && _todosClientesCache && _todosClientesCache.length > 0) {
+            return _todosClientesCache;
+        }
+
+        // Carrega imediatamente do cache local para resposta instantânea
+        var locais = _extrairClientesLocais();
+        if (locais.length > 0) {
+            _todosClientesCache = locais;
+            _atualizarSugestoesClientesConcorrente();
+        }
+
+        if (_carregandoClientes) return _todosClientesCache || [];
+        _carregandoClientes = true;
+
+        try {
+            var tenant = (_sessao && _sessao.tenantId) ? _sessao.tenantId : "centralpecas";
+            var carregados = [];
+
+            // A) Tenta DemandaClientes.listar() do Firestore
+            if (typeof DemandaClientes !== "undefined" && DemandaClientes.listar) {
+                try {
+                    var dc = await DemandaClientes.listar(forcar);
+                    if (Array.isArray(dc) && dc.length > 0) {
+                        carregados = dc;
+                    }
+                } catch(e) { console.warn("[DemandaApp] DemandaClientes.listar:", e); }
+            }
+
+            // B) Tenta Firestore tenants/{tenant}/demanda/data/clientes
+            if (carregados.length === 0 && typeof firebase !== "undefined" && firebase.firestore) {
+                try {
+                    var db = firebase.firestore();
+                    var snap = await db.collection("tenants/" + tenant + "/demanda/data/clientes").limit(1000).get();
+                    if (!snap.empty) {
+                        carregados = snap.docs.map(function(d) {
+                            var dt = d.data();
+                            dt.id = d.id;
+                            return dt;
+                        });
+                    }
+                } catch(e) { console.warn("[DemandaApp] Firestore demanda/clientes:", e); }
+            }
+
+            // C) Tenta Firestore tenants/{tenant}/data/clients (chunks salvos pelo Maxdata)
+            if (carregados.length === 0 && typeof firebase !== "undefined" && firebase.firestore) {
+                try {
+                    var db2 = firebase.firestore();
+                    var docSnap = await db2.collection("tenants/" + tenant + "/data").doc("clients").get();
+                    if (docSnap.exists) {
+                        var dt2 = docSnap.data();
+                        if (dt2 && Array.isArray(dt2.items) && dt2.items.length > 0) {
+                            carregados = dt2.items;
+                        }
+                    }
+                } catch(e) { console.warn("[DemandaApp] Firestore data/clients:", e); }
+            }
+
+            if (carregados.length > 0) {
+                var normalizados = _normalizarListaClientes(carregados);
+                if (normalizados.length > 0) {
+                    _todosClientesCache = normalizados;
+                    try {
+                        sessionStorage.setItem("_erp_clients_maxdata", JSON.stringify(normalizados.slice(0, 1500)));
+                        localStorage.setItem("centralpecas_clients", JSON.stringify(normalizados.slice(0, 500)));
+                    } catch(e) {}
+                }
+            }
+        } catch(err) {
+            console.error("[DemandaApp] Erro ao sincronizar clientes:", err);
+        } finally {
+            _carregandoClientes = false;
+            _atualizarSugestoesClientesConcorrente();
+            // Se dropdown de cliente estiver aberto, atualiza lista
+            var dd = document.getElementById("clienteDropdown");
+            if (dd && dd.style.display === "block") {
+                var inp = document.getElementById("clienteSearchInput");
+                _renderClienteDropdownList(inp ? inp.value : "");
+            }
+        }
+
+        return _todosClientesCache || [];
+    }
 
     function toggleClienteDropdown() {
         var dd  = document.getElementById("clienteDropdown");
@@ -201,6 +371,9 @@ const DemandaApp = (function() {
         if (!open) {
             var inp = document.getElementById("clienteSearchInput");
             if (inp) { inp.value = ""; inp.focus(); }
+            if (!_todosClientesCache || _todosClientesCache.length === 0) {
+                _carregarClientesAsync();
+            }
             _renderClienteDropdownList("");
         }
     }
@@ -211,33 +384,41 @@ const DemandaApp = (function() {
         var list = document.getElementById("clienteDropdownList");
         if (!list) return;
 
-        var todos = _getClientesLocalCache();
-        var filtrados = q.length > 1
+        var todos = (_todosClientesCache && _todosClientesCache.length > 0)
+            ? _todosClientesCache
+            : _extrairClientesLocais();
+
+        if (todos.length === 0 && _carregandoClientes) {
+            list.innerHTML = "<div style='padding:.75rem 1rem;color:var(--text-secondary);font-size:.82rem;display:flex;align-items:center;gap:.5rem'>" +
+                "<span class='material-icons-round' style='font-size:1rem;animation:spin 1s linear infinite'>sync</span> Buscando clientes na base..." +
+                "</div>";
+            return;
+        }
+
+        var qTerm = (q || "").trim().toLowerCase();
+        var filtrados = qTerm.length > 0
             ? todos.filter(function(c) {
-                var hay = ((c.nome || c.razaoSocial || "") + " " + (c.cnpj || "") + " " + (c.codigo || "")).toLowerCase();
-                return hay.indexOf(q.toLowerCase()) >= 0;
-              })
+                var hay = (c.nome + " " + (c.cnpj || "") + " " + (c.codigo || "") + " " + (c.cidade || "")).toLowerCase();
+                return hay.indexOf(qTerm) >= 0;
+              }).slice(0, 35)
             : todos.slice(0, 25);
 
         _clientesCache = filtrados;
 
         if (filtrados.length === 0) {
-            list.innerHTML = "<div style='padding:.75rem 1rem;color:var(--text-secondary);font-size:.82rem'>" +
-                (todos.length === 0 ? "Nenhum cliente em cache. Sincronize o ERP." : "Nenhum resultado para \"" + _esc(q) + "\".") +
-                "</div>";
+            var msgVazio = todos.length === 0
+                ? "Nenhum cliente sincronizado. <a href='javascript:void(0)' onclick='DemandaApp.switchView(\"integracaoErp\")' style='color:var(--accent-primary)'>Sincronizar no ERP</a>"
+                : "Nenhum resultado para \"" + _esc(qTerm) + "\".";
+            list.innerHTML = "<div style='padding:.75rem 1rem;color:var(--text-secondary);font-size:.82rem'>" + msgVazio + "</div>";
             return;
         }
 
         list.innerHTML = filtrados.map(function(c, i) {
-            var nome = c.nome || c.razaoSocial || "Cliente " + i;
-            var detalhe = c.cnpj || c.cpf || c.codigo || "";
-            return "<div onclick='DemandaApp.selectClienteIdx(" + i + ")'" +
-                   " style='padding:.5rem 1rem;cursor:pointer;font-size:.83rem;border-bottom:1px solid var(--border);" +
-                   "display:flex;flex-direction:column;gap:.1rem;transition:background .15s'" +
-                   " onmouseover='this.style.background=\"rgba(59,130,246,.08)\"'" +
-                   " onmouseout='this.style.background=\"\"'>" +
-                   "<span style='font-weight:600;color:var(--text-primary)'>" + _esc(nome) + "</span>" +
-                   (detalhe ? "<span style='color:var(--text-secondary);font-size:.75rem'>" + _esc(detalhe) + "</span>" : "") +
+            var nome = c.nome || "Cliente " + (i+1);
+            var detalhe = [c.cnpj || c.cpf || "", c.codigo ? "Cód: " + c.codigo : "", c.cidade || ""].filter(Boolean).join(" • ");
+            return "<div class='client-dropdown-item' onclick='DemandaApp.selectClienteIdx(" + i + ")'>" +
+                   "<strong>" + _esc(nome) + "</strong>" +
+                   (detalhe ? "<span>" + _esc(detalhe) + "</span>" : "") +
                    "</div>";
         }).join("");
     }
@@ -245,18 +426,34 @@ const DemandaApp = (function() {
     function selectClienteIdx(i) {
         if (i < 0 || i >= _clientesCache.length) return;
         var c = _clientesCache[i];
-        _clienteAtual = { id: c.id || c.codigo || null, nome: c.nome || c.razaoSocial || "", cnpj: c.cnpj || c.cpf || "" };
-        var lbl = document.getElementById("clienteLabel"); if (lbl) lbl.textContent = _clienteAtual.nome;
-        var dd  = document.getElementById("clienteDropdown"); if (dd) dd.style.display = "none";
+        _clienteAtual = { id: c.id || c.codigo || null, codigo: c.codigo || "", nome: c.nome || "", cnpj: c.cnpj || c.cpf || "", cidade: c.cidade || "" };
+        var lbl = document.getElementById("clienteLabel");
+        var btn = document.getElementById("btnSelectCliente");
+        var btnClear = document.getElementById("btnClearCliente");
+        if (lbl) lbl.textContent = _clienteAtual.nome;
+        if (btn) btn.classList.add("selected");
+        if (btnClear) btnClear.style.display = "inline-flex";
+        var dd  = document.getElementById("clienteDropdown");
+        if (dd) dd.style.display = "none";
+    }
+
+    function limparClienteSelecionado(ev) {
+        if (ev) ev.stopPropagation();
+        _clienteAtual = null;
+        var lbl = document.getElementById("clienteLabel");
+        var btn = document.getElementById("btnSelectCliente");
+        var btnClear = document.getElementById("btnClearCliente");
+        if (lbl) lbl.textContent = "Selecionar cliente";
+        if (btn) btn.classList.remove("selected");
+        if (btnClear) btnClear.style.display = "none";
+        var dd  = document.getElementById("clienteDropdown");
+        if (dd) dd.style.display = "none";
     }
 
     function _getClientesLocalCache() {
-        try {
-            var key = "centralpecas_clients";
-            var raw = localStorage.getItem(key);
-            if (raw) return JSON.parse(raw);
-        } catch(e) {}
-        return [];
+        return (_todosClientesCache && _todosClientesCache.length > 0)
+            ? _todosClientesCache
+            : _extrairClientesLocais();
     }
 
     // ════════════════════════════════════════════════════════
@@ -1561,6 +1758,7 @@ const DemandaApp = (function() {
     // ════════════════════════════════════════════════════════
 
     var _concItens = [];
+                _concClienteSelecionado = null;
     var _CONC_INP  = "width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:5px;padding:.3rem .55rem;color:var(--text-primary);font-size:.8rem;box-sizing:border-box";
 
     function _concDB() {
@@ -1580,17 +1778,24 @@ const DemandaApp = (function() {
         fc.innerHTML =
             "<div style='background:var(--bg-sidebar);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1.25rem'>" +
             "<h3 style='margin:0 0 1rem;font-size:.95rem;display:flex;align-items:center;gap:.5rem'>" +
-            "<span class='material-icons-round' style='color:#f59e0b'>trending_up</span>Nova Cota\u00e7\u00e3o do Concorrente</h3>" +
-            "<div style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem;margin-bottom:.75rem'>" +
+            "<span class='material-icons-round' style='color:#f59e0b'>trending_up</span>Nova Cotação do Concorrente</h3>" +
+            "<div style='display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:.75rem;margin-bottom:.75rem'>" +
             _concField("concNome", "Concorrente *", "text", "Ex: Distribuidora ABC", "list='concNomeSugestoes'") +
-            _concField("concCliente", "Cliente (refer\u00eancia)", "text", "Quem trouxe a cota\u00e7\u00e3o", "") +
-            _concField("concObs", "Observa\u00e7\u00e3o", "text", "Contexto opcional", "") +
+            "<div>" +
+                "<label style='font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.3rem'>Cliente (referência)</label>" +
+                "<div style='position:relative'>" +
+                    "<input id='concCliente' type='text' placeholder='Buscar ou digitar cliente...' list='concClienteSugestoes' autocomplete='off' style='" + _CONC_INP + "' oninput='DemandaApp._onConcClienteInput(this.value)' onfocus='DemandaApp._onConcClienteFocus(this)'>" +
+                    "<div id='concClienteDropdown' class='client-dropdown' style='width:100%;left:0;right:0;top:100%;'></div>" +
+                "</div>" +
+            "</div>" +
+            _concField("concObs", "Observação", "text", "Contexto opcional", "") +
             "</div>" +
             "<datalist id='concNomeSugestoes'></datalist>" +
+            "<datalist id='concClienteSugestoes'></datalist>" +
             "<div style='overflow-x:auto;margin-bottom:.75rem'>" +
             "<table style='width:100%;border-collapse:collapse;font-size:.8rem'>" +
             "<thead><tr style='border-bottom:1px solid var(--border-color)'>" +
-            ["#","Refer\u00eancia","Descri\u00e7\u00e3o","Qtde","Pre\u00e7o Concorrente","Pre\u00e7o Nosso","Diferen\u00e7a",""].map(function(h) {
+            ["#","Referência","Descrição","Qtde","Preço Concorrente","Preço Nosso","Diferença",""].map(function(h) {
                 return "<th style='padding:.35rem .4rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:600;text-transform:uppercase;white-space:nowrap'>" + h + "</th>";
             }).join("") +
             "</tr></thead>" +
@@ -1600,10 +1805,11 @@ const DemandaApp = (function() {
             "<button onclick='DemandaApp._concAddItem()' style='background:transparent;border:1px dashed var(--border-color);border-radius:6px;padding:.3rem .75rem;color:var(--text-secondary);cursor:pointer;font-size:.8rem'>" +
             "<span class='material-icons-round' style='font-size:.9rem;vertical-align:middle'>add</span> Adicionar item</button>" +
             "<button onclick='DemandaApp._salvarCotacaoConcorrente()' style='margin-left:auto;background:var(--accent-primary);color:#fff;border:none;border-radius:6px;padding:.4rem 1.1rem;font-size:.85rem;cursor:pointer;font-weight:600'>" +
-            "<span class='material-icons-round' style='font-size:.9rem;vertical-align:middle'>save</span> Salvar Cota\u00e7\u00e3o</button>" +
+            "<span class='material-icons-round' style='font-size:.9rem;vertical-align:middle'>save</span> Salvar Cotação</button>" +
             "</div></div>";
         _renderConcTbody();
         _populateConcSugestoes();
+        _atualizarSugestoesClientesConcorrente();
     }
 
     function _concField(id, label, type, ph, extra) {
@@ -1660,6 +1866,71 @@ const DemandaApp = (function() {
         if (tbody) _renderConcTbody();
     }
 
+    
+    function _onConcClienteInput(val) {
+        var dd = document.getElementById("concClienteDropdown");
+        if (!dd) return;
+        var qTerm = (val || "").trim().toLowerCase();
+        if (!qTerm) {
+            dd.style.display = "none";
+            return;
+        }
+
+        var todos = (_todosClientesCache && _todosClientesCache.length > 0)
+            ? _todosClientesCache
+            : _extrairClientesLocais();
+
+        var matches = todos.filter(function(c) {
+            var hay = (c.nome + " " + (c.cnpj || "") + " " + (c.codigo || "") + " " + (c.cidade || "")).toLowerCase();
+            return hay.indexOf(qTerm) >= 0;
+        }).slice(0, 15);
+
+        if (matches.length === 0) {
+            dd.style.display = "none";
+            return;
+        }
+
+        _concClientesCache = matches;
+        dd.style.display = "block";
+        dd.innerHTML = matches.map(function(c, i) {
+            var detalhe = [c.cnpj || c.cpf || "", c.codigo ? "Cód: " + c.codigo : "", c.cidade || ""].filter(Boolean).join(" • ");
+            return "<div class='client-dropdown-item' onclick='DemandaApp._selectConcCliente(" + i + ")'>" +
+                   "<strong>" + _esc(c.nome) + "</strong>" +
+                   (detalhe ? "<span>" + _esc(detalhe) + "</span>" : "") +
+                   "</div>";
+        }).join("");
+    }
+
+    function _onConcClienteFocus(inp) {
+        if (!_todosClientesCache || _todosClientesCache.length === 0) {
+            _carregarClientesAsync();
+        }
+        if (inp && inp.value.trim()) {
+            _onConcClienteInput(inp.value);
+        }
+    }
+
+    function _selectConcCliente(i) {
+        if (!_concClientesCache || !_concClientesCache[i]) return;
+        var c = _concClientesCache[i];
+        var inp = document.getElementById("concCliente");
+        if (inp) inp.value = c.nome;
+        _concClienteSelecionado = { id: c.id || c.codigo || null, nome: c.nome, cnpj: c.cnpj || c.cpf || "" };
+        var dd = document.getElementById("concClienteDropdown");
+        if (dd) dd.style.display = "none";
+    }
+
+    function _atualizarSugestoesClientesConcorrente() {
+        var dl = document.getElementById("concClienteSugestoes");
+        if (!dl) return;
+        var todos = (_todosClientesCache && _todosClientesCache.length > 0) ? _todosClientesCache : _extrairClientesLocais();
+        if (!todos || todos.length === 0) return;
+        dl.innerHTML = todos.slice(0, 150).map(function(c) {
+            var label = c.nome + (c.cnpj ? " (" + c.cnpj + ")" : "") + (c.cidade ? " - " + c.cidade : "");
+            return "<option value=\"" + _escAttr(c.nome) + "\" label=\"" + _escAttr(label) + "\">";
+        }).join("");
+    }
+
     function _salvarCotacaoConcorrente() {
         var db = _concDB();
         if (!db) { _toast("Firebase n\u00e3o dispon\u00edvel.", "error"); return; }
@@ -1671,6 +1942,8 @@ const DemandaApp = (function() {
         var doc = {
             concorrente:  concNome.trim(),
             clienteRef:   (document.getElementById("concCliente") || {}).value || "",
+            clienteId:    (_concClienteSelecionado ? _concClienteSelecionado.id : null),
+            clienteCnpj:  (_concClienteSelecionado ? _concClienteSelecionado.cnpj : ""),
             obs:          (document.getElementById("concObs") || {}).value || "",
             vendedorNome: por,
             criadoEm:     firebase.firestore.FieldValue.serverTimestamp(),
@@ -1689,6 +1962,7 @@ const DemandaApp = (function() {
             .then(function() {
                 _toast("Cota\u00e7\u00e3o de " + concNome + " salva!", "success");
                 _concItens = [];
+                _concClienteSelecionado = null;
                 _concAddItem();
                 _renderConcorrenteForm();
                 _loadHistoricoConcorrente();
@@ -1914,6 +2188,18 @@ const DemandaApp = (function() {
             if (!dd.contains(ev.target)) dd.style.display = "none";
         });
 
+                // Carrega clientes assincronamente em segundo plano
+        _carregarClientesAsync();
+
+        // Fecha dropdown de cliente concorrente ao clicar fora
+        document.addEventListener("click", function(ev) {
+            var cdd  = document.getElementById("concClienteDropdown");
+            var cinp = document.getElementById("concCliente");
+            if (!cdd || cdd.style.display !== "block") return;
+            if (cinp && (ev.target === cinp || cinp.contains(ev.target))) return;
+            if (!cdd.contains(ev.target)) cdd.style.display = "none";
+        });
+
         // Exibe shell e vai para captura
         var sh = document.getElementById("appShell");
         if (sh) sh.style.display = "flex";
@@ -1966,6 +2252,11 @@ const DemandaApp = (function() {
         toggleClienteDropdown:  toggleClienteDropdown,
         searchCliente:          searchCliente,
         selectClienteIdx:       selectClienteIdx,
+        limparClienteSelecionado: limparClienteSelecionado,
+        _onConcClienteInput:    _onConcClienteInput,
+        _onConcClienteFocus:    _onConcClienteFocus,
+        _selectConcCliente:     _selectConcCliente,
+        carregarClientes:       _carregarClientesAsync,
         // Lista
         filterDemandas:         filterDemandas,
         loadDemandasLista:      loadDemandasLista,
