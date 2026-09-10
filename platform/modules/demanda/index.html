@@ -15,6 +15,32 @@
     <link rel="stylesheet" href="/platform/core/styles/portal.css">
     <!-- Estilos específicos do módulo -->
     <link rel="stylesheet" href="styles/demanda.css?v=2.4.9">
+    <style>
+        .btn-subtab {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            padding: .45rem .85rem;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-size: .8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .2s ease;
+            white-space: nowrap;
+        }
+        .btn-subtab:hover {
+            color: var(--text-primary);
+            background: rgba(255,255,255,.05);
+        }
+        .btn-subtab.active {
+            background: rgba(59,130,246,.15);
+            color: var(--primary-color);
+            border-color: rgba(59,130,246,.3);
+        }
+    </style>
 </head>
 
 <body>
@@ -80,6 +106,10 @@
                 <button class="nav-item" id="nav-dashboard" onclick="DemandaApp.switchView('dashboard')">
                     <span class="material-icons-round">bar_chart</span>
                     Dashboard
+                </button>
+                <button class="nav-item" id="nav-relatorios" onclick="DemandaApp.switchView('relatorios')">
+                    <span class="material-icons-round">assessment</span>
+                    Relatórios
                 </button>
 
                 <div class="nav-section-label">Base Técnica</div>
@@ -403,6 +433,53 @@
                     </div>
                 </div>
                 <div id="dashboardContainer" style="flex:1;overflow-y:auto;padding:1.5rem"></div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════ -->
+            <!--  VIEW: RELATÓRIOS & INTELIGÊNCIA COMERCIAL    -->
+            <!-- ══════════════════════════════════════════════ -->
+            <div id="view-relatorios" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden">
+                <div class="top-bar">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">assessment</span>
+                        <span>Relatórios Gerenciais & Inteligência</span>
+                    </div>
+                    <div class="top-bar-actions" style="gap:.5rem">
+                        <select id="relatorioFiltroPeriodo" onchange="DemandaApp.loadRelatorios()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.3rem .6rem;color:var(--text-primary);font-size:.78rem;cursor:pointer">
+                            <option value="30">Últimos 30 dias</option>
+                            <option value="7">Últimos 7 dias</option>
+                            <option value="mes">Este Mês</option>
+                            <option value="tudo">Todo o Período</option>
+                        </select>
+                        <button class="btn btn-secondary btn-sm" onclick="DemandaApp.loadRelatorios()">
+                            <span class="material-icons-round">refresh</span> Atualizar
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="DemandaApp.imprimirRelatorio()">
+                            <span class="material-icons-round">print</span> Imprimir
+                        </button>
+                        <button class="btn btn-primary btn-sm" onclick="DemandaApp.exportarRelatorioCSV()">
+                            <span class="material-icons-round">download</span> Exportar CSV
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sub-abas de relatórios -->
+                <div style="display:flex;gap:.5rem;padding:.75rem 1.5rem;background:var(--bg-sidebar);border-bottom:1px solid var(--border-color);overflow-x:auto">
+                    <button class="btn-subtab active" id="subtab-perdas" onclick="DemandaApp.switchRelatorioTab('perdas')">
+                        <span class="material-icons-round" style="font-size:1rem">trending_down</span> Vendas Perdidas (R$)
+                    </button>
+                    <button class="btn-subtab" id="subtab-faltas" onclick="DemandaApp.switchRelatorioTab('faltas')">
+                        <span class="material-icons-round" style="font-size:1rem">inventory_2</span> Demanda Reprimida
+                    </button>
+                    <button class="btn-subtab" id="subtab-novos" onclick="DemandaApp.switchRelatorioTab('novos')">
+                        <span class="material-icons-round" style="font-size:1rem">add_shopping_cart</span> Novos SKUs (Sem ERP)
+                    </button>
+                    <button class="btn-subtab" id="subtab-performance" onclick="DemandaApp.switchRelatorioTab('performance')">
+                        <span class="material-icons-round" style="font-size:1rem">leaderboard</span> Desempenho Comercial
+                    </button>
+                </div>
+
+                <div id="relatoriosContainer" style="flex:1;overflow-y:auto;padding:1.5rem"></div>
             </div>
 
             <!-- ══════════════════════════════════════════════ -->

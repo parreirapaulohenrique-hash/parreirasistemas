@@ -557,6 +557,82 @@ class MaxDataAdapter extends ErpAdapter {
     async syncNFs(filters = {})     { return this.fetchRecentSales(filters); }
     async confirmDispatch(nfData)   { this._log('info', 'confirmDispatch: fora de escopo.'); return { success: true }; }
 
+    /**
+     * Cria um Pedido de Venda no MaxData (POST /v2/sale) e adiciona itens (POST /v2/sale/items/array).
+     * Mapeado conforme Engenharia Reversa e api_test.py.
+     * @param {object} saleData - { clienteId, vendedorId, condicaoPgtoId, cfop, demandaCodigo, obs }
+     * @param {Array}  items    - Lista de itens aprovados com produtoId, qtde, valor, etc.
+     * @returns {Promise<object>} { success: true, vendaId, itemsAdded: boolean, data }
+     */
+    async createSale(saleData, items = []) {
+        const headers = await this._authHeaders();
+        const empId = Number(this.config.empId || 1);
+
+        const payloadVenda = {
+            empId,
+            clienteId: Number(saleData.clienteId) || saleData.clienteId,
+            atendenteId: Number(saleData.vendedorId || saleData.atendenteId || 1),
+            condicaoPgtoId: Number(saleData.condicaoPgtoId || 1),
+            cfop: Number(saleData.cfop || 5102),
+            consumidorFinal: saleData.consumidorFinal !== false,
+            msg: (saleData.msg || `COTACAO_CTR:${saleData.demandaCodigo || saleData.id || ''} ${saleData.obs || ''}`).trim()
+        };
+
+        this._log('info', `Criando pedido de venda no MaxData para cliente #${payloadVenda.clienteId}...`, payloadVenda);
+
+        const urlVenda = this._buildUrl('sale');
+        const respVenda = await fetch(urlVenda, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(payloadVenda)
+        });
+
+        if (!respVenda.ok) {
+            const errTxt = await respVenda.text().catch(() => respVenda.statusText);
+            throw new Error(`Erro MaxData POST /sale (HTTP ${respVenda.status}): ${errTxt}`);
+        }
+
+        const resData = await respVenda.json();
+        const vendaId = resData.id || resData.vendaId || (typeof resData === 'number' ? resData : null);
+
+        if (!vendaId) {
+            throw new Error(`Pedido criado no MaxData mas ID não retornado: ${JSON.stringify(resData)}`);
+        }
+
+        this._log('success', `✅ Pedido de venda #${vendaId} criado no MaxData com sucesso!`);
+
+        // Adiciona itens aprovados se houver
+        if (items && items.length > 0) {
+            const payloadItens = items.map(it => ({
+                vendaId: Number(vendaId),
+                produtoId: Number(it.erpProdutoId || it.codigoErp || it.id || 0),
+                qtde: Number(it.qtdeSolicitada || it.qtde || 1),
+                valor: Number(it.preco || it.valor || it.precoUnitario || 0),
+                desconto: Number(it.desconto || 0),
+                un: String(it.un || it.unidade || 'UN').toUpperCase().trim(),
+                descricaoProduto: String(it.erpProdutoDesc || it.descricao || '').trim(),
+                codigoFab: String(it.erpCodigoFab || it.referencia || '').trim()
+            }));
+
+            this._log('info', `Adicionando ${payloadItens.length} item(ns) ao pedido #${vendaId}...`);
+
+            const urlItens = this._buildUrl('sale/items/array');
+            const respItens = await fetch(urlItens, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payloadItens)
+            });
+
+            if (!respItens.ok) {
+                const errItensTxt = await respItens.text().catch(() => respItens.statusText);
+                this._log('warning', `Pedido #${vendaId} gerado, mas houve erro ao adicionar itens: ${errItensTxt}`);
+                return { success: true, vendaId, itemsAdded: false, errorItems: errItensTxt };
+            }
+        }
+
+        return { success: true, vendaId, itemsAdded: true, data: resData };
+    }
+
 
     // ─────────────────────────────────────────────────────────
     //  HELPERS — Firestore + localStorage
