@@ -65,9 +65,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const _role = (MaxCRMState.sessao.role || '').toLowerCase();
     MaxCRMState.isGestor = ['gerente', 'admin', 'master'].includes(_role);
     if (MaxCRMState.isGestor && typeof firebase !== 'undefined') {
-        if (!firebase.apps.length) firebase.initializeApp(window.FIREBASE_CONFIG || {});
-        MaxCRMState.db = firebase.firestore();
-        console.log(`[MAXCRM] Modo Gestor ativado (role: ${_role})`);
+        // Firebase já foi inicializado pelo FIREBASE_CONFIG no index.html
+        try {
+            MaxCRMState.db = firebase.firestore();
+            console.log(`[MAXCRM] Modo Gestor ativado (role: ${_role}) — Firestore conectado`);
+        } catch (e) {
+            console.error('[MAXCRM] Erro ao conectar Firestore para Gestor:', e.message);
+        }
     }
 
     // Atualizar badge do usuário

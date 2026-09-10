@@ -407,7 +407,10 @@ const MaxCRMDB = (() => {
     }
 
     async function getFilaSync() {
-        return _getByIndex('sync_queue', 'status', 'pending');
+        // Retorna pending E error (para contarPendentes mostrar status real)
+        const pending = await _getByIndex('sync_queue', 'status', 'pending');
+        const errors  = await _getByIndex('sync_queue', 'status', 'error');
+        return [...pending, ...errors];
     }
 
     async function marcarSyncOk(queueId, referenciaId, store) {
@@ -421,6 +424,22 @@ const MaxCRMDB = (() => {
         if (item) {
             item.status = 'done';
             await new Promise((res) => { const r = s.put(item); r.onsuccess = res; });
+        }
+        // fix: também atualiza o syncStatus do registro original (visita/empresa/contato)
+        if (referenciaId && store && ['visitas', 'empresas', 'contatos'].includes(store)) {
+            try {
+                const st = _tx(store, 'readwrite');
+                const rec = await new Promise((res) => {
+                    const r = st.get(referenciaId);
+                    r.onsuccess = () => res(r.result);
+                    r.onerror = () => res(null);
+                });
+                if (rec) {
+                    rec.syncStatus = 'synced';
+                    rec.sincronizadoEm = new Date().toISOString();
+                    await new Promise((res) => { const r = st.put(rec); r.onsuccess = res; });
+                }
+            } catch(e) { console.warn('[MaxCRMDB] marcarSyncOk: erro ao atualizar registro:', e); }
         }
 
         // Atualiza syncStatus da entidade

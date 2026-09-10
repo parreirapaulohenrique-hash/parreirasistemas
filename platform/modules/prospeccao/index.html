@@ -19,6 +19,22 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <!-- ParreiraAuth — security-guard NÃO é carregado aqui: o maxcrm-core.js
          faz seu próprio guard com verificação de tenant=parreira -->
+    <!-- Firebase App Config -->
+    <script>
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyDzatCQ8zmH4aQftznf7Y5wdYPwFYSiARc",
+            authDomain: "parreiralog-91904.firebaseapp.com",
+            projectId: "parreiralog-91904",
+            messagingSenderId: "527633267616",
+            appId: "1:527633267616:web:3567e883b31f7fa02882c5",
+            measurementId: "G-CQC6HKZ4V1"
+        };
+        // Inicializar Firebase (necessário para Firestore sync)
+        if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+            firebase.initializeApp(FIREBASE_CONFIG);
+        }
+        window.FIREBASE_CONFIG = FIREBASE_CONFIG;
+    </script>
     <script src="/platform/core/js/session-manager.js"></script>
     <script src="/platform/core/js/auth.js"></script>
 </head>
