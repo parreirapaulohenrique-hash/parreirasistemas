@@ -7383,21 +7383,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             const totalWeight = dayItems.reduce((acc, curr) => acc + (parseFloat(curr.weight) || 0), 0);
             const totalFreight = dayItems.reduce((acc, curr) => acc + (parseFloat(curr.total) || 0), 0);
 
-            // Create 2 copies
+            // Create 2 copies com aproveitamento total da folha
+            const isDayCompact = dayItems.length <= 6;
             for (let i = 0; i < 2; i++) {
                 const page = document.createElement('div');
-                page.className = 'manifest-page';
-                const cellStyle = 'border: 1px solid #777; padding: 3px 5px; font-size: 11px; color: #000;';
-                const headStyle = 'border: 1px solid #777; padding: 5px; font-size: 11px; background: #e0e0e0; font-weight: bold; text-align: center; color: #000;';
+                page.className = 'manifest-page' + (isDayCompact && i === 0 ? ' manifest-page-split' : '') + (!isDayCompact ? ' page-break-after' : (i === 1 ? ' page-break-after' : ''));
+                page.style.cssText = 'page-break-inside: avoid; break-inside: avoid;' + (isDayCompact ? ' margin-bottom: 10px;' : ' margin-bottom: 0;');
+                const cellStyle = 'border: 1px solid #777; padding: 3px 4px; font-size: 10px; color: #000;';
+                const headStyle = 'border: 1px solid #777; padding: 4px; font-size: 10px; background: #e0e0e0; font-weight: bold; text-align: center; color: #000;';
 
                 page.innerHTML = `
-                <div class="manifest-header" style="border: 1px solid #000; padding: 10px; margin-bottom: 10px; font-family: Arial, sans-serif; text-align: center;">
-                    <h2 style="margin:0; font-size: 16px; font-weight: bold; text-transform: uppercase;">Relatório Geral de Despacho</h2>
-                    <div style="font-size: 12px; margin-top: 5px;">DATA: <strong>${day}</strong></div>
-                    <div style="font-size: 10px;">Emissão: ${new Date().toLocaleString()} | Via ${i + 1}</div>
+                <div class="manifest-header" style="border: 2px solid #000; padding: 8px 10px; margin-bottom: 8px; font-family: Arial, sans-serif; text-align: center;">
+                    <h2 style="margin:0; font-size: 15px; font-weight: bold; text-transform: uppercase;">Relatório Geral de Despacho</h2>
+                    <div style="font-size: 11px; margin-top: 3px;">DATA: <strong>${day}</strong></div>
+                    <div style="font-size: 9px;">Emissão: ${new Date().toLocaleString()} | Via ${i + 1}</div>
                 </div>
 
-                <table class="manifest-table" style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif;">
+                <table class="manifest-table" style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; margin-bottom: 10px;">
                     <thead>
                         <tr style="background: #e0e0e0;">
                             <th style="${headStyle} width: 70px;">NF</th>
@@ -7415,7 +7417,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <td style="${cellStyle} text-align: center; font-weight: bold;">${item.invoice}</td>
                                 <td style="${cellStyle}">${item.client}</td>
                                 <td style="${cellStyle}">${item.city} ${item.neighborhood ? '/ ' + item.neighborhood : ''}</td>
-                                <td style="${cellStyle} font-size: 10px;">${item.carrier}</td>
+                                <td style="${cellStyle} font-size: 9px;">${item.carrier}</td>
                                 <td style="${cellStyle} text-align: right;">${parseFloat(item.weight).toFixed(2)}</td>
                                 <td style="${cellStyle} text-align: right;">${Utils.formatCurrency(item.total)}</td>
                                 <td style="${cellStyle}"></td>
@@ -7432,15 +7434,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </tfoot>
                 </table>
 
-                <div style="margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; font-family: Arial, sans-serif;">
-                    <div style="border-top: 1px solid #000; padding-top: 5px; text-align: center; font-size: 10px;">
+                <div class="signature-row" style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; font-family: Arial, sans-serif;">
+                    <div class="sig-box" style="border-top: 1px solid #000; padding-top: 4px; text-align: center; font-size: 10px; font-weight: bold;">
                         Responsável Expedição
                     </div>
-                    <div style="border-top: 1px solid #000; padding-top: 5px; text-align: center; font-size: 10px;">
+                    <div class="sig-box" style="border-top: 1px solid #000; padding-top: 4px; text-align: center; font-size: 10px; font-weight: bold;">
                         Motorista / Conferente
                     </div>
                 </div>
-                ${i === 0 ? '<div style="margin-top: 30px; border-bottom: 2px dashed #999;"></div>' : ''}
+                ${isDayCompact && i === 0 ? '<div style="margin-top: 8px; text-align: center; font-size: 8px; color: #555; letter-spacing: 2px;">✂ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ✂</div>' : ''}
             `;
                 printArea.appendChild(page);
             }
@@ -8217,46 +8219,47 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // para que não falte espaço e não quebre a palavra verticalmente.
                 const cellStyle = 'border: 1px solid #000; padding: 2px; font-size: 10px; color: #000; font-family: Arial, sans-serif; font-weight: bold; text-align: left; white-space: nowrap;';
 
-                // Create 2 copies
+                // Create 2 copies com aproveitamento total da folha A4
+                const isCompact = items.length <= 5;
                 for (let i = 0; i < 2; i++) {
                     const page = document.createElement('div');
-                    page.className = 'manifest-page';
-                    page.style.cssText = 'page-break-inside: avoid; margin-bottom: 40px;'; // Assegura que a segunda via não seja cortada no meio
+                    page.className = 'manifest-page' + (isCompact && i === 0 ? ' manifest-page-split' : '') + (!isCompact ? ' page-break-after' : (i === 1 ? ' page-break-after' : ''));
+                    page.style.cssText = 'page-break-inside: avoid; break-inside: avoid;' + (isCompact ? ' margin-bottom: 10px;' : ' margin-bottom: 0;');
                     
                     page.innerHTML = `
-            <div class="manifest-header" style="display: grid !important; grid-template-columns: 1fr 1fr !important; border: 2px solid #000; padding: 10px; margin-bottom: 15px;">
+            <div class="manifest-header" style="display: grid !important; grid-template-columns: 1fr 1fr !important; border: 2px solid #000; padding: 6px 10px; margin-bottom: 8px;">
                 <div>
-                    <h3 style="margin:0; font-size: 1rem;">DESPACHANTE (REMETENTE)</h3>
-                    <div style="font-size: 0.9rem; font-weight: bold; margin-top: 5px;">${company.name || 'EMPRESA NÃO CONFIGURADA'}</div>
-                    <div style="font-size: 0.8rem;">CNPJ: ${company.cnpj || '-'}</div>
-                    <div style="font-size: 0.8rem;">END: ${company.address || '-'}</div>
+                    <h3 style="margin:0; font-size: 0.95rem;">DESPACHANTE (REMETENTE)</h3>
+                    <div style="font-size: 0.85rem; font-weight: bold; margin-top: 3px;">${company.name || 'EMPRESA NÃO CONFIGURADA'}</div>
+                    <div style="font-size: 0.75rem;">CNPJ: ${company.cnpj || '-'}</div>
+                    <div style="font-size: 0.75rem;">END: ${company.address || '-'}</div>
                 </div>
-                <div style="border-left: 2px solid #000; padding-left: 15px;">
-                    <h3 style="margin:0; font-size: 1rem;">TRANSPORTADORA</h3>
-                    <div style="font-size: 0.9rem; font-weight: bold; margin-top: 5px;">${cleanName}</div>
-                    <div style="font-size: 0.8rem;">CNPJ: ${cInfo.cnpj}</div>
-                    <div style="font-size: 0.8rem;">END: ${cInfo.address}</div>
+                <div style="border-left: 2px solid #000; padding-left: 12px;">
+                    <h3 style="margin:0; font-size: 0.95rem;">TRANSPORTADORA</h3>
+                    <div style="font-size: 0.85rem; font-weight: bold; margin-top: 3px;">${cleanName}</div>
+                    <div style="font-size: 0.75rem;">CNPJ: ${cInfo.cnpj}</div>
+                    <div style="font-size: 0.75rem;">END: ${cInfo.address}</div>
                 </div>
             </div>
 
-            <div style="text-align: center; margin-bottom: 15px;">
-                <h2 style="margin:0; text-decoration: underline;">ROMANEIO DE ENTREGA</h2>
-                <div style="font-size: 0.8rem;">Emissão: ${new Date().toLocaleString()} | Via ${i + 1}</div>
+            <div style="text-align: center; margin-bottom: 8px;">
+                <h2 style="margin:0; font-size: 1.05rem; text-decoration: underline;">ROMANEIO DE ENTREGA</h2>
+                <div style="font-size: 0.75rem;">Emissão: ${new Date().toLocaleString()} | Via ${i + 1}</div>
             </div>
 
-            <table style="width: 100%; border-collapse: collapse; table-layout: fixed; font-family: Arial, sans-serif; font-size: 9px; color: #000; margin-bottom: 20px; font-weight: bold;">
+            <table class="manifest-table" style="width: 100%; border-collapse: collapse; table-layout: fixed; font-family: Arial, sans-serif; font-size: 9px; color: #000; margin-bottom: 10px; font-weight: bold;">
                 <colgroup>
-                    <col style="width: 6%;" />   <!-- N&#xBA; NF -->
-                    <col style="width: 17%;" />  <!-- CLIENTE -->
+                    <col style="width: 7%;" />   <!-- Nº NF -->
+                    <col style="width: 20%;" />  <!-- CLIENTE -->
                     <col style="width: 11%;" />  <!-- TELEFONE -->
-                    <col style="width: 17%;" />  <!-- CIDADE -->
-                    <col style="width: 4%;" />   <!-- RED. -->
-                    <col style="width: 10%;" />  <!-- TRANSP. REDESP. -->
-                    <col style="width: 6%;" />   <!-- COMPL. -->
+                    <col style="width: 16%;" />  <!-- CIDADE -->
+                    <col style="width: 5%;" />   <!-- RED. -->
+                    <col style="width: 11%;" />  <!-- TRANSP. REDESP. -->
+                    <col style="width: 5%;" />   <!-- COMPL. -->
                     <col style="width: 6%;" />   <!-- PESO -->
-                    <col style="width: 7%;" />   <!-- QTD VOL. -->
-                    <col style="width: 8%;" />   <!-- VALOR NF -->
-                    <col style="width: 8%;" />   <!-- FRETE -->
+                    <col style="width: 6%;" />   <!-- QTD VOL. -->
+                    <col style="width: 7%;" />   <!-- VALOR NF -->
+                    <col style="width: 6%;" />   <!-- FRETE -->
                 </colgroup>
                 <thead>
                     <tr style="background: #f0f0f0;">
@@ -8275,7 +8278,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </thead>
                 <tbody>
                     ${items.map(item => {
-                        // v3.11.33: sanitiza&#231;&#227;o on-the-fly
+                        // v3.11.33: sanitização on-the-fly
                         const _s = (v, fb) => (!v || v === 'undefined' || v === 'null' || String(v).trim() === '') ? fb : String(v);
                         item.client       = _s(item.client,       'N&#xC3;O INFORMADO');
                         item.city         = _s(item.city,         'N&#xC3;O INFORMADO');
@@ -8330,16 +8333,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </tr>
                 </tfoot>
             </table>
-            </div>
 
-            <div style="margin-top: 25px; display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 50px;">
-                <div style="border-top: 1px solid #000; text-align: center; padding-top: 5px; font-size: 0.8rem; font-weight: bold; font-family: Arial, sans-serif;">
+            <div class="signature-row" style="margin-top: 12px; display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 40px;">
+                <div class="sig-box" style="border-top: 1px solid #000; text-align: center; padding-top: 4px; font-size: 0.8rem; font-weight: bold; font-family: Arial, sans-serif;">
                     Responsável Expedição
                 </div>
-                <div style="border-top: 1px solid #000; text-align: center; padding-top: 5px; font-size: 0.8rem; font-weight: bold; font-family: Arial, sans-serif;">
+                <div class="sig-box" style="border-top: 1px solid #000; text-align: center; padding-top: 4px; font-size: 0.8rem; font-weight: bold; font-family: Arial, sans-serif;">
                     Motorista / Conferente
                 </div>
             </div>
+            ${isCompact && i === 0 ? '<div style="margin-top: 8px; text-align: center; font-size: 8px; color: #555; letter-spacing: 2px;">✂ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ✂</div>' : ''}
         `;
                     printArea.appendChild(page);
                 }
@@ -8359,43 +8362,44 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const rcInfo = (Utils.getStorage('carrier_info_v2') || {})[rcName] || { cnpj: '-', address: '-' };
                     const rcFreightTotal = rcItems.reduce((a, c) => a + (parseFloat(c.redespTotal) || 0), 0);
                     const rcWeightTotal  = rcItems.reduce((a, c) => a + (parseFloat(c.weight)     || 0), 0);
+                    const isRcCompact    = rcItems.length <= 5;
 
                     for (let ri = 0; ri < 2; ri++) {
                         const rPage = document.createElement('div');
-                        rPage.className = 'manifest-page';
-                        rPage.style.cssText = 'page-break-before: always; page-break-inside: avoid; margin-bottom: 40px;';
+                        rPage.className = 'manifest-page' + (isRcCompact && ri === 0 ? ' manifest-page-split' : '') + (!isRcCompact ? ' page-break-after' : (ri === 1 ? ' page-break-after' : ''));
+                        rPage.style.cssText = (ri === 0 ? 'page-break-before: always; break-before: page; ' : '') + 'page-break-inside: avoid; break-inside: avoid;' + (isRcCompact ? ' margin-bottom: 10px;' : ' margin-bottom: 0;');
                         rPage.innerHTML = `
-            <div class="manifest-header" style="display: grid !important; grid-template-columns: 1fr 1fr !important; border: 2px solid #000; padding: 10px; margin-bottom: 15px;">
+            <div class="manifest-header" style="display: grid !important; grid-template-columns: 1fr 1fr !important; border: 2px solid #000; padding: 6px 10px; margin-bottom: 8px;">
                 <div>
-                    <h3 style="margin:0; font-size: 1rem;">REMETENTE (ENTREGA PARA REDESPACHO)</h3>
-                    <div style="font-size: 0.9rem; font-weight: bold; margin-top: 5px;">${company.name || 'EMPRESA NÃO CONFIGURADA'}</div>
-                    <div style="font-size: 0.8rem;">CNPJ: ${company.cnpj || '-'}</div>
-                    <div style="font-size: 0.8rem;">END: ${company.address || '-'}</div>
-                    <div style="font-size: 0.75rem; margin-top:4px; color:#555;">Transportadora Principal: ${cleanName}</div>
+                    <h3 style="margin:0; font-size: 0.95rem;">REMETENTE (ENTREGA PARA REDESPACHO)</h3>
+                    <div style="font-size: 0.85rem; font-weight: bold; margin-top: 3px;">${company.name || 'EMPRESA NÃO CONFIGURADA'}</div>
+                    <div style="font-size: 0.75rem;">CNPJ: ${company.cnpj || '-'}</div>
+                    <div style="font-size: 0.75rem;">END: ${company.address || '-'}</div>
+                    <div style="font-size: 0.75rem; margin-top:2px; color:#333;">Transportadora Principal: ${cleanName}</div>
                 </div>
-                <div style="border-left: 2px solid #000; padding-left: 15px;">
-                    <h3 style="margin:0; font-size: 1rem;">TRANSPORTADORA REDESPACHO</h3>
-                    <div style="font-size: 0.9rem; font-weight: bold; margin-top: 5px;">${rcName}</div>
-                    <div style="font-size: 0.8rem;">CNPJ: ${rcInfo.cnpj}</div>
-                    <div style="font-size: 0.8rem;">END: ${rcInfo.address}</div>
+                <div style="border-left: 2px solid #000; padding-left: 12px;">
+                    <h3 style="margin:0; font-size: 0.95rem;">TRANSPORTADORA REDESPACHO</h3>
+                    <div style="font-size: 0.85rem; font-weight: bold; margin-top: 3px;">${rcName}</div>
+                    <div style="font-size: 0.75rem;">CNPJ: ${rcInfo.cnpj}</div>
+                    <div style="font-size: 0.75rem;">END: ${rcInfo.address}</div>
                 </div>
             </div>
-            <div style="text-align: center; margin-bottom: 15px;">
-                <h2 style="margin:0; text-decoration: underline;">ROMANEIO DE REDESPACHO</h2>
-                <div style="font-size: 0.8rem;">Emissão: ${new Date().toLocaleString()} | Via ${ri + 1}</div>
+            <div style="text-align: center; margin-bottom: 8px;">
+                <h2 style="margin:0; font-size: 1.05rem; text-decoration: underline;">ROMANEIO DE REDESPACHO</h2>
+                <div style="font-size: 0.75rem;">Emissão: ${new Date().toLocaleString()} | Via ${ri + 1}</div>
             </div>
-            <table style="width: 100%; border-collapse: collapse; table-layout: fixed; font-family: Arial, sans-serif; font-weight: bold; font-size: 9px; color: #000; margin-bottom: 20px;">
+            <table class="manifest-table" style="width: 100%; border-collapse: collapse; table-layout: fixed; font-family: Arial, sans-serif; font-weight: bold; font-size: 9px; color: #000; margin-bottom: 10px;">
                 <colgroup>
-                    <col style="width: 6%;" />
+                    <col style="width: 7%;" />
                     <col style="width: 20%;" />
                     <col style="width: 11%;" />
-                    <col style="width: 18%;" />
+                    <col style="width: 16%;" />
                     <col style="width: 14%;" />
                     <col style="width: 6%;" />
                     <col style="width: 5%;" />
-                    <col style="width: 10%;" />
-                    <col style="width: 5%;" />
-                    <col style="width: 5%;" />
+                    <col style="width: 9%;" />
+                    <col style="width: 6%;" />
+                    <col style="width: 6%;" />
                 </colgroup>
                 <thead>
                     <tr style="background: #f0f0f0;">
@@ -8450,10 +8454,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </tr>
                 </tfoot>
             </table>
-            <div style="margin-top:25px;display:grid !important;grid-template-columns:1fr 1fr !important;gap:50px;">
-                <div style="border-top:1px solid #000;text-align:center;padding-top:5px;font-size:0.8rem;font-weight:bold;font-family:Arial,sans-serif;">Responsável Expedição</div>
-                <div style="border-top:1px solid #000;text-align:center;padding-top:5px;font-size:0.8rem;font-weight:bold;font-family:Arial,sans-serif;">Conferente / Redespacho</div>
-            </div>`;
+            <div class="signature-row" style="margin-top:12px;display:grid !important;grid-template-columns:1fr 1fr !important;gap:40px;">
+                <div class="sig-box" style="border-top:1px solid #000;text-align:center;padding-top:4px;font-size:0.8rem;font-weight:bold;font-family:Arial,sans-serif;">Responsável Expedição</div>
+                <div class="sig-box" style="border-top:1px solid #000;text-align:center;padding-top:4px;font-size:0.8rem;font-weight:bold;font-family:Arial,sans-serif;">Conferente / Redespacho</div>
+            </div>
+            ${isRcCompact && ri === 0 ? '<div style="margin-top: 8px; text-align: center; font-size: 8px; color: #555; letter-spacing: 2px;">✂ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ✂</div>' : ''}
+        `;
                         printArea.appendChild(rPage);
                     }
                 });
