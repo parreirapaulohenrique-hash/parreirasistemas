@@ -286,7 +286,6 @@ async function atualizarHome() {
             // ── GESTOR: busca todos os lançamentos do Firestore ──────────────
             const vSnap = await MaxCRMState.db
                 .collection('tenants/parreira/prospeccao/visitas')
-                .orderBy('criadoEm', 'desc')
                 .limit(500)
                 .get();
             visitas = vSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -509,10 +508,11 @@ async function carregarMinhasVisitas() {
         try {
             const snap = await MaxCRMState.db
                 .collection('tenants/parreira/prospeccao/visitas')
-                .orderBy('criadoEm', 'desc')
-                .limit(200)
+                .limit(300)
                 .get();
-            visitas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            // Sort client-side (evita necessidade de índice no Firestore)
+            visitas = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+                .sort((a, b) => (b.criadoEm || '').localeCompare(a.criadoEm || ''));
         } catch(e) {
             console.warn('[MAXCRM Gestor] Firestore offline:', e.message);
             visitas = await MaxCRMDB.listarVisitas(50);

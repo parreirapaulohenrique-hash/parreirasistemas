@@ -1,8 +1,8 @@
 {
-  "build": "20260910-v3.21.8",
-  "version": "3.21.8",
+  "build": "20260910-v3.21.9",
+  "version": "3.21.9",
   "environment": "production",
-  "change": "v3.21.8 - fix(maxcrm/sync): firebase init + sync correto + gestor ve todos lancamentos",
+  "change": "v3.21.9 - MAXCRM: 9 melhorias + leads Redencao/PA + fix CNPJ + fix visitas",
   "lastUpdate": "2026-09-10",
   "deployedAt": "2026-09-10"
 }

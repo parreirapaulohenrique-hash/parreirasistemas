@@ -371,6 +371,7 @@ const MaxCRMDB = (() => {
             { id: 'alterdata',       nome: 'Alterdata',            fornecedor: 'Alterdata' },
             { id: 'siaf',            nome: 'SIAF',                 fornecedor: 'SIAF' },
             { id: 'planilha',        nome: 'Planilha Excel',       fornecedor: 'Microsoft' },
+            { id: 'srk',             nome: 'SRK',                  fornecedor: 'SRK Sistemas' },
             { id: 'sem-erp',         nome: 'Sem sistema / Manual', fornecedor: '-' },
             { id: 'outro',           nome: 'Outro (não listado)',   fornecedor: '-' }
         ];

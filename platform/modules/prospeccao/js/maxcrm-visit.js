@@ -70,8 +70,7 @@ window.initTelaContato = function() {
         '<div><div class="card-title">Adicionar Contato</div><div class="card-subtitle">Quem atendeu você?</div></div></div>',
         '<div class="form-group"><label class="form-label required">Nome</label>',
         '<input type="text" class="form-input" id="contatoNome" placeholder="Nome completo" autocomplete="off"></div>',
-        '<div class="form-group"><label class="form-label">Cargo</label>',
-        '<input type="text" class="form-input" id="contatoCargo" placeholder="Ex: Gerente Financeiro"></div>',
+
         '<div class="form-group"><label class="form-label">Telefone / WhatsApp</label>',
         '<input type="tel" class="form-input" id="contatoTelefone" placeholder="(00) 00000-0000"></div>',
         '<div class="form-group"><label class="form-label">Papel na decisão</label>',
@@ -128,18 +127,18 @@ window.initTelaPerfilOperacional = function() {
         '<div class="section-header"><div class="section-title">Perfil Operacional</div><div class="section-subtitle">Estrutura da empresa</div></div>',
         '<div class="card">',
         '<div class="form-group"><label class="form-label">Usuários do ERP</label>',
-        _chipGrid([{valor:"1-5",label:"1-5"},{valor:"6-15",label:"6-15"},{valor:"16-30",label:"16-30"},{valor:"31-50",label:"31-50"},{valor:"51-100",label:"51-100"},{valor:"100+",label:"100+"}],"perfil_usuarios",false),
+        '<input type="number" class="form-input" id="perfil_usuarios_input" min="1" max="9999" placeholder="Ex: 5" oninput="salvarRespostaEtapa(\'perfil_usuarios\', this.value)" style="max-width:160px">',
         '</div>',
         '<div class="form-group"><label class="form-label">Número de filiais</label>',
         _chipGrid([{valor:"0",label:"Só matriz"},{valor:"1",label:"1 filial"},{valor:"2-3",label:"2-3"},{valor:"4-10",label:"4-10"},{valor:"10+",label:"Mais de 10"}],"perfil_filiais",false),
         '</div>',
         '<div class="form-group"><label class="form-label">Segmento</label>',
-        _chipGrid([{valor:"distribuidor",label:"Distribuidor"},{valor:"atacado",label:"Atacado"},{valor:"varejo",label:"Varejo"},{valor:"autopecas",label:"Autopeças"},{valor:"supermercado",label:"Supermercado"},{valor:"industria",label:"Indústria"},{valor:"servicos",label:"Serviços"},{valor:"agro",label:"Agronegócio"},{valor:"construcao",label:"Construção"},{valor:"saude",label:"Saúde"},{valor:"outro",label:"Outro"}],"perfil_segmento",false),
+        _chipGrid([{valor:"distribuidor",label:"Distribuidor"},{valor:"atacado",label:"Atacado"},{valor:"varejo",label:"Varejo"},{valor:"autopecas",label:"Autopeças"},{valor:"supermercado",label:"Supermercado"},{valor:"industria",label:"Indústria"},{valor:"servicos",label:"Serviços"},{valor:"agro",label:"Agronegócio"},{valor:"construcao",label:"Construção"},{valor:"saude",label:"Saúde"},{valor:"restaurante",label:"Restaurante"},{valor:"lanchonete",label:"Lanchonete"},{valor:"autocenter",label:"Autocenter"},{valor:"oficina",label:"Oficina"},{valor:"outro",label:"Outro"}],"perfil_segmento",false),
         '</div>',
         '</div>',
         '<div class="card">',
         '<div style="font-size:0.82rem;font-weight:700;color:var(--text-secondary);margin-bottom:12px">RECURSOS UTILIZADOS</div>',
-        _chipGrid([{valor:"pdv",label:"PDV/Caixa"},{valor:"ecommerce",label:"E-commerce"},{valor:"wms",label:"WMS"},{valor:"bi",label:"BI"},{valor:"fv",label:"Força de Vendas"},{valor:"banco",label:"Int. Bancária"},{valor:"pix",label:"PIX"},{valor:"fiscal",label:"NF-e/Fiscal"},{valor:"contabil",label:"Int. Contábil"},{valor:"crm",label:"CRM"},{valor:"app",label:"App Mobile"}],"perfil_modulos",true),
+        _chipGrid([{valor:"maxmaneger",label:"Maxmaneger"},{valor:"maxfarma",label:"Maxfarma"},{valor:"automax",label:"Automax"},{valor:"maxproducao",label:"Maxprodução"},{valor:"maxweber",label:"Maxweber"},{valor:"maxconciliadora",label:"Maxconciliadora"},{valor:"maxfood",label:"Maxfood"},{valor:"maxpdv",label:"Maxpdv"},{valor:"maxvendas",label:"Maxvendas"},{valor:"maxposto",label:"Maxposto"},{valor:"wms",label:"WMS"},{valor:"despacho",label:"Despacho"},{valor:"cotacao",label:"Cotação"}],"perfil_modulos",true),
         '</div>',
         '<button class="btn btn-primary" onclick="salvarPerfilEAvancar()"><span class="material-icons-round">arrow_forward</span> Avançar para ERP Atual</button>',
         '<div style="height:12px"></div>',
@@ -428,7 +427,7 @@ window.initTelaAcao = function() {
     tela.innerHTML = '<div class="section-header"><div class="section-title">Próxima Ação</div><div class="section-subtitle">Nenhuma visita termina sem uma ação definida</div></div>' +
         '<div class="card">' +
         '<div class="form-group"><label class="form-label required">Tipo de ação</label>' +
-        _chipGrid([{valor:"whatsapp",label:"💬 WhatsApp"},{valor:"ligacao",label:"📞 Ligação"},{valor:"nova_visita",label:"🚶 Nova visita"},{valor:"decisor",label:"👔 Falar com decisor"},{valor:"material",label:"📄 Enviar material"},{valor:"ag_demo",label:"📅 Agendar demo"},{valor:"demo",label:"🖥 Realizar demo"},{valor:"proposta",label:"📋 Proposta"},{valor:"acompanhar",label:"🔄 Acompanhar"},{valor:"sem_interesse",label:"⛔ Sem interesse"}],"acao_tipo",false) +
+        _chipGrid([{valor:"whatsapp",label:"💬 WhatsApp"},{valor:"ligacao",label:"📞 Ligação"},{valor:"nova_visita",label:"🚶 Nova visita"},{valor:"decisor",label:"👔 Falar com decisor"},{valor:"material",label:"📄 Enviar material"},{valor:"ag_demo",label:"📅 Agendar demo"},{valor:"demo",label:"🖥 Realizar demo"},{valor:"demonstracao",label:"🖥 Demonstração"},{valor:"proposta",label:"📋 Proposta"},{valor:"acompanhar",label:"🔄 Acompanhar"},{valor:"sem_interesse",label:"⛔ Sem interesse"}],"acao_tipo",false) +
         '</div>' +
         '<div class="form-group"><label class="form-label">Data</label><input type="date" class="form-input" id="acaoData" value="' + hoje + '" oninput="salvarAcao()"></div>' +
         '<div class="form-group"><label class="form-label">Observação</label><textarea class="form-input" id="acaoObs" rows="2" placeholder="O que combinou exatamente?" oninput="salvarAcao()" style="resize:none"></textarea></div>' +

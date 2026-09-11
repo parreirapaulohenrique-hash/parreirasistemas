@@ -1,8 +1,8 @@
 {
-  "version": "1.1.3",
+  "version": "1.1.4",
   "build": "20260909-v1.1.1",
   "environment": "production",
-  "change": "v1.1.3 - fix(sync): firebase initializeApp no index.html + marcarSyncOk atualiza syncStatus + getFilaSync inclui erros",
+  "change": "v1.1.4 - feat: remove cargo field; input manual usuarios; segmentos: restaurante/lanchonete/autocenter/oficina; recursos substituidos por modulos Parreira; SRK como ERP concorrente; acao demonstracao; fix CNPJ fallback ReceitaWS; fix minhas_visitas sem orderBy Firestore; 449 leads redencao/PA",
   "lastUpdate": "2026-09-09",
   "deployedAt": "2026-09-09"
 }
