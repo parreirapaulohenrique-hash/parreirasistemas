@@ -394,7 +394,7 @@ const DemandaPDF = (() => {
         const itensEncontrados = [];
 
         // Termos que indicam cabeçalhos ou rodapés a serem descartados
-        const IGNORE_PATTERNS = /^(número\s*de\s*peça|numero\s*de\s*peca|part\s*number|item\s*code|código|codigo|qtde?|quantidade|qty|descrição|descricao|description|comentário|comentario|pin|copyright|todos\s*os\s*direitos|page\s*\d+|página\s*\d+|a\s*pronta\s*entrega|em\s*cotação|um\s*pouco\s*mais|orçamento|deere\s*&\s*company)/i;
+        const IGNORE_PATTERNS = /^(número\s*de\s*peça|numero\s*de\s*peca|part\s*number|item\s*code|código|codigo|qtde?|quantidade|qty|descrição|descricao|description|comentário|comentario|pin|copyright|todos\s*os\s*direitos|page\s*\d+|página\s*\d+|a\s*pronta\s*entrega|em\s*cotação|um\s*pouco\s*mais|orçamento|deere\s*&\s*company|um\s*solicita|qtde?\s*solic|descri[cç][aã]o\s*comple|denomina[cç][aã]o)/i;
 
         for (let p = 1; p <= totalPaginas; p++) {
             if (onProgress) onProgress(p, totalPaginas);
@@ -432,6 +432,9 @@ const DemandaPDF = (() => {
                 if (!lineFullText || IGNORE_PATTERNS.test(lineFullText) || lineFullText.length < 3) {
                     return;
                 }
+                if (/(solicita|qtde?\s*solic|descri[cç][aã]o\s*comple|denomina[cç][aã]o)/i.test(lineFullText) && !/\b\d{1,5}[.,]0+\b/.test(lineFullText)) {
+                    return;
+                }
 
                 // Remove marcas de conferência comuns (✓, X, —, etc.)
                 const tokens = row.items
@@ -467,18 +470,25 @@ const DemandaPDF = (() => {
                     }
                 }
 
-                if (!ref) return;
+                if (!ref || ref.length < 3) return;
 
                 const restTokens = tokens.slice(refIdx + 1);
 
-                // Detecta quantidade (número inteiro 1 a 99999)
+                // Detecta quantidade (aceita inteiros como 1..99999 OU decimais como 2,00000 / 48,00000)
                 let qtdeIdx = -1;
                 for (let j = 0; j < restTokens.length; j++) {
-                    const t = restTokens[j];
-                    if (/^\d{1,5}$/.test(t) && Number(t) > 0 && Number(t) <= 50000) {
-                        qtde = parseInt(t, 10);
-                        qtdeIdx = j;
-                        break;
+                    const t = restTokens[j].trim();
+                    // Ignora centro de custo ou número de item tipo .100.997 ou ,100.997
+                    if (/^[.,]?\d{3}[.,]\d{3}$/.test(t)) continue;
+                    if (/^(un|und|unid|pc|pç|cj|jg|kg|m)$/i.test(t)) continue;
+
+                    if (/^\d{1,6}(?:[.,]\d+)?$/.test(t)) {
+                        const numVal = parseFloat(t.replace(',', '.'));
+                        if (numVal > 0 && numVal <= 50000) {
+                            qtde = Math.round(numVal) || 1;
+                            qtdeIdx = j;
+                            break;
+                        }
                     }
                 }
 
@@ -487,11 +497,14 @@ const DemandaPDF = (() => {
 
                 restTokens.forEach((t, j) => {
                     if (j === qtdeIdx) return;
-                    if (t.toLowerCase() === 'agricultura') return;
-                    if (/^m\d{3,4}/i.test(t) || /pulverizador|colheitadeira|trator|plantadeira/i.test(t)) {
-                        obsTokens.push(t);
+                    const clean = t.trim();
+                    if (/^(un|und|unid|pc|pç|cj|jg|kg|m)$/i.test(clean)) return;
+                    if (/^[.,]?\d{3}[.,]\d{3}$/.test(clean)) return; // ignora ,100.997
+                    if (clean.toLowerCase() === 'agricultura') return;
+                    if (/^m\d{3,4}/i.test(clean) || /pulverizador|colheitadeira|trator|plantadeira/i.test(clean)) {
+                        obsTokens.push(clean);
                     } else {
-                        descTokens.push(t);
+                        descTokens.push(clean);
                     }
                 });
 
