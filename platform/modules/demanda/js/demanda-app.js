@@ -915,82 +915,127 @@ const DemandaApp = (function() {
             var status = document.getElementById("fotoOcrStatus");
             var msg    = document.getElementById("fotoOcrMsg");
             var pct    = document.getElementById("fotoOcrPct");
-            if (!modal || !imgEl) { _toast("Modal Foto nao encontrado.", "error"); return; }
-            if (ta) { ta.value = ""; ta.placeholder = "Aguardando leitura OCR..."; }
+            if (!modal || !imgEl) { _toast("Modal Foto não encontrado.", "error"); return; }
+            if (ta) { ta.value = ""; ta.placeholder = "Carregando e processando imagem via OCR..."; }
             modal.style.display = "flex";
             if (status) { status.style.display = "flex"; }
-            if (msg) msg.textContent = "Lendo imagem via OCR...";
-            if (pct) pct.textContent = "";
+            if (msg) msg.textContent = "Preparando reconhecimento...";
+            if (pct) pct.textContent = "0%";
 
-            // Comprime imagem via Canvas (max 1200px) antes de enviar
             var reader = new FileReader();
-            reader.onerror = function() { _toast("Erro ao ler arquivo.", "error"); };
+            reader.onerror = function() { _toast("Erro ao ler arquivo de imagem.", "error"); };
             reader.onload = function(ev) {
                 var dataUrl = ev.target.result;
                 imgEl.src = dataUrl;
                 imgEl.onload = function() {
-                    var maxDim = 480;
-                    var w = imgEl.naturalWidth || 800, h = imgEl.naturalHeight || 600;
+                    // Mantém alta resolução (até 2200px) para máxima nitidez do texto e das tabelas
+                    var maxDim = 2200;
+                    var w = imgEl.naturalWidth || 1200, h = imgEl.naturalHeight || 900;
                     var ratio = Math.min(maxDim / w, maxDim / h, 1);
                     var cv = document.createElement("canvas");
                     cv.width  = Math.round(w * ratio);
                     cv.height = Math.round(h * ratio);
-                    cv.getContext("2d").drawImage(imgEl, 0, 0, cv.width, cv.height);
-                    var base64 = cv.toDataURL("image/jpeg", 0.75);
+                    var ctx = cv.getContext("2d");
+                    ctx.drawImage(imgEl, 0, 0, cv.width, cv.height);
 
-                    // Envia para proxy local /api/ocr (resolve CORS)
-                    fetch("/api/ocr", {
-                        method:  "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body:    JSON.stringify({ base64: base64 })
-                    }).then(function(r) { return r.json(); }).then(function(data) {
-                        if (status) status.style.display = "none";
-                        if (data.error) throw new Error(data.error);
-                        var texto = (data.text || "").trim();
-                        if (texto.length > 5) {
-                            // Texto suficiente: processa automaticamente e vai para conferencia
-                            _fecharImportFoto();
-                            if (typeof DemandaImport !== "undefined") {
-                                var parsed    = DemandaImport.parseText(texto);
-                                var validados = DemandaImport.validateItens(parsed);
-                                if (validados.length > 0) {
-                                    _showConferencia(validados);
-                                    _toast("\u2713 " + validados.length + " " + (validados.length === 1 ? "item" : "itens") + " reconhecidos do OCR!", "success");
-                                } else {
-                                    // Parser nao encontrou itens: mostra texto no modal de texto para revisao
-                                    if (ta) { ta.value = texto; ta.placeholder = ""; }
-                                    _fecharImportFoto();
-                                    var taImport = document.getElementById("textareaImport");
-                                    if (taImport) taImport.value = texto;
-                                    _openModal("modalTexto");
-                                    _toast("Texto extraido, mas nao foram encontrados itens no formato esperado. Revise.", "warning");
-                                }
-                            } else {
-                                // DemandaImport nao disponivel: cai no modal de texto
-                                var taImport = document.getElementById("textareaImport");
-                                if (taImport) taImport.value = texto;
-                                _fecharImportFoto();
-                                _openModal("modalTexto");
-                                _toast("Texto extraido! Revise e clique em Processar.", "info");
-                            }
-                        } else {
-                            // Pouco texto: mantém modal aberto para edicao manual
-                            if (ta) { ta.value = texto; ta.placeholder = texto.length === 0 ? "OCR nao reconheceu texto. Digite manualmente." : ""; }
-                            _toast("Pouco texto reconhecido. Revise o campo e clique em Processar.", "warning");
+                    // Aprimoramento de contraste para texto impresso em fundo claro
+                    try {
+                        var imgData = ctx.getImageData(0, 0, cv.width, cv.height);
+                        var d = imgData.data;
+                        for (var i = 0; i < d.length; i += 4) {
+                            var lum = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+                            lum = lum > 140 ? Math.min(255, lum * 1.15) : Math.max(0, lum * 0.85);
+                            d[i] = lum; d[i+1] = lum; d[i+2] = lum;
                         }
-                    }).catch(function(err) {
-                        console.error("[OCR]", err);
-                        if (status) status.style.display = "none";
-                        if (ta) { ta.value = ""; ta.placeholder = "Falha no OCR. Digite o texto manualmente."; }
-                        _toast("Falha OCR: " + (err.message || "verifique a conexao"), "error");
-                    });
+                        ctx.putImageData(imgData, 0, 0);
+                    } catch(_) {}
+
+                    var processedDataUrl = cv.toDataURL("image/png");
+
+                    function _executarOcrTesseract() {
+                        if (msg) msg.textContent = "Lendo caracteres (Tesseract OCR)...";
+                        if (pct) pct.textContent = "15%";
+
+                        Tesseract.recognize(
+                            processedDataUrl,
+                            "por+eng",
+                            {
+                                logger: function(m) {
+                                    if (m.status === "recognizing text" && pct) {
+                                        pct.textContent = Math.round((m.progress || 0) * 100) + "%";
+                                    }
+                                    if (m.status && msg) {
+                                        msg.textContent = (m.status === "recognizing text") ? "Reconhecendo texto..." : "Carregando modelo OCR...";
+                                    }
+                                }
+                            }
+                        ).then(function(result) {
+                            if (status) status.style.display = "none";
+                            var texto = (result && result.data && result.data.text) ? result.data.text.trim() : "";
+                            _tratarTextoExtraidoFoto(texto);
+                        }).catch(function(err) {
+                            console.warn("[DemandaApp] Tesseract client-side falhou, tentando fallback:", err);
+                            _executarOcrFallbackServer();
+                        });
+                    }
+
+                    function _executarOcrFallbackServer() {
+                        if (msg) msg.textContent = "Tentando OCR via servidor...";
+                        fetch("/api/ocr", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ base64: processedDataUrl })
+                        }).then(function(r) { return r.json(); }).then(function(data) {
+                            if (status) status.style.display = "none";
+                            if (data.error) throw new Error(data.error);
+                            var texto = (data.text || "").trim();
+                            _tratarTextoExtraidoFoto(texto);
+                        }).catch(function(err) {
+                            console.error("[OCR Fallback]", err);
+                            if (status) status.style.display = "none";
+                            if (ta) { ta.value = ""; ta.placeholder = "Não foi possível extrair o texto automaticamente. Digite ou cole os dados manualmente."; }
+                            _toast("Pouco texto legível na imagem. Digite os dados na caixa ao lado.", "warning");
+                        });
+                    }
+
+                    if (typeof Tesseract !== "undefined") {
+                        _executarOcrTesseract();
+                    } else {
+                        var scr = document.createElement("script");
+                        scr.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+                        scr.onload = function() { _executarOcrTesseract(); };
+                        scr.onerror = function() { _executarOcrFallbackServer(); };
+                        document.head.appendChild(scr);
+                    }
                 };
-                imgEl.onerror = function() { _toast("Imagem invalida.", "error"); };
             };
             reader.readAsDataURL(file);
         };
         inp.click();
     }
+
+    function _tratarTextoExtraidoFoto(texto) {
+        var ta = document.getElementById("fotoTranscricao");
+        if (ta) ta.value = texto;
+
+        if (texto && texto.length > 5) {
+            if (typeof DemandaImport !== "undefined") {
+                var parsed    = DemandaImport.parseText(texto);
+                var validados = DemandaImport.validateItens(parsed);
+                if (validados.length > 0) {
+                    _fecharImportFoto();
+                    _showConferencia(validados);
+                    _toast("✓ " + validados.length + " " + (validados.length === 1 ? "peça reconhecida" : "peças reconhecidas") + " da imagem!", "success");
+                    return;
+                }
+            }
+            _toast("Texto reconhecido! Revise e clique em Processar Itens.", "info");
+        } else {
+            if (ta) ta.placeholder = "Pouco texto reconhecido. Digite ou cole as peças manualmente.";
+            _toast("Pouco texto identificado na imagem. Revise ou digite no campo.", "warning");
+        }
+    }
+
     function _fecharImportFoto() {
         var modal  = document.getElementById("modalImportFoto");
         var img    = document.getElementById("fotoPreview");

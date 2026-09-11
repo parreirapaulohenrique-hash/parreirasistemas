@@ -34,7 +34,8 @@ module.exports = async function handler(req, res) {
     form.append("base64Image", base64Image);
     form.append("apikey",      OCR_API_KEY);
     form.append("language",    "por");
-    form.append("OCREngine",   "1");      // Engine 1 - gratuito e compativel
+    form.append("OCREngine",   "2");
+    form.append("isTable",     "true");      // Engine 1 - gratuito e compativel
     form.append("detectOrientation", "true");
     form.append("scale",       "true");   // melhora leitura de imagens pequenas
 

@@ -1,8 +1,8 @@
 {
-  "build": "20260911-v3.21.6",
-  "version": "3.21.6",
+  "build": "20260911-v3.21.7",
+  "version": "3.21.7",
   "environment": "production",
-  "change": "v3.21.6 - feat(cotacao): conciliacao automatica com estoque do ERP e catalogo geral com auto-sync 5 min",
+  "change": "v3.21.7 - fix(cotacao): OCR de fotos e impressos em alta resolucao com motor Tesseract client-side e parser de tabelas",
   "lastUpdate": "2026-09-11",
   "deployedAt": "2026-09-11"
 }
