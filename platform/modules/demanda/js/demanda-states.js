@@ -31,6 +31,8 @@ const DemandaStates = (() => {
         faturado:                { label: 'Faturado',            icon: 'task_alt',        color: '#10b981' },
         venda_perdida:           { label: 'Venda Perdida',       icon: 'cancel',          color: '#ef4444' },
         cancelado:               { label: 'Cancelado',           icon: 'block',           color: '#6b7280' },
+        nao_cadastrado:          { label: 'Não Cadastrado',      icon: 'help_outline',    color: '#94a3b8' },
+        catalogado:              { label: 'Na Base Técnica',     icon: 'hub',             color: '#60a5fa' },
     };
 
     // ── Transições válidas (de → [lista de destinos possíveis]) ──
@@ -38,6 +40,8 @@ const DemandaStates = (() => {
         demanda_recebida:        ['em_identificacao', 'identificado', 'cancelado'],
         em_identificacao:        ['identificado', 'cancelado'],
         identificado:            ['estoque_disponivel', 'estoque_parcial', 'sem_estoque', 'cancelado'],
+        nao_cadastrado:          ['encaminhado_compras', 'cotacao_fornecedor', 'identificado', 'cancelado'],
+        catalogado:              ['encaminhado_compras', 'cotacao_fornecedor', 'identificado', 'cancelado'],
         estoque_disponivel:      ['proposta_enviada', 'aguardando_cliente', 'cancelado'],
         estoque_parcial:         ['proposta_enviada', 'aguardando_cliente', 'encaminhado_compras', 'cancelado'],
         sem_estoque:             ['consulta_outras_filiais', 'encaminhado_compras', 'venda_perdida', 'cancelado'],

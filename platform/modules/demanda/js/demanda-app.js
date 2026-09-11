@@ -1378,6 +1378,33 @@ const DemandaApp = (function() {
                 }
                 container.innerHTML = "<div style='padding:1rem 1.5rem'>" +
                     demandas.map(_renderDemandaCard).join("") + "</div>";
+
+                // Auto-recuperação de totalizadores (ex: cotações salvas anteriormente como 0)
+                demandas.forEach(function(d) {
+                    if ((!d.totalItens || d.totalItens === 0) && d.id) {
+                        DemandaDB.getItens(d.id).then(function(itens) {
+                            if (itens && itens.length > 0) {
+                                var comEst = 0, semEst = 0;
+                                itens.forEach(function(i) {
+                                    if (i.status === "estoque_disponivel") comEst++;
+                                    else if (i.status === "estoque_parcial") { comEst++; semEst++; }
+                                    else semEst++;
+                                });
+                                var el = document.getElementById("card_stats_" + d.id);
+                                if (el) {
+                                    el.innerHTML = _miniStat("Itens", itens.length, "var(--text-primary)") +
+                                                   _miniStat("Estoque", comEst, "var(--accent-success)") +
+                                                   _miniStat("Faltam", semEst, semEst > 0 ? "var(--accent-danger)" : "var(--text-secondary)");
+                                }
+                                DemandaDB.updateDemanda(d.id, {
+                                    totalItens: itens.length,
+                                    totalComEstoque: comEst,
+                                    totalSemEstoque: semEst
+                                }).catch(function() {});
+                            }
+                        }).catch(function() {});
+                    }
+                });
             })
             .catch(function(err) {
                 console.error("[DemandaApp] Erro ao listar:", err);
@@ -1414,7 +1441,7 @@ const DemandaApp = (function() {
             "</div>" +
             "</div>" +
             // Contadores
-            "<div style='display:flex;gap:1.25rem;text-align:center;flex-shrink:0'>" +
+            "<div id='card_stats_" + _esc(d.id) + "' style='display:flex;gap:1.25rem;text-align:center;flex-shrink:0'>" +
             _miniStat("Itens",   d.totalItens      || 0, "var(--text-primary)") +
             _miniStat("Estoque", d.totalComEstoque  || 0, "var(--accent-success)") +
             _miniStat("Faltam",  d.totalSemEstoque  || 0, (d.totalSemEstoque || 0) > 0 ? "var(--accent-danger)" : "var(--text-secondary)") +
@@ -2070,8 +2097,8 @@ const DemandaApp = (function() {
                     return;
                 }
 
-                var SLBL = { sem_estoque:"Sem Estoque", encaminhado_compras:"Em Compras", cotacao_fornecedor:"Cotando", compra_possivel:"Compra Possível" };
-                var SCOR = { sem_estoque:"#ef4444", encaminhado_compras:"#8b5cf6", cotacao_fornecedor:"#f97316", compra_possivel:"#10b981" };
+                var SLBL = { sem_estoque:"Sem Estoque", nao_cadastrado:"Não Cadastrado no ERP", catalogado:"Na Base Técnica", encaminhado_compras:"Em Compras", cotacao_fornecedor:"Cotando", compra_possivel:"Compra Possível" };
+                var SCOR = { sem_estoque:"#ef4444", nao_cadastrado:"#94a3b8", catalogado:"#60a5fa", encaminhado_compras:"#8b5cf6", cotacao_fornecedor:"#f97316", compra_possivel:"#10b981" };
 
                 // Agrupa por status
                 var grupos = {};
@@ -2449,7 +2476,7 @@ const DemandaApp = (function() {
             "<span class='material-icons-round' style='font-size:2rem;animation:spin 1s linear infinite'>sync</span>" +
             "<p style='margin-top:.5rem;font-size:.85rem'>Carregando orçamentos...</p></div>";
         if (typeof DemandaDB === "undefined") { container.innerHTML = "<p style='padding:2rem;color:var(--accent-danger)'>DemandaDB indisponível.</p>"; return; }
-        var STATUS_ORC = ["proposta_enviada", "aguardando_cliente", "venda_aprovada", "compra_possivel", "pedido_criado_erp"];
+        var STATUS_ORC = ["estoque_disponivel", "estoque_parcial", "compra_possivel", "proposta_enviada", "aguardando_cliente", "venda_aprovada", "pedido_criado_erp"];
         DemandaDB.listDemandas({ status: "todas", limit: 60 })
             .then(function(demandas) {
                 return Promise.all(demandas.map(function(d) {
@@ -2464,7 +2491,7 @@ const DemandaApp = (function() {
                     container.innerHTML = "<div style='padding:3rem;text-align:center;color:var(--text-secondary)'>" +
                         "<span class='material-icons-round' style='font-size:2.5rem;opacity:.4'>description</span>" +
                         "<p style='margin-top:.75rem'>Nenhum item em orçamento.</p>" +
-                        "<small>Itens em Compra Possível, Proposta Enviada, Aguardando Cliente ou Venda Aprovada aparecem aqui.</small></div>";
+                        "<small>Itens em Estoque, Compra Possível, Proposta Enviada, Aguardando Cliente ou Venda Aprovada aparecem aqui.</small></div>";
                     return;
                 }
                 var html = comItens.map(function(t) {

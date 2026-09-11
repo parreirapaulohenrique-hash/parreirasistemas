@@ -54,6 +54,27 @@ const DemandaDB = (() => {
         const demandaRef = db.collection(DEMANDS_COL).doc();
         const demandaId  = demandaRef.id;
 
+        let totalComEstoque = 0;
+        let totalSemEstoque = 0;
+        let totalIdentificados = 0;
+
+        for (let i = 0; i < itens.length; i++) {
+            const st = itens[i].status;
+            if (st === 'estoque_disponivel') {
+                totalComEstoque++;
+                totalIdentificados++;
+            } else if (st === 'estoque_parcial') {
+                totalComEstoque++;
+                totalSemEstoque++;
+                totalIdentificados++;
+            } else if (st === 'sem_estoque') {
+                totalSemEstoque++;
+                totalIdentificados++;
+            } else {
+                totalSemEstoque++;
+            }
+        }
+
         const demandaDoc = {
             id:                demandaId,
             tenantId:          TENANT_ID,
@@ -70,10 +91,10 @@ const DemandaDB = (() => {
             filialNome:        data.filialNome  || '',
             obs:               data.obs        || '',
             documentos:        [],
-            totalItens:        0,
-            totalIdentificados: 0,
-            totalComEstoque:   0,
-            totalSemEstoque:   0,
+            totalItens:        itens.length,
+            totalIdentificados: totalIdentificados,
+            totalComEstoque:   totalComEstoque,
+            totalSemEstoque:   totalSemEstoque,
             totalPerdidos:     0,
             erpSaleId:         null,
             quoteId:           null,
@@ -530,7 +551,7 @@ const DemandaDB = (() => {
      * @returns {Promise<Array>}
      */
     async function listItensFila(limit = 80) {
-        const FILA_STATES = ['sem_estoque', 'encaminhado_compras', 'cotacao_fornecedor', 'compra_possivel'];
+        const FILA_STATES = ['sem_estoque', 'nao_cadastrado', 'catalogado', 'encaminhado_compras', 'cotacao_fornecedor', 'compra_possivel'];
         const db      = _db();
         const results = [];
         const seen    = new Set();
@@ -539,7 +560,6 @@ const DemandaDB = (() => {
             try {
                 const snap = await db.collectionGroup('items')
                     .where('status', '==', status)
-                    .where('demandaId', '!=', null)
                     .limit(limit)
                     .get();
                 snap.docs.forEach(d => {
@@ -553,8 +573,29 @@ const DemandaDB = (() => {
             }
         }));
 
-        // Ordena: sem_estoque primeiro, depois compra_possivel (mais urgente)
-        const ORDER = { sem_estoque: 0, encaminhado_compras: 1, cotacao_fornecedor: 2, compra_possivel: 3 };
+        // Fallback robusto: se collectionGroup falhou (ex: índice composto pendente), carrega das demandas ativas
+        if (results.length === 0) {
+            try {
+                const demandas = await listDemandas({ limit: 40 });
+                for (const d of demandas) {
+                    if (d.status === 'cancelada') continue;
+                    const itSnap = await db.collection(`${DEMANDS_COL}/${d.id}/items`).get();
+                    itSnap.docs.forEach(doc => {
+                        const item = doc.data();
+                        if (FILA_STATES.includes(item.status) && !seen.has(item.id || doc.id)) {
+                            seen.add(item.id || doc.id);
+                            results.push(item);
+                        }
+                    });
+                    if (results.length >= limit) break;
+                }
+            } catch (errFallback) {
+                console.warn('[DemandaDB] Fallback listItensFila:', errFallback);
+            }
+        }
+
+        // Ordena: sem_estoque e nao_cadastrado primeiro, depois compra_possivel
+        const ORDER = { sem_estoque: 0, nao_cadastrado: 1, catalogado: 2, encaminhado_compras: 3, cotacao_fornecedor: 4, compra_possivel: 5 };
         return results.sort((a, b) => (ORDER[a.status] || 9) - (ORDER[b.status] || 9));
     }
 

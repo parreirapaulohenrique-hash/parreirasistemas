@@ -1,8 +1,8 @@
 {
-  "build": "20260911-v3.21.10",
-  "version": "3.21.10",
+  "build": "20260911-v3.21.11",
+  "version": "3.21.11",
   "environment": "production",
-  "change": "v3.21.10 - fix(cotacao): exportacao publica de parseCotacaoPDF em DemandaPDF para leitura de PDFs de cotacao",
+  "change": "v3.21.11 - feat(cotacao): totalizadores reais no card, geracao de itens em Orcamentos e Fila de Compras e estados corretos",
   "lastUpdate": "2026-09-11",
   "deployedAt": "2026-09-11"
 }
