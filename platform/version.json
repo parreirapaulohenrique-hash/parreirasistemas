@@ -1,8 +1,8 @@
 {
-  "build": "20260911-v3.21.13",
-  "version": "3.21.13",
+  "build": "20260911-v3.21.14",
+  "version": "3.21.14",
   "environment": "production",
-  "change": "v3.21.13 - fix(cotacao): correcao de escape de aspas em demanda-app.js restabelecendo carregamento completo da interface",
+  "change": "v3.21.14 - fix(supervisao): conectar e exportar funcoes do modal de exclusao/supervisao e fechamento resiliente",
   "lastUpdate": "2026-09-11",
   "deployedAt": "2026-09-11"
 }
