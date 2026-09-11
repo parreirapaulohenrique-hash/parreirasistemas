@@ -8334,7 +8334,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </tfoot>
             </table>
 
-            <div class="signature-row" style="margin-top: 12px; display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 40px;">
+            <div class="signature-row" style="margin-top: 2.8cm; display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 40px;">
                 <div class="sig-box" style="border-top: 1px solid #000; text-align: center; padding-top: 4px; font-size: 0.8rem; font-weight: bold; font-family: Arial, sans-serif;">
                     Responsável Expedição
                 </div>
@@ -8454,7 +8454,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </tr>
                 </tfoot>
             </table>
-            <div class="signature-row" style="margin-top:12px;display:grid !important;grid-template-columns:1fr 1fr !important;gap:40px;">
+            <div class="signature-row" style="margin-top:2.8cm;display:grid !important;grid-template-columns:1fr 1fr !important;gap:40px;">
                 <div class="sig-box" style="border-top:1px solid #000;text-align:center;padding-top:4px;font-size:0.8rem;font-weight:bold;font-family:Arial,sans-serif;">Responsável Expedição</div>
                 <div class="sig-box" style="border-top:1px solid #000;text-align:center;padding-top:4px;font-size:0.8rem;font-weight:bold;font-family:Arial,sans-serif;">Conferente / Redespacho</div>
             </div>
