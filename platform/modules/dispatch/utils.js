@@ -85,7 +85,7 @@ const Utils = {
                     const baixados = all.filter(r => r.status === 'baixado').slice(-50);
                     const trimmed = [...emRota, ...baixados];
                     localStorage.setItem(Utils._storageKey(key), JSON.stringify(trimmed));
-                    console.warn([saveRaw] Quota: romaneios podados  → );
+                    console.warn('[saveRaw] Quota: romaneios podados ' + all.length + ' -> ' + trimmed.length);
                 } catch (e2) {
                     // Último recurso: remove chave e recria com dados novos
                     localStorage.removeItem(Utils._storageKey(key));
