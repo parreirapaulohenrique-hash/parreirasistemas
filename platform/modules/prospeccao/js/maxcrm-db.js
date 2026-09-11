@@ -182,12 +182,18 @@ const MaxCRMDB = (() => {
         const all = await _getAll('empresas');
         const t = (termo || '').trim().toLowerCase();
         if (!t) return all;
+        // tDigits: apenas dígitos do termo (para busca de CNPJ/telefone)
+        // ATENÇÃO: só aplica filtro de dígitos se o termo tiver ao menos 1 dígito,
+        // pois ''.includes('') === true e passaria TODAS as empresas
+        const tDigits = t.replace(/\D/g, '');
         return all.filter(e =>
             (e.razaoSocial  || '').toLowerCase().includes(t) ||
             (e.nomeFantasia || '').toLowerCase().includes(t) ||
-            (e.cnpj         || '').replace(/\D/g,'').includes(t.replace(/\D/g,'')) ||
+            (e.nome         || '').toLowerCase().includes(t) ||
             (e.cidade       || '').toLowerCase().includes(t) ||
-            (e.telefone     || '').replace(/\D/g,'').includes(t.replace(/\D/g,''))
+            (e.uf           || '').toLowerCase().includes(t) ||
+            (tDigits.length > 0 && (e.cnpj    || '').replace(/\D/g,'').includes(tDigits)) ||
+            (tDigits.length > 0 && (e.telefone|| '').replace(/\D/g,'').includes(tDigits))
         );
     }
 

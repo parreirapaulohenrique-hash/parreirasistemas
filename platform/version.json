@@ -1,8 +1,8 @@
 {
   "build": "20260911-v3.21.16",
-  "version": "3.21.17",
+  "version": "3.21.18",
   "environment": "production",
-  "change": "v3.21.17 - fix(dispatches): quota localStorage — salva apenas ultimos 60 dias; evita NFs despachadas voltando como Pendentes apos reload",
+  "change": "v3.21.18 - fix(maxcrm): buscarEmpresas sempre retornava todas empresas para termos sem digitos — t.replace(/D/g,'') resultava em '' e ''.includes('') == true",
   "lastUpdate": "2026-09-11",
   "deployedAt": "2026-09-11"
 }
