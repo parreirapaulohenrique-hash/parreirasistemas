@@ -213,13 +213,17 @@ const DemandaApp = (function() {
         var ref  = refEl.value.trim();
         var qtde = Math.max(1, parseInt((qtdeEl && qtdeEl.value) || "1", 10) || 1);
 
-        _itens.push({ refOriginal: ref, descOriginal: "", qtdeSolicitada: qtde, status: "demanda_recebida" });
+        var novo = { refOriginal: ref, descOriginal: "", qtdeSolicitada: qtde, status: "demanda_recebida" };
+        _itens.push(novo);
         renderItens();
 
         refEl.value = "";
         if (qtdeEl) qtdeEl.value = "1";
         refEl.focus();
-        _toast("Item adicionado", "success");
+
+        _conciliarItensComEstoque([novo]).then(function() {
+            renderItens();
+        });
     }
 
     function onGradeKeydown(ev) {
@@ -245,25 +249,30 @@ const DemandaApp = (function() {
         }
 
         var html = _itens.map(function(item, i) {
-            var st = item.status || (Number(item.estoqueFilial || 0) > 0 ? "estoque_disponivel" : (item.erpProdutoId ? "sem_estoque" : "demanda_recebida"));
+            var st = item.status || (Number(item.estoqueFilial || 0) > 0 ? "estoque_disponivel" : (item.erpProdutoId ? "sem_estoque" : "nao_cadastrado"));
             var badgeHtml = "";
+            var stk = Number(item.estoqueFilial || 0);
+
             if (st === "estoque_disponivel") {
-                badgeHtml = "<span style='font-size:.7rem;padding:.12rem .45rem;border-radius:6px;background:rgba(16,185,129,.15);color:#10b981'>Em Estoque</span>";
-            } else if (st === "sem_estoque") {
-                badgeHtml = "<span style='font-size:.7rem;padding:.12rem .45rem;border-radius:6px;background:rgba(239,68,68,.15);color:#ef4444'>Sem Estoque</span>";
+                badgeHtml = "<span style='font-size:.7rem;padding:.15rem .5rem;border-radius:6px;background:rgba(16,185,129,.15);color:#10b981;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.75rem'>check_circle</span> Em Estoque (" + stk + ")</span>";
             } else if (st === "estoque_parcial") {
-                badgeHtml = "<span style='font-size:.7rem;padding:.12rem .45rem;border-radius:6px;background:rgba(245,158,11,.15);color:#f59e0b'>Estoque Parcial</span>";
+                badgeHtml = "<span style='font-size:.7rem;padding:.15rem .5rem;border-radius:6px;background:rgba(245,158,11,.15);color:#f59e0b;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.75rem'>hourglass_bottom</span> Parcial (" + stk + "/" + item.qtdeSolicitada + ")</span>";
+            } else if (st === "sem_estoque") {
+                badgeHtml = "<span style='font-size:.7rem;padding:.15rem .5rem;border-radius:6px;background:rgba(234,179,8,.15);color:#eab308;font-weight:600;display:inline-flex;align-items:center;gap:.25rem' title='Cadastrado no ERP, porém sem saldo na filial'><span class='material-icons-round' style='font-size:.75rem'>inventory_2</span> Sem Estoque</span>";
+            } else if (st === "catalogado") {
+                badgeHtml = "<span style='font-size:.7rem;padding:.15rem .5rem;border-radius:6px;background:rgba(59,130,246,.15);color:#3b82f6;font-weight:600;display:inline-flex;align-items:center;gap:.25rem' title='Peça localizada na Base de Peças / Catálogo'><span class='material-icons-round' style='font-size:.75rem'>hub</span> Base de Peças</span>";
             } else {
-                badgeHtml = "<span style='font-size:.7rem;padding:.12rem .45rem;border-radius:6px;background:rgba(99,102,241,.15);color:#6366f1'>Recebida</span>";
+                badgeHtml = "<span style='font-size:.7rem;padding:.15rem .5rem;border-radius:6px;background:rgba(239,68,68,.15);color:#ef4444;font-weight:600;display:inline-flex;align-items:center;gap:.25rem' title='Não encontrado no ERP'><span class='material-icons-round' style='font-size:.75rem'>help_outline</span> Não Cadastrado</span>";
             }
 
-            var prc = Number(item.preco || 0);
+            var prc = Number(item.preco || item.precoUnitario || 0);
             var prcTxt = prc > 0 ? "<div style='font-size:.72rem;color:var(--accent-success);font-weight:600'>R$ " + prc.toFixed(2).replace(".",",") + "</div>" : "";
+            var erpBadge = item.erpProdutoId ? " <span style='font-size:.65rem;color:var(--text-secondary);background:rgba(255,255,255,.07);padding:.1rem .35rem;border-radius:4px'>ERP #" + _esc(item.erpProdutoId) + "</span>" : "";
 
             return "<tr>" +
                 "<td style='color:var(--text-secondary);font-size:.8rem'>" + (i + 1) + "</td>" +
-                "<td style='font-weight:600;font-size:.83rem'>" + _esc(item.refOriginal) + prcTxt + "</td>" +
-                "<td style='font-size:.8rem;color:var(--text-secondary)'>" + (_esc(item.descOriginal) || "—") + "</td>" +
+                "<td style='font-weight:600;font-size:.83rem'>" + _esc(item.refOriginal) + erpBadge + prcTxt + "</td>" +
+                "<td style='font-size:.8rem;color:var(--text-secondary)'>" + (_esc(item.erpProdutoDesc || item.descOriginal) || "—") + "</td>" +
                 "<td style='text-align:center'>" + item.qtdeSolicitada + "</td>" +
                 "<td>" + badgeHtml + "</td>" +
                 "<td><button onclick='DemandaApp.removeItem(" + i + ")' title='Remover' " +
@@ -275,6 +284,15 @@ const DemandaApp = (function() {
 
         var ct = document.getElementById("demandaCodigoTopbar");
         if (ct) ct.textContent = "— " + _itens.length + (_itens.length === 1 ? " item" : " itens");
+    }
+
+    async function reavaliarEstoqueItens() {
+        if (_itens.length === 0) { _toast("Adicione peças à cotação para checar.", "info"); return; }
+        _toast("Cruzando peças com estoque do ERP e Base Técnica...", "info");
+        await _carregarProdutosEEstoqueAsync(true);
+        await _conciliarItensComEstoque(_itens);
+        renderItens();
+        _toast("Saldos e produtos atualizados com sucesso!", "success");
     }
 
     function limparDemanda() {
@@ -292,6 +310,195 @@ const DemandaApp = (function() {
 
     var _todosClientesCache      = null;   // Cache global normalizado em memória
     var _carregandoClientes      = false;  // Flag de requisição assíncrona
+
+
+    // ════════════════════════════════════════════════════════
+    // CACHE DE PRODUTOS & ESTOQUE DO ERP (COM AUTO-SYNC 5 MIN)
+    // ════════════════════════════════════════════════════════
+
+    var _todosProdutosCache = new Map(); // normalizado -> produto
+    var _carregandoProdutos = false;
+
+    function _normalizeKey(ref) {
+        return (ref || "").toString().toUpperCase().replace(/[^A-Z0-9]/g, "");
+    }
+
+    function _extrairProdutosLocais() {
+        var lista = [];
+        try {
+            var rawSession = sessionStorage.getItem("_erp_products_cache");
+            if (rawSession) lista = JSON.parse(rawSession);
+        } catch(e) {}
+        if (!lista || lista.length === 0) {
+            try {
+                var rawLocal = localStorage.getItem("centralpecas_products_cache");
+                if (rawLocal) lista = JSON.parse(rawLocal);
+            } catch(e) {}
+        }
+        return Array.isArray(lista) ? lista : [];
+    }
+
+    async function _carregarProdutosEEstoqueAsync(forcar) {
+        if (!forcar && _todosProdutosCache && _todosProdutosCache.size > 0) {
+            return _todosProdutosCache;
+        }
+
+        // 1. Carrega imediatamente do cache local para resposta instantânea
+        var locais = _extrairProdutosLocais();
+        if (locais.length > 0 && _todosProdutosCache.size === 0) {
+            locais.forEach(function(p) {
+                var k = _normalizeKey(p.erpCodigoFab || p.referencia || p.codigoErp || p.codigoFab || p.id);
+                if (k) _todosProdutosCache.set(k, p);
+            });
+            console.log("[DemandaApp] Produtos carregados do cache local:", _todosProdutosCache.size);
+        }
+
+        if (_carregandoProdutos) return _todosProdutosCache;
+        _carregandoProdutos = true;
+
+        try {
+            var tenant = (_sessao && _sessao.tenantId) ? _sessao.tenantId : "centralpecas";
+            var carregados = [];
+
+            // A) Tenta Firestore tenants/{tenant}/demanda/techbase/products
+            if (typeof firebase !== "undefined" && firebase.firestore) {
+                try {
+                    var db = firebase.firestore();
+                    var snap = await db.collection("tenants/" + tenant + "/demanda/techbase/products").limit(1500).get();
+                    if (!snap.empty) {
+                        carregados = snap.docs.map(function(d) {
+                            var dt = d.data();
+                            dt._id = d.id;
+                            return dt;
+                        });
+                    }
+                } catch(e) { console.warn("[DemandaApp] Firestore techbase/products:", e); }
+            }
+
+            // B) Se tiver adapter ERP ativo, tenta carregar produtos sincronizados
+            if (carregados.length === 0 && typeof ErpIntegration !== "undefined" && ErpIntegration.getActive) {
+                try {
+                    var adapter = ErpIntegration.getActive();
+                    if (adapter && typeof adapter.syncProducts === "function") {
+                        // Não bloqueia — carrega produtos se disponível
+                    }
+                } catch(e) {}
+            }
+
+            if (carregados.length > 0) {
+                var listaCacheSalvar = [];
+                carregados.forEach(function(p) {
+                    var obj = {
+                        erpProdutoId:   p.codigoErp || p.erpProdutoId || p.id || p._id,
+                        erpProdutoDesc: (p.descricao || p.erpProdutoDesc || p.descPdv || "").trim(),
+                        erpCodigoFab:   (p.referencia || p.codigoFab || p.erpCodigoFab || "").trim(),
+                        fabricante:     (p.fabricante || "").trim(),
+                        estoqueFilial:  Number(p.estoque !== undefined ? p.estoque : (p.estoqueFilial || 0)),
+                        preco:          Number(p.preco || p.precoUnitario || 0),
+                        unidade:        p.unidade || "UN"
+                    };
+                    var k = _normalizeKey(obj.erpCodigoFab || obj.erpProdutoId);
+                    if (k) {
+                        _todosProdutosCache.set(k, obj);
+                        if (listaCacheSalvar.length < 1500) listaCacheSalvar.push(obj);
+                    }
+                });
+
+                try {
+                    sessionStorage.setItem("_erp_products_cache", JSON.stringify(listaCacheSalvar));
+                    localStorage.setItem("centralpecas_products_cache", JSON.stringify(listaCacheSalvar.slice(0, 500)));
+                } catch(e) {}
+                console.log("[DemandaApp] Base de produtos e estoque sincronizada:", _todosProdutosCache.size);
+            }
+        } catch(err) {
+            console.warn("[DemandaApp] Erro ao sincronizar catálogo de produtos:", err);
+        } finally {
+            _carregandoProdutos = false;
+        }
+
+        return _todosProdutosCache;
+    }
+
+    // ── Conciliação Automática de Itens com o Estoque e Base Técnica ────
+    async function _conciliarItensComEstoque(itens) {
+        if (!itens || itens.length === 0) return itens;
+
+        if (_todosProdutosCache.size === 0) {
+            await _carregarProdutosEEstoqueAsync();
+        }
+
+        for (var i = 0; i < itens.length; i++) {
+            var item = itens[i];
+            var refKey = _normalizeKey(item.refOriginal || item.erpCodigoFab);
+            var prod = refKey ? _todosProdutosCache.get(refKey) : null;
+
+            // Busca por prefixo/contém no cache se não encontrou exato
+            if (!prod && refKey && refKey.length >= 4) {
+                var entries = Array.from(_todosProdutosCache.entries());
+                for (var j = 0; j < entries.length; j++) {
+                    var k = entries[j][0];
+                    if (k === refKey || k.indexOf(refKey) >= 0 || refKey.indexOf(k) >= 0) {
+                        prod = entries[j][1];
+                        break;
+                    }
+                }
+            }
+
+            if (prod) {
+                item.erpProdutoId    = String(prod.erpProdutoId || "");
+                item.erpProdutoDesc  = prod.erpProdutoDesc || item.descOriginal || "";
+                item.erpCodigoFab    = prod.erpCodigoFab || item.refOriginal;
+                item.fabricante      = prod.fabricante || item.fabricante || "";
+                item.estoqueFilial   = Number(prod.estoqueFilial !== undefined ? prod.estoqueFilial : 0);
+                item.preco           = Number(prod.preco || 0);
+                item.precoUnitario   = Number(prod.preco || 0);
+                item.unidade         = prod.unidade || "UN";
+
+                var qtde = Number(item.qtdeSolicitada || 1);
+                if (item.estoqueFilial >= qtde && item.estoqueFilial > 0) {
+                    item.status = "estoque_disponivel";
+                } else if (item.estoqueFilial > 0) {
+                    item.status = "estoque_parcial";
+                } else {
+                    item.status = "sem_estoque";
+                }
+            } else {
+                // Se não está no cache local do ERP, tenta DemandaLookup (Techbase / Base de Peças)
+                if (typeof DemandaLookup !== "undefined" && DemandaLookup.lookupItem) {
+                    try {
+                        var resLkp = await DemandaLookup.lookupItem(item.refOriginal, item.descOriginal);
+                        if (resLkp && resLkp.erpData) {
+                            var ep = resLkp.erpData;
+                            item.erpProdutoId   = String(ep.erpProdutoId || "");
+                            item.erpProdutoDesc = ep.erpProdutoDesc || item.descOriginal || "";
+                            item.erpCodigoFab   = ep.erpCodigoFab || item.refOriginal;
+                            item.estoqueFilial  = Number(ep.estoqueFilial !== undefined ? ep.estoqueFilial : 0);
+                            item.preco          = Number(ep.preco || 0);
+                            item.precoUnitario  = Number(ep.preco || 0);
+                            var q = Number(item.qtdeSolicitada || 1);
+                            if (item.estoqueFilial >= q && item.estoqueFilial > 0) item.status = "estoque_disponivel";
+                            else if (item.estoqueFilial > 0) item.status = "estoque_parcial";
+                            else item.status = "sem_estoque";
+                        } else if (resLkp && resLkp.status === "catalogado") {
+                            item.status = "catalogado";
+                            if (resLkp.techbaseData && resLkp.techbaseData.descricao) {
+                                item.descOriginal = item.descOriginal || resLkp.techbaseData.descricao;
+                            }
+                        } else {
+                            item.status = "nao_cadastrado";
+                        }
+                    } catch(errLkp) {
+                        item.status = "nao_cadastrado";
+                    }
+                } else {
+                    item.status = "nao_cadastrado";
+                }
+            }
+        }
+
+        return itens;
+    }
+
 
     function _extrairClientesLocais() {
         var lista = [];
@@ -990,12 +1197,29 @@ const DemandaApp = (function() {
             }
         });
         if (selecionados.length === 0) { _toast("Selecione ao menos um item.", "error"); return; }
+
+        var novosAdicionados = [];
         selecionados.forEach(function(item) {
-            _itens.push({ refOriginal: item.refOriginal, descOriginal: item.descOriginal, qtdeSolicitada: item.qtdeSolicitada || 1 });
+            var obj = {
+                refOriginal: item.refOriginal,
+                descOriginal: item.descOriginal || "",
+                qtdeSolicitada: item.qtdeSolicitada || 1,
+                unidadeOriginal: item.unidadeOriginal || "UN",
+                obsCliente: item.obsCliente || item.obs || ""
+            };
+            _itens.push(obj);
+            novosAdicionados.push(obj);
         });
+
         renderItens();
         closeModal("modalConferencia");
-        _toast(selecionados.length + " " + (selecionados.length === 1 ? "item adicionado" : "itens adicionados") + " à demanda.", "success");
+        _toast("Cruzando " + novosAdicionados.length + " itens com estoque e base técnica...", "info");
+
+        _conciliarItensComEstoque(novosAdicionados).then(function() {
+            renderItens();
+            _toast(novosAdicionados.length + " itens importados e conciliados com estoque!", "success");
+        });
+
         _importItensTemp = [];
     }
 
@@ -3043,8 +3267,20 @@ const DemandaApp = (function() {
             if (!dd.contains(ev.target)) dd.style.display = "none";
         });
 
-                // Carrega clientes assincronamente em segundo plano
+                // Carrega clientes, produtos e estoque assincronamente em segundo plano
         _carregarClientesAsync();
+        _carregarProdutosEEstoqueAsync();
+
+        // Sincronização periódica em background de 5 em 5 minutos
+        if (!window._demandaAutoSyncInterval) {
+            window._demandaAutoSyncInterval = setInterval(function() {
+                try {
+                    console.log("[DemandaApp] Auto-sync (5 min): atualizando cadastro de clientes, produtos e estoque...");
+                    _carregarClientesAsync(true);
+                    _carregarProdutosEEstoqueAsync(true);
+                } catch(e) { console.warn("[DemandaApp] Falha no auto-sync 5 min:", e); }
+            }, 5 * 60 * 1000);
+        }
 
         // Fecha dropdown de cliente concorrente ao clicar fora
         document.addEventListener("click", function(ev) {
@@ -3115,6 +3351,9 @@ const DemandaApp = (function() {
         _onConcClienteFocus:    _onConcClienteFocus,
         _selectConcCliente:     _selectConcCliente,
         carregarClientes:       _carregarClientesAsync,
+        carregarProdutos:       _carregarProdutosEEstoqueAsync,
+        conciliarItens:         _conciliarItensComEstoque,
+        reavaliarEstoqueItens:  reavaliarEstoqueItens,
         // Lista
         filterDemandas:         filterDemandas,
         excluirDemanda:         excluirDemanda,

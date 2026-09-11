@@ -233,9 +233,12 @@
 
                             <!-- Cabeçalho do painel -->
                             <div class="demanda-panel-header">
-                                <div class="demanda-panel-title">
+                                <div class="demanda-panel-title" style="display:flex;align-items:center;gap:.5rem;width:100%">
                                     <span class="material-icons-round">receipt_long</span>
-                                    Cotação Atual
+                                    <span>Cotação Atual</span>
+                                    <button class="btn btn-secondary btn-sm" onclick="DemandaApp.reavaliarEstoqueItens()" title="Atualizar saldos de estoque no ERP" style="margin-left:auto;font-size:.7rem;padding:.2rem .5rem;gap:.25rem;display:inline-flex;align-items:center;background:rgba(255,255,255,.05);border:1px solid var(--border-color);">
+                                        <span class="material-icons-round" style="font-size:.82rem">sync</span> Checar Estoque
+                                    </button>
                                 </div>
                                 <div class="demanda-client-info">
                                     <!-- Seletor de cliente -->
@@ -898,7 +901,7 @@
     <script src="js/demanda-lookup.js?v=2.5.2"></script>
     <script src="js/demanda-pdf.js?v=2.5.1"></script>
     <script src="js/demanda-clientes.js?v=2.5.1"></script>
-    <script src="js/demanda-app.js?v=3.21.5"></script>
+    <script src="js/demanda-app.js?v=3.21.6"></script>
 
     <!-- ═══════════════════════════════════════════════════════════
          MODAL: Administração da Base Técnica de Peças

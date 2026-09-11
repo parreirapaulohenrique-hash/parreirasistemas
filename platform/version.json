@@ -1,8 +1,8 @@
 {
-  "build": "20260910-v3.21.10",
-  "version": "3.21.10",
+  "build": "20260911-v3.21.6",
+  "version": "3.21.6",
   "environment": "production",
-  "change": "v3.21.10 - fix(firestore): BASE_PATH tenants/parreira (sem /prospeccao) — 4 segmentos validos",
+  "change": "v3.21.6 - feat(cotacao): conciliacao automatica com estoque do ERP e catalogo geral com auto-sync 5 min",
   "lastUpdate": "2026-09-11",
-  "deployedAt": "2026-09-10"
+  "deployedAt": "2026-09-11"
 }
