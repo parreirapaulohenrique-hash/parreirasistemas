@@ -1,8 +1,8 @@
 {
   "build": "20260911-v3.21.16",
-  "version": "3.21.16",
+  "version": "3.21.17",
   "environment": "production",
-  "change": "v3.21.16 - fix(db): implementar e exportar DemandaDB.updateItemStatus e proteger abrirDemanda contra falhas",
+  "change": "v3.21.17 - fix(dispatches): quota localStorage — salva apenas ultimos 60 dias; evita NFs despachadas voltando como Pendentes apos reload",
   "lastUpdate": "2026-09-11",
   "deployedAt": "2026-09-11"
 }

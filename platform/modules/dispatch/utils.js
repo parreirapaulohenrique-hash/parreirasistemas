@@ -92,6 +92,22 @@ const Utils = {
                     try { localStorage.setItem(Utils._storageKey(key), stringData); } catch (_) {}
                     console.error('[saveRaw] Quota crítica — chave recriada:', key, e2.message);
                 }
+            } else if (key === 'dispatches') {
+                try {
+                    // Mantém apenas despachos dos últimos 60 dias para liberar espaço
+                    const all = JSON.parse(stringData) || [];
+                    const cutoff = Date.now() - (60 * 24 * 60 * 60 * 1000); // 60 dias
+                    const recent = all.filter(d => {
+                        const t = d.dispatchedAt || d.date || d.createdAt || '';
+                        return !t || new Date(t).getTime() > cutoff || d.status === 'Pendente Despacho';
+                    });
+                    localStorage.setItem(Utils._storageKey(key), JSON.stringify(recent));
+                    console.warn('[saveRaw] Quota dispatches: podados ' + all.length + ' -> ' + recent.length);
+                } catch (e2) {
+                    localStorage.removeItem(Utils._storageKey(key));
+                    try { localStorage.setItem(Utils._storageKey(key), stringData); } catch (_) {}
+                    console.error('[saveRaw] Quota critica dispatches — chave recriada:', e2.message);
+                }
             } else {
                 console.error('[saveRaw] QuotaExceededError:', key, quotaErr.message);
             }
