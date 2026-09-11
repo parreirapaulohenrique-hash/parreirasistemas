@@ -23,6 +23,7 @@ const DemandaImport = (() => {
     function _isNoiseLine(s) {
         s = s.trim();
         if (SKIP_PATTERNS.test(s))     return true;   // cabecalho
+        if (/(solicita|qtde?\s*solic|descri[cç][aã]o\s*comple|denomina[cç][aã]o|c[oó]d\.?\s*item)/i.test(s) && !/\b\d{1,5}[.,]0+\b/.test(s)) return true; // cabecalho composto
         if (/^[.:,]?\d{3}[.,]\d{3}$/.test(s)) return true; // .100.997 / 100,997
         if (/^[.:,]?\d+([.,]\d+)+$/.test(s) && s.length <= 12) return true; // numeros isolados tipo preco
         if (/^\.$/.test(s))            return true;   // ponto isolado
@@ -144,6 +145,24 @@ const DemandaImport = (() => {
     function _parseLinha(linha) {
         linha = linha.replace(/^[-•*·]\s*/, '').replace(/^\d+[.)]\s*/, '').trim();
         if (!linha || _isNoiseLine(linha)) return null;
+
+        // ── Formato Tabela / Concessionária / Relatório: [REF] [UM] [,100.997] [QTDE] [DESC] ──
+        // Ex: AKK24650 UN ,100.997 2,00000 ROLAMENTO
+        // Ex: 11M7032 UN ,100.997 48,00000 CONTRAPINO
+        const mTable = linha.match(/^([A-Z0-9]{3,})\s+(?:UN|PC|PÇ|CJ|JG|M|KG|UND)?\s*(?:[.,:\s]*\d+[.,]\d+)?\s*(\d+(?:[.,]\d+)?)\s+(.+)$/i);
+        if (mTable) {
+            const refTable = mTable[1].toUpperCase().trim();
+            const qVal = parseFloat(mTable[2].replace(',', '.'));
+            const qtdeTable = Math.round(qVal) || 1;
+            let descTable = mTable[3].trim().replace(/^(?:UN|PC|PÇ|UND)\s+/i, '');
+            return {
+                refOriginal:    refTable,
+                descOriginal:   descTable || refTable,
+                qtdeSolicitada: qtdeTable,
+                obs:            '',
+                incerteza:      false
+            };
+        }
 
         let qtde = 1;
         let ref  = '';

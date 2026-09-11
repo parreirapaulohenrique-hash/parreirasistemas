@@ -1,8 +1,8 @@
 {
-  "build": "20260911-v3.21.7",
-  "version": "3.21.7",
+  "build": "20260911-v3.21.8",
+  "version": "3.21.8",
   "environment": "production",
-  "change": "v3.21.7 - fix(cotacao): OCR de fotos e impressos em alta resolucao com motor Tesseract client-side e parser de tabelas",
+  "change": "v3.21.8 - fix(cotacao): extracao de quantidades em formato decimal de relatorios/concessionarias e filtro de cabecalhos",
   "lastUpdate": "2026-09-11",
   "deployedAt": "2026-09-11"
 }
