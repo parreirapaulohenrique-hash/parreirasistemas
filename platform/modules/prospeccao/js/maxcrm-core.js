@@ -415,7 +415,48 @@ async function initTelaBuscar(opcoes) {
     lista.innerHTML = '';
 
     const renderEmpresas = async (termo) => {
-        const empresas = await MaxCRMDB.buscarEmpresas(termo);
+        let empresas;
+
+        // ── Gestor: busca diretamente no Firestore ─────────────────────────────
+        if (MaxCRMState.isGestor && MaxCRMState.db) {
+            try {
+                lista.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;font-size:.85rem">⟳ Buscando no servidor...</div>';
+                const snap = await MaxCRMState.db
+                    .collection('tenants/parreira/empresas')
+                    .limit(500)
+                    .get();
+                empresas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                // Filtro client-side pelo termo
+                if (termo && termo.length >= 1) {
+                    const t = termo.toLowerCase();
+                    empresas = empresas.filter(e =>
+                        (e.razaoSocial  || '').toLowerCase().includes(t) ||
+                        (e.nomeFantasia || '').toLowerCase().includes(t) ||
+                        (e.cnpj  || '').includes(t) ||
+                        (e.cidade || '').toLowerCase().includes(t) ||
+                        (e.telefone || '').includes(t)
+                    );
+                }
+            } catch(err) {
+                console.warn('[MAXCRM] Firestore busca falhou, usando IDB:', err.message);
+                empresas = await MaxCRMDB.buscarEmpresas(termo);
+            }
+        } else {
+            // ── Promotor: IndexedDB local ───────────────────────────────────────
+            empresas = await MaxCRMDB.buscarEmpresas(termo);
+
+            // Se vazio e online → pull do Firestore antes de mostrar
+            if (empresas.length === 0 && navigator.onLine) {
+                lista.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;font-size:.85rem">⟳ Sincronizando empresas...</div>';
+                try {
+                    await MaxCRMSync.pullEmpresas();
+                    empresas = await MaxCRMDB.buscarEmpresas(termo);
+                } catch(ex) {
+                    console.warn('[MAXCRM] pullEmpresas falhou:', ex.message);
+                }
+            }
+        }
+
         lista.innerHTML = '';
         if (empresas.length === 0) {
             lista.innerHTML = `
@@ -428,7 +469,7 @@ async function initTelaBuscar(opcoes) {
             return;
         }
         if (btnNova) btnNova.style.display = 'none';
-        empresas.slice(0, 30).forEach(emp => {
+        empresas.slice(0, 50).forEach(emp => {
             const div = document.createElement('div');
             div.className = 'empresa-card';
             div.innerHTML = `

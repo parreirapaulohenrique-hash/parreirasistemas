@@ -184,7 +184,7 @@ const MaxCRMSync = (() => {
         if (!isOnline()) return;
         try {
             const db    = _db();
-            const snap  = await db.collection(`${BASE_PATH}/empresas`).limit(500).get();
+            const snap  = await db.collection(`${BASE_PATH}/empresas`).limit(1000).get();
             for (const doc of snap.docs) {
                 const data = doc.data();
                 // Só salva localmente se não há versão local mais recente

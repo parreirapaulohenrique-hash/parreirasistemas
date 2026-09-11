@@ -1,8 +1,8 @@
 {
   "build": "20260911-v3.21.7",
-  "version": "3.21.7",
+  "version": "3.21.8",
   "environment": "production",
-  "change": "v3.21.7 - fix(cotacao): OCR de fotos e impressos em alta resolucao com motor Tesseract client-side e parser de tabelas",
+  "change": "v3.21.8 - fix: busca empresas via Firestore (gestor) + pullEmpresas auto (promotor)",
   "lastUpdate": "2026-09-11",
   "deployedAt": "2026-09-11"
 }
