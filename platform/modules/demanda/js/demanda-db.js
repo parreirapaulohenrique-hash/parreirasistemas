@@ -406,6 +406,18 @@ const DemandaDB = (() => {
     }
 
     /**
+     * Atualiza o status de um item com registro na timeline.
+     */
+    async function updateItemStatus(demandaId, itemId, novoStatus, motivo = '', usuario = 'sistema') {
+        return updateItem(demandaId, itemId, { status: novoStatus }, {
+            evento: 'status_changed',
+            para: novoStatus,
+            por: usuario,
+            obs: motivo
+        });
+    }
+
+    /**
      * Atualiza múltiplos itens em lote (batch).
      */
     async function updateItensBatch(demandaId, itemIds, fields, timelineEntry = null) {
@@ -866,7 +878,7 @@ const DemandaDB = (() => {
 
     return {
         createDemanda, getDemanda, updateDemanda, listDemandas, deleteDemanda, estornarDemanda, reabrirDemanda,
-        addItens, getItens, updateItem, updateItensBatch, deleteItem, recalcTotals, splitItem,
+        addItens, getItens, updateItem, updateItemStatus, updateItensBatch, deleteItem, recalcTotals, splitItem,
         onItensChanged, listItensFila, getDashboardStats, getRelatoriosData,
         saveSession, loadSession, clearSession,
         TENANT_ID, DEMANDS_COL

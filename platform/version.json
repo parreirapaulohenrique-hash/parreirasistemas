@@ -1,8 +1,8 @@
 {
-  "build": "20260911-v3.21.15",
-  "version": "3.21.15",
+  "build": "20260911-v3.21.16",
+  "version": "3.21.16",
   "environment": "production",
-  "change": "v3.21.15 - feat(status): eliminar status recebida/nao-classificado, garantindo classificacao definitiva em estoque, sem estoque ou nao cadastrado",
+  "change": "v3.21.16 - fix(db): implementar e exportar DemandaDB.updateItemStatus e proteger abrirDemanda contra falhas",
   "lastUpdate": "2026-09-11",
   "deployedAt": "2026-09-11"
 }

@@ -1752,7 +1752,15 @@ const DemandaApp = (function() {
                             i.status = "nao_cadastrado";
                         }
                         if (i.id) {
-                            DemandaDB.updateItemStatus(id, i.id, i.status, "Reclassificação automática: eliminação de status não classificado").catch(function() {});
+                            try {
+                                if (typeof DemandaDB !== "undefined") {
+                                    if (typeof DemandaDB.updateItemStatus === "function") {
+                                        DemandaDB.updateItemStatus(id, i.id, i.status, "Reclassificação automática: eliminação de status não classificado").catch(function() {});
+                                    } else if (typeof DemandaDB.updateItem === "function") {
+                                        DemandaDB.updateItem(id, i.id, { status: i.status }).catch(function() {});
+                                    }
+                                }
+                            } catch(eIgn) {}
                         }
                     }
                 });
