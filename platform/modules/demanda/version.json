@@ -1,8 +1,8 @@
 {
-  "build": "20260911-v3.21.14",
-  "version": "3.21.14",
+  "build": "20260911-v3.21.15",
+  "version": "3.21.15",
   "environment": "production",
-  "change": "v3.21.14 - fix(supervisao): conectar e exportar funcoes do modal de exclusao/supervisao e fechamento resiliente",
+  "change": "v3.21.15 - feat(status): eliminar status recebida/nao-classificado, garantindo classificacao definitiva em estoque, sem estoque ou nao cadastrado",
   "lastUpdate": "2026-09-11",
   "deployedAt": "2026-09-11"
 }

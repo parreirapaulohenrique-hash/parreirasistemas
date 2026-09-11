@@ -12,9 +12,7 @@ const DemandaStates = (() => {
 
     // ── Definição dos estados ─────────────────────────────────
     const STATES = {
-        demanda_recebida:        { label: 'Recebida',            icon: 'inbox',           color: '#6366f1' },
-        em_identificacao:        { label: 'Identificando',        icon: 'search',          color: '#f59e0b' },
-        identificado:            { label: 'Identificado',         icon: 'check_circle',    color: '#3b82f6' },
+        nao_cadastrado:          { label: 'Não Cadastrado',      icon: 'help_outline',    color: '#f59e0b' },
         estoque_disponivel:      { label: 'Em Estoque',          icon: 'inventory',       color: '#10b981' },
         estoque_parcial:         { label: 'Estoque Parcial',     icon: 'inventory_2',     color: '#f59e0b' },
         sem_estoque:             { label: 'Sem Estoque',         icon: 'inventory_2',     color: '#ef4444' },
@@ -31,17 +29,20 @@ const DemandaStates = (() => {
         faturado:                { label: 'Faturado',            icon: 'task_alt',        color: '#10b981' },
         venda_perdida:           { label: 'Venda Perdida',       icon: 'cancel',          color: '#ef4444' },
         cancelado:               { label: 'Cancelado',           icon: 'block',           color: '#6b7280' },
-        nao_cadastrado:          { label: 'Não Cadastrado',      icon: 'help_outline',    color: '#94a3b8' },
         catalogado:              { label: 'Na Base Técnica',     icon: 'hub',             color: '#60a5fa' },
+        // Alias de compatibilidade para itens legados (mapeados automaticamente)
+        demanda_recebida:        { label: 'Não Cadastrado',      icon: 'help_outline',    color: '#f59e0b' },
+        em_identificacao:        { label: 'Não Cadastrado',      icon: 'help_outline',    color: '#f59e0b' },
+        identificado:            { label: 'Sem Estoque',         icon: 'inventory_2',     color: '#ef4444' },
     };
 
     // ── Transições válidas (de → [lista de destinos possíveis]) ──
     const TRANSITIONS = {
-        demanda_recebida:        ['em_identificacao', 'identificado', 'estoque_disponivel', 'estoque_parcial', 'sem_estoque', 'nao_cadastrado', 'encaminhado_compras', 'cancelado'],
-        em_identificacao:        ['identificado', 'estoque_disponivel', 'sem_estoque', 'nao_cadastrado', 'cancelado'],
+        nao_cadastrado:          ['encaminhado_compras', 'cotacao_fornecedor', 'estoque_disponivel', 'sem_estoque', 'cancelado'],
+        demanda_recebida:        ['nao_cadastrado', 'estoque_disponivel', 'sem_estoque', 'encaminhado_compras'],
+        em_identificacao:        ['nao_cadastrado', 'estoque_disponivel', 'sem_estoque', 'cancelado'],
         identificado:            ['estoque_disponivel', 'estoque_parcial', 'sem_estoque', 'encaminhado_compras', 'cancelado'],
-        nao_cadastrado:          ['encaminhado_compras', 'cotacao_fornecedor', 'identificado', 'estoque_disponivel', 'sem_estoque', 'cancelado'],
-        catalogado:              ['encaminhado_compras', 'cotacao_fornecedor', 'identificado', 'estoque_disponivel', 'sem_estoque', 'cancelado'],
+        catalogado:              ['encaminhado_compras', 'cotacao_fornecedor', 'estoque_disponivel', 'sem_estoque', 'cancelado'],
         estoque_disponivel:      ['proposta_enviada', 'aguardando_cliente', 'sem_estoque', 'cancelado'],
         estoque_parcial:         ['proposta_enviada', 'aguardando_cliente', 'encaminhado_compras', 'sem_estoque', 'cancelado'],
         sem_estoque:             ['consulta_outras_filiais', 'encaminhado_compras', 'estoque_disponivel', 'venda_perdida', 'cancelado'],

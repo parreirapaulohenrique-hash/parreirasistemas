@@ -215,7 +215,7 @@ const DemandaApp = (function() {
         var ref  = refEl.value.trim();
         var qtde = Math.max(1, parseInt((qtdeEl && qtdeEl.value) || "1", 10) || 1);
 
-        var novo = { refOriginal: ref, descOriginal: "", qtdeSolicitada: qtde, status: "demanda_recebida" };
+        var novo = { refOriginal: ref, descOriginal: "", qtdeSolicitada: qtde, status: "nao_cadastrado" };
         _itens.push(novo);
         renderItens();
 
@@ -1739,7 +1739,24 @@ const DemandaApp = (function() {
         }
         Promise.all([ DemandaDB.getDemanda(id), DemandaDB.getItens(id) ])
             .then(function(res) {
-                _demandaAtual = { id: id, data: res[0], itens: res[1] };
+                var dData = res[0];
+                var itens = res[1] || [];
+                // Reclassificação imediata: nenhum item pode ficar como não classificado / recebida
+                itens.forEach(function(i) {
+                    if (!i.status || i.status === "demanda_recebida" || i.status === "em_identificacao" || i.status === "identificado") {
+                        if (i.erpProdutoId) {
+                            var q = Number(i.qtdeSolicitada || 1);
+                            var est = Number(i.estoqueFilial || 0);
+                            i.status = (est >= q && est > 0) ? "estoque_disponivel" : (est > 0 ? "estoque_parcial" : "sem_estoque");
+                        } else {
+                            i.status = "nao_cadastrado";
+                        }
+                        if (i.id) {
+                            DemandaDB.updateItemStatus(id, i.id, i.status, "Reclassificação automática: eliminação de status não classificado").catch(function() {});
+                        }
+                    }
+                });
+                _demandaAtual = { id: id, data: dData, itens: itens };
                 _renderDemandaDetalheBody();
             })
             .catch(function(err) {
@@ -1774,13 +1791,12 @@ const DemandaApp = (function() {
         var lbl = SL[d.status] || d.status;
         var dt  = d.criadoEm && d.criadoEm.toDate ? d.criadoEm.toDate().toLocaleDateString("pt-BR") : "—";
 
-        // Contadores por Status
+        // Contadores por Status (todos os produtos classificados)
         var contadores = {
             todos: itens.length,
             nao_cadastrado: 0,
             sem_estoque: 0,
             em_estoque: 0,
-            recebida: 0,
             catalogado: 0,
             compras: 0,
             filiais: 0,
@@ -1789,29 +1805,36 @@ const DemandaApp = (function() {
         };
 
         itens.forEach(function(i) {
-            var st = i.status || "demanda_recebida";
+            var st = i.status || "nao_cadastrado";
             if (st === "nao_cadastrado") contadores.nao_cadastrado++;
             else if (st === "sem_estoque") contadores.sem_estoque++;
             else if (st === "estoque_disponivel" || st === "estoque_parcial") contadores.em_estoque++;
-            else if (st === "demanda_recebida" || st === "em_identificacao" || st === "identificado") contadores.recebida++;
             else if (st === "catalogado") contadores.catalogado++;
             else if (st === "encaminhado_compras" || st === "cotacao_fornecedor" || st === "compra_possivel") contadores.compras++;
             else if (st === "consulta_outras_filiais" || st === "transferencia_possivel") contadores.filiais++;
             else if (["proposta_enviada", "aguardando_cliente", "venda_aprovada", "venda_parcial", "pedido_criado_erp", "faturado"].includes(st)) contadores.proposta++;
             else if (st === "venda_perdida" || st === "cancelado") contadores.perdida++;
-            else contadores.recebida++;
+            else {
+                // Fallback para qualquer status legado
+                if (i.erpProdutoId) {
+                    var est = Number(i.estoqueFilial || 0);
+                    if (est > 0) contadores.em_estoque++;
+                    else contadores.sem_estoque++;
+                } else {
+                    contadores.nao_cadastrado++;
+                }
+            }
         });
 
         var terminal = itens.filter(function(i) { return typeof DemandaStates !== "undefined" && DemandaStates.isTerminal(i.status); }).length;
         var pct      = itens.length > 0 ? Math.round((terminal / itens.length) * 100) : 0;
 
-        // Lista de Chips de Totalizadores
+        // Lista de Chips de Totalizadores (sem status não classificado)
         var chipsList = [
             { key: "todos",          label: "Todos",           count: contadores.todos,          color: "var(--text-primary)", icon: "format_list_bulleted" },
             { key: "nao_cadastrado", label: "Não Cadastrados", count: contadores.nao_cadastrado,  color: "#f59e0b",             icon: "help_outline" },
             { key: "sem_estoque",    label: "Sem Estoque",     count: contadores.sem_estoque,     color: "#ef4444",             icon: "inventory_2" },
-            { key: "em_estoque",     label: "Em Estoque",      count: contadores.em_estoque,      color: "#10b981",             icon: "inventory" },
-            { key: "recebida",       label: "Recebida",        count: contadores.recebida,        color: "#6366f1",             icon: "inbox" }
+            { key: "em_estoque",     label: "Em Estoque",      count: contadores.em_estoque,      color: "#10b981",             icon: "inventory" }
         ];
 
         if (contadores.catalogado > 0) {
@@ -1880,16 +1903,6 @@ const DemandaApp = (function() {
                 "<div style='display:flex;gap:.5rem;align-items:center'>" +
                 "<button onclick=\"DemandaApp.enviarItensParaOrcamentoLote()\" class='btn btn-primary btn-sm' style='background:#10b981;border-color:#10b981;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'>" +
                 "<span class='material-icons-round' style='font-size:.95rem'>request_quote</span> Gerar Proposta com Disponíveis</button>" +
-                "</div></div>";
-        } else if (_filtroItensDetalhe === "recebida" && contadores.recebida > 0) {
-            acoesStatusHtml = "<div style='display:flex;align-items:center;justify-content:space-between;padding:.6rem .85rem;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.25);border-radius:8px;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem'>" +
-                "<div style='display:flex;align-items:center;gap:.4rem;font-size:.82rem;color:var(--text-primary)'>" +
-                "<span class='material-icons-round' style='color:#6366f1;font-size:1.15rem'>inbox</span>" +
-                "<span><strong>" + contadores.recebida + "</strong> " + (contadores.recebida === 1 ? "item em triagem inicial" : "itens em triagem inicial") + "</span>" +
-                "</div>" +
-                "<div style='display:flex;gap:.5rem;align-items:center'>" +
-                "<button onclick=\"DemandaApp.reavaliarEstoque('" + _esc(d.id) + "')\" class='btn btn-secondary btn-sm' style='display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem'>" +
-                "<span class='material-icons-round' style='font-size:.95rem'>sync</span> Reavaliar Estoque</button>" +
                 "</div></div>";
         } else if (_filtroItensDetalhe === "todos") {
             var btns = [];
@@ -1972,12 +1985,14 @@ const DemandaApp = (function() {
 
     function _getItensFiltrados(itens) {
         return itens.filter(function(item) {
-            var st = item.status || "demanda_recebida";
+            var st = item.status || "nao_cadastrado";
+            if (st === "demanda_recebida" || st === "em_identificacao") {
+                st = item.erpProdutoId ? (Number(item.estoqueFilial || 0) > 0 ? "estoque_disponivel" : "sem_estoque") : "nao_cadastrado";
+            }
             var matchStatus = true;
             if (_filtroItensDetalhe === "nao_cadastrado") matchStatus = (st === "nao_cadastrado");
             else if (_filtroItensDetalhe === "sem_estoque") matchStatus = (st === "sem_estoque");
             else if (_filtroItensDetalhe === "em_estoque") matchStatus = (st === "estoque_disponivel" || st === "estoque_parcial");
-            else if (_filtroItensDetalhe === "recebida") matchStatus = (st === "demanda_recebida" || st === "em_identificacao" || st === "identificado");
             else if (_filtroItensDetalhe === "catalogado") matchStatus = (st === "catalogado");
             else if (_filtroItensDetalhe === "compras") matchStatus = (st === "encaminhado_compras" || st === "cotacao_fornecedor" || st === "compra_possivel");
             else if (_filtroItensDetalhe === "filiais") matchStatus = (st === "consulta_outras_filiais" || st === "transferencia_possivel");
@@ -2010,10 +2025,14 @@ const DemandaApp = (function() {
     }
 
     function _renderItemRow(item, i) {
-        var sc     = (typeof DemandaStates !== "undefined") ? DemandaStates.get(item.status) : { label: item.status, color: "#6366f1" };
-        var nexts  = (typeof DemandaStates !== "undefined") ? DemandaStates.nextStates(item.status) : [];
-        var isEnd  = (typeof DemandaStates !== "undefined") && DemandaStates.isTerminal(item.status);
-        var st     = item.status || "demanda_recebida";
+        var effectiveStatus = item.status || "nao_cadastrado";
+        if (effectiveStatus === "demanda_recebida" || effectiveStatus === "em_identificacao") {
+            effectiveStatus = item.erpProdutoId ? (Number(item.estoqueFilial || 0) > 0 ? "estoque_disponivel" : "sem_estoque") : "nao_cadastrado";
+        }
+        var sc     = (typeof DemandaStates !== "undefined") ? DemandaStates.get(effectiveStatus) : { label: effectiveStatus, color: "#6366f1" };
+        var nexts  = (typeof DemandaStates !== "undefined") ? DemandaStates.nextStates(effectiveStatus) : [];
+        var isEnd  = (typeof DemandaStates !== "undefined") && DemandaStates.isTerminal(effectiveStatus);
+        var st     = effectiveStatus;
 
         var acoesCabiveis = [];
 
@@ -2032,8 +2051,6 @@ const DemandaApp = (function() {
         } else if (st === "catalogado") {
             acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
             acoesCabiveis.push("<button onclick=\"DemandaApp._abrirBuscaERP('" + _esc(item.id) + "')\" title='Vincular ao ERP' style='background:transparent;border:1px solid var(--accent-primary);border-radius:5px;padding:.22rem .55rem;color:var(--accent-primary);font-size:.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>search</span> ERP</button>");
-        } else if (st === "demanda_recebida" || st === "em_identificacao" || st === "identificado") {
-            acoesCabiveis.push("<button onclick=\"DemandaApp._abrirBuscaERP('" + _esc(item.id) + "')\" title='Identificar no ERP' style='background:transparent;border:1px solid var(--accent-primary);border-radius:5px;padding:.22rem .55rem;color:var(--accent-primary);font-size:.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>search</span> Identificar</button>");
         } else if (st === "encaminhado_compras" || st === "cotacao_fornecedor") {
             acoesCabiveis.push("<button onclick=\"DemandaApp._abrirDevolutivaCompras('" + _esc(item.id) + "','" + _esc(_demandaAtual.id) + "')\" title='Informar Cotação do Fornecedor' style='background:rgba(249,115,22,.15);color:#f97316;border:1px solid rgba(249,115,22,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>local_shipping</span> Cotar</button>");
         }

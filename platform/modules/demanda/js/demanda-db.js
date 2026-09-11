@@ -216,8 +216,10 @@ const DemandaDB = (() => {
         itemsSnap.docs.forEach(doc => {
             const data = doc.data();
             if (data.status === 'cancelado') {
+                const est = Number(data.estoqueFilial || 0);
+                const s = data.erpProdutoId ? (est > 0 ? 'estoque_disponivel' : 'sem_estoque') : 'nao_cadastrado';
                 batch.update(doc.ref, {
-                    status: 'demanda_recebida',
+                    status: s,
                     atualizadoEm: now
                 });
             }
@@ -239,11 +241,11 @@ const DemandaDB = (() => {
             ? Number(raw.estoqueFilial)
             : (raw.estoque !== undefined && raw.estoque !== null ? Number(raw.estoque) : null);
 
-        // Classificação inteligente de status inicial:
-        let initialStatus = raw.status || 'demanda_recebida';
+        // Classificação inteligente de status inicial (todos itens devem ser classificados):
+        let initialStatus = (raw.status && raw.status !== 'demanda_recebida' && raw.status !== 'em_identificacao') ? raw.status : null;
         let initialObs    = 'Item registrado na cotação.';
 
-        if (!raw.status) {
+        if (!initialStatus) {
             if (erpId) {
                 if (estoque !== null && estoque >= qtde && estoque > 0) {
                     initialStatus = 'estoque_disponivel';
@@ -255,12 +257,15 @@ const DemandaDB = (() => {
                     initialStatus = 'sem_estoque';
                     initialObs = 'Produto cadastrado no ERP, porém sem estoque imediato. Encaminhado para Compras.';
                 } else {
-                    initialStatus = 'identificado';
+                    initialStatus = 'sem_estoque';
                     initialObs = 'Produto identificado no ERP.';
                 }
-            } else if (raw.refOriginal || raw.descOriginal) {
-                initialStatus = 'demanda_recebida';
-                initialObs = 'Item recebido. Em pesquisa e identificação.';
+            } else if (raw.status === 'catalogado') {
+                initialStatus = 'catalogado';
+                initialObs = 'Item presente na base técnica de peças.';
+            } else {
+                initialStatus = 'nao_cadastrado';
+                initialObs = 'Item não cadastrado no ERP.';
             }
         }
 
@@ -435,7 +440,7 @@ const DemandaDB = (() => {
         const ref = db.doc(`${DEMANDS_COL}/${demandaId}/items/${itemId}`);
         const snap = await ref.get();
         if (!snap.exists) throw new Error(`Item ${itemId} não encontrado.`);
-        if (!['demanda_recebida', 'em_identificacao'].includes(snap.data().status)) {
+        if (!['nao_cadastrado', 'sem_estoque', 'estoque_disponivel', 'estoque_parcial', 'demanda_recebida', 'em_identificacao'].includes(snap.data().status)) {
             throw new Error('Só é possível remover itens no estado inicial.');
         }
         await ref.delete();
@@ -477,7 +482,7 @@ const DemandaDB = (() => {
             atualizadoEm:   firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        // Cria novo item com a quantidade faltante, voltando para demanda_recebida
+        // Cria novo item com a quantidade faltante (status sem_estoque para compras/outras filiais)
         const novoId  = `${itemId}_split_${Date.now()}`;
         const novoSeq = (original.seq || 0) + 0.5;
         const novoItem = {
@@ -487,15 +492,15 @@ const DemandaDB = (() => {
             refOriginal:    original.refOriginal || '',
             descOriginal:   original.descOriginal || '',
             qtdeSolicitada: qtdeFaltante,
-            status:         'demanda_recebida',
+            status:         'sem_estoque',
             origemSplit:    itemId,
             criadoEm:       firebase.firestore.FieldValue.serverTimestamp(),
             atualizadoEm:   firebase.firestore.FieldValue.serverTimestamp(),
             timeline:       [{
                 evento: 'split_criado',
-                para:   'demanda_recebida',
+                para:   'sem_estoque',
                 por:    'sistema',
-                obs:    `Item criado por split de ${itemId} (${qtdeFaltante} unidades restantes)`,
+                obs:    `Item criado por split de ${itemId} (${qtdeFaltante} unidades restantes sem estoque)`,
                 em:     new Date().toISOString()
             }]
         };
