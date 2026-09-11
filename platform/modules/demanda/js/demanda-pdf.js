@@ -524,6 +524,11 @@ const DemandaPDF = (() => {
         return itensEncontrados;
     }
 
-    return { importCatalogPDF };
+    return {
+        importCatalogPDF,
+        parseCotacaoPDF
+    };
 
 })();
+
+window.DemandaPDF = DemandaPDF;
