@@ -1,8 +1,8 @@
 {
-  "build": "20260911-v3.21.12",
-  "version": "3.21.12",
+  "build": "20260911-v3.21.13",
+  "version": "3.21.13",
   "environment": "production",
-  "change": "v3.21.12 - feat(cotacao): totalizadores de todos os status, filtros interativos e acoes cabiveis em lote e por item",
+  "change": "v3.21.13 - fix(cotacao): correcao de escape de aspas em demanda-app.js restabelecendo carregamento completo da interface",
   "lastUpdate": "2026-09-11",
   "deployedAt": "2026-09-11"
 }

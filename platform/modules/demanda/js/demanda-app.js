@@ -1806,7 +1806,7 @@ const DemandaApp = (function() {
                 var activeStyle = isActive
                     ? "background:" + (c.color.startsWith("#") ? c.color + "22" : "rgba(255,255,255,.12)") + ";border-color:" + (c.color.startsWith("#") ? c.color : "var(--primary-color)") + ";box-shadow:0 0 0 1px " + (c.color.startsWith("#") ? c.color : "var(--primary-color)") + ";color:var(--text-primary);"
                     : "background:var(--bg-card);border-color:var(--border-color);color:var(--text-secondary);";
-                return "<button type='button' onclick='DemandaApp.setFiltroDetalhe("" + c.key + "")' " +
+                return "<button type='button' onclick='DemandaApp.setFiltroDetalhe(\"" + c.key + "\")' " +
                     "style='display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .75rem;border-radius:20px;font-size:.76rem;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;" + activeStyle + "'>" +
                     "<span class='material-icons-round' style='font-size:.95rem;color:" + c.color + "'>" + c.icon + "</span>" +
                     "<span>" + c.label + "</span>" +
@@ -1826,7 +1826,7 @@ const DemandaApp = (function() {
                 "<span><strong>" + contadores.nao_cadastrado + "</strong> " + (contadores.nao_cadastrado === 1 ? "peça sem cadastro no ERP" : "peças sem cadastro no ERP") + "</span>" +
                 "</div>" +
                 "<div style='display:flex;gap:.5rem;align-items:center'>" +
-                "<button onclick='DemandaApp.enviarItensParaComprasLote("nao_cadastrado")' class='btn btn-primary btn-sm' style='background:#8b5cf6;border-color:#8b5cf6;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'>" +
+                "<button onclick=\"DemandaApp.enviarItensParaComprasLote('nao_cadastrado')\" class='btn btn-primary btn-sm' style='background:#8b5cf6;border-color:#8b5cf6;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'>" +
                 "<span class='material-icons-round' style='font-size:.95rem'>shopping_cart</span> Enviar Não Cadastrados p/ Compras</button>" +
                 "</div></div>";
         } else if (_filtroItensDetalhe === "sem_estoque" && contadores.sem_estoque > 0) {
@@ -1836,9 +1836,9 @@ const DemandaApp = (function() {
                 "<span><strong>" + contadores.sem_estoque + "</strong> " + (contadores.sem_estoque === 1 ? "peça cadastrada mas sem estoque" : "peças cadastradas mas sem estoque") + "</span>" +
                 "</div>" +
                 "<div style='display:flex;gap:.5rem;align-items:center'>" +
-                "<button onclick='DemandaApp.enviarItensParaComprasLote("sem_estoque")' class='btn btn-primary btn-sm' style='background:#8b5cf6;border-color:#8b5cf6;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'>" +
+                "<button onclick=\"DemandaApp.enviarItensParaComprasLote('sem_estoque')\" class='btn btn-primary btn-sm' style='background:#8b5cf6;border-color:#8b5cf6;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'>" +
                 "<span class='material-icons-round' style='font-size:.95rem'>shopping_cart</span> Enviar Sem Estoque p/ Compras</button>" +
-                "<button onclick='DemandaApp.consultarFiliaisLote()' class='btn btn-secondary btn-sm' style='display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem'>" +
+                "<button onclick=\"DemandaApp.consultarFiliaisLote()\" class='btn btn-secondary btn-sm' style='display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem'>" +
                 "<span class='material-icons-round' style='font-size:.95rem'>store</span> Consultar Filiais</button>" +
                 "</div></div>";
         } else if (_filtroItensDetalhe === "em_estoque" && contadores.em_estoque > 0) {
@@ -1848,7 +1848,7 @@ const DemandaApp = (function() {
                 "<span><strong>" + contadores.em_estoque + "</strong> " + (contadores.em_estoque === 1 ? "peça com estoque disponível" : "peças com estoque disponível") + "</span>" +
                 "</div>" +
                 "<div style='display:flex;gap:.5rem;align-items:center'>" +
-                "<button onclick='DemandaApp.enviarItensParaOrcamentoLote()' class='btn btn-primary btn-sm' style='background:#10b981;border-color:#10b981;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'>" +
+                "<button onclick=\"DemandaApp.enviarItensParaOrcamentoLote()\" class='btn btn-primary btn-sm' style='background:#10b981;border-color:#10b981;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'>" +
                 "<span class='material-icons-round' style='font-size:.95rem'>request_quote</span> Gerar Proposta com Disponíveis</button>" +
                 "</div></div>";
         } else if (_filtroItensDetalhe === "recebida" && contadores.recebida > 0) {
@@ -1858,20 +1858,20 @@ const DemandaApp = (function() {
                 "<span><strong>" + contadores.recebida + "</strong> " + (contadores.recebida === 1 ? "item em triagem inicial" : "itens em triagem inicial") + "</span>" +
                 "</div>" +
                 "<div style='display:flex;gap:.5rem;align-items:center'>" +
-                "<button onclick='DemandaApp.reavaliarEstoque("" + _esc(d.id) + "")' class='btn btn-secondary btn-sm' style='display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem'>" +
+                "<button onclick=\"DemandaApp.reavaliarEstoque('" + _esc(d.id) + "')\" class='btn btn-secondary btn-sm' style='display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem'>" +
                 "<span class='material-icons-round' style='font-size:.95rem'>sync</span> Reavaliar Estoque</button>" +
                 "</div></div>";
         } else if (_filtroItensDetalhe === "todos") {
             var btns = [];
             if (totalFaltam > 0) {
-                btns.push("<button onclick='DemandaApp.enviarItensParaComprasLote("todos_faltantes")' class='btn btn-primary btn-sm' style='background:#8b5cf6;border-color:#8b5cf6;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'>" +
+                btns.push("<button onclick=\"DemandaApp.enviarItensParaComprasLote('todos_faltantes')\" class='btn btn-primary btn-sm' style='background:#8b5cf6;border-color:#8b5cf6;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'>" +
                     "<span class='material-icons-round' style='font-size:.95rem'>shopping_cart</span> Enviar Faltantes p/ Compras (" + totalFaltam + ")</button>");
             }
             if (contadores.em_estoque > 0) {
-                btns.push("<button onclick='DemandaApp.enviarItensParaOrcamentoLote()' class='btn btn-sm' style='background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'>" +
+                btns.push("<button onclick=\"DemandaApp.enviarItensParaOrcamentoLote()\" class='btn btn-sm' style='background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'>" +
                     "<span class='material-icons-round' style='font-size:.95rem'>request_quote</span> Orçar Disponíveis (" + contadores.em_estoque + ")</button>");
             }
-            btns.push("<button onclick='DemandaApp.reavaliarEstoque("" + _esc(d.id) + "")' class='btn btn-secondary btn-sm' style='display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem'>" +
+            btns.push("<button onclick=\"DemandaApp.reavaliarEstoque('" + _esc(d.id) + "')\" class='btn btn-secondary btn-sm' style='display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem'>" +
                 "<span class='material-icons-round' style='font-size:.95rem'>sync</span> Reavaliar Estoque</button>");
 
             acoesStatusHtml = "<div style='display:flex;align-items:center;justify-content:space-between;padding:.5rem .85rem;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem'>" +
@@ -1886,7 +1886,7 @@ const DemandaApp = (function() {
             ? "<tr><td colspan='6' style='text-align:center;padding:2.5rem;color:var(--text-secondary)'>" +
               "<span class='material-icons-round' style='font-size:2.2rem;opacity:.3;display:block;margin-bottom:.5rem'>filter_alt_off</span>" +
               "Nenhum item encontrado para o status ou busca selecionada." +
-              (_filtroItensDetalhe !== "todos" ? "<br><button class='btn btn-secondary btn-sm' style='margin-top:.75rem' onclick='DemandaApp.setFiltroDetalhe("todos")'>Ver Todos os Itens</button>" : "") +
+              (_filtroItensDetalhe !== "todos" ? "<br><button class='btn btn-secondary btn-sm' style='margin-top:.75rem' onclick=\"DemandaApp.setFiltroDetalhe('todos')\">Ver Todos os Itens</button>" : "") +
               "</td></tr>"
             : itensFiltrados.map(function(item, idx) { return _renderItemRow(item, idx); }).join("");
 
@@ -1900,10 +1900,10 @@ const DemandaApp = (function() {
             // Barra de ações globais da cotação (Estornar / Reabrir / Excluir)
             "<div style='display:flex;gap:.5rem;align-items:center;justify-content:flex-end;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border-color)'>" +
             (d.status === "cancelada"
-                ? "<button onclick='DemandaApp.reabrirDemanda("" + _esc(d.id) + "", "" + _esc(d.codigo || "") + "")' style='background:rgba(59,130,246,.15);color:#3b82f6;border:1px solid rgba(59,130,246,.3);border-radius:6px;padding:.35rem .75rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'><span class='material-icons-round' style='font-size:.95rem'>restore</span> Reabrir Cotação</button>"
-                : "<button onclick='DemandaApp.estornarDemanda("" + _esc(d.id) + "", "" + _esc(d.codigo || "") + "")' style='background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);border-radius:6px;padding:.35rem .75rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'><span class='material-icons-round' style='font-size:.95rem'>undo</span> Estornar Cotação</button>"
+                ? "<button onclick=\"DemandaApp.reabrirDemanda('" + _esc(d.id) + "', '" + _esc(d.codigo || '') + "')\" style='background:rgba(59,130,246,.15);color:#3b82f6;border:1px solid rgba(59,130,246,.3);border-radius:6px;padding:.35rem .75rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'><span class='material-icons-round' style='font-size:.95rem'>restore</span> Reabrir Cotação</button>"
+                : "<button onclick=\"DemandaApp.estornarDemanda('" + _esc(d.id) + "', '" + _esc(d.codigo || '') + "')\" style='background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);border-radius:6px;padding:.35rem .75rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'><span class='material-icons-round' style='font-size:.95rem'>undo</span> Estornar Cotação</button>"
             ) +
-            "<button onclick='DemandaApp.excluirDemanda("" + _esc(d.id) + "", "" + _esc(d.codigo || "") + "")' style='background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:.35rem .75rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'><span class='material-icons-round' style='font-size:.95rem'>delete_forever</span> Excluir Cotação</button>" +
+            "<button onclick=\"DemandaApp.excluirDemanda('" + _esc(d.id) + "', '" + _esc(d.codigo || '') + "')\" style='background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:.35rem .75rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'><span class='material-icons-round' style='font-size:.95rem'>delete_forever</span> Excluir Cotação</button>" +
             "</div>" +
             // Info cliente / vendedor
             (d.clienteNome ? "<div style='font-size:.84rem;margin-bottom:.75rem;color:var(--text-secondary)'>" +
@@ -1989,23 +1989,23 @@ const DemandaApp = (function() {
 
         // Botões de Ação Direta conforme o Status do Item
         if (st === "nao_cadastrado") {
-            acoesCabiveis.push("<button onclick="DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
-            acoesCabiveis.push("<button onclick="DemandaApp._abrirBuscaERP('" + _esc(item.id) + "')" title='Vincular / Buscar Produto no ERP' style='background:transparent;border:1px solid var(--accent-primary);border-radius:5px;padding:.22rem .55rem;color:var(--accent-primary);font-size:.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>search</span> ERP</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp._abrirBuscaERP('" + _esc(item.id) + "')\" title='Vincular / Buscar Produto no ERP' style='background:transparent;border:1px solid var(--accent-primary);border-radius:5px;padding:.22rem .55rem;color:var(--accent-primary);font-size:.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>search</span> ERP</button>");
         } else if (st === "sem_estoque") {
-            acoesCabiveis.push("<button onclick="DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
-            acoesCabiveis.push("<button onclick="DemandaApp.avancarItemStatus('" + _esc(item.id) + "','consulta_outras_filiais')" title='Consultar Estoque em Outras Filiais' style='background:rgba(6,182,212,.15);color:#06b6d4;border:1px solid rgba(6,182,212,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>store</span> Filiais</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','consulta_outras_filiais')\" title='Consultar Estoque em Outras Filiais' style='background:rgba(6,182,212,.15);color:#06b6d4;border:1px solid rgba(6,182,212,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>store</span> Filiais</button>");
         } else if (st === "estoque_disponivel") {
-            acoesCabiveis.push("<button onclick="DemandaApp.avancarItemStatus('" + _esc(item.id) + "','proposta_enviada')" title='Incluir item na Proposta / Orçamento' style='background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>request_quote</span> Orçar</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','proposta_enviada')\" title='Incluir item na Proposta / Orçamento' style='background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>request_quote</span> Orçar</button>");
         } else if (st === "estoque_parcial") {
-            acoesCabiveis.push("<button onclick="DemandaApp.avancarItemStatus('" + _esc(item.id) + "','proposta_enviada')" title='Orçar quantidade disponível' style='background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>request_quote</span> Orçar</button>");
-            acoesCabiveis.push("<button onclick="DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')" title='Comprar saldo faltante' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Comprar Saldo</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','proposta_enviada')\" title='Orçar quantidade disponível' style='background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>request_quote</span> Orçar</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Comprar saldo faltante' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Comprar Saldo</button>");
         } else if (st === "catalogado") {
-            acoesCabiveis.push("<button onclick="DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
-            acoesCabiveis.push("<button onclick="DemandaApp._abrirBuscaERP('" + _esc(item.id) + "')" title='Vincular ao ERP' style='background:transparent;border:1px solid var(--accent-primary);border-radius:5px;padding:.22rem .55rem;color:var(--accent-primary);font-size:.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>search</span> ERP</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp._abrirBuscaERP('" + _esc(item.id) + "')\" title='Vincular ao ERP' style='background:transparent;border:1px solid var(--accent-primary);border-radius:5px;padding:.22rem .55rem;color:var(--accent-primary);font-size:.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>search</span> ERP</button>");
         } else if (st === "demanda_recebida" || st === "em_identificacao" || st === "identificado") {
-            acoesCabiveis.push("<button onclick="DemandaApp._abrirBuscaERP('" + _esc(item.id) + "')" title='Identificar no ERP' style='background:transparent;border:1px solid var(--accent-primary);border-radius:5px;padding:.22rem .55rem;color:var(--accent-primary);font-size:.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>search</span> Identificar</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp._abrirBuscaERP('" + _esc(item.id) + "')\" title='Identificar no ERP' style='background:transparent;border:1px solid var(--accent-primary);border-radius:5px;padding:.22rem .55rem;color:var(--accent-primary);font-size:.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>search</span> Identificar</button>");
         } else if (st === "encaminhado_compras" || st === "cotacao_fornecedor") {
-            acoesCabiveis.push("<button onclick="DemandaApp._abrirDevolutivaCompras('" + _esc(item.id) + "','" + _esc(_demandaAtual.id) + "')" title='Informar Cotação do Fornecedor' style='background:rgba(249,115,22,.15);color:#f97316;border:1px solid rgba(249,115,22,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>local_shipping</span> Cotar</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp._abrirDevolutivaCompras('" + _esc(item.id) + "','" + _esc(_demandaAtual.id) + "')\" title='Informar Cotação do Fornecedor' style='background:rgba(249,115,22,.15);color:#f97316;border:1px solid rgba(249,115,22,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>local_shipping</span> Cotar</button>");
         }
 
         // Select dropdown para todas as outras transições
@@ -2013,7 +2013,7 @@ const DemandaApp = (function() {
         if (isEnd) {
             selectHtml = "<span style='font-size:.72rem;color:var(--text-secondary);font-weight:600'>Concluído</span>";
         } else if (nexts.length > 0) {
-            selectHtml = "<select onchange="DemandaApp.avancarItemStatus('" + _esc(item.id) + "',this.value,this)" " +
+            selectHtml = "<select onchange=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "',this.value,this)\" " +
                 "style='background:var(--bg-dark);border:1px solid var(--border-color);border-radius:5px;padding:.2rem .4rem;" +
                 "color:var(--text-secondary);font-size:.72rem;cursor:pointer;max-width:130px'>" +
                 "<option value=''>Mais...</option>" +
@@ -2024,7 +2024,7 @@ const DemandaApp = (function() {
         var acaoHtml = "<div style='display:flex;align-items:center;gap:.35rem;flex-wrap:wrap'>" +
             acoesCabiveis.join("") + selectHtml + "</div>";
 
-        var tlBtn = "<button id='btnTimeline_" + _esc(item.id) + "' title='Histórico' onclick="DemandaApp.toggleItemTimeline('" + _esc(item.id) + "')" " +
+        var tlBtn = "<button id='btnTimeline_" + _esc(item.id) + "' title='Histórico' onclick=\"DemandaApp.toggleItemTimeline('" + _esc(item.id) + "')\" " +
             "style='background:transparent;border:none;color:var(--text-secondary);cursor:pointer;padding:.1rem;vertical-align:middle'>" +
             "<span class='material-icons-round' style='font-size:.95rem'>history</span></button>";
 
