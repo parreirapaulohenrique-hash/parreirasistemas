@@ -37,14 +37,14 @@ const DemandaStates = (() => {
 
     // ── Transições válidas (de → [lista de destinos possíveis]) ──
     const TRANSITIONS = {
-        demanda_recebida:        ['em_identificacao', 'identificado', 'cancelado'],
-        em_identificacao:        ['identificado', 'cancelado'],
-        identificado:            ['estoque_disponivel', 'estoque_parcial', 'sem_estoque', 'cancelado'],
-        nao_cadastrado:          ['encaminhado_compras', 'cotacao_fornecedor', 'identificado', 'cancelado'],
-        catalogado:              ['encaminhado_compras', 'cotacao_fornecedor', 'identificado', 'cancelado'],
-        estoque_disponivel:      ['proposta_enviada', 'aguardando_cliente', 'cancelado'],
-        estoque_parcial:         ['proposta_enviada', 'aguardando_cliente', 'encaminhado_compras', 'cancelado'],
-        sem_estoque:             ['consulta_outras_filiais', 'encaminhado_compras', 'venda_perdida', 'cancelado'],
+        demanda_recebida:        ['em_identificacao', 'identificado', 'estoque_disponivel', 'estoque_parcial', 'sem_estoque', 'nao_cadastrado', 'encaminhado_compras', 'cancelado'],
+        em_identificacao:        ['identificado', 'estoque_disponivel', 'sem_estoque', 'nao_cadastrado', 'cancelado'],
+        identificado:            ['estoque_disponivel', 'estoque_parcial', 'sem_estoque', 'encaminhado_compras', 'cancelado'],
+        nao_cadastrado:          ['encaminhado_compras', 'cotacao_fornecedor', 'identificado', 'estoque_disponivel', 'sem_estoque', 'cancelado'],
+        catalogado:              ['encaminhado_compras', 'cotacao_fornecedor', 'identificado', 'estoque_disponivel', 'sem_estoque', 'cancelado'],
+        estoque_disponivel:      ['proposta_enviada', 'aguardando_cliente', 'sem_estoque', 'cancelado'],
+        estoque_parcial:         ['proposta_enviada', 'aguardando_cliente', 'encaminhado_compras', 'sem_estoque', 'cancelado'],
+        sem_estoque:             ['consulta_outras_filiais', 'encaminhado_compras', 'estoque_disponivel', 'venda_perdida', 'cancelado'],
         consulta_outras_filiais: ['transferencia_possivel', 'encaminhado_compras', 'venda_perdida', 'cancelado'],
         transferencia_possivel:  ['proposta_enviada', 'aguardando_cliente', 'encaminhado_compras', 'cancelado'],
         encaminhado_compras:     ['cotacao_fornecedor', 'compra_possivel', 'venda_perdida', 'cancelado'],

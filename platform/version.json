@@ -1,8 +1,8 @@
 {
-  "build": "20260911-v3.21.11",
-  "version": "3.21.11",
+  "build": "20260911-v3.21.12",
+  "version": "3.21.12",
   "environment": "production",
-  "change": "v3.21.11 - feat(cotacao): totalizadores reais no card, geracao de itens em Orcamentos e Fila de Compras e estados corretos",
+  "change": "v3.21.12 - feat(cotacao): totalizadores de todos os status, filtros interativos e acoes cabiveis em lote e por item",
   "lastUpdate": "2026-09-11",
   "deployedAt": "2026-09-11"
 }

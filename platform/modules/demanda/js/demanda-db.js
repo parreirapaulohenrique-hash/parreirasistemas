@@ -401,6 +401,33 @@ const DemandaDB = (() => {
     }
 
     /**
+     * Atualiza múltiplos itens em lote (batch).
+     */
+    async function updateItensBatch(demandaId, itemIds, fields, timelineEntry = null) {
+        const db = _db();
+        const batch = db.batch();
+        const now = firebase.firestore.FieldValue.serverTimestamp();
+        
+        itemIds.forEach(itemId => {
+            const ref = db.doc(`${DEMANDS_COL}/${demandaId}/items/${itemId}`);
+            const update = {
+                ...fields,
+                atualizadoEm: now
+            };
+            if (timelineEntry) {
+                update.timeline = firebase.firestore.FieldValue.arrayUnion({
+                    ...timelineEntry,
+                    em: new Date().toISOString()
+                });
+            }
+            batch.update(ref, update);
+        });
+
+        await batch.commit();
+        await recalcTotals(demandaId).catch(() => {});
+    }
+
+    /**
      * Remove um item de uma demanda (só permite se status = demanda_recebida).
      */
     async function deleteItem(demandaId, itemId) {
@@ -834,7 +861,7 @@ const DemandaDB = (() => {
 
     return {
         createDemanda, getDemanda, updateDemanda, listDemandas, deleteDemanda, estornarDemanda, reabrirDemanda,
-        addItens, getItens, updateItem, deleteItem, recalcTotals, splitItem,
+        addItens, getItens, updateItem, updateItensBatch, deleteItem, recalcTotals, splitItem,
         onItensChanged, listItensFila, getDashboardStats, getRelatoriosData,
         saveSession, loadSession, clearSession,
         TENANT_ID, DEMANDS_COL
