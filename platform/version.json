@@ -1,8 +1,8 @@
 {
   "build": "20260911-v3.21.14",
-  "version": "3.21.14",
+  "version": "3.21.15",
   "environment": "production",
-  "change": "v3.21.14 - fix(supervisao): conectar e exportar funcoes do modal de exclusao/supervisao e fechamento resiliente",
+  "change": "v3.21.15 - fix(romaneio): espacamento 2.8cm entre tabela e assinatura Responsavel Expedicao — corrigido em styles.css (.signature-row margin-top !important sobrescrevia inline style)",
   "lastUpdate": "2026-09-11",
   "deployedAt": "2026-09-11"
 }
