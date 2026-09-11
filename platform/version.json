@@ -1,8 +1,8 @@
 {
-  "build": "20260910-v3.21.9",
-  "version": "3.21.9",
+  "build": "20260910-v3.21.10",
+  "version": "3.21.10",
   "environment": "production",
-  "change": "v3.21.9 - MAXCRM: 9 melhorias + leads Redencao/PA + fix CNPJ + fix visitas",
-  "lastUpdate": "2026-09-10",
+  "change": "v3.21.10 - fix(firestore): BASE_PATH tenants/parreira (sem /prospeccao) — 4 segmentos validos",
+  "lastUpdate": "2026-09-11",
   "deployedAt": "2026-09-10"
 }

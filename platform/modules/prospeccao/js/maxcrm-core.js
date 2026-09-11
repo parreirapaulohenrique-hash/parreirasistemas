@@ -285,12 +285,12 @@ async function atualizarHome() {
         if (MaxCRMState.isGestor && MaxCRMState.db) {
             // ── GESTOR: busca todos os lançamentos do Firestore ──────────────
             const vSnap = await MaxCRMState.db
-                .collection('tenants/parreira/prospeccao/visitas')
+                .collection('tenants/parreira/visitas')
                 .limit(500)
                 .get();
             visitas = vSnap.docs.map(d => ({ id: d.id, ...d.data() }));
             const eSnap = await MaxCRMState.db
-                .collection('tenants/parreira/prospeccao/empresas')
+                .collection('tenants/parreira/empresas')
                 .limit(500)
                 .get();
             empresas = eSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -507,7 +507,7 @@ async function carregarMinhasVisitas() {
         // ── GESTOR: busca todos os lançamentos do Firestore ──────────────────
         try {
             const snap = await MaxCRMState.db
-                .collection('tenants/parreira/prospeccao/visitas')
+                .collection('tenants/parreira/visitas')
                 .limit(300)
                 .get();
             // Sort client-side (evita necessidade de índice no Firestore)

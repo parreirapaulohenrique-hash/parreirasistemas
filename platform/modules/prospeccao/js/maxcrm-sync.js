@@ -15,7 +15,7 @@
 const MaxCRMSync = (() => {
 
     const TENANT_ID  = 'parreira';
-    const BASE_PATH  = `tenants/${TENANT_ID}/prospeccao`;
+    const BASE_PATH  = `tenants/${TENANT_ID}`;
 
     let _syncRunning = false;
     let _onStatusChange = null;

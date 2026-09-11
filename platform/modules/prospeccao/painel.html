@@ -856,7 +856,7 @@
         async function carregarDados() {
             try {
                 // Carrega visitas
-                const vSnap = await db.collection(`tenants/${TENANT_ID}/prospeccao/visitas`)
+                const vSnap = await db.collection(`tenants/${TENANT_ID}/visitas`)
                     .orderBy('criadoEm', 'desc')
                     .limit(200)
                     .get();
@@ -867,7 +867,7 @@
                 });
 
                 // Carrega empresas
-                const eSnap = await db.collection(`tenants/${TENANT_ID}/prospeccao/empresas`)
+                const eSnap = await db.collection(`tenants/${TENANT_ID}/empresas`)
                     .limit(300)
                     .get();
 
