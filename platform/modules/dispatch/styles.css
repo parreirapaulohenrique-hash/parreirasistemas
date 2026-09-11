@@ -914,7 +914,7 @@ input[type=number] {
         display: grid !important;
         grid-template-columns: 1fr 1fr !important;
         gap: 40px !important;
-        margin-top: 12px !important;
+        margin-top: 2.8cm !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
