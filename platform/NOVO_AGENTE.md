@@ -358,6 +358,7 @@ Abra o terminal do PowerShell na raiz do projeto (`C:\Users\Paulo H Parreira\.ge
 
 | Módulo | Pasta | Política de Deploy | Rationale |
 |---|---|---|
+| **3.21.23** | 2026-09-12 | Despacho Logístico / Master: Correção do redirecionamento e carregamento de usuários no modal de login em ambiente de homologação (_hml). Provisionamento de centralpecas_hml no Firestore (doc, subcoleção users com admin CENTRAL PEÇAS e legacy_store/app_users) e implementação de fallback transparente no app.js de dispatch para tenants HML sem perfil próprio. Adição de centralpecas_hml no mockTenants do Master Admin. |
 | **3.21.22** | 2026-09-12 | Master Panel (v1.4.3): Correção de layout da sidebar com banner de homologação (classe has-staging-banner) e integração do indicador de versão no sticky footer do painel administrativo. |
 | **3.21.21** | 2026-09-12 | MAXCRM (v1.2.0): Motor e UI de importação de clientes territorial com mapeamento das 20 colunas da planilha (XLSX/CSV), upload interativo no Painel e no App, correção de rotas Firestore (tenants/parreira/empresas), resolução de erro de sincronização e busca com normalização de acentos. Carga completa dos 449 cadastros no Firestore. |
 | **3.21.20** | 2026-09-12 | MAXCRM (v1.1.1): Exibição dinâmica da versão do sistema na top-bar e no modal de perfil do usuário. |

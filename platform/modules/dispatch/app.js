@@ -1072,23 +1072,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
                 loadUsersForTenant._retries = 0; // reset para próxima chamada
-
                 console.log(`👥 [Login] Buscando usuários do tenant: ${tenantId}...`);
 
                 // v3.22.17 FIX: Timeout em cada leitura para evitar travamento indefinido do dropdown
                 const _fsTimeout = (ms, label) => new Promise((_, rej) => setTimeout(() => rej(new Error(`Timeout Firestore ${label} (${ms}ms)`)), ms));
 
-                try {
-                    let usersFromCloud = [];
-
+                // Função auxiliar para buscar usuários de um tenant específico no Firestore
+                const _fetchUsersFromTenant = async (tId) => {
+                    let result = [];
                     // 1. Sistema novo: tenants/{id}/users — timeout 6s
                     try {
                         const usersSnap = await Promise.race([
-                            db.collection('tenants').doc(tenantId).collection('users').get(),
+                            db.collection('tenants').doc(tId).collection('users').get(),
                             _fsTimeout(6000, 'users')
                         ]);
                         if (!usersSnap.empty) {
-                            usersFromCloud = usersSnap.docs
+                            result = usersSnap.docs
                                 .filter(d => d.data().ativo !== false)
                                 .map(d => {
                                     const u = d.data();
@@ -1100,16 +1099,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         ativo:     u.ativo !== false
                                     };
                                 });
-                            console.log(`✅ [Login] ${usersFromCloud.length} usuário(s) carregado(s) do sistema novo`);
+                            console.log(`✅ [Login] ${result.length} usuário(s) carregado(s) do sistema novo [${tId}]`);
                         }
                     } catch (newSysErr) {
-                        console.warn('[Login] Sistema novo falhou ou timeout:', newSysErr.message);
+                        console.warn(`[Login] Sistema novo falhou ou timeout [${tId}]:`, newSysErr.message);
                     }
 
                     // 2. Sistema legado: legacy_store/app_users — timeout 4s
                     try {
                         const legacyDoc = await Promise.race([
-                            db.collection('tenants').doc(tenantId).collection('legacy_store').doc('app_users').get(),
+                            db.collection('tenants').doc(tId).collection('legacy_store').doc('app_users').get(),
                             _fsTimeout(4000, 'legacy_store')
                         ]);
                         if (legacyDoc.exists && legacyDoc.data().content) {
@@ -1117,8 +1116,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                             let mergeCount = 0;
                             legacyUsers.forEach(lu => {
                                 const login = lu.login || lu.Login || '';
-                                if (login && !usersFromCloud.find(u => u.login === login)) {
-                                    usersFromCloud.push({
+                                if (login && !result.find(u => u.login === login)) {
+                                    result.push({
                                         name:  lu.name || lu.nome || login,
                                         login: login,
                                         pass:  lu.pass || '',
@@ -1128,10 +1127,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     mergeCount++;
                                 }
                             });
-                            if (mergeCount > 0) console.log(`🔀 [Login] +${mergeCount} usuário(s) mesclado(s) do sistema legado`);
+                            if (mergeCount > 0) console.log(`🔀 [Login] +${mergeCount} usuário(s) mesclado(s) do sistema legado [${tId}]`);
                         }
                     } catch (legacyErr) {
-                        console.warn('[Login] Erro ao ler legacy_store (não crítico):', legacyErr.message);
+                        console.warn(`[Login] Erro ao ler legacy_store [${tId}] (não crítico):`, legacyErr.message);
+                    }
+                    return result;
+                };
+
+                try {
+                    let usersFromCloud = await _fetchUsersFromTenant(tenantId);
+
+                    // v3.21.23 FIX: Fallback para tenant base em homologação se _hml não tiver usuários próprios
+                    if (usersFromCloud.length === 0 && tenantId.endsWith('_hml')) {
+                        const baseTenantId = tenantId.replace(/_hml$/, '');
+                        console.log(`ℹ️ [Login] Tenant HML '${tenantId}' sem usuários no Firestore, buscando do tenant base '${baseTenantId}'...`);
+                        usersFromCloud = await _fetchUsersFromTenant(baseTenantId);
                     }
 
                     if (usersFromCloud.length > 0) {
@@ -1214,6 +1225,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                             window.db.collection('tenants').doc(tenantId).get(),
                             new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))
                         ]);
+                        // v3.21.23 FIX: Fallback para tenant base em homologação se o _hml não existir no Firestore
+                        if ((!tenantDoc.exists || tenantDoc.data().ativo === false) && tenantId.endsWith('_hml')) {
+                            const baseTenantId = tenantId.replace(/_hml$/, '');
+                            const baseDoc = await window.db.collection('tenants').doc(baseTenantId).get();
+                            if (baseDoc.exists && baseDoc.data().ativo !== false) {
+                                tenantDoc = baseDoc;
+                                console.log(`ℹ️ [Login] Tenant HML '${tenantId}' validado via tenant base '${baseTenantId}'`);
+                            }
+                        }
                         if (!tenantDoc.exists || tenantDoc.data().ativo === false) {
                             btnLogin.disabled = false;
                             btnLogin.innerHTML = 'ACESSAR SISTEMA';
@@ -1225,7 +1245,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         // Firebase offline: fallback para whitelist local
                         const storedTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
                         const dynamicIds = storedTenants.map(t => t.id);
-                        const ALLOWED_TENANTS = ['parreiralog', 'centralpecas', 'ltdistribuidora', 'parreira', ...dynamicIds];
+                        const ALLOWED_TENANTS = ['parreiralog', 'centralpecas', 'ltdistribuidora', 'parreira', 'altafix', 'centralpecas_hml', 'ltdistribuidora_hml', 'parreiralog_hml', 'altafix_hml', 'parreira_hml', ...dynamicIds];
                         if (!ALLOWED_TENANTS.includes(tenantId)) {
                             btnLogin.disabled = false;
                             btnLogin.innerHTML = 'ACESSAR SISTEMA';
@@ -1320,7 +1340,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Tenta validar direto no Firestore (sistema novo)
                 if (window.db) {
                     try {
-                        const _uDoc = await window.db.collection('tenants').doc(tenantId).collection('users').doc(login).get();
+                        let _uDoc = await window.db.collection('tenants').doc(tenantId).collection('users').doc(login).get();
+                        // v3.21.23 FIX: Fallback para usuário do tenant base se _hml não tiver
+                        if (!_uDoc.exists && tenantId.endsWith('_hml')) {
+                            const baseTenantId = tenantId.replace(/_hml$/, '');
+                            _uDoc = await window.db.collection('tenants').doc(baseTenantId).collection('users').doc(login).get();
+                        }
                         if (_uDoc.exists && _uDoc.data().ativo !== false) {
                             const _ud = _uDoc.data();
                             // v3.16.12: aceita senhaHash (SHA-256) OU pass (texto puro legado/manual)

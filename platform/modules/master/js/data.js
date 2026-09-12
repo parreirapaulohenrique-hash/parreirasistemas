@@ -65,6 +65,14 @@ window.mockTenants = [
         adminEmail: 'contato@ltdistribuidora.com.br'
     },
     {
+        id: 'centralpecas_hml',
+        name: 'Central Peças [HML]',
+        cnpj: '12.987.654/0001-11',
+        slug: 'centralpecas',
+        modules: ['dispatch', 'wms', 'wms-coletor', 'erp-consultoria'],
+        status: 'active'
+    },
+    {
         id: 'parreiralog_hml',
         name: 'ParreiraLog [HML]',
         cnpj: '',

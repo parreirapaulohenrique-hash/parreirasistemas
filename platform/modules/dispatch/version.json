@@ -1,8 +1,8 @@
 {
-  "build": "20260912-v3.21.19",
-  "version": "3.21.19",
+  "build": "20260912-v3.21.23",
+  "version": "3.21.23",
   "environment": "staging",
-  "change": "v3.21.19 - feat(routing): links diretos Opcao A (/demanda/:tenant, /wms-coletor/:tenant, /maxcrm/:tenant, /consultoria/:tenant) e sincronizacao estrita de permissoes em Ambientes",
+  "change": "v3.21.23 - fix(login): carregamento de usuários e validação de login para tenants de homologação (_hml) com provisionamento e fallback automático para tenant base",
   "lastUpdate": "2026-09-12",
   "deployedAt": "2026-09-12"
 }

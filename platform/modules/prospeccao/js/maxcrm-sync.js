@@ -176,8 +176,40 @@ const MaxCRMSync = (() => {
 
         // Sincroniza ao carregar se online
         if (isOnline()) {
-            setTimeout(processar, 1500); // Aguarda DB inicializar
-            setTimeout(pullEmpresas, 2500); // Baixa empresas atualizadas
+            setTimeout(processar, 1500);                       // Processa fila
+            setTimeout(sincronizarVisitasPendentes, 3000);    // Sobe visitas órfãs
+            setTimeout(pullEmpresas, 4500);                   // Baixa empresas atualizadas
+        }
+    }
+
+    // ── Sincronizar visitas "órfãs" (pending no IDB mas não na fila de sync) ──
+    // Isso garante que visitas criadas antes do fix de enqueueSync na iniciarVisita
+    // sejam enviadas ao Firestore.
+    async function sincronizarVisitasPendentes() {
+        if (!isOnline()) return;
+        try {
+            const db = _db();
+            const visitas = await MaxCRMDB.listarVisitas(200);
+            const pendentes = visitas.filter(v => v.syncStatus === 'pending');
+            if (pendentes.length === 0) return;
+            console.log(`[MaxCRMSync] Sincronizando ${pendentes.length} visita(s) pendente(s) órfãs...`);
+            for (const visita of pendentes) {
+                try {
+                    const ref = db.doc(`${BASE_PATH}/visitas/${visita.id}`);
+                    await ref.set({
+                        ...visita,
+                        atualizadoEm:   firebase.firestore.FieldValue.serverTimestamp(),
+                        sincronizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+                    // Marca como synced no IDB
+                    await MaxCRMDB.salvarProgresso(visita.id, { syncStatus: 'synced' });
+                    console.log('[MaxCRMSync] Visita sincronizada (órfã):', visita.id, visita.empresaNome);
+                } catch(e) {
+                    console.warn('[MaxCRMSync] Erro ao sincronizar visita órfã:', visita.id, e.message);
+                }
+            }
+        } catch(e) {
+            console.warn('[MaxCRMSync] sincronizarVisitasPendentes falhou:', e.message);
         }
     }
 
@@ -241,6 +273,7 @@ const MaxCRMSync = (() => {
         processar,
         iniciarListeners,
         pullEmpresas,
+        sincronizarVisitasPendentes,
         contarPendentes,
         atualizarStatusUI,
         isOnline,

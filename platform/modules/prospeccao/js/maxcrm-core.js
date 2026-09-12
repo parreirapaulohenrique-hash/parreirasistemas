@@ -59,6 +59,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     MaxCRMState.sessao = ParreiraAuth.getSessao();
     const nome = MaxCRMState.sessao.nome || MaxCRMState.sessao.login || 'OP';
 
+    // ── Papel do usuário: gestor vê tudo via Firestore ──────────────────────
+    const _role = (MaxCRMState.sessao.role || '').toLowerCase();
+    MaxCRMState.isGestor = ['admin','master','gestor','gerente','supervisor'].includes(_role);
+
+    // ── Referência ao Firestore (para queries do gestor) ─────────────────────
+    if (typeof firebase !== 'undefined' && typeof firebase.firestore === 'function') {
+        try { MaxCRMState.db = firebase.firestore(); } catch(e) {}
+    }
+
+    console.log('[MAXCRM] Role:', _role, '| isGestor:', MaxCRMState.isGestor);
+
     // Atualizar badge do usuário
     const badge = document.getElementById('userBadge');
     if (badge) {

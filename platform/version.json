@@ -1,8 +1,8 @@
 {
-  "build": "20260912-v3.21.22",
-  "version": "3.21.22",
+  "build": "20260912-v3.21.23",
+  "version": "3.21.24",
   "environment": "staging",
-  "change": "v3.21.22 - fix(master): ajuste de layout da sidebar com banner de homologacao e integracao de versao no sticky footer",
+  "change": "v3.21.24 - fix(maxcrm): isGestor+db definidos no init; sincronizarVisitasPendentes sobe visitas orfas para Firestore",
   "lastUpdate": "2026-09-12",
   "deployedAt": "2026-09-12"
 }
