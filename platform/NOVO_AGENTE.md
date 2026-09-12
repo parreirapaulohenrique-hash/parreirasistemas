@@ -357,7 +357,10 @@ Abra o terminal do PowerShell na raiz do projeto (`C:\Users\Paulo H Parreira\.ge
 > ⚠️ As regras abaixo foram definidas explicitamente pelo usuário (Paulo Parreira) e substituem a regra geral acima **apenas para os módulos listados**. Para qualquer módulo **não** listado, aplica-se sempre a regra geral (staging → aprovação → promote).
 
 | Módulo | Pasta | Política de Deploy | Rationale |
-|---|---|---|---|
+|---|---|---|
+| **3.21.21** | 2026-09-12 | MAXCRM (v1.2.0): Motor e UI de importação de clientes territorial com mapeamento das 20 colunas da planilha (XLSX/CSV), upload interativo no Painel e no App, correção de rotas Firestore (tenants/parreira/empresas), resolução de erro de sincronização e busca com normalização de acentos. Carga completa dos 449 cadastros no Firestore. |
+| **3.21.20** | 2026-09-12 | MAXCRM (v1.1.1): Exibição dinâmica da versão do sistema na top-bar e no modal de perfil do usuário. |
+| **3.21.19** | 2026-09-12 | Roteamento Opção A: Desvinculação da rota /centralpecas (Despacho Logístico) e links diretos com sincronização de permissões no Master. |---|
 | **Intelig. Demanda** | `demanda` | 🟢 **Deploy direto em produção** — pode rodar `deploy.ps1 + promote.ps1` na mesma sequência sem aprovação intermediária | Autorizado pelo usuário em 2026-09-04. Iterações frequentes liberadas. |
 | **Bússola Log** | `dispatch` | 🔴 **Staging obrigatório** — aguardar aprovação explícita antes do `promote.ps1` | Operação logística em tempo real. Bugs afetam clientes e motoristas diretamente. |
 | **Bússola Gestão** | `erp-consultoria` | 🟢 **Deploy direto em produção** — pode rodar `deploy.ps1 + promote.ps1` na mesma sequência sem aprovação intermediária | Módulo de gestão interna, sem impacto operacional imediato. Iterações frequentes autorizadas pelo usuário em 2026-08-20. |

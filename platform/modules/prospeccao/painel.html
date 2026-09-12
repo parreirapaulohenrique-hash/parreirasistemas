@@ -18,6 +18,9 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="/platform/core/js/session-manager.js"></script>
     <script src="/platform/core/js/auth.js"></script>
+    <!-- SheetJS e Motor de Importação Territorial -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="js/maxcrm-import.js"></script>
 
     <style>
         :root {
@@ -497,6 +500,10 @@
                 <span class="material-icons-round" style="font-size: 1.05rem;">explore</span>
                 App Promotor
             </a>
+            <button class="nav-btn" onclick="MaxCRMImport.abrirModalImportacao(carregarDados)" title="Importar Planilha Territorial (.xlsx, .csv)">
+                <span class="material-icons-round" style="font-size: 1.05rem; color: #fb7185;">upload_file</span>
+                Importar Planilha
+            </button>
             <button class="nav-btn primary" onclick="exportarCSV()" title="Exportar visitas em CSV">
                 <span class="material-icons-round" style="font-size: 1.05rem;">file_download</span>
                 Exportar CSV
@@ -623,6 +630,16 @@
 
         <!-- Tabela: Base Territorial (Empresas) -->
         <section class="table-card" id="sectionEmpresas" style="display: none;">
+            <div style="padding: 1rem 1.4rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <h3 style="font-size: 1.05rem; font-weight: 700; color: #fff;">Base Territorial de Empresas</h3>
+                    <div style="font-size: 0.74rem; color: var(--text-muted);">Listagem completa de prospects e clientes mapeados</div>
+                </div>
+                <button class="nav-btn" onclick="MaxCRMImport.abrirModalImportacao(carregarDados)" style="background: rgba(225,29,72,0.15); border-color: rgba(225,29,72,0.35); color: #fb7185; font-weight: 700;">
+                    <span class="material-icons-round" style="font-size: 1.1rem;">upload_file</span>
+                    Importar Planilha (.xlsx)
+                </button>
+            </div>
             <div class="table-responsive">
                 <table>
                     <thead>
@@ -855,10 +872,10 @@
         // ── Carregar Dados do Firestore ──────────────────────────────────────
         async function carregarDados() {
             try {
-                // Carrega visitas
-                const vSnap = await db.collection(`tenants/${TENANT_ID}/prospeccao/visitas`)
+                // Carrega visitas (coleção correta tenants/parreira/visitas)
+                const vSnap = await db.collection(`tenants/${TENANT_ID}/visitas`)
                     .orderBy('criadoEm', 'desc')
-                    .limit(200)
+                    .limit(300)
                     .get();
 
                 _visitas = [];
@@ -866,9 +883,9 @@
                     _visitas.push({ id: doc.id, ...doc.data() });
                 });
 
-                // Carrega empresas
-                const eSnap = await db.collection(`tenants/${TENANT_ID}/prospeccao/empresas`)
-                    .limit(300)
+                // Carrega empresas (coleção correta tenants/parreira/empresas)
+                const eSnap = await db.collection(`tenants/${TENANT_ID}/empresas`)
+                    .limit(1000)
                     .get();
 
                 _empresas = [];
@@ -891,7 +908,7 @@
 
         // ── Fallback IndexedDB ────────────────────────────────────────────────
         function carregarDoIndexedDB() {
-            const req = indexedDB.open('MaxCRM_DB', 1);
+            const req = indexedDB.open('maxcrm_campo', 1);
             req.onsuccess = (e) => {
                 const idb = e.target.result;
                 try {

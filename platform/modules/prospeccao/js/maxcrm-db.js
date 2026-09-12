@@ -178,17 +178,79 @@ const MaxCRMDB = (() => {
         return all.sort((a, b) => b.atualizadoEm.localeCompare(a.atualizadoEm));
     }
 
+    function _normalizeText(s) {
+        return (s || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim();
+    }
+
+    async function salvarEmpresasEmLote(lista) {
+        if (!Array.isArray(lista) || lista.length === 0) return 0;
+        const db = await open();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(['empresas'], 'readwrite');
+            const store = tx.objectStore('empresas');
+            for (const item of lista) {
+                if (!item || !item.id) continue;
+                store.put({
+                    ...item,
+                    syncStatus: item.syncStatus || 'synced'
+                });
+            }
+            tx.oncomplete = () => resolve(lista.length);
+            tx.onerror = (e) => reject(e);
+        });
+    }
+
+    async function salvarEmpresaLocalSemSync(dados) {
+        if (!dados || !dados.id) return;
+        await _put('empresas', {
+            ...dados,
+            syncStatus: dados.syncStatus || 'synced'
+        });
+    }
+
     async function buscarEmpresas(termo) {
         const all = await _getAll('empresas');
-        const t = (termo || '').trim().toLowerCase();
-        if (!t) return all;
-        return all.filter(e =>
-            (e.razaoSocial  || '').toLowerCase().includes(t) ||
-            (e.nomeFantasia || '').toLowerCase().includes(t) ||
-            (e.cnpj         || '').replace(/\D/g,'').includes(t.replace(/\D/g,'')) ||
-            (e.cidade       || '').toLowerCase().includes(t) ||
-            (e.telefone     || '').replace(/\D/g,'').includes(t.replace(/\D/g,''))
-        );
+        const raw = (termo || '').trim();
+        if (!raw) return all;
+        const t = _normalizeText(raw);
+        const tDigits = raw.replace(/\D/g, '');
+
+        return all.filter(e => {
+            const razao = _normalizeText(e.razaoSocial);
+            const fantasia = _normalizeText(e.nomeFantasia || e.nome);
+            const cidade = _normalizeText(e.cidade);
+            const bairro = _normalizeText(e.bairro);
+            const logradouro = _normalizeText(e.logradouro || e.endereco);
+            const segmento = _normalizeText(e.segmento);
+            const cnae = _normalizeText(e.cnae);
+            const uf = _normalizeText(e.uf);
+            const email = _normalizeText(e.email);
+
+            if (razao.includes(t)) return true;
+            if (fantasia.includes(t)) return true;
+            if (cidade.includes(t)) return true;
+            if (bairro.includes(t)) return true;
+            if (logradouro.includes(t)) return true;
+            if (segmento.includes(t)) return true;
+            if (cnae.includes(t)) return true;
+            if (email.includes(t)) return true;
+            if (t.length <= 3 && uf === t) return true;
+
+            if (tDigits.length > 0) {
+                const cnpj = (e.cnpj || '').replace(/\D/g, '');
+                const tel1 = (e.telefone || '').replace(/\D/g, '');
+                const tel2 = (e.telefone2 || '').replace(/\D/g, '');
+                if (cnpj.includes(tDigits)) return true;
+                if (tel1.includes(tDigits)) return true;
+                if (tel2.includes(tDigits)) return true;
+            }
+
+            return false;
+        });
     }
 
     // ════════════════════════════════════════════════════════════════════════
@@ -466,6 +528,8 @@ const MaxCRMDB = (() => {
 
         // Empresas
         salvarEmpresa,
+        salvarEmpresasEmLote,
+        salvarEmpresaLocalSemSync,
         getEmpresa,
         listarEmpresas,
         buscarEmpresas,

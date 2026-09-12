@@ -15,7 +15,7 @@
 const MaxCRMSync = (() => {
 
     const TENANT_ID  = 'parreira';
-    const BASE_PATH  = `tenants/${TENANT_ID}/prospeccao`;
+    const BASE_PATH  = `tenants/${TENANT_ID}`;
 
     let _syncRunning = false;
     let _onStatusChange = null;
@@ -168,6 +168,7 @@ const MaxCRMSync = (() => {
         window.addEventListener('online', () => {
             console.log('[MaxCRMSync] Online — iniciando sync automático...');
             processar();
+            pullEmpresas();
         });
         window.addEventListener('offline', () => {
             _emitStatus('offline');
@@ -175,7 +176,8 @@ const MaxCRMSync = (() => {
 
         // Sincroniza ao carregar se online
         if (isOnline()) {
-            setTimeout(processar, 2000); // Aguarda DB inicializar
+            setTimeout(processar, 1500); // Aguarda DB inicializar
+            setTimeout(pullEmpresas, 2500); // Baixa empresas atualizadas
         }
     }
 
@@ -183,17 +185,31 @@ const MaxCRMSync = (() => {
     async function pullEmpresas() {
         if (!isOnline()) return;
         try {
-            const db    = _db();
-            const snap  = await db.collection(`${BASE_PATH}/empresas`).limit(500).get();
-            for (const doc of snap.docs) {
+            const db   = _db();
+            const snap = await db.collection(`${BASE_PATH}/empresas`).limit(1000).get();
+            const empresasSalvar = [];
+            snap.forEach(doc => {
                 const data = doc.data();
-                // Só salva localmente se não há versão local mais recente
-                const local = await MaxCRMDB.getEmpresa(doc.id);
-                if (!local || local.syncStatus === 'synced') {
-                    await MaxCRMDB.salvarEmpresa({ ...data, id: doc.id, syncStatus: 'synced' });
+                empresasSalvar.push({
+                    ...data,
+                    id: doc.id,
+                    syncStatus: 'synced'
+                });
+            });
+
+            if (empresasSalvar.length > 0) {
+                if (typeof MaxCRMDB.salvarEmpresasEmLote === 'function') {
+                    await MaxCRMDB.salvarEmpresasEmLote(empresasSalvar);
+                } else {
+                    for (const emp of empresasSalvar) {
+                        await MaxCRMDB.salvarEmpresaLocalSemSync(emp);
+                    }
+                }
+                console.log(`[MaxCRMSync] Pull empresas: ${empresasSalvar.length} registros baixados com sucesso para IndexedDB`);
+                if (typeof window.refreshListaEmpresas === 'function') {
+                    window.refreshListaEmpresas();
                 }
             }
-            console.log(`[MaxCRMSync] Pull empresas: ${snap.docs.length} registros`);
         } catch (e) {
             console.warn('[MaxCRMSync] Erro no pull de empresas:', e.message);
         }

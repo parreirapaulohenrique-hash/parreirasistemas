@@ -21,6 +21,8 @@
          faz seu próprio guard com verificação de tenant=parreira -->
     <script src="/platform/core/js/session-manager.js"></script>
     <script src="/platform/core/js/auth.js"></script>
+    <!-- SheetJS para importação de planilhas -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 <div id="app">
@@ -134,9 +136,14 @@
                     placeholder="Buscar empresa..."
                     autocomplete="off" autocorrect="off">
             </div>
-            <button class="btn btn-secondary" id="btnNovaEmpresa" onclick="navigateTo('nova_empresa')" style="display:none;margin-bottom:12px">
-                <span class="material-icons-round">add_business</span> Cadastrar Nova Empresa
-            </button>
+            <div style="display:flex;gap:8px;margin-bottom:12px">
+                <button class="btn btn-secondary" onclick="MaxCRMImport.abrirModalImportacao(window.refreshListaEmpresas)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:rgba(225,29,72,0.12);border-color:rgba(225,29,72,0.35);color:#fb7185;font-weight:700">
+                    <span class="material-icons-round" style="font-size:1.1rem">upload_file</span> Importar Planilha
+                </button>
+                <button class="btn btn-secondary" onclick="navigateTo('nova_empresa')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px">
+                    <span class="material-icons-round" style="font-size:1.1rem">add_business</span> Nova Empresa
+                </button>
+            </div>
             <div id="buscarResultados"></div>
             <div style="height:12px"></div>
             <button class="btn btn-secondary" onclick="navigateTo('nova_empresa')">
@@ -288,6 +295,7 @@
 <script src="js/cnpj-lookup.js"></script>
 <script src="js/maxcrm-db.js"></script>
 <script src="js/maxcrm-sync.js"></script>
+<script src="js/maxcrm-import.js"></script>
 <script src="js/maxcrm-core.js"></script>
 <script src="js/maxcrm-visit.js"></script>
 

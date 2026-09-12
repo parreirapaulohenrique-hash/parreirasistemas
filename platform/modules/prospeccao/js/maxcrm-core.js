@@ -390,25 +390,35 @@ async function initTelaBuscar(opcoes) {
                 <div class="empty-state">
                     <span class="material-icons-round">search_off</span>
                     <div class="empty-state-title">Nenhuma empresa encontrada</div>
-                    <div class="empty-state-sub">Cadastre como nova empresa</div>
+                    <div class="empty-state-sub">Tente outro termo ou cadastre como nova empresa</div>
                 </div>`;
             if (btnNova) btnNova.style.display = 'flex';
             return;
         }
         if (btnNova) btnNova.style.display = 'none';
-        empresas.slice(0, 30).forEach(emp => {
+
+        const infoCount = document.createElement('div');
+        infoCount.style.cssText = 'font-size:0.74rem;color:var(--text-secondary);margin:4px 0 10px 4px;font-weight:600;display:flex;justify-content:space-between;align-items:center';
+        infoCount.innerHTML = `<span>Mostrando ${Math.min(empresas.length, 60)} de ${empresas.length} empresa(s)</span>${empresas.length > 60 ? '<span style="font-size:0.68rem;opacity:0.75">Refine a busca se necessário</span>' : ''}`;
+        lista.appendChild(infoCount);
+
+        empresas.slice(0, 60).forEach(emp => {
             const div = document.createElement('div');
             div.className = 'empresa-card';
+            const segTag = emp.segmento ? `<span style="display:inline-block;padding:2px 6px;border-radius:4px;background:rgba(225,29,72,0.12);color:#fb7185;font-size:0.68rem;font-weight:600;margin-right:6px">${emp.segmento}</span>` : '';
             div.innerHTML = `
                 <div class="empresa-card-nome">${emp.nomeFantasia || emp.razaoSocial || '(sem nome)'}</div>
-                <div class="empresa-card-info">${[emp.razaoSocial, emp.cidade, emp.uf].filter(Boolean).join(' • ')}</div>
-                ${emp.cnpj ? `<div class="empresa-card-info text-xs mt-8" style="color:var(--text-muted)">${emp.cnpj}</div>` : ''}
+                <div class="empresa-card-info">${segTag}${[emp.razaoSocial, emp.cidade, emp.uf].filter(Boolean).join(' • ')}</div>
+                ${(emp.endereco || emp.logradouro) ? `<div class="empresa-card-info text-xs" style="color:var(--text-muted);margin-top:3px">${[emp.endereco || emp.logradouro, emp.bairro].filter(Boolean).join(' - ')}</div>` : ''}
+                ${emp.cnpj ? `<div class="empresa-card-info text-xs mt-8" style="color:var(--text-muted);display:flex;gap:8px;flex-wrap:wrap"><span>CNPJ: ${emp.cnpj}</span>${emp.telefone ? `<span>Tel: ${emp.telefone}</span>` : ''}</div>` : ''}
                 <span class="empresa-card-status status-${emp.status || 'prospecto'}">${_labelStatus(emp.status)}</span>
             `;
             div.onclick = () => _exibirOpcaoEmpresa(emp);
             lista.appendChild(div);
         });
     };
+
+    window.refreshListaEmpresas = () => renderEmpresas(input.value);
 
     // Carrega todas ao abrir
     renderEmpresas('');
@@ -417,7 +427,7 @@ async function initTelaBuscar(opcoes) {
     let debounce;
     input.oninput = () => {
         clearTimeout(debounce);
-        debounce = setTimeout(() => renderEmpresas(input.value), 250);
+        debounce = setTimeout(() => renderEmpresas(input.value), 200);
     };
 
     input.focus();

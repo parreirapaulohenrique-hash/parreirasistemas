@@ -1,8 +1,8 @@
 {
-  "build": "20260912-v3.21.19",
-  "version": "3.21.20",
+  "build": "20260912-v3.21.21",
+  "version": "3.21.21",
   "environment": "staging",
-  "change": "v3.21.20 - feat(maxcrm): exibe versao do sistema na top-bar e modal perfil",
+  "change": "v3.21.21 - feat(maxcrm): motor e UI de importacao de clientes (20 colunas XLSX/CSV), correcao de rotas Firestore e busca instantanea",
   "lastUpdate": "2026-09-12",
   "deployedAt": "2026-09-12"
 }
