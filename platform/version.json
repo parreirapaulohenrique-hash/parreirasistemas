@@ -1,8 +1,8 @@
 {
   "build": "20260912-v3.21.19",
-  "version": "3.21.19",
+  "version": "3.21.20",
   "environment": "staging",
-  "change": "v3.21.19 - feat(routing): links diretos Opcao A (/demanda/:tenant, /wms-coletor/:tenant, /maxcrm/:tenant, /consultoria/:tenant) e sincronizacao estrita de permissoes em Ambientes",
+  "change": "v3.21.20 - feat(maxcrm): exibe versao do sistema na top-bar e modal perfil",
   "lastUpdate": "2026-09-12",
   "deployedAt": "2026-09-12"
 }

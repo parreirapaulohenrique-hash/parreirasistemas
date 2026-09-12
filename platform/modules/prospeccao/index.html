@@ -31,6 +31,7 @@
             <div class="top-bar-logo">MX</div>
             <div>
                 <div class="top-bar-title" id="screenTitle">MAXCRM</div>
+                <div id="appVersionBadge" style="font-size:0.58rem;color:rgba(255,255,255,0.45);margin-top:-3px;letter-spacing:0.02em">v—</div>
             </div>
         </div>
         <div class="top-bar-right">
@@ -421,6 +422,23 @@ window.abrirModalPerfil = function() {
         document.getElementById('modalPerfilLogin').textContent = 'Usuário: ' + (sessao.login || '—');
         document.getElementById('modalPerfilRole').textContent = 'Perfil: ' + (sessao.role || 'promotor') + ' · Tenant: ' + (sessao.tenantId || 'parreira');
     }
+    // Versão do sistema
+    if (!window._maxcrmVersion) {
+        fetch('/platform/version.json')
+            .then(r => r.json())
+            .then(v => {
+                window._maxcrmVersion = v.version || '—';
+                var badge = 'v' + window._maxcrmVersion;
+                var el = document.getElementById('modalPerfilVersion');
+                if (el) el.textContent = badge;
+                var tb = document.getElementById('appVersionBadge');
+                if (tb) tb.textContent = badge;
+            }).catch(function(){});
+    } else {
+        var badge = 'v' + window._maxcrmVersion;
+        var el = document.getElementById('modalPerfilVersion');
+        if (el) el.textContent = badge;
+    }
     document.getElementById('modalPerfil').style.display = 'flex';
 };
 
@@ -447,7 +465,8 @@ window.fazerLogout = function() {
         <div style="width:60px;height:60px;border-radius:50%;background:var(--grad-primary);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:1.4rem;font-weight:800;color:#fff;" id="modalPerfilAvatar">OP</div>
         <div style="font-size:1.15rem;font-weight:800;color:#fff;margin-bottom:4px;" id="modalPerfilNome">Usuário</div>
         <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;" id="modalPerfilLogin">login</div>
-        <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:20px;" id="modalPerfilRole">Promotor · Tenant: parreira</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;" id="modalPerfilRole">Promotor · Tenant: parreira</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);opacity:0.6;margin-bottom:20px;" id="modalPerfilVersion">v—</div>
         
         <button class="btn btn-primary" onclick="fazerLogout()" style="width:100%;margin-bottom:8px;background:linear-gradient(135deg, #ef4444, #b91c1c);display:flex;align-items:center;justify-content:center;gap:8px;">
             <span class="material-icons-round">logout</span> Sair da Conta
@@ -458,5 +477,17 @@ window.fazerLogout = function() {
     </div>
 </div>
 
+<script>
+// Exibir versão na top-bar ao carregar
+(function() {
+    fetch('/platform/version.json')
+        .then(function(r){ return r.json(); })
+        .then(function(v){
+            window._maxcrmVersion = v.version || '—';
+            var tb = document.getElementById('appVersionBadge');
+            if (tb) tb.textContent = 'v' + v.version;
+        }).catch(function(){});
+})();
+</script>
 </body>
 </html>
