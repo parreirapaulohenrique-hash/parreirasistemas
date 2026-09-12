@@ -182,18 +182,12 @@ const MaxCRMDB = (() => {
         const all = await _getAll('empresas');
         const t = (termo || '').trim().toLowerCase();
         if (!t) return all;
-        // tDigits: apenas dígitos do termo (para busca de CNPJ/telefone)
-        // ATENÇÃO: só aplica filtro de dígitos se o termo tiver ao menos 1 dígito,
-        // pois ''.includes('') === true e passaria TODAS as empresas
-        const tDigits = t.replace(/\D/g, '');
         return all.filter(e =>
             (e.razaoSocial  || '').toLowerCase().includes(t) ||
             (e.nomeFantasia || '').toLowerCase().includes(t) ||
-            (e.nome         || '').toLowerCase().includes(t) ||
+            (e.cnpj         || '').replace(/\D/g,'').includes(t.replace(/\D/g,'')) ||
             (e.cidade       || '').toLowerCase().includes(t) ||
-            (e.uf           || '').toLowerCase().includes(t) ||
-            (tDigits.length > 0 && (e.cnpj    || '').replace(/\D/g,'').includes(tDigits)) ||
-            (tDigits.length > 0 && (e.telefone|| '').replace(/\D/g,'').includes(tDigits))
+            (e.telefone     || '').replace(/\D/g,'').includes(t.replace(/\D/g,''))
         );
     }
 
@@ -377,7 +371,6 @@ const MaxCRMDB = (() => {
             { id: 'alterdata',       nome: 'Alterdata',            fornecedor: 'Alterdata' },
             { id: 'siaf',            nome: 'SIAF',                 fornecedor: 'SIAF' },
             { id: 'planilha',        nome: 'Planilha Excel',       fornecedor: 'Microsoft' },
-            { id: 'srk',             nome: 'SRK',                  fornecedor: 'SRK Sistemas' },
             { id: 'sem-erp',         nome: 'Sem sistema / Manual', fornecedor: '-' },
             { id: 'outro',           nome: 'Outro (não listado)',   fornecedor: '-' }
         ];
@@ -414,10 +407,7 @@ const MaxCRMDB = (() => {
     }
 
     async function getFilaSync() {
-        // Retorna pending E error (para contarPendentes mostrar status real)
-        const pending = await _getByIndex('sync_queue', 'status', 'pending');
-        const errors  = await _getByIndex('sync_queue', 'status', 'error');
-        return [...pending, ...errors];
+        return _getByIndex('sync_queue', 'status', 'pending');
     }
 
     async function marcarSyncOk(queueId, referenciaId, store) {
@@ -431,22 +421,6 @@ const MaxCRMDB = (() => {
         if (item) {
             item.status = 'done';
             await new Promise((res) => { const r = s.put(item); r.onsuccess = res; });
-        }
-        // fix: também atualiza o syncStatus do registro original (visita/empresa/contato)
-        if (referenciaId && store && ['visitas', 'empresas', 'contatos'].includes(store)) {
-            try {
-                const st = _tx(store, 'readwrite');
-                const rec = await new Promise((res) => {
-                    const r = st.get(referenciaId);
-                    r.onsuccess = () => res(r.result);
-                    r.onerror = () => res(null);
-                });
-                if (rec) {
-                    rec.syncStatus = 'synced';
-                    rec.sincronizadoEm = new Date().toISOString();
-                    await new Promise((res) => { const r = st.put(rec); r.onsuccess = res; });
-                }
-            } catch(e) { console.warn('[MaxCRMDB] marcarSyncOk: erro ao atualizar registro:', e); }
         }
 
         // Atualiza syncStatus da entidade

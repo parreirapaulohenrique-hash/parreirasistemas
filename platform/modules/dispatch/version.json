@@ -1,8 +1,8 @@
 {
-  "build": "20260910-v3.20.11",
-  "version": "3.20.11",
-  "environment": "production",
-  "change": "v3.20.11 - fix(dispatch): configuracao de impressao do romaneio para A4 retrato com margens 9mm e area util ~192x279mm (2 romaneios de ~192x131mm por folha)",
-  "lastUpdate": "2026-09-10",
-  "deployedAt": "2026-09-10"
+  "build": "20260912-v3.21.19",
+  "version": "3.21.19",
+  "environment": "staging",
+  "change": "v3.21.19 - feat(routing): links diretos Opcao A (/demanda/:tenant, /wms-coletor/:tenant, /maxcrm/:tenant, /consultoria/:tenant) e sincronizacao estrita de permissoes em Ambientes",
+  "lastUpdate": "2026-09-12",
+  "deployedAt": "2026-09-12"
 }

@@ -13,9 +13,7 @@ const MaxCRMState = {
     empresaAtual:  null,   // empresa da visita
     gpsCoords:     null,   // { lat, lng, accuracy }
     gpsStatus:     'idle', // idle | loading | ok | error
-    telaAnterior:  'home',
-    isGestor:      false,  // true se role = gerente | admin | master
-    db:            null    // referência Firestore (gestor mode)
+    telaAnterior:  'home'
 };
 
 // ── Inicialização ─────────────────────────────────────────────────────────────
@@ -60,19 +58,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 3. Carregar sessão
     MaxCRMState.sessao = ParreiraAuth.getSessao();
     const nome = MaxCRMState.sessao.nome || MaxCRMState.sessao.login || 'OP';
-
-    // 3b. Detectar perfil gestor (gerente | admin | master)
-    const _role = (MaxCRMState.sessao.role || '').toLowerCase();
-    MaxCRMState.isGestor = ['gerente', 'admin', 'master'].includes(_role);
-    if (MaxCRMState.isGestor && typeof firebase !== 'undefined') {
-        // Firebase já foi inicializado pelo FIREBASE_CONFIG no index.html
-        try {
-            MaxCRMState.db = firebase.firestore();
-            console.log(`[MAXCRM] Modo Gestor ativado (role: ${_role}) — Firestore conectado`);
-        } catch (e) {
-            console.error('[MAXCRM] Erro ao conectar Firestore para Gestor:', e.message);
-        }
-    }
 
     // Atualizar badge do usuário
     const badge = document.getElementById('userBadge');
@@ -280,28 +265,11 @@ function _atualizarProgressBar(telaId) {
 // ── Home Stats ────────────────────────────────────────────────────────────────
 async function atualizarHome() {
     try {
-        let visitas, empresas;
-
-        if (MaxCRMState.isGestor && MaxCRMState.db) {
-            // ── GESTOR: busca todos os lançamentos do Firestore ──────────────
-            const vSnap = await MaxCRMState.db
-                .collection('tenants/parreira/visitas')
-                .limit(500)
-                .get();
-            visitas = vSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-            const eSnap = await MaxCRMState.db
-                .collection('tenants/parreira/empresas')
-                .limit(500)
-                .get();
-            empresas = eSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        } else {
-            // ── PROMOTOR: lê do IndexedDB local ─────────────────────────────
-            visitas  = await MaxCRMDB.listarVisitas(200);
-            empresas = await MaxCRMDB.listarEmpresas();
-        }
+        const visitas  = await MaxCRMDB.listarVisitas(200);
+        const empresas = await MaxCRMDB.listarEmpresas();
 
         const hoje = new Date().toISOString().split('T')[0];
-        const visitasHoje = visitas.filter(v => (v.data || '').startsWith(hoje));
+        const visitasHoje = visitas.filter(v => v.data === hoje);
         const pendentes   = visitas.filter(v => v.syncStatus === 'pending');
         const retornos    = visitas.filter(v =>
             v.respostas?.proximaAcao?.data === hoje && v.status === 'finalizada'
@@ -415,48 +383,7 @@ async function initTelaBuscar(opcoes) {
     lista.innerHTML = '';
 
     const renderEmpresas = async (termo) => {
-        let empresas;
-
-        // ── Gestor: busca diretamente no Firestore ─────────────────────────────
-        if (MaxCRMState.isGestor && MaxCRMState.db) {
-            try {
-                lista.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;font-size:.85rem">⟳ Buscando no servidor...</div>';
-                const snap = await MaxCRMState.db
-                    .collection('tenants/parreira/empresas')
-                    .limit(500)
-                    .get();
-                empresas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                // Filtro client-side pelo termo
-                if (termo && termo.length >= 1) {
-                    const t = termo.toLowerCase();
-                    empresas = empresas.filter(e =>
-                        (e.razaoSocial  || '').toLowerCase().includes(t) ||
-                        (e.nomeFantasia || '').toLowerCase().includes(t) ||
-                        (e.cnpj  || '').includes(t) ||
-                        (e.cidade || '').toLowerCase().includes(t) ||
-                        (e.telefone || '').includes(t)
-                    );
-                }
-            } catch(err) {
-                console.warn('[MAXCRM] Firestore busca falhou, usando IDB:', err.message);
-                empresas = await MaxCRMDB.buscarEmpresas(termo);
-            }
-        } else {
-            // ── Promotor: IndexedDB local ───────────────────────────────────────
-            empresas = await MaxCRMDB.buscarEmpresas(termo);
-
-            // Se vazio e online → pull do Firestore antes de mostrar
-            if (empresas.length === 0 && navigator.onLine) {
-                lista.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;font-size:.85rem">⟳ Sincronizando empresas...</div>';
-                try {
-                    await MaxCRMSync.pullEmpresas();
-                    empresas = await MaxCRMDB.buscarEmpresas(termo);
-                } catch(ex) {
-                    console.warn('[MAXCRM] pullEmpresas falhou:', ex.message);
-                }
-            }
-        }
-
+        const empresas = await MaxCRMDB.buscarEmpresas(termo);
         lista.innerHTML = '';
         if (empresas.length === 0) {
             lista.innerHTML = `
@@ -469,7 +396,7 @@ async function initTelaBuscar(opcoes) {
             return;
         }
         if (btnNova) btnNova.style.display = 'none';
-        empresas.slice(0, 50).forEach(emp => {
+        empresas.slice(0, 30).forEach(emp => {
             const div = document.createElement('div');
             div.className = 'empresa-card';
             div.innerHTML = `
@@ -543,26 +470,7 @@ async function carregarMinhasVisitas() {
     if (!lista) return;
     lista.innerHTML = '<div class="loading-spinner"></div>';
 
-    let visitas;
-    if (MaxCRMState.isGestor && MaxCRMState.db) {
-        // ── GESTOR: busca todos os lançamentos do Firestore ──────────────────
-        try {
-            const snap = await MaxCRMState.db
-                .collection('tenants/parreira/visitas')
-                .limit(300)
-                .get();
-            // Sort client-side (evita necessidade de índice no Firestore)
-            visitas = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-                .sort((a, b) => (b.criadoEm || '').localeCompare(a.criadoEm || ''));
-        } catch(e) {
-            console.warn('[MAXCRM Gestor] Firestore offline:', e.message);
-            visitas = await MaxCRMDB.listarVisitas(50);
-        }
-    } else {
-        // ── PROMOTOR: lê somente os próprios lançamentos do IndexedDB ────────
-        visitas = await MaxCRMDB.listarVisitas(50);
-    }
-
+    const visitas = await MaxCRMDB.listarVisitas(50);
     if (visitas.length === 0) {
         lista.innerHTML = `
             <div class="empty-state">
@@ -576,11 +484,7 @@ async function carregarMinhasVisitas() {
     lista.innerHTML = visitas.map(v => {
         const d = new Date(v.criadoEm);
         const dataFmt = d.toLocaleDateString('pt-BR');
-        const syncIcon = v.syncStatus === 'synced' ? '☁️' : (v.syncStatus === 'pending' ? '⏳' : '☁️');
-        // Gestor: mostra o promotor responsável pelo lançamento
-        const promotorTag = MaxCRMState.isGestor && (v.promotorNome || v.promotorId)
-            ? `<span style="font-size:0.7rem;color:var(--text-muted);margin-left:6px;">👤 ${v.promotorNome || v.promotorId}</span>`
-            : '';
+        const syncIcon = v.syncStatus === 'synced' ? '☁️' : '⏳';
         return `
             <div class="list-item">
                 <div class="list-item-icon" style="background:var(--primary-bg)">
@@ -588,7 +492,7 @@ async function carregarMinhasVisitas() {
                 </div>
                 <div class="list-item-content">
                     <div class="list-item-title">${v.empresaNome || 'Empresa'}</div>
-                    <div class="list-item-sub">${dataFmt} • ${_labelStatusVisita(v.status)} ${syncIcon}${promotorTag}</div>
+                    <div class="list-item-sub">${dataFmt} • ${_labelStatusVisita(v.status)} ${syncIcon}</div>
                 </div>
                 <span class="material-icons-round list-item-arrow">chevron_right</span>
             </div>`;

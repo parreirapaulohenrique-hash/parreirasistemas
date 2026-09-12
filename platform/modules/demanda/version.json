@@ -1,8 +1,8 @@
 {
-  "build": "20260911-v3.21.16",
-  "version": "3.21.16",
-  "environment": "production",
-  "change": "v3.21.16 - fix(db): implementar e exportar DemandaDB.updateItemStatus e proteger abrirDemanda contra falhas",
-  "lastUpdate": "2026-09-11",
-  "deployedAt": "2026-09-11"
+  "version": "2.5.2",
+  "build": "20260910-v2.5.2",
+  "module": "demanda",
+  "name": "Inteligência de Demanda",
+  "lastUpdate": "2026-09-10",
+  "change": "v2.5.2 - feat(maxdata): sincronizacao completa de produtos ativos (GET /v2/product?desativado=false) gravando na colecao techbase/products com paginacao, logs em tempo real e busca integrada"
 }

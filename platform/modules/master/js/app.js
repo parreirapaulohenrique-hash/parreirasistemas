@@ -1224,12 +1224,12 @@ window.renderAmbientes = function renderAmbientes() {
 
     const MODULE_CONFIG = {
         'dispatch':        { label: 'Despacho Logístico', icon: 'local_shipping',       color: '#3b82f6', prodUrl: (s) => `${PROD}/${s}`,                   hmlUrl: (s) => `${HML}/${s}` },
-        'master':          { label: 'Painel Admin',    icon: 'admin_panel_settings', color: '#8b5cf6', prodUrl: ()  => `${PROD}/platform/modules/master/`,hmlUrl: ()  => `${HML}/platform/modules/master/` },
-        'wms':             { label: 'WMS',              icon: 'warehouse',            color: '#10b981', prodUrl: (s) => `${PROD}/wms/${s}`,                    hmlUrl: (s) => `${HML}/wms/${s}` },
-        'wms-coletor':     { label: 'WMS Coletor',     icon: 'phone_android',        color: '#06b6d4', prodUrl: ()  => `${PROD}/modules/wms-coletor/`,       hmlUrl: ()  => `${HML}/modules/wms-coletor/`, pwaUrl: () => `${PROD}/platform/download/wms-coletor.html`, isPwa: true },
-        'erp-consultoria': { label: 'Bússola Gestão', icon: 'savings',              color: '#14b8a6', prodUrl: ()  => PROD + '/erp-consultoria',             hmlUrl: ()  => HML + '/erp-consultoria_hml' },
-        'demanda':         { label: 'Intelig. Demanda', icon: 'insights',            color: '#8b5cf6', prodUrl: (s) => `${PROD}/platform/modules/demanda/`,   hmlUrl: (s) => `${HML}/platform/modules/demanda/` },
-        'prospeccao':      { label: 'MAXCRM',           icon: 'explore',             color: '#e11d48', prodUrl: ()  => `${PROD}/prospeccao`,                  hmlUrl: ()  => `${HML}/prospeccao`, pwaUrl: () => `${PROD}/platform/download/maxcrm.html`, isPwa: true },
+        'master':          { label: 'Painel Admin',       icon: 'admin_panel_settings', color: '#8b5cf6', prodUrl: ()  => `${PROD}/admin`,                  hmlUrl: ()  => `${HML}/admin` },
+        'wms':             { label: 'WMS',                 icon: 'warehouse',            color: '#10b981', prodUrl: (s) => `${PROD}/wms/${s}`,               hmlUrl: (s) => `${HML}/wms/${s}` },
+        'wms-coletor':     { label: 'WMS Coletor',        icon: 'phone_android',        color: '#06b6d4', prodUrl: (s) => `${PROD}/wms-coletor/${s}`,       hmlUrl: (s) => `${HML}/wms-coletor/${s}`, pwaUrl: () => `${PROD}/apk`, isPwa: true },
+        'erp-consultoria': { label: 'Bússola Gestão',    icon: 'savings',              color: '#14b8a6', prodUrl: (s) => `${PROD}/consultoria/${s}`,       hmlUrl: (s) => `${HML}/consultoria/${s}` },
+        'demanda':         { label: 'Intelig. Demanda',   icon: 'insights',             color: '#8b5cf6', prodUrl: (s) => `${PROD}/demanda/${s}`,           hmlUrl: (s) => `${HML}/demanda/${s}` },
+        'prospeccao':      { label: 'MAXCRM',              icon: 'explore',              color: '#e11d48', prodUrl: (s) => `${PROD}/maxcrm/${s}`,            hmlUrl: (s) => `${HML}/maxcrm/${s}`, pwaUrl: () => `${PROD}/maxcrm-app`, isPwa: true },
     };
 
     const allTenants  = getAllTenants();
@@ -1254,6 +1254,7 @@ window.renderAmbientes = function renderAmbientes() {
         const modules = t.modules || [];
 
         const moduleRows = modules.map(modId => {
+            if (modId === 'master' && slug !== 'parreira') return ''; // Painel Admin exclusivo Parreira
             const cfg = MODULE_CONFIG[modId];
             if (!cfg) return '';
             const pUrl = cfg.prodUrl(slug);

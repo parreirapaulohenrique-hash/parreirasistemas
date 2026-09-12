@@ -1,11 +1,12 @@
 {
     "module": "module-master",
     "name": "Master Panel (Admin)",
-    "version": "1.4.1",
-    "date": "2026-09-09",
-    "last_change": "v1.4.1 - Persistência direta no Firestore para criação e edição de usuários via Painel Master + auto-sync de usuários locais para o banco central",
-    "build": "20260909.1",
+    "version": "1.4.2",
+    "date": "2026-09-12",
+    "last_change": "v1.4.2 - Padronizacao de links diretos Opcao A na aba Ambientes baseada estritamente nas permissoes ativas de Gestao de Clientes",
+    "build": "20260912.1",
     "changelog": [
+        "v1.4.2 - Padronizacao de links diretos Opcao A na aba Ambientes baseada estritamente nas permissoes ativas de Gestao de Clientes",
         "1.4.1 - Persistência direta no Firestore para criação e edição de usuários via Painel Master + auto-sync de usuários locais para o banco central",
         "1.4.0 - Coluna de download PWA na Gestão de Clientes + botão App PWA nos cards de Ambientes para WMS Coletor e MAXCRM Campo + página de instalação PWA",
         "1.3.0 - Login unificado + controle de acesso + Ambientes redesign",

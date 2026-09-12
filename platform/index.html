@@ -135,8 +135,8 @@
                 <div class="module-icon" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">
                     <span class="material-icons-round">insights</span>
                 </div>
-                <h3>Cotação</h3>
-                <p>Captura, rastreamento e inteligência de cotações comerciais e pré-venda.</p>
+                <h3>Intelig. Demanda</h3>
+                <p>Captura, rastreamento e inteligência de demanda comercial e pré-venda.</p>
                 <span class="module-status active">✅ Disponível</span>
             </div>
 
@@ -258,8 +258,7 @@
                 if (sessao) {
                     // ── CONTROLE DE ACESSO POR TENANT ───────────────────────────────────
                     // Tenants que NÃO são 'parreira' não têm acesso ao hub.
-                    // fix: redireciona para LOGIN (não para o módulo do tenant)
-                    // Isso permite trocar de conta mesmo com outra aba aberta (ex: cotação/centralpecas)
+                    // São redirecionados direto para o módulo do seu tenant.
                     if (sessao.tenantId && sessao.tenantId !== 'parreira') {
                         // Se ha parametro ?redirect= (ex: vindo de um modulo), honra o redirect
                         const redirectParam = new URLSearchParams(window.location.search).get('redirect');
@@ -267,13 +266,11 @@
                             window.location.href = redirectParam;
                             return;
                         }
-                        // Limpa sessão não-parreira e manda para login para trocar de conta
-                        console.log(`[Hub] Tenant externo (${sessao.tenantId}) tentou acessar o hub → redirecionando para login`);
-                        sessionStorage.removeItem('parreira_session');
-                        localStorage.removeItem('parreira_session_ls');
-                        localStorage.removeItem('logged_user');
-                        localStorage.removeItem('app_tenant_id');
-                        window.location.href = '/platform/login.html';
+                        const allTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
+                        const tenant = allTenants.find(t => t.id === sessao.tenantId);
+                        const slug = tenant?.slug || sessao.tenantId;
+                        console.log(`[Hub] Tenant externo detectado: ${sessao.tenantId} → redirecionando para /${slug}`);
+                        window.location.href = `/${slug}`;
                         return;
                     }
                     // ── TENANT PARREIRA: mostra hub ──────────────────────────────────────
@@ -295,13 +292,12 @@
             const user = JSON.parse(localStorage.getItem('logged_user') || 'null');
             const tenant = localStorage.getItem('app_tenant_id');
             if (user && tenant) {
-                // fix: tenant não-parreira via localStorage → limpa e vai para login
+                // Aplica bypass para não-parreira também via localStorage
                 if (tenant !== 'parreira') {
-                    sessionStorage.removeItem('parreira_session');
-                    localStorage.removeItem('parreira_session_ls');
-                    localStorage.removeItem('logged_user');
-                    localStorage.removeItem('app_tenant_id');
-                    window.location.href = '/platform/login.html';
+                    const allTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
+                    const t = allTenants.find(x => x.id === tenant);
+                    const slug = t?.slug || tenant;
+                    window.location.href = `/${slug}`;
                     return;
                 }
                 renderUserInfo(user);
@@ -458,21 +454,12 @@
         }
 
         function logout() {
-            // Limpa TODO sessionStorage (sessão ativa)
-            sessionStorage.clear();
-            // Limpa TODOS os vestígios de sessão do localStorage
             localStorage.removeItem('logged_user');
             localStorage.removeItem('platform_user_logged');
             localStorage.removeItem('app_tenant_id');
-            localStorage.removeItem('parreira_session_ls'); // ← bug fix: restaurava sessão no reload
-            localStorage.removeItem('app_tenant');
-            // Usa ParreiraAuth.logout se disponível (limpa Firebase/Firestore)
-            if (typeof ParreiraAuth !== 'undefined' && ParreiraAuth.logout) {
-                ParreiraAuth.logout();
-            } else {
-                // Redirect direto para login — NÃO faz reload (reload restaurava sessão)
-                window.location.href = '/platform/login.html';
-            }
+            sessionStorage.removeItem('parreira_session');
+            sessionStorage.clear();
+            location.reload();
         }
     </script>
 </body>

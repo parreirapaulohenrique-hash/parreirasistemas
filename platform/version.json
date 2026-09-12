@@ -1,8 +1,8 @@
 {
-  "build": "20260911-v3.21.16",
-  "version": "3.21.18",
-  "environment": "production",
-  "change": "v3.21.18 - fix(maxcrm): buscarEmpresas sempre retornava todas empresas para termos sem digitos — t.replace(/D/g,'') resultava em '' e ''.includes('') == true",
-  "lastUpdate": "2026-09-11",
-  "deployedAt": "2026-09-11"
+  "build": "20260912-v3.21.19",
+  "version": "3.21.19",
+  "environment": "staging",
+  "change": "v3.21.19 - feat(routing): links diretos Opcao A (/demanda/:tenant, /wms-coletor/:tenant, /maxcrm/:tenant, /consultoria/:tenant) e sincronizacao estrita de permissoes em Ambientes",
+  "lastUpdate": "2026-09-12",
+  "deployedAt": "2026-09-12"
 }

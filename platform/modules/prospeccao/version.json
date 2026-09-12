@@ -1,8 +1,1 @@
-{
-  "version": "1.1.6",
-  "build": "20260909-v1.1.1",
-  "environment": "production",
-  "change": "v1.1.6 - fix: busca empresas via Firestore (gestor) + pullEmpresas auto (promotor)",
-  "lastUpdate": "2026-09-09",
-  "deployedAt": "2026-09-09"
-}
+{"version":"1.1.1","build":"20260909-v1.1.1","environment":"production","change":"v1.1.1 - FEAT: Botão de logout no topo, card do promotor e modal de perfil no MAXCRM","lastUpdate":"2026-09-09","deployedAt":"2026-09-09"}

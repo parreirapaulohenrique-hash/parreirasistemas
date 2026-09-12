@@ -189,6 +189,10 @@
       "destination": "/platform/modules/erp-consultoria/index.html"
     },
     {
+      "source": "/consultoria/:tenant",
+      "destination": "/platform/modules/erp-consultoria/index.html"
+    },
+    {
       "source": "/consultoria/(.*)",
       "destination": "/platform/modules/erp-consultoria/$1"
     },
@@ -214,6 +218,10 @@
     },
     {
       "source": "/wms-coletor",
+      "destination": "/platform/modules/wms-coletor/index.html"
+    },
+    {
+      "source": "/wms-coletor/:tenant",
       "destination": "/platform/modules/wms-coletor/index.html"
     },
     {
@@ -249,11 +257,19 @@
       "destination": "/platform/modules/demanda/index.html"
     },
     {
+      "source": "/demanda/:tenant",
+      "destination": "/platform/modules/demanda/index.html"
+    },
+    {
       "source": "/demanda/(.*)",
       "destination": "/platform/modules/demanda/$1"
     },
     {
       "source": "/prospeccao",
+      "destination": "/platform/modules/prospeccao/index.html"
+    },
+    {
+      "source": "/prospeccao/:tenant",
       "destination": "/platform/modules/prospeccao/index.html"
     },
     {
@@ -275,6 +291,10 @@
     {
       "source": "/maxcrm-app",
       "destination": "/platform/download/maxcrm.html"
+    },
+    {
+      "source": "/maxcrm/:tenant",
+      "destination": "/platform/modules/prospeccao/index.html"
     },
     {
       "source": "/maxcrm/(.*)",

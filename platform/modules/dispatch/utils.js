@@ -73,45 +73,7 @@ const Utils = {
     },
 
     saveRaw: (key, stringData) => {
-        // v3.20.12: Tratamento de QuotaExceededError — purga romaneios baixados se necessário
-        try {
-            localStorage.setItem(Utils._storageKey(key), stringData);
-        } catch (quotaErr) {
-            if (key === 'app_romaneios') {
-                try {
-                    // Mantém apenas romaneios em_rota + últimos 50 baixados
-                    const all = JSON.parse(stringData) || [];
-                    const emRota  = all.filter(r => r.status !== 'baixado');
-                    const baixados = all.filter(r => r.status === 'baixado').slice(-50);
-                    const trimmed = [...emRota, ...baixados];
-                    localStorage.setItem(Utils._storageKey(key), JSON.stringify(trimmed));
-                    console.warn('[saveRaw] Quota: romaneios podados ' + all.length + ' -> ' + trimmed.length);
-                } catch (e2) {
-                    // Último recurso: remove chave e recria com dados novos
-                    localStorage.removeItem(Utils._storageKey(key));
-                    try { localStorage.setItem(Utils._storageKey(key), stringData); } catch (_) {}
-                    console.error('[saveRaw] Quota crítica — chave recriada:', key, e2.message);
-                }
-            } else if (key === 'dispatches') {
-                try {
-                    // Mantém apenas despachos dos últimos 60 dias para liberar espaço
-                    const all = JSON.parse(stringData) || [];
-                    const cutoff = Date.now() - (60 * 24 * 60 * 60 * 1000); // 60 dias
-                    const recent = all.filter(d => {
-                        const t = d.dispatchedAt || d.date || d.createdAt || '';
-                        return !t || new Date(t).getTime() > cutoff || d.status === 'Pendente Despacho';
-                    });
-                    localStorage.setItem(Utils._storageKey(key), JSON.stringify(recent));
-                    console.warn('[saveRaw] Quota dispatches: podados ' + all.length + ' -> ' + recent.length);
-                } catch (e2) {
-                    localStorage.removeItem(Utils._storageKey(key));
-                    try { localStorage.setItem(Utils._storageKey(key), stringData); } catch (_) {}
-                    console.error('[saveRaw] Quota critica dispatches — chave recriada:', e2.message);
-                }
-            } else {
-                console.error('[saveRaw] QuotaExceededError:', key, quotaErr.message);
-            }
-        }
+        localStorage.setItem(Utils._storageKey(key), stringData);
         Utils.lastWriteTime[key] = Date.now();
         Utils._persistLastWriteTime(); // FIX v3.11.64: persiste para sobreviver a refreshes
         try {

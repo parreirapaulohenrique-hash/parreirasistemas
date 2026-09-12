@@ -15,7 +15,7 @@
 const MaxCRMSync = (() => {
 
     const TENANT_ID  = 'parreira';
-    const BASE_PATH  = `tenants/${TENANT_ID}`;
+    const BASE_PATH  = `tenants/${TENANT_ID}/prospeccao`;
 
     let _syncRunning = false;
     let _onStatusChange = null;
@@ -184,7 +184,7 @@ const MaxCRMSync = (() => {
         if (!isOnline()) return;
         try {
             const db    = _db();
-            const snap  = await db.collection(`${BASE_PATH}/empresas`).limit(1000).get();
+            const snap  = await db.collection(`${BASE_PATH}/empresas`).limit(500).get();
             for (const doc of snap.docs) {
                 const data = doc.data();
                 // Só salva localmente se não há versão local mais recente

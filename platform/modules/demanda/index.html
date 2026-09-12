@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <base href="/platform/modules/demanda/">
-    <title>Cotação | Central Rolamentos</title>
-    <meta name="description" content="Módulo de captura, identificação e rastreamento de cotações comerciais — Central Rolamentos CTR.">
+    <title>Inteligência de Demanda | Central Rolamentos</title>
+    <meta name="description" content="Módulo de captura, identificação e rastreamento de demanda comercial — Central Rolamentos CTR.">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <!-- SheetJS para importação de Excel -->
@@ -15,32 +15,6 @@
     <link rel="stylesheet" href="/platform/core/styles/portal.css">
     <!-- Estilos específicos do módulo -->
     <link rel="stylesheet" href="styles/demanda.css?v=2.4.9">
-    <style>
-        .btn-subtab {
-            display: inline-flex;
-            align-items: center;
-            gap: .4rem;
-            padding: .45rem .85rem;
-            background: transparent;
-            border: 1px solid transparent;
-            border-radius: 6px;
-            color: var(--text-secondary);
-            font-size: .8rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all .2s ease;
-            white-space: nowrap;
-        }
-        .btn-subtab:hover {
-            color: var(--text-primary);
-            background: rgba(255,255,255,.05);
-        }
-        .btn-subtab.active {
-            background: rgba(59,130,246,.15);
-            color: var(--primary-color);
-            border-color: rgba(59,130,246,.3);
-        }
-    </style>
 </head>
 
 <body>
@@ -70,7 +44,7 @@
                     <span class="material-icons-round">insights</span>
                 </div>
                 <div class="sidebar-logo-text">
-                    <strong>Cotação</strong>
+                    <strong>Intelig. Demanda</strong>
                     <small id="sidebarFilial">—</small>
                 </div>
             </div>
@@ -79,11 +53,11 @@
                 <div class="nav-section-label">Operacional</div>
                 <button class="nav-item active" id="nav-captura" onclick="DemandaApp.switchView('captura')">
                     <span class="material-icons-round">add_circle</span>
-                    Nova Cotação
+                    Nova Demanda
                 </button>
                 <button class="nav-item" id="nav-lista" onclick="DemandaApp.switchView('lista')">
                     <span class="material-icons-round">list_alt</span>
-                    Minhas Cotações
+                    Minhas Demandas
                 </button>
                 <button class="nav-item" id="nav-pesquisa" onclick="DemandaApp.switchView('pesquisa')">
                     <span class="material-icons-round">manage_search</span>
@@ -106,10 +80,6 @@
                 <button class="nav-item" id="nav-dashboard" onclick="DemandaApp.switchView('dashboard')">
                     <span class="material-icons-round">bar_chart</span>
                     Dashboard
-                </button>
-                <button class="nav-item" id="nav-relatorios" onclick="DemandaApp.switchView('relatorios')">
-                    <span class="material-icons-round">assessment</span>
-                    Relatórios
                 </button>
 
                 <div class="nav-section-label">Base Técnica</div>
@@ -166,8 +136,14 @@
                         <span id="demandaCodigoTopbar" style="font-size:.78rem;color:var(--text-secondary)"></span>
                     </div>
                     <div class="topbar-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="DemandaApp.openImportModal('texto')">
+                            <span class="material-icons-round">content_paste</span> Colar Texto
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="DemandaApp.openImportModal('excel')">
+                            <span class="material-icons-round">table_view</span> Excel/CSV
+                        </button>
                         <button class="btn btn-primary btn-sm" id="btnSalvarDemanda" onclick="DemandaApp.salvarDemanda()">
-                            <span class="material-icons-round">save</span> Salvar Cotação
+                            <span class="material-icons-round">save</span> Salvar
                         </button>
                     </div>
                 </div>
@@ -227,18 +203,15 @@
                         </div>
                     </div>
 
-                    <!-- ── Coluna Direita: Cotação Atual ─── -->
+                    <!-- ── Coluna Direita: Demanda Atual ─── -->
                     <div class="captura-right">
                         <div class="demanda-panel">
 
                             <!-- Cabeçalho do painel -->
                             <div class="demanda-panel-header">
-                                <div class="demanda-panel-title" style="display:flex;align-items:center;gap:.5rem;width:100%">
+                                <div class="demanda-panel-title">
                                     <span class="material-icons-round">receipt_long</span>
-                                    <span>Cotação Atual</span>
-                                    <button class="btn btn-secondary btn-sm" onclick="DemandaApp.reavaliarEstoqueItens()" title="Atualizar saldos de estoque no ERP" style="margin-left:auto;font-size:.7rem;padding:.2rem .5rem;gap:.25rem;display:inline-flex;align-items:center;background:rgba(255,255,255,.05);border:1px solid var(--border-color);">
-                                        <span class="material-icons-round" style="font-size:.82rem">sync</span> Checar Estoque
-                                    </button>
+                                    Demanda Atual
                                 </div>
                                 <div class="demanda-client-info">
                                     <!-- Seletor de cliente -->
@@ -265,7 +238,7 @@
                                     <!-- Canal de origem -->
                                     <select id="selectOrigem" class="form-select"
                                         style="padding:.3rem .6rem;font-size:.75rem;width:auto;background:var(--bg-dark);"
-                                        title="Canal de origem da cotação">
+                                        title="Canal de origem da demanda">
                                         <option value="whatsapp">📱 WhatsApp</option>
                                         <option value="email">📧 Email</option>
                                         <option value="telefone">📞 Telefone</option>
@@ -331,7 +304,7 @@
                                 </button>
                                 <button class="btn btn-success btn-sm" id="btnSalvarDemandaPanel" style="flex:1" onclick="DemandaApp.salvarDemanda()">
                                     <span class="material-icons-round">save</span>
-                                    Salvar Cotação
+                                    Salvar Demanda
                                 </button>
                             </div>
                         </div>
@@ -346,12 +319,12 @@
                 <div class="top-bar">
                     <div class="breadcrumb">
                         <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">list_alt</span>
-                        <span class="current">Minhas Cotações</span>
+                        <span class="current">Minhas Demandas</span>
                     </div>
                     <div class="topbar-actions">
                         <button class="btn btn-primary btn-sm" onclick="DemandaApp.switchView('captura')">
                             <span class="material-icons-round">add</span>
-                            Nova Cotação
+                            Nova Demanda
                         </button>
                     </div>
                 </div>
@@ -361,13 +334,12 @@
                         <button class="filter-chip" onclick="DemandaApp.filterDemandas('aberta', this)">Abertas</button>
                         <button class="filter-chip" onclick="DemandaApp.filterDemandas('em_atendimento', this)">Em Atendimento</button>
                         <button class="filter-chip" onclick="DemandaApp.filterDemandas('encerrada', this)">Encerradas</button>
-                        <button class="filter-chip" onclick="DemandaApp.filterDemandas('cancelada', this)">Estornadas / Canceladas</button>
                     </div>
                 </div>
                 <div style="flex:1;overflow-y:auto;padding:1rem 1.5rem" id="listaDemandasContainer">
                     <div class="empty-state">
                         <span class="material-icons-round">hourglass_empty</span>
-                        <h4>Carregando cotações...</h4>
+                        <h4>Carregando demandas...</h4>
                     </div>
                 </div>
             </div>
@@ -434,53 +406,6 @@
             </div>
 
             <!-- ══════════════════════════════════════════════ -->
-            <!--  VIEW: RELATÓRIOS & INTELIGÊNCIA COMERCIAL    -->
-            <!-- ══════════════════════════════════════════════ -->
-            <div id="view-relatorios" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden">
-                <div class="top-bar">
-                    <div class="breadcrumb">
-                        <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">assessment</span>
-                        <span>Relatórios Gerenciais & Inteligência</span>
-                    </div>
-                    <div class="top-bar-actions" style="gap:.5rem">
-                        <select id="relatorioFiltroPeriodo" onchange="DemandaApp.loadRelatorios()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.3rem .6rem;color:var(--text-primary);font-size:.78rem;cursor:pointer">
-                            <option value="30">Últimos 30 dias</option>
-                            <option value="7">Últimos 7 dias</option>
-                            <option value="mes">Este Mês</option>
-                            <option value="tudo">Todo o Período</option>
-                        </select>
-                        <button class="btn btn-secondary btn-sm" onclick="DemandaApp.loadRelatorios()">
-                            <span class="material-icons-round">refresh</span> Atualizar
-                        </button>
-                        <button class="btn btn-secondary btn-sm" onclick="DemandaApp.imprimirRelatorio()">
-                            <span class="material-icons-round">print</span> Imprimir
-                        </button>
-                        <button class="btn btn-primary btn-sm" onclick="DemandaApp.exportarRelatorioCSV()">
-                            <span class="material-icons-round">download</span> Exportar CSV
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Sub-abas de relatórios -->
-                <div style="display:flex;gap:.5rem;padding:.75rem 1.5rem;background:var(--bg-sidebar);border-bottom:1px solid var(--border-color);overflow-x:auto">
-                    <button class="btn-subtab active" id="subtab-perdas" onclick="DemandaApp.switchRelatorioTab('perdas')">
-                        <span class="material-icons-round" style="font-size:1rem">trending_down</span> Vendas Perdidas (R$)
-                    </button>
-                    <button class="btn-subtab" id="subtab-faltas" onclick="DemandaApp.switchRelatorioTab('faltas')">
-                        <span class="material-icons-round" style="font-size:1rem">inventory_2</span> Demanda Reprimida
-                    </button>
-                    <button class="btn-subtab" id="subtab-novos" onclick="DemandaApp.switchRelatorioTab('novos')">
-                        <span class="material-icons-round" style="font-size:1rem">add_shopping_cart</span> Novos SKUs (Sem ERP)
-                    </button>
-                    <button class="btn-subtab" id="subtab-performance" onclick="DemandaApp.switchRelatorioTab('performance')">
-                        <span class="material-icons-round" style="font-size:1rem">leaderboard</span> Desempenho Comercial
-                    </button>
-                </div>
-
-                <div id="relatoriosContainer" style="flex:1;overflow-y:auto;padding:1.5rem"></div>
-            </div>
-
-            <!-- ══════════════════════════════════════════════ -->
             <!--  VIEW: BASE TÉCNICA                           -->
             <!-- ══════════════════════════════════════════════ -->
             <!-- VIEW: BASE TÉCNICA -->
@@ -495,7 +420,7 @@
                     <div class="empty-state">
                         <span class="material-icons-round">hub</span>
                         <h4>Base de Inteligência Técnica</h4>
-                        <p>Compatíveis, substitutos, aplicações por máquina e histórico de cotação por peça.</p>
+                        <p>Compatíveis, substitutos, aplicações por máquina e histórico de demanda por peça.</p>
                     </div>
                 </div>
             </div>
@@ -570,7 +495,7 @@
             <!-- Footer / LGPD Notice — padrão Despacho (no rodapé do main-content) -->
             <footer style="padding:1rem 2rem;border-top:1px solid var(--border-color);font-size:0.75rem;color:var(--text-secondary);display:flex;justify-content:space-between;align-items:center;background:var(--bg-card);flex-shrink:0;">
                 <div>
-                    <strong>&copy; 2026 Cotação</strong> · Parreira Sistemas
+                    <strong>&copy; 2026 Inteligência de Demanda</strong> · Parreira Sistemas
                 </div>
                 <div style="display:flex;align-items:center;gap:0.5rem;">
                     <span class="material-icons-round" style="font-size:1rem;color:var(--accent-success);">security</span>
@@ -584,9 +509,9 @@
 
     <!-- Modal: Detalhe da Demanda -->
     <div class="modal-overlay" id="modalDemandaDetalhe">
-        <div class="modal-card modal-lg" style="max-width:980px;width:95vw">
+        <div class="modal-card modal-lg">
             <div class="modal-header">
-                <h3><span class="material-icons-round">receipt_long</span> Detalhe da Cotação</h3>
+                <h3><span class="material-icons-round">receipt_long</span> Detalhe da Demanda</h3>
                 <button class="btn-close" onclick="DemandaApp.closeModal('modalDemandaDetalhe')">
                     <span class="material-icons-round">close</span>
                 </button>
@@ -712,7 +637,7 @@
                 <button class="btn btn-secondary" onclick="DemandaApp.closeModal('modalConferencia')">Cancelar</button>
                 <button class="btn btn-primary" onclick="DemandaApp.confirmConferencia()">
                     <span class="material-icons-round">add_shopping_cart</span>
-                    Adicionar Selecionados à Cotação
+                    Adicionar Selecionados à Demanda
                 </button>
             </div>
         </div>
@@ -737,7 +662,7 @@
                 <button class="btn btn-secondary" onclick="DemandaApp.closeModal('modalItemDetalhes')">Fechar</button>
                 <button class="btn btn-primary" id="btnAddFromDetails" onclick="DemandaApp.addItemFromDetails()">
                     <span class="material-icons-round">add_shopping_cart</span>
-                    Adicionar à Cotação
+                    Adicionar à Demanda
                 </button>
             </div>
         </div>
@@ -750,49 +675,53 @@
     <!--  SCRIPTS                                              -->
     <!-- ══════════════════════════════════════════════════════ -->
 
-    <!-- Modal: Importar Cotação em PDF (Leitura Estruturada Direta) -->
+    <!-- Modal: Import PDF -->
     <div id="modalImportPDF" class="modal-overlay" style="display:none">
-        <div class="modal-card modal-lg">
+        <div class="modal-container" style="max-width:720px;width:97%">
             <div class="modal-header">
-                <h3>
+                <span style="font-weight:700;display:flex;align-items:center;gap:.5rem">
                     <span class="material-icons-round" style="color:#ef4444">picture_as_pdf</span>
-                    Importar Cotação / Orçamento em PDF
-                </h3>
+                    Importar de PDF
+                    <span id="pdfFileName" style="font-size:.78rem;font-weight:400;color:var(--text-secondary);margin-left:.25rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+                </span>
                 <button class="btn-close" onclick="DemandaApp._fecharImportPDF()">
                     <span class="material-icons-round">close</span>
                 </button>
             </div>
-            <div class="modal-body" style="padding:1.5rem">
-                <div id="pdfUploadArea" style="
-                    border:2px dashed var(--border);border-radius:12px;padding:2.5rem 1.5rem;text-align:center;
-                    cursor:pointer;transition:border-color .2s;background:rgba(255,255,255,.02);
-                " onclick="document.getElementById('pdfDirectFileInput').click()"
-                   ondragover="event.preventDefault();this.style.borderColor='var(--accent-primary)'"
-                   ondragleave="this.style.borderColor='var(--border)'"
-                   ondrop="DemandaApp.onPdfDrop(event)">
-                    <span class="material-icons-round" style="font-size:3.5rem;color:#ef4444;display:block;margin-bottom:.5rem">picture_as_pdf</span>
-                    <p style="color:var(--text-primary);font-size:.95rem;font-weight:600;margin:0 0 .35rem">
-                        Clique para selecionar ou arraste o PDF da cotação aqui
-                    </p>
-                    <p style="color:var(--text-secondary);font-size:.82rem;margin:0">
-                        O sistema faz a leitura direta da tabela de peças e quantidades (John Deere, Case, New Holland, etc.)
-                    </p>
-                    <input type="file" id="pdfDirectFileInput" accept=".pdf,application/pdf" style="display:none"
-                        onchange="DemandaApp.onPdfFileSelected(this.files[0])">
-                </div>
-
-                <div id="pdfProcessingArea" style="display:none;margin-top:1.5rem;text-align:center;padding:1.5rem;background:var(--bg-dark);border-radius:10px;border:1px solid var(--border)">
-                    <span class="material-icons-round" style="animation:spin 1s linear infinite;font-size:2.2rem;color:var(--accent-primary)">sync</span>
-                    <p id="pdfProcessingMsg" style="margin-top:.75rem;font-size:.88rem;font-weight:600;color:var(--text-primary)">
-                        Lendo PDF e identificando referências...
-                    </p>
-                    <div style="background:rgba(255,255,255,.1);border-radius:6px;height:8px;overflow:hidden;margin-top:.75rem;max-width:320px;margin-left:auto;margin-right:auto">
-                        <div id="pdfProgressBar" style="height:100%;width:15%;background:var(--accent-primary);transition:width .2s"></div>
+            <div class="modal-body" style="padding:1.25rem;display:grid;grid-template-columns:1fr 1.4fr;gap:1rem;align-items:start">
+                <div style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:10px;padding:1.5rem;text-align:center">
+                    <span class="material-icons-round" style="font-size:3rem;color:#ef4444;display:block;margin-bottom:.75rem">picture_as_pdf</span>
+                    <p style="font-size:.88rem;font-weight:600;color:var(--text-primary);margin:0 0 .75rem">PDF selecionado</p>
+                    <!-- Botao ancora: unico jeito confiavel de abrir nova aba sem popup-blocker -->
+                    <a id="btnAbrirPdfNovaAba" href="#" target="_blank" rel="noopener"
+                       style="display:inline-flex;align-items:center;gap:.4rem;padding:.55rem 1rem;background:#ef4444;color:#fff;border-radius:8px;font-size:.83rem;font-weight:600;text-decoration:none;margin-bottom:1rem">
+                        <span class="material-icons-round" style="font-size:.95rem">open_in_new</span>
+                        Abrir PDF em nova aba
+                    </a>
+                    <div style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:.65rem;font-size:.75rem;color:#a5b4fc;text-align:left;line-height:1.6">
+                        <strong>Apos abrir o PDF:</strong><br>
+                        1. Selecione o texto (Ctrl+A)<br>
+                        2. Copie (Ctrl+C)<br>
+                        3. Cole no campo ao lado<br>
+                        4. Clique em <strong>Processar Itens</strong>
                     </div>
                 </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:.5rem">
+                    <label for="pdfTextoColar" style="font-size:.78rem;color:var(--text-secondary);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Cole o texto do PDF aqui</label>
+                    <textarea id="pdfTextoColar" rows="12" placeholder="Cole aqui o texto copiado do PDF"
+                        style="resize:vertical;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.65rem .85rem;color:var(--text-primary);font-size:.83rem;font-family:inherit;min-height:220px;box-sizing:border-box;width:100%"></textarea>
+                    <p style="font-size:.76rem;color:var(--text-secondary);margin:0">
+                        <span class="material-icons-round" style="font-size:.85rem;vertical-align:middle;color:#f59e0b">info</span>
+                        O sistema detecta referencias, descricoes e quantidades automaticamente.
+                    </p>
+                </div>
             </div>
-            <div class="modal-footer" style="padding:.75rem 1.25rem;border-top:1px solid var(--border-color);display:flex;justify-content:flex-end">
+            <div class="modal-footer" style="padding:.75rem 1.25rem;display:flex;justify-content:flex-end;gap:.75rem">
                 <button class="btn btn-secondary" onclick="DemandaApp._fecharImportPDF()">Cancelar</button>
+                <button class="btn btn-primary" onclick="DemandaApp._copiarDoPDF()">
+                    <span class="material-icons-round" style="font-size:.9rem">send</span> Processar Itens
+                </button>
             </div>
         </div>
     </div>
@@ -894,15 +823,14 @@
     <script src="/platform/shared/integrations/index.js?v=2.0.0"></script>
 
     <!-- Módulo de Demanda -->
-    <script src="js/demanda-states.js?v=3.21.16"></script>
-    <script src="js/demanda-db.js?v=3.21.16"></script>
-    <script src="js/demanda-import.js?v=3.21.16"></script>
+    <script src="js/demanda-states.js?v=2.5.1"></script>
+    <script src="js/demanda-db.js?v=2.5.1"></script>
+    <script src="js/demanda-import.js?v=2.5.1"></script>
     <script src="js/demanda-search.js?v=2.5.1"></script>
     <script src="js/demanda-lookup.js?v=2.5.2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <script src="js/demanda-pdf.js?v=3.21.16"></script>
+    <script src="js/demanda-pdf.js?v=2.5.1"></script>
     <script src="js/demanda-clientes.js?v=2.5.1"></script>
-    <script src="js/demanda-app.js?v=3.21.16"></script>
+    <script src="js/demanda-app.js?v=2.5.1"></script>
 
     <!-- ═══════════════════════════════════════════════════════════
          MODAL: Administração da Base Técnica de Peças
@@ -1005,65 +933,6 @@
         </div>
 
       </div>
-    </div>
-
-    <!-- Modal: Autorização de Supervisão / Adm -->
-    <div id="modalAutorizacaoSupervisao" class="modal-overlay" style="display:none;z-index:99999"
-         onclick="if(event.target===this){this.style.display='none';if(typeof DemandaApp!=='undefined'&&DemandaApp._fecharModalSupervisao)DemandaApp._fecharModalSupervisao();}">
-        <div class="modal-container" style="max-width:440px;width:95%">
-            <div class="modal-header" style="border-bottom:1px solid var(--border-color)">
-                <span style="font-weight:700;display:flex;align-items:center;gap:.5rem;color:var(--warning)">
-                    <span class="material-icons-round">verified_user</span>
-                    <span id="supModalTitulo">Autorização de Supervisão / Adm</span>
-                </span>
-                <button class="btn-close" onclick="document.getElementById('modalAutorizacaoSupervisao').style.display='none';if(typeof DemandaApp!=='undefined'&&DemandaApp._fecharModalSupervisao)DemandaApp._fecharModalSupervisao();">
-                    <span class="material-icons-round">close</span>
-                </button>
-            </div>
-            <div class="modal-body" style="padding:1.25rem">
-                <div id="supAcaoDescricao" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:.75rem;margin-bottom:1rem;font-size:.82rem;line-height:1.5;color:var(--text-primary)">
-                    Esta operação requer autorização expressa de um supervisor ou administrador.
-                </div>
-
-                <div id="supCampoMotivo" style="margin-bottom:.85rem">
-                    <label style="font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.3rem">
-                        Motivo / Justificativa <span style="color:var(--accent-danger)">*</span>
-                    </label>
-                    <input id="supInputMotivo" type="text" placeholder="Ex: Cancelamento solicitado pelo cliente..."
-                        style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.5rem .75rem;color:var(--text-primary);font-size:.85rem;box-sizing:border-box">
-                </div>
-
-                <div style="margin-bottom:.85rem">
-                    <label style="font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.3rem">
-                        Usuário Supervisor / Administrador <span style="color:var(--accent-danger)">*</span>
-                    </label>
-                    <input id="supInputLogin" type="text" placeholder="Login do supervisor..."
-                        style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.5rem .75rem;color:var(--text-primary);font-size:.85rem;box-sizing:border-box">
-                </div>
-
-                <div style="margin-bottom:.5rem">
-                    <label style="font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.3rem">
-                        Senha ou PIN de Supervisão <span style="color:var(--accent-danger)">*</span>
-                    </label>
-                    <div style="position:relative">
-                        <input id="supInputSenha" type="password" placeholder="Digite a senha ou PIN..."
-                            onkeydown="if(event.key==='Enter'){if(typeof DemandaApp!=='undefined'&&DemandaApp._confirmarAutorizacaoSupervisao)DemandaApp._confirmarAutorizacaoSupervisao();}"
-                            style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.5rem .75rem;padding-right:2.5rem;color:var(--text-primary);font-size:.85rem;box-sizing:border-box">
-                        <span id="supToggleVisBtn" class="material-icons-round" onclick="if(typeof DemandaApp!=='undefined'&&DemandaApp._toggleVisibilidadeSenhaSupervisao)DemandaApp._toggleVisibilidadeSenhaSupervisao();"
-                            style="position:absolute;right:.6rem;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--text-secondary);font-size:1.1rem">visibility</span>
-                    </div>
-                </div>
-
-                <div id="supMsgErro" style="display:none;color:var(--accent-danger);font-size:.78rem;margin-top:.6rem;padding:.4rem;background:rgba(239,68,68,.1);border-radius:4px;border:1px solid rgba(239,68,68,.2)"></div>
-            </div>
-            <div class="modal-footer" style="padding:.75rem 1.25rem;border-top:1px solid var(--border-color);display:flex;justify-content:flex-end;gap:.5rem">
-                <button class="btn btn-secondary" onclick="document.getElementById('modalAutorizacaoSupervisao').style.display='none';if(typeof DemandaApp!=='undefined'&&DemandaApp._fecharModalSupervisao)DemandaApp._fecharModalSupervisao();">Cancelar</button>
-                <button class="btn btn-warning" id="btnConfirmarSup" onclick="if(typeof DemandaApp!=='undefined'&&DemandaApp._confirmarAutorizacaoSupervisao)DemandaApp._confirmarAutorizacaoSupervisao();" style="display:inline-flex;align-items:center;gap:.35rem">
-                    <span class="material-icons-round" style="font-size:.95rem">lock_open</span>
-                    Autorizar e Confirmar
-                </button>
-            </div>
-        </div>
     </div>
 
 </body>

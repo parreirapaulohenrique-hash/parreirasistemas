@@ -45,47 +45,17 @@ const CNPJLookup = {
             throw new Error('Consulta automática via API disponível apenas para CNPJ (14 dígitos).');
         }
 
-        // Tenta BrasilAPI; se falhar usa receitaws como fallback
-        let data;
         try {
-            const r1 = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleaned}`, { signal: AbortSignal.timeout(7000) });
-            if (!r1.ok) throw new Error(`BrasilAPI: ${r1.status}`);
-            data = await r1.json();
-        } catch(e1) {
-            console.warn('[CNPJLookup] BrasilAPI falhou, tentando ReceitaWS:', e1.message);
-            try {
-                const r2 = await fetch(`https://receitaws.com.br/v1/cnpj/${cleaned}`, { signal: AbortSignal.timeout(10000) });
-                if (!r2.ok) throw new Error(`ReceitaWS: ${r2.status}`);
-                const d2 = await r2.json();
-                if (d2.status === 'ERROR') throw new Error(d2.message || 'CNPJ inválido ou não encontrado');
-                // Normalizar formato ReceitaWS → BrasilAPI
-                data = {
-                    cnpj: cleaned,
-                    razao_social: d2.nome || '',
-                    nome_fantasia: d2.fantasia || d2.nome || '',
-                    descricao_situacao_cadastral: d2.situacao || '',
-                    logradouro: d2.logradouro || '',
-                    numero: d2.numero || '',
-                    complemento: d2.complemento || '',
-                    bairro: d2.bairro || '',
-                    municipio: d2.municipio || '',
-                    uf: d2.uf || '',
-                    cep: (d2.cep || '').replace(/\D/g,'').replace(/(\d{5})(\d{3})/,'$1-$2'),
-                    ddd_telefone_1: (d2.telefone || '').replace(/[^\d]/g,'').substring(0,11),
-                    email: d2.email || '',
-                    cnae_fiscal_descricao: (d2.atividade_principal || [{}])[0]?.text || '',
-                    cnae_fiscal: (d2.atividade_principal || [{}])[0]?.code || '',
-                    capital_social: parseFloat((d2.capital_social || '0').replace(/[^\d,]/g,'').replace(',','.')) || 0,
-                    data_inicio_atividade: d2.abertura || '',
-                    qsa: (d2.qsa || []).map(s => ({ nome_socio: s.nome, qualificacao_socio: s.qual })),
-                    opcao_pelo_simples: d2.simples?.optante,
-                    opcao_pelo_mei: d2.mei?.optante
-                };
-            } catch(e2) {
-                throw new Error('CNPJ não encontrado: ' + e2.message);
+            const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleaned}`);
+
+            if (!response.ok) {
+                if (response.status === 404) {
+                    throw new Error('CNPJ não encontrado na base da Receita Federal');
+                }
+                throw new Error(`Erro na consulta: ${response.status}`);
             }
-        }
-        try {
+
+            const data = await response.json();
 
             // Normalizar dados para nosso formato
             return {
