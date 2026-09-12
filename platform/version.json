@@ -1,8 +1,8 @@
 {
   "build": "20260912-v3.21.21",
-  "version": "3.21.21",
+  "version": "3.21.22",
   "environment": "staging",
-  "change": "v3.21.21 - feat(maxcrm): motor e UI de importacao de clientes (20 colunas XLSX/CSV), correcao de rotas Firestore e busca instantanea",
+  "change": "v3.21.22 - fix(maxcrm): iniciarVisita enfileira sync; carregarMinhasVisitas gestor usa Firestore; onclick cards de visita adicionado",
   "lastUpdate": "2026-09-12",
   "deployedAt": "2026-09-12"
 }

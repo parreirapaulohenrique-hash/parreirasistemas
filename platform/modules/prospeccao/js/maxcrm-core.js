@@ -480,7 +480,26 @@ async function carregarMinhasVisitas() {
     if (!lista) return;
     lista.innerHTML = '<div class="loading-spinner"></div>';
 
-    const visitas = await MaxCRMDB.listarVisitas(50);
+    let visitas = [];
+
+    if (MaxCRMState.isGestor && MaxCRMState.db) {
+        // ── GESTOR: busca todas as visitas do Firestore ──────────────────
+        try {
+            const snap = await MaxCRMState.db
+                .collection('tenants/parreira/visitas')
+                .orderBy('criadoEm', 'desc')
+                .limit(100)
+                .get();
+            visitas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        } catch(e) {
+            console.warn('[MAXCRM] Firestore visitas falhou, usando IDB:', e.message);
+            visitas = await MaxCRMDB.listarVisitas(50);
+        }
+    } else {
+        // ── PROMOTOR: lê do IndexedDB local ─────────────────────────────
+        visitas = await MaxCRMDB.listarVisitas(50);
+    }
+
     if (visitas.length === 0) {
         lista.innerHTML = `
             <div class="empty-state">
@@ -491,22 +510,62 @@ async function carregarMinhasVisitas() {
         return;
     }
 
-    lista.innerHTML = visitas.map(v => {
-        const d = new Date(v.criadoEm);
+    lista.innerHTML = '';
+    visitas.forEach(v => {
+        const d = new Date(v.criadoEm || v.data || Date.now());
         const dataFmt = d.toLocaleDateString('pt-BR');
         const syncIcon = v.syncStatus === 'synced' ? '☁️' : '⏳';
-        return `
-            <div class="list-item">
-                <div class="list-item-icon" style="background:var(--primary-bg)">
-                    <span class="material-icons-round" style="color:var(--primary)">assignment</span>
-                </div>
-                <div class="list-item-content">
-                    <div class="list-item-title">${v.empresaNome || 'Empresa'}</div>
-                    <div class="list-item-sub">${dataFmt} • ${_labelStatusVisita(v.status)} ${syncIcon}</div>
-                </div>
-                <span class="material-icons-round list-item-arrow">chevron_right</span>
-            </div>`;
-    }).join('');
+        const promotorInfo = (MaxCRMState.isGestor && v.promotorNome) ? ` · ${v.promotorNome}` : '';
+        const div = document.createElement('div');
+        div.className = 'list-item';
+        div.style.cursor = 'pointer';
+        div.innerHTML = `
+            <div class="list-item-icon" style="background:var(--primary-bg)">
+                <span class="material-icons-round" style="color:var(--primary)">assignment</span>
+            </div>
+            <div class="list-item-content">
+                <div class="list-item-title">${v.empresaNome || 'Empresa'}</div>
+                <div class="list-item-sub">${dataFmt} • ${_labelStatusVisita(v.status)} ${syncIcon}${promotorInfo}</div>
+            </div>
+            <span class="material-icons-round list-item-arrow">chevron_right</span>`;
+        div.onclick = () => _abrirDetalheVisita(v);
+        lista.appendChild(div);
+    });
+}
+
+function _abrirDetalheVisita(v) {
+    // Para gestor ou visitas já finalizadas: mostra resumo em modal
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const r = v.respostas || {};
+    const erp = r.erpAtual || {};
+    const acao = r.proximaAcao || {};
+    const rows = [
+        ['Empresa',      v.empresaNome || '—'],
+        ['Promotor',     v.promotorNome || '—'],
+        ['Data',         new Date(v.criadoEm || v.data || Date.now()).toLocaleDateString('pt-BR')],
+        ['Status',       _labelStatusVisita(v.status)],
+        ['ERP Atual',    erp.erpNome || '—'],
+        ['Satisfação',   erp.satisfacao ? erp.satisfacao + '/5' : '—'],
+        ['Interesse',    r.interesse || '—'],
+        ['Timing',       r.timing || '—'],
+        ['Próxima Ação', [acao.tipo, acao.data].filter(Boolean).join(' • ') || '—'],
+        ['Obs',          r.observacoes || '—']
+    ];
+    overlay.innerHTML = `
+        <div class="modal-sheet" style="max-height:80vh;overflow-y:auto">
+            <div class="modal-handle"></div>
+            <div class="modal-title" style="margin-bottom:16px">${v.empresaNome || 'Visita'}</div>
+            ${rows.map(([lbl,val]) => `
+                <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06)">
+                    <span style="font-size:0.75rem;color:var(--text-secondary)">${lbl}</span>
+                    <span style="font-size:0.8rem;color:#fff;text-align:right;max-width:60%">${val}</span>
+                </div>`).join('')}
+            <div style="height:16px"></div>
+            <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="width:100%">Fechar</button>
+        </div>`;
+    overlay.onclick = e => { if(e.target === overlay) overlay.remove(); };
+    document.body.appendChild(overlay);
 }
 
 function _labelStatusVisita(status) {

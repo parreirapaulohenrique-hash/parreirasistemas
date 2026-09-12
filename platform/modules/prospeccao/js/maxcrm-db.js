@@ -165,7 +165,10 @@ const MaxCRMDB = (() => {
             _localOnly:   !dados.id || dados._localOnly || false
         };
         await _put('empresas', empresa);
-        await _enqueueSync('empresa', empresa.id, 'upsert');
+        // Não enfileirar sync para empresas já sincronizadas (vinda do pullEmpresas)
+        if (empresa.syncStatus !== 'synced') {
+            await _enqueueSync('empresa', empresa.id, 'upsert');
+        }
         return empresa;
     }
 
@@ -329,6 +332,7 @@ const MaxCRMDB = (() => {
             sincronizadoEm: null
         };
         await _put('visitas', visita);
+        await _enqueueSync('visita', visita.id, 'upsert'); // Sobe imediatamente (não esperar finalizar)
         return visita;
     }
 
