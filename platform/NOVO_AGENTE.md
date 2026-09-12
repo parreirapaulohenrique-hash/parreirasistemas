@@ -358,6 +358,7 @@ Abra o terminal do PowerShell na raiz do projeto (`C:\Users\Paulo H Parreira\.ge
 
 | Módulo | Pasta | Política de Deploy | Rationale |
 |---|---|---|
+| **3.21.22** | 2026-09-12 | Master Panel (v1.4.3): Correção de layout da sidebar com banner de homologação (classe has-staging-banner) e integração do indicador de versão no sticky footer do painel administrativo. |
 | **3.21.21** | 2026-09-12 | MAXCRM (v1.2.0): Motor e UI de importação de clientes territorial com mapeamento das 20 colunas da planilha (XLSX/CSV), upload interativo no Painel e no App, correção de rotas Firestore (tenants/parreira/empresas), resolução de erro de sincronização e busca com normalização de acentos. Carga completa dos 449 cadastros no Firestore. |
 | **3.21.20** | 2026-09-12 | MAXCRM (v1.1.1): Exibição dinâmica da versão do sistema na top-bar e no modal de perfil do usuário. |
 | **3.21.19** | 2026-09-12 | Roteamento Opção A: Desvinculação da rota /centralpecas (Despacho Logístico) e links diretos com sincronização de permissões no Master. |---|
@@ -367,6 +368,7 @@ Abra o terminal do PowerShell na raiz do projeto (`C:\Users\Paulo H Parreira\.ge
 | **WMS / WMS Coletor** | `wms`, `wms-coletor` | 🟢 **Deploy direto em produção** — rodar `deploy.ps1 + promote.ps1` na mesma sequência até segunda ordem | Atualizações e melhorias diretas em produção autorizadas pelo usuário em 2026-09-01. |
 | **ERP** | `erp` | 🔴 **Staging obrigatório** | Faturamento, NF-e e dados fiscais. Risco alto. |
 | **Master** | `master` | 🔴 **Staging obrigatório** | Gestão de tenants e permissões. Erro pode bloquear acesso de todos os usuários. |
+| **MAXCRM** | `prospeccao` | 🟢 **Deploy direto em produção** — rodar commit+push direto para `main` sem staging intermediário até segunda ordem | PWA de prospecção comercial em desenvolvimento ativo. Iterações frequentes autorizadas pelo usuário em 2026-09-12. |
 | **Sales Force** | `sales-force` | 🟡 **Staging recomendado** — pode ir direto se for ajuste visual/menor | PWA offline-first, mas impacto menor em operação imediata. |
 
 **Como aplicar na prática:**

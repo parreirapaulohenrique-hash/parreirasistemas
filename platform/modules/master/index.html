@@ -34,15 +34,8 @@
                 var b = document.getElementById('stagingBanner');
                 if (b) { 
                     b.style.display = 'flex'; 
-                    document.body.style.paddingTop = '34px'; 
-                    
-                    // Ajusta a sidebar fixa para descer 34px
-                    var sidebar = document.querySelector('.sidebar');
-                    if (sidebar) {
-                        sidebar.style.top = '34px';
-                        sidebar.style.height = 'calc(100vh - 34px)';
-                    }
                 }
+                document.body.classList.add('has-staging-banner');
                 // Adiciona prefixo [HOMOLOG] ao título da aba
                 document.title = '[HOMOLOG] ' + document.title;
             }
@@ -89,21 +82,23 @@
             </nav>
 
             <div class="sidebar-footer">
-                <div class="user-info">
-                    <div class="avatar">A</div>
-                    <div>
-                        <div class="u-name">Admin</div>
-                        <div class="u-role">Master</div>
+                <div class="sidebar-footer-row">
+                    <div class="user-info">
+                        <div class="avatar">A</div>
+                        <div>
+                            <div class="u-name">Admin</div>
+                            <div class="u-role">Master</div>
+                        </div>
                     </div>
+                    <a href="#" class="btn-logout" title="Sair — Voltar ao Portal"
+                       onclick="logoutToPortal(); return false;">
+                        <span class="material-icons-round">logout</span>
+                    </a>
                 </div>
-                <a href="#" class="btn-logout" title="Sair — Voltar ao Portal"
-                   onclick="logoutToPortal(); return false;">
-                    <span class="material-icons-round">logout</span>
-                </a>
-            </div>
-            <div style="text-align: center; font-size: 0.7rem; color: var(--text-secondary); padding-bottom: 1rem; opacity: 0.5;"
-                id="masterVersion">
-                vLoading...
+                <div class="sidebar-footer-meta">
+                    <span>Painel Master</span>
+                    <span id="masterVersion">vLoading...</span>
+                </div>
             </div>
         </aside>
 

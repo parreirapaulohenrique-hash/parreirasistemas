@@ -1,18 +1,19 @@
 {
     "module": "module-master",
     "name": "Master Panel (Admin)",
-    "version": "1.4.2",
+    "version": "1.4.3",
     "date": "2026-09-12",
-    "last_change": "v1.4.2 - Padronizacao de links diretos Opcao A na aba Ambientes baseada estritamente nas permissoes ativas de Gestao de Clientes",
-    "build": "20260912.1",
+    "last_change": "v1.4.3 - Fix layout da sidebar com banner de homologacao e integracao de versao no sticky footer",
+    "build": "20260912.2",
     "changelog": [
+        "v1.4.3 - Fix layout da sidebar com banner de homologacao e integracao de versao no sticky footer",
         "v1.4.2 - Padronizacao de links diretos Opcao A na aba Ambientes baseada estritamente nas permissoes ativas de Gestao de Clientes",
-        "1.4.1 - Persistência direta no Firestore para criação e edição de usuários via Painel Master + auto-sync de usuários locais para o banco central",
-        "1.4.0 - Coluna de download PWA na Gestão de Clientes + botão App PWA nos cards de Ambientes para WMS Coletor e MAXCRM Campo + página de instalação PWA",
+        "1.4.1 - Persistencia direta no Firestore para criacao e edicao de usuarios via Painel Master + auto-sync de usuarios locais para o banco central",
+        "1.4.0 - Coluna de download PWA na Gestao de Clientes + botao App PWA nos cards de Ambientes para WMS Coletor e MAXCRM Campo + pagina de instalacao PWA",
         "1.3.0 - Login unificado + controle de acesso + Ambientes redesign",
         "1.2.0 - Aba Ambientes com links diretos por modulo",
         "1.1.2 - CRITICAL BUGFIX: sintaxe corrompida no app.js",
         "1.1.0 - Multi-tenant Firestore, merge de tenants",
-        "1.0.0 - Versão inicial Master Panel"
+        "1.0.0 - Versao inicial Master Panel"
     ]
 }
