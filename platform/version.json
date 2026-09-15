@@ -1,8 +1,8 @@
 {
-  "build": "20260915-v3.21.24",
-  "version": "3.21.24",
+  "build": "20260915-v3.21.25",
+  "version": "3.21.25",
   "environment": "staging",
-  "change": "v3.21.24 - fix(hub): remocao do redirecionamento automatico para despacho em tenants externos; hub acessivel para todos os tenants autenticados",
+  "change": "v3.21.25 - feat(demanda): restauracao dos filtros por status dos produtos com contadores e barra de acoes cabiveis ligada a cada status",
   "lastUpdate": "2026-09-15",
   "deployedAt": "2026-09-15"
 }

@@ -1,8 +1,8 @@
 {
-  "version": "2.5.2",
-  "build": "20260910-v2.5.2",
+  "version": "2.5.3",
+  "build": "20260915-v2.5.3",
   "module": "demanda",
   "name": "Inteligência de Demanda",
-  "lastUpdate": "2026-09-10",
-  "change": "v2.5.2 - feat(maxdata): sincronizacao completa de produtos ativos (GET /v2/product?desativado=false) gravando na colecao techbase/products com paginacao, logs em tempo real e busca integrada"
+  "lastUpdate": "2026-09-15",
+  "change": "v2.5.3 - feat(cotacao): totalizadores de status por produto, filtros interativos com contadores, busca textual e acoes cabiveis em lote e por item no detalhe da cotacao"
 }

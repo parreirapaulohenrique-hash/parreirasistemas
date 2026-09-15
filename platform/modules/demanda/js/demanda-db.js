@@ -263,6 +263,46 @@ const DemandaDB = (() => {
     }
 
     /**
+     * Atualiza o status de um item isolado e registra na timeline.
+     */
+    async function updateItemStatus(demandaId, itemId, novoStatus, por = 'sistema', obs = '') {
+        const tl = {
+            evento: 'status_changed',
+            para: novoStatus,
+            por: por,
+            obs: obs,
+            em: new Date().toISOString()
+        };
+        await updateItem(demandaId, itemId, { status: novoStatus }, tl);
+        await recalcTotals(demandaId).catch(() => {});
+    }
+
+    /**
+     * Atualiza múltiplos itens em lote (batch) de uma mesma demanda.
+     */
+    async function updateItensBatch(demandaId, itemIds, fields, timelineEntry = null) {
+        if (!demandaId || !itemIds || itemIds.length === 0) return;
+        const db = _db();
+        const batch = db.batch();
+        const updateData = {
+            ...fields,
+            atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        if (timelineEntry) {
+            updateData.timeline = firebase.firestore.FieldValue.arrayUnion({
+                ...timelineEntry,
+                em: new Date().toISOString()
+            });
+        }
+        itemIds.forEach(id => {
+            const ref = db.doc(`${DEMANDS_COL}/${demandaId}/items/${id}`);
+            batch.update(ref, updateData);
+        });
+        await batch.commit();
+        await recalcTotals(demandaId).catch(() => {});
+    }
+
+    /**
      * Remove um item de uma demanda (só permite se status = demanda_recebida).
      */
     async function deleteItem(demandaId, itemId) {
@@ -475,7 +515,7 @@ const DemandaDB = (() => {
 
     return {
         createDemanda, getDemanda, updateDemanda, listDemandas,
-        addItens, getItens, updateItem, deleteItem, recalcTotals, splitItem,
+        addItens, getItens, updateItem, updateItemStatus, updateItensBatch, deleteItem, recalcTotals, splitItem,
         onItensChanged, listItensFila, getDashboardStats,
         saveSession, loadSession, clearSession,
         TENANT_ID, DEMANDS_COL
