@@ -1,8 +1,8 @@
 {
   "build": "20260912-v3.21.23",
-  "version": "3.21.24",
+  "version": "3.21.25",
   "environment": "staging",
-  "change": "v3.21.24 - fix(maxcrm): isGestor+db definidos no init; sincronizarVisitasPendentes sobe visitas orfas para Firestore",
+  "change": "v3.21.25 - fix(dispatch): linha de assinatura romaneio — margin-top 2cm (inline app.js + CSS)",
   "lastUpdate": "2026-09-12",
   "deployedAt": "2026-09-12"
 }

@@ -907,7 +907,7 @@ input[type=number] {
         display: grid !important;
         grid-template-columns: 1fr 1fr !important;
         gap: 40px !important;
-        margin-top: 12px !important;
+        margin-top: 2cm !important; /* espaço para assinatura acima da linha */
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
@@ -915,7 +915,7 @@ input[type=number] {
     .sig-box {
         border-top: 1px solid #000 !important;
         width: 100% !important;
-        padding-top: 4px !important;
+        padding-top: 5px !important;
         font-size: 0.8rem !important;
         font-weight: bold !important;
         text-align: center !important;

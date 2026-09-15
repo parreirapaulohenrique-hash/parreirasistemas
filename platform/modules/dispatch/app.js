@@ -7459,7 +7459,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </tfoot>
                 </table>
 
-                <div class="signature-row" style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; font-family: Arial, sans-serif;">
+                <div class="signature-row" style="margin-top: 2cm; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; font-family: Arial, sans-serif;">
                     <div class="sig-box" style="border-top: 1px solid #000; padding-top: 4px; text-align: center; font-size: 10px; font-weight: bold;">
                         Responsável Expedição
                     </div>
@@ -7467,7 +7467,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         Motorista / Conferente
                     </div>
                 </div>
-                ${isDayCompact && i === 0 ? '<div style="margin-top: 8px; text-align: center; font-size: 8px; color: #555; letter-spacing: 2px;">✂ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ✂</div>' : ''}
+                ${isDayCompact && i === 0 ? '<div style="margin-top: 6mm; text-align: center; font-size: 8px; color: #555; letter-spacing: 2px;">✂ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ✂</div>' : ''}
             `;
                 printArea.appendChild(page);
             }
@@ -8367,7 +8367,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     Motorista / Conferente
                 </div>
             </div>
-            ${isCompact && i === 0 ? '<div style="margin-top: 8px; text-align: center; font-size: 8px; color: #555; letter-spacing: 2px;">✂ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ✂</div>' : ''}
+            ${isCompact && i === 0 ? '<div style="margin-top: 6mm; text-align: center; font-size: 8px; color: #555; letter-spacing: 2px;">✂ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ✂</div>' : ''}
         `;
                     printArea.appendChild(page);
                 }
@@ -8483,7 +8483,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="sig-box" style="border-top:1px solid #000;text-align:center;padding-top:4px;font-size:0.8rem;font-weight:bold;font-family:Arial,sans-serif;">Responsável Expedição</div>
                 <div class="sig-box" style="border-top:1px solid #000;text-align:center;padding-top:4px;font-size:0.8rem;font-weight:bold;font-family:Arial,sans-serif;">Conferente / Redespacho</div>
             </div>
-            ${isRcCompact && ri === 0 ? '<div style="margin-top: 8px; text-align: center; font-size: 8px; color: #555; letter-spacing: 2px;">✂ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ✂</div>' : ''}
+            ${isRcCompact && ri === 0 ? '<div style="margin-top: 6mm; text-align: center; font-size: 8px; color: #555; letter-spacing: 2px;">✂ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ✂</div>' : ''}
         `;
                         printArea.appendChild(rPage);
                     }
