@@ -745,6 +745,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 localStorage.removeItem('platform_user_logged');
                 localStorage.removeItem('app_tenant_id');
                 sessionStorage.removeItem('parreira_session');
+                try { localStorage.removeItem('parreira_session_ls'); } catch(_) {}
                 sessionStorage.clear();
                 location.reload();
             }

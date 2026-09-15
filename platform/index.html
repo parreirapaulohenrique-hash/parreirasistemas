@@ -256,24 +256,14 @@
             if (typeof ParreiraAuth !== 'undefined' && ParreiraAuth.isLogado()) {
                 const sessao = ParreiraAuth.getSessao ? ParreiraAuth.getSessao() : null;
                 if (sessao) {
-                    // ── CONTROLE DE ACESSO POR TENANT ───────────────────────────────────
-                    // Tenants que NÃO são 'parreira' não têm acesso ao hub.
-                    // São redirecionados direto para o módulo do seu tenant.
-                    if (sessao.tenantId && sessao.tenantId !== 'parreira') {
-                        // Se ha parametro ?redirect= (ex: vindo de um modulo), honra o redirect
-                        const redirectParam = new URLSearchParams(window.location.search).get('redirect');
-                        if (redirectParam) {
-                            window.location.href = redirectParam;
-                            return;
-                        }
-                        const allTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
-                        const tenant = allTenants.find(t => t.id === sessao.tenantId);
-                        const slug = tenant?.slug || sessao.tenantId;
-                        console.log(`[Hub] Tenant externo detectado: ${sessao.tenantId} → redirecionando para /${slug}`);
-                        window.location.href = `/${slug}`;
+                    // Se há parâmetro ?redirect= (ex: vindo de um módulo), honra o redirect
+                    const redirectParam = new URLSearchParams(window.location.search).get('redirect');
+                    if (redirectParam) {
+                        window.location.href = redirectParam;
                         return;
                     }
-                    // ── TENANT PARREIRA: mostra hub ──────────────────────────────────────
+
+                    // ── v3.21.24 FIX: Hub acessível a todos os tenants autenticados ──
                     renderUserInfo({ name: sessao.nome, role: sessao.role, login: sessao.login });
                     // SEMPRE sincroniza localStorage com a sessão ParreiraAuth
                     localStorage.setItem('logged_user', JSON.stringify({ name: sessao.nome, role: sessao.role, login: sessao.login }));
@@ -292,14 +282,7 @@
             const user = JSON.parse(localStorage.getItem('logged_user') || 'null');
             const tenant = localStorage.getItem('app_tenant_id');
             if (user && tenant) {
-                // Aplica bypass para não-parreira também via localStorage
-                if (tenant !== 'parreira') {
-                    const allTenants = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
-                    const t = allTenants.find(x => x.id === tenant);
-                    const slug = t?.slug || tenant;
-                    window.location.href = `/${slug}`;
-                    return;
-                }
+                // v3.21.24 FIX: Todos os tenants autenticados podem ver o hub
                 renderUserInfo(user);
                 // Fix cross-tab: recria parreira_session_ls a partir do localStorage para sessões antigas
                 if (!localStorage.getItem('parreira_session_ls')) {
@@ -458,8 +441,13 @@
             localStorage.removeItem('platform_user_logged');
             localStorage.removeItem('app_tenant_id');
             sessionStorage.removeItem('parreira_session');
+            try { localStorage.removeItem('parreira_session_ls'); } catch(_) {}
             sessionStorage.clear();
-            location.reload();
+            if (typeof ParreiraAuth !== 'undefined' && ParreiraAuth.logout) {
+                ParreiraAuth.logout();
+            } else {
+                location.reload();
+            }
         }
     </script>
 </body>

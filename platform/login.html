@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -135,8 +135,12 @@
     document.getElementById('pageTitleTag').textContent =
         (_modLabels[_module] || _module) + ' — Login | Parreira Sistemas';
 
-    // Se já logado, redireciona direto
-    if (ParreiraAuth.isLogado()) window.location.href = _redirect;
+    // v3.21.24: Suporte a logout explícito via URL
+    if (_params.get('logout') === 'true') {
+        ParreiraAuth.logout();
+    } else if (ParreiraAuth.isLogado()) {
+        window.location.href = _redirect;
+    }
 
     async function doLogin() {
         const login = document.getElementById('inpLogin').value.trim();

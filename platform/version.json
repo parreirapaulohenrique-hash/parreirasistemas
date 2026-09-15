@@ -1,8 +1,8 @@
 {
-  "build": "20260912-v3.21.23",
-  "version": "3.21.25",
+  "build": "20260915-v3.21.24",
+  "version": "3.21.24",
   "environment": "staging",
-  "change": "v3.21.25 - fix(dispatch): linha de assinatura romaneio — margin-top 2cm (inline app.js + CSS)",
-  "lastUpdate": "2026-09-12",
-  "deployedAt": "2026-09-12"
+  "change": "v3.21.24 - fix(hub): remocao do redirecionamento automatico para despacho em tenants externos; hub acessivel para todos os tenants autenticados",
+  "lastUpdate": "2026-09-15",
+  "deployedAt": "2026-09-15"
 }
