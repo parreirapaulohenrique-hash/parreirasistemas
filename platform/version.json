@@ -1,8 +1,8 @@
 {
-  "build": "20260916-v3.21.25",
-  "version": "3.21.25",
+  "build": "20260916-v3.21.26",
+  "version": "3.21.26",
   "environment": "staging",
-  "change": "v3.21.25 - feat(auth): implantacao do Modelo A (identidade unica por tenant com matriz de modulos); SSO transparente no Despacho com suporte a PIN rapido de expedicao",
+  "change": "v3.21.26 - fix(wms): autenticacao Firebase no WMS e ErpRegistry eliminando erro Missing or insufficient permissions ao salvar integracao ERP e sincronizar com Firestore",
   "lastUpdate": "2026-09-16",
   "deployedAt": "2026-09-16"
 }

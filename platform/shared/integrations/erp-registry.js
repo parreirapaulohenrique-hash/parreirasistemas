@@ -111,6 +111,11 @@ const ErpRegistry = {
     async _loadConfig(tenantId) {
         try {
             if (typeof firebase !== 'undefined' && firebase.firestore) {
+                if (window.ParreiraAuth?.ensureAuth) {
+                    await window.ParreiraAuth.ensureAuth();
+                } else if (firebase.auth && !firebase.auth().currentUser) {
+                    await firebase.auth().signInAnonymously().catch(e => console.warn('[ErpRegistry] signInAnonymously em _loadConfig:', e));
+                }
                 const db = firebase.firestore();
                 const doc = await db.doc(`tenants/${tenantId}/erp_config/settings`).get();
                 if (doc.exists && doc.data()?.enabled) return doc.data();
@@ -160,6 +165,12 @@ const ErpRegistry = {
         };
 
         try {
+            if (window.ParreiraAuth?.ensureAuth) {
+                await window.ParreiraAuth.ensureAuth();
+            } else if (typeof firebase !== 'undefined' && firebase.auth && !firebase.auth().currentUser) {
+                await firebase.auth().signInAnonymously().catch(e => console.warn('[ErpRegistry] signInAnonymously:', e));
+            }
+
             const db = firebase.firestore();
             await db.doc(`tenants/${tenantId}/erp_config/settings`).set(docData, { merge: true });
 
