@@ -2816,7 +2816,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                   : (rule.taxaFixaPorVolume ? 0 : (rule.pedagio || 0));
                 const _taxaVolume = (rule.taxaVolume != null) ? (rule.taxaVolume || 0)
                                   : (rule.taxaFixaPorVolume ? (rule.pedagio || 0) : 0);
-                const tollVal = _taxaTDA + (_taxaVolume * volume);
+                let tollVal = _taxaTDA + (_taxaVolume * volume);
 
                 // 2. Weight Excess
                 let excessCost = 0;
@@ -2876,6 +2876,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                             rValVol = volume * redespConfig.valorVolume;
                         }
 
+                        // 3. Taxa por Volume / TDA da regra de redespacho (v3.21.26)
+                        let isRedespVolumeCost = false;
+                        if ((_taxaVolume > 0 || _taxaTDA > 0) && (!rule.percentualRedespacho || rule.percentualRedespacho === 0)) {
+                            rValVol = Math.max(rValVol, tollVal);
+                            isRedespVolumeCost = true;
+                        }
+
                         // Max of both strategies (Percent vs Volume)
                         let rVal = Math.max(rValPercent, rValVol);
 
@@ -2884,6 +2891,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (rVal < rMin) rVal = rMin;
 
                         redispatchCost = rVal;
+
+                        // Se a taxa de volume/TDA foi alocada ao redespacho, zera do pedagio da principal
+                        if (isRedespVolumeCost) {
+                            tollVal = 0;
+                        }
                     }
 
                 }
@@ -5354,17 +5366,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                 .filter(d => VALID_STATUSES.includes(d.status) && d.carrier)
                 .map(d => d.carrier.toUpperCase().trim());
 
-            // Coleta transportadoras de redespacho (somente as que têm valor real)
+            // Coleta transportadoras de redespacho (v3.21.26: inclui com ou sem redespTotal pre-calculado)
             const redespCarriers = dispatches
-                .filter(d => VALID_STATUSES.includes(d.status) && d.redespCarrier && d.redespTotal > 0)
+                .filter(d => VALID_STATUSES.includes(d.status) && d.redespCarrier)
                 .map(d => d.redespCarrier.toUpperCase().trim());
 
-            // v3.11.62: suporte ao campo legado d.redespacho (NFs antigas sem redespCarrier)
+            // Suporte ao campo legado d.redespacho (NFs antigas sem redespCarrier)
             const legacyRedespCarriers = dispatches
                 .filter(d => VALID_STATUSES.includes(d.status) && d.redespacho && d.redespacho !== '-' && d.redespacho !== '' && !d.redespCarrier)
                 .map(d => d.redespacho.toUpperCase().trim());
 
-            const allCarriers = [...new Set([...mainCarriers, ...redespCarriers, ...legacyRedespCarriers])].sort();
+            // v3.21.26: Garante inclusao de transportadoras cadastradas como redespacho ou presentes nas regras
+            const registeredRedesp = (carrierList || []).filter(c => {
+                const info = (typeof carrierInfo !== 'undefined' && carrierInfo[c]) ? carrierInfo[c] : null;
+                return info && info.isRedespacho === true;
+            }).map(c => c.toUpperCase().trim());
+
+            const freightRules = Utils.getStorage('freight_tables') || [];
+            const ruleRedesp = freightRules
+                .filter(r => r.redespacho && r.redespacho !== '-' && r.redespacho !== '')
+                .map(r => r.redespacho.toUpperCase().trim());
+
+            const allCarriers = [...new Set([...mainCarriers, ...redespCarriers, ...legacyRedespCarriers, ...registeredRedesp, ...ruleRedesp])].sort();
 
             select.innerHTML = '<option value="">-- Selecione --</option>';
             allCarriers.forEach(carrier => {
@@ -5430,7 +5453,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // Principal não paga
                     const mainOk  = _carrierMatch(d.carrier) && d.status !== 'Pago';
                     // Redespacho novo não pago
-                    const rdNew   = _carrierMatch(d.redespCarrier) && d.redespTotal > 0 && !d.redespPago;
+                    const rdNew   = _carrierMatch(d.redespCarrier) && !d.redespPago;
                     // Redespacho legado não pago
                     const rdLeg   = _carrierMatch(d.redespacho) && !d.redespCarrier
                                     && d.redespacho && d.redespacho !== '-' && !d.redespPago;
@@ -5444,92 +5467,76 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const isRedesp = isRedespNew || isRedespLegacy;
                     // Calcula o valor correto para esta transportadora
                     let invoiceValue;
-                    if (isRedespNew) {
-                        // Redespacho novo: usa apenas o valor do redespacho
+                    if (isRedespNew || isRedespLegacy) {
                         invoiceValue = d.redespTotal || 0;
                         
-                        // Se redespTotal não foi salvo, tenta extrair da regra de redespacho cadastrada
+                        // v3.21.26: Se redespTotal esta 0 ou ausente, busca na regra de frete (incluindo taxa de volume e TDA)
                         if (!invoiceValue) {
                             const freightRules = Utils.getStorage('freight_tables') || [];
                             const dCarrier = String(d.carrier || '').trim().toUpperCase();
                             const dCity = String(d.city || '').trim().toUpperCase();
+                            const dNeighb = String(d.neighborhood || '').trim().toUpperCase();
+
                             const rule = freightRules.find(r =>
                                 String(r.transportadora || '').trim().toUpperCase() === dCarrier &&
                                 String(r.cidade || '').trim().toUpperCase() === dCity &&
-                                String(r.redespacho || '').trim().toUpperCase() === carrierNorm
-                            );
-                            if (rule && d.nfValue) {
-                                let rVal = 0;
-                                if (rule.percentualRedespacho > 0) {
-                                    rVal = d.nfValue * (rule.percentualRedespacho / 100);
-                                }
-                                const rMin = rule.minimoRedespacho || 0;
-                                if (rVal < rMin) rVal = rMin;
-                                invoiceValue = Math.round(rVal * 100) / 100;
-                            }
-                        }
-                        
-                        // Como último recurso, se ainda for 0, tenta usar a diferença de originalTotal e total (recalculado)
-                        if (!invoiceValue && d.originalTotal && d.total && d.originalTotal > d.total) {
-                            invoiceValue = Math.round((d.originalTotal - d.total) * 100) / 100;
-                        }
-
-                        // Se ainda for 0, tenta aproximar subtraindo os custos principais do total
-                        if (!invoiceValue && d.total) {
-                            const mainCosts = (d.baseCalculada || d.minimo || 0) + (d.pedagio || 0) + (d.gris || 0) + (d.taxaFixa || 0) + (d.excessoCalculado || 0);
-                            const estimatedRedesp = d.total - mainCosts;
-                            if (estimatedRedesp > 0) {
-                                invoiceValue = Math.round(estimatedRedesp * 100) / 100;
-                            }
-                        }
-                    } else if (isRedespLegacy) {
-                        // Redespacho legado: usa redespTotal se existir, senão tenta calcular
-                        // (NFs antigas podem ter o valor em d.total e não ter mainTotal/redespTotal)
-                        invoiceValue = d.redespTotal || 0;
-                        // Se redespTotal não foi salvo, tenta extrair do percentualRedespacho
-                        if (!invoiceValue && d.percentualRedespacho && d.nfValue) {
-                            invoiceValue = Math.round(d.nfValue * (d.percentualRedespacho / 100) * 100) / 100;
-                        }
-                        
-                        // Se ainda for 0, tenta buscar a regra ativa no localStorage
-                        if (!invoiceValue) {
-                            const freightRules = Utils.getStorage('freight_tables') || [];
-                            const dCarrier = String(d.carrier || '').trim().toUpperCase();
-                            const dCity = String(d.city || '').trim().toUpperCase();
-                            const rule = freightRules.find(r =>
+                                (String(r.redespacho || '').trim().toUpperCase() === carrierNorm || _carrierMatch(r.redespacho)) &&
+                                (
+                                    !dNeighb || !r.cidadeRedespacho ||
+                                    String(r.cidadeRedespacho || '').trim().toUpperCase() === dNeighb ||
+                                    dNeighb.includes(String(r.cidadeRedespacho || '').trim().toUpperCase())
+                                )
+                            ) || freightRules.find(r =>
                                 String(r.transportadora || '').trim().toUpperCase() === dCarrier &&
                                 String(r.cidade || '').trim().toUpperCase() === dCity &&
-                                String(r.redespacho || '').trim().toUpperCase() === carrierNorm
+                                (String(r.redespacho || '').trim().toUpperCase() === carrierNorm || _carrierMatch(r.redespacho))
                             );
-                            if (rule && d.nfValue) {
-                                let rVal = 0;
-                                if (rule.percentualRedespacho > 0) {
-                                    rVal = d.nfValue * (rule.percentualRedespacho / 100);
+
+                            if (rule) {
+                                let rValPercent = 0;
+                                if (rule.percentualRedespacho > 0 && d.nfValue) {
+                                    rValPercent = d.nfValue * (rule.percentualRedespacho / 100);
                                 }
+                                const vol = parseInt(d.volume) || 1;
+                                const rTaxaVol = (rule.taxaVolume != null ? rule.taxaVolume : (rule.taxaFixaPorVolume ? (rule.pedagio || 0) : 0)) * vol;
+                                const rTaxaTDA = rule.taxaTDA != null ? rule.taxaTDA : 0;
+                                const rValVol = rTaxaVol + rTaxaTDA;
+
+                                let rVal = Math.max(rValPercent, rValVol);
                                 const rMin = rule.minimoRedespacho || 0;
                                 if (rVal < rMin) rVal = rMin;
-                                invoiceValue = Math.round(rVal * 100) / 100;
+                                if (rVal > 0) invoiceValue = Math.round(rVal * 100) / 100;
                             }
-                        }
-                        
-                        // Como último recurso, se ainda for 0, tenta usar a diferença de originalTotal e total (recalculado)
-                        if (!invoiceValue && d.originalTotal && d.total && d.originalTotal > d.total) {
-                            invoiceValue = Math.round((d.originalTotal - d.total) * 100) / 100;
-                        }
 
-                        // Se ainda for 0, como último recurso para NFs legadas, subtrai os custos principais do total
-                        if (!invoiceValue && d.total) {
-                            const mainCosts = (d.baseCalculada || d.minimo || 0) + (d.pedagio || 0) + (d.gris || 0) + (d.taxaFixa || 0) + (d.excessoCalculado || 0);
-                            const estimatedRedesp = d.total - mainCosts;
-                            if (estimatedRedesp > 0) {
-                                invoiceValue = Math.round(estimatedRedesp * 100) / 100;
+                            // Se ainda for 0 e a NF tiver pedagio gravado correspondente a taxa de volume do redespacho, usa d.pedagio
+                            if (!invoiceValue && d.pedagio && Number(d.pedagio) > 0) {
+                                invoiceValue = Math.round(Number(d.pedagio) * 100) / 100;
+                            }
+
+                            // Como recurso secundario, se houver diferenca entre originalTotal e total
+                            if (!invoiceValue && d.originalTotal && d.total && d.originalTotal > d.total) {
+                                invoiceValue = Math.round((d.originalTotal - d.total) * 100) / 100;
+                            }
+
+                            // Se ainda for 0, aproxima subtraindo os custos operacionais da principal do total
+                            if (!invoiceValue && d.total) {
+                                const mainCosts = (d.baseCalculada || d.minimo || 0) + (d.gris || 0) + (d.taxaFixa || 0) + (d.excessoCalculado || 0);
+                                const estimatedRedesp = d.total - mainCosts;
+                                if (estimatedRedesp > 0) {
+                                    invoiceValue = Math.round(estimatedRedesp * 100) / 100;
+                                }
                             }
                         }
                     } else {
-                        // Principal: usa o total menos o redespacho (evita dupla contagem)
-                        // ✅ FIX v3.11.43: Math.round para evitar resíduo float na subtração
-                        // Ex: 200.10 - 65.33 = 134.77000000000001 sem arredondamento
-                        const raw = d.mainTotal != null ? d.mainTotal : (d.total - (d.redespTotal || 0));
+                        // Principal: usa o total menos o redespacho (evita pagar redespacho a transportadora principal)
+                        let redespVal = d.redespTotal || 0;
+                        // v3.21.26: se redespTotal for 0 mas a NF possui transportadora de redespacho e pedagio/taxa de volume
+                        if (!redespVal && d.redespCarrier && d.pedagio && Number(d.pedagio) > 0) {
+                            redespVal = Number(d.pedagio);
+                        }
+                        const raw = (d.mainTotal != null && d.mainTotal !== d.total)
+                            ? d.mainTotal
+                            : (d.total - redespVal);
                         invoiceValue = Math.round(raw * 100) / 100;
                     }
                     // v3.14.56: _isPago diferenciado por tipo de carrier
