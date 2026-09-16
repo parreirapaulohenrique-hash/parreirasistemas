@@ -30,9 +30,32 @@ window.ParreiraAuth = (function () {
     async function _ensureAuth() {
         if (typeof firebase !== 'undefined' && firebase.auth) {
             const auth = firebase.auth();
-            if (!auth.currentUser) {
-                await auth.signInAnonymously();
-            }
+            if (auth.currentUser) return auth.currentUser;
+            return new Promise((resolve) => {
+                let resolved = false;
+                const timer = setTimeout(() => {
+                    if (!resolved) {
+                        resolved = true;
+                        if (!auth.currentUser) {
+                            auth.signInAnonymously().then(resolve).catch(resolve);
+                        } else {
+                            resolve(auth.currentUser);
+                        }
+                    }
+                }, 1500);
+
+                const unsub = auth.onAuthStateChanged(user => {
+                    if (resolved) return;
+                    unsub();
+                    clearTimeout(timer);
+                    resolved = true;
+                    if (user) {
+                        resolve(user);
+                    } else {
+                        auth.signInAnonymously().then(resolve).catch(resolve);
+                    }
+                });
+            });
         }
     }
 
@@ -74,6 +97,15 @@ window.ParreiraAuth = (function () {
         const tenant = tenantDoc.data();
         if (!tenant.ativo) throw new Error('Empresa inativa no sistema.');
 
+        // 4.1. Valida permissão do usuário por módulo (Modelo A: Identidade Única por Tenant)
+        const userModulos = (['admin', 'master'].includes(perfil.role))
+            ? (tenant.modulos || [])
+            : ((perfil.modulos && perfil.modulos.length) ? perfil.modulos : (tenant.modulos || []));
+
+        if (modulo && modulo !== 'portal' && modulo !== 'master' && !userModulos.includes(modulo)) {
+            throw new Error(`Seu perfil (@${loginKey}) não possui permissão para acessar o módulo '${modulo}'. Contate o administrador.`);
+        }
+
         // 5. Verifica licença e registra sessão (lança erro se limite atingido)
         if (window.SessionManager) {
             await SessionManager.registrar(db, tenantId, modulo, {
@@ -82,17 +114,18 @@ window.ParreiraAuth = (function () {
             SessionManager.iniciarHeartbeat(db, tenantId);
         }
 
-        // 6. Salva sessão
+        // 6. Salva sessão unificada
         const sessao = {
-            login:      loginKey,
-            nome:       perfil.nome,
-            role:       perfil.role,
-            pin:        perfil.pin || '',
+            login:       loginKey,
+            nome:        perfil.nome,
+            role:        perfil.role,
+            pin:         perfil.pin || '',
             tenantId,
-            tenantNome: tenant.nome,
-            modulos:    tenant.modulos || [],
+            tenantNome:  tenant.nome,
+            modulos:     userModulos,
+            tenantModulos: tenant.modulos || [],
             moduloAtivo: modulo,
-            ts:         Date.now()
+            ts:          Date.now()
         };
         sessionStorage.setItem('parreira_session', JSON.stringify(sessao));
         // Fix cross-tab: salva tambem no localStorage para abas abertas via window.open
@@ -119,6 +152,7 @@ window.ParreiraAuth = (function () {
             }
         }
 
+        _safeSetItem('app_tenant_id', tenantId);
         _safeSetItem('logged_user', JSON.stringify({
             name: perfil.nome, login: loginKey, role: perfil.role
         }));
@@ -191,7 +225,8 @@ window.ParreiraAuth = (function () {
         const s = getSessao();
         if (!s) return false;
         if (['admin','master'].includes(s.role)) return true;
-        return (s.modulos || []).includes(mod);
+        const list = s.modulos || [];
+        return list.includes(mod);
     }
     function hasRole(...roles) { return roles.includes(getRole()); }
     const _hier = ['operator','supervisor','admin','master'];

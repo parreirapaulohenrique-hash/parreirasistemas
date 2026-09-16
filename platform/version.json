@@ -1,8 +1,8 @@
 {
-  "build": "20260916-v3.21.26",
-  "version": "3.21.26",
+  "build": "20260916-v3.21.25",
+  "version": "3.21.25",
   "environment": "staging",
-  "change": "v3.21.26 - fix(demanda): correcao da abertura de cards de cotacao, correcao de escopo de variaveis de filtro e atualizacao de cache scripts",
+  "change": "v3.21.25 - feat(auth): implantacao do Modelo A (identidade unica por tenant com matriz de modulos); SSO transparente no Despacho com suporte a PIN rapido de expedicao",
   "lastUpdate": "2026-09-16",
   "deployedAt": "2026-09-16"
 }

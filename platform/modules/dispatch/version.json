@@ -1,8 +1,8 @@
 {
-  "build": "20260912-v3.21.23",
-  "version": "3.21.23",
+  "build": "20260916-v3.21.25",
+  "version": "3.21.25",
   "environment": "staging",
-  "change": "v3.21.23 - fix(login): carregamento de usuários e validação de login para tenants de homologação (_hml) com provisionamento e fallback automático para tenant base",
-  "lastUpdate": "2026-09-12",
-  "deployedAt": "2026-09-12"
+  "change": "v3.21.25 - feat(auth): integracao SSO ParreiraAuth (Modelo A) no Despacho, login por PIN rapido de bancada e sincronizacao de sessao unificada",
+  "lastUpdate": "2026-09-16",
+  "deployedAt": "2026-09-16"
 }

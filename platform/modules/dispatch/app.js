@@ -672,26 +672,49 @@ document.addEventListener('DOMContentLoaded', async () => {
         // NÃO revalidamos contra app_users porque eles ainda não foram
         // carregados da nuvem no início da página (Cloud.loadAll() só roda no login).
         window.checkAuth = () => {
-            // v3.17.0 BRIDGE: Aceita sessão do Hub (login.html / ParreiraAuth)
-            // Se o usuário já está logado via Hub, não pede login de novo no Despacho Logístico
+            // v3.21.25 SSO BRIDGE (Modelo A): Aceita sessão centralizada do ParreiraAuth (sessionStorage / localStorage)
             const _parreiraSessao = (() => {
-                try { return JSON.parse(sessionStorage.getItem('parreira_session') || 'null'); }
-                catch { return null; }
+                try {
+                    return JSON.parse(sessionStorage.getItem('parreira_session') || 'null') ||
+                           JSON.parse(localStorage.getItem('parreira_session_ls') || 'null');
+                } catch { return null; }
             })();
+
             if (_parreiraSessao && _parreiraSessao.login && _parreiraSessao.tenantId &&
                 (Date.now() - (_parreiraSessao.ts || 0) < 8 * 3600000)) {
-                currentUser = {
-                    name:     _parreiraSessao.nome  || _parreiraSessao.login,
-                    login:    _parreiraSessao.login,
-                    role:     _parreiraSessao.role  || 'supervisor',
-                    tenantId: _parreiraSessao.tenantId
-                };
-                if (typeof AppState !== 'undefined') AppState.set('currentUser', currentUser);
-                // Salva em localStorage para que o role check (Utils.getStorage) encontre o usuário
-                Utils.setStorage('logged_user', currentUser);
-                if (loginOverlay) loginOverlay.style.display = 'none';
-                console.log(`[checkAuth] ✅ Sessão bridge (Hub): ${currentUser.login} (${currentUser.role})`);
-                return;
+
+                // Valida permissão do módulo dispatch
+                const isMasterRole = ['admin', 'master'].includes((_parreiraSessao.role || '').toLowerCase());
+                const userModulos = _parreiraSessao.modulos || [];
+                const hasDispatch = isMasterRole || userModulos.includes('dispatch');
+
+                if (hasDispatch) {
+                    const effectiveTenant = (window._tenantFromUrl && isMasterRole)
+                        ? window._tenantFromUrl
+                        : _parreiraSessao.tenantId;
+
+                    currentUser = {
+                        name:     _parreiraSessao.nome  || _parreiraSessao.login,
+                        login:    _parreiraSessao.login,
+                        role:     _parreiraSessao.role  || 'supervisor',
+                        tenantId: effectiveTenant
+                    };
+                    if (typeof AppState !== 'undefined') AppState.set('currentUser', currentUser);
+                    Utils.setStorage('logged_user', currentUser);
+                    Utils.Cloud.setTenantId(effectiveTenant);
+                    localStorage.setItem('app_tenant_id', effectiveTenant);
+
+                    if (loginOverlay) loginOverlay.style.display = 'none';
+                    console.log(`[checkAuth] ✅ SSO Ativo (Modelo A): ${currentUser.login} (${currentUser.role}) [tenant=${effectiveTenant}]`);
+
+                    // Carrega dados do tenant na nuvem de forma assíncrona
+                    if (Utils.Cloud && Utils.Cloud.hasTenant()) {
+                        Utils.Cloud.loadAll().catch(e => console.warn('[checkAuth] loadAll:', e.message));
+                    }
+                    return;
+                } else {
+                    console.warn(`[checkAuth] Usuário @${_parreiraSessao.login} não possui permissão para o módulo dispatch.`);
+                }
             }
 
             // Fluxo original: verifica sessão em localStorage
@@ -1089,14 +1112,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ]);
                         if (!usersSnap.empty) {
                             result = usersSnap.docs
-                                .filter(d => d.data().ativo !== false)
+                                .filter(d => {
+                                    const u = d.data();
+                                    if (u.ativo === false) return false;
+                                    // v3.21.25 Modelo A: Exibe apenas usuários com permissão para despacho ou administradores
+                                    const uMods = u.modulos || [];
+                                    const isAdm = ['admin', 'master', 'supervisor'].includes((u.role || '').toLowerCase());
+                                    return isAdm || uMods.includes('dispatch') || uMods.length === 0;
+                                })
                                 .map(d => {
                                     const u = d.data();
                                     return {
                                         name:      u.nome || u.name || d.id,
                                         login:     u.login || d.id,
                                         senhaHash: u.senhaHash || '',
+                                        pin:       u.pin || '',
                                         role:      u.role || 'operator',
+                                        modulos:   u.modulos || ['dispatch'],
                                         ativo:     u.ativo !== false
                                     };
                                 });
@@ -1351,16 +1383,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                             const _ud = _uDoc.data();
                             // v3.16.12: aceita senhaHash (SHA-256) OU pass (texto puro legado/manual)
                             let _match = false;
+                            // 1. Validação por Hash SHA-256
                             if (_ud.senhaHash) {
                                 const _hBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass));
                                 const _hHex = Array.from(new Uint8Array(_hBuf)).map(b => b.toString(16).padStart(2,'0')).join('');
                                 _match = (_hHex === _ud.senhaHash);
                             }
+                            // 2. Validação por senha texto puro legado
                             if (!_match && _ud.pass) {
                                 _match = (pass === _ud.pass);
                             }
+                            // 3. Validação por PIN rápido de terminal de expedição (Modelo A)
+                            if (!_match && _ud.pin && pass.trim() === _ud.pin.trim()) {
+                                _match = true;
+                                console.log(`⚡ [Login] Autenticado via PIN de expedição: ${login}`);
+                            }
                             if (_match) {
-                                user = { name: _ud.nome || _ud.login || login, login: _ud.login || login, role: _ud.role || 'operator' };
+                                user = {
+                                    name: _ud.nome || _ud.login || login,
+                                    login: _ud.login || login,
+                                    role: _ud.role || 'operator',
+                                    modulos: _ud.modulos || ['dispatch'],
+                                    pin: _ud.pin || ''
+                                };
                                 console.log(`✅ [Login] Validado no Firestore: ${login}`);
                             }
                         }
@@ -1385,6 +1430,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     // Etapa 3: sincroniza AppState com usuário logado
                     if (typeof AppState !== 'undefined') AppState.set('currentUser', user);
+
+                    localStorage.setItem('app_tenant_id', tenantId);
+                    localStorage.setItem('platform_user_logged', JSON.stringify({
+                        name: user.name, login: user.login, role: user.role, tenant: tenantId
+                    }));
+
+                    // v3.21.25 Modelo A: Cria sessão unificada ParreiraAuth para acesso seamless ao Hub e módulos
+                    const _unifiedSessao = {
+                        login:       user.login,
+                        nome:        user.name,
+                        role:        user.role,
+                        pin:         user.pin || '',
+                        tenantId:    tenantId,
+                        tenantNome:  tenantId,
+                        modulos:     user.modulos || ['dispatch'],
+                        moduloAtivo: 'dispatch',
+                        ts:          Date.now()
+                    };
+                    sessionStorage.setItem('parreira_session', JSON.stringify(_unifiedSessao));
+                    try { localStorage.setItem('parreira_session_ls', JSON.stringify(_unifiedSessao)); } catch(_) {}
 
                     if (loginOverlay) loginOverlay.style.display = 'none';
                     showToast(`Bem-vindo, ${user.name}! [${tenantId}]`);

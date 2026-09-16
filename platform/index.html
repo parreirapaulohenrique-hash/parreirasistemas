@@ -369,28 +369,73 @@
             const roleLabel = { admin:'Admin', master:'Master', supervisor:'Supervisor', gerente:'Gerente' };
             document.getElementById('userRole').textContent = roleLabel[user.role] || 'Operacional';
 
-            // Acesso ao Painel Admin: admin / master / tenant parreira / login paulo
-            const isMaster = ['admin','master'].includes(user.role)
+            // Sessão e permissões (Modelo A: Identidade Única por Tenant)
+            const sessao = (typeof ParreiraAuth !== 'undefined' && ParreiraAuth.getSessao)
+                ? ParreiraAuth.getSessao()
+                : (JSON.parse(localStorage.getItem('parreira_session_ls') || 'null') || {});
+
+            const isMaster = ['admin','master'].includes((user.role || '').toLowerCase())
                 || user.tenant    === 'parreira'
                 || user.tenantId  === 'parreira'
                 || user.login     === 'paulo';
 
+            const userMods = sessao.modulos || user.modulos || [];
+
+            // 1. Painel Admin (Master)
             const masterCard = document.querySelector('.module-master');
             if (masterCard) {
                 if (!isMaster) {
-                    masterCard.classList.add('disabled'); // Ensure it's disabled
-                    masterCard.style.opacity = '0.5';
+                    masterCard.classList.add('disabled');
+                    masterCard.style.opacity = '0.4';
                     masterCard.style.pointerEvents = 'none';
-                    masterCard.querySelector('.module-status').textContent = 'Restrito';
-                    masterCard.querySelector('.module-status').className = 'module-status inactive';
+                    const st = masterCard.querySelector('.module-status');
+                    if (st) { st.textContent = 'Restrito'; st.className = 'module-status inactive'; }
                 } else {
-                    masterCard.classList.remove('disabled'); // Ensure it's enabled
+                    masterCard.classList.remove('disabled');
                     masterCard.style.opacity = '1';
                     masterCard.style.pointerEvents = 'auto';
-                    masterCard.querySelector('.module-status').textContent = 'Acesso Total';
-                    masterCard.querySelector('.module-status').className = 'module-status active';
+                    const st = masterCard.querySelector('.module-status');
+                    if (st) { st.textContent = '👑 Administrador'; st.className = 'module-status master'; }
                 }
             }
+
+            // 2. Matriz de Módulos (Despacho, WMS, Demanda, MAXCRM, Bússola)
+            const moduleMap = [
+                { id: 'dispatch',        selector: '.module-dispatch' },
+                { id: 'wms',             selector: '.module-wms' },
+                { id: 'wms-coletor',     selector: '.module-wms-coletor' },
+                { id: 'erp-consultoria', selector: '.module-fluxo-caixa' },
+                { id: 'demanda',         selector: '.module-card[onclick*="demanda"]' },
+                { id: 'prospeccao',      selector: '.module-maxcrm' }
+            ];
+
+            moduleMap.forEach(({ id, selector }) => {
+                const card = document.querySelector(selector);
+                if (!card) return;
+
+                const hasAccess = isMaster || userMods.includes(id);
+                const st = card.querySelector('.module-status');
+
+                if (hasAccess) {
+                    card.classList.remove('disabled');
+                    card.style.opacity = '1';
+                    card.style.pointerEvents = 'auto';
+                    card.style.cursor = 'pointer';
+                    if (st && st.textContent.includes('Não Liberado')) {
+                        st.textContent = '✅ Disponível';
+                        st.className = 'module-status active';
+                    }
+                } else {
+                    card.classList.add('disabled');
+                    card.style.opacity = '0.45';
+                    card.style.pointerEvents = 'none';
+                    card.style.cursor = 'not-allowed';
+                    if (st) {
+                        st.textContent = '🔒 Não Liberado';
+                        st.className = 'module-status inactive';
+                    }
+                }
+            });
         }
 
         function loadVersion() {
