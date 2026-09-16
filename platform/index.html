@@ -131,7 +131,7 @@
             </div>
 
             <!-- Inteligência de Demanda — NOVO -->
-            <div class="module-card" onclick="openModule('demanda')" style="border-color:rgba(99,102,241,.3)">
+            <div class="module-card module-demanda" onclick="openModule('demanda')" style="border-color:rgba(99,102,241,.3)">
                 <div class="module-icon" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">
                     <span class="material-icons-round">insights</span>
                 </div>
@@ -413,17 +413,18 @@
                 { id: "wms",             aliases: ["wms"], selector: ".module-wms" },
                 { id: "wms-coletor",     aliases: ["wms-coletor", "coletor"], selector: ".module-wms-coletor" },
                 { id: "erp-consultoria", aliases: ["erp-consultoria", "consultoria", "bussola", "fluxo-caixa"], selector: ".module-fluxo-caixa" },
-                { id: "demanda",         aliases: ["demanda", "cotacao", "inteligencia-demanda"], selector: '.module-card[onclick*="demanda"]' },
-                { id: "prospeccao",      aliases: ["prospeccao", "maxcrm"], selector: ".module-maxcrm" }
+                { id: "demanda",         aliases: ["demanda", "cotacao", "inteligencia-demanda"], selector: ".module-demanda, .module-card[onclick*=\"demanda\"]" },
+                { id: "prospeccao",      aliases: ["prospeccao", "maxcrm"], selector: ".module-maxcrm, .module-card[onclick*=\"prospeccao\"]" }
             ];
-            moduleMap.forEach(({ id, selector }) => {
+            moduleMap.forEach(({ id, aliases, selector }) => {
                 const card = document.querySelector(selector);
                 if (!card) return;
 
-                const hasAccess = isMaster || aliases.some(a => userMods.includes(a));
+                const hasAccess = isMaster || (aliases && aliases.some(a => userMods.includes(a)));
                 const st = card.querySelector('.module-status');
 
                 if (hasAccess) {
+                    card.style.display = "";
                     card.classList.remove('disabled');
                     card.style.opacity = '1';
                     card.style.pointerEvents = 'auto';
@@ -433,8 +434,10 @@
                         st.className = 'module-status active';
                     }
                 } else {
+                    // Módulo não liberado para a empresa: NÃO deve aparecer na plataforma
+                    card.style.display = "none";
                     card.classList.add('disabled');
-                    card.style.opacity = '0.45';
+                    card.style.opacity = '0';
                     card.style.pointerEvents = 'none';
                     card.style.cursor = 'not-allowed';
                     if (st) {
@@ -459,7 +462,7 @@
 
         function openModule(module) {
             const card = document.querySelector(`.module-${module}`) || document.querySelector(`.module-card[onclick*="${module}"]`);
-            if (card && card.classList.contains("disabled")) {
+            if (card && (card.classList.contains("disabled") || card.style.display === "none")) {
                 alert("Acesso negado: Este modulo nao esta liberado para sua empresa ou usuario.");
                 return;
             }
