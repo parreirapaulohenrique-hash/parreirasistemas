@@ -365,19 +365,23 @@
         }
 
         function renderUserInfo(user) {
-            document.getElementById('userName').textContent = user.name || user.nome || user.login;
-            const roleLabel = { admin:'Admin', master:'Master', supervisor:'Supervisor', gerente:'Gerente' };
-            document.getElementById('userRole').textContent = roleLabel[user.role] || 'Operacional';
-
-            // Sessão e permissões (Modelo A: Identidade Única por Tenant)
-            const sessao = (typeof ParreiraAuth !== 'undefined' && ParreiraAuth.getSessao)
+            // Sessao e permissoes (Modelo A: Identidade Unica por Tenant)
+            const sessao = (typeof ParreiraAuth !== "undefined" && ParreiraAuth.getSessao)
                 ? ParreiraAuth.getSessao()
-                : (JSON.parse(localStorage.getItem('parreira_session_ls') || 'null') || {});
+                : (JSON.parse(localStorage.getItem("parreira_session_ls") || "null") || {});
 
             const tenantId = sessao.tenantId || user.tenant || user.tenantId || "";
+            const tenantNome = sessao.tenantNome || tenantId;
+
+            document.getElementById("userName").textContent = user.name || user.nome || user.login;
+            const roleLabel = { admin:"Admin", master:"Master", supervisor:"Supervisor", gerente:"Gerente" };
+            const roleStr = roleLabel[user.role] || user.role || "Operacional";
+            const displayTenant = tenantNome ? (tenantNome !== tenantId ? `${tenantNome} (${tenantId})` : tenantId) : "";
+            document.getElementById("userRole").textContent = displayTenant ? `${roleStr} • ${displayTenant}` : roleStr;
+
             const isMasterTenant = ["parreira", "parreira_hml"].includes(tenantId);
             const isMaster = (isMasterTenant && ["admin","master"].includes((user.role || "").toLowerCase()))
-                || user.login === "paulo";
+                || (isMasterTenant && user.login === "paulo");
 
             const userMods = sessao.modulos || user.modulos || [];
 

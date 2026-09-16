@@ -1,8 +1,8 @@
 {
-  "version": "3.21.29",
-  "build": "20260916-v3.21.29",
+  "version": "3.21.30",
+  "build": "20260916-v3.21.30",
   "environment": "staging",
   "lastUpdate": "2026-09-16",
   "deployedAt": "2026-09-16",
-  "change": "v3.21.29 - fix(auth): precedencia absoluta de tenant por URL no Despacho, restricao do Painel Admin apenas ao tenant master e bloqueio de modulos nao contratados"
+  "change": "v3.21.30 - feat(hub): exibicao clara do tenant no cabecalho do portal e no MAXCRM, garantindo transparencia de qual empresa esta logada"
 }

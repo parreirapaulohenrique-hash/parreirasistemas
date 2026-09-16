@@ -311,7 +311,8 @@ document.addEventListener('DOMContentLoaded', function() {
         var dtEl  = document.getElementById('homeUserData');
         if (nomEl) nomEl.textContent = sessao.nome || sessao.login;
         if (avEl)  avEl.textContent  = (sessao.nome || sessao.login || 'OP').substring(0,2).toUpperCase();
-        if (dtEl)  dtEl.textContent  = new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long' });
+        var tLabel = (sessao.tenantNome || sessao.tenantId || 'parreira');
+        if (dtEl)  dtEl.textContent  = 'Empresa: ' + tLabel + ' • ' + new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long' });
     }
 });
 
