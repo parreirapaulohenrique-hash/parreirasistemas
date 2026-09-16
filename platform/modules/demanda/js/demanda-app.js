@@ -27,6 +27,8 @@ const DemandaApp = (function() {
     var _concClienteSelecionado = null;    // { id, nome, cnpj } | null
     var _sessao            = null;    // Cache ParreiraAuth.getSessao()
     var _demandaAtual      = null;    // { id, data, itens } — demanda aberta no modal de detalhe
+    var _filtroItensDetalhe = "todos"; // filtro ativo na visualização do detalhe
+    var _buscaTextoDetalhe  = "";      // texto de busca na tabela de itens do detalhe
     var _erpInitialized    = false;
     var _searchTimeout     = null;
     var _filterAtual       = "todas";
@@ -499,7 +501,11 @@ const DemandaApp = (function() {
     // ════════════════════════════════════════════════════════
 
     function _openModal(id) {
-        var el = document.getElementById(id); if (el) el.style.display = "flex";
+        var el = document.getElementById(id);
+        if (el) {
+            el.style.display = "flex";
+            el.classList.add("open");
+        }
     }
 
     function openImportModal(type) {
@@ -697,7 +703,13 @@ const DemandaApp = (function() {
     }
 
 
-    function closeModal(id) { var el = document.getElementById(id); if (el) el.style.display = "none"; }
+    function closeModal(id) {
+        var el = document.getElementById(id);
+        if (el) {
+            el.style.display = "none";
+            el.classList.remove("open");
+        }
+    }
     function addItemFromDetails() { closeModal("modalItemDetalhes"); }
 
     // ════════════════════════════════════════════════════════

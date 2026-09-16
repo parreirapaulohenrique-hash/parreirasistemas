@@ -1,8 +1,8 @@
 {
-  "build": "20260915-v3.21.25",
-  "version": "3.21.25",
+  "build": "20260916-v3.21.26",
+  "version": "3.21.26",
   "environment": "staging",
-  "change": "v3.21.25 - feat(demanda): restauracao dos filtros por status dos produtos com contadores e barra de acoes cabiveis ligada a cada status",
-  "lastUpdate": "2026-09-15",
-  "deployedAt": "2026-09-15"
+  "change": "v3.21.26 - fix(demanda): correcao da abertura de cards de cotacao, correcao de escopo de variaveis de filtro e atualizacao de cache scripts",
+  "lastUpdate": "2026-09-16",
+  "deployedAt": "2026-09-16"
 }

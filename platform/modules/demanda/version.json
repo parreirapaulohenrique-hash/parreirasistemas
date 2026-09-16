@@ -1,8 +1,8 @@
 {
-  "version": "2.5.3",
-  "build": "20260915-v2.5.3",
+  "version": "2.5.4",
+  "build": "20260916-v2.5.4",
   "module": "demanda",
   "name": "Inteligência de Demanda",
-  "lastUpdate": "2026-09-15",
-  "change": "v2.5.3 - feat(cotacao): totalizadores de status por produto, filtros interativos com contadores, busca textual e acoes cabiveis em lote e por item no detalhe da cotacao"
+  "lastUpdate": "2026-09-16",
+  "change": "v2.5.4 - fix(cotacao): correcao de escopo de _filtroItensDetalhe no estado global, abertura resiliente do modal e invalidacao de cache com ?v=2.5.4"
 }
