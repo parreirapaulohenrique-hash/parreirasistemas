@@ -1,8 +1,8 @@
 {
-  "build": "20260916-v3.21.26",
-  "version": "3.21.26",
+  "build": "20260916-v3.21.27",
+  "version": "3.21.27",
   "environment": "staging",
-  "change": "v3.21.26 - fix(wms): autenticacao Firebase no WMS e ErpRegistry eliminando erro Missing or insufficient permissions ao salvar integracao ERP e sincronizar com Firestore",
+  "change": "v3.21.27 - fix(dispatch): inclusao de transportadoras de redespacho (TRANSPORTE TUERE) na Conferencia de Fatura, segregacao de taxa por volume no calculo de frete e conciliacao correta da fatura principal",
   "lastUpdate": "2026-09-16",
   "deployedAt": "2026-09-16"
 }
