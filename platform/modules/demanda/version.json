@@ -1,8 +1,8 @@
 {
-  "version": "2.5.5",
-  "build": "20260916-v2.5.5",
+  "version": "2.5.6",
+  "build": "20260916-v2.5.6",
   "module": "demanda",
   "name": "Inteligencia de Demanda",
   "lastUpdate": "2026-09-16",
-  "change": "v2.5.5 - feat(cotacao): status Nao Encontrado (antigo recebida), Nao Cadastrado e Catalogado sem Concluido indevido, filtros dinâmicos com contadores e acoes em lote"
+  "change": "v2.5.6 - feat(cruzamento): cruzamento inteligente de referencias, similares e aplicacoes do ERP Maxdata, selecao comparativa de opcoes e inclusao como alternativa pelo vendedor"
 }

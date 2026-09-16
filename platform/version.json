@@ -1,8 +1,8 @@
 {
-  "version": "3.21.30",
-  "build": "20260916-v3.21.30",
+  "version": "3.21.29",
+  "build": "20260916-v3.21.29",
   "environment": "staging",
   "lastUpdate": "2026-09-16",
   "deployedAt": "2026-09-16",
-  "change": "v3.21.30 - feat(hub): exibicao clara do tenant no cabecalho do portal e no MAXCRM, garantindo transparencia de qual empresa esta logada"
+  "change": "v3.21.29 - feat(demanda): cruzamento automatico de referencias e aplicacao no ERP Maxdata com painel comparativo de similares para o vendedor"
 }

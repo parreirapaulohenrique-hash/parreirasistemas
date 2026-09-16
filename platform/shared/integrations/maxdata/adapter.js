@@ -507,11 +507,37 @@ class MaxDataAdapter extends ErpAdapter {
         }
     }
 
+    _extractCrossReferences(aplicacao, descricao, codigoFab, codigoOriginal) {
+        const cross = new Set();
+        if (codigoFab) {
+            const c = this._normalizeRef(codigoFab);
+            if (c.length >= 3) cross.add(c);
+        }
+        if (codigoOriginal) {
+            const c = this._normalizeRef(codigoOriginal);
+            if (c.length >= 3) cross.add(c);
+        }
+
+        const text = ((aplicacao || '') + ' ' + (descricao || '')).toUpperCase();
+        const tokens = text.split(/[\s,;\/\+\|]+/);
+        for (const tok of tokens) {
+            const clean = this._normalizeRef(tok);
+            // Códigos de peças automotivas/agrícolas têm ao menos 3 caracteres e possuem dígitos
+            if (clean.length >= 3 && /\d/.test(clean)) {
+                cross.add(clean);
+            }
+        }
+        return Array.from(cross);
+    }
+
     _mapProduct(raw) {
         const code = (raw.codigoFab || raw.codigoOriginal || '').trim();
         const key = this._normalizeRef(code);
         const desc = (raw.descricao || raw.descPdv || '').trim();
         const descNorm = desc.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+        const aplicacao = (raw.aplicacao || '').trim();
+        const aplicacaoNorm = aplicacao.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+        const referenciasCruzadas = this._extractCrossReferences(aplicacao, desc, code, raw.codigoOriginal);
 
         return {
             id:            raw.id,
@@ -521,6 +547,7 @@ class MaxDataAdapter extends ErpAdapter {
             codigoFab:     code,
             codigoNorm:    key,
             codigoOriginal:(raw.codigoOriginal || '').trim(),
+            referenciasCruzadas: referenciasCruzadas,
             descricao:     desc,
             descNorm:      descNorm,
             fabricante:    (raw.fabricante || '').toUpperCase().trim(),
@@ -536,7 +563,8 @@ class MaxDataAdapter extends ErpAdapter {
             valorAtacado:  Number(raw.valorAtacado || 0),
             unidade:       (raw.un || 'UN').toUpperCase().trim(),
             un:            (raw.un || 'UN').toUpperCase().trim(),
-            aplicacao:     (raw.aplicacao || '').trim(),
+            aplicacao:     aplicacao,
+            aplicacaoNorm: aplicacaoNorm,
             localizador:   (raw.localizador || '').trim(),
             ativo:         !raw.desativado && raw.desativado !== true,
             desativado:    false,

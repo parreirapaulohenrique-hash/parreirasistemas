@@ -1396,13 +1396,13 @@ const DemandaApp = (function() {
         // Botões de Ação Direta conforme o Status do Item
         if (st === "nao_cadastrado") {
             acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
-            acoesCabiveis.push("<button onclick=\"DemandaApp._abrirBuscaERP('" + _esc(item.id) + "')\" title='Vincular / Buscar Produto no ERP' style='background:transparent;border:1px solid var(--accent-primary);border-radius:5px;padding:.22rem .55rem;color:var(--accent-primary);font-size:.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>search</span> ERP</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp._abrirBuscaERP('" + _esc(item.id) + "','" + _esc(item.refOriginal || "") + "','" + _esc(item.descOriginal || "") + "')\" title='Buscar Peça ou Similares no ERP' style='background:transparent;border:1px solid var(--accent-primary);border-radius:5px;padding:.22rem .55rem;color:var(--accent-primary);font-size:.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>search</span> ERP</button>");
         } else if (st === "catalogado") {
             acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
-            acoesCabiveis.push("<button onclick=\"DemandaApp._abrirBuscaERP('" + _esc(item.id) + "')\" title='Vincular ao ERP' style='background:transparent;border:1px solid var(--accent-primary);border-radius:5px;padding:.22rem .55rem;color:var(--accent-primary);font-size:.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>search</span> ERP</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp._abrirBuscaERP('" + _esc(item.id) + "','" + _esc(item.refOriginal || "") + "','" + _esc(item.descOriginal || "") + "')\" title='Vincular ao ERP / Similares' style='background:transparent;border:1px solid var(--accent-primary);border-radius:5px;padding:.22rem .55rem;color:var(--accent-primary);font-size:.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>search</span> ERP</button>");
         } else if (st === "demanda_recebida" || st === "nao_encontrado" || st === "em_identificacao" || st === "identificado") {
             acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
-            acoesCabiveis.push("<button onclick=\"DemandaApp._abrirBuscaERP('" + _esc(item.id) + "')\" title='Buscar / Identificar no ERP' style='background:transparent;border:1px solid var(--accent-primary);border-radius:5px;padding:.22rem .55rem;color:var(--accent-primary);font-size:.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>search</span> ERP</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp._abrirBuscaERP('" + _esc(item.id) + "','" + _esc(item.refOriginal || "") + "','" + _esc(item.descOriginal || "") + "')\" title='Buscar / Identificar Similares no ERP' style='background:transparent;border:1px solid var(--accent-primary);border-radius:5px;padding:.22rem .55rem;color:var(--accent-primary);font-size:.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>search</span> ERP</button>");
         } else if (st === "sem_estoque") {
             acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
             acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','consulta_outras_filiais')\" title='Consultar Estoque em Outras Filiais' style='background:rgba(6,182,212,.15);color:#06b6d4;border:1px solid rgba(6,182,212,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>store</span> Filiais</button>");
@@ -1928,26 +1928,39 @@ const DemandaApp = (function() {
     }
 
     // ════════════════════════════════════════════════════════
-    // IDENTIFICAR ITEM VIA ERP
+    // IDENTIFICAR ITEM VIA ERP — CRUZAMENTO DE SIMILARES
     // ════════════════════════════════════════════════════════
 
     var _buscaErpItemId = null;
+    var _buscaErpItemRef = "";
 
-    function _abrirBuscaERP(itemId) {
+    function _abrirBuscaERP(itemId, refOriginal, descOriginal) {
         _buscaErpItemId = itemId;
+        _buscaErpItemRef = refOriginal || "";
         var modal = document.getElementById("modalBuscaERP");
-        if (!modal) { _toast("Modal ERP n\u00e3o encontrado.", "error"); return; }
+        if (!modal) { _toast("Modal ERP não encontrado.", "error"); return; }
         var inp = document.getElementById("inpBuscaERP");
-        if (inp) { inp.value = ""; setTimeout(function(){ inp.focus(); }, 100); }
+        var termoInicial = (refOriginal || descOriginal || "").trim();
+        if (inp) {
+            inp.value = termoInicial;
+            setTimeout(function(){ inp.focus(); inp.select(); }, 100);
+        }
         var res = document.getElementById("buscaERPResultados");
-        if (res) res.innerHTML = "<p style='color:var(--text-secondary);font-size:.83rem;padding:.5rem 0'>Digite uma refer\u00eancia ou descri\u00e7\u00e3o para buscar.</p>";
+        if (res) {
+            res.innerHTML = "<p style='color:var(--text-secondary);font-size:.83rem;padding:.5rem 0'>Pesquise por código original, similar, descrição ou aplicação de máquina...</p>";
+        }
         modal.style.display = "flex";
+
+        if (termoInicial.length >= 2) {
+            _executarBuscaERP();
+        }
     }
 
     function _fecharBuscaERP() {
         var modal = document.getElementById("modalBuscaERP");
         if (modal) modal.style.display = "none";
         _buscaErpItemId = null;
+        _buscaErpItemRef = "";
     }
 
     function _executarBuscaERP() {
@@ -1956,40 +1969,128 @@ const DemandaApp = (function() {
         if (q.length < 2) { _toast("Digite ao menos 2 caracteres.", "warning"); return; }
         var res = document.getElementById("buscaERPResultados");
         if (res) res.innerHTML = "<div style='padding:1.5rem;text-align:center;color:var(--text-secondary)'>" +
-            "<span class='material-icons-round' style='animation:spin 1s linear infinite'>sync</span>" +
-            "<br><small>Buscando no ERP...</small></div>";
+            "<span class='material-icons-round' style='animation:spin 1s linear infinite;font-size:1.8rem;color:var(--accent-primary)'>sync</span>" +
+            "<br><small style='margin-top:.4rem;display:inline-block'>Cruzando referências e aplicações no ERP...</small></div>";
+
         if (typeof DemandaSearch === "undefined") {
-            if (res) res.innerHTML = "<p style='color:var(--accent-danger);font-size:.83rem'>DemandaSearch n\u00e3o dispon\u00edvel. Configure a integra\u00e7\u00e3o ERP.</p>";
+            if (res) res.innerHTML = "<p style='color:var(--accent-danger);font-size:.83rem'>DemandaSearch não disponível. Configure a integração ERP.</p>";
             return;
         }
-        DemandaSearch.search(q)
+
+        DemandaSearch.search(q, { limit: 30 })
             .then(function(resultados) {
                 if (!resultados || resultados.length === 0) {
-                    if (res) res.innerHTML = "<p style='color:var(--text-secondary);font-size:.83rem;padding:.5rem'>Nenhum produto encontrado para \"" + _esc(q) + "\".</p>";
+                    if (res) res.innerHTML = "<div style='text-align:center;padding:1.5rem;color:var(--text-secondary)'>" +
+                        "<span class='material-icons-round' style='font-size:2rem;opacity:.4'>search_off</span>" +
+                        "<p style='font-size:.85rem;margin-top:.5rem'>Nenhum produto ou similar encontrado para \"<strong>" + _esc(q) + "</strong>\".</p>" +
+                        "<p style='font-size:.75rem;color:var(--text-secondary)'>Dica: verifique se o código possui traços ou tente buscar pela descrição ou modelo da máquina.</p>" +
+                        "</div>";
                     return;
                 }
-                var html = resultados.slice(0, 15).map(function(p) {
-                    var estoque = p.estoqueFilial !== undefined ? p.estoqueFilial : (p.saldo !== undefined ? p.saldo : null);
-                    var badge   = (estoque !== null && estoque > 0) ? "#10b981" : "#ef4444";
-                    var estoqTxt = estoque !== null ? (estoque > 0 ? "Estoque: " + estoque : "Sem estoque") : "";
-                    var pid = JSON.stringify({ erpId: p.erpId || p.referencia || p.codigo || "", desc: p.descricao || p.nome || "", fabricante: p.fabricante || "", estoque: estoque, preco: p.preco || 0 });
-                    return "<div style='border:1px solid var(--border-color);border-radius:8px;padding:.7rem;margin-bottom:.5rem'>" +
-                        "<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem'>" +
-                        "<div><div style='font-weight:700;font-size:.84rem'>" + _esc(p.referencia || p.codigo || p.erpId || "?") + "</div>" +
-                        "<div style='font-size:.77rem;color:var(--text-secondary)'>" + _esc(p.descricao || p.nome || "\u2014") + "</div>" +
-                        (p.fabricante ? "<div style='font-size:.7rem;color:var(--text-secondary)'>" + _esc(p.fabricante) + "</div>" : "") + "</div>" +
+
+                // Ordenação inteligente:
+                // 1º: Códigos exatos com estoque
+                // 2º: Similares com estoque
+                // 3º: Códigos exatos sem estoque
+                // 4º: Similares sem estoque
+                // 5º: Demais opções
+                var qClean = q.toUpperCase().replace(/[\s\-\.\/]/g, "");
+                resultados.sort(function(a, b) {
+                    var aEstoque = Number(a.estoqueFilial || a.estoque || 0);
+                    var bEstoque = Number(b.estoqueFilial || b.estoque || 0);
+                    var aScore = (a.tipoMatch === "exato" ? 200 : (a.tipoMatch === "similar" ? 150 : 100)) + (aEstoque > 0 ? 50 : 0);
+                    var bScore = (b.tipoMatch === "exato" ? 200 : (b.tipoMatch === "similar" ? 150 : 100)) + (bEstoque > 0 ? 50 : 0);
+                    return bScore - aScore;
+                });
+
+                var headerHtml = "<div style='display:flex;justify-content:space-between;align-items:center;padding:.45rem .75rem;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:6px;margin-bottom:.75rem'>" +
+                    "<div style='font-size:.8rem;color:#60a5fa;font-weight:600'>" +
+                    "<span class='material-icons-round' style='font-size:1rem;vertical-align:middle;margin-right:.3rem'>compare_arrows</span>" +
+                    resultados.length + (resultados.length === 1 ? " opção encontrada" : " opções encontradas para comparação") +
+                    "</div>" +
+                    "<div style='font-size:.72rem;color:var(--text-secondary)'>Selecione ou adicione como alternativa</div>" +
+                    "</div>";
+
+                var html = resultados.map(function(p, idx) {
+                    var estoque = p.estoqueFilial !== undefined ? p.estoqueFilial : (p.estoque !== undefined ? p.estoque : 0);
+                    estoque = Number(estoque || 0);
+                    var temEstoque = estoque > 0;
+                    var badgeCor = temEstoque ? "#10b981" : "#f59e0b";
+                    var estoqTxt = temEstoque ? "Estoque: " + estoque + " UN" : "Sem Estoque (0 UN)";
+
+                    var refPrincipal = p.referencia || p.codigoFab || p.codigo || p.erpCodigoFab || "?";
+                    var matchBadge = "";
+                    if (p.tipoMatch === "exato") {
+                        matchBadge = "<span style='font-size:.68rem;font-weight:700;padding:.12rem .4rem;border-radius:4px;background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3)'>✓ Código Exato</span>";
+                    } else if (p.tipoMatch === "similar") {
+                        matchBadge = "<span style='font-size:.68rem;font-weight:700;padding:.12rem .4rem;border-radius:4px;background:rgba(59,130,246,.15);color:#60a5fa;border:1px solid rgba(59,130,246,.3)'>🔄 Similar / Ref. Cruzada</span>";
+                    } else {
+                        matchBadge = "<span style='font-size:.68rem;font-weight:700;padding:.12rem .4rem;border-radius:4px;background:rgba(139,92,246,.15);color:#a78bfa;border:1px solid rgba(139,92,246,.3)'>🚜 Aplicação Técnica</span>";
+                    }
+
+                    var crossList = Array.isArray(p.referenciasCruzadas) ? p.referenciasCruzadas : [];
+                    var crossHtml = "";
+                    if (crossList.length > 0) {
+                        crossHtml = "<div style='margin-top:.35rem;font-size:.7rem;color:var(--text-secondary);display:flex;align-items:center;flex-wrap:wrap;gap:.25rem'>" +
+                            "<span style='font-weight:600;color:var(--text-primary)'>Ref. Cruzadas:</span> " +
+                            crossList.slice(0, 8).map(function(c){
+                                var isMatch = (c === qClean || c.indexOf(qClean) !== -1);
+                                return "<span style='padding:.05rem .3rem;border-radius:3px;background:" + (isMatch ? "rgba(59,130,246,.3)" : "rgba(255,255,255,.06)") + ";color:" + (isMatch ? "#93c5fd" : "var(--text-secondary)") + ";font-weight:" + (isMatch ? "700" : "400") + "'>" + _esc(c) + "</span>";
+                            }).join("") +
+                            "</div>";
+                    }
+
+                    var appHtml = "";
+                    if (p.aplicacao && p.aplicacao.trim()) {
+                        appHtml = "<div style='margin-top:.35rem;font-size:.72rem;background:rgba(255,255,255,.03);padding:.35rem .5rem;border-radius:5px;border-left:3px solid var(--accent-primary);color:var(--text-secondary)'>" +
+                            "<strong style='color:var(--text-primary)'>Aplicação:</strong> " + _esc(p.aplicacao) +
+                            "</div>";
+                    }
+
+                    var pid = JSON.stringify({
+                        erpId: p.erpProdutoId || p.erpId || p.id || refPrincipal,
+                        referencia: refPrincipal,
+                        desc: p.erpProdutoDesc || p.descricao || p.nome || "",
+                        fabricante: p.fabricante || "",
+                        estoque: estoque,
+                        preco: p.preco || p.valorVenda || 0,
+                        aplicacao: p.aplicacao || "",
+                        tipoMatch: p.tipoMatch || "exato"
+                    });
+
+                    return "<div style='border:1px solid " + (p.tipoMatch === "exato" ? "rgba(16,185,129,.35)" : "rgba(255,255,255,.1)") + ";background:" + (p.tipoMatch === "exato" ? "rgba(16,185,129,.03)" : "var(--bg-card)") + ";border-radius:8px;padding:.85rem;margin-bottom:.65rem;transition:all .15s ease'>" +
+                        "<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:.6rem'>" +
+                        "<div style='flex:1'>" +
+                        "<div style='display:flex;align-items:center;gap:.45rem;flex-wrap:wrap'>" +
+                        "<span style='font-weight:700;font-size:.92rem;color:var(--text-primary);letter-spacing:.02em'>" + _esc(refPrincipal) + "</span>" +
+                        matchBadge +
+                        (p.fabricante ? "<span style='font-size:.7rem;padding:.1rem .35rem;border-radius:4px;background:rgba(255,255,255,.08);color:var(--text-secondary);font-weight:600'>" + _esc(p.fabricante) + "</span>" : "") +
+                        "</div>" +
+                        "<div style='font-size:.79rem;color:var(--text-primary);margin-top:.2rem;font-weight:500'>" + _esc(p.erpProdutoDesc || p.descricao || "\u2014") + "</div>" +
+                        appHtml +
+                        crossHtml +
+                        "</div>" +
                         "<div style='text-align:right;flex-shrink:0'>" +
-                        (estoqTxt ? "<span style='font-size:.7rem;padding:.12rem .4rem;border-radius:6px;background:" + badge + "22;color:" + badge + "'>" + estoqTxt + "</span>" : "") +
-                        (p.preco ? "<div style='font-size:.72rem;color:var(--text-secondary);margin-top:.2rem'>R$ " + Number(p.preco).toFixed(2).replace(".",",") + "</div>" : "") +
-                        "</div></div>" +
+                        "<div style='font-size:.72rem;padding:.15rem .45rem;border-radius:5px;background:" + badgeCor + "22;color:" + badgeCor + ";font-weight:700;display:inline-block'>" + estoqTxt + "</div>" +
+                        (p.preco || p.valorVenda ? "<div style='font-size:.85rem;font-weight:700;color:var(--text-primary);margin-top:.3rem'>R$ " + Number(p.preco || p.valorVenda).toFixed(2).replace(".",",") + "</div>" : "") +
+                        "</div>" +
+                        "</div>" +
+                        "<div style='display:flex;gap:.5rem;margin-top:.7rem;border-top:1px solid rgba(255,255,255,.06);padding-top:.6rem'>" +
                         "<button onclick=\"DemandaApp._vincularProduto(" + pid.replace(/\"/g, "&quot;") + ")\" " +
-                        "style='margin-top:.45rem;background:var(--accent-primary);color:#fff;border:none;border-radius:5px;padding:.28rem .75rem;font-size:.75rem;cursor:pointer;width:100%'>Vincular este produto</button>" +
+                        "style='flex:1;background:var(--accent-primary);color:#fff;border:none;border-radius:6px;padding:.38rem .75rem;font-size:.78rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:.35rem'>" +
+                        "<span class='material-icons-round' style='font-size:.9rem'>check</span> Vincular esta Opção ao Item</button>" +
+                        "<button onclick=\"DemandaApp._adicionarProdutoAlternativo(" + pid.replace(/\"/g, "&quot;") + ")\" " +
+                        "title='Adicionar esta peça como item alternativo na cotação para o cliente escolher' " +
+                        "style='background:rgba(255,255,255,.07);color:var(--text-primary);border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:.38rem .75rem;font-size:.76rem;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem'>" +
+                        "<span class='material-icons-round' style='font-size:.9rem'>add_circle_outline</span> Incluir como Alternativa</button>" +
+                        "</div>" +
                         "</div>";
                 }).join("");
-                if (res) res.innerHTML = html;
+
+                if (res) res.innerHTML = headerHtml + html;
             })
             .catch(function(err) {
-                if (res) res.innerHTML = "<p style='color:var(--accent-danger);font-size:.83rem'>Erro: " + _esc(err.message || String(err)) + "</p>";
+                if (res) res.innerHTML = "<p style='color:var(--accent-danger);font-size:.83rem;padding:.5rem'>Erro ao pesquisar: " + _esc(err.message || String(err)) + "</p>";
             });
     }
 
@@ -1998,26 +2099,96 @@ const DemandaApp = (function() {
         if (typeof produto === "string") { try { produto = JSON.parse(produto); } catch(e) { _toast("Erro ao processar produto.", "error"); return; } }
         var itemId = _buscaErpItemId;
         var por    = _sessao ? (_sessao.login || _sessao.nome || "sistema") : "sistema";
+
+        var estoque = Number(produto.estoque || 0);
+        var novoStatus = estoque > 0 ? "em_estoque" : "sem_estoque";
+
         var fields = {
-            erpProdutoId:   produto.erpId || "",
-            erpProdutoDesc: produto.desc  || "",
+            erpProdutoId:   String(produto.erpId || ""),
+            erpProdutoDesc: produto.desc || "",
+            erpCodigoFab:   produto.referencia || "",
             fabricante:     produto.fabricante || "",
-            estoqueFilial:  produto.estoque !== undefined ? produto.estoque : null,
-            preco:          produto.preco  || null,
-            status:         "identificado"
+            estoqueFilial:  estoque,
+            preco:          Number(produto.preco || 0),
+            status:         novoStatus
         };
-        var tl = { evento: "produto_vinculado", para: "identificado", por: por, obs: "ERP: " + (produto.erpId || "") };
+
+        var tl = {
+            evento: "produto_vinculado",
+            para: novoStatus,
+            por: por,
+            obs: "ERP: " + (produto.erpId || "") + " | " + (produto.referencia || "") + (produto.tipoMatch === "similar" ? " (Similar Vinculado)" : "")
+        };
+
         DemandaDB.updateItem(_demandaAtual.id, itemId, fields, tl)
             .then(function() {
                 for (var i = 0; i < _demandaAtual.itens.length; i++) {
-                    if (_demandaAtual.itens[i].id === itemId) { Object.assign(_demandaAtual.itens[i], fields); break; }
+                    if (_demandaAtual.itens[i].id === itemId) {
+                        Object.assign(_demandaAtual.itens[i], fields);
+                        break;
+                    }
                 }
                 _fecharBuscaERP();
                 _renderDemandaDetalheBody();
                 loadDemandasLista(_filterAtual);
-                _toast("Produto " + (produto.erpId || "") + " vinculado!", "success");
+                _toast("Peça " + (produto.referencia || produto.erpId) + " vinculada com sucesso (" + (estoque > 0 ? "Em Estoque" : "Sem Estoque") + ")!", "success");
             })
             .catch(function(err) { _toast("Erro ao vincular: " + (err.message || err), "error"); });
+    }
+
+    function _adicionarProdutoAlternativo(produto) {
+        if (!_demandaAtual) { _toast("Abra uma demanda primeiro.", "error"); return; }
+        if (typeof produto === "string") { try { produto = JSON.parse(produto); } catch(e) { _toast("Erro ao processar produto.", "error"); return; } }
+
+        var itemBase = null;
+        if (_buscaErpItemId && _demandaAtual.itens) {
+            itemBase = _demandaAtual.itens.find(function(it){ return it.id === _buscaErpItemId; });
+        }
+
+        var estoque = Number(produto.estoque || 0);
+        var novoStatus = estoque > 0 ? "em_estoque" : "sem_estoque";
+        var novoId = "item_alt_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+
+        var novoItem = {
+            id: novoId,
+            demandaId: _demandaAtual.id,
+            seq: (_demandaAtual.itens ? _demandaAtual.itens.length + 1 : 1),
+            refOriginal: produto.referencia || produto.erpId || "SIMILAR",
+            descOriginal: (produto.desc || "") + (itemBase ? " [Alternativa de " + (itemBase.refOriginal || "") + "]" : " [Alternativa]"),
+            qtdeSolicitada: itemBase ? Number(itemBase.qtdeSolicitada || 1) : 1,
+            unidadeOriginal: itemBase ? (itemBase.unidadeOriginal || "UN") : "UN",
+            obsCliente: itemBase ? "Opção similar/alternativa sugerida para a peça " + (itemBase.refOriginal || "") : "Peça alternativa",
+            status: novoStatus,
+            erpProdutoId: String(produto.erpId || ""),
+            erpProdutoDesc: produto.desc || "",
+            erpCodigoFab: produto.referencia || "",
+            fabricante: produto.fabricante || "",
+            estoqueFilial: estoque,
+            preco: Number(produto.preco || 0),
+            confidenciaIdentificacao: "confirmada"
+        };
+
+        if (!_demandaAtual.itens) _demandaAtual.itens = [];
+        _demandaAtual.itens.push(novoItem);
+
+        var por = _sessao ? (_sessao.login || _sessao.nome || "sistema") : "sistema";
+        var tl = {
+            evento: "item_alternativo_adicionado",
+            para: novoStatus,
+            por: por,
+            obs: "Adicionado similar: " + (produto.referencia || "") + " (" + (produto.fabricante || "") + ")"
+        };
+
+        DemandaDB.updateItens(_demandaAtual.id, _demandaAtual.itens, tl)
+            .then(function() {
+                _fecharBuscaERP();
+                _renderDemandaDetalheBody();
+                loadDemandasLista(_filterAtual);
+                _toast("Peça alternativa " + (produto.referencia || "") + " incluída na cotação!", "success");
+            })
+            .catch(function(err) {
+                _toast("Erro ao incluir alternativa: " + (err.message || err), "error");
+            });
     }
 
     // ════════════════════════════════════════════════════════
@@ -2744,10 +2915,14 @@ const DemandaApp = (function() {
         _fecharBuscaERP:        _fecharBuscaERP,
         _executarBuscaERP:      _executarBuscaERP,
         _vincularProduto:       _vincularProduto,
+        _adicionarProdutoAlternativo: _adicionarProdutoAlternativo,
+        executarPesquisaPecasView:    executarPesquisaPecasView,
+        filtrarPesquisaView:          filtrarPesquisaView,
+        criarDemandaComPeca:          criarDemandaComPeca,
         // Devolutiva Compras
         _abrirDevolutivaCompras:  _abrirDevolutivaCompras,
         _confirmarDevolutiva:     _confirmarDevolutiva,
-        // Cota\u00e7\u00e3o Concorrente
+        // Cotação Concorrente
         loadConcorrente:              loadConcorrente,
         _concAddItem:                 _concAddItem,
         _concRemoveItem:              _concRemoveItem,
@@ -2761,6 +2936,167 @@ const DemandaApp = (function() {
         syncMaxdataTechbase:          syncMaxdataTechbase,
         importarCatalogoPDF:          importarCatalogoPDF,
     };
+
+    // ════════════════════════════════════════════════════════
+    // VIEW: PESQUISAR PEÇAS & SIMILARES
+    // ════════════════════════════════════════════════════════
+
+    var _pesquisaViewResultados = [];
+    var _filtroPesquisaViewAtivo = 'todos';
+
+    function executarPesquisaPecasView() {
+        var inp = document.getElementById('inpPesquisaPecasView');
+        var q = inp ? inp.value.trim() : '';
+        if (q.length < 2) {
+            _toast('Digite ao menos 2 caracteres para pesquisar.', 'warning');
+            return;
+        }
+
+        var container = document.getElementById('pesquisaPecasContainer');
+        if (container) {
+            container.innerHTML = "<div style='padding:3rem;text-align:center;color:var(--text-secondary)'>" +
+                "<span class='material-icons-round' style='animation:spin 1s linear infinite;font-size:2.2rem;color:var(--accent-primary)'>sync</span>" +
+                "<p style='margin-top:.75rem;font-size:.88rem'>Cruzando catálogo do ERP e similares para \"<strong>" + _esc(q) + "</strong>\"...</p>" +
+                "</div>";
+        }
+
+        if (typeof DemandaSearch === 'undefined') {
+            if (container) container.innerHTML = "<p style='color:var(--accent-danger);padding:1.5rem'>DemandaSearch indisponível.</p>";
+            return;
+        }
+
+        DemandaSearch.search(q, { limit: 50 })
+            .then(function(resultados) {
+                _pesquisaViewResultados = resultados || [];
+                _renderPesquisaView();
+            })
+            .catch(function(err) {
+                if (container) {
+                    container.innerHTML = "<p style='color:var(--accent-danger);padding:1.5rem'>Erro na busca: " + _esc(err.message || String(err)) + "</p>";
+                }
+            });
+    }
+
+    function filtrarPesquisaView(filtro) {
+        _filtroPesquisaViewAtivo = filtro;
+        ['Todos', 'Estoque', 'JD', 'CNH', 'AGCO', 'ZF'].forEach(function(k) {
+            var el = document.getElementById('chipPesq' + k);
+            if (el) el.classList.remove('active');
+        });
+        var mapChip = { todos: 'Todos', estoque: 'Estoque', john_deere: 'JD', cnh: 'CNH', agco: 'AGCO', zf: 'ZF' };
+        var activeEl = document.getElementById('chipPesq' + (mapChip[filtro] || 'Todos'));
+        if (activeEl) activeEl.classList.add('active');
+
+        _renderPesquisaView();
+    }
+
+    function _renderPesquisaView() {
+        var container = document.getElementById('pesquisaPecasContainer');
+        if (!container) return;
+
+        if (!_pesquisaViewResultados || _pesquisaViewResultados.length === 0) {
+            container.innerHTML = "<div style='text-align:center;padding:3rem;color:var(--text-secondary)'>" +
+                "<span class='material-icons-round' style='font-size:2.5rem;opacity:.3'>search_off</span>" +
+                "<p style='font-size:.9rem;margin-top:.5rem'>Nenhuma peça ou similar encontrada para os critérios informados.</p>" +
+                "</div>";
+            return;
+        }
+
+        var filtrados = _pesquisaViewResultados.filter(function(p) {
+            var est = Number(p.estoqueFilial || p.estoque || 0);
+            var fab = (p.fabricante || '').toUpperCase();
+            var app = (p.aplicacao || '').toUpperCase();
+            var desc = (p.descricao || '').toUpperCase();
+
+            if (_filtroPesquisaViewAtivo === 'estoque') return est > 0;
+            if (_filtroPesquisaViewAtivo === 'john_deere') return fab.indexOf('DEERE') !== -1 || app.indexOf('DEERE') !== -1 || desc.indexOf('DEERE') !== -1;
+            if (_filtroPesquisaViewAtivo === 'cnh') return fab.indexOf('CASE') !== -1 || fab.indexOf('CNH') !== -1 || fab.indexOf('NEW HOLLAND') !== -1 || app.indexOf('CASE') !== -1 || app.indexOf('NEW HOLLAND') !== -1;
+            if (_filtroPesquisaViewAtivo === 'agco') return fab.indexOf('AGCO') !== -1 || fab.indexOf('MASSEY') !== -1 || fab.indexOf('VALTRA') !== -1 || app.indexOf('VALTRA') !== -1;
+            if (_filtroPesquisaViewAtivo === 'zf') return fab.indexOf('ZF') !== -1 || app.indexOf('ZF') !== -1;
+            return true;
+        });
+
+        var html = "<div style='margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center'>" +
+            "<span style='font-size:.85rem;color:var(--text-secondary)'>Exibindo <strong style='color:var(--text-primary)'>" + filtrados.length + "</strong> de " + _pesquisaViewResultados.length + " peças encontradas</span>" +
+            "</div>" +
+            "<div style='display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:.85rem'>";
+
+        html += filtrados.map(function(p) {
+            var est = Number(p.estoqueFilial || p.estoque || 0);
+            var temEst = est > 0;
+            var badgeCor = temEst ? '#10b981' : '#f59e0b';
+            var estoqTxt = temEst ? 'Estoque: ' + est + ' UN' : 'Sem Estoque';
+            var refP = p.referencia || p.codigoFab || p.codigo || '?';
+
+            var matchBadge = '';
+            if (p.tipoMatch === 'exato') {
+                matchBadge = "<span style='font-size:.65rem;font-weight:700;padding:.1rem .35rem;border-radius:4px;background:rgba(16,185,129,.15);color:#10b981'>Exato</span>";
+            } else if (p.tipoMatch === 'similar') {
+                matchBadge = "<span style='font-size:.65rem;font-weight:700;padding:.1rem .35rem;border-radius:4px;background:rgba(59,130,246,.15);color:#60a5fa'>Similar</span>";
+            }
+
+            var crossList = Array.isArray(p.referenciasCruzadas) ? p.referenciasCruzadas : [];
+            var crossHtml = '';
+            if (crossList.length > 0) {
+                crossHtml = "<div style='margin-top:.35rem;font-size:.68rem;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap'>" +
+                    "<strong style='color:var(--accent-primary)'>Ref. Cruzadas:</strong> " + _esc(crossList.slice(0, 6).join(', ')) +
+                    "</div>";
+            }
+
+            var appHtml = '';
+            if (p.aplicacao) {
+                appHtml = "<div style='margin-top:.3rem;font-size:.7rem;color:var(--text-secondary);background:rgba(255,255,255,.02);padding:.25rem .45rem;border-radius:4px;line-height:1.3'>" +
+                    "<strong>Aplicação:</strong> " + _esc(p.aplicacao) +
+                    "</div>";
+            }
+
+            var refEsc = _esc(refP);
+            var descEsc = _esc(p.descricao || p.erpProdutoDesc || '');
+
+            return "<div class='card' style='padding:.85rem;display:flex;flex-direction:column;justify-content:space-between;border:1px solid rgba(255,255,255,.08)'>" +
+                "<div>" +
+                "<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem'>" +
+                "<div>" +
+                "<div style='display:flex;align-items:center;gap:.35rem'>" +
+                "<span style='font-weight:700;font-size:.9rem;color:var(--text-primary)'>" + refEsc + "</span>" +
+                matchBadge +
+                "</div>" +
+                (p.fabricante ? "<span style='font-size:.7rem;color:var(--text-secondary);font-weight:600'>" + _esc(p.fabricante) + "</span>" : "") +
+                "</div>" +
+                "<div style='text-align:right'>" +
+                "<span style='font-size:.68rem;padding:.12rem .4rem;border-radius:4px;background:" + badgeCor + "22;color:" + badgeCor + ";font-weight:700'>" + estoqTxt + "</span>" +
+                (p.preco || p.valorVenda ? "<div style='font-size:.8rem;font-weight:700;color:var(--text-primary);margin-top:.2rem'>R$ " + Number(p.preco || p.valorVenda).toFixed(2).replace('.', ',') + "</div>" : "") +
+                "</div>" +
+                "</div>" +
+                "<div style='font-size:.78rem;color:var(--text-primary);margin-top:.35rem;font-weight:500'>" + descEsc + "</div>" +
+                appHtml +
+                crossHtml +
+                "</div>" +
+                "<div style='display:flex;gap:.4rem;margin-top:.75rem;padding-top:.55rem;border-top:1px solid rgba(255,255,255,.06)'>" +
+                "<button onclick=\"navigator.clipboard.writeText('" + refEsc + "');DemandaApp._toast('Código " + refEsc + " copiado!','success')\" class='btn btn-secondary btn-sm' style='flex:1;font-size:.72rem;padding:.25rem .5rem'>" +
+                "<span class='material-icons-round' style='font-size:.8rem'>content_copy</span> Copiar" +
+                "</button>" +
+                "<button onclick=\"DemandaApp.criarDemandaComPeca('" + refEsc + "','" + descEsc.replace(/'/g, "\\'") + "')\" class='btn btn-primary btn-sm' style='flex:1.4;font-size:.72rem;padding:.25rem .5rem;white-space:nowrap'>" +
+                "<span class='material-icons-round' style='font-size:.8rem'>add</span> Nova Cotação" +
+                "</button>" +
+                "</div>" +
+                "</div>";
+        }).join('');
+
+        html += "</div>";
+        container.innerHTML = html;
+    }
+
+    function criarDemandaComPeca(codigo, descricao) {
+        switchView('captura');
+        setTimeout(function() {
+            var inpLista = document.getElementById('inpDemandaTexto');
+            if (inpLista) {
+                inpLista.value = codigo + (descricao ? ' - ' + descricao : '') + ' (1 UN)';
+                _toast('Item ' + codigo + ' adicionado à Central de Captura!', 'success');
+            }
+        }, 150);
+    }
 
     // ── Base Técnica ───────────────────────────────────────────
     function abrirBaseTecnica() {

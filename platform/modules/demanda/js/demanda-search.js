@@ -130,12 +130,18 @@ const DemandaSearch = (() => {
      * Busca produtos no Firestore usando prefix range queries.
      * Funciona para: código exato, prefixo de referência, prefixo de descrição.
      */
+    // ── Busca no Firestore (techbase/products — coleção sincronizada) ─────
+    /**
+     * Busca produtos no Firestore usando referências exatas, referências cruzadas e texto.
+     * Funciona para: código exato, referências cruzadas (similares), prefixo de referência e descrição.
+     */
     async function _searchFirestoreProducts(query, filialId) {
         if (typeof firebase === 'undefined') return [];
         const db  = firebase.firestore();
         const col = `tenants/${TENANT_ID}/demanda/techbase/products`;
 
         const qUp = query.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+        const qNorm = qUp.replace(/[\s\-\.\/]/g, '');
         const end = qUp + '\uf8ff';
         const results = [];
         const seen = new Set();
@@ -144,10 +150,10 @@ const DemandaSearch = (() => {
             if (seen.has(doc.id)) return;
             seen.add(doc.id);
             const d = doc.data();
-            results.push(_mapFirestoreProduct(d, doc.id, filialId, qUp));
+            results.push(_mapFirestoreProduct(d, doc.id, filialId, qUp, qNorm));
         };
 
-        // Busca por referência (codigoFab) — mais precisa
+        // 1. Busca por código de fábrica / referência
         try {
             const refSnap = await db.collection(col)
                 .where('referencia', '>=', qUp).where('referencia', '<=', end)
@@ -155,7 +161,17 @@ const DemandaSearch = (() => {
             refSnap.docs.forEach(d => addItem(d));
         } catch (_) {}
 
-        // Busca por código ERP exato (numérico)
+        // 2. Busca por referências cruzadas (similares indexados via array-contains)
+        if (qNorm.length >= 3) {
+            try {
+                const crossSnap = await db.collection(col)
+                    .where('referenciasCruzadas', 'array-contains', qNorm)
+                    .where('ativo', '==', true).limit(15).get();
+                crossSnap.docs.forEach(d => addItem(d));
+            } catch (_) {}
+        }
+
+        // 3. Busca por código ERP exato (numérico)
         if (/^\d+$/.test(query)) {
             try {
                 const codeSnap = await db.collection(col)
@@ -165,15 +181,14 @@ const DemandaSearch = (() => {
             } catch (_) {}
         }
 
-        // Busca por descrição (prefix) — complementa referência
-        if (results.length < 10) {
+        // 4. Busca por descrição (prefix) — complementa referência
+        if (results.length < 15) {
             try {
                 const descSnap = await db.collection(col)
                     .where('descNorm', '>=', qUp).where('descNorm', '<=', end)
                     .where('ativo', '==', true).limit(15).get();
                 descSnap.docs.forEach(d => addItem(d));
             } catch (_) {
-                // descNorm pode não existir nos docs antigos — tenta descricao
                 try {
                     const descSnap2 = await db.collection(col)
                         .where('descricao', '>=', query).where('descricao', '<=', query + '\uf8ff')
@@ -187,57 +202,86 @@ const DemandaSearch = (() => {
     }
 
     // ── Mapeamento Firestore product → ResultadoBusca ─────────
-    function _mapFirestoreProduct(d, docId, filialId, queryNorm) {
+    function _mapFirestoreProduct(d, docId, filialId, queryNorm, queryClean) {
         const ref  = (d.referencia || '').toUpperCase();
+        const refClean = (d.codigoNorm || ref.replace(/[\s\-\.\/]/g, ''));
         const desc = (d.descricao  || '').toUpperCase();
-        // Rank: referência exata = 100, prefixo ref = 90, descrição = 75
-        let rank = 75;
-        if (ref === queryNorm)         rank = 100;
-        else if (ref.startsWith(queryNorm)) rank = 90;
-        else if (desc.startsWith(queryNorm)) rank = 80;
+        const descClean = desc.replace(/[\s\-\.\/]/g, '');
+        const aplicacao = (d.aplicacao || '').toUpperCase();
+        const aplicacaoClean = aplicacao.replace(/[\s\-\.\/]/g, '');
+        const cross = Array.isArray(d.referenciasCruzadas) ? d.referenciasCruzadas : [];
+
+        let tipoMatch = 'descricao';
+        let motivoMatch = 'Encontrado por descrição';
+        let rank = 70;
+
+        if (refClean === queryClean || ref === queryNorm) {
+            tipoMatch = 'exato';
+            motivoMatch = 'Código Exato';
+            rank = 100;
+        } else if (cross.includes(queryClean)) {
+            tipoMatch = 'similar';
+            motivoMatch = 'Similar / Ref. Cruzada (' + (queryNorm || queryClean) + ')';
+            rank = 95;
+        } else if (refClean.startsWith(queryClean) || ref.startsWith(queryNorm)) {
+            tipoMatch = 'exato';
+            motivoMatch = 'Prefixo do Código';
+            rank = 90;
+        } else if (aplicacaoClean.includes(queryClean) || aplicacao.includes(queryNorm)) {
+            tipoMatch = 'similar';
+            motivoMatch = 'Código citado na Aplicação Técnica';
+            rank = 88;
+        } else if (descClean.includes(queryClean) || desc.includes(queryNorm)) {
+            tipoMatch = 'descricao';
+            motivoMatch = 'Descrição do produto';
+            rank = 75;
+        }
 
         return {
-            _firestoreId:       docId,
-            erpProdutoId:       d.codigoErp || null,
-            erpProdutoDesc:     (d.descricao || d.descPdv || '').trim(),
-            erpCodigoFab:       (d.referencia || '').trim(),
-            erpCodigoOriginal:  (d.referencia || '').trim(),
-            erpGrupo:           (d.grupo || '').trim(),
-            erpSubGrupo:        '',
-            fabricante:         (d.fabricante || '').trim(),
-            fabricanteId:       null,
-            unidade:            'UN',
-            aplicacao:          (d.aplicacao || '').trim(),
-            localizador:        '',
-            ean:                (d.barcode || '').trim(),
-            estoqueFilial:      Number(d.estoque || 0),
+            _firestoreId:         docId,
+            erpProdutoId:         d.codigoErp || null,
+            erpProdutoDesc:       (d.descricao || d.descPdv || '').trim(),
+            erpCodigoFab:         (d.referencia || '').trim(),
+            erpCodigoOriginal:    (d.referencia || '').trim(),
+            erpGrupo:             (d.grupo || '').trim(),
+            erpSubGrupo:          '',
+            fabricante:           (d.fabricante || '').trim(),
+            fabricanteId:         null,
+            unidade:              'UN',
+            aplicacao:            (d.aplicacao || '').trim(),
+            referenciasCruzadas:  cross,
+            tipoMatch:            tipoMatch,
+            motivoMatch:          motivoMatch,
+            localizador:          '',
+            ean:                  (d.barcode || '').trim(),
+            estoqueFilial:        Number(d.estoque || 0),
             estoqueOutrasFiliais: [],
-            estoqueTotal:       Number(d.estoque || 0),
-            preco:              Number(d.preco || 0),
-            valorAtacado:       0,
-            valorCusto:         0,
-            confidencia:        'erp',
-            parteMestreId:      null,
-            _temEstoque:        Number(d.estoque || 0) > 0,
-            _temEstoqueOutro:   false,
-            _source:            'firestore',
-            _rank:              rank,
+            estoqueTotal:         Number(d.estoque || 0),
+            preco:                Number(d.preco || 0),
+            valorAtacado:         0,
+            valorCusto:           0,
+            confidencia:          'erp',
+            parteMestreId:        null,
+            _temEstoque:          Number(d.estoque || 0) > 0,
+            _temEstoqueOutro:     false,
+            _source:              'firestore',
+            _rank:                rank,
         };
     }
 
     // ── Busca por referência exata no ERP ─────────────────────
     async function _searchErpByRef(query, filialId) {
         const adapter = _getAdapter();
-        const normRef = DemandaImport ? DemandaImport.normalizeRef(query) : query.toUpperCase().replace(/[\s\-]/g, '');
+        const normRef = DemandaImport ? DemandaImport.normalizeRef(query) : query.toUpperCase().replace(/[\s\-\.\/]/g, '');
         const headers = await adapter._authHeaders();
         const results = [];
 
         // Maxdata GET /product aceita: codigoBarras (barcode) e descricao (texto)
-        // Não tem parâmetro codigoFab — tentamos codigoBarras primeiro, depois descricao
         const attempts = [
-            adapter._buildUrl('product', { codigoBarras: normRef, limit: 10, sincronizacao: true }),
-            adapter._buildUrl('product', { codigoBarras: query.toUpperCase(), limit: 10, sincronizacao: true }),
-            adapter._buildUrl('product', { descricao: normRef, limit: 20, sincronizacao: true }),
+            adapter._buildUrl('product', { codigoBarras: normRef, limit: 15, sincronizacao: true }),
+            adapter._buildUrl('product', { codigoBarras: query.toUpperCase(), limit: 15, sincronizacao: true }),
+            adapter._buildUrl('product', { descricao: normRef, limit: 30, sincronizacao: true }),
+            adapter._buildUrl('product', { descricao: query, limit: 30, sincronizacao: true }),
         ];
 
         for (const url of attempts) {
@@ -247,15 +291,29 @@ const DemandaSearch = (() => {
                 const data  = await resp.json();
                 const items = Array.isArray(data) ? data : (data.docs || data.data || []);
                 for (const item of items) {
-                    // Filtra: prefere itens cujo codigoFab bate com a busca
-                    const fab = (item.codigoFab || item.codigoOriginal || '').toUpperCase().replace(/[\s\-]/g, '');
-                    if (fab.includes(normRef) || normRef.includes(fab)) {
-                        results.push(_mapErpProduct(item, filialId));
+                    const fab = (item.codigoFab || item.codigoOriginal || '').toUpperCase().replace(/[\s\-\.\/]/g, '');
+                    const app = (item.aplicacao || '').toUpperCase().replace(/[\s\-\.\/]/g, '');
+                    const desc = (item.descricao || '').toUpperCase().replace(/[\s\-\.\/]/g, '');
+
+                    let matchType = null;
+                    let matchMotivo = '';
+                    if (fab === normRef || fab.includes(normRef) || normRef.includes(fab)) {
+                        matchType = (fab === normRef) ? 'exato' : 'exato';
+                        matchMotivo = 'Código correspondente no ERP';
+                    } else if (app.includes(normRef)) {
+                        matchType = 'similar';
+                        matchMotivo = 'Similar encontrado na aplicação do produto (' + query + ')';
+                    } else if (desc.includes(normRef)) {
+                        matchType = 'descricao';
+                        matchMotivo = 'Código na descrição';
+                    }
+
+                    if (matchType) {
+                        results.push(_mapErpProduct(item, filialId, matchType, matchMotivo));
                     }
                 }
                 if (results.length === 0 && items.length > 0) {
-                    // Fallback: retorna todos os resultados mesmo sem filtro exato
-                    items.slice(0, 5).forEach(item => results.push(_mapErpProduct(item, filialId)));
+                    items.slice(0, 5).forEach(item => results.push(_mapErpProduct(item, filialId, 'descricao', 'Busca aproximada')));
                 }
                 if (results.length > 0) break;
             } catch (_) { continue; }
@@ -326,7 +384,7 @@ const DemandaSearch = (() => {
     }
 
     // ── Mapeamento de produto ERP → ResultadoBusca ────────────
-    function _mapErpProduct(raw, filialId) {
+    function _mapErpProduct(raw, filialId, tipoMatch = 'exato', motivoMatch = 'Encontrado no ERP') {
         // Extrai estoque da filial solicitada via multiloja[]
         const multiloja  = raw.multiloja || [];
         const filialData = multiloja.find(f => f.empId === filialId) || multiloja[0] || {};
@@ -361,6 +419,16 @@ const DemandaSearch = (() => {
         // Barcodes: codBarras é array no schema Maxdata
         const barcodes = Array.isArray(raw.codBarras) ? raw.codBarras.join(', ') : (raw.codBarras || '');
 
+        // Extrai referências cruzadas da aplicação e descrição
+        const cross = new Set();
+        if (raw.codigoFab) cross.add(String(raw.codigoFab).toUpperCase().replace(/[\s\-\.\/]/g, ''));
+        if (raw.codigoOriginal) cross.add(String(raw.codigoOriginal).toUpperCase().replace(/[\s\-\.\/]/g, ''));
+        const textTokens = ((raw.aplicacao || '') + ' ' + (raw.descricao || '')).toUpperCase().split(/[\s,;\/\+\|]+/);
+        for (const tok of textTokens) {
+            const clean = tok.replace(/[\s\-\.\/]/g, '');
+            if (clean.length >= 3 && /\d/.test(clean)) cross.add(clean);
+        }
+
         return {
             erpProdutoId:         raw.id,
             erpProdutoDesc:       (raw.descricao || raw.descPdv || '').trim(),
@@ -371,7 +439,10 @@ const DemandaSearch = (() => {
             fabricante:           (raw.fabricante || '').trim(),
             fabricanteId:         raw.fabricanteId || null,
             unidade:              raw.un || 'UN',
-            aplicacao:            (raw.aplicacao || '').trim(),    // equipamento compatível
+            aplicacao:            (raw.aplicacao || '').trim(),    // equipamento compatível / referências
+            referenciasCruzadas:  Array.from(cross),
+            tipoMatch:            tipoMatch,
+            motivoMatch:          motivoMatch,
             localizador:          (raw.localizador || raw.prateleira || '').trim(),
             ean:                  barcodes,
             estoqueFilial,
