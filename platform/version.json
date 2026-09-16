@@ -1,8 +1,8 @@
 {
-  "version": "3.21.31",
-  "build": "20260916-v3.21.31",
+  "version": "3.21.32",
+  "build": "20260916-v3.21.32",
   "environment": "staging",
   "lastUpdate": "2026-09-16",
   "deployedAt": "2026-09-16",
-  "change": "v3.21.31 - fix(hub): ocultar completamente do portal os modulos nao contratados/nao liberados para o tenant"
+  "change": "v3.21.32 - feat(demanda): 15 marcas oficiais (maquinas + implementos), base tecnica hierarquica com selos de confianca e radar de demanda reprimida/ruptura"
 }

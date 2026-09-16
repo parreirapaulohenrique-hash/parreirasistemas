@@ -214,10 +214,24 @@ const DemandaLookup = (() => {
      * @returns {Promise<number>} Total de produtos salvos
      */
     const MARCAS_AGRI = [
+        // Máquinas agrícolas (Prompt 2 — Seção 5.2)
         'JOHN DEERE', 'DEERE',
         'NEW HOLLAND', 'CNH',
         'CASE', 'CASE IH',
         'MASSEY FERGUSON', 'AGCO', 'VALTRA',
+        // Implementos e equipamentos agrícolas (Prompt 2 — Seção 5.2)
+        'KUHN',
+        'JAN',
+        'VENCE TUDO',
+        'JUMIL',
+        'TATU', 'MARCHESAN', 'TATU MARCHESAN',
+        'JACTO',
+        'STARA',
+        'BALDAN',
+        'SEMEATO',
+        'PICCIN',
+        // Fabricantes de transmissões e componentes críticos
+        'ZF', 'EATON', 'SPICER'
     ];
 
     async function syncMaxdataToTechbase(filialId = 1, onProgress) {

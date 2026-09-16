@@ -13,8 +13,7 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <!-- Design system da plataforma -->
     <link rel="stylesheet" href="/platform/core/styles/portal.css">
-    <!-- Estilos específicos do módulo -->
-    <link rel="stylesheet" href="styles/demanda.css?v=2.4.9">
+    <link rel="stylesheet" href="styles/demanda.css?v=2.5.7">
 </head>
 
 <body>
@@ -377,6 +376,12 @@
                     <button class="chip" id="chipPesqJD" onclick="DemandaApp.filtrarPesquisaView('john_deere')" style="font-size:.75rem;padding:.2rem .65rem;border-radius:6px">John Deere</button>
                     <button class="chip" id="chipPesqCNH" onclick="DemandaApp.filtrarPesquisaView('cnh')" style="font-size:.75rem;padding:.2rem .65rem;border-radius:6px">Case / CNH</button>
                     <button class="chip" id="chipPesqAGCO" onclick="DemandaApp.filtrarPesquisaView('agco')" style="font-size:.75rem;padding:.2rem .65rem;border-radius:6px">Massey / Valtra</button>
+                    <button class="chip" id="chipPesqKuhn" onclick="DemandaApp.filtrarPesquisaView('kuhn')" style="font-size:.75rem;padding:.2rem .65rem;border-radius:6px">Kuhn</button>
+                    <button class="chip" id="chipPesqStara" onclick="DemandaApp.filtrarPesquisaView('stara')" style="font-size:.75rem;padding:.2rem .65rem;border-radius:6px">Stara</button>
+                    <button class="chip" id="chipPesqJacto" onclick="DemandaApp.filtrarPesquisaView('jacto')" style="font-size:.75rem;padding:.2rem .65rem;border-radius:6px">Jacto</button>
+                    <button class="chip" id="chipPesqTatu" onclick="DemandaApp.filtrarPesquisaView('tatu')" style="font-size:.75rem;padding:.2rem .65rem;border-radius:6px">Tatu Marchesan</button>
+                    <button class="chip" id="chipPesqBaldan" onclick="DemandaApp.filtrarPesquisaView('baldan')" style="font-size:.75rem;padding:.2rem .65rem;border-radius:6px">Baldan / Piccin</button>
+                    <button class="chip" id="chipPesqJAN" onclick="DemandaApp.filtrarPesquisaView('jan')" style="font-size:.75rem;padding:.2rem .65rem;border-radius:6px">JAN / Vence Tudo / Jumil</button>
                     <button class="chip" id="chipPesqZF" onclick="DemandaApp.filtrarPesquisaView('zf')" style="font-size:.75rem;padding:.2rem .65rem;border-radius:6px">ZF / Transmissão</button>
                 </div>
 
@@ -437,19 +442,115 @@
             <!-- ══════════════════════════════════════════════ -->
             <!--  VIEW: BASE TÉCNICA                           -->
             <!-- ══════════════════════════════════════════════ -->
-            <!-- VIEW: BASE TÉCNICA -->
+            <!-- VIEW: BASE TÉCNICA (Prompt 2 — Seções 5.2, 5.3, 5.4) -->
             <div id="view-base" style="display:none;flex-direction:column">
-                <div class="top-bar">
+                <div class="top-bar" style="flex-wrap:wrap;gap:.75rem">
                     <div class="breadcrumb">
                         <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">hub</span>
-                        <span>Base Técnica de Peças</span>
+                        <span>Base Técnica de Peças & Implementos</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:.5rem;margin-left:auto;flex-wrap:wrap">
+                        <div style="position:relative;width:300px">
+                            <span class="material-icons-round" style="position:absolute;left:.65rem;top:50%;transform:translateY(-50%);font-size:1rem;color:var(--text-secondary)">search</span>
+                            <input id="btInpBuscaMestre" type="text" placeholder="Buscar peça mestre, OEM, similar..."
+                                oninput="DemandaApp.filtrarBaseTecnica()"
+                                style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.45rem .75rem .45rem 2.2rem;color:var(--text-primary);font-size:.82rem">
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="DemandaApp.abrirBaseTecnica()" style="display:inline-flex;align-items:center;gap:.35rem">
+                            <span class="material-icons-round" style="font-size:.9rem">settings</span> Sincronizar ERP / Catálogo PDF
+                        </button>
                     </div>
                 </div>
-                <div style="flex:1;overflow-y:auto;padding:1.5rem;display:flex;align-items:center;justify-content:center">
-                    <div class="empty-state">
-                        <span class="material-icons-round">hub</span>
-                        <h4>Base de Inteligência Técnica</h4>
-                        <p>Compatíveis, substitutos, aplicações por máquina e histórico de demanda por peça.</p>
+
+                <!-- Barra de Navegação Hierárquica: Marca > Tipo de Equipamento/Implemento > Sistema -->
+                <div style="display:flex;align-items:center;gap:.75rem;padding:.75rem 1.25rem;background:rgba(255,255,255,.015);border-bottom:1px solid var(--border-color);flex-wrap:wrap">
+                    <!-- Nível 1: Marca (15 marcas oficiais + transmissões) -->
+                    <div style="display:flex;align-items:center;gap:.35rem">
+                        <label style="font-size:.72rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Marca:</label>
+                        <select id="btSelMarca" onchange="DemandaApp.onBtFiltroChange()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem">
+                            <option value="">Todas as Marcas (15+)</option>
+                            <optgroup label="Máquinas Agrícolas (Prompt 2)">
+                                <option value="JOHN DEERE">John Deere</option>
+                                <option value="CASE">Case IH</option>
+                                <option value="NEW HOLLAND">New Holland</option>
+                                <option value="MASSEY FERGUSON">Massey Ferguson</option>
+                                <option value="VALTRA">Valtra</option>
+                            </optgroup>
+                            <optgroup label="Implementos Agrícolas (Prompt 2)">
+                                <option value="KUHN">Kuhn</option>
+                                <option value="JAN">JAN</option>
+                                <option value="VENCE TUDO">Vence Tudo</option>
+                                <option value="JUMIL">Jumil</option>
+                                <option value="TATU MARCHESAN">Tatu Marchesan</option>
+                                <option value="JACTO">Jacto</option>
+                                <option value="STARA">Stara</option>
+                                <option value="BALDAN">Baldan</option>
+                                <option value="SEMEATO">Semeato</option>
+                                <option value="PICCIN">Piccin</option>
+                            </optgroup>
+                            <optgroup label="Transmissões & Componentes">
+                                <option value="ZF">ZF do Brasil</option>
+                                <option value="EATON">Eaton</option>
+                                <option value="SPICER">Spicer / Dana</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <!-- Nível 2: Equipamento / Implemento -->
+                    <div style="display:flex;align-items:center;gap:.35rem">
+                        <label style="font-size:.72rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Equipamento:</label>
+                        <select id="btSelTipoEquipamento" onchange="DemandaApp.onBtFiltroChange()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem">
+                            <option value="">Todos os Tipos</option>
+                            <optgroup label="Máquinas">
+                                <option value="COLHEITADEIRA">Colheitadeira</option>
+                                <option value="TRATOR">Trator</option>
+                                <option value="PULVERIZADOR">Pulverizador</option>
+                            </optgroup>
+                            <optgroup label="Implementos Agrícolas (Prompt 2)">
+                                <option value="PLANTADEIRA">Plantadeira / Semeadora</option>
+                                <option value="GRADE">Grade / Arado</option>
+                                <option value="DISTRIBUIDOR">Distribuidor</option>
+                                <option value="PLATAFORMA_MILHO">Plataforma de Milho</option>
+                                <option value="CARRETA_BAZUCA">Carreta / Bazuca</option>
+                                <option value="ESCARIFICADOR">Escarificador</option>
+                            </optgroup>
+                            <optgroup label="Transmissões">
+                                <option value="TRANSMISSAO">Transmissão & Eixo</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <!-- Nível 3: Sistema da Máquina -->
+                    <div style="display:flex;align-items:center;gap:.35rem">
+                        <label style="font-size:.72rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Sistema:</label>
+                        <select id="btSelSistema" onchange="DemandaApp.onBtFiltroChange()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem">
+                            <option value="">Todos os Sistemas</option>
+                            <option value="TRANSMISSAO">Transmissão, Diferencial & Eixo</option>
+                            <option value="PLANTIO">Linha de Plantio & Dosadores</option>
+                            <option value="CORTE">Corte, Molinete & Rotor</option>
+                            <option value="DISCO_MANCAL">Discos, Mancais & Cubos</option>
+                            <option value="PULVERIZACAO">Bicos, Bomba & Pulverização</option>
+                            <option value="HIDRAULICO">Sistema Hidráulico & Cilindros</option>
+                            <option value="MOTOR">Motor, Correias & Filtragem</option>
+                        </select>
+                    </div>
+
+                    <!-- Legenda dos Graus de Confiança -->
+                    <div style="margin-left:auto;display:flex;align-items:center;gap:.35rem;font-size:.68rem;color:var(--text-secondary);flex-wrap:wrap">
+                        <span style="font-weight:600">Graus:</span>
+                        <span class="badge-confianca badge-grau1" title="Grau 1: Oficial OEM (100%)">🛡️ Grau 1</span>
+                        <span class="badge-confianca badge-grau2" title="Grau 2: Catálogo Fabricante (95%)">📘 Grau 2</span>
+                        <span class="badge-confianca badge-grau3" title="Grau 3: Confirmada Técnica (90%)">🔧 Grau 3</span>
+                        <span class="badge-confianca badge-grau4" title="Grau 4: Histórico de Venda (75%)">📜 Grau 4</span>
+                        <span class="badge-confianca badge-grau5" title="Grau 5: Sugestão Algorítmica (50%)">💡 Grau 5</span>
+                    </div>
+                </div>
+
+                <!-- Container Principal da Base Técnica -->
+                <div id="btContainerPrincipal" style="flex:1;overflow-y:auto;padding:1.25rem">
+                    <div style="padding:3rem;text-align:center;color:var(--text-secondary)">
+                        <span class="material-icons-round" style="animation:spin 1s linear infinite;font-size:2rem;color:var(--accent-primary)">sync</span>
+                        <p style="margin-top:.75rem;font-size:.88rem">Carregando Base Técnica de Peças...</p>
                     </div>
                 </div>
             </div>
@@ -852,14 +953,14 @@
     <script src="/platform/shared/integrations/index.js?v=2.0.0"></script>
 
     <!-- Módulo de Demanda -->
-    <script src="js/demanda-states.js?v=2.5.6"></script>
-    <script src="js/demanda-db.js?v=2.5.6"></script>
-    <script src="js/demanda-import.js?v=2.5.4"></script>
-    <script src="js/demanda-search.js?v=2.5.6"></script>
-    <script src="js/demanda-lookup.js?v=2.5.4"></script>
-    <script src="js/demanda-pdf.js?v=2.5.4"></script>
-    <script src="js/demanda-clientes.js?v=2.5.4"></script>
-    <script src="js/demanda-app.js?v=2.5.6"></script>
+    <script src="js/demanda-states.js?v=2.5.7"></script>
+    <script src="js/demanda-db.js?v=2.5.7"></script>
+    <script src="js/demanda-import.js?v=2.5.7"></script>
+    <script src="js/demanda-search.js?v=2.5.7"></script>
+    <script src="js/demanda-lookup.js?v=2.5.7"></script>
+    <script src="js/demanda-pdf.js?v=2.5.7"></script>
+    <script src="js/demanda-clientes.js?v=2.5.7"></script>
+    <script src="js/demanda-app.js?v=2.5.7"></script>
 
     <!-- ═══════════════════════════════════════════════════════════
          MODAL: Administração da Base Técnica de Peças
@@ -924,21 +1025,49 @@
               <label style="font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.25rem;">Fabricante</label>
               <select id="btPdfFabricante" style="width:100%;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:.4rem .75rem;color:var(--text-primary);font-size:.85rem;">
                 <option value="">Detectar automaticamente</option>
-                <option value="JOHN DEERE">John Deere</option>
-                <option value="NEW HOLLAND">New Holland</option>
-                <option value="CASE">Case IH</option>
-                <option value="MASSEY FERGUSON">Massey Ferguson</option>
-                <option value="VALTRA">Valtra</option>
+                <optgroup label="Máquinas Agrícolas (Prompt 2)">
+                  <option value="JOHN DEERE">John Deere</option>
+                  <option value="CASE">Case IH</option>
+                  <option value="NEW HOLLAND">New Holland</option>
+                  <option value="MASSEY FERGUSON">Massey Ferguson</option>
+                  <option value="VALTRA">Valtra</option>
+                </optgroup>
+                <optgroup label="Implementos & Equipamentos Agrícolas (Prompt 2)">
+                  <option value="KUHN">Kuhn</option>
+                  <option value="JAN">JAN</option>
+                  <option value="VENCE TUDO">Vence Tudo</option>
+                  <option value="JUMIL">Jumil</option>
+                  <option value="TATU MARCHESAN">Tatu Marchesan</option>
+                  <option value="JACTO">Jacto</option>
+                  <option value="STARA">Stara</option>
+                  <option value="BALDAN">Baldan</option>
+                  <option value="SEMEATO">Semeato</option>
+                  <option value="PICCIN">Piccin</option>
+                </optgroup>
+                <optgroup label="Transmissões & Componentes">
+                  <option value="ZF">ZF do Brasil</option>
+                  <option value="EATON">Eaton</option>
+                  <option value="SPICER">Spicer / Dana</option>
+                </optgroup>
               </select>
             </div>
             <div>
-              <label style="font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.25rem;">Equipamento</label>
+              <label style="font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.25rem;">Equipamento / Implemento</label>
               <select id="btPdfEquipamento" style="width:100%;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:.4rem .75rem;color:var(--text-primary);font-size:.85rem;">
                 <option value="">Detectar automaticamente</option>
-                <option value="COLHEITADEIRA">Colheitadeira</option>
-                <option value="PLANTADEIRA">Plantadeira</option>
-                <option value="PULVERIZADOR">Pulverizador</option>
-                <option value="TRATOR">Trator</option>
+                <optgroup label="Máquinas Autopropelidas">
+                  <option value="COLHEITADEIRA">Colheitadeira</option>
+                  <option value="TRATOR">Trator</option>
+                  <option value="PULVERIZADOR">Pulverizador Autopropelido</option>
+                </optgroup>
+                <optgroup label="Implementos Agrícolas">
+                  <option value="PLANTADEIRA">Plantadeira / Semeadora</option>
+                  <option value="GRADE">Grade / Arado</option>
+                  <option value="DISTRIBUIDOR">Distribuidor de Calcário / Adubadeira</option>
+                  <option value="PLATAFORMA_MILHO">Plataforma de Milho / Corte</option>
+                  <option value="CARRETA_BAZUCA">Carreta Graneleira / Bazuca</option>
+                  <option value="ESCARIFICADOR">Escarificador / Subsolador</option>
+                </optgroup>
               </select>
             </div>
           </div>

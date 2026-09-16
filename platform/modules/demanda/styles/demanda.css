@@ -1165,3 +1165,57 @@ body {
     20%, 60% { transform: translateX(-4px); }
     40%, 80% { transform: translateX(4px); }
 }
+
+/* ══════════════════════════════════════════════════════════
+   BADGES DE GRAU DE CONFIANÇA (Prompt 2 — Seção 5.4)
+   ══════════════════════════════════════════════════════════ */
+.badge-confianca {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    line-height: 1.2;
+}
+.badge-grau1 { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.35); }
+.badge-grau2 { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.35); }
+.badge-grau3 { background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.35); }
+.badge-grau4 { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); }
+.badge-grau5 { background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); }
+
+/* ══════════════════════════════════════════════════════════
+   BASE TÉCNICA HIERÁRQUICA (Prompt 2 — Seção 5.3)
+   ══════════════════════════════════════════════════════════ */
+.bt-tree-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem;
+    transition: transform .15s ease, border-color .15s ease;
+}
+.bt-tree-card:hover {
+    border-color: rgba(99, 102, 241, 0.4);
+    transform: translateY(-2px);
+}
+.bt-master-tag {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    padding: .15rem .45rem;
+    border-radius: 4px;
+    background: rgba(99, 102, 241, 0.15);
+    color: #818cf8;
+}
+.bt-system-tag {
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: .15rem .45rem;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+}

@@ -1,8 +1,8 @@
 {
-  "version": "2.5.6",
-  "build": "20260916-v2.5.6",
+  "version": "2.5.7",
+  "build": "20260916-v2.5.7",
   "module": "demanda",
   "name": "Inteligencia de Demanda",
   "lastUpdate": "2026-09-16",
-  "change": "v2.5.6 - feat(cruzamento): cruzamento inteligente de referencias, similares e aplicacoes do ERP Maxdata, selecao comparativa de opcoes e inclusao como alternativa pelo vendedor"
+  "change": "v2.5.7 - feat(prompt2): 15 marcas oficiais de maquinas e implementos agricolas, base tecnica hierarquica com selos de confianca (Graus 1 a 5) e radar de demanda reprimida e ruptura no dashboard"
 }
