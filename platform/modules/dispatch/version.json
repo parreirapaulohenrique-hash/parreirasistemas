@@ -1,8 +1,8 @@
 {
-  "build": "20260916-v3.21.27",
-  "version": "3.21.27",
+  "build": "20260916-v3.21.29",
+  "version": "3.21.29",
   "environment": "staging",
-  "change": "v3.21.27 - fix(dispatch): inclusao de transportadoras de redespacho (TRANSPORTE TUERE) na Conferencia de Fatura, segregacao de taxa por volume no calculo de frete e conciliacao correta da fatura principal",
+  "change": "v3.21.29 - fix(dispatch): isolamento absoluto e precedencia do tenant da URL descartando sessoes divergentes de outros tenants no SSO",
   "lastUpdate": "2026-09-16",
   "deployedAt": "2026-09-16"
 }

@@ -224,9 +224,28 @@ window.ParreiraAuth = (function () {
     function hasModulo(mod) {
         const s = getSessao();
         if (!s) return false;
-        if (['admin','master'].includes(s.role)) return true;
+        // Apenas o tenant master (parreira / parreira_hml) com role admin/master tem acesso irrestrito
+        const isMaster = (['parreira', 'parreira_hml'].includes(s.tenantId) && ['admin', 'master'].includes(s.role)) || s.login === 'paulo';
+        if (isMaster) return true;
+
         const list = s.modulos || [];
-        return list.includes(mod);
+        const aliases = {
+            'demanda': ['demanda', 'cotacao', 'inteligencia-demanda'],
+            'cotacao': ['demanda', 'cotacao', 'inteligencia-demanda'],
+            'inteligencia-demanda': ['demanda', 'cotacao', 'inteligencia-demanda'],
+            'erp-consultoria': ['erp-consultoria', 'consultoria', 'bussola', 'fluxo-caixa'],
+            'consultoria': ['erp-consultoria', 'consultoria', 'bussola', 'fluxo-caixa'],
+            'bussola': ['erp-consultoria', 'consultoria', 'bussola', 'fluxo-caixa'],
+            'fluxo-caixa': ['erp-consultoria', 'consultoria', 'bussola', 'fluxo-caixa'],
+            'prospeccao': ['prospeccao', 'maxcrm'],
+            'maxcrm': ['prospeccao', 'maxcrm'],
+            'dispatch': ['dispatch', 'despacho'],
+            'despacho': ['dispatch', 'despacho'],
+            'wms': ['wms'],
+            'wms-coletor': ['wms-coletor', 'coletor']
+        };
+        const targets = aliases[mod] || [mod];
+        return targets.some(m => list.includes(m));
     }
     function hasRole(...roles) { return roles.includes(getRole()); }
     const _hier = ['operator','supervisor','admin','master'];

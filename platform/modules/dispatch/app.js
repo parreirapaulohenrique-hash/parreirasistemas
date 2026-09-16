@@ -409,24 +409,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch(e) { console.warn('[LS Cleanup] Erro na limpeza:', e.message); }
     })();
 
-    // === SWAP TENANT DETECTED BY URL BEFORE INITIALIZATION ===
-    const segments = window.location.pathname.split('/').filter(Boolean);
-    const candidate = segments[0] ? segments[0].trim().toLowerCase() : '';
-    const reserved = ['modules', 'platform', 'core', 'fix_frete', 'fix_viopex', 'fix_romaneios', 'web', 'homolog'];
-    const tenantFromUrl = (candidate && !reserved.includes(candidate)) ? candidate : '';
-    const currentTenant = localStorage.getItem('app_tenant_id');
+    // === SWAP TENANT DETECTED BY URL BEFORE INITIALIZATION (PRECEDENCIA ABSOLUTA) ===
+    const segments = window.location.pathname.split("/").filter(Boolean);
+    const candidate = segments[0] ? segments[0].trim().toLowerCase() : "";
+    const reserved = ["modules", "platform", "core", "fix_frete", "fix_viopex", "fix_romaneios", "web", "homolog"];
+    const tenantFromUrl = (candidate && !reserved.includes(candidate)) ? candidate : "";
+    window._tenantFromUrl = tenantFromUrl; // Expoe globalmente para checkAuth
+    const currentTenant = localStorage.getItem("app_tenant_id");
     
-    if (tenantFromUrl && tenantFromUrl !== currentTenant) {
-        console.warn(`[Tenant Switch] URL tenant (${tenantFromUrl}) diferente do atual (${currentTenant}). Resetando dados...`);
+    let _sessaoDivergente = false;
+    try {
+        const _s = JSON.parse(sessionStorage.getItem("parreira_session") || "null") ||
+                   JSON.parse(localStorage.getItem("parreira_session_ls") || "null");
+        if (tenantFromUrl && _s && _s.tenantId && _s.tenantId !== tenantFromUrl && !["parreira", "parreira_hml"].includes(_s.tenantId)) {
+            _sessaoDivergente = true;
+        }
+    } catch(_) {}
+
+    if (tenantFromUrl && (tenantFromUrl !== currentTenant || _sessaoDivergente)) {
+        console.warn(`[Tenant Switch] URL tenant (${tenantFromUrl}) diferente da sessao/storage (${currentTenant}). Resetando para isolamento absoluto...`);
+        sessionStorage.removeItem("parreira_session");
+        localStorage.removeItem("parreira_session_ls");
+        localStorage.removeItem("logged_user");
         if (currentTenant) {
-            ['dispatches', 'freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients'].forEach(k => {
+            ["dispatches", "freight_tables", "carrier_list", "carrier_configs", "company_data", "app_users", "carrier_info_v2", "clients"].forEach(k => {
                 localStorage.removeItem(k);
                 localStorage.removeItem(`tenant_${currentTenant}_${k}`);
             });
-            localStorage.removeItem('logged_user');
         }
-        localStorage.setItem('app_tenant_id', tenantFromUrl);
-        if (currentTenant) {
+        localStorage.setItem("app_tenant_id", tenantFromUrl);
+        if (currentTenant || _sessaoDivergente) {
             location.reload();
             return;
         }
@@ -683,14 +695,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (_parreiraSessao && _parreiraSessao.login && _parreiraSessao.tenantId &&
                 (Date.now() - (_parreiraSessao.ts || 0) < 8 * 3600000)) {
 
-                // Valida permissão do módulo dispatch
-                const isMasterRole = ['admin', 'master'].includes((_parreiraSessao.role || '').toLowerCase());
+                const urlTenant = window._tenantFromUrl || "";
+                const isMasterTenant = ["parreira", "parreira_hml"].includes(_parreiraSessao.tenantId);
+
+                // Bloqueio de vazamento entre tenants: se a URL for de um tenant diferente, nao aceita SSO de outro tenant
+                if (urlTenant && _parreiraSessao.tenantId !== urlTenant && !isMasterTenant) {
+                    console.warn(`[checkAuth] Sessao de outro tenant (${_parreiraSessao.tenantId}) para URL (${urlTenant}). Ignorando SSO e abrindo login.`);
+                    sessionStorage.removeItem("parreira_session");
+                    localStorage.removeItem("parreira_session_ls");
+                    if (loginOverlay) loginOverlay.style.display = "flex";
+                    return;
+                }
+
+                // Valida permissao do modulo dispatch
+                const isMasterRole = isMasterTenant && ["admin", "master"].includes((_parreiraSessao.role || "").toLowerCase());
                 const userModulos = _parreiraSessao.modulos || [];
-                const hasDispatch = isMasterRole || userModulos.includes('dispatch');
+                const hasDispatch = isMasterRole || userModulos.includes("dispatch") || userModulos.includes("despacho");
 
                 if (hasDispatch) {
-                    const effectiveTenant = (window._tenantFromUrl && isMasterRole)
-                        ? window._tenantFromUrl
+                    const effectiveTenant = (urlTenant && isMasterRole)
+                        ? urlTenant
                         : _parreiraSessao.tenantId;
 
                     currentUser = {

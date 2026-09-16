@@ -25,19 +25,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // 1b. Garantir que é tenant parreira ou master
+    // 1b. Garantir que e tenant parreira ou possui modulo prospeccao liberado
     const _sessaoCheck = ParreiraAuth.getSessao();
     const isAllowedTenant = _sessaoCheck && (
-        _sessaoCheck.tenantId === 'parreira' ||
-        _sessaoCheck.tenantId === 'master' ||
+        ["parreira", "parreira_hml", "master"].includes(_sessaoCheck.tenantId) ||
         _sessaoCheck.isMaster ||
-        _sessaoCheck.role === 'master' ||
-        _sessaoCheck.role === 'admin'
+        (typeof ParreiraAuth.hasModulo === "function" && ParreiraAuth.hasModulo("prospeccao"))
     );
     if (!isAllowedTenant) {
-        // Sessão de outro tenant detectada — vai para o login próprio do MAXCRM
-        sessionStorage.removeItem('parreira_session');
-        window.location.href = 'login.html';
+        alert("Acesso negado: O modulo MAXCRM nao esta liberado para o seu usuario ou empresa.");
+        window.location.href = "/platform/index.html";
         return;
     }
 

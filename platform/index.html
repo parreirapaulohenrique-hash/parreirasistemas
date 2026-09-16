@@ -271,10 +271,10 @@
                     // Fix cross-tab: garante parreira_session_ls para módulos em nova aba
                     try { localStorage.setItem('parreira_session_ls', JSON.stringify(sessao)); } catch(_) {}
 
-                    // Painel Admin: visível apenas para role admin ou master
-                    const isMasterRole = ['admin', 'master'].includes((sessao.role || '').toLowerCase());
-                    const masterCard = document.querySelector('.module-master');
-                    if (masterCard) masterCard.style.display = isMasterRole ? '' : 'none';
+                    // Painel Admin: visivel APENAS para tenant master (parreira / parreira_hml)
+                    const isMasterTenant = ["parreira", "parreira_hml"].includes(sessao.tenantId);
+                    const masterCard = document.querySelector(".module-master");
+                    if (masterCard) masterCard.style.display = isMasterTenant ? "" : "none";
                     return;
                 }
             }
@@ -290,10 +290,10 @@
                         pin: '', tenantId: tenant, tenantNome: tenant, modulos: [], moduloAtivo: 'portal', ts: Date.now() };
                     try { localStorage.setItem('parreira_session_ls', JSON.stringify(ls_sessao)); } catch(_) {}
                 }
-                // Painel Admin: oculto se não for admin/master
-                const isMasterRole = ['admin', 'master'].includes((user.role || '').toLowerCase());
-                const masterCard = document.querySelector('.module-master');
-                if (masterCard) masterCard.style.display = isMasterRole ? '' : 'none';
+                // Painel Admin: visivel APENAS para tenant master (parreira / parreira_hml)
+                const isMasterTenant = ["parreira", "parreira_hml"].includes(tenant);
+                const masterCard = document.querySelector(".module-master");
+                if (masterCard) masterCard.style.display = isMasterTenant ? "" : "none";
                 return;
             }
             // Sem sessão: redireciona para login único (ParreiraAuth)
@@ -374,46 +374,49 @@
                 ? ParreiraAuth.getSessao()
                 : (JSON.parse(localStorage.getItem('parreira_session_ls') || 'null') || {});
 
-            const isMaster = ['admin','master'].includes((user.role || '').toLowerCase())
-                || user.tenant    === 'parreira'
-                || user.tenantId  === 'parreira'
-                || user.login     === 'paulo';
+            const tenantId = sessao.tenantId || user.tenant || user.tenantId || "";
+            const isMasterTenant = ["parreira", "parreira_hml"].includes(tenantId);
+            const isMaster = (isMasterTenant && ["admin","master"].includes((user.role || "").toLowerCase()))
+                || user.login === "paulo";
 
             const userMods = sessao.modulos || user.modulos || [];
 
             // 1. Painel Admin (Master)
             const masterCard = document.querySelector('.module-master');
             if (masterCard) {
-                if (!isMaster) {
-                    masterCard.classList.add('disabled');
-                    masterCard.style.opacity = '0.4';
-                    masterCard.style.pointerEvents = 'none';
-                    const st = masterCard.querySelector('.module-status');
-                    if (st) { st.textContent = 'Restrito'; st.className = 'module-status inactive'; }
+                if (!isMasterTenant) {
+                    masterCard.style.display = "none";
+                } else if (!isMaster) {
+                    masterCard.style.display = "";
+                    masterCard.classList.add("disabled");
+                    masterCard.style.opacity = "0.4";
+                    masterCard.style.pointerEvents = "none";
+                    const st = masterCard.querySelector(".module-status");
+                    if (st) { st.textContent = "Restrito"; st.className = "module-status inactive"; }
                 } else {
-                    masterCard.classList.remove('disabled');
-                    masterCard.style.opacity = '1';
-                    masterCard.style.pointerEvents = 'auto';
-                    const st = masterCard.querySelector('.module-status');
-                    if (st) { st.textContent = '👑 Administrador'; st.className = 'module-status master'; }
+                    masterCard.style.display = "";
+                    masterCard.classList.remove("disabled");
+                    masterCard.style.opacity = "1";
+                    masterCard.style.pointerEvents = "auto";
+                    const st = masterCard.querySelector(".module-status");
+                    if (st) { st.textContent = "Administrador"; st.className = "module-status master"; }
                 }
             }
 
             // 2. Matriz de Módulos (Despacho, WMS, Demanda, MAXCRM, Bússola)
             const moduleMap = [
-                { id: 'dispatch',        selector: '.module-dispatch' },
-                { id: 'wms',             selector: '.module-wms' },
-                { id: 'wms-coletor',     selector: '.module-wms-coletor' },
-                { id: 'erp-consultoria', selector: '.module-fluxo-caixa' },
-                { id: 'demanda',         selector: '.module-card[onclick*="demanda"]' },
-                { id: 'prospeccao',      selector: '.module-maxcrm' }
+                { id: "dispatch",        aliases: ["dispatch", "despacho"], selector: ".module-dispatch" },
+                { id: "wms",             aliases: ["wms"], selector: ".module-wms" },
+                { id: "wms-coletor",     aliases: ["wms-coletor", "coletor"], selector: ".module-wms-coletor" },
+                { id: "erp-consultoria", aliases: ["erp-consultoria", "consultoria", "bussola", "fluxo-caixa"], selector: ".module-fluxo-caixa" },
+                { id: "demanda",         aliases: ["demanda", "cotacao", "inteligencia-demanda"], selector: '.module-card[onclick*="demanda"]' },
+                { id: "prospeccao",      aliases: ["prospeccao", "maxcrm"], selector: ".module-maxcrm" }
             ];
-
             moduleMap.forEach(({ id, selector }) => {
                 const card = document.querySelector(selector);
                 if (!card) return;
 
-                const hasAccess = isMaster || userMods.includes(id);
+                const hasAccess = isMaster || aliases.some(a => userMods.includes(a));
                 const st = card.querySelector('.module-status');
 
                 if (hasAccess) {
@@ -451,8 +454,11 @@
         }
 
         function openModule(module) {
-            const card = document.querySelector(`.module-${module}`);
-            if (card && card.classList.contains('disabled')) return;
+            const card = document.querySelector(`.module-${module}`) || document.querySelector(`.module-card[onclick*="${module}"]`);
+            if (card && card.classList.contains("disabled")) {
+                alert("Acesso negado: Este modulo nao esta liberado para sua empresa ou usuario.");
+                return;
+            }
 
             const base = window.location.origin + '/platform/modules/';
 

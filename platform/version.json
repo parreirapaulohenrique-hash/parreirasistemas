@@ -1,8 +1,8 @@
 {
-  "version": "3.21.28",
-  "build": "20260916-v3.21.28",
+  "version": "3.21.29",
+  "build": "20260916-v3.21.29",
   "environment": "staging",
   "lastUpdate": "2026-09-16",
   "deployedAt": "2026-09-16",
-  "change": "v3.21.28 - feat(demanda): ajuste de status Nao Encontrado, Nao Cadastrado e Catalogado sem Concluido indevido, filtros por status e acoes operacionais"
+  "change": "v3.21.29 - fix(auth): precedencia absoluta de tenant por URL no Despacho, restricao do Painel Admin apenas ao tenant master e bloqueio de modulos nao contratados"
 }
