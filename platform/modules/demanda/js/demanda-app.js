@@ -1100,10 +1100,12 @@ const DemandaApp = (function() {
         var lbl = SL[d.status] || d.status;
         var dt  = d.criadoEm && d.criadoEm.toDate ? d.criadoEm.toDate().toLocaleDateString("pt-BR") : "—";
 
-        // Contadores por Status (eliminando recebida/não classificado, encaixando em status objetivos)
+        // Contadores por Status
         var contadores = {
             todos: itens.length,
             nao_cadastrado: 0,
+            catalogado: 0,
+            nao_encontrado: 0,
             sem_estoque: 0,
             em_estoque: 0,
             compras: 0,
@@ -1113,9 +1115,13 @@ const DemandaApp = (function() {
         };
 
         itens.forEach(function(i) {
-            var st = i.status || "sem_estoque";
+            var st = i.status || "nao_cadastrado";
             if (st === "nao_cadastrado") {
                 contadores.nao_cadastrado++;
+            } else if (st === "catalogado") {
+                contadores.catalogado++;
+            } else if (st === "demanda_recebida" || st === "nao_encontrado" || st === "em_identificacao" || st === "identificado") {
+                contadores.nao_encontrado++;
             } else if (st === "sem_estoque") {
                 contadores.sem_estoque++;
             } else if (st === "estoque_disponivel" || st === "estoque_parcial") {
@@ -1129,21 +1135,33 @@ const DemandaApp = (function() {
             } else if (st === "venda_perdida" || st === "cancelado") {
                 contadores.perdida++;
             } else {
-                if (i.erpProdutoId) contadores.sem_estoque++;
-                else contadores.nao_cadastrado++;
+                contadores.nao_cadastrado++;
             }
         });
 
-        var terminal = itens.filter(function(i) { return typeof DemandaStates !== "undefined" && DemandaStates.isTerminal(i.status); }).length;
-        var pct      = itens.length > 0 ? Math.round((terminal / itens.length) * 100) : 0;
+        var terminal = itens.filter(function(i) {
+            var s = i.status;
+            return s === "faturado" || s === "venda_perdida" || s === "cancelado";
+        }).length;
+        var pct = itens.length > 0 ? Math.round((terminal / itens.length) * 100) : 0;
 
         // Lista de Chips de Totalizadores
         var chipsList = [
             { key: "todos",          label: "Todos",           count: contadores.todos,          color: "var(--text-primary)", icon: "format_list_bulleted" },
-            { key: "nao_cadastrado", label: "Não Cadastrados", count: contadores.nao_cadastrado,  color: "#f59e0b",             icon: "help_outline" },
+            { key: "nao_cadastrado", label: "Não Cadastrados", count: contadores.nao_cadastrado,  color: "#f97316",             icon: "error_outline" }
+        ];
+
+        if (contadores.catalogado > 0) {
+            chipsList.push({ key: "catalogado", label: "Catalogados", count: contadores.catalogado, color: "#3b82f6", icon: "hub" });
+        }
+        if (contadores.nao_encontrado > 0) {
+            chipsList.push({ key: "nao_encontrado", label: "Não Encontrados", count: contadores.nao_encontrado, color: "#f59e0b", icon: "help_outline" });
+        }
+
+        chipsList.push(
             { key: "sem_estoque",    label: "Sem Estoque",     count: contadores.sem_estoque,     color: "#ef4444",             icon: "inventory_2" },
             { key: "em_estoque",     label: "Em Estoque",      count: contadores.em_estoque,      color: "#10b981",             icon: "inventory" }
-        ];
+        );
 
         if (contadores.compras > 0) {
             chipsList.push({ key: "compras", label: "Em Compras", count: contadores.compras, color: "#8b5cf6", icon: "shopping_cart" });
@@ -1174,18 +1192,38 @@ const DemandaApp = (function() {
             "</div>";
 
         // Barra de Ações Cabíveis para o Status Selecionado
-        var totalFaltam = contadores.nao_cadastrado + contadores.sem_estoque;
+        var totalFaltam = contadores.nao_cadastrado + contadores.catalogado + contadores.nao_encontrado + contadores.sem_estoque;
         var acoesStatusHtml = "";
 
         if (_filtroItensDetalhe === "nao_cadastrado" && contadores.nao_cadastrado > 0) {
-            acoesStatusHtml = "<div style='display:flex;align-items:center;justify-content:space-between;padding:.6rem .85rem;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem'>" +
+            acoesStatusHtml = "<div style='display:flex;align-items:center;justify-content:space-between;padding:.6rem .85rem;background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.25);border-radius:8px;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem'>" +
                 "<div style='display:flex;align-items:center;gap:.4rem;font-size:.82rem;color:var(--text-primary)'>" +
-                "<span class='material-icons-round' style='color:#f59e0b;font-size:1.15rem'>help_outline</span>" +
+                "<span class='material-icons-round' style='color:#f97316;font-size:1.15rem'>error_outline</span>" +
                 "<span><strong>" + contadores.nao_cadastrado + "</strong> " + (contadores.nao_cadastrado === 1 ? "peça sem cadastro no ERP" : "peças sem cadastro no ERP") + "</span>" +
                 "</div>" +
                 "<div style='display:flex;gap:.5rem;align-items:center'>" +
                 "<button onclick=\"DemandaApp.enviarItensParaComprasLote('nao_cadastrado')\" class='btn btn-primary btn-sm' style='background:#8b5cf6;border-color:#8b5cf6;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'>" +
                 "<span class='material-icons-round' style='font-size:.95rem'>shopping_cart</span> Enviar Não Cadastrados p/ Compras</button>" +
+                "</div></div>";
+        } else if (_filtroItensDetalhe === "catalogado" && contadores.catalogado > 0) {
+            acoesStatusHtml = "<div style='display:flex;align-items:center;justify-content:space-between;padding:.6rem .85rem;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:8px;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem'>" +
+                "<div style='display:flex;align-items:center;gap:.4rem;font-size:.82rem;color:var(--text-primary)'>" +
+                "<span class='material-icons-round' style='color:#3b82f6;font-size:1.15rem'>hub</span>" +
+                "<span><strong>" + contadores.catalogado + "</strong> " + (contadores.catalogado === 1 ? "peça na Base Técnica / Catálogo" : "peças na Base Técnica / Catálogo") + "</span>" +
+                "</div>" +
+                "<div style='display:flex;gap:.5rem;align-items:center'>" +
+                "<button onclick=\"DemandaApp.enviarItensParaComprasLote('catalogado')\" class='btn btn-primary btn-sm' style='background:#8b5cf6;border-color:#8b5cf6;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'>" +
+                "<span class='material-icons-round' style='font-size:.95rem'>shopping_cart</span> Enviar Catalogados p/ Compras</button>" +
+                "</div></div>";
+        } else if (_filtroItensDetalhe === "nao_encontrado" && contadores.nao_encontrado > 0) {
+            acoesStatusHtml = "<div style='display:flex;align-items:center;justify-content:space-between;padding:.6rem .85rem;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem'>" +
+                "<div style='display:flex;align-items:center;gap:.4rem;font-size:.82rem;color:var(--text-primary)'>" +
+                "<span class='material-icons-round' style='color:#f59e0b;font-size:1.15rem'>help_outline</span>" +
+                "<span><strong>" + contadores.nao_encontrado + "</strong> " + (contadores.nao_encontrado === 1 ? "peça não encontrada" : "peças não encontradas") + "</span>" +
+                "</div>" +
+                "<div style='display:flex;gap:.5rem;align-items:center'>" +
+                "<button onclick=\"DemandaApp.enviarItensParaComprasLote('nao_encontrado')\" class='btn btn-primary btn-sm' style='background:#8b5cf6;border-color:#8b5cf6;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'>" +
+                "<span class='material-icons-round' style='font-size:.95rem'>shopping_cart</span> Enviar Não Encontrados p/ Compras</button>" +
                 "</div></div>";
         } else if (_filtroItensDetalhe === "sem_estoque" && contadores.sem_estoque > 0) {
             acoesStatusHtml = "<div style='display:flex;align-items:center;justify-content:space-between;padding:.6rem .85rem;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:8px;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem'>" +
@@ -1290,12 +1328,16 @@ const DemandaApp = (function() {
 
     function _getItensFiltrados(itens) {
         return (itens || []).filter(function(item) {
-            var st = item.status || "sem_estoque";
+            var st = item.status || "nao_cadastrado";
             var matchStatus = true;
             if (_filtroItensDetalhe === "nao_cadastrado") {
-                matchStatus = (st === "nao_cadastrado" || (st === "demanda_recebida" && !item.erpProdutoId));
+                matchStatus = (st === "nao_cadastrado");
+            } else if (_filtroItensDetalhe === "catalogado") {
+                matchStatus = (st === "catalogado");
+            } else if (_filtroItensDetalhe === "nao_encontrado") {
+                matchStatus = (st === "demanda_recebida" || st === "nao_encontrado" || st === "em_identificacao" || st === "identificado");
             } else if (_filtroItensDetalhe === "sem_estoque") {
-                matchStatus = (st === "sem_estoque" || (st === "demanda_recebida" && !!item.erpProdutoId));
+                matchStatus = (st === "sem_estoque");
             } else if (_filtroItensDetalhe === "em_estoque") {
                 matchStatus = (st === "estoque_disponivel" || st === "estoque_parcial");
             } else if (_filtroItensDetalhe === "compras") {
@@ -1334,10 +1376,20 @@ const DemandaApp = (function() {
     }
 
     function _renderItemRow(item, i) {
-        var sc     = (typeof DemandaStates !== "undefined") ? DemandaStates.get(item.status) : { label: item.status, color: "#6366f1" };
-        var nexts  = (typeof DemandaStates !== "undefined") ? DemandaStates.nextStates(item.status) : [];
-        var isEnd  = (typeof DemandaStates !== "undefined") && DemandaStates.isTerminal(item.status);
-        var st     = item.status || "sem_estoque";
+        var st = item.status || "nao_cadastrado";
+        var sc = (typeof DemandaStates !== "undefined") ? DemandaStates.get(st) : { label: st, color: "#6366f1" };
+
+        // Normalização de rótulos visuais amigáveis
+        if (st === "demanda_recebida" || st === "nao_encontrado") {
+            sc = { label: "Não Encontrado", color: "#f59e0b", icon: "help_outline" };
+        } else if (st === "nao_cadastrado") {
+            sc = { label: "Não Cadastrado", color: "#f97316", icon: "error_outline" };
+        } else if (st === "catalogado") {
+            sc = { label: "Catalogado", color: "#3b82f6", icon: "hub" };
+        }
+
+        var nexts = (typeof DemandaStates !== "undefined") ? DemandaStates.nextStates(st) : [];
+        var isRealEnd = (st === "faturado" || st === "venda_perdida" || st === "cancelado");
 
         var acoesCabiveis = [];
 
@@ -1345,6 +1397,12 @@ const DemandaApp = (function() {
         if (st === "nao_cadastrado") {
             acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
             acoesCabiveis.push("<button onclick=\"DemandaApp._abrirBuscaERP('" + _esc(item.id) + "')\" title='Vincular / Buscar Produto no ERP' style='background:transparent;border:1px solid var(--accent-primary);border-radius:5px;padding:.22rem .55rem;color:var(--accent-primary);font-size:.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>search</span> ERP</button>");
+        } else if (st === "catalogado") {
+            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp._abrirBuscaERP('" + _esc(item.id) + "')\" title='Vincular ao ERP' style='background:transparent;border:1px solid var(--accent-primary);border-radius:5px;padding:.22rem .55rem;color:var(--accent-primary);font-size:.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>search</span> ERP</button>");
+        } else if (st === "demanda_recebida" || st === "nao_encontrado" || st === "em_identificacao" || st === "identificado") {
+            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp._abrirBuscaERP('" + _esc(item.id) + "')\" title='Buscar / Identificar no ERP' style='background:transparent;border:1px solid var(--accent-primary);border-radius:5px;padding:.22rem .55rem;color:var(--accent-primary);font-size:.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>search</span> ERP</button>");
         } else if (st === "sem_estoque") {
             acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
             acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','consulta_outras_filiais')\" title='Consultar Estoque em Outras Filiais' style='background:rgba(6,182,212,.15);color:#06b6d4;border:1px solid rgba(6,182,212,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>store</span> Filiais</button>");
@@ -1362,7 +1420,7 @@ const DemandaApp = (function() {
 
         // Select dropdown para outras transições
         var selectHtml = "";
-        if (isEnd) {
+        if (isRealEnd) {
             selectHtml = "<span style='font-size:.72rem;color:var(--text-secondary);font-weight:600'>Concluído</span>";
         } else if (nexts.length > 0) {
             selectHtml = "<select onchange=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "',this.value,this)\" " +
@@ -1405,10 +1463,18 @@ const DemandaApp = (function() {
         var itensAlvo = [];
         if (tipo === "nao_cadastrado") {
             itensAlvo = _demandaAtual.itens.filter(function(i) { return i.status === "nao_cadastrado"; });
+        } else if (tipo === "catalogado") {
+            itensAlvo = _demandaAtual.itens.filter(function(i) { return i.status === "catalogado"; });
+        } else if (tipo === "nao_encontrado") {
+            itensAlvo = _demandaAtual.itens.filter(function(i) {
+                return i.status === "demanda_recebida" || i.status === "nao_encontrado" || i.status === "em_identificacao" || i.status === "identificado";
+            });
         } else if (tipo === "sem_estoque") {
             itensAlvo = _demandaAtual.itens.filter(function(i) { return i.status === "sem_estoque"; });
         } else if (tipo === "todos_faltantes") {
-            itensAlvo = _demandaAtual.itens.filter(function(i) { return i.status === "nao_cadastrado" || i.status === "sem_estoque"; });
+            itensAlvo = _demandaAtual.itens.filter(function(i) {
+                return i.status === "nao_cadastrado" || i.status === "catalogado" || i.status === "demanda_recebida" || i.status === "nao_encontrado" || i.status === "sem_estoque";
+            });
         }
         if (itensAlvo.length === 0) {
             _toast("Nenhum item aplicável para enviar p/ compras.", "warning");

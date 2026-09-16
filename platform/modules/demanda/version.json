@@ -1,8 +1,8 @@
 {
-  "version": "2.5.4",
-  "build": "20260916-v2.5.4",
+  "version": "2.5.5",
+  "build": "20260916-v2.5.5",
   "module": "demanda",
-  "name": "Inteligência de Demanda",
+  "name": "Inteligencia de Demanda",
   "lastUpdate": "2026-09-16",
-  "change": "v2.5.4 - fix(cotacao): correcao de escopo de _filtroItensDetalhe no estado global, abertura resiliente do modal e invalidacao de cache com ?v=2.5.4"
+  "change": "v2.5.5 - feat(cotacao): status Nao Encontrado (antigo recebida), Nao Cadastrado e Catalogado sem Concluido indevido, filtros dinâmicos com contadores e acoes em lote"
 }

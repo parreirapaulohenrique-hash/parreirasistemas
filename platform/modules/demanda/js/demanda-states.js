@@ -12,7 +12,10 @@ const DemandaStates = (() => {
 
     // ── Definição dos estados ─────────────────────────────────
     const STATES = {
-        demanda_recebida:        { label: 'Recebida',            icon: 'inbox',           color: '#6366f1' },
+        demanda_recebida:        { label: 'Não Encontrado',      icon: 'help_outline',    color: '#f59e0b' },
+        nao_encontrado:          { label: 'Não Encontrado',      icon: 'help_outline',    color: '#f59e0b' },
+        nao_cadastrado:          { label: 'Não Cadastrado',      icon: 'error_outline',   color: '#f97316' },
+        catalogado:              { label: 'Catalogado',          icon: 'hub',             color: '#3b82f6' },
         em_identificacao:        { label: 'Identificando',        icon: 'search',          color: '#f59e0b' },
         identificado:            { label: 'Identificado',         icon: 'check_circle',    color: '#3b82f6' },
         estoque_disponivel:      { label: 'Em Estoque',          icon: 'inventory',       color: '#10b981' },
@@ -35,7 +38,10 @@ const DemandaStates = (() => {
 
     // ── Transições válidas (de → [lista de destinos possíveis]) ──
     const TRANSITIONS = {
-        demanda_recebida:        ['em_identificacao', 'identificado', 'cancelado'],
+        demanda_recebida:        ['encaminhado_compras', 'consulta_outras_filiais', 'venda_perdida', 'cancelado'],
+        nao_encontrado:          ['encaminhado_compras', 'consulta_outras_filiais', 'venda_perdida', 'cancelado'],
+        nao_cadastrado:          ['encaminhado_compras', 'consulta_outras_filiais', 'venda_perdida', 'cancelado'],
+        catalogado:              ['encaminhado_compras', 'consulta_outras_filiais', 'venda_perdida', 'cancelado'],
         em_identificacao:        ['identificado', 'cancelado'],
         identificado:            ['estoque_disponivel', 'estoque_parcial', 'sem_estoque', 'cancelado'],
         estoque_disponivel:      ['proposta_enviada', 'aguardando_cliente', 'cancelado'],
