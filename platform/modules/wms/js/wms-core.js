@@ -43,6 +43,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ── Garante que Firebase esteja inicializado (auth.js tem lazy init) ──────
     // Sem isso, wms-store e wms-sync recebem "No Firebase App [DEFAULT]" error
     try { if (window.ParreiraAuth?.getDB) window.ParreiraAuth.getDB(); } catch(e) {}
+    // Garante que Firebase esteja autenticado (anonimo) para permissoes Firestore
+    try {
+        if (window.ParreiraAuth?.ensureAuth) {
+            await window.ParreiraAuth.ensureAuth();
+        } else if (typeof firebase !== 'undefined' && firebase.auth && !firebase.auth().currentUser) {
+            await firebase.auth().signInAnonymously().catch(e => console.warn('[WMS] signInAnonymously:', e));
+        }
+    } catch(e) {
+        console.warn('[WMS] Falha ao inicializar autenticacao Firebase:', e.message);
+    }
 
     // ── Abre o dashboard IMEDIATAMENTE (antes de qualquer await ou Firestore) ──
     // Garante que a UI carregue mesmo que algum código posterior lance erro.

@@ -1,1 +1,6 @@
-{"version":"2.0.1","date":"2026-08-31","build":"20260831-1017","last_change":"WMS Inbound: Ajustado o fluxo de 2 etapas do MaxData — Etapa 1 (Chegada Doca / Volumes Tela 102.13) e Etapa 2 (Conferência de Produtos iniciada pela Tela 102 Pendente e finalizada alterando status no MaxData de PENDENTE para CONCLUÍDO) (v2.0.1)"}
+{
+  "version": "2.0.2",
+  "date": "2026-09-16",
+  "build": "20260916-1200",
+  "last_change": "Fix(auth): Autenticação anônima Firebase no WMS e ErpRegistry, corrigindo 'Missing or insufficient permissions' ao salvar configurações de ERP e sincronizar dados com o Firestore (v2.0.2)"
+}
