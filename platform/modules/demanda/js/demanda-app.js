@@ -3133,13 +3133,37 @@ const DemandaApp = (function() {
     var _produtosErpCarregando = false;
     var _produtosErpBuscaTimeout = null;
     var _erpExpandedRows = {};
+    var _erpPageAtual = 1;
+    var _erpTotalPages = 1;
+    var _erpTotalGeral = 18750;
+    var _erpPageSize = 50;
+    var _erpUltimaQuery = "";
 
     function toggleErpRow(prodId) {
         _erpExpandedRows[prodId] = !_erpExpandedRows[prodId];
         _renderProdutosErpTable(_produtosErpFiltrados);
     }
 
-    function loadProdutosErp(forceRefresh) {
+    function irParaPaginaErp(pg) {
+        if (_produtosErpCarregando) return;
+        var p = Number(pg);
+        if (isNaN(p) || p < 1 || p > _erpTotalPages || p === _erpPageAtual) return;
+        _erpPageAtual = p;
+        loadProdutosErp(true, p, _erpUltimaQuery);
+    }
+
+    function onErpBuscaRemota(termo) {
+        clearTimeout(_produtosErpBuscaTimeout);
+        _produtosErpBuscaTimeout = setTimeout(function() {
+            var inpDesc = document.getElementById("erpInpBuscaDesc") || document.getElementById("erpInpBusca");
+            var q = (termo !== undefined ? termo : (inpDesc ? inpDesc.value : "")).trim();
+            _erpUltimaQuery = q;
+            _erpPageAtual = 1;
+            loadProdutosErp(true, 1, q);
+        }, 400);
+    }
+
+    function loadProdutosErp(forceRefresh, page, searchOverride) {
         var container = document.getElementById("erpProdutosContainer");
         var contador  = document.getElementById("erpTotalContador");
         if (!container) return;
@@ -3149,24 +3173,26 @@ const DemandaApp = (function() {
             _baseTecnicaPecas = JSON.parse(JSON.stringify(_PECA_MESTRE_SEED));
         }
 
-        if (!forceRefresh && _produtosErpList.length > 0) {
+        var targetPage = page !== undefined ? page : _erpPageAtual;
+
+        if (!forceRefresh && _produtosErpList.length > 0 && targetPage === _erpPageAtual && searchOverride === undefined) {
             filtrarProdutosErp();
             return;
         }
 
         _produtosErpCarregando = true;
-        if (contador) contador.textContent = "Conectando ao ERP Maxdata...";
+        if (contador) contador.textContent = "Consultando catálogo do ERP Maxdata...";
         container.innerHTML = "<div style='padding:3rem;text-align:center;color:var(--text-secondary)'>" +
             "<span class='material-icons-round' style='animation:spin 1s linear infinite;font-size:2.2rem;color:var(--accent-primary)'>sync</span>" +
-            "<p style='margin-top:.75rem;font-size:.88rem'>Carregando produtos cadastrados no ERP Maxdata...</p></div>";
+            "<p style='margin-top:.75rem;font-size:.88rem'>Carregando produtos do ERP Maxdata (página " + targetPage + ")...</p></div>";
 
-        _buscarProdutosErpRemoto(forceRefresh).then(function(prods) {
+        _buscarProdutosErpRemoto(forceRefresh, targetPage, searchOverride).then(function(prods) {
             _produtosErpList = prods;
             _produtosErpCarregando = false;
             _popularFiltrosErp(prods);
             filtrarProdutosErp();
         }).catch(function(err) {
-            console.warn("[DemandaApp] Falha ao carregar direto do ERP, tentando cache do Firestore:", err);
+            console.warn("[DemandaApp] Falha ao carregar direto do ERP via proxy, tentando cache do Firestore:", err);
             _buscarProdutosErpFirestore().then(function(fsProds) {
                 _produtosErpList = fsProds;
                 _produtosErpCarregando = false;
@@ -3183,30 +3209,55 @@ const DemandaApp = (function() {
         });
     }
 
-    async function _buscarProdutosErpRemoto(forceRefresh) {
+    async function _buscarProdutosErpRemoto(forceRefresh, page, searchOverride) {
         var adapter = null;
         if (typeof DemandaSearch !== "undefined" && DemandaSearch.getAdapter) {
             try { adapter = DemandaSearch.getAdapter(); } catch(_) {}
         }
         if (!adapter && window.MaxDataAdapter) {
             var cfg = JSON.parse(sessionStorage.getItem('_demanda_erp_config') || '{}');
-            if (cfg.baseUrl) adapter = new MaxDataAdapter('centralpecas', cfg);
+            if (!cfg.baseUrl) {
+                cfg = {
+                    baseUrl: 'http://rds.skytins.com.br:8720/v2',
+                    empId: 1,
+                    terminal: '364F64E6539974C1D75C8A46C14B2D3D'
+                };
+            }
+            adapter = new MaxDataAdapter('centralpecas', cfg);
         }
         if (!adapter) {
             throw new Error("Integração ERP não autenticada.");
         }
 
         var headers = await adapter._authHeaders();
-        var params = { limit: 200, sincronizacao: true };
+        var curPage = Number(page || _erpPageAtual || 1);
+        var params = { limit: _erpPageSize || 50, page: curPage, sincronizacao: true };
+
         var chkUsoConsumo = document.getElementById("erpChkOcultarUsoConsumo");
         if (!chkUsoConsumo || chkUsoConsumo.checked) {
             params.tipoSped = "00";
         }
+
+        var qText = searchOverride !== undefined ? searchOverride : _erpUltimaQuery;
+        if (qText) {
+            if (/^\d+$/.test(qText)) {
+                params.id = qText;
+            } else {
+                params.descricao = qText;
+            }
+        }
+
         var url = adapter._buildUrl('product', params);
-        var resp = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout ? AbortSignal.timeout(12000) : undefined });
+        var resp = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined });
         if (!resp.ok) throw new Error("HTTP " + resp.status + " ao consultar ERP");
         var data = await resp.json();
+
         var rawDocs = Array.isArray(data) ? data : (data.docs || data.data || []);
+        if (data && data.total !== undefined) {
+            _erpTotalGeral = Number(data.total);
+            _erpTotalPages = Number(data.pages || Math.ceil(_erpTotalGeral / (params.limit || 50)) || 1);
+            _erpPageAtual = Number(data.page || curPage);
+        }
         
         return rawDocs.map(function(item) {
             var saldo = 0;
@@ -3232,7 +3283,7 @@ const DemandaApp = (function() {
                 aplicacao: (item.aplicacao || "").trim(),
                 tipoSped: String(item.tipoSped || ""),
                 tipo: String(item.tipo || ""),
-                unidade: item.unidade || "UN",
+                unidade: item.unidade || item.un || "UN",
                 estoque: saldo,
                 preco: preco,
                 origem: "erp"
@@ -3545,7 +3596,8 @@ const DemandaApp = (function() {
         if (!container) return;
 
         if (contador) {
-            contador.textContent = lista.length + " produto" + (lista.length === 1 ? "" : "s") + " listado" + (lista.length === 1 ? "" : "s") + " do ERP";
+            var totalExibido = _erpTotalGeral > 0 ? _erpTotalGeral.toLocaleString('pt-BR') : lista.length;
+            contador.textContent = totalExibido + " produtos no catálogo ERP (Página " + _erpPageAtual + " de " + _erpTotalPages + ")";
         }
 
         if (lista.length === 0) {
@@ -3704,7 +3756,32 @@ const DemandaApp = (function() {
         }).join("");
 
         html += "</tbody></table></div>";
+        html += _renderErpPaginacao();
         container.innerHTML = html;
+    }
+
+    function _renderErpPaginacao() {
+        if (_erpTotalPages <= 1 && _produtosErpList.length <= _erpPageSize) return "";
+        return "<div class='bt-paginacao-wrapper' style='display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.25rem;background:rgba(255,255,255,.02);border-top:1px solid var(--border-color);flex-wrap:wrap;gap:.75rem;margin-top:.75rem;border-radius:8px'>" +
+            "<div style='font-size:.78rem;color:var(--text-secondary)'>" +
+            "Página <strong style='color:var(--text-primary)'>" + _erpPageAtual + "</strong> de <strong style='color:var(--text-primary)'>" + _erpTotalPages + "</strong> &bull; Total no ERP: <strong style='color:var(--accent-primary)'>" + _erpTotalGeral.toLocaleString('pt-BR') + " produtos</strong>" +
+            "</div>" +
+            "<div style='display:flex;align-items:center;gap:.35rem'>" +
+            "<button onclick='DemandaApp.irParaPaginaErp(1)' class='btn btn-secondary btn-sm' " + (_erpPageAtual <= 1 ? "disabled style='opacity:.35;pointer-events:none'" : "") + " title='Primeira página'>" +
+            "<span class='material-icons-round' style='font-size:.95rem'>first_page</span>" +
+            "</button>" +
+            "<button onclick='DemandaApp.irParaPaginaErp(" + (_erpPageAtual - 1) + ")' class='btn btn-secondary btn-sm' " + (_erpPageAtual <= 1 ? "disabled style='opacity:.35;pointer-events:none'" : "") + " title='Página anterior'>" +
+            "<span class='material-icons-round' style='font-size:.95rem'>chevron_left</span> Anterior" +
+            "</button>" +
+            "<span style='font-size:.8rem;padding:0 .5rem;color:var(--text-primary);font-weight:700'>" + _erpPageAtual + " / " + _erpTotalPages + "</span>" +
+            "<button onclick='DemandaApp.irParaPaginaErp(" + (_erpPageAtual + 1) + ")' class='btn btn-secondary btn-sm' " + (_erpPageAtual >= _erpTotalPages ? "disabled style='opacity:.35;pointer-events:none'" : "") + " title='Próxima página'>" +
+            "Próxima <span class='material-icons-round' style='font-size:.95rem'>chevron_right</span>" +
+            "</button>" +
+            "<button onclick='DemandaApp.irParaPaginaErp(" + _erpTotalPages + ")' class='btn btn-secondary btn-sm' " + (_erpPageAtual >= _erpTotalPages ? "disabled style='opacity:.35;pointer-events:none'" : "") + " title='Última página'>" +
+            "<span class='material-icons-round' style='font-size:.95rem'>last_page</span>" +
+            "</button>" +
+            "</div>" +
+            "</div>";
     }
 
     function cotarProdutoErp(codigo, ref, desc, preco) {
@@ -4503,6 +4580,8 @@ const DemandaApp = (function() {
         // Cadastro de Produtos (ERP Maxdata)
         loadProdutosErp:              loadProdutosErp,
         onErpBuscaInput:              onErpBuscaInput,
+        onErpBuscaRemota:             onErpBuscaRemota,
+        irParaPaginaErp:              irParaPaginaErp,
         filtrarProdutosErp:           filtrarProdutosErp,
         toggleErpRow:                 toggleErpRow,
         cotarProdutoErp:              cotarProdutoErp,

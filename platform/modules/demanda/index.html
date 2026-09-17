@@ -452,7 +452,7 @@
                         <div style="position:relative;width:320px">
                             <span class="material-icons-round" style="position:absolute;left:.65rem;top:50%;transform:translateY(-50%);font-size:1rem;color:var(--text-secondary)">search</span>
                             <input id="erpInpBusca" type="text" placeholder="Busca geral no catálogo (18.750 itens)..."
-                                oninput="DemandaApp.onErpBuscaInput()"
+                                oninput="DemandaApp.onErpBuscaRemota()"
                                 style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.45rem .75rem .45rem 2.2rem;color:var(--text-primary);font-size:.82rem">
                         </div>
                         <button class="btn btn-secondary btn-sm" onclick="DemandaApp.loadProdutosErp(true)" style="display:inline-flex;align-items:center;gap:.35rem">
@@ -465,7 +465,7 @@
                 <div style="display:flex;align-items:center;gap:.6rem;padding:.65rem 1.25rem;background:rgba(255,255,255,.015);border-bottom:1px solid var(--border-color);flex-wrap:wrap">
                     <div style="display:flex;align-items:center;gap:.3rem">
                         <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Cód. / Desc.:</label>
-                        <input id="erpInpBuscaDesc" type="text" placeholder="Cód. ou Descrição..." oninput="DemandaApp.filtrarProdutosErp()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem;width:170px">
+                        <input id="erpInpBuscaDesc" type="text" placeholder="Cód. ou Descrição..." oninput="DemandaApp.onErpBuscaRemota()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem;width:170px">
                     </div>
 
                     <div style="display:flex;align-items:center;gap:.3rem">
