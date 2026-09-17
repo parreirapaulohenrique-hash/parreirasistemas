@@ -1,8 +1,8 @@
 {
-  "version": "2.6.2",
-  "build": "20260917-v2.6.2",
+  "version": "2.6.3",
+  "build": "20260917-v2.6.3",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-09-17",
-  "change": "v2.6.2 - feat(cadastro-produtos): filtro nativo Ocultar Uso e Consumo (tipoSped=00/07) + exibição técnica do campo Aplicação + tabela de Produtos Equivalentes & Similares"
+  "change": "v2.6.3 - fix(cadastro-produtos): scrollbar lateral fixa e estavel, remocao do hash # no codigo do produto, filtro avancado de impurezas (ativo imobilizado, frota, embalagens e consumo) e espelhamento de filtros do ERP Maxdata"
 }

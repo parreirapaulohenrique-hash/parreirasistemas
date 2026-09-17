@@ -3245,7 +3245,7 @@ const DemandaApp = (function() {
         var db = firebase.firestore();
         var snap = await db.collection("tenants/centralpecas/demanda/techbase/products")
             .where("ativo", "==", true)
-            .limit(150)
+            .limit(1000)
             .get();
 
         return snap.docs.map(function(doc) {
@@ -3260,6 +3260,8 @@ const DemandaApp = (function() {
                 grupo: (d.grupo || "").trim(),
                 subGrupo: (d.subGrupo || "").trim(),
                 aplicacao: (d.aplicacao || "").trim(),
+                tipoSped: String(d.tipoSped || d.tipo || ""),
+                tipo: String(d.tipo || ""),
                 unidade: d.unidade || "UN",
                 estoque: Number(d.estoque || 0),
                 preco: Number(d.preco || 0),
@@ -3275,6 +3277,7 @@ const DemandaApp = (function() {
 
         var fabSet = {}, grpSet = {};
         prods.forEach(function(p) {
+            if (_isProdutoImpureza(p)) return;
             if (p.fabricante) fabSet[p.fabricante.toUpperCase()] = true;
             if (p.grupo) grpSet[p.grupo.toUpperCase()] = true;
         });
@@ -3446,38 +3449,89 @@ const DemandaApp = (function() {
         return equivs;
     }
 
+    function _isProdutoImpureza(p) {
+        if (!p) return false;
+        var sped = String(p.tipoSped || "").trim();
+        // SPED 07 = Uso e Consumo, 08 = Ativo Imobilizado, 09 = Serviços, 99 = Outros
+        if (sped === "07" || sped === "08" || sped === "09" || sped === "99") return true;
+
+        var fab = (p.fabricante || "").toUpperCase().trim();
+        if (fab === "USO E CONSUMO" || fab === "IMOBILIZADO" || fab === "ATIVO" || fab === "INTERNO" || fab === "DESPESA") return true;
+
+        var grp = (p.grupo || "").toUpperCase().trim();
+        if (grp === "30.FRETE" || grp === "20.SERVICO" || grp === "ERRADO" || grp === "USO E CONSUMO" || grp === "IMOBILIZADO" || grp === "ATIVO IMOBILIZADO" || grp === "DESPESAS" || grp === "FROTA") return true;
+
+        var desc = (p.descricao || "").toUpperCase().trim();
+        // Veículos da frota / imobilizado
+        if (desc.indexOf("FIAT/") !== -1 || desc.indexOf("STRADA") !== -1 || desc.indexOf("VOLKSWAGEN") !== -1 || 
+            desc.indexOf("CHEVROLET") !== -1 || desc.indexOf("HILUX") !== -1 || desc.indexOf("SAVEIRO") !== -1 || 
+            desc.indexOf("AUTOMOVEL") !== -1 || desc.indexOf("VEICULO") !== -1 || desc.indexOf("PASSAGEIROS") !== -1 ||
+            desc.indexOf("CAMINHAO") !== -1) {
+            return true;
+        }
+
+        // Embalagens, fitas e material de expedição
+        if (desc.indexOf("FITA DE EMPACOTAMENTO") !== -1 || desc.indexOf("FITA ADESIVA") !== -1 || 
+            desc.indexOf("SC BOPP") !== -1 || desc.indexOf("SACO PLASTICO") !== -1 || 
+            desc.indexOf("ETIQUETA") !== -1 || desc.indexOf("PAPEL TOALHA") !== -1 || 
+            desc.indexOf("COPO DESCARTAVEL") !== -1 || desc.indexOf("BOBBINA") !== -1) {
+            return true;
+        }
+
+        // Refeições e alimentação
+        if (desc.indexOf("SELF SERVICE") !== -1 || desc.indexOf("REFEICAO") !== -1 || 
+            desc.indexOf("ALMOCO") !== -1 || desc.indexOf("MARMITA") !== -1 || desc.indexOf("LANCHE") !== -1) {
+            return true;
+        }
+
+        return false;
+    }
+
     function filtrarProdutosErp() {
-        var inpBusca = document.getElementById("erpInpBusca");
-        var selFab   = document.getElementById("erpSelFabricante");
-        var selGrp   = document.getElementById("erpSelGrupo");
-        var chkEst   = document.getElementById("erpChkEstoque");
+        var inpDesc = document.getElementById("erpInpBuscaDesc") || document.getElementById("erpInpBusca");
+        var inpFab  = document.getElementById("erpInpBuscaCodFab");
+        var inpApp  = document.getElementById("erpInpBuscaAplicacao");
+        var selFab  = document.getElementById("erpSelFabricante");
+        var selGrp  = document.getElementById("erpSelGrupo");
+        var chkEst  = document.getElementById("erpChkEstoque");
         var chkUsoConsumo = document.getElementById("erpChkOcultarUsoConsumo");
 
-        var q = (inpBusca ? inpBusca.value : "").trim().toLowerCase();
-        var f = (selFab ? selFab.value : "").toUpperCase();
-        var g = (selGrp ? selGrp.value : "").toUpperCase();
+        var qDesc = (inpDesc ? inpDesc.value : "").trim().toLowerCase();
+        var qFab  = (inpFab ? inpFab.value : "").trim().toLowerCase();
+        var qApp  = (inpApp ? inpApp.value : "").trim().toLowerCase();
+        var f     = (selFab ? selFab.value : "").toUpperCase();
+        var g     = (selGrp ? selGrp.value : "").toUpperCase();
         var soEstoque = chkEst ? chkEst.checked : false;
         var ocultarUsoConsumo = chkUsoConsumo ? chkUsoConsumo.checked : true;
 
         var filtrados = _produtosErpList.filter(function(p) {
-            // Filtro rigoroso de Uso e Consumo
-            if (ocultarUsoConsumo) {
-                if (p.tipoSped === "07") return false;
-                if ((p.fabricante || "").toUpperCase() === "USO E CONSUMO") return false;
-                var gUp = (p.grupo || "").toUpperCase();
-                if (gUp === "30.FRETE" || gUp === "20.SERVICO" || gUp === "ERRADO") return false;
-                var dUp = (p.descricao || "").toUpperCase();
-                if (dUp.indexOf("SELF SERVICE") !== -1 || dUp.indexOf("REFEICAO") !== -1) return false;
+            // Filtro rigoroso de Uso e Consumo e Ativo Imobilizado
+            if (ocultarUsoConsumo && _isProdutoImpureza(p)) {
+                return false;
             }
 
             if (soEstoque && Number(p.estoque || 0) <= 0) return false;
             if (f && (p.fabricante || "").toUpperCase() !== f) return false;
             if (g && (p.grupo || "").toUpperCase() !== g) return false;
 
-            if (q) {
-                var hay = (p.codigoErp + " " + p.codigoFab + " " + p.descricao + " " + p.fabricante + " " + (p.aplicacao || "")).toLowerCase();
-                if (hay.indexOf(q) < 0) return false;
+            // Filtro de Cód. ERP ou Descrição
+            if (qDesc) {
+                var hayDesc = ((p.codigoErp || "") + " " + (p.descricao || "")).toLowerCase();
+                if (hayDesc.indexOf(qDesc) < 0) return false;
             }
+
+            // Filtro de Código de Fábrica / OEM / Referência
+            if (qFab) {
+                var hayFab = ((p.codigoFab || "") + " " + (p.codigoOriginal || "")).toLowerCase();
+                if (hayFab.indexOf(qFab) < 0) return false;
+            }
+
+            // Filtro de Aplicação técnica
+            if (qApp) {
+                var hayApp = (p.aplicacao || "").toLowerCase();
+                if (hayApp.indexOf(qApp) < 0) return false;
+            }
+
             return true;
         });
 
@@ -3525,7 +3579,7 @@ const DemandaApp = (function() {
                 ? "R$ " + Number(item.preco).toFixed(2).replace(".", ",")
                 : "—";
 
-            var codErp = item.codigoErp ? "#" + _esc(item.codigoErp) : "—";
+            var codErp = item.codigoErp ? _esc(item.codigoErp) : "—";
             var codFab = item.codigoFab ? _esc(item.codigoFab) : "—";
             var desc   = _esc(item.descricao || "SEM DESCRIÇÃO");
             var fab    = item.fabricante ? "<span class='bt-brand-badge'>" + _esc(item.fabricante) + "</span>" : "—";

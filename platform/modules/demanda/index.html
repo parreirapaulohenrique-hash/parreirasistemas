@@ -442,16 +442,16 @@
             <!-- ══════════════════════════════════════════════ -->
             <!--  VIEW: CADASTRO DE PRODUTOS (ERP MAXDATA)     -->
             <!-- ══════════════════════════════════════════════ -->
-            <div id="view-produtosErp" style="display:none;flex-direction:column">
+            <div id="view-produtosErp" style="display:none">
                 <div class="top-bar" style="flex-wrap:wrap;gap:.75rem">
                     <div class="breadcrumb">
                         <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">inventory_2</span>
                         <span>Cadastro de Produtos (ERP Maxdata)</span>
                     </div>
                     <div style="display:flex;align-items:center;gap:.5rem;margin-left:auto;flex-wrap:wrap">
-                        <div style="position:relative;width:340px">
+                        <div style="position:relative;width:320px">
                             <span class="material-icons-round" style="position:absolute;left:.65rem;top:50%;transform:translateY(-50%);font-size:1rem;color:var(--text-secondary)">search</span>
-                            <input id="erpInpBusca" type="text" placeholder="Buscar cód. interno, OEM, descrição, aplicação, fabricante..."
+                            <input id="erpInpBusca" type="text" placeholder="Busca geral no catálogo (18.750 itens)..."
                                 oninput="DemandaApp.onErpBuscaInput()"
                                 style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.45rem .75rem .45rem 2.2rem;color:var(--text-primary);font-size:.82rem">
                         </div>
@@ -461,36 +461,53 @@
                     </div>
                 </div>
 
-                <!-- Barra de Filtros do Cadastro ERP -->
-                <div style="display:flex;align-items:center;gap:.75rem;padding:.75rem 1.25rem;background:rgba(255,255,255,.015);border-bottom:1px solid var(--border-color);flex-wrap:wrap">
-                    <div style="display:flex;align-items:center;gap:.35rem">
-                        <label style="font-size:.72rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Fabricante:</label>
+                <!-- Barra de Filtros Estilo ERP Maxdata -->
+                <div style="display:flex;align-items:center;gap:.6rem;padding:.65rem 1.25rem;background:rgba(255,255,255,.015);border-bottom:1px solid var(--border-color);flex-wrap:wrap">
+                    <div style="display:flex;align-items:center;gap:.3rem">
+                        <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Cód. / Desc.:</label>
+                        <input id="erpInpBuscaDesc" type="text" placeholder="Cód. ou Descrição..." oninput="DemandaApp.filtrarProdutosErp()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem;width:170px">
+                    </div>
+
+                    <div style="display:flex;align-items:center;gap:.3rem">
+                        <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Cód. Fab.:</label>
+                        <input id="erpInpBuscaCodFab" type="text" placeholder="Referência OEM / Fábrica..." oninput="DemandaApp.filtrarProdutosErp()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem;width:150px">
+                    </div>
+
+                    <div style="display:flex;align-items:center;gap:.3rem">
+                        <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Aplicação:</label>
+                        <input id="erpInpBuscaAplicacao" type="text" placeholder="Aplicação técnica..." oninput="DemandaApp.filtrarProdutosErp()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem;width:150px">
+                    </div>
+
+                    <div style="display:flex;align-items:center;gap:.3rem">
+                        <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Fabricante:</label>
                         <select id="erpSelFabricante" onchange="DemandaApp.filtrarProdutosErp()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem">
                             <option value="">Todos os Fabricantes</option>
                         </select>
                     </div>
-                    <div style="display:flex;align-items:center;gap:.35rem">
-                        <label style="font-size:.72rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Grupo:</label>
+
+                    <div style="display:flex;align-items:center;gap:.3rem">
+                        <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Grupo:</label>
                         <select id="erpSelGrupo" onchange="DemandaApp.filtrarProdutosErp()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem">
                             <option value="">Todos os Grupos</option>
                         </select>
                     </div>
-                    <label style="display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;color:var(--text-secondary);cursor:pointer">
+
+                    <label style="display:inline-flex;align-items:center;gap:.35rem;font-size:.75rem;color:var(--text-secondary);cursor:pointer">
                         <input id="erpChkEstoque" type="checkbox" onchange="DemandaApp.filtrarProdutosErp()"> Apenas com Estoque
                     </label>
 
-                    <label style="display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;color:#10b981;cursor:pointer;font-weight:600;padding:.2rem .55rem;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:6px" title="Filtra automaticamente produtos com tipoSped=07 (Uso e Consumo), refeições e despesas">
+                    <label style="display:inline-flex;align-items:center;gap:.35rem;font-size:.75rem;color:#10b981;cursor:pointer;font-weight:600;padding:.2rem .5rem;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:6px" title="Oculta automaticamente Ativo Imobilizado (veículos), Uso e Consumo (almoço, café, descartáveis), fitas de embalagem e fretes">
                         <input id="erpChkOcultarUsoConsumo" type="checkbox" checked onchange="DemandaApp.filtrarProdutosErp()">
-                        <span class="material-icons-round" style="font-size:.85rem">verified_user</span> Ocultar Uso & Consumo
+                        <span class="material-icons-round" style="font-size:.85rem">verified_user</span> Ocultar Consumo & Imobilizado
                     </label>
 
-                    <div id="erpTotalContador" style="margin-left:auto;font-size:.78rem;color:var(--text-secondary)">
+                    <div id="erpTotalContador" style="margin-left:auto;font-size:.78rem;color:var(--text-secondary);font-weight:600">
                         Carregando produtos do ERP...
                     </div>
                 </div>
 
                 <!-- Container da Tabela do ERP -->
-                <div id="erpProdutosContainer" style="flex:1;overflow-y:auto;padding:1.25rem">
+                <div id="erpProdutosContainer" style="flex:1;min-height:0;max-height:calc(100vh - 170px);overflow-y:scroll!important;padding:1.25rem">
                     <div style="padding:3rem;text-align:center;color:var(--text-secondary)">
                         <span class="material-icons-round" style="animation:spin 1s linear infinite;font-size:2rem;color:var(--accent-primary)">sync</span>
                         <p style="margin-top:.75rem;font-size:.88rem">Conectando ao ERP Maxdata...</p>
