@@ -442,7 +442,7 @@
             <!-- ══════════════════════════════════════════════ -->
             <!--  VIEW: CADASTRO DE PRODUTOS (ERP MAXDATA)     -->
             <!-- ══════════════════════════════════════════════ -->
-            <div id="view-produtosErp" style="display:none">
+            <div id="view-produtosErp" style="display:none;flex-direction:column">
                 <div class="top-bar" style="flex-wrap:wrap;gap:.75rem">
                     <div class="breadcrumb">
                         <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">inventory_2</span>
@@ -451,7 +451,7 @@
                     <div style="display:flex;align-items:center;gap:.5rem;margin-left:auto;flex-wrap:wrap">
                         <div style="position:relative;width:340px">
                             <span class="material-icons-round" style="position:absolute;left:.65rem;top:50%;transform:translateY(-50%);font-size:1rem;color:var(--text-secondary)">search</span>
-                            <input id="erpInpBusca" type="text" placeholder="Buscar cód. interno, OEM, descrição, marca..."
+                            <input id="erpInpBusca" type="text" placeholder="Buscar cód. interno, OEM, descrição, aplicação, fabricante..."
                                 oninput="DemandaApp.onErpBuscaInput()"
                                 style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.45rem .75rem .45rem 2.2rem;color:var(--text-primary);font-size:.82rem">
                         </div>
@@ -479,6 +479,11 @@
                         <input id="erpChkEstoque" type="checkbox" onchange="DemandaApp.filtrarProdutosErp()"> Apenas com Estoque
                     </label>
 
+                    <label style="display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;color:#10b981;cursor:pointer;font-weight:600;padding:.2rem .55rem;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:6px" title="Filtra automaticamente produtos com tipoSped=07 (Uso e Consumo), refeições e despesas">
+                        <input id="erpChkOcultarUsoConsumo" type="checkbox" checked onchange="DemandaApp.filtrarProdutosErp()">
+                        <span class="material-icons-round" style="font-size:.85rem">verified_user</span> Ocultar Uso & Consumo
+                    </label>
+
                     <div id="erpTotalContador" style="margin-left:auto;font-size:.78rem;color:var(--text-secondary)">
                         Carregando produtos do ERP...
                     </div>
@@ -496,7 +501,7 @@
             <!-- ══════════════════════════════════════════════ -->
             <!--  VIEW: BASE EXTERNA (Catálogo & Mercado)       -->
             <!-- ══════════════════════════════════════════════ -->
-            <div id="view-base" style="display:none">
+            <div id="view-base" style="display:none;flex-direction:column">
                 <div class="top-bar" style="flex-wrap:wrap;gap:.75rem">
                     <div class="breadcrumb">
                         <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">hub</span>

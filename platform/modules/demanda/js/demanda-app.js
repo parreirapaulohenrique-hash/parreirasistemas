@@ -3132,11 +3132,22 @@ const DemandaApp = (function() {
     var _produtosErpFiltrados = [];
     var _produtosErpCarregando = false;
     var _produtosErpBuscaTimeout = null;
+    var _erpExpandedRows = {};
+
+    function toggleErpRow(prodId) {
+        _erpExpandedRows[prodId] = !_erpExpandedRows[prodId];
+        _renderProdutosErpTable(_produtosErpFiltrados);
+    }
 
     function loadProdutosErp(forceRefresh) {
         var container = document.getElementById("erpProdutosContainer");
         var contador  = document.getElementById("erpTotalContador");
         if (!container) return;
+
+        // Garante que a base mestre de peças tecnicas esteja pronta para busca de equivalentes
+        if (_baseTecnicaPecas.length === 0 && typeof _PECA_MESTRE_SEED !== "undefined") {
+            _baseTecnicaPecas = JSON.parse(JSON.stringify(_PECA_MESTRE_SEED));
+        }
 
         if (!forceRefresh && _produtosErpList.length > 0) {
             filtrarProdutosErp();
@@ -3186,7 +3197,12 @@ const DemandaApp = (function() {
         }
 
         var headers = await adapter._authHeaders();
-        var url = adapter._buildUrl('product', { limit: 150, sincronizacao: true });
+        var params = { limit: 200, sincronizacao: true };
+        var chkUsoConsumo = document.getElementById("erpChkOcultarUsoConsumo");
+        if (!chkUsoConsumo || chkUsoConsumo.checked) {
+            params.tipoSped = "00";
+        }
+        var url = adapter._buildUrl('product', params);
         var resp = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout ? AbortSignal.timeout(12000) : undefined });
         if (!resp.ok) throw new Error("HTTP " + resp.status + " ao consultar ERP");
         var data = await resp.json();
@@ -3214,6 +3230,8 @@ const DemandaApp = (function() {
                 grupo: (item.grupo || (item.grupoObj && item.grupoObj.nome) || "").trim(),
                 subGrupo: (item.subGrupo || "").trim(),
                 aplicacao: (item.aplicacao || "").trim(),
+                tipoSped: String(item.tipoSped || ""),
+                tipo: String(item.tipo || ""),
                 unidade: item.unidade || "UN",
                 estoque: saldo,
                 preco: preco,
@@ -3317,23 +3335,147 @@ const DemandaApp = (function() {
         }, 300);
     }
 
+    function _obterEquivalentesDoProduto(item) {
+        var equivs = [];
+        var jaVistos = {};
+        var meuCodErp = String(item.codigoErp || item.id || "").trim();
+        var meuCodFab = String(item.codigoFab || "").trim().toUpperCase();
+        var minhaAplicacao = String(item.aplicacao || "").trim().toUpperCase();
+
+        // 1. Pesquisa na Base Técnica Mestre (_baseTecnicaPecas)
+        if (typeof _baseTecnicaPecas !== "undefined" && _baseTecnicaPecas.length > 0) {
+            _baseTecnicaPecas.forEach(function(pm) {
+                var bate = false;
+                var refOemUp = (pm.refOem || "").toUpperCase();
+                if (meuCodFab && refOemUp && (meuCodFab === refOemUp || meuCodFab.indexOf(refOemUp) !== -1 || refOemUp.indexOf(meuCodFab) !== -1)) {
+                    bate = true;
+                }
+                if (meuCodErp && pm.erpCodigo && String(pm.erpCodigo) === meuCodErp) {
+                    bate = true;
+                }
+                if (!bate && pm.equivalentes) {
+                    pm.equivalentes.forEach(function(eq) {
+                        var eqRefUp = (eq.ref || "").toUpperCase();
+                        if (meuCodFab && eqRefUp && (meuCodFab === eqRefUp || meuCodFab.indexOf(eqRefUp) !== -1)) {
+                            bate = true;
+                        }
+                    });
+                }
+
+                if (bate) {
+                    if (pm.refOem && pm.refOem.toUpperCase() !== meuCodFab && !jaVistos[pm.refOem.toUpperCase()]) {
+                        jaVistos[pm.refOem.toUpperCase()] = true;
+                        equivs.push({
+                            codigo: pm.erpCodigo || "—",
+                            codigoFab: pm.refOem,
+                            descricao: pm.funcaoTecnica,
+                            fabricante: pm.marca,
+                            grau: "1",
+                            grauBadge: getGrauConfiancaBadge("1"),
+                            estoque: pm.estoque || 0,
+                            preco: pm.preco || 0,
+                            origem: "Base Técnica Mestre"
+                        });
+                    }
+                    (pm.equivalentes || []).forEach(function(eq) {
+                        var rUp = (eq.ref || "").toUpperCase();
+                        if (rUp && rUp !== meuCodFab && !jaVistos[rUp]) {
+                            jaVistos[rUp] = true;
+                            equivs.push({
+                                codigo: "—",
+                                codigoFab: eq.ref,
+                                descricao: pm.funcaoTecnica + " (" + (pm.modeloEquipamento || "") + ")",
+                                fabricante: eq.marca,
+                                grau: eq.grau || "2",
+                                grauBadge: getGrauConfiancaBadge(eq.grau || "2"),
+                                estoque: 0,
+                                preco: 0,
+                                origem: "Catálogo de Mercado"
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
+        // 2. Pesquisa em outros produtos do ERP que compartilham aplicação ou código cruzado
+        if (meuCodFab || minhaAplicacao) {
+            var meusTokens = [];
+            if (meuCodFab && meuCodFab.length >= 4) meusTokens.push(meuCodFab);
+            var tokensApp = (minhaAplicacao.match(/[A-Z0-9\-\.\/]{4,}/g) || []);
+            tokensApp.forEach(function(tk) {
+                if (tk.length >= 4 && meusTokens.indexOf(tk) === -1) meusTokens.push(tk);
+            });
+
+            _produtosErpList.forEach(function(outro) {
+                var outroCodErp = String(outro.codigoErp || outro.id || "").trim();
+                if (outroCodErp === meuCodErp) return;
+                var outroCodFab = String(outro.codigoFab || "").trim().toUpperCase();
+                var outraAplicacao = String(outro.aplicacao || "").trim().toUpperCase();
+
+                var bateCruzado = false;
+                for (var i = 0; i < meusTokens.length; i++) {
+                    var tk = meusTokens[i];
+                    if (outroCodFab === tk || (outroCodFab && outroCodFab.indexOf(tk) !== -1)) {
+                        bateCruzado = true;
+                        break;
+                    }
+                    if (outraAplicacao && outraAplicacao.indexOf(tk) !== -1) {
+                        bateCruzado = true;
+                        break;
+                    }
+                }
+
+                if (bateCruzado && !jaVistos[outroCodErp]) {
+                    jaVistos[outroCodErp] = true;
+                    equivs.push({
+                        codigo: outro.codigoErp,
+                        codigoFab: outro.codigoFab || "—",
+                        descricao: outro.descricao,
+                        fabricante: outro.fabricante || "—",
+                        grau: "3",
+                        grauBadge: "<span class='badge-confianca badge-grau3' title='Encontrado por compatibilidade de aplicação cruzada no ERP'>🔧 Cruzamento ERP</span>",
+                        estoque: outro.estoque || 0,
+                        preco: outro.preco || 0,
+                        origem: "ERP Maxdata"
+                    });
+                }
+            });
+        }
+
+        return equivs;
+    }
+
     function filtrarProdutosErp() {
         var inpBusca = document.getElementById("erpInpBusca");
         var selFab   = document.getElementById("erpSelFabricante");
         var selGrp   = document.getElementById("erpSelGrupo");
         var chkEst   = document.getElementById("erpChkEstoque");
+        var chkUsoConsumo = document.getElementById("erpChkOcultarUsoConsumo");
 
         var q = (inpBusca ? inpBusca.value : "").trim().toLowerCase();
         var f = (selFab ? selFab.value : "").toUpperCase();
         var g = (selGrp ? selGrp.value : "").toUpperCase();
         var soEstoque = chkEst ? chkEst.checked : false;
+        var ocultarUsoConsumo = chkUsoConsumo ? chkUsoConsumo.checked : true;
 
         var filtrados = _produtosErpList.filter(function(p) {
+            // Filtro rigoroso de Uso e Consumo
+            if (ocultarUsoConsumo) {
+                if (p.tipoSped === "07") return false;
+                if ((p.fabricante || "").toUpperCase() === "USO E CONSUMO") return false;
+                var gUp = (p.grupo || "").toUpperCase();
+                if (gUp === "30.FRETE" || gUp === "20.SERVICO" || gUp === "ERRADO") return false;
+                var dUp = (p.descricao || "").toUpperCase();
+                if (dUp.indexOf("SELF SERVICE") !== -1 || dUp.indexOf("REFEICAO") !== -1) return false;
+            }
+
             if (soEstoque && Number(p.estoque || 0) <= 0) return false;
             if (f && (p.fabricante || "").toUpperCase() !== f) return false;
             if (g && (p.grupo || "").toUpperCase() !== g) return false;
+
             if (q) {
-                var hay = (p.codigoErp + " " + p.codigoFab + " " + p.descricao + " " + p.fabricante + " " + p.aplicacao).toLowerCase();
+                var hay = (p.codigoErp + " " + p.codigoFab + " " + p.descricao + " " + p.fabricante + " " + (p.aplicacao || "")).toLowerCase();
                 if (hay.indexOf(q) < 0) return false;
             }
             return true;
@@ -3364,12 +3506,13 @@ const DemandaApp = (function() {
         var html = "<div class='bt-table-wrapper'>" +
             "<table class='bt-data-table'>" +
             "<thead><tr>" +
+            "<th style='width:40px;text-align:center'></th>" +
             "<th style='width:90px'>Cód. ERP</th>" +
-            "<th style='width:140px'>Cód. Fábrica / OEM</th>" +
-            "<th>Descrição do Produto no ERP</th>" +
+            "<th style='width:150px'>Cód. Fábrica / OEM</th>" +
+            "<th>Descrição do Produto & Aplicação no ERP</th>" +
             "<th style='width:130px'>Fabricante</th>" +
             "<th style='width:120px'>Grupo</th>" +
-            "<th style='width:100px;text-align:center'>Estoque</th>" +
+            "<th style='width:95px;text-align:center'>Estoque</th>" +
             "<th style='width:110px;text-align:right'>Preço Venda</th>" +
             "<th style='width:120px;text-align:center'>Ações</th>" +
             "</tr></thead><tbody>";
@@ -3393,12 +3536,26 @@ const DemandaApp = (function() {
             var safePreco = Number(item.preco || 0);
             var safeId   = _escAttr(item.codigoErp || item.id || "");
 
-            return "<tr class='bt-tr-main'>" +
+            var isExp = !!_erpExpandedRows[item.id];
+            var equivs = _obterEquivalentesDoProduto(item);
+            var temEquivs = equivs.length > 0;
+
+            var rowHtml = "<tr class='bt-tr-main " + (isExp ? "bt-row-expanded" : "") + "'>" +
+                "<td style='text-align:center;padding:0 .25rem'>" +
+                "<button onclick=\"DemandaApp.toggleErpRow('" + safeId + "')\" style='background:none;border:none;color:var(--text-secondary);cursor:pointer;display:inline-flex;align-items:center;padding:.2rem;border-radius:4px' title='Ver aplicação detalhada e produtos equivalentes'>" +
+                "<span class='material-icons-round' style='font-size:1.15rem;transition:transform .2s ease;" + (isExp ? "transform:rotate(90deg);color:var(--accent-primary)" : "") + "'>chevron_right</span>" +
+                "</button>" +
+                "</td>" +
                 "<td style='font-family:monospace;font-weight:700;color:var(--accent-primary)'>" + codErp + "</td>" +
-                "<td><strong style='color:var(--text-primary);letter-spacing:.02em'>" + codFab + "</strong></td>" +
+                "<td>" +
+                "<div style='display:flex;align-items:center;gap:.35rem;flex-wrap:wrap'>" +
+                "<strong style='color:var(--text-primary);letter-spacing:.02em'>" + codFab + "</strong>" +
+                (temEquivs ? "<span style='font-size:.65rem;background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:4px;padding:.1rem .35rem;font-weight:700' title='" + equivs.length + " equivalentes disponíveis'>+" + equivs.length + " equiv.</span>" : "") +
+                "</div>" +
+                "</td>" +
                 "<td>" +
                 "<div style='font-weight:600;color:var(--text-primary);line-height:1.3'>" + desc + "</div>" +
-                (item.aplicacao ? "<div style='font-size:.72rem;color:var(--text-secondary);margin-top:2px'>" + _esc(item.aplicacao) + "</div>" : "") +
+                (item.aplicacao ? "<div style='font-size:.73rem;color:#93c5fd;margin-top:3px;display:flex;align-items:center;gap:.3rem'><span class='material-icons-round' style='font-size:.85rem;color:#3b82f6'>category</span><strong>Aplicação:</strong> <span style='font-family:monospace'>" + _esc(item.aplicacao) + "</span></div>" : "") +
                 "</td>" +
                 "<td>" + fab + "</td>" +
                 "<td style='font-size:.75rem;color:var(--text-secondary)'>" + grp + "</td>" +
@@ -3413,12 +3570,83 @@ const DemandaApp = (function() {
                 "<button onclick=\"DemandaApp.cotarProdutoErp('" + safeId + "','" + safeRef + "','" + safeDesc + "'," + safePreco + ")\" class='btn btn-primary btn-sm' style='padding:.25rem .55rem;font-size:.72rem' title='Adicionar à Cotação Atual'>" +
                 "<span class='material-icons-round' style='font-size:.85rem'>add_shopping_cart</span> Cotar" +
                 "</button>" +
-                "<button onclick=\"navigator.clipboard.writeText('" + safeRef + "');DemandaApp._toast('Código " + safeRef + " copiado!','success')\" class='btn btn-secondary btn-sm' style='padding:.25rem .4rem;font-size:.72rem' title='Copiar Referência'>" +
-                "<span class='material-icons-round' style='font-size:.85rem'>content_copy</span>" +
+                "<button onclick=\"DemandaApp.toggleErpRow('" + safeId + "')\" class='btn btn-secondary btn-sm' style='padding:.25rem .45rem;font-size:.72rem' title='Ver aplicação e produtos equivalentes'>" +
+                "<span class='material-icons-round' style='font-size:.85rem'>compare_arrows</span>" +
                 "</button>" +
                 "</div>" +
                 "</td>" +
                 "</tr>";
+
+            if (isExp) {
+                var equivRowsHtml = "";
+                if (equivs.length > 0) {
+                    equivRowsHtml = "<table style='width:100%;font-size:.76rem;border-collapse:collapse;margin-top:.4rem;background:rgba(0,0,0,.25);border-radius:6px;overflow:hidden'>" +
+                        "<thead><tr style='background:rgba(255,255,255,.03);color:var(--text-secondary);border-bottom:1px solid rgba(255,255,255,.06)'>" +
+                        "<th style='padding:.45rem .6rem;text-align:left'>Cód. ERP</th>" +
+                        "<th style='padding:.45rem .6rem;text-align:left'>Cód. Fábrica / Ref</th>" +
+                        "<th style='padding:.45rem .6rem;text-align:left'>Descrição</th>" +
+                        "<th style='padding:.45rem .6rem;text-align:left'>Fabricante</th>" +
+                        "<th style='padding:.45rem .6rem;text-align:left'>Nível / Confiança</th>" +
+                        "<th style='padding:.45rem .6rem;text-align:center'>Estoque</th>" +
+                        "<th style='padding:.45rem .6rem;text-align:right'>Preço Venda</th>" +
+                        "<th style='padding:.45rem .6rem;text-align:center'>Ação</th>" +
+                        "</tr></thead><tbody>" +
+                        equivs.map(function(eq) {
+                            var eqTemEstoque = Number(eq.estoque || 0) > 0;
+                            var eqEstCor = eqTemEstoque ? "#10b981" : "#94a3b8";
+                            var eqPreco = Number(eq.preco || 0) > 0 ? "R$ " + Number(eq.preco).toFixed(2).replace(".", ",") : "—";
+                            var eqSafeRef = _escAttr(eq.codigoFab || "");
+                            var eqSafeDesc = _escAttr(eq.descricao || "");
+                            var eqSafePreco = Number(eq.preco || 0);
+                            var eqSafeId = _escAttr(eq.codigo !== "—" ? eq.codigo : "");
+
+                            return "<tr style='border-bottom:1px solid rgba(255,255,255,.03)'>" +
+                                "<td style='padding:.45rem .6rem;font-family:monospace;color:var(--accent-primary)'>" + _esc(eq.codigo) + "</td>" +
+                                "<td style='padding:.45rem .6rem;font-weight:700;color:var(--text-primary)'>" + _esc(eq.codigoFab) + "</td>" +
+                                "<td style='padding:.45rem .6rem;color:var(--text-secondary)'>" + _esc(eq.descricao) + "</td>" +
+                                "<td style='padding:.45rem .6rem'><span class='bt-brand-badge'>" + _esc(eq.fabricante) + "</span></td>" +
+                                "<td style='padding:.45rem .6rem'>" + (eq.grauBadge || eq.origem) + "</td>" +
+                                "<td style='padding:.45rem .6rem;text-align:center;color:" + eqEstCor + ";font-weight:700'>" + (eq.estoque || 0) + " UN</td>" +
+                                "<td style='padding:.45rem .6rem;text-align:right;font-weight:700;color:var(--text-primary)'>" + eqPreco + "</td>" +
+                                "<td style='padding:.45rem .6rem;text-align:center'>" +
+                                "<button onclick=\"DemandaApp.cotarProdutoErp('" + eqSafeId + "','" + eqSafeRef + "','" + eqSafeDesc + "'," + eqSafePreco + ")\" class='btn btn-primary btn-sm' style='padding:.15rem .45rem;font-size:.68rem'>" +
+                                "<span class='material-icons-round' style='font-size:.78rem'>add_shopping_cart</span> Cotar" +
+                                "</button>" +
+                                "</td>" +
+                                "</tr>";
+                        }).join("") +
+                        "</tbody></table>";
+                } else {
+                    equivRowsHtml = "<div style='padding:.75rem;background:rgba(255,255,255,.02);border-radius:6px;font-size:.78rem;color:var(--text-secondary);display:flex;align-items:center;gap:.4rem'>" +
+                        "<span class='material-icons-round' style='font-size:1rem;color:var(--text-secondary)'>info</span>" +
+                        "Nenhum produto equivalente direto vinculado no momento para este código. Consulte também a aba <strong>Base Externa</strong> para consultar as 15 marcas homologadas." +
+                        "</div>";
+                }
+
+                rowHtml += "<tr class='bt-detail-tr'>" +
+                    "<td colspan='9' style='padding:0;background:rgba(15,23,42,.95)'>" +
+                    "<div class='bt-detail-container' style='border-left:3px solid var(--accent-primary);padding:1rem 1.25rem'>" +
+                    // Box Aplicação
+                    "<div style='margin-bottom:.85rem'>" +
+                    "<div style='font-size:.72rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.35rem;display:flex;align-items:center;gap:.35rem'>" +
+                    "<span class='material-icons-round' style='font-size:.95rem;color:#3b82f6'>description</span> Aplicação Cadastrada no ERP (Campo Oficial Maxdata):" +
+                    "</div>" +
+                    "<div style='font-size:.85rem;color:#e2e8f0;font-family:monospace;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:6px;padding:.55rem .85rem'>" +
+                    (item.aplicacao ? _esc(item.aplicacao) : "<span style='color:var(--text-secondary);font-style:italic'>Sem texto de aplicação cadastrado no ERP Maxdata.</span>") +
+                    "</div>" +
+                    "</div>" +
+                    // Seção Produtos Equivalentes
+                    "<div>" +
+                    "<div style='font-size:.72rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.35rem;display:flex;align-items:center;gap:.35rem'>" +
+                    "<span class='material-icons-round' style='font-size:.95rem;color:#10b981'>compare_arrows</span> Produtos Equivalentes & Similares (" + equivs.length + "):" +
+                    "</div>" +
+                    equivRowsHtml +
+                    "</div>" +
+                    "</div>" +
+                    "</td></tr>";
+            }
+
+            return rowHtml;
         }).join("");
 
         html += "</tbody></table></div>";
@@ -3803,95 +4031,8 @@ const DemandaApp = (function() {
         var container = document.getElementById("btContainerPrincipal");
         if (!container) return;
 
-        // Cálculos dos Totais Disponíveis para a Pesquisa
-        var totalMestresGeral = _baseTecnicaPecas.length;
-        var totalMestresFiltradas = (lista || []).length;
-
-        var totalRefsGeral = _baseTecnicaPecas.reduce(function(acc, p) {
-            return acc + 1 + (p.equivalentes ? p.equivalentes.length : 0);
-        }, 0);
-        var totalRefsFiltradas = (lista || []).reduce(function(acc, p) {
-            return acc + 1 + (p.equivalentes ? p.equivalentes.length : 0);
-        }, 0);
-
-        var marcasSet = {};
-        _baseTecnicaPecas.forEach(function(p) {
-            if (p.marca) marcasSet[p.marca] = true;
-            (p.equivalentes || []).forEach(function(eq) {
-                if (eq.marca) marcasSet[eq.marca] = true;
-            });
-        });
-        var totalMarcasGeral = Object.keys(marcasSet).length;
-
-        var totalComEstoqueGeral = _baseTecnicaPecas.filter(function(p) { return Number(p.estoque || 0) > 0; }).length;
-        var totalComEstoqueFiltrado = (lista || []).filter(function(p) { return Number(p.estoque || 0) > 0; }).length;
-        var totalComErpFiltrado = (lista || []).filter(function(p) { return !!p.erpCodigo; }).length;
-
-        // Painel de Indicadores de Totais da Pesquisa (Cards + Banner Informativo)
-        var htmlTotais = "<div class='bt-summary-cards' style='display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:.75rem;margin-bottom:1rem'>" +
-            // Card 1: Peças Mestres
-            "<div style='background:var(--bg-card);border:1px solid var(--border-color);border-radius:10px;padding:.8rem 1rem;display:flex;align-items:center;gap:.75rem;box-shadow:0 2px 8px rgba(0,0,0,.15)'>" +
-            "<div style='width:38px;height:38px;border-radius:8px;background:rgba(59,130,246,.15);display:flex;align-items:center;justify-content:center;color:#3b82f6;flex-shrink:0'>" +
-            "<span class='material-icons-round' style='font-size:1.3rem'>hub</span>" +
-            "</div>" +
-            "<div>" +
-            "<div style='font-size:.68rem;color:var(--text-secondary);text-transform:uppercase;font-weight:700;letter-spacing:.04em'>Peças Mestres</div>" +
-            "<div style='font-size:1.2rem;font-weight:800;color:var(--text-primary);line-height:1.2'>" +
-            totalMestresFiltradas + " <span style='font-size:.72rem;font-weight:500;color:var(--text-secondary)'>/ " + totalMestresGeral + " total</span>" +
-            "</div>" +
-            "<div style='font-size:.68rem;color:var(--text-secondary);margin-top:2px'>Catalogadas & padronizadas</div>" +
-            "</div></div>" +
-            // Card 2: Refs OEM & Similares
-            "<div style='background:var(--bg-card);border:1px solid var(--border-color);border-radius:10px;padding:.8rem 1rem;display:flex;align-items:center;gap:.75rem;box-shadow:0 2px 8px rgba(0,0,0,.15)'>" +
-            "<div style='width:38px;height:38px;border-radius:8px;background:rgba(16,185,129,.15);display:flex;align-items:center;justify-content:center;color:#10b981;flex-shrink:0'>" +
-            "<span class='material-icons-round' style='font-size:1.3rem'>manage_search</span>" +
-            "</div>" +
-            "<div>" +
-            "<div style='font-size:.68rem;color:var(--text-secondary);text-transform:uppercase;font-weight:700;letter-spacing:.04em'>Refs. OEM & Similares</div>" +
-            "<div style='font-size:1.2rem;font-weight:800;color:#10b981;line-height:1.2'>" +
-            totalRefsFiltradas + " <span style='font-size:.72rem;font-weight:500;color:var(--text-secondary)'>/ " + totalRefsGeral + " indexadas</span>" +
-            "</div>" +
-            "<div style='font-size:.68rem;color:var(--text-secondary);margin-top:2px'>Códigos cruzados pesquisáveis</div>" +
-            "</div></div>" +
-            // Card 3: Marcas Homologadas
-            "<div style='background:var(--bg-card);border:1px solid var(--border-color);border-radius:10px;padding:.8rem 1rem;display:flex;align-items:center;gap:.75rem;box-shadow:0 2px 8px rgba(0,0,0,.15)'>" +
-            "<div style='width:38px;height:38px;border-radius:8px;background:rgba(245,158,11,.15);display:flex;align-items:center;justify-content:center;color:#f59e0b;flex-shrink:0'>" +
-            "<span class='material-icons-round' style='font-size:1.3rem'>agriculture</span>" +
-            "</div>" +
-            "<div>" +
-            "<div style='font-size:.68rem;color:var(--text-secondary);text-transform:uppercase;font-weight:700;letter-spacing:.04em'>Marcas Homologadas</div>" +
-            "<div style='font-size:1.2rem;font-weight:800;color:#f59e0b;line-height:1.2'>" +
-            totalMarcasGeral + "+ <span style='font-size:.72rem;font-weight:500;color:var(--text-secondary)'>fabricantes</span>" +
-            "</div>" +
-            "<div style='font-size:.68rem;color:var(--text-secondary);margin-top:2px'>Máquinas, plantio e implementos</div>" +
-            "</div></div>" +
-            // Card 4: Vínculo ERP & Estoque
-            "<div style='background:var(--bg-card);border:1px solid var(--border-color);border-radius:10px;padding:.8rem 1rem;display:flex;align-items:center;gap:.75rem;box-shadow:0 2px 8px rgba(0,0,0,.15)'>" +
-            "<div style='width:38px;height:38px;border-radius:8px;background:rgba(139,92,246,.15);display:flex;align-items:center;justify-content:center;color:#a855f7;flex-shrink:0'>" +
-            "<span class='material-icons-round' style='font-size:1.3rem'>inventory</span>" +
-            "</div>" +
-            "<div>" +
-            "<div style='font-size:.68rem;color:var(--text-secondary);text-transform:uppercase;font-weight:700;letter-spacing:.04em'>Vínculo ERP & Estoque</div>" +
-            "<div style='font-size:1.2rem;font-weight:800;color:#a855f7;line-height:1.2'>" +
-            totalComEstoqueFiltrado + " <span style='font-size:.72rem;font-weight:500;color:var(--text-secondary)'>com estoque (" + totalComErpFiltrado + " no ERP)</span>" +
-            "</div>" +
-            "<div style='font-size:.68rem;color:var(--text-secondary);margin-top:2px'>Pronta entrega para cotação</div>" +
-            "</div></div>" +
-            "</div>" +
-            // Banner de Universo de Pesquisa
-            "<div style='background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.2);border-radius:8px;padding:.55rem .9rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;font-size:.78rem'>" +
-            "<div style='display:flex;align-items:center;gap:.5rem;color:var(--text-primary)'>" +
-            "<span class='material-icons-round' style='font-size:1.05rem;color:#3b82f6'>info</span>" +
-            "<span><strong>Universo de Pesquisa Disponível:</strong> Base técnica ativa com <strong>" + totalRefsGeral + " referências cruzadas</strong> (OEM + Similares) de <strong>" + totalMestresGeral + " peças mestres</strong> integradas ao catálogo de <strong>+18.750 itens do ERP Maxdata</strong>.</span>" +
-            "</div>" +
-            "<div style='color:var(--text-secondary);font-size:.74rem'>" +
-            "🔍 Digite OEM, similar de mercado, código interno ou modelo para busca instantânea" +
-            "</div>" +
-            "</div>";
-
         if (!lista || lista.length === 0) {
-            container.innerHTML = htmlTotais +
-                "<div style='text-align:center;padding:3rem;color:var(--text-secondary)'>" +
+            container.innerHTML = "<div style='text-align:center;padding:3rem;color:var(--text-secondary)'>" +
                 "<span class='material-icons-round' style='font-size:2.5rem;opacity:.3'>search_off</span>" +
                 "<p style='font-size:.9rem;margin-top:.5rem'>Nenhuma peça mestre encontrada para os filtros selecionados.</p>" +
                 "</div>";
@@ -3908,8 +4049,7 @@ const DemandaApp = (function() {
             MOTOR: "🔋 Motor & Filtros"
         };
 
-        var html = htmlTotais +
-            "<div style='margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem'>" +
+        var html = "<div style='margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem'>" +
             "<div style='display:flex;align-items:center;gap:.75rem'>" +
             "<span style='font-size:.85rem;color:var(--text-secondary)'>Exibindo <strong style='color:var(--text-primary)'>" + lista.length + "</strong> peças mestres catalogadas</span>" +
             "<div class='bt-view-toggle'>" +
@@ -4310,7 +4450,9 @@ const DemandaApp = (function() {
         loadProdutosErp:              loadProdutosErp,
         onErpBuscaInput:              onErpBuscaInput,
         filtrarProdutosErp:           filtrarProdutosErp,
+        toggleErpRow:                 toggleErpRow,
         cotarProdutoErp:              cotarProdutoErp,
+        _setProdutosErpList:          function(lista) { _produtosErpList = lista || []; filtrarProdutosErp(); },
         // Base Técnica Hierárquica (Prompt 2)
         loadBaseTecnica:              loadBaseTecnica,
         onBtFiltroChange:             onBtFiltroChange,

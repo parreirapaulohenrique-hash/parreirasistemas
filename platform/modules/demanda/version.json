@@ -1,8 +1,8 @@
 {
-  "version": "2.6.1",
-  "build": "20260917-v2.6.1",
+  "version": "2.6.2",
+  "build": "20260917-v2.6.2",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-09-17",
-  "change": "v2.6.1 - fix(cadastro-produtos): barra de rolagem vertical visível + feat(base-externa): painel de totais de itens e universo de pesquisa (peças mestres, refs OEM e similares de mercado)"
+  "change": "v2.6.2 - feat(cadastro-produtos): filtro nativo Ocultar Uso e Consumo (tipoSped=00/07) + exibição técnica do campo Aplicação + tabela de Produtos Equivalentes & Similares"
 }
