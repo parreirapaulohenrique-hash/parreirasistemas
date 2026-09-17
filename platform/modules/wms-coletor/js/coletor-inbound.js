@@ -18,59 +18,126 @@ function _docasHtml() {
 // ===================================
 
 window.initConferirScreen = async function(container) {
-    container.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-secondary);"><span class="material-icons-round" style="font-size:2rem;display:block;opacity:.3;margin-bottom:.4rem;">sync</span><span style="font-size:.82rem;">Carregando...</span></div>`;
-    const pending = await WmsStore.listarRecebimentos({ status: 'AGUARDANDO_CONFERENCIA' }).catch(() => []);
+    container.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-secondary);"><span class="material-icons-round" style="font-size:2rem;display:block;animation:spin 1s linear infinite;margin-bottom:.4rem;">sync</span><span style="font-size:.82rem;">Carregando dados de recebimento...</span></div>`;
+    
+    // Busca fila local e NFs pendentes do ERP em paralelo
+    const [pending, erpNfs] = await Promise.all([
+        WmsStore.listarRecebimentos({ status: 'AGUARDANDO_CONFERENCIA' }).catch(() => []),
+        (window.WmsProcedures && window.WmsProcedures.proc_listar_nfs_erp ? window.WmsProcedures.proc_listar_nfs_erp() : Promise.resolve([])).catch(() => [])
+    ]);
     pending.sort((a, b) => new Date(a.criadoEm||0) - new Date(b.criadoEm||0));
+
     container.innerHTML = `
+        <!-- Card de Busca e Bipagem -->
         <div class="m-card" style="border-left:3px solid #ec4899;margin-bottom:1rem;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
-                <div style="font-weight:600;font-size:.9rem;display:flex;align-items:center;gap:.5rem;color:#ec4899;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
+                <div style="font-weight:700;font-size:.9rem;display:flex;align-items:center;gap:.4rem;color:#ec4899;">
                     <span class="material-icons-round">qr_code_scanner</span>
-                    Bipe a chave da NF-e para receber
+                    Recebimento de Carga (Doca)
                 </div>
                 <button onclick="startCameraScanner('scannerInput')" 
-                    style="background:#ec4899;color:white;border:none;padding:.35rem .75rem;border-radius:6px;font-size:.78rem;font-weight:700;display:flex;align-items:center;gap:.3rem;cursor:pointer;">
-                    <span class="material-icons-round" style="font-size:1rem;">photo_camera</span> Bipar Câmera
+                    style="background:#ec4899;color:white;border:none;padding:.3rem .65rem;border-radius:6px;font-size:.75rem;font-weight:700;display:flex;align-items:center;gap:.3rem;cursor:pointer;">
+                    <span class="material-icons-round" style="font-size:.95rem;">photo_camera</span> Bipar Câmera
                 </button>
             </div>
-            <p style="font-size:.78rem;color:var(--text-secondary);margin-top:.2rem;margin-bottom:0;">
-                Escaneie os 44 dígitos da chave ou informe o número da NF
+            <div style="display:flex;gap:.5rem;margin-top:.4rem;">
+                <input id="coletor-busca-nf-input" type="text" class="m-input" 
+                    placeholder="Chave 44 dígitos ou Nº da NF..." 
+                    style="font-size:.82rem;padding:.45rem .6rem;"
+                    onkeydown="if(event.key==='Enter') window.consultarNfColetorManual()">
+                <button class="m-btn m-btn-primary" onclick="window.consultarNfColetorManual()" 
+                    style="padding:.45rem .8rem;font-size:.8rem;white-space:nowrap;">
+                    <span class="material-icons-round" style="font-size:.9rem;vertical-align:middle;">search</span> Buscar
+                </button>
+            </div>
+            <p style="font-size:.72rem;color:var(--text-secondary);margin-top:.4rem;margin-bottom:0;">
+                Digite o número da NF (ex: 10956) ou aponte o leitor para o código de barras
             </p>
         </div>
+
+        <!-- Fila WMS em andamento -->
         ${pending.length > 0 ? `
-        <div style="font-size:.85rem;font-weight:600;color:var(--text-secondary);margin-bottom:.5rem;">NFs na Fila (${pending.length})</div>
-        ${pending.map(r => `
-            <div class="m-card" style="padding:.85rem;cursor:pointer;" onclick="iniciarConferenciaFisica('${r.id}')">
-                <div style="display:flex;justify-content:space-between;align-items:start;">
-                    <div><strong style="font-size:.9rem;">NF: ${r.nfNumero}</strong><br>
-                    <span style="font-size:.75rem;color:var(--text-secondary);">${r.fornecedor}</span></div>
-                    <span class="m-badge" style="background:rgba(236,72,153,.15);color:#ec4899;">FILA</span>
+        <div style="font-size:.82rem;font-weight:700;color:var(--text-secondary);margin-bottom:.5rem;display:flex;align-items:center;gap:.4rem;">
+            <span class="material-icons-round" style="font-size:.95rem;color:#ec4899;">pending_actions</span>
+            NFs na Fila da Doca (${pending.length})
+        </div>
+        <div style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:1.2rem;">
+            ${pending.map(r => `
+                <div class="m-card" style="padding:.85rem;cursor:pointer;border-left:3px solid #ec4899;" onclick="iniciarConferenciaFisica('${r.id}')">
+                    <div style="display:flex;justify-content:space-between;align-items:start;">
+                        <div>
+                            <strong style="font-size:.9rem;">NF: ${r.nfNumero}</strong><br>
+                            <span style="font-size:.75rem;color:var(--text-secondary);">${r.fornecedor}</span>
+                        </div>
+                        <span class="m-badge" style="background:rgba(236,72,153,.15);color:#ec4899;">DOCA</span>
+                    </div>
+                    ${r.doca ? `<div style="margin-top:.4rem;font-size:.73rem;color:var(--text-secondary);">
+                        <span class="material-icons-round" style="font-size:.8rem;vertical-align:middle;">local_shipping</span>
+                        ${r.doca}${r.placa ? ' • ' + r.placa : ''}</div>` : ''}
                 </div>
-                ${r.doca ? `<div style="margin-top:.5rem;font-size:.75rem;color:var(--text-secondary);">
-                    <span class="material-icons-round" style="font-size:.8rem;vertical-align:middle;">local_shipping</span>
-                    ${r.doca}${r.placa ? ' · ' + r.placa : ''}</div>` : ''}
-            </div>
-        `).join('')}` : ''}
+            `).join('')}
+        </div>` : ''}
+
+        <!-- NFs disponíveis no ERP MaxData -->
+        <div style="font-size:.82rem;font-weight:700;color:var(--text-secondary);margin-bottom:.5rem;display:flex;justify-content:space-between;align-items:center;">
+            <span style="display:flex;align-items:center;gap:.4rem;">
+                <span class="material-icons-round" style="font-size:.95rem;color:#0ea5e9;">cloud_download</span>
+                NFs Pendentes no ERP (${erpNfs.length})
+            </span>
+            <button class="m-btn m-btn-outline" onclick="initConferirScreen(document.getElementById('screen-conferir'))" 
+                style="font-size:.7rem;padding:.2rem .5rem;">
+                <span class="material-icons-round" style="font-size:.8rem;">refresh</span> Atualizar
+            </button>
+        </div>
+        ${erpNfs.length > 0 ? `
+        <div style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:2rem;">
+            ${erpNfs.map(e => `
+                <div class="m-card" style="padding:.85rem;cursor:pointer;border-left:3px solid #0ea5e9;" onclick="window.handleScanConferir('${e.chaveNfe || e.numero}')">
+                    <div style="display:flex;justify-content:space-between;align-items:start;">
+                        <div>
+                            <strong style="font-size:.9rem;color:#0ea5e9;">NF ${e.numero} / Série ${e.serie || '1'}</strong><br>
+                            <span style="font-size:.75rem;color:var(--text-primary);font-weight:600;">${e.razaoSocialEmitente || 'Fornecedor'}</span>
+                        </div>
+                        <span class="m-badge" style="background:rgba(14,165,233,.15);color:#0ea5e9;">ERP</span>
+                    </div>
+                    <div style="font-size:.72rem;color:var(--text-secondary);margin-top:.4rem;display:flex;gap:.8rem;">
+                        ${e.dataEmissao ? `<span><span class="material-icons-round" style="font-size:.75rem;vertical-align:middle;">calendar_today</span> ${e.dataEmissao}</span>` : ''}
+                        ${e.volumes ? `<span><span class="material-icons-round" style="font-size:.75rem;vertical-align:middle;">inventory_2</span> ${e.volumes} vol</span>` : ''}
+                        <span><span class="material-icons-round" style="font-size:.75rem;vertical-align:middle;">touch_app</span> Clique para Receber</span>
+                    </div>
+                </div>
+            `).join('')}
+        </div>` : `
+        <div style="text-align:center;padding:1.5rem 1rem;color:var(--text-secondary);font-size:.8rem;">
+            <span class="material-icons-round" style="font-size:2.2rem;opacity:.3;">inventory_2</span>
+            <p style="margin-top:.4rem;">Nenhuma NF pendente listada no momento no ERP.</p>
+        </div>`}
     `;
+};
+
+window.consultarNfColetorManual = function() {
+    const input = document.getElementById('coletor-busca-nf-input');
+    const val = input ? input.value.trim() : '';
+    if (!val) { showToast('Digite a chave ou número da NF', 'warning'); return; }
+    window.handleScanConferir(val);
 };
 
 window.handleScanConferir = async function(code) {
     const clean = code.replace(/\D/g, '');
+    if (!clean) return;
     try {
-        const lista = await WmsStore.listarRecebimentos({ status: 'AGUARDANDO_CONFERENCIA' });
+        const lista = await WmsStore.listarRecebimentos({ status: 'AGUARDANDO_CONFERENCIA' }).catch(() => []);
         const target = lista.find(r =>
             (clean.length === 44 && (r.chaveNfe||'').replace(/\D/g,'') === clean) ||
             (clean.length < 44  && String(r.nfNumero) === clean)
         );
         if (target) { iniciarConferenciaFisica(target.id); return; }
-        if (clean.length === 44) {
-            const dup = await WmsStore.verificarNfDuplicada(clean).catch(() => null);
-            if (dup) { Feedback.beep('error'); showToast(`NF ${dup.nfNumero} já foi recebida (${dup.status}).`, 'warning'); return; }
-            await _exibirFormNovoRecebimento(clean);
-        } else {
-            Feedback.beep('error');
-            showToast('NF não encontrada na fila. Para nova NF, bipe a chave completa (44 dígitos).', 'warning');
-        }
+
+        const dup = await WmsStore.verificarNfDuplicada(clean).catch(() => null);
+        if (dup) { Feedback.beep('error'); showToast(`NF ${dup.nfNumero} já foi recebida (${dup.status}).`, 'warning'); return; }
+        
+        // Se chave 44 dígitos ou número de NF informado, busca no ERP
+        await _exibirFormNovoRecebimento(clean);
     } catch(e) { showToast('Erro: ' + e.message, 'danger'); }
 };
 
@@ -174,7 +241,7 @@ window.salvarNovoRecebimento = async function() {
         doca, placa, motorista,
         volumesNF: nf.volumes || 0, volumesFisicos: volFis,
         condicaoCarga: condicao, observacoes: obs, divergenciaMacro: divergencia,
-        itens: [], pedidoCompra: '', status: 'CONFERENCIA_ITENS_PENDENTE',
+        itens: window._recNovaNF?.itens || [], pedidoCompra: window._recNovaNF?.pedidoCompra || '', status: 'CONFERENCIA_ITENS_PENDENTE',
         dataCheckin: new Date().toISOString(), dataConferenciaMacro: new Date().toISOString(),
         operadorLogin: sessao.login || '', operadorNome: sessao.nome || 'Operador'
     };

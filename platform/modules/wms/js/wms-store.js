@@ -59,11 +59,13 @@ window.WmsStore = (function () {
 
     /** Lista recebimentos com filtros opcionais. */
     async function listarRecebimentos(filtros = {}) {
-        let q = _receiptsCol(_tid()).orderBy('criadoEm', 'desc');
+        let q = _receiptsCol(_tid());
         if (filtros.status) q = q.where('status', '==', filtros.status);
         if (filtros.limite) q = q.limit(filtros.limite);
         const snap = await q.get();
-        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        list.sort((a, b) => new Date(b.criadoEm || b.dataCheckin || 0) - new Date(a.criadoEm || a.dataCheckin || 0));
+        return list;
     }
 
     /** Atualiza campos de um recebimento. */
@@ -112,12 +114,14 @@ window.WmsStore = (function () {
 
     /** Lista tarefas de putaway com filtros opcionais. */
     async function listarPutaway(filtros = {}) {
-        let q = _putawayCol(_tid()).orderBy('criadoEm', 'asc');
+        let q = _putawayCol(_tid());
         if (filtros.status) q = q.where('status', '==', filtros.status);
         if (filtros.sku)    q = q.where('sku',    '==', filtros.sku);
         if (filtros.limite) q = q.limit(filtros.limite);
         const snap = await q.get();
-        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        list.sort((a, b) => new Date(a.criadoEm || 0) - new Date(b.criadoEm || 0));
+        return list;
     }
 
     /** Atualiza campos de uma tarefa de putaway. */
@@ -226,12 +230,14 @@ window.WmsStore = (function () {
 
     /** Lista divergências com filtros opcionais (status, recebimentoId). */
     async function listarDivergencias(filtros = {}) {
-        let q = _divCol(_tid()).orderBy('criadoEm', 'desc');
+        let q = _divCol(_tid());
         if (filtros.status)        q = q.where('status', '==', filtros.status);
         if (filtros.recebimentoId) q = q.where('recebimentoId', '==', filtros.recebimentoId);
         if (filtros.limite)        q = q.limit(filtros.limite);
         const snap = await q.get();
-        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        list.sort((a, b) => new Date(b.criadoEm || 0) - new Date(a.criadoEm || 0));
+        return list;
     }
 
     /** Atualiza campos de uma divergência (status, tratativas, etc.). */

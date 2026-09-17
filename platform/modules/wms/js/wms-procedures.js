@@ -187,12 +187,38 @@
             const token   = await _maxdataGetToken();
             const entries = await _maxdataGetEntries(token);
             const match   = entries.find(e => {
-                const eChave = (e.chaveNfe || e.accessKey || e.chave || '').replace(/\D/g,'');
-                const eNum   = String(e.nfNumero || e.numero || e.number || e.id || '');
-                return (eChave && eChave === chave) || eNum === chave || chave.endsWith(eNum);
+                const eChave = (e.chaveNfe || e.chaveAcesso || e.accessKey || e.chave || '').replace(/\D/g,'');
+                const eNum   = String(e.numeroNf || e.nfNumero || e.numero || e.number || e.id || '');
+                return (eChave && eChave === chave) || eNum === chave || (chave.length >= 4 && (chave.includes(eNum) || eNum.includes(chave)));
             });
             if (!match) return { found: false, nf: null, empresa: null, empresas: [], source: 'maxdata' };
             const nf      = _maxdataNorm(match);
+
+            // Carrega itens da entry para alimentar a conferência no coletor e WMS
+            try {
+                const itemsUrl = typeof _maxdataBuildUrl === 'function' ? _maxdataBuildUrl(`entry/${match.id}/items`) : `${_maxdataCfg().baseUrl.replace(/\/$/, '')}/entry/${match.id}/items`;
+                const itemsResp = await fetch(itemsUrl, {
+                    method: 'GET', headers: _maxdataHdrs(token), signal: AbortSignal.timeout(8000)
+                });
+                if (itemsResp.ok) {
+                    const itemsData = await itemsResp.json();
+                    const rawItems  = Array.isArray(itemsData) ? itemsData : (itemsData.docs || itemsData.data || itemsData.items || []);
+                    nf.itens = rawItems.map(it => ({
+                        sku:           String(it.codProduto || it.sku || it.codigo || it.code || it.id || ''),
+                        codigoInterno: String(it.codProduto || it.codigoInterno || it.sku || ''),
+                        codigoBarras:  String(it.codBarras || it.codigoBarras || it.ean || it.barcode || it.codProduto || ''),
+                        descricao:     it.descricao || it.description || it.nome || '',
+                        quantidade:    Number(it.qtde || it.quantidade || it.qty || it.qtd || 0),
+                        quantidadeEsperada: Number(it.qtde || it.quantidade || it.qty || it.qtd || 0),
+                        unidade:       it.un || it.unidade || it.unit || 'UN',
+                        valorUnitario: Number(it.valor || it.valorUnitario || it.preco || it.price || 0),
+                        ncm:           it.ncm || '',
+                        lote:          it.lote || it.batch || '',
+                        localizador:   it.localizador || ''
+                    }));
+                }
+            } catch(itErr) { console.warn('[Maxdata] Falha ao carregar itens da entry:', itErr); }
+
             const configuredCnpj = _getWmsFilialCnpj();
             const nfCnpj = _cleanCnpj(nf.cnpjDestinatario);
             const matchesFilialCnpj = !configuredCnpj || (nfCnpj === _cleanCnpj(configuredCnpj));
@@ -214,10 +240,10 @@
                 descarregamentoAutorizado: matchesFilialCnpj,
                 conferenciaItensStatus: isPendenteNa102 ? 'LIBERADA' : 'AGUARDANDO_COMPRAS',
                 statusMensagem: !matchesFilialCnpj
-                    ? `❌ CNPJ Destinatário (${nf.cnpjDestinatario}) diverge da Filial Logada (${configuredCnpj})`
+                    ? `NÃO CNPJ Destinatário (${nf.cnpjDestinatario}) diverge da Filial Logada (${configuredCnpj})`
                     : (isPendenteNa102
-                        ? '🟢 Descarregamento e Conferência de Itens Liberados'
-                        : '🟨 Descarregamento Autorizado (Tela 102.13) | ⚠️ Conferência de Itens Bloqueada: Aguardando Pré-Entrada do Compras (MaxData Tela 102)')
+                        ? 'Descarregamento e Conferência de Itens Liberados'
+                        : 'Descarregamento Autorizado (Tela 102.13) | Conferência de Itens Bloqueada: Aguardando Pré-Entrada do Compras (MaxData Tela 102)')
             };
         } catch (err) {
             return { found: false, nf: null, empresa: null, empresas: [], source: 'maxdata', error: err.message };
@@ -341,9 +367,35 @@
             try {
                 const token   = await _maxdataGetToken();
                 const entries = await _maxdataGetEntries(token);
-                const match   = entries.find(e => String(e.nfNumero || e.numero || e.number || e.id) === String(numero));
+                const match   = entries.find(e => {
+                    const eNum = String(e.numeroNf || e.nfNumero || e.numero || e.number || e.id || '');
+                    return eNum === String(numero) || (String(numero).length >= 4 && eNum.includes(String(numero)));
+                });
                 if (match) {
                     const nf = _maxdataNorm(match);
+                    try {
+                        const itemsUrl = typeof _maxdataBuildUrl === 'function' ? _maxdataBuildUrl(`entry/${match.id}/items`) : `${_maxdataCfg().baseUrl.replace(/\/$/, '')}/entry/${match.id}/items`;
+                        const itemsResp = await fetch(itemsUrl, {
+                            method: 'GET', headers: _maxdataHdrs(token), signal: AbortSignal.timeout(8000)
+                        });
+                        if (itemsResp.ok) {
+                            const itemsData = await itemsResp.json();
+                            const rawItems  = Array.isArray(itemsData) ? itemsData : (itemsData.docs || itemsData.data || itemsData.items || []);
+                            nf.itens = rawItems.map(it => ({
+                                sku:           String(it.codProduto || it.sku || it.codigo || it.code || it.id || ''),
+                                codigoInterno: String(it.codProduto || it.codigoInterno || it.sku || ''),
+                                codigoBarras:  String(it.codBarras || it.codigoBarras || it.ean || it.barcode || it.codProduto || ''),
+                                descricao:     it.descricao || it.description || it.nome || '',
+                                quantidade:    Number(it.qtde || it.quantidade || it.qty || it.qtd || 0),
+                                quantidadeEsperada: Number(it.qtde || it.quantidade || it.qty || it.qtd || 0),
+                                unidade:       it.un || it.unidade || it.unit || 'UN',
+                                valorUnitario: Number(it.valor || it.valorUnitario || it.preco || it.price || 0),
+                                ncm:           it.ncm || '',
+                                lote:          it.lote || it.batch || '',
+                                localizador:   it.localizador || ''
+                            }));
+                        }
+                    } catch(itErr) { console.warn('[Maxdata] Falha ao carregar itens da entry por numero:', itErr); }
                     const empresa = cnpjs.find(c => _cleanCnpj(c.cnpj) === _cleanCnpj(nf.cnpjDestinatario)) || cnpjs[0] || null;
                     result = { found: true, nf, empresa, empresas: empresa ? [empresa] : [], source: 'maxdata' };
                 } else {
@@ -575,7 +627,25 @@
 
     function _maxdataCfg() {
         const ic = JSON.parse(localStorage.getItem('wms_integration_config' + _ts()) || '{}');
-        return ic.connectorConfig || {};
+        const cc = ic.connectorConfig || {};
+        return {
+            baseUrl:  cc.baseUrl  || 'http://rds.skytins.com.br:8720/v2',
+            empId:    cc.empId    || 1,
+            terminal: cc.terminal || '364F64E6539974C1D75C8A46C14B2D3D',
+            _maxdataToken: cc._maxdataToken || null
+        };
+    }
+
+    function _maxdataBuildUrl(endpoint, params = {}) {
+        const cfg  = _maxdataCfg();
+        const base = (cfg.baseUrl || 'http://rds.skytins.com.br:8720/v2').replace(/\/$/, '');
+        const isHttps = typeof location !== 'undefined' && location.protocol === 'https:';
+        if (isHttps && base.startsWith('http://')) {
+            const qs = new URLSearchParams({ _path: endpoint, _apiUrl: base, ...params }).toString();
+            return `/api/maxdata?${qs}`;
+        }
+        const qs = Object.keys(params).length ? '?' + new URLSearchParams(params).toString() : '';
+        return `${base}/${endpoint}${qs}`;
     }
 
     async function _maxdataGetToken() {
@@ -585,7 +655,8 @@
         const base = (cfg.baseUrl || '').replace(/\/$/, '');
         if (!base || !cfg.empId || !cfg.terminal)
             throw new Error('Maxdata não configurado. Acesse Configurações → Integração.');
-        const resp = await fetch(`${base}/auth`, {
+        const authUrl = typeof _maxdataBuildUrl === 'function' ? _maxdataBuildUrl('auth') : `${base}/auth`;
+        const resp = await fetch(authUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ empId: Number(cfg.empId), terminal: cfg.terminal }),
@@ -608,13 +679,13 @@
     // Normaliza entry Maxdata → schema NF interno
     function _maxdataNorm(e) {
         return _normalizeNf({
-            chaveNfe:            e.chaveNfe || e.accessKey || e.chave || '',
-            numero:              e.nfNumero || e.numero || e.number || String(e.id || ''),
+            chaveNfe:            e.chaveNfe || e.chaveAcesso || e.accessKey || e.chave || '',
+            numero:              e.numeroNf || e.nfNumero || e.numero || e.number || String(e.id || ''),
             serie:               e.serie || '1',
-            dataEmissao:         e.dataEmissao || e.issueDate || '',
-            valorTotal:          e.valorTotal || e.total || 0,
+            dataEmissao:         e.emissao || e.dataEmissao || e.issueDate || '',
+            valorTotal:          e.valorTotalLiquidoProduto || e.valorTotal || e.total || 0,
             cnpjEmitente:        e.cnpjEmitente || e.fornecedorCnpj || '',
-            razaoSocialEmitente: e.fornecedor || e.supplier || e.supplierName || '',
+            razaoSocialEmitente: e.fornecedorNome || e.fornecedor || e.supplier || e.supplierName || '',
             cnpjDestinatario:    e.cnpjDestinatario || e.recipientCnpj || '',
             pedidoCompra:        e.pedidoCompra || e.purchaseOrder || '',
             volumes:             e.volumes || e.qtdVolumes || null,
@@ -625,14 +696,13 @@
 
     // GET /entry e retorna lista de entradas
     async function _maxdataGetEntries(token) {
-        const cfg  = _maxdataCfg();
-        const base = cfg.baseUrl.replace(/\/$/, '');
-        const resp = await fetch(`${base}/entry`, {
+        const entryUrl = typeof _maxdataBuildUrl === 'function' ? _maxdataBuildUrl('entry') : `${cfg.baseUrl.replace(/\/$/, '')}/entry`;
+        const resp = await fetch(entryUrl, {
             method: 'GET', headers: _maxdataHdrs(token), signal: AbortSignal.timeout(12000)
         });
         if (!resp.ok) throw new Error(`Maxdata GET /entry HTTP ${resp.status}`);
         const data = await resp.json();
-        return Array.isArray(data) ? data : (data.data || data.results || []);
+        return Array.isArray(data) ? data : (data.docs || data.data || data.results || []);
     }
 
 
@@ -844,24 +914,25 @@ ${emailRemetente ? `<${emailRemetente}>` : ''}
                     _logSync('proc_verificar_pre_entrada', 'erp→wms', 'not_found', 'Maxdata: NF não encontrada');
                     return { found: false, mensagem: 'NF não localizada no Maxdata.' };
                 }
-                const cfg2 = _maxdataCfg();
-                const base = cfg2.baseUrl.replace(/\/$/, '');
-                const itemsResp = await fetch(`${base}/entry/${entry.id}/items`, {
+                const itemsUrl = typeof _maxdataBuildUrl === 'function' ? _maxdataBuildUrl(`entry/${entry.id}/items`) : `${cfg2.baseUrl.replace(/\/$/, '')}/entry/${entry.id}/items`;
+                const itemsResp = await fetch(itemsUrl, {
                     method: 'GET', headers: _maxdataHdrs(token), signal: AbortSignal.timeout(12000)
                 });
                 if (!itemsResp.ok) throw new Error(`Maxdata /items HTTP ${itemsResp.status}`);
                 const itemsData = await itemsResp.json();
-                const rawItems  = Array.isArray(itemsData) ? itemsData : (itemsData.data || itemsData.items || []);
+                const rawItems  = Array.isArray(itemsData) ? itemsData : (itemsData.docs || itemsData.data || itemsData.items || []);
                 const itens = rawItems.map(it => ({
-                    sku:           it.sku || it.codigo || it.code || String(it.id || ''),
-                    codigoInterno: it.codigoInterno || it.internalCode || String(it.id || ''),
-                    codigoBarras:  it.codigoBarras || it.ean || it.barcode || it.sku || '',
+                    sku:           String(it.codProduto || it.sku || it.codigo || it.code || it.id || ''),
+                    codigoInterno: String(it.codProduto || it.codigoInterno || it.sku || ''),
+                    codigoBarras:  String(it.codBarras || it.codigoBarras || it.ean || it.barcode || it.codProduto || ''),
                     descricao:     it.descricao || it.description || it.nome || '',
-                    quantidade:    Number(it.quantidade || it.qty || it.qtd || it.quantity || 0),
-                    unidade:       it.unidade || it.unit || 'UN',
-                    valorUnitario: Number(it.valorUnitario || it.preco || it.price || 0),
+                    quantidade:    Number(it.qtde || it.quantidade || it.qty || it.qtd || it.quantity || 0),
+                    quantidadeEsperada: Number(it.qtde || it.quantidade || it.qty || it.qtd || it.quantity || 0),
+                    unidade:       it.un || it.unidade || it.unit || 'UN',
+                    valorUnitario: Number(it.valor || it.valorUnitario || it.preco || it.price || 0),
                     ncm:           it.ncm || '',
-                    lote:          it.lote || it.batch || ''
+                    lote:          it.lote || it.batch || '',
+                    localizador:   it.localizador || ''
                 }));
                 _logSync('proc_verificar_pre_entrada', 'erp→wms', 'ok',
                     `Maxdata: ${itens.length} item(ns) para NF ${entry.nfNumero || entry.id}`);
@@ -992,7 +1063,8 @@ ${emailRemetente ? `<${emailRemetente}>` : ''}
                         divergencia:         it.divergencia
                     }))
                 };
-                const resp = await fetch(`${base}/entry/markaschecked`, {
+                const markUrl = typeof _maxdataBuildUrl === 'function' ? _maxdataBuildUrl('entry/markaschecked') : `${base}/entry/markaschecked`;
+                const resp = await fetch(markUrl, {
                     method: 'PUT', headers: _maxdataHdrs(token),
                     body: JSON.stringify(body), signal: AbortSignal.timeout(15000)
                 });
@@ -1028,8 +1100,24 @@ ${emailRemetente ? `<${emailRemetente}>` : ''}
 
     // ─── EXPORT GLOBAL ────────────────────────────────────────────────────────
 
+    async function proc_listar_nfs_erp() {
+        const { id } = _getConnector();
+        if (id === 'maxdata') {
+            try {
+                const token   = await _maxdataGetToken();
+                const entries = await _maxdataGetEntries(token);
+                return (entries || []).map(e => _maxdataNorm(e));
+            } catch(e) {
+                console.warn('[Maxdata] Falha ao listar NFs pendentes do ERP:', e.message);
+                return [];
+            }
+        }
+        return [];
+    }
+
     window.WmsProcedures = {
         proc_buscar_nf_destinada,
+        proc_listar_nfs_erp,
         proc_buscar_nf_por_numero,
         proc_verificar_pre_entrada,
         proc_confirmar_recebimento,

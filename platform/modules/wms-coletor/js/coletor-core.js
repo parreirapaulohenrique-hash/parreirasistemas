@@ -1,3 +1,11 @@
+window.getTenantSuffix = function () {
+    try {
+        const sess = JSON.parse(sessionStorage.getItem('parreira_session') || 'null');
+        const tid  = sess?.tenant || sess?.tenantId || (window.ParreiraAuth?.getSessao?.()?.tenant) || '';
+        if (tid) return '_' + tid.replace('_hml', '');
+        return '_centralpecas';
+    } catch (e) { return '_centralpecas'; }
+};
 // WMS Coletor Ã¢â‚¬â€ Core Logic
 // Navigation, Auth, Scanner, Shared Data Access
 
@@ -48,6 +56,110 @@ document.addEventListener('DOMContentLoaded', async () => {
         pin:      sessao.pin || '',
         tenantId: sessao.tenantId
     }));
+
+    // Carrega configuração ERP do Firestore para o Coletor
+    try {
+        const tenantId = sessao.tenantId || 'centralpecas';
+        const _ts = (window.getTenantSuffix ? window.getTenantSuffix() : `_${tenantId}`);
+        const db = firebase.firestore();
+        const [erpDoc, wmsIntDoc] = await Promise.all([
+            db.doc(`tenants/${tenantId}/erp_config/settings`).get().catch(() => null),
+            db.collection('tenants').doc(tenantId).collection('wms_config').doc('integration').get().catch(() => null)
+        ]);
+
+        let intConfig = null;
+        if (erpDoc && erpDoc.exists && erpDoc.data()?.enabled) {
+            const ed = erpDoc.data();
+            intConfig = {
+                connectorId: ed.provider || 'maxdata',
+                connectorConfig: {
+                    baseUrl: ed.apiUrl || ed.baseUrl || 'http://rds.skytins.com.br:8720/v2',
+                    empId: ed.empId || 1,
+                    terminal: ed.terminal || '364F64E6539974C1D75C8A46C14B2D3D'
+                },
+                updatedAt: ed.updatedAt || new Date().toISOString()
+            };
+        } else if (wmsIntDoc && wmsIntDoc.exists) {
+            const wd = wmsIntDoc.data();
+            intConfig = {
+                connectorId: wd.connectorId || 'maxdata',
+                connectorConfig: {
+                    baseUrl: wd.baseUrl || 'http://rds.skytins.com.br:8720/v2',
+                    empId: wd.empId || 1,
+                    terminal: wd.terminal || '364F64E6539974C1D75C8A46C14B2D3D'
+                },
+                updatedAt: wd.updatedAt || new Date().toISOString()
+            };
+        } else if (tenantId && tenantId.startsWith('centralpecas')) {
+            intConfig = {
+                connectorId: 'maxdata',
+                connectorConfig: {
+                    baseUrl: 'http://rds.skytins.com.br:8720/v2',
+                    empId: 1,
+                    terminal: '364F64E6539974C1D75C8A46C14B2D3D'
+                },
+                updatedAt: new Date().toISOString()
+            };
+        }
+        if (intConfig) {
+            localStorage.setItem('wms_integration_config' + _ts, JSON.stringify(intConfig));
+            console.log('📦 [COLETOR] Configuração ERP inicializada com sucesso:', intConfig.connectorId);
+        }
+    } catch(e) {
+        console.warn('⚠️ [COLETOR] Falha ao sincronizar config ERP:', e.message);
+    }
+
+    // Carrega configuração ERP do Firestore para o Coletor
+    try {
+        const tenantId = sessao.tenantId || 'centralpecas';
+        const _ts = (window.getTenantSuffix ? window.getTenantSuffix() : `_${tenantId}`);
+        const db = firebase.firestore();
+        const [erpDoc, wmsIntDoc] = await Promise.all([
+            db.doc(`tenants/${tenantId}/erp_config/settings`).get().catch(() => null),
+            db.collection('tenants').doc(tenantId).collection('wms_config').doc('integration').get().catch(() => null)
+        ]);
+
+        let intConfig = null;
+        if (erpDoc && erpDoc.exists && erpDoc.data()?.enabled) {
+            const ed = erpDoc.data();
+            intConfig = {
+                connectorId: ed.provider || 'maxdata',
+                connectorConfig: {
+                    baseUrl: ed.apiUrl || ed.baseUrl || 'http://rds.skytins.com.br:8720/v2',
+                    empId: ed.empId || 1,
+                    terminal: ed.terminal || '364F64E6539974C1D75C8A46C14B2D3D'
+                },
+                updatedAt: ed.updatedAt || new Date().toISOString()
+            };
+        } else if (wmsIntDoc && wmsIntDoc.exists) {
+            const wd = wmsIntDoc.data();
+            intConfig = {
+                connectorId: wd.connectorId || 'maxdata',
+                connectorConfig: {
+                    baseUrl: wd.baseUrl || 'http://rds.skytins.com.br:8720/v2',
+                    empId: wd.empId || 1,
+                    terminal: wd.terminal || '364F64E6539974C1D75C8A46C14B2D3D'
+                },
+                updatedAt: wd.updatedAt || new Date().toISOString()
+            };
+        } else if (tenantId && tenantId.startsWith('centralpecas')) {
+            intConfig = {
+                connectorId: 'maxdata',
+                connectorConfig: {
+                    baseUrl: 'http://rds.skytins.com.br:8720/v2',
+                    empId: 1,
+                    terminal: '364F64E6539974C1D75C8A46C14B2D3D'
+                },
+                updatedAt: new Date().toISOString()
+            };
+        }
+        if (intConfig) {
+            localStorage.setItem('wms_integration_config' + _ts, JSON.stringify(intConfig));
+            console.log('📦 [COLETOR] Configuração ERP inicializada com sucesso:', intConfig.connectorId);
+        }
+    } catch(e) {
+        console.warn('⚠️ [COLETOR] Falha ao sincronizar config ERP:', e.message);
+    }
 
     updateHomeStats();
 
@@ -451,3 +563,9 @@ window.toggleCameraTorch = function() {
 };
 // force deploy
 
+
+// Alias para garantir que bipagem de câmera funcione na tela de itens
+window.handleScanRecebimento = function(code) {
+    if (window.handleScanConferenciaItens) window.handleScanConferenciaItens(code);
+    else if (window.handleScanConferir) window.handleScanConferir(code);
+};
