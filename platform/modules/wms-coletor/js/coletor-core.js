@@ -397,10 +397,12 @@ window.Feedback = {
 };
 
 // ===================================
-// LEITOR DE CÂMERA (MOBILE / WEBCAM)
+// LEITOR DE CÂMERA ROBUSTO (MOBILE / WEBCAM)
 // ===================================
 window._cameraScannerInstance = null;
 window._cameraTargetInputId   = null;
+window._cameraDevicesList     = [];
+window._cameraCurrentIndex    = 0;
 
 window.startCameraScanner = function(targetInputId = null) {
     window._cameraTargetInputId = targetInputId;
@@ -409,37 +411,40 @@ window.startCameraScanner = function(targetInputId = null) {
     if (!modal) {
         modal = document.createElement('div');
         modal.id = 'cameraScannerModal';
-        modal.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15,23,42,0.96); z-index: 9999;
-            display: flex; flex-direction: column; align-items: center; justify-content: space-between;
-            padding: 1rem; color: white; box-sizing: border-box;
-        `;
         modal.innerHTML = `
             <div style="width:100%;max-width:480px;display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;">
                 <span style="font-weight:700;font-size:1rem;display:flex;align-items:center;gap:.4rem;">
                     <span class="material-icons-round" style="color:#0ea5e9;">photo_camera</span>
-                    Leitor de Código de Barras
+                    Leitor de Código de Barras / NF-e
                 </span>
                 <button onclick="stopCameraScanner()" style="background:rgba(255,255,255,.15);border:none;color:white;width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;">
                     <span class="material-icons-round">close</span>
                 </button>
             </div>
 
-            <div style="width:100%;max-width:420px;position:relative;border-radius:12px;overflow:hidden;border:2px solid rgba(14,165,233,.6);box-shadow:0 0 30px rgba(14,165,233,.25);background:#000;">
-                <div id="cameraScannerReader" style="width:100%;min-height:260px;"></div>
-                <div style="position:absolute;top:50%;left:5%;right:5%;height:2px;background:#ef4444;box-shadow:0 0 10px #ef4444;z-index:10;pointer-events:none;"></div>
+            <div style="width:100%;max-width:440px;position:relative;border-radius:12px;overflow:hidden;border:2px solid rgba(14,165,233,.6);box-shadow:0 0 30px rgba(14,165,233,.25);background:#000;">
+                <div id="cameraScannerReader" style="width:100%;min-height:280px;background:#000;"></div>
+                <div style="position:absolute;top:50%;left:4%;right:4%;height:2px;background:#ef4444;box-shadow:0 0 12px #ef4444;z-index:10;pointer-events:none;"></div>
+                <div id="cameraStatusBadge" style="position:absolute;bottom:8px;left:8px;right:8px;text-align:center;font-size:.72rem;background:rgba(0,0,0,.65);padding:4px 8px;border-radius:6px;color:#93c5fd;z-index:11;">
+                    Iniciando câmera...
+                </div>
             </div>
 
             <div style="width:100%;max-width:480px;text-align:center;padding:.5rem 0;">
                 <p style="font-size:.82rem;color:#94a3b8;margin-bottom:1rem;line-height:1.35;">
-                    Aproxime a <strong>Chave NF-e (Código de Barras ou QR Code)</strong> do quadro vermelho.
+                    Aponte para o <strong>Código de Barras (44 dígitos)</strong> ou <strong>QR Code da NF-e</strong>.
                 </p>
-                <div style="display:flex;gap:.75rem;justify-content:center;">
-                    <button id="btnTorchToggle" onclick="toggleCameraTorch()" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:white;padding:.6rem 1rem;border-radius:20px;font-size:.8rem;font-weight:600;display:flex;align-items:center;gap:.4rem;cursor:pointer;">
-                        <span class="material-icons-round" style="font-size:1.1rem;color:#f59e0b;">flash_on</span> Lanterna
+                <div style="display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;">
+                    <button id="btnSwitchCamera" onclick="cycleCameraDevice()" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:white;padding:.55rem .9rem;border-radius:20px;font-size:.8rem;font-weight:600;display:flex;align-items:center;gap:.35rem;cursor:pointer;">
+                        <span class="material-icons-round" style="font-size:1.05rem;color:#38bdf8;">cameraswitch</span> Trocar Lente
                     </button>
-                    <button onclick="stopCameraScanner()" style="background:#ef4444;border:none;color:white;padding:.6rem 1.25rem;border-radius:20px;font-size:.8rem;font-weight:700;cursor:pointer;">
+                    <button id="btnTorchToggle" onclick="toggleCameraTorch()" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:white;padding:.55rem .9rem;border-radius:20px;font-size:.8rem;font-weight:600;display:flex;align-items:center;gap:.35rem;cursor:pointer;">
+                        <span class="material-icons-round" style="font-size:1.05rem;color:#f59e0b;">flash_on</span> Lanterna
+                    </button>
+                    <button onclick="promptManualChaveInput()" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:white;padding:.55rem .9rem;border-radius:20px;font-size:.8rem;font-weight:600;display:flex;align-items:center;gap:.35rem;cursor:pointer;">
+                        <span class="material-icons-round" style="font-size:1.05rem;color:#a855f7;">edit</span> Digitar
+                    </button>
+                    <button onclick="stopCameraScanner()" style="background:#ef4444;border:none;color:white;padding:.55rem 1.1rem;border-radius:20px;font-size:.8rem;font-weight:700;cursor:pointer;">
                         Cancelar
                     </button>
                 </div>
@@ -451,10 +456,19 @@ window.startCameraScanner = function(targetInputId = null) {
     modal.style.display = 'flex';
 
     if (typeof Html5Qrcode === 'undefined') {
-        alert('Carregando leitor de câmera... Tente novamente em 2 segundos.');
+        alert('Carregando biblioteca do leitor... Tente novamente em 2 segundos.');
         return;
     }
 
+    _initCameraInstance();
+};
+
+function _updateCameraStatus(text) {
+    const b = document.getElementById('cameraStatusBadge');
+    if (b) b.textContent = text;
+}
+
+function _initCameraInstance() {
     if (window._cameraScannerInstance) {
         try { window._cameraScannerInstance.stop().catch(() => {}); } catch(_) {}
     }
@@ -463,8 +477,13 @@ window.startCameraScanner = function(targetInputId = null) {
     window._cameraScannerInstance = html5QrCode;
 
     const config = {
-        fps: 15,
-        qrbox: { width: 320, height: 180 },
+        fps: 20,
+        qrbox: function(viewfinderWidth, viewfinderHeight) {
+            const w = Math.floor(Math.min(viewfinderWidth * 0.94, 380));
+            const h = Math.floor(Math.min(viewfinderHeight * 0.48, 180));
+            return { width: Math.max(w, 200), height: Math.max(h, 80) };
+        },
+        aspectRatio: 1.777778,
         formatsToSupport: [
             Html5QrcodeSupportedFormats.CODE_128,
             Html5QrcodeSupportedFormats.QR_CODE,
@@ -475,23 +494,130 @@ window.startCameraScanner = function(targetInputId = null) {
         ]
     };
 
-    html5QrCode.start(
-        { facingMode: "environment" },
+    _updateCameraStatus('Detectando câmeras do aparelho...');
+
+    Html5Qrcode.getCameras().then(devices => {
+        if (devices && devices.length > 0) {
+            window._cameraDevicesList = devices;
+            // Ordenar para priorizar câmeras traseiras
+            const backIndices = [];
+            devices.forEach((d, idx) => {
+                const label = (d.label || '').toLowerCase();
+                if (label.includes('back') || label.includes('traseira') || label.includes('rear') || label.includes('environment')) {
+                    backIndices.push(idx);
+                }
+            });
+
+            // Se encontrou câmera traseira, usa a primeira traseira; senao a ultima da lista (padrao Android)
+            window._cameraCurrentIndex = backIndices.length > 0 ? backIndices[0] : (devices.length - 1);
+            _startCameraWithDevice(window._cameraDevicesList[window._cameraCurrentIndex].id, config);
+        } else {
+            _startCameraFacingMode("environment", config);
+        }
+    }).catch(err => {
+        console.warn('[Camera] Falha ao enumerar dispositivos, tentando facingMode direto:', err);
+        _startCameraFacingMode("environment", config);
+    });
+}
+
+function _startCameraWithDevice(cameraId, config) {
+    if (!window._cameraScannerInstance) return;
+    _updateCameraStatus('Conectando à lente...');
+
+    window._cameraScannerInstance.start(
+        cameraId,
         config,
         (decodedText) => { onCameraCodeDetected(decodedText); },
         () => {}
-    ).catch(err => {
-        console.warn('Câmera traseira falhou, tentando fallback:', err);
-        html5QrCode.start(
-            { facingMode: "user" },
-            config,
-            (decodedText) => { onCameraCodeDetected(decodedText); },
-            () => {}
-        ).catch(e2 => {
-            alert('Permissão de câmera negada ou câmera não suportada no navegador.');
-            stopCameraScanner();
-        });
+    ).then(() => {
+        _onCameraStartedSuccess();
+    }).catch(err => {
+        console.warn('[Camera] Falha ao iniciar cameraId, tentando facingMode environment:', err);
+        _startCameraFacingMode("environment", config);
     });
+}
+
+function _startCameraFacingMode(facingMode, config) {
+    if (!window._cameraScannerInstance) return;
+    _updateCameraStatus('Ativando câmera traseira...');
+
+    window._cameraScannerInstance.start(
+        { facingMode: facingMode },
+        config,
+        (decodedText) => { onCameraCodeDetected(decodedText); },
+        () => {}
+    ).then(() => {
+        _onCameraStartedSuccess();
+    }).catch(err => {
+        console.warn('[Camera] Falha no facingMode environment:', err);
+        if (facingMode === "environment") {
+            _startCameraFacingMode("user", config);
+        } else {
+            _updateCameraStatus('Erro ao acessar a câmera.');
+            alert('Não foi possível acessar a câmera. Verifique se o navegador tem permissão nas configurações do celular.');
+            stopCameraScanner();
+        }
+    });
+}
+
+function _onCameraStartedSuccess() {
+    _updateCameraStatus('Câmera ativa — centralize a Chave NF-e na linha vermelha');
+    // Forçar atributos essenciais de reprodução no elemento video para evitar tela preta
+    setTimeout(() => {
+        const videoElem = document.querySelector('#cameraScannerReader video');
+        if (videoElem) {
+            videoElem.setAttribute('playsinline', 'true');
+            videoElem.setAttribute('webkit-playsinline', 'true');
+            videoElem.style.width = '100%';
+            videoElem.style.height = '100%';
+            videoElem.style.objectFit = 'cover';
+            videoElem.style.display = 'block';
+            videoElem.play().catch(() => {});
+        }
+    }, 150);
+}
+
+window.cycleCameraDevice = function() {
+    if (!window._cameraDevicesList || window._cameraDevicesList.length <= 1) {
+        alert('Este dispositivo possui apenas 1 câmera disponível.');
+        return;
+    }
+    window._cameraCurrentIndex = (window._cameraCurrentIndex + 1) % window._cameraDevicesList.length;
+    const nextDev = window._cameraDevicesList[window._cameraCurrentIndex];
+    _updateCameraStatus(`Alternando para: ${nextDev.label || 'Lente ' + (window._cameraCurrentIndex + 1)}...`);
+
+    const config = {
+        fps: 20,
+        qrbox: function(viewfinderWidth, viewfinderHeight) {
+            const w = Math.floor(Math.min(viewfinderWidth * 0.94, 380));
+            const h = Math.floor(Math.min(viewfinderHeight * 0.48, 180));
+            return { width: Math.max(w, 200), height: Math.max(h, 80) };
+        },
+        aspectRatio: 1.777778,
+        formatsToSupport: [
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.ITF,
+            Html5QrcodeSupportedFormats.CODE_39
+        ]
+    };
+
+    if (window._cameraScannerInstance) {
+        window._cameraScannerInstance.stop().then(() => {
+            _startCameraWithDevice(nextDev.id, config);
+        }).catch(() => {
+            _startCameraWithDevice(nextDev.id, config);
+        });
+    }
+};
+
+window.promptManualChaveInput = function() {
+    const raw = prompt('Digite ou cole os 44 dígitos da Chave da NF-e ou o número da NF:');
+    if (raw && raw.trim()) {
+        onCameraCodeDetected(raw.trim());
+    }
 };
 
 window.stopCameraScanner = function() {
@@ -515,9 +641,16 @@ window.onCameraCodeDetected = function(rawCode) {
     stopCameraScanner();
 
     let cleanCode = (rawCode || '').trim();
-    const numericOnly = cleanCode.replace(/\D/g, '');
-    if (numericOnly.length === 44) {
-        cleanCode = numericOnly;
+
+    // 1. Suporte a QR Code da SEFAZ (extrair os 44 dígitos da URL da NF-e) ou código de barras direto
+    const match44 = cleanCode.match(/\d{44}/) || cleanCode.match(/\d{44}/);
+    if (match44) {
+        cleanCode = match44[0];
+    } else {
+        const numericOnly = cleanCode.replace(/\D/g, '');
+        if (numericOnly.length === 44) {
+            cleanCode = numericOnly;
+        }
     }
 
     const targetId = window._cameraTargetInputId;
@@ -525,8 +658,11 @@ window.onCameraCodeDetected = function(rawCode) {
         const inp = document.getElementById(targetId);
         if (inp) {
             inp.value = cleanCode;
-            if (targetId === 'rec-chave-inp' && window.recConsultarChaveManual) {
-                window.recConsultarChaveManual();
+            if (targetId === 'rec-chave-inp') {
+                if (typeof recMascaraChave === 'function') recMascaraChave(inp);
+                if (window.recConsultarChaveManual) window.recConsultarChaveManual();
+            } else if (targetId === 'coletor-busca-nf-input') {
+                if (window.consultarNfColetorManual) window.consultarNfColetorManual();
             } else if (targetId === 'scannerInput') {
                 processScan();
             } else {
@@ -557,10 +693,11 @@ window.toggleCameraTorch = function() {
             const current = track.getSettings().torch || false;
             track.applyConstraints({ advanced: [{ torch: !current }] });
         } else {
-            alert('Lanterna não disponível nesta câmera.');
+            alert('Lanterna não disponível nesta lente. Tente trocar de lente.');
         }
     } catch(e) { console.warn('Torch error:', e); }
 };
+
 // force deploy
 
 

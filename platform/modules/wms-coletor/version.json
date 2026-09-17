@@ -1,8 +1,4 @@
 {
-    "module": "wms-coletor",
-    "name": "Parreira WMS Coletor",
-    "version": "3.18.10",
-    "date": "2026-09-17",
-    "last_change": "v3.18.10 - Inclusao provisoria das NFs homologadas 15105, 15107 e 35845 da Tela 102 com itens e remocao automatica da lista apos recebimento",
-    "build": "20260917.01"
+  "version": "3.18.11",
+  "updated": "2026-09-17 10:30"
 }

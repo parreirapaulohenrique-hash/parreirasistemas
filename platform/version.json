@@ -1,8 +1,4 @@
 {
-  "version": "3.21.37",
-  "build": "20260917-v3.21.37",
-  "environment": "staging",
-  "lastUpdate": "2026-09-17",
-  "deployedAt": "2026-09-17",
-  "change": "v3.21.37 - fix(integrations): resolucao robusta de tenantId no ErpUI e ErpRegistry para evitar erro ao salvar config de ERP no Despacho (/centralpecas)"
+  "version": "3.21.38",
+  "updated": "2026-09-17 10:30"
 }
