@@ -214,6 +214,13 @@ function navigateTo(screenId) {
         if (screenId === 'config'      && window.initConfigScreen)            window.initConfigScreen(target);
         if (screenId === 'recebimento' && window.initConferenciaItensScreen)  window.initConferenciaItensScreen(target);
         if (screenId === 'armazenar'   && window.initArmazenagemScreen)       window.initArmazenagemScreen(target);
+        if (screenId === 'inventario') {
+            if (window.ColetorInventario && window.ColetorInventario.render) {
+                window.ColetorInventario.render(target);
+            } else if (window.initInventarioScreen) {
+                window.initInventarioScreen(target);
+            }
+        }
 
         // Inject placeholder content if screen is empty
         if (target.innerHTML.trim() === '' && screenId !== 'home') {
@@ -707,4 +714,12 @@ window.toggleCameraTorch = function() {
 window.handleScanRecebimento = function(code) {
     if (window.handleScanConferenciaItens) window.handleScanConferenciaItens(code);
     else if (window.handleScanConferir) window.handleScanConferir(code);
+};
+
+
+window.initInventarioScreen = function(target) {
+    const el = target || document.getElementById('screen-inventario');
+    if (window.ColetorInventario && window.ColetorInventario.render) {
+        window.ColetorInventario.render(el);
+    }
 };
