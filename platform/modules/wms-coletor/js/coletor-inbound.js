@@ -38,7 +38,7 @@ window.initConferirScreen = async function(container) {
                     <span class="material-icons-round">qr_code_scanner</span>
                     Recebimento de Carga (Doca)
                 </div>
-                <button onclick="startCameraScanner('scannerInput')" 
+                <button onclick="startCameraScanner('coletor-busca-nf-input')" 
                     style="background:#ec4899;color:white;border:none;padding:.3rem .65rem;border-radius:6px;font-size:.75rem;font-weight:700;display:flex;align-items:center;gap:.3rem;cursor:pointer;">
                     <span class="material-icons-round" style="font-size:.95rem;">photo_camera</span> Bipar Câmera
                 </button>

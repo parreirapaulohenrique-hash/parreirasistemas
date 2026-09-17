@@ -1,8 +1,8 @@
 {
-  "version": "3.21.37",
-  "build": "20260917-v3.21.37",
+  "version": "3.21.38",
+  "build": "20260917-v3.21.38",
   "environment": "staging",
   "lastUpdate": "2026-09-17",
   "deployedAt": "2026-09-17",
-  "change": "v3.21.37 - fix(integrations): resolucao robusta de tenantId no ErpUI e ErpRegistry para evitar erro ao salvar config de ERP no Despacho (/centralpecas)"
+  "change": "v3.21.38 - feat(cotacao): reorganização da tela de Base de Peças em Data Grid tabular com colunas estruturadas, badges e alternador Grid/Cards"
 }
