@@ -16,6 +16,7 @@ const DemandaApp = (function() {
         dashboard:     "nav-dashboard",
         orcamento:     "nav-orcamento",
         concorrente:   "nav-concorrente",
+        produtosErp:   "nav-produtos-erp",
         base:          "nav-base",
         integracaoErp: "nav-integracaoErp"
     };
@@ -53,6 +54,7 @@ const DemandaApp = (function() {
         if (v === "compras")       loadFilaCompras();
         if (v === "orcamento")     loadOrcamento();
         if (v === "concorrente")   loadConcorrente();
+        if (v === "produtosErp")   loadProdutosErp();
         if (v === "base")          loadBaseTecnica();
     }
 
@@ -3123,6 +3125,320 @@ const DemandaApp = (function() {
 
 
     // ════════════════════════════════════════════════════════
+    // VIEW: CADASTRO DE PRODUTOS (ERP MAXDATA)
+    // ════════════════════════════════════════════════════════
+
+    var _produtosErpList = [];
+    var _produtosErpFiltrados = [];
+    var _produtosErpCarregando = false;
+    var _produtosErpBuscaTimeout = null;
+
+    function loadProdutosErp(forceRefresh) {
+        var container = document.getElementById("erpProdutosContainer");
+        var contador  = document.getElementById("erpTotalContador");
+        if (!container) return;
+
+        if (!forceRefresh && _produtosErpList.length > 0) {
+            filtrarProdutosErp();
+            return;
+        }
+
+        _produtosErpCarregando = true;
+        if (contador) contador.textContent = "Conectando ao ERP Maxdata...";
+        container.innerHTML = "<div style='padding:3rem;text-align:center;color:var(--text-secondary)'>" +
+            "<span class='material-icons-round' style='animation:spin 1s linear infinite;font-size:2.2rem;color:var(--accent-primary)'>sync</span>" +
+            "<p style='margin-top:.75rem;font-size:.88rem'>Carregando produtos cadastrados no ERP Maxdata...</p></div>";
+
+        _buscarProdutosErpRemoto(forceRefresh).then(function(prods) {
+            _produtosErpList = prods;
+            _produtosErpCarregando = false;
+            _popularFiltrosErp(prods);
+            filtrarProdutosErp();
+        }).catch(function(err) {
+            console.warn("[DemandaApp] Falha ao carregar direto do ERP, tentando cache do Firestore:", err);
+            _buscarProdutosErpFirestore().then(function(fsProds) {
+                _produtosErpList = fsProds;
+                _produtosErpCarregando = false;
+                _popularFiltrosErp(fsProds);
+                filtrarProdutosErp();
+            }).catch(function(err2) {
+                _produtosErpCarregando = false;
+                container.innerHTML = "<div style='padding:2rem;text-align:center;color:var(--accent-danger)'>" +
+                    "<span class='material-icons-round' style='font-size:2rem'>error_outline</span>" +
+                    "<p style='margin-top:.5rem'>Não foi possível carregar os produtos do ERP: " + _esc(err.message || err) + "</p>" +
+                    "<button class='btn btn-secondary btn-sm' onclick='DemandaApp.loadProdutosErp(true)' style='margin-top:.75rem'>Tentar novamente</button>" +
+                    "</div>";
+            });
+        });
+    }
+
+    async function _buscarProdutosErpRemoto(forceRefresh) {
+        var adapter = null;
+        if (typeof DemandaSearch !== "undefined" && DemandaSearch.getAdapter) {
+            try { adapter = DemandaSearch.getAdapter(); } catch(_) {}
+        }
+        if (!adapter && window.MaxDataAdapter) {
+            var cfg = JSON.parse(sessionStorage.getItem('_demanda_erp_config') || '{}');
+            if (cfg.baseUrl) adapter = new MaxDataAdapter('centralpecas', cfg);
+        }
+        if (!adapter) {
+            throw new Error("Integração ERP não autenticada.");
+        }
+
+        var headers = await adapter._authHeaders();
+        var url = adapter._buildUrl('product', { limit: 150, sincronizacao: true });
+        var resp = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout ? AbortSignal.timeout(12000) : undefined });
+        if (!resp.ok) throw new Error("HTTP " + resp.status + " ao consultar ERP");
+        var data = await resp.json();
+        var rawDocs = Array.isArray(data) ? data : (data.docs || data.data || []);
+        
+        return rawDocs.map(function(item) {
+            var saldo = 0;
+            if (item.estoque && typeof item.estoque === "object") {
+                saldo = Number(item.estoque.filial1 || item.estoque.saldo || item.estoque.total || 0);
+            } else if (item.saldoEstoque !== undefined) {
+                saldo = Number(item.saldoEstoque || 0);
+            } else if (item.estoque !== undefined) {
+                saldo = Number(item.estoque || 0);
+            }
+
+            var preco = Number(item.precoVenda || item.preco || item.valorVenda || item.valorCusto || 0);
+
+            return {
+                id: item.id || item.codigo || item.codigoErp || "",
+                codigoErp: String(item.id || item.codigo || item.codigoErp || ""),
+                codigoFab: (item.codigoFab || item.referencia || item.codigoOriginal || "").trim(),
+                codigoOriginal: (item.codigoOriginal || "").trim(),
+                descricao: (item.descricao || item.descPdv || "").trim(),
+                fabricante: (item.fabricante || (item.fabricanteObj && item.fabricanteObj.nome) || "").trim(),
+                grupo: (item.grupo || (item.grupoObj && item.grupoObj.nome) || "").trim(),
+                subGrupo: (item.subGrupo || "").trim(),
+                aplicacao: (item.aplicacao || "").trim(),
+                unidade: item.unidade || "UN",
+                estoque: saldo,
+                preco: preco,
+                origem: "erp"
+            };
+        });
+    }
+
+    async function _buscarProdutosErpFirestore() {
+        if (typeof firebase === "undefined") return [];
+        var db = firebase.firestore();
+        var snap = await db.collection("tenants/centralpecas/demanda/techbase/products")
+            .where("ativo", "==", true)
+            .limit(150)
+            .get();
+
+        return snap.docs.map(function(doc) {
+            var d = doc.data();
+            return {
+                id: d.codigoErp || doc.id,
+                codigoErp: String(d.codigoErp || ""),
+                codigoFab: (d.referencia || d.codigoFab || "").trim(),
+                codigoOriginal: (d.referencia || "").trim(),
+                descricao: (d.descricao || "").trim(),
+                fabricante: (d.fabricante || "").trim(),
+                grupo: (d.grupo || "").trim(),
+                subGrupo: (d.subGrupo || "").trim(),
+                aplicacao: (d.aplicacao || "").trim(),
+                unidade: d.unidade || "UN",
+                estoque: Number(d.estoque || 0),
+                preco: Number(d.preco || 0),
+                origem: "firestore"
+            };
+        });
+    }
+
+    function _popularFiltrosErp(prods) {
+        var selFab = document.getElementById("erpSelFabricante");
+        var selGrp = document.getElementById("erpSelGrupo");
+        if (!selFab || !selGrp) return;
+
+        var fabSet = {}, grpSet = {};
+        prods.forEach(function(p) {
+            if (p.fabricante) fabSet[p.fabricante.toUpperCase()] = true;
+            if (p.grupo) grpSet[p.grupo.toUpperCase()] = true;
+        });
+
+        var curFab = selFab.value;
+        var curGrp = selGrp.value;
+
+        selFab.innerHTML = "<option value=''>Todos os Fabricantes (" + Object.keys(fabSet).length + ")</option>" +
+            Object.keys(fabSet).sort().map(function(f) {
+                return "<option value='" + _escAttr(f) + "'>" + _esc(f) + "</option>";
+            }).join("");
+
+        selGrp.innerHTML = "<option value=''>Todos os Grupos (" + Object.keys(grpSet).length + ")</option>" +
+            Object.keys(grpSet).sort().map(function(g) {
+                return "<option value='" + _escAttr(g) + "'>" + _esc(g) + "</option>";
+            }).join("");
+
+        if (curFab) selFab.value = curFab;
+        if (curGrp) selGrp.value = curGrp;
+    }
+
+    function onErpBuscaInput() {
+        clearTimeout(_produtosErpBuscaTimeout);
+        _produtosErpBuscaTimeout = setTimeout(function() {
+            var inp = document.getElementById("erpInpBusca");
+            var q = inp ? inp.value.trim() : "";
+            if (q.length >= 2) {
+                var contador = document.getElementById("erpTotalContador");
+                if (contador) contador.textContent = "Buscando \"" + q + "\" no ERP...";
+                
+                if (typeof DemandaSearch !== "undefined") {
+                    DemandaSearch.search(q, { limit: 60, forceRefresh: true }).then(function(res) {
+                        var mapeados = res.map(function(r) {
+                            return {
+                                id: r.erpProdutoId || r._firestoreId || "",
+                                codigoErp: String(r.erpProdutoId || ""),
+                                codigoFab: r.erpCodigoFab || r.referencia || "",
+                                codigoOriginal: r.erpCodigoOriginal || "",
+                                descricao: r.erpProdutoDesc || r.descricao || "",
+                                fabricante: r.fabricante || "",
+                                grupo: r.erpGrupo || "",
+                                aplicacao: r.aplicacao || "",
+                                unidade: r.unidade || "UN",
+                                estoque: Number(r.estoque || 0),
+                                preco: Number(r.preco || 0),
+                                origem: r._fonte || "busca"
+                            };
+                        });
+                        _produtosErpFiltrados = mapeados;
+                        _renderProdutosErpTable(_produtosErpFiltrados);
+                    }).catch(function() {
+                        filtrarProdutosErp();
+                    });
+                    return;
+                }
+            }
+            filtrarProdutosErp();
+        }, 300);
+    }
+
+    function filtrarProdutosErp() {
+        var inpBusca = document.getElementById("erpInpBusca");
+        var selFab   = document.getElementById("erpSelFabricante");
+        var selGrp   = document.getElementById("erpSelGrupo");
+        var chkEst   = document.getElementById("erpChkEstoque");
+
+        var q = (inpBusca ? inpBusca.value : "").trim().toLowerCase();
+        var f = (selFab ? selFab.value : "").toUpperCase();
+        var g = (selGrp ? selGrp.value : "").toUpperCase();
+        var soEstoque = chkEst ? chkEst.checked : false;
+
+        var filtrados = _produtosErpList.filter(function(p) {
+            if (soEstoque && Number(p.estoque || 0) <= 0) return false;
+            if (f && (p.fabricante || "").toUpperCase() !== f) return false;
+            if (g && (p.grupo || "").toUpperCase() !== g) return false;
+            if (q) {
+                var hay = (p.codigoErp + " " + p.codigoFab + " " + p.descricao + " " + p.fabricante + " " + p.aplicacao).toLowerCase();
+                if (hay.indexOf(q) < 0) return false;
+            }
+            return true;
+        });
+
+        _produtosErpFiltrados = filtrados;
+        _renderProdutosErpTable(_produtosErpFiltrados);
+    }
+
+    function _renderProdutosErpTable(lista) {
+        var container = document.getElementById("erpProdutosContainer");
+        var contador  = document.getElementById("erpTotalContador");
+        if (!container) return;
+
+        if (contador) {
+            contador.textContent = lista.length + " produto" + (lista.length === 1 ? "" : "s") + " listado" + (lista.length === 1 ? "" : "s") + " do ERP";
+        }
+
+        if (lista.length === 0) {
+            container.innerHTML = "<div style='padding:3rem;text-align:center;color:var(--text-secondary)'>" +
+                "<span class='material-icons-round' style='font-size:3rem;opacity:.3'>inventory_2</span>" +
+                "<h4 style='margin:.75rem 0 .25rem;color:var(--text-primary)'>Nenhum produto encontrado</h4>" +
+                "<p style='font-size:.85rem'>Tente ajustar os filtros ou pesquisar por outro termo (código OEM, referência ou descrição).</p>" +
+                "</div>";
+            return;
+        }
+
+        var html = "<div class='bt-table-wrapper'>" +
+            "<table class='bt-data-table'>" +
+            "<thead><tr>" +
+            "<th style='width:90px'>Cód. ERP</th>" +
+            "<th style='width:140px'>Cód. Fábrica / OEM</th>" +
+            "<th>Descrição do Produto no ERP</th>" +
+            "<th style='width:130px'>Fabricante</th>" +
+            "<th style='width:120px'>Grupo</th>" +
+            "<th style='width:100px;text-align:center'>Estoque</th>" +
+            "<th style='width:110px;text-align:right'>Preço Venda</th>" +
+            "<th style='width:120px;text-align:center'>Ações</th>" +
+            "</tr></thead><tbody>";
+
+        html += lista.map(function(item) {
+            var temEstoque = Number(item.estoque || 0) > 0;
+            var estCor = temEstoque ? "#10b981" : "#94a3b8";
+            var estBg  = temEstoque ? "rgba(16,185,129,.12)" : "rgba(148,163,184,.1)";
+            var precoFormatado = Number(item.preco || 0) > 0
+                ? "R$ " + Number(item.preco).toFixed(2).replace(".", ",")
+                : "—";
+
+            var codErp = item.codigoErp ? "#" + _esc(item.codigoErp) : "—";
+            var codFab = item.codigoFab ? _esc(item.codigoFab) : "—";
+            var desc   = _esc(item.descricao || "SEM DESCRIÇÃO");
+            var fab    = item.fabricante ? "<span class='bt-brand-badge'>" + _esc(item.fabricante) + "</span>" : "—";
+            var grp    = item.grupo ? _esc(item.grupo) : "—";
+
+            var safeRef  = _escAttr(item.codigoFab || item.codigoErp || "");
+            var safeDesc = _escAttr(item.descricao || "");
+            var safePreco = Number(item.preco || 0);
+            var safeId   = _escAttr(item.codigoErp || item.id || "");
+
+            return "<tr class='bt-tr-main'>" +
+                "<td style='font-family:monospace;font-weight:700;color:var(--accent-primary)'>" + codErp + "</td>" +
+                "<td><strong style='color:var(--text-primary);letter-spacing:.02em'>" + codFab + "</strong></td>" +
+                "<td>" +
+                "<div style='font-weight:600;color:var(--text-primary);line-height:1.3'>" + desc + "</div>" +
+                (item.aplicacao ? "<div style='font-size:.72rem;color:var(--text-secondary);margin-top:2px'>" + _esc(item.aplicacao) + "</div>" : "") +
+                "</td>" +
+                "<td>" + fab + "</td>" +
+                "<td style='font-size:.75rem;color:var(--text-secondary)'>" + grp + "</td>" +
+                "<td style='text-align:center'>" +
+                "<span style='display:inline-block;padding:.15rem .45rem;border-radius:4px;font-weight:700;font-size:.72rem;background:" + estBg + ";color:" + estCor + "'>" +
+                (item.estoque || 0) + " " + (item.unidade || "UN") +
+                "</span>" +
+                "</td>" +
+                "<td style='text-align:right;font-weight:700;color:var(--text-primary);font-size:.82rem'>" + precoFormatado + "</td>" +
+                "<td style='text-align:center;white-space:nowrap'>" +
+                "<div style='display:inline-flex;gap:.35rem'>" +
+                "<button onclick=\"DemandaApp.cotarProdutoErp('" + safeId + "','" + safeRef + "','" + safeDesc + "'," + safePreco + ")\" class='btn btn-primary btn-sm' style='padding:.25rem .55rem;font-size:.72rem' title='Adicionar à Cotação Atual'>" +
+                "<span class='material-icons-round' style='font-size:.85rem'>add_shopping_cart</span> Cotar" +
+                "</button>" +
+                "<button onclick=\"navigator.clipboard.writeText('" + safeRef + "');DemandaApp._toast('Código " + safeRef + " copiado!','success')\" class='btn btn-secondary btn-sm' style='padding:.25rem .4rem;font-size:.72rem' title='Copiar Referência'>" +
+                "<span class='material-icons-round' style='font-size:.85rem'>content_copy</span>" +
+                "</button>" +
+                "</div>" +
+                "</td>" +
+                "</tr>";
+        }).join("");
+
+        html += "</tbody></table></div>";
+        container.innerHTML = html;
+    }
+
+    function cotarProdutoErp(codigo, ref, desc, preco) {
+        switchView("captura");
+        _itens.push({
+            refOriginal: ref || codigo,
+            descOriginal: desc || "",
+            qtdeSolicitada: 1,
+            erpProdutoId: codigo || null,
+            preco: preco || 0
+        });
+        renderItens();
+        _toast("Produto " + (ref || codigo) + " adicionado à cotação!", "success");
+    }
+
+    // ════════════════════════════════════════════════════════
     // VIEW: BASE TÉCNICA HIERÁRQUICA (Prompt 2 — Seções 5.2, 5.3, 5.4)
     // ════════════════════════════════════════════════════════
 
@@ -3135,23 +3451,22 @@ const DemandaApp = (function() {
     var _PECA_MESTRE_SEED = [
         {
             codigoMestre: "PM-00101",
-            funcaoTecnica: "ROLAMENTO AUTOCOMPENSADOR DO ROTOR DA COLHEITADEIRA",
+            funcaoTecnica: "DEDO SEPARADOR DO ROTOR DA COLHEITADEIRA",
             marca: "JOHN DEERE",
             tipoEquipamento: "COLHEITADEIRA",
-            modeloEquipamento: "S680, S690, STS 9750, 9670",
+            modeloEquipamento: "S680, S690, STS 9750, 9670, 9770",
             sistema: "CORTE",
-            subsistema: "Rotor Afx & Tubo Alimentador",
+            subsistema: "Rotor & Separação",
             refOem: "AH213767",
             equivalentes: [
-                { ref: "84074780", marca: "CASE IH", grau: "1" },
-                { ref: "87682993", marca: "NEW HOLLAND", grau: "2" },
-                { ref: "22210-E", marca: "FAG / INA", grau: "3" },
-                { ref: "22210-CC", marca: "SKF", grau: "4" }
+                { ref: "AH213767-ITS", marca: "ITS", grau: "1" },
+                { ref: "AH213767-VV", marca: "V.V", grau: "2" },
+                { ref: "H171540", marca: "JOHN DEERE", grau: "1" }
             ],
-            erpCodigo: "100234",
-            erpDesc: "ROLAMENTO 22210 AUTOCOMPENSADOR ROTOR JD/CASE",
-            estoque: 8,
-            preco: 385.00
+            erpCodigo: "5336",
+            erpDesc: "DEDO SEPARADOR DA COLHEITADEIRA",
+            estoque: 15,
+            preco: 163.83
         },
         {
             codigoMestre: "PM-00102",
@@ -3903,6 +4218,11 @@ const DemandaApp = (function() {
         _loadHistoricoConcorrente:    _loadHistoricoConcorrente,
         _toggleConcCard:              _toggleConcCard,
         _arquivarCotacaoConcorrente:  _arquivarCotacaoConcorrente,
+        // Cadastro de Produtos (ERP Maxdata)
+        loadProdutosErp:              loadProdutosErp,
+        onErpBuscaInput:              onErpBuscaInput,
+        filtrarProdutosErp:           filtrarProdutosErp,
+        cotarProdutoErp:              cotarProdutoErp,
         // Base Técnica Hierárquica (Prompt 2)
         loadBaseTecnica:              loadBaseTecnica,
         onBtFiltroChange:             onBtFiltroChange,

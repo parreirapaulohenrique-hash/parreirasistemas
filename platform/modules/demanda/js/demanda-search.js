@@ -276,8 +276,10 @@ const DemandaSearch = (() => {
         const headers = await adapter._authHeaders();
         const results = [];
 
-        // Maxdata GET /product aceita: codigoBarras (barcode) e descricao (texto)
+        // Maxdata GET /product aceita: codigoFab, codigoBarras (barcode) e descricao (texto)
         const attempts = [
+            adapter._buildUrl('product', { codigoFab: query.trim(), limit: 30, sincronizacao: true }),
+            adapter._buildUrl('product', { codigoFab: normRef, limit: 30, sincronizacao: true }),
             adapter._buildUrl('product', { codigoBarras: normRef, limit: 15, sincronizacao: true }),
             adapter._buildUrl('product', { codigoBarras: query.toUpperCase(), limit: 15, sincronizacao: true }),
             adapter._buildUrl('product', { descricao: normRef, limit: 30, sincronizacao: true }),
