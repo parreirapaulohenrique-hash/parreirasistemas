@@ -383,7 +383,48 @@
             const isMaster = (isMasterTenant && ["admin","master"].includes((user.role || "").toLowerCase()))
                 || (isMasterTenant && user.login === "paulo");
 
-            const userMods = sessao.modulos || user.modulos || [];
+            // Módulos do usuário/tenant com sincronização imediata
+            let userMods = sessao.modulos || user.modulos || [];
+
+            // 1. Verifica se há alteração recente gravada pelo Painel Master no localStorage
+            try {
+                const reg = JSON.parse(localStorage.getItem('platform_tenants_registry') || '[]');
+                const tReg = reg.find(t => t.id === tenantId || t.slug === tenantId);
+                if (tReg && Array.isArray(tReg.modules) && tReg.modules.length > 0) {
+                    if (['admin', 'master'].includes((user.role || '').toLowerCase())) {
+                        userMods = tReg.modules;
+                    }
+                }
+            } catch (_) {}
+
+            // 2. Sincronização em tempo real via Firestore (caso Master altere permissões remotamente)
+            if (typeof ParreiraAuth !== 'undefined' && tenantId && !window._tenantSyncing) {
+                window._tenantSyncing = true;
+                try {
+                    const db = ParreiraAuth.getDB ? ParreiraAuth.getDB() : null;
+                    if (db) {
+                        db.collection('tenants').doc(tenantId).get().then(doc => {
+                            window._tenantSyncing = false;
+                            if (doc.exists) {
+                                const tData = doc.data();
+                                const remoteMods = tData.modulos || tData.modules || [];
+                                if (remoteMods.length > 0 && ['admin', 'master'].includes((user.role || '').toLowerCase())) {
+                                    const c1 = (sessao.modulos || []).slice().sort().join(',');
+                                    const c2 = remoteMods.slice().sort().join(',');
+                                    if (c1 !== c2) {
+                                        console.log('🔄 [Portal] Módulos sincronizados com Firestore:', remoteMods);
+                                        sessao.modulos = remoteMods;
+                                        sessao.tenantModulos = remoteMods;
+                                        sessionStorage.setItem('parreira_session', JSON.stringify(sessao));
+                                        try { localStorage.setItem('parreira_session_ls', JSON.stringify(sessao)); } catch(_) {}
+                                        renderUserInfo(user);
+                                    }
+                                }
+                            }
+                        }).catch(e => { window._tenantSyncing = false; });
+                    }
+                } catch(_) { window._tenantSyncing = false; }
+            }
 
             // 1. Painel Admin (Master)
             const masterCard = document.querySelector('.module-master');
@@ -413,7 +454,7 @@
                 { id: "wms",             aliases: ["wms"], selector: ".module-wms" },
                 { id: "wms-coletor",     aliases: ["wms-coletor", "coletor"], selector: ".module-wms-coletor" },
                 { id: "erp-consultoria", aliases: ["erp-consultoria", "consultoria", "bussola", "fluxo-caixa"], selector: ".module-fluxo-caixa" },
-                { id: "demanda",         aliases: ["demanda", "cotacao", "inteligencia-demanda"], selector: ".module-demanda, .module-card[onclick*=\"demanda\"]" },
+                { id: "demanda",         aliases: ["demanda", "cotacao", "cotação", "inteligencia-demanda", "cotacoes"], selector: ".module-demanda, .module-card[onclick*=\"demanda\"]" },
                 { id: "prospeccao",      aliases: ["prospeccao", "maxcrm"], selector: ".module-maxcrm, .module-card[onclick*=\"prospeccao\"]" }
             ];
             moduleMap.forEach(({ id, aliases, selector }) => {

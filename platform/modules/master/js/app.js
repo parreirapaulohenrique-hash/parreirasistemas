@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Listener do form de editar liberaÃ§Ãµes de mÃ³dulos
     const editTenantForm = document.getElementById('editTenantForm');
     if (editTenantForm) {
-        editTenantForm.addEventListener('submit', (e) => {
+        editTenantForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const id      = document.getElementById('editTenantIdField').value;
             const modules = Array.from(document.querySelectorAll('input[name="editModules"]:checked')).map(cb => cb.value);
@@ -141,16 +141,31 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             localStorage.setItem('platform_tenants_registry', JSON.stringify(dynamicTenants));
 
-            // Atualiza Firestore: modulos do tenant (para auth.js refletir modulos corretos no login)
+            // Se for o tenant da sessão ativa salva no localStorage, atualiza também a sessão local
             try {
+                const sessLs = JSON.parse(localStorage.getItem('parreira_session_ls') || 'null');
+                if (sessLs && (sessLs.tenantId === id || sessLs.tenantId === id + '_hml')) {
+                    sessLs.modulos = modules;
+                    sessLs.tenantModulos = modules;
+                    localStorage.setItem('parreira_session_ls', JSON.stringify(sessLs));
+                    sessionStorage.setItem('parreira_session', JSON.stringify(sessLs));
+                }
+            } catch(_) {}
+
+            // Atualiza Firestore: modulos do tenant (com ensureAuth para autenticar com segurança)
+            try {
+                if (ParreiraAuth.ensureAuth) await ParreiraAuth.ensureAuth();
                 const tenant = getAllTenants().find(t => t.id === id);
                 const db = ParreiraAuth.getDB();
-                db.collection('tenants').doc(id).set({
-                    nome:    tenant?.name || id,
-                    modulos: modules,
-                    ativo:   true
-                }, { merge: true }).catch(e => console.warn('[Master] Firestore edit tenant:', e.message));
-            } catch(e) { console.warn('[Master] Firebase nao disponivel:', e.message); }
+                if (db) {
+                    await db.collection('tenants').doc(id).set({
+                        nome:    tenant?.name || id,
+                        modulos: modules,
+                        ativo:   true
+                    }, { merge: true });
+                    console.log('[Master] Firestore tenant atualizado com sucesso:', id, modules);
+                }
+            } catch(e) { console.warn('[Master] Firestore edit tenant:', e.message); }
 
             closeModal('editTenantModal');
             renderTenants();

@@ -14,7 +14,7 @@ window.mockTenants = [
         name: 'LT Distribuidora Peças Motos',
         cnpj: '08.747.452/0001-43',
         slug: 'ltdistribuidora',
-        modules: ['dispatch'],
+        modules: ['dispatch', 'wms', 'wms-coletor'],
         status: 'active',
         adminEmail: 'contato@ltdistribuidora.com.br'
     },
@@ -24,7 +24,7 @@ window.mockTenants = [
         cnpj: '12.987.654/0001-11',
         slug: 'centralpecas',
         adminEmail: 'admin@centralpecas.com.br',
-        modules: ['dispatch'],
+        modules: ['dispatch', 'wms', 'wms-coletor', 'demanda'],
         status: 'active',
         createdAt: '2026-01-31'
     },
@@ -69,7 +69,7 @@ window.mockTenants = [
         name: 'Central Peças [HML]',
         cnpj: '12.987.654/0001-11',
         slug: 'centralpecas',
-        modules: ['dispatch', 'wms', 'wms-coletor', 'erp-consultoria'],
+        modules: ['dispatch', 'wms', 'wms-coletor', 'demanda'],
         status: 'active'
     },
     {
