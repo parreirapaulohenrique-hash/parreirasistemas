@@ -1,8 +1,8 @@
 {
     "module": "wms-coletor",
     "name": "Parreira WMS Coletor",
-    "version": "3.18.9",
-    "date": "2026-09-16",
-    "last_change": "v3.18.9 - Integracao completa de recebimento no coletor com MaxData via proxy seguro, busca flexivel de NF, carga de itens para conferencia cega, sem falhas de indices Firestore e atalhos na barra inferior",
-    "build": "20260916.03"
+    "version": "3.18.10",
+    "date": "2026-09-17",
+    "last_change": "v3.18.10 - Inclusao provisoria das NFs homologadas 15105, 15107 e 35845 da Tela 102 com itens e remocao automatica da lista apos recebimento",
+    "build": "20260917.01"
 }

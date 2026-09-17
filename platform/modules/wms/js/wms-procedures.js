@@ -183,6 +183,29 @@
     }
 
     async function _buscarNf_maxdata(chave, cnpjs) {
+        if (typeof ATIVAR_NFS_PROVISORIAS !== 'undefined' && ATIVAR_NFS_PROVISORIAS) {
+            const prov = NFS_PROVISORIAS.find(p =>
+                p.numero === chave ||
+                p.chaveNfe === chave ||
+                (chave.length >= 4 && (p.chaveNfe.includes(chave) || p.numero.includes(chave)))
+            );
+            if (prov) {
+                const nf = _normalizeNf(prov);
+                nf.itens = prov.itens;
+                nf._maxdataId = prov._maxdataId;
+                return {
+                    found: true,
+                    nf,
+                    empresa: cnpjs[0] || null,
+                    empresas: cnpjs,
+                    source: 'maxdata',
+                    cnpjValido: true,
+                    descarregamentoAutorizado: true,
+                    conferenciaItensStatus: 'LIBERADA',
+                    statusMensagem: 'Descarregamento e Conferência de Itens Liberados (Entrada Homologada 102)'
+                };
+            }
+        }
         try {
             const token   = await _maxdataGetToken();
             const entries = await _maxdataGetEntries(token);
@@ -364,6 +387,16 @@
                 result = { found: false, nf: null, empresa: null, empresas: [], source: 'rest-api', error: err.message };
             }
         } else if (id === 'maxdata') {
+            if (typeof ATIVAR_NFS_PROVISORIAS !== 'undefined' && ATIVAR_NFS_PROVISORIAS) {
+                const prov = NFS_PROVISORIAS.find(p => String(p.numero) === String(numero));
+                if (prov) {
+                    const nf = _normalizeNf(prov);
+                    nf.itens = prov.itens;
+                    nf._maxdataId = prov._maxdataId;
+                    const empresa = cnpjs.find(c => _cleanCnpj(c.cnpj) === _cleanCnpj(nf.cnpjDestinatario)) || cnpjs[0] || null;
+                    return { found: true, nf, empresa, empresas: empresa ? [empresa] : [], source: 'maxdata' };
+                }
+            }
             try {
                 const token   = await _maxdataGetToken();
                 const entries = await _maxdataGetEntries(token);
@@ -1102,17 +1135,27 @@ ${emailRemetente ? `<${emailRemetente}>` : ''}
 
     async function proc_listar_nfs_erp() {
         const { id } = _getConnector();
+        let entries = [];
         if (id === 'maxdata') {
             try {
                 const token   = await _maxdataGetToken();
-                const entries = await _maxdataGetEntries(token);
-                return (entries || []).map(e => _maxdataNorm(e));
+                const rawEntries = await _maxdataGetEntries(token);
+                entries = (rawEntries || []).map(e => _maxdataNorm(e));
             } catch(e) {
                 console.warn('[Maxdata] Falha ao listar NFs pendentes do ERP:', e.message);
-                return [];
             }
         }
-        return [];
+        if (typeof ATIVAR_NFS_PROVISORIAS !== 'undefined' && ATIVAR_NFS_PROVISORIAS) {
+            for (const prov of NFS_PROVISORIAS) {
+                if (!entries.some(e => String(e.numero) === String(prov.numero))) {
+                    const normProv = _normalizeNf(prov);
+                    normProv.itens = prov.itens;
+                    normProv._maxdataId = prov._maxdataId;
+                    entries.push(normProv);
+                }
+            }
+        }
+        return entries;
     }
 
     window.WmsProcedures = {
