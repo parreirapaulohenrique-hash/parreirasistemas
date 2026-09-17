@@ -21,10 +21,13 @@ window.initConferirScreen = async function(container) {
     container.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-secondary);"><span class="material-icons-round" style="font-size:2rem;display:block;animation:spin 1s linear infinite;margin-bottom:.4rem;">sync</span><span style="font-size:.82rem;">Carregando dados de recebimento...</span></div>`;
     
     // Busca fila local e NFs pendentes do ERP em paralelo
-    const [pending, erpNfs] = await Promise.all([
+    const [pending, todosRecebidos, erpNfsRaw] = await Promise.all([
         WmsStore.listarRecebimentos({ status: 'AGUARDANDO_CONFERENCIA' }).catch(() => []),
+        WmsStore.listarRecebimentos().catch(() => []),
         (window.WmsProcedures && window.WmsProcedures.proc_listar_nfs_erp ? window.WmsProcedures.proc_listar_nfs_erp() : Promise.resolve([])).catch(() => [])
     ]);
+    const recebidosNum = new Set(todosRecebidos.map(r => String(r.nfNumero)));
+    const erpNfs = erpNfsRaw.filter(e => !recebidosNum.has(String(e.numero)));
     pending.sort((a, b) => new Date(a.criadoEm||0) - new Date(b.criadoEm||0));
 
     container.innerHTML = `

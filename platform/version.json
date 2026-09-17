@@ -1,8 +1,8 @@
 {
-  "version": "3.21.35",
-  "build": "20260917-v3.21.35",
+  "version": "3.21.36",
+  "build": "20260917-v3.21.36",
   "environment": "staging",
-  "lastUpdate": "2026-09-16",
-  "deployedAt": "2026-09-16",
-  "change": "v3.21.35 - fix(hml): restaurado Bussola Gestao para Central Pecas [HML] e ativacao da faixa amarela para tenants _hml"
+  "lastUpdate": "2026-09-17",
+  "deployedAt": "2026-09-17",
+  "change": "v3.21.36 - feat(wms-coletor): suporte provisorio para NFs homologadas 15105, 15107 e 35845 da Tela 102 no coletor com itens e descarte automatico apos conferencia"
 }
