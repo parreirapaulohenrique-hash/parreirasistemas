@@ -358,8 +358,10 @@ Abra o terminal do PowerShell na raiz do projeto (`C:\Users\Paulo H Parreira\.ge
 
 | Módulo | Pasta | Política de Deploy | Rationale |
 |---|---|---|
+| **3.21.35** | 2026-09-17 | Ambientes / Licenças HML: Restauração da Bússola Gestão para `centralpecas_hml` e Cotação para `centralpecas`. Ativação da faixa amarela de homologação quando o tenant autenticado for de testes (`_hml`). |
 | **3.21.34** | 2026-09-16 | WMS Coletor (v3.18.9): Fluxo de recebimento e conferência de NF no coletor 100% integrado ao ERP MaxData (proxy HTTPS anti Mixed-Content, busca por chave ou número de NF, carga de itens para conferência cega/aberta, consultas Firestore index-safe e listagem de NFs pendentes do ERP na Doca). |
 | **3.21.32** | 2026-09-16 | Hub / Licenças: Sincronização em tempo real das licenças do tenant via Firestore e `platform_tenants_registry`. Correção dos módulos padrão da Central Peças (`centralpecas`), habilitando o card Cotação (`demanda`) e ocultando Bússola Gestão. |
+| **3.21.35** | 2026-09-17 | Ambientes / Licenças HML: Restauração da Bússola Gestão para `centralpecas_hml` e Cotação para `centralpecas`. Ativação da faixa amarela de homologação quando o tenant autenticado for de testes (`_hml`). |
 | **3.21.34** | 2026-09-16 | Hub / Cotação: Habilitação do módulo Cotação para o tenant Central Peças (`centralpecas`), remoção de Bússola Gestão e sincronização em tempo real das licenças do tenant com o Painel Master. |
 | **3.21.31** | 2026-09-16 | Hub / Ocultação Estrita de Módulos: Módulos não contratados pelo tenant agora são completamente ocultados do Hub (`display: none`), não aparecendo para o cliente. Corrigida desestruturação de `aliases` no loop de permissões. |
 | **3.21.30** | 2026-09-16 | Hub / Identidade (Transparência de Tenant): Exibição explícita do nome e slug da empresa no cabeçalho do Hub da plataforma (`{Role} • {Empresa} ({Tenant})`) e no cartão inicial do MAXCRM, eliminando dúvidas sobre qual empresa está autenticada na sessão. |

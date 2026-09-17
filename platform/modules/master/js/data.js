@@ -69,7 +69,7 @@ window.mockTenants = [
         name: 'Central Peças [HML]',
         cnpj: '12.987.654/0001-11',
         slug: 'centralpecas',
-        modules: ['dispatch', 'wms', 'wms-coletor', 'demanda'],
+        modules: ['dispatch', 'wms', 'wms-coletor', 'erp-consultoria'],
         status: 'active'
     },
     {

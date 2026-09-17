@@ -35,23 +35,33 @@
         <span>⚠️</span>
     </div>
     <script>
-        // Exibe banner e ajusta padding SOMENTE em homologação/localhost/preview
+        // Exibe banner em homologação/localhost/preview OU quando o tenant autenticado for de testes (_hml)
         (function() {
             var h = window.location.hostname;
-            if (h.includes('staging') || h.includes('localhost') || h === '127.0.0.1' || (h.includes('vercel.app') && h !== 'parreirasistemas.vercel.app')) {
+            var isHmlHost = h.includes('staging') || h.includes('localhost') || h === '127.0.0.1' || (h.includes('vercel.app') && h !== 'parreirasistemas.vercel.app');
+
+            var s = null;
+            try { s = JSON.parse(sessionStorage.getItem('parreira_session') || localStorage.getItem('parreira_session_ls') || 'null'); } catch(_) {}
+            var tId = (s && s.tenantId) ? s.tenantId : (localStorage.getItem('app_tenant_id') || '');
+            var isHmlTenant = tId.endsWith('_hml') || tId.includes('_hml');
+
+            if (isHmlHost || isHmlTenant) {
                 var b = document.getElementById('stagingBanner');
                 if (b) { 
                     b.style.display = 'flex'; 
                     document.body.style.paddingTop = '34px'; 
-                    // Ajusta overlay de login para começar abaixo da faixa de homologação
+                    if (isHmlTenant && !isHmlHost) {
+                        b.innerHTML = '<span>⚠️</span><span>TENANT DE HOMOLOGAÇÃO [' + tId.toUpperCase() + '] — AMBIENTE DE TESTES</span><span>⚠️</span>';
+                    }
                     var loginOverlay = document.querySelector('.login-overlay');
                     if (loginOverlay) {
                         loginOverlay.style.top = '34px';
                         loginOverlay.style.height = 'calc(100% - 34px)';
                     }
                 }
-                // Adiciona prefixo [HOMOLOG] ao título da aba
-                document.title = '[HOMOLOG] ' + document.title;
+                if (!document.title.startsWith('[HOMOLOG]')) {
+                    document.title = '[HOMOLOG] ' + document.title;
+                }
             }
         })();
     </script>

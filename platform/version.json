@@ -1,8 +1,8 @@
 {
-  "version": "3.21.34",
-  "build": "20260916-v3.21.34",
+  "version": "3.21.35",
+  "build": "20260917-v3.21.35",
   "environment": "staging",
   "lastUpdate": "2026-09-16",
   "deployedAt": "2026-09-16",
-  "change": "v3.21.34 - fix(hub): exibicao do modulo Cotacao para Central Pecas e sincronizacao de licencas"
+  "change": "v3.21.35 - fix(hml): restaurado Bussola Gestao para Central Pecas [HML] e ativacao da faixa amarela para tenants _hml"
 }
