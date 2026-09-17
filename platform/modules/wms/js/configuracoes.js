@@ -183,21 +183,59 @@ function renderCfgArmazenagem(container) {
             </div>
         </div>
 
-        <!-- Seção 2: Tipo de Endereçamento -->
+                <!-- Seção 2: Tipo de Endereçamento & Política de Picking -->
         <div class="card">
             <div class="card-header">
                 <h3 style="font-size:.95rem;font-weight:600;">
                     <span class="material-icons-round" style="font-size:1.1rem;vertical-align:middle;">location_on</span>
-                    Tipo de Endereçamento
+                    Tipo de Endereçamento & Política de Picking
                 </h3>
             </div>
-            <div style="padding:1.25rem;display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
-                ${_radio('cfgTipoEnd','FLUTUANTE',tipoEnd,
-                    '🌊 Endereço Flutuante (Curva ABCD)',
-                    'Produto ocupa endereços do setor da sua curva. Curva calculada por frequência de acessos de picking.')}
-                ${_radio('cfgTipoEnd','FIXO',tipoEnd,
-                    '📌 Endereço Fixo por Produto',
-                    'Cada produto tem endereço, capacidade e ponto de reposição fixos. Gera tarefa de abastecimento automático.')}
+            <div style="padding:1.25rem;display:flex;flex-direction:column;gap:1.25rem;">
+                <div>
+                    <label style="font-size:.82rem;font-weight:700;display:block;margin-bottom:.5rem;color:var(--text-primary);">
+                        Modo de Endereçamento:
+                    </label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+                        ${_radio('cfgTipoEnd','FLUTUANTE',tipoEnd,
+                            '🔄 Endereço Dinâmico / Caótico',
+                            'Produto pode ser guardado livremente em qualquer endereço compatível sugerido pelo sistema.')}
+                        ${_radio('cfgTipoEnd','FIXO',tipoEnd,
+                            '📌 Endereço Fixo por Produto',
+                            'Cada SKU possui endereço(s) pré-determinado(s) vinculados na tabela de endereços fixos.')}
+                    </div>
+                </div>
+
+                <div style="border-top:1px solid rgba(255,255,255,.07);padding-top:1rem;">
+                    <label style="font-size:.82rem;font-weight:700;display:block;margin-bottom:.5rem;color:var(--text-primary);">
+                        Política de Picking por Produto:
+                    </label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+                        ${_radio('cfgLimitePicking','UNICO', (cfg.putaway?.limitePickingPorSku || 'UNICO'),
+                            '🎯 Apenas 1 Endereço de Picking por Produto',
+                            'O produto só pode ter 1 endereço de picking ativo. Qualquer excedente deve ir para o Pulmão.')}
+                        ${_radio('cfgLimitePicking','MULTIPLO', (cfg.putaway?.limitePickingPorSku || 'UNICO'),
+                            '📦 Múltiplos Endereços de Picking por Produto',
+                            'O mesmo produto pode ocupar simultaneamente 2 ou mais endereços de picking (itens de alto giro).')}
+                    </div>
+                </div>
+
+                <div style="border-top:1px solid rgba(255,255,255,.07);padding-top:1rem;display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div>
+                        <label style="font-size:.78rem;font-weight:600;display:block;margin-bottom:.35rem;">Ação em Divergência de Endereço Fixo</label>
+                        <select id="cfgAcaoDivergencia" class="form-input" style="width:100%;">
+                            <option value="ALERTAR" ${cfg.putaway?.acaoDivergencia === 'ALERTAR' ? 'selected' : ''}>⚠️ Alertar com Confirmação</option>
+                            <option value="BLOQUEAR" ${cfg.putaway?.acaoDivergencia === 'BLOQUEAR' ? 'selected' : ''}>🛑 Bloquear Bipagem Fora do Fixo</option>
+                            <option value="ATUALIZAR" ${cfg.putaway?.acaoDivergencia === 'ATUALIZAR' ? 'selected' : ''}>✏️ Permitir Atualizar Fixo no Inventário</option>
+                        </select>
+                    </div>
+                    <div style="display:flex;align-items:center;padding-top:1.2rem;">
+                        <label style="display:flex;align-items:center;gap:.5rem;font-size:.8rem;cursor:pointer;">
+                            <input type="checkbox" id="cfgMisturaSku" ${cfg.putaway?.permiteMisturaSku !== false ? 'checked' : ''}>
+                            <span>Permitir múltiplos produtos diferentes no mesmo endereço (vão compartilhado)</span>
+                        </label>
+                    </div>
+                </div>
             </div>
         </div>
 

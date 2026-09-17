@@ -559,3 +559,5 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
 
 ### 9.5. Registro de Atualizacoes Recentes (Historico)
 * **2026-09-17 (v3.21.38 / Coletor v3.18.11):** Correcao completa da camera do WMS Coletor. Corrigido problema de tela preta com estilizacao do elemento de video (#cameraScannerReader video), selecao automatica de lentes traseiras (Html5Qrcode.getCameras), botao de alternar lentes (cameraswitch), suporte a leitura de Chave NF-e 44 digitos via codigo de barras CODE_128 e QR Code da SEFAZ, alem de atalho para digitacao/colagem direta no modal.
+
+* **2026-09-17 (v3.21.39 / Coletor v3.18.12):** Implementacao completa da infraestrutura de Inventario e Mapeamento de Estoque por Endereco no WMS Coletor e WMS Web. Parametrizacao na aba Regras de Armazenagem com suporte a Enderecamento Fixo vs Dinamico (Caotico), Politica de Picking Unico vs Multiplos Pickings por Produto, Acao de Divergencia de Fixo (Alertar, Bloquear, Atualizar) e Mistura de SKUs no vao.

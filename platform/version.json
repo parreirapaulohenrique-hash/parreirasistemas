@@ -1,8 +1,4 @@
 {
   "version": "3.21.39",
-  "build": "20260917-v3.21.39",
-  "environment": "staging",
-  "lastUpdate": "2026-09-17",
-  "deployedAt": "2026-09-17",
-  "change": "v3.21.39 - feat(cotacao): aba de Cadastro de Produtos do ERP (Maxdata) com busca instantânea + aba Base Externa dedicada (Prompt 2)"
+  "updated": "2026-09-17 11:55"
 }

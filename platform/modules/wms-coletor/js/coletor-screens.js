@@ -937,6 +937,7 @@ window.confirmarPickMobile = function (taskId) {
 // Workflow: See active inventory → scan address → input count → save
 
 window.handleScanInventario = function (code) {
+    if (window.ColetorInventario && window.ColetorInventario.handleScan) { window.ColetorInventario.handleScan(code); return; }
     const inventarios = JSON.parse(localStorage.getItem('wms_inventarios') || '[]');
     const active = inventarios.find(i => i.status === 'EM ANDAMENTO');
     if (!active) {
@@ -958,6 +959,7 @@ window.handleScanInventario = function (code) {
 };
 
 function initInventarioScreen(container) {
+    if (window.ColetorInventario && window.ColetorInventario.render) { window.ColetorInventario.render(container); return; }
     const inventarios = JSON.parse(localStorage.getItem('wms_inventarios') || '[]');
     const active = inventarios.filter(i => i.status === 'EM ANDAMENTO');
 
