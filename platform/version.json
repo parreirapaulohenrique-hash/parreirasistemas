@@ -4,5 +4,5 @@
   "environment": "staging",
   "lastUpdate": "2026-09-17",
   "deployedAt": "2026-09-17",
-  "change": "v3.21.37 - refactor(master): atualizar exibicao do modulo para Cotacao no Painel Admin/Master"
+  "change": "v3.21.37 - fix(integrations): resolucao robusta de tenantId no ErpUI e ErpRegistry para evitar erro ao salvar config de ERP no Despacho (/centralpecas)"
 }

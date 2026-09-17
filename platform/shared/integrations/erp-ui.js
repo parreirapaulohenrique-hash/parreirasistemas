@@ -24,46 +24,104 @@ const ErpUI = {
     _connected: false,
 
     /**
+     * Resolve o tenantId a partir da URL, sessionStorage, ParreiraAuth ou fallbacks.
+     */
+    _resolveTenant() {
+        let tid = '';
+
+        // 1. URL Path: /centralpecas ou /centralpecas_hml ou /wms/centralpecas
+        try {
+            const pathParts = window.location.pathname.split('/').filter(Boolean);
+            for (const part of pathParts) {
+                if (['centralpecas', 'ltdistribuidora', 'parreira', 'altafix', 'parreiralog'].some(k => part.startsWith(k))) {
+                    tid = part;
+                    break;
+                }
+            }
+            if (!tid && pathParts.length > 0 && !['platform', 'modules', 'dispatch', 'wms', 'demanda', 'admin'].includes(pathParts[0])) {
+                tid = pathParts[0];
+            }
+        } catch (e) { /* ignora */ }
+
+        // 2. Query string: ?tenant=centralpecas
+        if (!tid) {
+            try {
+                const qs = new URLSearchParams(window.location.search);
+                tid = qs.get('tenant') || qs.get('tenantId') || '';
+            } catch (e) { /* ignora */ }
+        }
+
+        // 3. ParreiraAuth
+        if (!tid) {
+            try {
+                if (window.ParreiraAuth) {
+                    const s = ParreiraAuth.getSessao?.();
+                    tid = s?.tenant || s?.tenantId || s?.empresa || '';
+                    if (s?.nome || s?.name) this._operatorName = s.nome || s.name;
+                }
+            } catch (e) { /* ignora */ }
+        }
+
+        // 4. sessionStorage: parreira_session (chave canônica do ParreiraAuth)
+        if (!tid) {
+            try {
+                const ss = JSON.parse(sessionStorage.getItem('parreira_session') || 'null');
+                tid = ss?.tenant || ss?.tenantId || ss?.empresa || '';
+                if (ss?.nome || ss?.name) this._operatorName = ss.nome || ss.name;
+            } catch (e) { /* ignora */ }
+        }
+
+        // 5. Utils / Globais
+        if (!tid) {
+            try {
+                if (typeof Utils !== 'undefined') {
+                    tid = Utils.Cloud?.tenantId || (Utils.getTenant && Utils.getTenant()) || '';
+                }
+            } catch (e) { /* ignora */ }
+        }
+
+        // 6. getTenantSuffix
+        if (!tid) {
+            try {
+                if (typeof window.getTenantSuffix === 'function') {
+                    const suf = window.getTenantSuffix();
+                    if (suf && suf.startsWith('_')) tid = suf.substring(1);
+                }
+            } catch (e) { /* ignora */ }
+        }
+
+        // 7. LocalStorage fallbacks
+        if (!tid) {
+            try {
+                const raw = localStorage.getItem('parreira_session')
+                    || localStorage.getItem('_parreiraSessao')
+                    || localStorage.getItem('parreiraSession')
+                    || localStorage.getItem('session');
+                if (raw) {
+                    const sess = JSON.parse(raw);
+                    tid = sess.tenant || sess.tenantId || sess.empresa || '';
+                    if (sess.nome || sess.name) this._operatorName = sess.nome || sess.name;
+                }
+            } catch (e) { /* ignora */ }
+        }
+
+        // 8. Fallback padrão seguro para Central Peças
+        if (!tid) {
+            tid = 'centralpecas';
+        }
+
+        return tid;
+    },
+
+    /**
      * Inicializa a UI de configuração ERP.
      * @param {string} moduleContext - Nome do módulo que está exibindo a UI
      */
     init(moduleContext) {
         this._moduleContext = moduleContext || 'unknown';
         this._connected = false;
-
-        // Lê tenant e operador — múltiplos fallbacks para garantir robustez
-        try {
-            if (window.ParreiraAuth && ParreiraAuth.isLogado()) {
-                const s = ParreiraAuth.getSessao();
-                this._tenantId     = s.tenant || s.tenantId || s.empresa || '';
-                this._operatorName = s.nome || s.name || 'Sistema';
-            }
-        } catch (e) { /* ignora */ }
-
-        // Fallbacks adicionais se ParreiraAuth não retornou tenant
-        if (!this._tenantId) {
-            try {
-                if (typeof Utils !== 'undefined') {
-                    this._tenantId = Utils.Cloud?.tenantId
-                        || (Utils.getTenant && Utils.getTenant())
-                        || '';
-                }
-            } catch (e) { /* ignora */ }
-        }
-
-        // Último fallback: sessão no localStorage
-        if (!this._tenantId) {
-            try {
-                const raw = localStorage.getItem('_parreiraSessao')
-                    || localStorage.getItem('parreiraSession')
-                    || localStorage.getItem('session');
-                if (raw) {
-                    const sess = JSON.parse(raw);
-                    this._tenantId = sess.tenant || sess.tenantId || sess.empresa || '';
-                    if (!this._operatorName) this._operatorName = sess.nome || sess.name || 'Sistema';
-                }
-            } catch (e) { /* ignora */ }
-        }
+        this._tenantId = this._resolveTenant();
+        if (!this._operatorName) this._operatorName = 'Sistema';
 
         this._renderContainer();
         this._bindEvents();
@@ -325,6 +383,7 @@ const ErpUI = {
         const $ = id => document.getElementById(id);
 
         try {
+            if (!this._tenantId) this._tenantId = this._resolveTenant();
             if (!this._tenantId || typeof ErpRegistry === 'undefined') {
                 this._updateStatusBadge(false, false);
                 return;
@@ -379,6 +438,7 @@ const ErpUI = {
         if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvando...'; }
 
         try {
+            if (!this._tenantId) this._tenantId = this._resolveTenant();
             const provider  = ($('erpProvider')?.value || '').toLowerCase();
             let urlVal      = $('erpApiUrl')?.value?.trim() || '';
             const terminal  = $('erpTerminal')?.value?.trim() || '';
@@ -443,6 +503,7 @@ const ErpUI = {
         if (!silent && btn) { btn.disabled = true; btn.textContent = '⏳ Testando...'; }
 
         try {
+            if (!this._tenantId) this._tenantId = this._resolveTenant();
             // Timeout de segurança: garante que a função sempre termina em até 12s
             const withTimeout = (promise, ms, msg) => Promise.race([
                 promise,
@@ -500,6 +561,7 @@ const ErpUI = {
         this._showProgress(true);
 
         try {
+            if (!this._tenantId) this._tenantId = this._resolveTenant();
             const erp = await ErpRegistry.getAdapter(this._tenantId);
             if (!erp) throw new Error('ERP não configurado. Configure e salve antes de sincronizar.');
 
