@@ -1185,7 +1185,7 @@ function updateBadges() {
 // ===================================
 // SCREEN INIT HOOK — Override placeholder injection
 // ===================================
-const _originalNavigateTo = window.navigateTo || navigateTo;
+const _originalNavigateTo = window.navigateTo || function(s) { console.warn('navigateTo called before core init', s); };
 
 // ===================================
 // TELA DE CONFIGURAÇÕES / PARÂMETROS

@@ -9,7 +9,7 @@ window.getTenantSuffix = function () {
 // WMS Coletor Ã¢â‚¬â€ Core Logic
 // Navigation, Auth, Scanner, Shared Data Access
 
-const COLETOR_VERSION = '3.21.41';
+const COLETOR_VERSION = '3.21.42';
 
 // ===== Auth Check =====
 document.addEventListener('DOMContentLoaded', async () => {
@@ -171,9 +171,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const servVer = v.version || COLETOR_VERSION;
             const el = document.getElementById('coletor-version-badge');
             if (el) el.textContent = `WMS Coletor v${servVer} ⚙️`;
-            const elCard = document.getElementById('coletor-version-badge-card');
-            if (elCard) elCard.textContent = `v${servVer}`;
-            const banner = document.getElementById('coletor-update-banner');
+                        const banner = document.getElementById('coletor-update-banner');
             if (banner) {
                 // Banner só aparece se houver versão mais nova no servidor do que o código em execução
                 if (servVer && servVer !== COLETOR_VERSION) {
@@ -188,9 +186,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         .catch(() => {
             const el = document.getElementById('coletor-version-badge');
             if (el) el.textContent = `WMS Coletor v${COLETOR_VERSION} ⚙️`;
-            const elCard = document.getElementById('coletor-version-badge-card');
-            if (elCard) elCard.textContent = `v${COLETOR_VERSION}`;
-            const banner = document.getElementById('coletor-update-banner');
+                        const banner = document.getElementById('coletor-update-banner');
             if (banner) banner.style.display = 'none';
         });
 });
@@ -199,6 +195,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ===== Navigation =====
 let currentScreen = 'home';
 
+window.navigateTo = navigateTo;
 function navigateTo(screenId) {
     // Hide all screens
     document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
@@ -556,12 +553,7 @@ function _exibirErroPermissao(err) {
 
     let msg = 'Não foi possível acessar a câmera.';
     if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError') {
-        msg = 'A permissão da câmera está bloqueada no seu navegador.
-
-Como desbloquear no Chrome:
-1. Toque no ícone de configurações ao lado do endereço do site (cadeado ou opções);
-2. Vá em "Permissões" -> "Câmera";
-3. Selecione "Permitir" e tente novamente.';
+        msg = 'A permissão da câmera está bloqueada no seu navegador.\n\nComo desbloquear no Chrome:\n1. Toque no ícone ao lado do endereço do site (cadeado ou opções);\n2. Vá em "Permissões" -> "Câmera";\n3. Selecione "Permitir" e tente novamente.';
     } else {
         msg = `Erro na câmera (${errName || 'Falha de hardware'}). Verifique se outro aplicativo está usando a câmera.`;
     }

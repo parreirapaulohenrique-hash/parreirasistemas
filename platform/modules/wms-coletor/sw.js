@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wms-coletor-v3.21.41-clean';
+const CACHE_NAME = 'wms-coletor-v3.21.42-clean';
 const ASSETS = [
     './styles/coletor.css',
     'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
