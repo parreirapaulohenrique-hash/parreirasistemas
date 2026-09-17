@@ -3911,6 +3911,8 @@ const DemandaApp = (function() {
         abrirBaseTecnica:             abrirBaseTecnica,
         syncMaxdataTechbase:          syncMaxdataTechbase,
         importarCatalogoPDF:          importarCatalogoPDF,
+        setBtViewMode:                setBtViewMode,
+        toggleBtDetalhes:             toggleBtDetalhes,
     };
 
 })();
