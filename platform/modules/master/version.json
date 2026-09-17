@@ -1,11 +1,12 @@
 {
     "module": "module-master",
     "name": "Master Panel (Admin)",
-    "version": "1.4.3",
-    "date": "2026-09-12",
-    "last_change": "v1.4.3 - Fix layout da sidebar com banner de homologacao e integracao de versao no sticky footer",
-    "build": "20260912.2",
+    "version": "1.4.4",
+    "date": "2026-09-17",
+    "last_change": "v1.4.4 - Atualizacao de exibicao do modulo de Inteligencia de Demanda para Cotacao no Painel Master",
+    "build": "20260917.1",
     "changelog": [
+        "v1.4.4 - Atualizacao de exibicao do modulo de Inteligencia de Demanda para Cotacao no Painel Master",
         "v1.4.3 - Fix layout da sidebar com banner de homologacao e integracao de versao no sticky footer",
         "v1.4.2 - Padronizacao de links diretos Opcao A na aba Ambientes baseada estritamente nas permissoes ativas de Gestao de Clientes",
         "1.4.1 - Persistencia direta no Firestore para criacao e edicao de usuarios via Painel Master + auto-sync de usuarios locais para o banco central",

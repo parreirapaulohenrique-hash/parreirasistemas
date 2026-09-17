@@ -10,7 +10,7 @@ window.LicencasManager = (function () {
         { id: 'wms-coletor', label: 'WMS Coletor',                icon: 'phone_android'  },
         { id: 'dispatch',    label: 'Despacho',                   icon: 'local_shipping' },
         { id: 'consultoria', label: 'Bússola Gestão',            icon: 'savings'        },
-        { id: 'demanda',     label: 'Inteligência de Demanda',   icon: 'insights'       },
+        { id: 'demanda',     label: 'Cotação',                    icon: 'insights'       },
         { id: 'prospeccao',  label: 'MAXCRM',                     icon: 'explore'        },
     ];
 

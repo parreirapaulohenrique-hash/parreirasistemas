@@ -733,7 +733,7 @@ function setupForms() {
 }
 
 function formatModuleName(code) {
-    const names = { 'dispatch': 'Despacho Logístico', 'wms': 'WMS', 'master': 'Master', 'erp-consultoria': 'Bússola Gestão', 'wms-coletor': 'WMS Coletor', 'demanda': 'Inteligência de Demanda', 'prospeccao': 'MAXCRM' };
+    const names = { 'dispatch': 'Despacho Logístico', 'wms': 'WMS', 'master': 'Master', 'erp-consultoria': 'Bússola Gestão', 'wms-coletor': 'WMS Coletor', 'demanda': 'Cotação', 'prospeccao': 'MAXCRM' };
     return names[code] || code.toUpperCase();
 }
 
@@ -808,7 +808,7 @@ window.abrirWmsConfig = async function (tenantId) {
     if (!tenant) { alert('Tenant nÃ£o encontrado.'); return; }
 
     // MÃ³dulos habilitados com nome amigÃ¡vel
-    const modNames = { wms:'WMS', dispatch:'Despacho', master:'Master', 'erp-consultoria': 'Bússola Gestão', 'wms-coletor': 'WMS Coletor', 'demanda': 'Inteligência de Demanda', 'prospeccao': 'MAXCRM Campo' };
+    const modNames = { wms:'WMS', dispatch:'Despacho', master:'Master', 'erp-consultoria': 'Bússola Gestão', 'wms-coletor': 'WMS Coletor', 'demanda': 'Cotação', 'prospeccao': 'MAXCRM Campo' };
     const enabledMods = (tenant.modules || []).map(m => modNames[m] || m);
 
     // Carrega configs existentes do Firestore
@@ -1243,7 +1243,7 @@ window.renderAmbientes = function renderAmbientes() {
         'wms':             { label: 'WMS',                 icon: 'warehouse',            color: '#10b981', prodUrl: (s) => `${PROD}/wms/${s}`,               hmlUrl: (s) => `${HML}/wms/${s}` },
         'wms-coletor':     { label: 'WMS Coletor',        icon: 'phone_android',        color: '#06b6d4', prodUrl: (s) => `${PROD}/wms-coletor/${s}`,       hmlUrl: (s) => `${HML}/wms-coletor/${s}`, pwaUrl: () => `${PROD}/apk`, isPwa: true },
         'erp-consultoria': { label: 'Bússola Gestão',    icon: 'savings',              color: '#14b8a6', prodUrl: (s) => `${PROD}/consultoria/${s}`,       hmlUrl: (s) => `${HML}/consultoria/${s}` },
-        'demanda':         { label: 'Intelig. Demanda',   icon: 'insights',             color: '#8b5cf6', prodUrl: (s) => `${PROD}/demanda/${s}`,           hmlUrl: (s) => `${HML}/demanda/${s}` },
+        'demanda':         { label: 'Cotação',            icon: 'insights',             color: '#8b5cf6', prodUrl: (s) => `${PROD}/demanda/${s}`,           hmlUrl: (s) => `${HML}/demanda/${s}` },
         'prospeccao':      { label: 'MAXCRM',              icon: 'explore',              color: '#e11d48', prodUrl: (s) => `${PROD}/maxcrm/${s}`,            hmlUrl: (s) => `${HML}/maxcrm/${s}`, pwaUrl: () => `${PROD}/maxcrm-app`, isPwa: true },
     };
 

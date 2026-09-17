@@ -1,8 +1,8 @@
 {
-  "version": "3.21.36",
-  "build": "20260917-v3.21.36",
+  "version": "3.21.37",
+  "build": "20260917-v3.21.37",
   "environment": "staging",
   "lastUpdate": "2026-09-17",
   "deployedAt": "2026-09-17",
-  "change": "v3.21.36 - feat(wms-coletor): suporte provisorio para NFs homologadas 15105, 15107 e 35845 da Tela 102 no coletor com itens e descarte automatico apos conferencia"
+  "change": "v3.21.37 - refactor(master): atualizar exibicao do modulo para Cotacao no Painel Admin/Master"
 }
