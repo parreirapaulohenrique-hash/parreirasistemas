@@ -1,8 +1,8 @@
 {
-  "version": "2.5.7",
-  "build": "20260916-v2.5.7",
+  "version": "2.5.8",
+  "build": "20260916-v2.5.8",
   "module": "demanda",
-  "name": "Inteligencia de Demanda",
+  "name": "Cotacao",
   "lastUpdate": "2026-09-16",
-  "change": "v2.5.7 - feat(prompt2): 15 marcas oficiais de maquinas e implementos agricolas, base tecnica hierarquica com selos de confianca (Graus 1 a 5) e radar de demanda reprimida e ruptura no dashboard"
+  "change": "v2.5.8 - refactor(naming): renomeação completa da interface de Demanda para Cotação (Hub, sidebar, botões, modais e relatórios)"
 }

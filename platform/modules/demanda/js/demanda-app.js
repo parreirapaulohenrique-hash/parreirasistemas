@@ -186,7 +186,7 @@ const DemandaApp = (function() {
     }
 
     function limparDemanda() {
-        if (_itens.length > 0 && !confirm("Limpar todos os itens da demanda?")) return;
+        if (_itens.length > 0 && !confirm("Limpar todos os itens da cotação?")) return;
         _itens = [];
         _clienteAtual = null;
         var cl = document.getElementById("clienteLabel"); if (cl) cl.textContent = "Selecionar cliente";
@@ -902,7 +902,7 @@ const DemandaApp = (function() {
             _toast("Adicione ao menos um item antes de salvar.", "error"); return;
         }
         if (!_clienteAtual || !_clienteAtual.nome || !_clienteAtual.nome.trim()) {
-            _toast("Obrigatório selecionar ou informar o cliente antes de salvar a demanda.", "warning");
+            _toast("Obrigatório selecionar ou informar o cliente antes de salvar a cotação.", "warning");
             var btnCli = document.getElementById("btnSelectCliente");
             if (btnCli) {
                 btnCli.style.borderColor = "var(--accent-danger)";
@@ -940,7 +940,7 @@ const DemandaApp = (function() {
                 if (!b) return;
                 b.disabled = saving;
                 if (saving) { b.textContent = "Salvando..."; }
-                else { b.innerHTML = "<span class='material-icons-round'>save</span> Salvar Demanda"; }
+                else { b.innerHTML = "<span class='material-icons-round'>save</span> Salvar Cotação"; }
             });
         }
         _setBtnSaving(true);
@@ -948,7 +948,7 @@ const DemandaApp = (function() {
         DemandaDB.createDemanda(data, _itens.slice())
             .then(function(demandaId) {
                 console.log("[DemandaApp] Demanda criada:", demandaId);
-                _toast("Demanda salva com sucesso!", "success");
+                _toast("Cotação salva com sucesso!", "success");
                 limparDemanda();
                 setTimeout(function() { switchView("lista"); }, 800);
             })
@@ -976,7 +976,7 @@ const DemandaApp = (function() {
 
         container.innerHTML = "<div style='padding:3rem;text-align:center;color:var(--text-secondary)'>" +
             "<span class='material-icons-round' style='font-size:2rem;display:block;animation:spin 1s linear infinite'>sync</span>" +
-            "<p style='margin-top:.5rem;font-size:.85rem'>Carregando demandas...</p></div>";
+            "<p style='margin-top:.5rem;font-size:.85rem'>Carregando cotações...</p></div>";
 
         if (typeof DemandaDB === "undefined") {
             container.innerHTML = "<div style='padding:2rem;text-align:center;color:var(--accent-danger)'>DemandaDB não disponível.</div>";
@@ -994,7 +994,7 @@ const DemandaApp = (function() {
                     container.innerHTML =
                         "<div style='padding:3rem;text-align:center;color:var(--text-secondary)'>" +
                         "<span class='material-icons-round' style='font-size:3rem;opacity:.3'>inbox</span>" +
-                        "<h4 style='margin:.75rem 0 .25rem;color:var(--text-primary)'>Nenhuma demanda encontrada</h4>" +
+                        "<h4 style='margin:.75rem 0 .25rem;color:var(--text-primary)'>Nenhuma cotação encontrada</h4>" +
                         "<p style='font-size:.85rem'>Crie uma nova na Central de Captura.</p>" +
                         "<button class='btn btn-primary btn-sm' style='margin-top:1rem' onclick='DemandaApp.switchView(\"captura\")'>" +
                         "<span class='material-icons-round'>add</span> Nova Demanda</button></div>";
@@ -1686,7 +1686,7 @@ const DemandaApp = (function() {
 
                 // KPI cards
                 var kpis = [
-                    { icon: "receipt_long",  label: "Total Demandas",    val: s.totalDemandas,      color: "#6366f1" },
+                    { icon: "receipt_long",  label: "Total Cotações",    val: s.totalDemandas,      color: "#6366f1" },
                     { icon: "inventory",     label: "Itens Recebidos",   val: s.totalItens,         color: "#3b82f6" },
                     { icon: "manage_search", label: "Identificados",     val: s.totalIdentificados, color: "#f59e0b" },
                     { icon: "check_circle",  label: "Com Estoque",       val: s.totalComEstoque,    color: "#10b981" },
@@ -1730,7 +1730,7 @@ const DemandaApp = (function() {
                 var statusKeys = Object.keys(s.porStatus);
                 var statusHtml = statusKeys.length === 0 ? "" :
                     "<div style='background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1.25rem'>" +
-                    "<h4 style='margin:0 0 1.25rem;font-size:.9rem;color:var(--text-primary)'>Demandas por Status</h4>" +
+                    "<h4 style='margin:0 0 1.25rem;font-size:.9rem;color:var(--text-primary)'>Cotações por Status</h4>" +
                     "<div style='display:flex;flex-direction:column;gap:.5rem'>" +
                     statusKeys.map(function(sk) {
                         var cnt = s.porStatus[sk] || 0;
@@ -2203,7 +2203,7 @@ const DemandaApp = (function() {
     }
 
     function _vincularProduto(produto) {
-        if (!_buscaErpItemId || !_demandaAtual) { _toast("Contexto perdido. Reabra a demanda.", "error"); return; }
+        if (!_buscaErpItemId || !_demandaAtual) { _toast("Contexto perdido. Reabra a cotação.", "error"); return; }
         if (typeof produto === "string") { try { produto = JSON.parse(produto); } catch(e) { _toast("Erro ao processar produto.", "error"); return; } }
         var itemId = _buscaErpItemId;
         var por    = _sessao ? (_sessao.login || _sessao.nome || "sistema") : "sistema";
