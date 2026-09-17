@@ -1,8 +1,8 @@
 {
-  "version": "3.21.32",
-  "build": "20260916-v3.21.32",
+  "version": "3.21.34",
+  "build": "20260916-v3.21.34",
   "environment": "staging",
   "lastUpdate": "2026-09-16",
   "deployedAt": "2026-09-16",
-  "change": "v3.21.32 - fix(hub): sincronizacao em tempo real de modulos do tenant (exibicao de Cotacao/Demanda para Central Pecas e remocao de Bussola Gestao)"
+  "change": "v3.21.34 - fix(hub): exibicao do modulo Cotacao para Central Pecas e sincronizacao de licencas"
 }
