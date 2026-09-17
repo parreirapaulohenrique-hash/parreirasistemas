@@ -9,7 +9,7 @@ window.getTenantSuffix = function () {
 // WMS Coletor Ã¢â‚¬â€ Core Logic
 // Navigation, Auth, Scanner, Shared Data Access
 
-const COLETOR_VERSION = '3.18.3';
+const COLETOR_VERSION = '3.21.40';
 
 // ===== Auth Check =====
 document.addEventListener('DOMContentLoaded', async () => {
@@ -164,23 +164,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateHomeStats();
 
     // Exibe versão no badge da home (lê do version.json para refletir deploys automaticamente)
+    // Exibe versão no badge da home e controla o banner de atualização
     fetch('/platform/version.json?t=' + Date.now())
         .then(r => r.json())
         .then(v => {
+            const servVer = v.version || COLETOR_VERSION;
             const el = document.getElementById('coletor-version-badge');
-            if (el) el.textContent = `WMS Coletor v${v.version} ⚙️`;
+            if (el) el.textContent = `WMS Coletor v${servVer} ⚙️`;
             const elCard = document.getElementById('coletor-version-badge-card');
-            if (elCard) elCard.textContent = `v${v.version}`;
-            const elTop = document.getElementById('coletor-top-v-badge');
-            if (elTop) elTop.textContent = `v${v.version}`;
+            if (elCard) elCard.textContent = `v${servVer}`;
+            const banner = document.getElementById('coletor-update-banner');
+            if (banner) {
+                // Banner só aparece se houver versão mais nova no servidor do que o código em execução
+                if (servVer && servVer !== COLETOR_VERSION) {
+                    banner.style.display = 'flex';
+                    const elTop = document.getElementById('coletor-top-v-badge');
+                    if (elTop) elTop.textContent = `v${servVer}`;
+                } else {
+                    banner.style.display = 'none'; // Já está na versão mais recente!
+                }
+            }
         })
         .catch(() => {
             const el = document.getElementById('coletor-version-badge');
             if (el) el.textContent = `WMS Coletor v${COLETOR_VERSION} ⚙️`;
             const elCard = document.getElementById('coletor-version-badge-card');
             if (elCard) elCard.textContent = `v${COLETOR_VERSION}`;
-            const elTop = document.getElementById('coletor-top-v-badge');
-            if (elTop) elTop.textContent = `v${COLETOR_VERSION}`;
+            const banner = document.getElementById('coletor-update-banner');
+            if (banner) banner.style.display = 'none';
         });
 });
 
