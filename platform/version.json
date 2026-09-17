@@ -1,8 +1,4 @@
 {
-  "version": "3.21.38",
-  "build": "20260917-v3.21.38",
-  "environment": "staging",
-  "lastUpdate": "2026-09-17",
-  "deployedAt": "2026-09-17",
-  "change": "v3.21.38 - feat(cotacao): reorganização da tela de Base de Peças em Data Grid tabular com colunas estruturadas, badges e alternador Grid/Cards"
+  "version": "3.21.39",
+  "updated": "2026-09-17 11:55"
 }

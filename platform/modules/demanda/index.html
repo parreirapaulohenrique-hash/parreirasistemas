@@ -13,7 +13,7 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <!-- Design system da plataforma -->
     <link rel="stylesheet" href="/platform/core/styles/portal.css">
-    <link rel="stylesheet" href="styles/demanda.css?v=3.21.38">
+    <link rel="stylesheet" href="styles/demanda.css?v=3.21.39">
 </head>
 
 <body>
@@ -82,13 +82,13 @@
                 </button>
 
                 <div class="nav-section-label">Base Técnica</div>
+                <button class="nav-item" id="nav-produtos-erp" onclick="DemandaApp.switchView('produtosErp')">
+                    <span class="material-icons-round">inventory_2</span>
+                    Cadastro de Produtos
+                </button>
                 <button class="nav-item" id="nav-base" onclick="DemandaApp.switchView('base')">
                     <span class="material-icons-round">hub</span>
-                    Base de Peças
-                </button>
-                <button class="nav-item" id="nav-base-admin" onclick="DemandaApp.abrirBaseTecnica()" style="font-size:.78rem;opacity:.85;">
-                    <span class="material-icons-round">manage_search</span>
-                    Admin Base / PDF
+                    Base Externa
                 </button>
 
                 <div class="nav-section-label">Sistema</div>
@@ -440,14 +440,67 @@
             </div>
 
             <!-- ══════════════════════════════════════════════ -->
-            <!--  VIEW: BASE TÉCNICA                           -->
+            <!--  VIEW: CADASTRO DE PRODUTOS (ERP MAXDATA)     -->
             <!-- ══════════════════════════════════════════════ -->
-            <!-- VIEW: BASE TÉCNICA (Prompt 2 — Seções 5.2, 5.3, 5.4) -->
+            <div id="view-produtosErp" style="display:none;flex-direction:column">
+                <div class="top-bar" style="flex-wrap:wrap;gap:.75rem">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">inventory_2</span>
+                        <span>Cadastro de Produtos (ERP Maxdata)</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:.5rem;margin-left:auto;flex-wrap:wrap">
+                        <div style="position:relative;width:340px">
+                            <span class="material-icons-round" style="position:absolute;left:.65rem;top:50%;transform:translateY(-50%);font-size:1rem;color:var(--text-secondary)">search</span>
+                            <input id="erpInpBusca" type="text" placeholder="Buscar cód. interno, OEM, descrição, marca..."
+                                oninput="DemandaApp.onErpBuscaInput()"
+                                style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.45rem .75rem .45rem 2.2rem;color:var(--text-primary);font-size:.82rem">
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="DemandaApp.loadProdutosErp(true)" style="display:inline-flex;align-items:center;gap:.35rem">
+                            <span class="material-icons-round" style="font-size:.9rem">refresh</span> Atualizar do ERP
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Barra de Filtros do Cadastro ERP -->
+                <div style="display:flex;align-items:center;gap:.75rem;padding:.75rem 1.25rem;background:rgba(255,255,255,.015);border-bottom:1px solid var(--border-color);flex-wrap:wrap">
+                    <div style="display:flex;align-items:center;gap:.35rem">
+                        <label style="font-size:.72rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Fabricante:</label>
+                        <select id="erpSelFabricante" onchange="DemandaApp.filtrarProdutosErp()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem">
+                            <option value="">Todos os Fabricantes</option>
+                        </select>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:.35rem">
+                        <label style="font-size:.72rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Grupo:</label>
+                        <select id="erpSelGrupo" onchange="DemandaApp.filtrarProdutosErp()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem">
+                            <option value="">Todos os Grupos</option>
+                        </select>
+                    </div>
+                    <label style="display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;color:var(--text-secondary);cursor:pointer">
+                        <input id="erpChkEstoque" type="checkbox" onchange="DemandaApp.filtrarProdutosErp()"> Apenas com Estoque
+                    </label>
+
+                    <div id="erpTotalContador" style="margin-left:auto;font-size:.78rem;color:var(--text-secondary)">
+                        Carregando produtos do ERP...
+                    </div>
+                </div>
+
+                <!-- Container da Tabela do ERP -->
+                <div id="erpProdutosContainer" style="flex:1;overflow-y:auto;padding:1.25rem">
+                    <div style="padding:3rem;text-align:center;color:var(--text-secondary)">
+                        <span class="material-icons-round" style="animation:spin 1s linear infinite;font-size:2rem;color:var(--accent-primary)">sync</span>
+                        <p style="margin-top:.75rem;font-size:.88rem">Conectando ao ERP Maxdata...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════ -->
+            <!--  VIEW: BASE EXTERNA (Catálogo & Mercado)       -->
+            <!-- ══════════════════════════════════════════════ -->
             <div id="view-base" style="display:none;flex-direction:column">
                 <div class="top-bar" style="flex-wrap:wrap;gap:.75rem">
                     <div class="breadcrumb">
                         <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">hub</span>
-                        <span>Base Técnica de Peças & Implementos</span>
+                        <span>Base Externa de Peças & Implementos</span>
                     </div>
                     <div style="display:flex;align-items:center;gap:.5rem;margin-left:auto;flex-wrap:wrap">
                         <div style="position:relative;width:300px">
@@ -953,14 +1006,14 @@
     <script src="/platform/shared/integrations/index.js?v=2.0.0"></script>
 
     <!-- Módulo de Demanda -->
-    <script src="js/demanda-states.js?v=3.21.38"></script>
-    <script src="js/demanda-db.js?v=3.21.38"></script>
-    <script src="js/demanda-import.js?v=3.21.38"></script>
-    <script src="js/demanda-search.js?v=3.21.38"></script>
-    <script src="js/demanda-lookup.js?v=3.21.38"></script>
-    <script src="js/demanda-pdf.js?v=3.21.38"></script>
-    <script src="js/demanda-clientes.js?v=3.21.38"></script>
-    <script src="js/demanda-app.js?v=3.21.38"></script>
+    <script src="js/demanda-states.js?v=3.21.39"></script>
+    <script src="js/demanda-db.js?v=3.21.39"></script>
+    <script src="js/demanda-import.js?v=3.21.39"></script>
+    <script src="js/demanda-search.js?v=3.21.39"></script>
+    <script src="js/demanda-lookup.js?v=3.21.39"></script>
+    <script src="js/demanda-pdf.js?v=3.21.39"></script>
+    <script src="js/demanda-clientes.js?v=3.21.39"></script>
+    <script src="js/demanda-app.js?v=3.21.39"></script>
 
     <!-- ═══════════════════════════════════════════════════════════
          MODAL: Administração da Base Técnica de Peças

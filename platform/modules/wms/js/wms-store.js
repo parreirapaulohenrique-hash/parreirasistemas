@@ -422,6 +422,124 @@ window.WmsStore = (function () {
         return d.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
     }
 
+    
+    // ═════════════════════════════════════════════════════════════════════════════
+    // REGRAS DE ARMAZENAGEM & INVENTÁRIO
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    function getRegrasArmazenagem() {
+        try {
+            const raw = localStorage.getItem('wms_config' + (window.getTenantSuffix ? window.getTenantSuffix() : ''));
+            const cfg = raw ? JSON.parse(raw) : {};
+            return {
+                modo:                cfg.putaway?.modo || 'PICKING_PULMAO',
+                tipoEnderec:         cfg.putaway?.tipoEnderec || 'FLUTUANTE', // 'FLUTUANTE' (dinamico) ou 'FIXO'
+                limitePickingPorSku: cfg.putaway?.limitePickingPorSku || 'UNICO', // 'UNICO' ou 'MULTIPLO'
+                acaoDivergencia:     cfg.putaway?.acaoDivergencia || 'ALERTAR', // 'ALERTAR', 'BLOQUEAR', 'ATUALIZAR'
+                permiteMisturaSku:   cfg.putaway?.permiteMisturaSku !== false,
+                enderecosFixos:      cfg.enderecoFixo || {}
+            };
+        } catch(e) {
+            return {
+                modo: 'PICKING_PULMAO', tipoEnderec: 'FLUTUANTE', limitePickingPorSku: 'UNICO',
+                acaoDivergencia: 'ALERTAR', permiteMisturaSku: true, enderecosFixos: {}
+            };
+        }
+    }
+
+    /** Valida se a alocação de um SKU em determinado endereço cumpre as regras ativas */
+    function validarAlocacaoArmazenagem(sku, enderecoAlvo, tipoEnderecoAlvo = 'PICKING') {
+        const regras = getRegrasArmazenagem();
+        const skuNorm = (sku || '').trim().toUpperCase();
+        const endNorm = (enderecoAlvo || '').trim().toUpperCase();
+        const tipoNorm = (tipoEnderecoAlvo || '').toUpperCase();
+
+        const resultado = {
+            valido: true,
+            status: 'OK',
+            mensagem: '',
+            regras: regras,
+            enderecoFixo: null,
+            outrosPickings: []
+        };
+
+        // 1. Validar Endereço Fixo
+        const fixoInfo = regras.enderecosFixos[skuNorm];
+        if (fixoInfo && fixoInfo.endereco) {
+            resultado.enderecoFixo = fixoInfo.endereco;
+            if (regras.tipoEnderec === 'FIXO' && fixoInfo.endereco !== endNorm) {
+                if (regras.acaoDivergencia === 'BLOQUEAR') {
+                    resultado.valido = false;
+                    resultado.status = 'BLOQUEADO_FIXO';
+                    resultado.mensagem = `BLOQUEADO: O produto ${skuNorm} tem endereço fixo obrigatório em ${fixoInfo.endereco}.`;
+                    return resultado;
+                } else if (regras.acaoDivergencia === 'ATUALIZAR') {
+                    resultado.status = 'SUGERIR_ATUALIZAR_FIXO';
+                    resultado.mensagem = `O produto ${skuNorm} possui fixo em ${fixoInfo.endereco}. Deseja atualizar o endereço fixo para ${endNorm}?`;
+                } else {
+                    resultado.status = 'AVISO_FIXO_DIVERGENTE';
+                    resultado.mensagem = `Atenção: Endereço fixo cadastrado deste produto é ${fixoInfo.endereco}.`;
+                }
+            }
+        }
+
+        // 2. Validar Política de Picking (Único vs Múltiplo)
+        if (regras.limitePickingPorSku === 'UNICO' && tipoNorm === 'PICKING') {
+            try {
+                const stockData = window.StockManager ? window.StockManager.getData() : { addresses: [] };
+                const outros = [];
+                (stockData.addresses || []).forEach(a => {
+                    const aEnd = (a.id || a.address || '').trim().toUpperCase();
+                    if (aEnd && aEnd !== endNorm && (a.sku || '').toUpperCase() === skuNorm && (a.qty || 0) > 0) {
+                        const aTipo = (a.type || a.tipo || 'PICKING').toUpperCase();
+                        if (aTipo === 'PICKING') outros.push(aEnd);
+                    }
+                });
+
+                if (outros.length > 0) {
+                    resultado.outrosPickings = outros;
+                    resultado.status = 'AVISO_PICKING_DUPLICADO';
+                    resultado.mensagem = `Atenção: Este SKU já possui Picking ativo no endereço ${outros.join(', ')}. (Regra de Picking Único)`;
+                }
+            } catch(e) { console.warn('Erro ao validar outros pickings:', e); }
+        }
+
+        return resultado;
+    }
+
+    /** Grava item inventariado no estoque de endereço */
+    function salvarItemInventariado(endereco, produto, quantidade, operador = 'Operador') {
+        const endNorm = (endereco || '').trim().toUpperCase();
+        const qty = Number(quantidade) || 0;
+        const sku = (produto.referencia || produto.sku || produto.codigoFab || produto.codigoErp || '').trim();
+        const desc = produto.descricao || produto.desc || sku;
+        const unit = produto.un || produto.unidade || 'UN';
+
+        // 1. Atualiza StockManager (Local)
+        if (window.StockManager) {
+            window.StockManager.add(sku, qty, endNorm, desc, unit, 'INVENTARIO-WMS');
+            window.StockManager.logTransaction('AJUSTE', sku, qty, 'INVENTARIO', `Inventário no endereço ${endNorm}`);
+        }
+
+        // 2. Grava registro no histórico de inventário
+        try {
+            const histKey = 'wms_inventario_logs' + (window.getTenantSuffix ? window.getTenantSuffix() : '');
+            const logs = JSON.parse(localStorage.getItem(histKey) || '[]');
+            logs.unshift({
+                data: new Date().toISOString(),
+                endereco: endNorm,
+                sku: sku,
+                descricao: desc,
+                quantidade: qty,
+                operador: operador
+            });
+            if (logs.length > 500) logs.pop();
+            localStorage.setItem(histKey, JSON.stringify(logs));
+        } catch(_) {}
+
+        return { sucesso: true, endereco: endNorm, sku, quantidade: qty };
+    }
+
     return {
         verificarNfDuplicada,
         criarRecebimento,
@@ -457,6 +575,9 @@ window.WmsStore = (function () {
         ouvirEnderecos,
         sincronizarEnderecos,
         migrarEnderecos,
+        getRegrasArmazenagem,
+        validarAlocacaoArmazenagem,
+        salvarItemInventariado,
         toDate, fmtData
     };
 })();

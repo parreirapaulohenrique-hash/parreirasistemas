@@ -1,8 +1,8 @@
 {
-  "version": "2.5.9",
-  "build": "20260917-v2.5.9",
+  "version": "2.6.0",
+  "build": "20260917-v2.6.0",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-09-17",
-  "change": "v2.5.9 - feat(base-tecnica): reorganização em Data Grid / Tabela rica com colunas estruturadas, badges e alternador Grid/Cards"
+  "change": "v2.6.0 - feat(produtos-erp): tela de Cadastro de Produtos conectada ao ERP Maxdata + Base Externa dedicada (Prompt 2)"
 }
