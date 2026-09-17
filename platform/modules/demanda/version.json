@@ -1,8 +1,8 @@
 {
-  "version": "2.5.8",
-  "build": "20260916-v2.5.8",
+  "version": "2.5.9",
+  "build": "20260917-v2.5.9",
   "module": "demanda",
   "name": "Cotacao",
-  "lastUpdate": "2026-09-16",
-  "change": "v2.5.8 - refactor(naming): renomeação completa da interface de Demanda para Cotação (Hub, sidebar, botões, modais e relatórios)"
+  "lastUpdate": "2026-09-17",
+  "change": "v2.5.9 - feat(base-tecnica): reorganização em Data Grid / Tabela rica com colunas estruturadas, badges e alternador Grid/Cards"
 }
