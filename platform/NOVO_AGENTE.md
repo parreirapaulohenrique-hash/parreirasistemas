@@ -563,3 +563,5 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
 * **2026-09-17 (v3.21.39 / Coletor v3.18.12):** Implementacao completa da infraestrutura de Inventario e Mapeamento de Estoque por Endereco no WMS Coletor e WMS Web. Parametrizacao na aba Regras de Armazenagem com suporte a Enderecamento Fixo vs Dinamico (Caotico), Politica de Picking Unico vs Multiplos Pickings por Produto, Acao de Divergencia de Fixo (Alertar, Bloquear, Atualizar) e Mistura de SKUs no vao.
 
 * **2026-09-17 (v3.21.40):** Correcao da visibilidade do banner de atualizacao na Home do Coletor. O banner agora fica oculto (display:none) quando o aplicativo ja esta na versao mais recente, e a funcao de forcar atualizacao limpa caches de forma assincrona e confiavel.
+
+* **2026-09-17 (v3.21.41):** Correcao universal de compatibilidade da camera mobile no Chrome Android. Removida restricao rigida de aspectRatio que causava OverconstrainedError e implementada orientacao automatica para permissao de camera no Chrome.
