@@ -1566,6 +1566,179 @@ const DemandaApp = (function() {
         }
     }
 
+    async function reavaliarEstoque(demandaId) {
+        var id = demandaId || (_demandaAtual ? _demandaAtual.id : null);
+        if (!id) {
+            _toast("Nenhuma cotação selecionada.", "warning");
+            return;
+        }
+
+        if (!_demandaAtual || !_demandaAtual.itens || _demandaAtual.itens.length === 0) {
+            _toast("A cotação não possui itens para reavaliar.", "info");
+            return;
+        }
+
+        var itens = _demandaAtual.itens;
+        _toast("Reavaliando estoque no ERP Maxdata e Base Técnica...", "info");
+
+        var btnReavaliar = document.querySelector("button[onclick*='reavaliarEstoque']");
+        var textoOriginal = btnReavaliar ? btnReavaliar.innerHTML : "";
+        if (btnReavaliar) {
+            btnReavaliar.disabled = true;
+            btnReavaliar.innerHTML = "<span class='material-icons-round' style='font-size:.95rem;animation:spin 1s linear infinite'>sync</span> Reavaliando...";
+        }
+
+        var atualizados = 0;
+        var comEstoque = 0;
+        var semEstoque = 0;
+
+        try {
+            if (_baseTecnicaPecas.length === 0 && typeof _PECA_MESTRE_SEED !== "undefined") {
+                _baseTecnicaPecas = JSON.parse(JSON.stringify(_PECA_MESTRE_SEED));
+            }
+
+            for (var i = 0; i < itens.length; i++) {
+                var item = itens[i];
+                var refBusca = (item.erpCodigoFab || item.refOriginal || "").trim();
+                var codErp = (item.erpProdutoId || "").trim();
+                var descBusca = (item.erpProdutoDesc || item.descOriginal || "").trim();
+
+                var produtoEncontrado = null;
+
+                // 1. Tenta buscar via DemandaSearch por código ou referência
+                var query = codErp || refBusca || descBusca;
+                if (query && query.length >= 2) {
+                    try {
+                        if (typeof DemandaSearch !== "undefined" && DemandaSearch.search) {
+                            var res = await DemandaSearch.search(query, { limit: 5, forceRefresh: true });
+                            if (res && res.length > 0) {
+                                produtoEncontrado = res[0];
+                            }
+                        }
+                    } catch (e) {
+                        console.warn("[DemandaApp] Erro na busca DemandaSearch:", item.id, e);
+                    }
+                }
+
+                // 2. Fallback: Lista em memória de produtos ERP
+                if (!produtoEncontrado && _produtosErpList && _produtosErpList.length > 0) {
+                    var refUpper = refBusca.toUpperCase();
+                    produtoEncontrado = _produtosErpList.find(function(p) {
+                        if (codErp && String(p.codigoErp) === codErp) return true;
+                        if (refUpper && (p.codigoFab || "").toUpperCase() === refUpper) return true;
+                        if (refUpper && (p.codigoOriginal || "").toUpperCase() === refUpper) return true;
+                        return false;
+                    });
+                }
+
+                // 3. Fallback: Base Técnica Mestre
+                var pecaMestre = null;
+                if (!produtoEncontrado && _baseTecnicaPecas && _baseTecnicaPecas.length > 0) {
+                    var refNorm = refBusca.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                    pecaMestre = _baseTecnicaPecas.find(function(pm) {
+                        var oemNorm = (pm.refOem || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+                        if (oemNorm && oemNorm === refNorm) return true;
+                        if (pm.equivalentes) {
+                            return pm.equivalentes.some(function(eq) {
+                                var eqNorm = (eq.ref || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+                                return eqNorm && eqNorm === refNorm;
+                            });
+                        }
+                        return false;
+                    });
+                }
+
+                var fieldsToUpdate = {};
+                var novoStatus = item.status;
+                var qtdeSol = Number(item.qtdeSolicitada || 1);
+
+                if (produtoEncontrado) {
+                    var saldo = Number(produtoEncontrado.estoque || produtoEncontrado.saldoEstoque || 0);
+                    var preco = Number(produtoEncontrado.preco || produtoEncontrado.precoVenda || produtoEncontrado.valorVenda || 0);
+
+                    if (saldo >= qtdeSol) {
+                        novoStatus = "estoque_disponivel";
+                        fieldsToUpdate.qtdeDisponivel = qtdeSol;
+                        fieldsToUpdate.qtdeFaltante = 0;
+                        comEstoque++;
+                    } else if (saldo > 0) {
+                        novoStatus = "estoque_parcial";
+                        fieldsToUpdate.qtdeDisponivel = saldo;
+                        fieldsToUpdate.qtdeFaltante = qtdeSol - saldo;
+                        comEstoque++;
+                    } else {
+                        novoStatus = "sem_estoque";
+                        fieldsToUpdate.qtdeDisponivel = 0;
+                        fieldsToUpdate.qtdeFaltante = qtdeSol;
+                        semEstoque++;
+                    }
+
+                    fieldsToUpdate.status = novoStatus;
+                    fieldsToUpdate.estoqueFilial = saldo;
+                    if (preco > 0) fieldsToUpdate.precoUnitario = preco;
+                    if (produtoEncontrado.erpProdutoId || produtoEncontrado.id) {
+                        fieldsToUpdate.erpProdutoId = String(produtoEncontrado.erpProdutoId || produtoEncontrado.id);
+                    }
+                    if (produtoEncontrado.erpProdutoDesc || produtoEncontrado.descricao) {
+                        fieldsToUpdate.erpProdutoDesc = produtoEncontrado.erpProdutoDesc || produtoEncontrado.descricao;
+                    }
+                    if (produtoEncontrado.fabricante) {
+                        fieldsToUpdate.fabricante = produtoEncontrado.fabricante;
+                    }
+                    if (produtoEncontrado.codigoFab) {
+                        fieldsToUpdate.erpCodigoFab = produtoEncontrado.codigoFab;
+                    }
+                } else if (pecaMestre) {
+                    novoStatus = "catalogado";
+                    fieldsToUpdate.status = novoStatus;
+                    fieldsToUpdate.parteMestreId = pecaMestre.id;
+                    fieldsToUpdate.qtdeDisponivel = 0;
+                    fieldsToUpdate.qtdeFaltante = qtdeSol;
+                    if (pecaMestre.marca) fieldsToUpdate.fabricante = pecaMestre.marca;
+                    semEstoque++;
+                }
+
+                if (novoStatus !== item.status || fieldsToUpdate.estoqueFilial !== undefined) {
+                    atualizados++;
+                    Object.assign(item, fieldsToUpdate);
+                    if (typeof DemandaDB !== "undefined" && DemandaDB.updateItem) {
+                        var tl = {
+                            evento: "estoque_reavaliado",
+                            de: item.status,
+                            para: novoStatus,
+                            por: (_sessao && _sessao.nome) || "sistema",
+                            obs: "Reavaliação automática de estoque",
+                            em: new Date().toISOString()
+                        };
+                        await DemandaDB.updateItem(id, item.id, fieldsToUpdate, tl).catch(function(err) {
+                            console.warn("[DemandaApp] Falha ao atualizar item no Firestore:", item.id, err);
+                        });
+                    }
+                }
+            }
+
+            if (typeof DemandaDB !== "undefined" && DemandaDB.recalcTotals) {
+                await DemandaDB.recalcTotals(id).catch(function() {});
+            }
+
+            if (typeof DemandaDB !== "undefined" && DemandaDB.getDemanda && DemandaDB.getItens) {
+                var res = await Promise.all([ DemandaDB.getDemanda(id), DemandaDB.getItens(id) ]);
+                _demandaAtual = { id: id, data: res[0], itens: res[1] };
+            }
+
+            _renderDemandaDetalheBody();
+            _toast("Estoque reavaliado com sucesso! " + comEstoque + " com estoque, " + semEstoque + " faltantes.", "success");
+        } catch (err) {
+            console.error("[DemandaApp] Erro ao reavaliar estoque:", err);
+            _toast("Erro ao reavaliar estoque: " + (err.message || String(err)), "error");
+        } finally {
+            if (btnReavaliar) {
+                btnReavaliar.disabled = false;
+                btnReavaliar.innerHTML = textoOriginal || "<span class='material-icons-round' style='font-size:.95rem'>sync</span> Reavaliar Estoque";
+            }
+        }
+    }
+
 
     // ════════════════════════════════════════════════════════
     // AVANÇAR ESTADO DO ITEM → FIRESTORE
@@ -4565,6 +4738,11 @@ const DemandaApp = (function() {
         executarPesquisaPecasView:    executarPesquisaPecasView,
         filtrarPesquisaView:          filtrarPesquisaView,
         criarDemandaComPeca:          criarDemandaComPeca,
+        // Ações Rápidas da Cotação
+        reavaliarEstoque:             reavaliarEstoque,
+        consultarFiliaisLote:         consultarFiliaisLote,
+        enviarItensParaOrcamentoLote: enviarItensParaOrcamentoLote,
+        enviarItensParaComprasLote:   enviarItensParaComprasLote,
         // Devolutiva Compras
         _abrirDevolutivaCompras:  _abrirDevolutivaCompras,
         _confirmarDevolutiva:     _confirmarDevolutiva,

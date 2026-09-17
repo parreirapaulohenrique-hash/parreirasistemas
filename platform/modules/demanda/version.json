@@ -1,8 +1,8 @@
 {
-  "version": "2.6.4",
-  "build": "20260917-v2.6.4",
+  "version": "2.6.5",
+  "build": "20260917-v2.6.5",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-09-17",
-  "change": "v2.6.4 - feat(cadastro-produtos): suporte ao catalogo completo de 18.750 produtos via serverless proxy /api/maxdata no Vercel com paginacao e busca remota instantanea"
+  "change": "v2.6.5 - fix(detalhe-cotacao): implementacao da funcao reavaliarEstoque no modal da cotacao com cruzamento de itens no ERP Maxdata e Base Tecnica, gravacao no Firestore e atualizacao automatica da UI"
 }
