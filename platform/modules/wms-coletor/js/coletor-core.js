@@ -9,7 +9,7 @@ window.getTenantSuffix = function () {
 // WMS Coletor Ã¢â‚¬â€ Core Logic
 // Navigation, Auth, Scanner, Shared Data Access
 
-const COLETOR_VERSION = '3.21.40';
+const COLETOR_VERSION = '3.21.41';
 
 // ===== Auth Check =====
 document.addEventListener('DOMContentLoaded', async () => {
@@ -487,14 +487,14 @@ function _initCameraInstance() {
     const html5QrCode = new Html5Qrcode("cameraScannerReader");
     window._cameraScannerInstance = html5QrCode;
 
+    // Config universal sem aspectRatio forcado (evita OverconstrainedError no Android)
     const config = {
-        fps: 20,
+        fps: 15,
         qrbox: function(viewfinderWidth, viewfinderHeight) {
-            const w = Math.floor(Math.min(viewfinderWidth * 0.94, 380));
-            const h = Math.floor(Math.min(viewfinderHeight * 0.48, 180));
+            const w = Math.floor(Math.min(viewfinderWidth * 0.92, 360));
+            const h = Math.floor(Math.min(viewfinderHeight * 0.55, 180));
             return { width: Math.max(w, 200), height: Math.max(h, 80) };
         },
-        aspectRatio: 1.777778,
         formatsToSupport: [
             Html5QrcodeSupportedFormats.CODE_128,
             Html5QrcodeSupportedFormats.QR_CODE,
@@ -505,70 +505,61 @@ function _initCameraInstance() {
         ]
     };
 
-    _updateCameraStatus('Detectando câmeras do aparelho...');
+    _updateCameraStatus('Solicitando acesso à câmera...');
 
-    Html5Qrcode.getCameras().then(devices => {
-        if (devices && devices.length > 0) {
-            window._cameraDevicesList = devices;
-            // Ordenar para priorizar câmeras traseiras
-            const backIndices = [];
-            devices.forEach((d, idx) => {
-                const label = (d.label || '').toLowerCase();
-                if (label.includes('back') || label.includes('traseira') || label.includes('rear') || label.includes('environment')) {
-                    backIndices.push(idx);
-                }
+    // 1. Tenta facingMode environment diretamente para disparar o prompt nativo do Chrome
+    html5QrCode.start(
+        { facingMode: "environment" },
+        config,
+        (decodedText) => { onCameraCodeDetected(decodedText); },
+        () => {}
+    ).then(() => {
+        _onCameraStartedSuccess();
+        // Apos permissao concedida, enumera cameras para o botao de trocar lente
+        Html5Qrcode.getCameras().then(devs => {
+            if (devs && devs.length) window._cameraDevicesList = devs;
+        }).catch(() => {});
+    }).catch(err => {
+        console.warn('[Camera] Falha facingMode environment:', err);
+        const errName = err?.name || '';
+        const errMsg  = err?.message || String(err);
+
+        // Se falhou mas nao foi bloqueio de permissao, tenta enumerar dispositivos ou usar camera user
+        if (errName !== 'NotAllowedError' && errName !== 'PermissionDeniedError') {
+            _updateCameraStatus('Tentando câmera alternativa...');
+            html5QrCode.start(
+                { facingMode: "user" },
+                config,
+                (decodedText) => { onCameraCodeDetected(decodedText); },
+                () => {}
+            ).then(() => {
+                _onCameraStartedSuccess();
+            }).catch(e2 => {
+                _exibirErroPermissao(e2);
             });
-
-            // Se encontrou câmera traseira, usa a primeira traseira; senao a ultima da lista (padrao Android)
-            window._cameraCurrentIndex = backIndices.length > 0 ? backIndices[0] : (devices.length - 1);
-            _startCameraWithDevice(window._cameraDevicesList[window._cameraCurrentIndex].id, config);
         } else {
-            _startCameraFacingMode("environment", config);
+            _exibirErroPermissao(err);
         }
-    }).catch(err => {
-        console.warn('[Camera] Falha ao enumerar dispositivos, tentando facingMode direto:', err);
-        _startCameraFacingMode("environment", config);
     });
 }
 
-function _startCameraWithDevice(cameraId, config) {
-    if (!window._cameraScannerInstance) return;
-    _updateCameraStatus('Conectando à lente...');
+function _exibirErroPermissao(err) {
+    const errName = err?.name || '';
+    _updateCameraStatus('Câmera não autorizada');
 
-    window._cameraScannerInstance.start(
-        cameraId,
-        config,
-        (decodedText) => { onCameraCodeDetected(decodedText); },
-        () => {}
-    ).then(() => {
-        _onCameraStartedSuccess();
-    }).catch(err => {
-        console.warn('[Camera] Falha ao iniciar cameraId, tentando facingMode environment:', err);
-        _startCameraFacingMode("environment", config);
-    });
-}
+    let msg = 'Não foi possível acessar a câmera.';
+    if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError') {
+        msg = 'A permissão da câmera está bloqueada no seu navegador.
 
-function _startCameraFacingMode(facingMode, config) {
-    if (!window._cameraScannerInstance) return;
-    _updateCameraStatus('Ativando câmera traseira...');
-
-    window._cameraScannerInstance.start(
-        { facingMode: facingMode },
-        config,
-        (decodedText) => { onCameraCodeDetected(decodedText); },
-        () => {}
-    ).then(() => {
-        _onCameraStartedSuccess();
-    }).catch(err => {
-        console.warn('[Camera] Falha no facingMode environment:', err);
-        if (facingMode === "environment") {
-            _startCameraFacingMode("user", config);
-        } else {
-            _updateCameraStatus('Erro ao acessar a câmera.');
-            alert('Não foi possível acessar a câmera. Verifique se o navegador tem permissão nas configurações do celular.');
-            stopCameraScanner();
-        }
-    });
+Como desbloquear no Chrome:
+1. Toque no ícone de configurações ao lado do endereço do site (cadeado ou opções);
+2. Vá em "Permissões" -> "Câmera";
+3. Selecione "Permitir" e tente novamente.';
+    } else {
+        msg = `Erro na câmera (${errName || 'Falha de hardware'}). Verifique se outro aplicativo está usando a câmera.`;
+    }
+    alert(msg);
+    stopCameraScanner();
 }
 
 function _onCameraStartedSuccess() {
