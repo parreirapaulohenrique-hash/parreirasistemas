@@ -300,7 +300,11 @@ body {
 #view-lista,
 #view-pesquisa,
 #view-compras,
+#view-orcamento,
+#view-concorrente,
 #view-dashboard,
+#view-clientes,
+#view-produtosErp,
 #view-base,
 #view-integracaoErp {
     flex: 1;
@@ -308,6 +312,54 @@ body {
     overflow: hidden;
     display: flex;
     flex-direction: column;
+}
+
+/* Scrollbars visíveis e estilizadas para containers com rolagem */
+#erpProdutosContainer,
+#btContainerPrincipal,
+#orcamentoContainer,
+#concorrenteContainer {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto !important;
+    overflow-x: auto;
+    scrollbar-gutter: stable;
+}
+
+#erpProdutosContainer::-webkit-scrollbar,
+#btContainerPrincipal::-webkit-scrollbar,
+#orcamentoContainer::-webkit-scrollbar,
+#concorrenteContainer::-webkit-scrollbar,
+.bt-table-wrapper::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+#erpProdutosContainer::-webkit-scrollbar-track,
+#btContainerPrincipal::-webkit-scrollbar-track,
+#orcamentoContainer::-webkit-scrollbar-track,
+#concorrenteContainer::-webkit-scrollbar-track,
+.bt-table-wrapper::-webkit-scrollbar-track {
+    background: #0f172a;
+    border-radius: 6px;
+}
+
+#erpProdutosContainer::-webkit-scrollbar-thumb,
+#btContainerPrincipal::-webkit-scrollbar-thumb,
+#orcamentoContainer::-webkit-scrollbar-thumb,
+#concorrenteContainer::-webkit-scrollbar-thumb,
+.bt-table-wrapper::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 6px;
+    border: 2px solid #0f172a;
+}
+
+#erpProdutosContainer::-webkit-scrollbar-thumb:hover,
+#btContainerPrincipal::-webkit-scrollbar-thumb:hover,
+#orcamentoContainer::-webkit-scrollbar-thumb:hover,
+#concorrenteContainer::-webkit-scrollbar-thumb:hover,
+.bt-table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-primary, #3b82f6);
 }
 
 /* ── Content Wrapper & Card (Padrão Despacho) ── */

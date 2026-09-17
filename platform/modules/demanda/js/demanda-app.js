@@ -3803,8 +3803,95 @@ const DemandaApp = (function() {
         var container = document.getElementById("btContainerPrincipal");
         if (!container) return;
 
+        // Cálculos dos Totais Disponíveis para a Pesquisa
+        var totalMestresGeral = _baseTecnicaPecas.length;
+        var totalMestresFiltradas = (lista || []).length;
+
+        var totalRefsGeral = _baseTecnicaPecas.reduce(function(acc, p) {
+            return acc + 1 + (p.equivalentes ? p.equivalentes.length : 0);
+        }, 0);
+        var totalRefsFiltradas = (lista || []).reduce(function(acc, p) {
+            return acc + 1 + (p.equivalentes ? p.equivalentes.length : 0);
+        }, 0);
+
+        var marcasSet = {};
+        _baseTecnicaPecas.forEach(function(p) {
+            if (p.marca) marcasSet[p.marca] = true;
+            (p.equivalentes || []).forEach(function(eq) {
+                if (eq.marca) marcasSet[eq.marca] = true;
+            });
+        });
+        var totalMarcasGeral = Object.keys(marcasSet).length;
+
+        var totalComEstoqueGeral = _baseTecnicaPecas.filter(function(p) { return Number(p.estoque || 0) > 0; }).length;
+        var totalComEstoqueFiltrado = (lista || []).filter(function(p) { return Number(p.estoque || 0) > 0; }).length;
+        var totalComErpFiltrado = (lista || []).filter(function(p) { return !!p.erpCodigo; }).length;
+
+        // Painel de Indicadores de Totais da Pesquisa (Cards + Banner Informativo)
+        var htmlTotais = "<div class='bt-summary-cards' style='display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:.75rem;margin-bottom:1rem'>" +
+            // Card 1: Peças Mestres
+            "<div style='background:var(--bg-card);border:1px solid var(--border-color);border-radius:10px;padding:.8rem 1rem;display:flex;align-items:center;gap:.75rem;box-shadow:0 2px 8px rgba(0,0,0,.15)'>" +
+            "<div style='width:38px;height:38px;border-radius:8px;background:rgba(59,130,246,.15);display:flex;align-items:center;justify-content:center;color:#3b82f6;flex-shrink:0'>" +
+            "<span class='material-icons-round' style='font-size:1.3rem'>hub</span>" +
+            "</div>" +
+            "<div>" +
+            "<div style='font-size:.68rem;color:var(--text-secondary);text-transform:uppercase;font-weight:700;letter-spacing:.04em'>Peças Mestres</div>" +
+            "<div style='font-size:1.2rem;font-weight:800;color:var(--text-primary);line-height:1.2'>" +
+            totalMestresFiltradas + " <span style='font-size:.72rem;font-weight:500;color:var(--text-secondary)'>/ " + totalMestresGeral + " total</span>" +
+            "</div>" +
+            "<div style='font-size:.68rem;color:var(--text-secondary);margin-top:2px'>Catalogadas & padronizadas</div>" +
+            "</div></div>" +
+            // Card 2: Refs OEM & Similares
+            "<div style='background:var(--bg-card);border:1px solid var(--border-color);border-radius:10px;padding:.8rem 1rem;display:flex;align-items:center;gap:.75rem;box-shadow:0 2px 8px rgba(0,0,0,.15)'>" +
+            "<div style='width:38px;height:38px;border-radius:8px;background:rgba(16,185,129,.15);display:flex;align-items:center;justify-content:center;color:#10b981;flex-shrink:0'>" +
+            "<span class='material-icons-round' style='font-size:1.3rem'>manage_search</span>" +
+            "</div>" +
+            "<div>" +
+            "<div style='font-size:.68rem;color:var(--text-secondary);text-transform:uppercase;font-weight:700;letter-spacing:.04em'>Refs. OEM & Similares</div>" +
+            "<div style='font-size:1.2rem;font-weight:800;color:#10b981;line-height:1.2'>" +
+            totalRefsFiltradas + " <span style='font-size:.72rem;font-weight:500;color:var(--text-secondary)'>/ " + totalRefsGeral + " indexadas</span>" +
+            "</div>" +
+            "<div style='font-size:.68rem;color:var(--text-secondary);margin-top:2px'>Códigos cruzados pesquisáveis</div>" +
+            "</div></div>" +
+            // Card 3: Marcas Homologadas
+            "<div style='background:var(--bg-card);border:1px solid var(--border-color);border-radius:10px;padding:.8rem 1rem;display:flex;align-items:center;gap:.75rem;box-shadow:0 2px 8px rgba(0,0,0,.15)'>" +
+            "<div style='width:38px;height:38px;border-radius:8px;background:rgba(245,158,11,.15);display:flex;align-items:center;justify-content:center;color:#f59e0b;flex-shrink:0'>" +
+            "<span class='material-icons-round' style='font-size:1.3rem'>agriculture</span>" +
+            "</div>" +
+            "<div>" +
+            "<div style='font-size:.68rem;color:var(--text-secondary);text-transform:uppercase;font-weight:700;letter-spacing:.04em'>Marcas Homologadas</div>" +
+            "<div style='font-size:1.2rem;font-weight:800;color:#f59e0b;line-height:1.2'>" +
+            totalMarcasGeral + "+ <span style='font-size:.72rem;font-weight:500;color:var(--text-secondary)'>fabricantes</span>" +
+            "</div>" +
+            "<div style='font-size:.68rem;color:var(--text-secondary);margin-top:2px'>Máquinas, plantio e implementos</div>" +
+            "</div></div>" +
+            // Card 4: Vínculo ERP & Estoque
+            "<div style='background:var(--bg-card);border:1px solid var(--border-color);border-radius:10px;padding:.8rem 1rem;display:flex;align-items:center;gap:.75rem;box-shadow:0 2px 8px rgba(0,0,0,.15)'>" +
+            "<div style='width:38px;height:38px;border-radius:8px;background:rgba(139,92,246,.15);display:flex;align-items:center;justify-content:center;color:#a855f7;flex-shrink:0'>" +
+            "<span class='material-icons-round' style='font-size:1.3rem'>inventory</span>" +
+            "</div>" +
+            "<div>" +
+            "<div style='font-size:.68rem;color:var(--text-secondary);text-transform:uppercase;font-weight:700;letter-spacing:.04em'>Vínculo ERP & Estoque</div>" +
+            "<div style='font-size:1.2rem;font-weight:800;color:#a855f7;line-height:1.2'>" +
+            totalComEstoqueFiltrado + " <span style='font-size:.72rem;font-weight:500;color:var(--text-secondary)'>com estoque (" + totalComErpFiltrado + " no ERP)</span>" +
+            "</div>" +
+            "<div style='font-size:.68rem;color:var(--text-secondary);margin-top:2px'>Pronta entrega para cotação</div>" +
+            "</div></div>" +
+            "</div>" +
+            // Banner de Universo de Pesquisa
+            "<div style='background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.2);border-radius:8px;padding:.55rem .9rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;font-size:.78rem'>" +
+            "<div style='display:flex;align-items:center;gap:.5rem;color:var(--text-primary)'>" +
+            "<span class='material-icons-round' style='font-size:1.05rem;color:#3b82f6'>info</span>" +
+            "<span><strong>Universo de Pesquisa Disponível:</strong> Base técnica ativa com <strong>" + totalRefsGeral + " referências cruzadas</strong> (OEM + Similares) de <strong>" + totalMestresGeral + " peças mestres</strong> integradas ao catálogo de <strong>+18.750 itens do ERP Maxdata</strong>.</span>" +
+            "</div>" +
+            "<div style='color:var(--text-secondary);font-size:.74rem'>" +
+            "🔍 Digite OEM, similar de mercado, código interno ou modelo para busca instantânea" +
+            "</div>" +
+            "</div>";
+
         if (!lista || lista.length === 0) {
-            container.innerHTML = "<div style='text-align:center;padding:3rem;color:var(--text-secondary)'>" +
+            container.innerHTML = htmlTotais +
+                "<div style='text-align:center;padding:3rem;color:var(--text-secondary)'>" +
                 "<span class='material-icons-round' style='font-size:2.5rem;opacity:.3'>search_off</span>" +
                 "<p style='font-size:.9rem;margin-top:.5rem'>Nenhuma peça mestre encontrada para os filtros selecionados.</p>" +
                 "</div>";
@@ -3821,7 +3908,8 @@ const DemandaApp = (function() {
             MOTOR: "🔋 Motor & Filtros"
         };
 
-        var html = "<div style='margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem'>" +
+        var html = htmlTotais +
+            "<div style='margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem'>" +
             "<div style='display:flex;align-items:center;gap:.75rem'>" +
             "<span style='font-size:.85rem;color:var(--text-secondary)'>Exibindo <strong style='color:var(--text-primary)'>" + lista.length + "</strong> peças mestres catalogadas</span>" +
             "<div class='bt-view-toggle'>" +
