@@ -1,4 +1,4 @@
-window.getTenantSuffix = function () {
+﻿window.getTenantSuffix = function () {
     try {
         const sess = JSON.parse(sessionStorage.getItem('parreira_session') || 'null');
         const tid  = sess?.tenant || sess?.tenantId || (window.ParreiraAuth?.getSessao?.()?.tenant) || '';
@@ -315,11 +315,15 @@ function processScan() {
     input.focus();
 }
 
-// Handle Enter key on scanner input
+// Handle Enter key on scanner input + Escape para fechar camera
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && document.activeElement?.id === 'scannerInput') {
         e.preventDefault();
         processScan();
+    }
+    if (e.key === 'Escape') {
+        const camModal = document.getElementById('cameraScannerModal');
+        if (camModal) { e.preventDefault(); window.stopCameraScanner && window.stopCameraScanner(); }
     }
 });
 
@@ -547,16 +551,23 @@ function _initCameraInstance() {
 
 function _exibirErroPermissao(err) {
     const errName = err?.name || '';
-    _updateCameraStatus('Câmera não autorizada');
 
-    let msg = 'Não foi possível acessar a câmera.';
-    if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError') {
-        msg = 'A permissão da câmera está bloqueada no seu navegador.\n\nComo desbloquear no Chrome:\n1. Toque no ícone ao lado do endereço do site (cadeado ou opções);\n2. Vá em "Permissões" -> "Câmera";\n3. Selecione "Permitir" e tente novamente.';
-    } else {
-        msg = `Erro na câmera (${errName || 'Falha de hardware'}). Verifique se outro aplicativo está usando a câmera.`;
-    }
-    alert(msg);
+    // Fecha o modal IMEDIATAMENTE (sem alert() bloqueante que impedia o X de funcionar)
     stopCameraScanner();
+
+    let msg = 'Nao foi possivel acessar a camera.';
+    if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError') {
+        msg = '\u26a0 Camera bloqueada. Va em Configuracoes do navegador > Permissoes > Camera > Permitir, e tente novamente.';
+    } else if (errName) {
+        msg = \u26a0 Erro na camera (). Verifique se outro app esta usando a camera.;
+    }
+
+    // Toast nao-bloqueante em vez de alert()
+    const t = document.createElement('div');
+    t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e293b;color:#f87171;border:1px solid #ef4444;padding:.75rem 1.2rem;border-radius:12px;font-size:.85rem;z-index:999999;max-width:90vw;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.5);line-height:1.4;';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => { try { t.remove(); } catch(_) {} }, 7000);
 }
 
 function _onCameraStartedSuccess() {
@@ -614,29 +625,27 @@ window.promptManualChaveInput = function() {
 window.stopCameraScanner = function() {
     if (window._cameraInitTimeout) clearTimeout(window._cameraInitTimeout);
 
-    // 1. Para a instância ativa do scanner
-    if (window._cameraScannerInstance) {
-        try {
-            const inst = window._cameraScannerInstance;
-            window._cameraScannerInstance = null;
-            if (inst.isScanning) {
-                inst.stop().catch(() => {}).finally(() => {
-                    try { inst.clear(); } catch(_) {}
-                });
-            } else {
-                try { inst.clear(); } catch(_) {}
-            }
-        } catch(_) {
-            window._cameraScannerInstance = null;
-        }
-    }
-
-    // 2. Remove incondicionalmente o modal do DOM
+    // 1. Fecha o modal IMEDIATAMENTE (sincrono) -- independente do estado do scanner
     const modal = document.getElementById('cameraScannerModal');
     if (modal) {
         modal.classList.add('hidden');
-        modal.style.setProperty('display', 'none', 'important');
+        modal.style.cssText += ';display:none!important;pointer-events:none!important;';
         try { modal.remove(); } catch(_) {}
+    }
+
+    // 2. Para o scanner em background (assincrono -- nao bloqueia o fechamento)
+    const inst = window._cameraScannerInstance;
+    window._cameraScannerInstance = null;
+    if (inst) {
+        setTimeout(() => {
+            try {
+                if (inst.isScanning) {
+                    inst.stop().catch(() => {}).finally(() => { try { inst.clear(); } catch(_) {} });
+                } else {
+                    try { inst.clear(); } catch(_) {}
+                }
+            } catch(_) {}
+        }, 0);
     }
 };
 
