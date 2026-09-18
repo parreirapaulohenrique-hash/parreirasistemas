@@ -9,7 +9,7 @@ window.getTenantSuffix = function () {
 // WMS Coletor Ã¢â‚¬â€ Core Logic
 // Navigation, Auth, Scanner, Shared Data Access
 
-const COLETOR_VERSION = '3.21.42';
+const COLETOR_VERSION = '3.21.43';
 
 // ===== Auth Check =====
 document.addEventListener('DOMContentLoaded', async () => {
@@ -422,6 +422,12 @@ window._cameraCurrentIndex    = 0;
 window.startCameraScanner = function(targetInputId = null) {
     window._cameraTargetInputId = targetInputId;
 
+    // Remove qualquer modal pré-existente para não acumular nem travar
+    let existingModal = document.getElementById('cameraScannerModal');
+    if (existingModal) {
+        try { existingModal.remove(); } catch(_) {}
+    }
+
     let modal = document.getElementById('cameraScannerModal');
     if (!modal) {
         modal = document.createElement('div');
@@ -498,15 +504,7 @@ function _initCameraInstance() {
             const w = Math.floor(Math.min(viewfinderWidth * 0.92, 360));
             const h = Math.floor(Math.min(viewfinderHeight * 0.55, 180));
             return { width: Math.max(w, 200), height: Math.max(h, 80) };
-        },
-        formatsToSupport: [
-            Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.QR_CODE,
-            Html5QrcodeSupportedFormats.EAN_13,
-            Html5QrcodeSupportedFormats.EAN_8,
-            Html5QrcodeSupportedFormats.ITF,
-            Html5QrcodeSupportedFormats.CODE_39
-        ]
+        }
     };
 
     _updateCameraStatus('Solicitando acesso à câmera...');
@@ -594,15 +592,7 @@ window.cycleCameraDevice = function() {
             const h = Math.floor(Math.min(viewfinderHeight * 0.48, 180));
             return { width: Math.max(w, 200), height: Math.max(h, 80) };
         },
-        aspectRatio: 1.777778,
-        formatsToSupport: [
-            Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.QR_CODE,
-            Html5QrcodeSupportedFormats.EAN_13,
-            Html5QrcodeSupportedFormats.EAN_8,
-            Html5QrcodeSupportedFormats.ITF,
-            Html5QrcodeSupportedFormats.CODE_39
-        ]
+        aspectRatio: 1.777778
     };
 
     if (window._cameraScannerInstance) {
@@ -622,16 +612,32 @@ window.promptManualChaveInput = function() {
 };
 
 window.stopCameraScanner = function() {
+    if (window._cameraInitTimeout) clearTimeout(window._cameraInitTimeout);
+
+    // 1. Para a instância ativa do scanner
     if (window._cameraScannerInstance) {
-        window._cameraScannerInstance.stop().then(() => {
-            window._cameraScannerInstance.clear();
+        try {
+            const inst = window._cameraScannerInstance;
             window._cameraScannerInstance = null;
-        }).catch(() => {
+            if (inst.isScanning) {
+                inst.stop().catch(() => {}).finally(() => {
+                    try { inst.clear(); } catch(_) {}
+                });
+            } else {
+                try { inst.clear(); } catch(_) {}
+            }
+        } catch(_) {
             window._cameraScannerInstance = null;
-        });
+        }
     }
+
+    // 2. Remove incondicionalmente o modal do DOM
     const modal = document.getElementById('cameraScannerModal');
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.setProperty('display', 'none', 'important');
+        try { modal.remove(); } catch(_) {}
+    }
 };
 
 window.onCameraCodeDetected = function(rawCode) {

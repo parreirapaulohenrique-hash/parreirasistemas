@@ -494,13 +494,18 @@ body {
     height: 100vh !important;
     background: rgba(10, 15, 30, 0.98) !important;
     z-index: 99999 !important;
-    display: flex !important;
+    display: flex;
     flex-direction: column !important;
     align-items: center !important;
     justify-content: space-between !important;
     padding: 1rem !important;
     box-sizing: border-box !important;
     color: white !important;
+}
+
+#cameraScannerModal.hidden,
+#cameraScannerModal[style*="display: none"] {
+    display: none !important;
 }
 
 #cameraScannerReader {
