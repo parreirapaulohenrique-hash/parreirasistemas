@@ -1,4 +1,4 @@
-﻿window.getTenantSuffix = function () {
+window.getTenantSuffix = function () {
     try {
         const sess = JSON.parse(sessionStorage.getItem('parreira_session') || 'null');
         const tid  = sess?.tenant || sess?.tenantId || (window.ParreiraAuth?.getSessao?.()?.tenant) || '';
@@ -9,7 +9,7 @@
 // WMS Coletor Ã¢â‚¬â€ Core Logic
 // Navigation, Auth, Scanner, Shared Data Access
 
-const COLETOR_VERSION = '3.21.47';
+const COLETOR_VERSION = '3.21.48';
 
 // ===== Auth Check =====
 document.addEventListener('DOMContentLoaded', async () => {
@@ -559,7 +559,7 @@ function _exibirErroPermissao(err) {
     if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError') {
         msg = '\u26a0 Camera bloqueada. Va em Configuracoes do navegador > Permissoes > Camera > Permitir, e tente novamente.';
     } else if (errName) {
-        msg = \u26a0 Erro na camera (). Verifique se outro app esta usando a camera.;
+        msg = '\u26a0 Erro na camera (' + errName + '). Verifique se outro app esta usando a camera.';
     }
 
     // Toast nao-bloqueante em vez de alert()
