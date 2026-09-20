@@ -137,7 +137,23 @@ const DemandaDB = (() => {
      * Constrói o documento de um item com todos os campos default.
      */
     function _buildItemDoc(itemId, demandaId, raw, seq, timestamp) {
-        return {
+        // ── Catálogos Externos de Peças (OEM e Fabricantes) ─────
+    const CATALOG_COL = `${BASE_PATH}/techbase/catalogos`;
+
+    async function saveCatalogoItem(item) {
+        const db = _db();
+        const id = (item.marca + "_" + (item.codigoNorm || item.codigo || "")).replace(/[^a-zA-Z0-9_]/g, "_").slice(0, 60);
+        await db.collection(CATALOG_COL).doc(id).set(item, { merge: true });
+        return id;
+    }
+
+    async function listCatalogoItems(limit = 300) {
+        const db = _db();
+        const snap = await db.collection(CATALOG_COL).limit(limit).get();
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+
+    return {
             id:            itemId,
             demandaId,
             seq,
@@ -517,7 +533,7 @@ const DemandaDB = (() => {
         createDemanda, getDemanda, updateDemanda, listDemandas,
         addItens, getItens, updateItem, updateItemStatus, updateItensBatch, deleteItem, recalcTotals, splitItem,
         onItensChanged, listItensFila, getDashboardStats,
-        saveSession, loadSession, clearSession,
+        saveSession, loadSession, clearSession, saveCatalogoItem, listCatalogoItems, CATALOG_COL,
         TENANT_ID, DEMANDS_COL
     };
 
