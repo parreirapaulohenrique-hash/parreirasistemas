@@ -3980,306 +3980,19 @@ const DemandaApp = (function() {
     var _btExpandedRows = {};
 
     // Catálogo Mestre Inicial de Alta Fidelidade (15 marcas de máquinas e implementos agrícolas)
-    var _PECA_MESTRE_SEED = [
-        {
-            codigoMestre: "PM-00101",
-            funcaoTecnica: "DEDO SEPARADOR DO ROTOR DA COLHEITADEIRA",
-            marca: "JOHN DEERE",
-            tipoEquipamento: "COLHEITADEIRA",
-            modeloEquipamento: "S680, S690, STS 9750, 9670, 9770",
-            sistema: "CORTE",
-            subsistema: "Rotor & Separação",
-            refOem: "AH213767",
-            equivalentes: [
-                { ref: "AH213767-ITS", marca: "ITS", grau: "1" },
-                { ref: "AH213767-VV", marca: "V.V", grau: "2" },
-                { ref: "H171540", marca: "JOHN DEERE", grau: "1" }
-            ],
-            erpCodigo: "5336",
-            erpDesc: "DEDO SEPARADOR DA COLHEITADEIRA",
-            estoque: 15,
-            preco: 163.83
-        },
-        {
-            codigoMestre: "PM-00102",
-            funcaoTecnica: "ENGRENAGEM CÔNICA DA TRANSMISSÃO DO EIXO DIANTEIRO",
-            marca: "CASE",
-            tipoEquipamento: "TRATOR",
-            modeloEquipamento: "Magnum 340, Puma 215, Maxxum",
-            sistema: "TRANSMISSAO",
-            subsistema: "Eixo Trativo Dianteiro 4x4",
-            refOem: "87385412",
-            equivalentes: [
-                { ref: "87385412", marca: "NEW HOLLAND", grau: "1" },
-                { ref: "0095353137", marca: "ZF", grau: "1" },
-                { ref: "DQ34512", marca: "JOHN DEERE", grau: "3" },
-                { ref: "0501215440", marca: "ZF DO BRASIL", grau: "2" }
-            ],
-            erpCodigo: "100456",
-            erpDesc: "COROA E PINHAO CÔNICA ZF EIXO APL 350",
-            estoque: 2,
-            preco: 1890.00
-        },
-        {
-            codigoMestre: "PM-00103",
-            funcaoTecnica: "MANCAL DUPLO A ÓLEO PARA GRADE ARADORA PESADA",
-            marca: "TATU MARCHESAN",
-            tipoEquipamento: "GRADE",
-            modeloEquipamento: "GAPCR 32, GCRO 28, GAICR",
-            sistema: "DISCO_MANCAL",
-            subsistema: "Conjunto do Eixo & Carretéis",
-            refOem: "0501046922",
-            equivalentes: [
-                { ref: "0501046922", marca: "TATU MARCHESAN", grau: "1" },
-                { ref: "5201010045", marca: "BALDAN", grau: "3" },
-                { ref: "PC-42100", marca: "PICCIN", grau: "3" },
-                { ref: "GW211PPB", marca: "PEER BEARINGS", grau: "4" }
-            ],
-            erpCodigo: "100512",
-            erpDesc: "MANCAL GRADE ARADORA A OLEO 211 DUPLO COMPLETO",
-            estoque: 14,
-            preco: 265.00
-        },
-        {
-            codigoMestre: "PM-00104",
-            funcaoTecnica: "DISCO DE CORTE TURBO CANELADO 18 POL COM CUBO BLINDADO",
-            marca: "KUHN",
-            tipoEquipamento: "PLANTADEIRA",
-            modeloEquipamento: "Maxima 3, Primeat, Select",
-            sistema: "PLANTIO",
-            subsistema: "Linha de Plantio Direto",
-            refOem: "K3601440",
-            equivalentes: [
-                { ref: "K3601440", marca: "KUHN", grau: "1" },
-                { ref: "ST-08941", marca: "STARA", grau: "3" },
-                { ref: "0502011245", marca: "TATU MARCHESAN", grau: "3" },
-                { ref: "12845-TURBO", marca: "METISA", grau: "4" }
-            ],
-            erpCodigo: "100688",
-            erpDesc: "DISCO DE CORTE 18 CANELADO COM CUBO AGRI-HUB",
-            estoque: 26,
-            preco: 198.50
-        },
-        {
-            codigoMestre: "PM-00105",
-            funcaoTecnica: "DOSADOR PNEUMÁTICO DE SEMENTES COMPLETO",
-            marca: "STARA",
-            tipoEquipamento: "PLANTADEIRA",
-            modeloEquipamento: "Estrela 32, Cinderela, Absoluta",
-            sistema: "PLANTIO",
-            subsistema: "Distribuição Pneumática DPS 02",
-            refOem: "ST-DPS02-CP",
-            equivalentes: [
-                { ref: "ST-DPS02-CP", marca: "STARA", grau: "1" },
-                { ref: "AA72345", marca: "JOHN DEERE", grau: "3" },
-                { ref: "V-99321", marca: "VENCE TUDO", grau: "4" }
-            ],
-            erpCodigo: "100742",
-            erpDesc: "DOSADOR PNEUMÁTICO DPS COMPLETO STARA",
-            estoque: 0,
-            preco: 840.00
-        },
-        {
-            codigoMestre: "PM-00106",
-            funcaoTecnica: "BOMBA DE PISTÃO CERÂMICO DE PULVERIZAÇÃO 150 L/MIN",
-            marca: "JACTO",
-            tipoEquipamento: "PULVERIZADOR",
-            modeloEquipamento: "Uniport 3030, Uniport 2500, Advance",
-            sistema: "PULVERIZACAO",
-            subsistema: "Circuito de Defensivos & Bomba JP-150",
-            refOem: "JP-150-JACTO",
-            equivalentes: [
-                { ref: "JP-150-JACTO", marca: "JACTO", grau: "1" },
-                { ref: "1042398", marca: "KUHN", grau: "3" },
-                { ref: "BP-150", marca: "HYPRO / PENTAIR", grau: "4" }
-            ],
-            erpCodigo: "100810",
-            erpDesc: "BOMBA PULVERIZADOR JP-150 COMPLETA JACTO",
-            estoque: 3,
-            preco: 3250.00
-        },
-        {
-            codigoMestre: "PM-00107",
-            funcaoTecnica: "CORRENTE RECOLHEDORA COM TALISCA FORJADA LINHA DE CORTE",
-            marca: "VENCE TUDO",
-            tipoEquipamento: "PLATAFORMA_MILHO",
-            modeloEquipamento: "Bocuda, Carina, Panther",
-            sistema: "CORTE",
-            subsistema: "Unhas e Correntes Recolhedoras",
-            refOem: "VT-501239",
-            equivalentes: [
-                { ref: "VT-501239", marca: "VENCE TUDO", grau: "1" },
-                { ref: "CA550-6W", marca: "TATU MARCHESAN", grau: "2" },
-                { ref: "HXE32806", marca: "JOHN DEERE", grau: "3" }
-            ],
-            erpCodigo: "100915",
-            erpDesc: "CORRENTE RECOLHEDORA MILHO CA550 C/ 6 TALISCAS",
-            estoque: 42,
-            preco: 145.00
-        },
-        {
-            codigoMestre: "PM-00108",
-            funcaoTecnica: "DISCO DISTRIBUIDOR DUPLO DE INOX COM PALHETAS REGULÁVEIS",
-            marca: "JAN",
-            tipoEquipamento: "DISTRIBUIDOR",
-            modeloEquipamento: "Lancer 12000, Lancer 24000, Maxi",
-            sistema: "DISCO_MANCAL",
-            subsistema: "Distribuição Centrífuga de Adubo & Calcário",
-            refOem: "JAN-029412",
-            equivalentes: [
-                { ref: "JAN-029412", marca: "JAN", grau: "1" },
-                { ref: "ST-HERC-09", marca: "STARA", grau: "3" },
-                { ref: "K-AXIS-20", marca: "KUHN", grau: "4" }
-            ],
-            erpCodigo: "101032",
-            erpDesc: "DISCO DISTRIBUIDOR INOX ADUBO/CALCARIO JAN/STARA",
-            estoque: 6,
-            preco: 490.00
-        },
-        {
-            codigoMestre: "PM-00109",
-            funcaoTecnica: "DISCO DE CORTE DUPLO DE SEMENTES 15 POL COM ROLAMENTO",
-            marca: "SEMEATO",
-            tipoEquipamento: "PLANTADEIRA",
-            modeloEquipamento: "SSM 27, Sol TT, Land Master",
-            sistema: "PLANTIO",
-            subsistema: "Sulcador & Linha de Semente",
-            refOem: "SM-150244",
-            equivalentes: [
-                { ref: "SM-150244", marca: "SEMEATO", grau: "1" },
-                { ref: "JM-30291", marca: "JUMIL", grau: "2" },
-                { ref: "0501051200", marca: "TATU MARCHESAN", grau: "3" },
-                { ref: "ST-DISC-15", marca: "STARA", grau: "4" }
-            ],
-            erpCodigo: "101118",
-            erpDesc: "DISCO PLANTIO DUPLO 15 POL C/ ROLAMENTO BLINDADO",
-            estoque: 38,
-            preco: 162.00
-        },
-        {
-            codigoMestre: "PM-00110",
-            funcaoTecnica: "CRUZETA DA TRANSMISSÃO COM ENGRAXADEIRA CENTRAL",
-            marca: "ZF",
-            tipoEquipamento: "TRANSMISSAO",
-            modeloEquipamento: "Eixo Dianteiro ZF APL 345 / 350 / 355",
-            sistema: "TRANSMISSAO",
-            subsistema: "Articulação do Semieixo Cardan",
-            refOem: "0501211245",
-            equivalentes: [
-                { ref: "0501211245", marca: "ZF", grau: "1" },
-                { ref: "5-280X", marca: "SPICER", grau: "1" },
-                { ref: "DQ28941", marca: "JOHN DEERE", grau: "3" },
-                { ref: "3317429M1", marca: "MASSEY FERGUSON", grau: "2" },
-                { ref: "81864192", marca: "NEW HOLLAND", grau: "3" }
-            ],
-            erpCodigo: "101205",
-            erpDesc: "CRUZETA CARDAN ZF EIXO DIANTEIRO 35X106",
-            estoque: 19,
-            preco: 145.00
-        },
-        {
-            codigoMestre: "PM-00111",
-            funcaoTecnica: "PONTEIRA FORJADA REVERSÍVEL COM ASAS DO ESCARIFICADOR",
-            marca: "BALDAN",
-            tipoEquipamento: "ESCARIFICADOR",
-            modeloEquipamento: "EPC, Dicar, Asa Laser",
-            sistema: "DISCO_MANCAL",
-            subsistema: "Haste Escarificadora & Chassi",
-            refOem: "BD-049210",
-            equivalentes: [
-                { ref: "BD-049210", marca: "BALDAN", grau: "1" },
-                { ref: "PC-ESC-33", marca: "PICCIN", grau: "2" },
-                { ref: "0502011988", marca: "TATU MARCHESAN", grau: "3" },
-                { ref: "ST-FOX-01", marca: "STARA", grau: "4" }
-            ],
-            erpCodigo: "101340",
-            erpDesc: "PONTEIRA FORJADA COM ASA ESCARIFICADOR BALDAN/TATU",
-            estoque: 50,
-            preco: 95.00
-        },
-        {
-            codigoMestre: "PM-00112",
-            funcaoTecnica: "ENGRENAGEM HELICOIDAL DA CAIXA DE DISTRIBUIÇÃO",
-            marca: "JUMIL",
-            tipoEquipamento: "PLANTADEIRA",
-            modeloEquipamento: "Exacta Air, Guerra, JM 2980",
-            sistema: "PLANTIO",
-            subsistema: "Caixa de Adubo & Transmissão Central",
-            refOem: "JM-270844",
-            equivalentes: [
-                { ref: "JM-270844", marca: "JUMIL", grau: "1" },
-                { ref: "VT-ENG-12", marca: "VENCE TUDO", grau: "3" },
-                { ref: "0502012411", marca: "TATU MARCHESAN", grau: "3" }
-            ],
-            erpCodigo: "101422",
-            erpDesc: "ENGRENAGEM HELICOIDAL Z-18 DISTRIBUIDOR JUMIL",
-            estoque: 9,
-            preco: 88.00
-        }
-    ];
+    // Base Externa de Catálogos & Peças Técnicas (Limpa e Pronta para Alimentação)
+    var _PECA_MESTRE_SEED = [];
+    var _baseTecnicaPecas = [];
+    var _baseTecnicaInicializada = false;
+    var _btBuscaGeralTimeout = null;
+    var _btExpandedRows = {};
+    var _btViewMode = "grid";
 
-    function loadBaseTecnica() {
-        var container = document.getElementById("btContainerPrincipal");
-        if (!container) return;
-
-        if (_baseTecnicaInicializada && _baseTecnicaPecas.length > 0) {
+    function onBtBuscaGeral(val) {
+        clearTimeout(_btBuscaGeralTimeout);
+        _btBuscaGeralTimeout = setTimeout(function() {
             filtrarBaseTecnica();
-            return;
-        }
-
-        container.innerHTML = "<div style='padding:3rem;text-align:center;color:var(--text-secondary)'>" +
-            "<span class='material-icons-round' style='animation:spin 1s linear infinite;font-size:2.2rem;color:var(--accent-primary)'>sync</span>" +
-            "<p style='margin-top:.75rem;font-size:.88rem'>Carregando Base Técnica de Peças Agrícolas & Implementos...</p></div>";
-
-        _baseTecnicaPecas = JSON.parse(JSON.stringify(_PECA_MESTRE_SEED));
-
-        // Tenta enriquecer com itens gravados no Firestore techbase
-        if (typeof firebase !== "undefined") {
-            try {
-                var db = firebase.firestore();
-                db.collection("tenants/centralpecas/demanda/techbase/products")
-                    .limit(50)
-                    .get()
-                    .then(function(snap) {
-                        snap.docs.forEach(function(d) {
-                            var dt = d.data();
-                            var refCode = dt.codigoFab || dt.referencia || d.id;
-                            var jaExiste = _baseTecnicaPecas.some(function(p) {
-                                return p.refOem === refCode || p.codigoMestre === refCode;
-                            });
-                            if (!jaExiste && refCode) {
-                                _baseTecnicaPecas.push({
-                                    codigoMestre: "FS-" + refCode,
-                                    funcaoTecnica: (dt.descricao || dt.erpProdutoDesc || "PEÇA TÉCNICA AGRÍCOLA").toUpperCase(),
-                                    marca: (dt.fabricante || "CATÁLOGO").toUpperCase(),
-                                    tipoEquipamento: (dt.grupo || "IMPLEMENTOS").toUpperCase(),
-                                    modeloEquipamento: dt.aplicacao || "Geral",
-                                    sistema: "DISCO_MANCAL",
-                                    subsistema: dt.subGrupo || "Catálogo Oficial",
-                                    refOem: refCode,
-                                    equivalentes: [
-                                        { ref: refCode, marca: dt.fabricante || "OEM", grau: dt.origem === "pdf_catalog" ? "2" : "1" }
-                                    ],
-                                    erpCodigo: dt.codigoErp || dt.erpProdutoId || null,
-                                    erpDesc: dt.descricao || "",
-                                    estoque: Number(dt.estoque || 0),
-                                    preco: Number(dt.preco || 0)
-                                });
-                            }
-                        });
-                        _baseTecnicaInicializada = true;
-                        filtrarBaseTecnica();
-                    })
-                    .catch(function() {
-                        _baseTecnicaInicializada = true;
-                        filtrarBaseTecnica();
-                    });
-                return;
-            } catch (_) {}
-        }
-
-        _baseTecnicaInicializada = true;
-        filtrarBaseTecnica();
+        }, 250);
     }
 
     function setBtViewMode(mode) {
@@ -4296,37 +4009,318 @@ const DemandaApp = (function() {
         filtrarBaseTecnica();
     }
 
-    function filtrarBaseTecnica() {
+    function abrirModalImportarCatalogo() {
+        var m = document.getElementById("modalImportarCatalogo");
+        if (m) m.style.display = "flex";
+        var st = document.getElementById("catImpStatus");
+        if (st) st.textContent = "Pronto para importar";
+    }
+
+    function fecharModalImportarCatalogo() {
+        var m = document.getElementById("modalImportarCatalogo");
+        if (m) m.style.display = "none";
+        var txt = document.getElementById("catImpTexto");
+        if (txt) txt.value = "";
+    }
+
+    function processarImportacaoCatalogo() {
+        var inpMarca   = document.getElementById("catImpMarca");
+        var selTipo    = document.getElementById("catImpTipoOrigem");
+        var selSist    = document.getElementById("catImpSistema");
+        var inpArquivo = document.getElementById("catImpNomeArquivo");
+        var txtDados   = document.getElementById("catImpTexto");
+        var elStatus   = document.getElementById("catImpStatus");
+
+        var marca = (inpMarca ? inpMarca.value : "").trim().toUpperCase();
+        var tipo  = (selTipo ? selTipo.value : "OEM").trim().toUpperCase();
+        var sist  = (selSist ? selSist.value : "DISCO_MANCAL").trim().toUpperCase();
+        var arq   = (inpArquivo ? inpArquivo.value : "").trim() || ("Catálogo " + marca);
+        var texto = (txtDados ? txtDados.value : "").trim();
+
+        if (!marca) {
+            if (elStatus) elStatus.textContent = "⚠️ Informe a Marca / Fabricante do catálogo.";
+            if (typeof DemandaApp._toast === "function") DemandaApp._toast("Informe a marca do catálogo!", "warning");
+            return;
+        }
+
+        if (!texto) {
+            if (elStatus) elStatus.textContent = "⚠️ Cole ao menos uma linha de dados da peça.";
+            if (typeof DemandaApp._toast === "function") DemandaApp._toast("Cole os dados das peças no campo de texto!", "warning");
+            return;
+        }
+
+        var linhas = texto.split(/\r?\n/);
+        var novosItens = [];
+        var timestamp = new Date().toISOString();
+
+        linhas.forEach(function(linha, idx) {
+            var l = linha.trim();
+            if (!l) return;
+            // Ignora cabeçalhos comuns
+            if (/^(c[oó]d|refer[eê]ncia|item|part|pe[çc]a|descri)/i.test(l)) return;
+
+            // Separadores aceitos: TAB, ponto e vírgula, ou barra vertical
+            var cols = l.indexOf("\t") !== -1 ? l.split("\t") : (l.indexOf(";") !== -1 ? l.split(";") : l.split("|"));
+            cols = cols.map(function(c) { return (c || "").trim(); });
+
+            var codigo = cols[0] || "";
+            if (!codigo) return;
+
+            var desc   = cols[1] || ("PEÇA " + codigo + " " + marca);
+            var app    = cols[2] || "Geral / Máquinas e Implementos";
+            var rawSim = cols[3] || "";
+
+            // Trata referências similares
+            var equivalentes = [];
+            if (rawSim) {
+                var partesSim = rawSim.split(/[,;/]+/);
+                partesSim.forEach(function(sim) {
+                    var s = sim.trim();
+                    if (s) {
+                        equivalentes.push({
+                            ref: s,
+                            marca: tipo === "OEM" ? "SIMILAR" : "ORIGINAL OEM",
+                            grau: tipo === "OEM" ? "1" : "2"
+                        });
+                    }
+                });
+            }
+
+            var itemObj = {
+                codigoMestre: (tipo === "OEM" ? "OEM-" : "FAB-") + codigo.replace(/[^A-Z0-9\-_]/gi, ""),
+                codigo: codigo,
+                codigoNorm: codigo.toUpperCase().replace(/[^A-Z0-9]/g, ""),
+                funcaoTecnica: desc.toUpperCase(),
+                marca: marca,
+                tipoOrigem: tipo,
+                tipoEquipamento: "IMPLEMENTOS",
+                modeloEquipamento: app,
+                sistema: sist,
+                subsistema: arq,
+                refOem: tipo === "OEM" ? codigo : (equivalentes[0] ? equivalentes[0].ref : codigo),
+                equivalentes: equivalentes,
+                origemCatalogo: arq,
+                criadoEm: timestamp
+            };
+
+            novosItens.push(itemObj);
+        });
+
+        if (novosItens.length === 0) {
+            if (elStatus) elStatus.textContent = "❌ Nenhuma peça válida detectada no texto.";
+            return;
+        }
+
+        if (elStatus) elStatus.textContent = "⏳ Gravando " + novosItens.length + " peças no catálogo...";
+
+        // Atualiza cache em memória
+        novosItens.forEach(function(novo) {
+            var jaExiste = _baseTecnicaPecas.some(function(p) {
+                return (p.codigoNorm && p.codigoNorm === novo.codigoNorm && p.marca === novo.marca);
+            });
+            if (!jaExiste) {
+                _baseTecnicaPecas.unshift(novo);
+            }
+        });
+
+        // Persiste no localStorage
+        try {
+            localStorage.setItem("demanda_catalogos_centralpecas", JSON.stringify(_baseTecnicaPecas));
+        } catch (_) {}
+
+        // Persiste no Firestore em lote se disponível
+        if (typeof firebase !== "undefined" && firebase.firestore) {
+            try {
+                var db = firebase.firestore();
+                var batch = db.batch();
+                var colRef = db.collection("tenants/centralpecas/demanda/techbase/catalogos");
+                novosItens.slice(0, 100).forEach(function(item) {
+                    var docId = (item.marca + "_" + item.codigoNorm).replace(/[^a-zA-Z0-9_]/g, "_").slice(0, 60);
+                    batch.set(colRef.doc(docId), item, { merge: true });
+                });
+                batch.commit().catch(function(err) {
+                    console.warn("[DemandaApp] Erro ao sincronizar catálogo no Firestore:", err);
+                });
+            } catch (e) {
+                console.warn("[DemandaApp] Falha Firestore batch:", e);
+            }
+        }
+
+        _popularSelectMarcas();
+        filtrarBaseTecnica();
+        fecharModalImportarCatalogo();
+
+        if (typeof DemandaApp._toast === "function") {
+            DemandaApp._toast("Catálogo gravado! " + novosItens.length + " peças importadas com sucesso.", "success");
+        }
+    }
+
+    function _popularSelectMarcas() {
+        var sel = document.getElementById("btSelMarca");
+        if (!sel) return;
+
+        var valAtual = sel.value;
+        var marcasMap = {};
+        _baseTecnicaPecas.forEach(function(p) {
+            if (p.marca) marcasMap[p.marca.toUpperCase()] = true;
+        });
+        var marcas = Object.keys(marcasMap).sort();
+
+        var optHtml = '<option value="">Todas as Marcas' + (marcas.length > 0 ? ' (' + marcas.length + ')' : '') + '</option>';
+        marcas.forEach(function(m) {
+            optHtml += '<option value="' + _esc(m) + '">' + _esc(m) + '</option>';
+        });
+        sel.innerHTML = optHtml;
+        if (valAtual && marcasMap[valAtual]) {
+            sel.value = valAtual;
+        }
+    }
+
+    function loadBaseTecnica(forceRefresh) {
         var container = document.getElementById("btContainerPrincipal");
         if (!container) return;
 
-        var selMarca = document.getElementById("btSelMarca");
-        var selTipo  = document.getElementById("btSelTipoEquipamento");
-        var selSist  = document.getElementById("btSelSistema");
-        var inpBusca = document.getElementById("btInpBuscaMestre");
+        if (_baseTecnicaInicializada && !forceRefresh && _baseTecnicaPecas.length > 0) {
+            _popularSelectMarcas();
+            filtrarBaseTecnica();
+            return;
+        }
 
-        var fMarca = selMarca ? selMarca.value.toUpperCase().trim() : "";
-        var fTipo  = selTipo  ? selTipo.value.toUpperCase().trim()  : "";
-        var fSist  = selSist  ? selSist.value.toUpperCase().trim()  : "";
-        var fBusca = inpBusca ? inpBusca.value.toUpperCase().trim() : "";
+        if (forceRefresh) {
+            _baseTecnicaPecas = [];
+        }
+
+        container.innerHTML = "<div style='padding:3rem;text-align:center;color:var(--text-secondary)'>" +
+            "<span class='material-icons-round' style='animation:spin 1s linear infinite;font-size:2.2rem;color:var(--accent-primary)'>sync</span>" +
+            "<p style='margin-top:.75rem;font-size:.88rem'>Carregando Catálogo de Peças & Fabricantes...</p></div>";
+
+        // 1. Tenta carregar do cache local
+        var localData = null;
+        try {
+            var raw = localStorage.getItem("demanda_catalogos_centralpecas");
+            if (raw) localData = JSON.parse(raw);
+        } catch (_) {}
+
+        if (Array.isArray(localData) && localData.length > 0) {
+            _baseTecnicaPecas = localData;
+        }
+
+        // 2. Consulta Firestore para carregar catálogos persistidos
+        if (typeof firebase !== "undefined" && firebase.firestore) {
+            try {
+                var db = firebase.firestore();
+                db.collection("tenants/centralpecas/demanda/techbase/catalogos")
+                    .limit(300)
+                    .get()
+                    .then(function(snap) {
+                        snap.docs.forEach(function(d) {
+                            var dt = d.data();
+                            var codNorm = dt.codigoNorm || (dt.codigo || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+                            var jaTem = _baseTecnicaPecas.some(function(p) {
+                                return (p.codigoNorm && p.codigoNorm === codNorm && p.marca === dt.marca);
+                            });
+                            if (!jaTem && (dt.codigo || dt.codigoMestre)) {
+                                _baseTecnicaPecas.push(dt);
+                            }
+                        });
+                        _baseTecnicaInicializada = true;
+                        _popularSelectMarcas();
+                        filtrarBaseTecnica();
+                    })
+                    .catch(function() {
+                        _baseTecnicaInicializada = true;
+                        _popularSelectMarcas();
+                        filtrarBaseTecnica();
+                    });
+                return;
+            } catch (_) {}
+        }
+
+        _baseTecnicaInicializada = true;
+        _popularSelectMarcas();
+        filtrarBaseTecnica();
+    }
+
+    function filtrarBaseTecnica() {
+        var container = document.getElementById("btContainerPrincipal");
+        var elContador = document.getElementById("btTotalContador");
+        if (!container) return;
+
+        var inpGeral = document.getElementById("btInpBuscaGeral");
+        var inpDesc  = document.getElementById("btInpBuscaDesc");
+        var inpRef   = document.getElementById("btInpBuscaRef");
+        var inpApp   = document.getElementById("btInpBuscaAplicacao");
+        var selMarca = document.getElementById("btSelMarca");
+        var selTipo  = document.getElementById("btSelTipoOrigem");
+        var selSist  = document.getElementById("btSelSistema");
+
+        var qGeral = (inpGeral ? inpGeral.value : "").trim().toLowerCase();
+        var qDesc  = (inpDesc ? inpDesc.value : "").trim().toLowerCase();
+        var qRef   = (inpRef ? inpRef.value : "").trim().toLowerCase();
+        var qApp   = (inpApp ? inpApp.value : "").trim().toLowerCase();
+        var fMarca = (selMarca ? selMarca.value : "").trim().toUpperCase();
+        var fTipo  = (selTipo ? selTipo.value : "").trim().toUpperCase();
+        var fSist  = (selSist ? selSist.value : "").trim().toUpperCase();
 
         var filtradas = _baseTecnicaPecas.filter(function(p) {
-            if (fMarca && p.marca.indexOf(fMarca) === -1) {
+            // Filtro Marca
+            if (fMarca && (p.marca || "").toUpperCase() !== fMarca) {
                 var bateEquiv = p.equivalentes && p.equivalentes.some(function(eq) {
-                    return (eq.marca || "").toUpperCase().indexOf(fMarca) !== -1;
+                    return (eq.marca || "").toUpperCase() === fMarca;
                 });
                 if (!bateEquiv) return false;
             }
-            if (fTipo && p.tipoEquipamento !== fTipo) return false;
-            if (fSist && p.sistema !== fSist) return false;
 
-            if (fBusca) {
-                var searchStr = (p.codigoMestre + " " + p.funcaoTecnica + " " + p.refOem + " " + p.marca + " " + p.modeloEquipamento + " " + (p.erpDesc || "")).toUpperCase();
-                var eqStr = (p.equivalentes || []).map(function(e){ return e.ref + " " + e.marca; }).join(" ").toUpperCase();
-                if (searchStr.indexOf(fBusca) === -1 && eqStr.indexOf(fBusca) === -1) return false;
+            // Filtro Tipo Origem (OEM vs FABRICANTE)
+            if (fTipo && (p.tipoOrigem || "OEM").toUpperCase() !== fTipo) {
+                return false;
             }
+
+            // Filtro Sistema
+            if (fSist && (p.sistema || "").toUpperCase() !== fSist) {
+                return false;
+            }
+
+            // Filtro Cód / Descrição
+            if (qDesc) {
+                var hayDesc = ((p.codigo || "") + " " + (p.codigoMestre || "") + " " + (p.funcaoTecnica || "")).toLowerCase();
+                if (hayDesc.indexOf(qDesc) === -1) return false;
+            }
+
+            // Filtro Ref / Similar
+            if (qRef) {
+                var hayRef = ((p.refOem || "") + " " + (p.codigo || "")).toLowerCase();
+                var eqText = (p.equivalentes || []).map(function(e) { return (e.ref || "") + " " + (e.marca || ""); }).join(" ").toLowerCase();
+                if (hayRef.indexOf(qRef) === -1 && eqText.indexOf(qRef) === -1) return false;
+            }
+
+            // Filtro Aplicação
+            if (qApp) {
+                var hayApp = ((p.modeloEquipamento || "") + " " + (p.aplicacao || "") + " " + (p.subsistema || "")).toLowerCase();
+                if (hayApp.indexOf(qApp) === -1) return false;
+            }
+
+            // Filtro Busca Geral (Top bar)
+            if (qGeral) {
+                var searchStr = ((p.codigo || "") + " " + (p.codigoMestre || "") + " " + (p.funcaoTecnica || "") + " " + (p.marca || "") + " " + (p.refOem || "") + " " + (p.modeloEquipamento || "") + " " + (p.erpDesc || "")).toLowerCase();
+                var eqStr = (p.equivalentes || []).map(function(e) { return (e.ref || "") + " " + (e.marca || ""); }).join(" ").toLowerCase();
+                if (searchStr.indexOf(qGeral) === -1 && eqStr.indexOf(qGeral) === -1) return false;
+            }
+
             return true;
         });
+
+        // Atualiza contador de cadastros
+        if (elContador) {
+            if (_baseTecnicaPecas.length === 0) {
+                elContador.textContent = "0 peças catalogadas na base";
+            } else {
+                var marcasUnicas = {};
+                _baseTecnicaPecas.forEach(function(p) { if (p.marca) marcasUnicas[p.marca] = true; });
+                var qtdMarcas = Object.keys(marcasUnicas).length;
+                elContador.textContent = filtradas.length.toLocaleString("pt-BR") + " de " + _baseTecnicaPecas.length.toLocaleString("pt-BR") + " peças catalogadas (" + qtdMarcas + " marcas)";
+            }
+        }
 
         _renderBaseTecnica(filtradas);
     }
@@ -4335,10 +4329,30 @@ const DemandaApp = (function() {
         var container = document.getElementById("btContainerPrincipal");
         if (!container) return;
 
+        // Caso 1: Base totalmente vazia / limpa (conforme instrução do usuário)
+        if (_baseTecnicaPecas.length === 0) {
+            container.innerHTML = "<div style='text-align:center;padding:4rem 2rem;max-width:620px;margin:2rem auto;background:rgba(255,255,255,.015);border:1px dashed var(--border-color);border-radius:14px'>" +
+                "<div style='width:64px;height:64px;border-radius:50%;background:rgba(59,130,246,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem'>" +
+                "<span class='material-icons-round' style='font-size:2.2rem;color:var(--primary-color)'>menu_book</span>" +
+                "</div>" +
+                "<h3 style='font-size:1.2rem;color:var(--text-primary);margin-bottom:.5rem'>Base Externa Limpa & Pronta para Catálogos</h3>" +
+                "<p style='font-size:.86rem;color:var(--text-secondary);line-height:1.6;margin-bottom:1.5rem'>" +
+                "A base externa foi reestruturada para receber os <strong>catálogos de peças originais (OEM)</strong> e de <strong>fabricantes parceiros</strong>. " +
+                "Assim que os dados forem alimentados, o sistema ativará o cruzamento bidirecional por aplicação, referências de similaridade e consulta ao estoque do ERP Maxdata." +
+                "</p>" +
+                "<button class='btn btn-primary' onclick='DemandaApp.abrirModalImportarCatalogo()' style='display:inline-flex;align-items:center;gap:.5rem;padding:.6rem 1.4rem;font-weight:600'>" +
+                "<span class='material-icons-round' style='font-size:1.1rem'>upload_file</span> Importar Primeiro Catálogo" +
+                "</button>" +
+                "</div>";
+            return;
+        }
+
+        // Caso 2: Filtros não encontraram registros
         if (!lista || lista.length === 0) {
-            container.innerHTML = "<div style='text-align:center;padding:3rem;color:var(--text-secondary)'>" +
-                "<span class='material-icons-round' style='font-size:2.5rem;opacity:.3'>search_off</span>" +
-                "<p style='font-size:.9rem;margin-top:.5rem'>Nenhuma peça mestre encontrada para os filtros selecionados.</p>" +
+            container.innerHTML = "<div style='text-align:center;padding:3.5rem;color:var(--text-secondary)'>" +
+                "<span class='material-icons-round' style='font-size:3rem;opacity:.3'>search_off</span>" +
+                "<h4 style='margin:.75rem 0 .25rem;color:var(--text-primary)'>Nenhuma peça encontrada</h4>" +
+                "<p style='font-size:.85rem'>Tente ajustar ou limpar os filtros de pesquisa de catálogos.</p>" +
                 "</div>";
             return;
         }
@@ -4353,226 +4367,128 @@ const DemandaApp = (function() {
             MOTOR: "🔋 Motor & Filtros"
         };
 
-        var html = "<div style='margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem'>" +
-            "<div style='display:flex;align-items:center;gap:.75rem'>" +
-            "<span style='font-size:.85rem;color:var(--text-secondary)'>Exibindo <strong style='color:var(--text-primary)'>" + lista.length + "</strong> peças mestres catalogadas</span>" +
-            "<div class='bt-view-toggle'>" +
-            "<button class='bt-toggle-btn " + (_btViewMode === "grid" ? "active" : "") + "' onclick='DemandaApp.setBtViewMode(\"grid\")' title='Visualização em Grid Tabular'>" +
-            "<span class='material-icons-round' style='font-size:.95rem'>table_chart</span> Grid</button>" +
-            "<button class='bt-toggle-btn " + (_btViewMode === "cards" ? "active" : "") + "' onclick='DemandaApp.setBtViewMode(\"cards\")' title='Visualização em Cards'>" +
-            "<span class='material-icons-round' style='font-size:.95rem'>grid_view</span> Cards</button>" +
-            "</div>" +
-            "</div>" +
-            "<span style='font-size:.75rem;color:var(--text-secondary);display:inline-flex;align-items:center;gap:.3rem'>" +
-            "<span class='material-icons-round' style='font-size:.85rem;color:#10b981'>check_circle</span> Relacionamento hierárquico ativo" +
-            "</span>" +
-            "</div>";
+        var html = "<div class='bt-table-wrapper'>" +
+            "<table class='bt-data-table'>" +
+            "<thead>" +
+            "<tr>" +
+            "<th style='width:36px;text-align:center'></th>" +
+            "<th style='width:140px'>Código / Part Number</th>" +
+            "<th>Peça / Descrição Técnica & Aplicação</th>" +
+            "<th style='width:130px'>Marca / Catálogo</th>" +
+            "<th style='min-width:240px'>Referências Cruzadas & Similaridades</th>" +
+            "<th style='width:170px'>Cruzamento ERP Maxdata</th>" +
+            "<th style='width:110px;text-align:center'>Ações</th>" +
+            "</tr>" +
+            "</thead>" +
+            "<tbody>";
 
-        if (_btViewMode === "grid") {
-            html += "<div class='bt-table-wrapper'>" +
-                "<table class='bt-data-table'>" +
-                "<thead>" +
-                "<tr>" +
-                "<th style='width:36px;text-align:center'></th>" +
-                "<th style='width:120px'>Código Mestre</th>" +
-                "<th>Peça / Descrição Técnica</th>" +
-                "<th style='width:130px'>Marca</th>" +
-                "<th style='width:170px'>Ref. Oficial OEM</th>" +
-                "<th style='min-width:240px'>Equivalentes & Similares</th>" +
-                "<th style='width:170px'>ERP Maxdata</th>" +
-                "<th style='width:120px;text-align:center'>Ações</th>" +
-                "</tr>" +
-                "</thead>" +
-                "<tbody>";
+        html += lista.map(function(p) {
+            var isOem = (p.tipoOrigem || "OEM") === "OEM";
+            var origBadge = isOem
+                ? "<span class='badge-confianca badge-grau1' title='Peça de Catálogo Oficial de Montadora'>🛡️ Original OEM</span>"
+                : "<span class='badge-confianca badge-grau2' title='Peça de Fabricante / Aftermarket'>📘 Fabricante</span>";
 
-            html += lista.map(function(p) {
-                var oemBadge = getGrauConfiancaBadge("1");
-                var temEstoque = Number(p.estoque || 0) > 0;
+            var codExibido = _esc(p.codigo || p.codigoMestre || p.refOem);
+            var safeDesc   = _esc(p.funcaoTecnica || p.descricao || "PEÇA TÉCNICA");
+            var safeMarca  = _esc(p.marca || "CATÁLOGO");
+            var safeApp    = _esc(p.modeloEquipamento || p.aplicacao || "Geral");
+            var sistNome   = sistLabels[p.sistema] || p.sistema || "Peças Agrícolas";
+            var isExp      = !!_btExpandedRows[p.codigoMestre || codExibido];
+
+            // Renderiza referências equivalentes / similares
+            var equivHtml = (p.equivalentes || []).map(function(eq) {
+                var eqBadge = getGrauConfiancaBadge(eq.grau || "2");
+                return "<span class='bt-sim-pill' title='" + _esc(eq.marca || "Similar") + "'>" +
+                    "<strong>" + _esc(eq.ref) + "</strong> " +
+                    "<span style='color:#94a3b8;font-size:.62rem'>(" + _esc(eq.marca || "SIMILAR") + ")</span> " +
+                    eqBadge +
+                    "</span>";
+            }).join("");
+
+            // Cruzamento em tempo real com o ERP Maxdata
+            var erpHtml = "";
+            var itemErpBate = null;
+            if (typeof _produtosErpList !== "undefined" && _produtosErpList.length > 0) {
+                var codNorm = (p.codigoNorm || p.codigo || "").toUpperCase();
+                itemErpBate = _produtosErpList.find(function(erp) {
+                    var cFab = (erp.codigoFab || "").toUpperCase();
+                    var cOrig = (erp.codigoOriginal || "").toUpperCase();
+                    return (cFab && cFab === codNorm) || (cOrig && cOrig === codNorm);
+                });
+            }
+
+            if (itemErpBate || p.erpCodigo) {
+                var erpCod = itemErpBate ? itemErpBate.codigoErp : p.erpCodigo;
+                var erpEst = itemErpBate ? Number(itemErpBate.estoque || 0) : Number(p.estoque || 0);
+                var erpPrc = itemErpBate ? Number(itemErpBate.preco || 0) : Number(p.preco || 0);
+                var temEstoque = erpEst > 0;
                 var estCor = temEstoque ? "#10b981" : "#f59e0b";
-                var sistNome = sistLabels[p.sistema] || p.sistema;
-                var safeRef = _esc(p.refOem);
-                var safeDesc = _esc(p.funcaoTecnica);
-                var isExp = !!_btExpandedRows[p.codigoMestre];
 
-                var equivHtml = (p.equivalentes || []).map(function(eq) {
-                    var eqBadge = getGrauConfiancaBadge(eq.grau);
-                    return "<span class='bt-sim-pill' title='" + _esc(eq.marca) + " (Grau " + eq.grau + ")'>" +
-                        "<strong>" + _esc(eq.ref) + "</strong> " +
-                        "<span style='color:#94a3b8;font-size:.62rem'>(" + _esc(eq.marca) + ")</span> " +
-                        eqBadge +
-                        "</span>";
-                }).join("");
+                erpHtml = "<div>" +
+                    "<span style='color:#10b981;font-weight:700;font-size:.74rem'>#" + _esc(erpCod) + "</span> " +
+                    "<span style='font-size:.65rem;padding:.1rem .35rem;border-radius:3px;background:" + estCor + "22;color:" + estCor + ";font-weight:700'>" +
+                    (temEstoque ? erpEst + " UN" : "Sem Estoque") + "</span>" +
+                    (erpPrc > 0 ? "<div style='font-size:.75rem;font-weight:700;color:var(--text-primary);margin-top:.15rem'>R$ " + erpPrc.toFixed(2).replace(".", ",") + "</div>" : "") +
+                    "</div>";
+            } else {
+                erpHtml = "<span style='font-size:.68rem;color:var(--text-muted);display:inline-flex;align-items:center;gap:.25rem' title='Não cadastrado no ERP Maxdata'>" +
+                    "<span class='material-icons-round' style='font-size:.85rem;color:#f59e0b'>info</span> Sem Cadastro ERP</span>";
+            }
 
-                var erpHtml = "";
-                if (p.erpCodigo) {
-                    erpHtml = "<div>" +
-                        "<span style='color:#10b981;font-weight:700;font-size:.74rem'>#" + _esc(p.erpCodigo) + "</span> " +
-                        "<span style='font-size:.65rem;padding:.1rem .35rem;border-radius:3px;background:" + estCor + "22;color:" + estCor + ";font-weight:700'>" +
-                        (temEstoque ? p.estoque + " UN" : "Sem Estoque") + "</span>" +
-                        (p.preco ? "<div style='font-size:.75rem;font-weight:700;color:var(--text-primary);margin-top:.15rem'>R$ " + Number(p.preco).toFixed(2).replace(".", ",") + "</div>" : "") +
-                        "</div>";
-                } else {
-                    erpHtml = "<span style='font-size:.68rem;color:#f59e0b'>⚠️ Sem ERP</span>";
-                }
-
-                var rowHtml = "<tr class='bt-tr-main " + (isExp ? "bt-row-expanded" : "") + "'>" +
-                    "<td style='text-align:center'>" +
-                    "<button onclick=\"DemandaApp.toggleBtDetalhes('" + _esc(p.codigoMestre) + "')\" title='Detalhes técnicos da peça' style='background:none;border:none;color:var(--text-secondary);cursor:pointer;padding:2px;display:inline-flex;align-items:center;transition:transform .2s;transform:" + (isExp ? "rotate(90deg)" : "none") + "'>" +
-                    "<span class='material-icons-round' style='font-size:1.1rem'>chevron_right</span>" +
-                    "</button>" +
-                    "</td>" +
-                    "<td>" +
-                    "<span class='bt-master-tag'>" + _esc(p.codigoMestre) + "</span>" +
-                    "<div class='bt-system-tag' style='margin-top:.25rem;display:inline-block;font-size:.64rem'>" + sistNome + "</div>" +
-                    "</td>" +
-                    "<td>" +
-                    "<div style='font-weight:700;color:var(--text-primary);font-size:.82rem;line-height:1.3'>" + safeDesc + "</div>" +
-                    "<div style='font-size:.7rem;color:var(--text-secondary);margin-top:.2rem'><span style='color:#64748b'>Modelos:</span> " + _esc(p.modeloEquipamento) + "</div>" +
-                    "</td>" +
-                    "<td><span class='bt-brand-badge'>" + _esc(p.marca) + "</span></td>" +
-                    "<td>" +
-                    "<div style='display:flex;align-items:center;gap:.35rem'>" +
-                    "<strong style='font-size:.86rem;color:#f8fafc;letter-spacing:.02em'>" + safeRef + "</strong>" +
-                    "<button onclick=\"navigator.clipboard.writeText('" + safeRef + "');DemandaApp._toast('Código OEM " + safeRef + " copiado!','success')\" title='Copiar OEM' style='background:none;border:none;color:var(--text-secondary);cursor:pointer;padding:2px;display:flex;align-items:center'><span class='material-icons-round' style='font-size:.85rem'>content_copy</span></button>" +
+            var rowKey = _esc(p.codigoMestre || codExibido);
+            var safeDescEsc = safeDesc.replace(/'/g, "\\\'");
+            var rowHtml = "<tr class='bt-tr-main " + (isExp ? "bt-row-expanded" : "") + "'>" +
+                "<td style='text-align:center'>" +
+                "<button onclick=\"DemandaApp.toggleBtDetalhes('" + rowKey + "')\" title='Detalhes técnicos e aplicações' style='background:none;border:none;color:var(--text-secondary);cursor:pointer;padding:2px;display:inline-flex;align-items:center;transition:transform .2s;transform:" + (isExp ? "rotate(90deg)" : "none") + "'>" +
+                "<span class='material-icons-round' style='font-size:1.1rem'>chevron_right</span>" +
+                "</button>" +
+                "</td>" +
+                "<td>" +
+                "<div style='display:flex;align-items:center;gap:.35rem'>" +
+                "<strong style='font-size:.86rem;color:#f8fafc;letter-spacing:.02em'>" + codExibido + "</strong>" +
+                "<button onclick=\"navigator.clipboard.writeText('" + codExibido + "');DemandaApp._toast('Código " + codExibido + " copiado!','success')\" title='Copiar Código' style='background:none;border:none;color:var(--text-secondary);cursor:pointer;padding:2px;display:flex;align-items:center'><span class='material-icons-round' style='font-size:.85rem'>content_copy</span></button>" +
+                "</div>" +
+                "<div style='margin-top:.3rem'>" + origBadge + "</div>" +
+                "</td>" +
+                "<td>" +
+                "<div style='font-weight:700;color:var(--text-primary);font-size:.82rem;line-height:1.3'>" + safeDesc + "</div>" +
+                "<div style='font-size:.7rem;color:var(--text-secondary);margin-top:.2rem'><span style='color:#64748b'>Aplicação:</span> " + safeApp + "</div>" +
+                "<div class='bt-system-tag' style='margin-top:.25rem;display:inline-block;font-size:.62rem'>" + sistNome + "</div>" +
+                "</td>" +
+                "<td><span class='bt-brand-badge'>" + safeMarca + "</span></td>" +
+                "<td><div class='bt-similares-pills'>" + (equivHtml || "<span style='color:var(--text-muted);font-size:.7rem'>Sem similaridades cadastradas</span>") + "</div></td>" +
+                "<td>" + erpHtml + "</td>" +
+                "<td style='text-align:center'>" +
+                "<button onclick=\"DemandaApp.criarDemandaComPeca('" + codExibido + "','" + safeDescEsc + "')\" class='btn btn-primary btn-sm' style='font-size:.72rem;padding:.3rem .6rem;display:inline-flex;align-items:center;gap:.25rem;white-space:nowrap' title='Adicionar à nova cotação'>" +
+                "<span class='material-icons-round' style='font-size:.85rem'>add</span> Cotar" +
+                "</button>" +
+                "</td>" +
+                "</tr>";
+            if (isExp) {
+                rowHtml += "<tr class='bt-tr-detail'>" +
+                    "<td colspan='7' style='padding:.85rem 1.25rem;background:rgba(15,23,42,.6);border-left:3px solid var(--accent-primary)'>" +
+                    "<div style='display:grid;grid-template-columns:1.5fr 1fr;gap:1.5rem'>" +
+                    "<div>" +
+                    "<h5 style='margin:0 0 .5rem;color:var(--text-primary);font-size:.82rem'>📘 Detalhamento de Aplicação & Catálogo</h5>" +
+                    "<p style='font-size:.78rem;color:var(--text-secondary);margin:.2rem 0'><strong>Catálogo / Origem:</strong> " + _esc(p.origemCatalogo || "Manual / Planilha") + "</p>" +
+                    "<p style='font-size:.78rem;color:var(--text-secondary);margin:.2rem 0'><strong>Modelos e Equipamentos:</strong> " + safeApp + "</p>" +
+                    "<p style='font-size:.78rem;color:var(--text-secondary);margin:.2rem 0'><strong>Sistema Mecânico:</strong> " + sistNome + "</p>" +
                     "</div>" +
-                    "<div style='margin-top:.25rem'>" + oemBadge + "</div>" +
-                    "</td>" +
-                    "<td><div class='bt-similares-pills'>" + (equivHtml || "<span style='color:var(--text-secondary);font-size:.7rem'>Nenhum</span>") + "</div></td>" +
-                    "<td>" + erpHtml + "</td>" +
-                    "<td style='text-align:center'>" +
-                    "<button onclick=\"DemandaApp.criarDemandaComPeca('" + safeRef + "','" + safeDesc.replace(/'/g, "\\'") + "')\" class='btn btn-primary btn-sm' style='font-size:.72rem;padding:.3rem .6rem;display:inline-flex;align-items:center;gap:.25rem;white-space:nowrap' title='Adicionar à nova cotação'>" +
-                    "<span class='material-icons-round' style='font-size:.85rem'>add</span> Cotar" +
-                    "</button>" +
+                    "<div>" +
+                    "<h5 style='margin:0 0 .5rem;color:var(--text-primary);font-size:.82rem'>🔗 Cruzamento de Similaridades (" + (p.equivalentes ? p.equivalentes.length : 0) + ")</h5>" +
+                    "<div style='font-size:.76rem;color:var(--text-secondary)'>" +
+                    (equivHtml || "Nenhuma referência equivalente registrada para este código.") +
+                    "</div>" +
+                    "</div>" +
+                    "</div>" +
                     "</td>" +
                     "</tr>";
+            }
 
-                if (isExp) {
-                    var allEquivList = (p.equivalentes || []).map(function(eq) {
-                        var b = getGrauConfiancaBadge(eq.grau);
-                        return "<div style='display:flex;justify-content:space-between;align-items:center;padding:.35rem .6rem;background:rgba(255,255,255,.03);border-radius:4px;margin-bottom:.3rem;font-size:.75rem'>" +
-                            "<div><strong style='color:var(--text-primary)'>" + _esc(eq.ref) + "</strong> <span style='color:var(--text-secondary);font-size:.7rem'>(" + _esc(eq.marca) + ")</span></div>" +
-                            b +
-                            "</div>";
-                    }).join("");
+            return rowHtml;
+        }).join("");
 
-                    rowHtml += "<tr>" +
-                        "<td colspan='8' style='padding:0'>" +
-                        "<div class='bt-detail-container'>" +
-                        "<div class='bt-detail-grid'>" +
-                        "<div>" +
-                        "<div style='font-size:.68rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;margin-bottom:.4rem'>Árvore de Equivalentes Técnicos & Similares (" + (p.equivalentes || []).length + ")</div>" +
-                        (allEquivList || "<span style='color:var(--text-secondary);font-size:.75rem'>Sem similares adicionais</span>") +
-                        "</div>" +
-                        "<div>" +
-                        "<div style='font-size:.68rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;margin-bottom:.4rem'>Ficha Técnica & Aplicação</div>" +
-                        "<div style='font-size:.75rem;color:var(--text-secondary);line-height:1.5'>" +
-                        "<div><strong>Sistema:</strong> " + sistNome + "</div>" +
-                        "<div><strong>Subsistema:</strong> " + _esc(p.subsistema || "Geral") + "</div>" +
-                        "<div><strong>Tipo Equipamento:</strong> " + _esc(p.tipoEquipamento) + "</div>" +
-                        "<div><strong>Modelos Homologados:</strong> " + _esc(p.modeloEquipamento) + "</div>" +
-                        "</div>" +
-                        "</div>" +
-                        "<div>" +
-                        "<div style='font-size:.68rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;margin-bottom:.4rem'>Integração ERP Maxdata</div>" +
-                        (p.erpCodigo ?
-                            ("<div style='font-size:.75rem;color:var(--text-secondary);line-height:1.5'>" +
-                            "<div><strong>Cód. ERP:</strong> #" + _esc(p.erpCodigo) + "</div>" +
-                            "<div><strong>Descrição ERP:</strong> " + _esc(p.erpDesc || p.funcaoTecnica) + "</div>" +
-                            "<div><strong>Estoque Atual:</strong> <span style='color:" + estCor + ";font-weight:700'>" + p.estoque + " UN</span></div>" +
-                            "<div><strong>Preço Tabela:</strong> <span style='color:var(--text-primary);font-weight:700'>R$ " + Number(p.preco || 0).toFixed(2).replace(".", ",") + "</span></div>" +
-                            "</div>") :
-                            ("<div style='font-size:.75rem;color:#f59e0b'>Peça mestre cadastrada na base técnica aguardando vinculação de SKU no ERP.</div>")
-                        ) +
-                        "</div>" +
-                        "</div>" +
-                        "</div>" +
-                        "</td>" +
-                        "</tr>";
-                }
-
-                return rowHtml;
-            }).join("");
-
-            html += "</tbody></table></div>";
-        } else {
-            // Modo Cards
-            html += "<div style='display:grid;grid-template-columns:repeat(auto-fill, minmax(360px, 1fr));gap:1rem'>";
-            html += lista.map(function(p) {
-                var oemBadge = getGrauConfiancaBadge("1");
-                var temEstoque = Number(p.estoque || 0) > 0;
-                var estCor = temEstoque ? "#10b981" : "#f59e0b";
-                var sistNome = sistLabels[p.sistema] || p.sistema;
-
-                var equivHtml = (p.equivalentes || []).map(function(eq) {
-                    var eqBadge = getGrauConfiancaBadge(eq.grau);
-                    return "<div style='display:flex;justify-content:space-between;align-items:center;padding:.3rem .5rem;background:rgba(255,255,255,.02);border-radius:4px;margin-bottom:.25rem;font-size:.74rem'>" +
-                        "<div>" +
-                        "<strong style='color:var(--text-primary)'>" + _esc(eq.ref) + "</strong> " +
-                        "<span style='color:var(--text-secondary);font-size:.68rem'>(" + _esc(eq.marca) + ")</span>" +
-                        "</div>" +
-                        eqBadge +
-                        "</div>";
-                }).join("");
-
-                var erpHtml = "";
-                if (p.erpCodigo) {
-                    erpHtml = "<div style='margin-top:.6rem;padding:.5rem .65rem;background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.2);border-radius:6px'>" +
-                        "<div style='display:flex;justify-content:space-between;align-items:center;font-size:.74rem'>" +
-                        "<span style='color:#10b981;font-weight:700'>Vínculo ERP Maxdata: #" + _esc(p.erpCodigo) + "</span>" +
-                        "<span style='font-size:.68rem;padding:.1rem .35rem;border-radius:3px;background:" + estCor + "22;color:" + estCor + ";font-weight:700'>" +
-                        (temEstoque ? "Estoque: " + p.estoque + " UN" : "Sem Estoque") + "</span>" +
-                        "</div>" +
-                        (p.preco ? "<div style='font-size:.78rem;font-weight:700;color:var(--text-primary);margin-top:.2rem'>R$ " + Number(p.preco).toFixed(2).replace(".", ",") + "</div>" : "") +
-                        "</div>";
-                } else {
-                    erpHtml = "<div style='margin-top:.6rem;padding:.4rem .65rem;background:rgba(245,158,11,.05);border:1px dashed rgba(245,158,11,.3);border-radius:6px;font-size:.72rem;color:#f59e0b'>" +
-                        "⚠️ Peça mestre catalogada sem produto cadastrado no ERP Maxdata" +
-                        "</div>";
-                }
-
-                var safeRef = _esc(p.refOem);
-                var safeDesc = _esc(p.funcaoTecnica);
-
-                return "<div class='bt-tree-card'>" +
-                    "<div style='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.5rem'>" +
-                    "<div>" +
-                    "<span class='bt-master-tag'>" + _esc(p.codigoMestre) + "</span>" +
-                    "<span class='bt-system-tag' style='margin-left:.35rem'>" + sistNome + "</span>" +
-                    "</div>" +
-                    "<span style='font-size:.72rem;color:var(--accent-primary);font-weight:700'>" + _esc(p.marca) + "</span>" +
-                    "</div>" +
-
-                    "<h4 style='font-size:.88rem;color:var(--text-primary);margin:0 0 .4rem;line-height:1.35'>" + safeDesc + "</h4>" +
-                    "<div style='font-size:.72rem;color:var(--text-secondary);margin-bottom:.55rem'>" +
-                    "<strong>Equipamentos / Modelos:</strong> " + _esc(p.modeloEquipamento) +
-                    "</div>" +
-
-                    "<div style='background:rgba(255,255,255,.03);padding:.45rem .65rem;border-radius:6px;border-left:3px solid var(--accent-primary);margin-bottom:.65rem'>" +
-                    "<div style='display:flex;justify-content:space-between;align-items:center'>" +
-                    "<span style='font-size:.72rem;color:var(--text-secondary)'>Ref. Oficial OEM:</span>" +
-                    oemBadge +
-                    "</div>" +
-                    "<div style='font-size:.92rem;font-weight:800;color:var(--text-primary);margin-top:.2rem;letter-spacing:.02em'>" + safeRef + "</div>" +
-                    "</div>" +
-
-                    "<div style='margin-bottom:.5rem'>" +
-                    "<div style='font-size:.68rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.25rem'>Equivalentes & Similares de Mercado:</div>" +
-                    equivHtml +
-                    "</div>" +
-
-                    erpHtml +
-
-                    "<div style='display:flex;gap:.4rem;margin-top:.85rem;padding-top:.65rem;border-top:1px solid var(--border-color)'>" +
-                    "<button onclick=\"navigator.clipboard.writeText('" + safeRef + "');DemandaApp._toast('Código OEM " + safeRef + " copiado!','success')\" class='btn btn-secondary btn-sm' style='flex:1;font-size:.72rem;padding:.25rem .45rem'>" +
-                    "<span class='material-icons-round' style='font-size:.8rem'>content_copy</span> Copiar OEM</button>" +
-                    "<button onclick=\"DemandaApp.criarDemandaComPeca('" + safeRef + "','" + safeDesc.replace(/'/g, "\\'") + "')\" class='btn btn-primary btn-sm' style='flex:1.4;font-size:.72rem;padding:.25rem .45rem;white-space:nowrap'>" +
-                    "<span class='material-icons-round' style='font-size:.8rem'>add</span> Nova Cotação</button>" +
-                    "</div>" +
-                    "</div>";
-            }).join("");
-
-            html += "</div>";
-        }
+        html += "</tbody></table></div>";
         container.innerHTML = html;
     }
 
@@ -4774,6 +4690,10 @@ const DemandaApp = (function() {
         importarCatalogoPDF:          importarCatalogoPDF,
         setBtViewMode:                setBtViewMode,
         toggleBtDetalhes:             toggleBtDetalhes,
+        onBtBuscaGeral:               onBtBuscaGeral,
+        abrirModalImportarCatalogo:   abrirModalImportarCatalogo,
+        fecharModalImportarCatalogo:  fecharModalImportarCatalogo,
+        processarImportacaoCatalogo:  processarImportacaoCatalogo,
     };
 
 })();

@@ -13,7 +13,7 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <!-- Design system da plataforma -->
     <link rel="stylesheet" href="/platform/core/styles/portal.css">
-    <link rel="stylesheet" href="styles/demanda.css?v=3.21.39">
+    <link rel="stylesheet" href="styles/demanda.css?v=3.21.49">
 </head>
 
 <body>
@@ -521,84 +521,61 @@
             <div id="view-base" style="display:none;flex-direction:column">
                 <div class="top-bar" style="flex-wrap:wrap;gap:.75rem">
                     <div class="breadcrumb">
-                        <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">hub</span>
-                        <span>Base Externa de Peças & Implementos</span>
+                        <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">menu_book</span>
+                        <span>Catálogo de Peças & Fabricantes (Base Externa)</span>
                     </div>
                     <div style="display:flex;align-items:center;gap:.5rem;margin-left:auto;flex-wrap:wrap">
-                        <div style="position:relative;width:300px">
+                        <div style="position:relative;width:320px">
                             <span class="material-icons-round" style="position:absolute;left:.65rem;top:50%;transform:translateY(-50%);font-size:1rem;color:var(--text-secondary)">search</span>
-                            <input id="btInpBuscaMestre" type="text" placeholder="Buscar peça mestre, OEM, similar..."
-                                oninput="DemandaApp.filtrarBaseTecnica()"
+                            <input id="btInpBuscaGeral" type="text" placeholder="Busca geral no catálogo externo..."
+                                oninput="DemandaApp.onBtBuscaGeral(this.value)"
                                 style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.45rem .75rem .45rem 2.2rem;color:var(--text-primary);font-size:.82rem">
                         </div>
-                        <button class="btn btn-secondary btn-sm" onclick="DemandaApp.abrirBaseTecnica()" style="display:inline-flex;align-items:center;gap:.35rem">
-                            <span class="material-icons-round" style="font-size:.9rem">settings</span> Sincronizar ERP / Catálogo PDF
+                        <button class="btn btn-primary btn-sm" onclick="DemandaApp.abrirModalImportarCatalogo()" style="display:inline-flex;align-items:center;gap:.35rem">
+                            <span class="material-icons-round" style="font-size:.9rem">upload_file</span> Importar Catálogo
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="DemandaApp.loadBaseTecnica(true)" style="display:inline-flex;align-items:center;gap:.35rem">
+                            <span class="material-icons-round" style="font-size:.9rem">refresh</span> Atualizar
                         </button>
                     </div>
                 </div>
 
-                <!-- Barra de Navegação Hierárquica: Marca > Tipo de Equipamento/Implemento > Sistema -->
-                <div style="display:flex;align-items:center;gap:.75rem;padding:.75rem 1.25rem;background:rgba(255,255,255,.015);border-bottom:1px solid var(--border-color);flex-wrap:wrap">
-                    <!-- Nível 1: Marca (15 marcas oficiais + transmissões) -->
-                    <div style="display:flex;align-items:center;gap:.35rem">
-                        <label style="font-size:.72rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Marca:</label>
-                        <select id="btSelMarca" onchange="DemandaApp.onBtFiltroChange()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem">
-                            <option value="">Todas as Marcas (15+)</option>
-                            <optgroup label="Máquinas Agrícolas (Prompt 2)">
-                                <option value="JOHN DEERE">John Deere</option>
-                                <option value="CASE">Case IH</option>
-                                <option value="NEW HOLLAND">New Holland</option>
-                                <option value="MASSEY FERGUSON">Massey Ferguson</option>
-                                <option value="VALTRA">Valtra</option>
-                            </optgroup>
-                            <optgroup label="Implementos Agrícolas (Prompt 2)">
-                                <option value="KUHN">Kuhn</option>
-                                <option value="JAN">JAN</option>
-                                <option value="VENCE TUDO">Vence Tudo</option>
-                                <option value="JUMIL">Jumil</option>
-                                <option value="TATU MARCHESAN">Tatu Marchesan</option>
-                                <option value="JACTO">Jacto</option>
-                                <option value="STARA">Stara</option>
-                                <option value="BALDAN">Baldan</option>
-                                <option value="SEMEATO">Semeato</option>
-                                <option value="PICCIN">Piccin</option>
-                            </optgroup>
-                            <optgroup label="Transmissões & Componentes">
-                                <option value="ZF">ZF do Brasil</option>
-                                <option value="EATON">Eaton</option>
-                                <option value="SPICER">Spicer / Dana</option>
-                            </optgroup>
+                <!-- Barra de Filtros Estilo Cadastro de Produtos -->
+                <div style="display:flex;align-items:center;gap:.6rem;padding:.65rem 1.25rem;background:rgba(255,255,255,.015);border-bottom:1px solid var(--border-color);flex-wrap:wrap">
+                    <div style="display:flex;align-items:center;gap:.3rem">
+                        <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Cód. / Desc.:</label>
+                        <input id="btInpBuscaDesc" type="text" placeholder="Cód. ou Descrição..." oninput="DemandaApp.filtrarBaseTecnica()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem;width:170px">
+                    </div>
+
+                    <div style="display:flex;align-items:center;gap:.3rem">
+                        <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Ref. / Similar:</label>
+                        <input id="btInpBuscaRef" type="text" placeholder="Ref. OEM / Similar..." oninput="DemandaApp.filtrarBaseTecnica()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem;width:150px">
+                    </div>
+
+                    <div style="display:flex;align-items:center;gap:.3rem">
+                        <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Aplicação:</label>
+                        <input id="btInpBuscaAplicacao" type="text" placeholder="Aplicação técnica..." oninput="DemandaApp.filtrarBaseTecnica()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem;width:150px">
+                    </div>
+
+                    <div style="display:flex;align-items:center;gap:.3rem">
+                        <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Marca / Catálogo:</label>
+                        <select id="btSelMarca" onchange="DemandaApp.filtrarBaseTecnica()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem">
+                            <option value="">Todas as Marcas</option>
                         </select>
                     </div>
 
-                    <!-- Nível 2: Equipamento / Implemento -->
-                    <div style="display:flex;align-items:center;gap:.35rem">
-                        <label style="font-size:.72rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Equipamento:</label>
-                        <select id="btSelTipoEquipamento" onchange="DemandaApp.onBtFiltroChange()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem">
+                    <div style="display:flex;align-items:center;gap:.3rem">
+                        <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Tipo:</label>
+                        <select id="btSelTipoOrigem" onchange="DemandaApp.filtrarBaseTecnica()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem">
                             <option value="">Todos os Tipos</option>
-                            <optgroup label="Máquinas">
-                                <option value="COLHEITADEIRA">Colheitadeira</option>
-                                <option value="TRATOR">Trator</option>
-                                <option value="PULVERIZADOR">Pulverizador</option>
-                            </optgroup>
-                            <optgroup label="Implementos Agrícolas (Prompt 2)">
-                                <option value="PLANTADEIRA">Plantadeira / Semeadora</option>
-                                <option value="GRADE">Grade / Arado</option>
-                                <option value="DISTRIBUIDOR">Distribuidor</option>
-                                <option value="PLATAFORMA_MILHO">Plataforma de Milho</option>
-                                <option value="CARRETA_BAZUCA">Carreta / Bazuca</option>
-                                <option value="ESCARIFICADOR">Escarificador</option>
-                            </optgroup>
-                            <optgroup label="Transmissões">
-                                <option value="TRANSMISSAO">Transmissão & Eixo</option>
-                            </optgroup>
+                            <option value="OEM">Original (Montadora OEM)</option>
+                            <option value="FABRICANTE">Fabricante (Autopeça / Aftermarket)</option>
                         </select>
                     </div>
 
-                    <!-- Nível 3: Sistema da Máquina -->
-                    <div style="display:flex;align-items:center;gap:.35rem">
-                        <label style="font-size:.72rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Sistema:</label>
-                        <select id="btSelSistema" onchange="DemandaApp.onBtFiltroChange()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem">
+                    <div style="display:flex;align-items:center;gap:.3rem">
+                        <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Sistema:</label>
+                        <select id="btSelSistema" onchange="DemandaApp.filtrarBaseTecnica()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem">
                             <option value="">Todos os Sistemas</option>
                             <option value="TRANSMISSAO">Transmissão, Diferencial & Eixo</option>
                             <option value="PLANTIO">Linha de Plantio & Dosadores</option>
@@ -610,22 +587,16 @@
                         </select>
                     </div>
 
-                    <!-- Legenda dos Graus de Confiança -->
-                    <div style="margin-left:auto;display:flex;align-items:center;gap:.35rem;font-size:.68rem;color:var(--text-secondary);flex-wrap:wrap">
-                        <span style="font-weight:600">Graus:</span>
-                        <span class="badge-confianca badge-grau1" title="Grau 1: Oficial OEM (100%)">🛡️ Grau 1</span>
-                        <span class="badge-confianca badge-grau2" title="Grau 2: Catálogo Fabricante (95%)">📘 Grau 2</span>
-                        <span class="badge-confianca badge-grau3" title="Grau 3: Confirmada Técnica (90%)">🔧 Grau 3</span>
-                        <span class="badge-confianca badge-grau4" title="Grau 4: Histórico de Venda (75%)">📜 Grau 4</span>
-                        <span class="badge-confianca badge-grau5" title="Grau 5: Sugestão Algorítmica (50%)">💡 Grau 5</span>
+                    <div id="btTotalContador" style="margin-left:auto;font-size:.78rem;color:var(--text-secondary);font-weight:600">
+                        0 peças catalogadas na base
                     </div>
                 </div>
 
-                <!-- Container Principal da Base Técnica -->
-                <div id="btContainerPrincipal" style="flex:1;overflow-y:auto;padding:1.25rem">
+                <!-- Container Principal da Tabela de Catálogos -->
+                <div id="btContainerPrincipal" style="flex:1;min-height:0;max-height:calc(100vh - 170px);overflow-y:scroll!important;padding:1.25rem">
                     <div style="padding:3rem;text-align:center;color:var(--text-secondary)">
                         <span class="material-icons-round" style="animation:spin 1s linear infinite;font-size:2rem;color:var(--accent-primary)">sync</span>
-                        <p style="margin-top:.75rem;font-size:.88rem">Carregando Base Técnica de Peças...</p>
+                        <p style="margin-top:.75rem;font-size:.88rem">Carregando catálogo de peças e fabricantes...</p>
                     </div>
                 </div>
             </div>
@@ -1028,14 +999,14 @@
     <script src="/platform/shared/integrations/index.js?v=2.0.0"></script>
 
     <!-- Módulo de Demanda -->
-    <script src="js/demanda-states.js?v=3.21.39"></script>
-    <script src="js/demanda-db.js?v=3.21.39"></script>
-    <script src="js/demanda-import.js?v=3.21.39"></script>
-    <script src="js/demanda-search.js?v=3.21.39"></script>
-    <script src="js/demanda-lookup.js?v=3.21.39"></script>
-    <script src="js/demanda-pdf.js?v=3.21.39"></script>
-    <script src="js/demanda-clientes.js?v=3.21.39"></script>
-    <script src="js/demanda-app.js?v=3.21.39"></script>
+    <script src="js/demanda-states.js?v=3.21.49"></script>
+    <script src="js/demanda-db.js?v=3.21.49"></script>
+    <script src="js/demanda-import.js?v=3.21.49"></script>
+    <script src="js/demanda-search.js?v=3.21.49"></script>
+    <script src="js/demanda-lookup.js?v=3.21.49"></script>
+    <script src="js/demanda-pdf.js?v=3.21.49"></script>
+    <script src="js/demanda-clientes.js?v=3.21.49"></script>
+    <script src="js/demanda-app.js?v=3.21.49"></script>
 
     <!-- ═══════════════════════════════════════════════════════════
          MODAL: Administração da Base Técnica de Peças
@@ -1165,6 +1136,82 @@
           </div>
         </div>
 
+      </div>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════════
+         MODAL: Importar Catálogo de Peças (OEM / Fabricantes)
+         ═══════════════════════════════════════════════════════════ -->
+    <div id="modalImportarCatalogo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(4px)">
+      <div style="background:var(--surface);border:1px solid var(--border-color);border-radius:14px;padding:1.75rem;width:min(720px,95vw);max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.6)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;border-bottom:1px solid var(--border-color);padding-bottom:.85rem">
+          <div style="display:flex;align-items:center;gap:.6rem">
+            <span class="material-icons-round" style="color:var(--accent-primary);font-size:1.5rem">upload_file</span>
+            <div>
+              <h3 style="margin:0;font-size:1.1rem;color:var(--text-primary)">Importar Catálogo de Peças Externas</h3>
+              <p style="margin:0;font-size:.78rem;color:var(--text-secondary)">Alimente catálogos de peças originais (OEM) ou fabricantes de autopeças</p>
+            </div>
+          </div>
+          <button onclick="DemandaApp.fecharModalImportarCatalogo()" style="background:none;border:none;color:var(--text-secondary);font-size:1.4rem;cursor:pointer;padding:.25rem">✕</button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+          <div>
+            <label style="font-size:.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;display:block;margin-bottom:.35rem">Marca / Montadora / Fabricante *</label>
+            <input id="catImpMarca" type="text" placeholder="Ex: JOHN DEERE, SKF, TATU, SPICER, VALTRA..."
+                   style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.5rem .75rem;color:var(--text-primary);font-size:.85rem">
+          </div>
+          <div>
+            <label style="font-size:.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;display:block;margin-bottom:.35rem">Tipo de Origem *</label>
+            <select id="catImpTipoOrigem" style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.5rem .75rem;color:var(--text-primary);font-size:.85rem">
+              <option value="OEM">Peça Original (Montadora OEM)</option>
+              <option value="FABRICANTE">Fabricante (Autopeça / Componente / Aftermarket)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+          <div>
+            <label style="font-size:.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;display:block;margin-bottom:.35rem">Sistema Padrão</label>
+            <select id="catImpSistema" style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.5rem .75rem;color:var(--text-primary);font-size:.85rem">
+              <option value="DISCO_MANCAL">Mancais, Discos, Rolamentos & Cubos</option>
+              <option value="TRANSMISSAO">Transmissão, Diferencial & Eixos</option>
+              <option value="PLANTIO">Linha de Plantio & Dosadores</option>
+              <option value="CORTE">Corte, Rotor & Molinete</option>
+              <option value="PULVERIZACAO">Pulverização & Bomba</option>
+              <option value="HIDRAULICO">Hidráulico & Cilindros</option>
+              <option value="MOTOR">Motor, Filtros & Correias</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;display:block;margin-bottom:.35rem">Identificação do Catálogo (Opcional)</label>
+            <input id="catImpNomeArquivo" type="text" placeholder="Ex: Catálogo Geral 2026, Tabela Rolamentos v1..."
+                   style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.5rem .75rem;color:var(--text-primary);font-size:.85rem">
+          </div>
+        </div>
+
+        <div style="margin-bottom:1rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem">
+            <label style="font-size:.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase">Cole os Dados do Catálogo (Tabela ou Texto)</label>
+            <span style="font-size:.72rem;color:var(--text-muted)">Formato: Código [TAB ou ;] Descrição [TAB ou ;] Aplicação [TAB ou ;] Ref. Similar</span>
+          </div>
+          <textarea id="catImpTexto" rows="7" placeholder="Exemplo colado do Excel:
+AH213767	DEDO SEPARADOR DO ROTOR	Colheitadeiras STS 9650/9750	H171540
+0501046922	MANCAL A ÓLEO GRADE ARADORA	Grade Marchesan GAPCR	5201010045; PC-42100
+6205-2RS	ROLAMENTO RÍGIDO ESFERAS 25x52x15	Eixo do Molinete / Linha de Plantio	JD9205; 80242200"
+            style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.65rem;color:var(--text-primary);font-size:.82rem;font-family:monospace;resize:vertical"></textarea>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.25rem;border-top:1px solid var(--border-color);padding-top:1rem">
+          <span id="catImpStatus" style="font-size:.8rem;color:var(--text-secondary)">Pronto para importar</span>
+          <div style="display:flex;gap:.5rem">
+            <button class="btn btn-secondary btn-sm" onclick="DemandaApp.fecharModalImportarCatalogo()">Cancelar</button>
+            <button class="btn btn-primary btn-sm" onclick="DemandaApp.processarImportacaoCatalogo()">
+              <span class="material-icons-round" style="font-size:.9rem">save</span> Gravar no Catálogo
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 

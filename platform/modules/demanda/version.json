@@ -1,8 +1,8 @@
 {
-  "version": "2.6.5",
-  "build": "20260917-v2.6.5",
+  "version": "2.7.0",
+  "build": "20260919-v2.7.0",
   "module": "demanda",
   "name": "Cotacao",
-  "lastUpdate": "2026-09-17",
-  "change": "v2.6.5 - fix(detalhe-cotacao): implementacao da funcao reavaliarEstoque no modal da cotacao com cruzamento de itens no ERP Maxdata e Base Tecnica, gravacao no Firestore e atualizacao automatica da UI"
+  "lastUpdate": "2026-09-19",
+  "change": "v2.7.0 - feat(base-externa): reestrutura\u00e7\u00e3o da aba Base Externa no padr\u00e3o do Cadastro de Produtos com barra de filtros, contador de cadastros na base, limpeza total dos dados mockados anteriores, e motor de cat\u00e1logos com cruzamento de similaridades e ERP Maxdata."
 }
