@@ -7349,15 +7349,50 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const cityBairro = `${nf.city || ''}${nf.neighborhood ? ` / ${nf.neighborhood}` : ''}`;
                     const sellerStr = nf.sellerName && nf.sellerName !== '-' ? nf.sellerName : '-';
 
-                    // v3.18.0: separa frete base de adicionais (taxas fixas/volume)
-                    const hasBreakdown = nf.baseCalculada != null;
-                    const baseNum = hasBreakdown ? ((nf.baseCalculada || 0) + (nf.excessoCalculado || 0)) : 0;
-                    const adicNum = hasBreakdown ? ((nf.pedagio || 0) + (nf.taxaFixa || 0) + (nf.gris || 0)) : 0;
+                    // v3.21.51: Distinção precisa entre Transportadora Principal e de Redespacho no relatório
+                    const isRedespNew = _carrierMatch(nf.redespCarrier) && !_carrierMatch(nf.carrier);
+                    const isRedespLegacy = !nf.redespCarrier && _carrierMatch(nf.redespacho) && !_carrierMatch(nf.carrier)
+                                         && nf.redespacho && nf.redespacho !== '-';
+                    const isRedesp = isRedespNew || isRedespLegacy;
+
+                    let baseNum = 0;
+                    let adicNum = 0;
+
+                    if (isRedesp) {
+                        // Transportadora de Redespacho: o frete base é o frete real cobrado pelo redespacho (nfVal).
+                        // Se houver taxa TDA/adicional na regra do redespacho, separa; senão todo o valor é frete base.
+                        const freightRules = Utils.getStorage('freight_tables') || [];
+                        const dCarrier = String(nf.carrier || '').trim().toUpperCase();
+                        const dCity = String(nf.city || '').trim().toUpperCase();
+                        const rule = freightRules.find(r =>
+                            String(r.transportadora || '').trim().toUpperCase() === dCarrier &&
+                            String(r.cidade || '').trim().toUpperCase() === dCity &&
+                            (String(r.redespacho || '').trim().toUpperCase() === carrierNorm || _carrierMatch(r.redespacho))
+                        );
+                        if (rule && rule.taxaTDA && Number(rule.taxaTDA) > 0 && nfVal > Number(rule.taxaTDA)) {
+                            adicNum = Number(rule.taxaTDA);
+                            baseNum = Math.round((nfVal - adicNum) * 100) / 100;
+                        } else {
+                            baseNum = nfVal;
+                            adicNum = 0;
+                        }
+                    } else {
+                        // Transportadora Principal: usa baseCalculada + excessoCalculado da principal
+                        const hasBreakdown = nf.baseCalculada != null;
+                        if (hasBreakdown) {
+                            baseNum = (nf.baseCalculada || 0) + (nf.excessoCalculado || 0);
+                            adicNum = Math.max(0, Math.round((nfVal - baseNum) * 100) / 100);
+                        } else {
+                            baseNum = nfVal;
+                            adicNum = 0;
+                        }
+                    }
+
                     totFreteBase += baseNum;
                     totAdicionais += adicNum;
 
-                    const freteBase  = hasBreakdown ? Utils.formatCurrency(baseNum) : '-';
-                    const adicionais = hasBreakdown ? Utils.formatCurrency(adicNum) : '-';
+                    const freteBase  = Utils.formatCurrency(baseNum);
+                    const adicionais = adicNum > 0 ? Utils.formatCurrency(adicNum) : Utils.formatCurrency(0);
 
                     rowsHtml += `
                         <tr>
@@ -7432,7 +7467,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
                             <div class="detail-item" style="text-align:right;">
                                 <p><strong>Qtd de Notas Fiscais:</strong> ${entry.nfCount}</p>
-                                <p><strong>Valor Total das NFs:</strong> ${Utils.formatCurrency(totNfValue)}</p>
                                 <p><strong>Valor da Fatura:</strong> ${Utils.formatCurrency(entry.invoiceValue)}</p>
                                 <p><strong>Total Calculado (NFs):</strong> ${Utils.formatCurrency(entry.calculatedValue)}</p>
                                 <p><strong>${diffLabel}:</strong> <span style="color:${diffColor}; font-weight:bold;">${Utils.formatCurrency(Math.abs(entry.difference))}</span></p>
