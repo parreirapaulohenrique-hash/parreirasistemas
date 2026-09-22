@@ -5442,7 +5442,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
             if (!carrier) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Selecione uma transportadora para ver as NFs disponíveis.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Selecione uma transportadora para ver as NFs disponíveis.</td></tr>`;
                 document.getElementById('invoiceNFsCount').textContent = '0 notas';
                 window.updateInvoiceComparison();
                 return;
@@ -5591,7 +5591,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (filtered.length === 0) {
                 const _rangeDesc = [_dateStartVal, _dateEndVal].filter(Boolean).join(' a ');
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Nenhuma NF encontrada para esta transportadora${_rangeDesc ? ` no período ${_rangeDesc}` : ''}.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Nenhuma NF encontrada para esta transportadora${_rangeDesc ? ` no período ${_rangeDesc}` : ''}.</td></tr>`;
                 document.getElementById('invoiceNFsCount').textContent = '0 notas';
                 window.updateInvoiceComparison();
                 return;
@@ -5644,6 +5644,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                        </td>`
                     : `<td style="text-align: right; font-weight: 600; color: var(--accent-success);">${Utils.formatCurrency(invoiceValue)}</td>`;
 
+                const nfValueFormatted = Utils.formatCurrency(d.nfValue || d.value || d.valor || 0);
+
                 return `
                     <tr data-id="${d.id}"${rowStyle}>
                         <td style="text-align: center;">
@@ -5653,6 +5655,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <td><div style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${d.client || ''}">${d.client || '-'}</div></td>
                         <td>${d.city || '-'}</td>
                         <td>${dispatchDate.toLocaleDateString('pt-BR')}</td>
+                        <td style="text-align: right; color: var(--text-primary); font-size: 0.88rem;">${nfValueFormatted}</td>
                         ${freightCell}
                     </tr>
                 `;
@@ -5668,29 +5671,32 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // v3.8.6 - Filtros por coluna na tabela de NFs da Conferência Fatura
         window.applyInvoiceColumnFilters = () => {
-            const fNf     = (document.getElementById('invF_nf')?.value     || '').toLowerCase();
-            const fClient = (document.getElementById('invF_client')?.value || '').toLowerCase();
-            const fCity   = (document.getElementById('invF_city')?.value   || '').toLowerCase();
-            const fDate   = (document.getElementById('invF_date')?.value   || '').toLowerCase();
-            const fFrete  = (document.getElementById('invF_frete')?.value  || '').toLowerCase();
+            const fNf      = (document.getElementById('invF_nf')?.value      || '').toLowerCase();
+            const fClient  = (document.getElementById('invF_client')?.value  || '').toLowerCase();
+            const fCity    = (document.getElementById('invF_city')?.value    || '').toLowerCase();
+            const fDate    = (document.getElementById('invF_date')?.value    || '').toLowerCase();
+            const fValorNf = (document.getElementById('invF_valornf')?.value || '').toLowerCase();
+            const fFrete   = (document.getElementById('invF_frete')?.value   || '').toLowerCase();
 
             const rows = document.querySelectorAll('#invoiceNFsBody tr[data-id]');
             let visible = 0;
             rows.forEach(row => {
                 const cells = row.querySelectorAll('td');
-                if (cells.length < 6) { row.style.display = ''; return; }
-                const nf    = (cells[1].textContent || '').toLowerCase();
-                const cli   = (cells[2].textContent || '').toLowerCase();
-                const city  = (cells[3].textContent || '').toLowerCase();
-                const date  = (cells[4].textContent || '').toLowerCase();
-                const frete = (cells[5].textContent || '').toLowerCase();
+                if (cells.length < 7) { row.style.display = ''; return; }
+                const nf      = (cells[1].textContent || '').toLowerCase();
+                const cli     = (cells[2].textContent || '').toLowerCase();
+                const city    = (cells[3].textContent || '').toLowerCase();
+                const date    = (cells[4].textContent || '').toLowerCase();
+                const valornf = (cells[5].textContent || '').toLowerCase();
+                const frete   = (cells[6].textContent || '').toLowerCase();
 
                 const match =
-                    (!fNf     || nf.includes(fNf))     &&
-                    (!fClient || cli.includes(fClient)) &&
-                    (!fCity   || city.includes(fCity))  &&
-                    (!fDate   || date.includes(fDate))  &&
-                    (!fFrete  || frete.includes(fFrete));
+                    (!fNf      || nf.includes(fNf))          &&
+                    (!fClient  || cli.includes(fClient))     &&
+                    (!fCity    || city.includes(fCity))      &&
+                    (!fDate    || date.includes(fDate))      &&
+                    (!fValorNf || valornf.includes(fValorNf))&&
+                    (!fFrete   || frete.includes(fFrete));
 
                 row.style.display = match ? '' : 'none';
                 if (match) visible++;
@@ -5791,7 +5797,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (selected.length > 0 && unselected.length > 0) {
                 const sep = document.createElement('tr');
                 sep.className = 'invoice-separator';
-                sep.innerHTML = `<td colspan="6" style="padding:4px 12px;background:rgba(255,255,255,0.04);border-top:1px dashed rgba(255,255,255,0.15);border-bottom:1px dashed rgba(255,255,255,0.15);font-size:0.72rem;color:#64748b;font-weight:600;letter-spacing:.04em;">── ${unselected.length} NF${unselected.length !== 1 ? 's' : ''} disponíveis ──</td>`;
+                sep.innerHTML = `<td colspan="7" style="padding:4px 12px;background:rgba(255,255,255,0.04);border-top:1px dashed rgba(255,255,255,0.15);border-bottom:1px dashed rgba(255,255,255,0.15);font-size:0.72rem;color:#64748b;font-weight:600;letter-spacing:.04em;">── ${unselected.length} NF${unselected.length !== 1 ? 's' : ''} disponíveis ──</td>`;
                 tbody.appendChild(sep);
             }
 
@@ -7327,8 +7333,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 relatedNFs.sort((a, b) => String(a.invoice || '').localeCompare(String(b.invoice || '')));
 
                 let rowsHtml = '';
+                let totNfValue = 0;
+                let totFreteBase = 0;
+                let totAdicionais = 0;
+                let totFreteGeral = 0;
+
                 relatedNFs.forEach(nf => {
                     const nfVal = getNFVal(nf);
+                    const nfDocVal = Number(nf.nfValue || nf.value || nf.valor || 0) || 0;
+                    totNfValue += nfDocVal;
+                    totFreteGeral += nfVal;
+
                     const depDate = nf.date ? new Date(nf.date).toLocaleDateString('pt-BR') : '-';
                     const clientName = nf.client || 'N/A';
                     const cityBairro = `${nf.city || ''}${nf.neighborhood ? ` / ${nf.neighborhood}` : ''}`;
@@ -7336,12 +7351,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     // v3.18.0: separa frete base de adicionais (taxas fixas/volume)
                     const hasBreakdown = nf.baseCalculada != null;
-                    const freteBase  = hasBreakdown
-                        ? Utils.formatCurrency((nf.baseCalculada || 0) + (nf.excessoCalculado || 0))
-                        : '-';
-                    const adicionais = hasBreakdown
-                        ? Utils.formatCurrency((nf.pedagio || 0) + (nf.taxaFixa || 0) + (nf.gris || 0))
-                        : '-';
+                    const baseNum = hasBreakdown ? ((nf.baseCalculada || 0) + (nf.excessoCalculado || 0)) : 0;
+                    const adicNum = hasBreakdown ? ((nf.pedagio || 0) + (nf.taxaFixa || 0) + (nf.gris || 0)) : 0;
+                    totFreteBase += baseNum;
+                    totAdicionais += adicNum;
+
+                    const freteBase  = hasBreakdown ? Utils.formatCurrency(baseNum) : '-';
+                    const adicionais = hasBreakdown ? Utils.formatCurrency(adicNum) : '-';
 
                     rowsHtml += `
                         <tr>
@@ -7350,6 +7366,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <td style="border:1px solid #cbd5e1; padding:8px;">${cityBairro}</td>
                             <td style="border:1px solid #cbd5e1; padding:8px; font-size:0.8em; color:#475569;">${sellerStr}</td>
                             <td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">${depDate}</td>
+                            <td style="border:1px solid #cbd5e1; padding:8px; text-align:right;">${Utils.formatCurrency(nfDocVal)}</td>
                             <td style="border:1px solid #cbd5e1; padding:8px; text-align:right;">${freteBase}</td>
                             <td style="border:1px solid #cbd5e1; padding:8px; text-align:right; color:#6366f1;">${adicionais}</td>
                             <td style="border:1px solid #cbd5e1; padding:8px; text-align:right; font-weight:600;">${Utils.formatCurrency(nfVal)}</td>
@@ -7415,6 +7432,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
                             <div class="detail-item" style="text-align:right;">
                                 <p><strong>Qtd de Notas Fiscais:</strong> ${entry.nfCount}</p>
+                                <p><strong>Valor Total das NFs:</strong> ${Utils.formatCurrency(totNfValue)}</p>
                                 <p><strong>Valor da Fatura:</strong> ${Utils.formatCurrency(entry.invoiceValue)}</p>
                                 <p><strong>Total Calculado (NFs):</strong> ${Utils.formatCurrency(entry.calculatedValue)}</p>
                                 <p><strong>${diffLabel}:</strong> <span style="color:${diffColor}; font-weight:bold;">${Utils.formatCurrency(Math.abs(entry.difference))}</span></p>
@@ -7434,6 +7452,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     <th>Cidade / Bairro</th>
                                     <th style="width:90px;">Vendedor</th>
                                     <th style="width:100px; text-align:center;">Data Desp.</th>
+                                    <th style="width:110px; text-align:right;">Valor NF</th>
                                     <th style="width:110px; text-align:right;">Frete Base</th>
                                     <th style="width:100px; text-align:right;">Adicionais</th>
                                     <th style="width:110px; text-align:right;">Total</th>
@@ -7442,6 +7461,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <tbody>
                                 ${rowsHtml}
                             </tbody>
+                            <tfoot>
+                                <tr style="background:#f8fafc; font-weight:bold;">
+                                    <td colspan="5" style="border:1px solid #cbd5e1; padding:8px; text-align:right;">Totais:</td>
+                                    <td style="border:1px solid #cbd5e1; padding:8px; text-align:right; color:#0f172a;">${Utils.formatCurrency(totNfValue)}</td>
+                                    <td style="border:1px solid #cbd5e1; padding:8px; text-align:right;">${totFreteBase > 0 ? Utils.formatCurrency(totFreteBase) : '-'}</td>
+                                    <td style="border:1px solid #cbd5e1; padding:8px; text-align:right; color:#6366f1;">${totAdicionais > 0 ? Utils.formatCurrency(totAdicionais) : '-'}</td>
+                                    <td style="border:1px solid #cbd5e1; padding:8px; text-align:right; color:#10b981; font-weight:700;">${Utils.formatCurrency(totFreteGeral)}</td>
+                                </tr>
+                            </tfoot>
                         </table>
 
                         <div class="footer">

@@ -414,6 +414,7 @@ Bem-vindo ao desenvolvimento! Siga as diretrizes, respeite o processo de deploy 
 ## 7. Histórico de Versões Relevantes
 
 | Versão | Data | Mudanças Principais |
+| **3.21.50** | 2026-09-22 | FEAT: Módulo Despacho — adição da coluna 'Valor NF' na tela de Conferência de Fatura (com filtro rápido 🔍 por valor de nota) e no relatório profissional de Impressão de Fatura Conferida (detalhamento por NF e somatório geral no rodapé). Inclusão também na sub-tabela expandida de histórico em Análise de Faturas. |
 | **3.21.49** | 2026-09-19 | Cotação / Demanda (v2.7.0): Reestruturação completa da aba Base Externa no padrão visual da aba Cadastro de Produtos, com barra de filtros dinâmica (Cód/Desc, Ref Similar, Aplicação, Fabricante, Tipo OEM/Fabricante, Sistema), contador de cadastros na base, limpeza total dos dados fictícios (_PECA_MESTRE_SEED), arquitetura para receber catálogos de peças originais (OEM) e fabricantes parceiros com cruzamento automático de referências similares e status de estoque/preço do ERP Maxdata. |
 |---|---|---|
 | **3.20.10** | 2026-09-10 | Demanda (v2.5.2): Implementação real da sincronização de produtos ativos do MaxData (`syncProducts()`) via `GET /v2/product?desativado=false&limit=200` com paginação automática, normalização completa de campos (`referencia`, `codigoNorm`, `descNorm`, `ativo`, `estoque`, `preco`, etc.) e gravação em lotes na coleção Firestore `tenants/centralpecas/demanda/techbase/products`. Suporte a log em tempo real na tela de Integração ERP e integração direta com DemandaSearch e DemandaLookup. |
