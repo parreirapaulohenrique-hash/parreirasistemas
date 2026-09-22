@@ -1640,6 +1640,7 @@
                                         <th style="width: 200px;">Cliente</th>
                                         <th style="width: 100px;">Cidade</th>
                                         <th style="width: 90px;">Data Desp.</th>
+                                        <th style="width: 100px; text-align: right;">Valor NF</th>
                                         <th style="width: 100px; text-align: right;">Valor Frete</th>
                                     </tr>
                                     <tr id="invoiceFilterRow">
@@ -1648,12 +1649,13 @@
                                         <th style="padding: 4px 6px;"><input type="text" id="invF_client" class="form-input" placeholder="🔍" style="padding:3px 6px;font-size:0.78rem;height:28px;width:100%;" oninput="window.applyInvoiceColumnFilters()"></th>
                                         <th style="padding: 4px 6px;"><input type="text" id="invF_city" class="form-input" placeholder="🔍" style="padding:3px 6px;font-size:0.78rem;height:28px;width:100%;" oninput="window.applyInvoiceColumnFilters()"></th>
                                         <th style="padding: 4px 6px;"><input type="text" id="invF_date" class="form-input" placeholder="🔍" style="padding:3px 6px;font-size:0.78rem;height:28px;width:100%;" oninput="window.applyInvoiceColumnFilters()"></th>
+                                        <th style="padding: 4px 6px;"><input type="text" id="invF_valornf" class="form-input" placeholder="🔍" style="padding:3px 6px;font-size:0.78rem;height:28px;width:100%;" oninput="window.applyInvoiceColumnFilters()"></th>
                                         <th style="padding: 4px 6px;"><input type="text" id="invF_frete" class="form-input" placeholder="🔍" style="padding:3px 6px;font-size:0.78rem;height:28px;width:100%;" oninput="window.applyInvoiceColumnFilters()"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="invoiceNFsBody">
                                     <tr>
-                                        <td colspan="6"
+                                        <td colspan="7"
                                             style="text-align: center; padding: 2rem; color: var(--text-secondary);">
                                             Selecione uma transportadora para ver as NFs disponíveis.
                                         </td>
