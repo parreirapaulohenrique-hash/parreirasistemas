@@ -835,8 +835,14 @@
     bottom: 0 !important;
     background: rgba(0, 0, 0, 0.8) !important;
     backdrop-filter: blur(6px) !important;
-    display: flex !important;
+    display: none !important;
     align-items: center !important;
     justify-content: center !important;
-    z-index: 99999 !important;
+    z-index: 1050 !important;
+}
+
+.modal-backdrop.active,
+.modal-backdrop[style*="display: flex"],
+.modal-backdrop[style*="display:flex"] {
+    display: flex !important;
 }

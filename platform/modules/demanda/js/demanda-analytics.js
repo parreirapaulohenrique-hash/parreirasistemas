@@ -301,14 +301,15 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
       }
 
       renderDrilldownRows(currentDrilldownList);
-      document.getElementById('drilldown-modal').classList.add('active');
+      var dm = document.getElementById('drilldown-modal'); if (dm) { dm.style.display = 'flex'; dm.classList.add('active'); }
 
       const tbl = document.getElementById('table-drilldown');
       initUniversalSorting(tbl);
     }
 
     function closeDrilldownModal() {
-      document.getElementById('drilldown-modal').classList.remove('active');
+      var el = document.getElementById('drilldown-modal');
+      if (el) { el.classList.remove('active'); el.style.display = 'none'; }
     }
 
     function applyDrilldownAsInventoryFilter() {
@@ -815,7 +816,7 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
       `;
 
       document.getElementById('sku-modal-title').innerText = `Vendedor: ${v.Vendedor}`;
-      document.getElementById('sku-modal').classList.add('active');
+      var sm = document.getElementById('sku-modal'); if (sm) { sm.style.display = 'flex'; sm.classList.add('active'); }
     }
 
     function drilldownCliente(cliName) {
@@ -848,7 +849,7 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
       `;
 
       document.getElementById('sku-modal-title').innerText = `Cliente: ${c.NomeCliente}`;
-      document.getElementById('sku-modal').classList.add('active');
+      var sm = document.getElementById('sku-modal'); if (sm) { sm.style.display = 'flex'; sm.classList.add('active'); }
     }
 
     function drilldownClientesGeral() {
@@ -869,7 +870,7 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
       const body = document.getElementById('sku-modal-body');
       body.innerHTML = html;
       document.getElementById('sku-modal-title').innerText = "Carteira de Clientes Prioritários";
-      document.getElementById('sku-modal').classList.add('active');
+      var sm = document.getElementById('sku-modal'); if (sm) { sm.style.display = 'flex'; sm.classList.add('active'); }
     }
 
     function drilldownDevolucaoMotivo(motivo) {
@@ -889,7 +890,7 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
         </div>
       `;
       document.getElementById('sku-modal-title').innerText = `Devolução: ${m.Operacao}`;
-      document.getElementById('sku-modal').classList.add('active');
+      var sm = document.getElementById('sku-modal'); if (sm) { sm.style.display = 'flex'; sm.classList.add('active'); }
     }
 
     function drilldownDevolucaoVendedor(vend) {
@@ -907,7 +908,7 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
         </div>
       `;
       document.getElementById('sku-modal-title').innerText = `Devoluções de ${v.Vendedor}`;
-      document.getElementById('sku-modal').classList.add('active');
+      var sm = document.getElementById('sku-modal'); if (sm) { sm.style.display = 'flex'; sm.classList.add('active'); }
     }
 
     // ========================================================
@@ -1060,7 +1061,7 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
         `;
       }
 
-      document.getElementById('sku-modal').classList.add('active');
+      var sm = document.getElementById('sku-modal'); if (sm) { sm.style.display = 'flex'; sm.classList.add('active'); }
     }
 
     
@@ -1268,7 +1269,8 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
     }
 
     function closeSkuModal() {
-      document.getElementById('sku-modal').classList.remove('active');
+      var el = document.getElementById('sku-modal');
+      if (el) { el.classList.remove('active'); el.style.display = 'none'; }
     }
 
     // Fecha modal clicando no fundo ou tecla ESC
