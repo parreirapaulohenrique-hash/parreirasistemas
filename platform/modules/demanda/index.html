@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <base href="/platform/modules/demanda/">
-    <title>Cotação | Central Rolamentos</title>
-    <meta name="description" content="Módulo de captura, identificação e rastreamento de cotações comerciais — Central Rolamentos CTR.">
+    <title>CotaÃ§Ã£o | Central Rolamentos</title>
+    <meta name="description" content="MÃ³dulo de captura, identificaÃ§Ã£o e rastreamento de cotaÃ§Ãµes comerciais â€” Central Rolamentos CTR.">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,18 +14,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-    <!-- SheetJS para importação de Excel -->
+    <!-- SheetJS para importaÃ§Ã£o de Excel -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <!-- Design system da plataforma -->
     <link rel="stylesheet" href="/platform/core/styles/portal.css">
     <link rel="stylesheet" href="styles/demanda.css?v=3.21.49">
-    <link rel="stylesheet" href="styles/demanda-analytics.css?v=3.0.1">
+    <link rel="stylesheet" href="styles/demanda-analytics.css?v=3.0.2">
 </head>
 
 <body>
-    <!-- Banner de homologação -->
+    <!-- Banner de homologaÃ§Ã£o -->
     <div id="stagingBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:999999;background:linear-gradient(90deg,#f59e0b,#d97706);color:#000;font-weight:700;font-size:.82rem;text-align:center;padding:6px 12px;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 2px 8px rgba(245,158,11,.5);">
-        ⚠️ AMBIENTE DE HOMOLOGAÇÃO — DADOS DE TESTE ⚠️
+        âš ï¸ AMBIENTE DE HOMOLOGAÃ‡ÃƒO â€” DADOS DE TESTE âš ï¸
     </div>
     <script>
         (function() {
@@ -38,51 +38,51 @@
         })();
     </script>
 
-    <!-- ── Shell Principal ──────────────────────────────────── -->
+    <!-- â”€â”€ Shell Principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <div class="demanda-shell" id="appShell" style="display:none">
 
         <!-- Sidebar -->
         <aside class="sidebar">
-            <!-- Logo / Título do módulo -->
+            <!-- Logo / TÃ­tulo do mÃ³dulo -->
             <div class="logo-area">
                 <div class="sidebar-logo-icon">
                     <span class="material-icons-round">insights</span>
                 </div>
                 <div class="sidebar-logo-text">
-                    <strong>Cotação</strong>
-                    <small id="sidebarFilial">—</small>
+                    <strong>CotaÃ§Ã£o</strong>
+                    <small id="sidebarFilial">â€”</small>
                 </div>
             </div>
 
             <nav class="nav-menu">
-                <!-- 1º GRUPO: COTAÇÕES -->
-                <div class="nav-section-label">1. Cotações</div>
+                <!-- 1Âº GRUPO: COTAÃ‡Ã•ES -->
+                <div class="nav-section-label">1. CotaÃ§Ãµes</div>
                 <button class="nav-item active" id="nav-captura" onclick="DemandaApp.switchView('captura')">
                     <span class="material-icons-round">add_circle</span>
-                    Nova Cotação
+                    Nova CotaÃ§Ã£o
                 </button>
                 <button class="nav-item" id="nav-lista" onclick="DemandaApp.switchView('lista')">
                     <span class="material-icons-round">list_alt</span>
-                    Minhas Cotações
+                    Minhas CotaÃ§Ãµes
                 </button>
                 <button class="nav-item" id="nav-pesquisa" onclick="DemandaApp.switchView('pesquisa')">
                     <span class="material-icons-round">manage_search</span>
-                    Pesquisar Peças
+                    Pesquisar PeÃ§as
                 </button>
                 <button class="nav-item" id="nav-concorrente" onclick="DemandaApp.switchView('concorrente')">
                     <span class="material-icons-round">trending_up</span>
-                    Cotação Concorrente
+                    CotaÃ§Ã£o Concorrente
                 </button>
                 <button class="nav-item" id="nav-orcamento" onclick="DemandaApp.switchView('orcamento')">
                     <span class="material-icons-round">description</span>
-                    Orçamentos
+                    OrÃ§amentos
                 </button>
 
-                <!-- 2º GRUPO: ANÁLISE ESTOQUE (MaxData) -->
-                <div class="nav-section-label">2. Análise Estoque</div>
+                <!-- 2Âº GRUPO: ANÃLISE ESTOQUE (MaxData) -->
+                <div class="nav-section-label">2. AnÃ¡lise Estoque</div>
                 <button class="nav-item" id="nav-estoque-visao" onclick="DemandaApp.switchView('estoque-visao')">
                     <span class="material-icons-round">dashboard</span>
-                    Visão Executiva &amp; KPIs
+                    VisÃ£o Executiva &amp; KPIs
                 </button>
                 <button class="nav-item" id="nav-estoque-abc" onclick="DemandaApp.switchView('estoque-abc')">
                     <span class="material-icons-round">analytics</span>
@@ -102,15 +102,15 @@
                 </button>
                 <button class="nav-item" id="nav-base" onclick="DemandaApp.switchView('base')">
                     <span class="material-icons-round">hub</span>
-                    Base Externa (Peças)
+                    Base Externa (PeÃ§as)
                 </button>
                 <button class="nav-item" id="nav-estoque-import" onclick="DemandaApp.switchView('estoque-import')">
                     <span class="material-icons-round">cloud_upload</span>
                     Carga de Dados MaxData
                 </button>
 
-                <!-- 3º GRUPO: AÇÕES GERENCIAIS (Correções Futuras / Excesso / Ruptura) -->
-                <div class="nav-section-label">3. Ações Gerenciais</div>
+                <!-- 3Âº GRUPO: AÃ‡Ã•ES GERENCIAIS (CorreÃ§Ãµes Futuras / Excesso / Ruptura) -->
+                <div class="nav-section-label">3. AÃ§Ãµes Gerenciais</div>
                 <button class="nav-item" id="nav-acoes-rupturas" onclick="DemandaApp.switchView('acoes-rupturas')">
                     <span class="material-icons-round">error_outline</span>
                     Rupturas &amp; Zerados
@@ -125,10 +125,10 @@
                 </button>
                 <button class="nav-item" id="nav-acoes-devolucoes" onclick="DemandaApp.switchView('acoes-devolucoes')">
                     <span class="material-icons-round">assignment_return</span>
-                    Devoluções &amp; Motivos
+                    DevoluÃ§Ãµes &amp; Motivos
                 </button>
 
-                <!-- 4º GRUPO: COMPRAS (Sugestões Unificadas Cotações + Estoque) -->
+                <!-- 4Âº GRUPO: COMPRAS (SugestÃµes Unificadas CotaÃ§Ãµes + Estoque) -->
                 <div class="nav-section-label">4. Compras</div>
                 <button class="nav-item" id="nav-compras-start" onclick="DemandaApp.switchView('compras-start')">
                     <span class="material-icons-round">bolt</span>
@@ -140,18 +140,18 @@
                 </button>
                 <button class="nav-item" id="nav-compras-sugestao" onclick="DemandaApp.switchView('compras-sugestao')">
                     <span class="material-icons-round">calculate</span>
-                    Sugestão &amp; Lead Time
+                    SugestÃ£o &amp; Lead Time
                 </button>
                 <button class="nav-item" id="nav-compras-fornecedores" onclick="DemandaApp.switchView('compras-fornecedores')">
                     <span class="material-icons-round">local_shipping</span>
                     Curva Fornecedores
                 </button>
 
-                <!-- 5º GRUPO: AÇÕES COMERCIAIS (Positivação, Mix, Recorrência, Ticket, Churn, Reativação, Vendedores) -->
-                <div class="nav-section-label">5. Ações Comerciais</div>
+                <!-- 5Âº GRUPO: AÃ‡Ã•ES COMERCIAIS (PositivaÃ§Ã£o, Mix, RecorrÃªncia, Ticket, Churn, ReativaÃ§Ã£o, Vendedores) -->
+                <div class="nav-section-label">5. AÃ§Ãµes Comerciais</div>
                 <button class="nav-item" id="nav-comercial-positivacao" onclick="DemandaApp.switchView('comercial-positivacao')">
                     <span class="material-icons-round">check_circle</span>
-                    Positivação de Clientes
+                    PositivaÃ§Ã£o de Clientes
                 </button>
                 <button class="nav-item" id="nav-comercial-mix" onclick="DemandaApp.switchView('comercial-mix')">
                     <span class="material-icons-round">category</span>
@@ -159,11 +159,11 @@
                 </button>
                 <button class="nav-item" id="nav-comercial-recorrencia" onclick="DemandaApp.switchView('comercial-recorrencia')">
                     <span class="material-icons-round">repeat</span>
-                    Recorrência &amp; Recompra
+                    RecorrÃªncia &amp; Recompra
                 </button>
                 <button class="nav-item" id="nav-comercial-ticket" onclick="DemandaApp.switchView('comercial-ticket')">
                     <span class="material-icons-round">receipt_long</span>
-                    Ticket Médio &amp; Margem
+                    Ticket MÃ©dio &amp; Margem
                 </button>
                 <button class="nav-item" id="nav-comercial-churn" onclick="DemandaApp.switchView('comercial-churn')">
                     <span class="material-icons-round">trending_down</span>
@@ -171,7 +171,7 @@
                 </button>
                 <button class="nav-item" id="nav-comercial-reativacao" onclick="DemandaApp.switchView('comercial-reativacao')">
                     <span class="material-icons-round">person_search</span>
-                    Radar de Reativação
+                    Radar de ReativaÃ§Ã£o
                 </button>
                 <button class="nav-item" id="nav-comercial-vendedores" onclick="DemandaApp.switchView('comercial-vendedores')">
                     <span class="material-icons-round">badge</span>
@@ -182,10 +182,10 @@
                 <div class="nav-section-label">Sistema</div>
                 <button class="nav-item" id="nav-integracaoErp" onclick="DemandaApp.switchView('integracaoErp')">
                     <span class="material-icons-round">sync</span>
-                    Integração ERP
+                    IntegraÃ§Ã£o ERP
                 </button>
 
-                <!-- Ações secundárias -->
+                <!-- AÃ§Ãµes secundÃ¡rias -->
                 <a href="/platform/index.html" class="nav-item" style="margin-top:auto;color:var(--text-secondary);">
                     <span class="material-icons-round">arrow_back</span>
                     Voltar ao Portal
@@ -201,7 +201,7 @@
                     <div class="avatar" id="sidebarAvatarLetter">?</div>
                     <div class="user-info">
                         <span class="name" id="sidebarUserName">Carregando...</span>
-                        <span class="role" id="sidebarRole">—</span>
+                        <span class="role" id="sidebarRole">â€”</span>
                     </div>
                 </div>
             </div>
@@ -211,15 +211,15 @@
         <!-- Main Content -->
         <div class="main-content">
 
-            <!-- ══════════════════════════════════════════════ -->
-            <!--  VIEW: CENTRAL DE CAPTURA (padrão)            -->
-            <!-- ══════════════════════════════════════════════ -->
+            <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+            <!--  VIEW: CENTRAL DE CAPTURA (padrÃ£o)            -->
+            <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
             <div id="view-captura">
-                <!-- Topbar — padrão Despacho -->
+                <!-- Topbar â€” padrÃ£o Despacho -->
                 <div class="top-bar">
                     <div class="breadcrumb">
                         <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">inbox</span>
-                        <span>Central de Cotação</span>
+                        <span>Central de CotaÃ§Ã£o</span>
                         <span id="demandaCodigoTopbar" style="font-size:.78rem;color:var(--text-secondary)"></span>
                     </div>
                     <div class="topbar-actions">
@@ -238,7 +238,7 @@
                 <!-- Layout: Pesquisa (esq) + Itens (dir) -->
                 <div class="captura-layout">
 
-                    <!-- ── Coluna Esquerda: Pesquisa ──── -->
+                    <!-- â”€â”€ Coluna Esquerda: Pesquisa â”€â”€â”€â”€ -->
                     <div class="captura-left">
 
                         <!-- Barra universal de pesquisa -->
@@ -248,7 +248,7 @@
                                 <input
                                     id="searchInput"
                                     type="text"
-                                    placeholder="Referência, descrição, EAN, máquina/modelo... (mín. 3 caracteres)"
+                                    placeholder="ReferÃªncia, descriÃ§Ã£o, EAN, mÃ¡quina/modelo... (mÃ­n. 3 caracteres)"
                                     autocomplete="off"
                                     spellcheck="false"
                                     oninput="DemandaApp.onSearchInput(this.value)"
@@ -259,7 +259,7 @@
                             </div>
                         </div>
 
-                        <!-- Barra de importação -->
+                        <!-- Barra de importaÃ§Ã£o -->
                         <div class="import-bar">
                             <span class="import-bar-label">Importar:</span>
                             <button class="btn-import" onclick="DemandaApp.openImportModal('texto')">
@@ -280,25 +280,25 @@
                             </button>
                         </div>
 
-                        <!-- Área de resultados da pesquisa -->
+                        <!-- Ãrea de resultados da pesquisa -->
                         <div class="search-results" id="searchResults">
                             <div class="search-placeholder" id="searchPlaceholder">
                                 <span class="material-icons-round">manage_search</span>
-                                <h4>Pesquise uma peça</h4>
-                                <p>Digite a referência, código, descrição ou nome da máquina para encontrar produtos no ERP e na base técnica.</p>
+                                <h4>Pesquise uma peÃ§a</h4>
+                                <p>Digite a referÃªncia, cÃ³digo, descriÃ§Ã£o ou nome da mÃ¡quina para encontrar produtos no ERP e na base tÃ©cnica.</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- ── Coluna Direita: Cotação Atual ─── -->
+                    <!-- â”€â”€ Coluna Direita: CotaÃ§Ã£o Atual â”€â”€â”€ -->
                     <div class="captura-right">
                         <div class="demanda-panel">
 
-                            <!-- Cabeçalho do painel -->
+                            <!-- CabeÃ§alho do painel -->
                             <div class="demanda-panel-header">
                                 <div class="demanda-panel-title">
                                     <span class="material-icons-round">receipt_long</span>
-                                    Cotação Atual
+                                    CotaÃ§Ã£o Atual
                                 </div>
                                 <div class="demanda-client-info">
                                     <!-- Seletor de cliente -->
@@ -307,7 +307,7 @@
                                             onclick="DemandaApp.toggleClienteDropdown()" type="button">
                                             <span class="material-icons-round">person_search</span>
                                             <span id="clienteLabel">Selecionar cliente <span style="color:var(--accent-danger);font-weight:bold;">*</span></span>
-                                            <span id="btnClearCliente" title="Remover cliente" onclick="DemandaApp.limparClienteSelecionado(event)" style="display:none;margin-left:auto;padding:0 4px;cursor:pointer;color:var(--accent-danger);font-size:.85rem;font-weight:bold">✕</span>
+                                            <span id="btnClearCliente" title="Remover cliente" onclick="DemandaApp.limparClienteSelecionado(event)" style="display:none;margin-left:auto;padding:0 4px;cursor:pointer;color:var(--accent-danger);font-size:.85rem;font-weight:bold">âœ•</span>
                                         </button>
                                         <div class="client-dropdown" id="clienteDropdown">
                                             <input
@@ -325,12 +325,12 @@
                                     <!-- Canal de origem -->
                                     <select id="selectOrigem" class="form-select"
                                         style="padding:.3rem .6rem;font-size:.75rem;width:auto;background:var(--bg-dark);"
-                                        title="Canal de origem da cotação">
-                                        <option value="whatsapp">📱 WhatsApp</option>
-                                        <option value="email">📧 Email</option>
-                                        <option value="telefone">📞 Telefone</option>
-                                        <option value="presencial">🏪 Presencial</option>
-                                        <option value="manual">✏️ Manual</option>
+                                        title="Canal de origem da cotaÃ§Ã£o">
+                                        <option value="whatsapp">ðŸ“± WhatsApp</option>
+                                        <option value="email">ðŸ“§ Email</option>
+                                        <option value="telefone">ðŸ“ž Telefone</option>
+                                        <option value="presencial">ðŸª Presencial</option>
+                                        <option value="manual">âœï¸ Manual</option>
                                     </select>
                                 </div>
                             </div>
@@ -341,8 +341,8 @@
                                     <thead>
                                         <tr>
                                             <th>#</th>
-                                            <th>Referência</th>
-                                            <th style="min-width:120px">Descrição</th>
+                                            <th>ReferÃªncia</th>
+                                            <th style="min-width:120px">DescriÃ§Ã£o</th>
                                             <th>Qtde</th>
                                             <th>Status</th>
                                             <th></th>
@@ -353,7 +353,7 @@
                                             <td colspan="6">
                                                 <div class="empty-state" style="padding:1.5rem">
                                                     <span class="material-icons-round">add_shopping_cart</span>
-                                                    <p>Pesquise uma peça ou importe uma lista para começar.</p>
+                                                    <p>Pesquise uma peÃ§a ou importe uma lista para comeÃ§ar.</p>
                                                 </div>
                                             </td>
                                         </tr>
@@ -361,12 +361,12 @@
                                 </table>
                             </div>
 
-                            <!-- Grade de entrada rápida -->
+                            <!-- Grade de entrada rÃ¡pida -->
                             <div class="grade-input-row" id="gradeInputRow">
                                 <input
                                     id="gradeRef"
                                     type="text"
-                                    placeholder="Referência ou descrição"
+                                    placeholder="ReferÃªncia ou descriÃ§Ã£o"
                                     autocomplete="off"
                                     onkeydown="DemandaApp.onGradeKeydown(event)"
                                 >
@@ -384,14 +384,14 @@
                                 </button>
                             </div>
 
-                            <!-- Rodapé de ações -->
+                            <!-- RodapÃ© de aÃ§Ãµes -->
                             <div class="demanda-panel-footer">
                                 <button class="btn btn-secondary btn-sm" onclick="DemandaApp.limparDemanda()" title="Limpar todos os itens">
                                     <span class="material-icons-round">delete_sweep</span>
                                 </button>
                                 <button class="btn btn-success btn-sm" id="btnSalvarDemandaPanel" style="flex:1" onclick="DemandaApp.salvarDemanda()">
                                     <span class="material-icons-round">save</span>
-                                    Salvar Cotação
+                                    Salvar CotaÃ§Ã£o
                                 </button>
                             </div>
                         </div>
@@ -399,19 +399,19 @@
                 </div><!-- /captura-layout -->
             </div><!-- /view-captura -->
 
-            <!-- ══════════════════════════════════════════════ -->
+            <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
             <!--  VIEW: LISTA DE DEMANDAS                      -->
-            <!-- ══════════════════════════════════════════════ -->
+            <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
             <div id="view-lista" style="display:none">
                 <div class="top-bar">
                     <div class="breadcrumb">
                         <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">list_alt</span>
-                        <span class="current">Minhas Cotações</span>
+                        <span class="current">Minhas CotaÃ§Ãµes</span>
                     </div>
                     <div class="topbar-actions">
                         <button class="btn btn-primary btn-sm" onclick="DemandaApp.switchView('captura')">
                             <span class="material-icons-round">add</span>
-                            Nova Cotação
+                            Nova CotaÃ§Ã£o
                         </button>
                     </div>
                 </div>
@@ -426,35 +426,35 @@
                 <div style="flex:1;overflow-y:auto;padding:1rem 1.5rem" id="listaDemandasContainer">
                     <div class="empty-state">
                         <span class="material-icons-round">hourglass_empty</span>
-                        <h4>Carregando cotações...</h4>
+                        <h4>Carregando cotaÃ§Ãµes...</h4>
                     </div>
                 </div>
             </div>
 
-            <!-- ══════════════════════════════════════════════ -->
-            <!--  VIEW: PESQUISA AVANÇADA DE PEÇAS             -->
-            <!-- ══════════════════════════════════════════════ -->
-            <!-- VIEW: PESQUISA AVANÇADA / CATÁLOGO DE SIMILARES -->
+            <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+            <!--  VIEW: PESQUISA AVANÃ‡ADA DE PEÃ‡AS             -->
+            <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+            <!-- VIEW: PESQUISA AVANÃ‡ADA / CATÃLOGO DE SIMILARES -->
             <div id="view-pesquisa" style="display:none;flex-direction:column">
                 <div class="top-bar" style="flex-wrap:wrap;gap:.75rem">
                     <div class="breadcrumb">
                         <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">manage_search</span>
-                        <span>Pesquisar Peças & Similares</span>
+                        <span>Pesquisar PeÃ§as & Similares</span>
                     </div>
                     <div style="display:flex;align-items:center;gap:.5rem;margin-left:auto;flex:1;max-width:550px">
                         <div style="position:relative;flex:1">
                             <span class="material-icons-round" style="position:absolute;left:.7rem;top:50%;transform:translateY(-50%);font-size:1.1rem;color:var(--text-secondary)">search</span>
-                            <input id="inpPesquisaPecasView" type="text" placeholder="Código montadora, similar, descrição ou máquina (ex: HXE32806, RE196945)..."
+                            <input id="inpPesquisaPecasView" type="text" placeholder="CÃ³digo montadora, similar, descriÃ§Ã£o ou mÃ¡quina (ex: HXE32806, RE196945)..."
                                 onkeydown="if(event.key==='Enter') DemandaApp.executarPesquisaPecasView()"
                                 style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.5rem .85rem .5rem 2.3rem;color:var(--text-primary);font-size:.85rem">
                         </div>
                         <button class="btn btn-primary btn-sm" onclick="DemandaApp.executarPesquisaPecasView()" style="display:inline-flex;align-items:center;gap:.35rem;white-space:nowrap;font-weight:600">
-                            <span class="material-icons-round" style="font-size:.9rem">search</span> Buscar Peça
+                            <span class="material-icons-round" style="font-size:.9rem">search</span> Buscar PeÃ§a
                         </button>
                     </div>
                 </div>
 
-                <!-- Barra de Filtros Rápidos de Fabricante / Estoque -->
+                <!-- Barra de Filtros RÃ¡pidos de Fabricante / Estoque -->
                 <div style="display:flex;align-items:center;gap:.5rem;padding:.6rem 1.25rem;background:rgba(255,255,255,.015);border-bottom:1px solid var(--border-color);overflow-x:auto">
                     <span style="font-size:.72rem;color:var(--text-secondary);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Filtros:</span>
                     <button class="chip active" id="chipPesqTodos" onclick="DemandaApp.filtrarPesquisaView('todos')" style="font-size:.75rem;padding:.2rem .65rem;border-radius:6px">Todos</button>
@@ -470,15 +470,15 @@
                     <button class="chip" id="chipPesqTatu" onclick="DemandaApp.filtrarPesquisaView('tatu')" style="font-size:.75rem;padding:.2rem .65rem;border-radius:6px">Tatu Marchesan</button>
                     <button class="chip" id="chipPesqBaldan" onclick="DemandaApp.filtrarPesquisaView('baldan')" style="font-size:.75rem;padding:.2rem .65rem;border-radius:6px">Baldan / Piccin</button>
                     <button class="chip" id="chipPesqJAN" onclick="DemandaApp.filtrarPesquisaView('jan')" style="font-size:.75rem;padding:.2rem .65rem;border-radius:6px">JAN / Vence Tudo / Jumil</button>
-                    <button class="chip" id="chipPesqZF" onclick="DemandaApp.filtrarPesquisaView('zf')" style="font-size:.75rem;padding:.2rem .65rem;border-radius:6px">ZF / Transmissão</button>
+                    <button class="chip" id="chipPesqZF" onclick="DemandaApp.filtrarPesquisaView('zf')" style="font-size:.75rem;padding:.2rem .65rem;border-radius:6px">ZF / TransmissÃ£o</button>
                 </div>
 
                 <!-- Container Principal de Resultados -->
                 <div id="pesquisaPecasContainer" style="flex:1;overflow-y:auto;padding:1.25rem">
                     <div style="max-width:620px;margin:2.5rem auto;text-align:center;color:var(--text-secondary)">
                         <span class="material-icons-round" style="font-size:3rem;color:var(--primary-color);opacity:.6;margin-bottom:.75rem">hub</span>
-                        <h4 style="font-size:1.1rem;color:var(--text-primary);margin-bottom:.5rem">Pesquisa Inteligente & Cruzamento de Peças</h4>
-                        <p style="font-size:.85rem;line-height:1.5">Digite qualquer código de fábrica, código similar de outra montadora, código paralelo ou aplicação de máquina. O sistema cruzará automaticamente com o catálogo do ERP.</p>
+                        <h4 style="font-size:1.1rem;color:var(--text-primary);margin-bottom:.5rem">Pesquisa Inteligente & Cruzamento de PeÃ§as</h4>
+                        <p style="font-size:.85rem;line-height:1.5">Digite qualquer cÃ³digo de fÃ¡brica, cÃ³digo similar de outra montadora, cÃ³digo paralelo ou aplicaÃ§Ã£o de mÃ¡quina. O sistema cruzarÃ¡ automaticamente com o catÃ¡logo do ERP.</p>
                         <div style="display:flex;justify-content:center;gap:.5rem;margin-top:1.25rem;flex-wrap:wrap">
                             <span style="font-size:.75rem;padding:.25rem .6rem;background:rgba(255,255,255,.05);border-radius:6px;cursor:pointer" onclick="document.getElementById('inpPesquisaPecasView').value='HXE32806';DemandaApp.executarPesquisaPecasView()">Ex: HXE32806</span>
                             <span style="font-size:.75rem;padding:.25rem .6rem;background:rgba(255,255,255,.05);border-radius:6px;cursor:pointer" onclick="document.getElementById('inpPesquisaPecasView').value='0095353137';DemandaApp.executarPesquisaPecasView()">Ex: 0095353137</span>
@@ -489,9 +489,9 @@
                 </div>
             </div>
 
-            <!-- ══════════════════════════════════════════════ -->
+            <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
             <!--  VIEW: FILA DE COMPRAS                        -->
-            <!-- ══════════════════════════════════════════════ -->
+            <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
             <!-- VIEW: FILA DE COMPRAS -->
             <div id="view-compras" style="display:none;flex-direction:column">
                 <div class="top-bar">
@@ -508,9 +508,9 @@
                 <div id="comprasContainer" style="flex:1;overflow-y:auto;padding:.5rem 0"></div>
             </div>
 
-            <!-- ══════════════════════════════════════════════ -->
+            <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
             <!--  VIEW: DASHBOARD                              -->
-            <!-- ══════════════════════════════════════════════ -->
+            <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
             <!-- VIEW: DASHBOARD -->
             <div id="view-dashboard" style="display:none;flex-direction:column">
                 <div class="top-bar">
@@ -527,9 +527,9 @@
                 <div id="dashboardContainer" style="flex:1;overflow-y:auto;padding:1.5rem"></div>
             </div>
 
-            <!-- ══════════════════════════════════════════════ -->
+            <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
             <!--  VIEW: CADASTRO DE PRODUTOS (ERP MAXDATA)     -->
-            <!-- ══════════════════════════════════════════════ -->
+            <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
             <div id="view-produtosErp" style="display:none">
                 <div class="top-bar" style="flex-wrap:wrap;gap:.75rem">
                     <div class="breadcrumb">
@@ -539,7 +539,7 @@
                     <div style="display:flex;align-items:center;gap:.5rem;margin-left:auto;flex-wrap:wrap">
                         <div style="position:relative;width:320px">
                             <span class="material-icons-round" style="position:absolute;left:.65rem;top:50%;transform:translateY(-50%);font-size:1rem;color:var(--text-secondary)">search</span>
-                            <input id="erpInpBusca" type="text" placeholder="Busca geral no catálogo (18.750 itens)..."
+                            <input id="erpInpBusca" type="text" placeholder="Busca geral no catÃ¡logo (18.750 itens)..."
                                 oninput="DemandaApp.onErpBuscaRemota()"
                                 style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.45rem .75rem .45rem 2.2rem;color:var(--text-primary);font-size:.82rem">
                         </div>
@@ -552,18 +552,18 @@
                 <!-- Barra de Filtros Estilo ERP Maxdata -->
                 <div style="display:flex;align-items:center;gap:.6rem;padding:.65rem 1.25rem;background:rgba(255,255,255,.015);border-bottom:1px solid var(--border-color);flex-wrap:wrap">
                     <div style="display:flex;align-items:center;gap:.3rem">
-                        <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Cód. / Desc.:</label>
-                        <input id="erpInpBuscaDesc" type="text" placeholder="Cód. ou Descrição..." oninput="DemandaApp.onErpBuscaRemota()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem;width:170px">
+                        <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">CÃ³d. / Desc.:</label>
+                        <input id="erpInpBuscaDesc" type="text" placeholder="CÃ³d. ou DescriÃ§Ã£o..." oninput="DemandaApp.onErpBuscaRemota()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem;width:170px">
                     </div>
 
                     <div style="display:flex;align-items:center;gap:.3rem">
-                        <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Cód. Fab.:</label>
-                        <input id="erpInpBuscaCodFab" type="text" placeholder="Referência OEM / Fábrica..." oninput="DemandaApp.filtrarProdutosErp()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem;width:150px">
+                        <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">CÃ³d. Fab.:</label>
+                        <input id="erpInpBuscaCodFab" type="text" placeholder="ReferÃªncia OEM / FÃ¡brica..." oninput="DemandaApp.filtrarProdutosErp()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem;width:150px">
                     </div>
 
                     <div style="display:flex;align-items:center;gap:.3rem">
-                        <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Aplicação:</label>
-                        <input id="erpInpBuscaAplicacao" type="text" placeholder="Aplicação técnica..." oninput="DemandaApp.filtrarProdutosErp()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem;width:150px">
+                        <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">AplicaÃ§Ã£o:</label>
+                        <input id="erpInpBuscaAplicacao" type="text" placeholder="AplicaÃ§Ã£o tÃ©cnica..." oninput="DemandaApp.filtrarProdutosErp()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem;width:150px">
                     </div>
 
                     <div style="display:flex;align-items:center;gap:.3rem">
@@ -584,7 +584,7 @@
                         <input id="erpChkEstoque" type="checkbox" onchange="DemandaApp.filtrarProdutosErp()"> Apenas com Estoque
                     </label>
 
-                    <label style="display:inline-flex;align-items:center;gap:.35rem;font-size:.75rem;color:#10b981;cursor:pointer;font-weight:600;padding:.2rem .5rem;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:6px" title="Oculta automaticamente Ativo Imobilizado (veículos), Uso e Consumo (almoço, café, descartáveis), fitas de embalagem e fretes">
+                    <label style="display:inline-flex;align-items:center;gap:.35rem;font-size:.75rem;color:#10b981;cursor:pointer;font-weight:600;padding:.2rem .5rem;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:6px" title="Oculta automaticamente Ativo Imobilizado (veÃ­culos), Uso e Consumo (almoÃ§o, cafÃ©, descartÃ¡veis), fitas de embalagem e fretes">
                         <input id="erpChkOcultarUsoConsumo" type="checkbox" checked onchange="DemandaApp.filtrarProdutosErp()">
                         <span class="material-icons-round" style="font-size:.85rem">verified_user</span> Ocultar Consumo & Imobilizado
                     </label>
@@ -603,24 +603,24 @@
                 </div>
             </div>
 
-            <!-- ══════════════════════════════════════════════ -->
-            <!--  VIEW: BASE EXTERNA (Catálogo & Mercado)       -->
-            <!-- ══════════════════════════════════════════════ -->
+            <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+            <!--  VIEW: BASE EXTERNA (CatÃ¡logo & Mercado)       -->
+            <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
             <div id="view-base" style="display:none;flex-direction:column">
                 <div class="top-bar" style="flex-wrap:wrap;gap:.75rem">
                     <div class="breadcrumb">
                         <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">menu_book</span>
-                        <span>Catálogo de Peças & Fabricantes (Base Externa)</span>
+                        <span>CatÃ¡logo de PeÃ§as & Fabricantes (Base Externa)</span>
                     </div>
                     <div style="display:flex;align-items:center;gap:.5rem;margin-left:auto;flex-wrap:wrap">
                         <div style="position:relative;width:320px">
                             <span class="material-icons-round" style="position:absolute;left:.65rem;top:50%;transform:translateY(-50%);font-size:1rem;color:var(--text-secondary)">search</span>
-                            <input id="btInpBuscaGeral" type="text" placeholder="Busca geral no catálogo externo..."
+                            <input id="btInpBuscaGeral" type="text" placeholder="Busca geral no catÃ¡logo externo..."
                                 oninput="DemandaApp.onBtBuscaGeral(this.value)"
                                 style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.45rem .75rem .45rem 2.2rem;color:var(--text-primary);font-size:.82rem">
                         </div>
                         <button class="btn btn-primary btn-sm" onclick="DemandaApp.abrirModalImportarCatalogo()" style="display:inline-flex;align-items:center;gap:.35rem">
-                            <span class="material-icons-round" style="font-size:.9rem">upload_file</span> Importar Catálogo
+                            <span class="material-icons-round" style="font-size:.9rem">upload_file</span> Importar CatÃ¡logo
                         </button>
                         <button class="btn btn-secondary btn-sm" onclick="DemandaApp.loadBaseTecnica(true)" style="display:inline-flex;align-items:center;gap:.35rem">
                             <span class="material-icons-round" style="font-size:.9rem">refresh</span> Atualizar
@@ -631,8 +631,8 @@
                 <!-- Barra de Filtros Estilo Cadastro de Produtos -->
                 <div style="display:flex;align-items:center;gap:.6rem;padding:.65rem 1.25rem;background:rgba(255,255,255,.015);border-bottom:1px solid var(--border-color);flex-wrap:wrap">
                     <div style="display:flex;align-items:center;gap:.3rem">
-                        <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Cód. / Desc.:</label>
-                        <input id="btInpBuscaDesc" type="text" placeholder="Cód. ou Descrição..." oninput="DemandaApp.filtrarBaseTecnica()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem;width:170px">
+                        <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">CÃ³d. / Desc.:</label>
+                        <input id="btInpBuscaDesc" type="text" placeholder="CÃ³d. ou DescriÃ§Ã£o..." oninput="DemandaApp.filtrarBaseTecnica()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem;width:170px">
                     </div>
 
                     <div style="display:flex;align-items:center;gap:.3rem">
@@ -641,12 +641,12 @@
                     </div>
 
                     <div style="display:flex;align-items:center;gap:.3rem">
-                        <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Aplicação:</label>
-                        <input id="btInpBuscaAplicacao" type="text" placeholder="Aplicação técnica..." oninput="DemandaApp.filtrarBaseTecnica()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem;width:150px">
+                        <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">AplicaÃ§Ã£o:</label>
+                        <input id="btInpBuscaAplicacao" type="text" placeholder="AplicaÃ§Ã£o tÃ©cnica..." oninput="DemandaApp.filtrarBaseTecnica()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem;width:150px">
                     </div>
 
                     <div style="display:flex;align-items:center;gap:.3rem">
-                        <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Marca / Catálogo:</label>
+                        <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Marca / CatÃ¡logo:</label>
                         <select id="btSelMarca" onchange="DemandaApp.filtrarBaseTecnica()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem">
                             <option value="">Todas as Marcas</option>
                         </select>
@@ -657,7 +657,7 @@
                         <select id="btSelTipoOrigem" onchange="DemandaApp.filtrarBaseTecnica()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem">
                             <option value="">Todos os Tipos</option>
                             <option value="OEM">Original (Montadora OEM)</option>
-                            <option value="FABRICANTE">Fabricante (Autopeça / Aftermarket)</option>
+                            <option value="FABRICANTE">Fabricante (AutopeÃ§a / Aftermarket)</option>
                         </select>
                     </div>
 
@@ -665,36 +665,36 @@
                         <label style="font-size:.7rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Sistema:</label>
                         <select id="btSelSistema" onchange="DemandaApp.filtrarBaseTecnica()" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.35rem .6rem;color:var(--text-primary);font-size:.8rem">
                             <option value="">Todos os Sistemas</option>
-                            <option value="TRANSMISSAO">Transmissão, Diferencial & Eixo</option>
+                            <option value="TRANSMISSAO">TransmissÃ£o, Diferencial & Eixo</option>
                             <option value="PLANTIO">Linha de Plantio & Dosadores</option>
                             <option value="CORTE">Corte, Molinete & Rotor</option>
                             <option value="DISCO_MANCAL">Discos, Mancais & Cubos</option>
-                            <option value="PULVERIZACAO">Bicos, Bomba & Pulverização</option>
-                            <option value="HIDRAULICO">Sistema Hidráulico & Cilindros</option>
+                            <option value="PULVERIZACAO">Bicos, Bomba & PulverizaÃ§Ã£o</option>
+                            <option value="HIDRAULICO">Sistema HidrÃ¡ulico & Cilindros</option>
                             <option value="MOTOR">Motor, Correias & Filtragem</option>
                         </select>
                     </div>
 
                     <div id="btTotalContador" style="margin-left:auto;font-size:.78rem;color:var(--text-secondary);font-weight:600">
-                        0 peças catalogadas na base
+                        0 peÃ§as catalogadas na base
                     </div>
                 </div>
 
-                <!-- Container Principal da Tabela de Catálogos -->
+                <!-- Container Principal da Tabela de CatÃ¡logos -->
                 <div id="btContainerPrincipal" style="flex:1;min-height:0;max-height:calc(100vh - 170px);overflow-y:scroll!important;padding:1.25rem">
                     <div style="padding:3rem;text-align:center;color:var(--text-secondary)">
                         <span class="material-icons-round" style="animation:spin 1s linear infinite;font-size:2rem;color:var(--accent-primary)">sync</span>
-                        <p style="margin-top:.75rem;font-size:.88rem">Carregando catálogo de peças e fabricantes...</p>
+                        <p style="margin-top:.75rem;font-size:.88rem">Carregando catÃ¡logo de peÃ§as e fabricantes...</p>
                     </div>
                 </div>
             </div>
 
-            <!-- VIEW: Orçamento Básico -->
+            <!-- VIEW: OrÃ§amento BÃ¡sico -->
             <div id="view-orcamento" style="display:none;flex-direction:column">
                 <div class="top-bar">
                     <div class="breadcrumb">
                         <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">description</span>
-                        <span>Orçamentos</span>
+                        <span>OrÃ§amentos</span>
                     </div>
                     <button class="btn btn-sm" onclick="DemandaApp.loadOrcamento()" style="margin-left:auto">
                         <span class="material-icons-round" style="font-size:.9rem">refresh</span> Atualizar
@@ -703,28 +703,28 @@
                 <div style="flex:1;overflow-y:auto;padding:1.25rem" id="orcamentoContainer">
                     <div style="padding:3rem;text-align:center;color:var(--text-secondary)">
                         <span class="material-icons-round" style="font-size:2.5rem;opacity:.4">description</span>
-                        <p style="margin-top:.75rem">Clique em "Orçamentos" na sidebar para carregar.</p>
+                        <p style="margin-top:.75rem">Clique em "OrÃ§amentos" na sidebar para carregar.</p>
                     </div>
                 </div>
             </div>
 
-            <!-- VIEW: Cotação do Concorrente -->
+            <!-- VIEW: CotaÃ§Ã£o do Concorrente -->
             <div id="view-concorrente" style="display:none;flex-direction:column">
                 <div class="top-bar">
                     <div class="breadcrumb">
                         <span class="material-icons-round" style="font-size:1rem;color:#f59e0b">trending_up</span>
-                        <span>Cotação do Concorrente</span>
+                        <span>CotaÃ§Ã£o do Concorrente</span>
                     </div>
                 </div>
                 <div style="flex:1;overflow-y:auto;padding:1.25rem;display:flex;flex-direction:column;gap:1.25rem">
-                    <!-- Form nova cotação -->
+                    <!-- Form nova cotaÃ§Ã£o -->
                     <div id="concFormContainer">
                         <div style="padding:3rem;text-align:center;color:var(--text-secondary)">
                             <span class="material-icons-round" style="font-size:2rem;opacity:.4">trending_up</span>
-                            <p style="margin-top:.5rem;font-size:.85rem">Clique em "Cotação Concorrente" na sidebar para carregar o formulário.</p>
+                            <p style="margin-top:.5rem;font-size:.85rem">Clique em "CotaÃ§Ã£o Concorrente" na sidebar para carregar o formulÃ¡rio.</p>
                         </div>
                     </div>
-                    <!-- Histórico de cotações -->
+                    <!-- HistÃ³rico de cotaÃ§Ãµes -->
                     <div id="concHistoricoContainer"></div>
                 </div>
             </div>
@@ -738,14 +738,14 @@
             </div>
 
             <!-- ======================================================= -->
-            <!--  VIEW: INTEGRAÇÃO ERP (gerenciado por ErpUI)          -->
+            <!--  VIEW: INTEGRAÃ‡ÃƒO ERP (gerenciado por ErpUI)          -->
             <!-- ======================================================= -->
             <div id="view-integracaoErp" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
-                <!-- Topbar — padrão Despacho -->
+                <!-- Topbar â€” padrÃ£o Despacho -->
                 <div class="top-bar">
                     <div class="breadcrumb">
                         <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">sync</span>
-                        <span>Integração ERP</span>
+                        <span>IntegraÃ§Ã£o ERP</span>
                     </div>
                 </div>
                 <!-- Container preenchido dinamicamente por ErpUI.init('demanda') -->
@@ -757,9 +757,9 @@
             </div>
 
             
-            <!-- ══════════════════════════════════════════════ -->
-            <!--  GRUPO 2: ANÁLISE ESTOQUE (MAXDATA)           -->
-            <!-- ══════════════════════════════════════════════ -->
+            <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+            <!--  GRUPO 2: ANÃLISE ESTOQUE (MAXDATA)           -->
+            <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
             <!-- ══════════════════════════════════════════════ -->
             <!-- 2º GRUPO: ANÁLISE ESTOQUE (MAXDATA)           -->
             <!-- ══════════════════════════════════════════════ -->
@@ -1775,17 +1775,17 @@
                 <div class="top-bar">
                     <div class="breadcrumb">
                         <span class="material-icons-round" style="font-size:1.1rem;color:var(--primary-color)">cloud_upload</span>
-                        <span>2. Análise Estoque / Carga de Dados Massivos MaxData</span>
+                        <span>2. AnÃ¡lise Estoque / Carga de Dados Massivos MaxData</span>
                     </div>
                 </div>
                 <div class="analytics-view-container">
                     <div class="card" style="padding:1.5rem;background:#111827;border:1px solid #1e293b;border-radius:12px;">
-                        <h3 style="margin-top:0;color:#f8fafc;">Sincronização da Base Analítica MaxData (10.655 Produtos)</h3>
-                        <p style="color:#94a3b8;font-size:0.85rem;">A base analítica atual contém 10.655 SKUs ativos e 20 módulos estruturados conforme o Prompt de Compras &amp; Estoque.</p>
+                        <h3 style="margin-top:0;color:#f8fafc;">SincronizaÃ§Ã£o da Base AnalÃ­tica MaxData (10.655 Produtos)</h3>
+                        <p style="color:#94a3b8;font-size:0.85rem;">A base analÃ­tica atual contÃ©m 10.655 SKUs ativos e 20 mÃ³dulos estruturados conforme o Prompt de Compras &amp; Estoque.</p>
                         <div style="margin-top:1.5rem;padding:2rem;border:2px dashed #334155;border-radius:12px;text-align:center;background:#0f172a;">
                             <span class="material-icons-round" style="font-size:3rem;color:#38bdf8;">upload_file</span>
                             <h4 style="margin:0.5rem 0;color:#f8fafc;">Carga de Arquivos em Massa</h4>
-                            <p style="color:#64748b;font-size:0.8rem;">Formatos aceitos: .xlsx, .csv, .json (Até 50MB)</p>
+                            <p style="color:#64748b;font-size:0.8rem;">Formatos aceitos: .xlsx, .csv, .json (AtÃ© 50MB)</p>
                             <button class="btn btn-primary" style="margin-top:1rem;" onclick="document.getElementById('file-upload-massivo').click()">
                                 Selecionar Planilha / Base MaxData
                             </button>
@@ -1795,9 +1795,9 @@
                 </div>
             </div>
 
-            <!-- ══════════════════════════════════════════════ -->
-            <!--  GRUPO 3: AÇÕES GERENCIAIS                   -->
-            <!-- ══════════════════════════════════════════════ -->
+            <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+            <!--  GRUPO 3: AÃ‡Ã•ES GERENCIAIS                   -->
+            <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 
             <!-- ══════════════════════════════════════════════ -->
             <!-- 3º GRUPO: AÇÕES GERENCIAIS (FUTURO/ESTOQUE)    -->
@@ -5805,15 +5805,593 @@
     <!-- ======================================================== -->
             </div>
 
-        <div class="modal-backdrop" id="drilldown-modal">
+            <!-- Footer / LGPD Notice â€” padrÃ£o Despacho (no rodapÃ© do main-content) -->
+            <footer style="padding:1rem 2rem;border-top:1px solid var(--border-color);font-size:0.75rem;color:var(--text-secondary);display:flex;justify-content:space-between;align-items:center;background:var(--bg-card);flex-shrink:0;">
+                <div>
+                    <strong>&copy; 2026 CotaÃ§Ã£o</strong> Â· Parreira Sistemas
+                </div>
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <span class="material-icons-round" style="font-size:1rem;color:var(--accent-success);">security</span>
+                    <span>Ambiente Seguro: Dados processados em conformidade com a LGPD.</span>
+                </div>
+                <div id="demandaFooterVersion" style="font-size:0.8rem;color:#666;">v2.4.9</div>
+            </footer>
+
+        </div><!-- /main-content -->
+    </div><!-- /demanda-shell -->
+
+    <!-- Modal: Detalhe da CotaÃ§Ã£o -->
+    <div class="modal-overlay" id="modalDemandaDetalhe">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <h3><span class="material-icons-round">receipt_long</span> Detalhe da CotaÃ§Ã£o</h3>
+                <button class="btn-close" onclick="DemandaApp.closeModal('modalDemandaDetalhe')">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="modal-body" id="modalDemandaDetalheBody">
+                <div class="search-loading"><div class="spinner"></div><span>Carregando...</span></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="DemandaApp.closeModal('modalDemandaDetalhe')">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- loginScreen removido v1.0.8: auth via ParreiraAuth (portal Firebase) -->
+
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!--  MODAIS                                               -->
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+
+    <!-- Modal: Importar Texto -->
+    <div class="modal-overlay" id="modalTexto">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><span class="material-icons-round" style="color:var(--demanda-accent)">content_paste</span> Colar Texto / WhatsApp</h3>
+                <button class="btn-close" onclick="DemandaApp.closeModal('modalTexto')">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:.83rem;color:var(--text-secondary);margin-bottom:1rem">
+                    Cole o texto recebido do cliente (WhatsApp, email, mensagem). O sistema vai tentar separar os itens automaticamente.
+                </p>
+                <textarea id="textareaImport" class="form-textarea" rows="10"
+                    placeholder="Exemplos:&#10;2 rolamento 6208 / 5 correia plataforma S660 / 10 RE123456&#10;&#10;- 2x 6208 SKF&#10;- 5 correia S660&#10;- 10 unid RE123456"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="DemandaApp.closeModal('modalTexto')">Cancelar</button>
+                <button class="btn btn-primary" onclick="DemandaApp.processImportTexto()">
+                    <span class="material-icons-round">auto_fix_high</span>
+                    Processar e Revisar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Importar Excel -->
+    <div class="modal-overlay" id="modalExcel">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <h3><span class="material-icons-round" style="color:#10b981">table_view</span> Importar Excel / CSV</h3>
+                <button class="btn-close" onclick="DemandaApp.closeModal('modalExcel')">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="excelUploadArea" style="
+                    border:2px dashed var(--border);border-radius:12px;padding:2rem;text-align:center;
+                    cursor:pointer;transition:border-color .2s;
+                " onclick="document.getElementById('excelFileInput').click()"
+                   ondragover="event.preventDefault();this.style.borderColor='var(--demanda-accent)'"
+                   ondragleave="this.style.borderColor='var(--border)'"
+                   ondrop="DemandaApp.onExcelDrop(event)">
+                    <span class="material-icons-round" style="font-size:2.5rem;color:var(--text-secondary)">upload_file</span>
+                    <p style="color:var(--text-secondary);font-size:.85rem;margin-top:.5rem">
+                        Clique para selecionar ou arraste o arquivo aqui<br>
+                        <small style="opacity:.6">Excel (.xlsx, .xls) ou CSV (.csv)</small>
+                    </p>
+                    <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" style="display:none"
+                        onchange="DemandaApp.onExcelFileSelected(this.files[0])">
+                </div>
+                <div id="excelPreviewArea" style="display:none;margin-top:1rem"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="DemandaApp.closeModal('modalExcel')">Cancelar</button>
+                <button class="btn btn-primary" id="btnConfirmExcel" style="display:none" onclick="DemandaApp.confirmExcelImport()">
+                    <span class="material-icons-round">check</span>
+                    Confirmar ImportaÃ§Ã£o
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: ConferÃªncia de ImportaÃ§Ã£o -->
+    <div class="modal-overlay" id="modalConferencia">
+        <div class="modal-card modal-xl">
+            <div class="modal-header">
+                <h3><span class="material-icons-round" style="color:var(--warning)">fact_check</span> ConferÃªncia de ImportaÃ§Ã£o</h3>
+                <button class="btn-close" onclick="DemandaApp.closeModal('modalConferencia')">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div style="display:flex;gap:.75rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
+                    <div id="conferenciaStats" style="font-size:.82rem;color:var(--text-secondary)"></div>
+                    <span style="flex:1"></span>
+                    <button class="btn btn-secondary btn-sm" onclick="DemandaApp.desmarcarIncertosConferencia()" title="Remove a seleÃ§Ã£o de todos os itens marcados como Incerto">
+                        <span class="material-icons-round" style="font-size:1rem">help_outline</span> Desmarcar Incertos
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="DemandaApp.selectAllConferencia()">
+                        <span class="material-icons-round">select_all</span> Selecionar todos
+                    </button>
+                </div>
+                <div style="overflow-x:auto">
+                    <table class="conferencia-table">
+                        <thead>
+                            <tr>
+                                <th style="width:28px"><input type="checkbox" id="chkAllConf" onclick="DemandaApp.toggleAllConferencia(this.checked)"></th>
+                                <th>#</th>
+                                <th>ReferÃªncia Original</th>
+                                <th>DescriÃ§Ã£o</th>
+                                <th style="width:70px">Qtde</th>
+                                <th>Obs</th>
+                                <th style="width:80px">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="conferenciaTbody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="DemandaApp.closeModal('modalConferencia')">Cancelar</button>
+                <button class="btn btn-primary" onclick="DemandaApp.confirmConferencia()">
+                    <span class="material-icons-round">add_shopping_cart</span>
+                    Adicionar Selecionados Ã  CotaÃ§Ã£o
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Detalhes do Item -->
+    <div class="modal-overlay" id="modalItemDetalhes">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <h3><span class="material-icons-round" style="color:var(--demanda-accent)">info</span> Detalhes do Item</h3>
+                <button class="btn-close" onclick="DemandaApp.closeModal('modalItemDetalhes')">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="modal-body" id="modalItemDetalhesBody">
+                <div class="empty-state">
+                    <div class="spinner"></div>
+                    <p>Buscando informaÃ§Ãµes...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="DemandaApp.closeModal('modalItemDetalhes')">Fechar</button>
+                <button class="btn btn-primary" id="btnAddFromDetails" onclick="DemandaApp.addItemFromDetails()">
+                    <span class="material-icons-round">add_shopping_cart</span>
+                    Adicionar Ã  CotaÃ§Ã£o
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+
+
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!--  SCRIPTS                                              -->
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+
+    <!-- Modal: Import PDF -->
+    <div id="modalImportPDF" class="modal-overlay" style="display:none">
+        <div class="modal-container" style="max-width:720px;width:97%">
+            <div class="modal-header">
+                <span style="font-weight:700;display:flex;align-items:center;gap:.5rem">
+                    <span class="material-icons-round" style="color:#ef4444">picture_as_pdf</span>
+                    Importar de PDF
+                    <span id="pdfFileName" style="font-size:.78rem;font-weight:400;color:var(--text-secondary);margin-left:.25rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+                </span>
+                <button class="btn-close" onclick="DemandaApp._fecharImportPDF()">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="modal-body" style="padding:1.25rem;display:grid;grid-template-columns:1fr 1.4fr;gap:1rem;align-items:start">
+                <div style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:10px;padding:1.5rem;text-align:center">
+                    <span class="material-icons-round" style="font-size:3rem;color:#ef4444;display:block;margin-bottom:.75rem">picture_as_pdf</span>
+                    <p style="font-size:.88rem;font-weight:600;color:var(--text-primary);margin:0 0 .75rem">PDF selecionado</p>
+                    <!-- Botao ancora: unico jeito confiavel de abrir nova aba sem popup-blocker -->
+                    <a id="btnAbrirPdfNovaAba" href="#" target="_blank" rel="noopener"
+                       style="display:inline-flex;align-items:center;gap:.4rem;padding:.55rem 1rem;background:#ef4444;color:#fff;border-radius:8px;font-size:.83rem;font-weight:600;text-decoration:none;margin-bottom:1rem">
+                        <span class="material-icons-round" style="font-size:.95rem">open_in_new</span>
+                        Abrir PDF em nova aba
+                    </a>
+                    <div style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:.65rem;font-size:.75rem;color:#a5b4fc;text-align:left;line-height:1.6">
+                        <strong>Apos abrir o PDF:</strong><br>
+                        1. Selecione o texto (Ctrl+A)<br>
+                        2. Copie (Ctrl+C)<br>
+                        3. Cole no campo ao lado<br>
+                        4. Clique em <strong>Processar Itens</strong>
+                    </div>
+                </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:.5rem">
+                    <label for="pdfTextoColar" style="font-size:.78rem;color:var(--text-secondary);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Cole o texto do PDF aqui</label>
+                    <textarea id="pdfTextoColar" rows="12" placeholder="Cole aqui o texto copiado do PDF"
+                        style="resize:vertical;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.65rem .85rem;color:var(--text-primary);font-size:.83rem;font-family:inherit;min-height:220px;box-sizing:border-box;width:100%"></textarea>
+                    <p style="font-size:.76rem;color:var(--text-secondary);margin:0">
+                        <span class="material-icons-round" style="font-size:.85rem;vertical-align:middle;color:#f59e0b">info</span>
+                        O sistema detecta referencias, descricoes e quantidades automaticamente.
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding:.75rem 1.25rem;display:flex;justify-content:flex-end;gap:.75rem">
+                <button class="btn btn-secondary" onclick="DemandaApp._fecharImportPDF()">Cancelar</button>
+                <button class="btn btn-primary" onclick="DemandaApp._copiarDoPDF()">
+                    <span class="material-icons-round" style="font-size:.9rem">send</span> Processar Itens
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Import Foto / Print -->
+    <div id="modalImportFoto" class="modal-overlay" style="display:none">
+        <div class="modal-container" style="max-width:820px;width:97%">
+            <div class="modal-header">
+                <span style="font-weight:700;display:flex;align-items:center;gap:.5rem">
+                    <span class="material-icons-round" style="color:#6366f1">photo_camera</span>
+                    Importar de Foto / Impresso
+                </span>
+                <button class="btn-close" onclick="DemandaApp._fecharImportFoto()">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="modal-body" style="padding:1.25rem;display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+                <!-- Preview da imagem -->
+                <div style="display:flex;flex-direction:column;gap:.5rem">
+                    <label style="font-size:.78rem;color:var(--text-secondary);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Foto / Impresso</label>
+                    <div style="border:1px solid var(--border-color);border-radius:8px;overflow:hidden;background:#111;min-height:200px;display:flex;align-items:center;justify-content:center">
+                        <img id="fotoPreview" src="" alt="Preview" style="max-width:100%;max-height:340px;object-fit:contain;display:block">
+                    </div>
+                </div>
+                <!-- Resultado OCR + edicao manual -->
+                <div style="display:flex;flex-direction:column;gap:.5rem">
+                    <label for="fotoTranscricao" style="font-size:.78rem;color:var(--text-secondary);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Texto reconhecido (OCR)</label>
+                    <!-- Status do OCR -->
+                    <div id="fotoOcrStatus" style="display:none;align-items:center;gap:.6rem;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:.5rem .75rem;font-size:.78rem;color:#a5b4fc">
+                        <span class="material-icons-round" style="font-size:1rem;animation:spin 1s linear infinite">autorenew</span>
+                        <span id="fotoOcrMsg">Lendo imagem...</span>
+                        <span id="fotoOcrPct" style="margin-left:auto;font-weight:700">0%</span>
+                    </div>
+                    <textarea id="fotoTranscricao" rows="11"
+                        placeholder="Aguardando imagem... O texto sera preenchido automaticamente pelo OCR."
+                        style="resize:vertical;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.65rem .85rem;color:var(--text-primary);font-size:.83rem;font-family:inherit;min-height:200px;box-sizing:border-box;width:100%"></textarea>
+                    <p style="font-size:.76rem;color:var(--text-secondary);margin:0">
+                        <span class="material-icons-round" style="font-size:.85rem;vertical-align:middle;color:#f59e0b">info</span>
+                        Revise o texto extraido e clique em Processar Itens.
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding:.75rem 1.25rem;display:flex;justify-content:flex-end;gap:.75rem">
+                <button class="btn btn-secondary" onclick="DemandaApp._fecharImportFoto()">Cancelar</button>
+                <button class="btn btn-primary" onclick="DemandaApp._processarFotoTranscricao()">
+                    <span class="material-icons-round" style="font-size:.9rem">send</span> Processar Itens
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Busca ERP -->
+    <div id="modalBuscaERP" class="modal-overlay" style="display:none">
+        <div class="modal-container" style="max-width:680px;width:95%">
+            <div class="modal-header">
+                <span style="font-weight:700;display:flex;align-items:center;gap:.5rem">
+                    <span class="material-icons-round" style="color:var(--accent-primary)">manage_search</span>
+                    Buscar PeÃ§a, ReferÃªncias Cruzadas & Similares no ERP
+                </span>
+                <button class="btn-close" onclick="DemandaApp._fecharBuscaERP()">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="modal-body" style="padding:1.25rem">
+                <div style="display:flex;gap:.5rem;margin-bottom:1rem">
+                    <input id="inpBuscaERP" type="text" placeholder="ReferÃªncia, descriÃ§Ã£o ou fabricante..."
+                        onkeydown="if(event.key==='Enter') DemandaApp._executarBuscaERP()"
+                        style="flex:1;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.55rem .85rem;color:var(--text-primary);font-size:.87rem">
+                    <button class="btn btn-primary" onclick="DemandaApp._executarBuscaERP()" style="white-space:nowrap">
+                        <span class="material-icons-round" style="font-size:.9rem">search</span> Buscar
+                    </button>
+                </div>
+                <div id="buscaERPResultados" style="max-height:380px;overflow-y:auto">
+                    <p style="color:var(--text-secondary);font-size:.83rem;padding:.5rem 0">Digite uma referÃªncia ou descriÃ§Ã£o para buscar.</p>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding:.75rem 1.25rem">
+                <button class="btn btn-secondary" onclick="DemandaApp._fecharBuscaERP()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <!-- Config Firebase da plataforma -->
+    <script src="/platform/modules/master/firebase-config.js"></script>
+    <!-- Sessao e Auth da plataforma (ParreiraAuth) -->
+    <script src="/platform/core/js/session-manager.js"></script>
+    <script src="/platform/core/js/auth.js"></script>
+
+    <!-- Camada de integraÃ§Ã£o ERP (shared/integrations) -->
+    <script src="/platform/shared/integrations/erp-adapter.js?v=2.0.0"></script>
+    <script src="/platform/shared/integrations/erp-registry.js?v=2.0.0"></script>
+    <script src="/platform/shared/integrations/acontec/adapter.js?v=2.0.0"></script>
+    <script src="/platform/shared/integrations/maxdata/adapter.js?v=2.5.6"></script>
+    <script src="/platform/shared/integrations/erp-ui.js?v=2.4.9"></script>
+    <script src="/platform/shared/integrations/index.js?v=2.0.0"></script>
+
+    <!-- MÃ³dulo de Demanda -->
+    <script src="js/demanda-states.js?v=3.21.49"></script>
+    <script src="js/demanda-db.js?v=3.21.49"></script>
+    <script src="js/demanda-import.js?v=3.21.49"></script>
+    <script src="js/demanda-search.js?v=3.21.49"></script>
+    <script src="js/demanda-lookup.js?v=3.21.49"></script>
+    <script src="js/demanda-pdf.js?v=3.21.49"></script>
+    <script src="js/demanda-clientes.js?v=3.21.49"></script>
+    
+    <!-- MÃ³dulos AnalÃ­ticos e Comerciais v3.0.0 (Master Prompt 104 SeÃ§Ãµes) -->
+    <script src="js/demanda-analytics-data.js?v=3.0.2"></script>
+    <script src="js/demanda-analytics.js?v=3.0.2"></script>
+    <script src="js/demanda-comercial.js?v=3.0.2"></script>
+<script src="js/demanda-app.js?v=3.21.49"></script>
+
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+         MODAL: AdministraÃ§Ã£o da Base TÃ©cnica de PeÃ§as
+         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div id="modalBaseTecnica" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center;">
+      <div style="background:var(--surface);border-radius:12px;padding:2rem;width:min(700px,95vw);max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+          <h2 style="margin:0;font-size:1.1rem;color:var(--text-primary);">ðŸ—„ï¸ Base TÃ©cnica de PeÃ§as AgrÃ­colas</h2>
+          <button onclick="document.getElementById('modalBaseTecnica').style.display='none'"
+                  style="background:none;border:none;color:var(--text-secondary);font-size:1.4rem;cursor:pointer;">âœ•</button>
+        </div>
+
+        <!-- EstatÃ­sticas -->
+        <div id="btStats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;">
+          <div style="background:var(--bg-secondary);border-radius:8px;padding:1rem;text-align:center;">
+            <div id="btCountTotal" style="font-size:1.6rem;font-weight:700;color:var(--accent-primary);">â€”</div>
+            <div style="font-size:.75rem;color:var(--text-secondary);">PeÃ§as na Base</div>
+          </div>
+          <div style="background:var(--bg-secondary);border-radius:8px;padding:1rem;text-align:center;">
+            <div id="btCountErp" style="font-size:1.6rem;font-weight:700;color:var(--accent-success);">â€”</div>
+            <div style="font-size:.75rem;color:var(--text-secondary);">Com Cadastro ERP</div>
+          </div>
+          <div style="background:var(--bg-secondary);border-radius:8px;padding:1rem;text-align:center;">
+            <div id="btCountPdf" style="font-size:1.6rem;font-weight:700;color:#60a5fa;">â€”</div>
+            <div style="font-size:.75rem;color:var(--text-secondary);">Via CatÃ¡logo PDF</div>
+          </div>
+        </div>
+
+        <!-- SeÃ§Ã£o 1: Sync Maxdata -->
+        <div style="border:1px solid var(--border);border-radius:8px;padding:1.25rem;margin-bottom:1.25rem;">
+          <div style="font-weight:600;color:var(--text-primary);margin-bottom:.5rem;">
+            ðŸ”„ Sincronizar ERP (Maxdata)
+          </div>
+          <p style="font-size:.82rem;color:var(--text-secondary);margin:.25rem 0 .75rem;">
+            Importa todos os produtos agrÃ­colas cadastrados no Maxdata para a base tÃ©cnica,
+            permitindo que o sistema reconheÃ§a peÃ§as mesmo quando o ERP estiver offline.
+          </p>
+          <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;">
+            <button id="btBtnSync" onclick="DemandaApp.syncMaxdataTechbase()"
+                    style="background:var(--accent-primary);color:#fff;border:none;border-radius:6px;padding:.5rem 1.25rem;cursor:pointer;font-size:.85rem;">
+              Sincronizar Maxdata
+            </button>
+            <span id="btSyncStatus" style="font-size:.8rem;color:var(--text-secondary);">Clique para iniciar</span>
+          </div>
+          <div id="btSyncBar" style="display:none;margin-top:.75rem;background:var(--bg-secondary);border-radius:4px;height:6px;overflow:hidden;">
+            <div id="btSyncBarFill" style="height:100%;background:var(--accent-primary);width:0%;transition:width .3s;"></div>
+          </div>
+        </div>
+
+        <!-- SeÃ§Ã£o 2: Import PDF -->
+        <div style="border:1px solid var(--border);border-radius:8px;padding:1.25rem;">
+          <div style="font-weight:600;color:var(--text-primary);margin-bottom:.5rem;">
+            ðŸ“„ Importar CatÃ¡logo PDF (OEM)
+          </div>
+          <p style="font-size:.82rem;color:var(--text-secondary);margin:.25rem 0 .75rem;">
+            Carregue PDFs de catÃ¡logos oficiais das fabricantes (John Deere, New Holland, Case IH, Massey Ferguson).
+            O sistema extrai automaticamente os cÃ³digos de peÃ§a e alimenta a base tÃ©cnica.
+          </p>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem;">
+            <div>
+              <label style="font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.25rem;">Fabricante</label>
+              <select id="btPdfFabricante" style="width:100%;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:.4rem .75rem;color:var(--text-primary);font-size:.85rem;">
+                <option value="">Detectar automaticamente</option>
+                <optgroup label="MÃ¡quinas AgrÃ­colas (Prompt 2)">
+                  <option value="JOHN DEERE">John Deere</option>
+                  <option value="CASE">Case IH</option>
+                  <option value="NEW HOLLAND">New Holland</option>
+                  <option value="MASSEY FERGUSON">Massey Ferguson</option>
+                  <option value="VALTRA">Valtra</option>
+                </optgroup>
+                <optgroup label="Implementos & Equipamentos AgrÃ­colas (Prompt 2)">
+                  <option value="KUHN">Kuhn</option>
+                  <option value="JAN">JAN</option>
+                  <option value="VENCE TUDO">Vence Tudo</option>
+                  <option value="JUMIL">Jumil</option>
+                  <option value="TATU MARCHESAN">Tatu Marchesan</option>
+                  <option value="JACTO">Jacto</option>
+                  <option value="STARA">Stara</option>
+                  <option value="BALDAN">Baldan</option>
+                  <option value="SEMEATO">Semeato</option>
+                  <option value="PICCIN">Piccin</option>
+                </optgroup>
+                <optgroup label="TransmissÃµes & Componentes">
+                  <option value="ZF">ZF do Brasil</option>
+                  <option value="EATON">Eaton</option>
+                  <option value="SPICER">Spicer / Dana</option>
+                </optgroup>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.25rem;">Equipamento / Implemento</label>
+              <select id="btPdfEquipamento" style="width:100%;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:.4rem .75rem;color:var(--text-primary);font-size:.85rem;">
+                <option value="">Detectar automaticamente</option>
+                <optgroup label="MÃ¡quinas Autopropelidas">
+                  <option value="COLHEITADEIRA">Colheitadeira</option>
+                  <option value="TRATOR">Trator</option>
+                  <option value="PULVERIZADOR">Pulverizador Autopropelido</option>
+                </optgroup>
+                <optgroup label="Implementos AgrÃ­colas">
+                  <option value="PLANTADEIRA">Plantadeira / Semeadora</option>
+                  <option value="GRADE">Grade / Arado</option>
+                  <option value="DISTRIBUIDOR">Distribuidor de CalcÃ¡rio / Adubadeira</option>
+                  <option value="PLATAFORMA_MILHO">Plataforma de Milho / Corte</option>
+                  <option value="CARRETA_BAZUCA">Carreta Graneleira / Bazuca</option>
+                  <option value="ESCARIFICADOR">Escarificador / Subsolador</option>
+                </optgroup>
+              </select>
+            </div>
+          </div>
+          <div style="margin-bottom:.75rem;">
+            <label style="font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.25rem;">Modelo (opcional, ex: S680, 8400R)</label>
+            <input id="btPdfModelo" type="text" placeholder="Ex: S680, 8400R, P2075..."
+                   style="width:100%;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:.4rem .75rem;color:var(--text-primary);font-size:.85rem;box-sizing:border-box;">
+          </div>
+
+          <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;">
+            <label style="background:var(--accent-primary);color:#fff;border-radius:6px;padding:.5rem 1.25rem;cursor:pointer;font-size:.85rem;display:inline-block;">
+              ðŸ“‚ Selecionar PDF
+              <input id="btPdfInput" type="file" accept=".pdf" style="display:none;" onchange="DemandaApp.importarCatalogoPDF(this.files[0])">
+            </label>
+            <span id="btPdfStatus" style="font-size:.8rem;color:var(--text-secondary);">Nenhum arquivo selecionado</span>
+          </div>
+
+          <div id="btPdfBar" style="display:none;margin-top:.75rem;background:var(--bg-secondary);border-radius:4px;height:6px;overflow:hidden;">
+            <div id="btPdfBarFill" style="height:100%;background:#60a5fa;width:0%;transition:width .3s;"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+         MODAL: Importar CatÃ¡logo de PeÃ§as (OEM / Fabricantes)
+         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div id="modalImportarCatalogo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(4px)">
+      <div style="background:var(--surface);border:1px solid var(--border-color);border-radius:14px;padding:1.75rem;width:min(720px,95vw);max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.6)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;border-bottom:1px solid var(--border-color);padding-bottom:.85rem">
+          <div style="display:flex;align-items:center;gap:.6rem">
+            <span class="material-icons-round" style="color:var(--accent-primary);font-size:1.5rem">upload_file</span>
+            <div>
+              <h3 style="margin:0;font-size:1.1rem;color:var(--text-primary)">Importar CatÃ¡logo de PeÃ§as Externas</h3>
+              <p style="margin:0;font-size:.78rem;color:var(--text-secondary)">Alimente catÃ¡logos de peÃ§as originais (OEM) ou fabricantes de autopeÃ§as</p>
+            </div>
+          </div>
+          <button onclick="DemandaApp.fecharModalImportarCatalogo()" style="background:none;border:none;color:var(--text-secondary);font-size:1.4rem;cursor:pointer;padding:.25rem">âœ•</button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+          <div>
+            <label style="font-size:.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;display:block;margin-bottom:.35rem">Marca / Montadora / Fabricante *</label>
+            <input id="catImpMarca" type="text" placeholder="Ex: JOHN DEERE, SKF, TATU, SPICER, VALTRA..."
+                   style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.5rem .75rem;color:var(--text-primary);font-size:.85rem">
+          </div>
+          <div>
+            <label style="font-size:.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;display:block;margin-bottom:.35rem">Tipo de Origem *</label>
+            <select id="catImpTipoOrigem" style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.5rem .75rem;color:var(--text-primary);font-size:.85rem">
+              <option value="OEM">PeÃ§a Original (Montadora OEM)</option>
+              <option value="FABRICANTE">Fabricante (AutopeÃ§a / Componente / Aftermarket)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+          <div>
+            <label style="font-size:.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;display:block;margin-bottom:.35rem">Sistema PadrÃ£o</label>
+            <select id="catImpSistema" style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.5rem .75rem;color:var(--text-primary);font-size:.85rem">
+              <option value="DISCO_MANCAL">Mancais, Discos, Rolamentos & Cubos</option>
+              <option value="TRANSMISSAO">TransmissÃ£o, Diferencial & Eixos</option>
+              <option value="PLANTIO">Linha de Plantio & Dosadores</option>
+              <option value="CORTE">Corte, Rotor & Molinete</option>
+              <option value="PULVERIZACAO">PulverizaÃ§Ã£o & Bomba</option>
+              <option value="HIDRAULICO">HidrÃ¡ulico & Cilindros</option>
+              <option value="MOTOR">Motor, Filtros & Correias</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;display:block;margin-bottom:.35rem">IdentificaÃ§Ã£o do CatÃ¡logo (Opcional)</label>
+            <input id="catImpNomeArquivo" type="text" placeholder="Ex: CatÃ¡logo Geral 2026, Tabela Rolamentos v1..."
+                   style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.5rem .75rem;color:var(--text-primary);font-size:.85rem">
+          </div>
+        </div>
+
+        <div style="margin-bottom:1rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem">
+            <label style="font-size:.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase">Cole os Dados do CatÃ¡logo (Tabela ou Texto)</label>
+            <span style="font-size:.72rem;color:var(--text-muted)">Formato: CÃ³digo [TAB ou ;] DescriÃ§Ã£o [TAB ou ;] AplicaÃ§Ã£o [TAB ou ;] Ref. Similar</span>
+          </div>
+          <textarea id="catImpTexto" rows="7" placeholder="Exemplo colado do Excel:
+AH213767	DEDO SEPARADOR DO ROTOR	Colheitadeiras STS 9650/9750	H171540
+0501046922	MANCAL A Ã“LEO GRADE ARADORA	Grade Marchesan GAPCR	5201010045; PC-42100
+6205-2RS	ROLAMENTO RÃGIDO ESFERAS 25x52x15	Eixo do Molinete / Linha de Plantio	JD9205; 80242200"
+            style="width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.65rem;color:var(--text-primary);font-size:.82rem;font-family:monospace;resize:vertical"></textarea>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.25rem;border-top:1px solid var(--border-color);padding-top:1rem">
+          <span id="catImpStatus" style="font-size:.8rem;color:var(--text-secondary)">Pronto para importar</span>
+          <div style="display:flex;gap:.5rem">
+            <button class="btn btn-secondary btn-sm" onclick="DemandaApp.fecharModalImportarCatalogo()">Cancelar</button>
+            <button class="btn btn-primary btn-sm" onclick="DemandaApp.processarImportacaoCatalogo()">
+              <span class="material-icons-round" style="font-size:.9rem">save</span> Gravar no CatÃ¡logo
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+         MODAL DE DRILL-DOWN AUDITÃVEL (SEÃ‡Ã•ES 89, 90)
+         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="modal-backdrop" id="dmd-modal" style="background: rgba(4, 7, 16, 0.92); backdrop-filter: blur(10px); z-index: 1060; display: none;">
+    <div class="modal-box" id="dmd-modal-box" style="max-width: 960px; width: 95%; background: #0c1322; border: 1px solid #1e3a8a; border-radius: 14px; box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.9), 0 0 35px rgba(37, 99, 235, 0.25); overflow: hidden; display: flex; flex-direction: column;">
+      <div class="modal-header" id="dmd-modal-header" style="background: #0d172b; border-bottom: 1px solid #1e2c4f; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #38bdf8; letter-spacing: 1px; display: flex; align-items: center; gap: 6px;">
+            <span>📊 AUDITORIA DE DEMANDA</span>
+            <span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 1px 8px; border-radius: 9999px; font-size: 10px; border: 1px solid rgba(56, 189, 248, 0.3);">MEMÓRIA DE CÁLCULO (90 DIAS)</span>
+          </div>
+          <h3 id="dmd-modal-title" style="font-size: 16px; font-weight: 800; color: #fff; margin: 4px 0 0; letter-spacing: 0.3px;">[SKU] PRODUTO</h3>
+        </div>
+        <button onclick="closeDmdModal()" style="background: none; border: none; font-size: 24px; color: #94a3b8; cursor: pointer; padding: 2px 8px; border-radius: 6px; line-height: 1; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#94a3b8'">&times;</button>
+      </div>
+      <div class="modal-body" id="dmd-modal-body" style="padding: 20px 24px; background: #0c1322; max-height: calc(85vh - 120px); overflow-y: auto;">
+        <!-- Injetado dinamicamente via openDmdDetailModal -->
+      </div>
+      <div class="modal-footer" id="dmd-modal-footer" style="background: #0d172b; border-top: 1px solid #1e2c4f; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="color: #64748b; font-size: 12px; font-weight: 500;">Fórmula Oficial: DMD = (Vendas Líquidas 90d ÷ 90) × Fator Sazonal</span>
+        <button class="btn" style="background-color: #2563eb; color: #fff; border-radius: 8px; font-weight: 700; padding: 8px 22px; border: none; font-size: 13px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#1d4ed8'" onmouseout="this.style.backgroundColor='#2563eb'" onclick="closeDmdModal()">← Voltar à Ficha do Produto</button>
+      </div>
+    </div>
+  </div>
+
+    <div class="modal-backdrop" id="drilldown-modal">
       <div class="modal-box" id="drilldown-modal-box" style="width: 98vw; max-width: 1820px; height: 95vh; max-height: 95vh; display: flex; flex-direction: column; background: #0b1322; border: 1px solid #1e293b; border-radius: 14px; box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9); overflow: hidden; transition: all 0.2s ease;">
         <div class="modal-header" style="background: #0b1322; border-bottom: 1px solid #1e293b; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; border-radius: 14px 14px 0 0;">
           <div>
-            <h3 id="modal-drilldown-title" style="font-size: 18px; font-weight: 800; color: #fff; margin: 0; letter-spacing: 0.3px;">Auditoria Analítica</h3>
-            <p id="modal-drilldown-sub" style="font-size: 12px; color: #94a3b8; margin-top: 3px;">Detalhamento de SKUs e Reconciliação Contábil</p>
+            <h3 id="modal-drilldown-title" style="font-size: 18px; font-weight: 800; color: #fff; margin: 0; letter-spacing: 0.3px;">Auditoria AnalÃ­tica</h3>
+            <p id="modal-drilldown-sub" style="font-size: 12px; color: #94a3b8; margin-top: 3px;">Detalhamento de SKUs e ReconciliaÃ§Ã£o ContÃ¡bil</p>
           </div>
           <div style="display: flex; align-items: center; gap: 10px;">
-            <button class="btn btn-sm btn-outline" id="btn-toggle-drilldown-fs" onclick="toggleDrilldownFullscreen()" title="Alternar Tela Cheia" style="font-size: 12px; padding: 5px 12px; border-radius: 6px;">⛶ Tela Cheia</button>
+            <button class="btn btn-sm btn-outline" id="btn-toggle-drilldown-fs" onclick="toggleDrilldownFullscreen()" title="Alternar Tela Cheia" style="font-size: 12px; padding: 5px 12px; border-radius: 6px;">â›¶ Tela Cheia</button>
             <button class="modal-close" onclick="closeDrilldownModal()" style="color: #94a3b8; font-size: 24px; cursor: pointer; background: transparent; border: none; line-height: 1; padding: 0 4px;">&times;</button>
           </div>
         </div>
@@ -5823,9 +6401,9 @@
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; background: #111c30; padding: 10px 16px; border-radius: 8px; border: 1px solid #1e2e4a;">
             <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; flex: 1;">
               <!-- Pesquisa Livre -->
-              <input type="text" id="drilldown-search-input" class="filter-input" placeholder="🔍 Pesquisar por ID, Descrição, Cód..." style="width: 280px;" oninput="applyDrilldownMultiFilter()">
+              <input type="text" id="drilldown-search-input" class="filter-input" placeholder="ðŸ” Pesquisar por ID, DescriÃ§Ã£o, CÃ³d..." style="width: 280px;" oninput="applyDrilldownMultiFilter()">
 
-              <!-- Filtro por Marca (Obrigatório) -->
+              <!-- Filtro por Marca (ObrigatÃ³rio) -->
               <div style="display: flex; align-items: center; gap: 6px;">
                 <span style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Marca:</span>
                 <select id="drilldown-filter-marca" class="filter-select" style="min-width: 200px; padding: 6px 12px; font-size: 12px;" onchange="applyDrilldownMultiFilter()">
@@ -5845,30 +6423,30 @@
                 </select>
               </div>
 
-              <!-- Botão Limpar -->
-              <button class="btn btn-sm btn-outline" onclick="resetDrilldownFilters()" title="Limpar filtros desta análise" style="padding: 5px 12px; font-size: 12px;">Limpar</button>
+              <!-- BotÃ£o Limpar -->
+              <button class="btn btn-sm btn-outline" onclick="resetDrilldownFilters()" title="Limpar filtros desta anÃ¡lise" style="padding: 5px 12px; font-size: 12px;">Limpar</button>
             </div>
 
-            <!-- Ações da Direita: Contador, Excel, Imprimir -->
+            <!-- AÃ§Ãµes da Direita: Contador, Excel, Imprimir -->
             <div style="display: flex; gap: 10px; align-items: center;">
               <div id="drilldown-counter" style="font-size: 12px; color: #94a3b8; font-weight: 700; margin-right: 4px;">0 registros</div>
               <button class="btn btn-sm" style="background-color: #10b981; color: #fff; font-weight: 700; border-radius: 6px; padding: 6px 14px; border: none; display: flex; align-items: center; gap: 6px; cursor: pointer;" onclick="exportDrilldownToCSV()" title="Exportar dados filtrados para Excel / CSV">
-                <span>📊</span> Exportar Excel
+                <span>ðŸ“Š</span> Exportar Excel
               </button>
               <button class="btn btn-sm btn-outline" style="font-weight: 700; border-radius: 6px; padding: 6px 14px; display: flex; align-items: center; gap: 6px; cursor: pointer;" onclick="printDrilldown()" title="Imprimir ou Salvar em PDF">
-                <span>🖨️</span> Imprimir
+                <span>ðŸ–¨ï¸</span> Imprimir
               </button>
             </div>
           </div>
 
-          <!-- TABELA EM ESPAÇO AMPLIADO COM REF. FÁBRICA NA 2ª COLUNA E VALOR EXCEDENTE DESTACADO -->
+          <!-- TABELA EM ESPAÃ‡O AMPLIADO COM REF. FÃBRICA NA 2Âª COLUNA E VALOR EXCEDENTE DESTACADO -->
           <div class="table-container" style="flex: 1; max-height: calc(95vh - 215px); overflow-y: auto; overflow-x: auto;" id="drilldown-table-container">
             <table class="data-table sortable-table" id="table-drilldown" style="width: 100%;">
               <thead>
                 <tr>
                   <th style="width: 70px;">ID</th>
-                  <th style="min-width: 120px;">Ref. Fábrica</th>
-                  <th style="min-width: 250px;">Descrição do Produto</th>
+                  <th style="min-width: 120px;">Ref. FÃ¡brica</th>
+                  <th style="min-width: 250px;">DescriÃ§Ã£o do Produto</th>
                   <th style="min-width: 120px;">Marca</th>
                   <th style="min-width: 140px;">Equipamento</th>
                   <th style="text-align: center; width: 75px;">Curva</th>
@@ -5898,9 +6476,9 @@
       </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════
-         MODAL: DETALHE COMPLETO DO SKU (SEÇÃO 93)
-         ═══════════════════════════════════════════════════════════ -->
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+         MODAL: DETALHE COMPLETO DO SKU (SEÃ‡ÃƒO 93)
+         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <div class="modal-backdrop" id="sku-modal">
       <div class="modal-box" id="sku-modal-box" style="max-width: 920px; background: #0c1322; border: 1px solid #1e293b; border-radius: 14px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85); overflow: hidden;">
         <div class="modal-header" id="sku-modal-header" style="background: #0c1322; border-bottom: 1px solid #1e293b; padding: 18px 24px 14px 24px; display: flex; justify-content: space-between; align-items: center; border-radius: 14px 14px 0 0;">
@@ -5911,34 +6489,10 @@
           <!-- Rendered via JS -->
         </div>
         <div class="modal-footer" id="sku-modal-footer" style="background: #0c1322; border-top: 1px solid #1e293b; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; border-radius: 0 0 14px 14px;">
-          <span id="sku-modal-footer-text" style="color: #64748b; font-size: 12px; font-weight: 500;">Dados Genuínos CENTRAL PEÇAS &amp; MAXDATA</span>
+          <span id="sku-modal-footer-text" style="color: #64748b; font-size: 12px; font-weight: 500;">Dados GenuÃ­nos CENTRAL PEÃ‡AS &amp; MAXDATA</span>
           <button id="sku-modal-btn-close" class="btn" style="background-color: #0ea5e9; color: #fff; border-radius: 8px; font-weight: 700; padding: 8px 26px; border: none; font-size: 13px; cursor: pointer;" onclick="closeSkuModal()">Fechar</button>
         </div>
       </div>
     </div>
 </body>
 </html>
-
-<div class="modal-backdrop" id="dmd-modal" style="background: rgba(4, 7, 16, 0.92); backdrop-filter: blur(10px); z-index: 1060; display: none;">
-    <div class="modal-box" id="dmd-modal-box" style="max-width: 960px; width: 95%; background: #0c1322; border: 1px solid #1e3a8a; border-radius: 14px; box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.9), 0 0 35px rgba(37, 99, 235, 0.25); overflow: hidden; display: flex; flex-direction: column;">
-      <div class="modal-header" id="dmd-modal-header" style="background: #0d172b; border-bottom: 1px solid #1e2c4f; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #38bdf8; letter-spacing: 1px; display: flex; align-items: center; gap: 6px;">
-            <span>📊 AUDITORIA DE DEMANDA</span>
-            <span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 1px 8px; border-radius: 9999px; font-size: 10px; border: 1px solid rgba(56, 189, 248, 0.3);">MEMÓRIA DE CÁLCULO (90 DIAS)</span>
-          </div>
-          <h3 id="dmd-modal-title" style="font-size: 16px; font-weight: 800; color: #fff; margin: 4px 0 0; letter-spacing: 0.3px;">[SKU] PRODUTO</h3>
-        </div>
-        <button onclick="closeDmdModal()" style="background: none; border: none; font-size: 24px; color: #94a3b8; cursor: pointer; padding: 2px 8px; border-radius: 6px; line-height: 1; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#94a3b8'">&times;</button>
-      </div>
-      <div class="modal-body" id="dmd-modal-body" style="padding: 20px 24px; background: #0c1322; max-height: calc(85vh - 120px); overflow-y: auto;">
-        <!-- Injetado dinamicamente via openDmdDetailModal -->
-      </div>
-      <div class="modal-footer" id="dmd-modal-footer" style="background: #0d172b; border-top: 1px solid #1e2c4f; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center;">
-        <span style="color: #64748b; font-size: 12px; font-weight: 500;">Fórmula Oficial: DMD = (Vendas Líquidas 90d ÷ 90) × Fator Sazonal</span>
-        <button class="btn" style="background-color: #2563eb; color: #fff; border-radius: 8px; font-weight: 700; padding: 8px 22px; border: none; font-size: 13px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#1d4ed8'" onmouseout="this.style.backgroundColor='#2563eb'" onclick="closeDmdModal()">← Voltar à Ficha do Produto</button>
-      </div>
-    </div>
-  </div>
-
-
