@@ -568,3 +568,13 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
 * **2026-09-17 (v3.21.40):** Correcao da visibilidade do banner de atualizacao na Home do Coletor. O banner agora fica oculto (display:none) quando o aplicativo ja esta na versao mais recente, e a funcao de forcar atualizacao limpa caches de forma assincrona e confiavel.
 
 * **2026-09-17 (v3.21.41):** Correcao universal de compatibilidade da camera mobile no Chrome Android. Removida restricao rigida de aspectRatio que causava OverconstrainedError e implementada orientacao automatica para permissao de camera no Chrome.
+
+* **2026-09-23 (v3.0.0 / Demanda & Cotação v3.0.0):** Integração completa do Master Prompt (104 seções) de Gestão de Compras e Análise de Estoque no módulo Cotação (modules/demanda). Reestruturação das abas em 5 Grupos Estratégicos:
+  1. **Cotações:** Alimentada pelas cotações dos clientes (Nova Cotação, Minhas Cotações, Pesquisar Peças, Cotação Concorrente, Orçamentos).
+  2. **Análise Estoque:** Alimentado pelos arquivos em massa do MaxData (Visão Executiva & KPIs Globais, Curva ABC & Vendas, Estoque Físico & Cobertura, Sazonalidade & Calendário Agro, Cadastro Geral ERP, Base Externa, Carga de Dados Massivos MaxData).
+  3. **Ações Gerenciais:** Correções futuras do que já está no estoque (Rupturas Comerciais & Zerados, Capital Excedente & Plano de Desova com coluna 'Valor Excedente' em destaque âmbar e filtro de 24 SKUs no valor de R$ 216.552,59, Curva X > 90d Sem Giro, Devoluções & Motivos Comerciais).
+  4. **Compras:** Sugestões unificadas de compras das cotações e análise de estoque (Start de Compra com horizontes START AGORA/Safra, Fila Unificada de Compras Cotações + Estoque, Sugestão de Reposição & Lead Time, Curva de Fornecedores & Pedidos).
+  5. **Ações Comerciais:** Inteligência comercial e monitoramento de mercado (Positivação de clientes, Mix de produtos & Cross-selling, Recorrência & Ciclo de recompra, Ticket médio & Rentabilidade, Monitoramento de Churn/Quedas 90d, Radar de Reativação de clientes inativos, Desempenho & Metas dos vendedores).
+  - Inclui coluna 'Ref. Fábrica' como 2ª coluna em todas as tabelas e relatórios.
+  - Implementado modal analítico dark navy com 12 métricas e badge de Curva ABC.
+  - Arquivo do prompt integrado preservado em PROMPT_ESTOQUE_COMPRAS.md.

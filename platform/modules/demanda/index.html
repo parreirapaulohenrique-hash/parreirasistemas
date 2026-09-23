@@ -14,6 +14,7 @@
     <!-- Design system da plataforma -->
     <link rel="stylesheet" href="/platform/core/styles/portal.css">
     <link rel="stylesheet" href="styles/demanda.css?v=3.21.49">
+    <link rel="stylesheet" href="styles/demanda-analytics.css?v=3.0.0">
 </head>
 
 <body>
@@ -49,7 +50,8 @@
             </div>
 
             <nav class="nav-menu">
-                <div class="nav-section-label">Operacional</div>
+                <!-- 1º GRUPO: COTAÇÕES -->
+                <div class="nav-section-label">1. Cotações</div>
                 <button class="nav-item active" id="nav-captura" onclick="DemandaApp.switchView('captura')">
                     <span class="material-icons-round">add_circle</span>
                     Nova Cotação
@@ -62,42 +64,123 @@
                     <span class="material-icons-round">manage_search</span>
                     Pesquisar Peças
                 </button>
-
-                <div class="nav-section-label">Gestão</div>
-                <button class="nav-item" id="nav-compras" onclick="DemandaApp.switchView('compras')">
-                    <span class="material-icons-round">shopping_cart</span>
-                    Fila de Compras
+                <button class="nav-item" id="nav-concorrente" onclick="DemandaApp.switchView('concorrente')">
+                    <span class="material-icons-round">trending_up</span>
+                    Cotação Concorrente
                 </button>
                 <button class="nav-item" id="nav-orcamento" onclick="DemandaApp.switchView('orcamento')">
                     <span class="material-icons-round">description</span>
                     Orçamentos
                 </button>
-                <button class="nav-item" id="nav-concorrente" onclick="DemandaApp.switchView('concorrente')">
-                    <span class="material-icons-round">trending_up</span>
-                    Cotação Concorrente
-                </button>
-                <button class="nav-item" id="nav-dashboard" onclick="DemandaApp.switchView('dashboard')">
-                    <span class="material-icons-round">bar_chart</span>
-                    Dashboard
-                </button>
 
-                <div class="nav-section-label">Base Técnica</div>
+                <!-- 2º GRUPO: ANÁLISE ESTOQUE (MaxData) -->
+                <div class="nav-section-label">2. Análise Estoque</div>
+                <button class="nav-item" id="nav-estoque-visao" onclick="DemandaApp.switchView('estoque-visao')">
+                    <span class="material-icons-round">dashboard</span>
+                    Visão Executiva &amp; KPIs
+                </button>
+                <button class="nav-item" id="nav-estoque-abc" onclick="DemandaApp.switchView('estoque-abc')">
+                    <span class="material-icons-round">analytics</span>
+                    Curva ABC &amp; Vendas
+                </button>
+                <button class="nav-item" id="nav-estoque-cobertura" onclick="DemandaApp.switchView('estoque-cobertura')">
+                    <span class="material-icons-round">inventory</span>
+                    Estoque &amp; Cobertura
+                </button>
+                <button class="nav-item" id="nav-estoque-sazonalidade" onclick="DemandaApp.switchView('estoque-sazonalidade')">
+                    <span class="material-icons-round">calendar_today</span>
+                    Sazonalidade Agro
+                </button>
                 <button class="nav-item" id="nav-produtos-erp" onclick="DemandaApp.switchView('produtosErp')">
                     <span class="material-icons-round">inventory_2</span>
-                    Cadastro de Produtos
+                    Cadastro Geral ERP
                 </button>
                 <button class="nav-item" id="nav-base" onclick="DemandaApp.switchView('base')">
                     <span class="material-icons-round">hub</span>
-                    Base Externa
+                    Base Externa (Peças)
+                </button>
+                <button class="nav-item" id="nav-estoque-import" onclick="DemandaApp.switchView('estoque-import')">
+                    <span class="material-icons-round">cloud_upload</span>
+                    Carga de Dados MaxData
                 </button>
 
+                <!-- 3º GRUPO: AÇÕES GERENCIAIS (Correções Futuras / Excesso / Ruptura) -->
+                <div class="nav-section-label">3. Ações Gerenciais</div>
+                <button class="nav-item" id="nav-acoes-rupturas" onclick="DemandaApp.switchView('acoes-rupturas')">
+                    <span class="material-icons-round">error_outline</span>
+                    Rupturas &amp; Zerados
+                </button>
+                <button class="nav-item" id="nav-acoes-excesso" onclick="DemandaApp.switchView('acoes-excesso')">
+                    <span class="material-icons-round">warning_amber</span>
+                    Capital Excedente / Desova
+                </button>
+                <button class="nav-item" id="nav-acoes-curvax" onclick="DemandaApp.switchView('acoes-curvax')">
+                    <span class="material-icons-round">hourglass_empty</span>
+                    Curva X &gt; 90d Sem Giro
+                </button>
+                <button class="nav-item" id="nav-acoes-devolucoes" onclick="DemandaApp.switchView('acoes-devolucoes')">
+                    <span class="material-icons-round">assignment_return</span>
+                    Devoluções &amp; Motivos
+                </button>
+
+                <!-- 4º GRUPO: COMPRAS (Sugestões Unificadas Cotações + Estoque) -->
+                <div class="nav-section-label">4. Compras</div>
+                <button class="nav-item" id="nav-compras-start" onclick="DemandaApp.switchView('compras-start')">
+                    <span class="material-icons-round">bolt</span>
+                    Start Compra (Safra/Imediato)
+                </button>
+                <button class="nav-item" id="nav-compras" onclick="DemandaApp.switchView('compras')">
+                    <span class="material-icons-round">shopping_cart</span>
+                    Fila Unificada Compras
+                </button>
+                <button class="nav-item" id="nav-compras-sugestao" onclick="DemandaApp.switchView('compras-sugestao')">
+                    <span class="material-icons-round">calculate</span>
+                    Sugestão &amp; Lead Time
+                </button>
+                <button class="nav-item" id="nav-compras-fornecedores" onclick="DemandaApp.switchView('compras-fornecedores')">
+                    <span class="material-icons-round">local_shipping</span>
+                    Curva Fornecedores
+                </button>
+
+                <!-- 5º GRUPO: AÇÕES COMERCIAIS (Positivação, Mix, Recorrência, Ticket, Churn, Reativação, Vendedores) -->
+                <div class="nav-section-label">5. Ações Comerciais</div>
+                <button class="nav-item" id="nav-comercial-positivacao" onclick="DemandaApp.switchView('comercial-positivacao')">
+                    <span class="material-icons-round">check_circle</span>
+                    Positivação de Clientes
+                </button>
+                <button class="nav-item" id="nav-comercial-mix" onclick="DemandaApp.switchView('comercial-mix')">
+                    <span class="material-icons-round">category</span>
+                    Mix &amp; Cross-Selling
+                </button>
+                <button class="nav-item" id="nav-comercial-recorrencia" onclick="DemandaApp.switchView('comercial-recorrencia')">
+                    <span class="material-icons-round">repeat</span>
+                    Recorrência &amp; Recompra
+                </button>
+                <button class="nav-item" id="nav-comercial-ticket" onclick="DemandaApp.switchView('comercial-ticket')">
+                    <span class="material-icons-round">receipt_long</span>
+                    Ticket Médio &amp; Margem
+                </button>
+                <button class="nav-item" id="nav-comercial-churn" onclick="DemandaApp.switchView('comercial-churn')">
+                    <span class="material-icons-round">trending_down</span>
+                    Monitoramento de Churn
+                </button>
+                <button class="nav-item" id="nav-comercial-reativacao" onclick="DemandaApp.switchView('comercial-reativacao')">
+                    <span class="material-icons-round">person_search</span>
+                    Radar de Reativação
+                </button>
+                <button class="nav-item" id="nav-comercial-vendedores" onclick="DemandaApp.switchView('comercial-vendedores')">
+                    <span class="material-icons-round">badge</span>
+                    Desempenho Vendedores
+                </button>
+
+                <!-- SISTEMA -->
                 <div class="nav-section-label">Sistema</div>
                 <button class="nav-item" id="nav-integracaoErp" onclick="DemandaApp.switchView('integracaoErp')">
                     <span class="material-icons-round">sync</span>
                     Integração ERP
                 </button>
 
-                <!-- Ações secundárias — padrão Despacho: margin-top auto empurra para o fundo -->
+                <!-- Ações secundárias -->
                 <a href="/platform/index.html" class="nav-item" style="margin-top:auto;color:var(--text-secondary);">
                     <span class="material-icons-round">arrow_back</span>
                     Voltar ao Portal
@@ -668,6 +751,752 @@
                 </div>
             </div>
 
+            
+            <!-- ══════════════════════════════════════════════ -->
+            <!--  GRUPO 2: ANÁLISE ESTOQUE (MAXDATA)           -->
+            <!-- ══════════════════════════════════════════════ -->
+            <div id="view-estoque-visao" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:auto;">
+                <div class="top-bar">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1.1rem;color:var(--primary-color)">dashboard</span>
+                        <span>2. Análise Estoque / Visão Executiva &amp; KPIs Globais</span>
+                    </div>
+                    <div class="top-bar-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="exportDrilldownToCSV()">
+                            <span class="material-icons-round">file_download</span> Exportar Dados
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="initEstoqueVisao()">
+                            <span class="material-icons-round">refresh</span> Atualizar KPIs
+                        </button>
+                    </div>
+                </div>
+                <div class="analytics-view-container">
+                    <div class="filter-card">
+                        <div class="filter-group">
+                            <span class="filter-label">Marca:</span>
+                            <select id="global-filter-marca" class="filter-select">
+                                <option value="">Todas as Marcas</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <span class="filter-label">Equipamento:</span>
+                            <select id="global-filter-equip" class="filter-select">
+                                <option value="">Todos Equipamentos</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <span class="filter-label">Perfil Agro:</span>
+                            <select id="global-filter-perfil" class="filter-select">
+                                <option value="">Todos os Perfis</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <span class="filter-label">Curva ABC:</span>
+                            <select id="global-filter-curva" class="filter-select">
+                                <option value="">Todas as Curvas</option>
+                                <option value="A">Curva A</option>
+                                <option value="B">Curva B</option>
+                                <option value="C">Curva C</option>
+                                <option value="X">Curva X</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <span class="filter-label">Prioridade:</span>
+                            <select id="global-filter-prio" class="filter-select">
+                                <option value="">Todas Prioridades</option>
+                                <option value="URGENTE">URGENTE</option>
+                                <option value="ALTA">ALTA</option>
+                                <option value="MEDIA">MÉDIA</option>
+                                <option value="BAIXA">BAIXA</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <span class="filter-label">Start Compra:</span>
+                            <select id="global-filter-start" class="filter-select">
+                                <option value="">Todos os Horizontes</option>
+                                <option value="START AGORA">START AGORA</option>
+                                <option value="START_AGORA">START AGORA (Normalizado)</option>
+                                <option value="SAFRA">SAFRA</option>
+                                <option value="ENTRESSAFRA">ENTRESSAFRA</option>
+                            </select>
+                        </div>
+                        <div class="filter-actions" style="margin-left:auto;display:flex;gap:0.5rem;align-items:center;">
+                            <button class="btn btn-primary btn-sm" id="btn-apply-filters" onclick="applyAnalyticsFilters()">
+                                <span class="material-icons-round" style="font-size:1rem;">filter_alt</span> Aplicar Filtros
+                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="resetAnalyticsFilters()">
+                                <span class="material-icons-round" style="font-size:1rem;">clear_all</span> Limpar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="active-filters-box" style="display:none;background:rgba(30,41,59,0.5);border:1px solid #1e293b;padding:0.6rem 1rem;border-radius:8px;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+                        <span style="font-size:0.75rem;font-weight:700;color:#94a3b8;text-transform:uppercase;">Filtros Ativos:</span>
+                        <div id="active-filter-tags" style="display:flex;gap:0.5rem;flex-wrap:wrap;"></div>
+                    </div>
+
+                    <div class="kpi-grid" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:1rem;">
+                        <div class="stat-card" onclick="drilldownAllSales()" title="Clique para detalhar faturamento de vendas" style="cursor:pointer;">
+                            <div class="stat-header">
+                                <span class="stat-title">Faturamento Total (Vendas)</span>
+                                <span class="material-icons-round" style="color:#10b981;">trending_up</span>
+                            </div>
+                            <div class="stat-value text-success" id="kpi-fat-val">R$ 8.948.825,97</div>
+                            <div class="stat-sub" id="kpi-fat-sub">10.655 SKUs movimentados</div>
+                        </div>
+
+                        <div class="stat-card" onclick="drilldownEstoqueTotal()" title="Clique para ver todo o estoque físico" style="cursor:pointer;">
+                            <div class="stat-header">
+                                <span class="stat-title">Estoque Físico Ativo</span>
+                                <span class="material-icons-round" style="color:#3b82f6;">inventory_2</span>
+                            </div>
+                            <div class="stat-value text-primary" id="kpi-est-val">R$ 7.924.966,41</div>
+                            <div class="stat-sub" id="kpi-est-sub">10.655 SKUs em estoque</div>
+                        </div>
+
+                        <div class="stat-card" onclick="drilldownMargem()" title="Clique para auditar rentabilidade e margens" style="cursor:pointer;">
+                            <div class="stat-header">
+                                <span class="stat-title">Margem Bruta Média</span>
+                                <span class="material-icons-round" style="color:#8b5cf6;">pie_chart</span>
+                            </div>
+                            <div class="stat-value text-purple" id="kpi-margem-val">38,8%</div>
+                            <div class="stat-sub" id="kpi-margem-sub">Rentabilidade operacional</div>
+                        </div>
+
+                        <div class="stat-card stat-urgent" id="kpi-start-agora-btn" onclick="drilldownStartAgora()" title="Clique para ver compras prioritárias imediatas" style="cursor:pointer;border-color:rgba(239,68,68,0.4);">
+                            <div class="stat-header">
+                                <span class="stat-title" style="color:#f87171;">Start Compra: AGORA</span>
+                                <span class="material-icons-round" style="color:#ef4444;">bolt</span>
+                            </div>
+                            <div class="stat-value text-danger" id="kpi-start-agora-val">R$ 3.844.757,98</div>
+                            <div class="stat-sub" id="kpi-start-agora-count"><strong id="kpi-start-sku-count">7.210</strong> SKUs com demanda imediata</div>
+                        </div>
+
+                        <div class="stat-card stat-warning" onclick="drilldownExcesso()" title="Clique para ver produtos com capital excedente" style="cursor:pointer;border-color:rgba(245,158,11,0.4);">
+                            <div class="stat-header">
+                                <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
+                                    <span class="stat-title" style="color:#fbbf24;">Capital Excedente</span>
+                                    <span id="kpi-exc-sku-count" style="background:#fbbf24;color:#0b1322;font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;">24 SKUs</span>
+                                </div>
+                            </div>
+                            <div class="stat-value text-warning" id="kpi-exc-val">R$ 216.552,59</div>
+                            <div class="stat-sub" id="kpi-exc-sub">Plano de desova / liquidação</div>
+                        </div>
+
+                        <div class="stat-card" onclick="drilldownCurvaX()" title="Clique para auditar itens sem giro" style="cursor:pointer;">
+                            <div class="stat-header">
+                                <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
+                                    <span class="stat-title">Curva X (&gt; 90d sem giro)</span>
+                                    <span id="kpi-x-sku-count" style="background:#475569;color:#fff;font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;">2.766 SKUs</span>
+                                </div>
+                            </div>
+                            <div class="stat-value text-muted" id="kpi-x-val">R$ 1.942.308,82</div>
+                            <div class="stat-sub" id="kpi-x-sub">Capital parado / obsolescência</div>
+                        </div>
+
+                        <div class="stat-card" onclick="drilldownRupturas()" title="Clique para ver produtos zerados com giro" style="cursor:pointer;">
+                            <div class="stat-header">
+                                <span class="stat-title">Ruptura de Estoque</span>
+                                <span class="material-icons-round" style="color:#ef4444;">error</span>
+                            </div>
+                            <div class="stat-value text-danger" id="kpi-rup-val">R$ 1.130.825,97</div>
+                            <div class="stat-sub" id="kpi-rup-sub">1.705 SKUs zerados em alta procura</div>
+                        </div>
+
+                        <div class="stat-card" onclick="drilldownSugestaoCompra()" title="Clique para ver reposição global calculada" style="cursor:pointer;">
+                            <div class="stat-header">
+                                <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
+                                    <span class="stat-title">Sugestão de Reposição</span>
+                                    <span id="kpi-sug-sku-count" style="background:#0284c7;color:#fff;font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;">7.279 SKUs</span>
+                                </div>
+                            </div>
+                            <div class="stat-value text-info" id="kpi-sug-val">R$ 3.902.946,80</div>
+                            <div class="stat-sub" id="kpi-sug-sub">Necessidade global de compras</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-estoque-abc" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:auto;">
+                <div class="top-bar">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1.1rem;color:var(--primary-color)">analytics</span>
+                        <span>2. Análise Estoque / Curva ABC &amp; Vendas</span>
+                    </div>
+                </div>
+                <div class="analytics-view-container">
+                    <div class="analytics-table-card">
+                        <div class="analytics-table-header">
+                            <h4>Distribuição da Curva ABC por Faturamento e Margem</h4>
+                            <span style="font-size:0.8rem;color:#94a3b8;">Classificação Pareto Dinâmica (MaxData)</span>
+                        </div>
+                        <div class="table-container" style="overflow-x:auto;">
+                            <table class="data-table" id="table-curva-abc" style="width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th style="width:100px;">Curva</th>
+                                        <th class="text-right">Total SKUs</th>
+                                        <th class="text-right">Estoque Valor</th>
+                                        <th class="text-right">Faturamento</th>
+                                        <th class="text-right">% Faturamento</th>
+                                        <th class="text-right">Margem Média</th>
+                                        <th>Ação Estratégica Recomendada</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-curva-abc"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-estoque-cobertura" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:auto;">
+                <div class="top-bar">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1.1rem;color:var(--primary-color)">inventory</span>
+                        <span>2. Análise Estoque / Estoque Físico &amp; Faixas de Cobertura</span>
+                    </div>
+                </div>
+                <div class="analytics-view-container">
+                    <div class="analytics-table-card">
+                        <div class="analytics-table-header">
+                            <h4>Saúde do Estoque por Faixa de Dias de Cobertura</h4>
+                            <span style="font-size:0.8rem;color:#94a3b8;">Estoque Atual ÷ Demanda Média Diária (DMD)</span>
+                        </div>
+                        <div class="table-container" style="overflow-x:auto;">
+                            <table class="data-table" id="table-cobertura" style="width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Faixa de Cobertura</th>
+                                        <th class="text-right">SKUs</th>
+                                        <th class="text-right">Capital Parado</th>
+                                        <th class="text-right">% do Estoque</th>
+                                        <th>Diagnóstico Operacional</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-cobertura"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-estoque-sazonalidade" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:auto;">
+                <div class="top-bar">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1.1rem;color:var(--primary-color)">calendar_today</span>
+                        <span>2. Análise Estoque / Sazonalidade &amp; Calendário Agro</span>
+                    </div>
+                </div>
+                <div class="analytics-view-container">
+                    <div class="analytics-table-card">
+                        <div class="analytics-table-header">
+                            <h4>Planejamento de Demanda por Ciclo da Safra</h4>
+                            <span style="font-size:0.8rem;color:#94a3b8;">Curva de Demanda Regional</span>
+                        </div>
+                        <div class="table-container" style="overflow-x:auto;">
+                            <table class="data-table" id="table-sazonalidade" style="width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Período / Ciclo Agro</th>
+                                        <th>Foco de Peças &amp; Equipamentos</th>
+                                        <th class="text-right">Faturamento Estimado</th>
+                                        <th>Ponto de Pedido &amp; Reposição</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-sazonalidade"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-estoque-import" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:auto;">
+                <div class="top-bar">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1.1rem;color:var(--primary-color)">cloud_upload</span>
+                        <span>2. Análise Estoque / Carga de Dados Massivos MaxData</span>
+                    </div>
+                </div>
+                <div class="analytics-view-container">
+                    <div class="card" style="padding:1.5rem;background:#111827;border:1px solid #1e293b;border-radius:12px;">
+                        <h3 style="margin-top:0;color:#f8fafc;">Sincronização da Base Analítica MaxData (10.655 Produtos)</h3>
+                        <p style="color:#94a3b8;font-size:0.85rem;">A base analítica atual contém 10.655 SKUs ativos e 20 módulos estruturados conforme o Prompt de Compras &amp; Estoque.</p>
+                        <div style="margin-top:1.5rem;padding:2rem;border:2px dashed #334155;border-radius:12px;text-align:center;background:#0f172a;">
+                            <span class="material-icons-round" style="font-size:3rem;color:#38bdf8;">upload_file</span>
+                            <h4 style="margin:0.5rem 0;color:#f8fafc;">Carga de Arquivos em Massa</h4>
+                            <p style="color:#64748b;font-size:0.8rem;">Formatos aceitos: .xlsx, .csv, .json (Até 50MB)</p>
+                            <button class="btn btn-primary" style="margin-top:1rem;" onclick="document.getElementById('file-upload-massivo').click()">
+                                Selecionar Planilha / Base MaxData
+                            </button>
+                            <input type="file" id="file-upload-massivo" style="display:none;" accept=".xlsx,.csv,.json" onchange="alert('Base carregada para auditoria: ' + (this.files[0] ? this.files[0].name : ''));">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════ -->
+            <!--  GRUPO 3: AÇÕES GERENCIAIS                   -->
+            <!-- ══════════════════════════════════════════════ -->
+            <div id="view-acoes-rupturas" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:auto;">
+                <div class="top-bar">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1.1rem;color:#ef4444;">error_outline</span>
+                        <span>3. Ações Gerenciais / Rupturas Comerciais &amp; Zerados</span>
+                    </div>
+                    <div class="top-bar-actions">
+                        <button class="btn btn-primary btn-sm" onclick="drilldownRupturas()">
+                            <span class="material-icons-round">open_in_new</span> Abrir Auditoria de Rupturas
+                        </button>
+                    </div>
+                </div>
+                <div class="analytics-view-container">
+                    <div class="stat-card" style="border-color:rgba(239,68,68,0.4);background:#1a1017;">
+                        <div class="stat-header">
+                            <span class="stat-title" style="color:#f87171;">Alerta de Ruptura de Estoque</span>
+                            <span class="material-icons-round" style="color:#ef4444;">report_problem</span>
+                        </div>
+                        <div class="stat-value text-danger">R$ 1.130.825,97</div>
+                        <div class="stat-sub">1.705 SKUs com demanda ativa porém zerados no estoque físico (Venda Perdida Iminente)</div>
+                        <div style="margin-top:1rem;">
+                            <button class="btn btn-primary btn-sm" onclick="drilldownRupturas()">
+                                <span class="material-icons-round">list</span> Auditar SKUs Zerados
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-acoes-excesso" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:auto;">
+                <div class="top-bar">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1.1rem;color:#fbbf24;">warning_amber</span>
+                        <span>3. Ações Gerenciais / Capital Excedente &amp; Plano de Desova</span>
+                    </div>
+                    <div class="top-bar-actions">
+                        <button class="btn btn-primary btn-sm" onclick="drilldownExcesso()">
+                            <span class="material-icons-round">open_in_new</span> Abrir Auditoria de Excesso
+                        </button>
+                    </div>
+                </div>
+                <div class="analytics-view-container">
+                    <div class="stat-card" style="border-color:rgba(245,158,11,0.4);background:#1a1710;">
+                        <div class="stat-header">
+                            <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
+                                <span class="stat-title" style="color:#fbbf24;">Capital Excedente em Risco</span>
+                                <span style="background:#fbbf24;color:#0b1322;font-size:12px;font-weight:800;padding:3px 10px;border-radius:12px;">24 SKUs</span>
+                            </div>
+                        </div>
+                        <div class="stat-value text-warning">R$ 216.552,59</div>
+                        <div class="stat-sub">Produtos com cobertura superior a 180 dias. Coluna <strong>Valor Excedente</strong> calculada por SKU em destaque âmbar.</div>
+                        <div style="margin-top:1rem;">
+                            <button class="btn btn-primary btn-sm" style="background:#d97706;border-color:#b45309;" onclick="drilldownExcesso()">
+                                <span class="material-icons-round">open_in_full</span> Auditar os 24 SKUs do Capital Excedente (R$ 216.552,59)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-acoes-curvax" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:auto;">
+                <div class="top-bar">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1.1rem;color:#94a3b8;">hourglass_empty</span>
+                        <span>3. Ações Gerenciais / Curva X &gt; 90d Sem Giro</span>
+                    </div>
+                    <div class="top-bar-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="drilldownCurvaX()">
+                            <span class="material-icons-round">open_in_new</span> Abrir Tabela Curva X
+                        </button>
+                    </div>
+                </div>
+                <div class="analytics-view-container">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-title">Produtos Sem Giro Recente (&gt; 90 dias)</span>
+                            <span style="background:#475569;color:#fff;font-size:12px;font-weight:800;padding:3px 10px;border-radius:12px;">2.766 SKUs</span>
+                        </div>
+                        <div class="stat-value text-muted">R$ 1.942.308,82</div>
+                        <div class="stat-sub">Itens de baixíssima rotatividade acumulando custo de oportunidade no estoque físico.</div>
+                        <div style="margin-top:1rem;">
+                            <button class="btn btn-secondary btn-sm" onclick="drilldownCurvaX()">
+                                <span class="material-icons-round">list</span> Detalhar 2.766 SKUs Curva X
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-acoes-devolucoes" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:auto;">
+                <div class="top-bar">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1.1rem;color:#f43f5e;">assignment_return</span>
+                        <span>3. Ações Gerenciais / Devoluções &amp; Motivos Comerciais</span>
+                    </div>
+                </div>
+                <div class="analytics-view-container">
+                    <div class="analytics-table-card">
+                        <div class="analytics-table-header">
+                            <h4>Principais Causas e Motivos de Devoluções de Peças</h4>
+                            <span style="font-size:0.8rem;color:#94a3b8;">Histórico Consolidado MaxData</span>
+                        </div>
+                        <div class="table-container" style="overflow-x:auto;">
+                            <table class="data-table" id="table-devolucoes" style="width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Operação / Motivo Comercial</th>
+                                        <th class="text-right">Ocorrências</th>
+                                        <th class="text-right">Quantidade</th>
+                                        <th class="text-right">Valor Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-devolucoes-motivos"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════ -->
+            <!--  GRUPO 4: COMPRAS                             -->
+            <!-- ══════════════════════════════════════════════ -->
+            <div id="view-compras-start" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:auto;">
+                <div class="top-bar">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1.1rem;color:#ef4444;">bolt</span>
+                        <span>4. Compras / Start de Compra &amp; Horizontes</span>
+                    </div>
+                    <div class="top-bar-actions">
+                        <button class="btn btn-primary btn-sm" onclick="drilldownStartAgora()">
+                            <span class="material-icons-round">bolt</span> Abrir START AGORA
+                        </button>
+                    </div>
+                </div>
+                <div class="analytics-view-container">
+                    <div class="stat-card stat-urgent" style="border-color:rgba(239,68,68,0.4);background:#1a1017;">
+                        <div class="stat-header">
+                            <span class="stat-title" style="color:#f87171;">Start Compra: START AGORA (Crítico)</span>
+                            <span class="material-icons-round" style="color:#ef4444;">flash_on</span>
+                        </div>
+                        <div class="stat-value text-danger">R$ 3.844.757,98</div>
+                        <div class="stat-sub">7.210 SKUs com cobertura abaixo do ponto de ressuprimento que exigem emissão imediata de pedido aos fornecedores.</div>
+                        <div style="margin-top:1rem;">
+                            <button class="btn btn-primary btn-sm" onclick="drilldownStartAgora()">
+                                <span class="material-icons-round">list</span> Ver Lista Completa START AGORA
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-compras-sugestao" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:auto;">
+                <div class="top-bar">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1.1rem;color:#0284c7;">calculate</span>
+                        <span>4. Compras / Sugestão de Reposição &amp; Lead Time</span>
+                    </div>
+                    <div class="top-bar-actions">
+                        <button class="btn btn-primary btn-sm" onclick="drilldownSugestaoCompra()">
+                            <span class="material-icons-round">calculate</span> Calcular Reposição
+                        </button>
+                    </div>
+                </div>
+                <div class="analytics-view-container">
+                    <div class="stat-card" style="border-color:rgba(14,165,233,0.4);background:#0c1a2e;">
+                        <div class="stat-header">
+                            <span class="stat-title" style="color:#38bdf8;">Necessidade Global de Reposição</span>
+                            <span style="background:#0284c7;color:#fff;font-size:12px;font-weight:800;padding:3px 10px;border-radius:12px;">7.279 SKUs</span>
+                        </div>
+                        <div class="stat-value text-info">R$ 3.902.946,80</div>
+                        <div class="stat-sub">Sugestão calculada com base no Lead Time do Fornecedor, Estoque de Segurança e Demanda Agro.</div>
+                        <div style="margin-top:1rem;">
+                            <button class="btn btn-primary btn-sm" onclick="drilldownSugestaoCompra()">
+                                <span class="material-icons-round">format_list_bulleted</span> Auditar Sugestões de Reposição
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-compras-fornecedores" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:auto;">
+                <div class="top-bar">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1.1rem;color:#8b5cf6;">local_shipping</span>
+                        <span>4. Compras / Curva de Fornecedores &amp; Pedidos</span>
+                    </div>
+                </div>
+                <div class="analytics-view-container">
+                    <div class="analytics-table-card">
+                        <div class="analytics-table-header">
+                            <h4>Top Fornecedores por Volume de Estoque e Compras Sugeridas</h4>
+                            <span style="font-size:0.8rem;color:#94a3b8;">Concentração de Pedidos &amp; Fornecimento</span>
+                        </div>
+                        <div class="table-container" style="overflow-x:auto;">
+                            <table class="data-table" id="table-fornecedores" style="width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Fornecedor / Fabricante</th>
+                                        <th class="text-right">Total SKUs</th>
+                                        <th class="text-right">Estoque Valor</th>
+                                        <th class="text-right">Faturamento</th>
+                                        <th class="text-right">Compra Sugerida</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-fornecedores-top"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════ -->
+            <!--  GRUPO 5: AÇÕES COMERCIAIS                    -->
+            <!-- ══════════════════════════════════════════════ -->
+            <div id="view-comercial-positivacao" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:auto;">
+                <div class="top-bar">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1.1rem;color:#10b981;">check_circle</span>
+                        <span>5. Ações Comerciais / Positivação de Clientes</span>
+                    </div>
+                    <div class="top-bar-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="initComercialPositivacao()">
+                            <span class="material-icons-round">refresh</span> Atualizar
+                        </button>
+                    </div>
+                </div>
+                <div class="analytics-view-container">
+                    <div class="comercial-kpi-grid">
+                        <div class="stat-card">
+                            <span class="stat-title">Total Clientes Base</span>
+                            <div class="stat-value text-primary" id="comercial-pos-total">1.250</div>
+                            <div class="stat-sub">Carteira ativa cadastrada</div>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-title">Clientes Positivados</span>
+                            <div class="stat-value text-success" id="comercial-pos-ativos">780</div>
+                            <div class="stat-sub">Com compras nos últimos 90d</div>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-title">Clientes Não Positivados</span>
+                            <div class="stat-value text-danger" id="comercial-pos-inativos">470</div>
+                            <div class="stat-sub">Sem compras nos últimos 90d</div>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-title">Taxa de Positivação</span>
+                            <div class="stat-value text-info" id="comercial-pos-taxa">62.4%</div>
+                            <div class="stat-sub">Eficiência de cobertura da base</div>
+                        </div>
+                    </div>
+
+                    <div class="analytics-table-card">
+                        <div class="analytics-table-header">
+                            <h4>Carteira de Clientes &amp; Status de Positivação</h4>
+                            <span style="font-size:0.8rem;color:#94a3b8;">Monitoramento Contínuo</span>
+                        </div>
+                        <div class="table-container" style="overflow-x:auto;">
+                            <table class="data-table" id="table-comercial-positivacao" style="width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Cliente / Razão Social</th>
+                                        <th>Região / Cidade</th>
+                                        <th class="text-right">Última Compra</th>
+                                        <th class="text-right">Total Comprado (BRL)</th>
+                                        <th class="text-center">Status</th>
+                                        <th class="text-center">Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-comercial-positivacao"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-comercial-mix" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:auto;">
+                <div class="top-bar">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1.1rem;color:#38bdf8;">category</span>
+                        <span>5. Ações Comerciais / Mix de Produtos &amp; Cross-Selling</span>
+                    </div>
+                </div>
+                <div class="analytics-view-container">
+                    <div class="analytics-table-card">
+                        <div class="analytics-table-header">
+                            <h4>Oportunidades de Venda Casada &amp; Complementar (Cross-Selling Agro)</h4>
+                            <span style="font-size:0.8rem;color:#94a3b8;">Produtos frequentemente comprados juntos</span>
+                        </div>
+                        <div class="table-container" style="overflow-x:auto;">
+                            <table class="data-table" id="table-comercial-cross" style="width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Produto Principal</th>
+                                        <th>Produto Recomendado (Cross-Selling)</th>
+                                        <th class="text-center">Afinidade</th>
+                                        <th>Sugestão de Abordagem Comercial</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-comercial-cross"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-comercial-recorrencia" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:auto;">
+                <div class="top-bar">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1.1rem;color:#a855f7;">repeat</span>
+                        <span>5. Ações Comerciais / Recorrência &amp; Ciclo de Recompra</span>
+                    </div>
+                </div>
+                <div class="analytics-view-container">
+                    <div class="analytics-table-card">
+                        <div class="analytics-table-header">
+                            <h4>Análise do Ciclo Médio de Recompra por Cliente</h4>
+                            <span style="font-size:0.8rem;color:#94a3b8;">Previsibilidade de Retorno e Contato Ativo</span>
+                        </div>
+                        <div class="table-container" style="overflow-x:auto;">
+                            <table class="data-table" id="table-comercial-recorrencia" style="width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Cliente</th>
+                                        <th class="text-right">Frequência (Dias)</th>
+                                        <th class="text-right">Dias Sem Comprar</th>
+                                        <th class="text-center">Previsão Recompra</th>
+                                        <th>Status do Ciclo</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-comercial-recorrencia"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-comercial-ticket" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:auto;">
+                <div class="top-bar">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1.1rem;color:#10b981;">receipt_long</span>
+                        <span>5. Ações Comerciais / Ticket Médio &amp; Rentabilidade</span>
+                    </div>
+                </div>
+                <div class="analytics-view-container">
+                    <div class="analytics-table-card">
+                        <div class="analytics-table-header">
+                            <h4>Ranking de Ticket Médio por Cliente e Faixa de Valor</h4>
+                            <span style="font-size:0.8rem;color:#94a3b8;">Ticket Médio = Faturamento ÷ Quantidade de Pedidos</span>
+                        </div>
+                        <div class="table-container" style="overflow-x:auto;">
+                            <table class="data-table" id="table-comercial-ticket" style="width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Cliente</th>
+                                        <th class="text-right">Pedidos Faturados</th>
+                                        <th class="text-right">Faturamento Total</th>
+                                        <th class="text-right">Ticket Médio</th>
+                                        <th class="text-center">Perfil de Compra</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-comercial-ticket"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-comercial-churn" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:auto;">
+                <div class="top-bar">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1.1rem;color:#ef4444;">trending_down</span>
+                        <span>5. Ações Comerciais / Monitoramento de Churn (&gt; 90d)</span>
+                    </div>
+                </div>
+                <div class="analytics-view-container">
+                    <div class="analytics-table-card">
+                        <div class="analytics-table-header">
+                            <h4>Top Clientes em Queda Brusca ou Risco Iminente de Churn</h4>
+                            <span style="font-size:0.8rem;color:#94a3b8;">Comparativo: Trimestre Atual vs Trimestre Anterior</span>
+                        </div>
+                        <div class="table-container" style="overflow-x:auto;">
+                            <table class="data-table" id="table-comercial-churn" style="width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Cliente</th>
+                                        <th class="text-right">Fat. Anterior</th>
+                                        <th class="text-right">Fat. Atual</th>
+                                        <th class="text-right">Queda (%)</th>
+                                        <th>Diagnóstico de Risco</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-comercial-churn"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-comercial-reativacao" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:auto;">
+                <div class="top-bar">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1.1rem;color:#f59e0b;">person_search</span>
+                        <span>5. Ações Comerciais / Radar de Reativação de Clientes Inativos</span>
+                    </div>
+                </div>
+                <div class="analytics-view-container">
+                    <div class="analytics-table-card">
+                        <div class="analytics-table-header">
+                            <h4>Campanha Ativa de Reativação de Contas Inativas</h4>
+                            <span style="font-size:0.8rem;color:#94a3b8;">Estratégia de Contato e Ofertas Promocionais</span>
+                        </div>
+                        <div class="table-container" style="overflow-x:auto;">
+                            <table class="data-table" id="table-comercial-reativacao" style="width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Cliente</th>
+                                        <th class="text-right">Dias de Inatividade</th>
+                                        <th class="text-right">Histórico de Compras</th>
+                                        <th>Ação Comercial Recomendada</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-comercial-reativacao"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-comercial-vendedores" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:auto;">
+                <div class="top-bar">
+                    <div class="breadcrumb">
+                        <span class="material-icons-round" style="font-size:1.1rem;color:#06b6d4;">badge</span>
+                        <span>5. Ações Comerciais / Desempenho &amp; Metas dos Vendedores</span>
+                    </div>
+                </div>
+                <div class="analytics-view-container">
+                    <div class="analytics-table-card">
+                        <div class="analytics-table-header">
+                            <h4>Ranking da Equipe Comercial &amp; Atingimento de Metas</h4>
+                            <span style="font-size:0.8rem;color:#94a3b8;">Desempenho por Faturamento, Clientes Positivados e Margem</span>
+                        </div>
+                        <div class="table-container" style="overflow-x:auto;">
+                            <table class="data-table" id="table-comercial-vendedores" style="width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Vendedor</th>
+                                        <th class="text-right">Faturamento</th>
+                                        <th class="text-right">Meta Safra</th>
+                                        <th class="text-right">Atingimento (%)</th>
+                                        <th class="text-right">Clientes Atendidos</th>
+                                        <th class="text-right">Ticket Médio</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-comercial-vendedores"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Footer / LGPD Notice — padrão Despacho (no rodapé do main-content) -->
             <footer style="padding:1rem 2rem;border-top:1px solid var(--border-color);font-size:0.75rem;color:var(--text-secondary);display:flex;justify-content:space-between;align-items:center;background:var(--bg-card);flex-shrink:0;">
                 <div>
@@ -1006,7 +1835,12 @@
     <script src="js/demanda-lookup.js?v=3.21.49"></script>
     <script src="js/demanda-pdf.js?v=3.21.49"></script>
     <script src="js/demanda-clientes.js?v=3.21.49"></script>
-    <script src="js/demanda-app.js?v=3.21.49"></script>
+    
+    <!-- Módulos Analíticos e Comerciais v3.0.0 (Master Prompt 104 Seções) -->
+    <script src="js/demanda-analytics-data.js?v=3.0.0"></script>
+    <script src="js/demanda-analytics.js?v=3.0.0"></script>
+    <script src="js/demanda-comercial.js?v=3.0.0"></script>
+<script src="js/demanda-app.js?v=3.21.49"></script>
 
     <!-- ═══════════════════════════════════════════════════════════
          MODAL: Administração da Base Técnica de Peças
@@ -1215,5 +2049,120 @@ AH213767	DEDO SEPARADOR DO ROTOR	Colheitadeiras STS 9650/9750	H171540
       </div>
     </div>
 
+
+    <!-- ═══════════════════════════════════════════════════════════
+         MODAL DE DRILL-DOWN AUDITÁVEL (SEÇÕES 89, 90)
+         ═══════════════════════════════════════════════════════════ -->
+    <div class="modal-backdrop" id="drilldown-modal">
+      <div class="modal-box" id="drilldown-modal-box" style="width: 98vw; max-width: 1820px; height: 95vh; max-height: 95vh; display: flex; flex-direction: column; background: #0b1322; border: 1px solid #1e293b; border-radius: 14px; box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9); overflow: hidden; transition: all 0.2s ease;">
+        <div class="modal-header" style="background: #0b1322; border-bottom: 1px solid #1e293b; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; border-radius: 14px 14px 0 0;">
+          <div>
+            <h3 id="modal-drilldown-title" style="font-size: 18px; font-weight: 800; color: #fff; margin: 0; letter-spacing: 0.3px;">Auditoria Analítica</h3>
+            <p id="modal-drilldown-sub" style="font-size: 12px; color: #94a3b8; margin-top: 3px;">Detalhamento de SKUs e Reconciliação Contábil</p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <button class="btn btn-sm btn-outline" id="btn-toggle-drilldown-fs" onclick="toggleDrilldownFullscreen()" title="Alternar Tela Cheia" style="font-size: 12px; padding: 5px 12px; border-radius: 6px;">⛶ Tela Cheia</button>
+            <button class="modal-close" onclick="closeDrilldownModal()" style="color: #94a3b8; font-size: 24px; cursor: pointer; background: transparent; border: none; line-height: 1; padding: 0 4px;">&times;</button>
+          </div>
+        </div>
+
+        <div class="modal-body" style="padding: 16px 24px; background: #0b1322; display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+          <!-- BARRA DE CONTROLE & FILTROS AMPLIADA -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; background: #111c30; padding: 10px 16px; border-radius: 8px; border: 1px solid #1e2e4a;">
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; flex: 1;">
+              <!-- Pesquisa Livre -->
+              <input type="text" id="drilldown-search-input" class="filter-input" placeholder="🔍 Pesquisar por ID, Descrição, Cód..." style="width: 280px;" oninput="applyDrilldownMultiFilter()">
+
+              <!-- Filtro por Marca (Obrigatório) -->
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Marca:</span>
+                <select id="drilldown-filter-marca" class="filter-select" style="min-width: 200px; padding: 6px 12px; font-size: 12px;" onchange="applyDrilldownMultiFilter()">
+                  <option value="">Todas as Marcas</option>
+                </select>
+              </div>
+
+              <!-- Filtro por Curva -->
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Curva:</span>
+                <select id="drilldown-filter-curva" class="filter-select" style="width: 120px; padding: 6px 10px; font-size: 12px;" onchange="applyDrilldownMultiFilter()">
+                  <option value="">Todas</option>
+                  <option value="A">Curva A</option>
+                  <option value="B">Curva B</option>
+                  <option value="C">Curva C</option>
+                  <option value="X">Curva X</option>
+                </select>
+              </div>
+
+              <!-- Botão Limpar -->
+              <button class="btn btn-sm btn-outline" onclick="resetDrilldownFilters()" title="Limpar filtros desta análise" style="padding: 5px 12px; font-size: 12px;">Limpar</button>
+            </div>
+
+            <!-- Ações da Direita: Contador, Excel, Imprimir -->
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <div id="drilldown-counter" style="font-size: 12px; color: #94a3b8; font-weight: 700; margin-right: 4px;">0 registros</div>
+              <button class="btn btn-sm" style="background-color: #10b981; color: #fff; font-weight: 700; border-radius: 6px; padding: 6px 14px; border: none; display: flex; align-items: center; gap: 6px; cursor: pointer;" onclick="exportDrilldownToCSV()" title="Exportar dados filtrados para Excel / CSV">
+                <span>📊</span> Exportar Excel
+              </button>
+              <button class="btn btn-sm btn-outline" style="font-weight: 700; border-radius: 6px; padding: 6px 14px; display: flex; align-items: center; gap: 6px; cursor: pointer;" onclick="printDrilldown()" title="Imprimir ou Salvar em PDF">
+                <span>🖨️</span> Imprimir
+              </button>
+            </div>
+          </div>
+
+          <!-- TABELA EM ESPAÇO AMPLIADO COM REF. FÁBRICA NA 2ª COLUNA E VALOR EXCEDENTE DESTACADO -->
+          <div class="table-container" style="flex: 1; max-height: calc(95vh - 215px); overflow-y: auto; overflow-x: auto;" id="drilldown-table-container">
+            <table class="data-table sortable-table" id="table-drilldown" style="width: 100%;">
+              <thead>
+                <tr>
+                  <th style="width: 70px;">ID</th>
+                  <th style="min-width: 120px;">Ref. Fábrica</th>
+                  <th style="min-width: 250px;">Descrição do Produto</th>
+                  <th style="min-width: 120px;">Marca</th>
+                  <th style="min-width: 140px;">Equipamento</th>
+                  <th style="text-align: center; width: 75px;">Curva</th>
+                  <th class="text-right" style="width: 90px;">Est. Disp.</th>
+                  <th class="text-right" style="width: 90px;">Dias Est.</th>
+                  <th class="text-right" style="width: 125px; color: #fbbf24;">Valor Excedente</th>
+                  <th class="text-right" style="width: 95px;">Compra Sug.</th>
+                  <th class="text-right" style="width: 115px;">Investimento</th>
+                  <th class="text-center" style="width: 100px;">Prioridade</th>
+                  <th class="text-center" style="width: 100px;">Start</th>
+                  <th class="text-center" style="width: 80px;">Detalhe</th>
+                </tr>
+              </thead>
+              <tbody id="drilldown-tbody">
+                <!-- Rendered via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="background: #0b1322; border-top: 1px solid #1e293b; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; border-radius: 0 0 14px 14px;">
+          <div id="drilldown-footer-reconciliation" style="font-size: 13px; font-weight: 700; color: #fff;"></div>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn btn-outline" onclick="closeDrilldownModal()">Fechar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         MODAL: DETALHE COMPLETO DO SKU (SEÇÃO 93)
+         ═══════════════════════════════════════════════════════════ -->
+    <div class="modal-backdrop" id="sku-modal">
+      <div class="modal-box" id="sku-modal-box" style="max-width: 920px; background: #0c1322; border: 1px solid #1e293b; border-radius: 14px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85); overflow: hidden;">
+        <div class="modal-header" id="sku-modal-header" style="background: #0c1322; border-bottom: 1px solid #1e293b; padding: 18px 24px 14px 24px; display: flex; justify-content: space-between; align-items: center; border-radius: 14px 14px 0 0;">
+          <h3 id="sku-modal-title" style="font-size: 16px; font-weight: 800; color: #fff; margin: 0; text-transform: uppercase; letter-spacing: 0.3px;">[SKU] PRODUTO</h3>
+          <button class="modal-close" onclick="closeSkuModal()" style="color: #94a3b8; font-size: 24px; cursor: pointer; background: transparent; border: none; line-height: 1; padding: 0 4px;">&times;</button>
+        </div>
+        <div class="modal-body" id="sku-modal-body" style="padding: 20px 24px; background: #0c1322; max-height: calc(88vh - 120px); overflow-y: auto;">
+          <!-- Rendered via JS -->
+        </div>
+        <div class="modal-footer" id="sku-modal-footer" style="background: #0c1322; border-top: 1px solid #1e293b; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; border-radius: 0 0 14px 14px;">
+          <span id="sku-modal-footer-text" style="color: #64748b; font-size: 12px; font-weight: 500;">Dados Genuínos CENTRAL PEÇAS &amp; MAXDATA</span>
+          <button id="sku-modal-btn-close" class="btn" style="background-color: #0ea5e9; color: #fff; border-radius: 8px; font-weight: 700; padding: 8px 26px; border: none; font-size: 13px; cursor: pointer;" onclick="closeSkuModal()">Fechar</button>
+        </div>
+      </div>
+    </div>
 </body>
 </html>

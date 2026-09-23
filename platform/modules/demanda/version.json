@@ -1,8 +1,8 @@
 {
-  "version": "2.7.0",
-  "build": "20260919-v2.7.0",
+  "version": "3.0.0",
+  "build": "20260923-v3.0.0",
   "module": "demanda",
   "name": "Cotacao",
-  "lastUpdate": "2026-09-19",
-  "change": "v2.7.0 - feat(base-externa): reestrutura\u00e7\u00e3o da aba Base Externa no padr\u00e3o do Cadastro de Produtos com barra de filtros, contador de cadastros na base, limpeza total dos dados mockados anteriores, e motor de cat\u00e1logos com cruzamento de similaridades e ERP Maxdata."
+  "lastUpdate": "2026-09-23",
+  "change": "v3.0.0 - feat(master-prompt-5grupos): Integracao completa do Master Prompt (104 secoes) e reestruturacao em 5 Grupos Estrategicos: 1. Cotacoes (Operacional/Orcamentos/Pesquisa), 2. Analise Estoque (Visao Executiva, KPIs, Curva ABC, Cobertura, Sazonalidade, Cadastro ERP, Base Externa, Carga MaxData), 3. Acoes Gerenciais (Rupturas, Capital Excedente com coluna Valor Excedente em ambar e drilldown auditavel R$ 216k, Curva X > 90d, Devolucoes), 4. Compras (Start de Compra Safra/Imediato, Fila Unificada, Sugestao Reposicao, Curva Fornecedores), 5. Acoes Comerciais (Positivacao de clientes, Mix & Cross-selling, Recorrencia de recompra, Ticket medio & margem, Monitoramento Churn 90d, Radar Reativacao, Desempenho vendedores). Adicionado modal dark navy 12 metricas de SKU e coluna Ref. Fabrica na 2a posicao de todas as tabelas."
 }

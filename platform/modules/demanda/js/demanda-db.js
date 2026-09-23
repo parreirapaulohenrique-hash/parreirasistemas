@@ -136,8 +136,7 @@ const DemandaDB = (() => {
     /**
      * Constrói o documento de um item com todos os campos default.
      */
-    function _buildItemDoc(itemId, demandaId, raw, seq, timestamp) {
-        // ── Catálogos Externos de Peças (OEM e Fabricantes) ─────
+    // ── Catálogos Externos de Peças (OEM e Fabricantes) ─────
     const CATALOG_COL = `${BASE_PATH}/techbase/catalogos`;
 
     async function saveCatalogoItem(item) {
@@ -153,7 +152,11 @@ const DemandaDB = (() => {
         return snap.docs.map(d => ({ id: d.id, ...d.data() }));
     }
 
-    return {
+    /**
+     * Constrói o documento de um item com todos os campos default.
+     */
+    function _buildItemDoc(itemId, demandaId, raw, seq, timestamp) {
+        return {
             id:            itemId,
             demandaId,
             seq,

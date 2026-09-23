@@ -8,16 +8,46 @@ const DemandaApp = (function() {
 
     // ── Mapeamento views → nav-item IDs ──────────────────────
     var _VIEWS = {
+        // ── 1º GRUPO: COTAÇÕES ──
         captura:       "nav-captura",
         lista:         "nav-lista",
         pesquisa:      "nav-pesquisa",
-        compras:       "nav-compras",
-        clientes:      'nav-clientes',
-        dashboard:     "nav-dashboard",
-        orcamento:     "nav-orcamento",
         concorrente:   "nav-concorrente",
-        produtosErp:   "nav-produtos-erp",
-        base:          "nav-base",
+        orcamento:     "nav-orcamento",
+
+        // ── 2º GRUPO: ANÁLISE ESTOQUE (MaxData) ──
+        "estoque-visao":        "nav-estoque-visao",
+        "estoque-abc":          "nav-estoque-abc",
+        "estoque-cobertura":    "nav-estoque-cobertura",
+        "estoque-sazonalidade": "nav-estoque-sazonalidade",
+        produtosErp:            "nav-produtos-erp",
+        base:                   "nav-base",
+        "estoque-import":       "nav-estoque-import",
+
+        // ── 3º GRUPO: AÇÕES GERENCIAIS ──
+        "acoes-rupturas":   "nav-acoes-rupturas",
+        "acoes-excesso":    "nav-acoes-excesso",
+        "acoes-curvax":     "nav-acoes-curvax",
+        "acoes-devolucoes": "nav-acoes-devolucoes",
+
+        // ── 4º GRUPO: COMPRAS ──
+        "compras-start":        "nav-compras-start",
+        compras:                "nav-compras",
+        "compras-sugestao":     "nav-compras-sugestao",
+        "compras-fornecedores": "nav-compras-fornecedores",
+
+        // ── 5º GRUPO: AÇÕES COMERCIAIS ──
+        "comercial-positivacao": "nav-comercial-positivacao",
+        "comercial-mix":         "nav-comercial-mix",
+        "comercial-recorrencia": "nav-comercial-recorrencia",
+        "comercial-ticket":      "nav-comercial-ticket",
+        "comercial-churn":       "nav-comercial-churn",
+        "comercial-reativacao":  "nav-comercial-reativacao",
+        "comercial-vendedores":  "nav-comercial-vendedores",
+
+        // ── LEGADO & SISTEMA ──
+        dashboard:     "nav-dashboard",
+        clientes:      "nav-clientes",
         integracaoErp: "nav-integracaoErp"
     };
 
@@ -56,6 +86,28 @@ const DemandaApp = (function() {
         if (v === "concorrente")   loadConcorrente();
         if (v === "produtosErp")   loadProdutosErp();
         if (v === "base")          loadBaseTecnica();
+
+        // ── Inicializadores Analíticos (Grupos 2, 3, 4) ──
+        if (v === "estoque-visao" && typeof initEstoqueVisao === "function") initEstoqueVisao();
+        if (v === "estoque-abc" && typeof initEstoqueAbc === "function") initEstoqueAbc();
+        if (v === "estoque-cobertura" && typeof initEstoqueCobertura === "function") initEstoqueCobertura();
+        if (v === "estoque-sazonalidade" && typeof initEstoqueSazonalidade === "function") initEstoqueSazonalidade();
+        if (v === "acoes-rupturas" && typeof initAcoesRupturas === "function") initAcoesRupturas();
+        if (v === "acoes-excesso" && typeof initAcoesExcesso === "function") initAcoesExcesso();
+        if (v === "acoes-curvax" && typeof initAcoesCurvaX === "function") initAcoesCurvaX();
+        if (v === "acoes-devolucoes" && typeof initAcoesDevolucoes === "function") initAcoesDevolucoes();
+        if (v === "compras-start" && typeof initComprasStart === "function") initComprasStart();
+        if (v === "compras-sugestao" && typeof initComprasSugestao === "function") initComprasSugestao();
+        if (v === "compras-fornecedores" && typeof initComprasFornecedores === "function") initComprasFornecedores();
+
+        // ── Inicializadores Comerciais (Grupo 5) ──
+        if (v === "comercial-positivacao" && typeof initComercialPositivacao === "function") initComercialPositivacao();
+        if (v === "comercial-mix" && typeof initComercialMix === "function") initComercialMix();
+        if (v === "comercial-recorrencia" && typeof initComercialRecorrencia === "function") initComercialRecorrencia();
+        if (v === "comercial-ticket" && typeof initComercialTicket === "function") initComercialTicket();
+        if (v === "comercial-churn" && typeof initComercialChurn === "function") initComercialChurn();
+        if (v === "comercial-reativacao" && typeof initComercialReativacao === "function") initComercialReativacao();
+        if (v === "comercial-vendedores" && typeof initComercialVendedores === "function") initComercialVendedores();
     }
 
     // ════════════════════════════════════════════════════════
