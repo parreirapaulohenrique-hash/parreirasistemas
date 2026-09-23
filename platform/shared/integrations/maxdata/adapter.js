@@ -507,7 +507,7 @@ class MaxDataAdapter extends ErpAdapter {
         }
     }
 
-    _extractCrossReferences(aplicacao, descricao, codigoFab, codigoOriginal) {
+    _extractCrossReferences(aplicacao, descricao, codigoFab, codigoOriginal, extras = []) {
         const cross = new Set();
         if (codigoFab) {
             const c = this._normalizeRef(codigoFab);
@@ -517,12 +517,20 @@ class MaxDataAdapter extends ErpAdapter {
             const c = this._normalizeRef(codigoOriginal);
             if (c.length >= 3) cross.add(c);
         }
+        if (Array.isArray(extras)) {
+            for (const item of extras) {
+                if (item && typeof item === 'string') {
+                    const c = this._normalizeRef(item);
+                    if (c.length >= 3) cross.add(c);
+                }
+            }
+        }
 
         const text = ((aplicacao || '') + ' ' + (descricao || '')).toUpperCase();
         const tokens = text.split(/[\s,;\/\+\|]+/);
         for (const tok of tokens) {
             const clean = this._normalizeRef(tok);
-            // Códigos de peças automotivas/agrícolas têm ao menos 3 caracteres e possuem dígitos
+            // Codigos de pecas automotivas/agricolas tem ao menos 3 caracteres e possuem digitos
             if (clean.length >= 3 && /\d/.test(clean)) {
                 cross.add(clean);
             }
@@ -531,13 +539,29 @@ class MaxDataAdapter extends ErpAdapter {
     }
 
     _mapProduct(raw) {
-        const code = (raw.codigoFab || raw.codigoOriginal || '').trim();
+        const code = (raw.codigoFab || raw.codigoOriginal || raw.referencia || '').trim();
         const key = this._normalizeRef(code);
         const desc = (raw.descricao || raw.descPdv || '').trim();
         const descNorm = desc.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
         const aplicacao = (raw.aplicacao || '').trim();
         const aplicacaoNorm = aplicacao.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-        const referenciasCruzadas = this._extractCrossReferences(aplicacao, desc, code, raw.codigoOriginal);
+
+        // Novos campos tecnicos de enriquecimento (planilha / ERP)
+        const equipamento = (raw.equipamento || '').trim();
+        const similarGenuino = (raw.similarGenuino || raw.similar_genuino || raw.refGenuino || raw.oem || '').trim();
+        const similar1 = (raw.similar1 || raw.similares1 || raw.similar_1 || '').trim();
+        const similar2 = (raw.similar2 || raw.similares2 || raw.similar_2 || '').trim();
+        const similar3 = (raw.similar3 || raw.similares3 || raw.similar_3 || '').trim();
+        const similar4 = (raw.similar4 || raw.similares4 || raw.similar_4 || '').trim();
+        const refFornecedor = (raw.refFornecedor || raw.ref_fornecedor || raw.codigoFornecedor || '').trim();
+        const fotoProduto = (raw.fotoProduto || raw.foto_produto || '').trim();
+        const fonte = (raw.fonte || '').trim();
+        const statusPesquisa = (raw.statusPesquisa || raw.status_pesquisa || '').trim();
+
+        const referenciasCruzadas = this._extractCrossReferences(
+            aplicacao, desc, code, raw.codigoOriginal,
+            [similarGenuino, similar1, similar2, similar3, similar4, refFornecedor]
+        );
 
         return {
             id:            raw.id,
@@ -550,10 +574,21 @@ class MaxDataAdapter extends ErpAdapter {
             referenciasCruzadas: referenciasCruzadas,
             descricao:     desc,
             descNorm:      descNorm,
-            fabricante:    (raw.fabricante || '').toUpperCase().trim(),
+            fabricante:    (raw.fabricante || raw.marca || '').toUpperCase().trim(),
+            marca:         (raw.marca || raw.fabricante || '').toUpperCase().trim(),
             fabricanteId:  raw.fabricanteId || null,
             grupo:         (raw.grupo || '').trim(),
             subGrupo:      (raw.subGrupo || '').trim(),
+            equipamento:   equipamento,
+            similarGenuino:similarGenuino,
+            similar1:      similar1,
+            similar2:      similar2,
+            similar3:      similar3,
+            similar4:      similar4,
+            refFornecedor: refFornecedor,
+            fotoProduto:   fotoProduto,
+            fonte:         fonte,
+            statusPesquisa:statusPesquisa,
             estoque:       Number(raw.estoque || 0),
             estoqueFilial: Number(raw.estoque || 0),
             estoqueTotal:  Number(raw.estoque || 0),
@@ -561,8 +596,8 @@ class MaxDataAdapter extends ErpAdapter {
             valorVenda:    Number(raw.valorVenda || 0),
             valorCusto:    Number(raw.valorCusto || 0),
             valorAtacado:  Number(raw.valorAtacado || 0),
-            unidade:       (raw.un || 'UN').toUpperCase().trim(),
-            un:            (raw.un || 'UN').toUpperCase().trim(),
+            unidade:       (raw.un || raw.unidade || 'UN').toUpperCase().trim(),
+            un:            (raw.un || raw.unidade || 'UN').toUpperCase().trim(),
             aplicacao:     aplicacao,
             aplicacaoNorm: aplicacaoNorm,
             localizador:   (raw.localizador || '').trim(),

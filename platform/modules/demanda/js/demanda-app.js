@@ -3502,10 +3502,21 @@ const DemandaApp = (function() {
                 codigoFab: (item.codigoFab || item.referencia || item.codigoOriginal || "").trim(),
                 codigoOriginal: (item.codigoOriginal || "").trim(),
                 descricao: (item.descricao || item.descPdv || "").trim(),
-                fabricante: (item.fabricante || (item.fabricanteObj && item.fabricanteObj.nome) || "").trim(),
+                fabricante: (item.fabricante || (item.fabricanteObj && item.fabricanteObj.nome) || item.marca || "").trim(),
+                marca: (item.marca || item.fabricante || "").trim(),
                 grupo: (item.grupo || (item.grupoObj && item.grupoObj.nome) || "").trim(),
                 subGrupo: (item.subGrupo || "").trim(),
+                equipamento: (item.equipamento || "").trim(),
                 aplicacao: (item.aplicacao || "").trim(),
+                similarGenuino: (item.similarGenuino || item.similar_genuino || "").trim(),
+                similar1: (item.similar1 || item.similares1 || "").trim(),
+                similar2: (item.similar2 || item.similares2 || "").trim(),
+                similar3: (item.similar3 || item.similares3 || "").trim(),
+                similar4: (item.similar4 || item.similares4 || "").trim(),
+                refFornecedor: (item.refFornecedor || item.ref_fornecedor || "").trim(),
+                fotoProduto: (item.fotoProduto || "").trim(),
+                fonte: (item.fonte || "").trim(),
+                statusPesquisa: (item.statusPesquisa || "").trim(),
                 tipoSped: String(item.tipoSped || ""),
                 tipo: String(item.tipo || ""),
                 unidade: item.unidade || item.un || "UN",
@@ -3528,14 +3539,25 @@ const DemandaApp = (function() {
             var d = doc.data();
             return {
                 id: d.codigoErp || doc.id,
-                codigoErp: String(d.codigoErp || ""),
+                codigoErp: String(d.codigoErp || doc.id || ""),
                 codigoFab: (d.referencia || d.codigoFab || "").trim(),
                 codigoOriginal: (d.referencia || "").trim(),
                 descricao: (d.descricao || "").trim(),
-                fabricante: (d.fabricante || "").trim(),
+                fabricante: (d.fabricante || d.marca || "").trim(),
+                marca: (d.marca || d.fabricante || "").trim(),
                 grupo: (d.grupo || "").trim(),
                 subGrupo: (d.subGrupo || "").trim(),
+                equipamento: (d.equipamento || "").trim(),
                 aplicacao: (d.aplicacao || "").trim(),
+                similarGenuino: (d.similarGenuino || "").trim(),
+                similar1: (d.similar1 || "").trim(),
+                similar2: (d.similar2 || "").trim(),
+                similar3: (d.similar3 || "").trim(),
+                similar4: (d.similar4 || "").trim(),
+                refFornecedor: (d.refFornecedor || "").trim(),
+                fotoProduto: (d.fotoProduto || "").trim(),
+                fonte: (d.fonte || "").trim(),
+                statusPesquisa: (d.statusPesquisa || "").trim(),
                 tipoSped: String(d.tipoSped || d.tipo || ""),
                 tipo: String(d.tipo || ""),
                 unidade: d.unidade || "UN",
@@ -3593,9 +3615,20 @@ const DemandaApp = (function() {
                                 codigoFab: r.erpCodigoFab || r.referencia || "",
                                 codigoOriginal: r.erpCodigoOriginal || "",
                                 descricao: r.erpProdutoDesc || r.descricao || "",
-                                fabricante: r.fabricante || "",
+                                fabricante: r.fabricante || r.marca || "",
+                                marca: r.marca || r.fabricante || "",
                                 grupo: r.erpGrupo || "",
+                                equipamento: r.equipamento || "",
                                 aplicacao: r.aplicacao || "",
+                                similarGenuino: r.similarGenuino || "",
+                                similar1: r.similar1 || "",
+                                similar2: r.similar2 || "",
+                                similar3: r.similar3 || "",
+                                similar4: r.similar4 || "",
+                                refFornecedor: r.refFornecedor || "",
+                                fotoProduto: r.fotoProduto || "",
+                                fonte: r.fonte || "",
+                                statusPesquisa: r.statusPesquisa || "",
                                 unidade: r.unidade || "UN",
                                 estoque: Number(r.estoque || 0),
                                 preco: Number(r.preco || 0),
@@ -3620,6 +3653,63 @@ const DemandaApp = (function() {
         var meuCodErp = String(item.codigoErp || item.id || "").trim();
         var meuCodFab = String(item.codigoFab || "").trim().toUpperCase();
         var minhaAplicacao = String(item.aplicacao || "").trim().toUpperCase();
+
+        // 0. Equivalentes diretos do Enriquecimento Técnico (Similar Genuíno OEM e Similares de Mercado)
+        if (item.similarGenuino) {
+            var simGenUp = item.similarGenuino.toUpperCase().trim();
+            if (simGenUp && simGenUp !== meuCodFab && !jaVistos[simGenUp]) {
+                jaVistos[simGenUp] = true;
+                equivs.push({
+                    codigo: "?",
+                    codigoFab: item.similarGenuino.trim(),
+                    descricao: item.descricao + " (Original Genuíno / OEM)",
+                    fabricante: "GENUÍNO / OEM",
+                    grau: "1",
+                    grauBadge: "<span class='badge-confianca badge-grau1' title='Original Genuíno (OEM)'>OEM Genuíno</span>",
+                    estoque: 0,
+                    preco: 0,
+                    origem: "Enriquecimento Técnico"
+                });
+            }
+        }
+
+        [item.similar1, item.similar2, item.similar3, item.similar4].forEach(function(sim, idx) {
+            if (sim) {
+                var simUp = sim.toUpperCase().trim();
+                if (simUp && simUp !== meuCodFab && !jaVistos[simUp]) {
+                    jaVistos[simUp] = true;
+                    equivs.push({
+                        codigo: "?",
+                        codigoFab: sim.trim(),
+                        descricao: item.descricao + " (Similar de Mercado)",
+                        fabricante: "SIMILAR " + (idx + 1),
+                        grau: "2",
+                        grauBadge: "<span class='badge-confianca badge-grau2' title='Peça Similar'>Similar " + (idx + 1) + "</span>",
+                        estoque: 0,
+                        preco: 0,
+                        origem: "Enriquecimento Técnico"
+                    });
+                }
+            }
+        });
+
+        if (item.refFornecedor) {
+            var refFornUp = item.refFornecedor.toUpperCase().trim();
+            if (refFornUp && refFornUp !== meuCodFab && !jaVistos[refFornUp]) {
+                jaVistos[refFornUp] = true;
+                equivs.push({
+                    codigo: "?",
+                    codigoFab: item.refFornecedor.trim(),
+                    descricao: item.descricao + " (Ref. Fornecedor)",
+                    fabricante: "FORNECEDOR",
+                    grau: "2",
+                    grauBadge: "<span class='badge-confianca badge-grau2' title='Ref. Fornecedor'>Ref. Fornec.</span>",
+                    estoque: 0,
+                    preco: 0,
+                    origem: "Enriquecimento Técnico"
+                });
+            }
+        }
 
         // 1. Pesquisa na Base Técnica Mestre (_baseTecnicaPecas)
         if (typeof _baseTecnicaPecas !== "undefined" && _baseTecnicaPecas.length > 0) {
@@ -3886,6 +3976,19 @@ const DemandaApp = (function() {
                 "</td>" +
                 "<td>" +
                 "<div style='font-weight:600;color:var(--text-primary);line-height:1.3'>" + desc + "</div>" +
+                ((function() {
+                    var bHtml = "";
+                    if (item.equipamento) {
+                        bHtml += "<span style='display:inline-flex;align-items:center;gap:3px;font-size:.67rem;background:rgba(59,130,246,.15);color:#60a5fa;border:1px solid rgba(59,130,246,.3);border-radius:4px;padding:.08rem .35rem;font-weight:600' title='Equipamento / Máquina'><span class='material-icons-round' style='font-size:.78rem'>agriculture</span>" + _esc(item.equipamento) + "</span>";
+                    }
+                    if (item.similarGenuino) {
+                        bHtml += "<span style='display:inline-flex;align-items:center;gap:3px;font-size:.67rem;background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);border-radius:4px;padding:.08rem .35rem;font-weight:700' title='Similar Genuíno (OEM)'><span class='material-icons-round' style='font-size:.78rem'>verified</span>OEM: " + _esc(item.similarGenuino) + "</span>";
+                    }
+                    if (item.refFornecedor) {
+                        bHtml += "<span style='display:inline-flex;align-items:center;gap:3px;font-size:.67rem;background:rgba(168,85,247,.15);color:#c084fc;border:1px solid rgba(168,85,247,.3);border-radius:4px;padding:.08rem .35rem;font-weight:600' title='Ref. Fornecedor'><span class='material-icons-round' style='font-size:.78rem'>store</span>Ref: " + _esc(item.refFornecedor) + "</span>";
+                    }
+                    return bHtml ? "<div style='display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;margin-top:4px'>" + bHtml + "</div>" : "";
+                })()) +
                 (item.aplicacao ? "<div style='font-size:.73rem;color:#93c5fd;margin-top:3px;display:flex;align-items:center;gap:.3rem'><span class='material-icons-round' style='font-size:.85rem;color:#3b82f6'>category</span><strong>Aplicação:</strong> <span style='font-family:monospace'>" + _esc(item.aplicacao) + "</span></div>" : "") +
                 "</td>" +
                 "<td>" + fab + "</td>" +
@@ -3957,6 +4060,27 @@ const DemandaApp = (function() {
                 rowHtml += "<tr class='bt-detail-tr'>" +
                     "<td colspan='9' style='padding:0;background:rgba(15,23,42,.95)'>" +
                     "<div class='bt-detail-container' style='border-left:3px solid var(--accent-primary);padding:1rem 1.25rem'>" +
+                    // Painel de Enriquecimento Técnico Complementar
+                    "<div style='display:grid;grid-template-columns:repeat(auto-fit, minmax(210px, 1fr));gap:.65rem;margin-bottom:.85rem'>" +
+                    "<div style='background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:6px;padding:.6rem .8rem'>" +
+                    "<div style='font-size:.67rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.2rem;display:flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem;color:#60a5fa'>agriculture</span>Equipamento / Máquina</div>" +
+                    "<div style='font-size:.82rem;color:#e2e8f0;font-weight:600'>" + (item.equipamento ? _esc(item.equipamento) : "<span style='color:var(--text-secondary);font-size:.74rem'>Não especificado</span>") + "</div>" +
+                    "</div>" +
+                    "<div style='background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:6px;padding:.6rem .8rem'>" +
+                    "<div style='font-size:.67rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.2rem;display:flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem;color:#fbbf24'>verified</span>Similar Genuíno (OEM)</div>" +
+                    "<div style='font-size:.82rem;color:#fbbf24;font-family:monospace;font-weight:700'>" + (item.similarGenuino ? _esc(item.similarGenuino) : "<span style='color:var(--text-secondary);font-size:.74rem'>Não vinculado</span>") + "</div>" +
+                    "</div>" +
+                    "<div style='background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:6px;padding:.6rem .8rem'>" +
+                    "<div style='font-size:.67rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.2rem;display:flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem;color:#c084fc'>store</span>Ref. Fornecedor</div>" +
+                    "<div style='font-size:.82rem;color:#c084fc;font-family:monospace;font-weight:700'>" + (item.refFornecedor ? _esc(item.refFornecedor) : "<span style='color:var(--text-secondary);font-size:.74rem'>Não informado</span>") + "</div>" +
+                    "</div>" +
+                    "<div style='background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:6px;padding:.6rem .8rem'>" +
+                    "<div style='font-size:.67rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.2rem;display:flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem;color:#34d399'>link</span>Fonte de Validação</div>" +
+                    "<div style='font-size:.75rem;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>" +
+                    (item.fonte ? (item.fonte.indexOf("http") === 0 ? "<a href='" + _escAttr(item.fonte) + "' target='_blank' style='color:#38bdf8;text-decoration:underline'>Ver Catálogo Oficial ↗</a>" : _esc(item.fonte)) : (item.statusPesquisa ? _esc(item.statusPesquisa) : "<span style='color:var(--text-secondary)'>Catálogo Padrão</span>")) +
+                    "</div>" +
+                    "</div>" +
+                    "</div>" +
                     // Box Aplicação
                     "<div style='margin-bottom:.85rem'>" +
                     "<div style='font-size:.72rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.35rem;display:flex;align-items:center;gap:.35rem'>" +
@@ -4731,6 +4855,35 @@ const DemandaApp = (function() {
         filtrarProdutosErp:           filtrarProdutosErp,
         toggleErpRow:                 toggleErpRow,
         cotarProdutoErp:              cotarProdutoErp,
+        abrirModalImportarEnriquecimento: function() {
+            if (window.DemandaEnrichment && window.DemandaEnrichment.abrirModal) {
+                DemandaEnrichment.abrirModal();
+            } else {
+                alert("Módulo de enriquecimento não carregado.");
+            }
+        },
+        atualizarAposEnriquecimento: function(enriquecidos) {
+            if (!Array.isArray(enriquecidos) || enriquecidos.length === 0) return;
+            var mapa = {};
+            enriquecidos.forEach(function(e) { mapa[String(e.codigo)] = e; });
+            _produtosErpList.forEach(function(p) {
+                var cod = String(p.codigoErp || p.id || "");
+                if (mapa[cod]) {
+                    var e = mapa[cod];
+                    if (e.equip) p.equipamento = e.equip;
+                    if (e.simGen) p.similarGenuino = e.simGen;
+                    if (e.sim1) p.similar1 = e.sim1;
+                    if (e.sim2) p.similar2 = e.sim2;
+                    if (e.sim3) p.similar3 = e.sim3;
+                    if (e.sim4) p.similar4 = e.sim4;
+                    if (e.refForn) p.refFornecedor = e.refForn;
+                    if (e.foto) p.fotoProduto = e.foto;
+                    if (e.fonte) p.fonte = e.fonte;
+                    if (e.status) p.statusPesquisa = e.status;
+                }
+            });
+            filtrarProdutosErp();
+        },
         _setProdutosErpList:          function(lista) { _produtosErpList = lista || []; filtrarProdutosErp(); },
         // Base Técnica Hierárquica (Prompt 2)
         loadBaseTecnica:              loadBaseTecnica,

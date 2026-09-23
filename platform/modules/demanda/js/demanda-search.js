@@ -211,29 +211,60 @@ const DemandaSearch = (() => {
         const aplicacaoClean = aplicacao.replace(/[\s\-\.\/]/g, '');
         const cross = Array.isArray(d.referenciasCruzadas) ? d.referenciasCruzadas : [];
 
+        // Novos campos tecnicos
+        const equipamento    = (d.equipamento || '').trim();
+        const similarGenuino = (d.similarGenuino || '').trim();
+        const similar1       = (d.similar1 || '').trim();
+        const similar2       = (d.similar2 || '').trim();
+        const similar3       = (d.similar3 || '').trim();
+        const similar4       = (d.similar4 || '').trim();
+        const refFornecedor  = (d.refFornecedor || '').trim();
+        const fotoProduto    = (d.fotoProduto || '').trim();
+        const fonte          = (d.fonte || '').trim();
+        const statusPesquisa = (d.statusPesquisa || '').trim();
+
+        const simGenuinoClean = similarGenuino.toUpperCase().replace(/[\s\-\.\/]/g, '');
+        const sim1Clean       = similar1.toUpperCase().replace(/[\s\-\.\/]/g, '');
+        const sim2Clean       = similar2.toUpperCase().replace(/[\s\-\.\/]/g, '');
+        const sim3Clean       = similar3.toUpperCase().replace(/[\s\-\.\/]/g, '');
+        const sim4Clean       = similar4.toUpperCase().replace(/[\s\-\.\/]/g, '');
+        const refFornClean    = refFornecedor.toUpperCase().replace(/[\s\-\.\/]/g, '');
+
         let tipoMatch = 'descricao';
-        let motivoMatch = 'Encontrado por descrição';
+        let motivoMatch = 'Encontrado por descricao';
         let rank = 70;
 
         if (refClean === queryClean || ref === queryNorm) {
             tipoMatch = 'exato';
-            motivoMatch = 'Código Exato';
+            motivoMatch = 'Codigo Exato';
             rank = 100;
+        } else if (simGenuinoClean && (simGenuinoClean === queryClean || simGenuinoClean === queryNorm)) {
+            tipoMatch = 'similar';
+            motivoMatch = 'Similar Genuino / OEM (' + similarGenuino + ')';
+            rank = 98;
+        } else if ([sim1Clean, sim2Clean, sim3Clean, sim4Clean].filter(Boolean).includes(queryClean)) {
+            tipoMatch = 'similar';
+            motivoMatch = 'Peca Similar de Mercado';
+            rank = 96;
+        } else if (refFornClean && (refFornClean === queryClean || refFornClean === queryNorm)) {
+            tipoMatch = 'similar';
+            motivoMatch = 'Ref. Fornecedor (' + refFornecedor + ')';
+            rank = 95;
         } else if (cross.includes(queryClean)) {
             tipoMatch = 'similar';
             motivoMatch = 'Similar / Ref. Cruzada (' + (queryNorm || queryClean) + ')';
-            rank = 95;
+            rank = 94;
         } else if (refClean.startsWith(queryClean) || ref.startsWith(queryNorm)) {
             tipoMatch = 'exato';
-            motivoMatch = 'Prefixo do Código';
+            motivoMatch = 'Prefixo do Codigo';
             rank = 90;
         } else if (aplicacaoClean.includes(queryClean) || aplicacao.includes(queryNorm)) {
             tipoMatch = 'similar';
-            motivoMatch = 'Código citado na Aplicação Técnica';
+            motivoMatch = 'Codigo citado na Aplicacao Tecnica';
             rank = 88;
         } else if (descClean.includes(queryClean) || desc.includes(queryNorm)) {
             tipoMatch = 'descricao';
-            motivoMatch = 'Descrição do produto';
+            motivoMatch = 'Descricao do produto';
             rank = 75;
         }
 
@@ -245,10 +276,21 @@ const DemandaSearch = (() => {
             erpCodigoOriginal:    (d.referencia || '').trim(),
             erpGrupo:             (d.grupo || '').trim(),
             erpSubGrupo:          '',
-            fabricante:           (d.fabricante || '').trim(),
+            fabricante:           (d.fabricante || d.marca || '').trim(),
+            marca:                (d.marca || d.fabricante || '').trim(),
             fabricanteId:         null,
-            unidade:              'UN',
+            unidade:              d.unidade || d.un || 'UN',
             aplicacao:            (d.aplicacao || '').trim(),
+            equipamento:          equipamento,
+            similarGenuino:       similarGenuino,
+            similar1:             similar1,
+            similar2:             similar2,
+            similar3:             similar3,
+            similar4:             similar4,
+            refFornecedor:        refFornecedor,
+            fotoProduto:          fotoProduto,
+            fonte:                fonte,
+            statusPesquisa:       statusPesquisa,
             referenciasCruzadas:  cross,
             tipoMatch:            tipoMatch,
             motivoMatch:          motivoMatch,
@@ -269,8 +311,7 @@ const DemandaSearch = (() => {
         };
     }
 
-    // ── Busca por referência exata no ERP ─────────────────────
-    async function _searchErpByRef(query, filialId) {
+    // async function _searchErpByRef(query, filialId) {
         const adapter = _getAdapter();
         const normRef = DemandaImport ? DemandaImport.normalizeRef(query) : query.toUpperCase().replace(/[\s\-\.\/]/g, '');
         const headers = await adapter._authHeaders();

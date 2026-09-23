@@ -1,9 +1,9 @@
 {
-  "version": "3.0.3",
-  "build": "20260923-v3.0.3",
+  "version": "3.0.4",
+  "build": "20260923-v3.0.4",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-09-23",
-  "change": "v3.0.1 - fix(estilos-visuais): Restauracao completa da fidelidade visual oficial do dashboard_central.html em todos os 5 grupos estrategicos. Correcao dos seletores CSS, inclusao das fontes Outfit e JetBrains Mono, restauracao do highlight card START DE COMPRA, top-bar com badges de parametros (Periodo, IPCA, Lead Time 15d), grid de 8 cards executivos e 3 cards de rupturas, e sincronizacao dos filtros globais.",
-  "releaseDate": "2026-09-23T17:21:00-03:00"
+  "change": "v3.0.4 - feat(produtos-enriquecimento): Criacao de todos os novos campos tecnicos no modelo de dados e MaxData adapter (equipamento, similarGenuino, similares 1 a 4, refFornecedor, foto, fonte, statusPesquisa). Implementacao do importador em lote de planilhas Excel/CSV (DemandaEnrichment) com preview, progresso e merge seguro no Firestore.",
+  "releaseDate": "2026-09-23T18:25:00-03:00"
 }
