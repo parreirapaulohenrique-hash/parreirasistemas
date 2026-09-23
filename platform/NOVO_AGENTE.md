@@ -578,3 +578,11 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
   - Inclui coluna 'Ref. Fábrica' como 2ª coluna em todas as tabelas e relatórios.
   - Implementado modal analítico dark navy com 12 métricas e badge de Curva ABC.
   - Arquivo do prompt integrado preservado em PROMPT_ESTOQUE_COMPRAS.md.
+
+* **2026-09-23 (v3.21.53 / Demanda v3.0.1):** Restauração integral da fidelidade visual do dashboard_central.html no módulo Cotação (modules/demanda).
+  - Correção rigorosa de sintaxe no CSS analítico (demanda-analytics.css).
+  - Inclusão oficial das fontes 'Outfit' e 'JetBrains Mono'.
+  - Restauração do layout executivo: Header bar com badges de parâmetros (Período 3 Anos, IPCA 4,22%, Lead Time 15 dias, Armazenagem), barra de filtros globais horizontais com visual dark card e botões 'Aplicar Filtros' e 'Limpar'.
+  - Restauração do Highlight Card 'START DE COMPRA — AGORA' com destaque vermelho sutil, valores destacados e botão de auditoria imediata.
+  - Alinhamento visual de todos os 20 submódulos integrados nos 5 Grupos Estratégicos (Visão Executiva, Curva ABC, Cobertura, Sazonalidade, Rupturas com 3 cards, Capital Excedente, Curva X, Compras, e Ações Comerciais).
+  - Preservação da auditoria estrita de Capital Excedente (24 SKUs / R$ 216.552,59) com coluna 'Valor Excedente' em destaque âmbar e modal de ficha técnica do SKU de 12 métricas.
