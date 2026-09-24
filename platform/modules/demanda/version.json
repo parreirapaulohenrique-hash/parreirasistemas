@@ -1,9 +1,9 @@
 {
-  "version": "3.0.6",
-  "build": "20260924-v3.0.6",
+  "version": "3.0.7",
+  "build": "20260924-v3.0.7",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-09-24",
-  "change": "v3.0.6 - fix(demanda-analytics): Motor unificado e resiliente de filtros globais com reatividade universal em todos os cards executivos (Modulo 01) e sincronizacao entre abas.",
-  "releaseDate": "2026-09-24T08:45:00-03:00"
+  "change": "v3.0.7 - fix(demanda-analytics): Correcao de null check no openDrilldownModal (btn-drilldown-inv-filter) e estilizacao display do modal-backdrop permitindo abertura imediata de todos os cards executivos e auditorias analiticas.",
+  "releaseDate": "2026-09-24T08:58:00-03:00"
 }

@@ -267,15 +267,19 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
       currentFilteredDrilldownList = currentDrilldownList;
       currentDrilldownFilterContext = filterContext || null;
 
-      document.getElementById('modal-drilldown-title').innerText = title;
-      document.getElementById('modal-drilldown-sub').innerText = subtitle;
-      document.getElementById('drilldown-counter').innerText = currentDrilldownList.length.toLocaleString('pt-BR') + ' registros';
-      document.getElementById('drilldown-footer-reconciliation').innerText = recLabel;
+      const elTitle = document.getElementById('modal-drilldown-title');
+      if (elTitle) elTitle.innerText = title;
+      const elSub = document.getElementById('modal-drilldown-sub');
+      if (elSub) elSub.innerText = subtitle;
+      const elCounter = document.getElementById('drilldown-counter');
+      if (elCounter) elCounter.innerText = currentDrilldownList.length.toLocaleString('pt-BR') + ' registros';
+      const elFooter = document.getElementById('drilldown-footer-reconciliation');
+      if (elFooter) elFooter.innerText = recLabel || '';
       
       const searchInput = document.getElementById('drilldown-search-input');
       if (searchInput) searchInput.value = '';
 
-      // Popular Dropdown de Marcas Dinâmico
+      // Popular Dropdown de Marcas Dinamico
       const marcasMap = {};
       currentDrilldownList.forEach(s => {
         const m = s[2] || 'OUTROS';
@@ -293,18 +297,27 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
       if (selCurva) selCurva.value = '';
 
       const btnInv = document.getElementById('btn-drilldown-inv-filter');
-      if (filterContext) {
-        btnInv.style.display = 'inline-flex';
-        btnInv.innerText = `🔍 Ver no Inventário Completo (${currentDrilldownList.length.toLocaleString('pt-BR')} SKUs)`;
-      } else {
-        btnInv.style.display = 'none';
+      if (btnInv) {
+        if (filterContext) {
+          btnInv.style.display = 'inline-flex';
+          btnInv.innerText = `🔍 Ver no Inventário Completo (${currentDrilldownList.length.toLocaleString('pt-BR')} SKUs)`;
+        } else {
+          btnInv.style.display = 'none';
+        }
       }
 
       renderDrilldownRows(currentDrilldownList);
-      var dm = document.getElementById('drilldown-modal'); if (dm) { dm.style.display = 'flex'; dm.classList.add('active'); }
+      
+      const dm = document.getElementById('drilldown-modal');
+      if (dm) {
+        dm.classList.add('active');
+        dm.style.display = 'flex';
+      }
 
       const tbl = document.getElementById('table-drilldown');
-      initUniversalSorting(tbl);
+      if (tbl && typeof initUniversalSorting === 'function') {
+        initUniversalSorting(tbl);
+      }
     }
 
     function closeDrilldownModal() {
@@ -2023,3 +2036,19 @@ if (document.readyState === 'loading') {
 } else {
   setTimeout(window.initEstoqueVisao, 50);
 }
+
+// Global Drilldown Exposes
+window.drilldownStartHorizonte = drilldownStartHorizonte;
+window.drilldownStartAgora = drilldownStartAgora;
+window.drilldownAllSales = drilldownAllSales;
+window.drilldownMargem = drilldownMargem;
+window.drilldownEstoqueTotal = drilldownEstoqueTotal;
+window.drilldownRupturas = drilldownRupturas;
+window.drilldownExcesso = drilldownExcesso;
+window.drilldownCurvaX = drilldownCurvaX;
+window.drilldownSugestaoCompra = drilldownSugestaoCompra;
+window.drilldownClientesGeral = drilldownClientesGeral;
+window.openDrilldownModal = openDrilldownModal;
+window.closeDrilldownModal = closeDrilldownModal;
+window.showSkuDetail = showSkuDetail;
+window.closeSkuModal = closeSkuModal;

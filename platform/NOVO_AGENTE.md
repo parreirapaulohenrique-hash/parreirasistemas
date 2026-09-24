@@ -579,6 +579,12 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
   - Implementado modal analítico dark navy com 12 métricas e badge de Curva ABC.
   - Arquivo do prompt integrado preservado em PROMPT_ESTOQUE_COMPRAS.md.
 
+* **2026-09-24 (v3.21.59 / Demanda v3.0.7):** Correcao critica de abertura e auditoria em todos os cards executivos do Modulo 01 (Visao Executiva & Indicadores Globais):
+  - Corrigido erro de referencia nula em 'btn-drilldown-inv-filter' dentro de openDrilldownModal que interrompia a exibicao do modal de auditoria nos cards Start de Compra, Faturamento, Margem Bruta, Estoque Total, Rupturas, Capital Excedente, Curva X e Sugestao de Compras.
+  - Adicionado elemento 'btn-drilldown-inv-filter' no footer do drilldown-modal e implementada protecao defensiva completa (null checks) em todos os seletores do modal.
+  - Corrigido estilo inline do modal-backdrop para remocao de !important redundante, garantindo abertura fluida via classe .active e propriedade display: flex.
+  - Expostas globalmente no objeto window todas as funcoes de drilldown e manipulacao de modais (drilldownStartAgora, drilldownAllSales, drilldownMargem, drilldownEstoqueTotal, drilldownRupturas, drilldownExcesso, drilldownCurvaX, drilldownSugestaoCompra, openDrilldownModal, closeDrilldownModal).
+
 * **2026-09-24 (v3.21.58 / Demanda v3.0.6):** Correcao completa da reatividade dos filtros globais e recalculo dinamico em tempo real de todos os 8 cards executivos e tabelas relacionadas (Modulo 01: Visao Executiva & Indicadores Globais):
   - Solucao definitiva da incompatibilidade entre IDs e classes nos seletores de filtros (Marca, Curva ABC, Equipamento, Perfil Sazonal, Prioridade Compra e Status do Start).
   - Implementacao de motor unificado e resiliente de sincronizacao universal de filtros (syncAllFilterInputs), garantindo que a selecao em qualquer aba sincronize as demais barras de filtros.

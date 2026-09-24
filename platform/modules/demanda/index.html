@@ -199,8 +199,8 @@
 
             <div class="sidebar-footer">
                 <div style="padding:0.4rem 0.6rem;font-size:0.68rem;color:#64748b;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.05);margin-bottom:0.4rem">
-                    <span>ParreiraLog <strong>v3.21.58</strong></span>
-                    <span style="background:rgba(16,185,129,.15);color:#10b981;padding:1px 5px;border-radius:4px;font-weight:700">Demanda v3.0.6</span>
+                    <span>ParreiraLog <strong>v3.21.59</strong></span>
+                    <span style="background:rgba(16,185,129,.15);color:#10b981;padding:1px 5px;border-radius:4px;font-weight:700">Demanda v3.0.7</span>
                 </div>
                 <div class="user-profile">
                     <div class="avatar" id="sidebarAvatarLetter">?</div>
@@ -6154,7 +6154,7 @@
     
     <!-- Módulos Analíticos e Comerciais v3.0.0 (Master Prompt 104 Seções) -->
     <script src="js/demanda-analytics-data.js?v=3.0.6"></script>
-    <script src="js/demanda-analytics.js?v=3.0.6"></script>
+    <script src="js/demanda-analytics.js?v=3.0.7"></script>
     <script src="js/demanda-comercial.js?v=3.0.6"></script>
     <script src="js/demanda-enrichment.js?v=3.0.5"></script>
 <script src="js/demanda-app.js?v=3.21.57"></script>
@@ -6392,7 +6392,7 @@ AH213767	DEDO SEPARADOR DO ROTOR	Colheitadeiras STS 9650/9750	H171540
     </div>
   </div>
 
-    <div class="modal-backdrop" id="drilldown-modal" style="display: none !important;">
+    <div class="modal-backdrop" id="drilldown-modal" style="display: none;">
       <div class="modal-box" id="drilldown-modal-box" style="width: 98vw; max-width: 1820px; height: 95vh; max-height: 95vh; display: flex; flex-direction: column; background: #0b1322; border: 1px solid #1e293b; border-radius: 14px; box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9); overflow: hidden; transition: all 0.2s ease;">
         <div class="modal-header" style="background: #0b1322; border-bottom: 1px solid #1e293b; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; border-radius: 14px 14px 0 0;">
           <div>
@@ -6479,6 +6479,7 @@ AH213767	DEDO SEPARADOR DO ROTOR	Colheitadeiras STS 9650/9750	H171540
         <div class="modal-footer" style="background: #0b1322; border-top: 1px solid #1e293b; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; border-radius: 0 0 14px 14px;">
           <div id="drilldown-footer-reconciliation" style="font-size: 13px; font-weight: 700; color: #fff;"></div>
           <div style="display: flex; gap: 10px;">
+            <button class="btn btn-primary" id="btn-drilldown-inv-filter" onclick="applyDrilldownAsInventoryFilter()" style="display: none;">Ver no Inventário</button>
             <button class="btn btn-outline" onclick="closeDrilldownModal()">Fechar</button>
           </div>
         </div>
