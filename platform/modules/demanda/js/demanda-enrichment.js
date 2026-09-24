@@ -194,10 +194,33 @@ const DemandaEnrichment = (() => {
         if (files && files.length > 0) _processarArquivo(files[0]);
     }
 
-    function _processarArquivo(file) {
+    async function _garantirXLSX() {
+        if (typeof XLSX !== 'undefined') return true;
+        const urls = [
+            'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+            'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+            'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'
+        ];
+        for (const u of urls) {
+            try {
+                await new Promise((resolve, reject) => {
+                    const s = document.createElement('script');
+                    s.src = u;
+                    s.onload = resolve;
+                    s.onerror = reject;
+                    document.head.appendChild(s);
+                });
+                if (typeof XLSX !== 'undefined') return true;
+            } catch (_) {}
+        }
+        return typeof XLSX !== 'undefined';
+    }
+
+    async function _processarArquivo(file) {
         if (!file) return;
-        if (typeof XLSX === 'undefined') {
-            alert('A biblioteca SheetJS (XLSX) não foi carregada. Por favor recarregue a página.');
+        const carregou = await _garantirXLSX();
+        if (!carregou || typeof XLSX === 'undefined') {
+            alert('Não foi possível carregar a biblioteca SheetJS (XLSX). Por favor verifique sua conexão ou recarregue a página.');
             return;
         }
 
