@@ -1,9 +1,9 @@
 {
-  "version": "3.0.8",
-  "build": "20260924-v3.0.8",
+  "version": "3.0.9",
+  "build": "20260924-v3.0.9",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-09-24",
-  "change": "v3.0.8 - fix(dmd-modal): Remocao de !important redundante no inline style do dmd-modal e sku-modal, correcao da regra CSS de especificidade no demanda-analytics.css com z-index 1065, e adicao de stopPropagation no card/botao VER CALCULO permitindo abertura imediata do memorial de calculo da DMD.",
-  "releaseDate": "2026-09-24T09:15:00-03:00"
+  "change": "v3.0.9 - fix(modais): Hierarquia estrita de z-index entre modais (drilldown=1050, sku-modal=1060, dmd-modal=1070) permitindo abertura imediata da ficha tecnica do SKU a partir de qualquer linha de tabela dos drilldowns.",
+  "releaseDate": "2026-09-24T09:25:00-03:00"
 }

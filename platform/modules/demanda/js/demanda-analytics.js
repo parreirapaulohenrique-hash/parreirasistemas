@@ -829,7 +829,13 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
       `;
 
       document.getElementById('sku-modal-title').innerText = `Vendedor: ${v.Vendedor}`;
-      var sm = document.getElementById('sku-modal'); if (sm) { sm.style.display = 'flex'; sm.classList.add('active'); }
+      var sm = document.getElementById('sku-modal');
+      if (sm) {
+        sm.style.removeProperty('display');
+        sm.style.setProperty('display', 'flex', 'important');
+        sm.style.setProperty('z-index', '1060', 'important');
+        sm.classList.add('active');
+      }
     }
 
     function drilldownCliente(cliName) {
@@ -862,7 +868,13 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
       `;
 
       document.getElementById('sku-modal-title').innerText = `Cliente: ${c.NomeCliente}`;
-      var sm = document.getElementById('sku-modal'); if (sm) { sm.style.display = 'flex'; sm.classList.add('active'); }
+      var sm = document.getElementById('sku-modal');
+      if (sm) {
+        sm.style.removeProperty('display');
+        sm.style.setProperty('display', 'flex', 'important');
+        sm.style.setProperty('z-index', '1060', 'important');
+        sm.classList.add('active');
+      }
     }
 
     function drilldownClientesGeral() {
@@ -883,7 +895,13 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
       const body = document.getElementById('sku-modal-body');
       body.innerHTML = html;
       document.getElementById('sku-modal-title').innerText = "Carteira de Clientes Prioritários";
-      var sm = document.getElementById('sku-modal'); if (sm) { sm.style.display = 'flex'; sm.classList.add('active'); }
+      var sm = document.getElementById('sku-modal');
+      if (sm) {
+        sm.style.removeProperty('display');
+        sm.style.setProperty('display', 'flex', 'important');
+        sm.style.setProperty('z-index', '1060', 'important');
+        sm.classList.add('active');
+      }
     }
 
     function drilldownDevolucaoMotivo(motivo) {
@@ -903,7 +921,13 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
         </div>
       `;
       document.getElementById('sku-modal-title').innerText = `Devolução: ${m.Operacao}`;
-      var sm = document.getElementById('sku-modal'); if (sm) { sm.style.display = 'flex'; sm.classList.add('active'); }
+      var sm = document.getElementById('sku-modal');
+      if (sm) {
+        sm.style.removeProperty('display');
+        sm.style.setProperty('display', 'flex', 'important');
+        sm.style.setProperty('z-index', '1060', 'important');
+        sm.classList.add('active');
+      }
     }
 
     function drilldownDevolucaoVendedor(vend) {
@@ -921,7 +945,13 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
         </div>
       `;
       document.getElementById('sku-modal-title').innerText = `Devoluções de ${v.Vendedor}`;
-      var sm = document.getElementById('sku-modal'); if (sm) { sm.style.display = 'flex'; sm.classList.add('active'); }
+      var sm = document.getElementById('sku-modal');
+      if (sm) {
+        sm.style.removeProperty('display');
+        sm.style.setProperty('display', 'flex', 'important');
+        sm.style.setProperty('z-index', '1060', 'important');
+        sm.classList.add('active');
+      }
     }
 
     // ========================================================
@@ -1074,7 +1104,13 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
         `;
       }
 
-      var sm = document.getElementById('sku-modal'); if (sm) { sm.style.display = 'flex'; sm.classList.add('active'); }
+      var sm = document.getElementById('sku-modal');
+      if (sm) {
+        sm.style.removeProperty('display');
+        sm.style.setProperty('display', 'flex', 'important');
+        sm.style.setProperty('z-index', '1060', 'important');
+        sm.classList.add('active');
+      }
     }
 
     
@@ -1287,7 +1323,10 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
 
     function closeSkuModal() {
       var el = document.getElementById('sku-modal');
-      if (el) { el.classList.remove('active'); el.style.display = 'none'; }
+      if (el) {
+        el.classList.remove('active');
+        el.style.setProperty('display', 'none', 'important');
+      }
     }
 
     // Fecha modal clicando no fundo ou tecla ESC

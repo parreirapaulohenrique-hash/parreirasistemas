@@ -579,6 +579,15 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
   - Implementado modal analítico dark navy com 12 métricas e badge de Curva ABC.
   - Arquivo do prompt integrado preservado em PROMPT_ESTOQUE_COMPRAS.md.
 
+* **2026-09-24 (v3.21.61 / Demanda v3.0.9):** Correcao de camadas e hierarquia de z-index para abertura da ficha tecnica do SKU dentro das tabelas de drilldown:
+  - Definida arquitetura rigorosa de empilhamento de modais:
+    1. Base / Dashboard: z-index 1 - 1000
+    2. Modal de Auditoria Analitica (drilldown-modal): z-index 1050
+    3. Modal de Ficha Tecnica do SKU (sku-modal): z-index 1060 (sobrepondo o drilldown)
+    4. Modal de Memoria de Calculo da DMD (dmd-modal): z-index 1070 (sobrepondo a ficha do SKU)
+  - Corrigido problema onde o sku-modal abria atras do drilldown-modal em tela cheia devido a inversao de z-index anterior.
+  - Aplicada remocao defensiva de display e estilizacao direta com z-index 1060 em todas as chamadas de showSkuDetail (ao clicar na linha do produto ou no botao 'Ficha' da tabela).
+
 * **2026-09-24 (v3.21.60 / Demanda v3.0.8):** Correcao de abertura do modal analitico de memoria de calculo da Demanda Diaria (VER CALCULO DMD):
   - Eliminado bloqueio de especificidade CSS causado por inline style 'display: none !important;' nos modais '#dmd-modal' e '#sku-modal'.
   - Ajustada a regra mestre em 'demanda-analytics.css' garantindo que '#dmd-modal.active' sobreponha o modal do SKU com z-index 1065 e 'display: flex !important'.

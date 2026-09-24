@@ -847,17 +847,17 @@
     display: flex !important;
 }
 
-#dmd-modal.active {
-    display: flex !important;
-    z-index: 1065 !important;
-}
-#sku-modal.active {
+#drilldown-modal.active {
     display: flex !important;
     z-index: 1050 !important;
 }
-#drilldown-modal.active {
+#sku-modal.active {
     display: flex !important;
-    z-index: 1055 !important;
+    z-index: 1060 !important;
+}
+#dmd-modal.active {
+    display: flex !important;
+    z-index: 1070 !important;
 }
 
 .modal-backdrop.active,
