@@ -998,7 +998,7 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
           </div>
 
                     <!-- 6: DEMANDA DIÁRIA (DMD) - INTERATIVO AUDITÁVEL -->
-          <div onclick="openDmdDetailModal('${s[0]}')" 
+          <div onclick="event.stopPropagation(); openDmdDetailModal(\'${s[0]}\')" 
                style="background: #111a2e; border: 1px solid #2563eb; border-radius: 8px; padding: 12px 14px; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); position: relative; box-shadow: 0 0 12px rgba(37, 99, 235, 0.15);"
                onmouseover="this.style.background='#162544'; this.style.borderColor='#38bdf8'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 16px rgba(56, 189, 248, 0.3)';"
                onmouseout="this.style.background='#111a2e'; this.style.borderColor='#2563eb'; this.style.transform='none'; this.style.boxShadow='0 0 12px rgba(37, 99, 235, 0.15)';"
@@ -1267,17 +1267,21 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
         </div>
       `;
 
-      document.getElementById('dmd-modal-title').innerText = `[${s[0]}] ${s[1]}`;
+      const elTitle = document.getElementById('dmd-modal-title');
+      if (elTitle) elTitle.innerText = `[${s[0]}] ${s[1]}`;
       const dmdModal = document.getElementById('dmd-modal');
-      dmdModal.style.display = 'flex';
-      dmdModal.classList.add('active');
+      if (dmdModal) {
+        dmdModal.style.removeProperty('display');
+        dmdModal.style.setProperty('display', 'flex', 'important');
+        dmdModal.classList.add('active');
+      }
     }
 
     function closeDmdModal() {
       const dmdModal = document.getElementById('dmd-modal');
       if (dmdModal) {
-        dmdModal.style.display = 'none';
         dmdModal.classList.remove('active');
+        dmdModal.style.setProperty('display', 'none', 'important');
       }
     }
 
@@ -2052,3 +2056,6 @@ window.openDrilldownModal = openDrilldownModal;
 window.closeDrilldownModal = closeDrilldownModal;
 window.showSkuDetail = showSkuDetail;
 window.closeSkuModal = closeSkuModal;
+
+window.openDmdDetailModal = openDmdDetailModal;
+window.closeDmdModal = closeDmdModal;

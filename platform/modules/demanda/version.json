@@ -1,9 +1,9 @@
 {
-  "version": "3.0.7",
-  "build": "20260924-v3.0.7",
+  "version": "3.0.8",
+  "build": "20260924-v3.0.8",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-09-24",
-  "change": "v3.0.7 - fix(demanda-analytics): Correcao de null check no openDrilldownModal (btn-drilldown-inv-filter) e estilizacao display do modal-backdrop permitindo abertura imediata de todos os cards executivos e auditorias analiticas.",
-  "releaseDate": "2026-09-24T08:58:00-03:00"
+  "change": "v3.0.8 - fix(dmd-modal): Remocao de !important redundante no inline style do dmd-modal e sku-modal, correcao da regra CSS de especificidade no demanda-analytics.css com z-index 1065, e adicao de stopPropagation no card/botao VER CALCULO permitindo abertura imediata do memorial de calculo da DMD.",
+  "releaseDate": "2026-09-24T09:15:00-03:00"
 }

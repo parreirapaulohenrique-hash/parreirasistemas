@@ -579,6 +579,12 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
   - Implementado modal analítico dark navy com 12 métricas e badge de Curva ABC.
   - Arquivo do prompt integrado preservado em PROMPT_ESTOQUE_COMPRAS.md.
 
+* **2026-09-24 (v3.21.60 / Demanda v3.0.8):** Correcao de abertura do modal analitico de memoria de calculo da Demanda Diaria (VER CALCULO DMD):
+  - Eliminado bloqueio de especificidade CSS causado por inline style 'display: none !important;' nos modais '#dmd-modal' e '#sku-modal'.
+  - Ajustada a regra mestre em 'demanda-analytics.css' garantindo que '#dmd-modal.active' sobreponha o modal do SKU com z-index 1065 e 'display: flex !important'.
+  - Implementado tratamento defensivo e 'event.stopPropagation()' no card e no botao 'VER CALCULO' da Demanda Diaria na ficha tecnica do SKU, expondo globalmente 'openDmdDetailModal' e 'closeDmdModal' no window.
+  - Exibicao fluida do passo a passo matematico da DMD (Volume 90d, Fator Sazonal, Projecao Mensal/Anual e Extrato de Vendas 90d) ao clicar em 'VER CALCULO'.
+
 * **2026-09-24 (v3.21.59 / Demanda v3.0.7):** Correcao critica de abertura e auditoria em todos os cards executivos do Modulo 01 (Visao Executiva & Indicadores Globais):
   - Corrigido erro de referencia nula em 'btn-drilldown-inv-filter' dentro de openDrilldownModal que interrompia a exibicao do modal de auditoria nos cards Start de Compra, Faturamento, Margem Bruta, Estoque Total, Rupturas, Capital Excedente, Curva X e Sugestao de Compras.
   - Adicionado elemento 'btn-drilldown-inv-filter' no footer do drilldown-modal e implementada protecao defensiva completa (null checks) em todos os seletores do modal.
