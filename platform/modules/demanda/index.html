@@ -199,8 +199,8 @@
 
             <div class="sidebar-footer">
                 <div style="padding:0.4rem 0.6rem;font-size:0.68rem;color:#64748b;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.05);margin-bottom:0.4rem">
-                    <span>ParreiraLog <strong>v3.21.57</strong></span>
-                    <span style="background:rgba(16,185,129,.15);color:#10b981;padding:1px 5px;border-radius:4px;font-weight:700">Demanda v3.0.5</span>
+                    <span>ParreiraLog <strong>v3.21.58</strong></span>
+                    <span style="background:rgba(16,185,129,.15);color:#10b981;padding:1px 5px;border-radius:4px;font-weight:700">Demanda v3.0.6</span>
                 </div>
                 <div class="user-profile">
                     <div class="avatar" id="sidebarAvatarLetter">?</div>
@@ -792,13 +792,13 @@
     <section class="filter-bar">
       <div class="filter-group">
         <label>Marca / Fabricante</label>
-        <select class="filter-select global-filter-marca" onchange="applyGlobalFilters(this)">
+        <select class="filter-select global-filter-marca" id="global-filter-marca" onchange="applyGlobalFilters(this)">
           <option value="">Todas as Marcas</option>
         </select>
       </div>
       <div class="filter-group">
         <label>Curva ABC</label>
-        <select class="filter-select global-filter-curva" onchange="applyGlobalFilters(this)">
+        <select class="filter-select global-filter-curva" id="global-filter-curva" onchange="applyGlobalFilters(this)">
           <option value="">Todas as Curvas</option>
           <option value="A">Curva A</option>
           <option value="B">Curva B</option>
@@ -808,7 +808,7 @@
       </div>
       <div class="filter-group">
         <label>Equipamento</label>
-        <select class="filter-select global-filter-equip" onchange="applyGlobalFilters(this)">
+        <select class="filter-select global-filter-equip" id="global-filter-equip" onchange="applyGlobalFilters(this)">
           <option value="">Todos os Equipamentos</option>
           <option value="Plantadeira">Plantadeiras</option>
           <option value="Colheitadeira">Colheitadeiras</option>
@@ -821,20 +821,20 @@
       </div>
       <div class="filter-group">
         <label>Perfil Sazonal</label>
-        <select class="filter-select global-filter-perfil" onchange="applyGlobalFilters(this)">
+        <select class="filter-select global-filter-perfil" id="global-filter-perfil" onchange="applyGlobalFilters(this)">
           <option value="">Todos os Perfis</option>
-          <option value="S1">S1 — PLANTIO (28)</option>
-          <option value="S2">S2 — PULVERIZAÇÃO / TRATOS (161)</option>
-          <option value="S3">S3 — COLHEITA (596)</option>
-          <option value="S4">S4 — PREPARO / IMPLEMENTOS (128)</option>
-          <option value="S5">S5 — TRATOR / USO CONTÍNUO (541)</option>
-          <option value="S7">S7 — CONSUMO RECORRENTE (4.320)</option>
-          <option value="S8">S8 — NÃO IDENTIFICADO (4.881)</option>
+          <option value="S1">S1 – PLANTIO (28)</option>
+          <option value="S2">S2 – PULVERIZAÇÃO / TRATOS (161)</option>
+          <option value="S3">S3 – COLHEITA (596)</option>
+          <option value="S4">S4 – PREPARO / IMPLEMENTOS (128)</option>
+          <option value="S5">S5 – TRATOR / USO CONTÍNUO (541)</option>
+          <option value="S7">S7 – CONSUMO RECORRENTE (4.320)</option>
+          <option value="S8">S8 – NÃO IDENTIFICADO (4.881)</option>
         </select>
       </div>
       <div class="filter-group">
         <label>Prioridade Compra</label>
-        <select class="filter-select global-filter-prio" onchange="applyGlobalFilters(this)">
+        <select class="filter-select global-filter-prio" id="global-filter-prio" onchange="applyGlobalFilters(this)">
           <option value="">Todas as Prioridades</option>
           <option value="CRÍTICO">CRÍTICO</option>
           <option value="ATENÇÃO">ATENÇÃO</option>
@@ -843,7 +843,7 @@
       </div>
       <div class="filter-group">
         <label>Status do Start</label>
-        <select class="filter-select global-filter-start" onchange="applyGlobalFilters(this)">
+        <select class="filter-select global-filter-start" id="global-filter-start" onchange="applyGlobalFilters(this)">
           <option value="">Todos os Status</option>
           <option value="START AGORA">START AGORA (367)</option>
           <option value="Próximos 30 dias">Próximos 30 dias (123)</option>
@@ -854,14 +854,14 @@
         </select>
       </div>
       <div class="filter-group" style="flex: 0 0 auto; align-self: flex-end; display: flex; gap: 8px;">
-        <button class="btn btn-primary" onclick="applyGlobalFilters()" style="padding: 7px 18px; font-weight: 700; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.35); cursor: pointer;">
+        <button class="btn btn-primary" onclick="applyGlobalFilters(this)" style="padding: 7px 18px; font-weight: 700; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.35); cursor: pointer;">
           <span>🔍</span> Aplicar Filtros
         </button>
-        <button class="btn btn-outline" onclick="resetGlobalFilters()" style="padding: 7px 14px; cursor: pointer;">🔄 Limpar</button>
+        <button class="btn btn-outline" onclick="resetGlobalFilters()" style="padding: 7px 14px; cursor: pointer;">↺ Limpar</button>
       </div>
-      <div class="active-filters-box" style="display: none; width: 100%;">
+      <div class="active-filters-box" id="active-filters-box" style="display: none; width: 100%;">
         <span class="active-filters-label">Filtros Ativos:</span>
-        <div class="active-filter-tags" style="display: inline-flex; gap: 6px; flex-wrap: wrap;"></div>
+        <div class="active-filter-tags" id="active-filter-tags" style="display: inline-flex; gap: 6px; flex-wrap: wrap;"></div>
       </div>
     </section>
 
@@ -6153,9 +6153,9 @@
     <script src="js/demanda-clientes.js?v=3.21.49"></script>
     
     <!-- Módulos Analíticos e Comerciais v3.0.0 (Master Prompt 104 Seções) -->
-    <script src="js/demanda-analytics-data.js?v=3.0.3"></script>
-    <script src="js/demanda-analytics.js?v=3.0.3"></script>
-    <script src="js/demanda-comercial.js?v=3.0.3"></script>
+    <script src="js/demanda-analytics-data.js?v=3.0.6"></script>
+    <script src="js/demanda-analytics.js?v=3.0.6"></script>
+    <script src="js/demanda-comercial.js?v=3.0.6"></script>
     <script src="js/demanda-enrichment.js?v=3.0.5"></script>
 <script src="js/demanda-app.js?v=3.21.57"></script>
 

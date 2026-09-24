@@ -1290,7 +1290,7 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
     });
 
     // ========================================================
-    // MOTOR DE FILTROS GLOBAIS INTEGRADOS (SEÇÕES 79, 84, 92)
+    // MOTOR DE FILTROS GLOBAIS INTEGRADOS E UNIVERSAIS
     // ========================================================
     let activeFilters = {
       marca: '',
@@ -1305,11 +1305,166 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
       customIdsSet: null
     };
 
+    // Helper seguro para obter valor de filtro de qualquer origem (id, classe, elemento ativo)
+    function getFilterValue(filterKey) {
+      const cls = 'global-filter-' + filterKey;
+      const byId = document.getElementById(cls);
+      if (byId && byId.value !== undefined && byId.value !== '') return byId.value;
+
+      // Busca na secao ativa/visivel primeiro
+      const visibleView = document.querySelector(
+        '#view-estoque-visao:not([style*="display: none"]):not([style*="display:none"]), ' +
+        'div[id^="view-"]:not([style*="display: none"]):not([style*="display:none"]), ' +
+        '#mod-visao'
+      );
+      if (visibleView) {
+        const sel = visibleView.querySelector('.' + cls);
+        if (sel && sel.value !== undefined && sel.value !== '') return sel.value;
+      }
+
+      // Procura em qualquer select com a classe que tenha valor preenchido
+      const all = document.querySelectorAll('.' + cls);
+      for (let i = 0; i < all.length; i++) {
+        if (all[i] && all[i].value !== undefined && all[i].value !== '') return all[i].value;
+      }
+      return (all[0] && all[0].value) ? all[0].value : '';
+    }
+
+    // Sincroniza todos os selects em todas as barras de filtros (todas as abas)
+    function syncAllFilterInputs(sourceEl) {
+      if (sourceEl && sourceEl.classList) {
+        const cls = Array.from(sourceEl.classList).find(c => c.startsWith('global-filter-'));
+        if (cls) {
+          const val = sourceEl.value || '';
+          document.querySelectorAll('.' + cls).forEach(el => {
+            if (el !== sourceEl) el.value = val;
+          });
+          const elId = document.getElementById(cls);
+          if (elId && elId !== sourceEl) elId.value = val;
+          return;
+        }
+      }
+      ['marca', 'curva', 'equip', 'perfil', 'prio', 'start'].forEach(key => {
+        const val = activeFilters[key] || '';
+        document.querySelectorAll('.global-filter-' + key).forEach(el => {
+          el.value = val;
+        });
+        const elId = document.getElementById('global-filter-' + key);
+        if (elId) elId.value = val;
+      });
+    }
+
+    // Atualiza chips visuais de filtros ativos com remocao individual
+    function updateFilterTags() {
+      const boxes = document.querySelectorAll('.active-filters-box');
+      const tagsContainers = document.querySelectorAll('.active-filter-tags');
+      const boxId = document.getElementById('active-filters-box');
+      const tagsId = document.getElementById('active-filter-tags');
+
+      const allContainers = Array.from(tagsContainers);
+      if (tagsId && !allContainers.includes(tagsId)) allContainers.push(tagsId);
+
+      const allBoxes = Array.from(boxes);
+      if (boxId && !allBoxes.includes(boxId)) allBoxes.push(boxId);
+
+      let count = 0;
+      const tagsHtml = [];
+      const labelsMap = {
+        marca: 'Marca',
+        curva: 'Curva ABC',
+        equip: 'Equipamento',
+        perfil: 'Perfil',
+        prio: 'Prioridade',
+        start: 'Status Start',
+        search: 'Busca',
+        aplicacao: 'Aplicação'
+      };
+
+      for (const [key, val] of Object.entries(activeFilters)) {
+        if (val && key !== 'customIdsSet') {
+          count++;
+          let displayVal = val;
+          if (Array.isArray(val)) displayVal = `${val.length} SKUs filtrados`;
+          const label = labelsMap[key] || key.toUpperCase();
+          tagsHtml.push(`
+            <span class="filter-tag" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(14,165,233,0.18);border:1px solid #0ea5e9;border-radius:20px;font-size:12px;color:#38bdf8;font-weight:600;margin:2px 4px 2px 0;">
+              <span>${label}: <strong>${displayVal}</strong></span>
+              <span class="remove" onclick="removeSingleFilter('${key}')" style="cursor:pointer;font-weight:800;font-size:14px;color:#f87171;margin-left:4px;padding:0 2px;" title="Remover filtro">&times;</span>
+            </span>
+          `);
+        }
+      }
+
+      const html = tagsHtml.join('');
+      allContainers.forEach(c => {
+        if (c) c.innerHTML = html;
+      });
+      allBoxes.forEach(b => {
+        if (b) b.style.display = count > 0 ? 'flex' : 'none';
+      });
+    }
+
+    function removeSingleFilter(key) {
+      activeFilters[key] = '';
+      if (key === 'customIds') {
+        activeFilters.customIds = null;
+        activeFilters.customIdsSet = null;
+      }
+      document.querySelectorAll('.global-filter-' + key).forEach(el => { el.value = ''; });
+      const elem = document.getElementById('global-filter-' + key);
+      if (elem) elem.value = '';
+
+      if (key === 'search') {
+        const invSearch = document.getElementById('inv-search-input');
+        if (invSearch) invSearch.value = '';
+        const prodSearch = document.getElementById('input-prod-search');
+        if (prodSearch) prodSearch.value = '';
+      }
+      applyGlobalFilters();
+    }
+
+    function resetGlobalFilters(doRender = true) {
+      activeFilters = {
+        marca: '',
+        curva: '',
+        equip: '',
+        perfil: '',
+        prio: '',
+        start: '',
+        aplicacao: '',
+        search: '',
+        customIds: null,
+        customIdsSet: null
+      };
+      ['marca', 'curva', 'equip', 'perfil', 'prio', 'start'].forEach(key => {
+        document.querySelectorAll('.global-filter-' + key).forEach(el => { el.value = ''; });
+        const el = document.getElementById('global-filter-' + key);
+        if (el) el.value = '';
+      });
+      const invSearch = document.getElementById('inv-search-input');
+      if (invSearch) invSearch.value = '';
+      const prodSearch = document.getElementById('input-prod-search');
+      if (prodSearch) prodSearch.value = '';
+
+      updateFilterTags();
+      const allSkus = window.COMPACT_SKUS || [];
+      updateExecutiveKPIs(allSkus);
+      updateFilteredTables(allSkus);
+
+      if (typeof renderProdutosCatalog === 'function') {
+        try { renderProdutosCatalog(); } catch (e) { console.warn(e); }
+      }
+      if (doRender && typeof renderInventoryPage === 'function') {
+        try { renderInventoryPage(); } catch (e) { console.warn(e); }
+      }
+    }
+
+    // Recalcula dinamicamente todos os 8 Cards Executivos do Modulo 01
     function updateExecutiveKPIs(list) {
       if (!list) list = getFilteredSkus();
 
-      // 1. Start Agora (Horizonte == 'START AGORA')
-      const startAgoraSkus = list.filter(s => (s[40] === 'START AGORA' || s[35] === 'AGORA' || s[35] === 'ATRASADO') && (s[16] > 0 || s[13] > 0));
+      // 1. Start Agora (Horizonte == 'START AGORA' ou status AGORA/ATRASADO com demanda ou reposicao)
+      const startAgoraSkus = list.filter(s => (s[40] === 'START AGORA' || s[35] === 'AGORA' || s[35] === 'ATRASADO') && ((s[16] || 0) > 0 || (s[13] || 0) > 0));
       const startAgoraCount = startAgoraSkus.length;
       const startAgoraInvest = startAgoraSkus.reduce((sum, s) => sum + (parseFloat(s[17]) || 0), 0);
 
@@ -1328,7 +1483,7 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
       const elFatSub = document.getElementById('kpi-fat-sub');
       if (elFatSub) elFatSub.innerText = `Vendas 3 Anos • ${skusComVenda.length.toLocaleString('pt-BR')} SKUs com giro`;
 
-      // 3. Margem Bruta
+      // 3. Margem Bruta Liquida
       const totMargem = list.reduce((sum, s) => sum + (parseFloat(s[25]) || 0), 0);
       const pctMargem = totFat > 0 ? (totMargem / totFat * 100) : 0;
       const elMargemVal = document.getElementById('kpi-margem-val');
@@ -1336,7 +1491,7 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
       const elMargemSub = document.getElementById('kpi-margem-sub');
       if (elMargemSub) elMargemSub.innerText = `${fmtPct(pctMargem)} sobre faturamento líquido`;
 
-      // 4. Estoque Fisico
+      // 4. Estoque Fisico Total
       const totValEst = list.reduce((sum, s) => sum + (parseFloat(s[12]) || 0), 0);
       const totQtdEst = list.reduce((sum, s) => sum + (parseFloat(s[9]) || 0), 0);
       const elEstVal = document.getElementById('kpi-est-val');
@@ -1344,8 +1499,8 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
       const elEstSub = document.getElementById('kpi-est-sub');
       if (elEstSub) elEstSub.innerText = `${list.length.toLocaleString('pt-BR')} SKUs • ${fmtNum(totQtdEst)} unidades`;
 
-      // 5. Rupturas
-      const rupturas = list.filter(s => (s[28] === 1 || s[10] <= 0) && (s[13] > 0 || s[16] > 0));
+      // 5. Rupturas Imediatas
+      const rupturas = list.filter(s => (s[28] === 1 || parseFloat(s[10]) <= 0) && (parseFloat(s[13]) > 0 || parseFloat(s[16]) > 0));
       const elRupVal = document.getElementById('kpi-rup-val');
       if (elRupVal) elRupVal.innerText = `${rupturas.length.toLocaleString('pt-BR')} SKUs`;
 
@@ -1359,8 +1514,8 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
       const elExcSub = document.getElementById('kpi-exc-sub');
       if (elExcSub) elExcSub.innerText = `${skusExcesso.length.toLocaleString('pt-BR')} SKUs com estoque acima do alvo`;
 
-      // 7. Curva X
-      const curvaXSkus = list.filter(s => s[5] === 'X' || (s[20] || 0) > 0);
+      // 7. Curva X (Sem Giro)
+      const curvaXSkus = list.filter(s => s[5] === 'X' || (parseFloat(s[20]) || 0) > 0);
       const totX = list.reduce((sum, s) => sum + (parseFloat(s[20]) || 0), 0);
       const elXVal = document.getElementById('kpi-x-val');
       if (elXVal) elXVal.innerText = fmtBRL(totX);
@@ -1368,7 +1523,7 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
       if (elXSub) elXSub.innerText = `${curvaXSkus.length.toLocaleString('pt-BR')} SKUs sem vendas há mais de 90 dias`;
 
       // 8. Sugestao de Compras
-      const skusComprar = list.filter(s => (s[17] || 0) > 0 || (s[16] || 0) > 0);
+      const skusComprar = list.filter(s => (parseFloat(s[17]) || 0) > 0 || (parseFloat(s[16]) || 0) > 0);
       const totCompra = list.reduce((sum, s) => sum + (parseFloat(s[17]) || 0), 0);
       const elSugVal = document.getElementById('kpi-sug-val');
       if (elSugVal) elSugVal.innerText = fmtBRL(totCompra);
@@ -1376,127 +1531,168 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
       if (elSugSub) elSugSub.innerText = `${skusComprar.length.toLocaleString('pt-BR')} SKUs • Reposição de segurança`;
     }
 
-    function applyGlobalFilters() {
-      activeFilters.marca = document.getElementById('global-filter-marca').value;
-      activeFilters.curva = document.getElementById('global-filter-curva').value;
-      activeFilters.equip = document.getElementById('global-filter-equip').value;
-      activeFilters.perfil = document.getElementById('global-filter-perfil').value;
-      activeFilters.prio = document.getElementById('global-filter-prio').value;
-      activeFilters.start = document.getElementById('global-filter-start').value;
+    // Atualiza tabelas relacionadas em outras views (Marcas, Curvas, Equipamentos)
+    function updateFilteredTables(filteredList) {
+      // 1. Tabela de Marcas
+      const tblMarcas = document.getElementById('table-marcas');
+      if (tblMarcas) {
+        tblMarcas.querySelectorAll('tbody tr').forEach(tr => {
+          if (!activeFilters.marca) {
+            tr.style.display = '';
+          } else {
+            const brandBadge = tr.querySelector('.badge-brand');
+            const brandName = brandBadge ? brandBadge.innerText.trim() : tr.cells[0]?.innerText.trim();
+            tr.style.display = (brandName === activeFilters.marca) ? '' : 'none';
+          }
+        });
+      }
 
+      // 2. Tabela de Curva X por Marca
+      const tblMarcasX = document.getElementById('table-marcas-x');
+      if (tblMarcasX) {
+        tblMarcasX.querySelectorAll('tbody tr').forEach(tr => {
+          if (!activeFilters.marca) {
+            tr.style.display = '';
+          } else {
+            const brandBadge = tr.querySelector('.badge-brand');
+            const brandName = brandBadge ? brandBadge.innerText.trim() : tr.cells[0]?.innerText.trim();
+            tr.style.display = (brandName === activeFilters.marca) ? '' : 'none';
+          }
+        });
+      }
+
+      // 3. Tabela de Cobertura ABC
+      const tblCobertura = document.getElementById('table-cobertura-abc');
+      if (tblCobertura) {
+        tblCobertura.querySelectorAll('tbody tr').forEach(tr => {
+          if (!activeFilters.curva) {
+            tr.style.display = '';
+          } else {
+            const curvaCell = tr.cells[0]?.innerText.trim();
+            tr.style.display = (curvaCell && (curvaCell === activeFilters.curva || curvaCell.startsWith('Curva ' + activeFilters.curva) || curvaCell.includes(activeFilters.curva))) ? '' : 'none';
+          }
+        });
+      }
+
+      // 4. Tabela de Equipamentos
+      const tblEquip = document.getElementById('table-equipamentos');
+      if (tblEquip) {
+        tblEquip.querySelectorAll('tbody tr').forEach(tr => {
+          if (!activeFilters.equip) {
+            tr.style.display = '';
+          } else {
+            const equipCell = tr.cells[0]?.innerText.trim();
+            tr.style.display = (equipCell && (equipCell.includes(activeFilters.equip) || activeFilters.equip.includes(equipCell))) ? '' : 'none';
+          }
+        });
+      }
+    }
+
+    // Funcao mestre que aplica filtros globais e re-renderiza componentes
+    function applyGlobalFilters(sourceEl) {
+      if (sourceEl && sourceEl.tagName === 'SELECT') {
+        syncAllFilterInputs(sourceEl);
+      }
+
+      activeFilters.marca = getFilterValue('marca');
+      activeFilters.curva = getFilterValue('curva');
+      activeFilters.equip = getFilterValue('equip');
+      activeFilters.perfil = getFilterValue('perfil');
+      activeFilters.prio = getFilterValue('prio');
+      activeFilters.start = getFilterValue('start');
+
+      syncAllFilterInputs();
       updateFilterTags();
 
       const filteredList = getFilteredSkus();
       updateExecutiveKPIs(filteredList);
+      updateFilteredTables(filteredList);
 
       if (typeof renderProdutosCatalog === 'function') {
-        renderProdutosCatalog();
+        try { renderProdutosCatalog(); } catch (e) { console.warn(e); }
       }
       if (typeof renderInventoryPage === 'function') {
-        renderInventoryPage();
+        try { renderInventoryPage(); } catch (e) { console.warn(e); }
       }
-    }
-
-    function resetGlobalFilters(doRender = true) {
-      activeFilters = {
-        marca: '',
-        curva: '',
-        equip: '',
-        perfil: '',
-        prio: '',
-        start: '',
-        aplicacao: '',
-        search: '',
-        customIds: null,
-        customIdsSet: null
-      };
-      const selM = document.getElementById('global-filter-marca'); if (selM) selM.value = '';
-      const selC = document.getElementById('global-filter-curva'); if (selC) selC.value = '';
-      const selE = document.getElementById('global-filter-equip'); if (selE) selE.value = '';
-      const selP = document.getElementById('global-filter-perfil'); if (selP) selP.value = '';
-      const selPr = document.getElementById('global-filter-prio'); if (selPr) selPr.value = '';
-      const selS = document.getElementById('global-filter-start'); if (selS) selS.value = '';
-      const invSearch = document.getElementById('inv-search-input'); if (invSearch) invSearch.value = '';
-
-      updateFilterTags();
-      updateExecutiveKPIs(window.COMPACT_SKUS);
-      if (typeof renderProdutosCatalog === 'function') {
-        renderProdutosCatalog();
-      }
-      if (doRender && typeof renderInventoryPage === 'function') {
-        renderInventoryPage();
-      }
-    }
-
-    function updateFilterTags() {
-      const box = document.getElementById('active-filters-box');
-      const tagsContainer = document.getElementById('active-filter-tags');
-      tagsContainer.innerHTML = '';
-      let count = 0;
-
-      for (const [key, val] of Object.entries(activeFilters)) {
-        if (val && key !== 'customIdsSet') {
-          count++;
-          let displayVal = val;
-          if (Array.isArray(val)) displayVal = `${val.length} SKUs filtrados`;
-          const tag = document.createElement('span');
-          tag.className = 'filter-tag';
-          tag.innerHTML = `<strong>${key.toUpperCase()}:</strong> ${displayVal} <span class="remove" onclick="removeSingleFilter('${key}')">&times;</span>`;
-          tagsContainer.appendChild(tag);
-        }
-      }
-      box.style.display = count > 0 ? 'flex' : 'none';
-    }
-
-    function removeSingleFilter(key) {
-      activeFilters[key] = '';
-      if (key === 'customIds') {
-        activeFilters.customIds = null;
-        activeFilters.customIdsSet = null;
-      }
-      const elem = document.getElementById('global-filter-' + key);
-      if (elem) elem.value = '';
-      if (key === 'search') {
-        const invSearch = document.getElementById('inv-search-input');
-        if (invSearch) invSearch.value = '';
-      }
-      applyGlobalFilters();
     }
 
     // ========================================================
-    // INVENTÁRIO COMPLETO (10.655 SKUs COM FILTRAGEM PRECISA)
+    // INVENTARIO COMPLETO (10.655 SKUs COM FILTRAGEM PRECISA)
     // ========================================================
     let currentInvPage = 1;
     const invPageSize = 50;
-    let filteredInvList = window.COMPACT_SKUS;
+    let filteredInvList = window.COMPACT_SKUS || [];
 
     function getFilteredSkus() {
+      if (!window.COMPACT_SKUS || !window.COMPACT_SKUS.length) return [];
       return window.COMPACT_SKUS.filter(s => {
         if (activeFilters.customIdsSet) {
           if (!activeFilters.customIdsSet.has(s[0])) return false;
         }
+        // 1. Marca
         if (activeFilters.marca && s[2] !== activeFilters.marca) return false;
+
+        // 2. Curva ABC
         if (activeFilters.curva) {
           if (activeFilters.curva === 'X' || activeFilters.curva.startsWith('X')) {
-            if (s[5] !== 'X' && (s[20] || 0) <= 0) return false;
+            if (s[5] !== 'X' && (parseFloat(s[20]) || 0) <= 0) return false;
           } else if (s[5] !== activeFilters.curva) {
             return false;
           }
         }
+
+        // 3. Equipamento
         if (activeFilters.equip) {
-          const peq = (s[36] || '').split(' / ')[0];
-          if (peq !== activeFilters.equip && !(s[36] || '').startsWith(activeFilters.equip)) return false;
+          const equipStr = String(s[36] || '');
+          const equipPrefix = equipStr.split(' / ')[0].trim();
+          if (equipPrefix !== activeFilters.equip &&
+              !equipStr.startsWith(activeFilters.equip) &&
+              !equipStr.toLowerCase().includes(activeFilters.equip.toLowerCase())) {
+            return false;
+          }
         }
+
+        // 4. Perfil Sazonal
         if (activeFilters.perfil) {
-          if (!s[37] || !s[37].startsWith(activeFilters.perfil)) return false;
+          const perfStr = String(s[37] || '');
+          if (!perfStr.startsWith(activeFilters.perfil)) return false;
         }
-        if (activeFilters.prio && s[18] !== activeFilters.prio) return false;
+
+        // 5. Prioridade Compra (normalizado sem acentos)
+        if (activeFilters.prio) {
+          const sPrio = String(s[18] || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
+          const fPrio = String(activeFilters.prio).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
+          if (sPrio !== fPrio && !String(s[18] || '').includes(activeFilters.prio)) return false;
+        }
+
+        // 6. Status do Start
         if (activeFilters.start) {
-          if (s[40] !== activeFilters.start && s[35] !== activeFilters.start) return false;
+          const sVal = activeFilters.start.toLowerCase();
+          const h40 = String(s[40] || '').toLowerCase();
+          const st35 = String(s[35] || '').toLowerCase();
+          if (activeFilters.start === 'START AGORA') {
+            if (st35 !== 'agora' && st35 !== 'atrasado' && !h40.includes('start agora')) return false;
+          } else if (activeFilters.start.includes('30 dias')) {
+            if (!h40.includes('30') && !st35.includes('30') && st35 !== 'programado') return false;
+          } else if (activeFilters.start.includes('60 dias')) {
+            if (!h40.includes('60') && !st35.includes('60')) return false;
+          } else if (activeFilters.start.includes('90 dias')) {
+            if (!h40.includes('90') && !st35.includes('90')) return false;
+          } else if (activeFilters.start.includes('Suspenso') || activeFilters.start.includes('Sem Giro')) {
+            if (!h40.includes('suspenso') && !h40.includes('sem giro') && st35 !== 'sem giro' && s[5] !== 'X') return false;
+          } else {
+            if (!h40.includes(sVal) && !st35.includes(sVal) && s[40] !== activeFilters.start && s[35] !== activeFilters.start) {
+              return false;
+            }
+          }
         }
+
+        // 7. Aplicacao
         if (activeFilters.aplicacao) {
           if (!s[39] || !s[39].toLowerCase().includes(activeFilters.aplicacao.toLowerCase())) return false;
         }
+
+        // 8. Busca Livre
         if (activeFilters.search) {
           const q = activeFilters.search.toLowerCase();
           const match = String(s[0]).toLowerCase().includes(q) ||
@@ -1518,13 +1714,12 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
       if (currentInvPage > totalPages) currentInvPage = totalPages;
       if (currentInvPage < 1) currentInvPage = 1;
 
-      document.getElementById('inv-count-label').innerText = `Exibindo ${total.toLocaleString('pt-BR')} SKUs filtrados`;
-      document.getElementById('pagination-label').innerText = `Página ${currentInvPage} de ${totalPages}`;
-      document.getElementById('btn-prev-page').disabled = currentInvPage <= 1;
-      document.getElementById('btn-next-page').disabled = currentInvPage >= totalPages;
+      const elCount = document.getElementById('inv-count-label'); if (elCount) elCount.innerText = `Exibindo ${total.toLocaleString('pt-BR')} SKUs filtrados`;
+      const elPag = document.getElementById('pagination-label'); if (elPag) elPag.innerText = `Página ${currentInvPage} de ${totalPages}`;
+      const btnPrev = document.getElementById('btn-prev-page'); if (btnPrev) btnPrev.disabled = currentInvPage <= 1;
+      const btnNext = document.getElementById('btn-next-page'); if (btnNext) btnNext.disabled = currentInvPage >= totalPages;
 
-      const tbody = document.getElementById('inventory-tbody');
-      tbody.innerHTML = '';
+      const tbody = document.getElementById('inventory-tbody'); if (!tbody) return; tbody.innerHTML = '';
 
       const startIdx = (currentInvPage - 1) * invPageSize;
       const pageItems = filteredInvList.slice(startIdx, startIdx + invPageSize);
@@ -1770,83 +1965,61 @@ console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
     };
 
 
-// Sincronização Universal de Filtros across all views
-function syncAllFilterInputs(sourceEl) {
-    if (!sourceEl) return;
-    const cls = Array.from(sourceEl.classList).find(c => c.startsWith('global-filter-'));
-    if (!cls) return;
-    const val = sourceEl.value;
-    document.querySelectorAll('.' + cls).forEach(el => {
-        if (el !== sourceEl) el.value = val;
+
+// ========================================================
+// ATTACH EVENT LISTENERS & INICIALIZACAO UNIVERSAL
+// ========================================================
+window.applyGlobalFilters = applyGlobalFilters;
+window.resetGlobalFilters = resetGlobalFilters;
+window.updateFilterTags = updateFilterTags;
+window.removeSingleFilter = removeSingleFilter;
+window.getFilteredSkus = getFilteredSkus;
+window.updateExecutiveKPIs = updateExecutiveKPIs;
+
+function attachFilterListeners() {
+  const filterClasses = [
+    'global-filter-marca',
+    'global-filter-curva',
+    'global-filter-equip',
+    'global-filter-perfil',
+    'global-filter-prio',
+    'global-filter-start'
+  ];
+  filterClasses.forEach(cls => {
+    document.querySelectorAll('.' + cls).forEach(sel => {
+      if (!sel.dataset.filterBound) {
+        sel.dataset.filterBound = 'true';
+        sel.addEventListener('change', function() {
+          applyGlobalFilters(this);
+        });
+      }
     });
+  });
 }
 
-const _origApplyGlobalFilters = typeof applyGlobalFilters === 'function' ? applyGlobalFilters : null;
-window.applyGlobalFilters = function(sourceEl) {
-    if (sourceEl) syncAllFilterInputs(sourceEl);
-    
-    // Read from any active filter element
-    const getVal = (cls, id) => {
-        const el = document.querySelector('.' + cls) || document.getElementById(id);
-        return el ? el.value : '';
-    };
-
-    activeFilters.marca = getVal('global-filter-marca', 'global-filter-marca');
-    activeFilters.curva = getVal('global-filter-curva', 'global-filter-curva');
-    activeFilters.equip = getVal('global-filter-equip', 'global-filter-equip');
-    activeFilters.perfil = getVal('global-filter-perfil', 'global-filter-perfil');
-    activeFilters.prio = getVal('global-filter-prio', 'global-filter-prio');
-    activeFilters.start = getVal('global-filter-start', 'global-filter-start');
-
-    updateFilterTags();
-
-    const filteredList = getFilteredSkus();
-    updateExecutiveKPIs(filteredList);
-
-    if (typeof renderProdutosCatalog === 'function') {
-        renderProdutosCatalog();
-    }
-    if (typeof renderInventoryPage === 'function') {
-        renderInventoryPage();
-    }
-};
-
-window.resetGlobalFilters = function() {
-    activeFilters = {
-        marca: '', curva: '', equip: '', perfil: '', prio: '', start: '',
-        aplicacao: '', search: '', customIds: null, customIdsSet: null
-    };
-    ['global-filter-marca', 'global-filter-curva', 'global-filter-equip', 'global-filter-perfil', 'global-filter-prio', 'global-filter-start'].forEach(cls => {
-        document.querySelectorAll('.' + cls).forEach(el => el.value = '');
-    });
-    updateFilterTags();
-    updateExecutiveKPIs(getFilteredSkus());
-};
-
-// Initializer when view changes
 window.initEstoqueVisao = function() {
-    if (window.COMPACT_SKUS && window.COMPACT_SKUS.length) {
-        const uniqueMarcas = [...new Set(window.COMPACT_SKUS.map(s => s[2]))].filter(Boolean).sort();
-        document.querySelectorAll('.global-filter-marca').forEach(selectMarca => {
-            if (selectMarca.options.length <= 1) {
-                uniqueMarcas.forEach(m => {
-                    const opt = document.createElement('option');
-                    opt.value = m;
-                    opt.innerText = m;
-                    selectMarca.appendChild(opt);
-                });
-            }
+  if (window.COMPACT_SKUS && window.COMPACT_SKUS.length) {
+    const uniqueMarcas = [...new Set(window.COMPACT_SKUS.map(s => s[2]))].filter(Boolean).sort();
+    document.querySelectorAll('.global-filter-marca').forEach(selectMarca => {
+      if (selectMarca.options.length <= 1) {
+        uniqueMarcas.forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m;
+          opt.innerText = m;
+          selectMarca.appendChild(opt);
         });
-        document.querySelectorAll('.sortable-table').forEach(tbl => {
-            initUniversalSorting(tbl);
-        });
-        updateExecutiveKPIs(getFilteredSkus());
-    }
+      }
+    });
+    attachFilterListeners();
+    document.querySelectorAll('.sortable-table').forEach(tbl => {
+      if (typeof initUniversalSorting === 'function') initUniversalSorting(tbl);
+    });
+    updateExecutiveKPIs(getFilteredSkus());
+  }
 };
 
-// Auto-run on DOM ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', window.initEstoqueVisao);
+  document.addEventListener('DOMContentLoaded', window.initEstoqueVisao);
 } else {
-    setTimeout(window.initEstoqueVisao, 100);
+  setTimeout(window.initEstoqueVisao, 50);
 }

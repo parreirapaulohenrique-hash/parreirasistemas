@@ -1,9 +1,9 @@
 {
-  "version": "3.0.5",
-  "build": "20260924-v3.0.5",
+  "version": "3.0.6",
+  "build": "20260924-v3.0.6",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-09-24",
-  "change": "v3.0.5 - fix(sheetjs-cdn): Correcao de seguranca CSP no vercel.json e troca de CDN para cdnjs.cloudflare.com com carregador automatico resiliente (_garantirXLSX) para importacao imediata de planilhas de enriquecimento.",
-  "releaseDate": "2026-09-24T02:08:00-03:00"
+  "change": "v3.0.6 - fix(demanda-analytics): Motor unificado e resiliente de filtros globais com reatividade universal em todos os cards executivos (Modulo 01) e sincronizacao entre abas.",
+  "releaseDate": "2026-09-24T08:45:00-03:00"
 }

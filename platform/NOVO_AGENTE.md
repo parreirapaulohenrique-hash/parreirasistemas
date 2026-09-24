@@ -579,6 +579,22 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
   - Implementado modal analítico dark navy com 12 métricas e badge de Curva ABC.
   - Arquivo do prompt integrado preservado em PROMPT_ESTOQUE_COMPRAS.md.
 
+* **2026-09-24 (v3.21.58 / Demanda v3.0.6):** Correcao completa da reatividade dos filtros globais e recalculo dinamico em tempo real de todos os 8 cards executivos e tabelas relacionadas (Modulo 01: Visao Executiva & Indicadores Globais):
+  - Solucao definitiva da incompatibilidade entre IDs e classes nos seletores de filtros (Marca, Curva ABC, Equipamento, Perfil Sazonal, Prioridade Compra e Status do Start).
+  - Implementacao de motor unificado e resiliente de sincronizacao universal de filtros (syncAllFilterInputs), garantindo que a selecao em qualquer aba sincronize as demais barras de filtros.
+  - Correcao do container de tags ativas (active-filter-tags / active-filters-box) eliminando erros de referencia nula (null.innerHTML) que impediam a execucao do recalculo.
+  - Recalculo matematico e analitico em tempo real ao selecionar qualquer opcao ou clicar em 'Aplicar Filtros':
+    * Start de Compra Agora (Count, Valor de Investimento e Botao de Auditoria)
+    * Faturamento Liquido (Total e SKUs com giro)
+    * Margem Bruta Liquida (Total e % sobre faturamento)
+    * Estoque Fisico Total (Valor, Unidades e SKUs)
+    * Rupturas Imediatas (Count)
+    * Capital Excedente (Valor, Badge count e subtitulo)
+    * Curva X Sem Giro (Valor e SKUs > 90d)
+    * Sugestao de Compras (Valor e SKUs)
+  - Integracao reativa com os modais de drilldown e tabelas analiticas secundarias (Marcas, Curva X por Marca, Cobertura ABC e Equipamentos).
+  - Adicionado botao individual com 'x' para remocao de filtros aplicados e botao 'Limpar' com restauracao integral dos totais globais.
+
 * **2026-09-24 (v3.21.57 / Demanda v3.0.5):** Correcao de seguranca CSP no vercel.json (liberacao de conexoes e scripts do SheetJS) e troca definitiva para o CDN oficial Cloudflare (cdnjs.cloudflare.com) com carregador dinamico resiliente (_garantirXLSX). Adicionada exibicao visual explicita da versao v3.0.5 / build 157 na sidebar.
 * **2026-09-23 (v3.21.56 / Demanda v3.0.4):** Criacao de todos os novos campos tecnicos no modelo de dados e adapter MaxData (equipamento, similarGenuino OEM, similares 1 a 4, refFornecedor, foto, fonte, statusPesquisa). Implementacao do importador em lote de planilhas Excel/CSV (DemandaEnrichment) com preview analitico, barra de progresso em tempo real e merge seguro no Firestore ({ merge: true }). Botoes e badges tecnicos integrados a visao Cadastro de Produtos (ERP Maxdata).
 * **2026-09-23 (v3.21.55 / Demanda v3.0.3):** Correção da regra CSS .modal-backdrop (ocultando modais por padrão com display:none !important e removendo modal travado na tela), correção do encoding UTF-8 (eliminando mojibake nos títulos) e garantia de abertura/fechamento fluido de drilldowns e SKU modal.
