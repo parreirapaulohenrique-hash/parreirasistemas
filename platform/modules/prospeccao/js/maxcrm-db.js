@@ -348,7 +348,16 @@ const MaxCRMDB = (() => {
             syncStatus:   'pending'
         };
         await _put('visitas', atualizada);
-        // NÃO enfileira sync a cada save intermediário — só na finalização
+        // Enfileira sync com debounce — garante que progresso intermediário suba ao Firestore
+        clearTimeout(salvarProgresso._debounce);
+        salvarProgresso._debounce = setTimeout(async () => {
+            try {
+                await _enqueueSync('visita', visitaId, 'upsert');
+                if (typeof MaxCRMSync !== 'undefined' && MaxCRMSync.isOnline()) {
+                    MaxCRMSync.processar();
+                }
+            } catch(e) { console.warn('[MaxCRMDB] Erro ao enfileirar sync de progresso:', e.message); }
+        }, 3000); // Aguarda 3s de inatividade antes de sincronizar
         return atualizada;
     }
 
@@ -387,6 +396,18 @@ const MaxCRMDB = (() => {
 
     async function getVisitasEmpresa(empresaId) {
         return _getByIndex('visitas', 'empresaId', empresaId);
+    }
+
+    /**
+     * salvarVisitaLocal — Grava uma visita diretamente no IndexedDB SEM enfileirar sync.
+     * Usado pelo pullVisitas() para importar visitas vindas do Firestore.
+     */
+    async function salvarVisitaLocal(dados) {
+        if (!dados || !dados.id) return;
+        await _put('visitas', {
+            ...dados,
+            syncStatus: dados.syncStatus || 'synced'
+        });
     }
 
     async function getPendentesSync() {
@@ -549,6 +570,7 @@ const MaxCRMDB = (() => {
         getVisita,
         listarVisitas,
         getVisitasEmpresa,
+        salvarVisitaLocal,
         getPendentesSync,
 
         // ERPs
