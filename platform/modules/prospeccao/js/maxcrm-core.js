@@ -489,18 +489,41 @@ async function carregarMinhasVisitas() {
     lista.innerHTML = '<div class="loading-spinner"></div>';
 
     let visitas = [];
+    let fonte = 'nenhuma';
+    let diagMsg = '';
     const sessao = MaxCRMState.sessao;
     const meuLogin = sessao ? (sessao.login || sessao.email || '') : '';
+
+    // ── Diagnóstico: estado do Firebase Auth ─────────────────────────────
+    const authUser = (typeof firebase !== 'undefined' && firebase.auth) ? firebase.auth().currentUser : null;
+    console.log('[MAXCRM-DIAG] Firebase Auth user:', authUser ? `uid=${authUser.uid}, anon=${authUser.isAnonymous}` : 'NULL (sem auth!)');
+    console.log('[MAXCRM-DIAG] MaxCRMState.db:', MaxCRMState.db ? 'OK' : 'NULL');
+    console.log('[MAXCRM-DIAG] isOnline:', MaxCRMSync.isOnline());
+    console.log('[MAXCRM-DIAG] isGestor:', MaxCRMState.isGestor, '| meuLogin:', meuLogin);
 
     // ── Sempre tenta buscar do Firestore primeiro (cross-device) ─────────
     if (MaxCRMState.db && MaxCRMSync.isOnline()) {
         try {
+            // Garantir auth antes da query
+            if (!authUser) {
+                console.warn('[MAXCRM-DIAG] Sem Firebase Auth! Tentando signInAnonymously...');
+                try {
+                    await firebase.auth().signInAnonymously();
+                    console.log('[MAXCRM-DIAG] Auth anônimo OK após retry');
+                } catch(authErr) {
+                    console.error('[MAXCRM-DIAG] Auth anônimo FALHOU:', authErr.message);
+                }
+            }
+
+            console.log('[MAXCRM-DIAG] Executando query Firestore: tenants/parreira/visitas ...');
             let query = MaxCRMState.db
                 .collection('tenants/parreira/visitas')
                 .orderBy('criadoEm', 'desc')
                 .limit(200);
 
             const snap = await query.get();
+            console.log(`[MAXCRM-DIAG] Firestore retornou ${snap.size} visitas (from cache: ${snap.metadata.fromCache})`);
+
             let firestoreVisitas = snap.docs.map(d => {
                 const data = d.data();
                 // Converter Firestore Timestamps para strings legíveis
@@ -511,30 +534,55 @@ async function carregarMinhasVisitas() {
                 return { id: d.id, ...data, syncStatus: 'synced' };
             });
 
+            // Log todas as visitas encontradas
+            firestoreVisitas.forEach(v => {
+                console.log(`[MAXCRM-DIAG] Visita: ${v.id} | empresa=${v.empresaNome} | promotor=${v.promotorId}/${v.promotorNome} | status=${v.status}`);
+            });
+
             // Se NÃO é gestor, filtra apenas as visitas do próprio promotor
             if (!MaxCRMState.isGestor && meuLogin) {
+                const antes = firestoreVisitas.length;
                 firestoreVisitas = firestoreVisitas.filter(v =>
                     v.promotorId === meuLogin || v.promotorNome === sessao.nome
                 );
+                console.log(`[MAXCRM-DIAG] Filtro promotor (${meuLogin}): ${antes} → ${firestoreVisitas.length}`);
             }
 
             visitas = firestoreVisitas;
+            fonte = 'firestore';
+            diagMsg = `Firestore: ${snap.size} total, ${visitas.length} do promotor (cache: ${snap.metadata.fromCache})`;
             console.log(`[MAXCRM] Minhas Visitas: ${visitas.length} carregadas do Firestore`);
         } catch(e) {
-            console.warn('[MAXCRM] Firestore visitas falhou, usando IndexedDB local:', e.message);
+            console.error('[MAXCRM-DIAG] Firestore query FALHOU:', e.code, e.message);
+            diagMsg = `Firestore ERRO: ${e.code || ''} ${e.message}`;
             visitas = await MaxCRMDB.listarVisitas(200);
+            fonte = 'indexeddb-fallback';
             // Se não é gestor, filtra pelo promotor
             if (!MaxCRMState.isGestor && meuLogin) {
                 visitas = visitas.filter(v => v.promotorId === meuLogin || v.promotorNome === sessao.nome);
             }
+            diagMsg += ` | IDB fallback: ${visitas.length}`;
         }
     } else {
         // ── Offline: lê do IndexedDB local ──────────────────────────────
         visitas = await MaxCRMDB.listarVisitas(200);
+        fonte = 'indexeddb-offline';
         if (!MaxCRMState.isGestor && meuLogin) {
             visitas = visitas.filter(v => v.promotorId === meuLogin || v.promotorNome === sessao.nome);
         }
+        diagMsg = `Offline/sem db: IDB local ${visitas.length} visitas`;
     }
+
+    // ── Diagnóstico IDB local também ─────────────────────────────────────
+    try {
+        const idbVisitas = await MaxCRMDB.listarVisitas(200);
+        console.log(`[MAXCRM-DIAG] IDB local: ${idbVisitas.length} visitas`);
+        idbVisitas.forEach(v => {
+            console.log(`[MAXCRM-DIAG] IDB: ${v.id} | empresa=${v.empresaNome} | sync=${v.syncStatus} | promotor=${v.promotorId}`);
+        });
+    } catch(e) { console.warn('[MAXCRM-DIAG] Erro ao listar IDB:', e.message); }
+
+    console.log(`[MAXCRM-DIAG] RESULTADO FINAL: fonte=${fonte} | ${visitas.length} visitas | ${diagMsg}`);
 
     if (visitas.length === 0) {
         lista.innerHTML = `
@@ -542,6 +590,13 @@ async function carregarMinhasVisitas() {
                 <span class="material-icons-round">assignment</span>
                 <div class="empty-state-title">Nenhuma visita ainda</div>
                 <div class="empty-state-sub">Inicie sua primeira visita</div>
+            </div>
+            <div style="margin-top:16px;padding:12px;background:rgba(255,255,255,0.05);border-radius:8px;font-size:0.7rem;color:rgba(255,255,255,0.4);word-break:break-all">
+                <strong>Diagnóstico:</strong> ${diagMsg}<br>
+                Auth: ${authUser ? 'uid=' + authUser.uid : 'SEM AUTH'}<br>
+                DB: ${MaxCRMState.db ? 'OK' : 'NULL'} | Online: ${MaxCRMSync.isOnline()}<br>
+                Login: ${meuLogin} | Gestor: ${MaxCRMState.isGestor}<br>
+                Fonte: ${fonte}
             </div>`;
         return;
     }
@@ -568,6 +623,12 @@ async function carregarMinhasVisitas() {
         div.onclick = () => _abrirDetalheVisita(v);
         lista.appendChild(div);
     });
+
+    // Rodapé diagnóstico (temporário - remover após resolver)
+    const diagFooter = document.createElement('div');
+    diagFooter.style.cssText = 'margin-top:12px;padding:8px;font-size:0.65rem;color:rgba(255,255,255,0.3);text-align:center';
+    diagFooter.textContent = `Fonte: ${fonte} | ${diagMsg}`;
+    lista.appendChild(diagFooter);
 }
 
 function _abrirDetalheVisita(v) {
