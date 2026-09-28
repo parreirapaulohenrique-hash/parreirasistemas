@@ -255,11 +255,15 @@ const MaxCRMSync = (() => {
         if (!isOnline()) return;
         try {
             const db   = _db();
-            // Busca todas as visitas do tenant (últimas 500)
-            const snap = await db.collection(`${BASE_PATH}/visitas`)
-                .orderBy('criadoEm', 'desc')
+            // Busca visitas do tenant SEM orderBy (evita hang por indice)
+            const queryPromise = db.collection(`${BASE_PATH}/visitas`)
                 .limit(500)
                 .get();
+            // Timeout de 10s
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('TIMEOUT pullVisitas')), 10000)
+            );
+            const snap = await Promise.race([queryPromise, timeoutPromise]);
 
             if (snap.empty) {
                 console.log('[MaxCRMSync] Pull visitas: nenhuma visita no Firestore');

@@ -496,10 +496,7 @@ async function carregarMinhasVisitas() {
 
     // ── Diagnóstico: estado do Firebase Auth ─────────────────────────────
     const authUser = (typeof firebase !== 'undefined' && firebase.auth) ? firebase.auth().currentUser : null;
-    console.log('[MAXCRM-DIAG] Firebase Auth user:', authUser ? `uid=${authUser.uid}, anon=${authUser.isAnonymous}` : 'NULL (sem auth!)');
-    console.log('[MAXCRM-DIAG] MaxCRMState.db:', MaxCRMState.db ? 'OK' : 'NULL');
-    console.log('[MAXCRM-DIAG] isOnline:', MaxCRMSync.isOnline());
-    console.log('[MAXCRM-DIAG] isGestor:', MaxCRMState.isGestor, '| meuLogin:', meuLogin);
+    console.log('[MAXCRM-DIAG] Auth:', authUser ? `uid=${authUser.uid}` : 'NULL', '| db:', MaxCRMState.db ? 'OK' : 'NULL', '| online:', MaxCRMSync.isOnline(), '| login:', meuLogin);
 
     // ── Sempre tenta buscar do Firestore primeiro (cross-device) ─────────
     if (MaxCRMState.db && MaxCRMSync.isOnline()) {
@@ -507,26 +504,27 @@ async function carregarMinhasVisitas() {
             // Garantir auth antes da query
             if (!authUser) {
                 console.warn('[MAXCRM-DIAG] Sem Firebase Auth! Tentando signInAnonymously...');
-                try {
-                    await firebase.auth().signInAnonymously();
-                    console.log('[MAXCRM-DIAG] Auth anônimo OK após retry');
-                } catch(authErr) {
-                    console.error('[MAXCRM-DIAG] Auth anônimo FALHOU:', authErr.message);
-                }
+                try { await firebase.auth().signInAnonymously(); } catch(e) { console.error('[MAXCRM-DIAG] Auth falhou:', e.message); }
             }
 
-            console.log('[MAXCRM-DIAG] Executando query Firestore: tenants/parreira/visitas ...');
-            let query = MaxCRMState.db
+            // Query SEM orderBy (evita necessidade de indice e evita hang)
+            // Ordenação feita client-side
+            console.log('[MAXCRM-DIAG] Query Firestore: tenants/parreira/visitas (sem orderBy, limit 300)...');
+            const queryPromise = MaxCRMState.db
                 .collection('tenants/parreira/visitas')
-                .orderBy('criadoEm', 'desc')
-                .limit(200);
+                .limit(300)
+                .get();
 
-            const snap = await query.get();
-            console.log(`[MAXCRM-DIAG] Firestore retornou ${snap.size} visitas (from cache: ${snap.metadata.fromCache})`);
+            // Timeout de 8 segundos para não travar
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('TIMEOUT: Firestore demorou mais de 8s')), 8000)
+            );
+
+            const snap = await Promise.race([queryPromise, timeoutPromise]);
+            console.log(`[MAXCRM-DIAG] Firestore OK: ${snap.size} visitas (cache: ${snap.metadata.fromCache})`);
 
             let firestoreVisitas = snap.docs.map(d => {
                 const data = d.data();
-                // Converter Firestore Timestamps para strings legíveis
                 if (data.criadoEm && data.criadoEm.toDate) data.criadoEm = data.criadoEm.toDate().toISOString();
                 if (data.atualizadoEm && data.atualizadoEm.toDate) data.atualizadoEm = data.atualizadoEm.toDate().toISOString();
                 if (data.inicioTs && data.inicioTs.toDate) data.inicioTs = data.inicioTs.toDate().toISOString();
@@ -534,10 +532,8 @@ async function carregarMinhasVisitas() {
                 return { id: d.id, ...data, syncStatus: 'synced' };
             });
 
-            // Log todas as visitas encontradas
-            firestoreVisitas.forEach(v => {
-                console.log(`[MAXCRM-DIAG] Visita: ${v.id} | empresa=${v.empresaNome} | promotor=${v.promotorId}/${v.promotorNome} | status=${v.status}`);
-            });
+            // Log visitas encontradas
+            firestoreVisitas.forEach(v => console.log(`[MAXCRM-DIAG] Visita: ${v.empresaNome} | promotor=${v.promotorId} | status=${v.status}`));
 
             // Se NÃO é gestor, filtra apenas as visitas do próprio promotor
             if (!MaxCRMState.isGestor && meuLogin) {
@@ -548,41 +544,33 @@ async function carregarMinhasVisitas() {
                 console.log(`[MAXCRM-DIAG] Filtro promotor (${meuLogin}): ${antes} → ${firestoreVisitas.length}`);
             }
 
+            // Ordenar client-side (mais recente primeiro)
+            firestoreVisitas.sort((a, b) => (b.criadoEm || '').localeCompare(a.criadoEm || ''));
+
             visitas = firestoreVisitas;
             fonte = 'firestore';
-            diagMsg = `Firestore: ${snap.size} total, ${visitas.length} do promotor (cache: ${snap.metadata.fromCache})`;
-            console.log(`[MAXCRM] Minhas Visitas: ${visitas.length} carregadas do Firestore`);
+            diagMsg = `Firestore: ${snap.size} total, ${visitas.length} filtradas (cache: ${snap.metadata.fromCache})`;
         } catch(e) {
-            console.error('[MAXCRM-DIAG] Firestore query FALHOU:', e.code, e.message);
-            diagMsg = `Firestore ERRO: ${e.code || ''} ${e.message}`;
+            console.error('[MAXCRM-DIAG] Firestore FALHOU:', e.code || '', e.message);
+            diagMsg = `Firestore ERRO: ${e.message}`;
+            // Fallback para IndexedDB
             visitas = await MaxCRMDB.listarVisitas(200);
             fonte = 'indexeddb-fallback';
-            // Se não é gestor, filtra pelo promotor
             if (!MaxCRMState.isGestor && meuLogin) {
                 visitas = visitas.filter(v => v.promotorId === meuLogin || v.promotorNome === sessao.nome);
             }
-            diagMsg += ` | IDB fallback: ${visitas.length}`;
+            diagMsg += ` | IDB: ${visitas.length}`;
         }
     } else {
-        // ── Offline: lê do IndexedDB local ──────────────────────────────
         visitas = await MaxCRMDB.listarVisitas(200);
         fonte = 'indexeddb-offline';
         if (!MaxCRMState.isGestor && meuLogin) {
             visitas = visitas.filter(v => v.promotorId === meuLogin || v.promotorNome === sessao.nome);
         }
-        diagMsg = `Offline/sem db: IDB local ${visitas.length} visitas`;
+        diagMsg = `Offline: IDB ${visitas.length} visitas`;
     }
 
-    // ── Diagnóstico IDB local também ─────────────────────────────────────
-    try {
-        const idbVisitas = await MaxCRMDB.listarVisitas(200);
-        console.log(`[MAXCRM-DIAG] IDB local: ${idbVisitas.length} visitas`);
-        idbVisitas.forEach(v => {
-            console.log(`[MAXCRM-DIAG] IDB: ${v.id} | empresa=${v.empresaNome} | sync=${v.syncStatus} | promotor=${v.promotorId}`);
-        });
-    } catch(e) { console.warn('[MAXCRM-DIAG] Erro ao listar IDB:', e.message); }
-
-    console.log(`[MAXCRM-DIAG] RESULTADO FINAL: fonte=${fonte} | ${visitas.length} visitas | ${diagMsg}`);
+    console.log(`[MAXCRM-DIAG] RESULTADO: fonte=${fonte} | ${visitas.length} visitas | ${diagMsg}`);
 
     if (visitas.length === 0) {
         lista.innerHTML = `
@@ -595,8 +583,7 @@ async function carregarMinhasVisitas() {
                 <strong>Diagnóstico:</strong> ${diagMsg}<br>
                 Auth: ${authUser ? 'uid=' + authUser.uid : 'SEM AUTH'}<br>
                 DB: ${MaxCRMState.db ? 'OK' : 'NULL'} | Online: ${MaxCRMSync.isOnline()}<br>
-                Login: ${meuLogin} | Gestor: ${MaxCRMState.isGestor}<br>
-                Fonte: ${fonte}
+                Login: ${meuLogin} | Gestor: ${MaxCRMState.isGestor} | Fonte: ${fonte}
             </div>`;
         return;
     }
@@ -624,7 +611,7 @@ async function carregarMinhasVisitas() {
         lista.appendChild(div);
     });
 
-    // Rodapé diagnóstico (temporário - remover após resolver)
+    // Rodapé diagnóstico
     const diagFooter = document.createElement('div');
     diagFooter.style.cssText = 'margin-top:12px;padding:8px;font-size:0.65rem;color:rgba(255,255,255,0.3);text-align:center';
     diagFooter.textContent = `Fonte: ${fonte} | ${diagMsg}`;
