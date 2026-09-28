@@ -1,15 +1,16 @@
 /**
- * maxcrm-sync.js — Sincronização IndexedDB → Firestore
- * ======================================================
- * Responsável por enviar dados locais para a nuvem quando houver conexão.
+ * maxcrm-sync.js — Sincronização IndexedDB ↔ Firestore (bidirecional)
+ * =====================================================================
+ * Responsável por enviar dados locais para a nuvem (push) e baixar
+ * dados da nuvem para o dispositivo (pull) quando houver conexão.
  * Funciona em background sem bloquear a UX.
  *
  * Estrutura Firestore:
- *   tenants/parreira/prospeccao/empresas/{id}
- *   tenants/parreira/prospeccao/visitas/{id}
- *   tenants/parreira/prospeccao/contatos/{id}
+ *   tenants/parreira/visitas/{id}
+ *   tenants/parreira/empresas/{id}
+ *   tenants/parreira/contatos/{id}
  *
- * Parreira Sistemas — MAXCRM Campo v1.0.0
+ * Parreira Sistemas — MAXCRM Campo v1.3.0
  */
 
 const MaxCRMSync = (() => {
@@ -169,6 +170,7 @@ const MaxCRMSync = (() => {
             console.log('[MaxCRMSync] Online — iniciando sync automático...');
             processar();
             pullEmpresas();
+            pullVisitas();
         });
         window.addEventListener('offline', () => {
             _emitStatus('offline');
@@ -176,9 +178,10 @@ const MaxCRMSync = (() => {
 
         // Sincroniza ao carregar se online
         if (isOnline()) {
-            setTimeout(processar, 1500);                       // Processa fila
+            setTimeout(processar, 1500);                       // Processa fila (push)
             setTimeout(sincronizarVisitasPendentes, 3000);    // Sobe visitas órfãs
             setTimeout(pullEmpresas, 4500);                   // Baixa empresas atualizadas
+            setTimeout(pullVisitas, 5500);                    // Baixa visitas do Firestore
         }
     }
 
@@ -247,6 +250,68 @@ const MaxCRMSync = (() => {
         }
     }
 
+    // ── Baixar visitas da nuvem (pull) ─────────────────────────────────────────
+    async function pullVisitas() {
+        if (!isOnline()) return;
+        try {
+            const db   = _db();
+            // Busca todas as visitas do tenant (últimas 500)
+            const snap = await db.collection(`${BASE_PATH}/visitas`)
+                .orderBy('criadoEm', 'desc')
+                .limit(500)
+                .get();
+
+            if (snap.empty) {
+                console.log('[MaxCRMSync] Pull visitas: nenhuma visita no Firestore');
+                return;
+            }
+
+            const idb = await MaxCRMDB.open();
+            let importadas = 0;
+            let atualizadas = 0;
+
+            for (const doc of snap.docs) {
+                const remota = doc.data();
+                remota.id = doc.id;
+
+                // Verifica se já existe localmente
+                const local = await MaxCRMDB.getVisita(doc.id);
+
+                if (!local) {
+                    // Visita não existe localmente → importar do Firestore
+                    remota.syncStatus = 'synced';
+                    // Converter Firestore Timestamps para ISO strings
+                    if (remota.criadoEm && remota.criadoEm.toDate) remota.criadoEm = remota.criadoEm.toDate().toISOString();
+                    if (remota.atualizadoEm && remota.atualizadoEm.toDate) remota.atualizadoEm = remota.atualizadoEm.toDate().toISOString();
+                    if (remota.sincronizadoEm && remota.sincronizadoEm.toDate) remota.sincronizadoEm = remota.sincronizadoEm.toDate().toISOString();
+                    if (remota.inicioTs && remota.inicioTs.toDate) remota.inicioTs = remota.inicioTs.toDate().toISOString();
+                    if (remota.fimTs && remota.fimTs.toDate) remota.fimTs = remota.fimTs.toDate().toISOString();
+                    await MaxCRMDB.salvarVisitaLocal(remota);
+                    importadas++;
+                } else if (local.syncStatus === 'synced') {
+                    // Visita existe e já está sincronizada → atualizar com versão mais recente da nuvem
+                    const remotaTs = remota.atualizadoEm?.toDate ? remota.atualizadoEm.toDate().getTime() : new Date(remota.atualizadoEm || 0).getTime();
+                    const localTs  = new Date(local.atualizadoEm || 0).getTime();
+                    if (remotaTs > localTs) {
+                        remota.syncStatus = 'synced';
+                        if (remota.criadoEm && remota.criadoEm.toDate) remota.criadoEm = remota.criadoEm.toDate().toISOString();
+                        if (remota.atualizadoEm && remota.atualizadoEm.toDate) remota.atualizadoEm = remota.atualizadoEm.toDate().toISOString();
+                        if (remota.sincronizadoEm && remota.sincronizadoEm.toDate) remota.sincronizadoEm = remota.sincronizadoEm.toDate().toISOString();
+                        if (remota.inicioTs && remota.inicioTs.toDate) remota.inicioTs = remota.inicioTs.toDate().toISOString();
+                        if (remota.fimTs && remota.fimTs.toDate) remota.fimTs = remota.fimTs.toDate().toISOString();
+                        await MaxCRMDB.salvarVisitaLocal(remota);
+                        atualizadas++;
+                    }
+                }
+                // Se local.syncStatus === 'pending' → não sobrescrever (local tem mudanças não enviadas)
+            }
+
+            console.log(`[MaxCRMSync] Pull visitas: ${importadas} importadas, ${atualizadas} atualizadas (total Firestore: ${snap.size})`);
+        } catch (e) {
+            console.warn('[MaxCRMSync] Erro no pull de visitas:', e.message);
+        }
+    }
+
     // ── Contar pendentes (para UI) ──────────────────────────────────────────
     async function contarPendentes() {
         const fila = await MaxCRMDB.getFilaSync();
@@ -273,6 +338,7 @@ const MaxCRMSync = (() => {
         processar,
         iniciarListeners,
         pullEmpresas,
+        pullVisitas,
         sincronizarVisitasPendentes,
         contarPendentes,
         atualizarStatusUI,

@@ -4,7 +4,7 @@
  * Parreira Sistemas — MAXCRM Campo v1.0.0
  */
 
-const MAXCRM_VERSION = '1.1.0';
+const MAXCRM_VERSION = '1.3.0';
 
 // ── Estado Global ────────────────────────────────────────────────────────────
 const MaxCRMState = {
@@ -489,23 +489,51 @@ async function carregarMinhasVisitas() {
     lista.innerHTML = '<div class="loading-spinner"></div>';
 
     let visitas = [];
+    const sessao = MaxCRMState.sessao;
+    const meuLogin = sessao ? (sessao.login || sessao.email || '') : '';
 
-    if (MaxCRMState.isGestor && MaxCRMState.db) {
-        // ── GESTOR: busca todas as visitas do Firestore ──────────────────
+    // ── Sempre tenta buscar do Firestore primeiro (cross-device) ─────────
+    if (MaxCRMState.db && MaxCRMSync.isOnline()) {
         try {
-            const snap = await MaxCRMState.db
+            let query = MaxCRMState.db
                 .collection('tenants/parreira/visitas')
                 .orderBy('criadoEm', 'desc')
-                .limit(100)
-                .get();
-            visitas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                .limit(200);
+
+            const snap = await query.get();
+            let firestoreVisitas = snap.docs.map(d => {
+                const data = d.data();
+                // Converter Firestore Timestamps para strings legíveis
+                if (data.criadoEm && data.criadoEm.toDate) data.criadoEm = data.criadoEm.toDate().toISOString();
+                if (data.atualizadoEm && data.atualizadoEm.toDate) data.atualizadoEm = data.atualizadoEm.toDate().toISOString();
+                if (data.inicioTs && data.inicioTs.toDate) data.inicioTs = data.inicioTs.toDate().toISOString();
+                if (data.fimTs && data.fimTs.toDate) data.fimTs = data.fimTs.toDate().toISOString();
+                return { id: d.id, ...data, syncStatus: 'synced' };
+            });
+
+            // Se NÃO é gestor, filtra apenas as visitas do próprio promotor
+            if (!MaxCRMState.isGestor && meuLogin) {
+                firestoreVisitas = firestoreVisitas.filter(v =>
+                    v.promotorId === meuLogin || v.promotorNome === sessao.nome
+                );
+            }
+
+            visitas = firestoreVisitas;
+            console.log(`[MAXCRM] Minhas Visitas: ${visitas.length} carregadas do Firestore`);
         } catch(e) {
-            console.warn('[MAXCRM] Firestore visitas falhou, usando IDB:', e.message);
-            visitas = await MaxCRMDB.listarVisitas(50);
+            console.warn('[MAXCRM] Firestore visitas falhou, usando IndexedDB local:', e.message);
+            visitas = await MaxCRMDB.listarVisitas(200);
+            // Se não é gestor, filtra pelo promotor
+            if (!MaxCRMState.isGestor && meuLogin) {
+                visitas = visitas.filter(v => v.promotorId === meuLogin || v.promotorNome === sessao.nome);
+            }
         }
     } else {
-        // ── PROMOTOR: lê do IndexedDB local ─────────────────────────────
-        visitas = await MaxCRMDB.listarVisitas(50);
+        // ── Offline: lê do IndexedDB local ──────────────────────────────
+        visitas = await MaxCRMDB.listarVisitas(200);
+        if (!MaxCRMState.isGestor && meuLogin) {
+            visitas = visitas.filter(v => v.promotorId === meuLogin || v.promotorNome === sessao.nome);
+        }
     }
 
     if (visitas.length === 0) {
@@ -520,8 +548,9 @@ async function carregarMinhasVisitas() {
 
     lista.innerHTML = '';
     visitas.forEach(v => {
-        const d = new Date(v.criadoEm || v.data || Date.now());
-        const dataFmt = d.toLocaleDateString('pt-BR');
+        const criadoEm = v.criadoEm || v.data || new Date().toISOString();
+        const d = new Date(criadoEm);
+        const dataFmt = isNaN(d.getTime()) ? criadoEm : d.toLocaleDateString('pt-BR');
         const syncIcon = v.syncStatus === 'synced' ? '☁️' : '⏳';
         const promotorInfo = (MaxCRMState.isGestor && v.promotorNome) ? ` · ${v.promotorNome}` : '';
         const div = document.createElement('div');
