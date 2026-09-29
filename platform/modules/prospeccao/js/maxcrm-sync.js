@@ -21,12 +21,62 @@ const MaxCRMSync = (() => {
     let _syncRunning = false;
     let _onStatusChange = null;
 
+    const FIREBASE_CONFIG = {
+        apiKey:            "AIzaSyDzatCQ8zmH4aQftznf7Y5wdYPwFYSiARc",
+        authDomain:        "parreiralog-91904.firebaseapp.com",
+        projectId:         "parreiralog-91904",
+        messagingSenderId: "527633267616",
+        appId:             "1:527633267616:web:3567e883b31f7fa02882c5"
+    };
+
+    function _ensureFirebase() {
+        if (typeof firebase === 'undefined') {
+            throw new Error('[MaxCRMSync] Firebase SDK não disponível.');
+        }
+        if (!firebase.apps.length) {
+            firebase.initializeApp(window.FIREBASE_CONFIG || FIREBASE_CONFIG);
+        }
+        return firebase;
+    }
+
     // ── Referência Firestore ────────────────────────────────────────────────
     function _db() {
-        if (typeof firebase === 'undefined' || !firebase.firestore) {
+        _ensureFirebase();
+        if (!firebase.firestore) {
             throw new Error('[MaxCRMSync] Firebase Firestore não disponível.');
         }
         return firebase.firestore();
+    }
+
+    // ── Garantir autenticação anônima para regras do Firestore ──────────────
+    async function _ensureAuth() {
+        try {
+            _ensureFirebase();
+            if (typeof firebase !== 'undefined' && firebase.auth) {
+                const auth = firebase.auth();
+                if (auth.currentUser) return auth.currentUser;
+                return await new Promise((resolve) => {
+                    let resolved = false;
+                    const timer = setTimeout(() => {
+                        if (!resolved) {
+                            resolved = true;
+                            if (!auth.currentUser) auth.signInAnonymously().then(resolve).catch(resolve);
+                            else resolve(auth.currentUser);
+                        }
+                    }, 1200);
+                    const unsub = auth.onAuthStateChanged(user => {
+                        if (resolved) return;
+                        unsub();
+                        clearTimeout(timer);
+                        resolved = true;
+                        if (user) resolve(user);
+                        else auth.signInAnonymously().then(resolve).catch(resolve);
+                    });
+                });
+            }
+        } catch(e) {
+            console.warn('[MaxCRMSync] Falha ao verificar auth:', e.message);
+        }
     }
 
     // ── Status de conectividade ─────────────────────────────────────────────
@@ -133,6 +183,12 @@ const MaxCRMSync = (() => {
         _syncRunning = true;
         _emitStatus('syncing');
 
+        try {
+            await _ensureAuth();
+        } catch(e) {
+            console.warn('[MaxCRMSync] Auth warning:', e.message);
+        }
+
         const fila = await MaxCRMDB.getFilaSync();
         if (fila.length === 0) {
             _syncRunning = false;
@@ -202,6 +258,7 @@ const MaxCRMSync = (() => {
         }
         _emitStatus('syncing');
         try {
+            await _ensureAuth();
             const db = _db();
             const visitas = await MaxCRMDB.listarVisitas(500);
             if (!visitas || visitas.length === 0) {
@@ -253,6 +310,7 @@ const MaxCRMSync = (() => {
     async function pullEmpresas() {
         if (!isOnline()) return;
         try {
+            await _ensureAuth();
             const db   = _db();
             const snap = await db.collection(`${BASE_PATH}/empresas`).limit(1000).get();
             const empresasSalvar = [];
@@ -287,6 +345,7 @@ const MaxCRMSync = (() => {
     async function pullVisitas() {
         if (!isOnline()) return;
         try {
+            await _ensureAuth();
             const db   = _db();
             // Busca visitas do tenant SEM orderBy (evita hang por indice)
             const queryPromise = db.collection(`${BASE_PATH}/visitas`)

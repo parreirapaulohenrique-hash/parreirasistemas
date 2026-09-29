@@ -4,7 +4,7 @@
  * Parreira Sistemas — MAXCRM Campo v1.0.0
  */
 
-const MAXCRM_VERSION = '1.3.2';
+const MAXCRM_VERSION = '1.3.3';
 
 // ── Estado Global ────────────────────────────────────────────────────────────
 const MaxCRMState = {
@@ -38,10 +38,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // 2. Garantir Firebase Auth anônimo (para Firestore rules)
+    // 2. Garantir Firebase inicializado e Auth anônimo (para Firestore rules)
     try {
+        if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+            const cfg = window.FIREBASE_CONFIG || {
+                apiKey:            "AIzaSyDzatCQ8zmH4aQftznf7Y5wdYPwFYSiARc",
+                authDomain:        "parreiralog-91904.firebaseapp.com",
+                projectId:         "parreiralog-91904",
+                messagingSenderId: "527633267616",
+                appId:             "1:527633267616:web:3567e883b31f7fa02882c5"
+            };
+            firebase.initializeApp(cfg);
+        }
         await new Promise((resolve) => {
-            if (typeof firebase === 'undefined') { resolve(); return; }
+            if (typeof firebase === 'undefined' || !firebase.auth) { resolve(); return; }
             const unsub = firebase.auth().onAuthStateChanged(user => {
                 unsub();
                 if (user) { resolve(); }

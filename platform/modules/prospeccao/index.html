@@ -17,6 +17,18 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script>
+        window.FIREBASE_CONFIG = {
+            apiKey:            "AIzaSyDzatCQ8zmH4aQftznf7Y5wdYPwFYSiARc",
+            authDomain:        "parreiralog-91904.firebaseapp.com",
+            projectId:         "parreiralog-91904",
+            messagingSenderId: "527633267616",
+            appId:             "1:527633267616:web:3567e883b31f7fa02882c5"
+        };
+        if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+            try { firebase.initializeApp(window.FIREBASE_CONFIG); } catch(e) { console.error('[MAXCRM] Firebase init error:', e); }
+        }
+    </script>
     <!-- ParreiraAuth — security-guard NÃO é carregado aqui: o maxcrm-core.js
          faz seu próprio guard com verificação de tenant=parreira -->
     <script src="/platform/core/js/session-manager.js"></script>
@@ -301,12 +313,12 @@
 <!-- Toast global -->
 <div id="toast"></div>
 <!-- Scripts -->
-<script src="js/cnpj-lookup.js?v=3.21.66"></script>
-<script src="js/maxcrm-db.js?v=3.21.66"></script>
-<script src="js/maxcrm-sync.js?v=3.21.66"></script>
-<script src="js/maxcrm-import.js?v=3.21.66"></script>
-<script src="js/maxcrm-core.js?v=3.21.66"></script>
-<script src="js/maxcrm-visit.js?v=3.21.66"></script>
+<script src="js/cnpj-lookup.js?v=3.21.67"></script>
+<script src="js/maxcrm-db.js?v=3.21.67"></script>
+<script src="js/maxcrm-sync.js?v=3.21.67"></script>
+<script src="js/maxcrm-import.js?v=3.21.67"></script>
+<script src="js/maxcrm-core.js?v=3.21.67"></script>
+<script src="js/maxcrm-visit.js?v=3.21.67"></script>
 
 <script>
 // ─── Callbacks extras da index ─────────────────────────────────────────────

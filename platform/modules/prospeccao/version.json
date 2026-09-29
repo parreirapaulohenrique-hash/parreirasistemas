@@ -1,8 +1,8 @@
 {
-  "version": "1.3.2",
-  "build": "20260929-v1.3.2",
+  "version": "1.3.3",
+  "build": "20260929-v1.3.3",
   "environment": "production",
-  "change": "v1.3.2 - FIX CRÍTICO SINCRONIZAÇÃO: Forçar upload de todas as visitas locais do IndexedDB para o Firestore (forcarSincronizacaoTotal) com sanitização de campos undefined, botão 'Sincronizar com Banco' e exportação de backup JSON na tela Minhas Visitas. Remoção de orderBy no painel.html com timeout 10s e filtro/coluna de Promotor da equipe.",
+  "change": "v1.3.3 - FIX CRÍTICO FIREBASE: Inicialização explícita do Firebase App e autenticação anônima garantida em index.html, maxcrm-core.js e maxcrm-sync.js para sessões já logadas, corrigindo o erro 'No Firebase App DEFAULT has been created' que impedia a sincronização das visitas da Maisa para o Firestore.",
   "lastUpdate": "2026-09-29",
   "deployedAt": "2026-09-29"
 }
