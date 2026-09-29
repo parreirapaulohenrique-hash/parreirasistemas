@@ -1,30 +1,32 @@
-// MAXCRM Campo — Service Worker v1.0.0
+// MAXCRM Campo — Service Worker v3.21.66
 // Estratégia: Network-first com fallback offline
 // Autor: Parreira Sistemas
 
-const CACHE_NAME = 'maxcrm-v1';
+const CACHE_NAME = 'maxcrm-v3.21.66';
 const STATIC_ASSETS = [
     '/platform/modules/prospeccao/index.html',
     '/platform/modules/prospeccao/login.html',
     '/platform/modules/prospeccao/styles/maxcrm.css',
-    '/platform/modules/prospeccao/js/maxcrm-core.js',
-    '/platform/modules/prospeccao/js/maxcrm-db.js',
-    '/platform/modules/prospeccao/js/maxcrm-sync.js',
-    '/platform/modules/prospeccao/js/maxcrm-visit.js',
-    '/platform/modules/prospeccao/js/cnpj-lookup.js',
+    '/platform/modules/prospeccao/js/maxcrm-core.js?v=3.21.66',
+    '/platform/modules/prospeccao/js/maxcrm-db.js?v=3.21.66',
+    '/platform/modules/prospeccao/js/maxcrm-sync.js?v=3.21.66',
+    '/platform/modules/prospeccao/js/maxcrm-import.js?v=3.21.66',
+    '/platform/modules/prospeccao/js/maxcrm-visit.js?v=3.21.66',
+    '/platform/modules/prospeccao/js/cnpj-lookup.js?v=3.21.66',
     'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
     'https://fonts.googleapis.com/icon?family=Material+Icons+Round'
 ];
 
 // ── Install: pré-cacheia assets estáticos ────────────────────────────────────
 self.addEventListener('install', (event) => {
-    console.log('[SW] Instalando MAXCRM v1...');
+    console.log('[SW] Instalando MAXCRM v3.21.66...');
+    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             return cache.addAll(STATIC_ASSETS).catch((err) => {
                 console.warn('[SW] Alguns assets não cacheados:', err);
             });
-        }).then(() => self.skipWaiting())
+        })
     );
 });
 

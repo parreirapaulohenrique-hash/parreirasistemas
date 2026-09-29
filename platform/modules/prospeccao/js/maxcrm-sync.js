@@ -117,6 +117,12 @@ const MaxCRMSync = (() => {
         });
     }
 
+    // ── Helper para limpar campos undefined (Firestore rejeita undefined) ────
+    function _sanitizeForFirestore(obj) {
+        if (!obj || typeof obj !== 'object') return obj;
+        return JSON.parse(JSON.stringify(obj, (k, v) => (v === undefined ? null : v)));
+    }
+
     // ── Executor principal da fila ──────────────────────────────────────────
     async function processar() {
         if (_syncRunning || !isOnline()) {
@@ -169,8 +175,8 @@ const MaxCRMSync = (() => {
         window.addEventListener('online', () => {
             console.log('[MaxCRMSync] Online — iniciando sync automático...');
             processar();
+            forcarSincronizacaoTotal();
             pullEmpresas();
-            pullVisitas();
         });
         window.addEventListener('offline', () => {
             _emitStatus('offline');
@@ -179,41 +185,68 @@ const MaxCRMSync = (() => {
         // Sincroniza ao carregar se online
         if (isOnline()) {
             setTimeout(processar, 1500);                       // Processa fila (push)
-            setTimeout(sincronizarVisitasPendentes, 3000);    // Sobe visitas órfãs
-            setTimeout(pullEmpresas, 4500);                   // Baixa empresas atualizadas
-            setTimeout(pullVisitas, 5500);                    // Baixa visitas do Firestore
+            setTimeout(forcarSincronizacaoTotal, 2800);        // Garante envio de TODAS as visitas locais (órfãs e finalizadas)
+            setTimeout(pullEmpresas, 5000);                   // Baixa empresas atualizadas
+            setTimeout(pullVisitas, 6000);                    // Baixa visitas do Firestore
         }
     }
 
-    // ── Sincronizar visitas "órfãs" (pending no IDB mas não na fila de sync) ──
-    // Isso garante que visitas criadas antes do fix de enqueueSync na iniciarVisita
-    // sejam enviadas ao Firestore.
-    async function sincronizarVisitasPendentes() {
-        if (!isOnline()) return;
+    // ── Forçar envio de TODAS as visitas locais para o Firestore ─────────────
+    // Varre todas as visitas no IndexedDB local e faz upsert no Firestore,
+    // garantindo que visitas salvas apenas no dispositivo do promotor subam
+    // para a nuvem mesmo que syncStatus não esteja 'pending' ou a fila falhou.
+    async function forcarSincronizacaoTotal() {
+        if (!isOnline()) {
+            _emitStatus('offline');
+            return { ok: 0, erros: 0, total: 0, offline: true };
+        }
+        _emitStatus('syncing');
         try {
             const db = _db();
-            const visitas = await MaxCRMDB.listarVisitas(200);
-            const pendentes = visitas.filter(v => v.syncStatus === 'pending');
-            if (pendentes.length === 0) return;
-            console.log(`[MaxCRMSync] Sincronizando ${pendentes.length} visita(s) pendente(s) órfãs...`);
-            for (const visita of pendentes) {
+            const visitas = await MaxCRMDB.listarVisitas(500);
+            if (!visitas || visitas.length === 0) {
+                console.log('[MaxCRMSync] Nenhuma visita local para sincronizar.');
+                await processar();
+                await atualizarStatusUI();
+                return { ok: 0, erros: 0, total: 0 };
+            }
+
+            console.log(`[MaxCRMSync] Verificando e enviando ${visitas.length} visita(s) locais para Firestore...`);
+            let ok = 0, erros = 0;
+            for (const visita of visitas) {
                 try {
+                    const sanitized = _sanitizeForFirestore(visita);
                     const ref = db.doc(`${BASE_PATH}/visitas/${visita.id}`);
                     await ref.set({
-                        ...visita,
+                        ...sanitized,
                         atualizadoEm:   firebase.firestore.FieldValue.serverTimestamp(),
                         sincronizadoEm: firebase.firestore.FieldValue.serverTimestamp()
                     }, { merge: true });
-                    // Marca como synced no IDB
+
+                    // Marca como synced no IDB local
                     await MaxCRMDB.salvarProgresso(visita.id, { syncStatus: 'synced' });
-                    console.log('[MaxCRMSync] Visita sincronizada (órfã):', visita.id, visita.empresaNome);
+                    ok++;
+                    console.log('[MaxCRMSync] Visita enviada à nuvem:', visita.id, visita.empresaNome);
                 } catch(e) {
-                    console.warn('[MaxCRMSync] Erro ao sincronizar visita órfã:', visita.id, e.message);
+                    console.warn('[MaxCRMSync] Falha ao enviar visita', visita.id, e.message);
+                    erros++;
                 }
             }
+
+            await processar();
+            await pullVisitas();
+            await atualizarStatusUI();
+
+            console.log(`[MaxCRMSync] Sincronização forçada concluída: ${ok} enviadas, ${erros} erros de ${visitas.length} totais.`);
+            return { ok, erros, total: visitas.length };
         } catch(e) {
-            console.warn('[MaxCRMSync] sincronizarVisitasPendentes falhou:', e.message);
+            console.warn('[MaxCRMSync] forcarSincronizacaoTotal falhou:', e.message);
+            return { ok: 0, erros: 1, total: 0, erro: e.message };
         }
+    }
+
+    async function sincronizarVisitasPendentes() {
+        return forcarSincronizacaoTotal();
     }
 
     // ── Baixar dados da nuvem (pull) ─────────────────────────────────────────
@@ -344,6 +377,7 @@ const MaxCRMSync = (() => {
         pullEmpresas,
         pullVisitas,
         sincronizarVisitasPendentes,
+        forcarSincronizacaoTotal,
         contarPendentes,
         atualizarStatusUI,
         isOnline,
