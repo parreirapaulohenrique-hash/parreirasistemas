@@ -691,8 +691,13 @@
         const authUrl = typeof _maxdataBuildUrl === 'function' ? _maxdataBuildUrl('auth') : `${base}/auth`;
         const resp = await fetch(authUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ empId: Number(cfg.empId), terminal: cfg.terminal }),
+            headers: {
+                'Content-Type':            'application/json',
+                'application_name':        cfg.appName || '5ea6149f-e123-4847-82a2-d5fc6e157aeb',
+                'application_key':         cfg.appKey || '249b6fc7-4312-48e3-9155-0c48d92b098637255f1b-95a4-4c91-a06a-c51d0dd062d2',
+                'application_description': cfg.appDescription || 'CENTRALPECAS_APP_COTACAO'
+            },
+            body: JSON.stringify({ empId: Number(cfg.empId), terminal: cfg.terminal, idUser: 0 }),
             signal: AbortSignal.timeout(10000)
         });
         if (!resp.ok) throw new Error(`Maxdata Auth HTTP ${resp.status}`);
