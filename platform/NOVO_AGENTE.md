@@ -630,3 +630,8 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
   - Restauração do Highlight Card 'START DE COMPRA — AGORA' com destaque vermelho sutil, valores destacados e botão de auditoria imediata.
   - Alinhamento visual de todos os 20 submódulos integrados nos 5 Grupos Estratégicos (Visão Executiva, Curva ABC, Cobertura, Sazonalidade, Rupturas com 3 cards, Capital Excedente, Curva X, Compras, e Ações Comerciais).
   - Preservação da auditoria estrita de Capital Excedente (24 SKUs / R$ 216.552,59) com coluna 'Valor Excedente' em destaque âmbar e modal de ficha técnica do SKU de 12 métricas.
+
+* **2026-09-29 (v3.21.66 / MAXCRM v1.3.2):** Sincronização forçada de visitas locais do IndexedDB para a nuvem Firestore (`tenants/parreira/visitas`), botões de sincronização manual e exportação de backup JSON em Minhas Visitas, correção da consulta no `painel.html` (remoção do `.orderBy` que causava hang por falta de índice) e inclusão de filtro/coluna de Promotor.
+
+* **2026-09-29 (v3.21.67 / MAXCRM v1.3.3):** Correção crítica de inicialização do Firebase (`Firebase: No Firebase App '[DEFAULT]' has been created`). Garantida a chamada explícita de `firebase.initializeApp(window.FIREBASE_CONFIG)` e autenticação anônima antes de qualquer operação de Firestore no `index.html`, `maxcrm-core.js` e `maxcrm-sync.js`, permitindo que usuários com sessão já iniciada (como a Maisa) sincronizem perfeitamente suas visitas locais para o banco na nuvem.
+
