@@ -250,13 +250,16 @@
                 <div class="section-title">Minhas Visitas</div>
                 <div class="section-subtitle">Histórico de visitas realizadas</div>
             </div>
-            <!-- Barra de Ações: Sincronização Forçada & Backup -->
-            <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <!-- Barra de Ações: Sincronização Forçada & Backup & Importar -->
+            <div style="display:flex;gap:6px;margin-bottom:12px;">
                 <button class="btn btn-primary btn-sm" onclick="forcarSincronizarVisitas()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,#e11d48,#be123c);font-weight:700">
-                    <span class="material-icons-round" style="font-size:1.05rem;">cloud_upload</span> Sincronizar com Banco
+                    <span class="material-icons-round" style="font-size:1.05rem;">cloud_upload</span> Sincronizar
                 </button>
                 <button class="btn btn-secondary btn-sm" onclick="exportarBackupVisitas()" title="Exportar cópia de segurança em JSON" style="display:flex;align-items:center;gap:4px;">
                     <span class="material-icons-round" style="font-size:1.05rem;">file_download</span> Backup
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="importarBackupVisitas()" title="Restaurar visitas de um backup JSON" style="display:flex;align-items:center;gap:4px;">
+                    <span class="material-icons-round" style="font-size:1.05rem;">file_upload</span> Importar
                 </button>
             </div>
             <div id="listaMinhasVisitas">
@@ -313,12 +316,12 @@
 <!-- Toast global -->
 <div id="toast"></div>
 <!-- Scripts -->
-<script src="js/cnpj-lookup.js?v=3.21.67"></script>
-<script src="js/maxcrm-db.js?v=3.21.67"></script>
-<script src="js/maxcrm-sync.js?v=3.21.67"></script>
-<script src="js/maxcrm-import.js?v=3.21.67"></script>
-<script src="js/maxcrm-core.js?v=3.21.67"></script>
-<script src="js/maxcrm-visit.js?v=3.21.67"></script>
+<script src="js/cnpj-lookup.js?v=3.21.68"></script>
+<script src="js/maxcrm-db.js?v=3.21.68"></script>
+<script src="js/maxcrm-sync.js?v=3.21.68"></script>
+<script src="js/maxcrm-import.js?v=3.21.68"></script>
+<script src="js/maxcrm-core.js?v=3.21.68"></script>
+<script src="js/maxcrm-visit.js?v=3.21.68"></script>
 
 <script>
 // ─── Callbacks extras da index ─────────────────────────────────────────────
@@ -456,6 +459,42 @@ window.exportarBackupVisitas = async function() {
     } catch(e) {
         showToast('Erro ao exportar backup: ' + e.message, 'error');
     }
+};
+
+window.importarBackupVisitas = function() {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.onchange = async function(e) {
+        var file = e.target.files && e.target.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = async function(evt) {
+            try {
+                var json = JSON.parse(evt.target.result);
+                var lista = Array.isArray(json) ? json : (json.visitas || []);
+                if (!lista || lista.length === 0) {
+                    showToast('Nenhuma visita encontrada no arquivo.', 'error');
+                    return;
+                }
+                showToast('Importando ' + lista.length + ' visitas...');
+                for (var i = 0; i < lista.length; i++) {
+                    var v = lista[i];
+                    if (v && v.id) {
+                        await MaxCRMDB.salvarProgresso(v.id, v);
+                    }
+                }
+                showToast('Importadas ' + lista.length + ' visitas! Enviando para o banco...', 'success');
+                if (typeof forcarSincronizarVisitas === 'function') {
+                    await forcarSincronizarVisitas();
+                }
+            } catch(err) {
+                showToast('Erro ao importar backup: ' + err.message, 'error');
+            }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
 };
 
 // Retomar visita em andamento ao abrir

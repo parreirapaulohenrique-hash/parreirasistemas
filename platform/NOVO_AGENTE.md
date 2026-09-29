@@ -635,3 +635,6 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
 
 * **2026-09-29 (v3.21.67 / MAXCRM v1.3.3):** Correção crítica de inicialização do Firebase (`Firebase: No Firebase App '[DEFAULT]' has been created`). Garantida a chamada explícita de `firebase.initializeApp(window.FIREBASE_CONFIG)` e autenticação anônima antes de qualquer operação de Firestore no `index.html`, `maxcrm-core.js` e `maxcrm-sync.js`, permitindo que usuários com sessão já iniciada (como a Maisa) sincronizem perfeitamente suas visitas locais para o banco na nuvem.
 
+* **2026-09-29 (v3.21.68 / MAXCRM v1.3.4):** Mesclagem automática de visitas locais do IndexedDB com os dados remotos do Firestore em `carregarMinhasVisitas` (para manter sempre visíveis as visitas locais do aparelho que ainda não subiram para a nuvem) e botão 'Importar' de backup JSON diretamente na tela Minhas Visitas.
+
+

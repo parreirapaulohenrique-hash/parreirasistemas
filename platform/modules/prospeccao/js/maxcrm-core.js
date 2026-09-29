@@ -4,7 +4,7 @@
  * Parreira Sistemas — MAXCRM Campo v1.0.0
  */
 
-const MAXCRM_VERSION = '1.3.3';
+const MAXCRM_VERSION = '1.3.4';
 
 // ── Estado Global ────────────────────────────────────────────────────────────
 const MaxCRMState = {
@@ -562,12 +562,31 @@ async function carregarMinhasVisitas() {
                 console.log(`[MAXCRM-DIAG] Filtro promotor (${meuLogin}): ${antes} → ${firestoreVisitas.length}`);
             }
 
-            // Ordenar client-side (mais recente primeiro)
-            firestoreVisitas.sort((a, b) => (b.criadoEm || b.data || '').localeCompare(a.criadoEm || a.data || ''));
+            // Mesclar visitas locais do IndexedDB com as visitas do Firestore (para não esconder visitas locais do dispositivo)
+            try {
+                const idbVisitas = await MaxCRMDB.listarVisitas(500);
+                const mapa = new Map();
+                // 1. Visitas salvas localmente neste aparelho
+                (idbVisitas || []).forEach(v => {
+                    if (v && v.id) mapa.set(v.id, v);
+                });
+                // 2. Visitas da nuvem Firestore (sobrescrevem com status oficial)
+                firestoreVisitas.forEach(v => {
+                    if (v && v.id) {
+                        const local = mapa.get(v.id) || {};
+                        mapa.set(v.id, { ...local, ...v });
+                    }
+                });
+                visitas = Array.from(mapa.values());
+            } catch(idbErr) {
+                visitas = firestoreVisitas;
+            }
 
-            visitas = firestoreVisitas;
-            fonte = 'firestore';
-            diagMsg = `Firestore: ${snap.size} total, ${visitas.length} carregadas (cache: ${snap.metadata.fromCache})`;
+            // Ordenar client-side (mais recente primeiro)
+            visitas.sort((a, b) => (b.criadoEm || b.data || '').localeCompare(a.criadoEm || a.data || ''));
+
+            fonte = 'firestore+local';
+            diagMsg = `Firestore: ${snap.size} nuvem | Total exibido: ${visitas.length}`;
         } catch(e) {
             console.error('[MAXCRM-DIAG] Firestore FALHOU:', e.code || '', e.message);
             diagMsg = `Firestore ERRO: ${e.message}`;
