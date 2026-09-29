@@ -238,6 +238,15 @@
                 <div class="section-title">Minhas Visitas</div>
                 <div class="section-subtitle">Histórico de visitas realizadas</div>
             </div>
+            <!-- Barra de Ações: Sincronização Forçada & Backup -->
+            <div style="display:flex;gap:8px;margin-bottom:12px;">
+                <button class="btn btn-primary btn-sm" onclick="forcarSincronizarVisitas()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,#e11d48,#be123c);font-weight:700">
+                    <span class="material-icons-round" style="font-size:1.05rem;">cloud_upload</span> Sincronizar com Banco
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="exportarBackupVisitas()" title="Exportar cópia de segurança em JSON" style="display:flex;align-items:center;gap:4px;">
+                    <span class="material-icons-round" style="font-size:1.05rem;">file_download</span> Backup
+                </button>
+            </div>
             <div id="listaMinhasVisitas">
                 <div class="loading-spinner"></div>
             </div>
@@ -292,12 +301,12 @@
 <!-- Toast global -->
 <div id="toast"></div>
 <!-- Scripts -->
-<script src="js/cnpj-lookup.js"></script>
-<script src="js/maxcrm-db.js"></script>
-<script src="js/maxcrm-sync.js"></script>
-<script src="js/maxcrm-import.js"></script>
-<script src="js/maxcrm-core.js"></script>
-<script src="js/maxcrm-visit.js"></script>
+<script src="js/cnpj-lookup.js?v=3.21.66"></script>
+<script src="js/maxcrm-db.js?v=3.21.66"></script>
+<script src="js/maxcrm-sync.js?v=3.21.66"></script>
+<script src="js/maxcrm-import.js?v=3.21.66"></script>
+<script src="js/maxcrm-core.js?v=3.21.66"></script>
+<script src="js/maxcrm-visit.js?v=3.21.66"></script>
 
 <script>
 // ─── Callbacks extras da index ─────────────────────────────────────────────
@@ -387,11 +396,54 @@ window.apenasCADastrar = async function() {
 };
 
 window.sincronizarAgora = async function() {
-    showToast('Sincronizando...');
-    var r = await MaxCRMSync.processar();
-    if (r.erros > 0) showToast(r.ok + ' sincronizados, ' + r.erros + ' erros', 'error');
-    else showToast(r.ok + ' itens sincronizados com sucesso', 'success');
+    showToast('Sincronizando com o banco...');
+    if (typeof MaxCRMSync !== 'undefined' && MaxCRMSync.forcarSincronizacaoTotal) {
+        var r = await MaxCRMSync.forcarSincronizacaoTotal();
+        if (r.erros > 0) showToast(r.ok + ' enviadas, ' + r.erros + ' com erro', 'error');
+        else showToast((r.ok || 0) + ' visita(s) sincronizadas no banco!', 'success');
+    } else if (typeof MaxCRMSync !== 'undefined') {
+        var r = await MaxCRMSync.processar();
+        if (r.erros > 0) showToast(r.ok + ' sincronizados, ' + r.erros + ' erros', 'error');
+        else showToast(r.ok + ' itens sincronizados com sucesso', 'success');
+    }
     atualizarHome();
+    if (typeof carregarMinhasVisitas === 'function') carregarMinhasVisitas();
+};
+
+window.forcarSincronizarVisitas = async function() {
+    showToast('Enviando visitas locais para a nuvem...');
+    if (typeof MaxCRMSync !== 'undefined' && MaxCRMSync.forcarSincronizacaoTotal) {
+        var r = await MaxCRMSync.forcarSincronizacaoTotal();
+        if (r.erros > 0) {
+            showToast(r.ok + ' enviadas, ' + r.erros + ' falharam.', 'error');
+        } else {
+            showToast(r.ok + ' visita(s) enviadas para a nuvem com sucesso!', 'success');
+        }
+    }
+    if (typeof carregarMinhasVisitas === 'function') carregarMinhasVisitas();
+    atualizarHome();
+};
+
+window.exportarBackupVisitas = async function() {
+    try {
+        var visitas = await MaxCRMDB.listarVisitas(1000);
+        if (!visitas || visitas.length === 0) {
+            showToast('Nenhuma visita para exportar.', 'error');
+            return;
+        }
+        var blob = new Blob([JSON.stringify(visitas, null, 2)], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'backup_visitas_maxcrm_' + (new Date().toISOString().split('T')[0]) + '.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('Backup exportado com ' + visitas.length + ' visitas!', 'success');
+    } catch(e) {
+        showToast('Erro ao exportar backup: ' + e.message, 'error');
+    }
 };
 
 // Retomar visita em andamento ao abrir

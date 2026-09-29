@@ -4,7 +4,7 @@
  * Parreira Sistemas — MAXCRM Campo v1.0.0
  */
 
-const MAXCRM_VERSION = '1.3.0';
+const MAXCRM_VERSION = '1.3.2';
 
 // ── Estado Global ────────────────────────────────────────────────────────────
 const MaxCRMState = {
@@ -532,40 +532,64 @@ async function carregarMinhasVisitas() {
                 return { id: d.id, ...data, syncStatus: 'synced' };
             });
 
+            // Normalização para comparação robusta
+            const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+            const meuLoginNorm = norm(meuLogin);
+            const meuNomeNorm  = norm(sessao ? sessao.nome : '');
+
             // Log visitas encontradas
-            firestoreVisitas.forEach(v => console.log(`[MAXCRM-DIAG] Visita: ${v.empresaNome} | promotor=${v.promotorId} | status=${v.status}`));
+            firestoreVisitas.forEach(v => console.log(`[MAXCRM-DIAG] Visita: ${v.empresaNome} | promotor=${v.promotorId} (${v.promotorNome}) | status=${v.status}`));
 
             // Se NÃO é gestor, filtra apenas as visitas do próprio promotor
-            if (!MaxCRMState.isGestor && meuLogin) {
+            if (!MaxCRMState.isGestor && (meuLoginNorm || meuNomeNorm)) {
                 const antes = firestoreVisitas.length;
-                firestoreVisitas = firestoreVisitas.filter(v =>
-                    v.promotorId === meuLogin || v.promotorNome === sessao.nome
-                );
+                firestoreVisitas = firestoreVisitas.filter(v => {
+                    const pId = norm(v.promotorId);
+                    const pNome = norm(v.promotorNome);
+                    return (meuLoginNorm && (pId === meuLoginNorm || pNome.includes(meuLoginNorm))) ||
+                           (meuNomeNorm && (pNome === meuNomeNorm || pNome.includes(meuNomeNorm)));
+                });
                 console.log(`[MAXCRM-DIAG] Filtro promotor (${meuLogin}): ${antes} → ${firestoreVisitas.length}`);
             }
 
             // Ordenar client-side (mais recente primeiro)
-            firestoreVisitas.sort((a, b) => (b.criadoEm || '').localeCompare(a.criadoEm || ''));
+            firestoreVisitas.sort((a, b) => (b.criadoEm || b.data || '').localeCompare(a.criadoEm || a.data || ''));
 
             visitas = firestoreVisitas;
             fonte = 'firestore';
-            diagMsg = `Firestore: ${snap.size} total, ${visitas.length} filtradas (cache: ${snap.metadata.fromCache})`;
+            diagMsg = `Firestore: ${snap.size} total, ${visitas.length} carregadas (cache: ${snap.metadata.fromCache})`;
         } catch(e) {
             console.error('[MAXCRM-DIAG] Firestore FALHOU:', e.code || '', e.message);
             diagMsg = `Firestore ERRO: ${e.message}`;
             // Fallback para IndexedDB
             visitas = await MaxCRMDB.listarVisitas(200);
             fonte = 'indexeddb-fallback';
-            if (!MaxCRMState.isGestor && meuLogin) {
-                visitas = visitas.filter(v => v.promotorId === meuLogin || v.promotorNome === sessao.nome);
+            const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+            const meuLoginNorm = norm(meuLogin);
+            const meuNomeNorm  = norm(sessao ? sessao.nome : '');
+            if (!MaxCRMState.isGestor && (meuLoginNorm || meuNomeNorm)) {
+                visitas = visitas.filter(v => {
+                    const pId = norm(v.promotorId);
+                    const pNome = norm(v.promotorNome);
+                    return (meuLoginNorm && (pId === meuLoginNorm || pNome.includes(meuLoginNorm))) ||
+                           (meuNomeNorm && (pNome === meuNomeNorm || pNome.includes(meuNomeNorm)));
+                });
             }
             diagMsg += ` | IDB: ${visitas.length}`;
         }
     } else {
         visitas = await MaxCRMDB.listarVisitas(200);
         fonte = 'indexeddb-offline';
-        if (!MaxCRMState.isGestor && meuLogin) {
-            visitas = visitas.filter(v => v.promotorId === meuLogin || v.promotorNome === sessao.nome);
+        const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+        const meuLoginNorm = norm(meuLogin);
+        const meuNomeNorm  = norm(sessao ? sessao.nome : '');
+        if (!MaxCRMState.isGestor && (meuLoginNorm || meuNomeNorm)) {
+            visitas = visitas.filter(v => {
+                const pId = norm(v.promotorId);
+                const pNome = norm(v.promotorNome);
+                return (meuLoginNorm && (pId === meuLoginNorm || pNome.includes(meuLoginNorm))) ||
+                       (meuNomeNorm && (pNome === meuNomeNorm || pNome.includes(meuNomeNorm)));
+            });
         }
         diagMsg = `Offline: IDB ${visitas.length} visitas`;
     }
@@ -576,8 +600,8 @@ async function carregarMinhasVisitas() {
         lista.innerHTML = `
             <div class="empty-state">
                 <span class="material-icons-round">assignment</span>
-                <div class="empty-state-title">Nenhuma visita ainda</div>
-                <div class="empty-state-sub">Inicie sua primeira visita</div>
+                <div class="empty-state-title">Nenhuma visita encontrada</div>
+                <div class="empty-state-sub">Toque em "Sincronizar com Banco" ou inicie uma nova visita</div>
             </div>
             <div style="margin-top:16px;padding:12px;background:rgba(255,255,255,0.05);border-radius:8px;font-size:0.7rem;color:rgba(255,255,255,0.4);word-break:break-all">
                 <strong>Diagnóstico:</strong> ${diagMsg}<br>
@@ -589,14 +613,47 @@ async function carregarMinhasVisitas() {
     }
 
     lista.innerHTML = '';
+
+    // Se o usuário for gestor, adiciona seletor rápido de promotores da equipe
+    if (MaxCRMState.isGestor) {
+        const promotoresUnicos = Array.from(new Set(visitas.map(v => v.promotorNome || v.promotorId).filter(Boolean)));
+        if (promotoresUnicos.length > 1) {
+            const filterBar = document.createElement('div');
+            filterBar.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px';
+            filterBar.innerHTML = `
+                <span class="material-icons-round" style="font-size:1rem;color:var(--primary)">group</span>
+                <span style="font-size:0.75rem;font-weight:600;color:var(--text-secondary)">Equipe:</span>
+                <select id="filtroEquipeSelect" style="flex:1;background:transparent;border:none;color:white;font-size:0.8rem;outline:none;font-weight:600">
+                    <option value="" style="background:#18181b">Todas as Visitas (${visitas.length})</option>
+                    ${promotoresUnicos.map(p => `<option value="${p}" style="background:#18181b">${p}</option>`).join('')}
+                </select>
+            `;
+            lista.appendChild(filterBar);
+
+            const selectEl = filterBar.querySelector('#filtroEquipeSelect');
+            selectEl.onchange = () => {
+                const escolhido = selectEl.value;
+                const itens = lista.querySelectorAll('.visita-card-item');
+                itens.forEach(item => {
+                    if (!escolhido || item.dataset.promotor === escolhido) {
+                        item.style.display = 'flex';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            };
+        }
+    }
+
     visitas.forEach(v => {
         const criadoEm = v.criadoEm || v.data || new Date().toISOString();
         const d = new Date(criadoEm);
         const dataFmt = isNaN(d.getTime()) ? criadoEm : d.toLocaleDateString('pt-BR');
         const syncIcon = v.syncStatus === 'synced' ? '☁️' : '⏳';
-        const promotorInfo = (MaxCRMState.isGestor && v.promotorNome) ? ` · ${v.promotorNome}` : '';
+        const promotorInfo = v.promotorNome ? ` • ${v.promotorNome}` : (v.promotorId ? ` • ${v.promotorId}` : '');
         const div = document.createElement('div');
-        div.className = 'list-item';
+        div.className = 'list-item visita-card-item';
+        div.dataset.promotor = v.promotorNome || v.promotorId || '';
         div.style.cursor = 'pointer';
         div.innerHTML = `
             <div class="list-item-icon" style="background:var(--primary-bg)">
@@ -604,7 +661,7 @@ async function carregarMinhasVisitas() {
             </div>
             <div class="list-item-content">
                 <div class="list-item-title">${v.empresaNome || 'Empresa'}</div>
-                <div class="list-item-sub">${dataFmt} • ${_labelStatusVisita(v.status)} ${syncIcon}${promotorInfo}</div>
+                <div class="list-item-sub">${dataFmt} • ${_labelStatusVisita(v.status)}${promotorInfo} <span style="font-size:0.75rem;opacity:0.7">${syncIcon}</span></div>
             </div>
             <span class="material-icons-round list-item-arrow">chevron_right</span>`;
         div.onclick = () => _abrirDetalheVisita(v);

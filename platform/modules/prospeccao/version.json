@@ -1,8 +1,8 @@
 {
-  "version": "1.3.0",
-  "build": "20260928-v1.3.0",
+  "version": "1.3.2",
+  "build": "20260929-v1.3.2",
   "environment": "production",
-  "change": "v1.3.0 - FIX: Sincronização bidirecional de visitas (pullVisitas Firestore→IndexedDB). Visitas agora aparecem em qualquer dispositivo do mesmo usuário. salvarProgresso com sync debounced a cada 3s. carregarMinhasVisitas busca Firestore primeiro (cross-device) com fallback IndexedDB offline.",
-  "lastUpdate": "2026-09-28",
-  "deployedAt": "2026-09-28"
+  "change": "v1.3.2 - FIX CRÍTICO SINCRONIZAÇÃO: Forçar upload de todas as visitas locais do IndexedDB para o Firestore (forcarSincronizacaoTotal) com sanitização de campos undefined, botão 'Sincronizar com Banco' e exportação de backup JSON na tela Minhas Visitas. Remoção de orderBy no painel.html com timeout 10s e filtro/coluna de Promotor da equipe.",
+  "lastUpdate": "2026-09-29",
+  "deployedAt": "2026-09-29"
 }

@@ -582,6 +582,9 @@
                     <span class="material-icons-round">search</span>
                     <input type="text" id="searchInput" placeholder="Buscar por empresa, CNPJ, contato..." oninput="aplicarFiltros()">
                 </div>
+                <select class="select-filter" id="filterPromotor" onchange="aplicarFiltros()">
+                    <option value="">Todos os Promotores</option>
+                </select>
                 <select class="select-filter" id="filterIntencao" onchange="aplicarFiltros()">
                     <option value="">Todas as Intenções</option>
                     <option value="ALTA">Alta Intenção</option>
@@ -605,6 +608,7 @@
                         <tr>
                             <th>Data/Hora</th>
                             <th>Empresa / CNPJ</th>
+                            <th>Promotor</th>
                             <th>Contato</th>
                             <th>ERP Concorrente</th>
                             <th>Satisfação</th>
@@ -872,16 +876,24 @@
         // ── Carregar Dados do Firestore ──────────────────────────────────────
         async function carregarDados() {
             try {
-                // Carrega visitas (coleção correta tenants/parreira/visitas)
-                const vSnap = await db.collection(`tenants/${TENANT_ID}/visitas`)
-                    .orderBy('criadoEm', 'desc')
-                    .limit(300)
+                // Carrega visitas (sem orderBy para não travar por falta de índice no Firestore)
+                const queryPromise = db.collection(`tenants/${TENANT_ID}/visitas`)
+                    .limit(500)
                     .get();
+
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('TIMEOUT: Firestore demorou mais de 10s')), 10000)
+                );
+
+                const vSnap = await Promise.race([queryPromise, timeoutPromise]);
 
                 _visitas = [];
                 vSnap.forEach(doc => {
                     _visitas.push({ id: doc.id, ...doc.data() });
                 });
+
+                // Ordenação client-side por data/criação mais recente
+                _visitas.sort((a, b) => (b.criadoEm || b.data || '').localeCompare(a.criadoEm || a.data || ''));
 
                 // Carrega empresas (coleção correta tenants/parreira/empresas)
                 const eSnap = await db.collection(`tenants/${TENANT_ID}/empresas`)
@@ -916,6 +928,7 @@
                     const vReq = txV.objectStore('visitas').getAll();
                     vReq.onsuccess = () => {
                         _visitas = vReq.result || [];
+                        _visitas.sort((a, b) => (b.criadoEm || b.data || '').localeCompare(a.criadoEm || a.data || ''));
                         atualizarKPIs();
                         aplicarFiltros();
                     };
@@ -930,7 +943,7 @@
             };
         }
 
-        // ── Atualiza KPIs ────────────────────────────────────────────────────
+        // ── Atualiza KPIs & Filtros ──────────────────────────────────────────
         function atualizarKPIs() {
             document.getElementById('kpiEmpresas').textContent = _empresas.length || _visitas.length;
             document.getElementById('kpiVisitas').textContent = _visitas.length;
@@ -948,28 +961,44 @@
                 if (e && e !== 'Não tem' && e !== 'Outro') erps.add(e);
             });
             document.getElementById('kpiConcorrentes').textContent = erps.size;
+
+            // Atualiza dropdown de promotores com dados reais
+            const promSelect = document.getElementById('filterPromotor');
+            if (promSelect) {
+                const atualVal = promSelect.value;
+                const promotores = Array.from(new Set(_visitas.map(v => v.promotorNome || v.promotorId).filter(Boolean))).sort();
+                promSelect.innerHTML = '<option value="">Todos os Promotores</option>' +
+                    promotores.map(p => `<option value="${p}">${p}</option>`).join('');
+                promSelect.value = atualVal;
+            }
         }
 
         // ── Filtros e Render de Visitas ──────────────────────────────────────
         function aplicarFiltros() {
             const q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+            const fProm = (document.getElementById('filterPromotor') || {}).value;
             const fInt = document.getElementById('filterIntencao').value;
             const fDemo = document.getElementById('filterDemo').value;
 
             const filtradas = _visitas.filter(v => {
-                const empNome = (v.empresa_nome || v.razao_social || v.empresa || '').toLowerCase();
+                const empNome = (v.empresa_nome || v.empresaNome || v.razao_social || v.empresa || '').toLowerCase();
                 const cnpj = (v.cnpj || '').toLowerCase();
                 const contato = (v.contato_nome || (v.contato && v.contato.nome) || '').toLowerCase();
-                const erp = (v.erp_atual || '').toLowerCase();
+                const erp = (v.erp_atual || (v.respostas && v.respostas.erpAtual && v.respostas.erpAtual.erpNome) || '').toLowerCase();
+                const prom = (v.promotorNome || v.promotorId || '').toLowerCase();
 
-                if (q && !empNome.includes(q) && !cnpj.includes(q) && !contato.includes(q) && !erp.includes(q)) {
+                if (fProm && (v.promotorNome !== fProm && v.promotorId !== fProm)) {
                     return false;
                 }
 
-                const intencao = (v.intencao || v.intencao_troca || '').toUpperCase();
+                if (q && !empNome.includes(q) && !cnpj.includes(q) && !contato.includes(q) && !erp.includes(q) && !prom.includes(q)) {
+                    return false;
+                }
+
+                const intencao = (v.intencao || v.intencao_troca || (v.respostas && v.respostas.intencaoTroca) || '').toUpperCase();
                 if (fInt && !intencao.includes(fInt)) return false;
 
-                const demo = v.aceita_demo || v.aceitaDemo;
+                const demo = v.aceita_demo || v.aceitaDemo || (v.respostas && v.respostas.aceitaDemo);
                 if (fDemo === 'sim' && !(demo === true || demo === 'sim')) return false;
                 if (fDemo === 'nao' && (demo === true || demo === 'sim')) return false;
 
@@ -984,26 +1013,28 @@
             if (!tbody) return;
 
             if (visitas.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><span class="material-icons-round">sentiment_dissatisfied</span>Nenhuma visita encontrada com os filtros selecionados.</div></td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><span class="material-icons-round">sentiment_dissatisfied</span>Nenhuma visita encontrada com os filtros selecionados.</div></td></tr>`;
                 return;
             }
 
             tbody.innerHTML = visitas.map(v => {
                 const dataStr = formatarData(v.criadoEm || v.data_visita || v.data);
-                const empNome = v.empresa_nome || v.razao_social || v.empresa || 'Empresa Sem Nome';
+                const empNome = v.empresa_nome || v.empresaNome || v.razao_social || v.empresa || 'Empresa Sem Nome';
                 const cnpj = v.cnpj || '—';
-                const contato = v.contato_nome || (v.contato && v.contato.nome) || '—';
-                const cargo = v.contato_cargo || (v.contato && v.contato.cargo) || '';
-                const erp = v.erp_atual || v.erpAtual || '—';
-                const sat = v.satisfacao_erp || v.satisfacao || 0;
-                const intencao = (v.intencao || v.intencao_troca || 'NENHUMA').toUpperCase();
-                const demo = v.aceita_demo || v.aceitaDemo;
-                const proxAcao = v.proxima_acao_tipo || v.proximaAcao || '—';
+                const promotor = v.promotorNome || v.promotorId || '—';
+                const contato = v.contato_nome || (v.contato && v.contato.nome) || (v.respostas && v.respostas.contatos && v.respostas.contatos[0] && v.respostas.contatos[0].nome) || '—';
+                const cargo = v.contato_cargo || (v.contato && v.contato.cargo) || (v.respostas && v.respostas.contatos && v.respostas.contatos[0] && v.respostas.contatos[0].cargo) || '';
+                const erp = v.erp_atual || v.erpAtual || (v.respostas && v.respostas.erpAtual && v.respostas.erpAtual.erpNome) || '—';
+                const sat = v.satisfacao_erp || v.satisfacao || (v.respostas && v.respostas.erpAtual && v.respostas.erpAtual.satisfacao) || 0;
+                const intencao = (v.intencao || v.intencao_troca || (v.respostas && v.respostas.intencaoTroca) || 'NENHUMA').toUpperCase();
+                const demo = v.aceita_demo || v.aceitaDemo || (v.respostas && v.respostas.aceitaDemo);
+                const acaoObj = (v.respostas && v.respostas.proximaAcao) || {};
+                const proxAcao = v.proxima_acao_tipo || v.proximaAcao || acaoObj.tipo || '—';
 
                 let badgeIntencao = '<span class="badge badge-nenhuma">Nenhuma</span>';
-                if (intencao.includes('ALTA')) badgeIntencao = '<span class="badge badge-alta">Alta</span>';
-                else if (intencao.includes('MEDIA') || intencao.includes('MÉDIA')) badgeIntencao = '<span class="badge badge-media">Média</span>';
-                else if (intencao.includes('BAIXA')) badgeIntencao = '<span class="badge badge-baixa">Baixa</span>';
+                if (intencao.includes('ALTA') || intencao.includes('RAPIDAMENTE') || intencao.includes('PREVAL')) badgeIntencao = '<span class="badge badge-alta">Alta</span>';
+                else if (intencao.includes('MEDIA') || intencao.includes('MÉDIA') || intencao.includes('AVALIANDO') || intencao.includes('NEGOCIANDO')) badgeIntencao = '<span class="badge badge-media">Média</span>';
+                else if (intencao.includes('BAIXA') || intencao.includes('JA_PENSEI') || intencao.includes('PESQUISANDO')) badgeIntencao = '<span class="badge badge-baixa">Baixa</span>';
 
                 let badgeDemo = (demo === true || demo === 'sim')
                     ? '<span class="badge badge-demo">Sim</span>'
@@ -1020,6 +1051,9 @@
                     <td>
                         <div style="font-weight:700;color:#fff;">${empNome}</div>
                         <div style="font-size:0.74rem;color:var(--text-muted);font-family:monospace;">${cnpj}</div>
+                    </td>
+                    <td>
+                        <div style="font-weight:600;color:#fb7185;font-size:0.84rem;">${promotor}</div>
                     </td>
                     <td>
                         <div style="font-weight:600;">${contato}</div>
