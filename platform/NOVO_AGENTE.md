@@ -24,18 +24,17 @@ A arquitetura moderna reside na pasta `/platform`. (A antiga subpasta `/web` ain
 *   `platform/shared/` (e `/core/`): Contém CSS global, scripts compartilhados de sessão, controle de tenants, logout e identidade visual.
 *   `platform/modules/`: Onde a mágica acontece. Cada módulo é um "micro-frontend" isolado com seu próprio `index.html`, `css/` e `js/`:
     *   **master**: Gestão global da plataforma (criação de tenants e super-usuários). Acesso exclusivo de administradores globais.
-    *   **dispatch**: Módulo de Despacho Logístico (a evolução do sistema legado).
-    *   **erp**: Sistema Integrado de Gestão Empresarial (Faturamento, Vendas, Financeiro, CRM, RH).
-    *   **sales-force**: Força de Vendas Mobile (PWA para RCA em campo, offline-first com IndexedDB).
-    *   **wms**: Warehouse Management System (Gestão de Armazéns).
+    *   **dispatch**: Módulo de Despacho Logístico (Bússola Log). Cotação de fretes, montagem de carga, romaneios, faturas e conciliação de frete.
+    *   **demanda**: Módulo de Inteligência de Demanda, Pré-venda, Cotação de Peças e Análise de Estoque. Integrado com ParreiraAuth/Firebase + busca MaxData + Firestore primário (produtos e clientes) + OCR serverless (/api/ocr).
+    *   **prospeccao (MAXCRM)**: PWA Mobile Offline-first para prospecção comercial externa. Check-in de visitas com geolocalização, busca de CNPJ, questionário guiado de 12 etapas, Painel Web do Gestor (painel.html) com inteligência concorrencial territorial, exportação CSV e sync Firestore bidirecional com reconciliação forçada total (forcarSincronizacaoTotal) e diagnóstico visual inline.
+    *   **wms**: Warehouse Management System (Gestão de Armazéns, endereçamento, inventário e visão 3D).
     *   **wms-coletor**: Versão do WMS estritamente otimizada para coletores móveis (Zebra/Android) utilizados na operação de piso.
-    *   **demanda**: Módulo de Inteligência de Demanda, Pré-venda e Venda Perdida (v2.4.5). Tenant: centralpecas (Central Rolamentos CTR). Integrado com ParreiraAuth/Firebase + busca MaxData + Firestore primário (produtos e clientes) + OCR serverless (/api/ocr). Adicionado em v3.19.0.
-    *   **prospeccao (MAXCRM)**: PWA Mobile Offline-first para prospecção comercial externa (v1.3.2). Check-in de visitas com geolocalização, busca de CNPJ, questionário guiado de 12 etapas, Painel Web do Gestor (painel.html) com inteligência concorrencial territorial, exportação CSV e sync Firestore bidirecional com reconciliação forçada total (forcarSincronizacaoTotal) e diagnóstico visual inline. Visitas cross-device via Firestore com fallback IndexedDB offline.
+    *   **erp-consultoria (Bússola Gestão)**: Análise financeira executiva, conciliação e projeções financeiras.
 *   **`platform/shared/integrations/`** (v3.15.0+): Camada centralizada de integração com ERPs externos.
     *   **`erp-adapter.js`**: Contrato genérico (interface). Todo ERP deve implementar `syncClients()`, `syncProducts()`, `syncOrders()`, `syncNFs()`, `confirmDispatch()`.
     *   **`erp-registry.js`**: Registro multi-tenant. Lê do Firestore qual ERP cada tenant usa e instancia o adaptador correto. Token fica em `sessionStorage`.
     *   **`erp-ui.js`**: Interface de configuração reutilizável (Dispatch, WMS e futuros módulos).
-    *   **`{erp-slug}/adapter.js`**: Implementação específica de cada ERP parceiro (ex: `acontec/adapter.js`, `maxdata/adapter.js`, `bling/adapter.js`). Cada novo ERP ganha sua própria subpasta seguindo o mesmo contrato.
+    *   **`{erp-slug}/adapter.js`**: Implementação específica de cada ERP parceiro (ex: `acontec/adapter.js`, `maxdata/adapter.js`). Cada novo ERP ganha sua própria subpasta seguindo o mesmo contrato.
     *   **`index.js`**: Registra provedores e exporta `window.ErpIntegration` para os módulos consumirem.
 
 > ⚠️ **IMPORTANTE — Ambiente de Desenvolvimento Canônico (desde 2026-06-17):**
@@ -50,7 +49,7 @@ A arquitetura moderna reside na pasta `/platform`. (A antiga subpasta `/web` ain
 ## 3. Padrões de Integração e Construção
 
 *   **Isolamento Multi-Tenant**: É a **regra de segurança número 1**. Nenhuma query no Firestore deve ser feita sem referenciar o `/tenants/{tenant_id}/...`. O acesso aos dados cruza sempre a validação da sessão do usuário.
-*   **Acoplamento Fraco (Adapter Pattern)**: Os módulos não devem depender criticamente de arquivos uns dos outros. Para integrações, usamos o conceito de adaptadores. Exemplo: O módulo `wms` possui um arquivo `wms-integration.js` que age como tradutor entre o WMS e o ERP (sendo ele o Parreira ERP embutido, ou um provedor externo via API REST). O módulo `sales-force` usa os adapters `exportClientesParaFV()`, `exportEstoqueParaFV()` e `onErpReceberPedidoFV()` em `integracoes.js` para trocar dados com o ERP.
+*   **Acoplamento Fraco (Adapter Pattern)**: Os módulos não devem depender criticamente de arquivos uns dos outros. Para integrações, usamos o conceito de adaptadores. Exemplo: A camada `shared/integrations/` age como tradutor entre a plataforma e o ERP parceiro externo (MaxData, Acontec, etc.).
 *   **Componentização Visual**: Reutilize classes e variáveis CSS (ex: `var(--primary-color)`) do escopo global. Crie interfaces modernas, intuitivas e responsivas.
 
 ---
@@ -59,23 +58,21 @@ A arquitetura moderna reside na pasta `/platform`. (A antiga subpasta `/web` ain
 
 ```mermaid
 graph TD
-    A[Portal ParreiraLog<br>/platform/index.html] -->|Autenticação Centralizada| B(Firebase Auth)
+    A[Portal ParreiraLog<br>/platform/index.html] -->|Autenticação Centralizada| B(Firebase Auth / SSO)
     B -->|Sessão & Tenant ID| C{Seletor de Módulos}
     
     C -->|Acesso Global| M[Módulo Master<br>Gestão de Tenants]
-    C -->|Operacional| D[Módulo Dispatch<br>Logística & Entregas]
-    C -->|Gestão Empresarial| E[Módulo ERP<br>Vendas, Finanças, Fiscal, CRM, RH]
-    C -->|Vendas Externas| FV[Força de Vendas<br>PWA Offline-First]
-    C -->|Gestão de Armazém| W[Módulo WMS<br>Estoque & Mapa]
+    C -->|Operacional| D[Módulo Dispatch<br>Logística & Fretes]
+    C -->|Inteligência Comercial| DMD[Módulo Demanda<br>Cotação & Estoque]
+    C -->|Prospecção Externa| CRM[Módulo MAXCRM<br>PWA Visitas em Campo]
+    C -->|Gestão de Armazém| W[Módulo WMS<br>Estoque & Mapa 3D]
     C -->|Chão de Fábrica| WC[WMS Coletor<br>Coletores RF/Zebra]
-    C -->|Análise Financeira| FC[ERP Consultoria<br>Projeções e Maxdata]
+    C -->|Análise Financeira| FC[Bússola Gestão<br>Consultoria Financeira]
 
-    FV -.->|Adapter: onErpReceberPedidoFV<br>Push Pedidos| E
-    E -.->|Adapter: exportClientesParaFV<br>Pull Cadastros| FV
-    E -.->|Adapter Pattern<br>Sincroniza Produtos/Pedidos| W
-    W -.->|Adapter Pattern<br>Retorna Status Estoque| E
-    E -.->|Gera Faturamento/NF| D
-    E -.->|Exporta Relatório 343| FC
+    ERP[(ERP Parceiro Externo<br>MaxData / Acontec)] <-->|Adapter Layer<br>shared/integrations| D
+    ERP <-->|Adapter Layer<br>shared/integrations| DMD
+    ERP <-->|WmsProcedures<br>Recebimento / Conferência| W
+    ERP <-->|WmsProcedures<br>Bipagem e MarkAsChecked| WC
 ```
 
 ---
@@ -109,29 +106,21 @@ graph LR
 *   **Roteirização:** Operador seleciona NFs pendentes no dashboard -> Agrupa por região ou rota logística -> Atribui ao veículo/Motorista/Transportadora -> Emite Romaneio de Carga.
 *   **Baixa e Ocorrências:** Motorista informa status -> Operador altera status para 'Entregue' (dispara Webhook/Sync) ou registra ocorrência (ex: "Destinatário Ausente", que reabre processo para reentrega).
 
-### 5.3. Módulo ERP (Gestão Empresarial)
-```mermaid
-graph TD
-    ERP[ERP] --> Cad[Cadastros Base]
-    ERP --> Ven[Vendas & Orçamentos]
-    ERP --> Fin[Financeiro]
-    ERP --> Fisc[Fiscal]
-    ERP --> CRM[CRM]
-    ERP --> RH[Recursos Humanos]
-    Cad --> Ven
-    Ven -->|Gera Recebíveis| Fin
-    Ven -->|Gera NF-e / SPED| Fisc
-    CRM -->|Converte Lead em Pedido| Ven
-```
-**POP (Procedimento Operacional Padrão):**
-*   **Cadastros Base:** Inserir e atualizar Clientes, Fornecedores, Produtos (SKU, NCM, Preço Base de Custo) e Vendedores/Comissões.
-*   **Vendas & Orçamentos (Fase 4):** Vendedor abre nova tela de Orçamento -> Adiciona Itens (aplicando Tabelas de Preços Regionais) -> Envia ao cliente. Cliente aprovando -> Converte para Pedido de Venda. Se houver limite estourado, cai em "Liberação de Crédito" para o gestor aprovar.
-*   **Financeiro (Fase 5):** Pedido faturado gera título em "Contas a Receber". Compras geram "Contas a Pagar". Executa-se rotina diária de Conciliação Bancária, emissão de boletos e análise de inadimplência (ERP Consultoria Projetado).
-*   **Fiscal/Faturamento (Fase 6):** Faturamento libera impressão do DANFE (NF-e) via SEFAZ. Ao fim do período, gera extração do SPED Fiscal e Contribuições. Dashboard (Fase 7) exibe KPIs (Margem, Curva ABC).
-*   **CRM (Fase 10):** Pipeline Kanban de Oportunidades (Prospecção → Qualificação → Proposta → Negociação → Fechamento). Leads ganhos são convertidos automaticamente em Clientes e Orçamentos no ERP.
-*   **RH (Fase 11):** Controle de Ponto Eletrônico, Folha de Pagamento (Holerite com deduções INSS/VT), Gestão de Férias e Licenças.
+### 5.3. Módulo Demanda & Cotação (Inteligência de Compras e Estoque)
+Módulo analítico com 5 grupos estratégicos:
+1. **Cotações:** Nova Cotação, Minhas Cotações, Pesquisar Peças, Cotação Concorrente e Orçamentos.
+2. **Análise Estoque:** Visão Executiva & KPIs Globais, Curva ABC & Vendas, Estoque Físico & Cobertura, Sazonalidade & Calendário Agro, Cadastro Geral ERP e Carga Massiva MaxData.
+3. **Ações Gerenciais:** Rupturas Comerciais, Capital Excedente & Plano de Desova, Curva X > 90d Sem Giro e Devoluções.
+4. **Compras:** Sugestões unificadas de compras (Start AGORA/Safra, Fila Unificada, Reposição & Lead Time, Curva de Fornecedores).
+5. **Ações Comerciais:** Positivação, Mix, Recorrência, Ticket Médio, Churn 90d e Desempenho de Vendedores.
 
-### 5.4. Módulo WMS (Warehouse Management System)
+### 5.4. Módulo MAXCRM (Prospecção Comercial em Campo)
+PWA Mobile Offline-First com IndexedDB + sync Firestore:
+*   **Visitas em Campo:** Check-in geolocalizado, questionário guiado de 12 etapas, fotos e diagnóstico de concorrentes.
+*   **Painel do Gestor (`painel.html`):** Gestão territorial, filtro por promotor, mapa de calor e exportação de relatórios.
+*   **Sincronização:** Sincronização forçada (`forcarSincronizacaoTotal`), reconciliação cruzada IndexedDB ↔ Firestore e importação/exportação de backups.
+
+### 5.5. Módulo WMS (Warehouse Management System)
 ```mermaid
 graph TD
     WMS[WMS] --> In[1. Inbound<br>Recebimento]
@@ -148,98 +137,25 @@ graph TD
     Vis -.->|Lê wms_mock_data + wms_estoque + wms_tarefas| Arm
 ```
 **POP (Procedimento Operacional Padrão):**
-*   **1. Inbound (Recebimento):** Operador bipa a **chave NF-e (44 dígitos)** na tela de scanner → sistema chama `proc_buscar_nf_destinada` consultando todos os CNPJs do tenant no ERP. Se localizada, abre **Card de Conferência** auto-preenchido com dados do ERP (fornecedor, itens, volumes, transportadora). O operador preenche campos manuais (doca, placa, motorista, volumes físicos, condição da carga, email do fornecedor). Em caso de divergência → registra tipo, fotos da avaria (até 4 imagens) e envia relatório automaticamente ao fornecedor (`proc_enviar_email_divergencia`). Se NF não encontrada → nega ou libera entrada avulsa via **PIN de supervisor** configurável (Configurações → Integrações → Segurança), com log de auditoria obrigatório.
-*   **2. Armazenagem (Putaway):** Motorista de empilhadeira/operador lê as tarefas. O sistema sugere endereço visual vazio ou onde já tem o SKU -> Operador move -> Confirma operação no app Web.
-*   **3. Picking (Separação):** Gera "Ondas de Separação" agrupadas por prioridade/Rota (integração Dispatch). Operador visualiza caminho otimizado no Mapa Visual -> Vai ao endereço -> Coleta SKU -> Leva à área de `packing`/consolidação.
-*   **4. Outbound (Expedição):** Última conferência na caixa -> Fecha volume -> Imprime etiqueta logística de transporte -> Despacha.
-*   **5. Inventário:** Supervisor agenda bloqueio contábil parcial ou total -> Operadores bipam endereços e atualizam as contagens -> Supervisor aprova distorções -> Sistema consolida estoque novo no ERP parceiro.
-*   **6. Visão 3D (Dashboard):** Tela principal com visualizador Three.js usando **InstancedMesh** para renderizar até 12.349+ endereços em 3 draw calls. Layout: predios ímpares à esquerda do corredor, pares à direita. Cada `posicao` ocupa um slot Z independente. Células coloridas por status (verde=livre, azul=ocupado, vermelho=desabastecido, amarelo=tarefa, cinza=bloqueado). Carregamento **manual** via botão para não travar a UI. Requer import de endereços em `/modules/wms/import-enderecos.html`.
+*   **1. Inbound (Recebimento):** Operador bipa a **chave NF-e (44 dígitos)** na tela de scanner → sistema chama `proc_buscar_nf_destinada` consultando a API MaxData (`/entry`). Se localizada, abre **Card de Conferência** auto-preenchido com dados do ERP (fornecedor, itens, volumes, transportadora). Em caso de divergência → registra fotos da avaria e envia relatório.
+*   **2. Armazenagem (Putaway):** Sugestão de endereços vazios baseados em tipo e cubagem -> Operador move -> Confirma operação no app Web.
+*   **3. Picking (Separação):** Ondas de separação otimizadas no Mapa Visual -> Vai ao endereço -> Coleta SKU -> Leva à área de packing.
+*   **4. Outbound (Expedição):** Conferência final -> Etiqueta de transporte -> Despacha.
+*   **5. Inventário:** Bloqueio contábil -> Bipagem de endereços e contagem cega -> Reconciliação no ERP.
+*   **6. Visão 3D (Dashboard):** Visualizador Three.js usando InstancedMesh para renderizar até 12.349+ endereços.
 
-**Armazenamento WMS:**
-- `wms_mock_data_<tenant>`: Array de endereços (estrutura: `{id, rua, predio, nivel, posicao, apto, tipo, status}`)
-- `wms_estoque_<tenant>`: Saldo de estoque por endereço
-- `wms_tarefas_<tenant>`: Tarefas de movimentação pendentes
-- `wms_armazem_config`: Config física global (corridorWidth, profundidade, posLargura, posAltura)
-- `wms_cadastros_<tenant>`: Cadastros gerais incluindo `enderecoTipo` (tipos com dimensões físicas)
-
-**Atenção:** A chave `wms_mock_data` (sem sufixo) é migrada automaticamente para `wms_mock_data_<tenant>` no startup do WMS (`wms-core.js`) para corrigir importações antigas.
-
-### 5.5. Módulo WMS Coletor (Chão de Fábrica)
+### 5.6. Módulo WMS Coletor (Chão de Fábrica)
 ```mermaid
 graph LR
     Col[WMS Coletor] --> Task[Fila de Tarefas]
     Task --> Bip[Bipagem Código de Barras]
     Bip --> Conf[Confirmação de Ação]
-    Conf -.->|Sync Real-time| WMS[WMS Desktop]
+    Conf -.->|Sync Real-time| WMS[WMS Desktop / MaxData]
 ```
 **POP (Procedimento Operacional Padrão):**
-*   **Operação Mobile:** Operador loga com sua credencial no browser do coletor Zebra/Android (interface enxuta XXL) -> Acessa módulo desejado (Guarda, Contagem, Picking) -> Ouve o bip (leitura de código de barras ou manual via teclado) do endereço e produto -> Digita Quantidade -> Confirma. Alerta sonoro de acerto/erro avisa o ritmo da operação em real-time.
+*   **Operação Mobile:** Operador loga com credencial no browser do coletor Zebra/Android -> Bipagem de produtos e endereços -> Ao finalizar conferência, envia `PUT /entry/markaschecked` alterando o status da NF na Tela 102 do MaxData de PENDENTE para CONCLUÍDO.
 
-### 5.6. Módulo Força de Vendas / Sales Force (Vendas em Campo)
-```mermaid
-graph TD
-    FV[Força de Vendas<br>PWA Mobile] --> Login[Login RCA]
-    FV --> Cli[Clientes / Rotas]
-    FV --> Ped[Pedidos / Orçamentos]
-    FV --> Sync[Sincronização]
-    
-    Login -->|IndexedDB| Cli
-    Cli --> Ped
-    Ped -->|Fila Offline| Sync
-    Sync -.->|exportClientesParaFV| ERP[ERP Parreira]
-    Sync -.->|onErpReceberPedidoFV| ERP
-```
-**POP (Procedimento Operacional Padrão):**
-*   **Login:** RCA acessa o app pelo browser do celular (PWA instalável) -> Digita código e senha -> Sistema carrega dados do vendedor e sincroniza cadastros do ERP (Clientes, Produtos, Tabelas, Transportadoras).
-*   **Vendas em Campo:** RCA seleciona o Cliente da rota -> Escolhe produtos e aplica desconto (limitado pelo máximo do vendedor/produto) -> Define condição de pagamento e transportadora -> Salva Pedido. Pedido entra na fila de sincronização.
-*   **Sincronização:** Ao ficar online, o app transmite os pedidos para o ERP via adapter `onErpReceberPedidoFV()`, que converte o formato FV → ERP, puxa cadastros atualizados via `exportClientesParaFV()`, e atualiza estoque via `exportEstoqueParaFV()`.
-
-### 5.7. Integração Profunda ERP ↔ WMS (Fase 9)
-```mermaid
-graph TD
-    Rec[Recebimento WMS] -->|Conferência OK| EstERP[Estoque ERP Atualizado]
-    Rec -->|Divergência| Bloq[Bloqueio Estoque Fantasma]
-    VendaERP[Venda Faturada ERP] -->|Reserva Estoque| SepWMS[Separação WMS]
-    SepWMS -->|Picking Concluído| BaixaERP[Baixa Estoque ERP]
-    FatERP[Faturamento ERP] -->|Chave NF-e| DesWMS[Despacho WMS - Trava Fiscal]
-    AjusteERP[Ajuste/Inventário ERP] <-->|Bidirecional| AjusteWMS[Ajuste/Inventário WMS]
-    DevERP[Devolução ERP] -->|Gera Putaway| WMS[WMS Armazenagem]
-```
-**POP:**
-*   **Recebimento:** WMS bipa chave NF-e → `proc_buscar_nf_destinada` (multi-CNPJ) → Conferência física no card → `proc_confirmar_recebimento` atualiza estoque ERP. Se divergente → `proc_registrar_divergencia` bloqueia unidades e `proc_enviar_email_divergencia` notifica o setor de Compras e o fornecedor automaticamente.
-*   **Separação:** ERP fatura venda -> Reserva estoque -> Gera Ordem de Separação no WMS -> Operador separa -> WMS confirma -> ERP dá baixa efetiva.
-*   **Trava Fiscal:** Veículo só é liberado para despacho no WMS se todos os pedidos vinculados possuírem Chave de NF-e faturada no ERP.
-*   **Ajustes Bidirecionais:** Ajustes manuais e inventários de um sistema refletem automaticamente no outro.
-*   **Devoluções:** Estorno no ERP gera tarefa de `putaway` pendente no WMS.
-
-### 5.8. Módulo CRM — Gestão de Relacionamento (Fase 10)
-```mermaid
-graph LR
-    CRM[CRM] --> Funil[Pipeline Kanban]
-    CRM --> Leads[Gestão de Leads]
-    CRM --> Hist[Histórico de Interações]
-    CRM --> Taref[Tarefas / Lembretes]
-    Funil -->|Oportunidade Ganha| Conv[Conversão Lead → Cliente + Pedido ERP]
-```
-**POP:**
-*   **Pipeline:** Vendedor abre o Funil -> Cria Oportunidade com valor estimado -> Arrasta entre fases (Prospecção → Qualificação → Proposta → Negociação → Fechamento).
-*   **Conversão:** Ao marcar como "Ganho", o CRM cadastra automaticamente o prospect como Cliente no ERP e gera um Orçamento no módulo de Vendas.
-
-### 5.9. Módulo RH — Recursos Humanos (Fase 11)
-```mermaid
-graph LR
-    RH[RH] --> Ponto[Ponto Eletrônico]
-    RH --> Folha[Folha de Pagamento]
-    RH --> Ferias[Férias e Licenças]
-    Ponto --> Folha
-    Folha -->|Holerite| Impressao[Impressão em Lote]
-```
-**POP:**
-*   **Ponto Eletrônico:** Funcionário acessa RH > Ponto -> Clica "Bater Ponto" -> Sistema registra Entrada/Saída com data/hora e geolocalização (mock).
-*   **Folha de Pagamento:** Gestor acessa RH > Holerites -> Visualiza grid de funcionários com Salário Base, deduções (INSS 10%, VT 6%) e Líquido a Receber -> Gera Holeite individual via modal de impressão.
-*   **Férias e Licenças:** RH agenda afastamento -> Define tipo (Férias/Licença) e período -> Status exibido em blocos coloridos (Programado, Em Andamento, Concluído).
-
-### 5.10. Módulo Financeiro ERP Consultoria (Standalone/PWA)
+### 5.7. Módulo Bússola Gestão (ERP Consultoria / Projeções Financeiras)
 ```mermaid
 graph LR
     FC[ERP Consultoria] --> Imp[Importação Maxdata 343]
@@ -378,14 +294,12 @@ Abra o terminal do PowerShell na raiz do projeto (`C:\Users\Paulo H Parreira\.ge
 | **3.21.21** | 2026-09-12 | MAXCRM (v1.2.0): Motor e UI de importação de clientes territorial com mapeamento das 20 colunas da planilha (XLSX/CSV), upload interativo no Painel e no App, correção de rotas Firestore (tenants/parreira/empresas), resolução de erro de sincronização e busca com normalização de acentos. Carga completa dos 449 cadastros no Firestore. |
 | **3.21.20** | 2026-09-12 | MAXCRM (v1.1.1): Exibição dinâmica da versão do sistema na top-bar e no modal de perfil do usuário. |
 | **3.21.19** | 2026-09-12 | Roteamento Opção A: Desvinculação da rota /centralpecas (Despacho Logístico) e links diretos com sincronização de permissões no Master. |---|
-| **Intelig. Demanda** | `demanda` | 🟢 **Deploy direto em produção** — pode rodar `deploy.ps1 + promote.ps1` na mesma sequência sem aprovação intermediária | Autorizado pelo usuário em 2026-09-04. Iterações frequentes liberadas. |
 | **Bússola Log** | `dispatch` | 🔴 **Staging obrigatório** — aguardar aprovação explícita antes do `promote.ps1` | Operação logística em tempo real. Bugs afetam clientes e motoristas diretamente. |
+| **Intelig. Demanda** | `demanda` | 🟢 **Deploy direto em produção** — pode rodar `deploy.ps1 + promote.ps1` na mesma sequência sem aprovação intermediária | Autorizado pelo usuário em 2026-09-04. Iterações frequentes liberadas. |
 | **Bússola Gestão** | `erp-consultoria` | 🟢 **Deploy direto em produção** — pode rodar `deploy.ps1 + promote.ps1` na mesma sequência sem aprovação intermediária | Módulo de gestão interna, sem impacto operacional imediato. Iterações frequentes autorizadas pelo usuário em 2026-08-20. |
 | **WMS / WMS Coletor** | `wms`, `wms-coletor` | 🟢 **Deploy direto em produção** — rodar `deploy.ps1 + promote.ps1` na mesma sequência até segunda ordem | Atualizações e melhorias diretas em produção autorizadas pelo usuário em 2026-09-01. |
-| **ERP** | `erp` | 🔴 **Staging obrigatório** | Faturamento, NF-e e dados fiscais. Risco alto. |
-| **Master** | `master` | 🔴 **Staging obrigatório** | Gestão de tenants e permissões. Erro pode bloquear acesso de todos os usuários. |
 | **MAXCRM** | `prospeccao` | 🟢 **Deploy direto em produção** — rodar commit+push direto para `main` sem staging intermediário até segunda ordem | PWA de prospecção comercial em desenvolvimento ativo. Iterações frequentes autorizadas pelo usuário em 2026-09-12. |
-| **Sales Force** | `sales-force` | 🟡 **Staging recomendado** — pode ir direto se for ajuste visual/menor | PWA offline-first, mas impacto menor em operação imediata. |
+| **Master** | `master` | 🔴 **Staging obrigatório** | Gestão de tenants e permissões. Erro pode bloquear acesso de todos os usuários. |
 
 **Como aplicar na prática:**
 
