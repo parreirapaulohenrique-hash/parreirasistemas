@@ -1,6 +1,6 @@
 # 🚚 AGENTE DESPACHO — Contexto e Histórico de Melhorias
 > Arquivo de contexto para continuidade do desenvolvimento do Módulo de Despacho
-> **Última atualização:** 2026-09-03 | **Versão atual:** Dispatch v3.18.8 | Platform v3.18.8
+> **Última atualização:** 2026-09-30 | **Versão atual:** Dispatch v3.19.0 (Desacoplado)
 
 ---
 
@@ -13,6 +13,14 @@ C:\Users\Paulo H Parreira\.gemini\antigravity\scratch\platform\modules\dispatch\
 ---
 
 ## ✅ Melhorias Implementadas Nesta Sessão
+
+### v3.19.0 — Versão Própria Desacoplada + Integração MaxData API v2
+- Desacoplamento definitivo da numeração do Despacho em relação ao Hub (`deploy.ps1` preserva `modules/dispatch/version.json`).
+- Atualização do fluxo de autenticação da API MaxData para inclusão das chaves do integrador (`application_name`, `application_key`, `application_description`).
+- Habilitação dos headers no proxy serverless da Vercel (`api/maxdata.js`).
+- Validação ao vivo da consulta de vendas (`/v2/sale`) e catálogo de clientes (`/v2/client`).
+- Documentação do novo portal de documentação Wiki MaxData.
+
 
 ### v3.7.9 — FOB: Renomeação + Posicionamento Fixo + Seletor de Transportadora
 - Renomeado de "FOB (Coleta)" para apenas **"FOB"**
