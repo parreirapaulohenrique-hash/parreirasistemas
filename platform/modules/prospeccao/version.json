@@ -1,8 +1,8 @@
 {
-  "version": "1.3.6",
-  "build": "20261001-v1.3.6",
+  "version": "1.3.11",
+  "build": "20261001-v1.3.11",
   "environment": "production",
-  "change": "v1.3.6 - RETOMAR VISITA: Botão 'Retomar Visita' no detalhe de visitas Em Andamento. Carrega estado no MaxCRMState e retoma o questionário a partir da tela de Contato. Permissão restrita ao próprio promotor ou gestor/master.",
+  "change": "v1.3.11 - MODO REVISAO: Formulario completo em leitura somente para visitas finalizadas. v1.3.10 - PERSISTENCIA: etapaAtual gravada ao navegar, flush ao fechar app, retomar na etapa correta. v1.3.9 - GPS clicavel com modal de permissao + edicao de visita finalizada. v1.3.8 - Remove banner auto home. v1.3.7 - Checklist de etapas + bump cache SW.",
   "lastUpdate": "2026-10-01",
   "deployedAt": "2026-10-01"
 }

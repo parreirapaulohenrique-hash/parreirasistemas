@@ -4,7 +4,7 @@
  * Parreira Sistemas — MAXCRM Campo v1.0.0
  */
 
-const MAXCRM_VERSION = '1.3.6';
+const MAXCRM_VERSION = '1.3.11';
 
 // ── Estado Global ────────────────────────────────────────────────────────────
 const MaxCRMState = {
