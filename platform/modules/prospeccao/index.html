@@ -67,7 +67,12 @@
     <div class="visit-progress-bar" id="visitProgressBar">
         <div class="visit-progress-header">
             <span class="visit-progress-label" style="font-size:0.7rem">MODO VISITA</span>
-            <span class="visit-progress-step">1 de 12</span>
+            <span class="visit-progress-step" id="visitProgressStep">1 de 12</span>
+            <button id="btnPausarVisita" onclick="pausarVisitaAtual()"
+                style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;padding:3px 10px;font-size:0.7rem;cursor:pointer;display:flex;align-items:center;gap:4px;line-height:1">
+                <span class="material-icons-round" style="font-size:0.85rem">pause_circle</span>
+                Pausar
+            </button>
         </div>
         <div class="visit-progress-track">
             <div class="visit-progress-fill" style="width:8%"></div>

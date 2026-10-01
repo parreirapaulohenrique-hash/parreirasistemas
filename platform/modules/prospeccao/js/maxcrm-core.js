@@ -4,7 +4,7 @@
  * Parreira Sistemas — MAXCRM Campo v1.0.0
  */
 
-const MAXCRM_VERSION = '1.3.11';
+const MAXCRM_VERSION = '1.3.12';
 
 // ── Estado Global ────────────────────────────────────────────────────────────
 const MaxCRMState = {
@@ -304,30 +304,105 @@ function navigateTo(telaId, opcoes) {
 // Garante persistência mesmo que o usuário abandone sem finalizar
 function _salvarAoSair() {
     if (!MaxCRMState.visitaAtual || !MaxCRMState.visitaAtual.id) return;
-    // Captura campos de texto visiveis e salva sincronamente via IndexedDB
-    const camposTexto = [
-        { id: 'erpMensalidade',  chave: 'erp_mensalidade' },
-        { id: 'pontosObs',       chave: 'pontosObs' },
-        { id: 'acaoObs',         chave: 'acaoObs' }
-    ];
+
+    // 1) BACKUP SÍNCRONO no localStorage — funciona mesmo se o browser matar a thread
+    //    antes das operações async do IndexedDB concluírem (especialmente iOS Safari)
+    try {
+        const snapshot = {
+            id:        MaxCRMState.visitaAtual.id,
+            etapa:     _telaAtual,
+            ts:        Date.now(),
+            respostas: MaxCRMState.visitaAtual.respostas || {}
+        };
+        // Captura campos de texto visíveis que podem não ter disparado oninput
+        const CAMPOS = [
+            { id: 'erpMensalidade', chave: 'erp_mensalidade' },
+            { id: 'pontosObs',      chave: 'pontosObs'       },
+            { id: 'acaoObs',        chave: 'acaoObs'         },
+            { id: 'mudanca1',       chave: '_mudanca1_tmp'   },
+            { id: 'mudanca2',       chave: '_mudanca2_tmp'   },
+            { id: 'mudanca3',       chave: '_mudanca3_tmp'   }
+        ];
+        CAMPOS.forEach(({ id, chave }) => {
+            const el = document.getElementById(id);
+            if (el && el.value.trim()) snapshot.respostas[chave] = el.value.trim();
+        });
+        localStorage.setItem('maxcrm_visita_snapshot', JSON.stringify(snapshot));
+    } catch (_) {}
+
+    // 2) Persiste no IndexedDB (async — melhor esforço)
+    const visitaId = MaxCRMState.visitaAtual.id;
     const respostasExtras = {};
-    camposTexto.forEach(({ id, chave }) => {
+    const CAMPOS2 = [
+        { id: 'erpMensalidade', chave: 'erp_mensalidade' },
+        { id: 'pontosObs',      chave: 'pontosObs'       },
+        { id: 'acaoObs',        chave: 'acaoObs'         }
+    ];
+    CAMPOS2.forEach(({ id, chave }) => {
         const el = document.getElementById(id);
         if (el && el.value.trim()) respostasExtras[chave] = el.value.trim();
     });
     if (Object.keys(respostasExtras).length > 0) {
-        MaxCRMDB.salvarProgresso(MaxCRMState.visitaAtual.id, { respostas: respostasExtras })
+        MaxCRMDB.salvarProgresso(visitaId, { respostas: respostasExtras })
             .catch(e => console.warn('[MAXCRM] Flush ao sair:', e.message));
     }
-    // Grava etapa atual
-    MaxCRMDB.salvarProgresso(MaxCRMState.visitaAtual.id, { etapaAtual: _telaAtual })
+    MaxCRMDB.salvarProgresso(visitaId, { etapaAtual: _telaAtual })
         .catch(e => console.warn('[MAXCRM] Flush etapa ao sair:', e.message));
 }
 
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') _salvarAoSair();
 });
+window.addEventListener('pagehide',    _salvarAoSair); // iOS Safari - mais confiável que beforeunload
 window.addEventListener('beforeunload', _salvarAoSair);
+
+// ── Pausar visita explicitamente ───────────────────────────────────────────────
+async function pausarVisitaAtual() {
+    if (!MaxCRMState.visitaAtual) { navigateTo('home'); return; }
+
+    const btn = document.getElementById('btnPausarVisita');
+    if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
+
+    try {
+        // Captura e salva campos de texto visíveis
+        const respostasExtras = {};
+        const CAMPOS = [
+            { id: 'erpMensalidade', chave: 'erp_mensalidade' },
+            { id: 'pontosObs',      chave: 'pontosObs'       },
+            { id: 'acaoObs',        chave: 'acaoObs'         },
+            { id: 'mudanca1',       chave: '_mudanca1_tmp'   },
+            { id: 'mudanca2',       chave: '_mudanca2_tmp'   },
+            { id: 'mudanca3',       chave: '_mudanca3_tmp'   }
+        ];
+        CAMPOS.forEach(({ id, chave }) => {
+            const el = document.getElementById(id);
+            if (el && el.value.trim()) respostasExtras[chave] = el.value.trim();
+        });
+        if (Object.keys(respostasExtras).length > 0) {
+            await MaxCRMDB.salvarProgresso(MaxCRMState.visitaAtual.id, { respostas: respostasExtras });
+        }
+        // Salva etapa atual
+        await MaxCRMDB.salvarProgresso(MaxCRMState.visitaAtual.id, { etapaAtual: _telaAtual });
+
+        // Limpa snapshot temporário e estado em memória
+        localStorage.removeItem('maxcrm_visita_snapshot');
+        const nomeEmpresa = MaxCRMState.empresaAtual?.nomeFantasia
+            || MaxCRMState.empresaAtual?.razaoSocial
+            || MaxCRMState.visitaAtual.empresaNome || 'empresa';
+        MaxCRMState.visitaAtual  = null;
+        MaxCRMState.empresaAtual = null;
+
+        showToast(`Visita em "${nomeEmpresa}" pausada — continue depois em Minhas Visitas`, 'success');
+        navigateTo('minhas_visitas');
+    } catch (e) {
+        console.error('[MAXCRM] Erro ao pausar:', e);
+        showToast('Erro ao pausar: ' + e.message, 'error');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons-round" style="font-size:0.85rem">pause_circle</span> Pausar'; }
+    }
+}
+window.pausarVisitaAtual = pausarVisitaAtual;
+
+
 
 function voltar() {
     // Lógica de voltar no modo visita
