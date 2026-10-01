@@ -1,4 +1,4 @@
-/**
+﻿/**
  * maxcrm-core.js — Core: Auth, Navegação SPA, GPS, Toast, Estado Global
  * =======================================================================
  * Parreira Sistemas — MAXCRM Campo v1.0.0
@@ -1107,8 +1107,12 @@ async function retomarVisita(v) {
         MaxCRMState.empresaAtual = empresa;
         sessionStorage.setItem('maxcrm_visita_id', visita.id);
 
-        // Retoma na etapa onde parou (ou no início se não houver registro)
-        const etapa = visita.etapaAtual || 'visita_contato';
+        // Valida etapaAtual para evitar tela em branco com IDs invalidos
+        const ETAPAS_VALIDAS = ['visita_contato','visita_perfil','visita_erp',
+            'visita_pontos','visita_dores','visita_mudancas',
+            'visita_intencao','visita_barreiras','visita_interesse',
+            'visita_timing','visita_acao','visita_resumo'];
+        const etapa = ETAPAS_VALIDAS.includes(visita.etapaAtual) ? visita.etapaAtual : 'visita_contato';
         showToast(`Retomando em "${_tituloEtapa(etapa)}"`, 'success');
         navigateTo(etapa);
     } catch (e) {
