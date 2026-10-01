@@ -163,6 +163,71 @@ function _atualizarGPSBadge() {
     }
 }
 
+// ── Solicitar permissão / renovar GPS ao clicar no badge ──────────────────────
+function solicitarOuRenovarGPS() {
+    if (!navigator.geolocation) {
+        showToast('Geolocalização não suportada neste dispositivo', 'error');
+        return;
+    }
+    if (MaxCRMState.gpsStatus === 'loading') {
+        showToast('Aguarde... localizando...', 'info');
+        return;
+    }
+    // GPS OK — mostra coordenadas e opções
+    if (MaxCRMState.gpsStatus === 'ok' && MaxCRMState.gpsCoords) {
+        const c = MaxCRMState.gpsCoords;
+        const url = `https://maps.google.com/?q=${c.lat},${c.lng}`;
+        const ov = document.createElement('div');
+        ov.className = 'modal-overlay';
+        ov.innerHTML = `
+            <div class="modal-sheet">
+                <div class="modal-handle"></div>
+                <div class="modal-title" style="margin-bottom:12px">📍 Localização Ativa</div>
+                <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:16px;text-align:center">
+                    Precisão: ±${Math.round(c.accuracy)}m<br>
+                    <span style="font-size:0.7rem;opacity:0.6">${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}</span>
+                </div>
+                <a href="${url}" target="_blank" class="btn btn-secondary"
+                   style="width:100%;margin-bottom:10px;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px">
+                    <span class="material-icons-round">map</span> Ver no Mapa
+                </a>
+                <button class="btn btn-ghost" style="width:100%;margin-bottom:8px" id="btnRenovarGPS">
+                    <span class="material-icons-round">refresh</span> Atualizar Localização
+                </button>
+                <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()" style="width:100%">Fechar</button>
+            </div>`;
+        ov.onclick = e => { if (e.target === ov) ov.remove(); };
+        document.body.appendChild(ov);
+        ov.querySelector('#btnRenovarGPS').onclick = () => { ov.remove(); iniciarGPS(); };
+        return;
+    }
+    // GPS com erro ou idle — guia o usuário para ativar
+    const ov = document.createElement('div');
+    ov.className = 'modal-overlay';
+    ov.innerHTML = `
+        <div class="modal-sheet">
+            <div class="modal-handle"></div>
+            <div class="modal-title" style="margin-bottom:12px">📍 Ativar Localização</div>
+            <div style="font-size:0.84rem;color:var(--text-secondary);margin-bottom:20px;line-height:1.6">
+                O MAXCRM usa sua localização para registrar o check-in das visitas.<br><br>
+                Ao clicar em <strong style="color:#fff">"Permitir"</strong>, autorize o acesso quando o sistema solicitar.
+                <br><br>
+                <span style="font-size:0.75rem;opacity:0.55">Se já negou antes: Configurações do navegador
+                → Privacidade → Permissões → Localização → habilite para este site.</span>
+            </div>
+            <button class="btn btn-primary" id="btnAtivarGPS" style="width:100%;margin-bottom:10px">
+                <span class="material-icons-round">my_location</span> Ativar Localização
+            </button>
+            <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()" style="width:100%">Cancelar</button>
+        </div>`;
+    ov.onclick = e => { if (e.target === ov) ov.remove(); };
+    document.body.appendChild(ov);
+    ov.querySelector('#btnAtivarGPS').onclick = () => { ov.remove(); iniciarGPS(); };
+}
+window.solicitarOuRenovarGPS = solicitarOuRenovarGPS;
+
+
+
 // ── Navegação SPA ─────────────────────────────────────────────────────────────
 let _telaAtual = 'home';
 
@@ -777,7 +842,10 @@ function _abrirDetalheVisita(v) {
                 </div>`).join('')}
 
             <div style="height:16px"></div>
-            <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="width:100%">Fechar</button>
+            ${!emAndamento ? `<button class="btn btn-secondary" id="btnAlterarVisita" style="width:100%;margin-bottom:10px">
+                <span class="material-icons-round">edit_note</span> Alterar Visita
+            </button>` : ''}
+            <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()" style="width:100%">Fechar</button>
         </div>`;
     overlay.onclick = e => { if(e.target === overlay) overlay.remove(); };
     document.body.appendChild(overlay);
@@ -788,6 +856,96 @@ function _abrirDetalheVisita(v) {
             await retomarVisita(v);
         };
     }
+    if (!emAndamento) {
+        overlay.querySelector('#btnAlterarVisita').onclick = () => {
+            overlay.remove();
+            _abrirModalEdicaoVisita(v);
+        };
+    }
+}
+
+// ── Modal de edição de visita finalizada ──────────────────────────────────────
+function _abrirModalEdicaoVisita(v) {
+    const r = v.respostas || {};
+    const acao = r.proximaAcao || {};
+
+    const INTERESSE_OPTS = ['Muito alto','Alto','Médio','Baixo','Sem interesse'];
+    const TIMING_OPTS    = ['Imediato (< 1 mês)','Curto prazo (1-3 meses)','Médio prazo (3-6 meses)','Longo prazo (> 6 meses)','Sem previsão'];
+    const ACAO_OPTS      = ['Retornar por telefone','Enviar proposta','Agendar demo','Aguardar contato','Visita presencial','Encerrar'];
+
+    const mkSelect = (id, opts, val) =>
+        `<select id="${id}" class="form-input" style="width:100%">
+            <option value="">— selecione —</option>
+            ${opts.map(o => `<option value="${o}" ${val===o?'selected':''}>${o}</option>`).join('')}
+         </select>`;
+
+    const ov = document.createElement('div');
+    ov.className = 'modal-overlay';
+    ov.innerHTML = `
+        <div class="modal-sheet" style="max-height:85vh;overflow-y:auto">
+            <div class="modal-handle"></div>
+            <div class="modal-title" style="margin-bottom:4px">Alterar Visita</div>
+            <div style="font-size:0.75rem;color:var(--text-secondary);text-align:center;margin-bottom:18px">
+                ${v.empresaNome || '—'} • ${new Date(v.criadoEm || Date.now()).toLocaleDateString('pt-BR')}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Interesse</label>
+                ${mkSelect('editInteresse', INTERESSE_OPTS, r.interesse)}
+            </div>
+            <div class="form-group">
+                <label class="form-label">Timing</label>
+                ${mkSelect('editTiming', TIMING_OPTS, r.timing)}
+            </div>
+            <div class="form-group">
+                <label class="form-label">Próxima Ação</label>
+                ${mkSelect('editProxAcaoTipo', ACAO_OPTS, acao.tipo)}
+            </div>
+            <div class="form-group">
+                <label class="form-label">Data da Próxima Ação</label>
+                <input type="date" id="editProxAcaoData" class="form-input" style="width:100%" value="${acao.data || ''}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Observações</label>
+                <textarea id="editObs" class="form-input" rows="3" style="width:100%;resize:vertical">${r.observacoes || ''}</textarea>
+            </div>
+
+            <div style="height:8px"></div>
+            <button class="btn btn-primary" id="btnSalvarEdicao" style="width:100%;margin-bottom:10px">
+                <span class="material-icons-round">save</span> Salvar Alterações
+            </button>
+            <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()" style="width:100%">Cancelar</button>
+        </div>`;
+    ov.onclick = e => { if (e.target === ov) ov.remove(); };
+    document.body.appendChild(ov);
+
+    ov.querySelector('#btnSalvarEdicao').onclick = async () => {
+        const btn = ov.querySelector('#btnSalvarEdicao');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-icons-round">hourglass_top</span> Salvando...';
+        try {
+            const novasRespostas = {
+                interesse:    ov.querySelector('#editInteresse').value   || r.interesse,
+                timing:       ov.querySelector('#editTiming').value      || r.timing,
+                observacoes:  ov.querySelector('#editObs').value.trim()  || r.observacoes,
+                proximaAcao: {
+                    ...acao,
+                    tipo: ov.querySelector('#editProxAcaoTipo').value || acao.tipo,
+                    data: ov.querySelector('#editProxAcaoData').value || acao.data
+                }
+            };
+            await MaxCRMDB.salvarProgresso(v.id, { respostas: novasRespostas });
+            showToast('Visita atualizada com sucesso!', 'success');
+            ov.remove();
+            // Recarrega a lista de visitas para refletir a alteração
+            if (typeof carregarMinhasVisitas === 'function') carregarMinhasVisitas();
+        } catch (e) {
+            console.error('[MAXCRM] Erro ao editar visita:', e);
+            showToast('Erro ao salvar: ' + e.message, 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<span class="material-icons-round">save</span> Salvar Alterações';
+        }
+    };
 }
 
 // ── Retomar visita em andamento a partir da lista ────────────────────────────
