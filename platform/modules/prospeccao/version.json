@@ -1,8 +1,8 @@
 {
-  "version": "1.3.4",
-  "build": "20260929-v1.3.4",
+  "version": "1.3.5",
+  "build": "20261001-v1.3.5",
   "environment": "production",
-  "change": "v1.3.4 - MERGE LOCAL E IMPORTACAO: Mesclagem automatica de visitas locais do IndexedDB com a nuvem Firestore em carregarMinhasVisitas (evitando ocultar visitas locais nao sincronizadas), e adicao do botao 'Importar' backup JSON diretamente em Minhas Visitas.",
-  "lastUpdate": "2026-09-29",
+  "change": "v1.3.5 - PWA iOS INSTALL & VERSION SYNC: Adição de meta tags e apple-touch-icon para instalação nativa no iOS (iPhone), atualização dinâmica da versão no rodapé da tela de login eliminando versão desfasada.",
+  "lastUpdate": "2026-10-01",
   "deployedAt": "2026-09-29"
 }

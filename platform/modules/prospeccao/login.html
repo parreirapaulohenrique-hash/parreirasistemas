@@ -6,7 +6,11 @@
     <base href="/platform/modules/prospeccao/">
     <meta name="theme-color" content="#e11d48">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MAXCRM">
+    <link rel="apple-touch-icon" href="/platform/modules/prospeccao/icons/icon-192.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="/platform/modules/prospeccao/icons/icon-192.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="/platform/modules/prospeccao/icons/icon-512.png">
     <title>MAXCRM — Login</title>
     <link rel="manifest" href="manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -51,8 +55,8 @@
         </button>
     </form>
 
-    <div style="margin-top:32px;text-align:center;color:var(--text-muted);font-size:0.72rem">
-        MAXCRM v1.1.0 • Parreira Sistemas
+    <div id="loginVersionBadge" style="margin-top:32px;text-align:center;color:var(--text-muted);font-size:0.75rem">
+        MAXCRM v1.3.4 • Plataforma v3.21.69 • Parreira Sistemas
     </div>
 </div>
 
@@ -103,6 +107,15 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof ParreiraAuth !== 'undefined' && ParreiraAuth.isLogado()) {
         window.location.href = 'index.html';
     }
+    // Carregar versão da plataforma dinamicamente
+    fetch('/platform/version.json')
+        .then(function(r) { return r.json(); })
+        .then(function(v) {
+            var el = document.getElementById('loginVersionBadge');
+            if (el && v && v.version) {
+                el.textContent = 'MAXCRM v1.3.4 • Plataforma v' + v.version + ' • Parreira Sistemas';
+            }
+        }).catch(function(){});
 });
 </script>
 </body>
