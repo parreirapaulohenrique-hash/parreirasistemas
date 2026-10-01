@@ -1,8 +1,8 @@
 {
-  "version": "1.3.5",
-  "build": "20261001-v1.3.5",
+  "version": "1.3.6",
+  "build": "20261001-v1.3.6",
   "environment": "production",
-  "change": "v1.3.5 - PWA iOS INSTALL & VERSION SYNC: Adição de meta tags e apple-touch-icon para instalação nativa no iOS (iPhone), atualização dinâmica da versão no rodapé da tela de login eliminando versão desfasada.",
+  "change": "v1.3.6 - RETOMAR VISITA: Botão 'Retomar Visita' no detalhe de visitas Em Andamento. Carrega estado no MaxCRMState e retoma o questionário a partir da tela de Contato. Permissão restrita ao próprio promotor ou gestor/master.",
   "lastUpdate": "2026-10-01",
-  "deployedAt": "2026-09-29"
+  "deployedAt": "2026-10-01"
 }

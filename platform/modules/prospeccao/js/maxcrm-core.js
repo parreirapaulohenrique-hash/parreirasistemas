@@ -4,7 +4,7 @@
  * Parreira Sistemas — MAXCRM Campo v1.0.0
  */
 
-const MAXCRM_VERSION = '1.3.5';
+const MAXCRM_VERSION = '1.3.6';
 
 // ── Estado Global ────────────────────────────────────────────────────────────
 const MaxCRMState = {
@@ -705,12 +705,17 @@ async function carregarMinhasVisitas() {
 }
 
 function _abrirDetalheVisita(v) {
-    // Para gestor ou visitas já finalizadas: mostra resumo em modal
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     const r = v.respostas || {};
     const erp = r.erpAtual || {};
     const acao = r.proximaAcao || {};
+    const emAndamento = v.status === 'em_andamento';
+    const sessao = MaxCRMState.sessao;
+    // Promotores só podem retomar as próprias visitas; gestores podem ver tudo
+    const podeRetomar = emAndamento && sessao && (
+        v.promotorId === sessao.login || sessao.perfil === 'gestor' || sessao.isMaster
+    );
     const rows = [
         ['Empresa',      v.empresaNome || '—'],
         ['Promotor',     v.promotorNome || '—'],
@@ -727,16 +732,55 @@ function _abrirDetalheVisita(v) {
         <div class="modal-sheet" style="max-height:80vh;overflow-y:auto">
             <div class="modal-handle"></div>
             <div class="modal-title" style="margin-bottom:16px">${v.empresaNome || 'Visita'}</div>
+            ${emAndamento ? `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(234,179,8,0.12);border:1px solid rgba(234,179,8,0.3);border-radius:8px;margin-bottom:12px">
+                <span class="material-icons-round" style="color:#facc15;font-size:1rem">schedule</span>
+                <span style="font-size:0.78rem;color:#facc15">Visita em andamento — questionário incompleto</span>
+            </div>` : ''}
             ${rows.map(([lbl,val]) => `
                 <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06)">
                     <span style="font-size:0.75rem;color:var(--text-secondary)">${lbl}</span>
                     <span style="font-size:0.8rem;color:#fff;text-align:right;max-width:60%">${val}</span>
                 </div>`).join('')}
             <div style="height:16px"></div>
+            ${podeRetomar ? `<button class="btn btn-primary" id="btnRetomarVisita" style="width:100%;margin-bottom:10px">
+                <span class="material-icons-round">play_circle</span> Retomar Visita
+            </button>` : ''}
             <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="width:100%">Fechar</button>
         </div>`;
     overlay.onclick = e => { if(e.target === overlay) overlay.remove(); };
     document.body.appendChild(overlay);
+
+    if (podeRetomar) {
+        overlay.querySelector('#btnRetomarVisita').onclick = async () => {
+            overlay.remove();
+            await retomarVisita(v);
+        };
+    }
+}
+
+// ── Retomar visita em andamento a partir da lista ────────────────────────────
+async function retomarVisita(v) {
+    try {
+        // Carrega a visita do IndexedDB para garantir dados mais recentes
+        let visita = await MaxCRMDB.getVisita(v.id);
+        if (!visita) visita = v; // fallback para os dados do Firestore
+
+        let empresa = await MaxCRMDB.getEmpresa(visita.empresaId);
+        if (!empresa) {
+            // Constrói empresa mínima a partir dos dados da visita para não bloquear
+            empresa = { id: visita.empresaId, razaoSocial: visita.empresaNome, nomeFantasia: visita.empresaNome };
+        }
+
+        MaxCRMState.visitaAtual  = visita;
+        MaxCRMState.empresaAtual = empresa;
+        sessionStorage.setItem('maxcrm_visita_id', visita.id);
+
+        showToast(`Retomando visita em ${empresa.nomeFantasia || empresa.razaoSocial}`, 'success');
+        navigateTo('visita_contato');
+    } catch (e) {
+        console.error('[MAXCRM] Erro ao retomar visita:', e);
+        showToast('Erro ao retomar visita: ' + e.message, 'error');
+    }
 }
 
 function _labelStatusVisita(status) {
@@ -808,5 +852,6 @@ window.MaxCRMState          = MaxCRMState;
 window.initTelaBuscar       = initTelaBuscar;
 window.carregarMinhasVisitas= carregarMinhasVisitas;
 window.renderResumoVisita   = renderResumoVisita;
+window.retomarVisita        = retomarVisita;
 
 console.log(`✅ MAXCRM Core v${MAXCRM_VERSION} carregado`);
