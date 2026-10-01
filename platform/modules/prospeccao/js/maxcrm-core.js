@@ -13,7 +13,8 @@ const MaxCRMState = {
     empresaAtual:  null,   // empresa da visita
     gpsCoords:     null,   // { lat, lng, accuracy }
     gpsStatus:     'idle', // idle | loading | ok | error
-    telaAnterior:  'home'
+    telaAnterior:  'home',
+    modoRevisao:   false   // true = somente leitura, não salva respostas
 };
 
 // ── Inicialização ─────────────────────────────────────────────────────────────
@@ -461,6 +462,7 @@ async function verificarVisitaEmAndamento() {
 // ── Salvar resposta da etapa atual ─────────────────────────────────────────────
 async function salvarRespostaEtapa(chave, valor) {
     if (!MaxCRMState.visitaAtual) return;
+    if (MaxCRMState.modoRevisao) return; // 🔒 Modo revisão: somente leitura
     const atualizada = await MaxCRMDB.salvarProgresso(MaxCRMState.visitaAtual.id, {
         respostas: { [chave]: valor }
     });
@@ -884,7 +886,11 @@ function _abrirDetalheVisita(v) {
                 </div>`).join('')}
 
             <div style="height:16px"></div>
-            ${!emAndamento ? `<button class="btn btn-secondary" id="btnAlterarVisita" style="width:100%;margin-bottom:10px">
+            ${!emAndamento ? `
+            <button class="btn btn-primary" id="btnRevisarVisita" style="width:100%;margin-bottom:10px">
+                <span class="material-icons-round">find_in_page</span> Revisar Formulário
+            </button>
+            <button class="btn btn-secondary" id="btnAlterarVisita" style="width:100%;margin-bottom:10px">
                 <span class="material-icons-round">edit_note</span> Alterar Visita
             </button>` : ''}
             <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()" style="width:100%">Fechar</button>
@@ -899,6 +905,10 @@ function _abrirDetalheVisita(v) {
         };
     }
     if (!emAndamento) {
+        overlay.querySelector('#btnRevisarVisita').onclick = async () => {
+            overlay.remove();
+            await revisarVisitaFinalizada(v);
+        };
         overlay.querySelector('#btnAlterarVisita').onclick = () => {
             overlay.remove();
             _abrirModalEdicaoVisita(v);
@@ -989,6 +999,96 @@ function _abrirModalEdicaoVisita(v) {
         }
     };
 }
+
+// ── Revisão somente-leitura de visita finalizada ──────────────────────────────
+async function revisarVisitaFinalizada(v) {
+    try {
+        let visita = await MaxCRMDB.getVisita(v.id);
+        if (!visita) visita = v;
+
+        let empresa = await MaxCRMDB.getEmpresa(visita.empresaId);
+        if (!empresa) empresa = { id: visita.empresaId, razaoSocial: visita.empresaNome, nomeFantasia: visita.empresaNome };
+
+        // Ativa modo revisão — salvarRespostaEtapa vira no-op
+        MaxCRMState.modoRevisao  = true;
+        MaxCRMState.visitaAtual  = visita;
+        MaxCRMState.empresaAtual = empresa;
+
+        // Banner fixo de leitura (removido ao sair do questionário)
+        _mostrarBannerRevisao(visita.empresaNome || empresa.nomeFantasia || empresa.razaoSocial);
+
+        navigateTo('visita_contato');
+        showToast('Modo revisão — somente leitura', 'info');
+    } catch (e) {
+        MaxCRMState.modoRevisao = false;
+        console.error('[MAXCRM] Erro ao abrir revisão:', e);
+        showToast('Erro ao abrir revisão: ' + e.message, 'error');
+    }
+}
+
+function _mostrarBannerRevisao(nomeEmpresa) {
+    // Remove banner anterior se houver
+    document.getElementById('bannerRevisao')?.remove();
+    const b = document.createElement('div');
+    b.id = 'bannerRevisao';
+    b.style.cssText = [
+        'position:fixed', 'top:56px', 'left:0', 'right:0', 'z-index:9980',
+        'background:rgba(37,99,235,0.95)', 'backdrop-filter:blur(8px)',
+        'padding:8px 16px', 'display:flex', 'align-items:center', 'gap:10px',
+        'border-bottom:1px solid rgba(96,165,250,0.4)'
+    ].join(';');
+    b.innerHTML = `
+        <span class="material-icons-round" style="font-size:1rem;color:#93c5fd">visibility</span>
+        <span style="flex:1;font-size:0.78rem;color:#fff">
+            <strong>REVISÃO</strong> — ${nomeEmpresa} — somente leitura
+        </span>
+        <button onclick="sairModoRevisao()" style="background:rgba(255,255,255,0.15);border:none;border-radius:6px;color:#fff;padding:4px 10px;font-size:0.72rem;cursor:pointer">
+            Sair
+        </button>`;
+    document.body.appendChild(b);
+}
+
+window.sairModoRevisao = function() {
+    MaxCRMState.modoRevisao = false;
+    MaxCRMState.visitaAtual  = null;
+    MaxCRMState.empresaAtual = null;
+    document.getElementById('bannerRevisao')?.remove();
+    navigateTo('minhas_visitas');
+};
+
+// Bloqueia interatividade da tela de visita quando em modo revisão
+// Chamado pelo hook do maxcrm-visit.js após o init de cada tela
+window._aplicarBloqueioRevisao = function() {
+    if (!MaxCRMState.modoRevisao) return;
+    setTimeout(() => {
+        const tela = document.querySelector('.screen.active');
+        if (!tela) return;
+        // Desabilita chips
+        tela.querySelectorAll('.chip').forEach(c => {
+            c.style.pointerEvents = 'none';
+            c.style.opacity = c.classList.contains('selected') ? '1' : '0.3';
+        });
+        // Desabilita segmenters
+        tela.querySelectorAll('.segmenter-item').forEach(c => {
+            c.style.pointerEvents = 'none';
+            c.style.opacity = c.classList.contains('active') ? '1' : '0.3';
+        });
+        // Desabilita inputs/textareas/selects
+        tela.querySelectorAll('input, textarea, select').forEach(el => {
+            el.setAttribute('readonly', '');
+            el.setAttribute('disabled', '');
+            el.style.opacity = '0.65';
+            el.style.cursor = 'not-allowed';
+        });
+        // Desabilita botões de ação (mantém só navegação prev/next)
+        tela.querySelectorAll('.btn:not(.btn-ghost):not([onclick*="navigateTo"]):not([onclick*="_proximo"]):not([onclick*="voltar"])').forEach(btn => {
+            if (!btn.textContent.includes('Próximo') && !btn.textContent.includes('Anterior') && !btn.textContent.includes('Voltar')) {
+                btn.style.opacity = '0.4';
+                btn.style.pointerEvents = 'none';
+            }
+        });
+    }, 80);
+};
 
 // ── Retomar visita em andamento a partir da lista ────────────────────────────
 async function retomarVisita(v) {

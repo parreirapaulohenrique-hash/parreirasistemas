@@ -474,6 +474,8 @@ window.avancarParaResumo = async function() {
             visita_acao:      window.initTelaAcao
         };
         if (mapa[telaId]) mapa[telaId]();
+        // Após init, bloqueia interatividade se em modo revisão
+        if (window._aplicarBloqueioRevisao) window._aplicarBloqueioRevisao();
     };
 })();
 
