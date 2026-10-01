@@ -4,7 +4,7 @@
  * Parreira Sistemas — MAXCRM Campo v1.0.0
  */
 
-const MAXCRM_VERSION = '1.3.12';
+const MAXCRM_VERSION = '1.3.13';
 
 // ── Estado Global ────────────────────────────────────────────────────────────
 const MaxCRMState = {
@@ -754,11 +754,16 @@ async function carregarMinhasVisitas() {
                 (idbVisitas || []).forEach(v => {
                     if (v && v.id) mapa.set(v.id, v);
                 });
-                // 2. Visitas da nuvem Firestore (sobrescrevem com status oficial)
+                // 2. Visitas da nuvem Firestore — deep-merge de respostas para não perder dados locais
                 firestoreVisitas.forEach(v => {
                     if (v && v.id) {
                         const local = mapa.get(v.id) || {};
-                        mapa.set(v.id, { ...local, ...v });
+                        mapa.set(v.id, {
+                            ...local,
+                            ...v,
+                            // Deep-merge de respostas: local tem prioridade por ter mais dados frescos
+                            respostas: Object.assign({}, v.respostas || {}, local.respostas || {})
+                        });
                     }
                 });
                 visitas = Array.from(mapa.values());
@@ -888,7 +893,17 @@ async function carregarMinhasVisitas() {
     lista.appendChild(diagFooter);
 }
 
-function _abrirDetalheVisita(v) {
+function _abrirDetalheVisita(vBase) {
+    // Sempre recarrega do IndexedDB para garantir dados mais completos (respostas, etc.)
+    MaxCRMDB.getVisita(vBase.id).then(vIDB => {
+        const v = vIDB
+            ? { ...vBase, ...vIDB, respostas: Object.assign({}, vBase.respostas || {}, vIDB.respostas || {}) }
+            : vBase;
+        _renderDetalheVisita(v);
+    }).catch(() => _renderDetalheVisita(vBase));
+}
+
+function _renderDetalheVisita(v) {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     const r = v.respostas || {};
