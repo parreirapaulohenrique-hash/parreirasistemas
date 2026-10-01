@@ -278,6 +278,19 @@ function navigateTo(telaId, opcoes) {
         if (telaId === 'buscar')         initTelaBuscar(opcoes);
         if (telaId === 'minhas_visitas') carregarMinhasVisitas();
         if (telaId === 'visita_resumo')  renderResumoVisita();
+        // Grava etapa atual na visita quando navegar pelo questionário
+        const ETAPAS_QUEST = [
+            'visita_contato','visita_perfil','visita_erp',
+            'visita_pontos','visita_dores','visita_mudancas',
+            'visita_intencao','visita_barreiras','visita_interesse',
+            'visita_timing','visita_acao','visita_resumo'
+        ];
+        if (ETAPAS_QUEST.includes(telaId) && MaxCRMState.visitaAtual) {
+            MaxCRMDB.salvarProgresso(MaxCRMState.visitaAtual.id, { etapaAtual: telaId })
+                .then(v => { MaxCRMState.visitaAtual = v; })
+                .catch(e => console.warn('[MAXCRM] Erro ao salvar etapaAtual:', e.message));
+        }
+
         if (opcoes?.scroll !== false) {
             target.scrollTop = 0;
         }
@@ -285,6 +298,35 @@ function navigateTo(telaId, opcoes) {
         console.warn('[MAXCRM] Tela não encontrada:', telaId);
     }
 }
+
+// ── Salvar dados ao fechar / minimizar o app ───────────────────────────
+// Garante persistência mesmo que o usuário abandone sem finalizar
+function _salvarAoSair() {
+    if (!MaxCRMState.visitaAtual || !MaxCRMState.visitaAtual.id) return;
+    // Captura campos de texto visiveis e salva sincronamente via IndexedDB
+    const camposTexto = [
+        { id: 'erpMensalidade',  chave: 'erp_mensalidade' },
+        { id: 'pontosObs',       chave: 'pontosObs' },
+        { id: 'acaoObs',         chave: 'acaoObs' }
+    ];
+    const respostasExtras = {};
+    camposTexto.forEach(({ id, chave }) => {
+        const el = document.getElementById(id);
+        if (el && el.value.trim()) respostasExtras[chave] = el.value.trim();
+    });
+    if (Object.keys(respostasExtras).length > 0) {
+        MaxCRMDB.salvarProgresso(MaxCRMState.visitaAtual.id, { respostas: respostasExtras })
+            .catch(e => console.warn('[MAXCRM] Flush ao sair:', e.message));
+    }
+    // Grava etapa atual
+    MaxCRMDB.salvarProgresso(MaxCRMState.visitaAtual.id, { etapaAtual: _telaAtual })
+        .catch(e => console.warn('[MAXCRM] Flush etapa ao sair:', e.message));
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') _salvarAoSair();
+});
+window.addEventListener('beforeunload', _salvarAoSair);
 
 function voltar() {
     // Lógica de voltar no modo visita
@@ -965,12 +1007,32 @@ async function retomarVisita(v) {
         MaxCRMState.empresaAtual = empresa;
         sessionStorage.setItem('maxcrm_visita_id', visita.id);
 
-        showToast(`Retomando visita em ${empresa.nomeFantasia || empresa.razaoSocial}`, 'success');
-        navigateTo('visita_contato');
+        // Retoma na etapa onde parou (ou no início se não houver registro)
+        const etapa = visita.etapaAtual || 'visita_contato';
+        showToast(`Retomando em "${_tituloEtapa(etapa)}"`, 'success');
+        navigateTo(etapa);
     } catch (e) {
         console.error('[MAXCRM] Erro ao retomar visita:', e);
         showToast('Erro ao retomar visita: ' + e.message, 'error');
     }
+}
+
+function _tituloEtapa(telaId) {
+    const t = {
+        visita_contato:  'Contato',
+        visita_perfil:   'Perfil Operacional',
+        visita_erp:      'ERP Atual',
+        visita_pontos:   'Pontos Fortes',
+        visita_dores:    'Dores',
+        visita_mudancas: '3 Mudanças',
+        visita_intencao: 'Intenção de Troca',
+        visita_barreiras:'Barreiras',
+        visita_interesse:'Interesse',
+        visita_timing:   'Timing',
+        visita_acao:     'Próxima Ação',
+        visita_resumo:   'Resumo'
+    };
+    return t[telaId] || telaId;
 }
 
 function _labelStatusVisita(status) {
