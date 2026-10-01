@@ -44,23 +44,16 @@ Write-Host "  OK Arquivos adicionados!" -ForegroundColor Green
 Write-Host ""
 
 # ============================================
-# ETAPA 2.5: SINCRONIZAR version.json
-# FIX: platform/version.json e o que atualizamos,
-#      mas o app le platform/modules/dispatch/version.json (relativo ao app.js)
-#      Sincronizamos automaticamente a cada deploy para que a versao
-#      exibida no rodape do app sempre bata com o que foi deployado.
+# ETAPA 2.5: VERIFICAR version.json DOS MÓDULOS
+# Cada módulo agora mantém sua versão própria e independente:
+# - Dispatch: platform/modules/dispatch/version.json
+# - Demanda:  platform/modules/demanda/version.json
+# - MAXCRM:   platform/modules/prospeccao/version.json
+# - WMS:      platform/modules/wms/version.json
+# - Plataforma Hub: platform/version.json
 # ============================================
-Write-Host "[2.5/5] Sincronizando version.json para o app de despacho..." -ForegroundColor Yellow
-$srcVersion  = "$projectPath\platform\version.json"
-$destVersion = "$projectPath\platform\modules\dispatch\version.json"
-if (Test-Path $srcVersion) {
-    Copy-Item -Path $srcVersion -Destination $destVersion -Force
-    git add $destVersion
-    Write-Host "  OK version.json sincronizado: platform/ -> platform/modules/dispatch/" -ForegroundColor Green
-} else {
-    Write-Host "  AVISO platform/version.json nao encontrado -- versao nao atualizada no app!" -ForegroundColor Yellow
-}
-Write-Host ""
+Write-Host "[2.5/5] Mantendo versões próprias e independentes por módulo..." -ForegroundColor Gray
+
 
 # ============================================
 # ETAPA 3: COMMIT

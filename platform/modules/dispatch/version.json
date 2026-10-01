@@ -1,5 +1,9 @@
 {
-  "version": "3.21.63",
-  "build": 163,
-  "releaseDate": "2026-09-26T09:48:00-03:00"
+  "module": "dispatch",
+  "name": "Bússola Log",
+  "version": "3.19.0",
+  "build": "20260930-v3.19.0",
+  "lastUpdate": "2026-09-30",
+  "releaseDate": "2026-09-30T17:30:00-03:00",
+  "change": "v3.19.0 - Versão própria do Despacho desacoplada do Hub. Integração com API MaxData v2 (headers de integrador no /auth e proxy Vercel), fila de NFs e sincronização de clientes."
 }

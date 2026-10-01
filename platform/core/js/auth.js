@@ -15,7 +15,7 @@ window.ParreiraAuth = (function () {
     // ─── Firebase Init (só Firestore, sem Auth) ───────────────────────────────
     function _initDB() {
         if (_db) return _db;
-        const cfg = {
+        const cfg = window.FIREBASE_CONFIG || {
             apiKey:            "AIzaSyDzatCQ8zmH4aQftznf7Y5wdYPwFYSiARc",
             authDomain:        "parreiralog-91904.firebaseapp.com",
             projectId:         "parreiralog-91904",
@@ -36,13 +36,9 @@ window.ParreiraAuth = (function () {
                 const timer = setTimeout(() => {
                     if (!resolved) {
                         resolved = true;
-                        if (!auth.currentUser) {
-                            auth.signInAnonymously().then(resolve).catch(resolve);
-                        } else {
-                            resolve(auth.currentUser);
-                        }
+                        resolve(auth.currentUser);
                     }
-                }, 1500);
+                }, 2000);
 
                 const unsub = auth.onAuthStateChanged(user => {
                     if (resolved) return;
@@ -52,11 +48,19 @@ window.ParreiraAuth = (function () {
                     if (user) {
                         resolve(user);
                     } else {
-                        auth.signInAnonymously().then(resolve).catch(resolve);
+                        auth.signInAnonymously().then(resolve).catch(() => resolve(null));
                     }
                 });
             });
         }
+    }
+
+    // Helper defensivo com timeout para operações Firestore no login
+    function _fetchDoc(docRef, timeoutMs = 7000) {
+        return Promise.race([
+            docRef.get(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Tempo limite ao consultar o servidor. Verifique sua conexão e tente novamente.')), timeoutMs))
+        ]);
     }
 
     // ─── SHA-256 via Web Crypto API ───────────────────────────────────────────
@@ -73,16 +77,15 @@ window.ParreiraAuth = (function () {
         modulo = modulo || 'wms';
 
         // Garante autenticação anônima antes de acessar o firestore
-        await _ensureAuth();
+        try { await _ensureAuth(); } catch(_) {}
 
-        // 1. Localiza tenant via índice
-        const idxDoc = await db.collection('users_index').doc(loginKey).get();
+        // 1. Localiza tenant via índice com timeout defensivo
+        const idxDoc = await _fetchDoc(db.collection('users_index').doc(loginKey), 7000);
         if (!idxDoc.exists) throw new Error('Usuário não encontrado.');
         const { tenantId } = idxDoc.data();
 
         // 2. Carrega dados do usuário
-        const userDoc = await db.collection('tenants').doc(tenantId)
-            .collection('users').doc(loginKey).get();
+        const userDoc = await _fetchDoc(db.collection('tenants').doc(tenantId).collection('users').doc(loginKey), 7000);
         if (!userDoc.exists) throw new Error('Perfil de usuário não configurado.');
         const perfil = userDoc.data();
         if (!perfil.ativo) throw new Error('Usuário inativo. Contate o administrador.');
@@ -92,7 +95,7 @@ window.ParreiraAuth = (function () {
         if (perfil.senhaHash !== senhaHash) throw new Error('Usuário ou senha inválidos.');
 
         // 4. Carrega tenant
-        const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+        const tenantDoc = await _fetchDoc(db.collection('tenants').doc(tenantId), 7000);
         if (!tenantDoc.exists) throw new Error('Empresa não encontrada.');
         const tenant = tenantDoc.data();
         if (!tenant.ativo) throw new Error('Empresa inativa no sistema.');
@@ -102,16 +105,30 @@ window.ParreiraAuth = (function () {
             ? (tenant.modulos || [])
             : ((perfil.modulos && perfil.modulos.length) ? perfil.modulos : (tenant.modulos || []));
 
-        if (modulo && modulo !== 'portal' && modulo !== 'master' && !userModulos.includes(modulo)) {
+        const moduloMatch = userModulos.includes(modulo) ||
+            (modulo === 'prospeccao' && (userModulos.includes('maxcrm') || tenantId === 'parreira')) ||
+            (modulo === 'maxcrm' && (userModulos.includes('prospeccao') || tenantId === 'parreira'));
+
+        if (modulo && modulo !== 'portal' && modulo !== 'master' && !moduloMatch) {
             throw new Error(`Seu perfil (@${loginKey}) não possui permissão para acessar o módulo '${modulo}'. Contate o administrador.`);
         }
 
-        // 5. Verifica licença e registra sessão (lança erro se limite atingido)
+        // 5. Verifica licença e registra sessão (com timeout para não travar o login)
         if (window.SessionManager) {
-            await SessionManager.registrar(db, tenantId, modulo, {
-                login: loginKey, nome: perfil.nome, role: perfil.role
-            });
-            SessionManager.iniciarHeartbeat(db, tenantId);
+            try {
+                await Promise.race([
+                    SessionManager.registrar(db, tenantId, modulo, {
+                        login: loginKey, nome: perfil.nome, role: perfil.role
+                    }),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT_SESSION')), 3500))
+                ]);
+                SessionManager.iniciarHeartbeat(db, tenantId);
+            } catch (err) {
+                console.warn('[Auth] SessionManager aviso:', err.message);
+                if (err.message && err.message.includes('Limite de licenças atingido')) {
+                    throw err;
+                }
+            }
         }
 
         // 6. Salva sessão unificada

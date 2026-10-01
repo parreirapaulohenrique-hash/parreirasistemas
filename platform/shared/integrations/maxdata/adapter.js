@@ -34,11 +34,20 @@ class MaxDataAdapter extends ErpAdapter {
 
         this._log('info', `Autenticando no MaxData — empId: ${empId}`);
 
+        const appName        = (this.config.appName || '5ea6149f-e123-4847-82a2-d5fc6e157aeb').trim();
+        const appKey         = (this.config.appKey || '249b6fc7-4312-48e3-9155-0c48d92b098637255f1b-95a4-4c91-a06a-c51d0dd062d2').trim();
+        const appDescription = (this.config.appDescription || 'CENTRALPECAS_APP_COTACAO').trim();
+
         const url  = this._buildUrl('auth');
         const resp = await fetch(url, {
             method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ empId, terminal }),
+            headers: {
+                'Content-Type':            'application/json',
+                'application_name':        appName,
+                'application_key':         appKey,
+                'application_description': appDescription
+            },
+            body:    JSON.stringify({ empId, terminal, idUser: 0 }),
             signal:  AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined
         });
 

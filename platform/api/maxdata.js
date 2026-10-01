@@ -12,7 +12,7 @@ module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
     res.setHeader(
         'Access-Control-Allow-Headers',
-        'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
+        'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, application_name, application_key, application_description'
     );
 
     if (req.method === 'OPTIONS') {
@@ -35,12 +35,13 @@ module.exports = async (req, res) => {
         });
 
         const fetchHeaders = {};
-        if (req.headers.authorization) {
-            fetchHeaders['Authorization'] = req.headers.authorization;
-        }
-        if (req.headers['content-type']) {
-            fetchHeaders['Content-Type'] = req.headers['content-type'];
-        } else {
+        const forwardHeaders = ['authorization', 'content-type', 'application_name', 'application_key', 'application_description'];
+        forwardHeaders.forEach(h => {
+            if (req.headers[h]) {
+                fetchHeaders[h] = req.headers[h];
+            }
+        });
+        if (!fetchHeaders['Content-Type']) {
             fetchHeaders['Content-Type'] = 'application/json';
         }
 
