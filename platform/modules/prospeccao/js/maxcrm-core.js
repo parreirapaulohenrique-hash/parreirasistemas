@@ -716,11 +716,22 @@ function _abrirDetalheVisita(v) {
     const podeRetomar = emAndamento && sessao && (
         v.promotorId === sessao.login || sessao.perfil === 'gestor' || sessao.isMaster
     );
+    // Etapas do questionário com status de conclusão
+    const etapas = [
+        { label: 'Contato identificado',  ok: !!(r.contatos && r.contatos.length > 0) },
+        { label: 'ERP atual mapeado',     ok: !!(erp.erpNome) },
+        { label: 'Dores levantadas',      ok: !!(r.dores && r.dores.length > 0) },
+        { label: 'Interesse avaliado',    ok: !!(r.interesse) },
+        { label: 'Timing definido',       ok: !!(r.timing) },
+        { label: 'Próxima ação definida', ok: !!(acao.tipo) }
+    ];
+    const etapasConcluidas = etapas.filter(e => e.ok).length;
+
+    // Linhas de resumo para visitas finalizadas
     const rows = [
         ['Empresa',      v.empresaNome || '—'],
         ['Promotor',     v.promotorNome || '—'],
         ['Data',         new Date(v.criadoEm || v.data || Date.now()).toLocaleDateString('pt-BR')],
-        ['Status',       _labelStatusVisita(v.status)],
         ['ERP Atual',    erp.erpNome || '—'],
         ['Satisfação',   erp.satisfacao ? erp.satisfacao + '/5' : '—'],
         ['Interesse',    r.interesse || '—'],
@@ -728,23 +739,44 @@ function _abrirDetalheVisita(v) {
         ['Próxima Ação', [acao.tipo, acao.data].filter(Boolean).join(' • ') || '—'],
         ['Obs',          r.observacoes || '—']
     ];
+
     overlay.innerHTML = `
-        <div class="modal-sheet" style="max-height:80vh;overflow-y:auto">
+        <div class="modal-sheet" style="max-height:85vh;overflow-y:auto">
             <div class="modal-handle"></div>
-            <div class="modal-title" style="margin-bottom:16px">${v.empresaNome || 'Visita'}</div>
-            ${emAndamento ? `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(234,179,8,0.12);border:1px solid rgba(234,179,8,0.3);border-radius:8px;margin-bottom:12px">
-                <span class="material-icons-round" style="color:#facc15;font-size:1rem">schedule</span>
-                <span style="font-size:0.78rem;color:#facc15">Visita em andamento — questionário incompleto</span>
-            </div>` : ''}
-            ${rows.map(([lbl,val]) => `
+            <div class="modal-title" style="margin-bottom:4px">${v.empresaNome || 'Visita'}</div>
+            <div style="font-size:0.75rem;color:var(--text-secondary);text-align:center;margin-bottom:16px">
+                ${new Date(v.criadoEm || v.data || Date.now()).toLocaleDateString('pt-BR')} &bull; ${v.promotorNome || '—'}
+            </div>
+
+            ${podeRetomar ? `
+            <button class="btn btn-primary" id="btnRetomarVisita"
+                style="width:100%;margin-bottom:16px;font-size:0.95rem;padding:14px 12px;display:flex;align-items:center;justify-content:center;gap:8px">
+                <span class="material-icons-round" style="font-size:1.3rem">play_circle</span>
+                <span>Retomar Visita</span>
+            </button>` : ''}
+
+            ${emAndamento ? `
+            <div style="margin-bottom:16px">
+                <div style="font-size:0.68rem;color:var(--text-secondary);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em">
+                    Progresso — ${etapasConcluidas}/${etapas.length} etapas concluídas
+                </div>
+                <div style="background:rgba(255,255,255,0.06);border-radius:4px;height:5px;margin-bottom:12px;overflow:hidden">
+                    <div style="height:100%;width:${Math.round(etapasConcluidas/etapas.length*100)}%;background:${etapasConcluidas===etapas.length?'#22c55e':'#facc15'};border-radius:4px"></div>
+                </div>
+                ${etapas.map(e => `
+                <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+                    <span class="material-icons-round" style="font-size:1.1rem;color:${e.ok ? '#22c55e' : 'rgba(255,255,255,0.2)'}">
+                        ${e.ok ? 'check_circle' : 'radio_button_unchecked'}
+                    </span>
+                    <span style="font-size:0.82rem;color:${e.ok ? '#fff' : 'rgba(255,255,255,0.35)'}">${e.label}</span>
+                </div>`).join('')}
+            </div>` : rows.map(([lbl,val]) => `
                 <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06)">
                     <span style="font-size:0.75rem;color:var(--text-secondary)">${lbl}</span>
                     <span style="font-size:0.8rem;color:#fff;text-align:right;max-width:60%">${val}</span>
                 </div>`).join('')}
+
             <div style="height:16px"></div>
-            ${podeRetomar ? `<button class="btn btn-primary" id="btnRetomarVisita" style="width:100%;margin-bottom:10px">
-                <span class="material-icons-round">play_circle</span> Retomar Visita
-            </button>` : ''}
             <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="width:100%">Fechar</button>
         </div>`;
     overlay.onclick = e => { if(e.target === overlay) overlay.remove(); };

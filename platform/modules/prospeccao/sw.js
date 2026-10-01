@@ -1,18 +1,18 @@
-// MAXCRM Campo — Service Worker v3.21.69
+// MAXCRM Campo — Service Worker v3.21.70
 // Estratégia: Network-first com fallback offline
 // Autor: Parreira Sistemas
 
-const CACHE_NAME = 'maxcrm-v3.21.69';
+const CACHE_NAME = 'maxcrm-v3.21.70';
 const STATIC_ASSETS = [
     '/platform/modules/prospeccao/index.html',
     '/platform/modules/prospeccao/login.html',
     '/platform/modules/prospeccao/styles/maxcrm.css',
-    '/platform/modules/prospeccao/js/maxcrm-core.js?v=3.21.69',
-    '/platform/modules/prospeccao/js/maxcrm-db.js?v=3.21.69',
-    '/platform/modules/prospeccao/js/maxcrm-sync.js?v=3.21.69',
-    '/platform/modules/prospeccao/js/maxcrm-import.js?v=3.21.69',
-    '/platform/modules/prospeccao/js/maxcrm-visit.js?v=3.21.69',
-    '/platform/modules/prospeccao/js/cnpj-lookup.js?v=3.21.69',
+    '/platform/modules/prospeccao/js/maxcrm-core.js?v=3.21.70',
+    '/platform/modules/prospeccao/js/maxcrm-db.js?v=3.21.70',
+    '/platform/modules/prospeccao/js/maxcrm-sync.js?v=3.21.70',
+    '/platform/modules/prospeccao/js/maxcrm-import.js?v=3.21.70',
+    '/platform/modules/prospeccao/js/maxcrm-visit.js?v=3.21.70',
+    '/platform/modules/prospeccao/js/cnpj-lookup.js?v=3.21.70',
     'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
     'https://fonts.googleapis.com/icon?family=Material+Icons+Round'
 ];
