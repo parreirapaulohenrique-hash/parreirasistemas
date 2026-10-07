@@ -1,4 +1,4 @@
-﻿// WMS Estoque - Stock queries
+// WMS Estoque - Stock queries
 // est-consulta: Search by SKU/description
 // est-endereco: Search by address
 
@@ -15,9 +15,29 @@ window.loadEstoqueView = function (viewId) {
 
 // --- Stock Manager (Persistence Layer) ---
 window.StockManager = {
-    getData: () => JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{"addresses":[]}'),
+    getData: function () {
+        const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+        const raw = localStorage.getItem('wms_mock_data' + suf);
+        if (!raw) return { addresses: [] };
+        try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+                return { addresses: parsed };
+            }
+            if (parsed && Array.isArray(parsed.addresses)) {
+                return parsed;
+            }
+            return { addresses: [] };
+        } catch (e) {
+            return { addresses: [] };
+        }
+    },
 
-    saveData: (data) => localStorage.setItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(data)),
+    saveData: function (data) {
+        const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+        const addrs = Array.isArray(data) ? data : (data && Array.isArray(data.addresses) ? data.addresses : []);
+        localStorage.setItem('wms_mock_data' + suf, JSON.stringify(addrs));
+    },
 
     // Log Transaction (Kardex)
     logTransaction: function (type, sku, qty, doc, reason) {

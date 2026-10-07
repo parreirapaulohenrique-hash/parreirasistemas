@@ -1,6 +1,6 @@
 {
-  "version": "2.0.2",
-  "date": "2026-09-16",
-  "build": "20260916-1200",
-  "last_change": "Fix(auth): Autenticação anônima Firebase no WMS e ErpRegistry, corrigindo 'Missing or insufficient permissions' ao salvar configurações de ERP e sincronizar dados com o Firestore (v2.0.2)"
+  "version": "2.0.3",
+  "date": "2026-10-07",
+  "build": "20261007-1500",
+  "last_change": "Fix(P1): Normalização estrutural de wms_mock_data (Array vs {addresses:[]}) em estoque.js, bi_operacional.js, controle.js, relatorios.js; persistência em nuvem (Firestore) do inventário de campo no WMS Coletor; unificação de getWmsConfig com tenant suffix (v2.0.3)"
 }

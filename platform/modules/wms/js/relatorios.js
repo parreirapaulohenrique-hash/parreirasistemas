@@ -1,4 +1,4 @@
-﻿// WMS Relatórios - Management Reports
+// WMS Relatórios - Management Reports
 // rel-recebimento: Receiving KPIs
 // rel-produtividade: Productivity metrics
 // rel-estoque: Stock position summary
@@ -198,9 +198,9 @@ function renderRelProdutividade(container) {
 // 3. POSIÇÃO DE ESTOQUE
 // ========================
 function renderRelEstoque(container) {
-    const mockData = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
-    const addresses = mockData.addresses || [];
-    const streets = mockData.streets || [];
+    const rawMock = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+    const addresses = Array.isArray(rawMock) ? rawMock : (rawMock.addresses || []);
+    const streets = Array.isArray(rawMock) ? [] : (rawMock.streets || []);
 
     const occupied = addresses.filter(a => a.status === 'OCUPADO').length;
     const empty = addresses.filter(a => a.status === 'LIVRE').length;

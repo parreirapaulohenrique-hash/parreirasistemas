@@ -516,7 +516,7 @@ function _recAbrirConferencia() {
 }
 
 function _recDocasOptions() {
-    const wmsConfig = JSON.parse(localStorage.getItem('wms_config') || '{}');
+    const wmsConfig = window.getWmsConfig ? window.getWmsConfig() : JSON.parse(localStorage.getItem('wms_config') || '{}');
     const docas = wmsConfig.docas || ['DOCA-01','DOCA-02','DOCA-03'];
     return docas.map(d => `<option value="${d}">${d.replace('-',' ')}</option>`).join('');
 }

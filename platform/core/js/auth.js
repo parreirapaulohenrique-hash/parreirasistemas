@@ -148,22 +148,39 @@ window.ParreiraAuth = (function () {
         // Fix cross-tab: salva tambem no localStorage para abas abertas via window.open
         try { localStorage.setItem('parreira_session_ls', JSON.stringify(sessao)); } catch(_) {}
 
-        // v3.22.17 FIX: QuotaExceededError — libera dados grandes antes de salvar sessão
+        // v3.21.78 FIX: QuotaExceededError seguro — limpa apenas caches temporários, sem apagar despachos e romaneios
         function _safeSetItem(key, value) {
             try {
                 localStorage.setItem(key, value);
             } catch (e) {
                 if (e.name === 'QuotaExceededError' || e.code === 22 || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
-                    console.warn('[Auth] localStorage cheio. Limpando dados grandes para liberar espaço...');
-                    // Remove dados grandes gerados pela integração ERP (clientes, despachos, histórico)
-                    const big = Object.keys(localStorage).filter(k =>
-                        k.includes('_clients') || k.includes('_dispatches') || k.includes('_invoice_history') ||
-                        k.includes('_app_romaneios') || k.includes('_delivery_history')
+                    console.warn('[Auth] localStorage atingiu cota. Removendo caches temporários não-críticos...');
+                    // Remove primeiro caches de consulta, temporários e logs
+                    const safeToEvict = Object.keys(localStorage).filter(k =>
+                        k.includes('_cache_') || k.includes('_temp_') || k.includes('_lwt_persist') ||
+                        k.includes('_debug_') || k.includes('cnpj_cache') || k.includes('_log_') ||
+                        k.includes('_session_old_')
                     );
-                    big.forEach(k => localStorage.removeItem(k));
-                    console.warn(`[Auth] ${big.length} chave(s) removida(s). Tentando salvar novamente...`);
-                    try { localStorage.setItem(key, value); } catch (_) {
-                        console.error('[Auth] localStorage ainda cheio mesmo após limpeza.');
+                    safeToEvict.forEach(k => {
+                        try { localStorage.removeItem(k); } catch (_) {}
+                    });
+                    console.warn(`[Auth] ${safeToEvict.length} chave(s) de cache temporário liberada(s).`);
+
+                    // Se ainda não couber, tenta remover caches antigos de catálogo/produtos
+                    try {
+                        localStorage.setItem(key, value);
+                    } catch (_) {
+                        const catalogCaches = Object.keys(localStorage).filter(k =>
+                            k.includes('_catalog_cache') || k.includes('_produtos_temp')
+                        );
+                        catalogCaches.forEach(k => {
+                            try { localStorage.removeItem(k); } catch (_) {}
+                        });
+                        try {
+                            localStorage.setItem(key, value);
+                        } catch (errFinal) {
+                            console.error('[Auth] Aviso: localStorage cheio. A sessão permanece íntegra no sessionStorage.', errFinal);
+                        }
                     }
                 }
             }

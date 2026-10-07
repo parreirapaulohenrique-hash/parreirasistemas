@@ -3,13 +3,53 @@
  * ===========================================================
  * Node.js 18+ com fetch global nativo. CommonJS (module.exports).
  * Resolve Mixed Content: browser HTTPS -> proxy HTTPS -> Maxdata HTTP.
+ * Inclui proteção contra SSRF e repasse dos headers de autenticação MaxData v2.
  */
+
+function isHostAllowed(urlString) {
+    try {
+        const parsed = new URL(urlString);
+        if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+
+        const hostname = parsed.hostname.toLowerCase();
+
+        // Bloqueio rigoroso de endereços locais, de loopback e de metadados de nuvem
+        if (
+            hostname === 'localhost' ||
+            hostname === '127.0.0.1' ||
+            hostname === '0.0.0.0' ||
+            hostname === '::1' ||
+            hostname === '169.254.169.254' ||
+            hostname.endsWith('.internal') ||
+            hostname.endsWith('.local')
+        ) {
+            return false;
+        }
+
+        // Bloqueio de faixas privadas IPv4 (RFC 1918)
+        const ipParts = hostname.split('.').map(Number);
+        if (ipParts.length === 4 && ipParts.every(n => !isNaN(n) && n >= 0 && n <= 255)) {
+            if (ipParts[0] === 10) return false;
+            if (ipParts[0] === 127) return false;
+            if (ipParts[0] === 172 && ipParts[1] >= 16 && ipParts[1] <= 31) return false;
+            if (ipParts[0] === 192 && ipParts[1] === 168) return false;
+            if (ipParts[0] === 169 && ipParts[1] === 254) return false;
+        }
+
+        return true;
+    } catch (_) {
+        return false;
+    }
+}
 
 module.exports = async function handler(req, res) {
     // CORS
     res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader(
+        'Access-Control-Allow-Headers',
+        'Content-Type, Authorization, application_name, application_key, application_description, X-CSRF-Token, X-Requested-With, Accept'
+    );
     res.setHeader('Access-Control-Allow-Credentials', 'true');
 
     if (req.method === 'OPTIONS') {
@@ -32,8 +72,16 @@ module.exports = async function handler(req, res) {
     // Se o frontend passou uma URL customizada / configurada pelo tenant
     if (_apiUrl) {
         let clean = decodeURIComponent(_apiUrl).trim().replace(/\/+$/, '');
-        // Sanitiza erros comuns de digitação como .con.br -> .com.br
         clean = clean.replace(/\.con\.br/gi, '.com.br');
+
+        if (!isHostAllowed(clean)) {
+            console.warn('[MaxDataProxy] Tentativa de acesso a host bloqueado (SSRF Guard):', clean);
+            return res.status(403).json({
+                success: false,
+                message: 'Acesso bloqueado pelo sistema de segurança (SSRF Guard).'
+            });
+        }
+
         if (clean && !candidateHosts.includes(clean)) {
             candidateHosts.push(clean);
         }
@@ -53,13 +101,23 @@ module.exports = async function handler(req, res) {
 
     const qs = Object.keys(rest).length ? '?' + new URLSearchParams(rest).toString() : '';
 
-    // Cabeçalhos para repassar (não forçamos Host manual para evitar conflitos no fetch)
-    const headers = { 
+    // Cabeçalhos para repassar à API do MaxData
+    const headers = {
         'Content-Type': 'application/json'
     };
-    if (req.headers['authorization']) {
-        headers['Authorization'] = req.headers['authorization'];
-    }
+
+    const forwardHeaders = [
+        'authorization',
+        'application_name',
+        'application_key',
+        'application_description'
+    ];
+
+    forwardHeaders.forEach(h => {
+        if (req.headers[h]) {
+            headers[h] = req.headers[h];
+        }
+    });
 
     // Prepara body
     let body;
@@ -76,7 +134,6 @@ module.exports = async function handler(req, res) {
         console.log('[MaxDataProxy] Tentando: ' + req.method + ' ' + targetUrl);
 
         const ac = new AbortController();
-        // 12s por tentativa (maxDuration é 30s)
         const timer = setTimeout(() => ac.abort(), 12000);
 
         try {

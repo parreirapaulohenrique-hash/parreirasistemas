@@ -3,7 +3,7 @@
 
 // === Helper: Docas ===
 function _docasHtml() {
-    const cfg = JSON.parse(localStorage.getItem('wms_config') || '{}');
+    const cfg = window.getWmsConfig ? window.getWmsConfig() : JSON.parse(localStorage.getItem('wms_config') || '{}');
     const docas = cfg.docas || ['DOCA-01', 'DOCA-02', 'DOCA-03'];
     return docas.map(d => `<option value="${d}">${d}</option>`).join('');
 }
@@ -551,7 +551,7 @@ window.salvarConferenciaFisica = async function() {
 // ===================================
 
 window.initConfigScreen = function(container) {
-    const cfg = JSON.parse(localStorage.getItem('wms_config') || '{}');
+    const cfg = window.getWmsConfig ? window.getWmsConfig() : JSON.parse(localStorage.getItem('wms_config') || '{}');
     const geral = cfg.geral || {};
     const pinSupervisor = cfg.seguranca?.pinSupervisor;
     
@@ -594,7 +594,7 @@ window.initConfigScreen = function(container) {
 
     window.unlockConfigMobile = function() {
         const pinDigitado = document.getElementById('cfg-pin-input').value.trim();
-        const cfg = JSON.parse(localStorage.getItem('wms_config') || '{}');
+        const cfg = window.getWmsConfig ? window.getWmsConfig() : JSON.parse(localStorage.getItem('wms_config') || '{}');
         const pinMaster = cfg.seguranca?.pinSupervisor;
         
         if (pinMaster && pinMaster !== pinDigitado) {
@@ -608,10 +608,16 @@ window.initConfigScreen = function(container) {
 
     window.saveConfigMobile = function() {
         const blind = document.getElementById('cfg-blind-toggle').checked;
-        const cfg = JSON.parse(localStorage.getItem('wms_config') || '{}');
+        const cfg = window.getWmsConfig ? window.getWmsConfig() : JSON.parse(localStorage.getItem('wms_config') || '{}');
         if (!cfg.geral) cfg.geral = {};
         cfg.geral.contagemCega = blind;
-        localStorage.setItem('wms_config', JSON.stringify(cfg));
+        if (window.saveWmsConfig) {
+            window.saveWmsConfig(cfg);
+        } else {
+            const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+            localStorage.setItem('wms_config' + suf, JSON.stringify(cfg));
+            localStorage.setItem('wms_config', JSON.stringify(cfg));
+        }
         
         showToast('Configurações salvas.', 'success');
         setTimeout(() => navigateTo('home'), 1000);
