@@ -3187,186 +3187,218 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         window.confirmDispatch = async (index) => {
-            const option = window.currentOptions[index];
-            if (!option) return;
-
-            // Check for VAN negotiated value
-            let finalTotal = option.total;
-            let vanDiff = 0;
-            let isNegotiated = false;
-
-            const vanInput = document.getElementById(`van-input-${index}`);
-            if (vanInput && vanInput.value) {
-                const negociado = parseFloat(vanInput.value);
-                if (!isNaN(negociado) && negociado > 0) {
-                    finalTotal = negociado;
-                    vanDiff = option.total - finalTotal; // Positive = Saving
-                    isNegotiated = true;
-                }
-            }
-
-            const msgPrice = isNegotiated
-                ? `${Utils.formatCurrency(finalTotal)} (Negociado) \n[Original: ${Utils.formatCurrency(option.total)}]`
-                : `${Utils.formatCurrency(option.total)}`;
-
-            // v3.7.9 - Validação de transportadora para FOB
-            if (option.carrier === 'FOB') {
-                const fobSelect = document.getElementById(`fob-carrier-${index}`);
-                if (!fobSelect || !fobSelect.value) {
-                    alert('Por favor, selecione a transportadora que realizará a coleta FOB.');
-                    if (fobSelect) fobSelect.focus();
-                    return;
-                }
-                option.selectedFobCarrier = fobSelect.value;
-            }
-
-            if (!confirm(`Confirmar despacho com ${option.carrier} per ${msgPrice}?`)) return;
-
-            const clientName = document.getElementById('resClientName').innerText;
-            // v3.11.33: _sanDom — sanitiza innerText antes de salvar (previne string 'undefined' herdada do DOM)
-            const _sanDom = (v, fb) => (!v || v === 'undefined' || v === 'null' || String(v).trim() === '') ? fb : String(v).trim();
-            const resCity = _sanDom(document.getElementById('resCity').innerText, '-');
-            const resNeighborhood = _sanDom(document.getElementById('resNeighborhood').innerText, '-');
-            const val = parseFloat(document.getElementById('inputValue').value) || 0;
-            const weight = parseFloat(document.getElementById('inputWeight').value) || 0;
-            const volume = parseInt(document.getElementById('inputVolume').value) || 1;
-            const invoice = document.getElementById('inputInvoiceNumber').value.trim();
-            const isComp = document.getElementById('inputIsComplement').value === 'sim';
-            const mainInv = isComp ? document.getElementById('inputMainNF').value.trim() : '';
-            const sellerId = document.getElementById('inputSeller').value;
-
-            let sellerName = '-';
-            let sellerPhone = '';
-            
-            if (sellerId) {
-                const sellers = Utils.getStorage('app_sellers') || [];
-                const sObj = sellers.find(s => s.id === sellerId);
-                if (sObj) {
-                    sellerName = sObj.name;
-                    sellerPhone = sObj.phone;
-                }
-            }
-
-
-            if (!invoice) {
-                alert('Por favor, informe o número da Nota Fiscal para confirmar o despacho.');
-                document.getElementById('inputInvoiceNumber').focus();
+            if (window._isConfirmingDispatch) {
+                console.warn('[confirmDispatch] Ação em andamento, ignorando clique duplicado.');
                 return;
             }
+            window._isConfirmingDispatch = true;
+            try {
+                const option = window.currentOptions[index];
+                if (!option) return;
 
-            if (isComp && !mainInv) {
-                alert('Por favor, informe o número da NF Principal (Paga) para registrar o complemento.');
-                return;
-            }
+                // Check for VAN negotiated value
+                let finalTotal = option.total;
+                let vanDiff = 0;
+                let isNegotiated = false;
 
-            // Block repeated NF (unless it's a complement or empty)
-            // ✅ FIX v3.11.45: busca no histórico completo (localStorage + Firestore)
-            // A versão anterior usava apenas Utils.getStorage('dispatches') — NFs arquivadas
-            // (>12h no Firestore) não eram encontradas e a trava não funcionava.
-            if (invoice && invoice !== 'S/N' && !isComp) {
-                const fullHistory = (await Utils.Cloud.getFullDispatchesHistory()) || [];
-                const duplicate = fullHistory.find(d => d.invoice === invoice);
-                if (duplicate) {
-                    const dupDate = duplicate.date
-                        ? new Date(duplicate.date).toLocaleDateString('pt-BR')
-                        : (duplicate.dispatchedAt ? new Date(duplicate.dispatchedAt).toLocaleDateString('pt-BR') : '?');
-                    alert(`⚠️ Atenção: A Nota Fiscal nº ${invoice} já foi despachada anteriormente para o cliente "${duplicate.client}" em ${dupDate}.`);
+                const vanInput = document.getElementById(`van-input-${index}`);
+                if (vanInput && vanInput.value) {
+                    const negociado = parseFloat(vanInput.value);
+                    if (!isNaN(negociado) && negociado > 0) {
+                        finalTotal = negociado;
+                        vanDiff = option.total - finalTotal; // Positive = Saving
+                        isNegotiated = true;
+                    }
+                }
+
+                const msgPrice = isNegotiated
+                    ? `${Utils.formatCurrency(finalTotal)} (Negociado) \n[Original: ${Utils.formatCurrency(option.total)}]`
+                    : `${Utils.formatCurrency(option.total)}`;
+
+                // v3.7.9 - Validação de transportadora para FOB
+                if (option.carrier === 'FOB') {
+                    const fobSelect = document.getElementById(`fob-carrier-${index}`);
+                    if (!fobSelect || !fobSelect.value) {
+                        alert('Por favor, selecione a transportadora que realizará a coleta FOB.');
+                        if (fobSelect) fobSelect.focus();
+                        return;
+                    }
+                    option.selectedFobCarrier = fobSelect.value;
+                }
+
+                if (!confirm(`Confirmar despacho com ${option.carrier} per ${msgPrice}?`)) return;
+
+                const clientName = document.getElementById('resClientName').innerText;
+                // v3.11.33: _sanDom — sanitiza innerText antes de salvar (previne string 'undefined' herdada do DOM)
+                const _sanDom = (v, fb) => (!v || v === 'undefined' || v === 'null' || String(v).trim() === '') ? fb : String(v).trim();
+                const resCity = _sanDom(document.getElementById('resCity').innerText, '-');
+                const resNeighborhood = _sanDom(document.getElementById('resNeighborhood').innerText, '-');
+                const val = parseFloat(document.getElementById('inputValue').value) || 0;
+                const weight = parseFloat(document.getElementById('inputWeight').value) || 0;
+                const volume = parseInt(document.getElementById('inputVolume').value) || 1;
+                const invoice = document.getElementById('inputInvoiceNumber').value.trim();
+                const isComp = document.getElementById('inputIsComplement').value === 'sim';
+                const mainInv = isComp ? document.getElementById('inputMainNF').value.trim() : '';
+                const sellerId = document.getElementById('inputSeller').value;
+
+                let sellerName = '-';
+                let sellerPhone = '';
+                
+                if (sellerId) {
+                    const sellers = Utils.getStorage('app_sellers') || [];
+                    const sObj = sellers.find(s => s.id === sellerId);
+                    if (sObj) {
+                        sellerName = sObj.name;
+                        sellerPhone = sObj.phone;
+                    }
+                }
+
+                if (!invoice) {
+                    alert('Por favor, informe o número da Nota Fiscal para confirmar o despacho.');
+                    document.getElementById('inputInvoiceNumber').focus();
                     return;
                 }
+
+                if (isComp && !mainInv) {
+                    alert('Por favor, informe o número da NF Principal (Paga) para registrar o complemento.');
+                    return;
+                }
+
+                // Block repeated NF (unless it's a complement or empty)
+                // ✅ v3.20.0: Trava definitiva de duplicidade — checagem normalizada imediata (local + nuvem)
+                if (invoice && invoice !== 'S/N' && !isComp) {
+                    const normInv = (inv) => String(inv || '').trim().replace(/\D/g, '').replace(/^0+/, '');
+                    const targetNorm = normInv(invoice);
+
+                    // 1. Checagem em tempo real na fila local / memória
+                    const localList = Utils.getStorage('dispatches') || [];
+                    let duplicate = localList.find(d => {
+                        if (d.isComplement || !d.invoice || d.invoice === 'S/N') return false;
+                        if (d.status === 'Cancelado') return false;
+                        const dNorm = normInv(d.invoice);
+                        return (targetNorm && dNorm === targetNorm) || String(d.invoice).trim().toUpperCase() === invoice.toUpperCase();
+                    });
+
+                    // 2. Se não achou na fila local, consulta o histórico completo (nuvem + arquivados)
+                    if (!duplicate && Utils.Cloud && typeof Utils.Cloud.getFullDispatchesHistory === 'function') {
+                        try {
+                            const fullHistory = (await Utils.Cloud.getFullDispatchesHistory()) || [];
+                            duplicate = fullHistory.find(d => {
+                                if (d.isComplement || !d.invoice || d.invoice === 'S/N') return false;
+                                if (d.status === 'Cancelado') return false;
+                                const dNorm = normInv(d.invoice);
+                                return (targetNorm && dNorm === targetNorm) || String(d.invoice).trim().toUpperCase() === invoice.toUpperCase();
+                            });
+                        } catch (eHistory) {
+                            console.warn('[confirmDispatch] Aviso ao buscar histórico completo:', eHistory);
+                        }
+                    }
+
+                    if (duplicate) {
+                        const dupDate = duplicate.date
+                            ? new Date(duplicate.date).toLocaleDateString('pt-BR')
+                            : (duplicate.dispatchedAt ? new Date(duplicate.dispatchedAt).toLocaleDateString('pt-BR') : '?');
+                        const dupStatus = duplicate.status || 'Despachado';
+                        alert(`⚠️ Atenção: A Nota Fiscal nº ${invoice} já está registrada no sistema (${dupStatus}) para o cliente "${duplicate.client}" em ${dupDate}.`);
+                        return;
+                    }
+                }
+
+                const ruleUsed = option.details.ruleUsed;
+
+                // Captura data escolhida pelo operador (pode ser retroativa)
+                const _dateInputEl = document.getElementById('inputDate');
+                const _todayStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
+                const _chosenDateStr = (_dateInputEl && _dateInputEl.value) ? _dateInputEl.value : _todayStr;
+                const _isRetroativo = _chosenDateStr < _todayStr;
+                const _dispatchDate = new Date(_chosenDateStr + 'T12:00:00').toISOString();
+
+                const dispatch = {
+                    id: Date.now(),
+                    date: _dispatchDate,
+                    isRetroativo: _isRetroativo,
+                    registradoEm: new Date().toISOString(), // data/hora real do lançamento
+                    client: (clientName && clientName !== 'Name' && clientName !== 'undefined') ? clientName : 'Consumidor',
+                    city: resCity || '-',
+                    neighborhood: resNeighborhood || '-',
+                    carrier: option.selectedFobCarrier ? `FOB - ${option.selectedFobCarrier}` : String(option.carrier || '').trim().toUpperCase(),
+                    total: finalTotal, // Use negotiated price if available
+                    originalTotal: option.total, // Keep original for records
+                    vanDiff: isNegotiated ? vanDiff : 0, // Save difference
+                    nfValue: val,
+                    weight: weight,
+                    volume: volume,
+                    invoice: invoice || 'S/N',
+                    sellerId: sellerId || null,
+                    sellerName: sellerName,
+                    sellerPhone: sellerPhone,
+
+                    isComplement: isComp,
+                    mainInvoice: mainInv,
+                    status: 'Pendente Despacho', // Novo status padrão
+                    percentual: ruleUsed.percentual,
+                    minimo: ruleUsed.minimo,
+                    redespacho: ruleUsed.redespacho || '-',
+                    horarios: ruleUsed.horarios || '-',
+                    diasHorarios: ruleUsed.diasHorarios || null,
+                    leadTime: ruleUsed.leadTime || '-',
+                    baseCalculada: option.details.base,
+                    excessoCalculado: option.details.excess,
+                    pedagio: option.details.toll,
+                    gris: option.details.gris,
+                    taxaFixa: option.details.fixed,
+                    icms: option.details.icms,
+                    capturedBy: currentUser ? currentUser.name : 'Sistema',
+                    // Redespacho: salva transportadora e valor separados para faturamento correto
+                    redespCarrier: (ruleUsed.redespacho && ruleUsed.redespacho !== '-') ? String(ruleUsed.redespacho).toUpperCase().trim() : null,
+                    redespTotal: option.details.redispatch || 0,
+                    mainTotal: finalTotal - (option.details.redispatch || 0)
+                };
+
+                Utils.addToStorage('dispatches', dispatch);
+                showToast('✅ Carga montada com sucesso!');
+
+                // ── Notifica ErpNFQueue: NF confirmada → sai da fila ──────────────
+                if (window.ErpNFQueue && dispatch.invoice) {
+                    window.ErpNFQueue.onConfirmed(dispatch.invoice);
+                }
+
+                // ── AUDIT LOG ──
+                if (Utils.writeLog) Utils.writeLog(
+                    'DISPATCH_CREATE', 'Despacho',
+                    `NF ${dispatch.invoice} — ${dispatch.carrier} / ${dispatch.city} — ${Utils.formatCurrency(dispatch.total)}`,
+                    null,
+                    { invoice: dispatch.invoice, carrier: dispatch.carrier, city: dispatch.city, total: dispatch.total, nfValue: dispatch.nfValue, minimo: dispatch.minimo, baseCalculada: dispatch.baseCalculada }
+                );
+
+                // Reset form for next input, but stay on Quote screen
+                if (window.resetQuote) {
+                    window.resetQuote();
+                } else {
+                    document.getElementById('inputInvoiceNumber').value = '';
+                    document.getElementById('inputWeight').value = '';
+                    document.getElementById('inputValue').value = '';
+                    document.getElementById('inputVolume').value = '';
+                    document.getElementById('inputIsComplement').value = 'nao';
+                    document.getElementById('inputClient').value = '';
+                    document.getElementById('inputSeller').value = '';
+                    const grp = document.getElementById('mainNFGroup');
+                    if (grp) grp.style.display = 'none';
+                    document.getElementById('inputMainNF').value = '';
+                    document.getElementById('resultsArea').innerHTML = '';
+                    if(window.selectedClient) window.selectedClient = null;
+                    const clientResult = document.getElementById('clientResult');
+                    if(clientResult) clientResult.style.display = 'none';
+                }
+
+                const resContainer = document.getElementById('quoteResults');
+                if (resContainer) resContainer.style.display = 'none';
+
+                // But keeping it might be better for reference. Let's just scroll up.
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } finally {
+                window._isConfirmingDispatch = false;
             }
-
-            const ruleUsed = option.details.ruleUsed;
-
-            // Captura data escolhida pelo operador (pode ser retroativa)
-            const _dateInputEl = document.getElementById('inputDate');
-            const _todayStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
-            const _chosenDateStr = (_dateInputEl && _dateInputEl.value) ? _dateInputEl.value : _todayStr;
-            const _isRetroativo = _chosenDateStr < _todayStr;
-            const _dispatchDate = new Date(_chosenDateStr + 'T12:00:00').toISOString();
-
-            const dispatch = {
-                id: Date.now(),
-                date: _dispatchDate,
-                isRetroativo: _isRetroativo,
-                registradoEm: new Date().toISOString(), // data/hora real do lançamento
-                client: (clientName && clientName !== 'Name' && clientName !== 'undefined') ? clientName : 'Consumidor',
-                city: resCity || '-',
-                neighborhood: resNeighborhood || '-',
-                carrier: option.selectedFobCarrier ? `FOB - ${option.selectedFobCarrier}` : String(option.carrier || '').trim().toUpperCase(),
-                total: finalTotal, // Use negotiated price if available
-                originalTotal: option.total, // Keep original for records
-                vanDiff: isNegotiated ? vanDiff : 0, // Save difference
-                nfValue: val,
-                weight: weight,
-                volume: volume,
-                invoice: invoice || 'S/N',
-                sellerId: sellerId || null,
-                sellerName: sellerName,
-                sellerPhone: sellerPhone,
-
-                isComplement: isComp,
-                mainInvoice: mainInv,
-                status: 'Pendente Despacho', // Novo status padrão
-                percentual: ruleUsed.percentual,
-                minimo: ruleUsed.minimo,
-                redespacho: ruleUsed.redespacho || '-',
-                horarios: ruleUsed.horarios || '-',
-                diasHorarios: ruleUsed.diasHorarios || null,
-                leadTime: ruleUsed.leadTime || '-',
-                baseCalculada: option.details.base,
-                excessoCalculado: option.details.excess,
-                pedagio: option.details.toll,
-                gris: option.details.gris,
-                taxaFixa: option.details.fixed,
-                icms: option.details.icms,
-                capturedBy: currentUser ? currentUser.name : 'Sistema',
-                // Redespacho: salva transportadora e valor separados para faturamento correto
-                redespCarrier: (ruleUsed.redespacho && ruleUsed.redespacho !== '-') ? String(ruleUsed.redespacho).toUpperCase().trim() : null,
-                redespTotal: option.details.redispatch || 0,
-                mainTotal: finalTotal - (option.details.redispatch || 0)
-            };
-
-            Utils.addToStorage('dispatches', dispatch);
-            showToast('✅ Carga montada com sucesso!');
-
-            // ── Notifica ErpNFQueue: NF confirmada → sai da fila ──────────────
-            if (window.ErpNFQueue && dispatch.invoice) {
-                window.ErpNFQueue.onConfirmed(dispatch.invoice);
-            }
-
-            // ── AUDIT LOG ──
-            if (Utils.writeLog) Utils.writeLog(
-                'DISPATCH_CREATE', 'Despacho',
-                `NF ${dispatch.invoice} — ${dispatch.carrier} / ${dispatch.city} — ${Utils.formatCurrency(dispatch.total)}`,
-                null,
-                { invoice: dispatch.invoice, carrier: dispatch.carrier, city: dispatch.city, total: dispatch.total, nfValue: dispatch.nfValue, minimo: dispatch.minimo, baseCalculada: dispatch.baseCalculada }
-            );
-
-            // Reset form for next input, but stay on Quote screen
-            if (window.resetQuote) {
-                window.resetQuote();
-            } else {
-                document.getElementById('inputInvoiceNumber').value = '';
-                document.getElementById('inputWeight').value = '';
-                document.getElementById('inputValue').value = '';
-                document.getElementById('inputVolume').value = '';
-                document.getElementById('inputIsComplement').value = 'nao';
-                document.getElementById('inputClient').value = '';
-                document.getElementById('inputSeller').value = '';
-                const grp = document.getElementById('mainNFGroup');
-                if (grp) grp.style.display = 'none';
-                document.getElementById('inputMainNF').value = '';
-                document.getElementById('resultsArea').innerHTML = '';
-                if(window.selectedClient) window.selectedClient = null;
-                const clientResult = document.getElementById('clientResult');
-                if(clientResult) clientResult.style.display = 'none';
-            }
-
-            const resContainer = document.getElementById('quoteResults');
-            if (resContainer) resContainer.style.display = 'none';
-
-            // But keeping it might be better for reference. Let's just scroll up.
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
         // showToast — já definida no topo do arquivo (L37, versão unificada v3.12.2)

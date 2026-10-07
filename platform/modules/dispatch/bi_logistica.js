@@ -8,6 +8,22 @@ let chartFreteBILog = null;
 let chartVolumesBILog = null;
 let chartEntregasBILog = null;
 
+// Helpers para resiliência na leitura de despachos (v3.20.0)
+function _getFreightValue(d) {
+    if (!d) return 0;
+    const val = d.total != null ? d.total : (d.mainTotal != null ? d.mainTotal : (d.originalTotal != null ? d.originalTotal : (d.freightValue || d.valor_frete || d.valorFrete)));
+    const num = parseFloat(val);
+    return isNaN(num) ? 0 : num;
+}
+
+function _getDispatchDate(d) {
+    if (!d) return null;
+    const raw = d.date || d.dispatchedAt || d.registradoEm || d.data || d.created_at;
+    if (!raw) return null;
+    const dt = new Date(raw);
+    return isNaN(dt.getTime()) ? null : dt;
+}
+
 window.renderBiLogistica = function () {
     console.log("Renderizando BI Logístico Dispatch...");
 
@@ -29,17 +45,14 @@ window.renderBiLogistica = function () {
 
     // Total de Despachos (mês atual)
     const despachosMes = dispatches.filter(d => {
-        const dt = new Date(d.date || d.data || d.created_at || '');
-        return dt.getMonth() === mesAtual && dt.getFullYear() === anoAtual;
+        const dt = _getDispatchDate(d);
+        return dt && dt.getMonth() === mesAtual && dt.getFullYear() === anoAtual;
     });
     const totalDespachosMes = despachosMes.length;
 
     // Custo Médio de Frete
-    const valoresDispatch = dispatches.filter(d => d.freightValue || d.valor_frete || d.valorFrete);
-    const totalFrete = valoresDispatch.reduce((s, d) => {
-        const v = parseFloat(d.freightValue || d.valor_frete || d.valorFrete || 0);
-        return s + v;
-    }, 0);
+    const valoresDispatch = dispatches.filter(d => _getFreightValue(d) > 0);
+    const totalFrete = valoresDispatch.reduce((s, d) => s + _getFreightValue(d), 0);
     const custoMedioFrete = valoresDispatch.length > 0 ? (totalFrete / valoresDispatch.length) : 0;
 
     // SLA Entregas (% entregues com sucesso)
@@ -89,10 +102,12 @@ function renderChartFreteTransportadora(dispatches, carrierList) {
     const carrierCosts = {};
     dispatches.forEach(d => {
         const carrier = d.carrierName || d.transportadora || d.carrier || 'N/I';
-        const value = parseFloat(d.freightValue || d.valor_frete || d.valorFrete || 0);
-        if (!carrierCosts[carrier]) carrierCosts[carrier] = { total: 0, count: 0 };
-        carrierCosts[carrier].total += value;
-        carrierCosts[carrier].count++;
+        const value = _getFreightValue(d);
+        if (value > 0) {
+            if (!carrierCosts[carrier]) carrierCosts[carrier] = { total: 0, count: 0 };
+            carrierCosts[carrier].total += value;
+            carrierCosts[carrier].count++;
+        }
     });
 
     const sorted = Object.entries(carrierCosts)
@@ -147,8 +162,8 @@ function renderChartVolumes(dispatches) {
         labels.push(d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }));
 
         const count = dispatches.filter(dp => {
-            const dt = new Date(dp.date || dp.data || dp.created_at || '');
-            return dt.getMonth() === mes && dt.getFullYear() === ano;
+            const dt = _getDispatchDate(dp);
+            return dt && dt.getMonth() === mes && dt.getFullYear() === ano;
         }).length;
 
         data.push(count);
