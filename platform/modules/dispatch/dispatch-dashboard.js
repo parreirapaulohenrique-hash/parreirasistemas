@@ -291,11 +291,19 @@
                 });
 
                 if (remaining.length === 0) {
-                    document.getElementById('shipmentModal').style.display = 'none';
-                    setTimeout(() => location.reload(), 800); // Dá tempo do Firebase Sync salvar na nuvem
+                    const modal = document.getElementById('shipmentModal');
+                    if (modal) modal.style.display = 'none';
+                    selectedNFIds = [];
+                    currentModalCarrier = '';
+                    if (typeof window.renderDashboard === 'function') {
+                        window.renderDashboard();
+                    }
                 } else {
                     selectedNFIds = selectedNFIds.filter(i => i !== id);
                     renderModalItems(remaining);
+                    if (typeof window.renderDashboard === 'function') {
+                        window.renderDashboard();
+                    }
                 }
                 window.showToast('🔄 Lançamento estornado!');
             }

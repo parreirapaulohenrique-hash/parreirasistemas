@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.19.0",
-  "build": "20260930-v3.19.0",
-  "lastUpdate": "2026-09-30",
-  "releaseDate": "2026-09-30T17:30:00-03:00",
-  "change": "v3.19.0 - Versão própria do Despacho desacoplada do Hub. Integração com API MaxData v2 (headers de integrador no /auth e proxy Vercel), fila de NFs e sincronização de clientes."
+  "version": "3.20.0-rc.1",
+  "build": "20261007-v3.20.0-rc.1",
+  "lastUpdate": "2026-10-07",
+  "releaseDate": "2026-10-07T15:30:00-03:00",
+  "change": "v3.20.0-rc.1 (Fase 1 Homologação): Correção crítica de métricas do BI Logístico (leitura de total/mainTotal e datas), eliminação de location.reload() no estorno do painel para renderização reativa, e trava anti-duplicidade definitiva de NFs com trava de clique duplo e busca normalizada."
 }
