@@ -6,6 +6,27 @@ window.getTenantSuffix = function () {
         return '_centralpecas';
     } catch (e) { return '_centralpecas'; }
 };
+
+window.getWmsConfig = function () {
+    try {
+        const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+        const raw = (suf && localStorage.getItem('wms_config' + suf)) || localStorage.getItem('wms_config');
+        return raw ? JSON.parse(raw) : {};
+    } catch(e) {
+        return {};
+    }
+};
+
+window.saveWmsConfig = function (cfg) {
+    try {
+        const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+        const val = JSON.stringify(cfg || {});
+        if (suf) localStorage.setItem('wms_config' + suf, val);
+        localStorage.setItem('wms_config', val);
+    } catch(e) {
+        console.warn('[WMS Coletor] saveWmsConfig erro:', e);
+    }
+};
 // WMS Coletor Ã¢â‚¬â€ Core Logic
 // Navigation, Auth, Scanner, Shared Data Access
 
@@ -329,45 +350,76 @@ document.addEventListener('keydown', (e) => {
 
 // ===== Home Stats =====
 function updateHomeStats() {
-    const locations = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
-    const receipts = JSON.parse(localStorage.getItem('wms_receipts') || '[]');
+    const rawLocs = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+    const locations = Array.isArray(rawLocs) ? rawLocs : (rawLocs.addresses || []);
 
-    // Stats
     const el = (id) => document.getElementById(id);
     if (el('statEnderecos')) el('statEnderecos').textContent = locations.length;
     if (el('statOcupados')) el('statOcupados').textContent = locations.filter(l => l.status === 'OCUPADO').length;
-    if (el('statPendentes')) el('statPendentes').textContent = receipts.filter(r => r.status === 'AGUARDANDO').length;
 
-    // Badges V2
-    const confReceipts = JSON.parse(localStorage.getItem('wms_receipts_v2') || '[]');
-    const confPending = confReceipts.filter(r => r.status === 'AGUARDANDO_CONFERENCIA').length;
-    if (el('badgeConferir')) {
-        el('badgeConferir').textContent = confPending;
-        el('badgeConferir').style.display = confPending > 0 ? 'inline-block' : 'none';
+    // Badges assíncronas do WmsStore (Firestore) com fallback
+    if (window.WmsStore && window.WmsStore.listarRecebimentos) {
+        WmsStore.listarRecebimentos({ status: 'AGUARDANDO_CONFERENCIA' }).then(recs => {
+            const count = recs.length;
+            if (el('badgeConferir')) {
+                el('badgeConferir').textContent = count;
+                el('badgeConferir').style.display = count > 0 ? 'inline-block' : 'none';
+            }
+        }).catch(() => {});
+
+        WmsStore.listarRecebimentos({ status: 'CONFERENCIA_ITENS_PENDENTE' }).then(confRecs => {
+            const count = confRecs.length;
+            if (el('badgeReceber')) {
+                el('badgeReceber').textContent = count;
+                el('badgeReceber').style.display = count > 0 ? 'flex' : 'none';
+            }
+            if (el('statPendentes')) el('statPendentes').textContent = count;
+        }).catch(() => {});
+
+        if (window.WmsStore.listarPutaway) {
+            WmsStore.listarPutaway({ status: 'PENDENTE' }).then(tasks => {
+                const count = tasks.length;
+                if (el('badgeArmazenar')) {
+                    el('badgeArmazenar').textContent = count;
+                    el('badgeArmazenar').style.display = count > 0 ? 'inline-block' : 'none';
+                }
+            }).catch(() => {});
+        }
+    } else {
+        const receipts = JSON.parse(localStorage.getItem('wms_receipts') || '[]');
+        if (el('statPendentes')) el('statPendentes').textContent = receipts.filter(r => r.status === 'AGUARDANDO').length;
+
+        const confReceipts = JSON.parse(localStorage.getItem('wms_receipts_v2') || '[]');
+        const confPending = confReceipts.filter(r => r.status === 'AGUARDANDO_CONFERENCIA').length;
+        if (el('badgeConferir')) {
+            el('badgeConferir').textContent = confPending;
+            el('badgeConferir').style.display = confPending > 0 ? 'inline-block' : 'none';
+        }
+
+        const pendingReceipts = receipts.filter(r => r.status === 'AGUARDANDO' || r.status === 'CONFERENCIA').length;
+        if (el('badgeReceber')) {
+            el('badgeReceber').textContent = pendingReceipts;
+            el('badgeReceber').style.display = pendingReceipts > 0 ? 'flex' : 'none';
+        }
     }
-
-    // Badges
-    const pendingReceipts = receipts.filter(r => r.status === 'AGUARDANDO' || r.status === 'CONFERENCIA').length;
-    if (el('badgeReceber')) {
-        el('badgeReceber').textContent = pendingReceipts;
-        el('badgeReceber').style.display = pendingReceipts > 0 ? 'flex' : 'none';
-    }
-
-    // Hide other badges for now (no data yet)
-    ['badgeArmazenar', 'badgeSeparar', 'badgeInventario'].forEach(id => {
-        if (el(id)) el(id).style.display = 'none';
-    });
 }
 
 // ===== Shared Data Helpers =====
 window.wmsData = {
-    getLocations: () => JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]'),
-    saveLocations: (data) => localStorage.setItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(data)),
+    getLocations: () => {
+        const raw = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+        return Array.isArray(raw) ? raw : (raw.addresses || []);
+    },
+    saveLocations: (data) => {
+        const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+        const addrs = Array.isArray(data) ? data : (data && Array.isArray(data.addresses) ? data.addresses : []);
+        localStorage.setItem('wms_mock_data' + suf, JSON.stringify(addrs));
+    },
     getReceipts: () => JSON.parse(localStorage.getItem('wms_receipts') || '[]'),
     saveReceipts: (data) => localStorage.setItem('wms_receipts', JSON.stringify(data)),
     findLocation: (id) => {
-        const locs = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
-        return locs.find(l => l.id === id);
+        const locs = window.wmsData.getLocations();
+        return locs.find(l => (l.id || l.address) === id);
     }
 };
 

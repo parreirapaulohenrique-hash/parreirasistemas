@@ -1,4 +1,4 @@
-﻿// WMS Controle & Auditoria
+// WMS Controle & Auditoria
 // aud-inventario: Cyclic inventory
 // est-transferencia: Address transfer
 // est-bloqueio: Block/quarantine
@@ -206,8 +206,8 @@ function renderInventarioCiclico(container) {
 }
 
 window.criarInventario = function () {
-    const mockData = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
-    const addresses = mockData.addresses || [];
+    const rawMock = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+    const addresses = Array.isArray(rawMock) ? rawMock : (rawMock.addresses || []);
 
     // Pick random 5 addresses or use defaults
     const selected = addresses.length > 0
@@ -271,12 +271,13 @@ window.finalizarInventario = function (invId) {
         inv.status = 'FINALIZADO';
 
         // FASE 9: Aplicar o saldo no mock WMS
-        const wmsStock = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{"addresses":[]}');
-        if (!wmsStock.addresses) wmsStock.addresses = [];
+        const rawStock = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+        const isArr = Array.isArray(rawStock);
+        const addrsList = isArr ? rawStock : (rawStock.addresses || []);
 
         inv.enderecos.forEach(e => {
             if (e.contagem !== null && e.contagem !== e.saldoSistema) {
-                let addr = wmsStock.addresses.find(a => a.sku === e.sku && (a.address === e.endereco || a.id === e.endereco) && a.status === 'OCUPADO');
+                let addr = addrsList.find(a => a.sku === e.sku && (a.address === e.endereco || a.id === e.endereco) && a.status === 'OCUPADO');
                 if (addr) {
                     addr.qty = e.contagem;
                     if (addr.qty <= 0) {
@@ -286,7 +287,7 @@ window.finalizarInventario = function (invId) {
                         delete addr.qty;
                     }
                 } else if (e.contagem > 0) {
-                    wmsStock.addresses.push({
+                    addrsList.push({
                         id: `INV-${Date.now()}-${Math.floor(Math.random() * 100)}`,
                         address: e.endereco,
                         status: 'OCUPADO',
@@ -298,7 +299,7 @@ window.finalizarInventario = function (invId) {
                 }
             }
         });
-        localStorage.setItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(wmsStock));
+        localStorage.setItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(isArr ? addrsList : { addresses: addrsList }));
         window.dispatchEvent(new CustomEvent('wms-estoque-atualizado'));
 
         localStorage.setItem('wms_inventarios' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(inventarios));

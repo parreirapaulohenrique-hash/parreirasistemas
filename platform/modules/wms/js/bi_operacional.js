@@ -1,4 +1,4 @@
-﻿// ===========================================
+// ===========================================
 // WMS - BI OPERACIONAL (Dashboard Gerencial)
 // ===========================================
 // KPIs: Ocupação, Recebimentos, Separações, Divergências
@@ -14,13 +14,14 @@ window.renderBiOperacional = function () {
     // ============================
     // 1. CARREGAR DADOS
     // ============================
-    const mockData = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '{}');
+    const rawMock = JSON.parse(localStorage.getItem('wms_mock_data' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const receipts = JSON.parse(localStorage.getItem('wms_receipts' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const ondas = JSON.parse(localStorage.getItem('wms_ondas' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const waves = JSON.parse(localStorage.getItem('wms_waves' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
     const ajustes = JSON.parse(localStorage.getItem('wms_ajustes' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
-    const addresses = mockData.addresses || [];
+    const addresses = Array.isArray(rawMock) ? rawMock : (rawMock.addresses || []);
     const stock = JSON.parse(localStorage.getItem('wms_stock' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
+    const estoque = JSON.parse(localStorage.getItem('wms_estoque' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
 
     const hoje = new Date();
     const todayStr = hoje.toLocaleDateString('pt-BR');
@@ -52,7 +53,7 @@ window.renderBiOperacional = function () {
     const divergenciasPendentes = ajustes.filter(a => a.status === 'pendente').length;
 
     // Total SKUs em estoque
-    const totalSKUs = stock.length || addresses.filter(a => a.sku).length;
+    const totalSKUs = stock.length || estoque.length || addresses.filter(a => a.sku).length;
 
     // ============================
     // 3. ATUALIZAR DOM - KPIs

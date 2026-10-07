@@ -425,7 +425,7 @@ window.ColetorInventario = (function () {
     }
 
     /** Salva o estoque do endereço no WMS e Firestore */
-    function concluirVao() {
+    async function concluirVao() {
         if (!_currentEndereco || _itensNoVao.length === 0) {
             showToast('Nenhum item registrado para salvar', 'warning');
             return;
@@ -434,16 +434,16 @@ window.ColetorInventario = (function () {
         const user = JSON.parse(localStorage.getItem('logged_user') || '{"nome":"Operador Coletor"}');
         const opNome = user.nome || user.login || 'Operador';
 
-        _itensNoVao.forEach(it => {
+        for (const it of _itensNoVao) {
             if (window.WmsStore && window.WmsStore.salvarItemInventariado) {
-                window.WmsStore.salvarItemInventariado(_currentEndereco, it, it.quantidade, opNome);
+                await window.WmsStore.salvarItemInventariado(_currentEndereco, it, it.quantidade, opNome);
             } else if (window.StockManager) {
                 window.StockManager.add(it.sku, it.quantidade, _currentEndereco, it.descricao, 'UN', 'INVENTARIO-WMS');
             }
-        });
+        }
 
         const qtdTotal = _itensNoVao.reduce((acc, i) => acc + (Number(i.quantidade)||0), 0);
-        showToast(`✔ Vão ${_currentEndereco} concluído com sucesso! (${qtdTotal} un)`, 'success');
+        showToast(`✔ Vão ${_currentEndereco} salvo e sincronizado na Nuvem! (${qtdTotal} un)`, 'success');
         if (window.Feedback) window.Feedback.beep('success');
 
         _currentEndereco = null;

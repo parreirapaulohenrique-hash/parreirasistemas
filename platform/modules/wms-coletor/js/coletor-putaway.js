@@ -13,13 +13,20 @@
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
+function _getWmsConfigLocal() {
+    if (window.getWmsConfig) return window.getWmsConfig();
+    const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+    const raw = (suf && localStorage.getItem('wms_config' + suf)) || localStorage.getItem('wms_config');
+    return raw ? JSON.parse(raw) : {};
+}
+
 function _getWmsCfgPutaway() {
-    const cfg = JSON.parse(localStorage.getItem('wms_config') || '{}');
+    const cfg = _getWmsConfigLocal();
     return cfg.putaway || { modo: 'PICKING_DIRETO', tipoEnderec: 'FLUTUANTE' };
 }
 
 function _getEnderecoFixo(sku) {
-    const cfg = JSON.parse(localStorage.getItem('wms_config') || '{}');
+    const cfg = _getWmsConfigLocal();
     return (cfg.enderecoFixo || {})[sku] || null;
 }
 
@@ -333,26 +340,58 @@ window.put_confirmarEndereco = async function(taskId, sku) {
             concluidoEm:     fim
         });
 
-        // 2. Marca endereço como OCUPADO (localStorage + Firestore)
-        try {
-            const addrs = JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
-            const addr  = addrs.find(e => e.id === endereco);
-            if (addr) { addr.status = 'OCUPADO'; localStorage.setItem('wms_mock_data' + suf, JSON.stringify(addrs)); }
-            if (window.WmsStore) await WmsStore.atualizarEndereco(endereco, { status: 'OCUPADO' });
-        } catch(e) { console.warn('[Putaway Coletor] updateAddress:', e); }
-
-        // 3. Atualiza wms_estoque
+        // 2. Busca dados da task para vincular ao endereço
+        let taskData = null;
         try {
             const allTasks = await WmsStore.listarPutaway({});
-            const task = allTasks.find(t => t.id === taskId);
-            if (task) {
-                const estoque = JSON.parse(localStorage.getItem('wms_estoque' + suf) || '[]');
-                const qtd = task.qtd || task.qty || 0;
-                const existing = estoque.find(e => e.sku === task.sku && e.endereco === endereco);
-                if (existing) { existing.qtd = (existing.qtd||0) + qtd; }
-                else { estoque.push({ sku: task.sku, desc: task.desc, endereco, qtd, lote: task.lote||'', status:'NORMAL' }); }
-                localStorage.setItem('wms_estoque' + suf, JSON.stringify(estoque));
+            taskData = allTasks.find(t => t.id === taskId);
+        } catch(_) {}
+
+        const qtd = taskData ? (taskData.qtd || taskData.qty || 0) : 0;
+        const taskSku = taskData ? (taskData.sku || sku) : sku;
+        const taskDesc = taskData ? (taskData.desc || taskData.descricao || '') : '';
+        const taskLote = taskData ? (taskData.lote || '') : '';
+
+        // 3. Marca endereço como OCUPADO e grava SKU/quantidade (localStorage + Firestore)
+        try {
+            const rawAddrs = JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
+            const isArr = Array.isArray(rawAddrs);
+            const addrs = isArr ? rawAddrs : (rawAddrs.addresses || []);
+            const addr  = addrs.find(e => (e.id || e.address || '').trim().toUpperCase() === endereco);
+            if (addr) {
+                addr.status = 'OCUPADO';
+                addr.sku = taskSku;
+                addr.product = taskDesc;
+                addr.descricao = taskDesc;
+                addr.qty = (addr.qty || 0) + qtd;
+                addr.lote = taskLote || addr.lote || '';
+                localStorage.setItem('wms_mock_data' + suf, JSON.stringify(isArr ? addrs : { addresses: addrs }));
             }
+            if (window.WmsStore && window.WmsStore.atualizarEndereco) {
+                await WmsStore.atualizarEndereco(endereco, {
+                    status: 'OCUPADO',
+                    sku: taskSku,
+                    produto: taskDesc,
+                    descricao: taskDesc,
+                    qty: qtd,
+                    quantidade: qtd,
+                    lote: taskLote,
+                    armazenadoEm: fim,
+                    operador: sessao.nome || sessao.login || 'Operador'
+                });
+            }
+        } catch(e) { console.warn('[Putaway Coletor] updateAddress:', e); }
+
+        // 4. Atualiza wms_estoque e StockManager
+        try {
+            if (window.StockManager && taskSku) {
+                window.StockManager.add(taskSku, qtd, endereco, taskDesc, 'UN', taskId);
+            }
+            const estoque = JSON.parse(localStorage.getItem('wms_estoque' + suf) || '[]');
+            const existing = estoque.find(e => e.sku === taskSku && (e.endereco || '').toUpperCase() === endereco);
+            if (existing) { existing.qtd = (existing.qtd||0) + qtd; }
+            else { estoque.push({ sku: taskSku, desc: taskDesc, endereco, qtd, lote: taskLote, status:'NORMAL' }); }
+            localStorage.setItem('wms_estoque' + suf, JSON.stringify(estoque));
         } catch(e) { console.warn('[Putaway Coletor] updateEstoque:', e); }
 
         Feedback.beep('success');

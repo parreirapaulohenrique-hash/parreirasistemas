@@ -129,7 +129,7 @@ window.iniciarConferirItens = async function(id) {
 // ─── RENDERIZA TELA DE CONFERÊNCIA ───────────────────────────────────────────
 function _renderTelaConferencia(r) {
     const container = document.getElementById('screen-recebimento');
-    const cfg       = JSON.parse(localStorage.getItem('wms_config') || '{}');
+    const cfg       = window.getWmsConfig ? window.getWmsConfig() : JSON.parse(localStorage.getItem('wms_config') || '{}');
     const isCega    = cfg.geral?.contagemCega !== false; // default: cega ativa
 
     const totalItens     = (r.itens || []).length;
@@ -356,7 +356,7 @@ window.registrarManualConf = function(sku, valor) {
 
 // ─── ATUALIZA UI SEM RE-RENDERIZAR TUDO ──────────────────────────────────────
 function _atualizarUiConferencia(r) {
-    const cfg    = JSON.parse(localStorage.getItem('wms_config') || '{}');
+    const cfg    = window.getWmsConfig ? window.getWmsConfig() : JSON.parse(localStorage.getItem('wms_config') || '{}');
     const isCega = cfg.geral?.contagemCega !== false;
 
     // Atualiza barra de progresso
@@ -483,7 +483,7 @@ window.finalizarConferencia = async function() {
 
 // ─── GERAR PUTAWAY ────────────────────────────────────────────────────────────
 async function _gerarPutaway(r) {
-    const cfgRaw = JSON.parse(localStorage.getItem('wms_config') || '{}');
+    const cfgRaw = window.getWmsConfig ? window.getWmsConfig() : JSON.parse(localStorage.getItem('wms_config') || '{}');
     const cfgPut = cfgRaw.putaway || { modo: 'PICKING_DIRETO', tipoEnderec: 'FLUTUANTE' };
     const setores = cfgPut.setores || { A:'PICK-A', B:'PICK-B', C:'PULMAO', D:'FUNDO' };
     const efCfg  = cfgRaw.enderecoFixo || {};

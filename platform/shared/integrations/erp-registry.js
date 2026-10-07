@@ -48,12 +48,32 @@ const ErpRegistry = {
      * Na primeira chamada, lê a config do Firestore.
      * Nas chamadas seguintes, usa o cache de sessão.
      *
+    _resolveTenantId(tenantId) {
+        if (tenantId && typeof tenantId === 'string' && tenantId.trim()) return tenantId.trim();
+        const fromUI = (typeof window !== 'undefined' && window.ErpUI?._resolveTenant) ? window.ErpUI._resolveTenant() : '';
+        if (fromUI) return fromUI;
+        const fromAuth = (typeof window !== 'undefined' && window.ParreiraAuth?.getTenantId) ? window.ParreiraAuth.getTenantId() : '';
+        if (fromAuth) return fromAuth;
+        if (typeof localStorage !== 'undefined') {
+            const fromLS = localStorage.getItem('app_tenant_id') || '';
+            if (fromLS) return fromLS;
+        }
+        return '';
+    },
+
+    /**
+     * Retorna o adaptador de ERP ativo para o tenant informado.
+     * Na primeira chamada, lê a config do Firestore.
+     * Nas chamadas seguintes, usa o cache de sessão.
+     *
      * @param {string} tenantId - ID do tenant (ex: 'ltdistribuidora')
      * @returns {Promise<ErpAdapter|null>} Instância do adaptador, ou null se não configurado
      */
     async getAdapter(tenantId) {
+        tenantId = this._resolveTenantId(tenantId);
         if (!tenantId) {
-            tenantId = (window.ErpUI?._resolveTenant ? window.ErpUI._resolveTenant() : '') || 'centralpecas';
+            console.error('[ErpRegistry] Erro crítico: tenantId não informado e não detectado na sessão ativa.');
+            return null;
         }
 
         // Retorna cache de sessão se já instanciado
@@ -108,9 +128,8 @@ const ErpRegistry = {
      * @returns {Promise<object|null>}
      */
     async _loadConfig(tenantId) {
-        if (!tenantId) {
-            tenantId = (window.ErpUI?._resolveTenant ? window.ErpUI._resolveTenant() : '') || 'centralpecas';
-        }
+        tenantId = this._resolveTenantId(tenantId);
+        if (!tenantId) return null;
         try {
             if (typeof firebase !== 'undefined' && firebase.firestore) {
                 if (window.ParreiraAuth?.ensureAuth) {
@@ -150,8 +169,9 @@ const ErpRegistry = {
      * @param {string} operatorName - Nome do operador que fez a configuração
      */
     async saveConfig(tenantId, config, operatorName) {
+        tenantId = this._resolveTenantId(tenantId);
         if (!tenantId) {
-            tenantId = (window.ErpUI?._resolveTenant ? window.ErpUI._resolveTenant() : '') || 'centralpecas';
+            throw new Error('[ErpRegistry] Não é possível salvar configuração: tenantId não informado.');
         }
 
         // Garante que o token não vá para o Firestore
@@ -196,8 +216,16 @@ const ErpRegistry = {
      * @returns {Promise<object>}
      */
     async getConfig(tenantId) {
+        tenantId = this._resolveTenantId(tenantId);
         if (!tenantId) {
-            tenantId = (window.ErpUI?._resolveTenant ? window.ErpUI._resolveTenant() : '') || 'centralpecas';
+            return {
+                provider: '',
+                apiUrl: '',
+                enabled: false,
+                autoSync: false,
+                syncInterval: 60,
+                lastSync: null
+            };
         }
         const config = await this._loadConfig(tenantId);
         return config || {

@@ -507,23 +507,63 @@ window.WmsStore = (function () {
         return resultado;
     }
 
-    /** Grava item inventariado no estoque de endereço */
-    function salvarItemInventariado(endereco, produto, quantidade, operador = 'Operador') {
+    /** Grava item inventariado no estoque de endereço (Local + Firestore) */
+    async function salvarItemInventariado(endereco, produto, quantidade, operador = 'Operador') {
         const endNorm = (endereco || '').trim().toUpperCase();
         const qty = Number(quantidade) || 0;
         const sku = (produto.referencia || produto.sku || produto.codigoFab || produto.codigoErp || '').trim();
         const desc = produto.descricao || produto.desc || sku;
         const unit = produto.un || produto.unidade || 'UN';
+        const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
 
-        // 1. Atualiza StockManager (Local)
+        // 1. Atualiza StockManager (Local) se disponível
         if (window.StockManager) {
             window.StockManager.add(sku, qty, endNorm, desc, unit, 'INVENTARIO-WMS');
             window.StockManager.logTransaction('AJUSTE', sku, qty, 'INVENTARIO', `Inventário no endereço ${endNorm}`);
         }
 
-        // 2. Grava registro no histórico de inventário
+        // 2. Atualiza wms_mock_data localmente para resposta imediata da UI
         try {
-            const histKey = 'wms_inventario_logs' + (window.getTenantSuffix ? window.getTenantSuffix() : '');
+            const rawMock = JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
+            const isArr = Array.isArray(rawMock);
+            const addrs = isArr ? rawMock : (rawMock.addresses || []);
+            const addr = addrs.find(a => (a.id || a.address || '').trim().toUpperCase() === endNorm);
+            if (addr) {
+                addr.status = qty > 0 ? 'OCUPADO' : 'LIVRE';
+                if (qty > 0) {
+                    addr.sku = sku;
+                    addr.product = desc;
+                    addr.descricao = desc;
+                    addr.qty = qty;
+                    addr.unit = unit;
+                    addr.lote = produto.lote || addr.lote || `INV-${new Date().getFullYear()}`;
+                } else {
+                    delete addr.sku;
+                    delete addr.product;
+                    delete addr.descricao;
+                    addr.qty = 0;
+                }
+                localStorage.setItem('wms_mock_data' + suf, JSON.stringify(isArr ? addrs : { addresses: addrs }));
+            }
+        } catch(errMock) {
+            console.warn('[WmsStore] Erro ao atualizar cache wms_mock_data local:', errMock);
+        }
+
+        // 3. Atualiza wms_estoque local
+        try {
+            const estoque = JSON.parse(localStorage.getItem('wms_estoque' + suf) || '[]');
+            const itemEst = estoque.find(e => (e.endereco || '').toUpperCase() === endNorm && e.sku === sku);
+            if (itemEst) {
+                itemEst.qtd = qty;
+            } else if (qty > 0) {
+                estoque.push({ sku, desc, endereco: endNorm, qtd: qty, lote: produto.lote || '', status: 'NORMAL' });
+            }
+            localStorage.setItem('wms_estoque' + suf, JSON.stringify(estoque));
+        } catch(_) {}
+
+        // 4. Grava registro no histórico de inventário (localStorage)
+        try {
+            const histKey = 'wms_inventario_logs' + suf;
             const logs = JSON.parse(localStorage.getItem(histKey) || '[]');
             logs.unshift({
                 data: new Date().toISOString(),
@@ -536,6 +576,51 @@ window.WmsStore = (function () {
             if (logs.length > 500) logs.pop();
             localStorage.setItem(histKey, JSON.stringify(logs));
         } catch(_) {}
+
+        // 5. PERSISTÊNCIA FIRESTORE (Nuvem em Tempo Real)
+        try {
+            const tid = _tid();
+            const timestampNow = new Date().toISOString();
+
+            // 5a. Atualiza documento do Endereço no Firestore
+            const endUpdate = {
+                status: qty > 0 ? 'OCUPADO' : 'LIVRE',
+                atualizadoEm: TS(),
+                ultimoInventario: timestampNow,
+                inventariadoPor: operador
+            };
+            if (qty > 0) {
+                endUpdate.sku = sku;
+                endUpdate.produto = desc;
+                endUpdate.descricao = desc;
+                endUpdate.qty = qty;
+                endUpdate.quantidade = qty;
+                endUpdate.unit = unit;
+            } else {
+                endUpdate.sku = null;
+                endUpdate.produto = null;
+                endUpdate.descricao = null;
+                endUpdate.qty = 0;
+                endUpdate.quantidade = 0;
+            }
+            await atualizarEndereco(endNorm, endUpdate);
+
+            // 5b. Registra log de inventário no Firestore do tenant
+            await _db().collection('tenants').doc(tid).collection('inventarios').add({
+                data: timestampNow,
+                endereco: endNorm,
+                sku: sku,
+                descricao: desc,
+                quantidade: qty,
+                operador: operador,
+                criadoEm: TS(),
+                tenantId: tid
+            }).catch(e => console.warn('[WmsStore] Falha ao gravar log no Firestore:', e.message));
+
+            console.log(`☁️ [WmsStore] Inventário do vão ${endNorm} (${sku}: ${qty} un) sincronizado no Firestore!`);
+        } catch(fsErr) {
+            console.warn('[WmsStore] Não foi possível sincronizar inventário no Firestore agora (salvo localmente):', fsErr.message);
+        }
 
         return { sucesso: true, endereco: endNorm, sku, quantidade: qty };
     }
