@@ -1562,24 +1562,51 @@ document.addEventListener('DOMContentLoaded', async () => {
                     rules = Utils.getStorage('freight_tables') || [];
                     console.log(`🔄 [Login] Variáveis recarregadas: ${carrierList.length} transportadoras, ${rules.length} tabelas.`);
 
-                    // v3.14.13 AUTO-REBUILD: MERGE em vez de SUBSTITUIR.
-                    // Adiciona transportadoras ausentes da carrier_list (vindas de freight_tables E carrier_info_v2)
-                    // MAS preserva carriers que nao tem tabela de frete (ex: redespacho puro).
-                    // NUNCA remove carriers ja existentes — evita perda de redespacho carriers.
+                    // v3.24.4 AUTO-REBUILD: MERGE transportadoras principais E de redespacho (tabelas + despachos)
+                    // Garante que parceiros como EMBARCACAO BOM JESUS apareçam em Cadastro Transportadora
                     {
                         const carriersInTables = rules.length > 0
                             ? [...new Set(rules.map(r => r.transportadora))].filter(c => c)
                             : [];
-                        // v3.16.13: também inclui chaves do carrier_info_v2 para não perder cadastros orfãos
+                        const redespInTables = rules.length > 0
+                            ? [...new Set(rules.map(r => r.redespacho))].filter(c => c && c !== '-' && String(c).trim() !== '')
+                            : [];
+                        const dispatches = Utils.getStorage('dispatches') || [];
+                        const redespInDispatches = dispatches
+                            .map(d => d.redespCarrier || (d.redespacho && d.redespacho !== '-' ? d.redespacho : null))
+                            .filter(c => c && String(c).trim() !== '');
+
+                        const allRedesp = [...new Set([...redespInTables, ...redespInDispatches])].map(c => String(c).toUpperCase().trim());
+                        let infoUpdated = false;
+                        allRedesp.forEach(rc => {
+                            if (!carrierInfo[rc]) {
+                                carrierInfo[rc] = {
+                                    cnpj: '-',
+                                    ie: '-',
+                                    address: '-',
+                                    city: '-',
+                                    reliability: 3,
+                                    isRedespacho: true,
+                                    createdAt: new Date().toISOString()
+                                };
+                                infoUpdated = true;
+                            } else if (carrierInfo[rc].isRedespacho !== true) {
+                                carrierInfo[rc].isRedespacho = true;
+                                infoUpdated = true;
+                            }
+                        });
+
                         const carriersInInfo = Object.keys(carrierInfo || {}).filter(c => c);
-                        const allKnownCarriers = [...new Set([...carriersInTables, ...carriersInInfo])].sort();
+                        const allKnownCarriers = [...new Set([...carriersInTables, ...allRedesp, ...carriersInInfo])].sort();
                         const missingCarriers = allKnownCarriers.filter(c => !carrierList.includes(c));
-                        if (missingCarriers.length > 0) {
-                            console.warn(`🔧 [Auto-Rebuild v3.16.13] MERGE: adicionando ${missingCarriers.length} carriers ausentes:`, missingCarriers);
+                        if (missingCarriers.length > 0 || infoUpdated) {
+                            console.warn(`🔧 [Auto-Rebuild v3.24.4] MERGE: adicionando ${missingCarriers.length} carriers ausentes (incluindo redespacho):`, missingCarriers);
                             carrierList = [...new Set([...carrierList, ...allKnownCarriers])].sort();
                             localStorage.setItem(Utils._storageKey('carrier_list'), JSON.stringify(carrierList));
+                            localStorage.setItem(Utils._storageKey('carrier_info_v2'), JSON.stringify(carrierInfo));
                             if (Utils.Cloud && Utils.Cloud.hasTenant()) {
                                 Utils.Cloud.save('carrier_list', carrierList);
+                                Utils.Cloud.save('carrier_info_v2', carrierInfo);
                             }
                             showToast(`🔧 Lista de transportadoras atualizada (${carrierList.length} transportadoras).`);
                             console.log(`✅ [Auto-Rebuild] carrier_list após merge: ${carrierList.join(', ')}`);
@@ -1778,9 +1805,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 AppState.set('rules',          rules);
             }
 
-            // Auto-rebuild: se carrier_list ainda vazia mas freight_tables tem dados, reconstrói
+            // Auto-rebuild: se carrier_list ainda vazia mas freight_tables tem dados, reconstrói (inclui redespacho)
             if (carrierList.length === 0 && rules.length > 0) {
-                const carriersInTables = [...new Set(rules.map(r => r.transportadora))].filter(c => c).sort();
+                const mainCarriers = rules.map(r => r.transportadora);
+                const redespCarriers = rules.map(r => r.redespacho).filter(c => c && c !== '-' && String(c).trim() !== '');
+                const carriersInTables = [...new Set([...mainCarriers, ...redespCarriers])].filter(c => c).sort();
                 if (carriersInTables.length > 0) {
                     console.warn(`🔧 [_refreshCarrierVars] Auto-rebuild: ${carriersInTables.length} transportadoras de freight_tables.`);
                     carrierList = carriersInTables;
@@ -3909,32 +3938,51 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Função para reconstruir lista de transportadoras a partir das tabelas de frete
         window.rebuildCarrierList = () => {
             const currentRules = Utils.getStorage('freight_tables') || [];
-            if (currentRules.length === 0) {
-                showToast('❌ Nenhuma tabela de frete encontrada para extrair transportadoras');
+            const dispatches = Utils.getStorage('dispatches') || [];
+            const redespDispatches = dispatches
+                .map(d => d.redespCarrier || (d.redespacho && d.redespacho !== '-' ? d.redespacho : null))
+                .filter(c => c && String(c).trim() !== '');
+
+            if (currentRules.length === 0 && redespDispatches.length === 0) {
+                showToast('❌ Nenhuma tabela de frete ou despacho encontrado para extrair transportadoras');
                 return;
             }
 
-            const extractedCarriers = [...new Set(currentRules.map(r => r.transportadora))].filter(c => c).sort();
+            const mainCarriers = currentRules.map(r => r.transportadora);
+            const redespCarriers = currentRules.map(r => r.redespacho).filter(c => c && c !== '-' && String(c).trim() !== '');
+            const allExtracted = [...new Set([...mainCarriers, ...redespCarriers, ...redespDispatches])].filter(c => c).map(c => String(c).toUpperCase().trim()).sort();
 
-            if (extractedCarriers.length === 0) {
+            if (allExtracted.length === 0) {
                 showToast('❌ Nenhuma transportadora encontrada nas tabelas');
                 return;
             }
 
-            if (confirm(`Encontradas ${extractedCarriers.length} transportadoras nas tabelas de frete:\n\n${extractedCarriers.join(', ')}\n\nReconstruir a lista?`)) {
-                carrierList = extractedCarriers;
+            if (confirm(`Encontradas ${allExtracted.length} transportadoras (incluindo redespacho):\n\n${allExtracted.join(', ')}\n\nReconstruir a lista?`)) {
+                carrierList = allExtracted;
+                allExtracted.forEach(c => {
+                    const isRedesp = redespCarriers.includes(c) || redespDispatches.includes(c);
+                    if (isRedesp) {
+                        if (!carrierInfo[c]) {
+                            carrierInfo[c] = { cnpj: '-', ie: '-', address: '-', city: '-', reliability: 3, isRedespacho: true, createdAt: new Date().toISOString() };
+                        } else {
+                            carrierInfo[c].isRedespacho = true;
+                        }
+                    }
+                });
                 Utils.lastWriteTime['carrier_list'] = Date.now();
                 Utils._persistLastWriteTime(); // v3.11.64: garante sobrevivência ao refresh
                 localStorage.setItem(Utils._storageKey('carrier_list'), JSON.stringify(carrierList));
+                localStorage.setItem(Utils._storageKey('carrier_info_v2'), JSON.stringify(carrierInfo));
 
                 // Forçar envio para nuvem (bypass da proteção de array vazio)
                 if (Utils.Cloud && carrierList.length > 0) {
                     Utils.Cloud.save('carrier_list', carrierList);
+                    Utils.Cloud.save('carrier_info_v2', carrierInfo);
                 }
 
                 renderCarrierConfigs();
                 populateCarrierSelect();
-                showToast(`✅ Lista reconstruída com ${extractedCarriers.length} transportadoras!`);
+                showToast(`✅ Lista reconstruída com ${allExtracted.length} transportadoras!`);
             }
         };
 
@@ -3951,6 +3999,50 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!carrierConfigs || typeof carrierConfigs !== 'object' || Array.isArray(carrierConfigs)) carrierConfigs = {};
             carrierInfo = Utils.getStorage('carrier_info_v2') || {};
             if (Array.isArray(carrierInfo)) carrierInfo = {};
+
+            // v3.24.4: auto-detecta transportadoras/embarcações de redespacho das tabelas e despachos
+            // (ex: EMBARCACAO BOM JESUS para Breves) e assegura presença no carrier_list e carrier_info_v2
+            const currentRules = Utils.getStorage('freight_tables') || [];
+            const currentDispatches = Utils.getStorage('dispatches') || [];
+            const redespFromRules = currentRules
+                .map(r => r.redespacho)
+                .filter(c => c && c !== '-' && String(c).trim() !== '');
+            const redespFromDispatches = currentDispatches
+                .map(d => d.redespCarrier || (d.redespacho && d.redespacho !== '-' ? d.redespacho : null))
+                .filter(c => c && String(c).trim() !== '');
+            const extraRedesp = [...new Set([...redespFromRules, ...redespFromDispatches])].map(c => String(c).toUpperCase().trim());
+
+            let listUpdated = false;
+            extraRedesp.forEach(rc => {
+                if (rc && !carrierList.includes(rc)) {
+                    carrierList.push(rc);
+                    listUpdated = true;
+                }
+                if (rc && !carrierInfo[rc]) {
+                    carrierInfo[rc] = {
+                        cnpj: '-',
+                        ie: '-',
+                        address: '-',
+                        city: '-',
+                        reliability: 3,
+                        isRedespacho: true,
+                        createdAt: new Date().toISOString()
+                    };
+                    listUpdated = true;
+                } else if (rc && carrierInfo[rc].isRedespacho !== true) {
+                    carrierInfo[rc].isRedespacho = true;
+                    listUpdated = true;
+                }
+            });
+            if (listUpdated) {
+                carrierList.sort();
+                Utils.saveRaw('carrier_list', JSON.stringify(carrierList));
+                Utils.saveRaw('carrier_info_v2', JSON.stringify(carrierInfo));
+                if (Utils.Cloud && Utils.Cloud.hasTenant()) {
+                    Utils.Cloud.save('carrier_list', carrierList);
+                    Utils.Cloud.save('carrier_info_v2', carrierInfo);
+                }
+            }
 
             // v3.16.13: union de carrier_list + chaves de carrier_info_v2
             // Garante que cadastros feitos via edição direta (sem tabela de frete)
@@ -4009,10 +4101,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ? `<span style="background:rgba(239,68,68,0.15);color:#ef4444;font-size:0.65rem;padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px;">FORA DA LISTA</span>`
                     : '';
 
+                // Badge de transportadora / embarcação de redespacho (v3.24.4)
+                const redespBadge = (info && info.isRedespacho)
+                    ? `<span style="background:rgba(245,158,11,0.18);color:#f59e0b;font-size:0.65rem;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px;border:1px solid rgba(245,158,11,0.35);" title="Transportadora / Embarcação Fluvial de Redespacho">REDESPACHO</span>`
+                    : '';
+
                 return `
-            <tr style="border-bottom: 2px solid var(--border-color);">
+            <tr style="border-bottom: 2px solid var(--border-color);" data-carrier-name="${safeC}">
                 <td>
-                    <div style="font-weight: 700; color: var(--text-primary);">${c}${orphanBadge}</div>
+                    <div style="font-weight: 700; color: var(--text-primary); display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
+                        <span>${c}</span>${orphanBadge}${redespBadge}
+                    </div>
                     <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px;">CNPJ: ${info.cnpj}</div>
                     <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 1px;">${dateLabel}</div>
                 </td>
@@ -4051,6 +4150,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
             }).join('');
+        };
+
+        // v3.24.4: Filtro rápido de busca na listagem de transportadoras
+        window.filterCarrierConfigs = (q) => {
+            const term = (q || '').toUpperCase().trim();
+            const rows = document.querySelectorAll('#carrierConfigsBody tr');
+            rows.forEach(row => {
+                if (!term) {
+                    row.style.display = '';
+                } else {
+                    const text = row.innerText.toUpperCase();
+                    row.style.display = text.includes(term) ? '' : 'none';
+                }
+            });
         };
 
         window.removeCarrier = (name) => {
@@ -4644,6 +4757,31 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // Save to cloud
                     if (Utils.Cloud && Utils.Cloud.save) {
                         Utils.Cloud.save('carrier_list', carrierList);
+                    }
+                }
+
+                // v3.24.4: ENSURE redespacho carrier is ALSO registered in permanent list
+                if (newRule.redespacho && newRule.redespacho !== '-') {
+                    const rName = String(newRule.redespacho).toUpperCase().trim();
+                    let redespUpdated = false;
+                    if (!carrierList.includes(rName)) {
+                        carrierList.push(rName);
+                        carrierList.sort();
+                        Utils.saveRaw('carrier_list', JSON.stringify(carrierList));
+                        redespUpdated = true;
+                    }
+                    if (!carrierInfo[rName]) {
+                        carrierInfo[rName] = { cnpj: '-', ie: '-', address: '-', city: '-', reliability: 3, isRedespacho: true, createdAt: new Date().toISOString() };
+                        Utils.saveRaw('carrier_info_v2', JSON.stringify(carrierInfo));
+                        redespUpdated = true;
+                    } else if (carrierInfo[rName].isRedespacho !== true) {
+                        carrierInfo[rName].isRedespacho = true;
+                        Utils.saveRaw('carrier_info_v2', JSON.stringify(carrierInfo));
+                        redespUpdated = true;
+                    }
+                    if (redespUpdated && Utils.Cloud && Utils.Cloud.save) {
+                        Utils.Cloud.save('carrier_list', carrierList);
+                        Utils.Cloud.save('carrier_info_v2', carrierInfo);
                     }
                 }
 
