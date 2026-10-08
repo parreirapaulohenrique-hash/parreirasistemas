@@ -75,12 +75,27 @@ window.WMS3D = (function () {
 
         if (_animId) cancelAnimationFrame(_animId);
         if (_resizeObs) _resizeObs.disconnect();
+        if (_unsubRealtime) {
+            try { _unsubRealtime(); } catch (_) {}
+            _unsubRealtime = null;
+        }
         if (_renderer) { _renderer.dispose(); if (_renderer.domElement.parentNode) _renderer.domElement.remove(); }
         if (_controls) _controls.dispose();
         _renderer = _camera = _scene = _controls = _animId = _resizeObs = null;
         _objects = [];
         _cellInstMesh = null;
         _addrList = [];
+    }
+
+    let _unsubRealtime = null;
+    function _startRealtimeListener() {
+        if (_unsubRealtime) return;
+        if (window.WmsStore && window.WmsStore.ouvirEnderecos) {
+            _unsubRealtime = window.WmsStore.ouvirEnderecos(enderecos => {
+                console.log('⚡ [WMS3D] Atualização de endereços em tempo real recebida via Firestore!');
+                updateData();
+            });
+        }
     }
 
     function init(container) {
@@ -470,6 +485,7 @@ window.WMS3D = (function () {
         _setupControls(canvas, WW / 2, maxRealHeight / 2, WL / 2);
         _setupRaycaster(canvas, container);
         _setupResize(container);
+        _startRealtimeListener();
         _animate();
     }
 
@@ -595,7 +611,21 @@ window.WMS3D = (function () {
         if (_cellInstMesh.instanceColor) _cellInstMesh.instanceColor.needsUpdate = true;
     }
 
-    return { init, destroy, getStats, reload, updateData };
+    function updateAddressRealtime(enderecoId, status) {
+        if (!_cellInstMesh) return;
+        const norm = (enderecoId || '').trim().toUpperCase();
+        for (let i = 0; i < _addrList.length; i++) {
+            if ((_addrList[i].id || '').toUpperCase() === norm) {
+                _addrList[i]._status = status;
+                const color = SC[status] || SC.OCUPADO;
+                _cellInstMesh.setColorAt(i, color);
+                if (_cellInstMesh.instanceColor) _cellInstMesh.instanceColor.needsUpdate = true;
+                break;
+            }
+        }
+    }
+
+    return { init, destroy, getStats, reload, updateData, updateAddressRealtime };
 })();
 
 // Spin animation for loading indicator

@@ -1,6 +1,6 @@
 {
-  "version": "2.0.3",
+  "version": "2.1.0",
   "date": "2026-10-07",
-  "build": "20261007-1500",
-  "last_change": "Fix(P1): Normalização estrutural de wms_mock_data (Array vs {addresses:[]}) em estoque.js, bi_operacional.js, controle.js, relatorios.js; persistência em nuvem (Firestore) do inventário de campo no WMS Coletor; unificação de getWmsConfig com tenant suffix (v2.0.3)"
+  "build": "20261007-2230",
+  "last_change": "Feat(P2/P3): Ondas e Picking sincronizados no Firestore, WMS3D Three.js com listener snapshot em tempo real e integração dimensional do Cubômetro myCUBI-50"
 }

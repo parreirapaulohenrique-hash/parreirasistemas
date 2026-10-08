@@ -1202,6 +1202,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                         usersFromCloud = await _fetchUsersFromTenant(baseTenantId);
                     }
 
+                    // v3.21.0 FIX: Fallback para cache local caso Firestore esteja indisponível ou cota 429
+                    if (usersFromCloud.length === 0) {
+                        const cachedUsersRaw = localStorage.getItem(`_app_users_${tenantId}`) || (tenantId.endsWith('_hml') ? localStorage.getItem(`_app_users_${tenantId.replace(/_hml$/, '')}`) : null);
+                        if (cachedUsersRaw) {
+                            try {
+                                const parsed = JSON.parse(cachedUsersRaw);
+                                if (Array.isArray(parsed) && parsed.length > 0) {
+                                    usersFromCloud = parsed;
+                                    console.log(`⚡ [Login] Recuperados ${usersFromCloud.length} usuário(s) do cache local [tenant=${tenantId}]`);
+                                }
+                            } catch (_) {}
+                        }
+                    }
+
                     if (usersFromCloud.length > 0) {
                         // v3.11.86 FIX: Salva com namespace de tenant para evitar contaminação cross-tenant
                         // NÃO usar Utils.saveRaw('app_users') sem prefixo — isso vaza para outros tenants
@@ -1212,13 +1226,33 @@ document.addEventListener('DOMContentLoaded', async () => {
                             return `<option value="${u.login}">${displayName} (${u.login})</option>`;
                         }).join('');
                         console.log(`✅ [Login] Dropdown populado com ${usersFromCloud.length} usuário(s) [tenant=${tenantId}]`);
+                    } else if (tenantId.startsWith('ltdistribuidora')) {
+                        loginUserSelect.innerHTML = '<option value="admin_lt">Administrador LT (admin_lt)</option>';
+                        console.log('⚠️ [Login] Usando fallback prioritário para Administrador LT (admin_lt)');
                     } else {
                         loginUserSelect.innerHTML = '<option value="admin">Administrador (admin)</option>';
                         console.log('⚠️ [Login] Nenhum usuário encontrado, usando admin padrão');
                     }
                 } catch (error) {
                     console.error('❌ [Login] Erro ao carregar usuários:', error);
-                    loginUserSelect.innerHTML = '<option value="admin">Administrador (admin)</option>';
+                    const cachedUsersRaw = localStorage.getItem(`_app_users_${tenantId}`) || (tenantId.endsWith('_hml') ? localStorage.getItem(`_app_users_${tenantId.replace(/_hml$/, '')}`) : null);
+                    let restored = false;
+                    if (cachedUsersRaw) {
+                        try {
+                            const parsed = JSON.parse(cachedUsersRaw);
+                            if (Array.isArray(parsed) && parsed.length > 0) {
+                                loginUserSelect.innerHTML = parsed.map(u => `<option value="${u.login}">${u.nome || u.name || u.login} (${u.login})</option>`).join('');
+                                restored = true;
+                            }
+                        } catch (_) {}
+                    }
+                    if (!restored) {
+                        if (tenantId.startsWith('ltdistribuidora')) {
+                            loginUserSelect.innerHTML = '<option value="admin_lt">Administrador LT (admin_lt)</option>';
+                        } else {
+                            loginUserSelect.innerHTML = '<option value="admin">Administrador (admin)</option>';
+                        }
+                    }
                 } finally {
                     if (loginUserSelect) loginUserSelect.disabled = false;
                 }
@@ -1434,6 +1468,43 @@ document.addEventListener('DOMContentLoaded', async () => {
                             }
                         }
                     } catch (_e) { console.warn('[Login] Erro ao validar no Firestore:', _e.message); }
+                }
+
+                // Fallback resiliente: validação via cache local do tenant (se Firestore offline ou quota 429)
+                if (!user) {
+                    const cachedUsersRaw = localStorage.getItem(`_app_users_${tenantId}`) || (tenantId.endsWith('_hml') ? localStorage.getItem(`_app_users_${tenantId.replace(/_hml$/, '')}`) : null);
+                    if (cachedUsersRaw) {
+                        try {
+                            const parsedCached = JSON.parse(cachedUsersRaw);
+                            if (Array.isArray(parsedCached)) {
+                                const cu = parsedCached.find(u => u.login === login);
+                                if (cu) {
+                                    let _matchCache = false;
+                                    if (cu.senhaHash) {
+                                        const _hBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass));
+                                        const _hHex = Array.from(new Uint8Array(_hBuf)).map(b => b.toString(16).padStart(2,'0')).join('');
+                                        _matchCache = (_hHex === cu.senhaHash);
+                                    }
+                                    if (!_matchCache && cu.pass) {
+                                        _matchCache = (pass === cu.pass);
+                                    }
+                                    if (!_matchCache && cu.pin && pass.trim() === String(cu.pin).trim()) {
+                                        _matchCache = true;
+                                    }
+                                    if (_matchCache) {
+                                        user = {
+                                            name: cu.nome || cu.name || cu.login || login,
+                                            login: cu.login || login,
+                                            role: cu.role || 'operator',
+                                            modulos: cu.modulos || ['dispatch'],
+                                            pin: cu.pin || ''
+                                        };
+                                        console.log(`⚡ [Login] Validado com resiliência via cache do tenant: ${login}`);
+                                    }
+                                }
+                            }
+                        } catch (_) {}
+                    }
                 }
 
                 // Fallback: sistema legado (senha texto puro em localStorage)
@@ -8411,7 +8482,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (window.renderDashboard) window.renderDashboard();
 
 
-        window.printSpecificRomaneio = (carrierName, items) => {
+        window.printSpecificRomaneio = (carrierName, items, romaneioId = null) => {
             try {
 
                 const carrierInfo = Utils.getStorage('carrier_info_v2') || {};
@@ -8420,6 +8491,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const company = (_companyRaw && typeof _companyRaw === 'object') ? _companyRaw : {};
                 const cleanName = String(carrierName || '').trim().toUpperCase();
                 const cInfo = carrierInfo[cleanName] || { cnpj: '-', address: '-', city: '-' };
+
+                // v3.21.0 - Fase 2: ID e Código de Barras no Romaneio
+                const cleanRomaneioId = romaneioId || (items && items[0] && items[0].romaneioId) || ('ROM-' + Date.now().toString().slice(-6));
+                const barcodeSvg = (typeof Utils !== 'undefined' && Utils.generateBarcode128)
+                    ? Utils.generateBarcode128(cleanRomaneioId, { height: 32, barWidth: 1.15, fontSize: 8 })
+                    : '';
                 
                 const printArea = document.getElementById('print-area');
                 printArea.innerHTML = '';
@@ -8458,9 +8535,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             </div>
 
-            <div style="text-align: center; margin-bottom: 8px;">
-                <h2 style="margin:0; font-size: 1.05rem; text-decoration: underline;">ROMANEIO DE ENTREGA</h2>
-                <div style="font-size: 0.75rem;">Emissão: ${new Date().toLocaleString()} | Via ${i + 1}</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 8px;">
+                <div style="text-align: left;">
+                    <h2 style="margin:0; font-size: 1.1rem; text-decoration: underline;">ROMANEIO DE ENTREGA</h2>
+                    <div style="font-size: 0.82rem; font-weight: bold; margin-top: 2px;">CÓDIGO: <span style="font-family: monospace;">${cleanRomaneioId}</span></div>
+                    <div style="font-size: 0.72rem; color: #333;">Emissão: ${new Date().toLocaleString('pt-BR')} | Via ${i + 1}</div>
+                </div>
+                <div style="text-align: right;">
+                    ${barcodeSvg}
+                </div>
             </div>
 
             <table class="manifest-table" style="width: 100%; border-collapse: collapse; table-layout: fixed; font-family: Arial, sans-serif; font-size: 9px; color: #000; margin-bottom: 10px; font-weight: bold;">
@@ -8600,9 +8683,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div style="font-size: 0.75rem;">END: ${rcInfo.address}</div>
                 </div>
             </div>
-            <div style="text-align: center; margin-bottom: 8px;">
-                <h2 style="margin:0; font-size: 1.05rem; text-decoration: underline;">ROMANEIO DE REDESPACHO</h2>
-                <div style="font-size: 0.75rem;">Emissão: ${new Date().toLocaleString()} | Via ${ri + 1}</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 8px;">
+                <div style="text-align: left;">
+                    <h2 style="margin:0; font-size: 1.1rem; text-decoration: underline;">ROMANEIO DE REDESPACHO</h2>
+                    <div style="font-size: 0.82rem; font-weight: bold; margin-top: 2px;">CÓDIGO: <span style="font-family: monospace;">${cleanRomaneioId}-RED</span></div>
+                    <div style="font-size: 0.72rem; color: #333;">Emissão: ${new Date().toLocaleString('pt-BR')} | Via ${ri + 1}</div>
+                </div>
+                <div style="text-align: right;">
+                    ${(typeof Utils !== 'undefined' && Utils.generateBarcode128) ? Utils.generateBarcode128(cleanRomaneioId + '-RED', { height: 32, barWidth: 1.15, fontSize: 8 }) : ''}
+                </div>
             </div>
             <table class="manifest-table" style="width: 100%; border-collapse: collapse; table-layout: fixed; font-family: Arial, sans-serif; font-weight: bold; font-size: 9px; color: #000; margin-bottom: 10px;">
                 <colgroup>
@@ -11094,6 +11183,134 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (window.renderAppHistory) window.renderAppHistory();
                 });
             });
+        };
+
+        // ═══════════════════════════════════════════════════════════
+        // BIPAGEM ÓPTICA DE ROMANEIO (v3.21.0 - Fase 2)
+        // Permite dar baixa ou localizar romaneio físico bipando o código impresso
+        // ═══════════════════════════════════════════════════════════
+        window.biparRomaneioBaixa = (codeRaw) => {
+            const clean = String(codeRaw || '').trim().toUpperCase();
+            const scanInput = document.getElementById('scanRomaneioInput');
+            if (!clean) return;
+
+            let romaneios = Utils.getStorage('app_romaneios') || [];
+            // Busca por ID exato ou contendo código (ex: ROM-XXXXXX)
+            const target = romaneios.find(r => r.id && (r.id.toUpperCase() === clean || r.id.toUpperCase().includes(clean) || clean.includes(r.id.toUpperCase())));
+
+            if (!target) {
+                if (Utils.playBeep) Utils.playBeep('error');
+                alert(`Romaneio "${clean}" não encontrado no sistema.`);
+                if (scanInput) { scanInput.value = ''; scanInput.focus(); }
+                return;
+            }
+
+            if (target.status === 'baixado') {
+                if (Utils.playBeep) Utils.playBeep('warn');
+                alert(`O Romaneio ${target.id} já foi baixado e arquivado em ${new Date(target.baixadoAt).toLocaleString('pt-BR')}.`);
+                if (scanInput) { scanInput.value = ''; scanInput.focus(); }
+                return;
+            }
+
+            // Se estiver em rota, aciona confirmação de baixa
+            if (Utils.playBeep) Utils.playBeep('success');
+            if (scanInput) scanInput.value = '';
+            window.confirmarBaixaRomaneio(target.id);
+        };
+
+        // ═══════════════════════════════════════════════════════════
+        // CALCULADORA DE CUBAGEM (v3.21.0 - Fase 2)
+        // Cálculo ABNT/ANTT de cubagem volumétrica e aplicação automática no frete
+        // ═══════════════════════════════════════════════════════════
+        window.toggleCubagemCalc = (forceOpen = null) => {
+            const panel = document.getElementById('cubagemPanel');
+            const chevron = document.getElementById('cubagemIconChevron');
+            if (!panel) return;
+            const shouldOpen = forceOpen !== null ? forceOpen : (panel.style.display === 'none' || !panel.style.display);
+            panel.style.display = shouldOpen ? 'block' : 'none';
+            if (chevron) chevron.style.transform = shouldOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+            if (shouldOpen) {
+                const volInput = document.getElementById('inputVolume');
+                const cubQtd = document.getElementById('cubagemQtd');
+                if (volInput && cubQtd) {
+                    cubQtd.value = Math.max(1, parseInt(volInput.value, 10) || 1);
+                }
+                window.calculateCubagem();
+                const cComp = document.getElementById('cubagemComp');
+                if (cComp) cComp.focus();
+            }
+        };
+
+        window.calculateCubagem = () => {
+            const comp = parseFloat(document.getElementById('cubagemComp')?.value) || 0;
+            const larg = parseFloat(document.getElementById('cubagemLarg')?.value) || 0;
+            const alt  = parseFloat(document.getElementById('cubagemAlt')?.value) || 0;
+            const qtd  = parseInt(document.getElementById('cubagemQtd')?.value, 10) || 1;
+            const fator = parseFloat(document.getElementById('cubagemFator')?.value) || 300;
+
+            // Fórmula: Volume em m³ = (C * L * A / 1.000.000) * Qtd
+            // Peso Cubado em kg = Volume (m³) * Fator
+            const m3 = ((comp * larg * alt) / 1000000) * Math.max(1, qtd);
+            const pesoCubado = m3 * fator;
+
+            const resM3El = document.getElementById('resCubagemM3');
+            const resKgEl = document.getElementById('resCubagemKg');
+            const badgeEl = document.getElementById('cubagemComparisonBadge');
+
+            if (resM3El) resM3El.innerText = `${m3.toFixed(3)} m³`;
+            if (resKgEl) resKgEl.innerText = `${pesoCubado.toFixed(2)} kg`;
+
+            const realWeight = parseFloat(document.getElementById('inputWeight')?.value) || 0;
+            if (badgeEl) {
+                if (comp > 0 && larg > 0 && alt > 0) {
+                    if (pesoCubado > realWeight) {
+                        const diff = (pesoCubado - realWeight).toFixed(2);
+                        badgeEl.innerHTML = `<span style="color: #f59e0b; font-weight: 600;">⚠️ Carga Volumosa: Frete tarifará pelo Peso Cubado (+${diff} kg acima do peso bruto).</span>`;
+                    } else if (realWeight > 0) {
+                        badgeEl.innerHTML = `<span style="color: #10b981; font-weight: 600;">✓ Carga Densa: Frete tarifará pelo Peso Bruto real (${realWeight.toFixed(2)} kg).</span>`;
+                    } else {
+                        badgeEl.innerHTML = `<span style="color: #93c5fd;">Peso cubado estimado em ${pesoCubado.toFixed(2)} kg.</span>`;
+                    }
+                } else {
+                    badgeEl.innerText = 'Preencha as dimensões acima para calcular a cubagem.';
+                }
+            }
+
+            return { m3, pesoCubado };
+        };
+
+        window.applyCubagemWeight = () => {
+            const calc = window.calculateCubagem();
+            if (!calc || calc.pesoCubado <= 0) {
+                alert('Informe as dimensões (Comprimento, Largura e Altura) para calcular o peso cubado.');
+                return;
+            }
+            const inputWeight = document.getElementById('inputWeight');
+            const inputVolume = document.getElementById('inputVolume');
+            const cubQtd = parseInt(document.getElementById('cubagemQtd')?.value, 10) || 1;
+
+            if (inputWeight) {
+                inputWeight.value = calc.pesoCubado.toFixed(2);
+                inputWeight.dispatchEvent(new Event('input', { bubbles: true }));
+                inputWeight.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            if (inputVolume && cubQtd > 1) {
+                inputVolume.value = cubQtd;
+                inputVolume.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            if (Utils.playBeep) Utils.playBeep('success');
+            showToast(`📐 Peso cubado aplicado: ${calc.pesoCubado.toFixed(2)} kg (${calc.m3.toFixed(3)} m³)`);
+
+            window.toggleCubagemCalc(false);
+        };
+
+        window.clearCubagem = () => {
+            ['cubagemComp', 'cubagemLarg', 'cubagemAlt'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            window.calculateCubagem();
         };
 
         // ─── ESTORNO DE PAGAMENTO DE FATURA ───────────────────────────────────────────

@@ -62,8 +62,8 @@
                 : '';
 
             return `
-        <tr>
-            <td><input type="checkbox" ${selectedNFIds.includes(item.id) ? 'checked' : ''} onchange="window.toggleNFSelection(${item.id})"></td>
+        <tr id="nf-modal-row-${item.id}" data-invoice="${String(item.invoice || '').trim()}">
+            <td><input type="checkbox" id="check-nf-${item.id}" ${selectedNFIds.includes(item.id) ? 'checked' : ''} onchange="window.toggleNFSelection(${item.id})"></td>
             <td style="font-weight: 600; display: flex; align-items: center;">
                 ${item.invoice}
                 ${iconHtml}
@@ -93,6 +93,106 @@
         if (countEl) countEl.innerText = selectedItems.length;
         if (totalEl) totalEl.innerText = Utils.formatCurrency(total);
     }
+
+    // ── Bipagem Óptica de NF (v3.21.0 - Fase 2) ──────────────────────────────
+    window.triggerScanNF = (customVal = null) => {
+        const input = document.getElementById('scanNFInput');
+        const feedback = document.getElementById('scanFeedback');
+        const raw = (customVal != null ? customVal : (input ? input.value : '')).trim();
+        if (!raw) return;
+
+        // Normalização de NF:
+        // 1) Chave DANFE de 44 dígitos: número da NF está entre posições 25 e 34
+        // 2) Número comum digitado ou com zeros/prefixos
+        let targetNF = '';
+        const digitsOnly = raw.replace(/\D/g, '');
+        if (digitsOnly.length === 44) {
+            targetNF = parseInt(digitsOnly.substring(25, 34), 10).toString();
+        } else {
+            targetNF = digitsOnly.replace(/^0+/, '');
+        }
+
+        if (!targetNF) {
+            if (feedback) {
+                feedback.style.display = 'inline-block';
+                feedback.style.background = 'rgba(239, 68, 68, 0.15)';
+                feedback.style.color = '#ef4444';
+                feedback.innerText = 'Código inválido';
+            }
+            if (Utils.playBeep) Utils.playBeep('error');
+            return;
+        }
+
+        const history = Utils.getStorage('dispatches');
+        const items = (Array.isArray(history) ? history : []).filter(d => {
+            const dCarrier = String(d.carrier || '').trim().toUpperCase();
+            const isSameCarrier = dCarrier === currentModalCarrier || dCarrier === 'FOB - ' + currentModalCarrier;
+            return isSameCarrier && d.status === 'Pendente Despacho';
+        });
+
+        // Localiza a NF na transportadora atual
+        const matchItem = items.find(it => {
+            const itNF = String(it.invoice || '').replace(/\D/g, '').replace(/^0+/, '');
+            return itNF === targetNF;
+        });
+
+        if (!matchItem) {
+            if (feedback) {
+                feedback.style.display = 'inline-block';
+                feedback.style.background = 'rgba(239, 68, 68, 0.15)';
+                feedback.style.color = '#ef4444';
+                feedback.innerText = `NF ${targetNF} não encontrada nesta carga`;
+            }
+            if (Utils.playBeep) Utils.playBeep('error');
+            if (input) { input.value = ''; input.focus(); }
+            return;
+        }
+
+        // Se já está selecionada:
+        if (selectedNFIds.includes(matchItem.id)) {
+            if (feedback) {
+                feedback.style.display = 'inline-block';
+                feedback.style.background = 'rgba(245, 158, 11, 0.15)';
+                feedback.style.color = '#f59e0b';
+                feedback.innerText = `NF ${matchItem.invoice} já está selecionada!`;
+            }
+            if (Utils.playBeep) Utils.playBeep('warn');
+            const row = document.getElementById(`nf-modal-row-${matchItem.id}`);
+            if (row) {
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                row.style.transition = 'all 0.3s';
+                row.style.background = 'rgba(245, 158, 11, 0.2)';
+                setTimeout(() => { row.style.background = ''; }, 1200);
+            }
+            if (input) { input.value = ''; input.focus(); }
+            return;
+        }
+
+        // Seleciona a NF
+        selectedNFIds.push(matchItem.id);
+        const chk = document.getElementById(`check-nf-${matchItem.id}`);
+        if (chk) chk.checked = true;
+
+        updateModalTotals(items);
+
+        if (feedback) {
+            feedback.style.display = 'inline-block';
+            feedback.style.background = 'rgba(16, 185, 129, 0.15)';
+            feedback.style.color = '#10b981';
+            feedback.innerText = `✅ NF ${matchItem.invoice} bipada com sucesso!`;
+        }
+        if (Utils.playBeep) Utils.playBeep('success');
+
+        const row = document.getElementById(`nf-modal-row-${matchItem.id}`);
+        if (row) {
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            row.style.transition = 'all 0.3s';
+            row.style.background = 'rgba(16, 185, 129, 0.25)';
+            setTimeout(() => { row.style.background = ''; }, 1500);
+        }
+
+        if (input) { input.value = ''; input.focus(); }
+    };
 
     // ── Funções Públicas (window.*) ───────────────────────────────────────────
 
@@ -244,6 +344,26 @@
             if (modalEl) {
                 modalEl.style.display = 'flex';
                 renderModalItems(items);
+
+                // Auto-foco na barra de leitura óptica (v3.21.0 - Fase 2)
+                setTimeout(() => {
+                    const scanIn = document.getElementById('scanNFInput');
+                    const scanFb = document.getElementById('scanFeedback');
+                    if (scanFb) scanFb.style.display = 'none';
+                    if (scanIn) {
+                        scanIn.value = '';
+                        scanIn.focus();
+                        if (!scanIn._hasScanListener) {
+                            scanIn._hasScanListener = true;
+                            scanIn.addEventListener('keydown', (e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    if (window.triggerScanNF) window.triggerScanNF();
+                                }
+                            });
+                        }
+                    }
+                }, 120);
 
                 // IMPORTANTE: Atualizar dropdown de motoristas
                 if (window.populateDriverSelector) window.populateDriverSelector();
@@ -497,7 +617,7 @@
             }
 
             // Open print manifest (called AFTER WA panel to preserve user gesture for WA)
-            window.printSpecificRomaneio(currentModalCarrier, toDispatch);
+            window.printSpecificRomaneio(currentModalCarrier, toDispatch, randomId);
 
             if (deliveryType === 'moto') {
                 window.showToast('🏍️ Romaneio gerado! NFs enviadas para Moto Entrega.');

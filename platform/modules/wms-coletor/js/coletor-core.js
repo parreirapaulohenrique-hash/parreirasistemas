@@ -423,49 +423,228 @@ window.wmsData = {
     }
 };
 
-// ===== Feedback Manager =====
+// ===== Feedback Manager Industrial =====
 window.Feedback = {
-    audioCtx: new (window.AudioContext || window.webkitAudioContext)(),
+    audioCtx: null,
+
+    _getAudioCtx: function () {
+        if (!this.audioCtx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) this.audioCtx = new AudioCtx();
+        }
+        if (this.audioCtx && this.audioCtx.state === 'suspended') {
+            this.audioCtx.resume();
+        }
+        return this.audioCtx;
+    },
 
     beep: function (type = 'success') {
-        if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
-        const osc = this.audioCtx.createOscillator();
-        const gain = this.audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(this.audioCtx.destination);
+        try {
+            const ctx = this._getAudioCtx();
+            if (!ctx) return;
 
-        if (type === 'success') {
-            osc.frequency.setValueAtTime(880, this.audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(1760, this.audioCtx.currentTime + 0.1);
-            gain.gain.setValueAtTime(0.1, this.audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.1);
-            osc.start();
-            osc.stop(this.audioCtx.currentTime + 0.1);
-        } else {
-            // Error buzzer
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(150, this.audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.2, this.audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.3);
-            osc.start();
-            osc.stop(this.audioCtx.currentTime + 0.3);
-        }
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            if (type === 'success') {
+                // Tom duplo agudo industrial (alta penetração sonora em galpão)
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1400, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(2200, ctx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.25, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.12);
+            } else if (type === 'warning') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(800, ctx.currentTime);
+                gain.gain.setValueAtTime(0.25, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.18);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.18);
+            } else {
+                // Alerta grave e dissonante de erro / bloqueio
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(280, ctx.currentTime);
+                osc.frequency.setValueAtTime(160, ctx.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.35, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.35);
+            }
+        } catch (_) {}
+    },
+
+    vibrateSuccess: function () {
+        if (navigator.vibrate) navigator.vibrate([80]);
+    },
+
+    vibrateWarning: function () {
+        if (navigator.vibrate) navigator.vibrate([100, 80, 100]);
+    },
+
+    vibrateError: function () {
+        if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 400]);
     },
 
     flash: function (type = 'success') {
+        const isSuccess = type === 'success';
+        const color = isSuccess ? '#10b981' : '#ef4444';
+
         const div = document.createElement('div');
         div.className = `flash-${type}`;
-        div.style.position = 'fixed';
-        div.style.top = '0'; div.style.left = '0';
-        div.style.width = '100%'; div.style.height = '100%';
-        div.style.pointerEvents = 'none';
-        div.style.zIndex = '9999';
+        div.style.cssText = `position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:99999; box-shadow: inset 0 0 0 8px ${color}; background: ${isSuccess ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.15)'}; transition: opacity 0.3s;`;
         document.body.appendChild(div);
-        setTimeout(() => div.remove(), 500);
+        setTimeout(() => {
+            div.style.opacity = '0';
+            setTimeout(() => div.remove(), 250);
+        }, 200);
 
-        if (navigator.vibrate) navigator.vibrate(type === 'success' ? 50 : 300);
+        if (isSuccess) this.vibrateSuccess();
+        else this.vibrateError();
     }
 };
+
+// ===== GS1-128 & Industrial Barcode Parser =====
+window.WmsBarcodeParser = {
+    parse: function (raw) {
+        if (!raw) return { raw: '', sku: '', isGs1: false };
+        let str = String(raw).trim();
+
+        // 1. Limpeza de caracteres invisíveis e prefixos de scanner
+        str = str.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+
+        // 2. Chave NF-e (44 dígitos)
+        if (/^\d{44}$/.test(str)) {
+            return {
+                raw: str,
+                tipo: 'NFE_CHAVE',
+                chave: str,
+                nfNumero: String(parseInt(str.substring(25, 34), 10)),
+                isGs1: false
+            };
+        }
+
+        // 3. GS1-128 com parênteses: (01)07891234567890(10)LOTE123(17)261231(21)SER12345
+        const result = {
+            raw: str,
+            sku: str,
+            gtin: null,
+            lote: null,
+            validade: null,
+            serial: null,
+            peso: null,
+            isGs1: false
+        };
+
+        if (str.includes('(') && str.includes(')')) {
+            result.isGs1 = true;
+            const aiRegex = /\((\d{2,4})\)([^\(]+)/g;
+            let match;
+            while ((match = aiRegex.exec(str)) !== null) {
+                const ai = match[1];
+                const val = match[2].trim();
+                if (ai === '01') { result.gtin = val; result.sku = val; }
+                else if (ai === '10') { result.lote = val; }
+                else if (ai === '17') {
+                    if (val.length === 6) {
+                        result.validade = `20${val.substring(0, 2)}-${val.substring(2, 4)}-${val.substring(4, 6)}`;
+                    } else {
+                        result.validade = val;
+                    }
+                }
+                else if (ai === '21') { result.serial = val; }
+                else if (ai.startsWith('310')) {
+                    const decimals = parseInt(ai[3], 10) || 2;
+                    result.peso = (parseFloat(val) / Math.pow(10, decimals)).toFixed(2);
+                }
+            }
+            return result;
+        }
+
+        // 4. DUN-14 (14 dígitos)
+        if (/^\d{14}$/.test(str)) {
+            result.isGs1 = true;
+            result.gtin = str;
+            result.sku = str;
+            return result;
+        }
+
+        // 5. EAN-13 (13 dígitos)
+        if (/^\d{13}$/.test(str)) {
+            result.gtin = str;
+            result.sku = str;
+            return result;
+        }
+
+        return result;
+    }
+};
+
+// ===== Zebra DataWedge & Laser Fast Cadence Listener =====
+(function initLaserCadence() {
+    let keyBuffer = '';
+    let lastKeyTime = 0;
+
+    window.addEventListener('keydown', function (e) {
+        const now = Date.now();
+        const interval = now - lastKeyTime;
+        lastKeyTime = now;
+
+        if (e.key === 'Enter') {
+            if (keyBuffer.length >= 3 && interval < 120) {
+                const scannedCode = keyBuffer.trim();
+                keyBuffer = '';
+                console.log(`⚡ [Laser Zebra] Bipagem capturada em alta cadência: ${scannedCode}`);
+
+                const parsed = window.WmsBarcodeParser.parse(scannedCode);
+                if (window.Feedback) {
+                    window.Feedback.vibrateSuccess();
+                    window.Feedback.beep('success');
+                }
+
+                if (typeof window.currentScanCallback === 'function') {
+                    window.currentScanCallback(parsed.sku || parsed.raw, parsed);
+                } else {
+                    window.dispatchEvent(new CustomEvent('wms:barcode-scanned', { detail: parsed }));
+                }
+            } else {
+                keyBuffer = '';
+            }
+            return;
+        }
+
+        if (e.key.length === 1) {
+            if (interval > 150) {
+                keyBuffer = e.key;
+            } else {
+                keyBuffer += e.key;
+            }
+        }
+    });
+
+    window.addEventListener('message', function (event) {
+        if (!event.data) return;
+        const data = event.data;
+        const barcode = data['com.symbol.datawedge.data_string'] || data.barcode || data.scanData;
+        if (barcode) {
+            console.log(`🦓 [Zebra DataWedge] Broadcast recebido: ${barcode}`);
+            const parsed = window.WmsBarcodeParser.parse(barcode);
+            if (window.Feedback) {
+                window.Feedback.vibrateSuccess();
+                window.Feedback.beep('success');
+            }
+            if (typeof window.currentScanCallback === 'function') {
+                window.currentScanCallback(parsed.sku || parsed.raw, parsed);
+            } else {
+                window.dispatchEvent(new CustomEvent('wms:barcode-scanned', { detail: parsed }));
+            }
+        }
+    });
+})();
+
 
 // ===================================
 // LEITOR DE CÂMERA ROBUSTO (MOBILE / WEBCAM)
