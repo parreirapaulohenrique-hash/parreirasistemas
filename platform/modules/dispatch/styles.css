@@ -1398,4 +1398,43 @@ body.is-motorista .welcome-banner h2 {
 .switch-kpi-card .kpi-sub {
     font-size: 0.75rem;
     color: var(--text-secondary);
+}
+
+/* --- Tabela Padronizada e Refinada (Harmonia com Montagem Carga) --- */
+.switch-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+}
+
+.switch-table thead tr {
+    background: rgba(15, 23, 42, 0.75);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.switch-table th {
+    text-align: left;
+    padding: 0.65rem 0.6rem;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.switch-table td {
+    padding: 0.65rem 0.6rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 0.82rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.switch-table tbody tr {
+    transition: background 0.15s ease;
+}
+
+.switch-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.02);
 }

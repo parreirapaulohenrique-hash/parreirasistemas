@@ -2297,12 +2297,12 @@
 
                         <!-- Tabela de Dados -->
                         <div class="table-responsive">
-                            <table class="data-table" style="width: 100%; margin: 0;">
+                            <table class="switch-table">
                                 <thead>
-                                    <tr style="background: rgba(15, 23, 42, 0.7);">
+                                    <tr>
                                         <th style="width: 20%;">Cliente</th>
                                         <th style="width: 11%;">Município / Vila</th>
-                                        <th style="width: 11%;">Transportadora Anterior</th>
+                                        <th style="width: 11%;">Transp. Anterior</th>
                                         <th style="width: 11%;">Nova Transportadora</th>
                                         <th style="width: 9%; text-align: center;">% Tabela (Nova)</th>
                                         <th style="width: 10%;">Custo Anterior</th>
@@ -2320,7 +2320,7 @@
                         </div>
 
                         <!-- Rodapé com contagem de registros -->
-                        <div style="padding: 0.85rem 1.25rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: var(--text-secondary);">
+                        <div style="padding: 0.75rem 1.25rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: var(--text-secondary);">
                             <span id="switchRowCountLabel">Carregando dados...</span>
                             <span>Sistema ParreiraLog • Módulo Estratégico</span>
                         </div>
@@ -2339,78 +2339,78 @@
                     ">
                         <!-- Header do Modal -->
                         <div style="
-                            padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color);
+                            padding: 1.1rem 1.5rem; border-bottom: 1px solid var(--border-color);
                             display: flex; justify-content: space-between; align-items: center;
                             background: rgba(30, 41, 59, 0.6);
                         ">
                             <div>
-                                <h3 id="switchModalTitle" style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin: 0;">Detalhamento da Troca</h3>
-                                <div id="switchModalSubtitle" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 3px;">
+                                <h3 id="switchModalTitle" style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin: 0;">Detalhamento da Troca</h3>
+                                <div id="switchModalSubtitle" style="font-size: 0.80rem; color: var(--text-secondary); margin-top: 2px;">
                                     Comparativo completo e auditável despacho a despacho.
                                 </div>
                             </div>
                             <button onclick="window.CarrierSwitchModule.closeDetail()" style="
                                 background: transparent; border: none; color: var(--text-secondary); cursor: pointer;
-                                padding: 0.4rem; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+                                padding: 0.35rem; border-radius: 6px; display: flex; align-items: center; justify-content: center;
                             " onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-secondary)'">
-                                <span class="material-icons-round" style="font-size: 1.5rem;">close</span>
+                                <span class="material-icons-round" style="font-size: 1.4rem;">close</span>
                             </button>
                         </div>
 
                         <!-- Corpo do Modal -->
-                        <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
+                        <div style="padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 1.25rem;">
                             <!-- Grid Comparativo Lado a Lado -->
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
                                 <!-- Card 1: Cenário Anterior -->
-                                <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.9rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
-                                        <span style="font-size: 0.85rem; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Cenário Atual</span>
-                                        <span id="detCarrierAnt" style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem;">-</span>
+                                <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.1rem;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; padding-bottom: 0.45rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
+                                        <span style="font-size: 0.78rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em;">Cenário Atual</span>
+                                        <span id="detCarrierAnt" style="font-weight: 700; color: var(--text-primary); font-size: 0.88rem;">-</span>
                                     </div>
-                                    <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem;">
-                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Frete Base Anterior:</span> <strong id="detBaseAnt" style="color: var(--text-primary);">R$ 0,00</strong></div>
+                                    <div style="display: flex; flex-direction: column; gap: 0.45rem; font-size: 0.82rem;">
+                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Frete Base Anterior:</span> <strong id="detBaseAnt" style="color: var(--text-primary); font-size: 0.82rem;">R$ 0,00</strong></div>
                                         <div style="display: flex; justify-content: space-between; background: rgba(255,255,255,0.03); padding: 2px 6px; border-radius: 4px;">
-                                            <span style="color: #cbd5e1; font-weight: 600;">% Frete da Tabela:</span>
-                                            <strong id="detPercTabAnt" style="color: #f8fafc;">0,00%</strong>
+                                            <span style="color: #cbd5e1; font-weight: 600; font-size: 0.78rem;">% Frete da Tabela:</span>
+                                            <strong id="detPercTabAnt" style="color: #f8fafc; font-size: 0.82rem;">0,00%</strong>
                                         </div>
-                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">% Efetivo s/ NF:</span> <strong id="detPercEfAnt" style="color: #94a3b8;">0,00%</strong></div>
-                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Peso Excedente:</span> <strong id="detExcAnt" style="color: var(--text-primary);">R$ 0,00</strong></div>
-                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Taxas Extras / GRIS:</span> <strong id="detTaxasAnt" style="color: var(--text-primary);">R$ 0,00</strong></div>
-                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Redespacho Anterior:</span> <strong id="detRedespAnt" style="color: var(--text-primary);">R$ 0,00</strong></div>
-                                        <div style="display: flex; justify-content: space-between; padding-top: 0.6rem; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.95rem;">
+                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">% Efetivo s/ NF:</span> <strong id="detPercEfAnt" style="color: #94a3b8; font-size: 0.80rem;">0,00%</strong></div>
+                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Peso Excedente:</span> <strong id="detExcAnt" style="color: var(--text-primary); font-size: 0.82rem;">R$ 0,00</strong></div>
+                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Taxas Extras / GRIS:</span> <strong id="detTaxasAnt" style="color: var(--text-primary); font-size: 0.82rem;">R$ 0,00</strong></div>
+                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Redespacho Anterior:</span> <strong id="detRedespAnt" style="color: var(--text-primary); font-size: 0.82rem;">R$ 0,00</strong></div>
+                                        <div style="display: flex; justify-content: space-between; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.88rem;">
                                             <span style="font-weight: 700; color: var(--text-primary);">Total Anterior Pago:</span>
-                                            <strong id="detTotalAnt" style="color: var(--text-primary); font-size: 1.05rem;">R$ 0,00</strong>
+                                            <strong id="detTotalAnt" style="color: var(--text-primary); font-size: 0.95rem;">R$ 0,00</strong>
                                         </div>
-                                        <div style="display: flex; justify-content: space-between; margin-top: 0.35rem; font-size: 0.8rem; color: var(--text-secondary);">
+                                        <div style="display: flex; justify-content: space-between; margin-top: 0.25rem; font-size: 0.78rem; color: var(--text-secondary);">
                                             <span>Prazo Médio:</span> <span id="detPrazoAnt" style="font-weight: 600; color: var(--text-primary);">-</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- Card 2: Novo Cenário Simulado -->
-                                <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(59, 130, 246, 0.4); border-radius: var(--radius-md); padding: 1.25rem;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.9rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(59, 130, 246, 0.2);">
-                                        <span style="font-size: 0.85rem; font-weight: 700; color: #60a5fa; text-transform: uppercase;">Novo Cenário Simulado</span>
-                                        <span id="detCarrierNovo" style="font-weight: 700; color: #60a5fa; font-size: 0.95rem;">-</span>
+                                <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(59, 130, 246, 0.4); border-radius: var(--radius-md); padding: 1.1rem;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; padding-bottom: 0.45rem; border-bottom: 1px solid rgba(59, 130, 246, 0.2);">
+                                        <span style="font-size: 0.78rem; font-weight: 700; color: #60a5fa; text-transform: uppercase; letter-spacing: 0.04em;">Novo Cenário Simulado</span>
+                                        <span id="detCarrierNovo" style="font-weight: 700; color: #60a5fa; font-size: 0.88rem;">-</span>
                                     </div>
-                                    <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem;">
-                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Novo Frete Base:</span> <strong id="detBaseNovo" style="color: var(--text-primary);">R$ 0,00</strong></div>
+                                    <div style="display: flex; flex-direction: column; gap: 0.45rem; font-size: 0.82rem;">
+                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Novo Frete Base:</span> <strong id="detBaseNovo" style="color: var(--text-primary); font-size: 0.82rem;">R$ 0,00</strong></div>
                                         <div style="display: flex; justify-content: space-between; background: rgba(59, 130, 246, 0.12); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(59, 130, 246, 0.25);">
-                                            <span style="color: #93c5fd; font-weight: 700;">% Frete da Tabela:</span>
-                                            <strong id="detPercTabNovo" style="color: #60a5fa; font-size: 0.95rem;">0,00%</strong>
+                                            <span style="color: #93c5fd; font-weight: 700; font-size: 0.78rem;">% Frete da Tabela:</span>
+                                            <strong id="detPercTabNovo" style="color: #60a5fa; font-size: 0.85rem;">0,00%</strong>
                                         </div>
-                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">% Efetivo s/ NF:</span> <strong id="detPercEfNovo" style="color: #60a5fa;">0,00%</strong></div>
-                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Novo Peso Excedente:</span> <strong id="detExcNovo" style="color: var(--text-primary);">R$ 0,00</strong></div>
-                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Novas Taxas / GRIS:</span> <strong id="detTaxasNovo" style="color: var(--text-primary);">R$ 0,00</strong></div>
+                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">% Efetivo s/ NF:</span> <strong id="detPercEfNovo" style="color: #60a5fa; font-size: 0.80rem;">0,00%</strong></div>
+                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Novo Peso Excedente:</span> <strong id="detExcNovo" style="color: var(--text-primary); font-size: 0.82rem;">R$ 0,00</strong></div>
+                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Novas Taxas / GRIS:</span> <strong id="detTaxasNovo" style="color: var(--text-primary); font-size: 0.82rem;">R$ 0,00</strong></div>
                                         <div style="display: flex; justify-content: space-between; background: rgba(245, 158, 11, 0.1); padding: 2px 6px; border-radius: 4px;">
-                                            <span style="color: #fde047; font-weight: 600;">🟨 Redespacho Novo:</span>
-                                            <span id="detRedespNovo" style="color: #fde047; font-weight: 700;">R$ 0,00</span>
+                                            <span style="color: #fde047; font-weight: 600; font-size: 0.78rem;">🟨 Redespacho Novo:</span>
+                                            <span id="detRedespNovo" style="color: #fde047; font-weight: 700; font-size: 0.82rem;">R$ 0,00</span>
                                         </div>
-                                        <div style="display: flex; justify-content: space-between; padding-top: 0.6rem; border-top: 1px solid rgba(59, 130, 246, 0.2); font-size: 0.95rem;">
+                                        <div style="display: flex; justify-content: space-between; padding-top: 0.5rem; border-top: 1px solid rgba(59, 130, 246, 0.2); font-size: 0.88rem;">
                                             <span style="font-weight: 700; color: var(--text-primary);">Novo Custo Total:</span>
-                                            <strong id="detTotalNovo" style="color: #60a5fa; font-size: 1.05rem;">R$ 0,00</strong>
+                                            <strong id="detTotalNovo" style="color: #60a5fa; font-size: 0.95rem;">R$ 0,00</strong>
                                         </div>
-                                        <div style="display: flex; justify-content: space-between; margin-top: 0.35rem; font-size: 0.8rem; color: var(--text-secondary);">
+                                        <div style="display: flex; justify-content: space-between; margin-top: 0.25rem; font-size: 0.78rem; color: var(--text-secondary);">
                                             <span>Novo Prazo Médio:</span> <span id="detPrazoNovo" style="font-weight: 600; color: #60a5fa;">-</span>
                                         </div>
                                     </div>
@@ -2419,21 +2419,21 @@
                                 <!-- Card 3: Parecer e Decisão -->
                                 <div id="detResultBox" style="
                                     background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3);
-                                    border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;
+                                    border-radius: var(--radius-md); padding: 1.1rem; display: flex; flex-direction: column; justify-content: space-between;
                                 ">
                                     <div>
-                                        <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                                        <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); margin-bottom: 0.4rem;">
                                             Resultado da Troca
                                         </div>
-                                        <div id="detResultValue" style="font-size: 1.45rem; font-weight: 800; color: #10b981; margin-bottom: 0.3rem;">
+                                        <div id="detResultValue" style="font-size: 1.35rem; font-weight: 700; color: #10b981; margin-bottom: 0.25rem;">
                                             - R$ 0,00
                                         </div>
-                                        <div id="detResultPerc" style="font-size: 0.85rem; font-weight: 600; color: #6ee7b7; margin-bottom: 0.75rem;">
+                                        <div id="detResultPerc" style="font-size: 0.80rem; font-weight: 600; color: #6ee7b7; margin-bottom: 0.6rem;">
                                             Redução de 0,00%
                                         </div>
                                     </div>
                                     <div id="detResultAlert" style="
-                                        font-size: 0.82rem; line-height: 1.45; padding: 0.75rem 0.85rem;
+                                        font-size: 0.80rem; line-height: 1.4; padding: 0.65rem 0.75rem;
                                         background: rgba(0, 0, 0, 0.25); border-radius: 6px; color: var(--text-primary);
                                     ">
                                         Carregando análise...
@@ -2443,18 +2443,18 @@
 
                             <!-- Tabela Despacho a Despacho (Drill-Down / Auditoria de cada NF) -->
                             <div class="card" style="padding: 0; background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border-color); overflow: hidden;">
-                                <div style="padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--border-color); background: rgba(30, 41, 59, 0.5); display: flex; justify-content: space-between; align-items: center;">
-                                    <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">
+                                <div style="padding: 0.75rem 1.1rem; border-bottom: 1px solid var(--border-color); background: rgba(30, 41, 59, 0.5); display: flex; justify-content: space-between; align-items: center;">
+                                    <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-primary);">
                                         Auditoria Despacho a Despacho (NFs Reais no Período)
                                     </div>
-                                    <span style="font-size: 0.78rem; color: var(--text-secondary);">
+                                    <span style="font-size: 0.75rem; color: var(--text-secondary);">
                                         Abra a perspectiva e audite cada envio unitário
                                     </span>
                                 </div>
                                 <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
-                                    <table class="data-table" style="width: 100%; margin: 0;">
+                                    <table class="switch-table">
                                         <thead>
-                                            <tr style="background: rgba(15, 23, 42, 0.9); position: sticky; top: 0; z-index: 2;">
+                                            <tr style="position: sticky; top: 0; z-index: 2;">
                                                 <th>Data</th>
                                                 <th>NF</th>
                                                 <th>Peso</th>
@@ -2462,7 +2462,7 @@
                                                 <th>Valor NF</th>
                                                 <th>Pago Anterior</th>
                                                 <th>Novo Simulado</th>
-                                                <th style="text-align: center;">% Tabela (Nova)</th>
+                                                <th style="text-align: center;">% Tabela</th>
                                                 <th>Economia / Gasto</th>
                                                 <th>Composição da Nova</th>
                                             </tr>
