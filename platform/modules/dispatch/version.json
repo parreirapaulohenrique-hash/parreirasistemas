@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.22.1",
-  "build": "20261008-v3.22.1",
+  "version": "3.22.2",
+  "build": "20261008-v3.22.2",
   "lastUpdate": "2026-10-08",
-  "releaseDate": "2026-10-08T09:45:00-03:00",
-  "change": "v3.22.1: Sincronização em tempo real do Painel de Despacho com dispatches_db, garantia de exibição de transportadoras com cargas pendentes e re-renderização reativa do dashboard após carregamento do Firestore."
+  "releaseDate": "2026-10-08T10:10:00-03:00",
+  "change": "v3.22.2: Correção de fechamento de forEach em dispatch-dashboard.js e fechamento de comentário em erp-registry.js."
 }

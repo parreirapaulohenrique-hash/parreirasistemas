@@ -44,10 +44,8 @@ const ErpRegistry = {
     // ─────────────────────────────────────────────
 
     /**
-     * Retorna o adaptador de ERP ativo para o tenant informado.
-     * Na primeira chamada, lê a config do Firestore.
-     * Nas chamadas seguintes, usa o cache de sessão.
-     *
+     * Resolve o tenantId ativo a partir de múltiplos fallbacks seguros.
+     */
     _resolveTenantId(tenantId) {
         if (tenantId && typeof tenantId === 'string' && tenantId.trim()) return tenantId.trim();
         const fromUI = (typeof window !== 'undefined' && window.ErpUI?._resolveTenant) ? window.ErpUI._resolveTenant() : '';
