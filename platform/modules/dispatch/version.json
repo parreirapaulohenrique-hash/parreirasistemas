@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.22.7",
-  "build": "20261008-v3.22.7",
+  "version": "3.22.8",
+  "build": "20261008-v3.22.8",
   "lastUpdate": "2026-10-08",
-  "releaseDate": "2026-10-08T12:35:00-03:00",
-  "change": "v3.22.7: Padronização dos campos de assinatura dos romaneios de Moto Entrega e Carro Entrega idênticos ao de transportadora (margin-top 2cm, layout e campos de Responsável Expedição e Motorista/Conferente com suporte a condutor atribuído e botão de impressão por entregador)."
+  "releaseDate": "2026-10-08T12:57:00-03:00",
+  "change": "v3.22.8: Adição de Valor Total de NFs e % Média Total nas linhas de totais mensais e diários na tela de Montagem de Carga."
 }
