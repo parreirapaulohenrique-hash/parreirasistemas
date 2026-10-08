@@ -1,18 +1,19 @@
 /**
  * ==============================================================================
- * CARRIER-SWITCH.JS - Módulo de Análise de Troca de Transportadora (v3.23.0)
+ * CARRIER-SWITCH.JS - Módulo de Análise de Troca de Transportadora (v3.24.2)
  * ==============================================================================
- * Permite a gestão logística comparar o Custo Total Real da operação (TCO),
+ * Permite à gestão logística comparar o Custo Total Real da operação (TCO),
  * considerando:
  *   - Frete Peso Base (mínimo e percentual sobre NF)
  *   - Custo por Peso Excedente
  *   - Taxas Extras (GRIS, Ad Valorem, TDA, Taxa por Volume, Pedágio)
- *   - Redespacho (Transportadora parceira + Custo adicional)
+ *   - Redespacho Obrigatório discriminado separadamente (Anterior e Sugerida)
+ *   - Coluna de Transportadora Sugerida SELECIONÁVEL em tempo real por linha
  *   - Prazo de Entrega (Lead Time / Variação de dias)
  * 
  * Funcionalidades:
  *   - Visão Macro: KPIs de Economia Total, Gastos Adicionais, Saldo Líquido e Prazo.
- *   - Visão Meso: Tabela compactada por Cliente, Cidade e Rota.
+ *   - Visão Meso: Tabela compactada por Cliente, Cidade e Rota com Select de Transportadora.
  *   - Visão Micro (Drill-Down): Auditoria despacho a despacho / NF a NF.
  *   - Exportação em Excel (Resumo e Completo).
  * ==============================================================================
@@ -49,7 +50,7 @@ window.CarrierSwitchModule = (function () {
         if (!str) return '';
         return String(str)
             .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[̀-ͯ]/g, '')
             .toUpperCase()
             .trim()
             .replace(/\s+/g, ' ');
@@ -95,6 +96,53 @@ window.CarrierSwitchModule = (function () {
             return nums.reduce((a, b) => a + b, 0) / nums.length;
         }
         return 0;
+    }
+
+    // Retorna todas as transportadoras que atendem a cidade (direto ou com redespacho)
+    function getCarriersForCity(city) {
+        if (!city || city === '-') return [];
+        const targetCityNorm = normStr(city);
+        const map = new Map();
+
+        (state.freightRules || []).forEach(r => {
+            const cName = String(r.transportadora || '').trim().toUpperCase();
+            if (!cName || cName === 'FOB') return;
+
+            const rCity = normStr(r.cidade);
+            const rRedespCity = normStr(r.cidadeRedespacho || '');
+            const hasRedesp = Boolean(r.redespacho && r.redespacho !== '-' && String(r.redespacho).trim() !== '');
+
+            let matches = false;
+            if (rCity && rCity === targetCityNorm) {
+                matches = true;
+            } else if (rRedespCity && rRedespCity === targetCityNorm) {
+                matches = true;
+            } else if (targetCityNorm && rCity && (targetCityNorm.includes(rCity) || rCity.includes(targetCityNorm))) {
+                matches = true;
+            }
+
+            if (matches) {
+                const redespName = hasRedesp ? String(r.redespacho).trim().toUpperCase() : null;
+                if (!map.has(cName)) {
+                    map.set(cName, {
+                        name: cName,
+                        hasRedespacho: hasRedesp,
+                        redespCarrier: redespName
+                    });
+                } else if (hasRedesp && !map.get(cName).hasRedespacho) {
+                    map.get(cName).hasRedespacho = true;
+                    map.get(cName).redespCarrier = redespName;
+                }
+            }
+        });
+
+        let list = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+        if (list.length === 0) {
+            // Fallback se não houver regra específica cadastrada no momento
+            const allCarriers = [...new Set(state.freightRules.map(r => String(r.transportadora || '').trim().toUpperCase()))].filter(c => c && c !== 'FOB').sort();
+            list = allCarriers.map(c => ({ name: c, hasRedespacho: false, redespCarrier: null }));
+        }
+        return list;
     }
 
     // Inicialização do módulo
@@ -157,7 +205,7 @@ window.CarrierSwitchModule = (function () {
         }
     }
 
-    // Popula seletores de Cliente, Município, Transportadora Atual e Nova Transportadora
+    // Popula seletores de Cliente, Município, Transportadora Atual e Sugerida
     function populateFilterSelectors() {
         const clientSel = document.getElementById('switchFilterCliente');
         const citySel = document.getElementById('switchFilterCidade');
@@ -193,8 +241,7 @@ window.CarrierSwitchModule = (function () {
             if (currentVal) currentCarrierSel.value = currentVal;
         }
 
-        // Novas Transportadoras (Candidatas à troca)
-        // Coleta de carrier_list e freight_tables
+        // Transportadoras Sugeridas (Candidatas à simulação global)
         const carriersFromList = (state.carrierList || []).map(c => String(c).trim().toUpperCase());
         const carriersFromRules = (state.freightRules || []).map(r => String(r.transportadora || '').trim().toUpperCase());
         const allCandidateCarriers = [...new Set([...carriersFromList, ...carriersFromRules])].filter(c => c && c !== 'FOB').sort();
@@ -346,6 +393,71 @@ window.CarrierSwitchModule = (function () {
     }
 
     /**
+     * Simulação Completa de um Despacho para uma Transportadora Sugerida:
+     * Separa Frete Principal e Redespacho Obrigatório da Rota com total transparência.
+     */
+    function simulateDispatchCost(d, candidateCarrierName) {
+        const actualCost = parseNum(d.total || ((d.mainTotal || 0) + (d.redespTotal || 0)), 0);
+        const actualCarrier = String(d.carrier || '').trim().toUpperCase();
+
+        const redespachoAnterior = parseNum(d.redespTotal, 0);
+        const redespCarrierAnterior = d.redespCarrier || (d.redespacho && d.redespacho !== '-' ? d.redespacho : null);
+        const mainAnterior = d.mainTotal != null ? parseNum(d.mainTotal, 0) : Math.max(0, actualCost - redespachoAnterior);
+
+        const sim = calculateCostForCarrier(d, candidateCarrierName);
+        if (!sim) return null;
+
+        // Frete da transportadora principal sugerida
+        const mainNovo = sim.total - (sim.redispatch || 0);
+
+        // Tratamento do Redespacho na Sugerida:
+        // Se a transportadora sugerida possui redespacho calculado na regra, usa ele.
+        // Se o despacho original já teve redespacho obrigatório na rota (ex: Breves/embarcação marítima),
+        // preserva o redespacho da rota, pois apenas a transportadora principal é alterada!
+        let redespachoNovo = 0;
+        let redespCarrierNovo = null;
+
+        if (sim.redispatch > 0) {
+            redespachoNovo = sim.redispatch;
+            redespCarrierNovo = sim.redespCarrier || redespCarrierAnterior || 'EMBARQ';
+        } else if (redespachoAnterior > 0) {
+            redespachoNovo = redespachoAnterior;
+            redespCarrierNovo = redespCarrierAnterior || 'EMBARQ';
+        }
+
+        const custoNovo = mainNovo + redespachoNovo;
+        const diferenca = actualCost - custoNovo; // Positivo = Economia, Negativo = Gasto adicional
+        const diferencaPerc = actualCost > 0 ? ((actualCost - custoNovo) / actualCost) * 100 : 0;
+
+        const leadTimeDaysAnterior = parseLeadTimeDays(d.leadTime || '-');
+        const diffDiasPrazo = sim.leadTimeDays - leadTimeDaysAnterior;
+
+        const valorNF = parseNum(d.nfValue || d.valorNF || d.value, 0);
+        const percentualTabelaNovo = sim.ruleUsed ? parseNum(sim.ruleUsed.percentual, 0) : 0;
+        const percentualEfetivoNovo = valorNF > 0 ? (custoNovo / valorNF) * 100 : 0;
+
+        return {
+            carrierNovo: candidateCarrierName,
+            custoNovo: custoNovo,
+            mainNovo: mainNovo,
+            redespachoNovo: redespachoNovo,
+            redespCarrierNovo: redespCarrierNovo,
+            baseNovo: sim.base,
+            excessoNovo: sim.excess,
+            taxasNovo: sim.toll + sim.gris + sim.fixed,
+            leadTimeNovo: sim.leadTime,
+            leadTimeDaysNovo: sim.leadTimeDays,
+            percentualTabelaNovo: percentualTabelaNovo,
+            percentualEfetivoNovo: percentualEfetivoNovo,
+            diferenca: diferenca,
+            diferencaPerc: diferencaPerc,
+            diffDiasPrazo: diffDiasPrazo,
+            hasRedespachoNovo: redespachoNovo > 0,
+            simRaw: sim
+        };
+    }
+
+    /**
      * Executa a análise comparativa de troca de transportadora
      */
     function runAnalysis() {
@@ -393,7 +505,6 @@ window.CarrierSwitchModule = (function () {
         console.log(`📊 [CarrierSwitch] ${filteredDispatches.length} despachos passaram pelos filtros.`);
 
         // 2. Simula o custo de cada despacho na transportadora candidata
-        // Lista de todas as transportadoras disponíveis para cálculo automático
         const allCandidateCarriers = [...new Set(state.freightRules.map(r => String(r.transportadora || '').trim().toUpperCase()))].filter(c => c && c !== 'FOB');
 
         const simulatedDispatches = [];
@@ -402,45 +513,38 @@ window.CarrierSwitchModule = (function () {
             const actualCost = parseNum(d.total || ((d.mainTotal || 0) + (d.redespTotal || 0)), 0);
             const actualCarrier = String(d.carrier || '').trim().toUpperCase();
 
-            // Descompacta custos anteriores do despacho
-            const baseAnterior = parseNum(d.baseCalculada, 0) || (actualCost - parseNum(d.excessoCalculado, 0) - parseNum(d.pedagio, 0) - parseNum(d.gris, 0) - parseNum(d.redespTotal, 0));
-            const excessoAnterior = parseNum(d.excessoCalculado, 0);
-            const taxasAnteriores = parseNum(d.pedagio, 0) + parseNum(d.gris, 0) + parseNum(d.taxaFixa, 0);
+            // Decomposição dos custos do despacho anterior
             const redespachoAnterior = parseNum(d.redespTotal, 0);
             const redespCarrierAnterior = d.redespCarrier || (d.redespacho && d.redespacho !== '-' ? d.redespacho : null);
+            const mainAnterior = d.mainTotal != null ? parseNum(d.mainTotal, 0) : Math.max(0, actualCost - redespachoAnterior);
+
+            const baseAnterior = parseNum(d.baseCalculada, 0) || (mainAnterior - parseNum(d.excessoCalculado, 0) - parseNum(d.pedagio, 0) - parseNum(d.gris, 0));
+            const excessoAnterior = parseNum(d.excessoCalculado, 0);
+            const taxasAnteriores = parseNum(d.pedagio, 0) + parseNum(d.gris, 0) + parseNum(d.taxaFixa, 0);
             const leadTimeAnterior = d.leadTime || '-';
             const leadTimeDaysAnterior = parseLeadTimeDays(leadTimeAnterior);
 
-            let bestSim = null;
+            let bestSimData = null;
 
             if (filterCarrierNovo !== '__AUTO__') {
-                // Usuário escolheu uma transportadora específica para testar a migração
-                bestSim = calculateCostForCarrier(d, filterCarrierNovo);
+                bestSimData = simulateDispatchCost(d, filterCarrierNovo);
             } else {
-                // Modo automático: testa todas as concorrentes e escolhe a mais barata
+                // Modo automático: testa as transportadoras que cobrem a rota e escolhe o menor custo total
                 let lowestCost = Infinity;
                 allCandidateCarriers.forEach(cand => {
-                    // Não compara a transportadora com ela mesma
                     if (cand === actualCarrier) return;
-                    const sim = calculateCostForCarrier(d, cand);
-                    if (sim && sim.total > 0 && sim.total < lowestCost) {
-                        lowestCost = sim.total;
-                        bestSim = sim;
+                    const sim = simulateDispatchCost(d, cand);
+                    if (sim && sim.custoNovo > 0 && sim.custoNovo < lowestCost) {
+                        lowestCost = sim.custoNovo;
+                        bestSimData = sim;
                     }
                 });
             }
 
-            // Se não encontrou regra na nova transportadora, pula ou marca sem cobertura
-            if (!bestSim) return;
+            // Se não encontrou cobertura, pula o despacho
+            if (!bestSimData) return;
 
-            const diferenca = actualCost - bestSim.total; // Positivo = Economia, Negativo = Gasto adicional
-            const diferencaPerc = actualCost > 0 ? ((actualCost - bestSim.total) / actualCost) * 100 : 0;
-            const diffDiasPrazo = bestSim.leadTimeDays - leadTimeDaysAnterior;
-
-            // Percentual de frete da tabela da nova transportadora
-            const percentualTabelaNovo = bestSim.ruleUsed ? parseNum(bestSim.ruleUsed.percentual, 0) : 0;
-
-            // Percentual da transportadora anterior (busca na tabela de frete se não estiver direto no despacho)
+            // Percentual da transportadora anterior
             const antRule = state.freightRules.find(r =>
                 normStr(r.transportadora) === normStr(actualCarrier) &&
                 (normStr(r.cidade) === normStr(d.city) || (d.city && (normStr(d.city).includes(normStr(r.cidade)) || normStr(r.cidade).includes(normStr(d.city)))))
@@ -449,7 +553,6 @@ window.CarrierSwitchModule = (function () {
 
             const valorNF = parseNum(d.nfValue || d.valorNF || d.value, 0);
             const percentualEfetivoAnterior = valorNF > 0 ? (actualCost / valorNF) * 100 : 0;
-            const percentualEfetivoNovo = valorNF > 0 ? (bestSim.total / valorNF) * 100 : 0;
 
             simulatedDispatches.push({
                 raw: d,
@@ -465,6 +568,7 @@ window.CarrierSwitchModule = (function () {
                 // Anterior
                 carrierAnterior: actualCarrier,
                 custoAnterior: actualCost,
+                mainAnterior: mainAnterior,
                 baseAnterior: Math.max(0, baseAnterior),
                 excessoAnterior: excessoAnterior,
                 taxasAnteriores: Math.max(0, taxasAnteriores),
@@ -475,32 +579,33 @@ window.CarrierSwitchModule = (function () {
                 percentualTabelaAnterior: percentualTabelaAnterior,
                 percentualEfetivoAnterior: percentualEfetivoAnterior,
 
-                // Novo Simulado
-                carrierNovo: bestSim.carrier,
-                custoNovo: bestSim.total,
-                baseNovo: bestSim.base,
-                excessoNovo: bestSim.excess,
-                taxasNovo: bestSim.toll + bestSim.gris + bestSim.fixed,
-                redespachoNovo: bestSim.redispatch,
-                redespCarrierNovo: bestSim.redespCarrier,
-                leadTimeNovo: bestSim.leadTime,
-                leadTimeDaysNovo: bestSim.leadTimeDays,
-                percentualTabelaNovo: percentualTabelaNovo,
-                percentualEfetivoNovo: percentualEfetivoNovo,
+                // Sugerido
+                carrierNovo: bestSimData.carrierNovo,
+                custoNovo: bestSimData.custoNovo,
+                mainNovo: bestSimData.mainNovo,
+                baseNovo: bestSimData.baseNovo,
+                excessoNovo: bestSimData.excessoNovo,
+                taxasNovo: bestSimData.taxasNovo,
+                redespachoNovo: bestSimData.redespachoNovo,
+                redespCarrierNovo: bestSimData.redespCarrierNovo,
+                leadTimeNovo: bestSimData.leadTimeNovo,
+                leadTimeDaysNovo: bestSimData.leadTimeDaysNovo,
+                percentualTabelaNovo: bestSimData.percentualTabelaNovo,
+                percentualEfetivoNovo: bestSimData.percentualEfetivoNovo,
 
                 // Diferenciais
-                diferenca: diferenca,
-                diferencaPerc: diferencaPerc,
-                diffDiasPrazo: diffDiasPrazo,
-                hasRedespachoNovo: bestSim.redispatch > 0
+                diferenca: bestSimData.diferenca,
+                diferencaPerc: bestSimData.diferencaPerc,
+                diffDiasPrazo: bestSimData.diffDiasPrazo,
+                hasRedespachoNovo: bestSimData.hasRedespachoNovo
             });
         });
 
-        // 3. Agrupa por Cliente + Cidade + Transportadora Anterior + Nova Transportadora
+        // 3. Agrupa por Cliente + Cidade + Transportadora Anterior
         const groupsMap = new Map();
 
         simulatedDispatches.forEach(item => {
-            const key = `${item.cliente}___${item.cidade}___${item.carrierAnterior}___${item.carrierNovo}`;
+            const key = `${item.cliente}___${item.cidade}___${item.carrierAnterior}`;
             if (!groupsMap.has(key)) {
                 groupsMap.set(key, {
                     key: key,
@@ -509,7 +614,9 @@ window.CarrierSwitchModule = (function () {
                     carrierAnterior: item.carrierAnterior,
                     carrierNovo: item.carrierNovo,
                     custoAnteriorTotal: 0,
+                    mainAnteriorTotal: 0,
                     custoNovoTotal: 0,
+                    mainNovoTotal: 0,
                     baseAnteriorTotal: 0,
                     baseNovoTotal: 0,
                     excessoAnteriorTotal: 0,
@@ -534,7 +641,9 @@ window.CarrierSwitchModule = (function () {
 
             const g = groupsMap.get(key);
             g.custoAnteriorTotal += item.custoAnterior;
+            g.mainAnteriorTotal += item.mainAnterior;
             g.custoNovoTotal += item.custoNovo;
+            g.mainNovoTotal += item.mainNovo;
             g.baseAnteriorTotal += item.baseAnterior;
             g.baseNovoTotal += item.baseNovo;
             g.excessoAnteriorTotal += item.excessoAnterior;
@@ -582,6 +691,14 @@ window.CarrierSwitchModule = (function () {
         state.groupedResults.sort((a, b) => Math.abs(b.diferencaTotal) - Math.abs(a.diferencaTotal));
 
         // 4. Calcula KPIs do Topo
+        recalculateKPIs();
+
+        // 5. Aplica filtro de tag e renderiza na tela
+        applyTagFilter(state.currentFilterTag || 'all');
+    }
+
+    // Recalcula KPIs consolidados do topo
+    function recalculateKPIs() {
         let totalEconomia = 0;
         let totalGasto = 0;
         let rotasEconomia = 0;
@@ -611,9 +728,91 @@ window.CarrierSwitchModule = (function () {
             rotasComRedespacho: rotasComRedespacho,
             prazoDiffMedio: state.groupedResults.length > 0 ? (somaDiasPrazo / state.groupedResults.length) : 0
         };
+    }
 
-        // 5. Aplica filtro de tag e renderiza na tela
+    /**
+     * Altera a Transportadora Sugerida diretamente na linha da tabela
+     * Recalcula em tempo real os despachos, grupos e KPIs.
+     */
+    function changeRowCarrier(groupKey, newCarrier) {
+        console.log('🔄 [CarrierSwitch] Alterando transportadora da linha:', { groupKey, newCarrier });
+        const group = state.groupedResults.find(g => g.key === groupKey);
+        if (!group) {
+            console.warn('Grupo não encontrado:', groupKey);
+            return;
+        }
+
+        group.carrierNovo = newCarrier;
+
+        // Zera acumuladores da sugerida para este grupo
+        group.custoNovoTotal = 0;
+        group.mainNovoTotal = 0;
+        group.redespachoNovoTotal = 0;
+        group.baseNovoTotal = 0;
+        group.excessoNovoTotal = 0;
+        group.taxasNovoTotal = 0;
+        group.diffDiasPrazoTotal = 0;
+        group.percentualTabelaNovoTotal = 0;
+
+        let lastRedespCarrier = null;
+        let lastLeadTimeNovo = '-';
+
+        group.dispatches.forEach(item => {
+            const sim = simulateDispatchCost(item.raw, newCarrier);
+            if (sim) {
+                item.carrierNovo = newCarrier;
+                item.custoNovo = sim.custoNovo;
+                item.mainNovo = sim.mainNovo;
+                item.redespachoNovo = sim.redespachoNovo;
+                item.redespCarrierNovo = sim.redespCarrierNovo;
+                item.baseNovo = sim.baseNovo;
+                item.excessoNovo = sim.excessoNovo;
+                item.taxasNovo = sim.taxasNovo;
+                item.leadTimeNovo = sim.leadTimeNovo;
+                item.leadTimeDaysNovo = sim.leadTimeDaysNovo;
+                item.percentualTabelaNovo = sim.percentualTabelaNovo;
+                item.percentualEfetivoNovo = sim.percentualEfetivoNovo;
+                item.diferenca = sim.diferenca;
+                item.diferencaPerc = sim.diferencaPerc;
+                item.diffDiasPrazo = sim.diffDiasPrazo;
+                item.hasRedespachoNovo = sim.hasRedespachoNovo;
+
+                lastRedespCarrier = sim.redespCarrierNovo || lastRedespCarrier;
+                lastLeadTimeNovo = sim.leadTimeNovo;
+            }
+
+            group.custoNovoTotal += item.custoNovo;
+            group.mainNovoTotal += item.mainNovo;
+            group.redespachoNovoTotal += item.redespachoNovo;
+            group.baseNovoTotal += item.baseNovo;
+            group.excessoNovoTotal += item.excessoNovo;
+            group.taxasNovoTotal += item.taxasNovo;
+            group.diffDiasPrazoTotal += item.diffDiasPrazo;
+            group.percentualTabelaNovoTotal += item.percentualTabelaNovo;
+        });
+
+        const count = group.dispatches.length;
+        group.redespCarrierNovo = lastRedespCarrier;
+        group.leadTimeNovo = lastLeadTimeNovo;
+        group.diferencaTotal = group.custoAnteriorTotal - group.custoNovoTotal;
+        group.diferencaPerc = group.custoAnteriorTotal > 0 ? (group.diferencaTotal / group.custoAnteriorTotal) * 100 : 0;
+        group.diffDiasPrazoMedio = count > 0 ? (group.diffDiasPrazoTotal / count) : 0;
+        group.percentualTabelaNovo = count > 0 ? (group.percentualTabelaNovoTotal / count) : 0;
+        group.percentualEfetivoNovo = group.valorNFTotal > 0 ? (group.custoNovoTotal / group.valorNFTotal) * 100 : 0;
+        group.isEconomia = group.diferencaTotal >= 0;
+        group.hasRedespachoNovo = group.redespachoNovoTotal > 0;
+
+        // Recalcula KPIs consolidados
+        recalculateKPIs();
+
+        // Atualiza a visualização
         applyTagFilter(state.currentFilterTag || 'all');
+
+        // Se o modal estiver aberto para esse grupo, atualiza o modal também
+        if (state.selectedGroup && state.selectedGroup.key === group.key) {
+            const idx = state.filteredGroups.findIndex(g => g.key === group.key);
+            if (idx >= 0) openDetail(idx);
+        }
     }
 
     // Filtra os grupos por clique nos KPIs do topo (Economia, Gasto, Redespacho ou Todos)
@@ -719,8 +918,22 @@ window.CarrierSwitchModule = (function () {
             const isEcon = g.isEconomia;
             const diffClass = isEcon ? 'color-success' : 'color-danger';
             const diffColor = isEcon ? '#10b981' : '#ef4444';
-            const diffPrefix = isEcon ? 'Economia: ' : 'Gasto: ';
             const diffSignal = isEcon ? '-' : '+';
+
+            // Transportadoras que atendem a cidade (inclusive com redespacho)
+            const cityCarriers = getCarriersForCity(g.cidade);
+            // Garante que a transportadora atual e sugerida estejam na lista
+            const candidateNames = cityCarriers.map(c => c.name);
+            if (!candidateNames.includes(g.carrierNovo)) {
+                cityCarriers.push({ name: g.carrierNovo, hasRedespacho: g.hasRedespachoNovo, redespCarrier: g.redespCarrierNovo });
+            }
+
+            // Opções do Select
+            const optionsHtml = cityCarriers.map(c => {
+                const isSel = (c.name === g.carrierNovo);
+                const tag = c.hasRedespacho ? ' (c/ Redesp.)' : '';
+                return `<option value="${c.name}" ${isSel ? 'selected' : ''}>${c.name}${tag}</option>`;
+            }).join('');
 
             // Badge de Redespacho
             let redespBadge = '';
@@ -749,6 +962,9 @@ window.CarrierSwitchModule = (function () {
                 prazoBadge = `<span style="color: #10b981; font-size: 0.75rem; font-weight: 600;">${dPrazo.toFixed(0)}d (mais rápido)</span>`;
             }
 
+            // Chave codificada para segurança no onclick / onchange
+            const safeKey = encodeURIComponent(g.key);
+
             html += `
                 <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
                     <td>
@@ -759,7 +975,26 @@ window.CarrierSwitchModule = (function () {
                     </td>
                     <td style="color: #cbd5e1; font-size: 0.82rem;">${g.cidade}</td>
                     <td style="color: #94a3b8; font-size: 0.82rem;">${g.carrierAnterior}</td>
-                    <td style="color: #60a5fa; font-weight: 600; font-size: 0.82rem;">${g.carrierNovo}</td>
+                    <td>
+                        <select class="form-input"
+                            onchange="window.CarrierSwitchModule.changeRowCarrier(decodeURIComponent('${safeKey}'), this.value)"
+                            style="
+                                height: 32px;
+                                padding: 2px 8px;
+                                font-size: 0.78rem;
+                                font-weight: 700;
+                                color: #60a5fa;
+                                background: rgba(15, 23, 42, 0.9);
+                                border: 1px solid rgba(59, 130, 246, 0.45);
+                                border-radius: 6px;
+                                cursor: pointer;
+                                width: 100%;
+                                max-width: 175px;
+                            "
+                            title="Selecione qualquer transportadora que atende ${g.cidade}">
+                            ${optionsHtml}
+                        </select>
+                    </td>
                     <td style="text-align: center;">
                         <div style="display: inline-flex; align-items: center; justify-content: center; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 4px; padding: 2px 7px; font-weight: 700; color: #60a5fa; font-size: 0.78rem;">
                             ${g.percentualTabelaNovo > 0 ? g.percentualTabelaNovo.toFixed(2) + '%' : '-'}
@@ -770,14 +1005,28 @@ window.CarrierSwitchModule = (function () {
                     </td>
                     <td>
                         <div style="font-weight: 600; color: #e2e8f0; font-size: 0.82rem;">${formatBRL(g.custoAnteriorTotal)}</div>
-                        <div style="font-size: 0.68rem; color: var(--text-secondary);">${g.percentualEfetivoAnterior > 0 ? g.percentualEfetivoAnterior.toFixed(2) + '% s/ NF' : ''}</div>
+                        ${g.redespachoAnteriorTotal > 0 ? `
+                            <div style="font-size: 0.70rem; color: #fde047; font-weight: 600; margin-top: 1px;" title="Principal: ${formatBRL(g.mainAnteriorTotal)} | Redespacho (${g.redespCarrierAnterior || 'EMBARQ'}): ${formatBRL(g.redespachoAnteriorTotal)}">
+                                + ${formatBRL(g.redespachoAnteriorTotal)} / ${g.redespCarrierAnterior || 'EMBARQ'}
+                            </div>
+                        ` : ''}
+                        <div style="font-size: 0.68rem; color: var(--text-secondary); margin-top: 1px;">
+                            ${g.percentualEfetivoAnterior > 0 ? g.percentualEfetivoAnterior.toFixed(2) + '% s/ NF' : ''}
+                        </div>
                     </td>
                     <td>
                         <div style="font-weight: 700; color: #f8fafc; font-size: 0.82rem;">
                             ${formatBRL(g.custoNovoTotal)}
                             ${redespBadge}
                         </div>
-                        <div style="font-size: 0.68rem; color: #94a3b8;">${g.percentualEfetivoNovo > 0 ? g.percentualEfetivoNovo.toFixed(2) + '% s/ NF' : ''}</div>
+                        ${g.redespachoNovoTotal > 0 ? `
+                            <div style="font-size: 0.70rem; color: #fde047; font-weight: 600; margin-top: 1px;" title="Principal (${g.carrierNovo}): ${formatBRL(g.mainNovoTotal)} | Redespacho (${g.redespCarrierNovo || 'EMBARQ'}): ${formatBRL(g.redespachoNovoTotal)}">
+                                + ${formatBRL(g.redespachoNovoTotal)} / ${g.redespCarrierNovo || 'EMBARQ'}
+                            </div>
+                        ` : ''}
+                        <div style="font-size: 0.68rem; color: #94a3b8; margin-top: 1px;">
+                            ${g.percentualEfetivoNovo > 0 ? g.percentualEfetivoNovo.toFixed(2) + '% s/ NF' : ''}
+                        </div>
                     </td>
                     <td style="font-weight: 700; color: ${diffColor}; font-size: 0.82rem;">
                         ${diffSignal} ${formatBRL(Math.abs(g.diferencaTotal))}
@@ -818,12 +1067,12 @@ window.CarrierSwitchModule = (function () {
         const subEl = document.getElementById('switchModalSubtitle');
         if (titleEl) titleEl.innerText = `${group.cliente} • ${group.cidade}`;
         if (subEl) {
-            subEl.innerText = `Comparativo entre ${group.carrierAnterior} (Atual) vs ${group.carrierNovo} (Nova) com base em ${group.count} despachos reais.`;
+            subEl.innerText = `Comparativo entre ${group.carrierAnterior} (Atual) vs ${group.carrierNovo} (Sugerida) com base em ${group.count} despachos reais.`;
         }
 
         // Cenário Anterior
         document.getElementById('detCarrierAnt').innerText = group.carrierAnterior;
-        document.getElementById('detBaseAnt').innerText = formatBRL(group.baseAnteriorTotal);
+        document.getElementById('detBaseAnt').innerText = formatBRL(group.mainAnteriorTotal);
         const percTabAntEl = document.getElementById('detPercTabAnt');
         if (percTabAntEl) {
             percTabAntEl.innerText = group.percentualTabelaAnterior > 0 ? `${group.percentualTabelaAnterior.toFixed(2)}%` : '-';
@@ -834,13 +1083,15 @@ window.CarrierSwitchModule = (function () {
         }
         document.getElementById('detExcAnt').innerText = formatBRL(group.excessoAnteriorTotal);
         document.getElementById('detTaxasAnt').innerText = formatBRL(group.taxasAnterioresTotal);
-        document.getElementById('detRedespAnt').innerText = group.redespachoAnteriorTotal > 0 ? formatBRL(group.redespachoAnteriorTotal) : 'R$ 0,00 (Direto)';
+        document.getElementById('detRedespAnt').innerText = group.redespachoAnteriorTotal > 0
+            ? `${formatBRL(group.redespachoAnteriorTotal)} (${group.redespCarrierAnterior || 'EMBARQ'})`
+            : 'R$ 0,00 (Direto)';
         document.getElementById('detTotalAnt').innerText = formatBRL(group.custoAnteriorTotal);
         document.getElementById('detPrazoAnt').innerText = group.leadTimeAnterior;
 
-        // Novo Cenário Simulado
+        // Cenário Sugerido
         document.getElementById('detCarrierNovo').innerText = group.carrierNovo;
-        document.getElementById('detBaseNovo').innerText = formatBRL(group.baseNovoTotal);
+        document.getElementById('detBaseNovo').innerText = formatBRL(group.mainNovoTotal);
         const percTabNovoEl = document.getElementById('detPercTabNovo');
         if (percTabNovoEl) {
             percTabNovoEl.innerText = group.percentualTabelaNovo > 0 ? `${group.percentualTabelaNovo.toFixed(2)}%` : '-';
@@ -878,10 +1129,10 @@ window.CarrierSwitchModule = (function () {
             resPerc.style.color = '#6ee7b7';
 
             if (group.diffDiasPrazoMedio > 1.5) {
-                resAlert.innerHTML = `⚠️ <strong>Atenção ao Prazo:</strong> Embora gere economia de ${formatBRL(Math.abs(group.diferencaTotal))}, a nova transportadora pode adicionar cerca de ${group.diffDiasPrazoMedio.toFixed(0)} dias úteis ao prazo de entrega do cliente.`;
+                resAlert.innerHTML = `⚠️ <strong>Atenção ao Prazo:</strong> Embora gere economia de ${formatBRL(Math.abs(group.diferencaTotal))}, a transportadora sugerida pode adicionar cerca de ${group.diffDiasPrazoMedio.toFixed(0)} dias úteis ao prazo de entrega do cliente.`;
                 resAlert.style.display = 'block';
             } else {
-                resAlert.innerHTML = `✅ <strong>Decisão Segura:</strong> A troca gera economia real sem comprometer o nível de serviço e prazo de entrega do cliente.`;
+                resAlert.innerHTML = `✅ <strong>Decisão Segura:</strong> A troca de transportadora principal gera economia real sem comprometer o nível de serviço do cliente.`;
                 resAlert.style.display = 'block';
             }
         } else {
@@ -893,10 +1144,10 @@ window.CarrierSwitchModule = (function () {
             resPerc.style.color = '#fca5a5';
 
             if (group.hasRedespachoNovo && group.redespachoNovoTotal > group.custoAnteriorTotal * 0.1) {
-                resAlert.innerHTML = `❌ <strong>Cuidado: Falsa Economia!</strong> O frete base parecia atrativo, mas o custo adicional de redespacho (<strong>${formatBRL(group.redespachoNovoTotal)}</strong>) e excedente tornou a nova opção mais cara que a atual.`;
+                resAlert.innerHTML = `❌ <strong>Cuidado: Falsa Economia!</strong> O frete base parecia atrativo, mas o custo adicional de redespacho (<strong>${formatBRL(group.redespachoNovoTotal)}</strong>) e excedente tornou a opção sugerida mais cara que a atual.`;
                 resAlert.style.display = 'block';
             } else {
-                resAlert.innerHTML = `❌ <strong>Não Recomendado:</strong> A nova transportadora encarece o custo da rota para este cliente.`;
+                resAlert.innerHTML = `❌ <strong>Não Recomendado:</strong> A transportadora sugerida encarece o custo da rota para este cliente.`;
                 resAlert.style.display = 'block';
             }
         }
@@ -918,9 +1169,14 @@ window.CarrierSwitchModule = (function () {
             const diffColor = isEcon ? '#10b981' : '#ef4444';
             const diffPrefix = isEcon ? '-' : '+';
 
-            let redespInfo = '';
+            let redespInfoAnt = '';
+            if (item.redespachoAnterior > 0) {
+                redespInfoAnt = `<div style="color:#fde047; font-size:0.7rem; font-weight:bold;">+ ${formatBRL(item.redespachoAnterior)} / ${item.redespCarrierAnterior || 'EMBARQ'}</div>`;
+            }
+
+            let redespInfoNovo = '';
             if (item.redespachoNovo > 0) {
-                redespInfo = `<span style="color:#fde047; font-size:0.7rem; font-weight:bold;">🟨 + ${formatBRL(item.redespachoNovo)}</span>`;
+                redespInfoNovo = `<div style="color:#fde047; font-size:0.7rem; font-weight:bold;">+ ${formatBRL(item.redespachoNovo)} / ${item.redespCarrierNovo || 'EMBARQ'}</div>`;
             }
 
             html += `
@@ -932,11 +1188,12 @@ window.CarrierSwitchModule = (function () {
                     <td>${formatBRL(item.valorNF)}</td>
                     <td style="color: #cbd5e1; font-weight: 600;">
                         ${formatBRL(item.custoAnterior)}
+                        ${redespInfoAnt}
                         <div style="font-size: 0.7rem; color: var(--text-secondary);">${item.percentualEfetivoAnterior > 0 ? item.percentualEfetivoAnterior.toFixed(2) + '% s/ NF' : ''}</div>
                     </td>
                     <td style="font-weight: 600; color: #f8fafc;">
                         ${formatBRL(item.custoNovo)}
-                        ${redespInfo ? `<div>${redespInfo}</div>` : ''}
+                        ${redespInfoNovo}
                         <div style="font-size: 0.7rem; color: #94a3b8;">${item.percentualEfetivoNovo > 0 ? item.percentualEfetivoNovo.toFixed(2) + '% s/ NF' : ''}</div>
                     </td>
                     <td style="text-align: center;">
@@ -949,7 +1206,7 @@ window.CarrierSwitchModule = (function () {
                     </td>
                     <td>
                         <span style="font-size:0.72rem; color:var(--text-secondary);">
-                            Base: ${formatBRL(item.baseNovo)} | Exc: ${formatBRL(item.excessoNovo)} | Taxas: ${formatBRL(item.taxasNovo)}
+                            Princ: ${formatBRL(item.mainNovo)} | Base: ${formatBRL(item.baseNovo)} | Exc: ${formatBRL(item.excessoNovo)}
                         </span>
                     </td>
                 </tr>
@@ -998,26 +1255,24 @@ window.CarrierSwitchModule = (function () {
             'Cliente': g.cliente,
             'Município': g.cidade,
             'Transportadora Atual': g.carrierAnterior,
-            'Nova Transportadora': g.carrierNovo,
-            '% Frete Tabela (Nova)': Number(g.percentualTabelaNovo.toFixed(2)),
-            '% Frete Efetivo Novo': Number(g.percentualEfetivoNovo.toFixed(2)),
+            'Transportadora Sugerida': g.carrierNovo,
+            '% Frete Tabela (Sugerida)': Number(g.percentualTabelaNovo.toFixed(2)),
+            '% Frete Efetivo Sugerido': Number(g.percentualEfetivoNovo.toFixed(2)),
             '% Frete Efetivo Anterior': Number(g.percentualEfetivoAnterior.toFixed(2)),
             'Qtd Despachos': g.count,
             'Peso Total (kg)': Number(g.pesoTotal.toFixed(2)),
-            'Custo Anterior (R$)': Number(g.custoAnteriorTotal.toFixed(2)),
-            'Frete Base Anterior (R$)': Number(g.baseAnteriorTotal.toFixed(2)),
-            'Excedente Anterior (R$)': Number(g.excessoAnteriorTotal.toFixed(2)),
+            'Custo Anterior Total (R$)': Number(g.custoAnteriorTotal.toFixed(2)),
+            'Frete Principal Anterior (R$)': Number(g.mainAnteriorTotal.toFixed(2)),
             'Redespacho Anterior (R$)': Number(g.redespachoAnteriorTotal.toFixed(2)),
-            'Novo Custo Total (R$)': Number(g.custoNovoTotal.toFixed(2)),
-            'Novo Frete Base (R$)': Number(g.baseNovoTotal.toFixed(2)),
-            'Novo Excedente (R$)': Number(g.excessoNovoTotal.toFixed(2)),
-            'Novo Redespacho (R$)': Number(g.redespachoNovoTotal.toFixed(2)),
+            'Custo Sugerido Total (R$)': Number(g.custoNovoTotal.toFixed(2)),
+            'Frete Principal Sugerido (R$)': Number(g.mainNovoTotal.toFixed(2)),
+            'Redespacho Sugerido (R$)': Number(g.redespachoNovoTotal.toFixed(2)),
             'Transportadora Redespacho': g.redespCarrierNovo || '-',
             'Resultado': g.isEconomia ? 'Economia' : 'Gasto Adicional',
             'Diferença (R$)': Number(g.diferencaTotal.toFixed(2)),
             'Diferença (%)': Number(g.diferencaPerc.toFixed(2)),
             'Prazo Anterior': g.leadTimeAnterior,
-            'Novo Prazo': g.leadTimeNovo,
+            'Prazo Sugerido': g.leadTimeNovo,
             'Variação Dias Prazo': Number(g.diffDiasPrazoMedio.toFixed(1))
         }));
 
@@ -1053,24 +1308,21 @@ window.CarrierSwitchModule = (function () {
                     'Valor NF (R$)': Number(d.valorNF.toFixed(2)),
                     'Transp. Anterior': d.carrierAnterior,
                     '% Frete Ant. Efetivo': Number(d.percentualEfetivoAnterior.toFixed(2)),
-                    'Custo Anterior Pago (R$)': Number(d.custoAnterior.toFixed(2)),
-                    'Frete Base Ant (R$)': Number(d.baseAnterior.toFixed(2)),
-                    'Excesso Ant (R$)': Number(d.excessoAnterior.toFixed(2)),
-                    'Redespacho Ant (R$)': Number(d.redespachoAnterior.toFixed(2)),
-                    'Nova Transportadora': d.carrierNovo,
-                    '% Frete Tabela (Nova)': Number(d.percentualTabelaNovo.toFixed(2)),
-                    '% Frete Novo Efetivo': Number(d.percentualEfetivoNovo.toFixed(2)),
-                    'Novo Custo Total (R$)': Number(d.custoNovo.toFixed(2)),
-                    'Novo Frete Base (R$)': Number(d.baseNovo.toFixed(2)),
-                    'Novo Excesso (R$)': Number(d.excessoNovo.toFixed(2)),
-                    'Novas Taxas (R$)': Number(d.taxasNovo.toFixed(2)),
-                    'Novo Redespacho (R$)': Number(d.redespachoNovo.toFixed(2)),
+                    'Custo Anterior Total (R$)': Number(d.custoAnterior.toFixed(2)),
+                    'Frete Princ. Anterior (R$)': Number(d.mainAnterior.toFixed(2)),
+                    'Redespacho Anterior (R$)': Number(d.redespachoAnterior.toFixed(2)),
+                    'Transp. Sugerida': d.carrierNovo,
+                    '% Frete Tabela (Sugerida)': Number(d.percentualTabelaNovo.toFixed(2)),
+                    '% Frete Sugerido Efetivo': Number(d.percentualEfetivoNovo.toFixed(2)),
+                    'Custo Sugerido Total (R$)': Number(d.custoNovo.toFixed(2)),
+                    'Frete Princ. Sugerido (R$)': Number(d.mainNovo.toFixed(2)),
+                    'Redespacho Sugerido (R$)': Number(d.redespachoNovo.toFixed(2)),
                     'Redespachante': d.redespCarrierNovo || '-',
                     'Diferença (R$)': Number(d.diferenca.toFixed(2)),
                     'Diferença (%)': Number(d.diferencaPerc.toFixed(2)),
                     'Impacto': d.diferenca >= 0 ? 'Economia' : 'Gasto Adicional',
                     'Prazo Anterior': d.leadTimeAnterior,
-                    'Novo Prazo': d.leadTimeNovo
+                    'Prazo Sugerido': d.leadTimeNovo
                 });
             });
         });
@@ -1085,6 +1337,7 @@ window.CarrierSwitchModule = (function () {
         init: init,
         runAnalysis: runAnalysis,
         applyTagFilter: applyTagFilter,
+        changeRowCarrier: changeRowCarrier,
         openDetail: openDetail,
         closeDetail: closeDetail,
         clearFilters: clearFilters,
