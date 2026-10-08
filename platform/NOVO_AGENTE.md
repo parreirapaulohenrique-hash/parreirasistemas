@@ -569,16 +569,15 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
   - **Gerador de Etiquetas ZPL II e Térmicas:** Módulo `wms-etiquetas.js` para geração de código ZPL II (Zebra Programming Language) nativo para impressoras industriais térmicas (Zebra ZT411, ZD220) e impressão direta formatada.
 
 * **2026-10-08 (v3.21.82 / Plataforma & Módulos):**
-  - **Favicons Corporativos Vetoriais em SVG (Design Enterprise):** Substituição dos emojis por insígnias vetoriais SVG estilizadas (squircle badges de alto padrão corporativo, com gradientes temáticos, paleta refinada e glifos geométricos precisos):
-    * **Cotação & Gestão de Demanda:** Insígnia Esmeralda com gráfico analítico e curva de tendência ascendente (`modules/demanda/index.html`) — removido qualquer resquício de tenant hardcoded do `<title>`.
-    * **Despacho Logístico:** Insígnia Âmbar/Laranja com vetor corporativo de frota e rastreamento (`modules/dispatch/index.html`).
-    * **WMS Gestão de Armazém:** Insígnia Índigo/Royal com cubo isométrico 3D de armazenagem (`modules/wms/index.html`).
-    * **WMS Coletor Mobile:** Insígnia Ciano/Slate com terminal industrial e scanner de código de barras (`modules/wms-coletor/index.html`).
-    * **Bússola Gestão ERP:** Insígnia Safira/Azul com rosa dos ventos e agulha executiva de navegação (`modules/erp-consultoria/index.html`).
-    * **Fluxo de Caixa:** Insígnia Verde Floresta com curva contábil de liquidez e crescimento (`modules/fluxo-caixa/index.html`).
-    * **MAXCRM Prospecção & Painel:** Insígnia Carmim/Rose com mira de inteligência territorial e radar comercial (`modules/prospeccao/index.html`, `modules/prospeccao/painel.html`).
-    * **Painel Master / Governança:** Insígnia Púrpura/Obsidiana com brasão de segurança e custódia administrativa (`modules/master/index.html`).
-    * **Hub Plataforma Principal:** Insígnia Grafite com matriz modular integrada de 4 quadrantes (`platform/index.html`).
-    * **Login Central:** Insígnia Grafite com cadeado de segurança e autenticação corporativa (`platform/login.html`).
+  - **Favicons Nativos em SVG nas Abas do Navegador:** Padronização visual em lote de todas as abas do navegador nos módulos da plataforma, utilizando ícones coloridos em SVG inline (`viewBox='0 0 100 100' font-size='90'`) no mesmo padrão de alta visibilidade do WMS:
+    * **Cotação & Demanda:** 📊 (`modules/demanda/index.html`)
+    * **Despacho Logístico:** 🚚 (`modules/dispatch/index.html`)
+    * **WMS Gestão de Armazém:** 📦 (`modules/wms/index.html`)
+    * **WMS Coletor Mobile:** 📱 (`modules/wms-coletor/index.html`)
+    * **Bússola Gestão ERP & Fluxo de Caixa:** 💰 (`modules/erp-consultoria/index.html`, `modules/fluxo-caixa/index.html`)
+    * **MAXCRM Prospecção & Painel:** 🎯 (`modules/prospeccao/index.html`, `modules/prospeccao/painel.html`)
+    * **Painel Master / Admin:** 👑 (`modules/master/index.html`)
+    * **Hub Plataforma Principal:** ⚡ (`platform/index.html`)
+    * **Login Central:** 🔐 (`platform/login.html`)
 
 
