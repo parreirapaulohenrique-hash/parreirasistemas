@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.24.3",
-  "build": "20261008-v3.24.3",
+  "version": "3.24.4",
+  "build": "20261008-v3.24.4",
   "lastUpdate": "2026-10-08",
-  "releaseDate": "2026-10-08T18:35:00-03:00",
-  "change": "v3.24.3: Ajuste visual e decomposição do Custo Anterior e Sugerido discriminando o frete principal da transportadora em destaque (R$ 1.004,99 Viopex vs R$ 790,27 TNorte), somado ao redespacho obrigatório (+ R$ 526,05 / EMBARQ) totalizando a rota (R$ 1.531,04 vs R$ 1.316,32), idêntico à Montagem de Carga."
+  "releaseDate": "2026-10-08T19:35:00-03:00",
+  "change": "v3.24.4: Inclusão e sincronização automática de transportadoras/embarcações de redespacho (ex: EMBARCACAO BOM JESUS para Breves) no Cadastro Transportadora, com badge indicativo [REDESPACHO] e campo de filtro rápido."
 }
