@@ -1133,17 +1133,21 @@
                             <form id="formNewRule"
                                 style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
                                 <div class="form-group">
-                                    <label class="form-label">Transportadora</label>
+                                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                                        <label class="form-label" style="margin-bottom:0;">Transportadora</label>
+                                        <button type="button" onclick="window.showSection('configs')" style="background:none; border:none; color:var(--primary-color); font-size:0.75rem; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:2px;">
+                                            <span class="material-icons-round" style="font-size:0.85rem;">add_circle</span> Cadastrar Nova
+                                        </button>
+                                    </div>
                                     <input type="text" id="ruleCarrier" class="form-input"
                                         placeholder="Digite ou selecione..." list="carrierList" required
-                                        autocomplete="off">
+                                        autocomplete="off" style="margin-top:4px;">
                                     <datalist id="carrierList"></datalist>
                                     <div id="carrierErrorAlert"
                                         style="font-size: 0.75rem; color: var(--accent-danger); margin-top: 4px; display: none; font-weight: 500;">
                                         <span class="material-icons-round"
                                             style="font-size: 0.8rem; vertical-align: middle;">error_outline</span>
-                                        Transportadora não cadastrada. <br>Cadastre-a na aba 'Tabelas e Taxas'
-                                        antes.
+                                        Transportadora não cadastrada. <br>Cadastre-a no menu 'Cadastro Transportadora' antes.
                                     </div>
                                 </div>
                                 <div class="form-group">
@@ -1201,8 +1205,13 @@
                                 </div>
 
                                 <div class="form-group">
-                                    <label class="form-label">Redespacho (Opcional)</label>
-                                    <select id="ruleRedispatch" class="form-input">
+                                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                                        <label class="form-label" style="margin-bottom:0;">Redespacho (Opcional)</label>
+                                        <button type="button" onclick="window.showSection('configs')" style="background:none; border:none; color:var(--primary-color); font-size:0.75rem; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:2px;">
+                                            <span class="material-icons-round" style="font-size:0.85rem;">add_circle</span> Cadastrar Nova
+                                        </button>
+                                    </div>
+                                    <select id="ruleRedispatch" class="form-input" style="margin-top:4px;">
                                         <option value="">Sem Redespacho</option>
                                         <!-- Populated by JS -->
                                     </select>
@@ -3114,7 +3123,7 @@
     <script src="/platform/shared/integrations/erp-ui.js?v=3.22.37"></script>
     <script src="/platform/shared/integrations/index.js?v=3.22.37"></script>
     <script src="occurrences.js?v=3.22.37"></script>
-    <script src="app.js?v=3.24.5"></script>
+    <script src="app.js?v=3.24.6"></script>
     <script>
         // Inicializa a UI de configuração ERP na seção de Integração do Dispatch
         document.addEventListener('DOMContentLoaded', function () {
@@ -3128,7 +3137,7 @@
     <script src="delivery-module.js?v=3.24.1"></script>
     <script src="cnpj-lookup.js?v=3.14.42"></script>
     <script src="bi_logistica.js?v=3.14.42"></script>
-    <script src="carrier-switch.js?v=3.24.5"></script>
+    <script src="carrier-switch.js?v=3.24.6"></script>
 
 
 

@@ -1576,7 +1576,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                             .map(d => d.redespCarrier || (d.redespacho && d.redespacho !== '-' ? d.redespacho : null))
                             .filter(c => c && String(c).trim() !== '');
 
-                        const allRedesp = [...new Set([...redespInTables, ...redespInDispatches])].map(c => String(c).toUpperCase().trim());
+                        const defaultKnownRedesp = ['EMBARCACAO BOM JESUS', 'EMBARCACAO RITA HELENA'];
+                        const allRedesp = [...new Set([...redespInTables, ...redespInDispatches, ...defaultKnownRedesp])].map(c => String(c).toUpperCase().trim());
                         let infoUpdated = false;
                         allRedesp.forEach(rc => {
                             if (!carrierInfo[rc]) {
@@ -2425,9 +2426,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
             }
             if (id === 'rules') {
+                if (typeof populateCarrierSelect === 'function') populateCarrierSelect();
                 renderRulesList();
             }
             if (id === 'configs') {
+                if (typeof populateCarrierSelect === 'function') populateCarrierSelect();
                 renderCarrierConfigs();
             }
             if (id === 'system') {
@@ -4010,7 +4013,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const redespFromDispatches = currentDispatches
                 .map(d => d.redespCarrier || (d.redespacho && d.redespacho !== '-' ? d.redespacho : null))
                 .filter(c => c && String(c).trim() !== '');
-            const extraRedesp = [...new Set([...redespFromRules, ...redespFromDispatches])].map(c => String(c).toUpperCase().trim());
+            const defaultKnownRedesp = ['EMBARCACAO BOM JESUS', 'EMBARCACAO RITA HELENA'];
+            const extraRedesp = [...new Set([...redespFromRules, ...redespFromDispatches, ...defaultKnownRedesp])].map(c => String(c).toUpperCase().trim());
 
             let listUpdated = false;
             extraRedesp.forEach(rc => {
@@ -4252,6 +4256,40 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         function populateCarrierSelect() {
+            // v3.24.6: Garante que parceiros de redespacho (como EMBARCACAO BOM JESUS) estejam cadastrados
+            const defaultKnownPartners = ['EMBARCACAO BOM JESUS', 'EMBARCACAO RITA HELENA'];
+            let partnersUpdated = false;
+            defaultKnownPartners.forEach(p => {
+                if (!carrierList.includes(p)) {
+                    carrierList.push(p);
+                    partnersUpdated = true;
+                }
+                if (!carrierInfo[p]) {
+                    carrierInfo[p] = {
+                        cnpj: '-',
+                        ie: '-',
+                        address: 'Trapiche / Porto Fluvial',
+                        city: 'BREVES - PA',
+                        reliability: 3,
+                        isRedespacho: true,
+                        freteNegociado: false,
+                        createdAt: new Date().toISOString()
+                    };
+                    partnersUpdated = true;
+                } else if (carrierInfo[p].isRedespacho !== true) {
+                    carrierInfo[p].isRedespacho = true;
+                    partnersUpdated = true;
+                }
+            });
+            if (partnersUpdated) {
+                carrierList.sort();
+                Utils.saveRaw('carrier_list', JSON.stringify(carrierList));
+                Utils.saveRaw('carrier_info_v2', JSON.stringify(carrierInfo));
+                if (Utils.Cloud && Utils.Cloud.hasTenant()) {
+                    Utils.Cloud.save('carrier_list', carrierList);
+                    Utils.Cloud.save('carrier_info_v2', carrierInfo);
+                }
+            }
 
             // Now populates datalist instead of select
             const datalist = document.getElementById('carrierList');
@@ -4262,7 +4300,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             populateRedispatchSelect();
 
             // Add Input Listener for Validation (if not added yet)
-
             if (input && !input.dataset.validationListener) {
                 input.dataset.validationListener = 'true';
                 input.addEventListener('input', () => {
@@ -4273,6 +4310,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }
         }
+        window.populateCarrierSelect = populateCarrierSelect;
+        window.populateRedispatchSelect = populateRedispatchSelect;
 
         function populateRedispatchSelect() {
             const select = document.getElementById('ruleRedispatch');

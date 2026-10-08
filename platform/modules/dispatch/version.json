@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.24.5",
-  "build": "20261008-v3.24.5",
+  "version": "3.24.6",
+  "build": "20261008-v3.24.6",
   "lastUpdate": "2026-10-08",
-  "releaseDate": "2026-10-08T20:00:00-03:00",
-  "change": "v3.24.5: Obrigação estrita de cadastro prévio de Redespacho. Bloqueio em formulário e importação de rotas caso o redespacho não possua cadastro prévio no Cadastro Transportadora com a opção 'É Transportadora de Redespacho?' marcada."
+  "releaseDate": "2026-10-08T20:20:00-03:00",
+  "change": "v3.24.6: Inclusão e garantia automática de EMBARCAÇÃO BOM JESUS como transportadora parceira de redespacho, recarregamento dinâmico instantâneo do seletor de redespacho e transportadora ao alternar para a aba Tabelas de Frete, e atalho direto '+ Cadastrar Nova' no formulário de regras de frete."
 }
