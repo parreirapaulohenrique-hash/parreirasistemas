@@ -93,8 +93,18 @@ const DemandaPDF = (() => {
         for (let i = 1; i <= pdf.numPages; i++) {
             const page    = await pdf.getPage(i);
             const content = await page.getTextContent();
-            const text    = content.items.map(it => it.str).join(' ');
-            pages.push({ pageNum: i, text });
+            let pageText = '';
+            let lastY = null;
+            for (const it of content.items) {
+                if (lastY !== null && Math.abs(it.transform[5] - lastY) > 5) {
+                    pageText += '\n';
+                } else if (pageText && !pageText.endsWith('\n') && !pageText.endsWith(' ')) {
+                    pageText += ' ';
+                }
+                pageText += it.str;
+                lastY = it.transform[5];
+            }
+            pages.push({ pageNum: i, text: pageText });
             if (onPageProgress) onPageProgress(i, pdf.numPages);
         }
 

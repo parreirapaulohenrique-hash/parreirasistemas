@@ -14,12 +14,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-    <!-- SheetJS para importação de Excel -->
     <!-- SheetJS para importacao de Excel (Cloudflare CDN) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- PDF.js para extracao direta de cotacoes em PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <!-- Design system da plataforma -->
     <link rel="stylesheet" href="/platform/core/styles/portal.css">
-    <link rel="stylesheet" href="styles/demanda.css?v=3.21.57">
+    <link rel="stylesheet" href="styles/demanda.css?v=3.21.58">
     <link rel="stylesheet" href="styles/demanda-analytics.css?v=3.0.9">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
 </head>
@@ -6016,7 +6018,6 @@
                         4. Clique em <strong>Processar Itens</strong>
                     </div>
                 </div>
-                </div>
                 <div style="display:flex;flex-direction:column;gap:.5rem">
                     <label for="pdfTextoColar" style="font-size:.78rem;color:var(--text-secondary);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Cole o texto do PDF aqui</label>
                     <textarea id="pdfTextoColar" rows="12" placeholder="Cole aqui o texto copiado do PDF"
@@ -6303,7 +6304,7 @@
     <script src="js/demanda-import.js?v=3.21.49"></script>
     <script src="js/demanda-search.js?v=3.21.57"></script>
     <script src="js/demanda-lookup.js?v=3.21.49"></script>
-    <script src="js/demanda-pdf.js?v=3.21.49"></script>
+    <script src="js/demanda-pdf.js?v=3.21.58"></script>
     <script src="js/demanda-clientes.js?v=3.21.49"></script>
     
     <!-- Módulos Analíticos e Comerciais v3.0.0 (Master Prompt 104 Seções) -->
@@ -6311,7 +6312,7 @@
     <script src="js/demanda-analytics.js?v=3.0.9"></script>
     <script src="js/demanda-comercial.js?v=3.0.6"></script>
     <script src="js/demanda-enrichment.js?v=3.0.5"></script>
-<script src="js/demanda-app.js?v=3.21.57"></script>
+    <script src="js/demanda-app.js?v=3.21.58"></script>
 
     <!-- ═══════════════════════════════════════════════════════════
          MODAL: Administração da Base Técnica de Peças
