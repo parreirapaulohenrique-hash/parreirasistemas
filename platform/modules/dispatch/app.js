@@ -9473,10 +9473,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const deliveryHistory = Utils.getStorage('delivery_history') || [];
             const dispatches = (await Utils.Cloud.getFullDispatchesHistory()) || [];
 
-            // Combinar entregas finalizadas (do histórico) e pendentes (dos dispatches)
+            // Combinar entregas finalizadas (do histórico) e com status intermediários/finais (dos dispatches)
             const allDeliveries = [
                 ...deliveryHistory,
-                ...dispatches.filter(d => d.deliveryStatus === 'entregue' || d.deliveryStatus === 'devolvido')
+                ...dispatches.filter(d => ['entregue', 'devolvido', 'em_transito', 'entregue_parcial', 'retido_fiscal'].includes(d.deliveryStatus))
             ];
 
             // Obter lista única de entregadores
@@ -9737,15 +9737,44 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         <th style="white-space:nowrap; text-align: center;">H. Baixa</th>
                                         <th style="white-space:nowrap; text-align: center;">Tempo Gasto</th>
                                         <th>Status</th>
+                                        <th style="text-align: center;">POD</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     ${s.items.map(d => {
                     const date = new Date(d.deliveryCompletedAt || d.finalizedAt || d.date);
                     const dispatchDate = new Date(d.deliveryDispatchedAt || d.date);
-                    const status = (d.deliveryStatus === 'entregue' || d.result === 'entregue') ? 'Entregue' : 'Devolvida';
-                    const statusColor = status === 'Entregue' ? 'var(--accent-success)' : 'var(--accent-danger)';
+
+                    // Mapeamento dinâmico de status intermediários e finais (Fase 4)
+                    const rawStatus = (d.deliveryStatus || d.result || 'em_entrega').toLowerCase();
+                    let status = 'Em Andamento';
+                    let statusBg = 'rgba(59, 130, 246, 0.1)';
+                    let statusColor = '#60a5fa';
+
+                    if (rawStatus === 'entregue') {
+                        status = 'Entregue';
+                        statusBg = 'rgba(39, 174, 96, 0.15)';
+                        statusColor = 'var(--accent-success)';
+                    } else if (rawStatus === 'devolvido') {
+                        status = 'Devolvida';
+                        statusBg = 'rgba(231, 76, 60, 0.15)';
+                        statusColor = 'var(--accent-danger)';
+                    } else if (rawStatus === 'em_transito') {
+                        status = 'Em Trânsito';
+                        statusBg = 'rgba(14, 165, 233, 0.15)';
+                        statusColor = '#38bdf8';
+                    } else if (rawStatus === 'entregue_parcial') {
+                        status = 'Parcial';
+                        statusBg = 'rgba(245, 158, 11, 0.15)';
+                        statusColor = '#f59e0b';
+                    } else if (rawStatus === 'retido_fiscal') {
+                        status = 'Retido Fiscal';
+                        statusBg = 'rgba(168, 85, 247, 0.15)';
+                        statusColor = '#c084fc';
+                    }
+
                     const formatTime = (dateObj) => dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    const hasPOD = !!(d.pod && (d.pod.photo || d.pod.signature));
 
                     return `
                                             <tr>
@@ -9758,7 +9787,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                                                 <td style="font-family: monospace; color: var(--primary-color); text-align: center;" title="Contado a partir de: ${d.timeOrigin}">
                                                     ${d.durationLabel}
                                                 </td>
-                                                <td><span class="status-badge" style="background: ${status === 'Entregue' ? 'rgba(39, 174, 96, 0.1)' : 'rgba(231, 76, 60, 0.1)'}; color: ${statusColor}">${status}</span></td>
+                                                <td><span class="status-badge" style="background: ${statusBg}; color: ${statusColor}; font-weight: 600;">${status}</span></td>
+                                                <td style="text-align: center;">
+                                                    ${hasPOD ? `
+                                                        <button class="btn btn-secondary" onclick="DeliveryModule.showPODModal(${d.id})" style="padding: 2px 8px; font-size: 0.75rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 2px; color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);">
+                                                            <span class="material-icons-round" style="font-size: 0.95rem;">receipt_long</span> POD
+                                                        </button>
+                                                    ` : '<span style="color:var(--text-secondary); opacity:0.5;">-</span>'}
+                                                </td>
                                             </tr>
                                         `;
                 }).join('')}

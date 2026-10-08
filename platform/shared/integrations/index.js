@@ -65,6 +65,25 @@
             } else {
                 console.warn('[ErpIntegration] ErpUI não carregado.');
             }
+        },
+
+        /**
+         * Notifica o ERP ativo sobre a confirmação de despacho (Fase 4).
+         * @param {object} payload
+         * @returns {Promise<{success: boolean, queued?: boolean, reason?: string}>}
+         */
+        async confirmDispatch(payload) {
+            try {
+                const adapter = await this.getActive();
+                if (!adapter) {
+                    console.log('[ErpIntegration] Nenhum ERP ativo para este tenant.');
+                    return { success: false, reason: 'no_adapter' };
+                }
+                return await adapter.confirmDispatch(payload);
+            } catch (err) {
+                console.warn('[ErpIntegration] Erro ao chamar confirmDispatch no adapter:', err);
+                return { success: false, error: err.message };
+            }
         }
     };
 })();

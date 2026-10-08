@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.21.0",
-  "build": "20261007-v3.21.0",
+  "version": "3.22.0",
+  "build": "20261007-v3.22.0",
   "lastUpdate": "2026-10-07",
-  "releaseDate": "2026-10-07T22:38:00-03:00",
-  "change": "v3.21.0 (Fase 2 Homologação): Operação na Doca & Romaneios — Código de barras Code 128B SVG nativo e ID nos romaneios impressos (vias normais e redespacho); Leitura óptica/bipagem de DANFE (44 dígitos) e NFs na montagem de carga com feedback sonoro e visual; Calculadora dinâmica de cubagem (C x L x A) com aplicação no frete; Leitura óptica na Baixa de Romaneios; Resiliência de login com fallback local e preservação de admin_lt."
+  "releaseDate": "2026-10-07T23:15:00-03:00",
+  "change": "v3.22.0 (Fases 3 e 4): Mobile Entregas, POD & Integração ERP — Comprovante Digital de Entrega (POD) com captura de foto de canhoto, compressão em Canvas, assinatura digital touch, geolocalização GPS em tempo real e visualizador de POD; Integração com rotas externas (Waze e Google Maps); Notificação e sincronização de despacho com ERP Acontec (confirmDispatch) com fila resiliente de contingência offline; Gravação concorrente direta na subcoleção dispatches_db; Suporte completo a status intermediários de carga (Em Trânsito, Parcial e Retido Fiscal)."
 }
