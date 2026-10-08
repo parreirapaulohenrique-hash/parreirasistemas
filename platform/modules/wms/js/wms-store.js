@@ -748,6 +748,267 @@ window.WmsStore = (function () {
         return dados;
     }
 
+    // ─── KARDEX DE AUDITORIA EM NUVEM ─────────────────────────────────────────
+    function _kardexCol(tid) {
+        return _db().collection('tenants').doc(tid).collection('kardex');
+    }
+
+    async function registrarKardex(transacao) {
+        try {
+            const tid = _tid();
+            const id = transacao.id || ('KDX-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4));
+            const logEntry = {
+                id,
+                tipo: (transacao.tipo || 'AJUSTE').toUpperCase(), // ENTRADA, SAIDA, AJUSTE, PICKING, REABASTECIMENTO
+                sku: (transacao.sku || '').trim().toUpperCase(),
+                descricao: transacao.descricao || transacao.desc || '',
+                qtd: Number(transacao.qtd) || 0,
+                saldoAnterior: Number(transacao.saldoAnterior) || 0,
+                saldoNovo: Number(transacao.saldoNovo) || 0,
+                endereco: (transacao.endereco || '-').trim().toUpperCase(),
+                doc: transacao.doc || transacao.documento || '-',
+                motivo: transacao.motivo || transacao.reason || '-',
+                usuario: transacao.usuario || transacao.operador || 'system',
+                data: transacao.data || new Date().toISOString(),
+                criadoEm: TS(),
+                tenantId: tid
+            };
+            await _kardexCol(tid).doc(id).set(logEntry);
+            return id;
+        } catch (e) {
+            console.warn('[WmsStore] registrarKardex fallback local:', e.message);
+            return null;
+        }
+    }
+
+    async function listarKardex(filtros = {}) {
+        let q = _kardexCol(_tid());
+        if (filtros.sku) q = q.where('sku', '==', filtros.sku.toUpperCase());
+        if (filtros.tipo) q = q.where('tipo', '==', filtros.tipo.toUpperCase());
+        const snap = await q.limit(filtros.limite || 100).get();
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        list.sort((a, b) => new Date(b.data || b.criadoEm || 0) - new Date(a.data || a.criadoEm || 0));
+        return list;
+    }
+
+    // ─── RESERVAS E CONCORRÊNCIA DE ESTOQUE ──────────────────────────────────
+    function _estoqueCol(tid) {
+        return _db().collection('tenants').doc(tid).collection('estoque');
+    }
+
+    async function consultarSaldoEstoque(sku) {
+        const doc = await _estoqueCol(_tid()).doc(sku.toUpperCase()).get();
+        if (!doc.exists) return { sku, qtdFisica: 0, qtdReservada: 0, qtdDisponivel: 0 };
+        const d = doc.data();
+        const qtdFisica = d.qtdFisica || d.qtd || 0;
+        const qtdReservada = d.qtdReservada || 0;
+        return {
+            sku,
+            qtdFisica,
+            qtdReservada,
+            qtdDisponivel: Math.max(0, qtdFisica - qtdReservada)
+        };
+    }
+
+    async function reservarEstoque(sku, qtd, pedidoId = '') {
+        const tid = _tid();
+        const ref = _estoqueCol(tid).doc(sku.toUpperCase());
+        return await _db().runTransaction(async tx => {
+            const doc = await tx.get(ref);
+            let qtdFisica = 0, qtdReservada = 0;
+            if (doc.exists) {
+                const d = doc.data();
+                qtdFisica = d.qtdFisica || d.qtd || 0;
+                qtdReservada = d.qtdReservada || 0;
+            }
+            const disponivel = qtdFisica - qtdReservada;
+            if (disponivel < qtd) {
+                throw new Error(`Saldo insuficiente para reserva do SKU ${sku}. Disponível: ${disponivel}, Solicitado: ${qtd}`);
+            }
+            const novaReserva = qtdReservada + qtd;
+            tx.set(ref, {
+                sku: sku.toUpperCase(),
+                qtdFisica,
+                qtdReservada: novaReserva,
+                atualizadoEm: TS()
+            }, { merge: true });
+            return { sucesso: true, sku, qtdReservada: novaReserva, disponivel: qtdFisica - novaReserva };
+        });
+    }
+
+    async function efetivarBaixaEstoque(sku, qtd, pedidoId = '') {
+        const tid = _tid();
+        const ref = _estoqueCol(tid).doc(sku.toUpperCase());
+        return await _db().runTransaction(async tx => {
+            const doc = await tx.get(ref);
+            let qtdFisica = 0, qtdReservada = 0;
+            if (doc.exists) {
+                const d = doc.data();
+                qtdFisica = d.qtdFisica || d.qtd || 0;
+                qtdReservada = d.qtdReservada || 0;
+            }
+            const novaFisica = Math.max(0, qtdFisica - qtd);
+            const novaReserva = Math.max(0, qtdReservada - qtd);
+            tx.set(ref, {
+                sku: sku.toUpperCase(),
+                qtdFisica: novaFisica,
+                qtdReservada: novaReserva,
+                atualizadoEm: TS()
+            }, { merge: true });
+            return { sucesso: true, sku, qtdFisica: novaFisica, qtdReservada: novaReserva };
+        });
+    }
+
+    async function estornarReservaEstoque(sku, qtd, pedidoId = '') {
+        const tid = _tid();
+        const ref = _estoqueCol(tid).doc(sku.toUpperCase());
+        return await _db().runTransaction(async tx => {
+            const doc = await tx.get(ref);
+            if (!doc.exists) return { sucesso: false };
+            const d = doc.data();
+            const novaReserva = Math.max(0, (d.qtdReservada || 0) - qtd);
+            tx.set(ref, { qtdReservada: novaReserva, atualizadoEm: TS() }, { merge: true });
+            return { sucesso: true, sku, qtdReservada: novaReserva };
+        });
+    }
+
+    // ─── MOTOR DE REABASTECIMENTO AUTOMÁTICO (PULMÃO ➔ PICKING) ─────────────
+    function _reabastCol(tid) {
+        return _db().collection('tenants').doc(tid).collection('reabastecimentos');
+    }
+
+    async function criarOrdemReabastecimento(ordem) {
+        const tid = _tid();
+        const id = ordem.id || ('REAB-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4));
+        const payload = {
+            ...ordem,
+            id,
+            status: ordem.status || 'PENDENTE',
+            prioridade: ordem.prioridade || 'ALTA',
+            criadoEm: TS(),
+            atualizadoEm: TS(),
+            tenantId: tid
+        };
+        await _reabastCol(tid).doc(id).set(payload, { merge: true });
+        return id;
+    }
+
+    async function listarOrdensReabastecimento(filtros = {}) {
+        let q = _reabastCol(_tid());
+        if (filtros.status) q = q.where('status', '==', filtros.status);
+        const snap = await q.get();
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        list.sort((a, b) => new Date(b.criadoEm || 0) - new Date(a.criadoEm || 0));
+        return list;
+    }
+
+    async function atualizarOrdemReabastecimento(id, update) {
+        await _reabastCol(_tid()).doc(id).update({
+            ...update,
+            atualizadoEm: TS()
+        });
+    }
+
+    function ouvirOrdensReabastecimento(callback) {
+        return _reabastCol(_tid()).onSnapshot(snap => {
+            const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            list.sort((a, b) => new Date(b.criadoEm || 0) - new Date(a.criadoEm || 0));
+            callback(list);
+        }, err => console.warn('[WmsStore] ouvirOrdensReabastecimento:', err));
+    }
+
+    /**
+     * Inspeciona endereços e gera ordens automáticas de descida de palete
+     * quando saldo do picking estiver abaixo do mínimo e houver pulmão disponível.
+     */
+    async function verificarGatilhosReabastecimento() {
+        const tid = _tid();
+        const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+        const rawMock = JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
+        const addrs = Array.isArray(rawMock) ? rawMock : (rawMock.addresses || []);
+
+        const pickings = addrs.filter(a => (a.tipo === 'PICKING' || a.nivel === '1' || a.nivel === 1) && a.sku);
+        const pulmoes = addrs.filter(a => (a.tipo === 'PULMAO' || +a.nivel > 1) && a.status === 'OCUPADO');
+
+        const ordensGeradas = [];
+
+        for (const pick of pickings) {
+            const qtyAtual = Number(pick.qty || pick.quantidade) || 0;
+            const min = Number(pick.qtdMin || pick.minimo) || 10;
+
+            if (qtyAtual <= min) {
+                // Procura palete compatível no Pulmão
+                const pulmaoOrigem = pulmoes.find(p => p.sku === pick.sku && (p.qty || p.quantidade) > 0);
+                if (pulmaoOrigem) {
+                    const id = `REAB-${pick.sku}-${pick.id}`;
+                    const ordem = {
+                        id,
+                        sku: pick.sku,
+                        produto: pick.product || pick.descricao || pick.sku,
+                        qtdSugerida: Math.min(Number(pulmaoOrigem.qty || pulmaoOrigem.quantidade), 50),
+                        origemEndereco: pulmaoOrigem.id || pulmaoOrigem.address,
+                        destinoEndereco: pick.id || pick.address,
+                        motivo: `Estoque de Picking crítico (${qtyAtual} un <= mín ${min})`,
+                        prioridade: qtyAtual === 0 ? 'URGENTE' : 'ALTA',
+                        status: 'PENDENTE'
+                    };
+                    await criarOrdemReabastecimento(ordem);
+                    ordensGeradas.push(ordem);
+                }
+            }
+        }
+
+        return ordensGeradas;
+    }
+
+    // ─── INVENTÁRIO CÍCLICO AUTOMÁTICO E IRA ──────────────────────────────────
+    async function gerarInventarioCiclico(maxVaos = 8) {
+        const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+        const rawMock = JSON.parse(localStorage.getItem('wms_mock_data' + suf) || '[]');
+        const addrs = Array.isArray(rawMock) ? rawMock : (rawMock.addresses || []);
+
+        // Prioriza vãos ocupados que não foram inventariados recentemente
+        const ocupados = addrs.filter(a => a.status === 'OCUPADO' && a.sku);
+        ocupados.sort((a, b) => new Date(a.ultimoInventario || 0) - new Date(b.ultimoInventario || 0));
+
+        const selecionados = ocupados.slice(0, maxVaos).map(a => ({
+            endereco: a.id || a.address,
+            skuEsperado: a.sku,
+            produto: a.product || a.descricao || a.sku,
+            qtdContabil: Number(a.qty || a.quantidade) || 0,
+            status: 'PENDENTE',
+            dataAgendada: new Date().toISOString()
+        }));
+
+        const id = `CICLICO-${new Date().toISOString().slice(0, 10)}`;
+        await _db().collection('tenants').doc(_tid()).collection('inventarios_ciclicos').doc(id).set({
+            id,
+            data: new Date().toISOString(),
+            vaos: selecionados,
+            status: 'ABERTO',
+            criadoEm: TS()
+        }, { merge: true });
+
+        return { id, vaos: selecionados };
+    }
+
+    async function calcularAcuraciaIRA() {
+        const snap = await _db().collection('tenants').doc(_tid()).collection('inventarios').limit(200).get();
+        if (snap.empty) return { totalContagens: 0, acuraciaPct: 100, divergencias: 0 };
+        const docs = snap.docs.map(d => d.data());
+        let semDiv = 0;
+        docs.forEach(d => {
+            if (!d.divergencia || d.divergencia === 0) semDiv++;
+        });
+        const pct = docs.length > 0 ? +((semDiv / docs.length) * 100).toFixed(1) : 100;
+        return {
+            totalContagens: docs.length,
+            conformes: semDiv,
+            divergencias: docs.length - semDiv,
+            acuraciaPct: pct
+        };
+    }
+
     return {
         verificarNfDuplicada,
         criarRecebimento,
@@ -798,6 +1059,23 @@ window.WmsStore = (function () {
         // Cubômetro myCUBI-50
         calcularCubagem,
         registrarCubagem,
+        // Fase P4: Kardex em Nuvem
+        registrarKardex,
+        listarKardex,
+        // Fase P4: Reservas Concorrentes
+        consultarSaldoEstoque,
+        reservarEstoque,
+        efetivarBaixaEstoque,
+        estornarReservaEstoque,
+        // Fase P4: Reabastecimento Automático
+        criarOrdemReabastecimento,
+        listarOrdensReabastecimento,
+        atualizarOrdemReabastecimento,
+        ouvirOrdensReabastecimento,
+        verificarGatilhosReabastecimento,
+        // Fase P4: Inventário Cíclico & IRA
+        gerarInventarioCiclico,
+        calcularAcuraciaIRA,
         toDate, fmtData
     };
 })();

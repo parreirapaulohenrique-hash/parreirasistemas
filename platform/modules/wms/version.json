@@ -1,6 +1,6 @@
 {
-  "version": "2.1.0",
-  "date": "2026-10-07",
-  "build": "20261007-2230",
-  "last_change": "Feat(P2/P3): Ondas e Picking sincronizados no Firestore, WMS3D Three.js com listener snapshot em tempo real e integração dimensional do Cubômetro myCUBI-50"
+  "version": "2.2.0",
+  "date": "2026-10-08",
+  "build": "20261008-1135",
+  "last_change": "Feat(P4): Kardex Firestore em nuvem com concorrência e reservas, reabastecimento automático Pulmão->Picking, inventário cíclico com IRA e gerador de etiquetas ZPL II para impressoras térmicas Zebra"
 }

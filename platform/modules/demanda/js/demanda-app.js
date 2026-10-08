@@ -2686,9 +2686,18 @@ const DemandaApp = (function() {
                         ["Refer\u00eancia","Descri\u00e7\u00e3o","Qtd","Status","Pre\u00e7o","A\u00e7\u00e3o"].map(function(h) {
                             return "<th style='padding:.35rem .5rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:600;text-transform:uppercase'>" + h + "</th>";
                         }).join("") + "</tr></thead><tbody>" + rows + "</tbody></table></div>" +
-                        "<div style='margin-top:.75rem;text-align:right'>" +
-                        "<button onclick='window.print()' style='background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.3rem .8rem;color:var(--text-secondary);cursor:pointer;font-size:.78rem'>" +
-                        "<span class='material-icons-round' style='font-size:.9rem;vertical-align:middle'>print</span> Imprimir</button></div></div>";
+                        "<div style='margin-top:.85rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;border-top:1px solid rgba(255,255,255,.06);padding-top:.75rem'>" +
+                        "  <div style='display:flex;align-items:center;gap:.4rem'>" +
+                        "    <button class='btn-orc-erp' onclick=\"DemandaApp.converterEmPedidoErp('" + d.id + "')\" title='Gerar Pedido no MaxData ERP (Estrutura Pausada)'>" +
+                        "      <span class='material-icons-round' style='font-size:.9rem'>hub</span> Gerar Pedido ERP (Pausado)</button>" +
+                        "  </div>" +
+                        "  <div style='display:flex;align-items:center;gap:.5rem'>" +
+                        "    <button class='btn-orc-whatsapp' onclick=\"DemandaApp.enviarPropostaWhatsapp('" + d.id + "')\" title='Enviar Proposta Comercial no WhatsApp'>" +
+                        "      <span class='material-icons-round' style='font-size:.9rem'>chat</span> WhatsApp</button>" +
+                        "    <button class='btn-orc-proposta' onclick=\"DemandaApp.gerarPropostaPdf('" + d.id + "')\" title='Visualizar e Imprimir Proposta Timbrada'>" +
+                        "      <span class='material-icons-round' style='font-size:.9rem'>description</span> Proposta PDF</button>" +
+                        "  </div>" +
+                        "</div></div>";
                 }).join("");
                 container.innerHTML = html;
             })
@@ -3530,7 +3539,7 @@ const DemandaApp = (function() {
     async function _buscarProdutosErpFirestore() {
         if (typeof firebase === "undefined") return [];
         var db = firebase.firestore();
-        var snap = await db.collection("tenants/centralpecas/demanda/techbase/products")
+        var snap = await db.collection("tenants/" + _currentTenant() + "/demanda/techbase/products")
             .where("ativo", "==", true)
             .limit(1000)
             .get();
@@ -4309,7 +4318,7 @@ const DemandaApp = (function() {
             try {
                 var db = firebase.firestore();
                 var batch = db.batch();
-                var colRef = db.collection("tenants/centralpecas/demanda/techbase/catalogos");
+                var colRef = db.collection("tenants/" + _currentTenant() + "/demanda/techbase/catalogos");
                 novosItens.slice(0, 100).forEach(function(item) {
                     var docId = (item.marca + "_" + item.codigoNorm).replace(/[^a-zA-Z0-9_]/g, "_").slice(0, 60);
                     batch.set(colRef.doc(docId), item, { merge: true });
@@ -4385,7 +4394,7 @@ const DemandaApp = (function() {
         if (typeof firebase !== "undefined" && firebase.firestore) {
             try {
                 var db = firebase.firestore();
-                db.collection("tenants/centralpecas/demanda/techbase/catalogos")
+                db.collection("tenants/" + _currentTenant() + "/demanda/techbase/catalogos")
                     .limit(300)
                     .get()
                     .then(function(snap) {
@@ -4679,7 +4688,7 @@ const DemandaApp = (function() {
     function _loadBaseTecnicaStats() {
         if (typeof firebase === 'undefined') return;
         var db  = firebase.firestore();
-        var col = db.collection('tenants/centralpecas/demanda/techbase/products');
+        var col = db.collection('tenants/' + _currentTenant() + '/demanda/techbase/products');
         col.get().then(function(snap) {
             var total = snap.size;
             var erp   = snap.docs.filter(function(d) { return d.data().hasErpRecord; }).length;
@@ -4750,11 +4759,454 @@ const DemandaApp = (function() {
         });
     }
 
+
+    // ════════════════════════════════════════════════════════
+    // EVOLUÇÕES: PROPOSTA COMERCIAL PDF, WHATSAPP & INTEGRAÇÃO ERP (PROMPTS 1 & 2)
+    // ════════════════════════════════════════════════════════
+
+    var _propostaAtualCache = null;
+    var _splitAtualContext = null;
+
+    function _currentTenant() {
+        if (typeof DemandaDB !== "undefined" && DemandaDB.TENANT_ID) return DemandaDB.TENANT_ID;
+        if (_sessao && _sessao.tenantId) return _sessao.tenantId;
+        try {
+            if (window.ParreiraAuth && typeof ParreiraAuth.getTenant === 'function') {
+                var t = ParreiraAuth.getTenant();
+                if (t) return t;
+            }
+            if (window.sessionManager && typeof sessionManager.getTenantId === 'function') {
+                var t = sessionManager.getTenantId();
+                if (t) return t;
+            }
+        } catch (_) {}
+        return localStorage.getItem('app_tenant_id') || 'centralpecas';
+    }
+
+    /**
+     * Gera e abre a Proposta Comercial em PDF Timbrado (Prompt 1 & 2)
+     */
+    async function gerarPropostaPdf(demandaId) {
+        if (!demandaId) return;
+        _toast("Montando Proposta Comercial...", "info");
+
+        try {
+            var demanda = await DemandaDB.getDemanda(demandaId);
+            if (!demanda) throw new Error("Cotação não encontrada.");
+
+            var itens = demanda.itens;
+            if (!itens || itens.length === 0) {
+                itens = await DemandaDB.getItens(demandaId);
+            }
+
+            var itensValidos = (itens || []).filter(function(i) {
+                return i.status !== 'venda_perdida';
+            });
+
+            _propostaAtualCache = { demanda: demanda, itens: itensValidos };
+
+            var s = _sessao || {};
+            var filialNome = demanda.filialNome || s.filial || s.tenantNome || "Central Peças Agrícolas";
+            var vendedorNome = demanda.vendedorNome || s.nome || s.login || "Consultor de Peças";
+            var clienteNome = demanda.clienteNome || "Cliente Não Informado";
+            var clienteDoc = demanda.clienteCnpj || demanda.clienteCpf || "—";
+            var codigoCotacao = demanda.codigo || ("CTR-" + demandaId.slice(0, 8).toUpperCase());
+
+            var emissaoDt = new Date();
+            var validadeDt = new Date();
+            validadeDt.setDate(emissaoDt.getDate() + 5);
+
+            var totalGeral = 0;
+            var rowsHtml = itensValidos.map(function(item, idx) {
+                var qtd = Number(item.qtdeSolicitada || 1);
+                var unit = Number(item.preco || item.precoUnitario || 0);
+                var subtotal = qtd * unit;
+                totalGeral += subtotal;
+
+                var ref = item.refOriginal || item.erpProdutoId || item.codigoFab || "—";
+                var desc = item.descOriginal || item.erpProdutoDesc || item.descricao || "Item cotado";
+                var marca = item.marca || item.fabricante || "Genuína / OEM";
+
+                return "<tr style='border-bottom:1px solid #e2e8f0;'>" +
+                    "<td style='padding:8px;font-size:12px;color:#64748b;text-align:center;'>" + (idx + 1) + "</td>" +
+                    "<td style='padding:8px;font-size:12px;font-weight:700;color:#0f172a;font-family:monospace;'>" + _esc(ref) + "</td>" +
+                    "<td style='padding:8px;font-size:12px;color:#334155;'>" + _esc(desc) + "</td>" +
+                    "<td style='padding:8px;font-size:12px;color:#64748b;'>" + _esc(marca) + "</td>" +
+                    "<td style='padding:8px;font-size:12px;text-align:center;font-weight:700;'>" + qtd + "</td>" +
+                    "<td style='padding:8px;font-size:12px;text-align:right;'>" + (unit > 0 ? "R$ " + unit.toFixed(2).replace(".",",") : "Consulte") + "</td>" +
+                    "<td style='padding:8px;font-size:12px;text-align:right;font-weight:700;color:#0f172a;'>" + (subtotal > 0 ? "R$ " + subtotal.toFixed(2).replace(".",",") : "—") + "</td>" +
+                "</tr>";
+            }).join("");
+
+            if (itensValidos.length === 0) {
+                rowsHtml = "<tr><td colspan='7' style='padding:20px;text-align:center;color:#94a3b8;'>Nenhum item válido para proposta nesta cotação.</td></tr>";
+            }
+
+            var html =
+                "<div style='border-bottom:2px solid #0284c7;padding-bottom:14px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:flex-start;'>" +
+                "  <div>" +
+                "    <div style='display:flex;align-items:center;gap:8px;margin-bottom:4px;'>" +
+                "      <div style='background:#0284c7;color:#fff;width:34px;height:34px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;'>CTR</div>" +
+                "      <div><h2 style='margin:0;font-size:18px;color:#0f172a;font-weight:800;letter-spacing:-0.02em;'>CENTRAL PEÇAS AGRÍCOLAS</h2>" +
+                "      <small style='color:#64748b;font-size:11px;'>Distribuição Especializada de Peças e Componentes para Tratores e Colheitadeiras</small></div>" +
+                "    </div>" +
+                "    <div style='font-size:11px;color:#475569;margin-top:6px;line-height:1.4;'>" +
+                "      <span><strong>Unidade:</strong> " + _esc(filialNome) + "</span> | " +
+                "      <span><strong>Atendimento:</strong> " + _esc(vendedorNome) + "</span><br>" +
+                "      <span><strong>CNPJ:</strong> 03.957.561/0001-92</span> | <span><strong>Inscrição Estadual:</strong> 29.384.910-1</span>" +
+                "    </div>" +
+                "  </div>" +
+                "  <div style='text-align:right;background:#f8fafc;padding:8px 14px;border-radius:6px;border:1px solid #e2e8f0;'>" +
+                "    <div style='font-size:10px;text-transform:uppercase;color:#64748b;font-weight:700;'>Proposta Comercial</div>" +
+                "    <div style='font-size:16px;font-weight:800;color:#0284c7;'>" + _esc(codigoCotacao) + "</div>" +
+                "    <div style='font-size:11px;color:#334155;margin-top:2px;'>Emissão: " + emissaoDt.toLocaleDateString("pt-BR") + "</div>" +
+                "    <div style='font-size:11px;color:#ef4444;font-weight:700;'>Validade: " + validadeDt.toLocaleDateString("pt-BR") + "</div>" +
+                "  </div>" +
+                "</div>" +
+
+                "<!-- Dados do Cliente -->" +
+                "<div style='background:#f1f5f9;border-radius:6px;padding:10px 14px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;font-size:12px;border:1px solid #e2e8f0;'>" +
+                "  <div><strong>Cliente / Razão Social:</strong> " + _esc(clienteNome) + "</div>" +
+                "  <div><strong>CPF / CNPJ:</strong> " + _esc(clienteDoc) + "</div>" +
+                "  <div><strong>Condição:</strong> À vista / Faturado 30d</div>" +
+                "</div>" +
+
+                "<!-- Tabela de Itens -->" +
+                "<table style='width:100%;border-collapse:collapse;margin-bottom:16px;'>" +
+                "  <thead>" +
+                "    <tr style='background:#f8fafc;border-bottom:2px solid #cbd5e1;'>" +
+                "      <th style='padding:8px;font-size:11px;font-weight:700;color:#475569;text-align:center;width:35px;'>#</th>" +
+                "      <th style='padding:8px;font-size:11px;font-weight:700;color:#475569;text-align:left;width:130px;'>CÓDIGO / REF</th>" +
+                "      <th style='padding:8px;font-size:11px;font-weight:700;color:#475569;text-align:left;'>DESCRIÇÃO TÉCNICA</th>" +
+                "      <th style='padding:8px;font-size:11px;font-weight:700;color:#475569;text-align:left;width:110px;'>MARCA</th>" +
+                "      <th style='padding:8px;font-size:11px;font-weight:700;color:#475569;text-align:center;width:45px;'>QTD</th>" +
+                "      <th style='padding:8px;font-size:11px;font-weight:700;color:#475569;text-align:right;width:105px;'>UNITÁRIO</th>" +
+                "      <th style='padding:8px;font-size:11px;font-weight:700;color:#475569;text-align:right;width:115px;'>SUBTOTAL</th>" +
+                "    </tr>" +
+                "  </thead>" +
+                "  <tbody>" + rowsHtml + "</tbody>" +
+                "</table>" +
+
+                "<!-- Resumo Financeiro & Condições Gerais -->" +
+                "<div style='display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-top:14px;border-top:1px solid #e2e8f0;padding-top:14px;'>" +
+                "  <div style='font-size:11px;color:#475569;line-height:1.5;background:#f8fafc;padding:12px;border-radius:6px;border:1px solid #e2e8f0;'>" +
+                "    <strong style='color:#0f172a;display:block;margin-bottom:4px;font-size:12px;'>Condições Comerciais & Entrega:</strong>" +
+                "    • <strong>Prazo de Entrega:</strong> Pronta Entrega na Filial " + _esc(filialNome) + " ou despacho em até 24h.<br>" +
+                "    • <strong>Modalidade do Frete:</strong> CIF (Entrega no cliente) ou FOB (Retirada no Balcão).<br>" +
+                "    • <strong>Pagamento via PIX:</strong> Chave CNPJ: <code>03.957.561/0001-92</code> (Central Peças Agrícolas).<br>" +
+                "    • <strong>Garantia:</strong> 90 dias contra defeitos de fabricação conforme legislação vigente." +
+                "  </div>" +
+                "  <div style='background:#f8fafc;padding:14px;border-radius:6px;border:2px solid #0284c7;display:flex;flex-direction:column;justify-content:center;text-align:right;'>" +
+                "    <span style='font-size:11px;text-transform:uppercase;color:#64748b;font-weight:700;'>Valor Total da Proposta</span>" +
+                "    <span style='font-size:22px;font-weight:800;color:#0284c7;'>R$ " + totalGeral.toFixed(2).replace(".",",") + "</span>" +
+                "    <span style='font-size:11px;color:#10b981;font-weight:600;margin-top:4px;'>Tributos e ICMS Inclusos</span>" +
+                "  </div>" +
+                "</div>" +
+
+                "<!-- Assinatura / Aceite do Cliente -->" +
+                "<div style='margin-top:35px;display:flex;justify-content:space-between;align-items:flex-end;font-size:11px;color:#475569;'>" +
+                "  <div style='border-top:1px solid #94a3b8;width:240px;text-align:center;padding-top:4px;'>" +
+                "    " + _esc(vendedorNome) + "<br><small>Consultor Comercial Central Peças</small>" +
+                "  </div>" +
+                "  <div style='border-top:1px solid #94a3b8;width:240px;text-align:center;padding-top:4px;'>" +
+                "    De Acordo / Assinatura do Cliente<br><small>" + _esc(clienteNome) + "</small>" +
+                "  </div>" +
+                "</div>";
+
+            var badge = document.getElementById("propostaCodigoBadge");
+            if (badge) badge.textContent = codigoCotacao;
+
+            var cont = document.getElementById("folhaPropostaConteudo");
+            if (cont) cont.innerHTML = html;
+
+            var modal = document.getElementById("modalPropostaComercial");
+            if (modal) modal.style.display = "block";
+
+        } catch (err) {
+            console.error("[DemandaApp] Erro ao gerar proposta PDF:", err);
+            _toast("Erro ao gerar proposta: " + err.message, "error");
+        }
+    }
+
+    function fecharModalProposta() {
+        var modal = document.getElementById("modalPropostaComercial");
+        if (modal) modal.style.display = "none";
+    }
+
+    /**
+     * Envia Proposta Comercial Formatada diretamente ao WhatsApp do Cliente
+     */
+    async function enviarPropostaWhatsapp(demandaId) {
+        if (!demandaId) return;
+        try {
+            var demanda = await DemandaDB.getDemanda(demandaId);
+            if (!demanda) throw new Error("Cotação não encontrada.");
+
+            var itens = demanda.itens;
+            if (!itens || itens.length === 0) itens = await DemandaDB.getItens(demandaId);
+
+            var clienteNome = demanda.clienteNome || "Cliente";
+            var codigoCotacao = demanda.codigo || ("CTR-" + demandaId.slice(0, 8).toUpperCase());
+            var vendedorNome = demanda.vendedorNome || (_sessao ? (_sessao.nome || _sessao.login) : "Consultor");
+            var filialNome = demanda.filialNome || (_sessao ? _sessao.filial : "Central Peças");
+
+            var totalGeral = 0;
+            var linhasTexto = [];
+            (itens || []).forEach(function(i) {
+                if (i.status === 'venda_perdida') return;
+                var q = Number(i.qtdeSolicitada || 1);
+                var p = Number(i.preco || i.precoUnitario || 0);
+                var tot = q * p;
+                totalGeral += tot;
+
+                var ref = i.refOriginal || i.erpProdutoId || "—";
+                var desc = i.descOriginal || i.erpProdutoDesc || "Peça";
+                var marca = i.marca ? " (" + i.marca + ")" : "";
+                linhasTexto.push("• " + q + "x *" + ref + "* - " + desc + marca + (p > 0 ? " — R$ " + tot.toFixed(2).replace(".",",") : ""));
+            });
+
+            var msg =
+                "🚜 *CENTRAL PEÇAS AGRÍCOLAS*\n" +
+                "📋 *Proposta Comercial:* " + codigoCotacao + "\n" +
+                "👤 *Cliente:* " + clienteNome + "\n" +
+                "👨‍💼 *Atendente:* " + vendedorNome + " | Filial: " + filialNome + "\n" +
+                "📅 *Validade:* 5 dias corridos\n\n" +
+                "📦 *ITENS DA COTAÇÃO:*\n" +
+                linhasTexto.slice(0, 15).join("\n") + "\n\n" +
+                (linhasTexto.length > 15 ? "_(...e mais " + (linhasTexto.length - 15) + " itens)_\n\n" : "") +
+                "💰 *VALOR TOTAL: R$ " + totalGeral.toFixed(2).replace(".",",") + "*\n" +
+                "💳 *Condição:* À vista / Faturado 30 dias\n" +
+                "🚚 *Entrega:* Pronta entrega / Despacho imediato\n\n" +
+                "Deseja confirmar o pedido ou precisa de mais algum item? Estamos à disposição!";
+
+            var telCliente = (demanda.clienteTelefone || demanda.clienteCelular || "").replace(/\D/g, "");
+            var url = "https://wa.me/" + (telCliente.length >= 10 ? "55" + telCliente : "") + "?text=" + encodeURIComponent(msg);
+
+            window.open(url, "_blank");
+            _toast("Proposta formatada e aberta no WhatsApp!", "success");
+
+        } catch (err) {
+            console.error("[DemandaApp] Erro WhatsApp:", err);
+            _toast("Erro: " + err.message, "error");
+        }
+    }
+
+    function enviarWhatsappDaPropostaAtual() {
+        if (_propostaAtualCache && _propostaAtualCache.demanda) {
+            enviarPropostaWhatsapp(_propostaAtualCache.demanda.id);
+        } else {
+            _toast("Nenhuma proposta carregada.", "warning");
+        }
+    }
+
+    /**
+     * Estrutura de Integração ERP: Conversão em Pedido MaxData (Prompt 1)
+     * Conforme instrução do usuário: Mapeia e valida toda a estrutura mas PAUSA a gravação em produção.
+     */
+    async function converterEmPedidoErp(demandaId) {
+        if (!demandaId) return;
+        _toast("Montando estrutura para envio ao ERP...", "info");
+
+        try {
+            var demanda = await DemandaDB.getDemanda(demandaId);
+            if (!demanda) throw new Error("Cotação não encontrada.");
+
+            var itens = demanda.itens;
+            if (!itens || itens.length === 0) itens = await DemandaDB.getItens(demandaId);
+
+            var itensAprovados = (itens || []).filter(function(i) {
+                return i.status === 'venda_aprovada' || i.status === 'proposta_enviada' || i.status === 'aguardando_cliente';
+            });
+
+            if (itensAprovados.length === 0) {
+                itensAprovados = itens || [];
+            }
+
+            var s = _sessao || {};
+            var empId = Number(s.empId || 1);
+            var clientId = Number(demanda.clienteId || 0);
+            var sellerId = Number(s.vendedorId || s.idUser || 804);
+            var paymentConditionId = 1;
+
+            var itemsPayload = itensAprovados.map(function(it, idx) {
+                var q = Number(it.qtdeSolicitada || 1);
+                var p = Number(it.preco || it.precoUnitario || 0);
+                return {
+                    seq: idx + 1,
+                    productId: Number(it.erpProdutoId || it.codigoErp || 0),
+                    reference: it.refOriginal || it.codigoFab || "",
+                    description: it.descOriginal || it.erpProdutoDesc || "",
+                    quantity: q,
+                    price: p,
+                    discount: Number(it.desconto || 0),
+                    total: Number((q * p).toFixed(2))
+                };
+            });
+
+            var totalValor = itemsPayload.reduce(function(acc, it) { return acc + it.total; }, 0);
+
+            var payloadErp = {
+                header: {
+                    empId: empId,
+                    clientId: clientId,
+                    clientName: demanda.clienteNome || "Cliente Balcão",
+                    clientCnpj: demanda.clienteCnpj || "",
+                    sellerId: sellerId,
+                    sellerName: demanda.vendedorNome || s.nome || "Vendedor",
+                    paymentConditionId: paymentConditionId,
+                    pricingTableId: 1,
+                    origin: "PLATAFORMA_COTACAO",
+                    quoteCode: demanda.codigo || ("CTR-" + demandaId.slice(0,8).toUpperCase()),
+                    totalAmount: Number(totalValor.toFixed(2)),
+                    observation: "Pedido originado da Cotação " + (demanda.codigo || demandaId) + " na Plataforma Comercial Central Peças"
+                },
+                items: itemsPayload,
+                status: "PAUSADO_HOMOLOGACAO",
+                targetEndpoint: "POST /v2/sale & POST /v2/sale/items/array",
+                swaggerSpec: "http://rds.skytins.com.br:8720/swagger/index.html",
+                createdAt: new Date().toISOString()
+            };
+
+            var jsonStr = JSON.stringify(payloadErp, null, 2);
+            var codeEl = document.getElementById("erpPayloadCode");
+            if (codeEl) codeEl.textContent = jsonStr;
+
+            var gridEl = document.getElementById("erpResumoGrid");
+            if (gridEl) {
+                gridEl.innerHTML =
+                    "<div style='background:#1e293b;padding:0.75rem;border-radius:6px;border:1px solid #334155;'>" +
+                    "  <div style='font-size:0.7rem;color:#94a3b8;text-transform:uppercase;font-weight:700;'>Cotação Vinculada</div>" +
+                    "  <div style='font-size:0.95rem;font-weight:800;color:#38bdf8;margin-top:2px;'>" + _esc(demanda.codigo || demandaId) + "</div>" +
+                    "</div>" +
+                    "<div style='background:#1e293b;padding:0.75rem;border-radius:6px;border:1px solid #334155;'>" +
+                    "  <div style='font-size:0.7rem;color:#94a3b8;text-transform:uppercase;font-weight:700;'>Cliente (MaxData)</div>" +
+                    "  <div style='font-size:0.95rem;font-weight:800;color:#f8fafc;margin-top:2px;'>" + _esc(demanda.clienteNome || "Balcão") + "</div>" +
+                    "</div>" +
+                    "<div style='background:#1e293b;padding:0.75rem;border-radius:6px;border:1px solid #334155;'>" +
+                    "  <div style='font-size:0.7rem;color:#94a3b8;text-transform:uppercase;font-weight:700;'>Qtd de Itens Válidos</div>" +
+                    "  <div style='font-size:0.95rem;font-weight:800;color:#10b981;margin-top:2px;'>" + itemsPayload.length + " itens</div>" +
+                    "</div>" +
+                    "<div style='background:#1e293b;padding:0.75rem;border-radius:6px;border:1px solid #334155;'>" +
+                    "  <div style='font-size:0.7rem;color:#94a3b8;text-transform:uppercase;font-weight:700;'>Valor Total do Pedido</div>" +
+                    "  <div style='font-size:0.95rem;font-weight:800;color:#f59e0b;margin-top:2px;'>R$ " + totalValor.toFixed(2).replace(".",",") + "</div>" +
+                    "</div>";
+            }
+
+            var modal = document.getElementById("modalIntegracaoERP");
+            if (modal) modal.style.display = "block";
+
+            DemandaDB.updateDemanda(demandaId, {
+                erpPayloadHomologacao: payloadErp,
+                erpStatusIntegracao: "pausado_homologacao"
+            }).catch(function() {});
+
+        } catch (err) {
+            console.error("[DemandaApp] Erro na estrutura ERP:", err);
+            _toast("Erro: " + err.message, "error");
+        }
+    }
+
+    function fecharModalIntegracaoERP() {
+        var modal = document.getElementById("modalIntegracaoERP");
+        if (modal) modal.style.display = "none";
+    }
+
+    function copiarPayloadErp() {
+        var el = document.getElementById("erpPayloadCode");
+        if (el && el.textContent) {
+            navigator.clipboard.writeText(el.textContent)
+                .then(function() { _toast("JSON copiado para a área de transferência!", "success"); })
+                .catch(function() { _toast("Selecione e copie o texto manualmente.", "info"); });
+        }
+    }
+
+    /**
+     * Atendimento Parcial / Split de Item (Prompt 2, Seção 7)
+     */
+    function abrirModalSplit(demandaId, itemId, qtdeTotal) {
+        _splitAtualContext = { demandaId: demandaId, itemId: itemId, qtdeTotal: qtdeTotal };
+        var totalEl = document.getElementById("splitQtdeTotal");
+        var atEl = document.getElementById("splitQtdeAtendida");
+        var fatEl = document.getElementById("splitQtdeFaltante");
+
+        if (totalEl) totalEl.textContent = qtdeTotal;
+        var inicialAtendida = Math.max(1, Math.floor(qtdeTotal / 2));
+        if (atEl) {
+            atEl.value = inicialAtendida;
+            atEl.max = qtdeTotal - 1;
+        }
+        if (fatEl) fatEl.value = qtdeTotal - inicialAtendida;
+
+        var modal = document.getElementById("modalSplitItem");
+        if (modal) modal.style.display = "block";
+    }
+
+    function fecharModalSplit() {
+        _splitAtualContext = null;
+        var modal = document.getElementById("modalSplitItem");
+        if (modal) modal.style.display = "none";
+    }
+
+    function onSplitInput() {
+        if (!_splitAtualContext) return;
+        var atEl = document.getElementById("splitQtdeAtendida");
+        var fatEl = document.getElementById("splitQtdeFaltante");
+        var total = _splitAtualContext.qtdeTotal;
+        var atendida = parseInt(atEl.value, 10) || 0;
+
+        if (atendida >= total) {
+            atendida = total - 1;
+            atEl.value = atendida;
+        }
+        if (atendida < 1) {
+            atendida = 1;
+            atEl.value = 1;
+        }
+        var faltante = total - atendida;
+        if (fatEl) fatEl.value = faltante;
+    }
+
+    async function confirmarSplitItem() {
+        if (!_splitAtualContext) return;
+        var atEl = document.getElementById("splitQtdeAtendida");
+        var atendida = parseInt(atEl.value, 10);
+        var total = _splitAtualContext.qtdeTotal;
+        var faltante = total - atendida;
+
+        if (!atendida || atendida <= 0 || faltante <= 0) {
+            _toast("Quantidades inválidas para divisão.", "warning");
+            return;
+        }
+
+        try {
+            _toast("Dividindo item em atendimento parcial...", "info");
+            await DemandaDB.splitItem(_splitAtualContext.demandaId, _splitAtualContext.itemId, atendida, faltante);
+            _toast("✓ Item dividido: " + atendida + " atendidos e " + faltante + " para Compras!", "success");
+            fecharModalSplit();
+            loadOrcamento();
+        } catch (e) {
+            _toast("Erro ao dividir item: " + e.message, "error");
+        }
+    }
+
 // ════════════════════════════════════════════════════════
     // API PÚBLICA
     // ════════════════════════════════════════════════════════
 
     return {
+        // Proposta Comercial, WhatsApp e ERP (Prompts 1 e 2)
+        gerarPropostaPdf:             gerarPropostaPdf,
+        fecharModalProposta:          fecharModalProposta,
+        enviarPropostaWhatsapp:       enviarPropostaWhatsapp,
+        enviarWhatsappDaPropostaAtual: enviarWhatsappDaPropostaAtual,
+        converterEmPedidoErp:         converterEmPedidoErp,
+        fecharModalIntegracaoERP:     fecharModalIntegracaoERP,
+        copiarPayloadErp:             copiarPayloadErp,
+        abrirModalSplit:              abrirModalSplit,
+        fecharModalSplit:             fecharModalSplit,
+        onSplitInput:                 onSplitInput,
+        confirmarSplitItem:           confirmarSplitItem,
+        _currentTenant:               _currentTenant,
         init:                   init,
         logout:                 logout,
         switchView:             switchView,

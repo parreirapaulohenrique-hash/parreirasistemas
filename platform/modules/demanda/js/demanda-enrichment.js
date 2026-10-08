@@ -12,8 +12,24 @@
  */
 
 const DemandaEnrichment = (() => {
-    const TENANT_ID = 'centralpecas';
-    const COLLECTION_PATH = 'tenants/' + TENANT_ID + '/demanda/techbase/products';
+    function _getTenantId() {
+        if (typeof DemandaDB !== 'undefined' && DemandaDB.TENANT_ID) return DemandaDB.TENANT_ID;
+        try {
+            if (window.ParreiraAuth && typeof ParreiraAuth.getTenant === 'function') {
+                const t = ParreiraAuth.getTenant();
+                if (t) return t;
+            }
+            if (window.sessionManager && typeof sessionManager.getTenantId === 'function') {
+                const t = sessionManager.getTenantId();
+                if (t) return t;
+            }
+            const s = JSON.parse(sessionStorage.getItem('parreira_session') || localStorage.getItem('parreira_session_ls') || 'null');
+            if (s && s.tenantId) return s.tenantId;
+        } catch (_) {}
+        return localStorage.getItem('app_tenant_id') || 'centralpecas';
+    }
+
+    const _getCollectionPath = () => 'tenants/' + _getTenantId() + '/demanda/techbase/products';
 
     let _parsedRows = [];
     let _isImporting = false;
@@ -429,7 +445,7 @@ const DemandaEnrichment = (() => {
             const batch = db.batch();
 
             chunk.forEach(p => {
-                const docRef = db.collection(COLLECTION_PATH).doc(p.codigo);
+                const docRef = db.collection(_getCollectionPath()).doc(p.codigo);
                 const payload = {
                     id: p.codigo,
                     codigoErp: p.codigo,

@@ -11,11 +11,27 @@
 
 const DemandaDB = (() => {
 
-    // ── Configuração ─────────────────────────────────────────
-    const TENANT_ID   = 'centralpecas';
-    const BASE_PATH   = `tenants/${TENANT_ID}/demanda`;          // 3 segs — subcoleção valida
-    const DEMANDS_COL = `${BASE_PATH}/data/demands`;             // 5 segs — coleção valida (ímpar) ✅
-    const CONFIG_COL  = `${BASE_PATH}/config`;                   // 4 segs — documento valido (par)  ✅
+    // ── Configuração Multi-Tenant Dinâmica ───────────────────
+    function _getTenantId() {
+        try {
+            if (window.ParreiraAuth && typeof ParreiraAuth.getTenant === 'function') {
+                const t = ParreiraAuth.getTenant();
+                if (t) return t;
+            }
+            if (window.sessionManager && typeof sessionManager.getTenantId === 'function') {
+                const t = sessionManager.getTenantId();
+                if (t) return t;
+            }
+            const s = JSON.parse(sessionStorage.getItem('parreira_session') || localStorage.getItem('parreira_session_ls') || 'null');
+            if (s && s.tenantId) return s.tenantId;
+        } catch (_) {}
+        return localStorage.getItem('app_tenant_id') || 'centralpecas';
+    }
+
+    const _basePath   = () => `tenants/${_getTenantId()}/demanda`;
+    const _demandsCol = () => `${_basePath()}/data/demands`;
+    const _configCol  = () => `${_basePath()}/config`;
+    const _catalogCol = () => `${_basePath()}/techbase/catalogos`;
 
     // Contador sequencial (persistido no Firestore)
     let _sequenceCache = null;
@@ -30,7 +46,7 @@ const DemandaDB = (() => {
     // ── Geração de código sequencial legível ─────────────────
     async function _nextCodigo() {
         const db    = _db();
-        const ref   = db.doc(`${CONFIG_COL}`);  // 4 segmentos — documento valido
+        const ref   = db.doc(_configCol());  // 4 segmentos — documento valido
         const snap  = await ref.get();
         const next  = ((snap.exists ? snap.data().lastDemanda : 0) || 0) + 1;
         await ref.set({ lastDemanda: next }, { merge: true });
@@ -51,12 +67,12 @@ const DemandaDB = (() => {
         const codigo = await _nextCodigo();
         const now    = firebase.firestore.FieldValue.serverTimestamp();
 
-        const demandaRef = db.collection(DEMANDS_COL).doc();
+        const demandaRef = db.collection(_demandsCol()).doc();
         const demandaId  = demandaRef.id;
 
         const demandaDoc = {
             id:                demandaId,
-            tenantId:          TENANT_ID,
+            tenantId:          _getTenantId(),
             codigo,
             status:            'aberta',
             origem:            data.origem     || 'manual',
@@ -99,7 +115,7 @@ const DemandaDB = (() => {
      * Busca uma demanda pelo ID (sem itens).
      */
     async function getDemanda(demandaId) {
-        const snap = await _db().doc(`${DEMANDS_COL}/${demandaId}`).get();
+        const snap = await _db().doc(`${_demandsCol()}/${demandaId}`).get();
         if (!snap.exists) throw new Error(`Demanda ${demandaId} não encontrada.`);
         return snap.data();
     }
@@ -108,7 +124,7 @@ const DemandaDB = (() => {
      * Atualiza campos da demanda.
      */
     async function updateDemanda(demandaId, fields) {
-        await _db().doc(`${DEMANDS_COL}/${demandaId}`).update({
+        await _db().doc(`${_demandsCol()}/${demandaId}`).update({
             ...fields,
             atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
         });
@@ -120,11 +136,11 @@ const DemandaDB = (() => {
      * @returns {Promise<Array>}
      */
     async function listDemandas(filters = {}) {
-        let q = _db().collection(DEMANDS_COL).orderBy('criadoEm', 'desc');
+        let q = _db().collection(_demandsCol()).orderBy('criadoEm', 'desc');
 
         if (filters.vendedorId) q = q.where('vendedorId', '==', filters.vendedorId);
         if (filters.filialId)   q = q.where('filialId',   '==', filters.filialId);
-        if (filters.status)     q = q.where('status',     '==', filters.status);
+        if (filters.status && filters.status !== 'todas') q = q.where('status', '==', filters.status);
         q = q.limit(filters.limit || 50);
 
         const snap = await q.get();
@@ -137,18 +153,16 @@ const DemandaDB = (() => {
      * Constrói o documento de um item com todos os campos default.
      */
     // ── Catálogos Externos de Peças (OEM e Fabricantes) ─────
-    const CATALOG_COL = `${BASE_PATH}/techbase/catalogos`;
-
     async function saveCatalogoItem(item) {
         const db = _db();
         const id = (item.marca + "_" + (item.codigoNorm || item.codigo || "")).replace(/[^a-zA-Z0-9_]/g, "_").slice(0, 60);
-        await db.collection(CATALOG_COL).doc(id).set(item, { merge: true });
+        await db.collection(_catalogCol()).doc(id).set(item, { merge: true });
         return id;
     }
 
     async function listCatalogoItems(limit = 300) {
         const db = _db();
-        const snap = await db.collection(CATALOG_COL).limit(limit).get();
+        const snap = await db.collection(_catalogCol()).limit(limit).get();
         return snap.docs.map(d => ({ id: d.id, ...d.data() }));
     }
 
@@ -536,8 +550,13 @@ const DemandaDB = (() => {
         createDemanda, getDemanda, updateDemanda, listDemandas,
         addItens, getItens, updateItem, updateItemStatus, updateItensBatch, deleteItem, recalcTotals, splitItem,
         onItensChanged, listItensFila, getDashboardStats,
-        saveSession, loadSession, clearSession, saveCatalogoItem, listCatalogoItems, CATALOG_COL,
-        TENANT_ID, DEMANDS_COL
+        saveSession, loadSession, clearSession, saveCatalogoItem, listCatalogoItems,
+        get TENANT_ID()   { return _getTenantId(); },
+        get BASE_PATH()   { return _basePath(); },
+        get DEMANDS_COL() { return _demandsCol(); },
+        get CONFIG_COL()  { return _configCol(); },
+        get CATALOG_COL() { return _catalogCol(); },
+        getTenantId: _getTenantId
     };
 
 })();

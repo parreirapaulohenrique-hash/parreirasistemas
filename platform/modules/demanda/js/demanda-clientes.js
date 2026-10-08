@@ -1,4 +1,4 @@
-﻿/**
+/**
  * demanda-clientes.js — Gerenciamento de Clientes (Demanda)
  * ==========================================================
  * Persistencia: Firestore → tenants/{tenant}/demanda/data/clientes/{id}
@@ -7,9 +7,26 @@
 
 const DemandaClientes = (() => {
 
-    const TENANT_ID    = 'centralpecas';
-    const BASE_PATH    = `tenants/${TENANT_ID}/demanda`;
-    const CLIENTES_COL = `${BASE_PATH}/data/clientes`;   // 5 segs valido
+    function _getTenantId() {
+        if (typeof DemandaDB !== 'undefined' && DemandaDB.TENANT_ID) {
+            return DemandaDB.TENANT_ID;
+        }
+        try {
+            if (window.ParreiraAuth && typeof ParreiraAuth.getTenant === 'function') {
+                const t = ParreiraAuth.getTenant();
+                if (t) return t;
+            }
+            if (window.sessionManager && typeof sessionManager.getTenantId === 'function') {
+                const t = sessionManager.getTenantId();
+                if (t) return t;
+            }
+            const s = JSON.parse(sessionStorage.getItem('parreira_session') || localStorage.getItem('parreira_session_ls') || 'null');
+            if (s && s.tenantId) return s.tenantId;
+        } catch (_) {}
+        return localStorage.getItem('app_tenant_id') || 'centralpecas';
+    }
+
+    const _clientesCol = () => `tenants/${_getTenantId()}/demanda/data/clientes`;
 
     let _cache  = [];
     let _cacheTs = 0;
@@ -33,7 +50,7 @@ const DemandaClientes = (() => {
     async function listar(forcar) {
         if (!forcar && _cache.length > 0 && Date.now() - _cacheTs < CACHE_TTL) return _cache;
         const db   = _db();
-        const snap = await db.collection(CLIENTES_COL).orderBy('nome').limit(1000).get();
+        const snap = await db.collection(_clientesCol()).orderBy('nome').limit(1000).get();
         _cache   = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         _cacheTs = Date.now();
         return _cache;
@@ -68,13 +85,13 @@ const DemandaClientes = (() => {
             updatedAt: new Date().toISOString(),
         };
         if (!cliente.id) doc.createdAt = new Date().toISOString();
-        await db.collection(CLIENTES_COL).doc(id).set(doc, { merge: true });
+        await db.collection(_clientesCol()).doc(id).set(doc, { merge: true });
         _cache = [];
         return { id, ...doc };
     }
 
     async function desativar(id) {
-        await _db().collection(CLIENTES_COL).doc(id).update({ ativo: false, updatedAt: new Date().toISOString() });
+        await _db().collection(_clientesCol()).doc(id).update({ ativo: false, updatedAt: new Date().toISOString() });
         _cache = [];
     }
 
@@ -87,7 +104,7 @@ const DemandaClientes = (() => {
             const slice = clientes.slice(i, i + SZ);
             for (const c of slice) {
                 const id  = _gerarId(c.nome || c.razaoSocial || '', c.cnpj || c.cpf || c.documento || '');
-                const ref = db.collection(CLIENTES_COL).doc(id);
+                const ref = db.collection(_clientesCol()).doc(id);
                 batch.set(ref, {
                     nome:      (c.nome || c.razaoSocial || c.nomeFantasia || '').trim(),
                     documento: (c.cnpj || c.cpf || c.documento || '').replace(/\D/g,''),

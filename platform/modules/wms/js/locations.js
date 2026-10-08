@@ -1003,7 +1003,10 @@ function renderTableView(data) {
             <td style="padding:0.5rem;text-align:center;">
                 <span style="background:${color}22;color:${color};padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem;font-weight:600;">${loc.status}</span>
             </td>
-            <td style="padding:0.5rem;text-align:center;">
+            <td style="padding:0.5rem;text-align:center;display:flex;align-items:center;justify-content:center;gap:4px;">
+                <button onclick="window.WmsEtiquetas && WmsEtiquetas.imprimirEtiquetaHtml({ endereco: '${loc.id}', tipo: '${loc.tipo || 'PICKING'}' })" style="background:none;border:none;cursor:pointer;color:var(--primary-color,#3b82f6);" title="Imprimir Etiqueta Térmica / ZPL">
+                    <span class="material-icons-round" style="font-size:1.1rem;">qr_code_2</span>
+                </button>
                 <button onclick="toggleBlock('${loc.id}')" style="background:none;border:none;cursor:pointer;color:${loc.status==='BLOQUEADO'?'#10b981':'#f59e0b'};" title="${loc.status==='BLOQUEADO'?'Desbloquear':'Bloquear'}">
                     <span class="material-icons-round" style="font-size:1.1rem;">${loc.status==='BLOQUEADO'?'lock_open':'lock'}</span>
                 </button>
@@ -1039,11 +1042,17 @@ window.showLocationActions = function (id) {
     if (!loc) return;
 
     const action = prompt(
-        `Endereço: ${loc.id}\nStatus: ${loc.status}\n\nDigite a ação:\n1 - Bloquear/Desbloquear\n2 - Excluir\n3 - Cancelar`
+        `Endereço: ${loc.id}\nStatus: ${loc.status}\n\nDigite a ação:\n1 - Bloquear/Desbloquear\n2 - Imprimir Etiqueta Térmica/ZPL\n3 - Excluir\n4 - Cancelar`
     );
 
     if (action === '1') toggleBlock(id);
-    else if (action === '2') deleteLocation(id);
+    else if (action === '2') {
+        if (window.WmsEtiquetas) {
+            WmsEtiquetas.imprimirEtiquetaHtml({ endereco: loc.id, tipo: loc.tipo || 'PICKING' });
+        } else {
+            alert('Módulo de etiquetas indisponível.');
+        }
+    } else if (action === '3') deleteLocation(id);
 }
 
 window.toggleBlock = function (id) {

@@ -74,12 +74,27 @@ window.renderEtiquetaEndereco = function () {
             </table>
         </div>
 
-        <div style="display:flex; justify-content:flex-end;">
-            <button class="btn btn-success" onclick="printSelectedLabels('endereco')">
-                <span class="material-icons-round">print</span> Imprimir Selecionadas
+        <div style="display:flex; justify-content:flex-end; gap:0.6rem; align-items:center;">
+            <button class="btn btn-outline" type="button" onclick="copiarZplSelecionados()">
+                <span class="material-icons-round">qr_code</span> Copiar ZPL II (Zebra)
+            </button>
+            <button class="btn btn-success" type="button" onclick="printSelectedLabels('endereco')">
+                <span class="material-icons-round">print</span> Imprimir Térmica / HTML
             </button>
         </div>
     `;
+};
+
+window.copiarZplSelecionados = function () {
+    const checked = [...document.querySelectorAll('.lbl-check:checked')].map(c => c.value);
+    if (checked.length === 0) return alert('Selecione pelo menos um endereço para gerar ZPL.');
+
+    if (window.WmsEtiquetas && WmsEtiquetas.gerarZplEndereco) {
+        const fullZpl = checked.map(addr => WmsEtiquetas.gerarZplEndereco({ endereco: addr, tipo: 'PICKING' })).join('\n');
+        WmsEtiquetas.copiarZpl(fullZpl);
+    } else {
+        alert('Módulo ZPL indisponível no momento.');
+    }
 };
 
 window.renderEtiquetaProduto = function () {
