@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.23.1",
-  "build": "20261008-v3.23.1",
+  "version": "3.23.2",
+  "build": "20261008-v3.23.2",
   "lastUpdate": "2026-10-08",
-  "releaseDate": "2026-10-08T15:18:00-03:00",
-  "change": "v3.23.1: Exibição do % de Frete da Tabela e % efetivo sobre NF na tabela consolidada, nos cards de cenário comparativo e no raio-x despacho a despacho; padronização rigorosa de fontes, formulários e tamanhos com os padrões do módulo."
+  "releaseDate": "2026-10-08T15:45:00-03:00",
+  "change": "v3.23.2: Padronização e refinamento visual da Análise de Troca de Transportadora no padrão de alta qualidade da Montagem de Carga (.switch-table, 0.82rem, hierarquia tipográfica equilibrada e harmonia estética)."
 }

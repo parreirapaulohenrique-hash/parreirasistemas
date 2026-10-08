@@ -751,47 +751,49 @@ window.CarrierSwitchModule = (function () {
 
             html += `
                 <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
-                    <td style="font-weight: 600; color: #f8fafc;">
-                        ${g.cliente}
-                        <div style="font-size: 0.72rem; color: var(--text-secondary); font-weight: normal;">
-                            ${g.count} ${g.count === 1 ? 'despacho' : 'despachos'} (${(g.pesoTotal).toFixed(0)} kg)
+                    <td>
+                        <div style="font-weight: 600; color: #f8fafc; font-size: 0.82rem; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${g.cliente}">${g.cliente}</div>
+                        <div style="font-size: 0.70rem; color: var(--text-secondary); margin-top: 1px;">
+                            ${g.count} ${g.count === 1 ? 'despacho' : 'despachos'} • ${(g.pesoTotal).toFixed(0)} kg
                         </div>
                     </td>
-                    <td style="color: #cbd5e1;">${g.cidade}</td>
-                    <td style="color: #94a3b8;">${g.carrierAnterior}</td>
-                    <td style="color: #60a5fa; font-weight: 600;">${g.carrierNovo}</td>
+                    <td style="color: #cbd5e1; font-size: 0.82rem;">${g.cidade}</td>
+                    <td style="color: #94a3b8; font-size: 0.82rem;">${g.carrierAnterior}</td>
+                    <td style="color: #60a5fa; font-weight: 600; font-size: 0.82rem;">${g.carrierNovo}</td>
                     <td style="text-align: center;">
-                        <div style="display: inline-flex; align-items: center; justify-content: center; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 4px; padding: 2px 8px; font-weight: 700; color: #60a5fa; font-size: 0.85rem;">
+                        <div style="display: inline-flex; align-items: center; justify-content: center; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 4px; padding: 2px 7px; font-weight: 700; color: #60a5fa; font-size: 0.78rem;">
                             ${g.percentualTabelaNovo > 0 ? g.percentualTabelaNovo.toFixed(2) + '%' : '-'}
                         </div>
-                        <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px;" title="Percentual Efetivo sobre Valor Total de NFs">
-                            ${g.percentualEfetivoNovo > 0 ? g.percentualEfetivoNovo.toFixed(2) + '% efetivo' : ''}
+                        <div style="font-size: 0.68rem; color: var(--text-secondary); margin-top: 1px;" title="Percentual Efetivo sobre Valor Total de NFs">
+                            ${g.percentualEfetivoNovo > 0 ? g.percentualEfetivoNovo.toFixed(2) + '% ef.' : ''}
                         </div>
                     </td>
-                    <td style="font-weight: 600; color: #e2e8f0;">
-                        ${formatBRL(g.custoAnteriorTotal)}
-                        <div style="font-size: 0.72rem; color: var(--text-secondary);">${g.percentualEfetivoAnterior > 0 ? g.percentualEfetivoAnterior.toFixed(2) + '% s/ NF' : ''}</div>
+                    <td>
+                        <div style="font-weight: 600; color: #e2e8f0; font-size: 0.82rem;">${formatBRL(g.custoAnteriorTotal)}</div>
+                        <div style="font-size: 0.68rem; color: var(--text-secondary);">${g.percentualEfetivoAnterior > 0 ? g.percentualEfetivoAnterior.toFixed(2) + '% s/ NF' : ''}</div>
                     </td>
-                    <td style="font-weight: 600; color: #f8fafc;">
-                        ${formatBRL(g.custoNovoTotal)}
-                        ${redespBadge}
-                        <div style="font-size: 0.72rem; color: #94a3b8;">${g.percentualEfetivoNovo > 0 ? g.percentualEfetivoNovo.toFixed(2) + '% s/ NF' : ''}</div>
+                    <td>
+                        <div style="font-weight: 700; color: #f8fafc; font-size: 0.82rem;">
+                            ${formatBRL(g.custoNovoTotal)}
+                            ${redespBadge}
+                        </div>
+                        <div style="font-size: 0.68rem; color: #94a3b8;">${g.percentualEfetivoNovo > 0 ? g.percentualEfetivoNovo.toFixed(2) + '% s/ NF' : ''}</div>
                     </td>
-                    <td style="font-weight: 700; color: ${diffColor};">
+                    <td style="font-weight: 700; color: ${diffColor}; font-size: 0.82rem;">
                         ${diffSignal} ${formatBRL(Math.abs(g.diferencaTotal))}
                     </td>
-                    <td style="font-weight: 700; color: ${diffColor};">
+                    <td style="font-weight: 700; color: ${diffColor}; font-size: 0.82rem;">
                         ${diffSignal} ${Math.abs(g.diferencaPerc).toFixed(2)}%
                     </td>
                     <td>
-                        <div style="font-size: 0.75rem; color: #94a3b8;">${g.leadTimeAnterior} ➔ ${g.leadTimeNovo}</div>
+                        <div style="font-size: 0.72rem; color: #94a3b8;">${g.leadTimeAnterior} ➔ ${g.leadTimeNovo}</div>
                         ${prazoBadge}
                     </td>
                     <td style="text-align: center;">
                         <button class="btn btn-secondary" onclick="window.CarrierSwitchModule.openDetail(${index})" style="
-                            padding: 0.35rem 0.65rem; font-size: 0.75rem; gap: 0.3rem; border-color: rgba(59, 130, 246, 0.4);
+                            padding: 0.25rem 0.55rem; font-size: 0.72rem; gap: 0.25rem; border-color: rgba(59, 130, 246, 0.35); border-radius: 5px;
                         " title="Abrir Raio-X e perspectiva despacho a despacho">
-                            <span class="material-icons-round" style="font-size: 1rem; color: #60a5fa;">visibility</span>
+                            <span class="material-icons-round" style="font-size: 0.95rem; color: #60a5fa;">visibility</span>
                             Detalhes
                         </button>
                     </td>
