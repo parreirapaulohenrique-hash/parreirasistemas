@@ -37,7 +37,8 @@ module.exports = async function handler(req, res) {
     form.append("base64Image", base64Image);
     form.append("apikey",      OCR_API_KEY);
     form.append("language",    "por");
-    form.append("OCREngine",   "1");      // Engine 1 - compatibilidade e velocidade
+    form.append("OCREngine",   parsed.engine ? String(parsed.engine) : "1"); // Engine 1 com isTable preserva colunas tabuladas
+    form.append("isTable",     "true");   // formata tabelas e colunas separadas por \t
     form.append("detectOrientation", "true");
     form.append("scale",       "true");   // melhora leitura de textos e etiquetas pequenas
 
