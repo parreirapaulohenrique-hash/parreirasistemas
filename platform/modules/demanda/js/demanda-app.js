@@ -585,56 +585,30 @@ const DemandaApp = (function() {
 
     var _pdfBlobUrl = null;
 
-    async function _abrirImportPDF() {
+    function _abrirImportPDF() {
         var inp = document.createElement("input");
         inp.type = "file";
         inp.accept = ".pdf,application/pdf";
         inp.style.display = "none";
         document.body.appendChild(inp);
-        inp.onchange = async function() {
+        inp.onchange = function() {
             var file = inp.files[0];
             document.body.removeChild(inp);
             if (!file) return;
-
             // Revoga URL anterior se existir
             if (_pdfBlobUrl) { try { URL.revokeObjectURL(_pdfBlobUrl); } catch(_) {} }
             _pdfBlobUrl = URL.createObjectURL(file);
-
-            _toast("Lendo e extraindo dados do PDF via PDF.js...", "info");
-
-            // 1. Tenta extrair automaticamente os itens com DemandaPDF / DemandaImport
-            try {
-                var itens = null;
-                if (typeof DemandaPDF !== 'undefined' && typeof DemandaPDF.parseCotacaoPDF === 'function') {
-                    itens = await DemandaPDF.parseCotacaoPDF(file);
-                } else if (typeof DemandaImport !== 'undefined' && typeof DemandaImport.parseFile === 'function') {
-                    itens = await DemandaImport.parseFile(file);
-                }
-
-                if (Array.isArray(itens) && itens.length > 0) {
-                    var validados = (typeof DemandaImport !== 'undefined' && typeof DemandaImport.validateItens === 'function')
-                        ? DemandaImport.validateItens(itens)
-                        : itens;
-                    _showConferencia(validados);
-                    _toast(validados.length + " item(ns) extraído(s) do PDF com sucesso!", "success");
-                    return;
-                }
-            } catch (errPdf) {
-                console.warn("[DemandaApp] Falha na extração automática de PDF:", errPdf);
-            }
-
-            // 2. Se não conseguiu extrair itens diretamente (ex: PDF escaneado/imagem sem texto),
-            // abre o modal de apoio visual (com botões e layout perfeitamente alinhados)
+            // Mostra modal com botão para abrir em nova aba
             var modal = document.getElementById("modalImportPDF");
             var fname = document.getElementById("pdfFileName");
             var ta    = document.getElementById("pdfTextoColar");
             var btn   = document.getElementById("btnAbrirPdfNovaAba");
-            if (!modal) { _toast("Não foi possível extrair dados do PDF.", "error"); return; }
+            if (!modal) { _toast("Modal PDF nao encontrado.", "error"); return; }
             if (fname) fname.textContent = file.name;
             if (ta)    ta.value = "";
+            // Atualiza o href do botão âncora diretamente (não abre automaticamente)
             if (btn) { btn.href = _pdfBlobUrl; }
             modal.style.display = "flex";
-            _toast("PDF não contém texto padrão detectável. Cole o conteúdo manualmente ou abra em nova aba.", "warning");
         };
         inp.click();
     }
@@ -649,17 +623,6 @@ const DemandaApp = (function() {
         if (!ta || !ta.value.trim()) { _toast("Cole o texto do PDF antes de processar.", "warning"); return; }
         var texto = ta.value.trim();
         _fecharImportPDF();
-
-        if (typeof DemandaImport !== 'undefined' && typeof DemandaImport.parseText === 'function') {
-            var itens = DemandaImport.parseText(texto);
-            var validados = DemandaImport.validateItens(itens);
-            if (validados.length > 0) {
-                _showConferencia(validados);
-                _toast(validados.length + " item(ns) importado(s) com sucesso!", "success");
-                return;
-            }
-        }
-
         var taImport = document.getElementById("textareaImport");
         if (taImport) taImport.value = texto;
         _openModal("modalTexto");

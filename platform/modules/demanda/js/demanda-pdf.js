@@ -84,7 +84,7 @@ const DemandaPDF = (() => {
         });
     }
 
-    // ── Extrai texto de todas as páginas (preservando quebras de linha) ──────
+    // ── Extrai texto de todas as páginas ───────────────────────
     async function _extractPages(pdfLib, file, onPageProgress) {
         const buffer = await file.arrayBuffer();
         const pdf    = await pdfLib.getDocument({ data: buffer }).promise;
@@ -93,26 +93,8 @@ const DemandaPDF = (() => {
         for (let i = 1; i <= pdf.numPages; i++) {
             const page    = await pdf.getPage(i);
             const content = await page.getTextContent();
-
-            // Preserva quebras de linha com base no transform Y ou hasEOL do PDF.js
-            let pageText = '';
-            let lastY = null;
-            for (const it of content.items) {
-                const currentY = (it.transform && typeof it.transform[5] === 'number') ? it.transform[5] : null;
-                if (lastY !== null && currentY !== null && Math.abs(currentY - lastY) > 4) {
-                    pageText += '\n';
-                } else if (it.hasEOL) {
-                    pageText += (it.str + '\n');
-                    lastY = currentY;
-                    continue;
-                } else if (pageText.length > 0 && !pageText.endsWith(' ') && !pageText.endsWith('\n')) {
-                    pageText += ' ';
-                }
-                pageText += (it.str || '');
-                lastY = currentY;
-            }
-
-            pages.push({ pageNum: i, text: pageText });
+            const text    = content.items.map(it => it.str).join(' ');
+            pages.push({ pageNum: i, text });
             if (onPageProgress) onPageProgress(i, pdf.numPages);
         }
 
@@ -269,44 +251,23 @@ const DemandaPDF = (() => {
         const pages = await _extractPages(pdfLib, file);
         const fullText = pages.map(p => p.text).join('\n');
 
-        let itens = [];
         if (typeof DemandaImport !== 'undefined' && typeof DemandaImport.parseText === 'function') {
-            itens = DemandaImport.parseText(fullText);
+            return DemandaImport.parseText(fullText);
         }
 
-        if (Array.isArray(itens) && itens.length > 0) {
-            return itens;
-        }
-
-        // Fallback inteligente para cotações e orçamentos em formato de tabela/linhas
+        // Fallback básico de extração
         const linhas = fullText.split(/[\r\n]+/).map(l => l.trim()).filter(l => l.length > 2);
-        const itensFallback = [];
-
+        const itens = [];
         for (const linha of linhas) {
-            // Ignora cabeçalhos comuns
-            if (/^(item|código|codigo|descrição|descricao|qtde|qtd|quantidade|unid|un|vl|unit|total|pedido|orçamento|orcamento|proposta|data|cliente|cnpj|fone|tel)/i.test(linha)) {
-                continue;
-            }
-
-            // Quantidade
-            const mQtd = linha.match(/\b(\d+(?:[.,]\d+)?)\s*(?:un|pç|pc|cx|und|jg|pecas|peças)?\b/i);
-            const qtd = mQtd ? parseFloat(mQtd[1].replace(',', '.')) : 1;
-
-            // Código / referência (alfanumérico de 3 a 20 chars com dígitos)
-            const mRef = linha.match(/\b([A-Z0-9\-\/]{3,20})\b/i);
-            if (mRef && /\d/.test(mRef[1]) && mRef[1].length >= 3) {
-                const ref = mRef[1].toUpperCase().trim();
-                let desc = linha.replace(mRef[0], '').replace(/\b\d+(?:[.,]\d+)?\s*(?:un|pç|pc|cx|und|jg)?\b/ig, '').trim();
-                desc = desc.replace(/^[|\-–—;,\s]+|[|\-–—;,\s]+$/g, '').trim();
-                itensFallback.push({
-                    refOriginal: ref,
-                    descOriginal: desc || ref,
-                    qtdeSolicitada: qtd > 0 ? qtd : 1
-                });
-            }
+            const mQtd = linha.match(/\b(\d+)\s*(?:un|pç|pc|cx|und|jg)?\b/i);
+            const qtd = mQtd ? parseInt(mQtd[1], 10) : 1;
+            const limpa = linha.replace(/\b\d+\s*(?:un|pç|pc|cx|und|jg)?\b/i, '').trim();
+            const partes = limpa.split(/\s{2,}|\t|\s+-\s+/);
+            const ref = partes[0] ? partes[0].trim() : '';
+            const desc = partes[1] ? partes[1].trim() : (partes[0] || 'Item do PDF');
+            if (ref) itens.push({ refOriginal: ref, descOriginal: desc, qtdeSolicitada: qtd });
         }
-
-        return itensFallback;
+        return itens;
     }
 
     return {
