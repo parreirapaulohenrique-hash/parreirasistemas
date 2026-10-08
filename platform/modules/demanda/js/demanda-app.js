@@ -697,14 +697,16 @@ const DemandaApp = (function() {
                 var dataUrl = ev.target.result;
                 imgEl.src = dataUrl;
                 imgEl.onload = function() {
-                    var maxDim = 480;
-                    var w = imgEl.naturalWidth || 800, h = imgEl.naturalHeight || 600;
+                    // Mantém alta resolução legível (max 2048px) para o motor OCR reconhecer tabelas e fontes pequenas
+                    var maxDim = 2048;
+                    var w = imgEl.naturalWidth || 1200, h = imgEl.naturalHeight || 800;
                     var ratio = Math.min(maxDim / w, maxDim / h, 1);
                     var cv = document.createElement("canvas");
                     cv.width  = Math.round(w * ratio);
                     cv.height = Math.round(h * ratio);
-                    cv.getContext("2d").drawImage(imgEl, 0, 0, cv.width, cv.height);
-                    var base64 = cv.toDataURL("image/jpeg", 0.75);
+                    var ctx   = cv.getContext("2d");
+                    ctx.drawImage(imgEl, 0, 0, cv.width, cv.height);
+                    var base64 = cv.toDataURL("image/jpeg", 0.88);
 
                     // Envia para proxy local /api/ocr (resolve CORS)
                     fetch("/api/ocr", {

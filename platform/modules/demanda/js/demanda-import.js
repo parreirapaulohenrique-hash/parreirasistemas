@@ -16,16 +16,59 @@
 
 const DemandaImport = (() => {
 
-    // Palavras que indicam linha de cabeçalho / título — devem ser ignoradas
-    // Linhas a ignorar: cabecalhos, unidades (UN), codigos de centro de custo (.100.997), pontos isolados
-    const SKIP_PATTERNS = /^(cod\.?\s*item|denominação|denomina|quantidade|qtde?|referencia|descrição|descri|titulo|título|peças|pecas|trator|produto|marca|obs|n[°º]|item|ref|seq|#|un|und|unid\.?)$/i;
-    // Padrao de centro de custo ERP: .100.997, 100.997, :100.997 — linha de ruido
+    // Palavras e padrões que indicam linha de cabeçalho / rodapé / ruído em documentos e notas
+    const NOISE_LINE_PATTERNS = [
+        /c\.?n\.?p\.?j/i,
+        /c\.?p\.?f/i,
+        /insc\.?\s*estadual/i,
+        /i\.?e\.?\s*:/i,
+        /telefone/i,
+        /fone\s*:/i,
+        /endere[cç]o/i,
+        /bairro/i,
+        /fazenda/i,
+        /estrada/i,
+        /zona\s*rural/i,
+        /cliente\s*:/i,
+        /vendedor/i,
+        /opera[cç][aã]o/i,
+        /local\s*de\s*venda/i,
+        /data\s*abert/i,
+        /data\s*:/i,
+        /or[cç]amento/i,
+        /\b\d+[ªºa]?\s*via\b/i,
+        /condi[cç][aã]o\s*de\s*pagamento/i,
+        /boleto/i,
+        /servi[cç]os\s*:/i,
+        /frete\s*:/i,
+        /outras\s*despesas/i,
+        /total\s*de\s*itens/i,
+        /total\s*geral/i,
+        /nro\s*itens/i,
+        /p[aá]g\s*:\s*\d+/i,
+        /pe[cç]as\s*e\s*insumos/i,
+        /filial\s*\d+/i,
+        /agricola\s*ltda/i,
+        /^produto\s+descri/i,
+        /^tipo\s+cod/i,
+        /^item\s+c[oó]digo/i,
+        /pre[cç]o\s*unit/i,
+        /pre[cç]o\s*bruto/i,
+        /^(cod\.?\s*item|denominação|denomina|quantidade|qtde?|referencia|descrição|descri|titulo|título|peças|pecas|trator|produto|marca|obs|n[°º]|item|ref|seq|#|un|und|unid\.?)$/i
+    ];
+
+    // Padrões de centro de custo ou linhas de puro ruído
     function _isNoiseLine(s) {
+        if (!s) return true;
         s = s.trim();
-        if (SKIP_PATTERNS.test(s))     return true;   // cabecalho
-        if (/^[.:,]?\d{3}[.,]\d{3}$/.test(s)) return true; // .100.997 / 100,997
-        if (/^[.:,]?\d+([.,]\d+)+$/.test(s) && s.length <= 12) return true; // numeros isolados tipo preco
-        if (/^\.$/.test(s))            return true;   // ponto isolado
+        if (s.length < 2) return true;
+        if (/^\.?\d{1,5}$/.test(s)) return true; // número isolado tipo '7401' ou '16'
+        if (/^[.:,]?\d+([.,]\d+)+$/.test(s) && s.length <= 12) return true; // números isolados tipo preço
+        if (/^\.+$/.test(s)) return true; // ponto isolado
+
+        for (let i = 0; i < NOISE_LINE_PATTERNS.length; i++) {
+            if (NOISE_LINE_PATTERNS[i].test(s)) return true;
+        }
         return false;
     }
 
@@ -37,8 +80,7 @@ const DemandaImport = (() => {
             .map(l => l.trim())
             .filter(l => l.length > 1);
 
-        // Tenta primeiro detectar tabela em formato "linha por linha" com colunas separadas
-        // (OCR de tabelas costuma emitir: código, descrição, número — uma por linha)
+        // Tenta primeiro detectar tabela estruturada (OCR, PDF, Excel colado)
         const tableItens = _tryParseTableLines(linhas);
         if (tableItens.length > 0) return tableItens;
 
@@ -49,7 +91,7 @@ const DemandaImport = (() => {
             if (item) itens.push(item);
         }
 
-        if (itens.length === 0 && text.trim()) {
+        if (itens.length === 0 && text.trim() && !_isNoiseLine(text.trim())) {
             itens.push({ refOriginal: '', descOriginal: text.trim(), qtdeSolicitada: 1, obs: '', incerteza: true });
         }
 
@@ -58,16 +100,52 @@ const DemandaImport = (() => {
 
     /**
      * Tenta interpretar linhas como tabela com colunas (Código | Descrição | Qtde).
-     * Suporta dois sub-formatos:
-     *   A) Uma linha por registro: "DZ126340 Junta 1"
-     *   B) Três linhas por registro: "DZ126340" / "Junta" / "1"
+     * Suporta:
+     *   0) Linhas com colunas tabuladas (\t) ou múltiplos espaços (\s{2,}) vindas de OCR/PDF
+     *   A) Uma linha por registro com formato "COD DESC NUM": "DZ126340 Junta 1"
+     *   B) Linhas alternadas Código / Descrição / Qtde
      */
     function _tryParseTableLines(linhas) {
-        // Filtra cabeçalhos e linhas muito curtas
-        const util = linhas.filter(l => !SKIP_PATTERNS.test(l) && l.length > 1);
+        // ─── Formato 0: Tabela com colunas tabuladas (\t) ou múltiplos espaços ───
+        const tabRows = [];
+        for (const l of linhas) {
+            if (_isNoiseLine(l)) continue;
+            const parts = l.split(/\t+|\s{2,}/).map(p => p.trim()).filter(Boolean);
+            if (parts.length >= 2 && _isPartCode(parts[0])) {
+                const ref = parts[0].toUpperCase();
+                const desc = parts[1];
+                let qtde = 1;
+                for (let idx = 2; idx < parts.length; idx++) {
+                    const p = parts[idx];
+                    // Quantidade após unidade
+                    if (/^(UN|PC|PÇ|CX|UND|JG|PAR|M)$/i.test(p) && idx + 1 < parts.length) {
+                        const mq = parts[idx + 1].match(/^(\d+(?:[.,]\d+)?)$/);
+                        if (mq) {
+                            qtde = Math.round(parseFloat(mq[1].replace(',', '.'))) || 1;
+                            break;
+                        }
+                    }
+                    // Quantidade com zeros ou formato inteiro
+                    const mq2 = p.match(/^(\d+(?:\.0+|\.0000)?)$/);
+                    if (mq2) {
+                        const qv = parseFloat(mq2[1]);
+                        if (qv > 0 && qv < 10000) {
+                            qtde = Math.round(qv) || 1;
+                            break;
+                        }
+                    }
+                }
+                tabRows.push({ refOriginal: ref, descOriginal: desc || ref, qtdeSolicitada: qtde, obs: '', incerteza: false });
+            }
+        }
+        if (tabRows.length >= 2 || (tabRows.length === 1 && linhas.length <= 6)) {
+            return tabRows;
+        }
+
+        // Filtra cabeçalhos e linhas muito curtas para outros formatos
+        const util = linhas.filter(l => !_isNoiseLine(l) && l.length > 1);
 
         // ─── Formato A: cada linha tem código + descrição + qtde ───
-        // Detecta se há pelo menos 3 linhas com padrão "COD DESC NUM" na linha inteira
         const formatA = util.filter(l => _isFormatALine(l));
         if (formatA.length >= 3 || (formatA.length >= 1 && formatA.length >= util.length * 0.5)) {
             return formatA
@@ -76,7 +154,6 @@ const DemandaImport = (() => {
         }
 
         // ─── Formato B: linhas alternadas Código / Descrição / Qtde ───
-        // Detecta se temos padrão repetido: código puro → texto → número
         const codLines = util.filter(l => _isPartCode(l) && !_isOnlyNumber(l));
         if (codLines.length >= 2 && codLines.length >= util.length * 0.25) {
             return _parseFormatBLines(util);
@@ -87,9 +164,8 @@ const DemandaImport = (() => {
 
     /** Linha no formato A: começa com código, termina com número, tem descrição no meio */
     function _isFormatALine(l) {
-        // "DZ126340 Junta 1" ou "R518255 Engrenagem 1"
-        return /^[A-Z0-9]{3,}[\s\-\/][^\d].*\s+\d+\s*$/i.test(l)
-            || /^[A-Z]{1,4}\d{3,}\S*\s+.+\s+\d+$/i.test(l);
+        return /^[A-Z0-9\-\/]{3,}[\s\-\/][^\d].*\s+\d+\s*$/i.test(l)
+            || /^[A-Z0-9]{1,6}\d{2,}\S*\s+.+\s+\d+$/i.test(l);
     }
 
     function _parseFormatALine(linha) {
@@ -128,9 +204,33 @@ const DemandaImport = (() => {
         return itens;
     }
 
+    /**
+     * Valida se uma string é um código de peça agrícola / automotiva / industrial real.
+     * Suporta formatos:
+     * - Alfanumérico (14M7230/JA, 6206-2RS-C3/PFI, ALM8/JA, F110390 -INA, DZ126340, RE123456)
+     * - Números com separador (450452029/199, 73382326-952, 3003060080/199)
+     * - Códigos numéricos OEM puros de 6 a 12 dígitos (61174275, 87016581, 73380630)
+     */
     function _isPartCode(s) {
-        return /^[A-Z]{1,4}[-\s]?\d{3,}[A-Z0-9\-\/]*$/i.test(s.trim())
-            || /^\d{3,}[A-Z]{2,}/i.test(s.trim());
+        if (!s) return false;
+        s = s.trim();
+        if (s.length < 3 || s.length > 32) return false;
+        if (_isNoiseLine(s)) return false;
+        if (/^\d{2}\/\d{2}\/\d{2,4}$/.test(s)) return false; // data
+        if (/^\(?\d{2}\)?\s*\d{4,5}-?\d{4}$/.test(s)) return false; // telefone
+        if (/^\d+([.,]\d+)+$/.test(s) && s.length < 10 && !/[A-Za-z]/.test(s)) return false; // preço/decimal puro
+        if (/^\d{1,5}$/.test(s)) return false; // número curto
+
+        // 1. Alfanumérico com letras e dígitos
+        if (/[A-Za-z]/.test(s) && /\d/.test(s)) return true;
+        // 2. Dígitos com hífen ou barra
+        if (/^\d{4,}[-/]\d+/.test(s)) return true;
+        // 3. Código numérico OEM puro com 6 a 12 dígitos
+        if (/^\d{6,12}$/.test(s)) return true;
+        // 4. Padrão OEM clássico de 1-4 letras + dígitos
+        if (/^[A-Za-z]{1,4}\d{3,}/.test(s)) return true;
+
+        return false;
     }
 
     function _isOnlyNumber(s) {
@@ -205,6 +305,14 @@ const DemandaImport = (() => {
                     desc = qtdFinal[1].trim();
                     qtde = Math.round(qf) || 1;
                 }
+            }
+        }
+
+        if (!ref) {
+            // Se não encontrou código de peça, só aceita se houver termo mecânico/agrícola na descrição
+            const hasPartKeyword = /\b(rolamento|correia|junta|parafuso|porca|filtro|retentor|arruela|mangueira|mangote|bucha|disco|mola|pino|sensor|v[aá]lvula|bomba|cabo|anel|terminal|engrenagem|eixo|cubo|reparo|kit|cruzeta|bico|corrente|amortecedor|bra[cç]o|sapata|lona|tambor|cilindro|radiador|palheta|lampada|rele|fusivel|chicote|espelho|farol|lanterna|oleo|graxa|adesivo|tinta|aditivo|vela|bateria|motor|compressor|alternador|turbina|tubo|abra[cç]adeira|gaxeta|chapa|revestimento|feltro|pinhao|oring|o-ring)\b/i.test(desc);
+            if (!hasPartKeyword) {
+                return null;
             }
         }
 
