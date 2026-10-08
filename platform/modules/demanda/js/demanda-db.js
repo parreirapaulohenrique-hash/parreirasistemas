@@ -28,10 +28,11 @@ const DemandaDB = (() => {
         return localStorage.getItem('app_tenant_id') || 'centralpecas';
     }
 
-    const _basePath   = () => `tenants/${_getTenantId()}/demanda`;
-    const _demandsCol = () => `${_basePath()}/data/demands`;
-    const _configCol  = () => `${_basePath()}/config`;
-    const _catalogCol = () => `${_basePath()}/techbase/catalogos`;
+        const _basePath   = () => 'tenants/' + _getTenantId() + '/demanda';
+    const _demandsCol = () => _basePath() + '/data/demands';
+    const _configCol  = () => _basePath() + '/config';
+    const _catalogCol = () => _basePath() + '/techbase/catalogos';
+    const DEMANDS_COL = { toString: () => _demandsCol(), valueOf: () => _demandsCol() };
 
     // Contador sequencial (persistido no Firestore)
     let _sequenceCache = null;
@@ -130,21 +131,66 @@ const DemandaDB = (() => {
         });
     }
 
+    const _CACHE_KEY_DEMANDAS = () => 'demanda_cache_demandas_' + _getTenantId();
+
     /**
      * Lista demandas do tenant com filtros opcionais.
+     * Suporta fallback para o tenant histórico 'centralpecas' e cache local resiliente (caso cota do Firestore estoure).
      * @param {object} filters - { vendedorId, status, filialId, limit }
      * @returns {Promise<Array>}
      */
     async function listDemandas(filters = {}) {
-        let q = _db().collection(_demandsCol()).orderBy('criadoEm', 'desc');
+        const tid = _getTenantId();
+        try {
+            let q = _db().collection(_demandsCol()).orderBy('criadoEm', 'desc');
 
-        if (filters.vendedorId) q = q.where('vendedorId', '==', filters.vendedorId);
-        if (filters.filialId)   q = q.where('filialId',   '==', filters.filialId);
-        if (filters.status && filters.status !== 'todas') q = q.where('status', '==', filters.status);
-        q = q.limit(filters.limit || 50);
+            if (filters.vendedorId) q = q.where('vendedorId', '==', filters.vendedorId);
+            if (filters.filialId)   q = q.where('filialId',   '==', filters.filialId);
+            if (filters.status && filters.status !== 'todas') q = q.where('status', '==', filters.status);
+            q = q.limit(filters.limit || 60);
 
-        const snap = await q.get();
-        return snap.docs.map(d => d.data());
+            const snap = await q.get();
+            let lista = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+
+            // Fallback histórico transparente: se tenant atual for diferente de 'centralpecas'
+            // e retornou poucas/nenhuma cotação, consulta também o histórico de 'centralpecas'
+            if (tid !== 'centralpecas' && lista.length < 5) {
+                try {
+                    let qFallback = _db().collection(`tenants/centralpecas/demanda/data/demands`).orderBy('criadoEm', 'desc').limit(filters.limit || 60);
+                    if (filters.status && filters.status !== 'todas') qFallback = qFallback.where('status', '==', filters.status);
+                    const snapFallback = await qFallback.get();
+                    const listaFallback = snapFallback.docs.map(d => ({ ...d.data(), id: d.id, _origemFallback: 'centralpecas' }));
+                    // Mescla sem duplicar IDs
+                    const mapIds = new Map();
+                    lista.forEach(item => mapIds.set(item.id, item));
+                    listaFallback.forEach(item => { if (!mapIds.has(item.id)) mapIds.set(item.id, item); });
+                    lista = Array.from(mapIds.values());
+                } catch (_) { /* Ignora se permissão ou cota */ }
+            }
+
+            // Salva no cache local resiliente
+            try {
+                localStorage.setItem(_CACHE_KEY_DEMANDAS(), JSON.stringify(lista));
+            } catch (_) {}
+
+            return lista;
+        } catch (err) {
+            console.warn('[DemandaDB] listDemandas aviso/erro:', err.message || err);
+            // Se cota excedida (429) ou offline, restaura do cache local
+            const rawCache = localStorage.getItem(_CACHE_KEY_DEMANDAS()) || localStorage.getItem('demanda_cache_demandas_centralpecas');
+            if (rawCache) {
+                try {
+                    const cached = JSON.parse(rawCache);
+                    if (Array.isArray(cached) && cached.length > 0) {
+                        if (typeof window !== 'undefined' && window.dispatchEvent) {
+                            window.dispatchEvent(new CustomEvent('demanda:quota_warning', { detail: { msg: 'Exibindo dados do cache local (Cota do Firestore atingida).' } }));
+                        }
+                        return cached;
+                    }
+                } catch (_) {}
+            }
+            throw err;
+        }
     }
 
     // ── ITENS ─────────────────────────────────────────────────
