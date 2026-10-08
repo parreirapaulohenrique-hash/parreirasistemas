@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.24.4",
-  "build": "20261008-v3.24.4",
+  "version": "3.24.5",
+  "build": "20261008-v3.24.5",
   "lastUpdate": "2026-10-08",
-  "releaseDate": "2026-10-08T19:35:00-03:00",
-  "change": "v3.24.4: Inclusão e sincronização automática de transportadoras/embarcações de redespacho (ex: EMBARCACAO BOM JESUS para Breves) no Cadastro Transportadora, com badge indicativo [REDESPACHO] e campo de filtro rápido."
+  "releaseDate": "2026-10-08T20:00:00-03:00",
+  "change": "v3.24.5: Obrigação estrita de cadastro prévio de Redespacho. Bloqueio em formulário e importação de rotas caso o redespacho não possua cadastro prévio no Cadastro Transportadora com a opção 'É Transportadora de Redespacho?' marcada."
 }
