@@ -7960,11 +7960,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </tfoot>
                 </table>
 
-                <div class="signature-row" style="margin-top: 2cm; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; font-family: Arial, sans-serif;">
-                    <div class="sig-box" style="border-top: 1px solid #000; padding-top: 4px; text-align: center; font-size: 10px; font-weight: bold;">
+                <div class="signature-row" style="margin-top: 2cm !important; display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 40px; font-family: Arial, sans-serif;">
+                    <div class="sig-box" style="border-top: 1px solid #000; padding-top: 5px; text-align: center; font-size: 0.8rem; font-weight: bold;">
                         Responsável Expedição
                     </div>
-                    <div class="sig-box" style="border-top: 1px solid #000; padding-top: 4px; text-align: center; font-size: 10px; font-weight: bold;">
+                    <div class="sig-box" style="border-top: 1px solid #000; padding-top: 5px; text-align: center; font-size: 0.8rem; font-weight: bold;">
                         Motorista / Conferente
                     </div>
                 </div>
@@ -8738,6 +8738,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const cleanName = String(carrierName || '').trim().toUpperCase();
                 const cInfo = carrierInfo[cleanName] || { cnpj: '-', address: '-', city: '-' };
 
+                // Motorista / Entregador atribuído (se houver)
+                const assignedDriver = (items && items.find(it => it.driverName || it.deliveryPerson))?.driverName 
+                    || (items && items.find(it => it.driverName || it.deliveryPerson))?.deliveryPerson 
+                    || '';
+
                 // v3.21.0 - Fase 2: ID e Código de Barras no Romaneio
                 const cleanRomaneioId = romaneioId || (items && items[0] && items[0].romaneioId) || ('ROM-' + Date.now().toString().slice(-6));
                 const barcodeSvg = (typeof Utils !== 'undefined' && Utils.generateBarcode128)
@@ -8879,12 +8884,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </tfoot>
             </table>
 
-            <div class="signature-row" style="margin-top: 12px; display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 40px;">
-                <div class="sig-box" style="border-top: 1px solid #000; text-align: center; padding-top: 4px; font-size: 0.8rem; font-weight: bold; font-family: Arial, sans-serif;">
+            <div class="signature-row" style="margin-top: 2cm !important; display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 40px;">
+                <div class="sig-box" style="border-top: 1px solid #000; text-align: center; padding-top: 5px; font-size: 0.8rem; font-weight: bold; font-family: Arial, sans-serif;">
                     Responsável Expedição
                 </div>
-                <div class="sig-box" style="border-top: 1px solid #000; text-align: center; padding-top: 4px; font-size: 0.8rem; font-weight: bold; font-family: Arial, sans-serif;">
-                    Motorista / Conferente
+                <div class="sig-box" style="border-top: 1px solid #000; text-align: center; padding-top: 5px; font-size: 0.8rem; font-weight: bold; font-family: Arial, sans-serif;">
+                    Motorista / Conferente${assignedDriver && assignedDriver !== '-' ? `<div style="font-size: 0.72rem; font-weight: normal; margin-top: 2px;">(${assignedDriver})</div>` : ''}
                 </div>
             </div>
             ${isCompact && i === 0 ? '<div style="margin-top: 6mm; text-align: center; font-size: 8px; color: #555; letter-spacing: 2px;">✂ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ✂</div>' : ''}
@@ -9005,9 +9010,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </tr>
                 </tfoot>
             </table>
-            <div class="signature-row" style="margin-top:12px;display:grid !important;grid-template-columns:1fr 1fr !important;gap:40px;">
-                <div class="sig-box" style="border-top:1px solid #000;text-align:center;padding-top:4px;font-size:0.8rem;font-weight:bold;font-family:Arial,sans-serif;">Responsável Expedição</div>
-                <div class="sig-box" style="border-top:1px solid #000;text-align:center;padding-top:4px;font-size:0.8rem;font-weight:bold;font-family:Arial,sans-serif;">Conferente / Redespacho</div>
+            <div class="signature-row" style="margin-top: 2cm !important; display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 40px;">
+                <div class="sig-box" style="border-top: 1px solid #000; text-align: center; padding-top: 5px; font-size: 0.8rem; font-weight: bold; font-family: Arial, sans-serif;">Responsável Expedição</div>
+                <div class="sig-box" style="border-top: 1px solid #000; text-align: center; padding-top: 5px; font-size: 0.8rem; font-weight: bold; font-family: Arial, sans-serif;">Conferente / Redespacho</div>
             </div>
             ${isRcCompact && ri === 0 ? '<div style="margin-top: 6mm; text-align: center; font-size: 8px; color: #555; letter-spacing: 2px;">✂ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ✂</div>' : ''}
         `;

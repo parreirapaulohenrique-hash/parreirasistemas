@@ -448,8 +448,10 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
 > O agente DEVE seguir impreterivelmente as regras abaixo:
 
 ### 9.1. Regra de Agrupamento em Lote (Batching)
-* **Nunca commitar a cada arquivo individual:** Realize todas as alterações de código, estilizações e integrações do módulo em sequência contínua.
-* **Teste e validação antes do Git:** Valide a sintaxe e o funcionamento da alteração antes de iniciar o processo de commit e deploy.
+* **Leitura e Análise em Lote (Batch Scan):** NUNCA inspecionar ou ler arquivos pela rede um a um de forma sequencial com ferramentas individuais (isso gera latência multiplicada de ~480ms por arquivo). Sempre utilizar um script consolidado (Python ou Node) para ler todo o diretório ou módulo de uma só vez para a memória, processar o diagnóstico e retornar o resultado em bloco.
+* **Planejamento em Bloco Único:** Apresentar o diagnóstico consolidado do módulo e a lista de melhorias de forma unificada antes da execução, evitando vaivéns fragmentados.
+* **Execução e Entrega em Lote (Batch Delivery):** Realizar todas as alterações de código, estilizações, HTML e regras de banco do pacote em sequência contínua e integrada.
+* **Teste e validação em Lote antes do Git:** Valide a sintaxe, dependências e funcionamento de todos os arquivos alterados em uma única rodada antes do commit.
 * **Um único commit por entrega funcional:** Reúna as alterações relacionadas em um único commit bem descrito, evitando múltiplos ciclos de espera de rede.
 
 ### 9.2. Git Scoped (Comandos Estritamente Direcionados)
