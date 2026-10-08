@@ -554,11 +554,16 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
 * **2026-09-29 (v3.21.67 / MAXCRM v1.3.3):** Correção crítica de inicialização do Firebase (`Firebase: No Firebase App '[DEFAULT]' has been created`). Garantida a chamada explícita de `firebase.initializeApp(window.FIREBASE_CONFIG)` e autenticação anônima antes de qualquer operação de Firestore no `index.html`, `maxcrm-core.js` e `maxcrm-sync.js`, permitindo que usuários com sessão já iniciada (como a Maisa) sincronizem perfeitamente suas visitas locais para o banco na nuvem.
 
 * **2026-09-29 (v3.21.68 / MAXCRM v1.3.4):** Mesclagem automática de visitas locais do IndexedDB com os dados remotos do Firestore em `carregarMinhasVisitas` (para manter sempre visíveis as visitas locais do aparelho que ainda não subiram para a nuvem) e botão 'Importar' de backup JSON diretamente na tela Minhas Visitas.
-* **2026-10-07 (v3.21.78 / Fase 1 - Estabilidade, Segurança e Integração):**
-  - **Eliminação de Vazamento entre Tenants (`erp-registry.js`):** Removido o fallback padrão perigoso que atribuía `'centralpecas'` quando o `tenantId` estivesse nulo ou indefinido, garantindo resolução estrita da sessão autenticada.
-  - **Proteção contra SSRF no Proxy MaxData (`api/maxdata.js` e `platform/api/maxdata.js`):** Implementada checagem defensiva de whitelist/blacklist de hosts e IPs, impedindo requisições a metadados de nuvem (`169.254.169.254`), `localhost` e faixas RFC 1918. Habilitado repasse dos headers MaxData v2 (`application_name`, `application_key`, `application_description`).
-  - **Proteção de Dados no LocalStorage (`auth.js`):** Ajustado o manipulador de `QuotaExceededError` para remover prioritariamente apenas chaves de cache e logs temporários, eliminando o risco de purga acidental de despachos (`_dispatches`), romaneios (`_app_romaneios`) e faturas operacionais.
-  - **Acesso ao Master Admin em Homologação (`security-guard.js`):** Atualizada a checagem de tenant master para aceitar tanto `'parreira'` quanto `'parreira_hml'`.
-  - **Parametrização do OCR (`api/ocr.js` e `platform/api/ocr.js`):** Suporte à variável de ambiente `process.env.OCR_API_KEY` com fallback defensivo e mensagens amigáveis em português ao atingir taxa limite.
+* **2026-10-07 (v3.21.80 / WMS v2.1.0 / WMS-Coletor v3.22.0 - Fases P1, P2 e P3):**
+  - **Fase P1 (Confiabilidade e Isolamento):** Normalização de estrutura de endereços `wms_mock_data` (Array vs `{addresses:[]}`), sincronização de inventário do coletor com Firestore em tempo real (`wms_inventario`), e padronização rigorosa do tenant suffix (`wms_config_<tenant>`).
+  - **Fase P2 (Offline-First e Ondas Integradas):** Fila Offline IndexedDB (`wms-offline-queue.js`) com sincronização automática em reconexão, unificação do fluxo de ondas de separação (`saida.js` ➔ `picking-app.js`) com roteamento otimizado de coleta física (ordenação rua par/ímpar, prédio, nível e vão).
+  - **Fase P3 (Hardware Industrial e 3D Real-Time):** Parser de códigos de barras GS1-128 e DUN-14 (EAN-14), listener de cadência ultra-rápida de leitores laser industriais (Zebra DataWedge), feedback multimodal (3 vibrações táticas, sintetizador de áudio Web Audio API e flash periférico), toggle de conferência cega vs guiada, e sincronização contínua do visualizador 3D Three.js (`wms-3d.js`) via snapshots do Firestore com cubômetro myCUBI-50.
+
+* **2026-10-08 (v3.21.81 / WMS v2.2.0 / WMS-Coletor v3.23.0 - Fase P4):**
+  - **Kardex Multi-tenant no Firestore:** Rastreabilidade contábil completa de todas as movimentações de estoque (`registrarKardex`, `listarKardex`) com persistência write-through na nuvem (`tenants/{tenantId}/wms_kardex`).
+  - **Reservas e Concorrência Atômica:** Controle atômico de estoque com `reservarEstoque`, `efetivarBaixaEstoque` e `estornarReservaEstoque` prevenindo furos de separação simultânea.
+  - **Motor de Reabastecimento Automático (Pulmão ➔ Picking):** Gatilho automático baseado em estoque mínimo e capacidade de vão de picking (`verificarGatilhosReabastecimento`), gerando tarefas de movimentação para o armazém.
+  - **Inventário Cíclico & Acurácia IRA:** Agendador de contagem cíclica aleatória por amostragem e cálculo do Indicador de Acurácia de Registro de Estoque (IRA).
+  - **Gerador de Etiquetas ZPL II e Térmicas:** Módulo `wms-etiquetas.js` para geração de código ZPL II (Zebra Programming Language) nativo para impressoras industriais térmicas (Zebra ZT411, ZD220) e impressão direta formatada.
 
 
