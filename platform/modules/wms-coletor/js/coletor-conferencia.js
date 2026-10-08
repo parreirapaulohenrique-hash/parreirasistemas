@@ -156,9 +156,11 @@ function _renderTelaConferencia(r) {
                 <div id="conf-progress-bar" style="height:100%;width:${pct}%;background:#0ea5e9;border-radius:3px;transition:width .4s;"></div>
             </div>
             <span id="conf-pct-label" style="font-size:.72rem;color:var(--text-secondary);white-space:nowrap;">${itensConferidos}/${totalItens} · ${pct}%</span>
-            <span style="font-size:.72rem;padding:.1rem .4rem;border-radius:4px;background:${isCega ? 'rgba(245,158,11,.15)' : 'rgba(16,185,129,.15)'};color:${isCega ? '#f59e0b' : '#10b981'}">
-                ${isCega ? '👁‍🗨 Cega' : '👁 Aberta'}
-            </span>
+            <button type="button" onclick="alternarModoCego()" style="background:transparent; border:none; padding:0; cursor:pointer;" title="Clique para alternar Modo Cego / Guiado">
+                <span style="font-size:.72rem;padding:.15rem .45rem;border-radius:6px;background:${isCega ? 'rgba(245,158,11,.2)' : 'rgba(16,185,129,.2)'};color:${isCega ? '#f59e0b' : '#10b981'};font-weight:700;">
+                    ${isCega ? '👁‍🗨 Modo Cego' : '👁 Modo Guiado'}
+                </span>
+            </button>
         </div>
 
         <!-- PAINEL ÚLTIMO LIDO (scanner feedback) -->
@@ -265,22 +267,52 @@ function _renderItensHtml(r, isCega) {
 }
 
 // ─── REGISTRAR BIPAGEM (SCANNER) ─────────────────────────────────────────────
+// ─── TOGGLE MODO CEGO / GUIADO ────────────────────────────────────────────────
+window.alternarModoCego = function() {
+    const cfg = window.getWmsConfig ? window.getWmsConfig() : JSON.parse(localStorage.getItem('wms_config') || '{}');
+    if (!cfg.geral) cfg.geral = {};
+    cfg.geral.contagemCega = (cfg.geral.contagemCega === false);
+    if (window.saveWmsConfig) window.saveWmsConfig(cfg);
+    if (window._recAtivo) _renderTelaConferencia(window._recAtivo);
+};
+
+// ─── REGISTRAR BIPAGEM (GS1-128 / EAN / SKU) ──────────────────────────────────
 function _registrarBipagem(code) {
     const r = window._recAtivo;
     if (!r) return;
 
-    const cln = code.trim();
-    // Resolve o item por barcode, SKU ou código interno do ERP
+    let cln = code.trim();
+    let gs1Parsed = null;
+    if (window.WmsBarcodeParser) {
+        gs1Parsed = window.WmsBarcodeParser.parse(cln);
+        if (gs1Parsed && gs1Parsed.sku) {
+            cln = gs1Parsed.sku;
+        }
+    }
+
+    // Resolve o item por barcode, SKU, GTIN ou código interno do ERP
     const item = (r.itens || []).find(it =>
         it.sku          === cln ||
         it.codigoBarras === cln ||
-        it.codigoInterno=== cln
+        it.codigoInterno=== cln ||
+        (gs1Parsed && (it.sku === gs1Parsed.gtin || it.codigoBarras === gs1Parsed.gtin))
     );
 
     if (!item) {
-        Feedback.beep('error');
+        if (window.Feedback) {
+            Feedback.beep('error');
+            Feedback.flash('error');
+        }
         _atualizarUltimoLido(null, cln, 'notfound');
         return;
+    }
+
+    // Se etiqueta GS1 conter lote/validade, enriquece o item
+    if (gs1Parsed && gs1Parsed.lote && !item.lote) {
+        item.lote = gs1Parsed.lote;
+    }
+    if (gs1Parsed && gs1Parsed.validade && !item.validade) {
+        item.validade = gs1Parsed.validade;
     }
 
     r._leituras[item.sku] = (r._leituras[item.sku] || 0) + 1;
@@ -288,8 +320,15 @@ function _registrarBipagem(code) {
     const esperado = Number(item.quantidade);
     const status   = lido > esperado ? 'excesso' : lido === esperado ? 'ok' : 'parcial';
 
-    if (status === 'excesso') Feedback.beep('error');
-    else Feedback.beep('success');
+    if (window.Feedback) {
+        if (status === 'excesso') {
+            Feedback.beep('warning');
+            Feedback.vibrateWarning();
+        } else {
+            Feedback.beep('success');
+            Feedback.vibrateSuccess();
+        }
+    }
 
     // Atualiza campo manual se visível
     const skuId = item.sku.replace(/[^a-z0-9]/gi,'_');
@@ -306,6 +345,25 @@ function _registrarBipagem(code) {
         const scanInput = document.getElementById('scannerInput');
         if (scanInput) scanInput.focus();
     }, 120);
+}
+
+// ─── DEBOUNCED SAVE DE LEITURAS ───────────────────────────────────────────────
+let _saveTimer = null;
+function _salvarLeiturasDebounced() {
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(async () => {
+        const r = window._recAtivo;
+        if (!r) return;
+        try {
+            if (window.WmsOfflineQueue) {
+                window.WmsOfflineQueue.enqueue('CONFERENCIA_LEITURAS', { id: r.id, leituras: r._leituras });
+            } else if (window.WmsStore && window.WmsStore.salvarLeituras) {
+                await window.WmsStore.salvarLeituras(r.id, r._leituras);
+            }
+        } catch (e) {
+            console.warn('[Conf] Erro ao salvar leituras:', e.message);
+        }
+    }, 400);
 }
 
 // ─── PAINEL ÚLTIMO LIDO ───────────────────────────────────────────────────────

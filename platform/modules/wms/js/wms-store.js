@@ -625,6 +625,129 @@ window.WmsStore = (function () {
         return { sucesso: true, endereco: endNorm, sku, quantidade: qty };
     }
 
+    // ─── ONDAS E PICKING (OUTBOUND) ───────────────────────────────────────────
+    function _ondasCol(tid) {
+        return _db().collection('tenants').doc(tid).collection('ondas');
+    }
+    function _pickingCol(tid) {
+        return _db().collection('tenants').doc(tid).collection('picking');
+    }
+
+    async function criarOnda(onda) {
+        const tid = _tid();
+        const id = onda.id || ('ONDA-' + Date.now());
+        await _ondasCol(tid).doc(id).set({
+            ...onda,
+            id,
+            tenantId: tid,
+            criadoEm: TS(),
+            atualizadoEm: TS()
+        }, { merge: true });
+        return id;
+    }
+
+    async function listarOndas(filtros = {}) {
+        let q = _ondasCol(_tid());
+        if (filtros.status) q = q.where('status', '==', filtros.status);
+        const snap = await q.get();
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        list.sort((a, b) => new Date(b.criadoEm || b.created || 0) - new Date(a.criadoEm || a.created || 0));
+        return list;
+    }
+
+    async function atualizarOnda(id, update) {
+        await _ondasCol(_tid()).doc(id).update({
+            ...update,
+            atualizadoEm: TS()
+        });
+    }
+
+    function ouvirOndas(callback) {
+        return _ondasCol(_tid()).onSnapshot(snap => {
+            const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            list.sort((a, b) => new Date(b.criadoEm || b.created || 0) - new Date(a.criadoEm || a.created || 0));
+            callback(list);
+        }, err => console.warn('[WmsStore] ouvirOndas:', err));
+    }
+
+    async function criarPickingTasks(tasks) {
+        const tid = _tid();
+        const batch = _db().batch();
+        tasks.forEach(t => {
+            const id = t.id || ('PICK-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4));
+            const ref = _pickingCol(tid).doc(id);
+            batch.set(ref, {
+                ...t,
+                id,
+                tenantId: tid,
+                criadoEm: TS(),
+                atualizadoEm: TS()
+            }, { merge: true });
+        });
+        await batch.commit();
+        return true;
+    }
+
+    async function listarPickingTasks(filtros = {}) {
+        let q = _pickingCol(_tid());
+        if (filtros.onda) q = q.where('onda', '==', filtros.onda);
+        if (filtros.status) q = q.where('status', '==', filtros.status);
+        const snap = await q.get();
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+
+    async function atualizarPickingTask(id, update) {
+        await _pickingCol(_tid()).doc(id).update({
+            ...update,
+            atualizadoEm: TS()
+        });
+    }
+
+    function ouvirPickingTasks(filtros, callback) {
+        let q = _pickingCol(_tid());
+        if (filtros && filtros.onda) q = q.where('onda', '==', filtros.onda);
+        return q.onSnapshot(snap => {
+            const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            callback(list);
+        }, err => console.warn('[WmsStore] ouvirPickingTasks:', err));
+    }
+
+    // ─── CUBÔMETRO myCUBI-50 & CADASTRO DIMENSIONAL ───────────────────────────
+    function calcularCubagem({ pesoKg = 0, alturaCm = 0, larguraCm = 0, comprimentoCm = 0, fatorCubagem = 300 }) {
+        const hM = Number(alturaCm) / 100;
+        const wM = Number(larguraCm) / 100;
+        const lM = Number(comprimentoCm) / 100;
+        const volumeM3 = +(hM * wM * lM).toFixed(4);
+        const pesoCubadoKg = +(volumeM3 * Number(fatorCubagem)).toFixed(2);
+        const pesoRealKg = +Number(pesoKg).toFixed(2);
+        const pesoCobradoKg = Math.max(pesoRealKg, pesoCubadoKg);
+        return {
+            pesoRealKg,
+            alturaCm: Number(alturaCm),
+            larguraCm: Number(larguraCm),
+            comprimentoCm: Number(comprimentoCm),
+            volumeM3,
+            pesoCubadoKg,
+            pesoCobradoKg,
+            fatorCubagem
+        };
+    }
+
+    async function registrarCubagem(sku, cubagem) {
+        const tid = _tid();
+        const skuNorm = (sku || '').trim();
+        if (!skuNorm) throw new Error('SKU é obrigatório para registrar cubagem.');
+        const dados = calcularCubagem(cubagem);
+        await _db().collection('tenants').doc(tid).collection('cubagens').doc(skuNorm).set({
+            sku: skuNorm,
+            ...dados,
+            capturadoPor: cubagem.operador || 'Operador',
+            dispositivo: cubagem.dispositivo || 'myCUBI-50',
+            atualizadoEm: TS()
+        }, { merge: true });
+        return dados;
+    }
+
     return {
         verificarNfDuplicada,
         criarRecebimento,
@@ -663,6 +786,18 @@ window.WmsStore = (function () {
         getRegrasArmazenagem,
         validarAlocacaoArmazenagem,
         salvarItemInventariado,
+        // Ondas e Picking (Outbound)
+        criarOnda,
+        listarOndas,
+        atualizarOnda,
+        ouvirOndas,
+        criarPickingTasks,
+        listarPickingTasks,
+        atualizarPickingTask,
+        ouvirPickingTasks,
+        // Cubômetro myCUBI-50
+        calcularCubagem,
+        registrarCubagem,
         toDate, fmtData
     };
 })();

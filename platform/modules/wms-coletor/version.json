@@ -1,4 +1,6 @@
 {
-  "version": "3.21.49",
-  "build": 149
+  "version": "3.22.0",
+  "build": 150,
+  "last_change": "2026-10-07: Fases P2 e P3 - Fila Offline IndexedDB, Separação Rota Otimizada Firestore, Parser GS1-128 e Laser Zebra"
 }
+

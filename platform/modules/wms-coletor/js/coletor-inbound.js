@@ -206,12 +206,138 @@ async function _exibirFormNovoRecebimento(chaveNfe) {
                 </div>
             </div>
             <div style="margin-bottom:1rem;"><label style="font-size:.72rem;color:var(--text-secondary);display:block;margin-bottom:.25rem;">Observações</label><textarea id="cnov-obs" class="m-input" rows="2" placeholder="Informações adicionais..."></textarea></div>
+
+            <!-- Botão Cubômetro myCUBI-50 -->
+            <button type="button" class="m-btn m-btn-secondary" onclick="abrirModalCubometro()" style="width:100%; margin-bottom:.75rem; border:1px solid #3b82f6; color:#3b82f6; font-size:.85rem;">
+                <span class="material-icons-round" style="font-size:1.1rem; vertical-align:middle;">straighten</span> Cubômetro (myCUBI-50)
+            </button>
+
             <button class="m-btn m-btn-success" id="cnov-btn" onclick="salvarNovoRecebimento()">
                 <span class="material-icons-round">check_circle</span> Confirmar Recebimento
             </button>
         `;
     } catch(e) { showToast('Erro ao consultar NF: ' + e.message, 'danger'); initConferirScreen(document.getElementById('screen-conferir')); }
 }
+
+// ─── MODAL DE CUBAGEM myCUBI-50 ───────────────────────────────────────────────
+window.abrirModalCubometro = function(skuPadrao = '') {
+    const existing = document.getElementById('modal-cubometro');
+    if (existing) existing.remove();
+
+    const div = document.createElement('div');
+    div.id = 'modal-cubometro';
+    div.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); z-index:99999; display:flex; align-items:center; justify-content:center; padding:1rem; backdrop-filter:blur(4px);';
+    div.innerHTML = `
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:14px; width:100%; max-width:380px; padding:1.25rem; box-shadow:0 10px 40px rgba(0,0,0,0.5);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span class="material-icons-round" style="color:#3b82f6; font-size:1.4rem;">straighten</span>
+                    <strong style="font-size:1rem; color:var(--text-primary);">Cubômetro myCUBI-50</strong>
+                </div>
+                <button type="button" onclick="document.getElementById('modal-cubometro').remove()" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer;">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+
+            <p style="font-size:.78rem; color:var(--text-secondary); margin-bottom:1rem;">
+                Posicione o volume na esteira/balança cubadora para aferir dimensões e peso real:
+            </p>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin-bottom:.8rem;">
+                <div>
+                    <label style="font-size:.7rem; color:var(--text-secondary);">Comprimento (cm)</label>
+                    <input type="number" id="cub-comp" class="m-input" value="40" step="0.5" oninput="calcularCubagemModal()">
+                </div>
+                <div>
+                    <label style="font-size:.7rem; color:var(--text-secondary);">Largura (cm)</label>
+                    <input type="number" id="cub-larg" class="m-input" value="30" step="0.5" oninput="calcularCubagemModal()">
+                </div>
+                <div>
+                    <label style="font-size:.7rem; color:var(--text-secondary);">Altura (cm)</label>
+                    <input type="number" id="cub-alt" class="m-input" value="25" step="0.5" oninput="calcularCubagemModal()">
+                </div>
+                <div>
+                    <label style="font-size:.7rem; color:var(--text-secondary);">Peso Real (kg)</label>
+                    <input type="number" id="cub-peso" class="m-input" value="5.80" step="0.05" oninput="calcularCubagemModal()">
+                </div>
+            </div>
+
+            <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:.75rem; margin-bottom:1rem;">
+                <div style="display:flex; justify-content:space-between; font-size:.8rem; margin-bottom:.3rem;">
+                    <span style="color:var(--text-secondary);">Volume Cúbico:</span>
+                    <strong id="cub-res-vol" style="color:#38bdf8;">0.0300 m³</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:.8rem; margin-bottom:.3rem;">
+                    <span style="color:var(--text-secondary);">Peso Cubado (Fator 300):</span>
+                    <strong id="cub-res-cubado" style="color:#f59e0b;">9.00 kg</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:.85rem; font-weight:700;">
+                    <span style="color:var(--text-primary);">Peso Cobrado / Frete:</span>
+                    <strong id="cub-res-cobrado" style="color:#10b981;">9.00 kg</strong>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:.6rem;">
+                <button type="button" class="m-btn m-btn-secondary" onclick="document.getElementById('modal-cubometro').remove()" style="flex:1;">
+                    Cancelar
+                </button>
+                <button type="button" class="m-btn m-btn-primary" onclick="confirmarCubagemModal('${skuPadrao}')" style="flex:1;">
+                    <span class="material-icons-round" style="font-size:1rem;">check</span> Aplicar
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(div);
+    calcularCubagemModal();
+};
+
+window.calcularCubagemModal = function() {
+    const comp = parseFloat(document.getElementById('cub-comp')?.value) || 0;
+    const larg = parseFloat(document.getElementById('cub-larg')?.value) || 0;
+    const alt  = parseFloat(document.getElementById('cub-alt')?.value) || 0;
+    const peso = parseFloat(document.getElementById('cub-peso')?.value) || 0;
+
+    const vol = +((comp / 100) * (larg / 100) * (alt / 100)).toFixed(4);
+    const cubado = +(vol * 300).toFixed(2);
+    const cobrado = +(Math.max(peso, cubado)).toFixed(2);
+
+    const elVol = document.getElementById('cub-res-vol');
+    const elCub = document.getElementById('cub-res-cubado');
+    const elCob = document.getElementById('cub-res-cobrado');
+
+    if (elVol) elVol.textContent = vol.toFixed(4) + ' m³';
+    if (elCub) elCub.textContent = cubado.toFixed(2) + ' kg';
+    if (elCob) elCob.textContent = cobrado.toFixed(2) + ' kg';
+};
+
+window.confirmarCubagemModal = function(sku) {
+    const comp = parseFloat(document.getElementById('cub-comp')?.value) || 0;
+    const larg = parseFloat(document.getElementById('cub-larg')?.value) || 0;
+    const alt  = parseFloat(document.getElementById('cub-alt')?.value) || 0;
+    const peso = parseFloat(document.getElementById('cub-peso')?.value) || 0;
+
+    const sessao = (typeof ParreiraAuth !== 'undefined' && ParreiraAuth.getSessao) ? ParreiraAuth.getSessao() : {};
+    const operador = sessao.nome || sessao.login || 'Operador';
+
+    const cubData = {
+        comprimentoCm: comp,
+        larguraCm: larg,
+        alturaCm: alt,
+        pesoKg: peso,
+        operador,
+        dispositivo: 'myCUBI-50'
+    };
+
+    if (window.WmsOfflineQueue) {
+        window.WmsOfflineQueue.enqueue('CUBAGEM', { sku: sku || 'VOLUME-GERAL', dados: cubData });
+    } else if (window.WmsStore && window.WmsStore.registrarCubagem) {
+        window.WmsStore.registrarCubagem(sku || 'VOLUME-GERAL', cubData).catch(() => {});
+    }
+
+    if (window.Feedback) window.Feedback.vibrateSuccess();
+    showToast('Dimensões capturadas do myCUBI-50 com sucesso!', 'success');
+    document.getElementById('modal-cubometro')?.remove();
+};
 
 window.salvarNovoRecebimento = async function() {
     const nf = window._recNovaNF;

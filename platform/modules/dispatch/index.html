@@ -499,6 +499,17 @@
                                 <span class="material-icons-round">close</span>
                             </button>
                         </div>
+
+                        <!-- Barra de Bipagem Óptica de NF (v3.21.0 - Fase 2) -->
+                        <div style="margin-bottom: 0.9rem; display: flex; gap: 0.5rem; align-items: center; background: rgba(59, 130, 246, 0.08); padding: 0.55rem 0.8rem; border-radius: var(--radius-md, 8px); border: 1px solid rgba(59, 130, 246, 0.25);">
+                            <span class="material-icons-round" style="color: #60a5fa; font-size: 1.3rem;">qr_code_scanner</span>
+                            <input type="text" id="scanNFInput" class="form-input" placeholder="Bipe o código de barras da DANFE (44 dígitos) ou digite a NF..." style="flex: 1; height: 38px; font-size: 0.88rem;" autocomplete="off">
+                            <button type="button" class="btn btn-primary" id="btnScanNFManual" onclick="if(window.triggerScanNF) window.triggerScanNF();" style="height: 38px; padding: 0 0.9rem; font-size: 0.82rem; gap: 0.35rem;">
+                                <span class="material-icons-round" style="font-size: 1.1rem;">check_circle</span> Selecionar
+                            </button>
+                            <span id="scanFeedback" style="font-size: 0.82rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 6px; display: none;"></span>
+                        </div>
+
                         <div style="max-height: 400px; overflow-y: auto; margin-bottom: 1.5rem;">
                             <table class="dispatch-table">
                                 <thead>
@@ -770,8 +781,71 @@
                                     <label class="form-label">Qtde Volume</label>
                                     <input type="number" id="inputVolume" class="form-input" placeholder="1" min="1">
                                 </div>
-
                             </div>
+
+                            <!-- ══ CALCULADORA DE CUBAGEM (v3.21.0 - Fase 2) ════════ -->
+                            <div style="margin-top: -0.2rem; margin-bottom: 0.9rem;">
+                                <button type="button" id="btnToggleCubagem" onclick="window.toggleCubagemCalc()" class="btn btn-secondary" style="width: 100%; justify-content: space-between; font-size: 0.8rem; padding: 0.45rem 0.85rem; border-color: rgba(59, 130, 246, 0.3); background: rgba(59, 130, 246, 0.05); color: #93c5fd;">
+                                    <span style="display: flex; align-items: center; gap: 0.45rem;">
+                                        <span class="material-icons-round" style="font-size: 1.1rem; color: #60a5fa;">straighten</span>
+                                        <strong>Calculadora de Cubagem (C &times; L &times; A)</strong>
+                                    </span>
+                                    <span class="material-icons-round" id="cubagemIconChevron" style="font-size: 1.1rem; transition: transform 0.2s;">expand_more</span>
+                                </button>
+
+                                <div id="cubagemPanel" style="display: none; margin-top: 0.5rem; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 8px; padding: 0.9rem;">
+                                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 0.6rem;">
+                                        <div>
+                                            <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">Comprimento (cm)</label>
+                                            <input type="number" id="cubagemComp" class="form-input" placeholder="ex: 50" min="1" step="0.1" style="height: 36px; font-size: 0.85rem;" oninput="window.calculateCubagem()">
+                                        </div>
+                                        <div>
+                                            <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">Largura (cm)</label>
+                                            <input type="number" id="cubagemLarg" class="form-input" placeholder="ex: 40" min="1" step="0.1" style="height: 36px; font-size: 0.85rem;" oninput="window.calculateCubagem()">
+                                        </div>
+                                        <div>
+                                            <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">Altura (cm)</label>
+                                            <input type="number" id="cubagemAlt" class="form-input" placeholder="ex: 30" min="1" step="0.1" style="height: 36px; font-size: 0.85rem;" oninput="window.calculateCubagem()">
+                                        </div>
+                                    </div>
+
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.6rem;">
+                                        <div>
+                                            <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">Qtd Caixas / Volumes</label>
+                                            <input type="number" id="cubagemQtd" class="form-input" placeholder="1" min="1" value="1" style="height: 36px; font-size: 0.85rem;" oninput="window.calculateCubagem()">
+                                        </div>
+                                        <div>
+                                            <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">Fator de Cubagem</label>
+                                            <select id="cubagemFator" class="form-input" style="height: 36px; font-size: 0.85rem;" onchange="window.calculateCubagem()">
+                                                <option value="300">Padrão Rodoviário (300 kg/m&sup3;)</option>
+                                                <option value="250">Cargas Volumosas (250 kg/m&sup3;)</option>
+                                                <option value="200">Volume Extra-Leve (200 kg/m&sup3;)</option>
+                                                <option value="166">Aéreo Expresso (166 kg/m&sup3;)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <!-- Resultado da Cubagem -->
+                                    <div id="cubagemResultBox" style="background: rgba(30, 58, 138, 0.2); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 6px; padding: 0.6rem 0.8rem; margin-bottom: 0.6rem;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;">
+                                            <span>Volume Total: <strong id="resCubagemM3" style="color: #93c5fd;">0.000 m&sup3;</strong></span>
+                                            <span>Peso Cubado: <strong id="resCubagemKg" style="color: #60a5fa; font-size: 0.95rem;">0.00 kg</strong></span>
+                                        </div>
+                                        <div id="cubagemComparisonBadge" style="margin-top: 0.35rem; font-size: 0.73rem; color: var(--text-secondary);">
+                                            Preencha as dimensões acima para comparar com o peso bruto.
+                                        </div>
+                                    </div>
+
+                                    <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                                        <button type="button" class="btn btn-secondary" onclick="window.clearCubagem()" style="font-size: 0.75rem; padding: 0.35rem 0.7rem;">Limpar</button>
+                                        <button type="button" class="btn btn-primary" onclick="window.applyCubagemWeight()" style="font-size: 0.75rem; padding: 0.35rem 0.9rem; gap: 0.3rem;">
+                                            <span class="material-icons-round" style="font-size: 0.95rem;">done</span>
+                                            Aplicar Peso Cubado
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- ══ FIM CALCULADORA DE CUBAGEM ═══════════════════════ -->
 
 
                         </div>
@@ -2441,7 +2515,24 @@
                         <p>Controle o retorno dos romaneios físicos e canhotos de entrega (dar baixa no sistema).</p>
                     </div>
 
-                    <div class="card" style="margin-top: 1rem;">
+                    <!-- Barra de Bipagem Rápida de Romaneio Físico (v3.21.0 - Fase 2) -->
+                    <div class="card" style="margin-top: 1rem; padding: 0.85rem 1.25rem; background: rgba(59, 130, 246, 0.06); border: 1px solid rgba(59, 130, 246, 0.25);">
+                        <div style="display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap;">
+                            <span class="material-icons-round" style="color: #60a5fa; font-size: 1.6rem;">document_scanner</span>
+                            <div style="flex: 1; min-width: 250px;">
+                                <div style="font-size: 0.85rem; font-weight: 700; color: #93c5fd; margin-bottom: 2px;">Leitura Óptica de Romaneio Físico</div>
+                                <div style="font-size: 0.74rem; color: var(--text-secondary);">Bipe o código de barras impresso na folha do romaneio para localizar e dar baixa imediatamente.</div>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; align-items: center; flex: 1; min-width: 260px; max-width: 450px;">
+                                <input type="text" id="scanRomaneioInput" class="form-input" placeholder="Bipe ou digite ex: ROM-123456..." style="height: 38px; font-size: 0.88rem;" autocomplete="off" onkeypress="if(event.key==='Enter'){event.preventDefault(); window.biparRomaneioBaixa(this.value);}">
+                                <button type="button" class="btn btn-primary" onclick="window.biparRomaneioBaixa(document.getElementById('scanRomaneioInput').value)" style="height: 38px; padding: 0 0.9rem; font-size: 0.82rem; gap: 0.35rem;">
+                                    <span class="material-icons-round" style="font-size: 1.1rem;">fact_check</span> Baixar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-top: 1.2rem;">
                         <div class="card-header">
                             <h3><span class="material-icons-round">fact_check</span> Romaneios Pendentes (<span id="countPendentesBaixa">0</span>)</h3>
                         </div>

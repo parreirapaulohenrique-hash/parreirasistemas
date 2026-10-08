@@ -1,4 +1,4 @@
-﻿// WMS Saída de Produtos - Outbound Flow
+// WMS Saída de Produtos - Outbound Flow
 // sai-ondas: Wave formation
 // sai-separacao: Picking
 // sai-conferencia: Outbound conference
@@ -180,7 +180,7 @@ window.toggleAllPedidos = function (el) {
     document.querySelectorAll('.ped-check').forEach(cb => cb.checked = el.checked);
 };
 
-window.formarOnda = function () {
+window.formarOnda = async function () {
     const checked = [...document.querySelectorAll('.ped-check:checked')].map(cb => cb.value);
     if (checked.length === 0) return alert('Selecione pelo menos um pedido.');
 
@@ -198,14 +198,21 @@ window.formarOnda = function () {
     });
 
     const ondaId = `ONDA-${String(ondas.length + 1).padStart(3, '0')}`;
-    ondas.push({ id: ondaId, pedidos: checked, totalItens, totalQtd, status: 'FORMADA', created: new Date().toISOString() });
+    const novaOnda = { id: ondaId, pedidos: checked, totalItens, totalQtd, status: 'FORMADA', created: new Date().toISOString() };
+    ondas.push(novaOnda);
 
     localStorage.setItem('wms_pedidos' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(pedidos));
     localStorage.setItem('wms_ondas' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(ondas));
+
+    // Nuvem Firestore em tempo real
+    if (window.WmsStore && window.WmsStore.criarOnda) {
+        window.WmsStore.criarOnda(novaOnda).catch(e => console.warn('[Saida] Falha ao sincronizar onda no Firestore:', e));
+    }
+
     renderOndas(document.getElementById('view-dynamic'));
 };
 
-window.liberarOnda = function (ondaId) {
+window.liberarOnda = async function (ondaId) {
     const ondas = getOndasMock();
     const onda = ondas.find(o => o.id === ondaId);
     if (!onda) return;
@@ -216,6 +223,7 @@ window.liberarOnda = function (ondaId) {
     const pedidos = getPedidosMock();
     let picking = getPickingTasksMock();
     let seq = picking.length + 1;
+    const novasTarefas = [];
 
     onda.pedidos.forEach(pid => {
         const ped = pedidos.find(p => p.id === pid);
@@ -226,7 +234,7 @@ window.liberarOnda = function (ondaId) {
                 const missing = ped.itens.some(item => window.StockManager.getAvailable(item.sku) < item.qtd);
                 if (missing) {
                     alert(`⚠️ Pedido ${pid} possui itens sem estoque disponível! A onda não será liberada parciais nesta versão.`);
-                    return; // Skip this order? Or abort whole function? Aborting is safer.
+                    return;
                 }
             }
 
@@ -238,7 +246,7 @@ window.liberarOnda = function (ondaId) {
                     window.StockManager.reserve(item.sku, item.qtd);
                 }
 
-                picking.push({
+                const task = {
                     id: `PICK-${String(seq++).padStart(4, '0')}`,
                     onda: ondaId,
                     pedido: pid,
@@ -247,7 +255,9 @@ window.liberarOnda = function (ondaId) {
                     qtd: item.qtd,
                     endereco: item.endereco,
                     status: 'PENDENTE'
-                });
+                };
+                picking.push(task);
+                novasTarefas.push(task);
             });
         }
     });
@@ -255,6 +265,17 @@ window.liberarOnda = function (ondaId) {
     localStorage.setItem('wms_ondas' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(ondas));
     localStorage.setItem('wms_pedidos' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(pedidos));
     localStorage.setItem('wms_picking' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(picking));
+
+    // Sincroniza onda e tarefas no Firestore para visualização e execução no Coletor Móvel
+    if (window.WmsStore) {
+        if (window.WmsStore.atualizarOnda) {
+            window.WmsStore.atualizarOnda(ondaId, { status: 'SEPARANDO' }).catch(e => console.warn('[Saida] Erro ao atualizar onda Firestore:', e));
+        }
+        if (window.WmsStore.criarPickingTasks && novasTarefas.length > 0) {
+            window.WmsStore.criarPickingTasks(novasTarefas).catch(e => console.warn('[Saida] Erro ao criar tarefas de picking Firestore:', e));
+        }
+    }
+
     renderOndas(document.getElementById('view-dynamic'));
 };
 
@@ -376,7 +397,7 @@ function renderSeparacao(container) {
     `;
 }
 
-window.confirmarPicking = function (taskId) {
+window.confirmarPicking = async function (taskId) {
     const tasks = getPickingTasksMock();
     const task = tasks.find(t => t.id === taskId);
     if (task) {
@@ -388,6 +409,11 @@ window.confirmarPicking = function (taskId) {
         }
 
         localStorage.setItem('wms_picking' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(tasks));
+
+        if (window.WmsStore && window.WmsStore.atualizarPickingTask) {
+            window.WmsStore.atualizarPickingTask(taskId, { status: 'COLETADO' }).catch(e => console.warn('[Saida] Erro ao atualizar tarefa picking:', e));
+        }
+
         renderSeparacao(document.getElementById('view-dynamic'));
     }
 };
