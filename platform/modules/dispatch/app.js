@@ -4281,19 +4281,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Save current selection if exists
             const currentVal = select.value;
 
-            // Filter carriers flagged as redespacho
+            // Filter ONLY carriers formally registered with isRedespacho === true
             const redespachoCarriers = carrierList.filter(c => {
                 const info = carrierInfo[c];
                 return info && info.isRedespacho === true;
             }).sort();
 
             let optionsHtml = '<option value="">Sem Redespacho</option>';
-            redespachoCarriers.forEach(c => {
-                optionsHtml += `<option value="${c}">${c}</option>`;
-            });
+            if (redespachoCarriers.length === 0) {
+                optionsHtml += '<option value="" disabled>⚠️ Nenhuma transportadora cadastrada com opção "É Transportadora de Redespacho?"</option>';
+            } else {
+                redespachoCarriers.forEach(c => {
+                    optionsHtml += `<option value="${c}">${c}</option>`;
+                });
+            }
 
             select.innerHTML = optionsHtml;
-            select.value = currentVal; // Restore selection if possible
+            if (currentVal && redespachoCarriers.includes(currentVal)) {
+                select.value = currentVal;
+            } else {
+                select.value = "";
+            }
         }
 
 
@@ -4564,7 +4572,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             const elVol = document.getElementById('ruleTaxaVolume');
             if (elTDA) elTDA.value = _eTDA || '';
             if (elVol) elVol.value = _eVol || '';
-            document.getElementById('ruleRedispatch').value = r.redespacho || '';
+            // v3.24.5: Se a regra possui redespacho que não está no select (pois não foi cadastrado como redespacho):
+            const redespSelect = document.getElementById('ruleRedispatch');
+            if (r.redespacho && r.redespacho !== '-') {
+                const optExists = Array.from(redespSelect.options).some(o => o.value === r.redespacho);
+                if (!optExists) {
+                    const opt = document.createElement('option');
+                    opt.value = r.redespacho;
+                    opt.textContent = `⚠️ ${r.redespacho} (SEM CADASTRO DE REDESPACHO)`;
+                    opt.style.color = '#ef4444';
+                    redespSelect.appendChild(opt);
+                }
+            }
+            redespSelect.value = r.redespacho || '';
             document.getElementById('ruleRedispatchPercent').value = r.percentualRedespacho || '';
             document.getElementById('ruleRedispatchMin').value = r.minimoRedespacho || '';
             document.getElementById('ruleLeadTime').value = (r.leadTime || '').replace(/^D\+/i, '');
@@ -4685,6 +4705,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                     showToast('⚠️ Transportadora inválida!');
                     return;
                 }
+
+                // v3.24.5: Validação obrigatória e estrita de Redespacho
+                const redespachoVal = window.normalizeText(document.getElementById('ruleRedispatch').value).toUpperCase().trim();
+                if (redespachoVal && redespachoVal !== '-' && redespachoVal !== '') {
+                    const isRegistered = carrierList.includes(redespachoVal);
+                    const isRedespFlagged = carrierInfo[redespachoVal] && carrierInfo[redespachoVal].isRedespacho === true;
+                    if (!isRegistered || !isRedespFlagged) {
+                        e.preventDefault();
+                        document.getElementById('ruleRedispatch').focus();
+                        alert(`❌ Não é permitido vincular redespacho sem cadastro prévio!\n\nA transportadora "${redespachoVal}" não pode ser vinculada como redespacho porque não possui cadastro no sistema com a opção "É Transportadora de Redespacho?" ativada.\n\nPor favor, acesse o menu "Cadastro Transportadora", realize o cadastro (ou edite o existente marcando a caixinha "É Transportadora de Redespacho?") para então poder selecioná-la aqui.`);
+                        return;
+                    }
+                }
                 e.preventDefault();
                 const editIdx = parseInt(document.getElementById('editingRuleIndex').value);
                 // ── AUDIT LOG: captura estado anterior ──
@@ -4757,31 +4790,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // Save to cloud
                     if (Utils.Cloud && Utils.Cloud.save) {
                         Utils.Cloud.save('carrier_list', carrierList);
-                    }
-                }
-
-                // v3.24.4: ENSURE redespacho carrier is ALSO registered in permanent list
-                if (newRule.redespacho && newRule.redespacho !== '-') {
-                    const rName = String(newRule.redespacho).toUpperCase().trim();
-                    let redespUpdated = false;
-                    if (!carrierList.includes(rName)) {
-                        carrierList.push(rName);
-                        carrierList.sort();
-                        Utils.saveRaw('carrier_list', JSON.stringify(carrierList));
-                        redespUpdated = true;
-                    }
-                    if (!carrierInfo[rName]) {
-                        carrierInfo[rName] = { cnpj: '-', ie: '-', address: '-', city: '-', reliability: 3, isRedespacho: true, createdAt: new Date().toISOString() };
-                        Utils.saveRaw('carrier_info_v2', JSON.stringify(carrierInfo));
-                        redespUpdated = true;
-                    } else if (carrierInfo[rName].isRedespacho !== true) {
-                        carrierInfo[rName].isRedespacho = true;
-                        Utils.saveRaw('carrier_info_v2', JSON.stringify(carrierInfo));
-                        redespUpdated = true;
-                    }
-                    if (redespUpdated && Utils.Cloud && Utils.Cloud.save) {
-                        Utils.Cloud.save('carrier_list', carrierList);
-                        Utils.Cloud.save('carrier_info_v2', carrierInfo);
                     }
                 }
 
@@ -5037,6 +5045,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (newRules.length === 0) {
                             showToast('❌ Nenhuma tabela válida encontrada no CSV. Verifique o formato.');
                             console.log('Primeira linha de dados:', lines[1]);
+                            return;
+                        }
+
+                        // v3.24.5: Validação obrigatória de Redespacho na importação
+                        const unapprovedRedesp = new Set();
+                        newRules.forEach(rule => {
+                            if (rule.redespacho && rule.redespacho !== '-' && String(rule.redespacho).trim() !== '') {
+                                const rName = String(rule.redespacho).toUpperCase().trim();
+                                const isReg = carrierList.includes(rName);
+                                const isFlagged = carrierInfo[rName] && carrierInfo[rName].isRedespacho === true;
+                                if (!isReg || !isFlagged) {
+                                    unapprovedRedesp.add(rName);
+                                }
+                            }
+                        });
+
+                        if (unapprovedRedesp.size > 0) {
+                            const listStr = Array.from(unapprovedRedesp).join(', ');
+                            alert(`❌ Importação Bloqueada!\n\nAs seguintes transportadoras de redespacho informadas no arquivo NÃO estão cadastradas como Transportadora de Redespacho no sistema:\n\n• ${listStr}\n\nConforme a regra do sistema, não é permitido nomear transportadoras de redespacho sem cadastro prévio.\n\nPor favor, acesse o menu "Cadastro Transportadora", cadastre cada uma delas marcando a opção "É Transportadora de Redespacho?" e repita a importação.`);
                             return;
                         }
 
