@@ -303,7 +303,71 @@ class AcontecAdapter extends ErpAdapter {
         };
     }
 
-    // (webhook de confirmação removido — status de despacho não é enviado de volta ao ERP)
+    /**
+     * Notifica o ERP Acontec sobre a confirmação de despacho da NF (Fase 4).
+     * Endpoint: POST /despachos/confirmar ou POST /notas-fiscais/{numero_nf}/despacho
+     * Possui resiliência com fila de contingência offline (localStorage).
+     *
+     * @param {object} nfData
+     * @returns {Promise<{success: boolean, queued?: boolean}>}
+     */
+    async confirmDispatch(nfData) {
+        const nfNum = String(nfData.numero_nf || nfData.invoice || '').trim();
+        this._log('info', `📤 Notificando ERP Acontec sobre despacho da NF ${nfNum}...`);
+
+        const payload = {
+            numero_nf: nfNum,
+            transportadora: nfData.transportadora || nfData.carrier || '',
+            valor_frete_total: parseFloat(nfData.valor_frete_total || nfData.freightValue || 0),
+            valor_frete_principal: parseFloat(nfData.valor_frete_principal || nfData.mainFreight || 0),
+            valor_redespacho: parseFloat(nfData.valor_redespacho || nfData.redespachoValue || 0),
+            data_despacho: nfData.data_despacho || new Date().toISOString().split('T')[0],
+            romaneio_id: String(nfData.romaneio_id || nfData.romaneioNumber || ''),
+            motorista: nfData.motorista || nfData.driverName || '',
+            placa: nfData.placa || '',
+            despachado_em: new Date().toISOString()
+        };
+
+        try {
+            // Se API não estiver configurada no tenant, salva direto na contingência
+            if (!this.config.apiUrl || !this.config.apiToken) {
+                this._log('info', `ERP Acontec não configurado para este tenant. Gravado na fila local.`);
+                this._enqueueDispatch(payload, 'API ou Token não configurados');
+                return { success: true, queued: true };
+            }
+
+            const res = await this._request('/despachos/confirmar', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+
+            this._log('success', `✅ Despacho da NF ${nfNum} sincronizado com ERP Acontec.`);
+            return { success: true, data: res };
+
+        } catch (e) {
+            this._log('warning', `⚠️ Erro ao enviar despacho da NF ${nfNum} ao ERP Acontec (${e.message}). Gravando na fila de contingência.`);
+            this._enqueueDispatch(payload, e.message);
+            return { success: false, queued: true, error: e.message };
+        }
+    }
+
+    /**
+     * Enfileira despacho para sincronização posterior em contingência
+     */
+    _enqueueDispatch(payload, reason) {
+        try {
+            const queueKey = `erp_dispatch_queue_${this.tenantId}`;
+            const queue = JSON.parse(localStorage.getItem(queueKey) || '[]');
+            queue.push({
+                payload,
+                reason,
+                queuedAt: new Date().toISOString()
+            });
+            localStorage.setItem(queueKey, JSON.stringify(queue.slice(-500))); // limite de segurança
+        } catch (err) {
+            console.warn('[AcontecAdapter] Erro ao enfileirar contingência:', err);
+        }
+    }
 
     // ─────────────────────────────────────────────
     //  HELPERS INTERNOS

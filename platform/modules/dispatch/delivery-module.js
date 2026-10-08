@@ -108,9 +108,9 @@ const DeliveryModule = {
     },
 
     /**
-     * Finaliza uma entrega com sucesso
+     * Finaliza uma entrega com sucesso e registra comprovante digital (POD)
      */
-    finalizeDelivery(dispatchId) {
+    finalizeDelivery(dispatchId, podData = null) {
         const dispatches = Utils.getStorage('dispatches') || [];
         const idx = dispatches.findIndex(d => d.id === dispatchId);
 
@@ -125,7 +125,31 @@ const DeliveryModule = {
         dispatch.deliveryStatus = 'entregue';
         dispatch.deliveryCompletedAt = new Date().toISOString();
 
+        // v3.22.0 - Fase 3: Registro do Comprovante Digital de Entrega (POD)
+        if (podData) {
+            dispatch.pod = {
+                receiverName: podData.receiverName || '',
+                receiverDoc:  podData.receiverDoc || '',
+                photo:        podData.photo || null,
+                signature:    podData.signature || null,
+                gps:          podData.gps || null,
+                capturedAt:   new Date().toISOString()
+            };
+            if (podData.gps) {
+                dispatch.deliveryLocation = podData.gps;
+            }
+        }
+
         Utils.saveRaw('dispatches', JSON.stringify(dispatches));
+
+        // Sincronização direta na subcoleção individual dispatches_db (Fase 4)
+        if (window.db && Utils.Cloud && Utils.Cloud.hasTenant()) {
+            try {
+                window.db.collection('tenants').doc(Utils.Cloud.tenantId)
+                    .collection('dispatches_db').doc(String(dispatch.id))
+                    .set(dispatch, { merge: true });
+            } catch(e) { console.warn('[DeliveryModule] Falha ao sincronizar dispatches_db:', e); }
+        }
 
         // Adicionar ao histórico de entregas
         const history = Utils.getStorage('delivery_history') || [];
@@ -144,10 +168,13 @@ const DeliveryModule = {
             invoice: dispatch.invoice,
             client: dispatch.client,
             deliveryPerson: dispatch.deliveryPerson,
+            hasPOD: !!(podData && (podData.photo || podData.signature)),
+            hasGPS: !!(podData && podData.gps),
             timestamp: new Date().toISOString()
         });
 
-        showToast(`✅ Entrega da NF ${dispatch.invoice} finalizada com sucesso!`);
+        if (Utils.playBeep) Utils.playBeep('success');
+        showToast(`✅ Entrega da NF ${dispatch.invoice} finalizada com comprovante digital!`);
 
         this.renderMotoEntregas();
         this.renderCarroEntregas();
@@ -263,6 +290,13 @@ const DeliveryModule = {
         });
 
         container.innerHTML = html;
+
+        // Atualizar contadores no banner
+        const stats = this.getDeliveryStats('moto');
+        const pEl = document.getElementById('motoPendentes');
+        const eEl = document.getElementById('motoEntregues');
+        if (pEl) pEl.innerText = stats.pendentes;
+        if (eEl) eEl.innerText = stats.entregues;
     },
 
     /**
@@ -282,6 +316,11 @@ const DeliveryModule = {
                     <p style="margin: 0;">As NFs despachadas para Carro Entrega aparecerão aqui.</p>
                 </div>
             `;
+            const stats = this.getDeliveryStats('carro');
+            const pEl = document.getElementById('carroPendentes');
+            const eEl = document.getElementById('carroEntregues');
+            if (pEl) pEl.innerText = stats.pendentes;
+            if (eEl) eEl.innerText = stats.entregues;
             return;
         }
 
@@ -310,6 +349,13 @@ const DeliveryModule = {
         });
 
         container.innerHTML = html;
+
+        // Atualizar contadores no banner
+        const stats = this.getDeliveryStats('carro');
+        const pEl = document.getElementById('carroPendentes');
+        const eEl = document.getElementById('carroEntregues');
+        if (pEl) pEl.innerText = stats.pendentes;
+        if (eEl) eEl.innerText = stats.entregues;
     },
 
     /**
@@ -322,50 +368,520 @@ const DeliveryModule = {
         const icon = type === 'moto' ? 'two_wheeler' : 'directions_car';
         const color = type === 'moto' ? '#f59e0b' : '#10b981';
 
+        // Endereço normalizado para GPS externo (Waze / Google Maps)
+        const fullAddress = [dispatch.address, dispatch.neighborhood, dispatch.city, dispatch.state].filter(Boolean).join(', ') || dispatch.client || '';
+        const wazeUrl = `https://waze.com/ul?q=${encodeURIComponent(fullAddress)}&navigate=yes`;
+        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`;
+
+        // Status visual
+        const statusLabel = (dispatch.deliveryStatus || dispatch.status || 'em_entrega').replace('_', ' ').toUpperCase();
+        const hasPOD = !!(dispatch.pod && (dispatch.pod.photo || dispatch.pod.signature));
+
         return `
             <div class="delivery-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 1rem; margin-bottom: 1rem; border-left: 4px solid ${color};">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
                     <div>
                         <div style="font-size: 1.25rem; font-weight: 700; color: ${color};">NF ${dispatch.invoice}</div>
-                        <div style="font-size: 0.9rem; color: var(--text-primary); margin-top: 0.25rem;">${dispatch.client}</div>
+                        <div style="font-size: 0.95rem; font-weight: 600; color: var(--text-primary); margin-top: 0.2rem;">${dispatch.client}</div>
                     </div>
-                    <span class="material-icons-round" style="font-size: 2rem; color: ${color}; opacity: 0.5;">${icon}</span>
+                    <span class="material-icons-round" style="font-size: 2rem; color: ${color}; opacity: 0.6;">${icon}</span>
                 </div>
                 
-                <div style="display: grid; gap: 0.5rem; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
-                    <div><strong>Cidade:</strong> ${dispatch.city || '-'}</div>
-                    <div><strong>Bairro:</strong> ${dispatch.neighborhood || '-'}</div>
-                    <div><strong>Entregador:</strong> ${dispatch.deliveryPerson || '-'}</div>
+                <div style="display: grid; gap: 0.4rem; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem; background: rgba(255,255,255,0.02); padding: 0.75rem; border-radius: 8px;">
+                    <div><strong>Endereço:</strong> ${dispatch.address || 'Não informado'}</div>
+                    <div><strong>Bairro / Cidade:</strong> ${dispatch.neighborhood || '-'} - ${dispatch.city || '-'}</div>
+                    <div><strong>Entregador:</strong> ${dispatch.deliveryPerson || dispatch.driverName || '-'}</div>
                     <div><strong>Despachado:</strong> ${dispatchedTime}</div>
-                    <div><strong>Valor:</strong> ${Utils.formatCurrency ? Utils.formatCurrency(dispatch.value) : 'R$ ' + dispatch.value}</div>
+                    <div><strong>Valor NF:</strong> ${Utils.formatCurrency ? Utils.formatCurrency(dispatch.value || dispatch.nfValue || 0) : 'R$ ' + (dispatch.value || dispatch.nfValue || 0)}</div>
+                    <div><strong>Status:</strong> <span style="font-weight:700; color:${color}; font-size:0.8rem;">${statusLabel}</span></div>
+                </div>
+
+                <!-- Atalhos de Navegação GPS (Fase 3 - Mobile) -->
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+                    <a href="${wazeUrl}" target="_blank" rel="noopener noreferrer" class="btn" style="flex: 1; justify-content: center; background: #33ccff; color: #002b49; font-weight: 600; font-size: 0.8rem; padding: 0.4rem; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.3rem;">
+                        <span class="material-icons-round" style="font-size: 1rem;">navigation</span> Waze
+                    </a>
+                    <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" class="btn" style="flex: 1; justify-content: center; background: #4285F4; color: white; font-weight: 600; font-size: 0.8rem; padding: 0.4rem; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.3rem;">
+                        <span class="material-icons-round" style="font-size: 1rem;">map</span> Google Maps
+                    </a>
                 </div>
                 
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                    <button onclick="DeliveryModule.showFinalizeModal(${dispatch.id})" class="btn btn-primary" style="flex: 1; justify-content: center;">
-                        <span class="material-icons-round" style="font-size: 1rem;">check_circle</span>
-                        Finalizar Entrega
+                    <button onclick="DeliveryModule.showFinalizeModal(${dispatch.id})" class="btn btn-primary" style="flex: 2; justify-content: center; min-width: 140px; background: #10b981;">
+                        <span class="material-icons-round" style="font-size: 1.1rem;">assignment_turned_in</span>
+                        Baixar Entrega (POD)
                     </button>
-                    <button onclick="DeliveryModule.showReturnModal(${dispatch.id})" class="btn btn-secondary" style="flex: 1; justify-content: center; background: var(--accent-warning);">
+                    <button onclick="DeliveryModule.showOccurrenceModal(${dispatch.id})" class="btn btn-secondary" style="flex: 1; justify-content: center; min-width: 100px;">
+                        <span class="material-icons-round" style="font-size: 1rem;">report_problem</span>
+                        Ocorrência
+                    </button>
+                    <button onclick="DeliveryModule.showReturnModal(${dispatch.id})" class="btn btn-secondary" style="flex: 1; justify-content: center; background: var(--accent-warning); color: #000; font-weight: 600; min-width: 100px;">
                         <span class="material-icons-round" style="font-size: 1rem;">undo</span>
-                        Devolução
+                        Devolver
                     </button>
+                    ${hasPOD ? `
+                        <button onclick="DeliveryModule.showPODModal(${dispatch.id})" class="btn" style="width: 100%; justify-content: center; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); margin-top: 0.25rem;">
+                            <span class="material-icons-round" style="font-size: 1rem;">receipt_long</span> Ver Comprovante (POD)
+                        </button>
+                    ` : ''}
                 </div>
             </div>
         `;
     },
 
     /**
-     * Modal para finalizar entrega
+     * Modal Completo para Finalizar Entrega com Comprovante Digital (POD) - Fase 3
      */
     showFinalizeModal(dispatchId) {
         const dispatches = Utils.getStorage('dispatches') || [];
         const dispatch = dispatches.find(d => d.id === dispatchId);
-
         if (!dispatch) return;
 
-        if (confirm(`Confirmar entrega da NF ${dispatch.invoice} para o cliente ${dispatch.client}?`)) {
-            this.finalizeDelivery(dispatchId);
+        window._currentPodPhoto = null;
+        window._currentPodGps = null;
+
+        const modalHtml = `
+            <div id="podFinalizeModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem; backdrop-filter: blur(4px);">
+                <div style="background: var(--bg-card, #1e293b); color: var(--text-primary, #f8fafc); border-radius: 14px; padding: 1.5rem; width: 100%; max-width: 480px; max-height: 92vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.75rem;">
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: 0.5rem; font-size: 1.15rem; color: #10b981;">
+                            <span class="material-icons-round">verified</span>
+                            Comprovante de Entrega (POD)
+                        </h3>
+                        <button onclick="document.getElementById('podFinalizeModal').remove()" style="background:none; border:none; color:var(--text-secondary,#94a3b8); cursor:pointer; font-size:1.5rem; line-height:1;">&times;</button>
+                    </div>
+
+                    <div style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.2);">
+                        <strong style="color: #10b981;">NF ${dispatch.invoice}</strong> — <span>${dispatch.client}</span>
+                    </div>
+
+                    <!-- 1. Foto do Canhoto / Documento -->
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:0.4rem;">📷 Foto do Canhoto / Comprovante</label>
+                        <input type="file" id="podPhotoInput" accept="image/*" capture="environment" style="display: none;">
+                        <button type="button" onclick="document.getElementById('podPhotoInput').click()" class="btn btn-secondary" style="width: 100%; justify-content: center; gap: 0.5rem; border: 1px dashed #3b82f6; background: rgba(59, 130, 246, 0.08); color: #60a5fa;">
+                            <span class="material-icons-round">photo_camera</span>
+                            Tirar Foto do Canhoto
+                        </button>
+                        <div id="podPhotoPreviewContainer" style="display:none; margin-top:0.5rem; position:relative; text-align:center;">
+                            <img id="podPhotoImg" src="" alt="Canhoto" style="max-width:100%; max-height:160px; border-radius:8px; border:1px solid #334155; object-fit:contain; background:#000;">
+                            <button type="button" onclick="DeliveryModule.clearPodPhoto()" style="position:absolute; top:4px; right:4px; background:#ef4444; color:white; border:none; border-radius:50%; width:26px; height:26px; cursor:pointer; font-weight:bold;">&times;</button>
+                        </div>
+                    </div>
+
+                    <!-- 2. Assinatura Digital Touch -->
+                    <div style="margin-bottom: 1rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+                            <label style="font-size:0.85rem; font-weight:600; margin:0;">✍️ Assinatura do Recebedor</label>
+                            <button type="button" onclick="DeliveryModule.clearSignature()" style="background:none; border:none; color:#f87171; font-size:0.75rem; cursor:pointer; text-decoration:underline;">Limpar</button>
+                        </div>
+                        <div style="border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; background: #ffffff; touch-action: none; overflow: hidden;">
+                            <canvas id="podSignatureCanvas" width="400" height="130" style="width:100%; height:130px; display:block; cursor:crosshair;"></canvas>
+                        </div>
+                        <span style="font-size:0.7rem; color:var(--text-secondary,#94a3b8);">Assine com o dedo ou caneta touch no quadro branco.</span>
+                    </div>
+
+                    <!-- 3. Dados do Recebedor -->
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; margin-bottom:1rem;">
+                        <div>
+                            <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:0.25rem;">Nome do Recebedor *</label>
+                            <input type="text" id="podReceiverName" class="form-input" placeholder="Quem recebeu" style="width:100%;">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:0.25rem;">RG ou CPF</label>
+                            <input type="text" id="podReceiverDoc" class="form-input" placeholder="Doc do recebedor" style="width:100%;">
+                        </div>
+                    </div>
+
+                    <!-- 4. Geolocalização GPS -->
+                    <div id="podGpsStatus" style="font-size:0.8rem; padding:0.5rem; background:rgba(255,255,255,0.03); border-radius:6px; margin-bottom:1.25rem; display:flex; align-items:center; gap:0.5rem; color:var(--text-secondary,#94a3b8);">
+                        <span class="material-icons-round" style="font-size:1.1rem; color:#f59e0b;">location_searching</span>
+                        <span>Capturando coordenadas GPS em tempo real...</span>
+                    </div>
+
+                    <!-- Botões de Ação -->
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button type="button" onclick="document.getElementById('podFinalizeModal').remove()" class="btn btn-secondary" style="flex: 1; justify-content: center;">
+                            Cancelar
+                        </button>
+                        <button type="button" onclick="DeliveryModule.confirmFinalizePOD(${dispatchId})" class="btn btn-primary" style="flex: 2; justify-content: center; background: #10b981; font-weight: 700;">
+                            <span class="material-icons-round">check_circle</span>
+                            Confirmar & Salvar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const existing = document.getElementById('podFinalizeModal');
+        if (existing) existing.remove();
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Inicializar Canvas de Assinatura e Eventos
+        setTimeout(() => {
+            this.initSignatureCanvas();
+            this.initPhotoHandler();
+            this.initGpsCapture();
+        }, 50);
+    },
+
+    /**
+     * Inicializa Canvas Touch de Assinatura
+     */
+    initSignatureCanvas() {
+        const canvas = document.getElementById('podSignatureCanvas');
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let hasDrawn = false;
+
+        // Suporte para retina/alta resolução
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * 2;
+        canvas.height = rect.height * 2;
+        ctx.scale(2, 2);
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        function getPos(e) {
+            const r = canvas.getBoundingClientRect();
+            if (e.touches && e.touches[0]) {
+                return { x: e.touches[0].clientX - r.left, y: e.touches[0].clientY - r.top };
+            }
+            return { x: e.clientX - r.left, y: e.clientY - r.top };
         }
+
+        function start(e) {
+            e.preventDefault();
+            isDrawing = true;
+            hasDrawn = true;
+            window._podHasSignature = true;
+            const pos = getPos(e);
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+            const pos = getPos(e);
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+        }
+
+        function stop(e) {
+            if (isDrawing) {
+                isDrawing = false;
+                ctx.closePath();
+            }
+        }
+
+        canvas.addEventListener('mousedown', start);
+        canvas.addEventListener('mousemove', draw);
+        window.addEventListener('mouseup', stop);
+
+        canvas.addEventListener('touchstart', start, { passive: false });
+        canvas.addEventListener('touchmove', draw, { passive: false });
+        canvas.addEventListener('touchend', stop, { passive: false });
+
+        window._podSignatureCanvas = canvas;
+        window._podHasSignature = false;
+    },
+
+    clearSignature() {
+        const canvas = window._podSignatureCanvas || document.getElementById('podSignatureCanvas');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            window._podHasSignature = false;
+        }
+    },
+
+    /**
+     * Manipulador de Câmera e Compressão de Foto (Canvas JPEG < 100KB)
+     */
+    initPhotoHandler() {
+        const input = document.getElementById('podPhotoInput');
+        if (!input) return;
+
+        input.addEventListener('change', (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    // Redimensiona proporcionalmente para max 1200px
+                    const maxDim = 1200;
+                    let width = img.width;
+                    let height = img.height;
+                    if (width > maxDim || height > maxDim) {
+                        if (width > height) {
+                            height = Math.round((height * maxDim) / width);
+                            width = maxDim;
+                        } else {
+                            width = Math.round((width * maxDim) / height);
+                            height = maxDim;
+                        }
+                    }
+
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = width;
+                    tempCanvas.height = height;
+                    const ctx = tempCanvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Carimbo de data/hora na imagem
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                    ctx.fillRect(0, height - 36, width, 36);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '16px monospace';
+                    ctx.fillText(`ENTREGA POD - ${new Date().toLocaleString('pt-BR')}`, 12, height - 12);
+
+                    const compressedBase64 = tempCanvas.toDataURL('image/jpeg', 0.72);
+                    window._currentPodPhoto = compressedBase64;
+
+                    const previewContainer = document.getElementById('podPhotoPreviewContainer');
+                    const previewImg = document.getElementById('podPhotoImg');
+                    if (previewContainer && previewImg) {
+                        previewImg.src = compressedBase64;
+                        previewContainer.style.display = 'block';
+                    }
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    },
+
+    clearPodPhoto() {
+        window._currentPodPhoto = null;
+        const previewContainer = document.getElementById('podPhotoPreviewContainer');
+        const input = document.getElementById('podPhotoInput');
+        if (previewContainer) previewContainer.style.display = 'none';
+        if (input) input.value = '';
+    },
+
+    /**
+     * Captura GPS nativa
+     */
+    initGpsCapture() {
+        const gpsEl = document.getElementById('podGpsStatus');
+        if (!navigator.geolocation) {
+            if (gpsEl) gpsEl.innerHTML = `<span class="material-icons-round" style="color:#ef4444;">location_off</span> Geolocation não suportada no aparelho.`;
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const { latitude, longitude, accuracy } = pos.coords;
+                window._currentPodGps = {
+                    lat: latitude,
+                    lng: longitude,
+                    accuracy: Math.round(accuracy),
+                    capturedAt: new Date().toISOString()
+                };
+                if (gpsEl) {
+                    gpsEl.innerHTML = `
+                        <span class="material-icons-round" style="color:#10b981;">my_location</span>
+                        <span style="color:#10b981; font-weight:600;">GPS OK:</span>
+                        <span>${latitude.toFixed(5)}, ${longitude.toFixed(5)} (±${Math.round(accuracy)}m)</span>
+                    `;
+                }
+            },
+            (err) => {
+                console.warn('[GPS POD] Erro ao obter geolocalização:', err.message);
+                if (gpsEl) {
+                    gpsEl.innerHTML = `
+                        <span class="material-icons-round" style="color:#f59e0b;">location_disabled</span>
+                        <span>GPS não capturado (${err.message}). Prosseguindo com POD.</span>
+                    `;
+                }
+            },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+        );
+    },
+
+    /**
+     * Valida e confirma baixa com POD
+     */
+    confirmFinalizePOD(dispatchId) {
+        const receiverName = (document.getElementById('podReceiverName')?.value || '').trim();
+        const receiverDoc = (document.getElementById('podReceiverDoc')?.value || '').trim();
+
+        if (!receiverName) {
+            alert('Por favor, informe o Nome do Recebedor.');
+            document.getElementById('podReceiverName')?.focus();
+            return;
+        }
+
+        let signatureBase64 = null;
+        if (window._podHasSignature && window._podSignatureCanvas) {
+            signatureBase64 = window._podSignatureCanvas.toDataURL('image/png');
+        }
+
+        const podData = {
+            receiverName,
+            receiverDoc,
+            photo: window._currentPodPhoto || null,
+            signature: signatureBase64 || null,
+            gps: window._currentPodGps || null
+        };
+
+        const modal = document.getElementById('podFinalizeModal');
+        if (modal) modal.remove();
+
+        this.finalizeDelivery(dispatchId, podData);
+    },
+
+    /**
+     * Visualizador de Comprovante de Entrega Digital (POD)
+     */
+    showPODModal(dispatchId) {
+        const dispatches = Utils.getStorage('dispatches') || [];
+        const history = Utils.getStorage('delivery_history') || [];
+        const d = dispatches.find(item => item.id === dispatchId) ||
+                  history.find(item => item.id === dispatchId);
+
+        if (!d || !d.pod) {
+            alert('Nenhum comprovante digital (POD) encontrado para esta entrega.');
+            return;
+        }
+
+        const pod = d.pod;
+        const capturedTime = pod.capturedAt ? new Date(pod.capturedAt).toLocaleString('pt-BR') : '-';
+        const mapsLink = pod.gps ? `https://www.google.com/maps/search/?api=1&query=${pod.gps.lat},${pod.gps.lng}` : null;
+
+        const modalHtml = `
+            <div id="podViewerModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.88); z-index: 10001; display: flex; align-items: center; justify-content: center; padding: 1rem; backdrop-filter: blur(4px);">
+                <div style="background: var(--bg-card, #1e293b); color: var(--text-primary, #f8fafc); border-radius: 14px; padding: 1.5rem; width: 100%; max-width: 520px; max-height: 92vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.75rem;">
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: 0.5rem; color: #38bdf8;">
+                            <span class="material-icons-round">receipt_long</span> Comprovante POD — NF ${d.invoice}
+                        </h3>
+                        <button onclick="document.getElementById('podViewerModal').remove()" style="background:none; border:none; color:#94a3b8; cursor:pointer; font-size:1.5rem; line-height:1;">&times;</button>
+                    </div>
+
+                    <div style="font-size:0.85rem; line-height:1.6; margin-bottom:1rem; background:rgba(255,255,255,0.03); padding:0.75rem; border-radius:8px;">
+                        <div><strong>Cliente:</strong> ${d.client}</div>
+                        <div><strong>Recebido por:</strong> ${pod.receiverName || 'Não informado'} ${pod.receiverDoc ? `(Doc: ${pod.receiverDoc})` : ''}</div>
+                        <div><strong>Data da Baixa:</strong> ${capturedTime}</div>
+                        ${pod.gps ? `<div><strong>GPS:</strong> Lat ${pod.gps.lat.toFixed(5)}, Lng ${pod.gps.lng.toFixed(5)} <a href="${mapsLink}" target="_blank" style="color:#38bdf8; text-decoration:underline; margin-left:6px;">Ver no Mapa 🗺️</a></div>` : ''}
+                    </div>
+
+                    ${pod.photo ? `
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:0.4rem;">Foto do Canhoto Assinado:</label>
+                            <img src="${pod.photo}" alt="Canhoto" style="width:100%; border-radius:8px; border:1px solid #334155; background:#000; max-height:280px; object-fit:contain;">
+                        </div>
+                    ` : ''}
+
+                    ${pod.signature ? `
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:0.4rem;">Assinatura Digital:</label>
+                            <div style="background:#fff; border-radius:8px; padding:8px; text-align:center;">
+                                <img src="${pod.signature}" alt="Assinatura" style="max-height:100px; max-width:100%;">
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <button onclick="document.getElementById('podViewerModal').remove()" class="btn btn-secondary" style="width: 100%; justify-content: center; margin-top: 0.5rem;">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        `;
+
+        const existing = document.getElementById('podViewerModal');
+        if (existing) existing.remove();
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    },
+
+    /**
+     * Modal para Registrar Ocorrência Intermediária (Fase 4 - Status Intermediários)
+     */
+    showOccurrenceModal(dispatchId) {
+        const dispatches = Utils.getStorage('dispatches') || [];
+        const dispatch = dispatches.find(d => d.id === dispatchId);
+        if (!dispatch) return;
+
+        const modalHtml = `
+            <div id="occModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+                <div style="background: var(--bg-card, #1e293b); border-radius: 12px; padding: 1.5rem; width: 100%; max-width: 420px; color: var(--text-primary, #fff);">
+                    <h3 style="margin: 0 0 1rem; display: flex; align-items: center; gap: 0.5rem; color: #f59e0b;">
+                        <span class="material-icons-round">notification_important</span>
+                        Registrar Ocorrência / Status
+                    </h3>
+                    <div style="margin-bottom: 1rem; padding: 0.5rem; background: rgba(245, 158, 11, 0.1); border-radius: 6px;">
+                        <strong>NF ${dispatch.invoice}</strong> — ${dispatch.client}
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label" style="font-size:0.85rem;">Novo Status</label>
+                        <select id="occStatus" class="form-input" style="width: 100%;">
+                            <option value="em_transito">🚚 Em Trânsito (Rota Iniciada)</option>
+                            <option value="entregue_parcial">⚠️ Entregue Parcial (Falta de Item/Avaria)</option>
+                            <option value="retido_fiscal">🛑 Retido Fiscal (Posto Fiscal)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1.25rem;">
+                        <label class="form-label" style="font-size:0.85rem;">Observação / Motivo</label>
+                        <textarea id="occObs" class="form-input" rows="3" placeholder="Detalhes da ocorrência..." style="width: 100%;"></textarea>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button onclick="document.getElementById('occModal').remove()" class="btn btn-secondary" style="flex: 1; justify-content: center;">Cancelar</button>
+                        <button onclick="DeliveryModule.confirmOccurrence(${dispatchId})" class="btn btn-primary" style="flex: 1; justify-content: center; background: #f59e0b; color: #000; font-weight: 700;">Salvar</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        const existing = document.getElementById('occModal');
+        if (existing) existing.remove();
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    },
+
+    /**
+     * Confirma registro de ocorrência
+     */
+    confirmOccurrence(dispatchId) {
+        const status = document.getElementById('occStatus')?.value;
+        const obs = document.getElementById('occObs')?.value || '';
+
+        const dispatches = Utils.getStorage('dispatches') || [];
+        const idx = dispatches.findIndex(d => d.id === dispatchId);
+        if (idx !== -1) {
+            dispatches[idx].deliveryStatus = status;
+            dispatches[idx].occurrenceObs = obs;
+            dispatches[idx].occurrenceAt = new Date().toISOString();
+            Utils.saveRaw('dispatches', JSON.stringify(dispatches));
+
+            // Sincronizar dispatches_db
+            if (window.db && Utils.Cloud && Utils.Cloud.hasTenant()) {
+                window.db.collection('tenants').doc(Utils.Cloud.tenantId)
+                    .collection('dispatches_db').doc(String(dispatchId))
+                    .set(dispatches[idx], { merge: true }).catch(e => console.warn(e));
+            }
+
+            this.addDeliveryLog({
+                type: dispatches[idx].deliveryType,
+                action: 'ocorrencia',
+                status,
+                dispatchId,
+                invoice: dispatches[idx].invoice,
+                obs,
+                timestamp: new Date().toISOString()
+            });
+
+            showToast(`Status da NF ${dispatches[idx].invoice} atualizado para ${status}!`);
+            this.renderMotoEntregas();
+            this.renderCarroEntregas();
+        }
+
+        const modal = document.getElementById('occModal');
+        if (modal) modal.remove();
     },
 
     /**

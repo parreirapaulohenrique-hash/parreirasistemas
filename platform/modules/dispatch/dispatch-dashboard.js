@@ -520,8 +520,21 @@
                         console.log(`🚚 NF ${d.invoice} enviada para ${deliveryType === 'moto' ? '🏍️ Moto' : '🚗 Carro'} Entrega (${assignedDriverName})`);
                     }
                 }
-            });
             Utils.saveRaw('dispatches', JSON.stringify(history));
+
+            // v3.22.0 - Fase 4: Gravação concorrente direta na subcoleção dispatches_db
+            if (window.db && Utils.Cloud && Utils.Cloud.hasTenant()) {
+                try {
+                    const batch = window.db.batch();
+                    toDispatch.forEach(item => {
+                        const docRef = window.db.collection('tenants').doc(Utils.Cloud.tenantId).collection('dispatches_db').doc(String(item.id));
+                        batch.set(docRef, item, { merge: true });
+                    });
+                    batch.commit().catch(e => console.warn('[Dashboard] Aviso batch dispatches_db:', e));
+                } catch (err) {
+                    console.warn('[Dashboard] Falha ao gravar dispatches_db:', err);
+                }
+            }
 
             // NOVO: Notificar Vendedores automaticamente (Parametrizável v3.7)
             const settings = window.app_settings || { wa_auto_seller: true };
@@ -637,6 +650,22 @@
             if (window.DeliveryModule) {
                 window.DeliveryModule.renderMotoEntregas();
                 window.DeliveryModule.renderCarroEntregas();
+            }
+
+            // v3.22.0 - Fase 4: Notificação assíncrona ao ERP ativo (confirmDispatch)
+            if (window.ErpIntegration && window.ErpIntegration.confirmDispatch) {
+                toDispatch.forEach(item => {
+                    window.ErpIntegration.confirmDispatch({
+                        numero_nf: item.invoice,
+                        transportadora: currentModalCarrier,
+                        valor_frete_total: item.total || item.freightValue || item.freightCost || 0,
+                        valor_frete_principal: item.mainFreight || 0,
+                        valor_redespacho: item.redespachoValue || 0,
+                        romaneio_id: randomId,
+                        motorista: assignedDriverName || '',
+                        data_despacho: new Date().toISOString().split('T')[0]
+                    }).catch(e => console.warn('[ERP confirmDispatch] Erro silencioso:', e));
+                });
             }
 
             // Reset delivery type selector for next use
