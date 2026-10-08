@@ -3427,6 +3427,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 };
 
                 Utils.addToStorage('dispatches', dispatch);
+
+                // v3.22.1: Gravação concorrente imediata em dispatches_db para sync em tempo real em todas as máquinas
+                if (window.db && Utils.Cloud && Utils.Cloud.hasTenant()) {
+                    try {
+                        window.db.collection('tenants').doc(Utils.Cloud.tenantId)
+                            .collection('dispatches_db').doc(String(dispatch.id))
+                            .set(dispatch, { merge: true })
+                            .catch(e => console.warn('[Quote] Falha ao sincronizar dispatches_db:', e));
+                    } catch(errDb) {
+                        console.warn('[Quote] Erro ao gravar dispatches_db:', errDb);
+                    }
+                }
+
+                // Atualizar painel de despacho imediatamente
+                if (window.renderDashboard) {
+                    try { window.renderDashboard(); } catch(eDash) { console.warn(eDash); }
+                }
+
                 showToast('✅ Carga montada com sucesso!');
 
                 // ── Notifica ErpNFQueue: NF confirmada → sai da fila ──────────────
