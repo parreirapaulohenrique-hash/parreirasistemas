@@ -5448,9 +5448,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 monthlyGroups[monthKey].push(item);
             });
 
+            const _parseMoneyVal = (v) => {
+                if (v == null || v === '') return 0;
+                if (typeof v === 'number') return isNaN(v) ? 0 : v;
+                let s = String(v).trim().replace(/[^\d.,-]/g, '');
+                if (s.includes(',') && s.includes('.')) s = s.replace(/\./g, '').replace(',', '.');
+                else if (s.includes(',')) s = s.replace(',', '.');
+                const n = parseFloat(s);
+                return isNaN(n) ? 0 : n;
+            };
+
             Object.keys(monthlyGroups).forEach(month => {
                 const mItems = monthlyGroups[month];
-                const mTotal = mItems.reduce((acc, curr) => acc + curr.total, 0);
+                const mTotal = mItems.reduce((acc, curr) => acc + _parseMoneyVal(curr.total), 0);
+                const mTotalNf = mItems.reduce((acc, curr) => acc + _parseMoneyVal(curr.nfValue != null ? curr.nfValue : (curr.value != null ? curr.value : curr.valor)), 0);
+                const mPercent = mTotalNf > 0 ? ((mTotal / mTotalNf) * 100).toFixed(2) : '0,00';
 
                 const mDiv = document.createElement('div');
                 mDiv.className = 'dispatch-month-group';
@@ -5460,7 +5472,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 mHeader.className = 'month-header';
                 mHeader.innerHTML = `
                     <span class="month-title">${month.charAt(0).toUpperCase() + month.slice(1)}</span>
-                    <span class="month-total">Total Mensal: ${Utils.formatCurrency(mTotal)}</span>
+                    <div class="month-total" style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+                        <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);">Total NFs: <strong style="color: var(--text-primary); font-weight: 700;">${Utils.formatCurrency(mTotalNf)}</strong></span>
+                        <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);">% Média: <strong style="color: #38bdf8; font-weight: 700;">${String(mPercent).replace('.', ',')}%</strong></span>
+                        <span style="font-size: 0.9rem; font-weight: 700; color: var(--accent-success);">Total Mensal: ${Utils.formatCurrency(mTotal)}</span>
+                    </div>
                 `;
                 mDiv.appendChild(mHeader);
 
@@ -5477,7 +5493,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 Object.keys(dailyGroups).forEach(day => {
                     const dItems = dailyGroups[day];
-                    const dTotal = dItems.reduce((acc, curr) => acc + curr.total, 0);
+                    const dTotal = dItems.reduce((acc, curr) => acc + _parseMoneyVal(curr.total), 0);
+                    const dTotalNf = dItems.reduce((acc, curr) => acc + _parseMoneyVal(curr.nfValue != null ? curr.nfValue : (curr.value != null ? curr.value : curr.valor)), 0);
+                    const dPercent = dTotalNf > 0 ? ((dTotal / dTotalNf) * 100).toFixed(2) : '0,00';
 
                     // Define se o dia deve iniciar aberto:
                     let shouldOpen = false;
@@ -5512,7 +5530,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <span class="material-icons-round" style="font-size:1.1rem;color:var(--text-secondary);opacity:0.7;">calendar_today</span>
                             <span>${day} (${dItems.length} despachos)</span>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 1rem;">
+                        <div style="display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap;">
+                            <span style="font-size: 0.8rem; color: var(--text-secondary);">Total NFs: <strong style="color: var(--text-primary); font-weight: 600;">${Utils.formatCurrency(dTotalNf)}</strong></span>
+                            <span style="font-size: 0.8rem; color: var(--text-secondary);">% Média: <strong style="color: #38bdf8; font-weight: 600;">${String(dPercent).replace('.', ',')}%</strong></span>
                             <span style="font-size: 0.8rem; font-weight: 600; color: var(--accent-success);">Subtotal: ${Utils.formatCurrency(dTotal)}</span>
                         </div>
                     `;
