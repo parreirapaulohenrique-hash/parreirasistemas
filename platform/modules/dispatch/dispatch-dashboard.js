@@ -197,8 +197,10 @@
     // ── Funções Públicas (window.*) ───────────────────────────────────────────
 
     window.renderDashboard = () => {
-
-        const history = Utils.getStorage('dispatches');
+        let history = Utils.getStorage('dispatches') || [];
+        if ((!Array.isArray(history) || history.length === 0) && Utils._memStore && Array.isArray(Utils._memStore['dispatches'])) {
+            history = Utils._memStore['dispatches'];
+        }
         const pending = (Array.isArray(history) ? history : []).filter(d => d.status === 'Pendente Despacho');
         const grid = document.getElementById('carrierDashboardGrid');
         if (!grid) return;
@@ -213,8 +215,12 @@
         document.getElementById('dashTotalWeight').innerText = `${totalWeight.toFixed(2)} kg`;
         document.getElementById('dashTotalFreight').innerText = Utils.formatCurrency(totalFreight);
 
-        // All registered carriers
-        const allCarriers = Utils.getStorage('carrier_list') || [];
+        // All registered carriers com fallback para memória
+        let allCarriers = Utils.getStorage('carrier_list');
+        if (!Array.isArray(allCarriers) || allCarriers.length === 0) {
+            allCarriers = (Utils._memStore && Array.isArray(Utils._memStore['carrier_list'])) ? Utils._memStore['carrier_list'] : [];
+        }
+        allCarriers = [...allCarriers];
 
         // Group pending items by Carrier
         const pendingByCarrier = {};
@@ -228,6 +234,13 @@
 
             if (!pendingByCarrier[carrierKey]) pendingByCarrier[carrierKey] = [];
             pendingByCarrier[carrierKey].push(p);
+        });
+
+        // v3.22.1: Garante que transportadoras com cargas pendentes SEMPRE tenham card visível, mesmo se carrier_list ainda estiver carregando
+        Object.keys(pendingByCarrier).forEach(cName => {
+            if (cName && !allCarriers.some(c => String(c || '').trim().toUpperCase() === cName)) {
+                allCarriers.push(cName);
+            }
         });
 
         // NOVO: Ordenar transportadoras por quantidade de itens pendentes (v3.7.3)
@@ -269,7 +282,8 @@
             let scheduleHtml = '';
             if (hasItems) {
                 const pendingCities = [...new Set(items.map(i => i.city))];
-                const rules = Utils.getStorage('freight_tables');
+                const rawRules = Utils.getStorage('freight_tables');
+                const rules = Array.isArray(rawRules) ? rawRules : [];
 
                 const schedules = [];
                 pendingCities.forEach(city => {
@@ -315,6 +329,43 @@
                     `;
             grid.appendChild(card);
         });
+
+        // v3.22.1: Sincronização em segundo plano dos pendentes no Firestore (dispatches_db)
+        // Garante que o painel mostre as cargas imediatamente mesmo em novos acessos ou abas
+        if (window.db && Utils.Cloud && Utils.Cloud.hasTenant() && !window._dashSyncing) {
+            window._dashSyncing = true;
+            window.db.collection('tenants').doc(Utils.Cloud.tenantId).collection('dispatches_db')
+                .where('status', '==', 'Pendente Despacho')
+                .get()
+                .then(snap => {
+                    window._dashSyncing = false;
+                    if (!snap || snap.empty) return;
+                    let localList = Utils.getStorage('dispatches') || [];
+                    if ((!Array.isArray(localList) || localList.length === 0) && Utils._memStore && Array.isArray(Utils._memStore['dispatches'])) {
+                        localList = Utils._memStore['dispatches'];
+                    }
+                    let hasNew = false;
+                    snap.forEach(docSnap => {
+                        const dData = docSnap.data();
+                        const idx = localList.findIndex(l => String(l.id || l.codigo) === String(dData.id || dData.codigo));
+                        if (idx === -1) {
+                            localList.push(dData);
+                            hasNew = true;
+                        } else if (localList[idx].status !== dData.status) {
+                            localList[idx] = dData;
+                            hasNew = true;
+                        }
+                    });
+                    if (hasNew) {
+                        Utils.setStorage('dispatches', localList);
+                        window.renderDashboard();
+                    }
+                })
+                .catch(err => {
+                    window._dashSyncing = false;
+                    console.warn('[Dashboard] Sync pendentes Firestore:', err);
+                });
+        }
     };
 
     window.openShipmentModal = (carrier) => {
@@ -323,7 +374,10 @@
             console.log('openShipmentModal executando para:', cleanCarrier);
             currentModalCarrier = cleanCarrier;
 
-            const history = Utils.getStorage('dispatches');
+            let history = Utils.getStorage('dispatches') || [];
+            if ((!Array.isArray(history) || history.length === 0) && Utils._memStore && Array.isArray(Utils._memStore['dispatches'])) {
+                history = Utils._memStore['dispatches'];
+            }
             const items = (Array.isArray(history) ? history : []).filter(d => {
                 const dCarrier = String(d.carrier || '').trim().toUpperCase();
                 // v3.8.2 - Incluir itens FOB na listagem da transportadora no modal
@@ -384,7 +438,10 @@
             selectedNFIds.push(id);
         }
 
-        const history = Utils.getStorage('dispatches');
+        let history = Utils.getStorage('dispatches') || [];
+        if ((!Array.isArray(history) || history.length === 0) && Utils._memStore && Array.isArray(Utils._memStore['dispatches'])) {
+            history = Utils._memStore['dispatches'];
+        }
         const items = history.filter(d => {
             const dCarrier = String(d.carrier || '').trim().toUpperCase();
             return dCarrier === currentModalCarrier && d.status === 'Pendente Despacho';
@@ -394,12 +451,22 @@
 
     window.undoDispatch = (id) => {
         if (confirm('Deseja estornar este lançamento? Ele sairá desta lista de despacho e voltará para o histórico como cancelado.')) {
-            let history = Utils.getStorage('dispatches');
+            let history = Utils.getStorage('dispatches') || [];
+            if ((!Array.isArray(history) || history.length === 0) && Utils._memStore && Array.isArray(Utils._memStore['dispatches'])) {
+                history = Utils._memStore['dispatches'];
+            }
             const idx = history.findIndex(d => d.id === id);
             if (idx !== -1) {
                 const _dispBefore = { ...history[idx] };
                 history[idx].status = 'Cancelado';
                 Utils.saveRaw('dispatches', JSON.stringify(history));
+
+                if (window.db && Utils.Cloud && Utils.Cloud.hasTenant()) {
+                    window.db.collection('tenants').doc(Utils.Cloud.tenantId)
+                        .collection('dispatches_db').doc(String(id))
+                        .update({ status: 'Cancelado' })
+                        .catch(e => console.warn('[Undo] Erro dispatches_db:', e));
+                }
 
                 // v3.14.54: Audit Log
                 if (Utils.writeLog) Utils.writeLog('DISPATCH_UNDISPATCH', 'Despacho', `NF ${_dispBefore.invoice || '#'+id} cancelada do painel — ${_dispBefore.carrier || ''} / ${_dispBefore.city || ''}`, { status: 'Pendente Despacho', id }, { status: 'Cancelado' });

@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.22.0",
-  "build": "20261007-v3.22.0",
-  "lastUpdate": "2026-10-07",
-  "releaseDate": "2026-10-07T23:15:00-03:00",
-  "change": "v3.22.0 (Fases 3 e 4): Mobile Entregas, POD & Integração ERP — Comprovante Digital de Entrega (POD) com captura de foto de canhoto, compressão em Canvas, assinatura digital touch, geolocalização GPS em tempo real e visualizador de POD; Integração com rotas externas (Waze e Google Maps); Notificação e sincronização de despacho com ERP Acontec (confirmDispatch) com fila resiliente de contingência offline; Gravação concorrente direta na subcoleção dispatches_db; Suporte completo a status intermediários de carga (Em Trânsito, Parcial e Retido Fiscal)."
+  "version": "3.22.1",
+  "build": "20261008-v3.22.1",
+  "lastUpdate": "2026-10-08",
+  "releaseDate": "2026-10-08T09:45:00-03:00",
+  "change": "v3.22.1: Sincronização em tempo real do Painel de Despacho com dispatches_db, garantia de exibição de transportadoras com cargas pendentes e re-renderização reativa do dashboard após carregamento do Firestore."
 }

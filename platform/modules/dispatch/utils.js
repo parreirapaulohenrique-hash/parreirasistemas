@@ -649,7 +649,10 @@ const Utils = {
                             } catch (migErr) { console.warn('Migration check failed', migErr); }
                         }
                     }
-                    setTimeout(() => { if (window.renderAppHistory) window.renderAppHistory(); }, 100);
+                    setTimeout(() => { 
+                        if (window.renderAppHistory) window.renderAppHistory(); 
+                        if (window.renderDashboard) window.renderDashboard();
+                    }, 100);
                 } catch (error) { console.error('Cloud Load Error', error); }
 
                 this.listen();
@@ -660,36 +663,6 @@ const Utils = {
             // --- LOCAL SIMULATION MODE (Fallback) ---
             if (!window.db) {
                 console.log('⚠️ [Cloud] Sem Firebase. Usando Simulação Local.');
-                
-                // Real-time listener for dispatches_db (Sync across PCs)
-                window.db.collection('tenants').doc(this.tenantId).collection('dispatches_db')
-                    .where('status', '==', 'Pendente Despacho')
-                    .onSnapshot((snapshot) => {
-                        let local = Utils.getStorage('dispatches') || [];
-                        let modified = false;
-                        
-                        snapshot.forEach(doc => {
-                            const data = doc.data();
-                            const idx = local.findIndex(d => (d.id === data.id || d.codigo === data.codigo));
-                            if (idx === -1) {
-                                local.push(data);
-                                modified = true;
-                            } else {
-                                // If cloud is newer or different, we update (simplification: just overwrite)
-                                local[idx] = data;
-                                modified = true;
-                            }
-                        });
-                        
-                        // Also remove from local if they were marked as "Despachado" by another PC and disappeared from query
-                        // This is tricky because the snapshot only contains Pendente. 
-                        // It's better handled by the background sync archiving old finished ones anyway.
-
-                        if (modified) {
-                            localStorage.setItem(`tenant_${this.tenantId}_dispatches`, JSON.stringify(local));
-                            if (window.renderDashboard) window.renderDashboard();
-                        }
-                    });
 
                 keys.forEach(key => {
                     const simKey = `tenant_${this.tenantId}_${key}`;
@@ -856,7 +829,10 @@ const Utils = {
                         if (key === 'freight_tables' && window.renderRulesList) window.renderRulesList();
                         if (key === 'carrier_configs' && window.renderCarrierConfigs) window.renderCarrierConfigs();
                         if (key === 'app_users' && window.renderUserList) window.renderUserList();
-                        if (key === 'carrier_list' && window.renderCarrierConfigs) window.renderCarrierConfigs();
+                        if (key === 'carrier_list') {
+                            if (window.renderCarrierConfigs) window.renderCarrierConfigs();
+                            if (window.renderDashboard) window.renderDashboard();
+                        }
                         // v3.11.75: Notifica app.js para atualizar variáveis de closure quando
                         // dados críticos de transportadora chegam via onSnapshot (sync em tempo real).
                         const CARRIER_REALTIME_KEYS = ['carrier_list', 'carrier_configs', 'freight_tables', 'carrier_info_v2'];
@@ -892,28 +868,27 @@ const Utils = {
                     .where('status', '==', 'Pendente Despacho')
                     .onSnapshot((snapshot) => {
                         let local = Utils.getStorage('dispatches') || [];
+                        if ((!Array.isArray(local) || local.length === 0) && Utils._memStore && Array.isArray(Utils._memStore['dispatches'])) {
+                            local = Utils._memStore['dispatches'];
+                        }
                         let modified = false;
                         
                         snapshot.forEach(doc => {
                             const data = doc.data();
-                            const idx = local.findIndex(d => (d.id === data.id || d.codigo === data.codigo));
+                            const idx = local.findIndex(d => String(d.id || d.codigo) === String(data.id || data.codigo));
                             if (idx === -1) {
                                 local.push(data);
                                 modified = true;
                             } else {
-                                // If cloud is newer or different, we update (simplification: just overwrite)
                                 local[idx] = data;
                                 modified = true;
                             }
                         });
-                        
-                        // Also remove from local if they were marked as "Despachado" by another PC and disappeared from query
-                        // This is tricky because the snapshot only contains Pendente. 
-                        // It's better handled by the background sync archiving old finished ones anyway.
 
                         if (modified) {
-                            localStorage.setItem(`tenant_${this.tenantId}_dispatches`, JSON.stringify(local));
+                            Utils.setStorage('dispatches', local);
                             if (window.renderDashboard) window.renderDashboard();
+                            if (window.renderAppHistory) window.renderAppHistory();
                         }
                     });
 
