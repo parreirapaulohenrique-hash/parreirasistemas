@@ -1943,10 +1943,76 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         };
 
+        // v3.23.0: Identificar o último despacho deste cliente (data mais recente)
+        window.lastDispatchForSelectedClient = null;
+
+        window.findLastDispatchForClient = async function (client) {
+            if (!client) return null;
+            try {
+                const history = (await Utils.Cloud.getFullDispatchesHistory()) || [];
+                if (!history.length) return null;
+
+                const cNome = norm(client.nome || client.razaoSocial || client.nomeFantasia || '');
+                const cCodigo = norm(client.codigo || '');
+
+                const clientDispatches = history.filter(d => {
+                    if (d.status === 'Cancelado') return false;
+                    const dClient = norm(d.client || '');
+                    const dCode = norm(d.clientCode || '');
+                    if (cCodigo && dCode && cCodigo === dCode) return true;
+                    if (cNome && dClient && (dClient === cNome || dClient.includes(cNome) || cNome.includes(dClient))) return true;
+                    return false;
+                });
+
+                if (!clientDispatches.length) return null;
+
+                // Ordena por data decrescente (mais recente primeiro)
+                clientDispatches.sort((a, b) => {
+                    const tA = (a.date ? new Date(a.date).getTime() : 0) || (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+                    const tB = (b.date ? new Date(b.date).getTime() : 0) || (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+                    return tB - tA;
+                });
+
+                return clientDispatches[0];
+            } catch (err) {
+                console.warn('[findLastDispatchForClient] Erro ao consultar último despacho:', err);
+                return null;
+            }
+        };
+
+        window.toggleLastDispatchPopover = (el) => {
+            const wasActive = el.classList.contains('active');
+            document.querySelectorAll('.last-dispatch-badge-wrapper.active').forEach(b => b.classList.remove('active'));
+            if (!wasActive) {
+                el.classList.add('active');
+            }
+        };
+
+        // Fecha popovers de último envio ao clicar fora
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.last-dispatch-badge-wrapper')) {
+                document.querySelectorAll('.last-dispatch-badge-wrapper.active').forEach(b => b.classList.remove('active'));
+            }
+        });
+
         function selectClient(client) {
             selectedClient = client;
             focusedClientIndex = -1;
             currentSearchMatches = [];
+
+            // v3.23.0: Consulta automática do último despacho deste cliente
+            window.lastDispatchForSelectedClient = null;
+            if (window.findLastDispatchForClient) {
+                window.findLastDispatchForClient(client).then(ld => {
+                    window.lastDispatchForSelectedClient = ld;
+                    // Se já existirem opções de cotação calculadas na tela, re-renderiza para aplicar a identificação
+                    if (window.currentOptions && window.currentOptions.length > 0 && typeof window.renderResults === 'function') {
+                        window.renderResults(window.currentOptions, window._lastBairroFallback);
+                    }
+                }).catch(err => {
+                    console.warn('[selectClient] Falha ao consultar último despacho:', err);
+                });
+            }
 
             // Verificar cobertura logística
             const hasCoverage = checkLogisticsCoverage(client.cidade, client.bairro);
@@ -2017,6 +2083,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Reset state
             selectedClient = null;
+            window.lastDispatchForSelectedClient = null;
+            window.currentOptions = [];
             clientResult.style.display = 'none';
 
             // Reset date field to today and hide retroative warning
@@ -2697,7 +2765,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
 
-        function calculateAndSave(silent = false) {
+        async function calculateAndSave(silent = false) {
             const sellerId = document.getElementById('inputSeller').value;
             if (!sellerId) {
                 if (!silent) {
@@ -2714,9 +2782,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             const norm = Utils.normalizeString;
             if (!selectedClient) {
-
                 if (!silent) alert('Por favor, selecione um cliente primeiro.');
                 return;
+            }
+
+            // v3.23.0: Garante identificação do último despacho para o cliente selecionado
+            if (selectedClient && !window.lastDispatchForSelectedClient && window.findLastDispatchForClient) {
+                try {
+                    window.lastDispatchForSelectedClient = await window.findLastDispatchForClient(selectedClient);
+                } catch(e) {}
             }
 
             const nfValue = parseFloat(inputValue.value) || 0;
@@ -3090,11 +3164,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         function renderResults(options, bairroFallback) {
+            window.currentOptions = options;
+            window._lastBairroFallback = bairroFallback;
+            window.renderResults = renderResults;
+
             const fallbackBanner = bairroFallback ? `
                 <div style="background: rgba(255,165,0,0.12); border: 1px solid rgba(255,165,0,0.4); border-radius: 8px; padding: 8px 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: #ffb347;">
                     <span class="material-icons-round" style="font-size: 1rem;">info</span>
                     <span>Nenhuma tabela para a cidade — cotação feita pelo <strong>bairro: ${bairroFallback}</strong></span>
                 </div>` : '';
+
+            let lastDispatchAssigned = false;
+            const ld = window.lastDispatchForSelectedClient;
+
             resultsArea.innerHTML = fallbackBanner + options.map((opt, index) => {
                 const d = opt.details;
                 const rule = d.ruleUsed;
@@ -3117,6 +3199,96 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (rule.horarios) timeParts.push(`<span style="color:var(--text-secondary)">🚚 Saídas:</span> <strong style="color: var(--primary-color);">${rule.horarios}</strong>`);
                 if (rule.leadTime) timeParts.push(`<span style="color:var(--text-secondary)">🕒 Entrega:</span> <strong style="color: var(--text-primary);">${rule.leadTime}</strong>`);
                 const timeInfoHtml = timeParts.length > 0 ? `<div style="margin-top:6px; font-size:0.75rem; display: flex; align-items: center; gap: 12px;">${timeParts.join(' <span style="opacity:0.3">|</span> ')}</div>` : '';
+
+                // v3.23.0: Identificação de Último Envio para este cliente
+                let isLastDispatchCard = false;
+                if (!lastDispatchAssigned && ld) {
+                    const cardCarrier = norm(opt.carrier);
+                    const lastCarrier = norm(ld.carrier);
+                    const carrierMatches = (cardCarrier && lastCarrier && (cardCarrier === lastCarrier || lastCarrier.includes(cardCarrier) || cardCarrier.includes(lastCarrier)));
+
+                    if (carrierMatches) {
+                        const cardRedesp = norm(rule.redespacho || '');
+                        const lastRedesp = norm(ld.redespCarrier || (ld.redespacho !== '-' ? ld.redespacho : '') || '');
+
+                        if (lastRedesp) {
+                            if (cardRedesp === lastRedesp || cardRedesp.includes(lastRedesp) || lastRedesp.includes(cardRedesp)) {
+                                isLastDispatchCard = true;
+                            }
+                        } else {
+                            if (!cardRedesp) {
+                                isLastDispatchCard = true;
+                            }
+                        }
+                    }
+
+                    if (isLastDispatchCard) {
+                        lastDispatchAssigned = true;
+                    }
+                }
+
+                let lastDispatchBadgeHtml = '';
+                if (isLastDispatchCard && ld) {
+                    let ldDateFormatted = '-';
+                    if (ld.date) {
+                        if (typeof ld.date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(ld.date)) {
+                            const p = ld.date.slice(0, 10).split('-');
+                            ldDateFormatted = `${p[2]}/${p[1]}/${p[0]}`;
+                        } else {
+                            ldDateFormatted = new Date(ld.date).toLocaleDateString('pt-BR');
+                        }
+                    }
+                    const ldRedesp = (ld.redespCarrier && ld.redespCarrier !== '-') ? ld.redespCarrier : (ld.redespacho && ld.redespacho !== '-' ? ld.redespacho : null);
+                    const ldVol = ld.volume != null ? `${ld.volume}` : '1';
+                    const ldNfVal = Utils.formatCurrency(ld.nfValue || 0);
+
+                    lastDispatchBadgeHtml = `
+                        <div class="last-dispatch-badge-wrapper" onclick="event.stopPropagation(); window.toggleLastDispatchPopover(this);" title="Clique ou passe o mouse para ver detalhes do último envio">
+                            <div class="last-dispatch-badge">
+                                <span class="pulse-dot"></span>
+                                <span>ÚLTIMO ENVIO</span>
+                            </div>
+                            <div class="last-dispatch-popover" onclick="event.stopPropagation();">
+                                <div class="popover-header">
+                                    <span class="material-icons-round" style="font-size: 1.15rem; color: #10b981;">verified_user</span>
+                                    <span>Último envio deste cliente</span>
+                                </div>
+                                <div class="popover-body">
+                                    <div class="popover-row">
+                                        <span class="popover-label">Transportadora:</span>
+                                        <span class="popover-val" style="color: #ffffff; font-weight: 700;">${ld.carrier}</span>
+                                    </div>
+                                    ${ldRedesp ? `
+                                    <div class="popover-row">
+                                        <span class="popover-label">Redespacho:</span>
+                                        <span class="popover-val" style="color: #f59e0b; font-weight: 700;">${ldRedesp}</span>
+                                    </div>` : ''}
+                                    <div class="popover-row-split" style="margin-top: 6px;">
+                                        <div>
+                                            <span class="popover-label">Data:</span>
+                                            <span class="popover-val">${ldDateFormatted}</span>
+                                        </div>
+                                        <div>
+                                            <span class="popover-label">NF:</span>
+                                            <span class="popover-val">${ld.invoice || 'S/N'}</span>
+                                        </div>
+                                    </div>
+                                    <div class="popover-row-split">
+                                        <div>
+                                            <span class="popover-label">Volumes:</span>
+                                            <span class="popover-val">${ldVol}</span>
+                                        </div>
+                                        <div>
+                                            <span class="popover-label">Valor NF:</span>
+                                            <span class="popover-val" style="color: #10b981; font-weight: 700;">${ldNfVal}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="popover-arrow"></div>
+                            </div>
+                        </div>
+                    `;
+                }
 
                 // VAN Specific Input
                 const vanInputHtml = isVan ? `
@@ -3179,7 +3351,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return `
             <div class="result-card ${cardClass}" onclick="window.confirmDispatch(${index})">
                 <div style="flex: 1;">
-                    <div class="carrier-name">${opt.carrier}</div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 3px; padding-right: 8px;">
+                        <div class="carrier-name" style="margin-bottom: 0;">${opt.carrier}</div>
+                        ${lastDispatchBadgeHtml}
+                    </div>
                     <div class="carrier-details">
                         ${rule.percentual.toLocaleString('pt-BR')}% Frete (min. ${Utils.formatCurrency(rule.minimo)})
                         ${extraText}

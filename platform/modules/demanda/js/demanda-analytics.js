@@ -1,4 +1,5 @@
-console.log("Central Peças Loaded:", window.COMPACT_SKUS.length, "SKUs");
+const _totalCompactSkus = (typeof window !== 'undefined' && Array.isArray(window.COMPACT_SKUS)) ? window.COMPACT_SKUS.length : 0;
+console.log("Central Peças Loaded:", _totalCompactSkus, "SKUs");
 
     function switchModule(modId) {
       document.querySelectorAll('.module-section').forEach(sec => sec.classList.remove('active'));

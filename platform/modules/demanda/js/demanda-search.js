@@ -11,9 +11,27 @@
 
 const DemandaSearch = (() => {
 
-    // Configuração do tenant Central Peças
-    const TENANT_ID   = 'centralpecas';
-    const TECHBASE    = `tenants/${TENANT_ID}/demanda/techbase`;
+    // ── Resolução Dinâmica de Tenant ─────────────────────────
+    function _getTenantId() {
+        if (typeof DemandaDB !== 'undefined' && DemandaDB.TENANT_ID) {
+            return DemandaDB.TENANT_ID;
+        }
+        try {
+            if (window.ParreiraAuth && typeof ParreiraAuth.getTenant === 'function') {
+                const t = ParreiraAuth.getTenant();
+                if (t) return t;
+            }
+            if (window.sessionManager && typeof sessionManager.getTenantId === 'function') {
+                const t = sessionManager.getTenantId();
+                if (t) return t;
+            }
+            const s = JSON.parse(sessionStorage.getItem('parreira_session') || localStorage.getItem('parreira_session_ls') || 'null');
+            if (s && s.tenantId) return s.tenantId;
+        } catch (_) {}
+        return localStorage.getItem('app_tenant_id') || 'centralpecas';
+    }
+
+    const _techbaseCol = () => `tenants/${_getTenantId()}/demanda/techbase`;
 
     // Cache simples para resultados recentes (5 min TTL, não para estoque)
     const _cache = new Map();
@@ -40,7 +58,7 @@ const DemandaSearch = (() => {
         if (window.MaxDataAdapter) {
             const cfg = JSON.parse(sessionStorage.getItem('_demanda_erp_config') || '{}');
             if (!cfg.baseUrl) throw new Error('ERP não configurado. Faça login primeiro.');
-            return new MaxDataAdapter(TENANT_ID, cfg);
+            return new MaxDataAdapter(_getTenantId(), cfg);
         }
         throw new Error('MaxDataAdapter não encontrado. Verifique os scripts carregados.');
     }
@@ -138,7 +156,7 @@ const DemandaSearch = (() => {
     async function _searchFirestoreProducts(query, filialId) {
         if (typeof firebase === 'undefined') return [];
         const db  = firebase.firestore();
-        const col = `tenants/${TENANT_ID}/demanda/techbase/products`;
+        const col = `tenants/${_getTenantId()}/demanda/techbase/products`;
 
         const qUp = query.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
         const qNorm = qUp.replace(/[\s\-\.\/]/g, '');

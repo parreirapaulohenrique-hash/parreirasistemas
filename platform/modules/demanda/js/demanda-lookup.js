@@ -16,7 +16,7 @@ const DemandaLookup = (() => {
 
     const TENANT_ID    = 'centralpecas';
     const TECHBASE     = `tenants/${TENANT_ID}/demanda/techbase`;
-    const PRODUCTS_COL = `${TECHBASE}/products`;   // 5 segmentos = coleção válida
+    const _productsCol() = `${TECHBASE}/products`;   // 5 segmentos = coleção válida
 
     // ── Status ────────────────────────────────────────────────
     const STATUS = {
@@ -94,9 +94,9 @@ const DemandaLookup = (() => {
         // ── 2. Tenta Firestore techbase ──────────────────────────
         if (refNorm && typeof firebase !== 'undefined') {
             try {
-                let snap = await _db().collection(PRODUCTS_COL).doc(refNorm).get();
+                let snap = await _db().collection(_productsCol()).doc(refNorm).get();
                 if (!snap.exists) {
-                    const qSnap = await _db().collection(PRODUCTS_COL).where('codigoNorm', '==', refNorm).limit(1).get();
+                    const qSnap = await _db().collection(_productsCol()).where('codigoNorm', '==', refNorm).limit(1).get();
                     if (!qSnap.empty) snap = qSnap.docs[0];
                 }
                 if (snap.exists) {
@@ -143,7 +143,7 @@ const DemandaLookup = (() => {
         const key  = _normalizeRef(code);
         if (!key) return;
 
-        await _db().collection(PRODUCTS_COL).doc(key).set({
+        await _db().collection(_productsCol()).doc(key).set({
             codigoFab:    code,
             codigoNorm:   key,
             descricao:    (produto.descricao || produto.erpProdutoDesc || produto.descPdv || '').trim(),
@@ -172,7 +172,7 @@ const DemandaLookup = (() => {
             const key = _normalizeRef(code);
             if (!key || key.length < 3) continue;
 
-            const ref = db.collection(PRODUCTS_COL).doc(key);
+            const ref = db.collection(_productsCol()).doc(key);
             batch.set(ref, {
                 codigoFab:    code,
                 codigoNorm:   key,
@@ -285,15 +285,15 @@ const DemandaLookup = (() => {
 
         // Busca exata por código normalizado
         if (refNorm) {
-            const snap = await db.collection(PRODUCTS_COL).doc(refNorm).get();
+            const snap = await db.collection(_productsCol()).doc(refNorm).get();
             if (snap.exists) return [snap.data()];
-            const q = await db.collection(PRODUCTS_COL).where('codigoNorm', '==', refNorm).limit(limit).get();
+            const q = await db.collection(_productsCol()).where('codigoNorm', '==', refNorm).limit(limit).get();
             if (!q.empty) return q.docs.map(d => d.data());
         }
 
         // Busca por prefixo de código (range query)
         if (refNorm.length >= 3) {
-            const snap = await db.collection(PRODUCTS_COL)
+            const snap = await db.collection(_productsCol())
                 .where('codigoNorm', '>=', refNorm)
                 .where('codigoNorm', '<=', refNorm + '\uf8ff')
                 .limit(limit)

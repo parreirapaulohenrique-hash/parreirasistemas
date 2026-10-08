@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.22.5",
-  "build": "20261008-v3.22.5",
+  "version": "3.23.0",
+  "build": "20261008-v3.23.0",
   "lastUpdate": "2026-10-08",
-  "releaseDate": "2026-10-08T10:55:00-03:00",
-  "change": "v3.22.5: Renderização ultra-rápida (Lazy Loading) na aba Montagem de Carga, loop reverso O(N) na aba Baixa Romaneio e otimização de verificação de atrasos eliminando travamento de CPU e troca de abas instantânea."
+  "releaseDate": "2026-10-08T11:30:00-03:00",
+  "change": "v3.23.0: Identificação visual automática do Último Envio do cliente na tela Nova Cotação (badge pulsante no card correspondente de transportadora e redespacho com popover detalhado contendo transportadora, redespacho, data, NF, volumes e valor)."
 }

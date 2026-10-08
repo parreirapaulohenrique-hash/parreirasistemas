@@ -10,6 +10,10 @@ window.loadEstoqueView = function (viewId) {
         renderConsultaEstoque(container);
     } else if (viewId === 'est-endereco') {
         renderConsultaEndereco(container);
+    } else if (viewId === 'est-kardex') {
+        renderKardexView(container);
+    } else if (viewId === 'est-reabastecimento') {
+        renderReabastecimentoView(container);
     }
 };
 
@@ -39,23 +43,31 @@ window.StockManager = {
         localStorage.setItem('wms_mock_data' + suf, JSON.stringify(addrs));
     },
 
-    // Log Transaction (Kardex)
-    logTransaction: function (type, sku, qty, doc, reason) {
-        const logs = JSON.parse(localStorage.getItem('wms_kardex' + (window.getTenantSuffix ? window.getTenantSuffix() : '')) || '[]');
-        const user = JSON.parse(localStorage.getItem('logged_user') || '{"login":"system"}');
-        logs.unshift({
-            id: `LOG-${Date.now()}`,
+    // Log Transaction (Kardex Local + Firestore)
+    logTransaction: function (type, sku, qty, doc, reason, endereco = '-') {
+        const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+        const logs = JSON.parse(localStorage.getItem('wms_kardex' + suf) || '[]');
+        const user = (typeof ParreiraAuth !== 'undefined' && ParreiraAuth.getSessao) ? ParreiraAuth.getSessao() : JSON.parse(localStorage.getItem('logged_user') || '{"login":"system"}');
+        const id = `LOG-${Date.now()}`;
+        const entry = {
+            id,
             data: new Date().toISOString(),
-            tipo: type, // 'ENTRADA', 'SAIDA', 'AJUSTE'
+            tipo: type, // 'ENTRADA', 'SAIDA', 'AJUSTE', 'PICKING', 'REABASTECIMENTO'
             sku: sku,
             qtd: qty,
+            endereco: endereco,
             doc: doc || '-',
             motivo: reason || '-',
-            usuario: user.login || 'system'
-        });
-        // Limit log size to 1000
+            usuario: user.nome || user.login || 'system'
+        };
+        logs.unshift(entry);
         if (logs.length > 1000) logs.pop();
-        localStorage.setItem('wms_kardex' + (window.getTenantSuffix ? window.getTenantSuffix() : ''), JSON.stringify(logs));
+        localStorage.setItem('wms_kardex' + suf, JSON.stringify(logs));
+
+        // Sincronização em nuvem Firestore (resiliente)
+        if (window.WmsStore && window.WmsStore.registrarKardex) {
+            window.WmsStore.registrarKardex(entry).catch(e => console.warn('[Kardex] Falha ao registrar log no Firestore:', e.message));
+        }
     },
 
     // Add stock to a location (Receiving)
@@ -150,6 +162,11 @@ window.StockManager = {
 
         this.saveData(data);
         this.logTransaction('SAIDA', sku, qty, docRef || '-', 'Expedição/Picking');
+
+        // Sincroniza baixa atômica no Firestore
+        if (window.WmsStore && window.WmsStore.efetivarBaixaEstoque) {
+            window.WmsStore.efetivarBaixaEstoque(sku, qty, docRef).catch(() => {});
+        }
     },
 
     // Get aggregated stock for view
@@ -435,5 +452,214 @@ window.filterEnderecos = function () {
     if (filtered.length === 0) {
         tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--text-secondary);">Nenhum endereço encontrado.</td></tr>`;
     }
+};
+
+// =============================================================================
+// TELA KARDEX DE AUDITORIA (HISTÓRICO EM NUVEM)
+// =============================================================================
+window.renderKardexView = async function (container) {
+    container.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:center;height:220px;gap:.75rem;color:var(--text-secondary);">
+            <span class="material-icons-round" style="animation:spin 1s linear infinite; font-size:1.6rem;">refresh</span>
+            Carregando Kardex de auditoria...
+        </div>
+    `;
+
+    const suf = window.getTenantSuffix ? window.getTenantSuffix() : '';
+    let logs = [];
+
+    // Tenta nuvem primeiro
+    try {
+        if (window.WmsStore && window.WmsStore.listarKardex) {
+            logs = await window.WmsStore.listarKardex({ limite: 200 });
+        }
+    } catch (_) {}
+
+    // Fallback local
+    if (!logs || logs.length === 0) {
+        logs = JSON.parse(localStorage.getItem('wms_kardex' + suf) || '[]');
+    }
+
+    container.innerHTML = `
+        <div class="card" style="margin-bottom:1.5rem;">
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="font-size:0.95rem; font-weight:600; margin:0;">
+                    <span class="material-icons-round" style="font-size:1.1rem; vertical-align:middle; color:#3b82f6;">history</span>
+                    Kardex de Movimentações (Auditoria Multi-Tenant)
+                </h3>
+                <span style="font-size:0.75rem; color:var(--text-secondary);">${logs.length} registros</span>
+            </div>
+
+            <div style="padding:1rem 1.5rem; display:flex; gap:1rem; flex-wrap:wrap; align-items:center; border-bottom:1px solid var(--border-color);">
+                <input id="kdx-search" type="text" placeholder="Buscar por SKU, motivo ou usuário..."
+                    style="flex:1; min-width:240px; padding:0.6rem 1rem; border:1px solid var(--border-color); border-radius:var(--radius-md);
+                    background:var(--bg-card); color:var(--text-primary); font-size:0.85rem;"
+                    oninput="filterKardex()">
+                <select id="kdx-filter-tipo" onchange="filterKardex()"
+                    style="padding:0.6rem 1rem; border:1px solid var(--border-color); border-radius:var(--radius-md);
+                    background:var(--bg-card); color:var(--text-primary); font-size:0.85rem;">
+                    <option value="">Todos os Tipos</option>
+                    <option value="ENTRADA">Entrada</option>
+                    <option value="SAIDA">Saída</option>
+                    <option value="AJUSTE">Ajuste / Inventário</option>
+                    <option value="PICKING">Picking / Separação</option>
+                    <option value="REABASTECIMENTO">Reabastecimento</option>
+                </select>
+                <button class="btn btn-secondary" onclick="renderKardexView(document.getElementById('view-dynamic'))" style="font-size:.8rem; padding:.5rem .9rem;">
+                    <span class="material-icons-round" style="font-size:1rem;">refresh</span>
+                </button>
+            </div>
+
+            <div style="overflow-x:auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Data/Hora</th>
+                            <th>Tipo</th>
+                            <th>SKU</th>
+                            <th>Endereço</th>
+                            <th style="text-align:right;">Quantidade</th>
+                            <th>Documento</th>
+                            <th>Motivo</th>
+                            <th>Operador</th>
+                        </tr>
+                    </thead>
+                    <tbody id="kdx-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    `;
+
+    window._kardexData = logs;
+    filterKardex();
+};
+
+window.filterKardex = function () {
+    const search = (document.getElementById('kdx-search')?.value || '').toLowerCase();
+    const tipo = document.getElementById('kdx-filter-tipo')?.value || '';
+    const logs = window._kardexData || [];
+    const tbody = document.getElementById('kdx-tbody');
+    if (!tbody) return;
+
+    const filtered = logs.filter(l => {
+        const mSearch = !search || (l.sku || '').toLowerCase().includes(search) || (l.motivo || '').toLowerCase().includes(search) || (l.usuario || '').toLowerCase().includes(search);
+        const mTipo = !tipo || (l.tipo || '').toUpperCase() === tipo.toUpperCase();
+        return mSearch && mTipo;
+    });
+
+    tbody.innerHTML = filtered.map(l => {
+        const t = (l.tipo || 'AJUSTE').toUpperCase();
+        const color = t === 'ENTRADA' ? '#10b981' : t === 'SAIDA' ? '#ef4444' : t === 'REABASTECIMENTO' ? '#3b82f6' : '#f59e0b';
+        const d = l.data ? new Date(l.data).toLocaleString('pt-BR') : '-';
+        return `
+            <tr>
+                <td style="font-size:0.78rem; font-family:monospace;">${d}</td>
+                <td><span style="padding:2px 8px; border-radius:10px; font-size:0.68rem; font-weight:700; background:${color}18; color:${color};">${t}</span></td>
+                <td style="font-weight:600; font-family:monospace;">${l.sku}</td>
+                <td style="font-family:monospace; font-size:0.8rem;">${l.endereco || '-'}</td>
+                <td style="text-align:right; font-weight:700; color:${color};">${t === 'SAIDA' ? '-' : '+'}${Number(l.qtd).toLocaleString('pt-BR')}</td>
+                <td style="font-size:0.8rem;">${l.doc || '-'}</td>
+                <td style="font-size:0.82rem;">${l.motivo || '-'}</td>
+                <td style="font-size:0.78rem; color:var(--text-secondary);">${l.usuario || 'system'}</td>
+            </tr>
+        `;
+    }).join('');
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--text-secondary);">Nenhum lançamento no Kardex.</td></tr>`;
+    }
+};
+
+// =============================================================================
+// TELA REABASTECIMENTO AUTOMÁTICO (PULMÃO ➔ PICKING)
+// =============================================================================
+window.renderReabastecimentoView = async function (container) {
+    container.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:center;height:220px;gap:.75rem;color:var(--text-secondary);">
+            <span class="material-icons-round" style="animation:spin 1s linear infinite; font-size:1.6rem;">refresh</span>
+            Calculando necessidades de reabastecimento...
+        </div>
+    `;
+
+    let ordens = [];
+    if (window.WmsStore) {
+        try {
+            await window.WmsStore.verificarGatilhosReabastecimento();
+            ordens = await window.WmsStore.listarOrdensReabastecimento();
+        } catch (_) {}
+    }
+
+    container.innerHTML = `
+        <div class="card" style="margin-bottom:1.5rem;">
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <h3 style="font-size:0.95rem; font-weight:600; margin:0;">
+                        <span class="material-icons-round" style="font-size:1.1rem; vertical-align:middle; color:#f59e0b;">swap_vert</span>
+                        Motor de Reabastecimento Contínuo (Pulmão ➔ Picking)
+                    </h3>
+                    <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:2px;">
+                        Geração automática de ordens de descida de paletes para empilhadeiristas
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="renderReabastecimentoView(document.getElementById('view-dynamic'))" style="font-size:.8rem; padding:.5rem 1rem;">
+                    <span class="material-icons-round" style="font-size:1rem;">sync</span> Recalcular Níveis
+                </button>
+            </div>
+
+            <div style="overflow-x:auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Ordem</th>
+                            <th>SKU</th>
+                            <th>Produto</th>
+                            <th>Origem (Pulmão)</th>
+                            <th>Destino (Picking)</th>
+                            <th style="text-align:right;">Qtd Sugerida</th>
+                            <th>Prioridade</th>
+                            <th>Status</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${ordens.length > 0 ? ordens.map(o => `
+                            <tr>
+                                <td style="font-weight:700; font-family:monospace;">${o.id}</td>
+                                <td style="font-weight:600; font-family:monospace;">${o.sku}</td>
+                                <td>${o.produto}</td>
+                                <td style="font-family:monospace; color:#3b82f6; font-weight:700;">${o.origemEndereco}</td>
+                                <td style="font-family:monospace; color:#10b981; font-weight:700;">${o.destinoEndereco}</td>
+                                <td style="text-align:right; font-weight:700;">${o.qtdSugerida} un</td>
+                                <td><span style="padding:2px 8px; border-radius:10px; font-size:.7rem; font-weight:700; background:rgba(239,68,68,0.12); color:#ef4444;">${o.prioridade}</span></td>
+                                <td><span style="padding:2px 8px; border-radius:10px; font-size:.7rem; font-weight:700; background:rgba(245,158,11,0.12); color:#f59e0b;">${o.status}</span></td>
+                                <td>
+                                    ${o.status === 'PENDENTE' ? `
+                                        <button class="btn btn-secondary" onclick="concluirReabastecimentoManual('${o.id}')" style="font-size:.75rem; padding:.3rem .6rem;">
+                                            Concluir
+                                        </button>
+                                    ` : '<span style="font-size:.75rem; color:#10b981;">Concluído</span>'}
+                                </td>
+                            </tr>
+                        `).join('') : `
+                            <tr>
+                                <td colspan="9" style="text-align:center; padding:3rem; color:var(--text-secondary);">
+                                    <span class="material-icons-round" style="font-size:2rem; opacity:.4; display:block; margin-bottom:.5rem;">check_circle</span>
+                                    Todos os endereços de picking operam com saldo acima do estoque mínimo!
+                                </td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+};
+
+window.concluirReabastecimentoManual = async function (id) {
+    if (!confirm('Confirmar movimentação e conclusão do reabastecimento?')) return;
+    if (window.WmsStore && window.WmsStore.atualizarOrdemReabastecimento) {
+        await window.WmsStore.atualizarOrdemReabastecimento(id, { status: 'CONCLUIDO', concluidoEm: new Date().toISOString() });
+    }
+    renderReabastecimentoView(document.getElementById('view-dynamic'));
 };
 

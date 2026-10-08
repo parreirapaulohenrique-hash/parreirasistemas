@@ -1388,3 +1388,134 @@ body {
     gap: 1rem;
 }
 
+/* ══════════════════════════════════════════════════════════════
+   PROPOSTA COMERCIAL TIMBRADA & HOMOLOGAÇÃO ERP
+   ══════════════════════════════════════════════════════════════ */
+.btn-orc-proposta {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: var(--transition);
+}
+.btn-orc-proposta:hover {
+    background: linear-gradient(135deg, #1d4ed8, #1e40af);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+}
+
+.btn-orc-whatsapp {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: var(--transition);
+}
+.btn-orc-whatsapp:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16,185,129,0.3);
+}
+
+.btn-orc-erp {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    border-radius: 6px;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: var(--transition);
+}
+.btn-orc-erp:hover {
+    background: rgba(245, 158, 11, 0.25);
+    border-color: #f59e0b;
+}
+
+/* Folha Timbrada de Proposta Comercial */
+.folha-proposta-preview {
+    background: #ffffff;
+    color: #1e293b;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 2.2rem 2.5rem;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    line-height: 1.45;
+}
+
+.folha-proposta-preview table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+}
+
+.folha-proposta-preview th {
+    background: #f1f5f9;
+    color: #0f172a;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.55rem 0.65rem;
+    border-bottom: 2px solid #cbd5e1;
+}
+
+.folha-proposta-preview td {
+    padding: 0.5rem 0.65rem;
+    font-size: 0.82rem;
+    border-bottom: 1px solid #e2e8f0;
+    color: #334155;
+}
+
+/* @media print para impressão 100% perfeita */
+@media print {
+    body * {
+        visibility: hidden !important;
+    }
+    #modalPropostaComercial, #modalPropostaComercial * {
+        visibility: visible !important;
+    }
+    #modalPropostaComercial {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        background: #ffffff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    .proposta-actions-bar {
+        display: none !important;
+    }
+    .folha-proposta-preview {
+        box-shadow: none !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+        border-radius: 0 !important;
+    }
+    @page {
+        size: A4 portrait;
+        margin: 12mm;
+    }
+}
+
