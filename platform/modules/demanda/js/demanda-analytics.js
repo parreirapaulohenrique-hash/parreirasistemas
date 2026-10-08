@@ -1268,6 +1268,35 @@ console.log("Central Peças Loaded:", _totalCompactSkus, "SKUs");
           </div>
         </div>
 
+        <!-- LOTE C: DEMANDA REPRIMIDA DE COTAÇÕES PERDIDAS -->
+        ${(() => {
+          try {
+            const repMap = window.COTACAO_REPRIMIDA_MAP || JSON.parse(localStorage.getItem('cotacao_reprimida_map') || '{}');
+            const codFabSku = String(s[1] || '').trim();
+            const refSku = String(s[0] || '').trim();
+            const repInfo = repMap[skuId] || repMap[codFabSku] || repMap[refSku] || null;
+            if (repInfo && repInfo.qtdPerdida > 0) {
+              return `
+                <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 10px; padding: 14px 18px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+                  <div>
+                    <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #ef4444; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+                      <span>🚨</span><span>Demanda Reprimida Detectada no Módulo Cotação</span>
+                    </div>
+                    <div style="font-size: 12px; color: #cbd5e1; margin-top: 4px;">
+                      Este SKU teve <strong>${repInfo.count} cotação(ões) perdida(s) por falta de estoque</strong> na janela, totalizando <strong style="color: #ef4444;">${repInfo.qtdPerdida} unidades não atendidas</strong>.
+                    </div>
+                  </div>
+                  <div style="text-align: right; background: rgba(0,0,0,0.3); padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(239,68,68,0.2);">
+                    <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Perda Comercial</div>
+                    <div style="font-size: 16px; font-weight: 900; color: #ef4444;">+${repInfo.qtdPerdida} un</div>
+                  </div>
+                </div>
+              `;
+            }
+          } catch (_) {}
+          return '';
+        })()}
+
         <!-- TABELA DE TRANSAÇÕES AUDITÁVEIS -->
         ${txsTableHtml}
 

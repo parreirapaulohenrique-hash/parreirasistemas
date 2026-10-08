@@ -335,9 +335,45 @@ const DemandaImport = (() => {
         });
     }
 
+    /**
+     * Processador Universal de Arquivos (PDF, Excel, CSV ou Texto).
+     * @param {File} file
+     * @returns {Promise<Array>} Lista de itens normalizados
+     */
+    async function parseFile(file) {
+        if (!file) throw new Error('Nenhum arquivo fornecido.');
+        const name = (file.name || '').toLowerCase();
+
+        // 1. Arquivo PDF
+        if (name.endsWith('.pdf')) {
+            if (typeof DemandaPDF === 'undefined' || typeof DemandaPDF.parseCotacaoPDF !== 'function') {
+                throw new Error('Motor de extração PDF.js não carregado.');
+            }
+            return await DemandaPDF.parseCotacaoPDF(file);
+        }
+
+        // 2. Arquivo Excel ou CSV
+        if (name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.csv')) {
+            const res = await parseExcel(file);
+            return res.itens || [];
+        }
+
+        // 3. Arquivo de Texto livre
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const text = e.target.result;
+                resolve(parseText(text));
+            };
+            reader.onerror = () => reject(new Error('Erro ao ler arquivo de texto.'));
+            reader.readAsText(file, 'utf-8');
+        });
+    }
+
     return {
         parseText,
         parseExcel,
+        parseFile,
         normalizeRef,
         refsMatch,
         validateItens,

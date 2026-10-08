@@ -804,22 +804,27 @@ const DemandaApp = (function() {
             prev.style.display = "";
             prev.innerHTML = "<div style='text-align:center;padding:1.5rem;color:var(--text-secondary)'>" +
                 "<span class='material-icons-round' style='animation:spin 1s linear infinite;font-size:2rem'>sync</span>" +
-                "<p style='margin-top:.5rem'>Lendo arquivo...</p></div>";
+                "<p style='margin-top:.5rem'>Extraindo itens do arquivo com inteligência...</p></div>";
         }
-        DemandaImport.parseExcel(file).then(function(result) {
-            _excelItensTemp = result.itens;
-            var validados = DemandaImport.validateItens(result.itens);
+
+        var processPromise = (typeof DemandaImport.parseFile === "function")
+            ? DemandaImport.parseFile(file)
+            : DemandaImport.parseExcel(file).then(function(r) { return r.itens || []; });
+
+        processPromise.then(function(itensExtraidos) {
+            _excelItensTemp = Array.isArray(itensExtraidos) ? itensExtraidos : (itensExtraidos.itens || []);
+            var validados = DemandaImport.validateItens(_excelItensTemp);
             var ok  = validados.filter(function(i) { return !i._erros || i._erros.length === 0; }).length;
             var err = validados.length - ok;
             if (prev) prev.innerHTML =
                 "<div style='padding:.75rem 1rem;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:8px;display:flex;gap:.75rem;align-items:center'>" +
-                "<span class='material-icons-round' style='color:var(--accent-success)'>check_circle</span>" +
-                "<div><strong>" + validados.length + " itens detectados</strong>" +
-                (err > 0 ? " <span style='color:var(--accent-danger)'>(" + err + " com alerta)</span>" : "") +
+                "<span class='material-icons-round' style='color:var(--accent-success);font-size:1.8rem;'>check_circle</span>" +
+                "<div><strong>" + validados.length + " itens detectados com sucesso!</strong>" +
+                (err > 0 ? " <span style='color:var(--accent-danger)'>(" + err + " requerem atenção)</span>" : "") +
                 "<div style='font-size:.78rem;color:var(--text-secondary);margin-top:.15rem'>" + _esc(file.name) + "</div></div></div>";
             var btn = document.getElementById("btnConfirmExcel"); if (btn) btn.style.display = "";
         }).catch(function(err) {
-            if (prev) prev.innerHTML = "<div style='color:var(--accent-danger);padding:1rem'>Erro: " + _esc(err.message) + "</div>";
+            if (prev) prev.innerHTML = "<div style='color:var(--accent-danger);padding:1rem'>Erro ao extrair: " + _esc(err.message || err) + "</div>";
             var area2 = document.getElementById("excelUploadArea"); if (area2) area2.style.display = "";
         });
     }
@@ -1450,17 +1455,22 @@ const DemandaApp = (function() {
 
         // Botões de Ação Direta conforme o Status do Item
         if (st === "nao_cadastrado") {
+            acoesCabiveis.push("<button onclick=\"DemandaApp.abrirModalEquivalencias('" + _esc(_demandaAtual ? _demandaAtual.id : '') + "','" + _esc(item.id) + "','" + _esc(item.refOriginal || '') + "','" + _esc(item.descOriginal || '') + "','" + _esc(st) + "')\" title='Ver Equivalências OEM & Similares' style='background:rgba(56,189,248,.15);color:#38bdf8;border:1px solid rgba(56,189,248,.35);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>compare_arrows</span> Equivalências OEM</button>");
             acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
             acoesCabiveis.push("<button onclick=\"DemandaApp._abrirBuscaERP('" + _esc(item.id) + "','" + _esc(item.refOriginal || "") + "','" + _esc(item.descOriginal || "") + "')\" title='Buscar Peça ou Similares no ERP' style='background:transparent;border:1px solid var(--accent-primary);border-radius:5px;padding:.22rem .55rem;color:var(--accent-primary);font-size:.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>search</span> ERP</button>");
         } else if (st === "catalogado") {
+            acoesCabiveis.push("<button onclick=\"DemandaApp.abrirModalEquivalencias('" + _esc(_demandaAtual ? _demandaAtual.id : '') + "','" + _esc(item.id) + "','" + _esc(item.refOriginal || item.codigoFab || '') + "','" + _esc(item.descOriginal || item.descricao || '') + "','" + _esc(st) + "')\" title='Ver Equivalências OEM & Similares' style='background:rgba(56,189,248,.15);color:#38bdf8;border:1px solid rgba(56,189,248,.35);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>compare_arrows</span> Equivalências OEM</button>");
             acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
             acoesCabiveis.push("<button onclick=\"DemandaApp._abrirBuscaERP('" + _esc(item.id) + "','" + _esc(item.refOriginal || "") + "','" + _esc(item.descOriginal || "") + "')\" title='Vincular ao ERP / Similares' style='background:transparent;border:1px solid var(--accent-primary);border-radius:5px;padding:.22rem .55rem;color:var(--accent-primary);font-size:.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>search</span> ERP</button>");
         } else if (st === "demanda_recebida" || st === "nao_encontrado" || st === "em_identificacao" || st === "identificado") {
+            acoesCabiveis.push("<button onclick=\"DemandaApp.abrirModalEquivalencias('" + _esc(_demandaAtual ? _demandaAtual.id : '') + "','" + _esc(item.id) + "','" + _esc(item.refOriginal || '') + "','" + _esc(item.descOriginal || '') + "','" + _esc(st) + "')\" title='Ver Equivalências OEM & Similares' style='background:rgba(56,189,248,.15);color:#38bdf8;border:1px solid rgba(56,189,248,.35);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>compare_arrows</span> Equivalências OEM</button>");
             acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
             acoesCabiveis.push("<button onclick=\"DemandaApp._abrirBuscaERP('" + _esc(item.id) + "','" + _esc(item.refOriginal || "") + "','" + _esc(item.descOriginal || "") + "')\" title='Buscar / Identificar Similares no ERP' style='background:transparent;border:1px solid var(--accent-primary);border-radius:5px;padding:.22rem .55rem;color:var(--accent-primary);font-size:.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>search</span> ERP</button>");
         } else if (st === "sem_estoque") {
+            acoesCabiveis.push("<button onclick=\"DemandaApp.abrirModalEquivalencias('" + _esc(_demandaAtual ? _demandaAtual.id : '') + "','" + _esc(item.id) + "','" + _esc(item.refOriginal || item.codigoFab || '') + "','" + _esc(item.descOriginal || item.descricao || '') + "','" + _esc(st) + "')\" title='Ver Equivalências OEM & Similares' style='background:rgba(56,189,248,.15);color:#38bdf8;border:1px solid rgba(56,189,248,.35);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>compare_arrows</span> Equivalências OEM</button>");
             acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
             acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','consulta_outras_filiais')\" title='Consultar Estoque em Outras Filiais' style='background:rgba(6,182,212,.15);color:#06b6d4;border:1px solid rgba(6,182,212,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>store</span> Filiais</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp._confirmarVendaPerdida('" + _esc(item.id) + "','" + _esc(st) + "')\" title='Registrar Ruptura Comercial / Venda Perdida' style='background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>report_problem</span> Ruptura</button>");
         } else if (st === "estoque_disponivel") {
             acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','proposta_enviada')\" title='Incluir item na Proposta / Orçamento' style='background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>request_quote</span> Orçar</button>");
         } else if (st === "estoque_parcial") {
@@ -1886,6 +1896,7 @@ const DemandaApp = (function() {
             var obs    = (document.getElementById("_motivoPerdaObs").value || "").trim();
             var obsStr = "Motivo: " + motivo + (obs ? " — " + obs : "");
             overlay.remove();
+            _registrarPerdaDMD(itemId, motivo, obs);
             _persistirTransicao(itemId, deStatus, "venda_perdida", obsStr);
         };
     }
@@ -5189,11 +5200,202 @@ const DemandaApp = (function() {
         }
     }
 
+    /**
+     * Lote B: Inteligência de Equivalências OEM & Similares Técnicos
+     */
+    var _equivContext = null;
+
+    async function abrirModalEquivalencias(demandaId, itemId, refOriginal, descOriginal, statusAtual) {
+        _equivContext = { demandaId: demandaId, itemId: itemId, refOriginal: refOriginal, descOriginal: descOriginal, statusAtual: statusAtual };
+
+        var refEl = document.getElementById("equivRefOriginal");
+        var descEl = document.getElementById("equivDescOriginal");
+        var container = document.getElementById("equivTabelaContainer");
+
+        if (refEl) refEl.textContent = refOriginal || "Sem Código";
+        if (descEl) descEl.textContent = descOriginal || "Peça Solicitada";
+
+        if (container) {
+            container.innerHTML = "<div style='padding:2rem;text-align:center;color:var(--text-secondary);'>" +
+                "<span class='material-icons-round' style='font-size:2rem;animation:spin 1s linear infinite;'>sync</span>" +
+                "<p style='margin-top:0.5rem;'>Cruzando base técnica de marcas OEM, Genuínos e Similares...</p></div>";
+        }
+
+        var modal = document.getElementById("modalEquivalenciasOEM");
+        if (modal) modal.style.display = "block";
+
+        try {
+            var equivalencias = [];
+            if (typeof DemandaLookup !== "undefined" && typeof DemandaLookup.getEquivalencias === "function") {
+                equivalencias = await DemandaLookup.getEquivalencias(refOriginal);
+            }
+
+            if (!container) return;
+
+            if (equivalencias.length === 0) {
+                container.innerHTML = "<div style='padding:2rem;text-align:center;color:#94a3b8;'>" +
+                    "<span class='material-icons-round' style='font-size:2.5rem;opacity:0.3;'>search_off</span>" +
+                    "<p style='margin-top:0.5rem;'>Nenhuma equivalência OEM cadastrada para esta referência.</p>" +
+                    "<button class='btn btn-primary btn-sm' style='margin-top:0.5rem;' onclick=\"DemandaApp._abrirBuscaERP('" + _esc(itemId) + "','" + _esc(refOriginal) + "','" + _esc(descOriginal) + "');DemandaApp.fecharModalEquivalencias();\">" +
+                    "<span class='material-icons-round'>search</span> Pesquisar Catálogo ERP</button></div>";
+                return;
+            }
+
+            var html = "<table style='width:100%;border-collapse:collapse;font-size:0.82rem;'>" +
+                "<thead><tr style='background:#1e293b;border-bottom:1px solid #334155;color:#94a3b8;text-transform:uppercase;font-size:0.7rem;'>" +
+                "<th style='padding:0.6rem 0.8rem;text-align:left;'>Código Alternativo</th>" +
+                "<th style='padding:0.6rem 0.8rem;text-align:left;'>Marca / Fabricante</th>" +
+                "<th style='padding:0.6rem 0.8rem;text-align:center;'>Grau de Confiança</th>" +
+                "<th style='padding:0.6rem 0.8rem;text-align:center;'>Estoque Local</th>" +
+                "<th style='padding:0.6rem 0.8rem;text-align:right;'>Preço Unit.</th>" +
+                "<th style='padding:0.6rem 0.8rem;text-align:center;'>Ação</th>" +
+                "</tr></thead><tbody>";
+
+            html += equivalencias.map(function(eq, idx) {
+                var badgeEstoque = eq.temEstoque
+                    ? "<span style='background:rgba(16,185,129,0.2);color:#10b981;padding:0.2rem 0.5rem;border-radius:4px;font-weight:700;'>" + eq.estoque + " un (Disponível)</span>"
+                    : "<span style='background:rgba(239,68,68,0.15);color:#ef4444;padding:0.2rem 0.5rem;border-radius:4px;'>Sem Estoque</span>";
+
+                var corConf = eq.confianca >= 95 ? "#10b981" : (eq.confianca >= 85 ? "#38bdf8" : "#f59e0b");
+                var precoFmt = eq.preco > 0 ? "R$ " + Number(eq.preco).toFixed(2).replace(".", ",") : "A cotar";
+
+                var jsonArg = _escAttr(JSON.stringify(eq));
+
+                return "<tr style='border-bottom:1px solid #1e293b;'>" +
+                    "<td style='padding:0.65rem 0.8rem;font-weight:700;color:#f8fafc;'>" + _esc(eq.codigo) + "<div style='font-size:0.72rem;color:#94a3b8;font-weight:400;'>" + _esc(eq.descricao) + "</div></td>" +
+                    "<td style='padding:0.65rem 0.8rem;'><span style='background:#334155;color:#e2e8f0;padding:0.15rem 0.45rem;border-radius:3px;font-size:0.72rem;font-weight:600;'>" + _esc(eq.marca) + "</span> <small style='color:#94a3b8;display:block;margin-top:2px;'>" + _esc(eq.tipo) + "</small></td>" +
+                    "<td style='padding:0.65rem 0.8rem;text-align:center;'><strong style='color:" + corConf + ";'>" + eq.confianca + "%</strong><div style='font-size:0.68rem;color:#64748b;'>Homologado</div></td>" +
+                    "<td style='padding:0.65rem 0.8rem;text-align:center;'>" + badgeEstoque + "</td>" +
+                    "<td style='padding:0.65rem 0.8rem;text-align:right;font-weight:700;color:#38bdf8;'>" + precoFmt + "</td>" +
+                    "<td style='padding:0.65rem 0.8rem;text-align:center;white-space:nowrap;'>" +
+                    "<button onclick=\"DemandaApp.substituirPorEquivalencia(" + jsonArg + ")\" style='background:var(--accent-primary);color:#fff;border:none;border-radius:4px;padding:0.3rem 0.6rem;font-size:0.75rem;font-weight:600;cursor:pointer;margin-right:0.3rem;'>Substituir</button>" +
+                    "<button onclick=\"DemandaApp.adicionarComoAlternativa(" + jsonArg + ")\" style='background:rgba(255,255,255,0.08);color:#cbd5e1;border:1px solid #334155;border-radius:4px;padding:0.3rem 0.6rem;font-size:0.75rem;cursor:pointer;'>+ Alternativa</button>" +
+                    "</td></tr>";
+            }).join("");
+
+            html += "</tbody></table>";
+            container.innerHTML = html;
+
+        } catch (e) {
+            console.error("[DemandaApp] Erro em abrirModalEquivalencias:", e);
+            if (container) container.innerHTML = "<div style='color:var(--accent-danger);padding:1rem;'>Erro ao carregar equivalências: " + _esc(e.message) + "</div>";
+        }
+    }
+
+    function fecharModalEquivalencias() {
+        _equivContext = null;
+        var modal = document.getElementById("modalEquivalenciasOEM");
+        if (modal) modal.style.display = "none";
+    }
+
+    async function substituirPorEquivalencia(eq) {
+        if (!_equivContext || !_equivContext.itemId) return;
+        try {
+            _toast("Substituindo peça pela equivalência OEM...", "info");
+            var patch = {
+                refOriginal: eq.codigo,
+                descOriginal: eq.descricao || eq.codigo,
+                erpProdutoId: eq.erpProdutoId || null,
+                preco: eq.preco || 0,
+                status: eq.temEstoque ? "estoque_disponivel" : "sem_estoque",
+                marca: eq.marca || "",
+                tipoEquivalencia: eq.tipo || "OEM"
+            };
+
+            await DemandaDB.updateItem(_equivContext.demandaId, _equivContext.itemId, patch, {
+                evento: "equivalencia_aplicada",
+                de: _equivContext.refOriginal,
+                para: eq.codigo,
+                tipo: eq.tipo,
+                por: (_sessao && (_sessao.login || _sessao.nome)) || "Consultor"
+            });
+
+            _toast("✓ Peça substituída por " + eq.codigo + " (" + eq.marca + ") com sucesso!", "success");
+            fecharModalEquivalencias();
+            if (_demandaAtual && _demandaAtual.id === _equivContext.demandaId) {
+                abrirDemanda(_demandaAtual.id);
+            }
+        } catch (e) {
+            _toast("Erro ao substituir: " + e.message, "error");
+        }
+    }
+
+    async function adicionarComoAlternativa(eq) {
+        if (!_equivContext || !_equivContext.demandaId) return;
+        try {
+            _toast("Adicionando alternativa técnica à cotação...", "info");
+            var novoItem = {
+                refOriginal: eq.codigo,
+                descOriginal: "[ALT] " + (eq.descricao || eq.codigo) + " (" + eq.marca + ")",
+                qtdeSolicitada: 1,
+                erpProdutoId: eq.erpProdutoId || null,
+                preco: eq.preco || 0,
+                status: eq.temEstoque ? "estoque_disponivel" : "sem_estoque",
+                obs: "Alternativa técnica à peça " + _equivContext.refOriginal
+            };
+
+            await DemandaDB.addItens(_equivContext.demandaId, [novoItem]);
+            _toast("✓ Item alternativo " + eq.codigo + " adicionado à cotação!", "success");
+            fecharModalEquivalencias();
+            if (_demandaAtual && _demandaAtual.id === _equivContext.demandaId) {
+                abrirDemanda(_demandaAtual.id);
+            }
+        } catch (e) {
+            _toast("Erro ao adicionar alternativa: " + e.message, "error");
+        }
+    }
+
+    /**
+     * Lote C: Registro de Demanda Reprimida / Ruptura para DMD de Compras
+     */
+    function _registrarPerdaDMD(itemId, motivo, obs) {
+        try {
+            if (!_demandaAtual || !_demandaAtual.itens) return;
+            var it = _demandaAtual.itens.find(function(i) { return i.id === itemId; });
+            if (!it) return;
+
+            var key = it.erpProdutoId || it.refOriginal || it.codigoFab || "";
+            if (!key) return;
+
+            if (!window.COTACAO_REPRIMIDA_MAP) {
+                try {
+                    window.COTACAO_REPRIMIDA_MAP = JSON.parse(localStorage.getItem("cotacao_reprimida_map") || "{}");
+                } catch (_) { window.COTACAO_REPRIMIDA_MAP = {}; }
+            }
+            var prev = window.COTACAO_REPRIMIDA_MAP[key] || { count: 0, qtdPerdida: 0, historico: [] };
+            prev.count += 1;
+            prev.qtdPerdida += (it.qtdeSolicitada || 1);
+            prev.historico.push({
+                demandaId: _demandaAtual.id,
+                codigo: _demandaAtual.codigo || "",
+                cliente: _demandaAtual.clienteNome || "Cliente",
+                motivo: motivo || "Ruptura de Estoque",
+                obs: obs || "",
+                data: new Date().toISOString()
+            });
+            window.COTACAO_REPRIMIDA_MAP[key] = prev;
+
+            try {
+                localStorage.setItem("cotacao_reprimida_map", JSON.stringify(window.COTACAO_REPRIMIDA_MAP));
+            } catch (_) {}
+
+            console.log("[DemandaApp] Demanda reprimida registrada para SKU:", key, prev);
+        } catch (e) {
+            console.warn("[DemandaApp] Erro ao registrar demanda reprimida:", e);
+        }
+    }
+
 // ════════════════════════════════════════════════════════
     // API PÚBLICA
     // ════════════════════════════════════════════════════════
 
     return {
+        // Equivalências OEM & Demanda Reprimida (Lotes B e C)
+        abrirModalEquivalencias:      abrirModalEquivalencias,
+        fecharModalEquivalencias:     fecharModalEquivalencias,
+        substituirPorEquivalencia:    substituirPorEquivalencia,
+        adicionarComoAlternativa:     adicionarComoAlternativa,
+        _registrarPerdaDMD:           _registrarPerdaDMD,
         // Proposta Comercial, WhatsApp e ERP (Prompts 1 e 2)
         gerarPropostaPdf:             gerarPropostaPdf,
         fecharModalProposta:          fecharModalProposta,

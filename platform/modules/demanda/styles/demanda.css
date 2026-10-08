@@ -1519,3 +1519,40 @@ body {
     }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   ESTILOS: EQUIVALÊNCIAS OEM & SIMILARES (LOTE B)
+   ═══════════════════════════════════════════════════════════ */
+.badge-confianca-alta {
+    background: rgba(16, 185, 129, 0.18);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    font-weight: 700;
+}
+
+.badge-confianca-media {
+    background: rgba(56, 189, 248, 0.18);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    font-weight: 700;
+}
+
+.btn-substituir-equiv {
+    background: #0284c7;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-substituir-equiv:hover {
+    background: #0369a1;
+}
+

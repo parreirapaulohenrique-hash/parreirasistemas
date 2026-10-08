@@ -1,9 +1,9 @@
 {
-  "version": "3.0.9",
-  "build": "20260924-v3.0.9",
+  "version": "3.1.0",
+  "build": "20261008-v3.1.0",
   "module": "demanda",
   "name": "Cotacao",
-  "lastUpdate": "2026-09-24",
-  "change": "v3.0.9 - fix(modais): Hierarquia estrita de z-index entre modais (drilldown=1050, sku-modal=1060, dmd-modal=1070) permitindo abertura imediata da ficha tecnica do SKU a partir de qualquer linha de tabela dos drilldowns.",
-  "releaseDate": "2026-09-24T09:25:00-03:00"
+  "lastUpdate": "2026-10-08",
+  "change": "v3.1.0 - feat(lotes A, B, C): Captura multimodal universal (PDF.js, Excel, CSV), Inteligência de Equivalências Técnicas OEM & Similares, e conexão de Vendas Perdidas/Rupturas com Demanda Reprimida e cálculo DMD.",
+  "releaseDate": "2026-10-08T16:15:00-03:00"
 }

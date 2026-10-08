@@ -241,6 +241,38 @@ const DemandaPDF = (() => {
         };
     }
 
-    return { importCatalogPDF };
+    /**
+     * Extrai itens diretamente de um arquivo de cotação / pedido em PDF (Lote A - Prompt 2).
+     * @param {File} file - Arquivo PDF da cotação
+     * @returns {Promise<Array>} Lista de itens normalizados { refOriginal, descOriginal, qtdeSolicitada }
+     */
+    async function parseCotacaoPDF(file) {
+        const pdfLib = await _loadPDFjs();
+        const pages = await _extractPages(pdfLib, file);
+        const fullText = pages.map(p => p.text).join('\n');
+
+        if (typeof DemandaImport !== 'undefined' && typeof DemandaImport.parseText === 'function') {
+            return DemandaImport.parseText(fullText);
+        }
+
+        // Fallback básico de extração
+        const linhas = fullText.split(/[\r\n]+/).map(l => l.trim()).filter(l => l.length > 2);
+        const itens = [];
+        for (const linha of linhas) {
+            const mQtd = linha.match(/\b(\d+)\s*(?:un|pç|pc|cx|und|jg)?\b/i);
+            const qtd = mQtd ? parseInt(mQtd[1], 10) : 1;
+            const limpa = linha.replace(/\b\d+\s*(?:un|pç|pc|cx|und|jg)?\b/i, '').trim();
+            const partes = limpa.split(/\s{2,}|\t|\s+-\s+/);
+            const ref = partes[0] ? partes[0].trim() : '';
+            const desc = partes[1] ? partes[1].trim() : (partes[0] || 'Item do PDF');
+            if (ref) itens.push({ refOriginal: ref, descOriginal: desc, qtdeSolicitada: qtd });
+        }
+        return itens;
+    }
+
+    return {
+        importCatalogPDF,
+        parseCotacaoPDF,
+    };
 
 })();

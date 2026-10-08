@@ -14,9 +14,19 @@
 
 const DemandaLookup = (() => {
 
-    const TENANT_ID    = 'centralpecas';
-    const TECHBASE     = `tenants/${TENANT_ID}/demanda/techbase`;
-    const _productsCol() = `${TECHBASE}/products`;   // 5 segmentos = coleção válida
+    function _getTenantId() {
+        try {
+            if (window.ParreiraAuth && typeof ParreiraAuth.getTenant === 'function') {
+                const t = ParreiraAuth.getTenant();
+                if (t) return t;
+            }
+            const s = JSON.parse(sessionStorage.getItem('parreira_session') || localStorage.getItem('parreira_session_ls') || 'null');
+            if (s && s.tenantId) return s.tenantId;
+        } catch (_) {}
+        return localStorage.getItem('app_tenant_id') || 'centralpecas';
+    }
+    const TECHBASE     = () => `tenants/${_getTenantId()}/demanda/techbase`;
+    const _productsCol = () => `${TECHBASE()}/products`;
 
     // ── Status ────────────────────────────────────────────────
     const STATUS = {
@@ -304,6 +314,113 @@ const DemandaLookup = (() => {
         return [];
     }
 
+    // ── Inteligência de Equivalências OEM e Similares (Lote B - Prompt 2) ──
+    const TIERS_CONF = {
+        OEM:   ['JOHN DEERE', 'CASE', 'CASE IH', 'NEW HOLLAND', 'MASSEY FERGUSON', 'VALTRA', 'AGCO', 'KUHN', 'JACTO', 'STARA'],
+        TIER1: ['TIMKEN', 'SKF', 'NSK', 'FAG', 'INA', 'KOYO', 'NTN', 'ZF', 'EATON', 'SPICER', 'DANA', 'BOSCH', 'PARKER'],
+        TIER2: ['SABO', 'FREUDENBERG', 'TARANTO', 'CORTECO', 'FRAS-LE', 'COBREQ', 'DAYCO', 'GATES', 'CONTINENTAL', 'MAHLE']
+    };
+
+    /**
+     * Busca equivalências OEM e similares técnicos para uma referência.
+     * @param {string} codigo - Código ou referência do produto
+     * @param {string} marcaOriginal - Marca/fabricante original
+     * @returns {Promise<Array>} Lista ordenada de equivalências com confiança e status de estoque
+     */
+    async function getEquivalencias(codigo, marcaOriginal = '') {
+        const norm = _normalizeRef(codigo);
+        if (!norm) return [];
+
+        const equivalencias = [];
+        const seen = new Set([norm]);
+
+        // 1. Busca na base técnica (Firestore)
+        try {
+            const produtosTech = await searchTechbase(codigo, 5);
+            for (const p of produtosTech) {
+                // Similar Genuíno OEM
+                if (p.similarGenuino && !_isSame(p.similarGenuino, norm)) {
+                    _addEquiv(equivalencias, seen, p.similarGenuino, p.fabricante || 'OEM', 'Genuíno OEM', 98, p.descricao, p.aplicacao);
+                }
+                // Similares 1 a 4
+                for (let k = 1; k <= 4; k++) {
+                    const sim = p['similar' + k] || p['similares' + k];
+                    if (sim && !_isSame(sim, norm)) {
+                        _addEquiv(equivalencias, seen, sim, p.fabricante || 'Similar', 'Similar Técnico', 85, p.descricao, p.aplicacao);
+                    }
+                }
+                if (Array.isArray(p.similares)) {
+                    p.similares.forEach(sim => {
+                        if (sim && !_isSame(sim, norm)) {
+                            _addEquiv(equivalencias, seen, sim, p.fabricante || 'Similar', 'Similar Técnico', 85, p.descricao, p.aplicacao);
+                        }
+                    });
+                }
+            }
+        } catch (_) {}
+
+        // 2. Busca no catálogo/ERP MaxData via DemandaSearch para obter saldo de estoque real das equivalências
+        if (typeof DemandaSearch !== 'undefined' && equivalencias.length > 0) {
+            await Promise.all(equivalencias.map(async eq => {
+                try {
+                    const res = await DemandaSearch.search(eq.codigo, { limit: 1 });
+                    if (res && res.length > 0) {
+                        const erpItem = res[0];
+                        eq.estoque = erpItem.estoqueFilial || 0;
+                        eq.preco = erpItem.precoVenda || erpItem.preco || 0;
+                        eq.erpProdutoId = erpItem.erpProdutoId || erpItem.id;
+                        eq.temEstoque = eq.estoque > 0;
+                    }
+                } catch (_) {}
+            }));
+        }
+
+        // Ordena: primeiro os que têm estoque, depois pela maior confiança técnica
+        return equivalencias.sort((a, b) => {
+            if (a.temEstoque && !b.temEstoque) return -1;
+            if (!a.temEstoque && b.temEstoque) return 1;
+            return b.confianca - a.confianca;
+        });
+    }
+
+    function _isSame(a, b) {
+        return _normalizeRef(a) === _normalizeRef(b);
+    }
+
+    function _addEquiv(list, seen, ref, marca, tipo, confPadrao, desc, aplicacao) {
+        const n = _normalizeRef(ref);
+        if (!n || seen.has(n)) return;
+        seen.add(n);
+
+        let conf = confPadrao;
+        let badgeTipo = tipo;
+        const mUpper = (marca || '').toUpperCase();
+
+        if (TIERS_CONF.OEM.some(oem => mUpper.includes(oem))) {
+            conf = 100;
+            badgeTipo = 'Genuíno OEM';
+        } else if (TIERS_CONF.TIER1.some(t1 => mUpper.includes(t1))) {
+            conf = Math.max(conf, 95);
+            badgeTipo = 'Fabricante Original (Tier-1)';
+        } else if (TIERS_CONF.TIER2.some(t2 => mUpper.includes(t2))) {
+            conf = Math.max(conf, 88);
+            badgeTipo = 'Reposição Certificada';
+        }
+
+        list.push({
+            codigo: ref,
+            marca: marca || 'Original',
+            tipo: badgeTipo,
+            confianca: conf,
+            confiancaLabel: conf + '% Confiança',
+            descricao: desc || 'Peça Técnica Equivalente',
+            aplicacao: aplicacao || 'Linha Agrícola',
+            estoque: 0,
+            preco: 0,
+            temEstoque: false
+        });
+    }
+
     return {
         STATUS,
         STATUS_LABEL,
@@ -315,6 +432,7 @@ const DemandaLookup = (() => {
         saveBatchToTechbase,
         syncMaxdataToTechbase,
         searchTechbase,
+        getEquivalencias,
     };
 
 })();
