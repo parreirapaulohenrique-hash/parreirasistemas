@@ -1004,29 +1004,39 @@ window.CarrierSwitchModule = (function () {
                         </div>
                     </td>
                     <td>
-                        <div style="font-weight: 600; color: #e2e8f0; font-size: 0.82rem;">${formatBRL(g.custoAnteriorTotal)}</div>
                         ${g.redespachoAnteriorTotal > 0 ? `
-                            <div style="font-size: 0.70rem; color: #fde047; font-weight: 600; margin-top: 1px;" title="Principal: ${formatBRL(g.mainAnteriorTotal)} | Redespacho (${g.redespCarrierAnterior || 'EMBARQ'}): ${formatBRL(g.redespachoAnteriorTotal)}">
+                            <div style="font-weight: 700; color: #22c55e; font-size: 0.84rem;" title="Frete Principal da Transportadora Anterior">${formatBRL(g.mainAnteriorTotal)}</div>
+                            <div style="font-size: 0.70rem; color: #fde047; font-weight: 600; margin-top: 1px; white-space: nowrap;" title="Redespacho Obrigatório via ${g.redespCarrierAnterior || 'EMBARQ'}">
                                 + ${formatBRL(g.redespachoAnteriorTotal)} / ${g.redespCarrierAnterior || 'EMBARQ'}
                             </div>
-                        ` : ''}
-                        <div style="font-size: 0.68rem; color: var(--text-secondary); margin-top: 1px;">
-                            ${g.percentualEfetivoAnterior > 0 ? g.percentualEfetivoAnterior.toFixed(2) + '% s/ NF' : ''}
-                        </div>
+                            <div style="font-size: 0.68rem; color: #94a3b8; margin-top: 2px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 1px;" title="Custo Total Anterior: ${formatBRL(g.mainAnteriorTotal)} principal + ${formatBRL(g.redespachoAnteriorTotal)} redespacho">
+                                Total: <strong style="color:#e2e8f0;">${formatBRL(g.custoAnteriorTotal)}</strong> <span style="opacity:0.8;">(${g.percentualEfetivoAnterior > 0 ? g.percentualEfetivoAnterior.toFixed(2) + '%' : ''})</span>
+                            </div>
+                        ` : `
+                            <div style="font-weight: 700; color: #22c55e; font-size: 0.84rem;">${formatBRL(g.custoAnteriorTotal)}</div>
+                            <div style="font-size: 0.68rem; color: var(--text-secondary); margin-top: 1px;">
+                                ${g.percentualEfetivoAnterior > 0 ? g.percentualEfetivoAnterior.toFixed(2) + '% s/ NF' : ''}
+                            </div>
+                        `}
                     </td>
                     <td>
-                        <div style="font-weight: 700; color: #f8fafc; font-size: 0.82rem;">
-                            ${formatBRL(g.custoNovoTotal)}
-                            ${redespBadge}
-                        </div>
                         ${g.redespachoNovoTotal > 0 ? `
-                            <div style="font-size: 0.70rem; color: #fde047; font-weight: 600; margin-top: 1px;" title="Principal (${g.carrierNovo}): ${formatBRL(g.mainNovoTotal)} | Redespacho (${g.redespCarrierNovo || 'EMBARQ'}): ${formatBRL(g.redespachoNovoTotal)}">
+                            <div style="font-weight: 700; color: #60a5fa; font-size: 0.84rem;" title="Frete Principal Sugerido">${formatBRL(g.mainNovoTotal)} ${redespBadge}</div>
+                            <div style="font-size: 0.70rem; color: #fde047; font-weight: 600; margin-top: 1px; white-space: nowrap;" title="Redespacho Obrigatório mantido via ${g.redespCarrierNovo || 'EMBARQ'}">
                                 + ${formatBRL(g.redespachoNovoTotal)} / ${g.redespCarrierNovo || 'EMBARQ'}
                             </div>
-                        ` : ''}
-                        <div style="font-size: 0.68rem; color: #94a3b8; margin-top: 1px;">
-                            ${g.percentualEfetivoNovo > 0 ? g.percentualEfetivoNovo.toFixed(2) + '% s/ NF' : ''}
-                        </div>
+                            <div style="font-size: 0.68rem; color: #94a3b8; margin-top: 2px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 1px;" title="Custo Total Sugerido: ${formatBRL(g.mainNovoTotal)} principal + ${formatBRL(g.redespachoNovoTotal)} redespacho">
+                                Total: <strong style="color:#f8fafc;">${formatBRL(g.custoNovoTotal)}</strong> <span style="opacity:0.8;">(${g.percentualEfetivoNovo > 0 ? g.percentualEfetivoNovo.toFixed(2) + '%' : ''})</span>
+                            </div>
+                        ` : `
+                            <div style="font-weight: 700; color: #f8fafc; font-size: 0.84rem;">
+                                ${formatBRL(g.custoNovoTotal)}
+                                ${redespBadge}
+                            </div>
+                            <div style="font-size: 0.68rem; color: #94a3b8; margin-top: 1px;">
+                                ${g.percentualEfetivoNovo > 0 ? g.percentualEfetivoNovo.toFixed(2) + '% s/ NF' : ''}
+                            </div>
+                        `}
                     </td>
                     <td style="font-weight: 700; color: ${diffColor}; font-size: 0.82rem;">
                         ${diffSignal} ${formatBRL(Math.abs(g.diferencaTotal))}
@@ -1132,7 +1142,7 @@ window.CarrierSwitchModule = (function () {
                 resAlert.innerHTML = `⚠️ <strong>Atenção ao Prazo:</strong> Embora gere economia de ${formatBRL(Math.abs(group.diferencaTotal))}, a transportadora sugerida pode adicionar cerca de ${group.diffDiasPrazoMedio.toFixed(0)} dias úteis ao prazo de entrega do cliente.`;
                 resAlert.style.display = 'block';
             } else {
-                resAlert.innerHTML = `✅ <strong>Decisão Segura:</strong> A troca de transportadora principal gera economia real sem comprometer o nível de serviço do cliente.`;
+                resAlert.innerHTML = `✅ <strong>Decisão Segura:</strong> A troca apenas da transportadora principal gera economia real, preservando o redespacho obrigatório da rota.`;
                 resAlert.style.display = 'block';
             }
         } else {
@@ -1186,15 +1196,25 @@ window.CarrierSwitchModule = (function () {
                     <td>${item.peso.toFixed(1)} kg</td>
                     <td>${item.volume} vol</td>
                     <td>${formatBRL(item.valorNF)}</td>
-                    <td style="color: #cbd5e1; font-weight: 600;">
-                        ${formatBRL(item.custoAnterior)}
-                        ${redespInfoAnt}
-                        <div style="font-size: 0.7rem; color: var(--text-secondary);">${item.percentualEfetivoAnterior > 0 ? item.percentualEfetivoAnterior.toFixed(2) + '% s/ NF' : ''}</div>
+                    <td>
+                        ${item.redespachoAnterior > 0 ? `
+                            <div style="font-weight: 700; color: #22c55e;">${formatBRL(item.mainAnterior)}</div>
+                            <div style="color: #fde047; font-size: 0.68rem; font-weight: 600;">+ ${formatBRL(item.redespachoAnterior)} / ${item.redespCarrierAnterior || 'EMBARQ'}</div>
+                            <div style="font-size: 0.66rem; color: #94a3b8;">Total: ${formatBRL(item.custoAnterior)}</div>
+                        ` : `
+                            <div style="font-weight: 600; color: #cbd5e1;">${formatBRL(item.custoAnterior)}</div>
+                            <div style="font-size: 0.7rem; color: var(--text-secondary);">${item.percentualEfetivoAnterior > 0 ? item.percentualEfetivoAnterior.toFixed(2) + '% s/ NF' : ''}</div>
+                        `}
                     </td>
-                    <td style="font-weight: 600; color: #f8fafc;">
-                        ${formatBRL(item.custoNovo)}
-                        ${redespInfoNovo}
-                        <div style="font-size: 0.7rem; color: #94a3b8;">${item.percentualEfetivoNovo > 0 ? item.percentualEfetivoNovo.toFixed(2) + '% s/ NF' : ''}</div>
+                    <td>
+                        ${item.redespachoNovo > 0 ? `
+                            <div style="font-weight: 700; color: #60a5fa;">${formatBRL(item.mainNovo)}</div>
+                            <div style="color: #fde047; font-size: 0.68rem; font-weight: 600;">+ ${formatBRL(item.redespachoNovo)} / ${item.redespCarrierNovo || 'EMBARQ'}</div>
+                            <div style="font-size: 0.66rem; color: #94a3b8;">Total: ${formatBRL(item.custoNovo)}</div>
+                        ` : `
+                            <div style="font-weight: 600; color: #f8fafc;">${formatBRL(item.custoNovo)}</div>
+                            <div style="font-size: 0.7rem; color: #94a3b8;">${item.percentualEfetivoNovo > 0 ? item.percentualEfetivoNovo.toFixed(2) + '% s/ NF' : ''}</div>
+                        `}
                     </td>
                     <td style="text-align: center;">
                         <span style="display:inline-block; padding: 2px 6px; border-radius: 4px; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; font-weight: 700; font-size: 0.8rem;">
