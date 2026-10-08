@@ -2229,7 +2229,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         async function checkLateDispatchesAndAlert() {
             const history = await Utils.Cloud.getFullDispatchesHistory();
-            const lateItems = history.filter(d => window.getDispatchDelayInfo(d).isLate);
+            const pendingItems = (history || []).filter(d => d.status === 'Pendente Despacho');
+            if (!pendingItems.length) return;
+            const lateItems = pendingItems.filter(d => window.getDispatchDelayInfo(d).isLate);
             if (!lateItems.length) return;
 
             // Fingerprint: IDs/NFFs das NFs em atraso (ordernadas) + data do dia
@@ -5013,7 +5015,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
 
-            list.sort((a, b) => new Date(b.date) - new Date(a.date));
+            // OTIMIZAÇÃO v3.22.5: Ordenação numérica direta com timestamp cacheado (evita dezenas de milhares de new Date)
+            list.sort((a, b) => (b._dTs || (b._dTs = (b.date ? new Date(b.date).getTime() : 0))) - (a._dTs || (a._dTs = (a.date ? new Date(a.date).getTime() : 0))));
 
             // FIX v3.17.5: Filtros ativos mas sem resultados — mantém a barra de pesquisa visível
             if (list.length === 0) {
@@ -5072,92 +5075,30 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            // Group by Month
-            const monthlyGroups = {};
-            list.forEach(item => {
-                const date = new Date(item.date);
-                const monthKey = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-                if (!monthlyGroups[monthKey]) monthlyGroups[monthKey] = [];
-                monthlyGroups[monthKey].push(item);
-            });
+            // v3.22.5: Função para renderizar o HTML da tabela sob demanda (Lazy Loading)
+            const buildDayTableHtml = (dItems, cols) => {
+                return `
+                <table class="dispatch-table">
+                    <thead>
+                        <tr>
+                            ${cols.map(col => {
+                                let style = 'padding: 8px 5px;';
+                                if (col === 'status') style += 'width: 40px; min-width: 40px; text-align: center;';
+                                else if (col === 'invoice') style += 'width: 55px; min-width: 50px;';
+                                else if (col === 'leadTime') style += 'width: 50px; min-width: 45px; text-align: center;';
+                                else if (col === 'total') style += 'width: 75px; min-width: 70px; text-align: right;';
+                                else if (col === 'client') style += 'width: 180px; min-width: 140px; max-width: 220px;';
+                                else if (col === 'city') style += 'min-width: 105px; width: 115px; max-width: 130px;';
+                                else if (col === 'carrier') style += 'min-width: 100px; width: 110px; max-width: 130px;';
+                                else if (col === 'nfValue') style += 'width: 85px; min-width: 80px; text-align: right;';
+                                else if (col === 'weight') style += 'width: 62px; min-width: 58px; text-align: right;';
+                                else if (col === 'volume') style += 'width: 45px; min-width: 42px; text-align: center;';
+                                else if (col === 'createdTime' || col === 'dispatchedTime') style += 'width: 50px; min-width: 45px; text-align: center;';
+                                else if (col === 'actions') style += 'width: 120px; min-width: 115px; text-align: center;';
+                                else if (col === 'deliveryConfirm') style += 'width: 90px; min-width: 84px; text-align: center;';
 
-            Object.keys(monthlyGroups).forEach(month => {
-                const mItems = monthlyGroups[month];
-                const mTotal = mItems.reduce((acc, curr) => acc + curr.total, 0);
-
-                const mDiv = document.createElement('div');
-                mDiv.className = 'dispatch-month-group';
-
-                // Header for Month
-                const mHeader = document.createElement('div');
-                mHeader.className = 'month-header';
-                mHeader.innerHTML = `
-                <span class="month-title">${month.charAt(0).toUpperCase() + month.slice(1)}</span>
-                <span class="month-total">Total Mensal: ${Utils.formatCurrency(mTotal)}</span>
-            `;
-                mDiv.appendChild(mHeader);
-
-                const mContent = document.createElement('div');
-                mContent.className = 'month-content';
-
-                // Group by Day within Month
-                const dailyGroups = {};
-                const todayKey = new Date().toLocaleDateString('pt-BR'); // key for today's date
-                mItems.forEach(item => {
-                    const dayKey = new Date(item.date).toLocaleDateString('pt-BR');
-                    if (!dailyGroups[dayKey]) dailyGroups[dayKey] = [];
-                    dailyGroups[dayKey].push(item);
-                });
-
-                Object.keys(dailyGroups).forEach(day => {
-                    const dItems = dailyGroups[day];
-                    const dTotal = dItems.reduce((acc, curr) => acc + curr.total, 0);
-
-                    const dDiv = document.createElement('div');
-                    dDiv.className = 'day-group';
-
-                    const dHeader = document.createElement('div');
-                    dHeader.className = 'day-header';
-                    dHeader.onclick = () => {
-                        const tbl = dDiv.querySelector('.day-table-container');
-                        tbl.hidden = !tbl.hidden;
-                    };
-                    dHeader.innerHTML = `
-                    <div class="day-title">${day} (${dItems.length} despachos)</div>
-                    <div style="display: flex; align-items: center; gap: 1rem;">
-                        <span style="font-size: 0.8rem; font-weight: 600; color: var(--accent-success);">Subtotal: ${Utils.formatCurrency(dTotal)}</span>
-                    </div>
-                `;
-                    dDiv.appendChild(dHeader);
-
-                    const dTableContainer = document.createElement('div');
-                    dTableContainer.className = 'day-table-container';
-                    dTableContainer.style.overflowX = 'auto';
-                    dTableContainer.hidden = day !== todayKey; // open today, hide others
-                    dTableContainer.innerHTML = `
-                    <table class="dispatch-table">
-                        <thead>
-                            <tr>
-                                ${activeCols.map(col => {
-                        let style = 'padding: 8px 5px;'; // Reduced padding
-                        // Custom Column Widths - Optimized for 100% zoom
-                        if (col === 'status') style += 'width: 40px; min-width: 40px; text-align: center;';
-                        else if (col === 'invoice') style += 'width: 55px; min-width: 50px;';
-                        else if (col === 'leadTime') style += 'width: 50px; min-width: 45px; text-align: center;';
-                        else if (col === 'total') style += 'width: 75px; min-width: 70px; text-align: right;';
-                        else if (col === 'client') style += 'width: 180px; min-width: 140px; max-width: 220px;';
-                        else if (col === 'city') style += 'min-width: 105px; width: 115px; max-width: 130px;';
-                        else if (col === 'carrier') style += 'min-width: 100px; width: 110px; max-width: 130px;';
-                        else if (col === 'nfValue') style += 'width: 85px; min-width: 80px; text-align: right;';
-                        else if (col === 'weight') style += 'width: 62px; min-width: 58px; text-align: right;';
-                        else if (col === 'volume') style += 'width: 45px; min-width: 42px; text-align: center;';
-                        else if (col === 'createdTime' || col === 'dispatchedTime') style += 'width: 50px; min-width: 45px; text-align: center;';
-                        else if (col === 'actions') style += 'width: 120px; min-width: 115px; text-align: center;';
-                        else if (col === 'deliveryConfirm') style += 'width: 90px; min-width: 84px; text-align: center;';
-
-
-                        const hasFilter = !['actions', 'deliveryConfirm', 'status'].includes(col);
-                        return `
+                                const hasFilter = !['actions', 'deliveryConfirm', 'status'].includes(col);
+                                return `
                                     <th style="${style}">
                                         <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">${columnMap[col]}</div>
                                         ${hasFilter ? `<input type="text" class="filter-input" placeholder="🔎" 
@@ -5166,14 +5107,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                                             autocomplete="off"
                                             style="width: 100%;">` : '<div style="height:26px;"></div>'}
                                     </th>
-                                `}).join('')}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${dItems.map(d => {
+                                `;
+                            }).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${dItems.map(d => {
                             try {
                                 const _retroStyle = d.isRetroativo ? ' style="background: rgba(245, 158, 11, 0.12); border-left: 3px solid #f59e0b;" title="⚠️ Lançamento retroativo"' : '';
-                                return `<tr${_retroStyle}>${activeCols.map(col => {
+                                return `<tr${_retroStyle}>${cols.map(col => {
                                     if (col === 'status') {
                                         const s = d.status || 'Pendente Despacho';
                                         let icon = 'schedule', cls = 'status-pending', title = 'Pendente Despacho';
@@ -5187,7 +5129,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                                             cls = 'status-cancelled';
                                             title = 'Cancelado';
                                         } else if (s === 'Pendente Despacho') {
-                                            // Check Time Logic
                                             const delayInfo = window.getDispatchDelayInfo(d);
                                             if (delayInfo.isLate) {
                                                 icon = 'alarm_off';
@@ -5197,7 +5138,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         }
                                         return `<td style="text-align: center; width: 40px;" title="${title}"><span class="material-icons-round ${cls}" style="font-size: 1.2rem; vertical-align: middle; color: ${cls === 'status-late' ? 'var(--accent-danger)' : ''}">${icon}</span></td>`;
                                     }
-                                    // v3.11.33 — sanitiza string "undefined"/"null" herdadas de dados corrompidos
                                     const _rawVal = d[col];
                                     let val = (_rawVal === undefined || _rawVal === null || String(_rawVal).trim() === '' || String(_rawVal).trim() === 'undefined' || String(_rawVal).trim() === 'null') ? '-' : _rawVal;
                                     if (col === 'date') val = new Date(val).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
@@ -5206,7 +5146,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     if (col === 'isComplement') val = val === true ? 'Sim' : 'Não';
                                     if (col === 'weight') val = (val !== '-' && val !== 0) ? `${Number(val).toFixed(1)} kg` : '-';
                                     if (col === 'volume') val = d.volume ? `${d.volume} cx` : '1 cx';
-                                    // Time Columns
 
                                     if (col === 'createdTime') {
                                         val = d.date ? new Date(d.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-';
@@ -5261,7 +5200,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         </td>`;
                                     }
 
-                                    // v3.14.48: Separação despacho × redespacho na coluna FRETE
                                     if (col === 'total') {
                                         const mainVal = d.mainTotal != null ? d.mainTotal : (d.total - (d.redespTotal || 0));
                                         const redespVal = d.redespTotal || 0;
@@ -5285,7 +5223,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     else if (col === 'capturedBy') style += 'font-size: 0.75rem; color: var(--text-secondary);';
 
                                     let displayVal = val;
-                                    // Widths matching Header - Optimized for 100% zoom
                                     if (col === 'invoice') style += 'width: 55px; min-width: 50px;';
                                     else if (col === 'leadTime') style += 'width: 50px; min-width: 45px; text-align: center;';
                                     else if (col === 'total') style += 'width: 75px; min-width: 70px;';
@@ -5314,9 +5251,112 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 return '';
                             }
                         }).join('')}
-                        </tbody>
-                    </table>
+                    </tbody>
+                </table>
                 `;
+            };
+
+            // OTIMIZAÇÃO v3.22.5: Lazy Rendering por dia.
+            // Apenas o dia de hoje (ou os dias com resultados de pesquisa) são renderizados no DOM.
+            // Os dias anteriores são criados colapsados e seus elementos são gerados sob demanda ao clicar.
+            const hasActiveFilters = Object.values(window.dispatchFilters).some(v => v && String(v).trim().length > 0);
+            const todayKey = new Date().toLocaleDateString('pt-BR');
+            const hasTodayInList = list.some(item => new Date(item.date).toLocaleDateString('pt-BR') === todayKey);
+            let hasOpenedAny = false;
+
+            // Group by Month
+            const monthlyGroups = {};
+            list.forEach(item => {
+                const date = new Date(item.date);
+                const monthKey = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+                if (!monthlyGroups[monthKey]) monthlyGroups[monthKey] = [];
+                monthlyGroups[monthKey].push(item);
+            });
+
+            Object.keys(monthlyGroups).forEach(month => {
+                const mItems = monthlyGroups[month];
+                const mTotal = mItems.reduce((acc, curr) => acc + curr.total, 0);
+
+                const mDiv = document.createElement('div');
+                mDiv.className = 'dispatch-month-group';
+
+                // Header for Month
+                const mHeader = document.createElement('div');
+                mHeader.className = 'month-header';
+                mHeader.innerHTML = `
+                    <span class="month-title">${month.charAt(0).toUpperCase() + month.slice(1)}</span>
+                    <span class="month-total">Total Mensal: ${Utils.formatCurrency(mTotal)}</span>
+                `;
+                mDiv.appendChild(mHeader);
+
+                const mContent = document.createElement('div');
+                mContent.className = 'month-content';
+
+                // Group by Day within Month
+                const dailyGroups = {};
+                mItems.forEach(item => {
+                    const dayKey = new Date(item.date).toLocaleDateString('pt-BR');
+                    if (!dailyGroups[dayKey]) dailyGroups[dayKey] = [];
+                    dailyGroups[dayKey].push(item);
+                });
+
+                Object.keys(dailyGroups).forEach(day => {
+                    const dItems = dailyGroups[day];
+                    const dTotal = dItems.reduce((acc, curr) => acc + curr.total, 0);
+
+                    // Define se o dia deve iniciar aberto:
+                    let shouldOpen = false;
+                    if (hasActiveFilters) {
+                        shouldOpen = true;
+                    } else if (hasTodayInList) {
+                        shouldOpen = (day === todayKey);
+                    } else if (!hasOpenedAny) {
+                        shouldOpen = true;
+                        hasOpenedAny = true;
+                    }
+
+                    const dDiv = document.createElement('div');
+                    dDiv.className = 'day-group';
+
+                    const dHeader = document.createElement('div');
+                    dHeader.className = 'day-header';
+                    dHeader.style.cursor = 'pointer';
+                    dHeader.title = 'Clique para expandir/recolher os despachos deste dia';
+                    dHeader.onclick = () => {
+                        const tbl = dDiv.querySelector('.day-table-container');
+                        if (tbl) {
+                            if (tbl.dataset.rendered !== 'true') {
+                                tbl.innerHTML = buildDayTableHtml(dItems, activeCols);
+                                tbl.dataset.rendered = 'true';
+                            }
+                            tbl.hidden = !tbl.hidden;
+                        }
+                    };
+                    dHeader.innerHTML = `
+                        <div class="day-title" style="display:flex;align-items:center;gap:6px;">
+                            <span class="material-icons-round" style="font-size:1.1rem;color:var(--text-secondary);opacity:0.7;">calendar_today</span>
+                            <span>${day} (${dItems.length} despachos)</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <span style="font-size: 0.8rem; font-weight: 600; color: var(--accent-success);">Subtotal: ${Utils.formatCurrency(dTotal)}</span>
+                        </div>
+                    `;
+                    dDiv.appendChild(dHeader);
+
+                    const dTableContainer = document.createElement('div');
+                    dTableContainer.className = 'day-table-container';
+                    dTableContainer.style.overflowX = 'auto';
+
+                    if (shouldOpen) {
+                        dTableContainer.hidden = false;
+                        dTableContainer.dataset.rendered = 'true';
+                        dTableContainer.innerHTML = buildDayTableHtml(dItems, activeCols);
+                    } else {
+                        dTableContainer.hidden = true;
+                        dTableContainer.dataset.rendered = 'false';
+                        dTableContainer.innerHTML = '';
+                    }
+
                     dDiv.appendChild(dTableContainer);
                     mContent.appendChild(dDiv);
                 });
@@ -11120,9 +11160,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             let romaneios = Utils.getStorage('app_romaneios') || [];
             
-            // Separar Pendentes (em_rota) de Arquivados (baixado)
-            const pendentes = romaneios.filter(r => r.status === 'em_rota').sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-            const arquivados = romaneios.filter(r => r.status === 'baixado').sort((a,b) => new Date(b.baixadoAt) - new Date(a.baixadoAt)).slice(0, 50); // Mostra os 50 últimos
+            // OTIMIZAÇÃO v3.22.5: Coleta pendentes e os 50 arquivados mais recentes de trás para frente.
+            // Elimina sort pesado com mais de 50.000 instâncias de new Date() sobre 2.500+ romaneios.
+            const pendentes = [];
+            const arquivados = [];
+            for (let i = romaneios.length - 1; i >= 0; i--) {
+                const r = romaneios[i];
+                if (r.status === 'em_rota') {
+                    pendentes.push(r);
+                } else if (r.status === 'baixado' && arquivados.length < 50) {
+                    arquivados.push(r);
+                }
+            }
+            if (pendentes.length > 1) {
+                pendentes.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+            }
 
             if(countPendentes) countPendentes.innerText = pendentes.length;
 
