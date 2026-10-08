@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.23.2",
-  "build": "20261008-v3.23.2",
+  "version": "3.24.0",
+  "build": "20261008-v3.24.0",
   "lastUpdate": "2026-10-08",
-  "releaseDate": "2026-10-08T15:45:00-03:00",
-  "change": "v3.23.2: Padronização e refinamento visual da Análise de Troca de Transportadora no padrão de alta qualidade da Montagem de Carga (.switch-table, 0.82rem, hierarquia tipográfica equilibrada e harmonia estética)."
+  "releaseDate": "2026-10-08T16:20:00-03:00",
+  "change": "v3.24.0: Remoção dos botões externos Waze/Google Maps e implantação do Registro de Rastreamento completo da rota (Origem ao Destino) com mapa interativo Leaflet/OSM, timeline auditável passo a passo e gravação de pontos de passagem GPS em tempo real para Moto Entrega e Carro Entrega."
 }

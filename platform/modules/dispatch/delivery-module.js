@@ -140,6 +140,37 @@ const DeliveryModule = {
             }
         }
 
+        // v3.24.0: Atualizar trilha de rastreamento com ponto final de destino / POD
+        try {
+            const trail = this.getDispatchTrail(dispatch);
+            const clientAddr = [dispatch.address, dispatch.neighborhood, dispatch.city, dispatch.state].filter(Boolean).join(', ') || 'Endereço de Entrega';
+            const destPoint = {
+                step: trail.length + 1,
+                type: 'destino',
+                title: 'Chegada no Destino (Cliente)',
+                location: dispatch.client || 'Cliente Final',
+                address: clientAddr,
+                status: 'Entregue com Sucesso',
+                timestamp: (podData && podData.capturedAt) || new Date().toISOString(),
+                driver: dispatch.deliveryPerson || dispatch.driverName || 'Entregador',
+                receiver: podData ? podData.receiverName : null,
+                doc: podData ? podData.receiverDoc : null,
+                lat: podData && podData.gps ? podData.gps.lat : null,
+                lng: podData && podData.gps ? podData.gps.lng : null,
+                accuracy: podData && podData.gps ? podData.gps.accuracy : null,
+                hasPOD: !!(podData && (podData.photo || podData.signature))
+            };
+            const destIdx = trail.findIndex(t => t.type === 'destino');
+            if (destIdx >= 0) {
+                trail[destIdx] = { ...trail[destIdx], ...destPoint, step: destIdx + 1 };
+            } else {
+                trail.push(destPoint);
+            }
+            dispatch.trackingTrail = trail;
+        } catch (e) {
+            console.warn('[DeliveryModule] Erro ao sincronizar trackingTrail na finalização:', e);
+        }
+
         Utils.saveRaw('dispatches', JSON.stringify(dispatches));
 
         // Sincronização direta na subcoleção individual dispatches_db (Fase 4)
@@ -396,11 +427,6 @@ const DeliveryModule = {
         const icon = type === 'moto' ? 'two_wheeler' : 'directions_car';
         const color = type === 'moto' ? '#f59e0b' : '#10b981';
 
-        // Endereço normalizado para GPS externo (Waze / Google Maps)
-        const fullAddress = [dispatch.address, dispatch.neighborhood, dispatch.city, dispatch.state].filter(Boolean).join(', ') || dispatch.client || '';
-        const wazeUrl = `https://waze.com/ul?q=${encodeURIComponent(fullAddress)}&navigate=yes`;
-        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`;
-
         // Status visual
         const statusLabel = (dispatch.deliveryStatus || dispatch.status || 'em_entrega').replace('_', ' ').toUpperCase();
         const hasPOD = !!(dispatch.pod && (dispatch.pod.photo || dispatch.pod.signature));
@@ -424,14 +450,12 @@ const DeliveryModule = {
                     <div><strong>Status:</strong> <span style="font-weight:700; color:${color}; font-size:0.8rem;">${statusLabel}</span></div>
                 </div>
 
-                <!-- Atalhos de Navegação GPS (Fase 3 - Mobile) -->
-                <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
-                    <a href="${wazeUrl}" target="_blank" rel="noopener noreferrer" class="btn" style="flex: 1; justify-content: center; background: #33ccff; color: #002b49; font-weight: 600; font-size: 0.8rem; padding: 0.4rem; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.3rem;">
-                        <span class="material-icons-round" style="font-size: 1rem;">navigation</span> Waze
-                    </a>
-                    <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" class="btn" style="flex: 1; justify-content: center; background: #4285F4; color: white; font-weight: 600; font-size: 0.8rem; padding: 0.4rem; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.3rem;">
-                        <span class="material-icons-round" style="font-size: 1rem;">map</span> Google Maps
-                    </a>
+                <!-- Registro de Rastreamento da Rota (Origem ao Destino) -->
+                <div style="margin-bottom: 0.75rem;">
+                    <button type="button" onclick="DeliveryModule.showTrackingModal(${dispatch.id})" class="btn" style="width: 100%; justify-content: center; background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); font-weight: 600; font-size: 0.82rem; padding: 0.55rem; border-radius: 8px; display: flex; align-items: center; gap: 0.45rem; cursor: pointer; transition: all 0.2s ease;">
+                        <span class="material-icons-round" style="font-size: 1.15rem; color: #38bdf8;">route</span>
+                        <span>Registro de Rastreamento (Origem ➔ Destino)</span>
+                    </button>
                 </div>
                 
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
@@ -884,6 +908,33 @@ const DeliveryModule = {
             dispatches[idx].deliveryStatus = status;
             dispatches[idx].occurrenceObs = obs;
             dispatches[idx].occurrenceAt = new Date().toISOString();
+
+            // v3.24.0: Registra ponto de ocorrência na trilha de rastreamento
+            try {
+                const trail = this.getDispatchTrail(dispatches[idx]);
+                const occPoint = {
+                    step: trail.length + 1,
+                    type: 'passagem',
+                    title: `Ocorrência: ${(status || 'Trânsito').replace(/_/g, ' ').toUpperCase()}`,
+                    location: 'Posição em Trânsito',
+                    address: 'Posição registrada em trânsito',
+                    status: status,
+                    obs: obs,
+                    timestamp: new Date().toISOString(),
+                    driver: dispatches[idx].deliveryPerson || dispatches[idx].driverName || 'Entregador'
+                };
+                const destIdx = trail.findIndex(t => t.type === 'destino');
+                if (destIdx >= 0) {
+                    trail.splice(destIdx, 0, occPoint);
+                } else {
+                    trail.push(occPoint);
+                }
+                trail.forEach((p, i) => p.step = i + 1);
+                dispatches[idx].trackingTrail = trail;
+            } catch (e) {
+                console.warn('[DeliveryModule] Erro ao registrar ocorrência na trilha:', e);
+            }
+
             Utils.saveRaw('dispatches', JSON.stringify(dispatches));
 
             // Sincronizar dispatches_db
@@ -996,6 +1047,606 @@ const DeliveryModule = {
 
             return true;
         });
+    },
+
+    /**
+     * Retorna ou inicializa a trilha auditável de rastreamento (Origem ao Destino)
+     */
+    getDispatchTrail(dispatch) {
+        if (dispatch.trackingTrail && Array.isArray(dispatch.trackingTrail) && dispatch.trackingTrail.length > 0) {
+            return dispatch.trackingTrail;
+        }
+
+        const company = Utils.getStorage('company_data') || {};
+        const originName = company.name || 'Centro de Distribuição / Base';
+        const originAddr = [company.address, company.city, company.state].filter(Boolean).join(', ') || 'Base Operacional Logística';
+        const driverName = dispatch.deliveryPerson || dispatch.driverName || 'Entregador Responsável';
+        const dispatchedTime = dispatch.deliveryDispatchedAt || dispatch.dispatchedAt || dispatch.createdAt || new Date().toISOString();
+
+        // Ponto 1: Origem (Saída da base/CD)
+        const trail = [
+            {
+                step: 1,
+                type: 'origem',
+                title: 'Saída da Origem (Base / CD)',
+                location: originName,
+                address: originAddr,
+                timestamp: dispatchedTime,
+                driver: driverName,
+                status: 'Despachado para rota',
+                lat: company.lat || -1.3653,
+                lng: company.lng || -48.3745,
+                obs: 'Carga conferida e liberada para saída.'
+            }
+        ];
+
+        // Ponto Intermediário de Ocorrência se houver
+        if (dispatch.occurrenceAt) {
+            trail.push({
+                step: trail.length + 1,
+                type: 'passagem',
+                title: `Ocorrência: ${(dispatch.deliveryStatus || 'Trânsito').replace(/_/g, ' ').toUpperCase()}`,
+                location: 'Posição em Trânsito',
+                address: 'Rota em andamento',
+                timestamp: dispatch.occurrenceAt,
+                driver: driverName,
+                status: dispatch.deliveryStatus || 'Ocorrência',
+                obs: dispatch.occurrenceObs || 'Atualização de status em rota'
+            });
+        }
+
+        // Ponto Final: Destino (Cliente)
+        const clientAddr = [dispatch.address, dispatch.neighborhood, dispatch.city, dispatch.state].filter(Boolean).join(', ') || 'Endereço do Cliente';
+        const isDelivered = dispatch.deliveryStatus === 'entregue' || !!(dispatch.pod && dispatch.pod.capturedAt);
+
+        if (isDelivered) {
+            const pod = dispatch.pod || {};
+            trail.push({
+                step: trail.length + 1,
+                type: 'destino',
+                title: 'Chegada no Destino (Cliente)',
+                location: dispatch.client || 'Cliente Final',
+                address: clientAddr,
+                timestamp: dispatch.deliveryCompletedAt || pod.capturedAt || new Date().toISOString(),
+                driver: driverName,
+                status: 'Entregue com Sucesso',
+                receiver: pod.receiverName || 'Não especificado',
+                doc: pod.receiverDoc || '',
+                lat: pod.gps ? pod.gps.lat : null,
+                lng: pod.gps ? pod.gps.lng : null,
+                accuracy: pod.gps ? pod.gps.accuracy : null,
+                hasPOD: !!(pod.photo || pod.signature)
+            });
+        } else {
+            trail.push({
+                step: trail.length + 1,
+                type: 'destino',
+                title: 'Destino Previsto (Cliente)',
+                location: dispatch.client || 'Cliente Final',
+                address: clientAddr,
+                status: 'Em deslocamento para o destino',
+                isPending: true
+            });
+        }
+
+        dispatch.trackingTrail = trail;
+        return trail;
+    },
+
+    /**
+     * Calcula o tempo de rota decorrido ou final entre primeiro e último ponto
+     */
+    calculateTrailDuration(trail) {
+        if (!trail || trail.length === 0) return '-';
+        const start = new Date(trail[0].timestamp || Date.now());
+        const lastWithTime = [...trail].reverse().find(t => t.timestamp);
+        const end = lastWithTime ? new Date(lastWithTime.timestamp) : new Date();
+
+        const diffMs = Math.max(0, end - start);
+        const totalMinutes = Math.floor(diffMs / 60000);
+        if (totalMinutes < 1) return 'Menos de 1 min';
+        if (totalMinutes < 60) return `${totalMinutes} min`;
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        return `${hours}h ${minutes}min`;
+    },
+
+    /**
+     * Modal Completo de Registro de Rastreamento (Origem ao Destino)
+     */
+    showTrackingModal(dispatchId) {
+        const dispatches = Utils.getStorage('dispatches') || [];
+        const history = Utils.getStorage('delivery_history') || [];
+        const dispatch = dispatches.find(d => d.id === dispatchId) ||
+                         history.find(d => d.id === dispatchId);
+
+        if (!dispatch) {
+            showToast('❌ Entrega não encontrada.');
+            return;
+        }
+
+        const trail = this.getDispatchTrail(dispatch);
+        const isMoto = (dispatch.deliveryType || '').toLowerCase() === 'moto';
+        const vehicleIcon = isMoto ? 'two_wheeler' : 'directions_car';
+        const vehicleLabel = isMoto ? 'Moto Entrega' : 'Carro Entrega';
+        const vehicleColor = isMoto ? '#f59e0b' : '#10b981';
+        const driverName = dispatch.deliveryPerson || dispatch.driverName || 'Entregador';
+        const durationText = this.calculateTrailDuration(trail);
+
+        const statusLabel = (dispatch.deliveryStatus || dispatch.status || 'em_entrega').replace(/_/g, ' ').toUpperCase();
+        const isCompleted = dispatch.deliveryStatus === 'entregue';
+        const hasPOD = !!(dispatch.pod && (dispatch.pod.photo || dispatch.pod.signature));
+
+        const waypointsCount = trail.filter(t => t.type === 'passagem').length;
+
+        const modalHtml = `
+            <div id="trackingTrailModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem; backdrop-filter: blur(5px);" onclick="if(event.target===this)this.remove()">
+                <div style="background: var(--bg-card, #1e293b); color: var(--text-primary, #f8fafc); border-radius: 14px; padding: 1.5rem; width: 100%; max-width: 760px; max-height: 94vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);">
+                    
+                    <!-- Header -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.85rem;">
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #38bdf8; display: flex; align-items: center; gap: 0.4rem;">
+                                    <span class="material-icons-round" style="font-size: 1.3rem;">route</span>
+                                    Rastreamento de Rota — NF ${dispatch.invoice}
+                                </h3>
+                                <span style="background: ${vehicleColor}20; color: ${vehicleColor}; border: 1px solid ${vehicleColor}50; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                                    <span class="material-icons-round" style="font-size: 0.9rem;">${vehicleIcon}</span>
+                                    ${vehicleLabel}
+                                </span>
+                                <span style="background: ${isCompleted ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)'}; color: ${isCompleted ? '#10b981' : '#f59e0b'}; border: 1px solid ${isCompleted ? 'rgba(16, 185, 129, 0.4)' : 'rgba(245, 158, 11, 0.4)'}; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">
+                                    ${statusLabel}
+                                </span>
+                            </div>
+                            <div style="font-size: 0.88rem; color: var(--text-secondary, #94a3b8); margin-top: 0.3rem;">
+                                <strong>Cliente:</strong> ${dispatch.client} &bull; <strong>Condutor:</strong> ${driverName}
+                            </div>
+                        </div>
+                        <button type="button" onclick="document.getElementById('trackingTrailModal').remove()" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1.7rem; line-height: 1; padding: 0 4px;" title="Fechar">&times;</button>
+                    </div>
+
+                    <!-- Métricas / Resumo da Rota -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.65rem; margin-bottom: 1.25rem;">
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 0.65rem; border-radius: 8px;">
+                            <div style="font-size: 0.72rem; color: var(--text-secondary, #94a3b8); text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">🏢 Saída (Origem)</div>
+                            <div style="font-size: 0.85rem; font-weight: 700; color: #10b981;">
+                                ${trail[0]?.timestamp ? new Date(trail[0].timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-'}
+                            </div>
+                            <div style="font-size: 0.72rem; color: var(--text-secondary, #94a3b8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${trail[0]?.location || 'Galpão / CD'}</div>
+                        </div>
+
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 0.65rem; border-radius: 8px;">
+                            <div style="font-size: 0.72rem; color: var(--text-secondary, #94a3b8); text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">📍 Passagens</div>
+                            <div style="font-size: 0.85rem; font-weight: 700; color: #38bdf8;">
+                                ${waypointsCount} ponto(s)
+                            </div>
+                            <div style="font-size: 0.72rem; color: var(--text-secondary, #94a3b8);">registrado(s) na rota</div>
+                        </div>
+
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 0.65rem; border-radius: 8px;">
+                            <div style="font-size: 0.72rem; color: var(--text-secondary, #94a3b8); text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">🏁 Destino</div>
+                            <div style="font-size: 0.85rem; font-weight: 700; color: ${isCompleted ? '#10b981' : '#f59e0b'};">
+                                ${dispatch.city || '-'}
+                            </div>
+                            <div style="font-size: 0.72rem; color: var(--text-secondary, #94a3b8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${dispatch.neighborhood || 'Bairro'}</div>
+                        </div>
+
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 0.65rem; border-radius: 8px;">
+                            <div style="font-size: 0.72rem; color: var(--text-secondary, #94a3b8); text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">⏱️ Tempo Total</div>
+                            <div style="font-size: 0.85rem; font-weight: 700; color: #a78bfa;">
+                                ${durationText}
+                            </div>
+                            <div style="font-size: 0.72rem; color: var(--text-secondary, #94a3b8);">${isCompleted ? 'Até a entrega final' : 'Em andamento'}</div>
+                        </div>
+                    </div>
+
+                    <!-- Mapa Interativo de Rastreamento (Leaflet / OSM) -->
+                    <div style="margin-bottom: 1.25rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                            <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary, #f1f5f9); display: flex; align-items: center; gap: 0.35rem;">
+                                <span class="material-icons-round" style="font-size: 1rem; color: #38bdf8;">map</span>
+                                Mapa Interativo da Rota (Origem ➔ Passagens ➔ Destino)
+                            </label>
+                            <span style="font-size: 0.72rem; color: var(--text-secondary, #94a3b8);">Georreferenciamento auditável</span>
+                        </div>
+                        <div id="trackingTrailMap" style="width: 100%; height: 290px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: #0f172a; position: relative;">
+                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #94a3b8; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;">
+                                <span class="material-icons-round" style="animation: spin 1s infinite linear;">refresh</span> Carregando mapa georreferenciado...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ação em tempo real: Gravação de Ponto de Passagem (GPS) -->
+                    ${!isCompleted ? `
+                        <div style="background: rgba(56, 189, 248, 0.05); border: 1px dashed rgba(56, 189, 248, 0.3); border-radius: 10px; padding: 0.85rem; margin-bottom: 1.25rem;">
+                            <div style="font-size: 0.82rem; font-weight: 700; color: #38bdf8; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.35rem;">
+                                <span class="material-icons-round" style="font-size: 1.1rem;">add_location_alt</span>
+                                Registrar Ponto de Passagem Agora (GPS em Tempo Real)
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                <input type="text" id="trailCustomObs" class="form-input" placeholder="Referência / Parada (ex: Posto Marajó, Travessia, BR-316)" style="flex: 2; min-width: 220px; font-size: 0.82rem; padding: 0.45rem 0.65rem; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff;">
+                                <button type="button" id="btnRecordWaypoint" onclick="DeliveryModule.recordLiveWaypoint(${dispatch.id})" class="btn" style="flex: 1; min-width: 170px; justify-content: center; background: #0284c7; color: white; font-weight: 600; font-size: 0.82rem; padding: 0.45rem 0.75rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+                                    <span class="material-icons-round" style="font-size: 1rem;">my_location</span> Gravar Ponto GPS
+                                </button>
+                            </div>
+                            <div id="trailLiveGpsStatus" style="font-size: 0.72rem; color: var(--text-secondary, #94a3b8); margin-top: 0.4rem;">
+                                📍 Captura a coordenada exata de onde o condutor está no momento e anexa ao trajeto.
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Linha do Tempo Auditável (Passo a Passo da Rota) -->
+                    <div style="margin-bottom: 1rem;">
+                        <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary, #f1f5f9); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.35rem;">
+                            <span class="material-icons-round" style="font-size: 1rem; color: #10b981;">history_edu</span>
+                            Histórico Auditável do Trajeto percorrido
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0; padding-left: 0.5rem;">
+                            ${trail.map((point, idx) => {
+                                const isFirst = idx === 0;
+                                const isLast = idx === trail.length - 1;
+                                
+                                let dotColor = '#38bdf8';
+                                let iconName = 'location_on';
+                                if (point.type === 'origem') {
+                                    dotColor = '#10b981';
+                                    iconName = 'warehouse';
+                                } else if (point.type === 'destino') {
+                                    dotColor = isCompleted ? '#10b981' : '#f59e0b';
+                                    iconName = isCompleted ? 'task_alt' : 'flag';
+                                }
+
+                                const dateStr = point.timestamp ? new Date(point.timestamp).toLocaleString('pt-BR') : 'Pendente';
+                                const coordsText = (point.lat && point.lng) ? `${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}` : null;
+
+                                return `
+                                    <div style="display: flex; gap: 0.85rem; position: relative;">
+                                        <!-- Vertical line connector -->
+                                        ${!isLast ? `
+                                            <div style="position: absolute; left: 15px; top: 32px; bottom: -8px; width: 2px; background: rgba(255,255,255,0.12);"></div>
+                                        ` : ''}
+
+                                        <!-- Step Icon Dot -->
+                                        <div style="width: 32px; height: 32px; border-radius: 50%; background: ${dotColor}25; border: 2px solid ${dotColor}; display: flex; align-items: center; justify-content: center; z-index: 1; flex-shrink: 0; margin-top: 2px;">
+                                            <span class="material-icons-round" style="font-size: 1rem; color: ${dotColor};">${iconName}</span>
+                                        </div>
+
+                                        <!-- Content Card -->
+                                        <div style="flex: 1; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 0.65rem 0.85rem; margin-bottom: 0.75rem;">
+                                            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.25rem;">
+                                                <div style="font-size: 0.85rem; font-weight: 700; color: ${dotColor};">
+                                                    Passo ${point.step || (idx + 1)}: ${point.title || point.label || 'Ponto de Rota'}
+                                                </div>
+                                                <div style="font-size: 0.74rem; color: var(--text-secondary, #94a3b8); font-weight: 500;">
+                                                    🕒 ${dateStr}
+                                                </div>
+                                            </div>
+
+                                            <div style="font-size: 0.82rem; color: var(--text-primary, #f1f5f9); margin-top: 0.25rem;">
+                                                <strong>Local:</strong> ${point.location || point.address || '-'}
+                                            </div>
+
+                                            ${point.address && point.address !== point.location ? `
+                                                <div style="font-size: 0.76rem; color: var(--text-secondary, #94a3b8); margin-top: 0.15rem;">
+                                                    📍 ${point.address}
+                                                </div>
+                                            ` : ''}
+
+                                            ${coordsText ? `
+                                                <div style="margin-top: 0.35rem; display: inline-flex; align-items: center; gap: 0.3rem; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.25); padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; color: #38bdf8;">
+                                                    <span class="material-icons-round" style="font-size: 0.85rem;">pin_drop</span>
+                                                    GPS: ${coordsText} ${point.accuracy ? `(±${point.accuracy}m)` : ''}
+                                                </div>
+                                            ` : ''}
+
+                                            ${point.receiver ? `
+                                                <div style="margin-top: 0.35rem; font-size: 0.78rem; color: #10b981; font-weight: 600;">
+                                                    👤 Recebido por: ${point.receiver} ${point.doc ? `(Doc: ${point.doc})` : ''}
+                                                </div>
+                                            ` : ''}
+
+                                            ${point.obs ? `
+                                                <div style="margin-top: 0.35rem; font-size: 0.76rem; color: #f59e0b; background: rgba(245, 158, 11, 0.08); padding: 3px 6px; border-radius: 4px; border-left: 2px solid #f59e0b;">
+                                                    📝 <strong>Obs:</strong> ${point.obs}
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div style="display: flex; justify-content: flex-end; gap: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.85rem;">
+                        ${hasPOD ? `
+                            <button type="button" onclick="DeliveryModule.showPODModal(${dispatch.id})" class="btn" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 0.82rem; padding: 0.45rem 0.85rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.3rem;">
+                                <span class="material-icons-round" style="font-size: 1rem;">receipt_long</span> Ver Comprovante (POD)
+                            </button>
+                        ` : ''}
+                        <button type="button" onclick="document.getElementById('trackingTrailModal').remove()" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.45rem 1.25rem;">
+                            Fechar
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        `;
+
+        const existing = document.getElementById('trackingTrailModal');
+        if (existing) existing.remove();
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Inicializar mapa após renderização no DOM
+        setTimeout(() => {
+            this.initTrackingMap(dispatch, trail);
+        }, 150);
+    },
+
+    /**
+     * Inicializa o mapa com Leaflet e renderiza a rota Origem ➔ Passagens ➔ Destino
+     */
+    initTrackingMap(dispatch, trail) {
+        const mapContainer = document.getElementById('trackingTrailMap');
+        if (!mapContainer) return;
+
+        // Se Leaflet não estiver disponível, renderiza fallback visual diagramático
+        if (typeof L === 'undefined') {
+            mapContainer.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-secondary, #94a3b8); padding: 1.5rem; text-align: center;">
+                    <span class="material-icons-round" style="font-size: 2.5rem; color: #38bdf8; margin-bottom: 0.5rem;">alt_route</span>
+                    <strong style="color: #f1f5f9; font-size: 0.9rem;">Trilha de Rota Registrada</strong>
+                    <div style="font-size: 0.78rem; margin-top: 0.25rem;">Origem (${trail[0]?.location || 'Base'}) ➔ ${trail.length - 2 > 0 ? (trail.length - 2) + ' Parada(s) ➔ ' : ''} Destino (${dispatch.neighborhood || dispatch.city || 'Cliente'})</div>
+                    <div style="font-size: 0.72rem; color: #64748b; margin-top: 0.4rem;">Coordenadas e timestamps gravados no histórico auditável abaixo.</div>
+                </div>
+            `;
+            return;
+        }
+
+        // Limpa conteúdo prévio
+        mapContainer.innerHTML = '';
+
+        // Cria o mapa Leaflet
+        try {
+            // Coleta pontos com coordenadas válidas
+            const geoPoints = [];
+            trail.forEach(t => {
+                if (typeof t.lat === 'number' && typeof t.lng === 'number' && !isNaN(t.lat) && !isNaN(t.lng)) {
+                    geoPoints.push({
+                        lat: t.lat,
+                        lng: t.lng,
+                        title: t.title || t.location,
+                        type: t.type,
+                        step: t.step,
+                        time: t.timestamp ? new Date(t.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '',
+                        obs: t.obs || t.address || ''
+                    });
+                }
+            });
+
+            // Se não houver coordenadas explícitas, define pontos padrão representativos baseados na origem
+            let center = [-1.3653, -48.3745]; // Belém / Região Metropolitana (Base LT Distribuidora)
+            let zoom = 12;
+
+            if (geoPoints.length > 0) {
+                center = [geoPoints[0].lat, geoPoints[0].lng];
+            }
+
+            const map = L.map(mapContainer, {
+                center: center,
+                zoom: zoom,
+                zoomControl: true,
+                attributionControl: false
+            });
+
+            // Tile layer elegante estilo voyager / carto
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19,
+                subdomains: 'abcd'
+            }).addTo(map);
+
+            // Adiciona marcadores e linhas se houver pontos
+            if (geoPoints.length > 0) {
+                const latLngs = [];
+
+                geoPoints.forEach((pt, index) => {
+                    latLngs.push([pt.lat, pt.lng]);
+
+                    let pinBg = '#0284c7';
+                    let pinSymbol = `${pt.step || (index + 1)}`;
+                    if (pt.type === 'origem') {
+                        pinBg = '#10b981';
+                        pinSymbol = 'A';
+                    } else if (pt.type === 'destino') {
+                        pinBg = '#e11d48';
+                        pinSymbol = 'B';
+                    }
+
+                    const customIcon = L.divIcon({
+                        className: 'custom-trail-pin',
+                        html: `
+                            <div style="background: ${pinBg}; color: white; width: 28px; height: 28px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.4); border: 2px solid #ffffff;">
+                                <span style="transform: rotate(45deg); font-size: 11px; font-weight: 700; font-family: sans-serif;">${pinSymbol}</span>
+                            </div>
+                        `,
+                        iconSize: [28, 28],
+                        iconAnchor: [14, 28],
+                        popupAnchor: [0, -28]
+                    });
+
+                    const marker = L.marker([pt.lat, pt.lng], { icon: customIcon }).addTo(map);
+                    marker.bindPopup(`
+                        <div style="font-family: sans-serif; font-size: 12px; color: #1e293b; line-height: 1.4;">
+                            <strong style="color: ${pinBg}; font-size: 13px;">${pt.title}</strong><br>
+                            ${pt.time ? `🕒 ${pt.time}<br>` : ''}
+                            ${pt.obs ? `<span>${pt.obs}</span><br>` : ''}
+                            <span style="font-size: 10px; color: #64748b;">GPS: ${pt.lat.toFixed(5)}, ${pt.lng.toFixed(5)}</span>
+                        </div>
+                    `);
+
+                    if (index === geoPoints.length - 1) {
+                        marker.openPopup();
+                    }
+                });
+
+                // Traçado da rota conectando os pontos
+                if (latLngs.length > 1) {
+                    const polyline = L.polyline(latLngs, {
+                        color: '#0284c7',
+                        weight: 4,
+                        opacity: 0.85,
+                        dashArray: '6, 8',
+                        lineJoin: 'round'
+                    }).addTo(map);
+
+                    map.fitBounds(polyline.getBounds(), { padding: [35, 35] });
+                } else {
+                    map.setView(latLngs[0], 14);
+                }
+            } else {
+                // Mensagem informativa no mapa se pontos não tiverem GPS
+                const banner = L.control({ position: 'topright' });
+                banner.onAdd = function() {
+                    const div = L.DomUtil.create('div', 'trail-info-banner');
+                    div.style.background = 'rgba(15, 23, 42, 0.85)';
+                    div.style.color = '#38bdf8';
+                    div.style.padding = '6px 12px';
+                    div.style.borderRadius = '6px';
+                    div.style.fontSize = '11px';
+                    div.style.border = '1px solid rgba(56, 189, 248, 0.4)';
+                    div.innerHTML = '📍 Origem registrada na Base. Clique em "Gravar Ponto GPS" para capturar paradas.';
+                    return div;
+                };
+                banner.addTo(map);
+            }
+
+            // Invalidação de tamanho essencial para modals
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 200);
+
+        } catch (err) {
+            console.warn('[TrackingMap] Erro ao instanciar Leaflet map:', err);
+            mapContainer.innerHTML = `
+                <div style="display:flex; align-items:center; justify-content:center; height:100%; color:#94a3b8; font-size:0.85rem;">
+                    Trilha de rota georreferenciada gravada com sucesso.
+                </div>
+            `;
+        }
+    },
+
+    /**
+     * Grava um novo Ponto de Passagem em tempo real utilizando a Geolocation nativa
+     */
+    recordLiveWaypoint(dispatchId) {
+        const btn = document.getElementById('btnRecordWaypoint');
+        const statusEl = document.getElementById('trailLiveGpsStatus');
+        const customObsInput = document.getElementById('trailCustomObs');
+        const customObs = (customObsInput?.value || '').trim();
+
+        if (!navigator.geolocation) {
+            alert('Geolocalização não é suportada neste dispositivo / navegador.');
+            return;
+        }
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="material-icons-round" style="font-size:1rem; animation:spin 1s infinite linear;">refresh</span> Gravando...';
+        }
+        if (statusEl) {
+            statusEl.innerHTML = '<span style="color:#f59e0b;">⏳ Obtendo coordenadas de satélite de alta precisão...</span>';
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const { latitude, longitude, accuracy } = pos.coords;
+                const nowIso = new Date().toISOString();
+
+                const dispatches = Utils.getStorage('dispatches') || [];
+                const idx = dispatches.findIndex(d => d.id === dispatchId);
+
+                if (idx === -1) {
+                    alert('Despacho não encontrado no armazenamento local.');
+                    if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons-round" style="font-size:1rem;">my_location</span> Gravar Ponto GPS'; }
+                    return;
+                }
+
+                const dispatch = dispatches[idx];
+                const trail = this.getDispatchTrail(dispatch);
+
+                const newPoint = {
+                    step: trail.length,
+                    type: 'passagem',
+                    title: 'Ponto de Passagem Registrado',
+                    location: customObs || 'Parada / Passagem em Rota',
+                    address: `Posição GPS: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`,
+                    timestamp: nowIso,
+                    driver: dispatch.deliveryPerson || dispatch.driverName || 'Entregador',
+                    status: 'Em Trânsito',
+                    lat: latitude,
+                    lng: longitude,
+                    accuracy: Math.round(accuracy),
+                    obs: customObs || 'Ponto de passagem registrado pelo condutor.'
+                };
+
+                // Insere antes do ponto final (Destino) se ele já existir
+                const destIndex = trail.findIndex(t => t.type === 'destino');
+                if (destIndex >= 0) {
+                    trail.splice(destIndex, 0, newPoint);
+                } else {
+                    trail.push(newPoint);
+                }
+
+                // Reindexa steps
+                trail.forEach((item, i) => { item.step = i + 1; });
+                dispatch.trackingTrail = trail;
+
+                // Salva
+                Utils.saveRaw('dispatches', JSON.stringify(dispatches));
+
+                // Sincroniza dispatches_db
+                if (window.db && Utils.Cloud && Utils.Cloud.hasTenant()) {
+                    window.db.collection('tenants').doc(Utils.Cloud.tenantId)
+                        .collection('dispatches_db').doc(String(dispatchId))
+                        .set(dispatch, { merge: true }).catch(e => console.warn(e));
+                }
+
+                this.addDeliveryLog({
+                    type: dispatch.deliveryType,
+                    action: 'waypoint_gps',
+                    dispatchId: dispatchId,
+                    invoice: dispatch.invoice,
+                    lat: latitude,
+                    lng: longitude,
+                    accuracy: Math.round(accuracy),
+                    obs: customObs,
+                    timestamp: nowIso
+                });
+
+                showToast(`📍 Ponto de passagem registrado com precisão de ±${Math.round(accuracy)}m!`);
+
+                // Reabre / atualiza o modal
+                this.showTrackingModal(dispatchId);
+            },
+            (err) => {
+                console.warn('[GPS Waypoint] Erro ao obter posição:', err);
+                let msg = 'Não foi possível obter a localização.';
+                if (err.code === 1) msg = 'Permissão de localização negada pelo usuário.';
+                else if (err.code === 2) msg = 'Posição indisponível (sem sinal GPS).';
+                else if (err.code === 3) msg = 'Tempo limite de busca do GPS esgotado.';
+
+                if (statusEl) {
+                    statusEl.innerHTML = `<span style="color:#ef4444;">⚠️ ${msg}</span>`;
+                }
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span class="material-icons-round" style="font-size:1rem;">my_location</span> Tentar Novamente';
+                }
+                alert(msg + '\n\nCertifique-se de autorizar a localização no navegador.');
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
     },
 
     /**
