@@ -446,20 +446,31 @@ const Utils = {
         },
 
 
-        async getFullDispatchesHistory(filters = {}) {
+        _dispatchesDbCache: null,
+        _dispatchesDbCacheTime: 0,
+
+        async getFullDispatchesHistory(filters = {}, forceRefresh = false) {
             let local = Utils.getStorage('dispatches') || [];
             let cloud = [];
 
-            if (this.hasTenant() && window.db) {
+            const now = Date.now();
+            const isCacheValid = !forceRefresh && Array.isArray(this._dispatchesDbCache) && (now - this._dispatchesDbCacheTime < 60000);
+
+            if (isCacheValid) {
+                cloud = this._dispatchesDbCache;
+            } else if (this.hasTenant() && window.db) {
                 try {
                     // SEM orderBy: evita necessidade de índice Firestore
                     // Ordenação feita 100% em memória usando d.id (= Date.now() no momento do despacho)
                     const ref = window.db.collection('tenants').doc(this.tenantId).collection('dispatches_db');
                     const snapshot = await ref.get();
                     snapshot.forEach(doc => cloud.push(doc.data()));
-                    console.log(`[Cloud] ${cloud.length} despachos carregados do Firestore.`);
+                    this._dispatchesDbCache = cloud;
+                    this._dispatchesDbCacheTime = now;
+                    console.log(`[Cloud] ${cloud.length} despachos carregados do Firestore (cache 60s atualizado).`);
                 } catch(e) {
                     console.error("Erro ao buscar histórico do banco:", e);
+                    if (this._dispatchesDbCache) cloud = this._dispatchesDbCache;
                 }
             }
 
@@ -886,9 +897,11 @@ const Utils = {
                         });
 
                         if (modified) {
-                            Utils.setStorage('dispatches', local);
+                            const storageKey = Utils._storageKey('dispatches');
+                            localStorage.setItem(storageKey, JSON.stringify(local));
+                            Utils._memStore['dispatches'] = local;
+                            if (Utils.Cloud) Utils.Cloud._dispatchesDbCache = null;
                             if (window.renderDashboard) window.renderDashboard();
-                            if (window.renderAppHistory) window.renderAppHistory();
                         }
                     });
 

@@ -329,43 +329,6 @@
                     `;
             grid.appendChild(card);
         });
-
-        // v3.22.1: Sincronização em segundo plano dos pendentes no Firestore (dispatches_db)
-        // Garante que o painel mostre as cargas imediatamente mesmo em novos acessos ou abas
-        if (window.db && Utils.Cloud && Utils.Cloud.hasTenant() && !window._dashSyncing) {
-            window._dashSyncing = true;
-            window.db.collection('tenants').doc(Utils.Cloud.tenantId).collection('dispatches_db')
-                .where('status', '==', 'Pendente Despacho')
-                .get()
-                .then(snap => {
-                    window._dashSyncing = false;
-                    if (!snap || snap.empty) return;
-                    let localList = Utils.getStorage('dispatches') || [];
-                    if ((!Array.isArray(localList) || localList.length === 0) && Utils._memStore && Array.isArray(Utils._memStore['dispatches'])) {
-                        localList = Utils._memStore['dispatches'];
-                    }
-                    let hasNew = false;
-                    snap.forEach(docSnap => {
-                        const dData = docSnap.data();
-                        const idx = localList.findIndex(l => String(l.id || l.codigo) === String(dData.id || dData.codigo));
-                        if (idx === -1) {
-                            localList.push(dData);
-                            hasNew = true;
-                        } else if (localList[idx].status !== dData.status) {
-                            localList[idx] = dData;
-                            hasNew = true;
-                        }
-                    });
-                    if (hasNew) {
-                        Utils.setStorage('dispatches', localList);
-                        window.renderDashboard();
-                    }
-                })
-                .catch(err => {
-                    window._dashSyncing = false;
-                    console.warn('[Dashboard] Sync pendentes Firestore:', err);
-                });
-        }
     };
 
     window.openShipmentModal = (carrier) => {

@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.22.2",
-  "build": "20261008-v3.22.2",
+  "version": "3.22.3",
+  "build": "20261008-v3.22.3",
   "lastUpdate": "2026-10-08",
-  "releaseDate": "2026-10-08T10:10:00-03:00",
-  "change": "v3.22.2: Correção de fechamento de forEach em dispatch-dashboard.js e fechamento de comentário em erp-registry.js."
+  "releaseDate": "2026-10-08T10:25:00-03:00",
+  "change": "v3.22.3: Performance e fluidez extrema — Cache inteligente de 60s em getFullDispatchesHistory, eliminação de uploads redundantes em onSnapshot e remoção de polling duplicado no Dashboard."
 }

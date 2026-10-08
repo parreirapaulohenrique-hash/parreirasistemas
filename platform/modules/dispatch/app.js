@@ -3440,6 +3440,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 }
 
+                if (Utils.Cloud) Utils.Cloud._dispatchesDbCache = null;
+
                 // Atualizar painel de despacho imediatamente
                 if (window.renderDashboard) {
                     try { window.renderDashboard(); } catch(eDash) { console.warn(eDash); }
