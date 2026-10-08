@@ -587,6 +587,8 @@
                         console.log(`🚚 NF ${d.invoice} enviada para ${deliveryType === 'moto' ? '🏍️ Moto' : '🚗 Carro'} Entrega (${assignedDriverName})`);
                     }
                 }
+            });
+
             Utils.saveRaw('dispatches', JSON.stringify(history));
 
             // v3.22.0 - Fase 4: Gravação concorrente direta na subcoleção dispatches_db
