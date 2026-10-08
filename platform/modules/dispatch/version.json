@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.22.4",
-  "build": "20261008-v3.22.4",
+  "version": "3.22.5",
+  "build": "20261008-v3.22.5",
   "lastUpdate": "2026-10-08",
-  "releaseDate": "2026-10-08T10:30:00-03:00",
-  "change": "v3.22.4: Remoção de inputs de filtro em colunas de ação/status/confirmação para prevenir autofill do navegador que ocultava a tabela após exclusão, proteção no supPassInput com new-password e invalidação imediata de cache no removeDispatch."
+  "releaseDate": "2026-10-08T10:55:00-03:00",
+  "change": "v3.22.5: Renderização ultra-rápida (Lazy Loading) na aba Montagem de Carga, loop reverso O(N) na aba Baixa Romaneio e otimização de verificação de atrasos eliminando travamento de CPU e troca de abas instantânea."
 }
