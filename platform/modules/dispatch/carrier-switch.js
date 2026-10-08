@@ -437,6 +437,20 @@ window.CarrierSwitchModule = (function () {
             const diferencaPerc = actualCost > 0 ? ((actualCost - bestSim.total) / actualCost) * 100 : 0;
             const diffDiasPrazo = bestSim.leadTimeDays - leadTimeDaysAnterior;
 
+            // Percentual de frete da tabela da nova transportadora
+            const percentualTabelaNovo = bestSim.ruleUsed ? parseNum(bestSim.ruleUsed.percentual, 0) : 0;
+
+            // Percentual da transportadora anterior (busca na tabela de frete se não estiver direto no despacho)
+            const antRule = state.freightRules.find(r =>
+                normStr(r.transportadora) === normStr(actualCarrier) &&
+                (normStr(r.cidade) === normStr(d.city) || (d.city && (normStr(d.city).includes(normStr(r.cidade)) || normStr(r.cidade).includes(normStr(d.city)))))
+            );
+            const percentualTabelaAnterior = parseNum(d.percentual, 0) || (antRule ? parseNum(antRule.percentual, 0) : 0) || (d.nfValue > 0 ? (baseAnterior / d.nfValue) * 100 : 0);
+
+            const valorNF = parseNum(d.nfValue || d.valorNF || d.value, 0);
+            const percentualEfetivoAnterior = valorNF > 0 ? (actualCost / valorNF) * 100 : 0;
+            const percentualEfetivoNovo = valorNF > 0 ? (bestSim.total / valorNF) * 100 : 0;
+
             simulatedDispatches.push({
                 raw: d,
                 cliente: (d.client && d.client !== 'undefined') ? d.client : 'Consumidor',
@@ -446,7 +460,7 @@ window.CarrierSwitchModule = (function () {
                 nf: d.invoice || d.invoiceNumber || d.nf || 'S/N',
                 peso: parseNum(d.weight || d.peso, 0),
                 volume: Math.max(1, parseInt(d.volume || d.volumes) || 1),
-                valorNF: parseNum(d.nfValue || d.valorNF || d.value, 0),
+                valorNF: valorNF,
 
                 // Anterior
                 carrierAnterior: actualCarrier,
@@ -458,6 +472,8 @@ window.CarrierSwitchModule = (function () {
                 redespCarrierAnterior: redespCarrierAnterior,
                 leadTimeAnterior: leadTimeAnterior,
                 leadTimeDaysAnterior: leadTimeDaysAnterior,
+                percentualTabelaAnterior: percentualTabelaAnterior,
+                percentualEfetivoAnterior: percentualEfetivoAnterior,
 
                 // Novo Simulado
                 carrierNovo: bestSim.carrier,
@@ -469,6 +485,8 @@ window.CarrierSwitchModule = (function () {
                 redespCarrierNovo: bestSim.redespCarrier,
                 leadTimeNovo: bestSim.leadTime,
                 leadTimeDaysNovo: bestSim.leadTimeDays,
+                percentualTabelaNovo: percentualTabelaNovo,
+                percentualEfetivoNovo: percentualEfetivoNovo,
 
                 // Diferenciais
                 diferenca: diferenca,
@@ -508,6 +526,8 @@ window.CarrierSwitchModule = (function () {
                     volumesTotal: 0,
                     valorNFTotal: 0,
                     diffDiasPrazoTotal: 0,
+                    percentualTabelaNovoTotal: 0,
+                    percentualTabelaAnteriorTotal: 0,
                     dispatches: []
                 });
             }
@@ -527,6 +547,8 @@ window.CarrierSwitchModule = (function () {
             g.volumesTotal += item.volume;
             g.valorNFTotal += item.valorNF;
             g.diffDiasPrazoTotal += item.diffDiasPrazo;
+            g.percentualTabelaNovoTotal += item.percentualTabelaNovo;
+            g.percentualTabelaAnteriorTotal += item.percentualTabelaAnterior;
             g.dispatches.push(item);
         });
 
@@ -536,6 +558,10 @@ window.CarrierSwitchModule = (function () {
             const diferencaTotal = g.custoAnteriorTotal - g.custoNovoTotal; // > 0 = Economia, < 0 = Gasto adicional
             const diferencaPerc = g.custoAnteriorTotal > 0 ? (diferencaTotal / g.custoAnteriorTotal) * 100 : 0;
             const diffDiasPrazoMedio = count > 0 ? (g.diffDiasPrazoTotal / count) : 0;
+            const percentualTabelaNovo = count > 0 ? (g.percentualTabelaNovoTotal / count) : 0;
+            const percentualTabelaAnterior = count > 0 ? (g.percentualTabelaAnteriorTotal / count) : 0;
+            const percentualEfetivoNovo = g.valorNFTotal > 0 ? (g.custoNovoTotal / g.valorNFTotal) * 100 : 0;
+            const percentualEfetivoAnterior = g.valorNFTotal > 0 ? (g.custoAnteriorTotal / g.valorNFTotal) * 100 : 0;
 
             return {
                 ...g,
@@ -543,6 +569,10 @@ window.CarrierSwitchModule = (function () {
                 diferencaTotal: diferencaTotal,
                 diferencaPerc: diferencaPerc,
                 diffDiasPrazoMedio: diffDiasPrazoMedio,
+                percentualTabelaNovo: percentualTabelaNovo,
+                percentualTabelaAnterior: percentualTabelaAnterior,
+                percentualEfetivoNovo: percentualEfetivoNovo,
+                percentualEfetivoAnterior: percentualEfetivoAnterior,
                 isEconomia: diferencaTotal >= 0,
                 hasRedespachoNovo: g.redespachoNovoTotal > 0
             };
@@ -671,7 +701,7 @@ window.CarrierSwitchModule = (function () {
         if (state.filteredGroups.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="10" style="text-align: center; padding: 3rem 1rem; color: var(--text-secondary);">
+                    <td colspan="11" style="text-align: center; padding: 3rem 1rem; color: var(--text-secondary);">
                         <span class="material-icons-round" style="font-size: 2.5rem; opacity: 0.3; display: block; margin-bottom: 0.5rem;">find_in_page</span>
                         Nenhum registro encontrado para os filtros selecionados.<br>
                         <small style="opacity: 0.7;">Tente ampliar o período ou alterar os filtros de cliente e município.</small>
@@ -730,10 +760,22 @@ window.CarrierSwitchModule = (function () {
                     <td style="color: #cbd5e1;">${g.cidade}</td>
                     <td style="color: #94a3b8;">${g.carrierAnterior}</td>
                     <td style="color: #60a5fa; font-weight: 600;">${g.carrierNovo}</td>
-                    <td style="font-weight: 600; color: #e2e8f0;">${formatBRL(g.custoAnteriorTotal)}</td>
+                    <td style="text-align: center;">
+                        <div style="display: inline-flex; align-items: center; justify-content: center; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 4px; padding: 2px 8px; font-weight: 700; color: #60a5fa; font-size: 0.85rem;">
+                            ${g.percentualTabelaNovo > 0 ? g.percentualTabelaNovo.toFixed(2) + '%' : '-'}
+                        </div>
+                        <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px;" title="Percentual Efetivo sobre Valor Total de NFs">
+                            ${g.percentualEfetivoNovo > 0 ? g.percentualEfetivoNovo.toFixed(2) + '% efetivo' : ''}
+                        </div>
+                    </td>
+                    <td style="font-weight: 600; color: #e2e8f0;">
+                        ${formatBRL(g.custoAnteriorTotal)}
+                        <div style="font-size: 0.72rem; color: var(--text-secondary);">${g.percentualEfetivoAnterior > 0 ? g.percentualEfetivoAnterior.toFixed(2) + '% s/ NF' : ''}</div>
+                    </td>
                     <td style="font-weight: 600; color: #f8fafc;">
                         ${formatBRL(g.custoNovoTotal)}
                         ${redespBadge}
+                        <div style="font-size: 0.72rem; color: #94a3b8;">${g.percentualEfetivoNovo > 0 ? g.percentualEfetivoNovo.toFixed(2) + '% s/ NF' : ''}</div>
                     </td>
                     <td style="font-weight: 700; color: ${diffColor};">
                         ${diffSignal} ${formatBRL(Math.abs(g.diferencaTotal))}
@@ -780,6 +822,14 @@ window.CarrierSwitchModule = (function () {
         // Cenário Anterior
         document.getElementById('detCarrierAnt').innerText = group.carrierAnterior;
         document.getElementById('detBaseAnt').innerText = formatBRL(group.baseAnteriorTotal);
+        const percTabAntEl = document.getElementById('detPercTabAnt');
+        if (percTabAntEl) {
+            percTabAntEl.innerText = group.percentualTabelaAnterior > 0 ? `${group.percentualTabelaAnterior.toFixed(2)}%` : '-';
+        }
+        const percEfAntEl = document.getElementById('detPercEfAnt');
+        if (percEfAntEl) {
+            percEfAntEl.innerText = group.percentualEfetivoAnterior > 0 ? `${group.percentualEfetivoAnterior.toFixed(2)}%` : '-';
+        }
         document.getElementById('detExcAnt').innerText = formatBRL(group.excessoAnteriorTotal);
         document.getElementById('detTaxasAnt').innerText = formatBRL(group.taxasAnterioresTotal);
         document.getElementById('detRedespAnt').innerText = group.redespachoAnteriorTotal > 0 ? formatBRL(group.redespachoAnteriorTotal) : 'R$ 0,00 (Direto)';
@@ -789,6 +839,14 @@ window.CarrierSwitchModule = (function () {
         // Novo Cenário Simulado
         document.getElementById('detCarrierNovo').innerText = group.carrierNovo;
         document.getElementById('detBaseNovo').innerText = formatBRL(group.baseNovoTotal);
+        const percTabNovoEl = document.getElementById('detPercTabNovo');
+        if (percTabNovoEl) {
+            percTabNovoEl.innerText = group.percentualTabelaNovo > 0 ? `${group.percentualTabelaNovo.toFixed(2)}%` : '-';
+        }
+        const percEfNovoEl = document.getElementById('detPercEfNovo');
+        if (percEfNovoEl) {
+            percEfNovoEl.innerText = group.percentualEfetivoNovo > 0 ? `${group.percentualEfetivoNovo.toFixed(2)}%` : '-';
+        }
         document.getElementById('detExcNovo').innerText = formatBRL(group.excessoNovoTotal);
         document.getElementById('detTaxasNovo').innerText = formatBRL(group.taxasNovoTotal);
 
@@ -870,10 +928,19 @@ window.CarrierSwitchModule = (function () {
                     <td>${item.peso.toFixed(1)} kg</td>
                     <td>${item.volume} vol</td>
                     <td>${formatBRL(item.valorNF)}</td>
-                    <td style="color: #cbd5e1; font-weight: 600;">${formatBRL(item.custoAnterior)}</td>
+                    <td style="color: #cbd5e1; font-weight: 600;">
+                        ${formatBRL(item.custoAnterior)}
+                        <div style="font-size: 0.7rem; color: var(--text-secondary);">${item.percentualEfetivoAnterior > 0 ? item.percentualEfetivoAnterior.toFixed(2) + '% s/ NF' : ''}</div>
+                    </td>
                     <td style="font-weight: 600; color: #f8fafc;">
                         ${formatBRL(item.custoNovo)}
                         ${redespInfo ? `<div>${redespInfo}</div>` : ''}
+                        <div style="font-size: 0.7rem; color: #94a3b8;">${item.percentualEfetivoNovo > 0 ? item.percentualEfetivoNovo.toFixed(2) + '% s/ NF' : ''}</div>
+                    </td>
+                    <td style="text-align: center;">
+                        <span style="display:inline-block; padding: 2px 6px; border-radius: 4px; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; font-weight: 700; font-size: 0.8rem;">
+                            ${item.percentualTabelaNovo > 0 ? item.percentualTabelaNovo.toFixed(2) + '%' : '-'}
+                        </span>
                     </td>
                     <td style="font-weight: 700; color: ${diffColor};">
                         ${diffPrefix} ${formatBRL(Math.abs(item.diferenca))}
@@ -930,6 +997,9 @@ window.CarrierSwitchModule = (function () {
             'Município': g.cidade,
             'Transportadora Atual': g.carrierAnterior,
             'Nova Transportadora': g.carrierNovo,
+            '% Frete Tabela (Nova)': Number(g.percentualTabelaNovo.toFixed(2)),
+            '% Frete Efetivo Novo': Number(g.percentualEfetivoNovo.toFixed(2)),
+            '% Frete Efetivo Anterior': Number(g.percentualEfetivoAnterior.toFixed(2)),
             'Qtd Despachos': g.count,
             'Peso Total (kg)': Number(g.pesoTotal.toFixed(2)),
             'Custo Anterior (R$)': Number(g.custoAnteriorTotal.toFixed(2)),
@@ -980,11 +1050,14 @@ window.CarrierSwitchModule = (function () {
                     'Volumes': d.volume,
                     'Valor NF (R$)': Number(d.valorNF.toFixed(2)),
                     'Transp. Anterior': d.carrierAnterior,
+                    '% Frete Ant. Efetivo': Number(d.percentualEfetivoAnterior.toFixed(2)),
                     'Custo Anterior Pago (R$)': Number(d.custoAnterior.toFixed(2)),
                     'Frete Base Ant (R$)': Number(d.baseAnterior.toFixed(2)),
                     'Excesso Ant (R$)': Number(d.excessoAnterior.toFixed(2)),
                     'Redespacho Ant (R$)': Number(d.redespachoAnterior.toFixed(2)),
                     'Nova Transportadora': d.carrierNovo,
+                    '% Frete Tabela (Nova)': Number(d.percentualTabelaNovo.toFixed(2)),
+                    '% Frete Novo Efetivo': Number(d.percentualEfetivoNovo.toFixed(2)),
                     'Novo Custo Total (R$)': Number(d.custoNovo.toFixed(2)),
                     'Novo Frete Base (R$)': Number(d.baseNovo.toFixed(2)),
                     'Novo Excesso (R$)': Number(d.excessoNovo.toFixed(2)),

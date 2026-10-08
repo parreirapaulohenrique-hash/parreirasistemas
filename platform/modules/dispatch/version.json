@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.23.0",
-  "build": "20261008-v3.23.0",
+  "version": "3.23.1",
+  "build": "20261008-v3.23.1",
   "lastUpdate": "2026-10-08",
-  "releaseDate": "2026-10-08T15:00:00-03:00",
-  "change": "v3.23.0: Nova tela de Análise de Troca de Transportadora com cálculo de custo total real (frete base, excedente, taxas, redespacho destacado e prazo), KPIs no topo, comparativo consolidado e auditoria despacho a despacho com exportação em Excel."
+  "releaseDate": "2026-10-08T15:18:00-03:00",
+  "change": "v3.23.1: Exibição do % de Frete da Tabela e % efetivo sobre NF na tabela consolidada, nos cards de cenário comparativo e no raio-x despacho a despacho; padronização rigorosa de fontes, formulários e tamanhos com os padrões do módulo."
 }
