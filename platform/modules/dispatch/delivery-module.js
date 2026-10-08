@@ -1250,7 +1250,18 @@ const DeliveryModule = {
                             </label>
                             <span style="font-size: 0.72rem; color: var(--text-secondary, #94a3b8);">Georreferenciamento auditável</span>
                         </div>
-                        <div id="trackingTrailMap" style="width: 100%; height: 290px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: #0f172a; position: relative;">
+                        <style>
+                            #trackingTrailMap { position: relative !important; overflow: hidden !important; isolation: isolate !important; z-index: 1 !important; border-radius: 10px; }
+                            #trackingTrailMap .leaflet-container { width: 100% !important; height: 100% !important; overflow: hidden !important; position: relative !important; z-index: 1 !important; background: #0f172a !important; }
+                            #trackingTrailMap .leaflet-pane { z-index: 1 !important; }
+                            #trackingTrailMap .leaflet-tile-pane { z-index: 1 !important; }
+                            #trackingTrailMap .leaflet-overlay-pane { z-index: 2 !important; }
+                            #trackingTrailMap .leaflet-marker-pane { z-index: 3 !important; }
+                            #trackingTrailMap .leaflet-popup-pane { z-index: 4 !important; }
+                            #trackingTrailMap .leaflet-top, #trackingTrailMap .leaflet-bottom { z-index: 5 !important; }
+                            #trackingTrailMap img.leaflet-tile { max-width: none !important; max-height: none !important; width: 256px !important; height: 256px !important; filter: brightness(0.95) contrast(1.05); }
+                        </style>
+                        <div id="trackingTrailMap" style="width: 100%; height: 290px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15); background: #0f172a; position: relative; overflow: hidden !important; isolation: isolate; z-index: 1;">
                             <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #94a3b8; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;">
                                 <span class="material-icons-round" style="animation: spin 1s infinite linear;">refresh</span> Carregando mapa georreferenciado...
                             </div>
@@ -1391,6 +1402,18 @@ const DeliveryModule = {
         const mapContainer = document.getElementById('trackingTrailMap');
         if (!mapContainer) return;
 
+        // Garante que o CSS do Leaflet esteja sempre presente no DOM
+        if (!document.getElementById('leaflet-cdn-css')) {
+            const link = document.createElement('link');
+            link.id = 'leaflet-cdn-css';
+            link.rel = 'stylesheet';
+            link.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+            document.head.appendChild(link);
+        }
+        if (typeof L !== 'undefined' && L.Icon && L.Icon.Default) {
+            L.Icon.Default.imagePath = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/';
+        }
+
         // Se Leaflet não estiver disponível, renderiza fallback visual diagramático
         if (typeof L === 'undefined') {
             mapContainer.innerHTML = `
@@ -1440,10 +1463,11 @@ const DeliveryModule = {
                 attributionControl: false
             });
 
-            // Tile layer elegante estilo voyager / carto
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            // Tile layer OpenStreetMap oficial (100% gratuito e sem necessidade de API Key)
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
-                subdomains: 'abcd'
+                subdomains: ['a', 'b', 'c'],
+                attribution: '&copy; OpenStreetMap contributors'
             }).addTo(map);
 
             // Adiciona marcadores e linhas se houver pontos
