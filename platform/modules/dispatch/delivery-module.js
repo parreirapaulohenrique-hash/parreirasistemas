@@ -246,6 +246,24 @@ const DeliveryModule = {
     },
 
     /**
+     * Imprime romaneio padronizado para o entregador (idêntico ao de transportadora)
+     */
+    printDriverRomaneio(type, person) {
+        const pending = this.getPendingDeliveries(type);
+        const items = pending.filter(d => (d.deliveryPerson || d.driverName || 'Não Atribuído') === person);
+        if (items.length === 0) {
+            showToast('⚠️ Nenhuma entrega pendente para imprimir.');
+            return;
+        }
+        const carrierTitle = type === 'moto' ? `MOTO ENTREGA - ${person}` : `CARRO ENTREGA - ${person}`;
+        if (window.printSpecificRomaneio) {
+            window.printSpecificRomaneio(carrierTitle, items);
+        } else {
+            alert('Função de impressão não disponível.');
+        }
+    },
+
+    /**
      * Renderiza cards de entregas para Moto (AGRUPADO POR ENTREGADOR)
      */
     renderMotoEntregas() {
@@ -278,9 +296,14 @@ const DeliveryModule = {
             const items = grouped[person];
             html += `
                 <div style="margin-bottom: 1.5rem;">
-                    <div style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 12px 16px; border-radius: 12px 12px 0 0; font-weight: 700; font-size: 1.1rem; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 12px 16px; border-radius: 12px 12px 0 0; font-weight: 700; font-size: 1.1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                         <span>🏍️ ${person}</span>
-                        <span style="background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px; font-size: 0.9rem;">${items.length} entrega(s)</span>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px; font-size: 0.9rem;">${items.length} entrega(s)</span>
+                            <button onclick="DeliveryModule.printDriverRomaneio('moto', '${person.replace(/'/g, "\\'")}')" class="btn" style="background: rgba(255,255,255,0.25); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 4px 10px; font-size: 0.8rem; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="Imprimir Romaneio Padronizado">
+                                <span class="material-icons-round" style="font-size: 1rem;">print</span> Imprimir Romaneio
+                            </button>
+                        </div>
                     </div>
                     <div style="border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 12px 12px; padding: 10px; background: var(--bg-secondary);">
                         ${items.map(d => this.createDeliveryCard(d, 'moto')).join('')}
@@ -337,9 +360,14 @@ const DeliveryModule = {
             const items = grouped[person];
             html += `
                 <div style="margin-bottom: 1.5rem;">
-                    <div style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 12px 16px; border-radius: 12px 12px 0 0; font-weight: 700; font-size: 1.1rem; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 12px 16px; border-radius: 12px 12px 0 0; font-weight: 700; font-size: 1.1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                         <span>🚗 ${person}</span>
-                        <span style="background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px; font-size: 0.9rem;">${items.length} entrega(s)</span>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px; font-size: 0.9rem;">${items.length} entrega(s)</span>
+                            <button onclick="DeliveryModule.printDriverRomaneio('carro', '${person.replace(/'/g, "\\'")}')" class="btn" style="background: rgba(255,255,255,0.25); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 4px 10px; font-size: 0.8rem; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="Imprimir Romaneio Padronizado">
+                                <span class="material-icons-round" style="font-size: 1rem;">print</span> Imprimir Romaneio
+                            </button>
+                        </div>
                     </div>
                     <div style="border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 12px 12px; padding: 10px; background: var(--bg-secondary);">
                         ${items.map(d => this.createDeliveryCard(d, 'carro')).join('')}

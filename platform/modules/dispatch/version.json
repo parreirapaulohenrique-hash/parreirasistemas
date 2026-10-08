@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.22.6",
-  "build": "20261008-v3.22.6",
+  "version": "3.22.7",
+  "build": "20261008-v3.22.7",
   "lastUpdate": "2026-10-08",
-  "releaseDate": "2026-10-08T11:40:00-03:00",
-  "change": "v3.22.6: Identificação visual automática do Último Envio do cliente na tela Nova Cotação (badge pulsante no card correspondente de transportadora e redespacho com popover detalhado contendo transportadora, redespacho, data, NF, volumes e valor)."
+  "releaseDate": "2026-10-08T12:35:00-03:00",
+  "change": "v3.22.7: Padronização dos campos de assinatura dos romaneios de Moto Entrega e Carro Entrega idênticos ao de transportadora (margin-top 2cm, layout e campos de Responsável Expedição e Motorista/Conferente com suporte a condutor atribuído e botão de impressão por entregador)."
 }
