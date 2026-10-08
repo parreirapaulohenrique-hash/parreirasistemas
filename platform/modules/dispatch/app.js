@@ -835,7 +835,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <label style="display:block; font-size:0.82rem; color:#94a3b8;
                                      margin-bottom:6px;">Senha de Supervisor</label>
                         <div style="position:relative;">
-                            <input id="supPassInput" type="password" autocomplete="current-password"
+                            <input id="supPassInput" type="password" autocomplete="new-password" data-lpignore="true"
                                 placeholder="Digite a senha..."
                                 style="width:100%; box-sizing:border-box; padding:10px 40px 10px 12px;
                                        background:#0f172a; border:1px solid #475569; border-radius:8px;
@@ -3440,6 +3440,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 }
 
+                if (Utils.Cloud) Utils.Cloud._dispatchesDbCache = null;
+
                 // Atualizar painel de despacho imediatamente
                 if (window.renderDashboard) {
                     try { window.renderDashboard(); } catch(eDash) { console.warn(eDash); }
@@ -5039,12 +5041,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <tr>
                                 ${activeCols.map(col => {
                                     const s = 'padding:8px 5px;' + (_colStyleMap[col] || '');
+                                    const hasFilter = !['actions', 'deliveryConfirm', 'status'].includes(col);
                                     return `<th style="${s}">
                                         <div style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:4px;">${columnMap[col]}</div>
-                                        <input type="text" class="filter-input" placeholder="🔎"
+                                        ${hasFilter ? `<input type="text" class="filter-input" placeholder="🔎"
                                             value="${window.dispatchFilters[col] || ''}"
                                             onkeyup="window.updateDispatchFilter('${col}', this.value)"
-                                            style="width:100%;">
+                                            autocomplete="off"
+                                            style="width:100%;">` : '<div style="height:26px;"></div>'}
                                     </th>`;
                                 }).join('')}
                             </tr>
@@ -5152,13 +5156,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                         else if (col === 'deliveryConfirm') style += 'width: 90px; min-width: 84px; text-align: center;';
 
 
+                        const hasFilter = !['actions', 'deliveryConfirm', 'status'].includes(col);
                         return `
                                     <th style="${style}">
                                         <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">${columnMap[col]}</div>
-                                        <input type="text" class="filter-input" placeholder="🔎" 
+                                        ${hasFilter ? `<input type="text" class="filter-input" placeholder="🔎" 
                                             value="${window.dispatchFilters[col] || ''}"
                                             onkeyup="window.updateDispatchFilter('${col}', this.value)"
-                                            style="width: 100%;">
+                                            autocomplete="off"
+                                            style="width: 100%;">` : '<div style="height:26px;"></div>'}
                                     </th>
                                 `}).join('')}
                             </tr>
@@ -8246,16 +8252,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 }
 
-                // 3. Remove do cache
+                // 3. Remove do cache e invalida cache de 60s
                 if (window._dispatchesFullCache) {
                     window._dispatchesFullCache = window._dispatchesFullCache.filter(d => Number(d.id) !== numId);
                 }
+                if (Utils.Cloud) {
+                    Utils.Cloud._dispatchesDbCache = null;
+                }
+
+                // Limpa filtros residuais caso algum tenha sido preenchido indevidamente
+                window.dispatchFilters = {};
 
                 // v3.14.54: Audit Log
                 const _dispRemoved = history.find ? null : null; // já removido do array
                 if (Utils.writeLog) Utils.writeLog('DISPATCH_DELETE', 'Despacho', `Lançamento #${numId} excluído permanentemente`, { id: numId }, null);
 
-                window.renderAppHistory();
+                await window.renderAppHistory();
+                if (window.renderDashboard) window.renderDashboard();
                 showToast('🗑️ Lançamento excluído com sucesso.');
 
                 // ── Notifica ErpNFQueue: NF excluída → não volta para a fila ──

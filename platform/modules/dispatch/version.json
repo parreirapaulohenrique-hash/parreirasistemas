@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.22.2",
-  "build": "20261008-v3.22.2",
+  "version": "3.22.4",
+  "build": "20261008-v3.22.4",
   "lastUpdate": "2026-10-08",
-  "releaseDate": "2026-10-08T10:10:00-03:00",
-  "change": "v3.22.2: Correção de fechamento de forEach em dispatch-dashboard.js e fechamento de comentário em erp-registry.js."
+  "releaseDate": "2026-10-08T10:30:00-03:00",
+  "change": "v3.22.4: Remoção de inputs de filtro em colunas de ação/status/confirmação para prevenir autofill do navegador que ocultava a tabela após exclusão, proteção no supPassInput com new-password e invalidação imediata de cache no removeDispatch."
 }
