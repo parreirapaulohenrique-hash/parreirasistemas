@@ -1343,3 +1343,60 @@ body.is-motorista .welcome-banner h2 {
     color: #f8fafc;
     font-size: 0.8rem;
 }
+
+/* --- Análise de Troca de Transportadora (v3.23.0) --- */
+.switch-kpi-card {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1.15rem 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+}
+.switch-kpi-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(59, 130, 246, 0.5);
+    background: rgba(30, 41, 59, 0.95);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+.switch-kpi-card.kpi-active {
+    border-color: #3b82f6 !important;
+    background: rgba(30, 58, 138, 0.35) !important;
+    box-shadow: 0 0 16px rgba(59, 130, 246, 0.35);
+}
+.switch-kpi-card .kpi-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+.switch-kpi-card .kpi-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+.switch-kpi-card .kpi-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.switch-kpi-card .kpi-value {
+    font-size: 1.6rem;
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 0.35rem;
+}
+.switch-kpi-card .kpi-sub {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+}

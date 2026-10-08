@@ -2364,6 +2364,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     'dashboard': 'Painel',
                     'quote': 'Cotação Rápida',
                     'dispatch': 'Montagem de Carga',
+                    'invoice': 'Conferência Fatura',
+                    'carrier-switch': 'Análise de Troca de Transportadora',
                     'rules': 'Tabelas de Frete',
                     'reports': 'Relatórios & KPIs',
                     'configs': 'Config. Transportadoras',
@@ -2412,6 +2414,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             if (id === 'invoice' && window.initInvoiceSection) {
                 window.initInvoiceSection();
+            }
+            if (id === 'carrier-switch' && window.CarrierSwitchModule) {
+                window.CarrierSwitchModule.init();
             }
             if (id === 'occurrences') {
                 if (window.OcorrenciasModule) window.OcorrenciasModule.renderView();

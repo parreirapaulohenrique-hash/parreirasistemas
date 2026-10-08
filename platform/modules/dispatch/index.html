@@ -515,6 +515,11 @@
                     <span class="material-icons-round">receipt_long</span>
                     Conferência Fatura
                 </a>
+                <a href="#carrier-switch" onclick="window.showSection('carrier-switch')" class="nav-item">
+                    <span class="material-icons-round">swap_horiz</span>
+                    Análise de Troca
+                    <span style="margin-left:auto;background:#2563eb;color:#fff;font-size:.65rem;font-weight:700;padding:.1rem .4rem;border-radius:10px;text-align:center;line-height:1.4">Novo</span>
+                </a>
                 <a href="#moto" onclick="window.showSection('moto')" class="nav-item">
                     <span class="material-icons-round">two_wheeler</span>
                     Moto Entrega
@@ -2142,6 +2147,337 @@
                 </div>
 
 
+                <!-- VIEW: ANÁLISE DE TROCA DE TRANSPORTADORA (v3.23.0) -->
+                <div id="view-carrier-switch" class="view-section" style="display: none;">
+                    <div class="welcome-banner" style="margin-bottom: 1.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 1rem;">
+                            <div>
+                                <h2 style="display: flex; align-items: center; gap: 0.5rem; color: #60a5fa;">
+                                    <span class="material-icons-round">swap_horiz</span>
+                                    Análise de Troca de Transportadora
+                                </h2>
+                                <p style="color: var(--text-secondary); margin-top: 0.25rem;">
+                                    Compare custos antes e depois da troca de transportadora e veja a economia real gerada (com frete, excedente, taxas e redespacho).
+                                </p>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button class="btn btn-secondary" onclick="window.CarrierSwitchModule.clearFilters()" style="gap: 0.35rem; font-size: 0.82rem;">
+                                    <span class="material-icons-round" style="font-size: 1rem;">refresh</span>
+                                    Limpar
+                                </button>
+                                <button class="btn btn-primary" onclick="window.CarrierSwitchModule.runAnalysis()" style="gap: 0.35rem; font-size: 0.82rem;">
+                                    <span class="material-icons-round" style="font-size: 1rem;">filter_alt</span>
+                                    Filtrar / Simular
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ══ BARRA DE FILTROS ══════════════════════════════════════════ -->
+                    <div class="card" style="margin-bottom: 1.5rem; padding: 1.25rem; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color);">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem; align-items: flex-end;">
+                            <div>
+                                <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.3rem;">Período Inicial</label>
+                                <input type="date" id="switchFilterDataInicio" class="form-input" style="height: 38px; font-size: 0.85rem;" onchange="window.CarrierSwitchModule.runAnalysis()">
+                            </div>
+                            <div>
+                                <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.3rem;">Período Final</label>
+                                <input type="date" id="switchFilterDataFim" class="form-input" style="height: 38px; font-size: 0.85rem;" onchange="window.CarrierSwitchModule.runAnalysis()">
+                            </div>
+                            <div>
+                                <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.3rem;">Cliente</label>
+                                <select id="switchFilterCliente" class="form-input" style="height: 38px; font-size: 0.85rem;" onchange="window.CarrierSwitchModule.runAnalysis()">
+                                    <option value="">Todos os Clientes</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.3rem;">Município / Vila</label>
+                                <select id="switchFilterCidade" class="form-input" style="height: 38px; font-size: 0.85rem;" onchange="window.CarrierSwitchModule.runAnalysis()">
+                                    <option value="">Todos os Municípios</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.3rem;">Transp. Atual</label>
+                                <select id="switchFilterCarrierAtual" class="form-input" style="height: 38px; font-size: 0.85rem;" onchange="window.CarrierSwitchModule.runAnalysis()">
+                                    <option value="">Todas as Transportadoras</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.3rem; color: #60a5fa; font-weight: 700;">Nova Transportadora (Simular)</label>
+                                <select id="switchFilterCarrierNovo" class="form-input" style="height: 38px; font-size: 0.85rem; border-color: rgba(59, 130, 246, 0.4);" onchange="window.CarrierSwitchModule.runAnalysis()">
+                                    <option value="__AUTO__">⭐ Melhor Opção Automática (Mais Econômica)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ══ RESUMO NO TOPO (KPIS INTERATIVOS) ═════════════════════════ -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <!-- Economia Total -->
+                        <div class="switch-kpi-card" id="kpiCard_economia" onclick="window.CarrierSwitchModule.applyTagFilter('economia')" title="Clique para filtrar apenas rotas com economia">
+                            <div class="kpi-header">
+                                <span class="kpi-title">Economia Total</span>
+                                <div class="kpi-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                                    <span class="material-icons-round" style="font-size: 1.25rem;">attach_money</span>
+                                </div>
+                            </div>
+                            <div class="kpi-value" id="switchKpiEconomia" style="color: #10b981;">R$ 0,00</div>
+                            <div class="kpi-sub">no período selecionado</div>
+                        </div>
+
+                        <!-- Gasto Adicional -->
+                        <div class="switch-kpi-card" id="kpiCard_gasto" onclick="window.CarrierSwitchModule.applyTagFilter('gasto')" title="Clique para filtrar rotas com custo adicional">
+                            <div class="kpi-header">
+                                <span class="kpi-title">Gasto Adicional</span>
+                                <div class="kpi-icon" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">
+                                    <span class="material-icons-round" style="font-size: 1.25rem;">trending_up</span>
+                                </div>
+                            </div>
+                            <div class="kpi-value" id="switchKpiGasto" style="color: #ef4444;">R$ 0,00</div>
+                            <div class="kpi-sub">custos excedentes identificados</div>
+                        </div>
+
+                        <!-- Saldo Final da Troca -->
+                        <div class="switch-kpi-card kpi-active" id="kpiCard_all" onclick="window.CarrierSwitchModule.applyTagFilter('all')" title="Clique para exibir todas as rotas">
+                            <div class="kpi-header">
+                                <span class="kpi-title">Saldo Final da Troca</span>
+                                <div class="kpi-icon" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">
+                                    <span class="material-icons-round" style="font-size: 1.25rem;">account_balance_wallet</span>
+                                </div>
+                            </div>
+                            <div class="kpi-value" id="switchKpiSaldo" style="color: #38bdf8;">R$ 0,00</div>
+                            <div class="kpi-sub" id="switchKpiSaldoSub">Economia total − Gastos adicionais</div>
+                        </div>
+
+                        <!-- Rotas Analisadas -->
+                        <div class="switch-kpi-card" id="kpiCard_rotas" onclick="window.CarrierSwitchModule.applyTagFilter('all')">
+                            <div class="kpi-header">
+                                <span class="kpi-title">Rotas Analisadas</span>
+                                <div class="kpi-icon" style="background: rgba(168, 85, 247, 0.15); color: #a855f7;">
+                                    <span class="material-icons-round" style="font-size: 1.25rem;">alt_route</span>
+                                </div>
+                            </div>
+                            <div class="kpi-value" id="switchKpiRotas" style="color: #c084fc;">0</div>
+                            <div class="kpi-sub" id="switchKpiRotasSub">clientes / municípios</div>
+                        </div>
+
+                        <!-- Impacto no Prazo -->
+                        <div class="switch-kpi-card" id="kpiCard_redespacho" onclick="window.CarrierSwitchModule.applyTagFilter('redespacho')" title="Clique para filtrar apenas rotas com redespacho">
+                            <div class="kpi-header">
+                                <span class="kpi-title">Impacto no Prazo</span>
+                                <div class="kpi-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+                                    <span class="material-icons-round" style="font-size: 1.25rem;">schedule</span>
+                                </div>
+                            </div>
+                            <div class="kpi-value" id="switchKpiPrazo" style="color: #fbbf24;">Neutro</div>
+                            <div class="kpi-sub">variação média de lead time</div>
+                        </div>
+                    </div>
+
+                    <!-- ══ TABELA PRINCIPAL (COMPARATIVO SIMPLIFICADO) ═══════════════ -->
+                    <div class="card" style="padding: 0; background: var(--bg-card); border: 1px solid var(--border-color); overflow: hidden;">
+                        <!-- Header da Tabela -->
+                        <div style="
+                            display: flex; justify-content: space-between; align-items: center;
+                            padding: 1.1rem 1.25rem; border-bottom: 1px solid var(--border-color);
+                            flex-wrap: wrap; gap: 0.75rem;
+                        ">
+                            <div>
+                                <h3 style="font-size: 1.05rem; font-weight: 700; color: #f8fafc; margin: 0;">Comparativo Simplificado</h3>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px;">
+                                    Custo total real com frete base, peso excedente, taxas acessórias e redespacho quando houver.
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                <button class="btn btn-secondary" onclick="window.CarrierSwitchModule.exportSummaryExcel()" style="font-size: 0.8rem; padding: 0.45rem 0.85rem; gap: 0.35rem;">
+                                    <span class="material-icons-round" style="font-size: 1rem; color: #10b981;">file_download</span>
+                                    Exportar Excel
+                                </button>
+                                <button class="btn btn-secondary" onclick="window.CarrierSwitchModule.exportDetailedExcel()" style="font-size: 0.8rem; padding: 0.45rem 0.85rem; gap: 0.35rem;" title="Exporta planilha com cada NF aberta e decomposta">
+                                    <span class="material-icons-round" style="font-size: 1rem; color: #38bdf8;">table_view</span>
+                                    Exportar Completo (NFs)
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Tabela de Dados -->
+                        <div class="table-responsive">
+                            <table class="data-table" style="width: 100%; margin: 0;">
+                                <thead>
+                                    <tr style="background: rgba(15, 23, 42, 0.7);">
+                                        <th style="width: 22%;">Cliente</th>
+                                        <th style="width: 12%;">Município / Vila</th>
+                                        <th style="width: 12%;">Transportadora Anterior</th>
+                                        <th style="width: 12%;">Nova Transportadora</th>
+                                        <th style="width: 10%;">Custo Anterior</th>
+                                        <th style="width: 12%;">Novo Custo Total</th>
+                                        <th style="width: 9%;">Economia / Gasto</th>
+                                        <th style="width: 6%;">Diferença</th>
+                                        <th style="width: 8%;">Prazo</th>
+                                        <th style="width: 7%; text-align: center;">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="switchTableBody">
+                                    <!-- Preenchido dinamicamente via CarrierSwitchModule -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Rodapé com contagem de registros -->
+                        <div style="padding: 0.75rem 1.25rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: var(--text-secondary);">
+                            <span id="switchRowCountLabel">Carregando dados...</span>
+                            <span>Sistema ParreiraLog • Módulo Estratégico</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══ MODAL DE DETALHAMENTO ("ABRIR PERSPECTIVA / RAIO-X") ════════ -->
+                <div id="switchDetailModal" style="
+                    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px);
+                    z-index: 9999; display: none; align-items: center; justify-content: center; padding: 1.5rem;
+                ">
+                    <div style="
+                        background: #0f172a; border: 1px solid rgba(59, 130, 246, 0.3); border-radius: var(--radius-lg);
+                        width: 100%; max-width: 1050px; max-height: 92vh; overflow-y: auto; box-shadow: 0 25px 50px rgba(0,0,0,0.6);
+                        display: flex; flex-direction: column;
+                    ">
+                        <!-- Header do Modal -->
+                        <div style="
+                            padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color);
+                            display: flex; justify-content: space-between; align-items: center;
+                            background: rgba(30, 41, 59, 0.6);
+                        ">
+                            <div>
+                                <h3 id="switchModalTitle" style="font-size: 1.2rem; font-weight: 700; color: #f8fafc; margin: 0;">Detalhamento da Troca</h3>
+                                <div id="switchModalSubtitle" style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 3px;">
+                                    Comparativo completo e auditável despacho a despacho.
+                                </div>
+                            </div>
+                            <button onclick="window.CarrierSwitchModule.closeDetail()" style="
+                                background: transparent; border: none; color: var(--text-secondary); cursor: pointer;
+                                padding: 0.4rem; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+                            " onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-secondary)'">
+                                <span class="material-icons-round" style="font-size: 1.5rem;">close</span>
+                            </button>
+                        </div>
+
+                        <!-- Corpo do Modal -->
+                        <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
+                            <!-- Grid Comparativo Lado a Lado -->
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+                                <!-- Card 1: Cenário Anterior -->
+                                <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.9rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
+                                        <span style="font-size: 0.85rem; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Cenário Atual</span>
+                                        <span id="detCarrierAnt" style="font-weight: 700; color: #f8fafc; font-size: 0.95rem;">-</span>
+                                    </div>
+                                    <div style="display: flex; flex-direction: column; gap: 0.45rem; font-size: 0.82rem;">
+                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Frete Base Anterior:</span> <strong id="detBaseAnt" style="color: #cbd5e1;">R$ 0,00</strong></div>
+                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Peso Excedente:</span> <strong id="detExcAnt" style="color: #cbd5e1;">R$ 0,00</strong></div>
+                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Taxas Extras / GRIS:</span> <strong id="detTaxasAnt" style="color: #cbd5e1;">R$ 0,00</strong></div>
+                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Redespacho Anterior:</span> <strong id="detRedespAnt" style="color: #cbd5e1;">R$ 0,00</strong></div>
+                                        <div style="display: flex; justify-content: space-between; padding-top: 0.6rem; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.95rem;">
+                                            <span style="font-weight: 700; color: #f1f5f9;">Total Anterior Pago:</span>
+                                            <strong id="detTotalAnt" style="color: #f1f5f9; font-size: 1.05rem;">R$ 0,00</strong>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; margin-top: 0.35rem; font-size: 0.76rem; color: var(--text-secondary);">
+                                            <span>Prazo Médio:</span> <span id="detPrazoAnt" style="font-weight: 600; color: #cbd5e1;">-</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Card 2: Novo Cenário Simulado -->
+                                <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(59, 130, 246, 0.4); border-radius: var(--radius-md); padding: 1.25rem;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.9rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(59, 130, 246, 0.2);">
+                                        <span style="font-size: 0.85rem; font-weight: 700; color: #60a5fa; text-transform: uppercase;">Novo Cenário Simulado</span>
+                                        <span id="detCarrierNovo" style="font-weight: 700; color: #60a5fa; font-size: 0.95rem;">-</span>
+                                    </div>
+                                    <div style="display: flex; flex-direction: column; gap: 0.45rem; font-size: 0.82rem;">
+                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Novo Frete Base:</span> <strong id="detBaseNovo" style="color: #cbd5e1;">R$ 0,00</strong></div>
+                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Novo Peso Excedente:</span> <strong id="detExcNovo" style="color: #cbd5e1;">R$ 0,00</strong></div>
+                                        <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Novas Taxas / GRIS:</span> <strong id="detTaxasNovo" style="color: #cbd5e1;">R$ 0,00</strong></div>
+                                        <div style="display: flex; justify-content: space-between; background: rgba(245, 158, 11, 0.1); padding: 2px 6px; border-radius: 4px;">
+                                            <span style="color: #fde047; font-weight: 600;">🟨 Redespacho Novo:</span>
+                                            <span id="detRedespNovo" style="color: #fde047; font-weight: 700;">R$ 0,00</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; padding-top: 0.6rem; border-top: 1px solid rgba(59, 130, 246, 0.2); font-size: 0.95rem;">
+                                            <span style="font-weight: 700; color: #f1f5f9;">Novo Custo Total:</span>
+                                            <strong id="detTotalNovo" style="color: #60a5fa; font-size: 1.05rem;">R$ 0,00</strong>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; margin-top: 0.35rem; font-size: 0.76rem; color: var(--text-secondary);">
+                                            <span>Novo Prazo Médio:</span> <span id="detPrazoNovo" style="font-weight: 600; color: #60a5fa;">-</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Card 3: Parecer e Decisão -->
+                                <div id="detResultBox" style="
+                                    background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3);
+                                    border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;
+                                ">
+                                    <div>
+                                        <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                                            Resultado da Troca
+                                        </div>
+                                        <div id="detResultValue" style="font-size: 1.45rem; font-weight: 800; color: #10b981; margin-bottom: 0.3rem;">
+                                            - R$ 0,00
+                                        </div>
+                                        <div id="detResultPerc" style="font-size: 0.85rem; font-weight: 600; color: #6ee7b7; margin-bottom: 0.75rem;">
+                                            Redução de 0,00%
+                                        </div>
+                                    </div>
+                                    <div id="detResultAlert" style="
+                                        font-size: 0.78rem; line-height: 1.4; padding: 0.65rem 0.85rem;
+                                        background: rgba(0, 0, 0, 0.25); border-radius: 6px; color: #f1f5f9;
+                                    ">
+                                        Carregando análise...
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tabela Despacho a Despacho (Drill-Down / Auditoria de cada NF) -->
+                            <div class="card" style="padding: 0; background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border-color); overflow: hidden;">
+                                <div style="padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--border-color); background: rgba(30, 41, 59, 0.5); display: flex; justify-content: space-between; align-items: center;">
+                                    <div style="font-weight: 700; font-size: 0.9rem; color: #f8fafc;">
+                                        Auditoria Despacho a Despacho (NFs Reais no Período)
+                                    </div>
+                                    <span style="font-size: 0.75rem; color: var(--text-secondary);">
+                                        Abra a perspectiva e audite cada envio unitário
+                                    </span>
+                                </div>
+                                <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+                                    <table class="data-table" style="width: 100%; margin: 0;">
+                                        <thead>
+                                            <tr style="background: rgba(15, 23, 42, 0.9); position: sticky; top: 0; z-index: 2;">
+                                                <th>Data</th>
+                                                <th>NF</th>
+                                                <th>Peso</th>
+                                                <th>Vol</th>
+                                                <th>Valor NF</th>
+                                                <th>Pago Anterior</th>
+                                                <th>Novo Simulado</th>
+                                                <th>Economia / Gasto</th>
+                                                <th>Composição da Nova</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="switchDetailTableBody">
+                                            <!-- Preenchido via renderDetailDispatches -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Rodapé do Modal -->
+                        <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; background: rgba(30, 41, 59, 0.4);">
+                            <button class="btn btn-primary" onclick="window.CarrierSwitchModule.closeDetail()" style="padding: 0.45rem 1.25rem;">
+                                Fechar Detalhamento
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+
                 <!-- VIEW: OCORRÊNCIAS LOGÍSTICAS -->
 
                 <!-- VIEW: LOG DE AUDITORIA -->
@@ -2763,7 +3099,7 @@
     <script src="/platform/shared/integrations/erp-ui.js?v=3.22.37"></script>
     <script src="/platform/shared/integrations/index.js?v=3.22.37"></script>
     <script src="occurrences.js?v=3.22.37"></script>
-    <script src="app.js?v=3.22.8"></script>
+    <script src="app.js?v=3.23.0"></script>
     <script>
         // Inicializa a UI de configuração ERP na seção de Integração do Dispatch
         document.addEventListener('DOMContentLoaded', function () {
@@ -2775,6 +3111,7 @@
     <script src="delivery-module.js?v=3.22.7"></script>
     <script src="cnpj-lookup.js?v=3.14.42"></script>
     <script src="bi_logistica.js?v=3.14.42"></script>
+    <script src="carrier-switch.js?v=3.23.0"></script>
 
 
 
