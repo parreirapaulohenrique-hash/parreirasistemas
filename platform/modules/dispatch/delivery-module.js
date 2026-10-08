@@ -1402,6 +1402,15 @@ const DeliveryModule = {
         const mapContainer = document.getElementById('trackingTrailMap');
         if (!mapContainer) return;
 
+        // Garante que o CSS do Leaflet esteja sempre presente no DOM
+        if (!document.getElementById('leaflet-cdn-css')) {
+            const link = document.createElement('link');
+            link.id = 'leaflet-cdn-css';
+            link.rel = 'stylesheet';
+            link.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+            document.head.appendChild(link);
+        }
+
         // Se Leaflet não estiver disponível, renderiza fallback visual diagramático
         if (typeof L === 'undefined') {
             mapContainer.innerHTML = `
@@ -1413,6 +1422,10 @@ const DeliveryModule = {
                 </div>
             `;
             return;
+        }
+
+        if (L.Icon && L.Icon.Default) {
+            L.Icon.Default.imagePath = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/';
         }
 
         // Limpa conteúdo prévio
@@ -1451,10 +1464,11 @@ const DeliveryModule = {
                 attributionControl: false
             });
 
-            // Tile layer elegante estilo voyager / carto
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            // Tile layer OpenStreetMap oficial (100% gratuito e sem necessidade de API Key)
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
-                subdomains: 'abcd'
+                subdomains: ['a', 'b', 'c'],
+                attribution: '&copy; OpenStreetMap contributors'
             }).addTo(map);
 
             // Adiciona marcadores e linhas se houver pontos
