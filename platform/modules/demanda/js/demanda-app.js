@@ -595,20 +595,40 @@ const DemandaApp = (function() {
             var file = inp.files[0];
             document.body.removeChild(inp);
             if (!file) return;
-            // Revoga URL anterior se existir
-            if (_pdfBlobUrl) { try { URL.revokeObjectURL(_pdfBlobUrl); } catch(_) {} }
-            _pdfBlobUrl = URL.createObjectURL(file);
-            // Mostra modal com botão para abrir em nova aba
-            var modal = document.getElementById("modalImportPDF");
-            var fname = document.getElementById("pdfFileName");
-            var ta    = document.getElementById("pdfTextoColar");
-            var btn   = document.getElementById("btnAbrirPdfNovaAba");
-            if (!modal) { _toast("Modal PDF nao encontrado.", "error"); return; }
-            if (fname) fname.textContent = file.name;
-            if (ta)    ta.value = "";
-            // Atualiza o href do botão âncora diretamente (não abre automaticamente)
-            if (btn) { btn.href = _pdfBlobUrl; }
-            modal.style.display = "flex";
+
+            // Tentativa de extração direta automática em memória (sem exigir copiar/colar do usuário)
+            _toast("Processando cotação em PDF...", "info");
+            (async function() {
+                try {
+                    if (typeof DemandaPDF !== 'undefined' && typeof DemandaPDF.parseCotacaoPDF === 'function') {
+                        var itens = await DemandaPDF.parseCotacaoPDF(file);
+                        if (Array.isArray(itens) && itens.length > 0) {
+                            var validados = typeof DemandaImport !== 'undefined' && typeof DemandaImport.validateItens === 'function'
+                                ? DemandaImport.validateItens(itens)
+                                : itens;
+                            _showConferencia(validados);
+                            _toast(itens.length + " item(ns) extraído(s) do PDF com sucesso!", "success");
+                            return;
+                        }
+                    }
+                } catch (err) {
+                    console.warn("[DemandaApp] Falha na extração automática do PDF:", err);
+                }
+
+                // Fallback para PDFs escaneados / sem camada de texto selecionável
+                if (_pdfBlobUrl) { try { URL.revokeObjectURL(_pdfBlobUrl); } catch(_) {} }
+                _pdfBlobUrl = URL.createObjectURL(file);
+                var modal = document.getElementById("modalImportPDF");
+                var fname = document.getElementById("pdfFileName");
+                var ta    = document.getElementById("pdfTextoColar");
+                var btn   = document.getElementById("btnAbrirPdfNovaAba");
+                if (!modal) { _toast("Modal PDF nao encontrado.", "error"); return; }
+                if (fname) fname.textContent = file.name;
+                if (ta)    ta.value = "";
+                if (btn) { btn.href = _pdfBlobUrl; }
+                modal.style.display = "flex";
+                _toast("PDF escaneado ou sem texto selecionável. Cole o conteúdo manualmente.", "warning");
+            })();
         };
         inp.click();
     }
@@ -623,10 +643,23 @@ const DemandaApp = (function() {
         if (!ta || !ta.value.trim()) { _toast("Cole o texto do PDF antes de processar.", "warning"); return; }
         var texto = ta.value.trim();
         _fecharImportPDF();
-        var taImport = document.getElementById("textareaImport");
-        if (taImport) taImport.value = texto;
-        _openModal("modalTexto");
-        _toast("Texto do PDF carregado! Clique em Processar.", "info");
+
+        var itens = typeof DemandaImport !== 'undefined' && typeof DemandaImport.parseText === 'function'
+            ? DemandaImport.parseText(texto)
+            : [];
+        if (!itens || itens.length === 0) {
+            var taImport = document.getElementById("textareaImport");
+            if (taImport) taImport.value = texto;
+            _openModal("modalTexto");
+            _toast("Texto carregado. Ajuste os dados e processe.", "info");
+            return;
+        }
+
+        var validados = typeof DemandaImport !== 'undefined' && typeof DemandaImport.validateItens === 'function'
+            ? DemandaImport.validateItens(itens)
+            : itens;
+        _showConferencia(validados);
+        _toast(itens.length + " item(ns) identificados a partir do texto do PDF!", "success");
     }
 
 
