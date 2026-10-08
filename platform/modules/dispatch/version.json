@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.22.8",
-  "build": "20261008-v3.22.8",
+  "version": "3.23.0",
+  "build": "20261008-v3.23.0",
   "lastUpdate": "2026-10-08",
-  "releaseDate": "2026-10-08T12:57:00-03:00",
-  "change": "v3.22.8: Adição de Valor Total de NFs e % Média Total nas linhas de totais mensais e diários na tela de Montagem de Carga."
+  "releaseDate": "2026-10-08T15:00:00-03:00",
+  "change": "v3.23.0: Nova tela de Análise de Troca de Transportadora com cálculo de custo total real (frete base, excedente, taxas, redespacho destacado e prazo), KPIs no topo, comparativo consolidado e auditoria despacho a despacho com exportação em Excel."
 }
