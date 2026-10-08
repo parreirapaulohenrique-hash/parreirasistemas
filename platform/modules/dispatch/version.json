@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.24.1",
-  "build": "20261008-v3.24.1",
+  "version": "3.24.0",
+  "build": "20261008-v3.24.0",
   "lastUpdate": "2026-10-08",
-  "releaseDate": "2026-10-08T16:45:00-03:00",
-  "change": "v3.24.1: Correção do mapa de rastreamento com adoção do OpenStreetMap oficial (zero API Key) e contenção estrita do container Leaflet (overflow: hidden, isolation: isolate) impedindo sobreposição de tiles na tela."
+  "releaseDate": "2026-10-08T16:20:00-03:00",
+  "change": "v3.24.0: Remoção dos botões externos Waze/Google Maps e implantação do Registro de Rastreamento completo da rota (Origem ao Destino) com mapa interativo Leaflet/OSM, timeline auditável passo a passo e gravação de pontos de passagem GPS em tempo real para Moto Entrega e Carro Entrega."
 }

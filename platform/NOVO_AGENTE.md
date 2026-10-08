@@ -568,16 +568,4 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
   - **Inventário Cíclico & Acurácia IRA:** Agendador de contagem cíclica aleatória por amostragem e cálculo do Indicador de Acurácia de Registro de Estoque (IRA).
   - **Gerador de Etiquetas ZPL II e Térmicas:** Módulo `wms-etiquetas.js` para geração de código ZPL II (Zebra Programming Language) nativo para impressoras industriais térmicas (Zebra ZT411, ZD220) e impressão direta formatada.
 
-* **2026-10-08 (v3.21.82 / Plataforma & Módulos):**
-  - **Favicons Nativos em SVG nas Abas do Navegador:** Padronização visual em lote de todas as abas do navegador nos módulos da plataforma, utilizando ícones coloridos em SVG inline (`viewBox='0 0 100 100' font-size='90'`) no mesmo padrão de alta visibilidade do WMS:
-    * **Cotação & Demanda:** 📊 (`modules/demanda/index.html`)
-    * **Despacho Logístico:** 🚚 (`modules/dispatch/index.html`)
-    * **WMS Gestão de Armazém:** 📦 (`modules/wms/index.html`)
-    * **WMS Coletor Mobile:** 📱 (`modules/wms-coletor/index.html`)
-    * **Bússola Gestão ERP & Fluxo de Caixa:** 💰 (`modules/erp-consultoria/index.html`, `modules/fluxo-caixa/index.html`)
-    * **MAXCRM Prospecção & Painel:** 🎯 (`modules/prospeccao/index.html`, `modules/prospeccao/painel.html`)
-    * **Painel Master / Admin:** 👑 (`modules/master/index.html`)
-    * **Hub Plataforma Principal:** ⚡ (`platform/index.html`)
-    * **Login Central:** 🔐 (`platform/login.html`)
-
 
