@@ -21,7 +21,7 @@
     <script>if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <!-- Design system da plataforma -->
     <link rel="stylesheet" href="/platform/core/styles/portal.css">
-    <link rel="stylesheet" href="styles/demanda.css?v=3.21.62">
+    <link rel="stylesheet" href="styles/demanda.css?v=3.21.64">
     <link rel="stylesheet" href="styles/demanda-analytics.css?v=3.0.9">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2048%2048%22%20width%3D%2248%22%20height%3D%2248%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22bg_dmd%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%2248%22%20y2%3D%2248%22%20gradientUnits%3D%22userSpaceOnUse%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23064e3b%22/%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%23047857%22/%3E%0A%20%20%20%20%3C/linearGradient%3E%0A%20%20%3C/defs%3E%0A%20%20%3Crect%20width%3D%2248%22%20height%3D%2248%22%20rx%3D%2211%22%20fill%3D%22url%28%23bg_dmd%29%22/%3E%0A%20%20%3Crect%20x%3D%2210%22%20y%3D%2224%22%20width%3D%226%22%20height%3D%2214%22%20rx%3D%222%22%20fill%3D%22%23a7f3d0%22/%3E%0A%20%20%3Crect%20x%3D%2221%22%20y%3D%2217%22%20width%3D%226%22%20height%3D%2221%22%20rx%3D%222%22%20fill%3D%22%2334d399%22/%3E%0A%20%20%3Crect%20x%3D%2232%22%20y%3D%2211%22%20width%3D%226%22%20height%3D%2227%22%20rx%3D%222%22%20fill%3D%22%23ffffff%22/%3E%0A%20%20%3Cpath%20d%3D%22M10%2020%20L21%2013%20L33%208%20L38%2012%22%20fill%3D%22none%22%20stroke%3D%22%236ee7b7%22%20stroke-width%3D%222.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%0A%3C/svg%3E">
 </head>
@@ -74,8 +74,8 @@
                     Pesquisar Peças
                 </button>
                 <button class="nav-item" id="nav-concorrente" onclick="DemandaApp.switchView('concorrente')">
-                    <span class="material-icons-round">trending_up</span>
-                    Cotação Concorrente
+                    <span class="material-icons-round">price_change</span>
+                    Preço Concorrente
                 </button>
                 <button class="nav-item" id="nav-orcamento" onclick="DemandaApp.switchView('orcamento')">
                     <span class="material-icons-round">description</span>
@@ -327,6 +327,17 @@
                                         <option value="manual">✏️ Manual</option>
                                     </select>
                                 </div>
+                                <!-- Linha Concorrente / Orçamento de Concorrente -->
+                                <div class="demanda-concorrente-row" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .6rem;background:rgba(245,158,11,.06);border-top:1px solid rgba(245,158,11,.18);">
+                                    <span class="material-icons-round" style="font-size:1rem;color:#f59e0b">store</span>
+                                    <span style="font-size:.73rem;color:#f59e0b;font-weight:700;white-space:nowrap">Concorrente:</span>
+                                    <select id="selectConcorrente" class="form-select" style="flex:1;padding:.2rem .4rem;font-size:.76rem;background:var(--bg-dark);border:1px solid var(--border-color);color:var(--text-primary);border-radius:4px" onchange="DemandaApp.onConcorrenteChange(this.value)">
+                                        <option value="">-- Cotação Própria (Sem Concorrente) --</option>
+                                    </select>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="DemandaApp.abrirModalNovoConcorrente()" title="Cadastrar Novo Concorrente" style="padding:.2rem .45rem;font-size:.72rem;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;background:rgba(255,255,255,.05)">
+                                        <span class="material-icons-round" style="font-size:.85rem">add</span> Novo
+                                    </button>
+                                </div>
                             </div>
 
                             <!-- Tabela de itens -->
@@ -338,6 +349,7 @@
                                             <th>Referência</th>
                                             <th style="min-width:120px">Descrição</th>
                                             <th>Qtde</th>
+                                            <th id="thPrecoConc" style="display:none;color:#f59e0b;text-align:right;white-space:nowrap">Preço Conc.</th>
                                             <th>Status</th>
                                             <th></th>
                                         </tr>
@@ -705,23 +717,41 @@
                 </div>
             </div>
 
-            <!-- VIEW: Cotação do Concorrente -->
-            <div id="view-concorrente" style="display:none;flex-direction:column">
-                <div class="top-bar">
+            <!-- VIEW: Preço Concorrente (Inteligência Competitiva & Mapeamento de Preços) -->
+            <div id="view-concorrente" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+                <div class="top-bar" style="flex-wrap:wrap;gap:.75rem">
                     <div class="breadcrumb">
-                        <span class="material-icons-round" style="font-size:1rem;color:#f59e0b">trending_up</span>
-                        <span>Cotação do Concorrente</span>
+                        <span class="material-icons-round" style="font-size:1.1rem;color:#f59e0b">price_change</span>
+                        <span style="font-weight:700">Preço Concorrente</span>
+                        <span style="color:var(--text-secondary);font-size:.78rem">· Inteligência de Mercado & Benchmarking</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:.5rem;margin-left:auto">
+                        <button class="btn btn-secondary btn-sm" onclick="DemandaApp.abrirModalNovoConcorrente()" style="display:inline-flex;align-items:center;gap:.3rem">
+                            <span class="material-icons-round" style="font-size:.9rem">add_business</span> Cadastrar Concorrente
+                        </button>
+                        <button class="btn btn-primary btn-sm" onclick="DemandaApp.switchView('captura')" style="display:inline-flex;align-items:center;gap:.3rem">
+                            <span class="material-icons-round" style="font-size:.9rem">add_shopping_cart</span> Nova Cotação
+                        </button>
                     </div>
                 </div>
-                <div style="flex:1;overflow-y:auto;padding:1.25rem;display:flex;flex-direction:column;gap:1.25rem">
-                    <!-- Form nova cotação -->
-                    <div id="concFormContainer">
-                        <div style="padding:3rem;text-align:center;color:var(--text-secondary)">
-                            <span class="material-icons-round" style="font-size:2rem;opacity:.4">trending_up</span>
-                            <p style="margin-top:.5rem;font-size:.85rem">Clique em "Cotação Concorrente" na sidebar para carregar o formulário.</p>
-                        </div>
-                    </div>
-                    <!-- Histórico de cotações -->
+
+                <!-- Sub-abas do Preço Concorrente -->
+                <div style="display:flex;align-items:center;gap:.5rem;padding:.5rem 1.25rem;background:rgba(255,255,255,.015);border-bottom:1px solid var(--border-color);overflow-x:auto">
+                    <button class="chip active" id="chipConcPrecos" onclick="DemandaApp.switchConcSubTab('precos')" style="font-size:.78rem;padding:.3rem .75rem;border-radius:6px;display:inline-flex;align-items:center;gap:.35rem">
+                        <span class="material-icons-round" style="font-size:.9rem">table_rows</span> Mapeamento de Preços por Peça
+                    </button>
+                    <button class="chip" id="chipConcCotacoes" onclick="DemandaApp.switchConcSubTab('cotacoes')" style="font-size:.78rem;padding:.3rem .75rem;border-radius:6px;display:inline-flex;align-items:center;gap:.35rem">
+                        <span class="material-icons-round" style="font-size:.9rem">receipt_long</span> Cotações de Concorrentes
+                    </button>
+                    <button class="chip" id="chipConcCadastrados" onclick="DemandaApp.switchConcSubTab('concorrentes')" style="font-size:.78rem;padding:.3rem .75rem;border-radius:6px;display:inline-flex;align-items:center;gap:.35rem">
+                        <span class="material-icons-round" style="font-size:.9rem">store</span> Concorrentes Cadastrados
+                    </button>
+                </div>
+
+                <div style="flex:1;overflow-y:auto;padding:1.25rem;display:flex;flex-direction:column;gap:1rem" id="concMainContent">
+                    <!-- Form nova cotação (quando na aba cotacoes) -->
+                    <div id="concFormContainer"></div>
+                    <!-- Histórico de cotações / Tabela de Preços -->
                     <div id="concHistoricoContainer"></div>
                 </div>
             </div>
@@ -5928,6 +5958,18 @@
                         <span class="material-icons-round">select_all</span> Selecionar todos
                     </button>
                 </div>
+                <!-- Banner Concorrente na Conferência de Importação -->
+                <div style="display:flex;align-items:center;gap:.6rem;padding:.5rem .75rem;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;margin-bottom:.85rem;flex-wrap:wrap">
+                    <span class="material-icons-round" style="color:#f59e0b;font-size:1.15rem">storefront</span>
+                    <span style="font-size:.78rem;font-weight:700;color:#f59e0b">Origem do Orçamento:</span>
+                    <select id="confSelectConcorrente" style="flex:1;min-width:200px;max-width:320px;background:var(--bg-dark);color:var(--text-primary);border:1px solid var(--border-color);border-radius:5px;padding:.3rem .5rem;font-size:.8rem" onchange="DemandaApp.onConfConcorrenteChange(this.value)">
+                        <option value="">-- Cotação Própria / Sem Concorrente --</option>
+                    </select>
+                    <button class="btn btn-secondary btn-sm" onclick="DemandaApp.abrirModalNovoConcorrente()" style="font-size:.75rem;padding:.25rem .6rem;display:inline-flex;align-items:center;gap:.25rem">
+                        <span class="material-icons-round" style="font-size:.85rem">add</span> Novo Concorrente
+                    </button>
+                    <span id="confBadgeOrcamento" style="display:none;font-size:.72rem;background:rgba(255,255,255,.08);padding:.2rem .5rem;border-radius:4px;color:var(--text-secondary)"></span>
+                </div>
                 <div style="overflow-x:auto">
                     <table class="conferencia-table">
                         <thead>
@@ -5936,7 +5978,8 @@
                                 <th>#</th>
                                 <th>Referência Original</th>
                                 <th>Descrição</th>
-                                <th style="width:70px">Qtde</th>
+                                <th style="width:65px">Qtde</th>
+                                <th style="width:115px">Preço Conc. (R$)</th>
                                 <th>Obs</th>
                                 <th style="width:80px">Status</th>
                             </tr>
@@ -5950,6 +5993,44 @@
                 <button class="btn btn-primary" onclick="DemandaApp.confirmConferencia()">
                     <span class="material-icons-round">add_shopping_cart</span>
                     Adicionar Selecionados à Cotação
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Cadastro de Concorrente -->
+    <div class="modal-overlay" id="modalNovoConcorrente" style="display:none">
+        <div class="modal-card modal-sm" style="max-width:440px">
+            <div class="modal-header">
+                <h3><span class="material-icons-round" style="color:#f59e0b">add_business</span> Cadastrar Concorrente</h3>
+                <button class="btn-close" onclick="DemandaApp.closeModal('modalNovoConcorrente')">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
+                <div>
+                    <label style="font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.3rem">Nome / Razão Social <span style="color:var(--accent-danger)">*</span></label>
+                    <input id="novoConcNome" type="text" placeholder="Ex: J.A. Agrícola, Rondobras..." style="width:100%;padding:.45rem .65rem;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:.85rem">
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
+                    <div>
+                        <label style="font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.3rem">Cidade / UF</label>
+                        <input id="novoConcCidade" type="text" placeholder="Ex: Redenção - PA" style="width:100%;padding:.45rem .65rem;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:.85rem">
+                    </div>
+                    <div>
+                        <label style="font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.3rem">Telefone</label>
+                        <input id="novoConcTelefone" type="text" placeholder="(00) 00000-0000" style="width:100%;padding:.45rem .65rem;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:.85rem">
+                    </div>
+                </div>
+                <div>
+                    <label style="font-size:.78rem;color:var(--text-secondary);display:block;margin-bottom:.3rem">Observação / Especialidade</label>
+                    <input id="novoConcObs" type="text" placeholder="Ex: Vende rolamentos, peças colheitadeiras..." style="width:100%;padding:.45rem .65rem;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:.85rem">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="DemandaApp.closeModal('modalNovoConcorrente')">Cancelar</button>
+                <button class="btn btn-primary" onclick="DemandaApp.salvarNovoConcorrenteModal()" style="display:inline-flex;align-items:center;gap:.35rem">
+                    <span class="material-icons-round" style="font-size:1rem">save</span> Salvar Concorrente
                 </button>
             </div>
         </div>
@@ -6301,8 +6382,8 @@
     <!-- Módulo de Demanda -->
     <script src="js/demanda-states.js?v=3.21.49"></script>
     <script src="js/demanda-db.js?v=3.21.49"></script>
-    <script src="js/demanda-import.js?v=3.21.62"></script>
-    <script src="js/demanda-search.js?v=3.21.63"></script>
+    <script src="js/demanda-import.js?v=3.21.64"></script>
+    <script src="js/demanda-search.js?v=3.21.64"></script>
     <script src="js/demanda-lookup.js?v=3.21.49"></script>
     <script src="js/demanda-pdf.js?v=3.21.60"></script>
     <script src="js/demanda-clientes.js?v=3.21.49"></script>
@@ -6312,7 +6393,7 @@
     <script src="js/demanda-analytics.js?v=3.0.9"></script>
     <script src="js/demanda-comercial.js?v=3.0.6"></script>
     <script src="js/demanda-enrichment.js?v=3.0.5"></script>
-    <script src="js/demanda-app.js?v=3.21.62"></script>
+    <script src="js/demanda-app.js?v=3.21.64"></script>
 
     <!-- ═══════════════════════════════════════════════════════════
          MODAL: Administração da Base Técnica de Peças
