@@ -281,15 +281,26 @@ window.CarrierSwitchModule = (function () {
         const targetBairro = normStr(dispatch.neighborhood);
         const targetCarrierNorm = normStr(candidateCarrierName);
 
-        // Busca regras da transportadora candidata para o município/bairro
+        // Busca regras da transportadora candidata para o município/bairro (direto ou via hub de redespacho)
         const matchingRules = state.freightRules.filter(r => {
             if (normStr(r.transportadora) !== targetCarrierNorm) return false;
             const rCity = normStr(r.cidade);
-            if (!rCity) return false;
+            const rRedespCity = normStr(r.cidadeRedespacho || '');
+            const rBairro = normStr(r.bairro || '');
 
-            if (rCity === targetCity) return true;
-            // Checagem parcial de cidades compostas
-            if (targetCity && (targetCity.includes(rCity) || rCity.includes(targetCity))) return true;
+            // 1. Atendimento via Hub de Redespacho para a cidade ou bairro de destino
+            if (rRedespCity && rRedespCity === targetCity) return true;
+            if (targetBairro && rRedespCity && rRedespCity === targetBairro) return true;
+
+            // 2. Atendimento direto por cidade
+            if (rCity && rCity === targetCity) return true;
+
+            // 3. Atendimento direto por bairro
+            if (targetBairro && rBairro && rBairro === targetBairro) return true;
+
+            // 4. Checagem parcial de cidades compostas
+            if (targetCity && rCity && (targetCity.includes(rCity) || rCity.includes(targetCity))) return true;
+
             return false;
         });
 
@@ -297,11 +308,40 @@ window.CarrierSwitchModule = (function () {
             return null; // Transportadora não atende esta rota
         }
 
-        // Seleciona a melhor regra para a cidade (prioriza bairro se especificado)
-        let rule = matchingRules[0];
-        if (targetBairro) {
-            const bairroMatch = matchingRules.find(r => normStr(r.bairro) === targetBairro);
-            if (bairroMatch) rule = bairroMatch;
+        // Seleciona a melhor regra para a cidade e modalidade de entrega
+        const hasOriginalRedespacho = (parseNum(dispatch.redespTotal, 0) > 0) ||
+            (dispatch.redespacho && dispatch.redespacho !== '-' && String(dispatch.redespacho).trim() !== '');
+
+        let rule = null;
+
+        // 1. Se o despacho original exigiu redespacho, prioriza regra que atende como cidadeRedespacho
+        if (hasOriginalRedespacho) {
+            rule = matchingRules.find(r => normStr(r.cidadeRedespacho) === targetCity);
+        }
+
+        // 2. Prioriza bairro específico se houver
+        if (!rule && targetBairro) {
+            rule = matchingRules.find(r => normStr(r.bairro) === targetBairro || normStr(r.cidadeRedespacho) === targetBairro);
+        }
+
+        // 3. Se não exigia redespacho original, tenta regra direta para a cidade (sem redespacho)
+        if (!rule && !hasOriginalRedespacho) {
+            rule = matchingRules.find(r => normStr(r.cidade) === targetCity && (!r.cidadeRedespacho || r.cidadeRedespacho === '-'));
+        }
+
+        // 4. Tenta qualquer regra que atenda direto à cidade
+        if (!rule) {
+            rule = matchingRules.find(r => normStr(r.cidade) === targetCity);
+        }
+
+        // 5. Tenta qualquer regra que atenda via cidadeRedespacho
+        if (!rule) {
+            rule = matchingRules.find(r => normStr(r.cidadeRedespacho) === targetCity);
+        }
+
+        // 6. Fallback para a primeira regra compatível
+        if (!rule) {
+            rule = matchingRules[0];
         }
 
         const config = state.carrierConfigs[candidateCarrierName] ||
@@ -567,7 +607,7 @@ window.CarrierSwitchModule = (function () {
             // Percentual da transportadora anterior
             const antRule = state.freightRules.find(r =>
                 normStr(r.transportadora) === normStr(actualCarrier) &&
-                (normStr(r.cidade) === normStr(d.city) || (d.city && (normStr(d.city).includes(normStr(r.cidade)) || normStr(r.cidade).includes(normStr(d.city)))))
+                (normStr(r.cidade) === normStr(d.city) || normStr(r.cidadeRedespacho || '') === normStr(d.city) || (d.city && (normStr(d.city).includes(normStr(r.cidade)) || normStr(r.cidade).includes(normStr(d.city)))))
             );
             const percentualTabelaAnterior = parseNum(d.percentual, 0) || (antRule ? parseNum(antRule.percentual, 0) : 0) || (d.nfValue > 0 ? (baseAnterior / d.nfValue) * 100 : 0);
 
@@ -799,6 +839,23 @@ window.CarrierSwitchModule = (function () {
 
                 lastRedespCarrier = sim.redespCarrierNovo || lastRedespCarrier;
                 lastLeadTimeNovo = sim.leadTimeNovo;
+            } else {
+                item.carrierNovo = newCarrier;
+                item.custoNovo = 0;
+                item.mainNovo = 0;
+                item.redespachoNovo = 0;
+                item.redespCarrierNovo = null;
+                item.baseNovo = 0;
+                item.excessoNovo = 0;
+                item.taxasNovo = 0;
+                item.leadTimeNovo = '-';
+                item.leadTimeDaysNovo = 0;
+                item.percentualTabelaNovo = 0;
+                item.percentualEfetivoNovo = 0;
+                item.diferenca = 0;
+                item.diferencaPerc = 0;
+                item.diffDiasPrazo = 0;
+                item.hasRedespachoNovo = false;
             }
 
             group.custoNovoTotal += item.custoNovo;
