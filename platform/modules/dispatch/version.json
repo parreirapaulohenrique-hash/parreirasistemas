@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.24.9",
-  "build": "20261009-v3.24.9",
+  "version": "3.25.0",
+  "build": "20261009-v3.25.0",
   "lastUpdate": "2026-10-09",
-  "releaseDate": "2026-10-09T09:35:00-03:00",
-  "change": "v3.24.9: Calibração de larguras de colunas (mínimo necessário para Município e Último Envio); cabeçalho fixo sticky; container com scroll horizontal estilizado e sempre visível para evitar corte de informações laterais."
+  "releaseDate": "2026-10-09T09:58:00-03:00",
+  "change": "v3.25.0: Correção no motor de cotação reversa da Análise de Troca: suporte a regras com redespacho via hub (cidadeRedespacho), priorização por rota e atualização dinâmica e precisa ao alternar entre transportadoras (ex: TNORTE 3% vs BOA ESPERANÇA 4%)."
 }
