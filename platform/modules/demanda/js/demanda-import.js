@@ -57,17 +57,52 @@ const DemandaImport = (() => {
         /^(cod\.?\s*item|denominação|denomina|quantidade|qtde?|referencia|descrição|descri|titulo|título|peças|pecas|trator|produto|marca|obs|n[°º]|item|ref|seq|#|un|und|unid\.?)$/i
     ];
 
+    // Padrões de conversa informal e saudações comuns em WhatsApp / mensagens
+    const CONVERSATION_NOISE_PATTERNS = [
+        /^(bom dia|boa tarde|boa noite|ola|olá|opa|fala|blz|oi|e ai|e aí)\b/i,
+        /\b(cota\s+pra\s+mim|cota\s+a[ií]|or[cç]a\s+a[ií]|or[cç]a\s+pra\s+mim|v[eê]\s+se\s+tem|tem\s+a[ií]|tem\s+em\s+estoque|tem\s+dispon[ií]vel|tem\s+pronta\s+entrega|qual\s+o\s+pre[cç]o|qual\s+o\s+valor|quanto\s+custa|quanto\s+t[aá]|consegue\s+desconto|manda\s+o\s+or[cç]amento|manda\s+a\s+cota[cç][aã]o|segue\s+a\s+lista|segue\s+os\s+itens|segue\s+cota[cç][aã]o|segue\s+pedido|preciso\s+dessas\s+pe[cç]as|preciso\s+desses\s+itens|d[aá]\s+uma\s+olhada)\b/i,
+        /^(obrigad[oa]|obg|valeu|vlw|agrade[cç]o|aguardo|aguardo\s+retorno|fico\s+no\s+aguardo|abra[cç]o|tks|thanks|fechou|perfeito|combinado|ok)\b/i,
+        /\b(criptografia\s+de\s+ponta\s+a\s+ponta|mensagem\s+apagada|mensagem\s+exclu[ií]da|arquivo\s+de\s+m[ií]dia\s+oculto|m[ií]dia\s+ocult[ao]|figurinha|sticker|chamada\s+de\s+voz|chamada\s+de\s+v[ií]deo|audio\s+oculto|[aá]udio\s+oculto)\b/i,
+        /^(aten[cç][aã]o|aviso|nota|importante)\b/i
+    ];
+
+    /**
+     * Remove prefixos e cabeçalhos automáticos de cópia de conversas do WhatsApp Web / Mobile.
+     * Ex: "[13:57, 08/10/2026] Carlos Central Peças: Rolamento 6028 2rsc3" -> "Rolamento 6028 2rsc3"
+     * Ex: "08/10/2026, 13:57 - Carlos: 67048/10" -> "67048/10"
+     */
+    function _cleanWhatsAppPrefix(linha) {
+        if (!linha) return '';
+        let s = linha.trim();
+        // [13:57, 08/10/2026] Nome:
+        s = s.replace(/^\[\s*\d{1,2}:\d{2}(?::\d{2})?\s*,\s*\d{1,2}\/\d{1,2}\/\d{2,4}\s*\]\s*[^:\n]+:?\s*/i, '');
+        // [08/10/2026, 13:57:12] Nome:
+        s = s.replace(/^\[\s*\d{1,2}\/\d{1,2}\/\d{2,4}\s*,\s*\d{1,2}:\d{2}(?::\d{2})?\s*\]\s*[^:\n]+:?\s*/i, '');
+        // 08/10/2026, 13:57 - Nome:
+        s = s.replace(/^\d{1,2}\/\d{1,2}\/\d{2,4}\s*,?\s*\d{1,2}:\d{2}(?::\d{2})?\s*-\s*[^:\n]+:?\s*/i, '');
+        // 13:57 - Nome: ou [13:57] Nome:
+        s = s.replace(/^(?:\[\d{1,2}:\d{2}(?::\d{2})?\]|\d{1,2}:\d{2}(?::\d{2})?\s*-)\s*[^:\n]+:?\s*/i, '');
+        // ~ Nome:
+        s = s.replace(/^~\s*[^:\n]+:?\s*/, '');
+        // Linha isolada que é apenas nome de contato com dois pontos: "Carlos Central Peças:"
+        s = s.replace(/^[\w\s\u00C0-\u00FF.\-_]{3,40}:\s*$/, '');
+        return s.trim();
+    }
+
     // Padrões de centro de custo ou linhas de puro ruído
     function _isNoiseLine(s) {
         if (!s) return true;
         s = s.trim();
         if (s.length < 2) return true;
-        if (/^\.?\d{1,5}$/.test(s)) return true; // número isolado tipo '7401' ou '16'
+        if (/^\.?\d{1,3}$/.test(s)) return true; // números isolados curtos tipo 1, 2, 99
         if (/^[.:,]?\d+([.,]\d+)+$/.test(s) && s.length <= 12) return true; // números isolados tipo preço
         if (/^\.+$/.test(s)) return true; // ponto isolado
 
         for (let i = 0; i < NOISE_LINE_PATTERNS.length; i++) {
             if (NOISE_LINE_PATTERNS[i].test(s)) return true;
+        }
+        for (let i = 0; i < CONVERSATION_NOISE_PATTERNS.length; i++) {
+            if (CONVERSATION_NOISE_PATTERNS[i].test(s)) return true;
         }
         return false;
     }
@@ -77,8 +112,9 @@ const DemandaImport = (() => {
 
         const linhas = text
             .split(/[\n\r]+/)
+            .map(l => _cleanWhatsAppPrefix(l))
             .map(l => l.trim())
-            .filter(l => l.length > 1);
+            .filter(l => l.length > 1 && !_isNoiseLine(l));
 
         // Tenta primeiro detectar tabela estruturada (OCR, PDF, Excel colado)
         const tableItens = _tryParseTableLines(linhas);
@@ -91,8 +127,9 @@ const DemandaImport = (() => {
             if (item) itens.push(item);
         }
 
-        if (itens.length === 0 && text.trim() && !_isNoiseLine(text.trim())) {
-            itens.push({ refOriginal: '', descOriginal: text.trim(), qtdeSolicitada: 1, obs: '', incerteza: true });
+        if (itens.length === 0 && text.trim() && !_isNoiseLine(_cleanWhatsAppPrefix(text.trim()))) {
+            const cleanT = _cleanWhatsAppPrefix(text.trim());
+            itens.push({ refOriginal: '', descOriginal: cleanT, qtdeSolicitada: 1, obs: '', incerteza: true });
         }
 
         return itens;
@@ -208,8 +245,9 @@ const DemandaImport = (() => {
      * Valida se uma string é um código de peça agrícola / automotiva / industrial real.
      * Suporta formatos:
      * - Alfanumérico (14M7230/JA, 6206-2RS-C3/PFI, ALM8/JA, F110390 -INA, DZ126340, RE123456)
-     * - Números com separador (450452029/199, 73382326-952, 3003060080/199)
-     * - Códigos numéricos OEM puros de 6 a 12 dígitos (61174275, 87016581, 73380630)
+     * - Conjuntos de rolamento com barra ou hífen (67048/10, LM11949/10, 450452029/199)
+     * - Códigos numéricos padrão de rolamentos e OEM de 4 a 12 dígitos (6204, 16012, 22310, 22309, 22216, 61174275)
+     * - Prefixo de mancais/rolamentos com letras e espaço/ponto (FL. 204, F 600, UC 205, UC211-32, UCP 205)
      */
     function _isPartCode(s) {
         if (!s) return false;
@@ -219,16 +257,17 @@ const DemandaImport = (() => {
         if (/^\d{2}\/\d{2}\/\d{2,4}$/.test(s)) return false; // data
         if (/^\(?\d{2}\)?\s*\d{4,5}-?\d{4}$/.test(s)) return false; // telefone
         if (/^\d+([.,]\d+)+$/.test(s) && s.length < 10 && !/[A-Za-z]/.test(s)) return false; // preço/decimal puro
-        if (/^\d{1,5}$/.test(s)) return false; // número curto
+        if (/^\d{1,3}$/.test(s)) return false; // número curto (1 a 3 dígitos é quantidade/índice)
+        if (/^(5101|5102|5405|6102|6405|7102|7401)$/.test(s)) return false; // CFOPs fiscais comuns
 
-        // 1. Alfanumérico com letras e dígitos
+        // 1. Alfanumérico com letras e dígitos (ex: 6028-2RS, FL. 204, F113407, UC211-32, F 600)
         if (/[A-Za-z]/.test(s) && /\d/.test(s)) return true;
-        // 2. Dígitos com hífen ou barra
-        if (/^\d{4,}[-/]\d+/.test(s)) return true;
-        // 3. Código numérico OEM puro com 6 a 12 dígitos
-        if (/^\d{6,12}$/.test(s)) return true;
-        // 4. Padrão OEM clássico de 1-4 letras + dígitos
-        if (/^[A-Za-z]{1,4}\d{3,}/.test(s)) return true;
+        // 2. Números com barra ou hífen (ex: 67048/10, 67048-10, 450452029/199)
+        if (/^\d{3,}[-/]\d+/.test(s)) return true;
+        // 3. Rolamentos e peças numéricas padrão (4 a 12 dígitos: 6204, 16012, 22310, 22309, 22216)
+        if (/^\d{4,12}$/.test(s)) return true;
+        // 4. Padrão OEM com prefixo de letras e espaços/pontos (ex: FL. 204, F 600, UC 205)
+        if (/^[A-Za-z]{1,4}\.?\s*[-/]?\s*\d{2,6}/.test(s)) return true;
 
         return false;
     }
@@ -239,9 +278,10 @@ const DemandaImport = (() => {
 
     /**
      * Tenta extrair ref, qtde e desc de uma única linha de texto.
-     * Suporta quantidade no início OU no final da linha.
+     * Suporta WhatsApp, códigos com espaços ("FL. 204", "F 600"), sufixos de rolamento e quantidade.
      */
     function _parseLinha(linha) {
+        linha = _cleanWhatsAppPrefix(linha);
         linha = linha.replace(/^[-•*·]\s*/, '').replace(/^\d+[.)]\s*/, '').trim();
         if (!linha || _isNoiseLine(linha)) return null;
 
@@ -249,10 +289,50 @@ const DemandaImport = (() => {
         let ref  = '';
         let desc = linha;
 
-        // ── Padrao John Deere: "DESCRICAO;MARCA/CODIGO" ou "DESCRICAO/CODIGO" ──
-        // Referencia eh o segmento apos a ULTIMA barra, se parecer um codigo de peca
+        // ── 0. Linha que já é um código de peça direto ──
+        // Ex: "67048/10", "16012", "FL. 204", "F113407", "F 600", "22310", "UC211-32", "22309", "22216"
+        if (_isPartCode(linha)) {
+            const code = linha.toUpperCase().trim();
+            return {
+                refOriginal:    code,
+                descOriginal:   code,
+                qtdeSolicitada: 1,
+                obs:            '',
+                incerteza:      false,
+            };
+        }
+
+        // ── 1. Categoria no início: "Rolamento 6028 2rsc3", "Retentor 01234", "Correia A-45" ──
+        const mTipo = linha.match(/^([A-Za-zÀ-ÿ]{3,20})\s+(.+)$/i);
+        if (mTipo && /^(rolamento|mancal|retentor|correia|porca|parafuso|filtro|anel|bucha|cruzeta|junta|v[aá]lvula|valvula|disco|eixo|sensor|bomba)$/i.test(mTipo[1])) {
+            const tipo = mTipo[1].charAt(0).toUpperCase() + mTipo[1].slice(1).toLowerCase();
+            let resto = mTipo[2].trim();
+
+            // Quantidade explícita no final do resto: "6028 2 un", "A-45 3 pçs", "6028 x 2"
+            const mqFinal = resto.match(/\s+(?:x\s*)?(\d+(?:[.,]\d+)?)\s*(?:x|pcs?|un(?:id)?|peças?|pç)$/i);
+            if (mqFinal) {
+                const qv = parseFloat(mqFinal[1].replace(',', '.'));
+                if (qv > 0 && qv < 10000) {
+                    qtde = Math.round(qv) || 1;
+                    resto = resto.slice(0, mqFinal.index).trim();
+                }
+            }
+
+            ref  = resto.toUpperCase().trim();
+            desc = `${tipo} ${resto}`;
+            return {
+                refOriginal:    ref,
+                descOriginal:   desc,
+                qtdeSolicitada: qtde,
+                obs:            '',
+                incerteza:      false,
+            };
+        }
+
+        // ── 2. Padrão John Deere / OEM com barra: "DESCRICAO/CODIGO" ou "DESCRICAO;MARCA/CODIGO" ──
+        // (Apenas se a barra separa texto descritivo de código, sem ser conjunto tipo 67048/10)
         const slashIdx = linha.lastIndexOf('/');
-        if (slashIdx > 0) {
+        if (slashIdx > 0 && !/^\d{3,}[-/]\d+$/.test(linha)) {
             const candidateRef = linha.slice(slashIdx + 1).trim();
             if (candidateRef.length >= 3 && /^[A-Z0-9][A-Z0-9\-]{2,}$/i.test(candidateRef)) {
                 ref  = candidateRef.toUpperCase();
@@ -262,44 +342,67 @@ const DemandaImport = (() => {
             }
         }
 
-        // ── Quantidade no INICIO: "2,00000 ROLAMENTO" ou "2 rolamento" ──
-        // Formato ERP: 2,00000 (virgula decimal + zeros) — normaliza para inteiro
+        // ── 3. Quantidade no INÍCIO: "2,00000 ROLAMENTO" ou "2x 6206" ou "2 rolamento" ──
         const qtdInicio = linha.match(/^(\d+(?:[.,]\d+)?)\s*(?:x|pcs?|un(?:id)?|peças?|pç)?\s+(.+)$/i);
         if (qtdInicio) {
             const qv = parseFloat(qtdInicio[1].replace(',', '.'));
             if (qv > 0 && qv < 10000) {
-                qtde = Math.round(qv) || 1;   // 2,00000 → 2
+                qtde = Math.round(qv) || 1;
                 if (!ref) {
                     desc = qtdInicio[2].trim();
                 } else {
-                    // ref ja extraida via slash — ainda remove prefixo numerico da desc
-                    // ex: "2,00000 ROLAMENTO;JOHN DEERE" → "ROLAMENTO;JOHN DEERE" → "ROLAMENTO"
                     desc = desc.replace(/^\d+(?:[.,]\d+)?\s+/, '').trim();
                 }
             }
         }
 
-        // ── Fallback: detecta referencia por padrao alfanumerico ──
+        // ── 4. Quantidade com unidade explícita no FINAL: "6206 2 un", "DZ126340 5 pcs" ──
+        const qtdFinalUn = desc.match(/^(.+?)\s+(\d+(?:[.,]\d+)?)\s*(?:x|pcs?|un(?:id)?|peças?|pç)$/i);
+        if (qtdFinalUn) {
+            const qf = parseFloat(qtdFinalUn[2].replace(',', '.'));
+            if (qf > 0 && qf < 10000) {
+                desc = qtdFinalUn[1].trim();
+                qtde = Math.round(qf) || 1;
+            }
+        }
+
+        // Se após remover quantidade a linha restante for código puro
+        if (!ref && _isPartCode(desc)) {
+            ref = desc.toUpperCase().trim();
+            desc = ref;
+        }
+
+        // ── 5. Fallback: detecta referência por padrão alfanumérico ou código no meio ──
+        if (!ref) {
+            // Primeiro tenta código composto com espaço tipo "FL. 204", "F 600", "UC 205"
+            const mPre = desc.match(/\b([A-Za-z]{1,4}\.?\s*[-/]?\s*\d{2,6}[A-Za-z0-9\-]*)\b/i);
+            if (mPre && _isPartCode(mPre[1])) {
+                ref = mPre[1].toUpperCase().trim();
+                desc = desc.replace(mPre[0], '').trim().replace(/^[,\s\-]+/, '').replace(/[,\s\-]+$/, '');
+            }
+        }
+
         if (!ref) {
             const refPatterns = [
                 /\b([A-Z]{1,4}[-\s]?\d{3,}[A-Z0-9\-]*)\b/i,
                 /\b(\d{3,}[A-Z0-9\-]{2,})\b/i,
                 /\b([A-Z]{2,}\d{3,})\b/i,
+                /\b(\d{4,12})\b/
             ];
             for (const pat of refPatterns) {
                 const m = desc.match(pat);
                 if (m) {
                     ref  = m[1].toUpperCase().trim();
-                    desc = desc.replace(m[0], '').trim().replace(/^[,\s]+/, '').replace(/[,\s]+$/, '');
+                    desc = desc.replace(m[0], '').trim().replace(/^[,\s\-]+/, '').replace(/[,\s\-]+$/, '');
                     break;
                 }
             }
         }
 
-        // Quantidade no FINAL da descricao (tabela foto): "Junta 1"
-        if (!qtdInicio && desc) {
+        // Quantidade no FINAL da descrição apenas se não for parte de um código e houver número isolado
+        if (!qtdInicio && !qtdFinalUn && desc) {
             const qtdFinal = desc.match(/^(.+?)\s+(\d+(?:[.,]\d+)?)\s*$/);
-            if (qtdFinal && !_isNoiseLine(qtdFinal[1])) {
+            if (qtdFinal && !_isNoiseLine(qtdFinal[1]) && !_isPartCode(qtdFinal[0])) {
                 const qf = parseFloat(qtdFinal[2].replace(',', '.'));
                 if (qf > 0 && qf < 10000) {
                     desc = qtdFinal[1].trim();
@@ -310,7 +413,7 @@ const DemandaImport = (() => {
 
         if (!ref) {
             // Se não encontrou código de peça, só aceita se houver termo mecânico/agrícola na descrição
-            const hasPartKeyword = /\b(rolamento|correia|junta|parafuso|porca|filtro|retentor|arruela|mangueira|mangote|bucha|disco|mola|pino|sensor|v[aá]lvula|bomba|cabo|anel|terminal|engrenagem|eixo|cubo|reparo|kit|cruzeta|bico|corrente|amortecedor|bra[cç]o|sapata|lona|tambor|cilindro|radiador|palheta|lampada|rele|fusivel|chicote|espelho|farol|lanterna|oleo|graxa|adesivo|tinta|aditivo|vela|bateria|motor|compressor|alternador|turbina|tubo|abra[cç]adeira|gaxeta|chapa|revestimento|feltro|pinhao|oring|o-ring)\b/i.test(desc);
+            const hasPartKeyword = /\b(rolamento|mancal|correia|junta|parafuso|porca|filtro|retentor|arruela|mangueira|mangote|bucha|disco|mola|pino|sensor|v[aá]lvula|valvula|bomba|cabo|anel|terminal|engrenagem|eixo|cubo|reparo|kit|cruzeta|bico|corrente|amortecedor|bra[cç]o|sapata|lona|tambor|cilindro|radiador|palheta|lampada|rele|fusivel|chicote|espelho|farol|lanterna|oleo|graxa|adesivo|tinta|aditivo|vela|bateria|motor|compressor|alternador|turbina|tubo|abra[cç]adeira|gaxeta|chapa|revestimento|feltro|pinhao|oring|o-ring)\b/i.test(desc);
             if (!hasPartKeyword) {
                 return null;
             }
