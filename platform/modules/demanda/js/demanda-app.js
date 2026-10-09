@@ -2889,13 +2889,17 @@ const DemandaApp = (function() {
     ];
 
     function _concDB() {
-        if (typeof firebase === "undefined" || typeof DemandaDB === "undefined") return null;
-        return firebase.firestore().collection("tenants").doc(DemandaDB.TENANT_ID).collection("cotacoes_concorrente");
+        if (typeof firebase === "undefined") return null;
+        var t = _currentTenant();
+        if (!t) return null;
+        return firebase.firestore().collection("tenants").doc(t).collection("cotacoes_concorrente");
     }
 
     function _concorrentesCadDB() {
-        if (typeof firebase === "undefined" || typeof DemandaDB === "undefined") return null;
-        return firebase.firestore().collection("tenants").doc(DemandaDB.TENANT_ID).collection("concorrentes_cadastro");
+        if (typeof firebase === "undefined") return null;
+        var t = _currentTenant();
+        if (!t) return null;
+        return firebase.firestore().collection("tenants").doc(t).collection("concorrentes_cadastro");
     }
 
     function _carregarConcorrentesAsync() {
@@ -3798,10 +3802,15 @@ const DemandaApp = (function() {
             if (!dd.contains(ev.target)) dd.style.display = "none";
         });
 
-                // Carrega clientes assincronamente em segundo plano
-        _carregarClientesAsync();
+        // Exibe shell e vai para captura imediatamente
+        var sh = document.getElementById("appShell");
+        if (sh) sh.style.display = "flex";
+        switchView("captura");
+
+        // Carrega clientes assincronamente em segundo plano
+        try { _carregarClientesAsync(); } catch(e) { console.warn("[DemandaApp] _carregarClientesAsync:", e); }
         // Carrega concorrentes cadastrados
-        _carregarConcorrentesAsync();
+        try { _carregarConcorrentesAsync(); } catch(e) { console.warn("[DemandaApp] _carregarConcorrentesAsync:", e); }
 
         // Fecha dropdown de cliente concorrente ao clicar fora
         document.addEventListener("click", function(ev) {
@@ -3812,10 +3821,6 @@ const DemandaApp = (function() {
             if (!cdd.contains(ev.target)) cdd.style.display = "none";
         });
 
-        // Exibe shell e vai para captura
-        var sh = document.getElementById("appShell");
-        if (sh) sh.style.display = "flex";
-        switchView("captura");
         console.log("[DemandaApp] Pronto v1.1.0.");
     }
 
