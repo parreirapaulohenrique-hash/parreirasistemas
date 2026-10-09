@@ -1371,6 +1371,28 @@
                     </div>
 
                     <div id="reports-menu" class="grid-2-col" style="margin-top: 1.5rem;">
+                        <!-- Report Card: BI Logístico Executivo (v3.25.3) -->
+                        <div class="result-card standard-option" onclick="window.openBiLogisticaModal()"
+                            style="cursor: pointer; transition: transform 0.2s; border-left: 4px solid #3b82f6; background: rgba(59, 130, 246, 0.05);">
+                            <div style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                    <span class="material-icons-round"
+                                        style="color: #3b82f6; font-size: 2rem;">insights</span>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <h3 style="margin: 0; font-size: 1.1rem; color: var(--text-primary);">BI Logístico Executivo</h3>
+                                        <span style="background: #2563eb; color: #fff; font-size: .65rem; font-weight: 700; padding: .1rem .45rem; border-radius: 10px;">Gráficos & KPIs</span>
+                                    </div>
+                                </div>
+                                <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0;">
+                                    Painel com Custo Médio por Transportadora, Evolução de Volumes dos últimos 6 meses, SLA de Entregas e Indicadores de Ocorrências.
+                                </p>
+                            </div>
+                            <div style="text-align: right;">
+                                <span class="material-icons-round"
+                                    style="color: var(--text-secondary);">chevron_right</span>
+                            </div>
+                        </div>
+
                         <!-- Report Card: Performance VAN -->
                         <div class="result-card standard-option" onclick="window.showReportDetail('van-performance')"
                             style="cursor: pointer; transition: transform 0.2s;">
@@ -3123,7 +3145,7 @@
     <script src="/platform/shared/integrations/erp-ui.js?v=3.22.37"></script>
     <script src="/platform/shared/integrations/index.js?v=3.22.37"></script>
     <script src="occurrences.js?v=3.22.37"></script>
-    <script src="app.js?v=3.24.6"></script>
+    <script src="app.js?v=3.25.3"></script>
     <script>
         // Inicializa a UI de configuração ERP na seção de Integração do Dispatch
         document.addEventListener('DOMContentLoaded', function () {
@@ -3136,7 +3158,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <script src="delivery-module.js?v=3.24.1"></script>
     <script src="cnpj-lookup.js?v=3.14.42"></script>
-    <script src="bi_logistica.js?v=3.14.42"></script>
+    <script src="bi_logistica.js?v=3.25.3"></script>
     <script src="carrier-switch.js?v=3.25.2"></script>
 
 

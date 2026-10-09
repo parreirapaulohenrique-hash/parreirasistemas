@@ -24,15 +24,42 @@ function _getDispatchDate(d) {
     return isNaN(dt.getTime()) ? null : dt;
 }
 
+window.openBiLogisticaModal = function () {
+    const modal = document.getElementById('modalBiLogistica');
+    if (modal) {
+        modal.style.display = 'flex';
+        setTimeout(() => {
+            if (typeof window.renderBiLogistica === 'function') {
+                window.renderBiLogistica();
+            }
+        }, 60);
+    }
+};
+
+window.closeBiLogisticaModal = function () {
+    const modal = document.getElementById('modalBiLogistica');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+};
+
 window.renderBiLogistica = function () {
-    console.log("Renderizando BI Logístico Dispatch...");
+    console.log("📊 Renderizando BI Logístico Dispatch...");
 
     // ============================
     // 1. CARREGAR DADOS
     // ============================
-    const dispatches = Utils.getStorage('dispatches') || [];
-    const deliveryHistory = Utils.getStorage('delivery_history') || [];
-    const carrierList = Utils.getStorage('carrier_list') || [];
+    let dispatches = (window.Utils && typeof Utils.getStorage === 'function') ? (Utils.getStorage('dispatches') || []) : [];
+    if ((!dispatches || dispatches.length === 0) && window.dispatchState && Array.isArray(window.dispatchState.dispatches)) {
+        dispatches = window.dispatchState.dispatches;
+    }
+    if ((!dispatches || dispatches.length === 0) && window.CarrierSwitchModule && typeof window.CarrierSwitchModule.getState === 'function') {
+        const cs = window.CarrierSwitchModule.getState();
+        if (cs && Array.isArray(cs.dispatches)) dispatches = cs.dispatches;
+    }
+
+    const deliveryHistory = (window.Utils && typeof Utils.getStorage === 'function') ? (Utils.getStorage('delivery_history') || []) : [];
+    const carrierList = (window.Utils && typeof Utils.getStorage === 'function') ? (Utils.getStorage('carrier_list') || []) : [];
 
     const hoje = new Date();
     const todayStr = hoje.toLocaleDateString('pt-BR');

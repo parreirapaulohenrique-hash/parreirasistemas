@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.25.2",
-  "build": "20261009-v3.25.2",
+  "version": "3.25.3",
+  "build": "20261009-v3.25.3",
   "lastUpdate": "2026-10-09",
-  "releaseDate": "2026-10-09T11:08:00-03:00",
-  "change": "v3.25.2: Organização da Análise de Troca: traz sempre preenchida por padrão a opção com maior economia gerada para cada rota e ordena a tabela da maior economia para a menor, permitindo trocar opções na linha para observar outros parâmetros."
+  "releaseDate": "2026-10-09T12:02:00-03:00",
+  "change": "v3.25.3: Ativação do BI Logístico Executivo dentro da aba Relatórios Gerenciais com cards de KPIs e gráficos de Custo por Transportadora, Volumes e SLA de Entregas."
 }

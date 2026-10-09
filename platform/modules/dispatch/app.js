@@ -9455,7 +9455,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             const container = document.getElementById('report-detail-container');
             const content = document.getElementById('report-content-area');
 
-            if (reportType === 'van-performance') {
+            if (reportType === 'bi-logistica') {
+                if (typeof window.openBiLogisticaModal === 'function') {
+                    window.openBiLogisticaModal();
+                }
+                return;
+            } else if (reportType === 'van-performance') {
                 renderVanPerformanceReport(content);
             } else if (reportType === 'late-dispatches') {
                 renderLateDispatchesReport(content);
