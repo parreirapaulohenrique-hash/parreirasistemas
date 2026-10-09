@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.24.8",
-  "build": "20261009-v3.24.8",
+  "version": "3.24.9",
+  "build": "20261009-v3.24.9",
   "lastUpdate": "2026-10-09",
-  "releaseDate": "2026-10-09T09:15:00-03:00",
-  "change": "v3.24.8: Renomeação das colunas para 'Último Envio' e 'Custo Último Envio'; exibição clara do nome da transportadora principal em ambas as colunas (anterior e sugerida); identificação do redespacho sem rotular indevidamente como 'Terceiro'."
+  "releaseDate": "2026-10-09T09:35:00-03:00",
+  "change": "v3.24.9: Calibração de larguras de colunas (mínimo necessário para Município e Último Envio); cabeçalho fixo sticky; container com scroll horizontal estilizado e sempre visível para evitar corte de informações laterais."
 }

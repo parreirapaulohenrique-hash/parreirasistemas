@@ -1403,30 +1403,32 @@ body.is-motorista .welcome-banner h2 {
 /* --- Tabela Padronizada e Refinada (Harmonia com Montagem Carga) --- */
 .switch-table {
     width: 100%;
+    min-width: 1100px;
     border-collapse: collapse;
     margin: 0;
 }
 
 .switch-table thead tr {
-    background: rgba(15, 23, 42, 0.75);
+    background: #0f172a;
     border-bottom: 1px solid var(--border-color);
 }
 
 .switch-table th {
     text-align: left;
-    padding: 0.65rem 0.6rem;
+    padding: 0.55rem 0.45rem;
     color: var(--text-secondary);
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
     white-space: nowrap;
+    background: #0f172a;
 }
 
 .switch-table td {
-    padding: 0.65rem 0.6rem;
+    padding: 0.50rem 0.45rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    font-size: 0.82rem;
+    font-size: 0.80rem;
     vertical-align: middle;
     white-space: nowrap;
 }
@@ -1437,4 +1439,31 @@ body.is-motorista .welcome-banner h2 {
 
 .switch-table tbody tr:hover {
     background: rgba(255, 255, 255, 0.02);
+}
+
+.switch-table-wrapper {
+    overflow-x: auto;
+    max-height: calc(100vh - 290px);
+    min-height: 480px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(59, 130, 246, 0.4) rgba(15, 23, 42, 0.6);
+}
+
+.switch-table-wrapper::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.switch-table-wrapper::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.7);
+}
+
+.switch-table-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.4);
+    border-radius: 4px;
+}
+
+.switch-table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: rgba(59, 130, 246, 0.7);
 }
