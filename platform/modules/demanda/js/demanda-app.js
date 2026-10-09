@@ -209,13 +209,9 @@ const DemandaApp = (function() {
     }
 
     function renderItens() {
-        var tbody   = document.getElementById("itensTbody");
+        var tbody  = document.getElementById("itensTbody");
         var trEmpty = document.getElementById("trEmptyState");
-        var thConc  = document.getElementById("thPrecoConc");
         if (!tbody) return;
-
-        var temPrecoConc = !!_concorrenteAtual || _itens.some(function(it) { return it.precoConcorrente != null && it.precoConcorrente > 0; });
-        if (thConc) thConc.style.display = temPrecoConc ? "" : "none";
 
         if (_itens.length === 0) {
             tbody.innerHTML = "";
@@ -225,20 +221,11 @@ const DemandaApp = (function() {
         }
 
         var html = _itens.map(function(item, i) {
-            var colConc = temPrecoConc
-                ? "<td style='text-align:right'>" +
-                    "<input type='number' step='0.01' min='0' value='" + (item.precoConcorrente != null ? item.precoConcorrente : "") + "' placeholder='0,00' " +
-                    "style='background:transparent;border:none;border-bottom:1px dashed rgba(245,158,11,.5);color:#f59e0b;font-weight:700;width:75px;text-align:right;font-size:.82rem;padding:0 2px' " +
-                    "onchange=\"DemandaApp.updateItemPrecoConc(" + i + ", this.value)\" title='Preço Concorrente'>" +
-                  "</td>"
-                : "";
-
             return "<tr>" +
                 "<td style='color:var(--text-secondary);font-size:.8rem'>" + (i + 1) + "</td>" +
                 "<td style='font-weight:600;font-size:.83rem'>" + _esc(item.refOriginal) + "</td>" +
                 "<td style='font-size:.8rem;color:var(--text-secondary)'>" + (_esc(item.descOriginal) || "—") + "</td>" +
                 "<td style='text-align:center'>" + item.qtdeSolicitada + "</td>" +
-                colConc +
                 "<td><span style='font-size:.72rem;padding:.15rem .5rem;border-radius:10px;" +
                     "background:rgba(99,102,241,.15);color:#6366f1'>Recebida</span></td>" +
                 "<td><button onclick='DemandaApp.removeItem(" + i + ")' title='Remover' " +
@@ -252,18 +239,10 @@ const DemandaApp = (function() {
         if (ct) ct.textContent = "— " + _itens.length + (_itens.length === 1 ? " item" : " itens");
     }
 
-    function updateItemPrecoConc(idx, val) {
-        if (!_itens[idx]) return;
-        var p = parseFloat(String(val).replace(',', '.'));
-        _itens[idx].precoConcorrente = (!isNaN(p) && p > 0) ? p : null;
-    }
-
     function limparDemanda() {
         if (_itens.length > 0 && !confirm("Limpar todos os itens da cotação?")) return;
         _itens = [];
         _clienteAtual = null;
-        _concorrenteAtual = null;
-        var selC = document.getElementById("selectConcorrente"); if (selC) selC.value = "";
         var cl = document.getElementById("clienteLabel"); if (cl) cl.textContent = "Selecionar cliente";
         var si = document.getElementById("selectOrigem"); if (si) si.value = "whatsapp";
         renderItens();
@@ -902,57 +881,6 @@ const DemandaApp = (function() {
         var chkAll = document.getElementById("chkAllConf");
         if (!tbody) return;
 
-        // Detecta se algum item veio com metadados de concorrente, cliente ou orçamento
-        var concDetectado = "";
-        var cliDetectado  = "";
-        var orcDetectado  = "";
-        for (var k = 0; k < itens.length; k++) {
-            if (itens[k]._metaConcorrente && !concDetectado) concDetectado = itens[k]._metaConcorrente;
-            if (itens[k]._metaCliente && !cliDetectado) cliDetectado = itens[k]._metaCliente;
-            if (itens[k]._metaOrcamento && !orcDetectado) orcDetectado = itens[k]._metaOrcamento;
-        }
-
-        var selConf = document.getElementById("confSelectConcorrente");
-        if (selConf) {
-            _popularSelectsConcorrentes();
-            if (concDetectado) {
-                selConf.value = concDetectado;
-                onConfConcorrenteChange(concDetectado);
-            } else if (_concorrenteAtual) {
-                selConf.value = _concorrenteAtual.nome;
-            }
-        }
-
-        var badgeOrc = document.getElementById("confBadgeOrcamento");
-        if (badgeOrc) {
-            if (orcDetectado) {
-                badgeOrc.style.display = "inline-block";
-                badgeOrc.textContent = "Orçamento Concorrente: #" + orcDetectado;
-            } else {
-                badgeOrc.style.display = "none";
-            }
-        }
-
-        // Se detectou cliente do cabeçalho do orçamento do concorrente e a cotação atual ainda não tem cliente selecionado
-        if (cliDetectado && (!_clienteAtual || !_clienteAtual.nome)) {
-            var todos = _getClientesLocalCache();
-            var matchCli = todos.find(function(c) {
-                return c.nome.toLowerCase().indexOf(cliDetectado.toLowerCase()) >= 0 ||
-                       cliDetectado.toLowerCase().indexOf(c.nome.toLowerCase()) >= 0;
-            });
-            if (matchCli) {
-                _clienteAtual = matchCli;
-            } else {
-                _clienteAtual = { id: null, nome: cliDetectado, cnpj: "" };
-            }
-            var lbl = document.getElementById("clienteLabel");
-            if (lbl) lbl.textContent = _clienteAtual.nome;
-            var btn = document.getElementById("btnSelectCliente");
-            if (btn) btn.classList.add("selected");
-            var btnClear = document.getElementById("btnClearCliente");
-            if (btnClear) btnClear.style.display = "inline-block";
-        }
-
         var ok  = itens.filter(function(i) { return !i._erros || i._erros.length === 0; }).length;
         var err = itens.length - ok;
         if (stats) stats.innerHTML =
@@ -980,11 +908,8 @@ const DemandaApp = (function() {
                     "style='background:transparent;border:1px solid var(--border);border-radius:4px;padding:.2rem .5rem;color:var(--text-primary);width:100%;font-size:.82rem' " +
                     "onchange=\"DemandaApp.updateConferenciaItem(" + i + ",'desc',this.value)\"></td>" +
                 "<td style='text-align:center'><input type='number' value='" + (item.qtdeSolicitada || 1) + "' min='1' " +
-                    "style='background:transparent;border:1px solid var(--border);border-radius:4px;padding:.2rem .4rem;color:var(--text-primary);width:54px;text-align:center;font-size:.82rem' " +
+                    "style='background:transparent;border:1px solid var(--border);border-radius:4px;padding:.2rem .4rem;color:var(--text-primary);width:56px;text-align:center;font-size:.82rem' " +
                     "onchange=\"DemandaApp.updateConferenciaItem(" + i + ",'qtde',+this.value)\"></td>" +
-                "<td style='text-align:right'><input type='number' step='0.01' min='0' value='" + (item.precoConcorrente != null ? item.precoConcorrente : "") + "' placeholder='0,00' " +
-                    "style='background:transparent;border:1px solid rgba(245,158,11,.4);border-radius:4px;padding:.2rem .4rem;color:#f59e0b;font-weight:700;width:82px;text-align:right;font-size:.82rem' " +
-                    "onchange=\"DemandaApp.updateConferenciaItem(" + i + ",'precoConcorrente',this.value)\"></td>" +
                 "<td style='font-size:.78rem;color:var(--text-secondary)'>" + _esc(item.obs || "") + "</td>" +
                 "<td>" + statusHtml + "</td></tr>";
         }).join("");
@@ -997,13 +922,6 @@ const DemandaApp = (function() {
         if (field === "ref")  _importItensTemp[idx].refOriginal    = value;
         if (field === "desc") _importItensTemp[idx].descOriginal   = value;
         if (field === "qtde") _importItensTemp[idx].qtdeSolicitada = Math.max(1, value || 1);
-        if (field === "precoConcorrente") {
-            var valP = parseFloat(String(value).replace(',', '.'));
-            _importItensTemp[idx].precoConcorrente = (!isNaN(valP) && valP > 0) ? valP : null;
-            if (_importItensTemp[idx].precoConcorrente) {
-                _importItensTemp[idx].obs = "Preço conc.: R$ " + _importItensTemp[idx].precoConcorrente.toFixed(2).replace('.', ',');
-            }
-        }
 
         // Quando referencia muda, recalcula incerteza e atualiza badge de status
         if (field === "ref") {
@@ -1060,21 +978,8 @@ const DemandaApp = (function() {
             }
         });
         if (selecionados.length === 0) { _toast("Selecione ao menos um item.", "error"); return; }
-
-        var concSel = document.getElementById("confSelectConcorrente");
-        if (concSel && concSel.value) {
-            onConcorrenteChange(concSel.value);
-            var selPrincipal = document.getElementById("selectConcorrente");
-            if (selPrincipal) selPrincipal.value = concSel.value;
-        }
-
         selecionados.forEach(function(item) {
-            _itens.push({
-                refOriginal:      item.refOriginal,
-                descOriginal:     item.descOriginal,
-                qtdeSolicitada:   item.qtdeSolicitada || 1,
-                precoConcorrente: item.precoConcorrente || null
-            });
+            _itens.push({ refOriginal: item.refOriginal, descOriginal: item.descOriginal, qtdeSolicitada: item.qtdeSolicitada || 1 });
         });
         renderItens();
         closeModal("modalConferencia");
@@ -1108,22 +1013,17 @@ const DemandaApp = (function() {
         var s = _sessao;
         var origemEl = document.getElementById("selectOrigem");
 
-        var concEl = document.getElementById("selectConcorrente");
-        var concNome = (concEl && concEl.value) ? concEl.value : (_concorrenteAtual ? _concorrenteAtual.nome : "");
-
         var data = {
-            origem:          origemEl ? origemEl.value : "manual",
-            canalOrigem:     origemEl ? origemEl.value : "manual",
-            concorrenteNome: concNome || null,
-            isConcorrente:   !!concNome,
-            clienteId:       _clienteAtual ? _clienteAtual.id    : null,
-            clienteNome:     _clienteAtual ? _clienteAtual.nome  : "",
-            clienteCnpj:     _clienteAtual ? _clienteAtual.cnpj  : "",
-            vendedorId:      s ? (s.login || s.email || null)     : null,
-            vendedorNome:    s ? (s.nome  || s.name  || "")       : "",
-            filialId:        s ? (s.filialId    || 1)             : 1,
-            filialNome:      s ? (s.filial || s.tenantNome || "") : "",
-            criadoPor:       s ? (s.login || s.email || "sistema"): "sistema"
+            origem:       origemEl ? origemEl.value : "manual",
+            canalOrigem:  origemEl ? origemEl.value : "manual",
+            clienteId:    _clienteAtual ? _clienteAtual.id    : null,
+            clienteNome:  _clienteAtual ? _clienteAtual.nome  : "",
+            clienteCnpj:  _clienteAtual ? _clienteAtual.cnpj  : "",
+            vendedorId:   s ? (s.login || s.email || null)     : null,
+            vendedorNome: s ? (s.nome  || s.name  || "")       : "",
+            filialId:     s ? (s.filialId    || 1)             : 1,
+            filialNome:   s ? (s.filial || s.tenantNome || "") : "",
+            criadoPor:    s ? (s.login || s.email || "sistema"): "sistema"
         };
 
         // Feedback visual: desabilita ambos os botões salvar
@@ -1142,10 +1042,7 @@ const DemandaApp = (function() {
         DemandaDB.createDemanda(data, _itens.slice())
             .then(function(demandaId) {
                 console.log("[DemandaApp] Demanda criada:", demandaId);
-                if (concNome) {
-                    _salvarVinculoConcorrenteAutomatico(concNome, _clienteAtual, _itens.slice(), demandaId);
-                }
-                _toast(concNome ? "Cotação vinculada ao concorrente e salva com sucesso!" : "Cotação salva com sucesso!", "success");
+                _toast("Cotação salva com sucesso!", "success");
                 limparDemanda();
                 setTimeout(function() { switchView("lista"); }, 800);
             })
@@ -2867,514 +2764,22 @@ const DemandaApp = (function() {
     }
 
     // ════════════════════════════════════════════════════════
-    // VIEW: PREÇO CONCORRENTE & INTELIGÊNCIA COMPETITIVA
+    // VIEW: COTAÇÃO DO CONCORRENTE
     // ════════════════════════════════════════════════════════
 
-    var _concItens                = [];
-    var _concClienteSelecionado   = null;
-    var _concorrenteAtual         = null; // { id, nome } | null
-    var _concorrentesCadastrados  = [];
-    var _concSubTabAtual          = "precos"; // 'precos' | 'cotacoes' | 'concorrentes'
-    var _precosMapeadosCache      = [];
-    var _termoFiltroPrecos        = "";
-    var _concorrenteFiltroPrecos  = "todos";
-    var _CONC_INP                 = "width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:5px;padding:.3rem .55rem;color:var(--text-primary);font-size:.8rem;box-sizing:border-box";
-
-    var _CONCORRENTES_DEFAULT = [
-        { id: "ja_agricola", nome: "J.A. Agrícola", cidade: "Redenção - PA", telefone: "(94) 99157-5463", obs: "Peças e Insumos Agrícolas / Rolamentos" },
-        { id: "carlos_central", nome: "Carlos Central Peças", cidade: "Região Central", telefone: "", obs: "Distribuidor de Rolamentos e Retentores" },
-        { id: "rondobras", nome: "Rondobras Peças", cidade: "Rondônia", telefone: "", obs: "Linha Pesada e Agrícola" },
-        { id: "central_rol", nome: "Central Rolamentos", cidade: "Matriz", telefone: "", obs: "Rolamentos e Retentores Industriais" },
-        { id: "casa_produtor", nome: "Casa do Produtor", cidade: "Interior", telefone: "", obs: "Peças para Tratores e Implementos" }
-    ];
+    var _concItens = [];
+                _concClienteSelecionado = null;
+    var _CONC_INP  = "width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:5px;padding:.3rem .55rem;color:var(--text-primary);font-size:.8rem;box-sizing:border-box";
 
     function _concDB() {
         if (typeof firebase === "undefined" || typeof DemandaDB === "undefined") return null;
         return firebase.firestore().collection("tenants").doc(DemandaDB.TENANT_ID).collection("cotacoes_concorrente");
     }
 
-    function _concorrentesCadDB() {
-        if (typeof firebase === "undefined" || typeof DemandaDB === "undefined") return null;
-        return firebase.firestore().collection("tenants").doc(DemandaDB.TENANT_ID).collection("concorrentes_cadastro");
-    }
-
-    function _carregarConcorrentesAsync() {
-        try {
-            var cached = localStorage.getItem("demanda_concorrentes_cadastrados");
-            if (cached) {
-                var parsed = JSON.parse(cached);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                    _concorrentesCadastrados = parsed;
-                    _popularSelectsConcorrentes();
-                }
-            }
-        } catch(_) {}
-
-        if (_concorrentesCadastrados.length === 0) {
-            _concorrentesCadastrados = _CONCORRENTES_DEFAULT.slice();
-            _popularSelectsConcorrentes();
-        }
-
-        var db = _concorrentesCadDB();
-        if (!db) return;
-
-        db.orderBy("nome").get()
-            .then(function(snap) {
-                if (!snap.empty) {
-                    var doBanco = snap.docs.map(function(d) {
-                        var data = d.data();
-                        data.id = d.id;
-                        return data;
-                    });
-                    var mapNomes = {};
-                    doBanco.forEach(function(c) { mapNomes[c.nome.toLowerCase()] = true; });
-                    _CONCORRENTES_DEFAULT.forEach(function(def) {
-                        if (!mapNomes[def.nome.toLowerCase()]) doBanco.push(def);
-                    });
-                    _concorrentesCadastrados = doBanco;
-                } else {
-                    _CONCORRENTES_DEFAULT.forEach(function(def) {
-                        db.doc(def.id).set(def).catch(function(){});
-                    });
-                    _concorrentesCadastrados = _CONCORRENTES_DEFAULT.slice();
-                }
-                try {
-                    localStorage.setItem("demanda_concorrentes_cadastrados", JSON.stringify(_concorrentesCadastrados));
-                } catch(_) {}
-                _popularSelectsConcorrentes();
-            })
-            .catch(function(err) {
-                console.warn("[DemandaApp] Falha ao carregar concorrentes do Firestore:", err);
-            });
-    }
-
-    function _popularSelectsConcorrentes() {
-        var sel1 = document.getElementById("selectConcorrente");
-        var sel2 = document.getElementById("confSelectConcorrente");
-
-        var html1 = "<option value=''>-- Cotação Própria (Sem Concorrente) --</option>" +
-            _concorrentesCadastrados.map(function(c) {
-                var sel = (_concorrenteAtual && _concorrenteAtual.nome === c.nome) ? "selected" : "";
-                return "<option value='" + _escAttr(c.nome) + "' " + sel + ">" + _esc(c.nome) + (c.cidade ? " (" + _esc(c.cidade) + ")" : "") + "</option>";
-            }).join("");
-
-        if (sel1) {
-            var valAtual = sel1.value;
-            sel1.innerHTML = html1;
-            if (valAtual) sel1.value = valAtual;
-        }
-
-        var html2 = "<option value=''>-- Cotação Própria / Sem Concorrente --</option>" +
-            _concorrentesCadastrados.map(function(c) {
-                return "<option value='" + _escAttr(c.nome) + "'>" + _esc(c.nome) + "</option>";
-            }).join("");
-
-        if (sel2) {
-            var valAtual2 = sel2.value;
-            sel2.innerHTML = html2;
-            if (valAtual2) sel2.value = valAtual2;
-        }
-
-        _populateConcSugestoes();
-    }
-
-    function onConcorrenteChange(val) {
-        if (!val) {
-            _concorrenteAtual = null;
-        } else {
-            var found = _concorrentesCadastrados.find(function(c) { return c.nome === val; });
-            _concorrenteAtual = found ? { id: found.id, nome: found.nome } : { id: null, nome: val };
-        }
-        renderItens();
-    }
-
-    function onConfConcorrenteChange(val) {
-        if (val) {
-            var sel1 = document.getElementById("selectConcorrente");
-            if (sel1) sel1.value = val;
-            var found = _concorrentesCadastrados.find(function(c) { return c.nome === val; });
-            _concorrenteAtual = found ? { id: found.id, nome: found.nome } : { id: null, nome: val };
-        }
-    }
-
-    function abrirModalNovoConcorrente() {
-        var inpNome = document.getElementById("novoConcNome");
-        var inpCid  = document.getElementById("novoConcCidade");
-        var inpTel  = document.getElementById("novoConcTelefone");
-        var inpObs  = document.getElementById("novoConcObs");
-        if (inpNome) inpNome.value = "";
-        if (inpCid)  inpCid.value = "";
-        if (inpTel)  inpTel.value = "";
-        if (inpObs)  inpObs.value = "";
-        _openModal("modalNovoConcorrente");
-        setTimeout(function() { if (inpNome) inpNome.focus(); }, 150);
-    }
-
-    function salvarNovoConcorrenteModal() {
-        var inpNome = document.getElementById("novoConcNome");
-        var nome = inpNome ? inpNome.value.trim() : "";
-        if (!nome) {
-            _toast("Informe o nome do concorrente.", "warning");
-            if (inpNome) inpNome.focus();
-            return;
-        }
-        var cid = (document.getElementById("novoConcCidade") || {}).value || "";
-        var tel = (document.getElementById("novoConcTelefone") || {}).value || "";
-        var obs = (document.getElementById("novoConcObs") || {}).value || "";
-
-        var novoObj = {
-            id: "conc_" + Date.now(),
-            nome: nome,
-            cidade: cid.trim(),
-            telefone: tel.trim(),
-            obs: obs.trim(),
-            criadoEm: new Date().toISOString()
-        };
-
-        _concorrentesCadastrados.push(novoObj);
-        try {
-            localStorage.setItem("demanda_concorrentes_cadastrados", JSON.stringify(_concorrentesCadastrados));
-        } catch(_) {}
-
-        var db = _concorrentesCadDB();
-        if (db) {
-            db.doc(novoObj.id).set(novoObj).catch(function(e) { console.warn("Erro ao salvar concorrente no Firestore:", e); });
-        }
-
-        _concorrenteAtual = { id: novoObj.id, nome: novoObj.nome };
-        _popularSelectsConcorrentes();
-
-        var sel1 = document.getElementById("selectConcorrente");
-        if (sel1) sel1.value = novoObj.nome;
-        var sel2 = document.getElementById("confSelectConcorrente");
-        if (sel2) sel2.value = novoObj.nome;
-
-        closeModal("modalNovoConcorrente");
-        _toast("Concorrente '" + nome + "' cadastrado com sucesso!", "success");
-        renderItens();
-    }
-
-    function _salvarVinculoConcorrenteAutomatico(concNome, cliente, itens, demandaId) {
-        var db = _concDB();
-        if (!db) return;
-        var por = _sessao ? (_sessao.login || _sessao.nome || "sistema") : "sistema";
-
-        var catalogo = (typeof DemandaSearch !== "undefined" && typeof DemandaSearch.getProdutos === "function")
-            ? DemandaSearch.getProdutos()
-            : [];
-
-        var itensFormatados = itens.map(function(it, idx) {
-            var refUpper = (it.refOriginal || "").toUpperCase().trim();
-            var prodMeu = catalogo.find(function(p) {
-                return (p.codigo && p.codigo.toUpperCase() === refUpper) ||
-                       (p.referencia && p.referencia.toUpperCase() === refUpper);
-            });
-            var pm = (prodMeu && prodMeu.preco) ? parseFloat(prodMeu.preco) : 0;
-            var pc = parseFloat(it.precoConcorrente) || 0;
-
-            return {
-                id: String(Date.now() + idx),
-                ref: it.refOriginal || "",
-                desc: it.descOriginal || "",
-                qtde: parseFloat(it.qtdeSolicitada) || 1,
-                precoConcorrente: pc,
-                precoMeu: pm
-            };
-        });
-
-        var doc = {
-            concorrente:      concNome.trim(),
-            clienteRef:       cliente ? cliente.nome : "",
-            clienteId:        cliente ? cliente.id : null,
-            clienteCnpj:      cliente ? (cliente.cnpj || cliente.cpf || "") : "",
-            obs:              "Gerado a partir da Cotação #" + demandaId + " (Intenção de Compra)",
-            vendedorNome:     por,
-            criadoEm:         (typeof firebase !== "undefined" && firebase.firestore) ? firebase.firestore.FieldValue.serverTimestamp() : new Date(),
-            status:           "ativa",
-            demandaOrigemId:  demandaId,
-            itens:            itensFormatados
-        };
-
-        db.add(doc).then(function(r) { r.update({ id: r.id }); }).catch(function(e) { console.warn("Erro ao salvar histórico do concorrente:", e); });
-    }
-
     function loadConcorrente() {
-        _carregarConcorrentesAsync();
-        switchConcSubTab(_concSubTabAtual || "precos");
-    }
-
-    function switchConcSubTab(tab) {
-        _concSubTabAtual = tab;
-        var btnPrecos = document.getElementById("chipConcPrecos");
-        var btnCotacoes = document.getElementById("chipConcCotacoes");
-        var btnConcs = document.getElementById("chipConcCadastrados");
-
-        if (btnPrecos) btnPrecos.classList.toggle("active", tab === "precos");
-        if (btnCotacoes) btnCotacoes.classList.toggle("active", tab === "cotacoes");
-        if (btnConcs) btnConcs.classList.toggle("active", tab === "concorrentes");
-
-        var fc = document.getElementById("concFormContainer");
-
-        if (tab === "precos") {
-            if (fc) fc.style.display = "none";
-            _renderMapeamentoPrecos();
-        } else if (tab === "cotacoes") {
-            if (fc) fc.style.display = "block";
-            if (_concItens.length === 0) _concAddItem();
-            _renderConcorrenteForm();
-            _loadHistoricoConcorrente();
-        } else if (tab === "concorrentes") {
-            if (fc) fc.style.display = "none";
-            _renderListaConcorrentesCadastrados();
-        }
-    }
-
-    function _renderMapeamentoPrecos() {
-        var hc = document.getElementById("concHistoricoContainer");
-        if (!hc) return;
-
-        hc.innerHTML = "<div style='text-align:center;padding:2.5rem;color:var(--text-secondary)'>" +
-            "<span class='material-icons-round' style='animation:spin 1s linear infinite;font-size:2rem;color:var(--primary-color)'>sync</span>" +
-            "<p style='margin-top:.5rem;font-size:.85rem'>Carregando mapeamento de preços da concorrência...</p></div>";
-
-        var db = _concDB();
-        if (!db) {
-            hc.innerHTML = "<p style='color:var(--accent-danger);padding:1rem'>Banco de dados indisponível.</p>";
-            return;
-        }
-
-        db.where("status", "==", "ativa").orderBy("criadoEm", "desc").limit(80).get()
-            .then(function(snap) {
-                var cotacoes = snap.docs.map(function(d) {
-                    var data = d.data();
-                    data.id = d.id;
-                    return data;
-                });
-
-                var catalogo = (typeof DemandaSearch !== "undefined" && typeof DemandaSearch.getProdutos === "function")
-                    ? DemandaSearch.getProdutos()
-                    : [];
-
-                var linhasMapeadas = [];
-                cotacoes.forEach(function(c) {
-                    var dtStr = c.criadoEm && c.criadoEm.toDate
-                        ? c.criadoEm.toDate().toLocaleDateString("pt-BR")
-                        : (c.criadoEm ? String(c.criadoEm).slice(0, 10) : "—");
-
-                    (c.itens || []).forEach(function(it) {
-                        var pc = parseFloat(it.precoConcorrente) || 0;
-                        var pm = parseFloat(it.precoMeu) || 0;
-                        var refUpper = (it.ref || "").toUpperCase().trim();
-
-                        if (!pm && refUpper && catalogo.length > 0) {
-                            var pEncontrado = catalogo.find(function(p) {
-                                return (p.codigo && p.codigo.toUpperCase() === refUpper) ||
-                                       (p.referencia && p.referencia.toUpperCase() === refUpper);
-                            });
-                            if (pEncontrado && pEncontrado.preco) {
-                                pm = parseFloat(pEncontrado.preco) || 0;
-                            }
-                        }
-
-                        var d = (pc > 0 && pm > 0) ? (pm - pc) : null;
-                        var pct = (pc > 0 && d !== null) ? ((d / pc) * 100).toFixed(1) : null;
-
-                        linhasMapeadas.push({
-                            ref: it.ref || "—",
-                            desc: it.desc || "—",
-                            qtde: it.qtde || 1,
-                            concorrente: c.concorrente || "Concorrente",
-                            precoConcorrente: pc,
-                            precoMeu: pm,
-                            diff: d,
-                            pct: pct,
-                            cliente: c.clienteRef || "—",
-                            data: dtStr,
-                            demandaOrigemId: c.demandaOrigemId || null,
-                            cotacaoId: c.id
-                        });
-                    });
-                });
-
-                _precosMapeadosCache = linhasMapeadas;
-                _desenharTabelaPrecosMapeados();
-            })
-            .catch(function(err) {
-                console.error("[DemandaApp] Erro ao carregar preços concorrentes:", err);
-                hc.innerHTML = "<p style='color:var(--accent-danger);padding:1rem'>Erro: " + _esc(err.message || String(err)) + "</p>";
-            });
-    }
-
-    function _desenharTabelaPrecosMapeados() {
-        var hc = document.getElementById("concHistoricoContainer");
-        if (!hc) return;
-
-        var q = (_termoFiltroPrecos || "").trim().toLowerCase();
-        var concFiltro = _concorrenteFiltroPrecos || "todos";
-
-        var filtrados = _precosMapeadosCache.filter(function(r) {
-            if (concFiltro !== "todos" && r.concorrente.toLowerCase() !== concFiltro.toLowerCase()) {
-                return false;
-            }
-            if (q) {
-                var hay = (r.ref + " " + r.desc + " " + r.concorrente + " " + r.cliente).toLowerCase();
-                return hay.indexOf(q) >= 0;
-            }
-            return true;
-        });
-
-        var concsUnicos = [];
-        _precosMapeadosCache.forEach(function(r) {
-            if (r.concorrente && concsUnicos.indexOf(r.concorrente) === -1) {
-                concsUnicos.push(r.concorrente);
-            }
-        });
-
-        var totalItens = filtrados.length;
-        var maisBaratos = filtrados.filter(function(r) { return r.diff !== null && r.diff < 0; }).length;
-        var maisCaros = filtrados.filter(function(r) { return r.diff !== null && r.diff > 0; }).length;
-
-        var kpiHtml =
-            "<div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.75rem;margin-bottom:1rem'>" +
-                "<div style='background:var(--bg-sidebar);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:.85rem 1rem'>" +
-                    "<div style='font-size:.72rem;color:var(--text-secondary);text-transform:uppercase;font-weight:600'>Preços Mapeados</div>" +
-                    "<div style='font-size:1.4rem;font-weight:800;color:var(--text-primary);margin-top:.2rem'>" + totalItens + "</div>" +
-                    "<div style='font-size:.72rem;color:var(--text-secondary)'>" + concsUnicos.length + " concorrente(s) monitorado(s)</div>" +
-                "</div>" +
-                "<div style='background:var(--bg-sidebar);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:.85rem 1rem'>" +
-                    "<div style='font-size:.72rem;color:var(--text-secondary);text-transform:uppercase;font-weight:600'>Nós Mais Baratos</div>" +
-                    "<div style='font-size:1.4rem;font-weight:800;color:#10b981;margin-top:.2rem'>" + maisBaratos + "</div>" +
-                    "<div style='font-size:.72rem;color:var(--text-secondary)'>Ganhamos em preço</div>" +
-                "</div>" +
-                "<div style='background:var(--bg-sidebar);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:.85rem 1rem'>" +
-                    "<div style='font-size:.72rem;color:var(--text-secondary);text-transform:uppercase;font-weight:600'>Concorrente Mais Barato</div>" +
-                    "<div style='font-size:1.4rem;font-weight:800;color:#ef4444;margin-top:.2rem'>" + maisCaros + "</div>" +
-                    "<div style='font-size:.72rem;color:var(--text-secondary)'>Oportunidade de cobrir</div>" +
-                "</div>" +
-            "</div>";
-
-        var barHtml =
-            "<div style='background:var(--bg-sidebar);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:.85rem 1rem;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem'>" +
-                "<div style='position:relative;flex:1;min-width:240px'>" +
-                    "<span class='material-icons-round' style='position:absolute;left:.65rem;top:50%;transform:translateY(-50%);font-size:1rem;color:var(--text-secondary)'>search</span>" +
-                    "<input type='text' id='inpBuscaPrecosMapeados' placeholder='Buscar por código da peça, descrição, concorrente ou cliente...' value='" + _escAttr(_termoFiltroPrecos) + "' " +
-                        "oninput='DemandaApp.filtrarPrecosMapeados(this.value)' " +
-                        "style='width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.4rem .6rem .4rem 2.2rem;color:var(--text-primary);font-size:.82rem'>" +
-                "</div>" +
-                "<select id='selFiltroConcPrecos' onchange='DemandaApp.filtrarPorConcorrente(this.value)' " +
-                    "style='background:var(--bg-dark);border:1px solid var(--border-color);border-radius:6px;padding:.4rem .6rem;color:var(--text-primary);font-size:.82rem'>" +
-                    "<option value='todos'>Todos os Concorrentes (" + concsUnicos.length + ")</option>" +
-                    concsUnicos.map(function(c) {
-                        return "<option value='" + _escAttr(c) + "' " + (concFiltro.toLowerCase() === c.toLowerCase() ? "selected" : "") + ">" + _esc(c) + "</option>";
-                    }).join("") +
-                "</select>" +
-                "<button class='btn btn-primary btn-sm' onclick='DemandaApp.switchView(\"captura\")' style='display:inline-flex;align-items:center;gap:.3rem;margin-left:auto'>" +
-                    "<span class='material-icons-round' style='font-size:.9rem'>add_circle</span> Nova Cotação" +
-                "</button>" +
-            "</div>";
-
-        var tableRows = filtrados.map(function(r, idx) {
-            var cor = r.diff !== null
-                ? (r.diff < 0 ? "#10b981" : r.diff > 0 ? "#ef4444" : "var(--text-secondary)")
-                : "var(--text-secondary)";
-
-            var diffTxt = r.diff !== null
-                ? ("R$ " + Math.abs(r.diff).toFixed(2).replace(".", ",") + " <span style='font-size:.7rem;opacity:.85'>(" + (r.diff > 0 ? "+" : "") + r.pct + "%)</span>")
-                : "—";
-
-            var badgeComparativo = r.diff !== null
-                ? (r.diff < 0
-                    ? "<span style='padding:.15rem .45rem;border-radius:4px;background:rgba(16,185,129,.15);color:#10b981;font-size:.72rem;font-weight:700'>Nós - Barato</span>"
-                    : r.diff > 0
-                        ? "<span style='padding:.15rem .45rem;border-radius:4px;background:rgba(239,68,68,.15);color:#ef4444;font-size:.72rem;font-weight:700'>Conc. - Barato</span>"
-                        : "<span style='padding:.15rem .45rem;border-radius:4px;background:rgba(255,255,255,.08);color:var(--text-secondary);font-size:.72rem'>Empatado</span>")
-                : "<span style='color:var(--text-secondary);font-size:.72rem'>Sem preço ERP</span>";
-
-            return "<tr style='border-bottom:1px solid rgba(255,255,255,.04)'>" +
-                "<td style='padding:.45rem .6rem;color:var(--text-secondary);font-size:.75rem'>" + (idx + 1) + "</td>" +
-                "<td style='padding:.45rem .6rem'><strong style='font-size:.85rem;color:var(--text-primary);letter-spacing:.02em'>" + _esc(r.ref) + "</strong></td>" +
-                "<td style='padding:.45rem .6rem;font-size:.8rem;color:var(--text-secondary);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' title='" + _escAttr(r.desc) + "'>" + _esc(r.desc) + "</td>" +
-                "<td style='padding:.45rem .6rem'><span style='padding:.18rem .55rem;border-radius:4px;background:rgba(245,158,11,.12);color:#f59e0b;font-size:.74rem;font-weight:700;display:inline-block;white-space:nowrap'><span class='material-icons-round' style='font-size:.8rem;vertical-align:middle;margin-right:2px'>store</span>" + _esc(r.concorrente) + "</span></td>" +
-                "<td style='padding:.45rem .6rem;text-align:right;font-weight:700;color:#f59e0b;font-size:.85rem'>" + (r.precoConcorrente > 0 ? "R$ " + r.precoConcorrente.toFixed(2).replace(".", ",") : "—") + "</td>" +
-                "<td style='padding:.45rem .6rem;text-align:right;font-weight:600;font-size:.85rem;color:var(--text-primary)'>" + (r.precoMeu > 0 ? "R$ " + r.precoMeu.toFixed(2).replace(".", ",") : "<span style='color:var(--text-secondary);font-size:.75rem'>—</span>") + "</td>" +
-                "<td style='padding:.45rem .6rem;text-align:center'>" + badgeComparativo + " " + (r.diff !== null ? "<div style='font-size:.72rem;color:" + cor + ";margin-top:2px'>" + diffTxt + "</div>" : "") + "</td>" +
-                "<td style='padding:.45rem .6rem;font-size:.78rem;color:var(--text-secondary)'>" + _esc(r.cliente) + "</td>" +
-                "<td style='padding:.45rem .6rem;font-size:.75rem;color:var(--text-secondary);white-space:nowrap'>" + r.data + "</td>" +
-            "</tr>";
-        }).join("");
-
-        var tableHtml =
-            "<div style='background:var(--bg-sidebar);border:1px solid var(--border-color);border-radius:var(--radius-lg);overflow:hidden'>" +
-                "<div style='overflow-x:auto'>" +
-                    "<table style='width:100%;border-collapse:collapse;font-size:.82rem'>" +
-                        "<thead><tr style='border-bottom:1px solid var(--border-color);background:rgba(255,255,255,.02)'>" +
-                            "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>#</th>" +
-                            "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Referência</th>" +
-                            "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Descrição</th>" +
-                            "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Concorrente</th>" +
-                            "<th style='padding:.5rem .6rem;text-align:right;color:#f59e0b;font-size:.7rem;font-weight:700;text-transform:uppercase'>Preço Concorrente</th>" +
-                            "<th style='padding:.5rem .6rem;text-align:right;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Nosso Preço</th>" +
-                            "<th style='padding:.5rem .6rem;text-align:center;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Comparativo</th>" +
-                            "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Cliente</th>" +
-                            "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Data</th>" +
-                        "</tr></thead>" +
-                        "<tbody>" +
-                            (tableRows || "<tr><td colspan='9' style='text-align:center;padding:2.5rem;color:var(--text-secondary)'>Nenhum preço mapeado encontrado.</td></tr>") +
-                        "</tbody>" +
-                    "</table>" +
-                "</div>" +
-            "</div>";
-
-        hc.innerHTML = kpiHtml + barHtml + tableHtml;
-    }
-
-    function filtrarPrecosMapeados(termo) {
-        _termoFiltroPrecos = termo || "";
-        _desenharTabelaPrecosMapeados();
-    }
-
-    function filtrarPorConcorrente(conc) {
-        _concorrenteFiltroPrecos = conc || "todos";
-        _desenharTabelaPrecosMapeados();
-    }
-
-    function _renderListaConcorrentesCadastrados() {
-        var hc = document.getElementById("concHistoricoContainer");
-        if (!hc) return;
-
-        var header =
-            "<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem'>" +
-                "<div>" +
-                    "<h3 style='margin:0;font-size:1.05rem;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:.4rem'>" +
-                        "<span class='material-icons-round' style='color:#f59e0b'>store</span> Empresas Concorrentes Cadastradas</h3>" +
-                    "<p style='margin:.2rem 0 0;font-size:.78rem;color:var(--text-secondary)'>Empresas concorrentes mapeadas para inteligência e precificação comparativa.</p>" +
-                "</div>" +
-                "<button class='btn btn-primary btn-sm' onclick='DemandaApp.abrirModalNovoConcorrente()' style='display:inline-flex;align-items:center;gap:.3rem'>" +
-                    "<span class='material-icons-round' style='font-size:.9rem'>add_business</span> + Novo Concorrente" +
-                "</button>" +
-            "</div>";
-
-        var cards = _concorrentesCadastrados.map(function(c, i) {
-            return "<div style='background:var(--bg-sidebar);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1rem;margin-bottom:.75rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap'>" +
-                "<div>" +
-                    "<div style='font-weight:700;font-size:.95rem;color:var(--text-primary);display:flex;align-items:center;gap:.4rem'>" +
-                        "<span class='material-icons-round' style='font-size:1rem;color:#f59e0b'>store</span>" + _esc(c.nome) +
-                    "</div>" +
-                    "<div style='font-size:.78rem;color:var(--text-secondary);margin-top:.25rem;display:flex;gap:.75rem;flex-wrap:wrap'>" +
-                        (c.cidade ? "<span>📍 " + _esc(c.cidade) + "</span>" : "") +
-                        (c.telefone ? "<span>📞 " + _esc(c.telefone) + "</span>" : "") +
-                        (c.obs ? "<span>📝 " + _esc(c.obs) + "</span>" : "") +
-                    "</div>" +
-                "</div>" +
-                "<div style='display:flex;gap:.5rem'>" +
-                    "<button class='btn btn-secondary btn-sm' onclick=\"DemandaApp.filtrarPorConcorrente('" + _escAttr(c.nome) + "');DemandaApp.switchConcSubTab('precos');\" style='font-size:.75rem;padding:.25rem .65rem'>" +
-                        "<span class='material-icons-round' style='font-size:.85rem'>table_rows</span> Ver Preços" +
-                    "</button>" +
-                "</div>" +
-            "</div>";
-        }).join("");
-
-        hc.innerHTML = header + cards;
+        if (_concItens.length === 0) _concAddItem();
+        _renderConcorrenteForm();
+        _loadHistoricoConcorrente();
     }
 
     function _renderConcorrenteForm() {
@@ -3466,10 +2871,12 @@ const DemandaApp = (function() {
     function _concUpdateItem(idx, field, value) {
         if (!_concItens[idx]) return;
         _concItens[idx][field] = value;
+        // Atualiza somente a coluna diferença sem re-renderizar tudo
         var tbody = document.getElementById("concTbody");
         if (tbody) _renderConcTbody();
     }
 
+    
     function _onConcClienteInput(val) {
         var dd = document.getElementById("concClienteDropdown");
         if (!dd) return;
@@ -3685,8 +3092,13 @@ const DemandaApp = (function() {
     function _populateConcSugestoes() {
         var dl = document.getElementById("concNomeSugestoes");
         if (!dl) return;
-        var nomes = _concorrentesCadastrados.map(function(c){ return c.nome; }).filter(Boolean);
-        dl.innerHTML = nomes.map(function(n){ return "<option value='" + _escAttr(n) + "'>"; }).join("");
+        var db = _concDB(); if (!db) return;
+        db.orderBy("criadoEm","desc").limit(30).get()
+            .then(function(snap) {
+                var nomes = snap.docs.map(function(d){return d.data().concorrente;}).filter(Boolean);
+                var uniq  = nomes.filter(function(v,i,a){return a.indexOf(v)===i;});
+                dl.innerHTML = uniq.map(function(n){return "<option value='" + _escAttr(n) + "'>";}).join("");
+            }).catch(function(){});
     }
 
     // ════════════════════════════════════════════════════════
@@ -3800,8 +3212,6 @@ const DemandaApp = (function() {
 
                 // Carrega clientes assincronamente em segundo plano
         _carregarClientesAsync();
-        // Carrega concorrentes cadastrados
-        _carregarConcorrentesAsync();
 
         // Fecha dropdown de cliente concorrente ao clicar fora
         document.addEventListener("click", function(ev) {
@@ -6117,17 +5527,8 @@ const DemandaApp = (function() {
         // Devolutiva Compras
         _abrirDevolutivaCompras:  _abrirDevolutivaCompras,
         _confirmarDevolutiva:     _confirmarDevolutiva,
-        // Preço Concorrente & Concorrentes
+        // Cotação Concorrente
         loadConcorrente:              loadConcorrente,
-        onConcorrenteChange:          onConcorrenteChange,
-        onConfConcorrenteChange:      onConfConcorrenteChange,
-        abrirModalNovoConcorrente:    abrirModalNovoConcorrente,
-        salvarNovoConcorrenteModal:   salvarNovoConcorrenteModal,
-        updateItemPrecoConc:          updateItemPrecoConc,
-        switchConcSubTab:             switchConcSubTab,
-        filtrarPrecosMapeados:        filtrarPrecosMapeados,
-        filtrarPorConcorrente:        filtrarPorConcorrente,
-        carregarConcorrentes:         _carregarConcorrentesAsync,
         _concAddItem:                 _concAddItem,
         _concRemoveItem:              _concRemoveItem,
         _concUpdateItem:              _concUpdateItem,
