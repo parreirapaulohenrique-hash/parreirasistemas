@@ -459,25 +459,14 @@ window.CarrierSwitchModule = (function () {
         const sim = calculateCostForCarrier(d, candidateCarrierName);
         if (!sim) return null;
 
-        // Frete da transportadora principal sugerida
-        const mainNovo = sim.total - (sim.redispatch || 0);
-
-        // Tratamento do Redespacho na Sugerida:
-        // Se a transportadora sugerida possui redespacho calculado na regra, usa ele.
-        // Se o despacho original já teve redespacho obrigatório na rota (ex: Breves/embarcação marítima),
-        // preserva o redespacho da rota, pois apenas a transportadora principal é alterada!
-        let redespachoNovo = 0;
-        let redespCarrierNovo = null;
-
-        if (sim.redispatch > 0) {
-            redespachoNovo = sim.redispatch;
-            redespCarrierNovo = resolveRedespachoName(sim.redespCarrier || redespCarrierAnterior, d.city);
-        } else if (redespachoAnterior > 0) {
-            redespachoNovo = redespachoAnterior;
-            redespCarrierNovo = resolveRedespachoName(redespCarrierAnterior || sim.redespCarrier, d.city);
-        }
-
-        const custoNovo = mainNovo + redespachoNovo;
+        // Frete e Redespacho da Transportadora Sugerida:
+        // Obedece estritamente às regras cadastradas da tabela de frete da transportadora:
+        // Se a transportadora possui redespacho cadastrado para a rota, aplica sim.redispatch.
+        // Se a transportadora atende a rota diretamente (sem redespacho na tabela, como TNORTE para Soure), redespacho é ZERO!
+        const redespachoNovo = (sim.redispatch && sim.redispatch > 0) ? sim.redispatch : 0;
+        const redespCarrierNovo = redespachoNovo > 0 ? resolveRedespachoName(sim.redespCarrier, d.city) : null;
+        const mainNovo = sim.total - redespachoNovo;
+        const custoNovo = sim.total;
         const diferenca = actualCost - custoNovo; // Positivo = Economia, Negativo = Gasto adicional
         const diferencaPerc = actualCost > 0 ? ((actualCost - custoNovo) / actualCost) * 100 : 0;
 
@@ -868,10 +857,8 @@ window.CarrierSwitchModule = (function () {
             group.percentualTabelaNovoTotal += item.percentualTabelaNovo;
         });
 
-        group.redespCarrierNovo = resolveRedespachoName(lastRedespCarrier || group.redespCarrierAnterior, group.cidade);
-
         const count = group.dispatches.length;
-        group.redespCarrierNovo = lastRedespCarrier;
+        group.redespCarrierNovo = lastRedespCarrier ? resolveRedespachoName(lastRedespCarrier, group.cidade) : null;
         group.leadTimeNovo = lastLeadTimeNovo;
         group.diferencaTotal = group.custoAnteriorTotal - group.custoNovoTotal;
         group.diferencaPerc = group.custoAnteriorTotal > 0 ? (group.diferencaTotal / group.custoAnteriorTotal) * 100 : 0;
