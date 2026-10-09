@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.25.0",
-  "build": "20261009-v3.25.0",
+  "version": "3.25.1",
+  "build": "20261009-v3.25.1",
   "lastUpdate": "2026-10-09",
-  "releaseDate": "2026-10-09T09:58:00-03:00",
-  "change": "v3.25.0: Correção no motor de cotação reversa da Análise de Troca: suporte a regras com redespacho via hub (cidadeRedespacho), priorização por rota e atualização dinâmica e precisa ao alternar entre transportadoras (ex: TNORTE 3% vs BOA ESPERANÇA 4%)."
+  "releaseDate": "2026-10-09T10:25:00-03:00",
+  "change": "v3.25.1: Correção no cálculo de redespacho da Análise de Troca: o redespacho obedece estritamente à regra da tabela da transportadora sugerida. Quando a transportadora atende a rota diretamente (como TNORTE para Soure), nenhum redespacho é cobrado, ficando o frete total fiel de R$ 1.395,16."
 }
