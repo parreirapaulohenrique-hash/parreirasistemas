@@ -329,7 +329,7 @@ const DemandaSearch = (() => {
         };
     }
 
-    // async function _searchErpByRef(query, filialId) {
+    async function _searchErpByRef(query, filialId) {
         const adapter = _getAdapter();
         const normRef = DemandaImport ? DemandaImport.normalizeRef(query) : query.toUpperCase().replace(/[\s\-\.\/]/g, '');
         const headers = await adapter._authHeaders();
