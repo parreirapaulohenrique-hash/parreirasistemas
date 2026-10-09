@@ -710,40 +710,142 @@ window.CarrierSwitchModule = (function () {
             g.dispatches.push(item);
         });
 
-        // Finaliza cálculos dos grupos
-        state.groupedResults = Array.from(groupsMap.values()).map(g => {
-            const count = g.dispatches.length;
-            const diferencaTotal = g.custoAnteriorTotal - g.custoNovoTotal; // > 0 = Economia, < 0 = Gasto adicional
-            const diferencaPerc = g.custoAnteriorTotal > 0 ? (diferencaTotal / g.custoAnteriorTotal) * 100 : 0;
-            const diffDiasPrazoMedio = count > 0 ? (g.diffDiasPrazoTotal / count) : 0;
-            const percentualTabelaNovo = count > 0 ? (g.percentualTabelaNovoTotal / count) : 0;
-            const percentualTabelaAnterior = count > 0 ? (g.percentualTabelaAnteriorTotal / count) : 0;
-            const percentualEfetivoNovo = g.valorNFTotal > 0 ? (g.custoNovoTotal / g.valorNFTotal) * 100 : 0;
-            const percentualEfetivoAnterior = g.valorNFTotal > 0 ? (g.custoAnteriorTotal / g.valorNFTotal) * 100 : 0;
+        // 3. Finaliza cálculos dos grupos trazendo SEMPRE como sugestão inicial a transportadora de MAIOR ECONOMIA GERADA
+        state.groupedResults = Array.from(groupsMap.values());
 
-            return {
-                ...g,
-                count: count,
-                diferencaTotal: diferencaTotal,
-                diferencaPerc: diferencaPerc,
-                diffDiasPrazoMedio: diffDiasPrazoMedio,
-                percentualTabelaNovo: percentualTabelaNovo,
-                percentualTabelaAnterior: percentualTabelaAnterior,
-                percentualEfetivoNovo: percentualEfetivoNovo,
-                percentualEfetivoAnterior: percentualEfetivoAnterior,
-                isEconomia: diferencaTotal >= 0,
-                hasRedespachoNovo: g.redespachoNovoTotal > 0
-            };
+        state.groupedResults.forEach(group => {
+            let targetCarrier = null;
+
+            if (filterCarrierNovo !== '__AUTO__') {
+                targetCarrier = filterCarrierNovo;
+            } else {
+                // Modo Automático: avalia todas as opções e seleciona a transportadora de MAIOR ECONOMIA TOTAL para a rota
+                const availableCarriers = getCarriersForCity(group.cidade).map(c => c.name);
+                let maxEconomia = -Infinity;
+                let bestCarrier = null;
+
+                availableCarriers.forEach(cand => {
+                    if (cand === group.carrierAnterior) return;
+                    let totalCost = 0;
+                    let validCount = 0;
+
+                    group.dispatches.forEach(item => {
+                        const sim = simulateDispatchCost(item.raw, cand);
+                        if (sim && sim.custoNovo > 0) {
+                            totalCost += sim.custoNovo;
+                            validCount++;
+                        }
+                    });
+
+                    if (validCount === group.dispatches.length && validCount > 0) {
+                        const econ = group.custoAnteriorTotal - totalCost;
+                        if (econ > maxEconomia) {
+                            maxEconomia = econ;
+                            bestCarrier = cand;
+                        }
+                    }
+                });
+
+                targetCarrier = bestCarrier || group.carrierNovo || availableCarriers[0] || group.carrierAnterior;
+            }
+
+            applyCarrierToGroup(group, targetCarrier);
         });
 
-        // Ordena por maior impacto financeiro
-        state.groupedResults.sort((a, b) => Math.abs(b.diferencaTotal) - Math.abs(a.diferencaTotal));
+        // Ordena organizando SEMPRE no topo as rotas com MAIOR ECONOMIA GERADA (maior saldo positivo primeiro)
+        state.groupedResults.sort((a, b) => b.diferencaTotal - a.diferencaTotal);
 
         // 4. Calcula KPIs do Topo
         recalculateKPIs();
 
         // 5. Aplica filtro de tag e renderiza na tela
         applyTagFilter(state.currentFilterTag || 'all');
+    }
+
+    /**
+     * Aplica uma transportadora a todos os despachos do grupo
+     * e recalcula métricas consolidadas (custo, economia, taxas, prazos, etc.)
+     */
+    function applyCarrierToGroup(group, targetCarrier) {
+        group.carrierNovo = targetCarrier;
+
+        // Zera acumuladores da sugerida para este grupo
+        group.custoNovoTotal = 0;
+        group.mainNovoTotal = 0;
+        group.redespachoNovoTotal = 0;
+        group.baseNovoTotal = 0;
+        group.excessoNovoTotal = 0;
+        group.taxasNovoTotal = 0;
+        group.diffDiasPrazoTotal = 0;
+        group.percentualTabelaNovoTotal = 0;
+
+        let lastRedespCarrier = null;
+        let lastLeadTimeNovo = '-';
+
+        group.dispatches.forEach(item => {
+            const sim = simulateDispatchCost(item.raw, targetCarrier);
+            if (sim) {
+                item.carrierNovo = targetCarrier;
+                item.custoNovo = sim.custoNovo;
+                item.mainNovo = sim.mainNovo;
+                item.redespachoNovo = sim.redespachoNovo;
+                item.redespCarrierNovo = sim.redespCarrierNovo;
+                item.baseNovo = sim.baseNovo;
+                item.excessoNovo = sim.excessoNovo;
+                item.taxasNovo = sim.taxasNovo;
+                item.leadTimeNovo = sim.leadTimeNovo;
+                item.leadTimeDaysNovo = sim.leadTimeDaysNovo;
+                item.percentualTabelaNovo = sim.percentualTabelaNovo;
+                item.percentualEfetivoNovo = sim.percentualEfetivoNovo;
+                item.diferenca = sim.diferenca;
+                item.diferencaPerc = sim.diferencaPerc;
+                item.diffDiasPrazo = sim.diffDiasPrazo;
+                item.hasRedespachoNovo = sim.hasRedespachoNovo;
+
+                lastRedespCarrier = sim.redespCarrierNovo || lastRedespCarrier;
+                lastLeadTimeNovo = sim.leadTimeNovo;
+            } else {
+                item.carrierNovo = targetCarrier;
+                item.custoNovo = 0;
+                item.mainNovo = 0;
+                item.redespachoNovo = 0;
+                item.redespCarrierNovo = null;
+                item.baseNovo = 0;
+                item.excessoNovo = 0;
+                item.taxasNovo = 0;
+                item.leadTimeNovo = '-';
+                item.leadTimeDaysNovo = 0;
+                item.percentualTabelaNovo = 0;
+                item.percentualEfetivoNovo = 0;
+                item.diferenca = 0;
+                item.diferencaPerc = 0;
+                item.diffDiasPrazo = 0;
+                item.hasRedespachoNovo = false;
+            }
+
+            group.custoNovoTotal += item.custoNovo;
+            group.mainNovoTotal += item.mainNovo;
+            group.redespachoNovoTotal += item.redespachoNovo;
+            group.baseNovoTotal += item.baseNovo;
+            group.excessoNovoTotal += item.excessoNovo;
+            group.taxasNovoTotal += item.taxasNovo;
+            group.diffDiasPrazoTotal += item.diffDiasPrazo;
+            group.percentualTabelaNovoTotal += item.percentualTabelaNovo;
+        });
+
+        const count = group.dispatches.length;
+        group.count = count;
+        group.redespCarrierNovo = lastRedespCarrier ? resolveRedespachoName(lastRedespCarrier, group.cidade) : null;
+        group.leadTimeNovo = lastLeadTimeNovo;
+        group.diferencaTotal = group.custoAnteriorTotal - group.custoNovoTotal;
+        group.diferencaPerc = group.custoAnteriorTotal > 0 ? (group.diferencaTotal / group.custoAnteriorTotal) * 100 : 0;
+        group.diffDiasPrazoMedio = count > 0 ? (group.diffDiasPrazoTotal / count) : 0;
+        group.percentualTabelaNovo = count > 0 ? (group.percentualTabelaNovoTotal / count) : 0;
+        group.percentualTabelaAnterior = count > 0 ? (group.percentualTabelaAnteriorTotal / count) : 0;
+        group.percentualEfetivoNovo = group.valorNFTotal > 0 ? (group.custoNovoTotal / group.valorNFTotal) * 100 : 0;
+        group.percentualEfetivoAnterior = group.valorNFTotal > 0 ? (group.custoAnteriorTotal / group.valorNFTotal) * 100 : 0;
+        group.isEconomia = group.diferencaTotal >= 0;
+        group.hasRedespachoNovo = group.redespachoNovoTotal > 0;
     }
 
     // Recalcula KPIs consolidados do topo
@@ -791,82 +893,7 @@ window.CarrierSwitchModule = (function () {
             return;
         }
 
-        group.carrierNovo = newCarrier;
-
-        // Zera acumuladores da sugerida para este grupo
-        group.custoNovoTotal = 0;
-        group.mainNovoTotal = 0;
-        group.redespachoNovoTotal = 0;
-        group.baseNovoTotal = 0;
-        group.excessoNovoTotal = 0;
-        group.taxasNovoTotal = 0;
-        group.diffDiasPrazoTotal = 0;
-        group.percentualTabelaNovoTotal = 0;
-
-        let lastRedespCarrier = null;
-        let lastLeadTimeNovo = '-';
-
-        group.dispatches.forEach(item => {
-            const sim = simulateDispatchCost(item.raw, newCarrier);
-            if (sim) {
-                item.carrierNovo = newCarrier;
-                item.custoNovo = sim.custoNovo;
-                item.mainNovo = sim.mainNovo;
-                item.redespachoNovo = sim.redespachoNovo;
-                item.redespCarrierNovo = sim.redespCarrierNovo;
-                item.baseNovo = sim.baseNovo;
-                item.excessoNovo = sim.excessoNovo;
-                item.taxasNovo = sim.taxasNovo;
-                item.leadTimeNovo = sim.leadTimeNovo;
-                item.leadTimeDaysNovo = sim.leadTimeDaysNovo;
-                item.percentualTabelaNovo = sim.percentualTabelaNovo;
-                item.percentualEfetivoNovo = sim.percentualEfetivoNovo;
-                item.diferenca = sim.diferenca;
-                item.diferencaPerc = sim.diferencaPerc;
-                item.diffDiasPrazo = sim.diffDiasPrazo;
-                item.hasRedespachoNovo = sim.hasRedespachoNovo;
-
-                lastRedespCarrier = sim.redespCarrierNovo || lastRedespCarrier;
-                lastLeadTimeNovo = sim.leadTimeNovo;
-            } else {
-                item.carrierNovo = newCarrier;
-                item.custoNovo = 0;
-                item.mainNovo = 0;
-                item.redespachoNovo = 0;
-                item.redespCarrierNovo = null;
-                item.baseNovo = 0;
-                item.excessoNovo = 0;
-                item.taxasNovo = 0;
-                item.leadTimeNovo = '-';
-                item.leadTimeDaysNovo = 0;
-                item.percentualTabelaNovo = 0;
-                item.percentualEfetivoNovo = 0;
-                item.diferenca = 0;
-                item.diferencaPerc = 0;
-                item.diffDiasPrazo = 0;
-                item.hasRedespachoNovo = false;
-            }
-
-            group.custoNovoTotal += item.custoNovo;
-            group.mainNovoTotal += item.mainNovo;
-            group.redespachoNovoTotal += item.redespachoNovo;
-            group.baseNovoTotal += item.baseNovo;
-            group.excessoNovoTotal += item.excessoNovo;
-            group.taxasNovoTotal += item.taxasNovo;
-            group.diffDiasPrazoTotal += item.diffDiasPrazo;
-            group.percentualTabelaNovoTotal += item.percentualTabelaNovo;
-        });
-
-        const count = group.dispatches.length;
-        group.redespCarrierNovo = lastRedespCarrier ? resolveRedespachoName(lastRedespCarrier, group.cidade) : null;
-        group.leadTimeNovo = lastLeadTimeNovo;
-        group.diferencaTotal = group.custoAnteriorTotal - group.custoNovoTotal;
-        group.diferencaPerc = group.custoAnteriorTotal > 0 ? (group.diferencaTotal / group.custoAnteriorTotal) * 100 : 0;
-        group.diffDiasPrazoMedio = count > 0 ? (group.diffDiasPrazoTotal / count) : 0;
-        group.percentualTabelaNovo = count > 0 ? (group.percentualTabelaNovoTotal / count) : 0;
-        group.percentualEfetivoNovo = group.valorNFTotal > 0 ? (group.custoNovoTotal / group.valorNFTotal) * 100 : 0;
-        group.isEconomia = group.diferencaTotal >= 0;
-        group.hasRedespachoNovo = group.redespachoNovoTotal > 0;
+        applyCarrierToGroup(group, newCarrier);
 
         // Recalcula KPIs consolidados
         recalculateKPIs();

@@ -1,9 +1,9 @@
 {
-  "version": "3.1.0",
-  "build": "20261008-v3.1.0",
+  "version": "3.2.0",
+  "build": "20261009-v3.2.0",
   "module": "demanda",
   "name": "Cotacao",
-  "lastUpdate": "2026-10-08",
-  "change": "v3.1.0 - feat(lotes A, B, C): Captura multimodal universal (PDF.js, Excel, CSV), Inteligência de Equivalências Técnicas OEM & Similares, e conexão de Vendas Perdidas/Rupturas com Demanda Reprimida e cálculo DMD.",
-  "releaseDate": "2026-10-08T16:15:00-03:00"
+  "lastUpdate": "2026-10-09",
+  "change": "v3.2.0 - feat: Inteligência de Preço Concorrente, seleção e cadastro de concorrentes na cotação, extração de preços de orçamentos (J.A. Agrícola) e benchmarking analítico peça a peça.",
+  "releaseDate": "2026-10-09T11:10:00-03:00"
 }

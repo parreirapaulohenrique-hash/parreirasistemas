@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.25.1",
-  "build": "20261009-v3.25.1",
+  "version": "3.25.2",
+  "build": "20261009-v3.25.2",
   "lastUpdate": "2026-10-09",
-  "releaseDate": "2026-10-09T10:25:00-03:00",
-  "change": "v3.25.1: Correção no cálculo de redespacho da Análise de Troca: o redespacho obedece estritamente à regra da tabela da transportadora sugerida. Quando a transportadora atende a rota diretamente (como TNORTE para Soure), nenhum redespacho é cobrado, ficando o frete total fiel de R$ 1.395,16."
+  "releaseDate": "2026-10-09T11:08:00-03:00",
+  "change": "v3.25.2: Organização da Análise de Troca: traz sempre preenchida por padrão a opção com maior economia gerada para cada rota e ordena a tabela da maior economia para a menor, permitindo trocar opções na linha para observar outros parâmetros."
 }
