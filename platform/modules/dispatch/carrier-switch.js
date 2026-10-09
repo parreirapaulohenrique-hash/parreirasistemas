@@ -993,7 +993,7 @@ window.CarrierSwitchModule = (function () {
         if (state.filteredGroups.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="11" style="text-align: center; padding: 3rem 1rem; color: var(--text-secondary);">
+                    <td colspan="12" style="text-align: center; padding: 3rem 1rem; color: var(--text-secondary);">
                         <span class="material-icons-round" style="font-size: 2.5rem; opacity: 0.3; display: block; margin-bottom: 0.5rem;">find_in_page</span>
                         Nenhum registro encontrado para os filtros selecionados.<br>
                         <small style="opacity: 0.7;">Tente ampliar o período ou alterar os filtros de cliente e município.</small>
@@ -1087,6 +1087,14 @@ window.CarrierSwitchModule = (function () {
                             title="Selecione qualquer transportadora que atende ${g.cidade}">
                             ${optionsHtml}
                         </select>
+                    </td>
+                    <td style="text-align: right;">
+                        <div style="font-weight: 700; color: #f8fafc; font-size: 0.80rem;" title="Preço / Valor total das notas fiscais desta rota">
+                            ${formatBRL(g.valorNFTotal)}
+                        </div>
+                        <div style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 1px;">
+                            ${g.count > 1 ? `${g.count} NFs` : '1 NF'}
+                        </div>
                     </td>
                     <td style="text-align: center;">
                         <div style="display: inline-flex; align-items: center; justify-content: center; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 4px; padding: 1px 5px; font-weight: 700; color: #60a5fa; font-size: 0.75rem;">
@@ -1390,6 +1398,7 @@ window.CarrierSwitchModule = (function () {
             'Município': g.cidade,
             'Último Envio': g.carrierAnterior,
             'Transportadora Sugerida': g.carrierNovo,
+            'Preço Total NFs (R$)': Number(g.valorNFTotal.toFixed(2)),
             '% Frete Tabela (Sugerida)': Number(g.percentualTabelaNovo.toFixed(2)),
             '% Frete Efetivo Sugerido': Number(g.percentualEfetivoNovo.toFixed(2)),
             '% Frete Efetivo Último Envio': Number(g.percentualEfetivoAnterior.toFixed(2)),

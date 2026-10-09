@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.25.3",
-  "build": "20261009-v3.25.3",
+  "version": "3.25.4",
+  "build": "20261009-v3.25.4",
   "lastUpdate": "2026-10-09",
-  "releaseDate": "2026-10-09T12:02:00-03:00",
-  "change": "v3.25.3: Ativação do BI Logístico Executivo dentro da aba Relatórios Gerenciais com cards de KPIs e gráficos de Custo por Transportadora, Volumes e SLA de Entregas."
+  "releaseDate": "2026-10-09T14:15:00-03:00",
+  "change": "v3.25.4: Adicionada coluna Preço NF na tabela comparativa da Análise de Troca de Transportadora e no relatório Excel consolidado."
 }
