@@ -143,6 +143,29 @@ const DemandaImport = (() => {
      *   B) Linhas alternadas Código / Descrição / Qtde
      */
     function _tryParseTableLines(linhas) {
+        // Tenta detectar cabeçalho de concorrente ou cliente nas linhas do documento
+        let detectedConcorrente = '';
+        let detectedCliente = '';
+        let detectedOrcamento = '';
+
+        for (const l of linhas) {
+            if (/j\.?\s*a\.?\s*agricola/i.test(l)) {
+                detectedConcorrente = 'J.A. Agrícola';
+            } else if (/carlos\s+central\s+pe/i.test(l)) {
+                detectedConcorrente = 'Carlos Central Peças';
+            } else if (/rondobras/i.test(l)) {
+                detectedConcorrente = 'Rondobras';
+            }
+            const mCli = l.match(/cliente\s*:\s*(?:\d+\s+)?([A-Za-zÀ-ÿ\s]{4,40})/i);
+            if (mCli && !detectedCliente) {
+                detectedCliente = mCli[1].trim();
+            }
+            const mOrc = l.match(/or[cç]amento\s*:\s*(?:orc\s*)?([0-9.]+)/i);
+            if (mOrc && !detectedOrcamento) {
+                detectedOrcamento = mOrc[1].trim();
+            }
+        }
+
         // ─── Formato 0: Tabela com colunas tabuladas (\t) ou múltiplos espaços ───
         const tabRows = [];
         for (const l of linhas) {
@@ -152,6 +175,7 @@ const DemandaImport = (() => {
                 const ref = parts[0].toUpperCase();
                 const desc = parts[1];
                 let qtde = 1;
+                let qIdx = -1;
                 for (let idx = 2; idx < parts.length; idx++) {
                     const p = parts[idx];
                     // Quantidade após unidade
@@ -159,6 +183,7 @@ const DemandaImport = (() => {
                         const mq = parts[idx + 1].match(/^(\d+(?:[.,]\d+)?)$/);
                         if (mq) {
                             qtde = Math.round(parseFloat(mq[1].replace(',', '.'))) || 1;
+                            qIdx = idx + 1;
                             break;
                         }
                     }
@@ -168,11 +193,36 @@ const DemandaImport = (() => {
                         const qv = parseFloat(mq2[1]);
                         if (qv > 0 && qv < 10000) {
                             qtde = Math.round(qv) || 1;
+                            qIdx = idx;
                             break;
                         }
                     }
                 }
-                tabRows.push({ refOriginal: ref, descOriginal: desc || ref, qtdeSolicitada: qtde, obs: '', incerteza: false });
+
+                // Tenta extrair preço unitário do concorrente se houver valor monetário após a quantidade
+                let precoConcorrente = null;
+                if (qIdx !== -1 && qIdx + 1 < parts.length) {
+                    const cand = parts[qIdx + 1];
+                    const candClean = cand.replace(/\./g, '').replace(',', '.');
+                    const val = parseFloat(candClean);
+                    if (!isNaN(val) && val > 0 && val < 500000) {
+                        precoConcorrente = val;
+                    }
+                }
+
+                const obsTxt = precoConcorrente ? ('Preço conc.: R$ ' + precoConcorrente.toFixed(2).replace('.', ',')) : '';
+
+                tabRows.push({
+                    refOriginal: ref,
+                    descOriginal: desc || ref,
+                    qtdeSolicitada: qtde,
+                    precoConcorrente: precoConcorrente,
+                    obs: obsTxt,
+                    incerteza: false,
+                    _metaConcorrente: detectedConcorrente || null,
+                    _metaCliente: detectedCliente || null,
+                    _metaOrcamento: detectedOrcamento || null
+                });
             }
         }
         if (tabRows.length >= 2 || (tabRows.length === 1 && linhas.length <= 6)) {
