@@ -1,9 +1,9 @@
 {
   "version": "3.2.0",
-  "build": "20261009-v3.2.0",
+  "build": "20261009-v3.2.0-r2",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-09",
   "change": "v3.2.0 - feat: Inteligência de Preço Concorrente, seleção e cadastro de concorrentes na cotação, extração de preços de orçamentos (J.A. Agrícola) e benchmarking analítico peça a peça.",
-  "releaseDate": "2026-10-09T11:10:00-03:00"
+  "releaseDate": "2026-10-09T12:52:00-03:00"
 }

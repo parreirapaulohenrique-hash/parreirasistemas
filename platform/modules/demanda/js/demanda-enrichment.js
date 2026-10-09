@@ -15,18 +15,25 @@ const DemandaEnrichment = (() => {
     function _getTenantId() {
         if (typeof DemandaDB !== 'undefined' && DemandaDB.TENANT_ID) return DemandaDB.TENANT_ID;
         try {
-            if (window.ParreiraAuth && typeof ParreiraAuth.getTenant === 'function') {
-                const t = ParreiraAuth.getTenant();
-                if (t) return t;
+            if (window.ParreiraAuth) {
+                if (typeof ParreiraAuth.getTenantId === 'function') {
+                    const tid = ParreiraAuth.getTenantId();
+                    if (tid) return String(tid);
+                }
+                if (typeof ParreiraAuth.getTenant === 'function') {
+                    const t = ParreiraAuth.getTenant();
+                    if (t && typeof t === 'object' && t.id) return String(t.id);
+                    if (t && typeof t === 'string') return t;
+                }
             }
             if (window.sessionManager && typeof sessionManager.getTenantId === 'function') {
                 const t = sessionManager.getTenantId();
-                if (t) return t;
+                if (t) return String(t);
             }
             const s = JSON.parse(sessionStorage.getItem('parreira_session') || localStorage.getItem('parreira_session_ls') || 'null');
-            if (s && s.tenantId) return s.tenantId;
+            if (s && s.tenantId) return String(s.tenantId);
         } catch (_) {}
-        return localStorage.getItem('app_tenant_id') || 'centralpecas';
+        return String(localStorage.getItem('app_tenant_id') || 'centralpecas');
     }
 
     const _getCollectionPath = () => 'tenants/' + _getTenantId() + '/demanda/techbase/products';
