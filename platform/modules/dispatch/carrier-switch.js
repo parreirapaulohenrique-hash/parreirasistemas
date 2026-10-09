@@ -990,100 +990,100 @@ window.CarrierSwitchModule = (function () {
             html += `
                 <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
                     <td>
-                        <div style="font-weight: 600; color: #f8fafc; font-size: 0.82rem; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${g.cliente}">${g.cliente}</div>
-                        <div style="font-size: 0.70rem; color: var(--text-secondary); margin-top: 1px;">
+                        <div style="font-weight: 600; color: #f8fafc; font-size: 0.80rem; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${g.cliente}">${g.cliente}</div>
+                        <div style="font-size: 0.68rem; color: var(--text-secondary); margin-top: 1px;">
                             ${g.count} ${g.count === 1 ? 'despacho' : 'despachos'} • ${(g.pesoTotal).toFixed(0)} kg
                         </div>
                     </td>
-                    <td style="color: #cbd5e1; font-size: 0.82rem;">${g.cidade}</td>
-                    <td style="color: #94a3b8; font-size: 0.82rem;">${g.carrierAnterior}</td>
+                    <td style="color: #cbd5e1; font-size: 0.78rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px;" title="${g.cidade}">${g.cidade}</td>
+                    <td style="color: #cbd5e1; font-size: 0.78rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px;" title="${g.carrierAnterior}">${g.carrierAnterior}</td>
                     <td>
                         <select class="form-input"
                             onchange="window.CarrierSwitchModule.changeRowCarrier(decodeURIComponent('${safeKey}'), this.value)"
                             style="
-                                height: 32px;
-                                padding: 2px 8px;
-                                font-size: 0.78rem;
+                                height: 30px;
+                                padding: 2px 6px;
+                                font-size: 0.74rem;
                                 font-weight: 700;
                                 color: #60a5fa;
                                 background: rgba(15, 23, 42, 0.9);
                                 border: 1px solid rgba(59, 130, 246, 0.45);
-                                border-radius: 6px;
+                                border-radius: 5px;
                                 cursor: pointer;
                                 width: 100%;
-                                max-width: 175px;
+                                max-width: 135px;
                             "
                             title="Selecione qualquer transportadora que atende ${g.cidade}">
                             ${optionsHtml}
                         </select>
                     </td>
                     <td style="text-align: center;">
-                        <div style="display: inline-flex; align-items: center; justify-content: center; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 4px; padding: 2px 7px; font-weight: 700; color: #60a5fa; font-size: 0.78rem;">
+                        <div style="display: inline-flex; align-items: center; justify-content: center; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 4px; padding: 1px 5px; font-weight: 700; color: #60a5fa; font-size: 0.75rem;">
                             ${g.percentualTabelaNovo > 0 ? g.percentualTabelaNovo.toFixed(2) + '%' : '-'}
                         </div>
-                        <div style="font-size: 0.68rem; color: var(--text-secondary); margin-top: 1px;" title="Percentual Efetivo sobre Valor Total de NFs">
+                        <div style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 1px;" title="Percentual Efetivo sobre Valor Total de NFs">
                             ${g.percentualEfetivoNovo > 0 ? g.percentualEfetivoNovo.toFixed(2) + '% ef.' : ''}
                         </div>
                     </td>
                     <td>
                         ${g.redespachoAnteriorTotal > 0 ? `
-                            <div style="font-weight: 700; color: #22c55e; font-size: 0.84rem; display: flex; align-items: center; justify-content: space-between; gap: 6px;" title="Frete Principal do Último Envio (${g.carrierAnterior})">
+                            <div style="font-weight: 700; color: #22c55e; font-size: 0.80rem; display: flex; align-items: center; justify-content: space-between; gap: 4px;" title="Frete Principal do Último Envio (${g.carrierAnterior})">
                                 <span>${formatBRL(g.mainAnteriorTotal)}</span>
-                                <span style="font-size: 0.68rem; font-weight: 700; color: #86efac; background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); padding: 1px 6px; border-radius: 4px;">${g.carrierAnterior}</span>
+                                <span style="font-size: 0.65rem; font-weight: 700; color: #86efac; background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); padding: 1px 4px; border-radius: 3px;">${g.carrierAnterior}</span>
                             </div>
-                            <div style="font-size: 0.70rem; color: #fde047; font-weight: 600; margin-top: 2px; white-space: nowrap;" title="Redespacho Obrigatório via ${resolveRedespachoName(g.redespCarrierAnterior, g.cidade)}">
+                            <div style="font-size: 0.68rem; color: #fde047; font-weight: 600; margin-top: 1px; white-space: nowrap;" title="Redespacho Obrigatório via ${resolveRedespachoName(g.redespCarrierAnterior, g.cidade)}">
                                 + ${formatBRL(g.redespachoAnteriorTotal)} / ${resolveRedespachoName(g.redespCarrierAnterior, g.cidade)}
                             </div>
-                            <div style="font-size: 0.68rem; color: #94a3b8; margin-top: 2px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 2px;" title="Custo Total Último Envio: ${formatBRL(g.mainAnteriorTotal)} principal + ${formatBRL(g.redespachoAnteriorTotal)} redespacho">
+                            <div style="font-size: 0.66rem; color: #94a3b8; margin-top: 1px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 1px;" title="Custo Total Último Envio: ${formatBRL(g.mainAnteriorTotal)} principal + ${formatBRL(g.redespachoAnteriorTotal)} redespacho">
                                 Total: <strong style="color:#e2e8f0;">${formatBRL(g.custoAnteriorTotal)}</strong> <span style="opacity:0.8;">(${g.percentualEfetivoAnterior > 0 ? g.percentualEfetivoAnterior.toFixed(2) + '%' : ''})</span>
                             </div>
                         ` : `
-                            <div style="font-weight: 700; color: #22c55e; font-size: 0.84rem; display: flex; align-items: center; justify-content: space-between; gap: 6px;" title="Transportadora do Último Envio: ${g.carrierAnterior}">
+                            <div style="font-weight: 700; color: #22c55e; font-size: 0.80rem; display: flex; align-items: center; justify-content: space-between; gap: 4px;" title="Transportadora do Último Envio: ${g.carrierAnterior}">
                                 <span>${formatBRL(g.custoAnteriorTotal)}</span>
-                                <span style="font-size: 0.68rem; font-weight: 700; color: #86efac; background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); padding: 1px 6px; border-radius: 4px;">${g.carrierAnterior}</span>
+                                <span style="font-size: 0.65rem; font-weight: 700; color: #86efac; background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); padding: 1px 4px; border-radius: 3px;">${g.carrierAnterior}</span>
                             </div>
-                            <div style="font-size: 0.68rem; color: var(--text-secondary); margin-top: 1px;">
+                            <div style="font-size: 0.66rem; color: var(--text-secondary); margin-top: 1px;">
                                 ${g.percentualEfetivoAnterior > 0 ? g.percentualEfetivoAnterior.toFixed(2) + '% s/ NF' : ''}
                             </div>
                         `}
                     </td>
                     <td>
                         ${g.redespachoNovoTotal > 0 ? `
-                            <div style="font-weight: 700; color: #60a5fa; font-size: 0.84rem; display: flex; align-items: center; justify-content: space-between; gap: 6px;" title="Frete Principal Sugerido (${g.carrierNovo})">
+                            <div style="font-weight: 700; color: #60a5fa; font-size: 0.80rem; display: flex; align-items: center; justify-content: space-between; gap: 4px;" title="Frete Principal Sugerido (${g.carrierNovo})">
                                 <span>${formatBRL(g.mainNovoTotal)}</span>
-                                <span style="font-size: 0.68rem; font-weight: 700; color: #93c5fd; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); padding: 1px 6px; border-radius: 4px;">${g.carrierNovo}</span>
+                                <span style="font-size: 0.65rem; font-weight: 700; color: #93c5fd; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); padding: 1px 4px; border-radius: 3px;">${g.carrierNovo}</span>
                             </div>
-                            <div style="font-size: 0.70rem; color: #fde047; font-weight: 600; margin-top: 2px; white-space: nowrap;" title="Redespacho Obrigatório mantido via ${resolveRedespachoName(g.redespCarrierNovo || g.redespCarrierAnterior, g.cidade)}">
+                            <div style="font-size: 0.68rem; color: #fde047; font-weight: 600; margin-top: 1px; white-space: nowrap;" title="Redespacho Obrigatório mantido via ${resolveRedespachoName(g.redespCarrierNovo || g.redespCarrierAnterior, g.cidade)}">
                                 + ${formatBRL(g.redespachoNovoTotal)} / ${resolveRedespachoName(g.redespCarrierNovo || g.redespCarrierAnterior, g.cidade)}
                             </div>
-                            <div style="font-size: 0.68rem; color: #94a3b8; margin-top: 2px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 2px;" title="Custo Total Sugerido: ${formatBRL(g.mainNovoTotal)} principal + ${formatBRL(g.redespachoNovoTotal)} redespacho">
+                            <div style="font-size: 0.66rem; color: #94a3b8; margin-top: 1px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 1px;" title="Custo Total Sugerido: ${formatBRL(g.mainNovoTotal)} principal + ${formatBRL(g.redespachoNovoTotal)} redespacho">
                                 Total: <strong style="color:#f8fafc;">${formatBRL(g.custoNovoTotal)}</strong> <span style="opacity:0.8;">(${g.percentualEfetivoNovo > 0 ? g.percentualEfetivoNovo.toFixed(2) + '%' : ''})</span>
                             </div>
                         ` : `
-                            <div style="font-weight: 700; color: #f8fafc; font-size: 0.84rem; display: flex; align-items: center; justify-content: space-between; gap: 6px;" title="Transportadora Sugerida: ${g.carrierNovo}">
+                            <div style="font-weight: 700; color: #f8fafc; font-size: 0.80rem; display: flex; align-items: center; justify-content: space-between; gap: 4px;" title="Transportadora Sugerida: ${g.carrierNovo}">
                                 <span>${formatBRL(g.custoNovoTotal)}</span>
-                                <span style="font-size: 0.68rem; font-weight: 700; color: #93c5fd; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); padding: 1px 6px; border-radius: 4px;">${g.carrierNovo}</span>
+                                <span style="font-size: 0.65rem; font-weight: 700; color: #93c5fd; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); padding: 1px 4px; border-radius: 3px;">${g.carrierNovo}</span>
                             </div>
-                            <div style="font-size: 0.68rem; color: #94a3b8; margin-top: 1px;">
+                            <div style="font-size: 0.66rem; color: #94a3b8; margin-top: 1px;">
                                 ${g.percentualEfetivoNovo > 0 ? g.percentualEfetivoNovo.toFixed(2) + '% s/ NF' : ''}
                             </div>
                         `}
                     </td>
-                    <td style="font-weight: 700; color: ${diffColor}; font-size: 0.82rem;">
+                    <td style="font-weight: 700; color: ${diffColor}; font-size: 0.80rem;">
                         ${diffSignal} ${formatBRL(Math.abs(g.diferencaTotal))}
                     </td>
-                    <td style="font-weight: 700; color: ${diffColor}; font-size: 0.82rem;">
-                        ${diffSignal} ${Math.abs(g.diferencaPerc).toFixed(2)}%
+                    <td style="font-weight: 700; color: ${diffColor}; font-size: 0.80rem;">
+                        ${diffSignal} ${Math.abs(g.diferencaPerc).toFixed(1)}%
                     </td>
                     <td>
-                        <div style="font-size: 0.72rem; color: #94a3b8;">${g.leadTimeAnterior} ➔ ${g.leadTimeNovo}</div>
+                        <div style="font-size: 0.70rem; color: #94a3b8;">${g.leadTimeAnterior} ➔ ${g.leadTimeNovo}</div>
                         ${prazoBadge}
                     </td>
                     <td style="text-align: center;">
                         <button class="btn btn-secondary" onclick="window.CarrierSwitchModule.openDetail(${index})" style="
-                            padding: 0.25rem 0.55rem; font-size: 0.72rem; gap: 0.25rem; border-color: rgba(59, 130, 246, 0.35); border-radius: 5px;
+                            padding: 0.2rem 0.5rem; font-size: 0.70rem; gap: 0.2rem; border-color: rgba(59, 130, 246, 0.35); border-radius: 5px;
                         " title="Abrir Raio-X e perspectiva despacho a despacho">
-                            <span class="material-icons-round" style="font-size: 0.95rem; color: #60a5fa;">visibility</span>
+                            <span class="material-icons-round" style="font-size: 0.90rem; color: #60a5fa;">visibility</span>
                             Detalhes
                         </button>
                     </td>
