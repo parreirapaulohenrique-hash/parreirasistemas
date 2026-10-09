@@ -2889,16 +2889,16 @@ const DemandaApp = (function() {
     ];
 
     function _concDB() {
-        if (typeof firebase === "undefined") return null;
+        if (typeof firebase === "undefined" || !firebase.firestore) return null;
         var t = _currentTenant();
-        if (!t) return null;
+        if (!t || typeof t !== "string") t = "centralpecas";
         return firebase.firestore().collection("tenants").doc(t).collection("cotacoes_concorrente");
     }
 
     function _concorrentesCadDB() {
-        if (typeof firebase === "undefined") return null;
+        if (typeof firebase === "undefined" || !firebase.firestore) return null;
         var t = _currentTenant();
-        if (!t) return null;
+        if (!t || typeof t !== "string") t = "centralpecas";
         return firebase.firestore().collection("tenants").doc(t).collection("concorrentes_cadastro");
     }
 
@@ -5409,19 +5409,37 @@ const DemandaApp = (function() {
     var _splitAtualContext = null;
 
     function _currentTenant() {
-        if (typeof DemandaDB !== "undefined" && DemandaDB.TENANT_ID) return DemandaDB.TENANT_ID;
-        if (_sessao && _sessao.tenantId) return _sessao.tenantId;
+        var raw = "";
         try {
-            if (window.ParreiraAuth && typeof ParreiraAuth.getTenant === 'function') {
-                var t = ParreiraAuth.getTenant();
-                if (t) return t;
-            }
-            if (window.sessionManager && typeof sessionManager.getTenantId === 'function') {
-                var t = sessionManager.getTenantId();
-                if (t) return t;
+            if (typeof DemandaDB !== "undefined" && DemandaDB.TENANT_ID) {
+                raw = DemandaDB.TENANT_ID;
+            } else if (typeof DemandaDB !== "undefined" && typeof DemandaDB.getTenantId === "function") {
+                raw = DemandaDB.getTenantId();
             }
         } catch (_) {}
-        return localStorage.getItem('app_tenant_id') || 'centralpecas';
+
+        if (!raw) {
+            try {
+                if (window.ParreiraAuth) {
+                    if (typeof ParreiraAuth.getTenantId === "function") raw = ParreiraAuth.getTenantId();
+                    if (!raw && typeof ParreiraAuth.getTenant === "function") {
+                        var tAuth = ParreiraAuth.getTenant();
+                        if (tAuth && typeof tAuth === "object" && tAuth.id) raw = tAuth.id;
+                        else if (typeof tAuth === "string") raw = tAuth;
+                    }
+                }
+                if (!raw && window.sessionManager && typeof sessionManager.getTenantId === "function") {
+                    raw = sessionManager.getTenantId();
+                }
+                if (!raw) {
+                    var s = JSON.parse(sessionStorage.getItem("parreira_session") || localStorage.getItem("parreira_session_ls") || "null");
+                    if (s && s.tenantId) raw = s.tenantId;
+                }
+            } catch (_) {}
+        }
+        if (!raw) raw = localStorage.getItem("app_tenant_id") || "centralpecas";
+        if (raw && typeof raw === "object") return String(raw.id || raw.tenantId || "centralpecas");
+        return String(raw || "centralpecas");
     }
 
     /**
@@ -6195,6 +6213,8 @@ const DemandaApp = (function() {
     };
 
 })();
+
+if (typeof window !== "undefined") window.DemandaApp = DemandaApp;
 
 // ── Bootstrap: aguarda ParreiraAuth antes de inicializar ─────
 document.addEventListener("DOMContentLoaded", function() {
