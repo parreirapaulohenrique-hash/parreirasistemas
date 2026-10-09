@@ -461,6 +461,14 @@ window.CarrierSwitchModule = (function () {
      * Executa a análise comparativa de troca de transportadora
      */
     function runAnalysis() {
+        // v3.24.7: Garante leitura em tempo real das tabelas de frete e configurações mais recentes (caso tenha havido novo cadastro de transportadora/regra)
+        if (window.Utils && typeof Utils.getStorage === 'function') {
+            state.freightRules = Utils.getStorage('freight_tables') || [];
+            state.carrierConfigs = Utils.getStorage('carrier_configs') || {};
+            state.carrierList = Utils.getStorage('carrier_list') || [];
+            populateFilterSelectors();
+        }
+
         const inputInicio = document.getElementById('switchFilterDataInicio');
         const inputFim = document.getElementById('switchFilterDataFim');
         const clientSel = document.getElementById('switchFilterCliente');
