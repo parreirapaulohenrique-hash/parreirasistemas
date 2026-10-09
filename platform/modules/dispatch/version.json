@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.24.7",
-  "build": "20261009-v3.24.7",
+  "version": "3.24.8",
+  "build": "20261009-v3.24.8",
   "lastUpdate": "2026-10-09",
-  "releaseDate": "2026-10-09T08:50:00-03:00",
-  "change": "v3.24.7: Análise de Troca atualiza e recalcula automaticamente ao entrar na aba, e a função runAnalysis agora re-lê em tempo real todas as novas tabelas e transportadoras cadastradas sem necessidade de recarregar o navegador."
+  "releaseDate": "2026-10-09T09:15:00-03:00",
+  "change": "v3.24.8: Renomeação das colunas para 'Último Envio' e 'Custo Último Envio'; exibição clara do nome da transportadora principal em ambas as colunas (anterior e sugerida); identificação do redespacho sem rotular indevidamente como 'Terceiro'."
 }
