@@ -588,13 +588,14 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
     * Ampliação de `maxlength` de 44 para 255 no campo de entrada de NF do Desktop (`inbound.js`), permitindo leitura de URLs completas de DANFEs da SEFAZ com extração automática da chave de 44 dígitos via regex `\d{44}` sem truncamento.
     * Registro explícito no menu do Desktop (`VIEW_REGISTRY` em `wms-core.js`) para abertura direta do **Kardex Multi-tenant** (`relo-movimentacao`, `aud-rastreio`) e **Reabastecimento Automático** (`reabastecimento`).
 
-* **2026-10-10 (v3.21.93 / WMS-Coletor v3.23.2):**
-  - **Compatibilidade Universal com Celulares Android, Tablets e Leitores Bluetooth:**
-    * **Câmera Móvel de Alta Resolução:** Botão em destaque de alta visibilidade (`📷 Bipar com a Câmera do Celular`) no card de recebimento na doca e na conferência de produtos, com caixa panorâmica (400x200) que suporta tanto o código de barras longo Code-128 quanto o QR Code da SEFAZ impresso na DANFE.
-    * **Suporte Universal a Colar (Paste):** Botão "📋 Colar" (`colarChaveClipboardColetor`) com leitura da área de transferência (`navigator.clipboard`) e listener global de `paste` no `coletor-core.js`, capturando chaves copiadas no Android (de PDFs ou WhatsApp) e preenchendo automaticamente.
-    * **Teclado Numérico Android:** Configurado `inputmode="numeric"` e `enterkeyhint="search"` no input de busca para abrir automaticamente o teclado numérico em celulares sem scanner físico.
-    * **Tolerância a Scanners Bluetooth:** Ampliada a cadência de captura no `initLaserCadence` de 120ms para até 240ms por caractere, garantindo que scanners Bluetooth pareados com smartphones Android não tenham suas leituras truncadas ou descartadas.
-    * **Conferência de Produtos com Câmera:** Inclusão de botão de disparo da câmera direto na tela de contagem física de itens da NF (`_renderTelaConferencia`), permitindo conferência ágil de SKUs e EANs pelo celular.
+* **2026-10-10 (v3.21.94 / Demanda v3.2.9):**
+  - **Motor Universal de Tabela para Documentos de Balcão e Concorrentes (`demanda-import.js`):**
+    * **Reconhecimento de Romaneios/Picking Slips:** Suporte nativo para documentos com estrutura invertida `Descrição | Marca | Local | Referência` (ex: J.A. Agrícola Fernando / 17.578), onde a referência de fábrica fica na última coluna e a descrição na primeira.
+    * **Tolerância a Espaços Simples:** Reconhecimento dinâmico de cabeçalho mesmo quando texto colado de chats ou OCR não possui tabulação `\t` (separação por `\s+` com validação de colunas).
+    * **Eliminação de Falsos Positivos de Marca e Endereço:** Ignora a penúltima coluna correspondente ao endereço físico de prateleira (`1D03`, `2A00`, regex `^[0-9][A-Z0-9][0-9]{2}$`) e evita que números de marcas (como `37 INGA` ou `59 SW`) sejam erroneamente convertidos em quantidades e produtos separados.
+    * **Filtro Rigoroso de Cabeçalhos e Metadados:** Descarte automático de cabeçalhos de vendedores e operações fiscais (`17.578 FERNANDO`, `10 VENDA`, `ORC 17.578`, `TIPO COD`, etc.).
+    * **Atualização de Cache-Busters:** Cache-buster atualizado para `v=3.21.75` no `platform/modules/demanda/index.html`.
+
 
 
 
