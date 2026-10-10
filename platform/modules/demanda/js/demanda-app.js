@@ -916,8 +916,28 @@ const DemandaApp = (function() {
         if (selConf) {
             _popularSelectsConcorrentes();
             if (concDetectado) {
-                selConf.value = concDetectado;
-                onConfConcorrenteChange(concDetectado);
+                var exist = (_concorrentesCadastrados || []).find(function(c) {
+                    var n1 = (c.nome || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                    var n2 = concDetectado.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    return n1 === n2 || n1.indexOf(n2) >= 0 || n2.indexOf(n1) >= 0;
+                });
+                var concFinal = exist ? exist.nome : concDetectado;
+                var optJaExiste = Array.from(selConf.options).some(function(o) { return o.value === concFinal; });
+                if (!optJaExiste) {
+                    var newOpt = document.createElement("option");
+                    newOpt.value = concFinal;
+                    newOpt.textContent = concFinal;
+                    selConf.appendChild(newOpt);
+                    var sel1 = document.getElementById("selectConcorrente");
+                    if (sel1) {
+                        var newOpt1 = document.createElement("option");
+                        newOpt1.value = concFinal;
+                        newOpt1.textContent = concFinal;
+                        sel1.appendChild(newOpt1);
+                    }
+                }
+                selConf.value = concFinal;
+                onConfConcorrenteChange(concFinal);
             } else if (_concorrenteAtual) {
                 selConf.value = _concorrenteAtual.nome;
             }
