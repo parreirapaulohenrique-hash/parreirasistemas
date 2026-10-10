@@ -1,5 +1,5 @@
 {
-  "version": "3.23.1",
-  "build": 152,
-  "last_change": "2026-10-10: Fix crítico - Roteamento da bipagem laser Zebra DataWedge para busca automática de NF-e, detecção oninput de 44 dígitos, sincronização de tabs e container ativo de recebimento"
+  "version": "3.23.2",
+  "build": 153,
+  "last_change": "2026-10-10: Compatibilidade universal Android/Mobile/Coletores - Botão de câmera em destaque, leitura QR Code DANFE, colar chave 44 dígitos, suporte a scanners Bluetooth e inputmode numérico"
 }

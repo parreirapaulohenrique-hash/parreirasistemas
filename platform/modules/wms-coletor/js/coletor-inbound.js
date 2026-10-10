@@ -31,31 +31,40 @@ window.initConferirScreen = async function(container) {
     pending.sort((a, b) => new Date(a.criadoEm||0) - new Date(b.criadoEm||0));
 
     container.innerHTML = `
-        <!-- Card de Busca e Bipagem -->
-        <div class="m-card" style="border-left:3px solid #ec4899;margin-bottom:1rem;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
-                <div style="font-weight:700;font-size:.9rem;display:flex;align-items:center;gap:.4rem;color:#ec4899;">
-                    <span class="material-icons-round">qr_code_scanner</span>
-                    Recebimento de Carga (Doca)
-                </div>
-                <button onclick="startCameraScanner('coletor-busca-nf-input')" 
-                    style="background:#ec4899;color:white;border:none;padding:.3rem .65rem;border-radius:6px;font-size:.75rem;font-weight:700;display:flex;align-items:center;gap:.3rem;cursor:pointer;">
-                    <span class="material-icons-round" style="font-size:.95rem;">photo_camera</span> Bipar Câmera
-                </button>
+        <!-- Card de Busca e Bipagem (Otimizado para Celulares Android e Coletores) -->
+        <div class="m-card" style="border-left:3px solid #ec4899;margin-bottom:1rem;background:var(--surface);">
+            <div style="font-weight:700;font-size:.92rem;display:flex;align-items:center;gap:.4rem;color:#ec4899;margin-bottom:.65rem;">
+                <span class="material-icons-round">qr_code_scanner</span>
+                Recebimento de Carga (Doca)
             </div>
-            <div style="display:flex;gap:.5rem;margin-top:.4rem;">
-                <input id="coletor-busca-nf-input" type="text" class="m-input" 
-                    placeholder="Chave 44 dígitos ou Nº da NF..." 
-                    style="font-size:.82rem;padding:.45rem .6rem;"
+
+            <!-- Botão Grande de Câmera para Celulares Android / Tablets -->
+            <button type="button" onclick="startCameraScanner('coletor-busca-nf-input')" 
+                style="width:100%;background:linear-gradient(135deg, #ec4899, #be185d);color:white;border:none;padding:.75rem 1rem;border-radius:10px;font-size:.88rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:.5rem;cursor:pointer;box-shadow:0 4px 14px rgba(236,72,153,.35);margin-bottom:.75rem;">
+                <span class="material-icons-round" style="font-size:1.3rem;">photo_camera</span>
+                📷 Bipar NF com a Câmera do Celular
+            </button>
+
+            <!-- Campo de Chave / Nº com Teclado Numérico Android, Colar e Buscar -->
+            <div style="display:flex;gap:.35rem;">
+                <input id="coletor-busca-nf-input" type="text" inputmode="numeric" enterkeyhint="search" class="m-input" 
+                    placeholder="Chave 44 dígitos ou Nº NF..." 
+                    style="font-size:.84rem;padding:.5rem .6rem;flex:1;font-family:monospace;"
+                    autocomplete="off"
                     oninput="window.handleChaveNfInputColetor && window.handleChaveNfInputColetor(this.value)"
                     onkeydown="if(event.key==='Enter') window.consultarNfColetorManual()">
-                <button class="m-btn m-btn-primary" onclick="window.consultarNfColetorManual()" 
-                    style="padding:.45rem .8rem;font-size:.8rem;white-space:nowrap;">
-                    <span class="material-icons-round" style="font-size:.9rem;vertical-align:middle;">search</span> Buscar
+                <button type="button" class="m-btn" onclick="window.colarChaveClipboardColetor()" 
+                    title="Colar da Área de Transferência"
+                    style="padding:.5rem .65rem;font-size:.78rem;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:var(--text-primary);display:flex;align-items:center;gap:.25rem;white-space:nowrap;">
+                    <span class="material-icons-round" style="font-size:.95rem;color:#38bdf8;">content_paste</span> Colar
+                </button>
+                <button type="button" class="m-btn m-btn-primary" onclick="window.consultarNfColetorManual()" 
+                    style="padding:.5rem .75rem;font-size:.8rem;white-space:nowrap;">
+                    <span class="material-icons-round" style="font-size:.95rem;vertical-align:middle;">search</span> Buscar
                 </button>
             </div>
-            <p style="font-size:.72rem;color:var(--text-secondary);margin-top:.4rem;margin-bottom:0;">
-                Digite o número da NF (ex: 10956) ou aponte o leitor para o código de barras
+            <p style="font-size:.72rem;color:var(--text-secondary);margin-top:.45rem;margin-bottom:0;line-height:1.35;">
+                💡 <strong>Compatível com:</strong> Câmera do celular (Código de barras ou QR Code), leitores Bluetooth/USB e coletores Zebra/Honeywell.
             </p>
         </div>
 
@@ -125,6 +134,33 @@ window.handleChaveNfInputColetor = function(val) {
     const clean = match44 ? match44[0] : raw.replace(/\D/g, '');
     if (clean.length === 44) {
         window.handleScanConferir(clean);
+    }
+};
+
+window.colarChaveClipboardColetor = async function() {
+    try {
+        let texto = '';
+        if (navigator.clipboard && navigator.clipboard.readText) {
+            texto = await navigator.clipboard.readText();
+        } else {
+            texto = prompt('Cole aqui a Chave da NF-e (44 dígitos):');
+        }
+        if (texto) {
+            const m = texto.match(/\d{44}/);
+            const limpa = m ? m[0] : texto.trim();
+            const inp = document.getElementById('coletor-busca-nf-input');
+            if (inp) inp.value = limpa;
+            window.handleScanConferir(limpa);
+        }
+    } catch(_) {
+        const manual = prompt('Cole aqui a Chave da NF-e (44 dígitos):');
+        if (manual) {
+            const m = manual.match(/\d{44}/);
+            const limpa = m ? m[0] : manual.trim();
+            const inp = document.getElementById('coletor-busca-nf-input');
+            if (inp) inp.value = limpa;
+            window.handleScanConferir(limpa);
+        }
     }
 };
 

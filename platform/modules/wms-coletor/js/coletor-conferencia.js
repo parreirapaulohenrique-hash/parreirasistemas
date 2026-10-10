@@ -40,14 +40,18 @@ window.initConferenciaItensScreen = async function(container) {
 
     container.innerHTML = `
         <!-- Instrução de bipagem -->
-        <div class="m-card" style="border-left:3px solid #0ea5e9;margin-bottom:1rem;">
-            <div style="display:flex;align-items:center;gap:.6rem;">
-                <span class="material-icons-round" style="color:#0ea5e9;font-size:1.4rem;">qr_code_scanner</span>
-                <div>
-                    <div style="font-weight:600;font-size:.9rem;color:#0ea5e9;">Bipe a chave NF-e ou selecione abaixo</div>
-                    <div style="font-size:.75rem;color:var(--text-secondary);">Inicia a conferência de produtos da carga recebida</div>
+        <div class="m-card" style="border-left:3px solid #0ea5e9;margin-bottom:1rem;background:var(--surface);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">
+                <div style="font-weight:700;font-size:.9rem;color:#0ea5e9;display:flex;align-items:center;gap:.4rem;">
+                    <span class="material-icons-round">qr_code_scanner</span>
+                    Conferência de Produtos
                 </div>
+                <button type="button" onclick="startCameraScanner('scannerInput')" 
+                    style="background:#0ea5e9;color:white;border:none;padding:.35rem .7rem;border-radius:6px;font-size:.78rem;font-weight:700;display:flex;align-items:center;gap:.35rem;cursor:pointer;">
+                    <span class="material-icons-round" style="font-size:1rem;">photo_camera</span> Bipar Câmera
+                </button>
             </div>
+            <div style="font-size:.75rem;color:var(--text-secondary);">Bipe a Chave NF-e ou selecione a carga na lista abaixo:</div>
         </div>
 
         <!-- Contador -->
@@ -162,6 +166,13 @@ function _renderTelaConferencia(r) {
                 </span>
             </button>
         </div>
+
+        <!-- Botão Câmera para Celulares Android -->
+        <button type="button" class="m-btn m-btn-primary" onclick="startCameraScanner('scannerInput')" 
+            style="width:100%;margin-bottom:.75rem;padding:.7rem;font-size:.88rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:.5rem;background:linear-gradient(135deg, #0ea5e9, #0284c7);border:none;border-radius:10px;color:white;box-shadow:0 4px 14px rgba(14,165,233,.28);cursor:pointer;">
+            <span class="material-icons-round" style="font-size:1.25rem;">photo_camera</span>
+            📷 Bipar Produto com Câmera do Celular
+        </button>
 
         <!-- PAINEL ÚLTIMO LIDO (scanner feedback) -->
         <div id="conf-ultimo-lido" style="border-radius:10px;padding:.75rem;margin-bottom:.75rem;

@@ -54,6 +54,12 @@ const DemandaImport = (() => {
         /^item\s+c[oó]digo/i,
         /pre[cç]o\s*unit/i,
         /pre[cç]o\s*bruto/i,
+        /\b(?:orc|or[cç]amento)\s*[\d.]+/i,
+        /\bfernando\b/i,
+        /\b\d+\s+venda\b/i,
+        /\bn[uú]mero\s+vendedor/i,
+        /\bcod\.?\s*int\.?/i,
+        /\bdescri[cç][aã]o\s+marca\s+local/i,
         /^(cod\.?\s*item|denominação|denomina|quantidade|qtde?|referencia|descrição|descri|titulo|título|peças|pecas|trator|produto|marca|obs|n[°º]|item|ref|seq|#|un|und|unid\.?)$/i
     ];
 
@@ -170,7 +176,11 @@ const DemandaImport = (() => {
 
         for (let idx = 0; idx < rawLines.length; idx++) {
             const l = rawLines[idx];
-            const parts = l.split(/\t+|\s{2,}/).map(p => p.trim()).filter(Boolean);
+            let parts = l.split(/\t+|\s{2,}/).map(p => p.trim()).filter(Boolean);
+            // Suporte para quando o cabeçalho vier separado por espaço simples (copiado de chat ou sem tab)
+            if (parts.length <= 1 && /\bdescri[cç][aã]o\b/i.test(l) && /\b(marca|local|refer[eê]ncia)\b/i.test(l)) {
+                parts = l.split(/\s+/).map(p => p.trim()).filter(Boolean);
+            }
             let matches = 0;
             const mapping = {};
             for (let pIdx = 0; pIdx < parts.length; pIdx++) {
@@ -200,42 +210,56 @@ const DemandaImport = (() => {
 
         for (let r = headerIdx + 1; r < rawLines.length; r++) {
             const rowLine = rawLines[r];
-            // Ignora rodapés / totais / mensagens do ERP
-            if (/^(frete|outras\s*despesas|total|nro\s*itens|condi[cç][aã]o|servi[cç]os|p[aá]g|balcao)\b/i.test(rowLine)) continue;
+            // Ignora rodapés / totais / mensagens do ERP e cabeçalhos residuais
+            if (/^(frete|outras\s*despesas|total|nro\s*itens|condi[cç][aã]o|servi[cç]os|p[aá]g|balcao|tipo\s+cod|orc\s+[\d.]+|\d+\s+fernando|10\s+venda)\b/i.test(rowLine)) continue;
             if (/^[\d\s.,\-]+$/.test(rowLine) && rowLine.length < 8) continue;
 
-            const partsRow = rowLine.split(/\t+|\s{2,}/).map(p => p.trim()).filter(Boolean);
+            let partsRow = rowLine.split(/\t+|\s{2,}/).map(p => p.trim()).filter(Boolean);
             if (partsRow.length === 0) continue;
             if (/^0[,.]00$/.test(partsRow[0]) || /outras\s*despesas/i.test(partsRow[0])) continue;
 
             let desc = '', ref = '', qtde = 1, preco = null, marca = '', local = '';
 
             if (isPickingSlip) {
-                // Separação de Balcão / Picking:
+                // Separação de Balcão / Picking (ex: J.A. Agrícola):
                 // Estrutura das colunas: Descrição [Marca] [Local] [Referência]
-                desc = partsRow[0];
-                const lastTok = partsRow[partsRow.length - 1];
-                // Padrão de endereço de prateleira/gôndola (ex: "1D03", "2A00", "7F04", "6G04")
-                const isLastLocal = /^[0-9][A-Z0-9][0-9]{2}$/i.test(lastTok);
+                const locPattern = /\b([0-9][A-Z0-9][0-9]{2})\b/i;
 
-                if (partsRow.length >= 4) {
-                    ref = partsRow[partsRow.length - 1];
-                    local = partsRow[partsRow.length - 2];
-                    marca = partsRow[1];
-                } else if (partsRow.length === 3) {
-                    if (isLastLocal) {
-                        marca = partsRow[1];
-                        local = partsRow[2];
-                        ref = '';
-                    } else {
-                        local = partsRow[1];
-                        ref = partsRow[2];
+                // Caso especial: linha veio com espaço simples (sem \t), localiza pelo padrão de local
+                if (partsRow.length === 1 && locPattern.test(rowLine)) {
+                    const mLoc = rowLine.match(locPattern);
+                    if (mLoc) {
+                        const locIdx = rowLine.lastIndexOf(mLoc[0]);
+                        const beforeLoc = rowLine.slice(0, locIdx).trim();
+                        const afterLoc = rowLine.slice(locIdx + mLoc[0].length).trim();
+                        ref = afterLoc;
+                        local = mLoc[0];
+                        const mMarca = beforeLoc.match(/\b(GERAL-?|37\s*INGA|59\s*SW|56\s*CONT\s*STAR|50\s*SOLUS)\b/i);
+                        if (mMarca) {
+                            desc = beforeLoc.slice(0, mMarca.index).trim();
+                            marca = mMarca[0];
+                        } else {
+                            desc = beforeLoc;
+                        }
                     }
-                } else if (partsRow.length === 2) {
+                } else if (partsRow.length >= 2) {
+                    desc = partsRow[0];
+                    const lastTok = partsRow[partsRow.length - 1];
+                    const isLastLocal = /^[0-9][A-Z0-9][0-9]{2}$/i.test(lastTok);
+
                     if (isLastLocal) {
-                        local = partsRow[1];
+                        // Último token é local (ex: 2A00), linha sem código de referência explícito
+                        ref = '';
+                        local = lastTok;
+                        if (partsRow.length >= 3) marca = partsRow[1];
                     } else {
-                        ref = partsRow[1];
+                        ref = lastTok;
+                        if (partsRow.length >= 4) {
+                            local = partsRow[partsRow.length - 2];
+                            marca = partsRow[1];
+                        } else if (partsRow.length === 3) {
+                            local = partsRow[1];
+                        }
                     }
                 }
 

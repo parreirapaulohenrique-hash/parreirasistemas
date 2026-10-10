@@ -1,9 +1,9 @@
 {
-  "version": "3.2.8",
-  "build": "20261010-v3.2.8",
+  "version": "3.2.9",
+  "build": "20261010-v3.2.9",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-10",
-  "change": "v3.2.8 - fix(ocr): multi-engine fallback (Engine 1 -> Engine 2 Deep Learning) e otimizacao de resolucao de imagem para eliminar falhas de leitura.",
-  "releaseDate": "2026-10-10T10:38:00-03:00"
+  "change": "v3.2.9 - fix(parser): suporte universal para tabelas de balcao (J.A. Agricola) com espacos simples e remocao de ruido de cabecalho.",
+  "releaseDate": "2026-10-10T11:05:00-03:00"
 }

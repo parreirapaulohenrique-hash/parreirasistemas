@@ -30,7 +30,7 @@ window.saveWmsConfig = function (cfg) {
 // WMS Coletor Ã¢â‚¬â€ Core Logic
 // Navigation, Auth, Scanner, Shared Data Access
 
-const COLETOR_VERSION = '3.21.48';
+const COLETOR_VERSION = '3.23.2';
 
 // ===== Auth Check =====
 document.addEventListener('DOMContentLoaded', async () => {
@@ -602,7 +602,7 @@ window.WmsBarcodeParser = {
     }
 };
 
-// ===== Zebra DataWedge & Laser Fast Cadence Listener =====
+// ===== Zebra DataWedge & Laser / Bluetooth Fast Cadence Listener =====
 (function initLaserCadence() {
     let keyBuffer = '';
     let lastKeyTime = 0;
@@ -613,10 +613,11 @@ window.WmsBarcodeParser = {
         lastKeyTime = now;
 
         if (e.key === 'Enter') {
-            if (keyBuffer.length >= 3 && interval < 120) {
+            // Aceita cadência de coletores industriais e scanners Bluetooth em Android (até 240ms por caractere)
+            if (keyBuffer.length >= 3 && interval < 240) {
                 const scannedCode = keyBuffer.trim();
                 keyBuffer = '';
-                console.log(`⚡ [Laser Zebra] Bipagem capturada em alta cadência: ${scannedCode}`);
+                console.log(`⚡ [Laser / Bluetooth] Bipagem capturada em cadência: ${scannedCode}`);
 
                 const parsed = window.WmsBarcodeParser.parse(scannedCode);
                 if (window.Feedback) {
@@ -646,10 +647,38 @@ window.WmsBarcodeParser = {
         }
 
         if (e.key.length === 1) {
-            if (interval > 150) {
+            if (interval > 280) {
                 keyBuffer = e.key;
             } else {
                 keyBuffer += e.key;
+            }
+        }
+    });
+
+    // Suporte universal a Colar (Paste) em celulares Android e Desktop
+    window.addEventListener('paste', function(e) {
+        const pasted = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+        if (!pasted) return;
+        const match44 = pasted.match(/\d{44}/);
+        if (match44) {
+            const chave44 = match44[0];
+            console.log('📋 [PASTE] Chave NF-e 44 dígitos detectada via colar:', chave44);
+            const buscaInp = document.getElementById('coletor-busca-nf-input');
+            if (buscaInp) buscaInp.value = chave44;
+            const scInput = document.getElementById('scannerInput');
+            if (scInput) scInput.value = chave44;
+
+            if (window.Feedback) {
+                window.Feedback.vibrateSuccess();
+                window.Feedback.beep('success');
+            }
+
+            if (currentScreen === 'conferir' && window.handleScanConferir) {
+                window.handleScanConferir(chave44);
+            } else if (currentScreen === 'recebimento' && window.handleScanRecebimento) {
+                window.handleScanRecebimento(chave44);
+            } else {
+                processScan(chave44);
             }
         }
     });
@@ -727,7 +756,8 @@ window.startCameraScanner = function(targetInputId = null) {
 
             <div style="width:100%;max-width:480px;text-align:center;padding:.5rem 0;">
                 <p style="font-size:.82rem;color:#94a3b8;margin-bottom:1rem;line-height:1.35;">
-                    Aponte para o <strong>Código de Barras (44 dígitos)</strong> ou <strong>QR Code da NF-e</strong>.
+                    Aponte para o <strong>Código de Barras (44 dígitos)</strong> ou <strong>QR Code da NF-e</strong>.<br>
+                    <span style="font-size:.74rem;color:#38bdf8;">💡 Dica: Em celulares, você pode ler tanto o código longo quanto o QR Code da DANFE.</span>
                 </p>
                 <div style="display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;">
                     <button id="btnSwitchCamera" onclick="cycleCameraDevice()" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:white;padding:.55rem .9rem;border-radius:20px;font-size:.8rem;font-weight:600;display:flex;align-items:center;gap:.35rem;cursor:pointer;">
@@ -768,30 +798,49 @@ function _initCameraInstance() {
         try { window._cameraScannerInstance.stop().catch(() => {}); } catch(_) {}
     }
 
-    const html5QrCode = new Html5Qrcode("cameraScannerReader");
+    // Ativa BarcodeDetector acelerado por hardware no Android (Chrome 84+)
+    const html5QrCode = new Html5Qrcode("cameraScannerReader", {
+        experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+        },
+        verbose: false
+    });
     window._cameraScannerInstance = html5QrCode;
 
-    // Config universal sem aspectRatio forcado (evita OverconstrainedError no Android)
+    // Configuração com caixa retangular panorâmica ideal para Código 128 longo (44 dígitos da DANFE) e QR Code
     const config = {
-        fps: 15,
+        fps: 22,
         qrbox: function(viewfinderWidth, viewfinderHeight) {
-            const w = Math.floor(Math.min(viewfinderWidth * 0.92, 360));
-            const h = Math.floor(Math.min(viewfinderHeight * 0.55, 180));
-            return { width: Math.max(w, 200), height: Math.max(h, 80) };
+            const w = Math.floor(Math.min(viewfinderWidth * 0.96, 400));
+            const h = Math.floor(Math.min(viewfinderHeight * 0.58, 200));
+            return { width: Math.max(w, 240), height: Math.max(h, 110) };
         }
     };
 
-    _updateCameraStatus('Solicitando acesso à câmera...');
+    _updateCameraStatus('Acessando câmera em alta resolução...');
 
-    // 1. Tenta facingMode environment diretamente para disparar o prompt nativo do Chrome
+    // 1. Tenta alta definição (1080p/720p) com foco contínuo para leitura nítida das barras finas da DANFE no Android
+    const hdConstraints = {
+        facingMode: "environment",
+        width: { min: 1024, ideal: 1920 },
+        height: { min: 720, ideal: 1080 }
+    };
+
     html5QrCode.start(
-        { facingMode: "environment" },
+        hdConstraints,
         config,
         (decodedText) => { onCameraCodeDetected(decodedText); },
         () => {}
-    ).then(() => {
+    ).catch(() => {
+        // Fallback para câmera environment padrão sem restrição de resolução (aparelhos básicos)
+        return html5QrCode.start(
+            { facingMode: "environment" },
+            config,
+            (decodedText) => { onCameraCodeDetected(decodedText); },
+            () => {}
+        );
+    }).then(() => {
         _onCameraStartedSuccess();
-        // Apos permissao concedida, enumera cameras para o botao de trocar lente
         Html5Qrcode.getCameras().then(devs => {
             if (devs && devs.length) window._cameraDevicesList = devs;
         }).catch(() => {});
@@ -800,7 +849,7 @@ function _initCameraInstance() {
         const errName = err?.name || '';
         const errMsg  = err?.message || String(err);
 
-        // Se falhou mas nao foi bloqueio de permissao, tenta enumerar dispositivos ou usar camera user
+        // Se falhou mas não foi bloqueio de permissão, tenta câmera frontal/user
         if (errName !== 'NotAllowedError' && errName !== 'PermissionDeniedError') {
             _updateCameraStatus('Tentando câmera alternativa...');
             html5QrCode.start(
@@ -987,10 +1036,17 @@ window.toggleCameraTorch = function() {
 // force deploy
 
 
-// Alias para garantir que bipagem de câmera funcione na tela de itens
+// Alias para garantir que bipagem de câmera ou scanner funcione na conferência
 window.handleScanRecebimento = function(code) {
-    if (window.handleScanConferenciaItens) window.handleScanConferenciaItens(code);
-    else if (window.handleScanConferir) window.handleScanConferir(code);
+    const raw = (code || '').trim();
+    const match44 = raw.match(/\d{44}/);
+    if (match44 && !window._confSessao?.ativo && window.handleScanConferir) {
+        window.handleScanConferir(match44[0]);
+    } else if (window.handleScanConferenciaItens) {
+        window.handleScanConferenciaItens(raw);
+    } else if (window.handleScanConferir) {
+        window.handleScanConferir(raw);
+    }
 };
 
 

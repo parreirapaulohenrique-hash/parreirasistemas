@@ -588,5 +588,14 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
     * Ampliação de `maxlength` de 44 para 255 no campo de entrada de NF do Desktop (`inbound.js`), permitindo leitura de URLs completas de DANFEs da SEFAZ com extração automática da chave de 44 dígitos via regex `\d{44}` sem truncamento.
     * Registro explícito no menu do Desktop (`VIEW_REGISTRY` em `wms-core.js`) para abertura direta do **Kardex Multi-tenant** (`relo-movimentacao`, `aud-rastreio`) e **Reabastecimento Automático** (`reabastecimento`).
 
+* **2026-10-10 (v3.21.93 / WMS-Coletor v3.23.2):**
+  - **Compatibilidade Universal com Celulares Android, Tablets e Leitores Bluetooth:**
+    * **Câmera Móvel de Alta Resolução:** Botão em destaque de alta visibilidade (`📷 Bipar com a Câmera do Celular`) no card de recebimento na doca e na conferência de produtos, com caixa panorâmica (400x200) que suporta tanto o código de barras longo Code-128 quanto o QR Code da SEFAZ impresso na DANFE.
+    * **Suporte Universal a Colar (Paste):** Botão "📋 Colar" (`colarChaveClipboardColetor`) com leitura da área de transferência (`navigator.clipboard`) e listener global de `paste` no `coletor-core.js`, capturando chaves copiadas no Android (de PDFs ou WhatsApp) e preenchendo automaticamente.
+    * **Teclado Numérico Android:** Configurado `inputmode="numeric"` e `enterkeyhint="search"` no input de busca para abrir automaticamente o teclado numérico em celulares sem scanner físico.
+    * **Tolerância a Scanners Bluetooth:** Ampliada a cadência de captura no `initLaserCadence` de 120ms para até 240ms por caractere, garantindo que scanners Bluetooth pareados com smartphones Android não tenham suas leituras truncadas ou descartadas.
+    * **Conferência de Produtos com Câmera:** Inclusão de botão de disparo da câmera direto na tela de contagem física de itens da NF (`_renderTelaConferencia`), permitindo conferência ágil de SKUs e EANs pelo celular.
+
+
 
 
