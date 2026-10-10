@@ -1,9 +1,9 @@
 {
-  "version": "3.2.6",
-  "build": "20261010-v3.2.6",
+  "version": "3.2.7",
+  "build": "20261010-v3.2.7",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-10",
-  "change": "v3.2.6 - fix(demanda): auto-sincronizacao de concorrente vinculado e precos da concorrencia (cotacoes_concorrente) ao abrir cotacao e na confirmacao da conferencia.",
-  "releaseDate": "2026-10-10T09:35:00-03:00"
+  "change": "v3.2.7 - feat(demanda): integracao instantanea do DemandaSearch com os 10.896 produtos MaxData (window.COMPACT_SKUS) e fallback inteligente por descricao na reavaliacao de estoque.",
+  "releaseDate": "2026-10-10T10:15:00-03:00"
 }
