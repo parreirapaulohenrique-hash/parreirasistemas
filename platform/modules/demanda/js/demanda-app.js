@@ -1082,10 +1082,20 @@ const DemandaApp = (function() {
         if (selecionados.length === 0) { _toast("Selecione ao menos um item.", "error"); return; }
 
         var concSel = document.getElementById("confSelectConcorrente");
-        if (concSel && concSel.value) {
-            onConcorrenteChange(concSel.value);
+        var concValor = concSel ? (concSel.value || "").trim() : "";
+        if (concValor) {
+            onConcorrenteChange(concValor);
             var selPrincipal = document.getElementById("selectConcorrente");
-            if (selPrincipal) selPrincipal.value = concSel.value;
+            if (selPrincipal) {
+                var optJa = Array.from(selPrincipal.options).some(function(o) { return o.value === concValor; });
+                if (!optJa) {
+                    var opt = document.createElement("option");
+                    opt.value = concValor;
+                    opt.textContent = concValor;
+                    selPrincipal.appendChild(opt);
+                }
+                selPrincipal.value = concValor;
+            }
         }
 
         selecionados.forEach(function(item) {
@@ -1093,7 +1103,8 @@ const DemandaApp = (function() {
                 refOriginal:      item.refOriginal,
                 descOriginal:     item.descOriginal,
                 qtdeSolicitada:   item.qtdeSolicitada || 1,
-                precoConcorrente: item.precoConcorrente || null
+                precoConcorrente: item.precoConcorrente || null,
+                _metaConcorrente: item._metaConcorrente || concValor || null
             });
         });
         renderItens();
@@ -1137,6 +1148,9 @@ const DemandaApp = (function() {
                     break;
                 }
             }
+        }
+        if (!concNome && _itens.some(function(it) { return it.precoConcorrente != null && it.precoConcorrente > 0; })) {
+            concNome = (_concorrentesCadastrados && _concorrentesCadastrados.length > 0) ? _concorrentesCadastrados[0].nome : "J.A. Agrícola";
         }
 
         var data = {
@@ -1252,9 +1266,10 @@ const DemandaApp = (function() {
             " onmouseout='this.style.borderColor=\"var(--border-color)\"'>" +
             // Info principal
             "<div style='flex:1;min-width:0'>" +
-            "<div style='display:flex;align-items:center;gap:.5rem;margin-bottom:.25rem'>" +
+            "<div style='display:flex;align-items:center;gap:.5rem;margin-bottom:.25rem;flex-wrap:wrap'>" +
             "<span style='font-weight:700;font-size:.9rem'>" + _esc(d.codigo || "—") + "</span>" +
             "<span style='font-size:.7rem;padding:.1rem .5rem;border-radius:10px;background:" + cor + "22;color:" + cor + ";font-weight:600'>" + lbl + "</span>" +
+            (d.concorrenteNome ? "<span style='font-size:.68rem;padding:.1rem .45rem;border-radius:8px;background:rgba(245,158,11,.15);color:#f59e0b;font-weight:600;display:inline-flex;align-items:center;gap:.25rem;border:1px solid rgba(245,158,11,.3)'><span class='material-icons-round' style='font-size:.75rem'>store</span> " + _esc(d.concorrenteNome) + "</span>" : "") +
             "</div>" +
             "<div style='font-size:.78rem;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>" +
             (d.clienteNome ? "<span style='color:var(--text-primary)'>" + _esc(d.clienteNome) + "</span> · " : "") +
@@ -1290,8 +1305,105 @@ const DemandaApp = (function() {
             if (body) body.innerHTML = "<p style='color:var(--accent-danger)'>DemandaDB indisponível.</p>"; return;
         }
         Promise.all([ DemandaDB.getDemanda(id), DemandaDB.getItens(id) ])
-            .then(function(res) {
-                _demandaAtual = { id: id, data: res[0], itens: res[1] };
+            .then(async function(res) {
+                var d = res[0] || {};
+                var itens = res[1] || [];
+                _demandaAtual = { id: id, data: d, itens: itens };
+
+                // Sincronização inteligente com cotacoes_concorrente:
+                // Se a demanda não possui concorrenteNome ou se itens faltam precoConcorrente, busca o registro vinculado
+                try {
+                    var precisaConcorrente = !d.concorrenteNome;
+                    var precisaPrecoItens = itens.some(function(it) { return it.precoConcorrente == null || it.precoConcorrente <= 0; });
+
+                    if (precisaConcorrente || precisaPrecoItens) {
+                        var dbConc = _concDB();
+                        if (dbConc) {
+                            var snapConc = await dbConc.limit(100).get().catch(function() { return { docs: [] }; });
+                            var docsConc = (snapConc.docs || []).map(function(docSnap) {
+                                var dt = docSnap.data();
+                                dt.id = docSnap.id;
+                                return dt;
+                            });
+
+                            var codDemanda = (d.codigo || "").toUpperCase().trim();
+                            var cliDemanda = (d.clienteNome || "").toLowerCase().trim();
+
+                            // 1. Busca por vínculo direto (demandaOrigemId ou obs)
+                            var concDoc = docsConc.find(function(c) {
+                                if (c.status === "cancelada") return false;
+                                if (c.demandaOrigemId && (c.demandaOrigemId === id || (codDemanda && String(c.demandaOrigemId).toUpperCase() === codDemanda))) return true;
+                                if (c.obs && (c.obs.indexOf(id) >= 0 || (codDemanda && c.obs.toUpperCase().indexOf(codDemanda) >= 0))) return true;
+                                return false;
+                            });
+
+                            // 2. Fallback: mesmo cliente e itens com referências compatíveis
+                            if (!concDoc && cliDemanda) {
+                                concDoc = docsConc.find(function(c) {
+                                    if (c.status === "cancelada") return false;
+                                    var cCli = (c.clienteRef || "").toLowerCase().trim();
+                                    if (cCli && (cCli === cliDemanda || cCli.indexOf(cliDemanda) >= 0 || cliDemanda.indexOf(cCli) >= 0)) {
+                                        var refsC = (c.itens || []).map(function(it) { return (it.ref || "").toUpperCase().trim(); }).filter(Boolean);
+                                        var refsD = itens.map(function(it) { return (it.refOriginal || "").toUpperCase().trim(); }).filter(Boolean);
+                                        var emComum = refsD.filter(function(r) { return refsC.indexOf(r) >= 0; }).length;
+                                        return (emComum > 0 && emComum >= Math.min(refsD.length, refsC.length) * 0.4);
+                                    }
+                                    return false;
+                                });
+                            }
+
+                            if (concDoc) {
+                                var atualizouDemanda = false;
+                                if (!d.concorrenteNome && concDoc.concorrente) {
+                                    d.concorrenteNome = concDoc.concorrente;
+                                    d.isConcorrente = true;
+                                    atualizouDemanda = true;
+                                }
+
+                                // Garante que o documento em cotacoes_concorrente tenha demandaOrigemId apontado
+                                if (!concDoc.demandaOrigemId || concDoc.demandaOrigemId !== id) {
+                                    dbConc.doc(concDoc.id).set({ demandaOrigemId: id }, { merge: true }).catch(function(){});
+                                }
+
+                                // Sincroniza precoConcorrente nos itens da demanda
+                                var itensModificados = [];
+                                itens.forEach(function(it, idx) {
+                                    var pcAtual = parseFloat(it.precoConcorrente) || 0;
+                                    if (pcAtual <= 0) {
+                                        var refUpper = (it.refOriginal || "").toUpperCase().trim();
+                                        var matchConcIt = (concDoc.itens || []).find(function(ci) {
+                                            return (ci.ref || "").toUpperCase().trim() === refUpper;
+                                        });
+                                        if (!matchConcIt && concDoc.itens && concDoc.itens[idx] && concDoc.itens.length === itens.length) {
+                                            matchConcIt = concDoc.itens[idx];
+                                        }
+                                        if (matchConcIt && parseFloat(matchConcIt.precoConcorrente) > 0) {
+                                            it.precoConcorrente = parseFloat(matchConcIt.precoConcorrente);
+                                            itensModificados.push(it);
+                                        }
+                                    }
+                                });
+
+                                if (atualizouDemanda && typeof DemandaDB !== "undefined" && typeof DemandaDB.updateDemanda === "function") {
+                                    DemandaDB.updateDemanda(id, {
+                                        concorrenteNome: d.concorrenteNome,
+                                        isConcorrente: true
+                                    }).catch(function(e) { console.warn("[DemandaApp] Falha ao persistir concorrente sincronizado:", e); });
+                                }
+
+                                if (itensModificados.length > 0 && typeof DemandaDB !== "undefined" && typeof DemandaDB.updateItem === "function") {
+                                    itensModificados.forEach(function(itMod) {
+                                        DemandaDB.updateItem(id, itMod.id, { precoConcorrente: itMod.precoConcorrente })
+                                            .catch(function(e) { console.warn("[DemandaApp] Falha ao persistir precoConcorrente:", e); });
+                                    });
+                                }
+                            }
+                        }
+                    }
+                } catch(eSync) {
+                    console.warn("[DemandaApp] Erro na sincronização com concorrência:", eSync);
+                }
+
                 _renderDemandaDetalheBody();
             })
             .catch(function(err) {
