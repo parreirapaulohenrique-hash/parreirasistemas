@@ -1,6 +1,6 @@
 {
-  "version": "2.2.0",
-  "date": "2026-10-08",
-  "build": "20261008-1135",
-  "last_change": "Feat(P4): Kardex Firestore em nuvem com concorrência e reservas, reabastecimento automático Pulmão->Picking, inventário cíclico com IRA e gerador de etiquetas ZPL II para impressoras térmicas Zebra"
+  "version": "2.2.1",
+  "date": "2026-10-10",
+  "build": "20261010-1048",
+  "last_change": "Fix: Suporte a leitura de QR Code/DANFE com URLs completas SEFAZ sem truncamento, e rotas ativas de Kardex e Reabastecimento no menu"
 }

@@ -1,5 +1,5 @@
 {
-  "version": "3.23.0",
-  "build": 151,
-  "last_change": "2026-10-08: Fase P4 - Suporte a ordens de reabastecimento e inventário cíclico com acurácia IRA no coletor"
+  "version": "3.23.1",
+  "build": 152,
+  "last_change": "2026-10-10: Fix crítico - Roteamento da bipagem laser Zebra DataWedge para busca automática de NF-e, detecção oninput de 44 dígitos, sincronização de tabs e container ativo de recebimento"
 }

@@ -59,7 +59,7 @@
                         </label>
                         <div style="display:flex; gap:0.75rem; align-items:center;">
                             <div style="position:relative; flex:1;">
-                                <input type="text" id="inb-scan-chave" placeholder="352607......................................" maxlength="44" autocomplete="off"
+                                <input type="text" id="inb-scan-chave" placeholder="352607......................................" maxlength="255" autocomplete="off"
                                     style="width:100%; font-size:1.25rem; font-family:monospace; padding:.75rem 1rem; border-radius:8px; border:2px solid var(--border-color); background:var(--bg-card, #1e293b); color:#fff; text-transform:uppercase;"
                                     oninput="window._handleChaveInput(this.value)" onkeydown="if(event.key==='Enter') window._buscarNfEntrada();">
                                 <span id="inb-scan-counter" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:0.75rem; color:var(--text-secondary); font-weight:600;">0/44</span>
@@ -210,9 +210,13 @@
 
     // ─── LEITURA E SCANNER NF-E ──────────────────────────────────────────────
     window._handleChaveInput = function (val) {
-        const clean = val.replace(/\D/g, '');
+        let clean = (val || '').trim();
+        const match44 = clean.match(/\d{44}/);
+        if (match44) clean = match44[0];
+        else clean = clean.replace(/\D/g, '');
+
         const counter = $('inb-scan-counter');
-        if (counter) counter.textContent = `${clean.length}/44`;
+        if (counter) counter.textContent = `${Math.min(clean.length, 44)}/44`;
 
         if (clean.length === 44) {
             window._buscarNfEntrada();
@@ -246,7 +250,9 @@
     window._buscarNfEntrada = async function () {
         const input = $('inb-scan-chave');
         if (!input) return;
-        const chave = input.value.replace(/\D/g, '');
+        let raw = (input.value || '').trim();
+        const match44 = raw.match(/\d{44}/);
+        const chave = match44 ? match44[0] : raw.replace(/\D/g, '');
 
         if (!chave || chave.length < 5) {
             if (window.showToast) showToast('Digite a chave NF-e de 44 dígitos ou número da NF.', 'warning');
