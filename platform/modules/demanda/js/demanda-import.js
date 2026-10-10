@@ -107,8 +107,208 @@ const DemandaImport = (() => {
         return false;
     }
 
+    /**
+     * Converte strings numéricas em formato brasileiro de moeda para float.
+     * Trata "1.250,50", "23,340", "8.010" (OCR de 8,010), "28,50", "0,00".
+     */
+    function _parseMoedaBR(s) {
+        if (!s) return null;
+        let c = String(s).trim();
+        c = c.replace(/^[R$\s]+/, '').trim();
+        if (c.indexOf(',') >= 0) {
+            // Tem vírgula: formato brasileiro padrão (ex: "1.400,40", "23,340")
+            c = c.replace(/\./g, '').replace(',', '.');
+        } else if (/^\d+\.\d{3}$/.test(c)) {
+            // Caso de OCR onde vírgula com 3 casas decimais virou ponto (ex: "8.010" -> 8.01)
+            // Mantém o ponto como separador decimal
+        } else if (/^\d+\.\d{1,2}$/.test(c)) {
+            // Decimal padrão com ponto (ex: 8.01, 15.5)
+        } else {
+            c = c.replace(/\./g, '');
+        }
+        const v = parseFloat(c);
+        return (!isNaN(v) && v > 0 && v < 500000) ? Math.round(v * 100) / 100 : null;
+    }
+
+    /**
+     * Motor Universal de Tabela por Cabeçalho Dinâmico.
+     * Inspeciona linhas cruas (sem perdas por filtros de ruído) buscando linha de cabeçalho
+     * com nomes de colunas: Produto, Descrição, Marca, Local, Referência, Un, Quant, Preço.
+     * Suporta perfeitamente:
+     *   - Romaneios/Separações de Balcão (ex: J.A. Agrícola Fernando) com colunas Descrição | Marca | Local | Referência
+     *   - Orçamentos de Concorrentes com preços (ex: J.A. Agrícola Andrei) com colunas Produto | Descrição | Un | Quant | Preço
+     */
+    function _parseTableWithHeader(text) {
+        if (!text) return [];
+        const rawLines = text
+            .split(/[\n\r]+/)
+            .map(l => _cleanWhatsAppPrefix(l).trim())
+            .filter(l => l.length > 0);
+
+        // 1. Extração preventiva de metadados do cabeçalho do documento (antes de qualquer filtro)
+        let detectedConcorrente = '';
+        let detectedCliente = '';
+        let detectedOrcamento = '';
+
+        if (/j\.?\s*a\.?\s*agricola/i.test(text)) {
+            detectedConcorrente = 'J.A. Agrícola';
+        } else if (/carlos\s+central\s+pe/i.test(text)) {
+            detectedConcorrente = 'Carlos Central Peças';
+        } else if (/rondobras/i.test(text)) {
+            detectedConcorrente = 'Rondobras';
+        }
+
+        const mCli = text.match(/cliente\s*:\s*(?:\d+\s+)?([A-Za-zÀ-ÿ\s]{4,40})/i);
+        if (mCli) detectedCliente = mCli[1].trim();
+
+        const mOrc = text.match(/(?:or[cç]amento|orc|cod\.?\s*int\.?)\s*:\s*(?:orc\s*)?([0-9.]+)/i);
+        if (mOrc) detectedOrcamento = mOrc[1].trim();
+
+        // 2. Localiza linha de cabeçalho da tabela
+        let headerIdx = -1;
+        let colMap = {};
+
+        for (let idx = 0; idx < rawLines.length; idx++) {
+            const l = rawLines[idx];
+            const parts = l.split(/\t+|\s{2,}/).map(p => p.trim()).filter(Boolean);
+            let matches = 0;
+            const mapping = {};
+            for (let pIdx = 0; pIdx < parts.length; pIdx++) {
+                const pClean = parts[pIdx].toLowerCase();
+                if (/^(produto|c[oó]d(?:igo)?|c[oó]d\.?\s*int\.?)$/i.test(pClean)) { mapping.produto = pIdx; matches++; }
+                else if (/^(descri[cç][aã]o|denomina[cç][aã]o|item|denomina)$/i.test(pClean)) { mapping.descricao = pIdx; matches++; }
+                else if (/^(marca|fabricante)$/i.test(pClean)) { mapping.marca = pIdx; matches++; }
+                else if (/^(local|loc|box)$/i.test(pClean)) { mapping.local = pIdx; matches++; }
+                else if (/^(refer[eê]ncia|ref\.?)$/i.test(pClean)) { mapping.referencia = pIdx; matches++; }
+                else if (/^(un|und|unid\.?)$/i.test(pClean)) { mapping.un = pIdx; matches++; }
+                else if (/^(quant\.?|quantidade|qtde?|qtd)$/i.test(pClean)) { mapping.qtde = pIdx; matches++; }
+                else if (/^(pre[cç]o\s*unit\.?|unit[aá]rio|vlr\.?\s*unit\.?)$/i.test(pClean)) { mapping.preco_unit = pIdx; matches++; }
+                else if (/^(pre[cç]o\s*bruto|total|subtotal)$/i.test(pClean)) { mapping.preco_total = pIdx; matches++; }
+            }
+            if (matches >= 2 && (mapping.descricao !== undefined || mapping.referencia !== undefined || mapping.produto !== undefined)) {
+                headerIdx = idx;
+                colMap = mapping;
+                break;
+            }
+        }
+
+        if (headerIdx === -1) return [];
+
+        // Detecta se é Romaneio/Separação de Balcão (tem Referência e Descrição, mas NÃO tem coluna de Quantidade explícita)
+        const isPickingSlip = (colMap.referencia !== undefined && colMap.descricao !== undefined && colMap.qtde === undefined);
+        const items = [];
+
+        for (let r = headerIdx + 1; r < rawLines.length; r++) {
+            const rowLine = rawLines[r];
+            // Ignora rodapés / totais / mensagens do ERP
+            if (/^(frete|outras\s*despesas|total|nro\s*itens|condi[cç][aã]o|servi[cç]os|p[aá]g|balcao)\b/i.test(rowLine)) continue;
+            if (/^[\d\s.,\-]+$/.test(rowLine) && rowLine.length < 8) continue;
+
+            const partsRow = rowLine.split(/\t+|\s{2,}/).map(p => p.trim()).filter(Boolean);
+            if (partsRow.length === 0) continue;
+            if (/^0[,.]00$/.test(partsRow[0]) || /outras\s*despesas/i.test(partsRow[0])) continue;
+
+            let desc = '', ref = '', qtde = 1, preco = null, marca = '', local = '';
+
+            if (isPickingSlip) {
+                // Separação de Balcão / Picking:
+                // Estrutura das colunas: Descrição [Marca] [Local] [Referência]
+                desc = partsRow[0];
+                const lastTok = partsRow[partsRow.length - 1];
+                // Padrão de endereço de prateleira/gôndola (ex: "1D03", "2A00", "7F04", "6G04")
+                const isLastLocal = /^[0-9][A-Z0-9][0-9]{2}$/i.test(lastTok);
+
+                if (partsRow.length >= 4) {
+                    ref = partsRow[partsRow.length - 1];
+                    local = partsRow[partsRow.length - 2];
+                    marca = partsRow[1];
+                } else if (partsRow.length === 3) {
+                    if (isLastLocal) {
+                        marca = partsRow[1];
+                        local = partsRow[2];
+                        ref = '';
+                    } else {
+                        local = partsRow[1];
+                        ref = partsRow[2];
+                    }
+                } else if (partsRow.length === 2) {
+                    if (isLastLocal) {
+                        local = partsRow[1];
+                    } else {
+                        ref = partsRow[1];
+                    }
+                }
+
+                // Se não veio coluna explícita de referência, extrai código da própria descrição se houver
+                if (!ref) {
+                    const mCode = desc.match(/\b([A-Z]{1,4}\d{4,}|\d{5,}[A-Z\d\-_]*)\b/);
+                    ref = mCode ? mCode[1] : desc;
+                }
+            } else {
+                // Layout com Produto / Quantidade / Preço (Orçamento completo)
+                ref = partsRow[0];
+                if (partsRow.length > 1) desc = partsRow[1];
+
+                // Localiza índice da unidade de medida (UN, PC, etc.)
+                let unIdx = -1;
+                for (let u = 0; u < partsRow.length; u++) {
+                    if (/^(UN|PC|PÇ|CX|UND|JG|PAR|M)$/i.test(partsRow[u])) {
+                        unIdx = u;
+                        break;
+                    }
+                }
+
+                if (unIdx !== -1 && unIdx + 1 < partsRow.length) {
+                    const qv = parseFloat(partsRow[unIdx + 1].replace(',', '.'));
+                    qtde = Math.round(qv) || 1;
+                    if (unIdx + 2 < partsRow.length) {
+                        const pv = _parseMoedaBR(partsRow[unIdx + 2]);
+                        if (pv > 0) preco = pv;
+                    }
+                } else {
+                    if (colMap.qtde !== undefined && colMap.qtde < partsRow.length) {
+                        const qv = parseFloat(partsRow[colMap.qtde].replace(',', '.'));
+                        qtde = Math.round(qv) || 1;
+                    }
+                    if (colMap.preco_unit !== undefined && colMap.preco_unit < partsRow.length) {
+                        const pv = _parseMoedaBR(partsRow[colMap.preco_unit]);
+                        if (pv > 0) preco = pv;
+                    }
+                }
+            }
+
+            if (!desc && ref) desc = ref;
+            if (!ref && desc) ref = desc;
+            if (/^(frete|outras\s*despesas|total|nro\s*itens)\b/i.test(desc)) continue;
+
+            const obsArr = [];
+            if (marca && marca.toUpperCase() !== 'GERAL') obsArr.push('Marca: ' + marca);
+            if (local) obsArr.push('Local: ' + local);
+            if (preco) obsArr.push('Preço conc.: R$ ' + preco.toFixed(2).replace('.', ','));
+
+            items.push({
+                refOriginal: ref.toUpperCase(),
+                descOriginal: desc.toUpperCase(),
+                qtdeSolicitada: Math.max(1, qtde),
+                precoConcorrente: preco,
+                obs: obsArr.join(' | '),
+                incerteza: false,
+                _metaConcorrente: detectedConcorrente || null,
+                _metaCliente: detectedCliente || null,
+                _metaOrcamento: detectedOrcamento || null
+            });
+        }
+        return items;
+    }
+
     function parseText(text) {
         if (!text || !text.trim()) return [];
+
+        // 1. Tenta primeiro motor universal por cabeçalho (Romaneios, Separações e Orçamentos com colunas)
+        const tableHeaderItens = _parseTableWithHeader(text);
+        if (tableHeaderItens.length > 0) {
+            return tableHeaderItens;
+        }
 
         const linhas = text
             .split(/[\n\r]+/)
@@ -116,11 +316,11 @@ const DemandaImport = (() => {
             .map(l => l.trim())
             .filter(l => l.length > 1 && !_isNoiseLine(l));
 
-        // Tenta primeiro detectar tabela estruturada (OCR, PDF, Excel colado)
+        // 2. Tenta interpretar como tabela sem cabeçalho explícito (colunas tabuladas / Formato A / Formato B)
         const tableItens = _tryParseTableLines(linhas);
         if (tableItens.length > 0) return tableItens;
 
-        // Fallback: processa linha a linha (WhatsApp, texto livre)
+        // 3. Fallback: processa linha a linha (WhatsApp, texto livre)
         const itens = [];
         for (const linha of linhas) {
             const item = _parseLinha(linha);

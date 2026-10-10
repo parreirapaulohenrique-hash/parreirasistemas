@@ -1,9 +1,9 @@
 {
-  "version": "3.2.0",
-  "build": "20261009-v3.2.0-r2",
+  "version": "3.2.1",
+  "build": "20261009-v3.2.1",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-09",
-  "change": "v3.2.0 - feat: Inteligência de Preço Concorrente, seleção e cadastro de concorrentes na cotação, extração de preços de orçamentos (J.A. Agrícola) e benchmarking analítico peça a peça.",
-  "releaseDate": "2026-10-09T12:52:00-03:00"
+  "change": "v3.2.1 - fix(demanda): motor universal de importacao com deteccao dinamica de cabecalho, suporte a romaneios de balcao (23/23 itens JA Agricola Fernando) e orcamentos de concorrente com precos unitarios e auto-selecao.",
+  "releaseDate": "2026-10-09T23:05:00-03:00"
 }
