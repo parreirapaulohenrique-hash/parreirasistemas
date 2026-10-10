@@ -684,6 +684,141 @@ class MaxDataAdapter extends ErpAdapter {
     }
 
     // ─────────────────────────────────────────────────────────
+    //  NOVOS RECURSOS — MaxAPI Go v2.0 (Doc Outubro/2026)
+    // ─────────────────────────────────────────────────────────
+
+    /**
+     * Marca uma Nota Fiscal de Entrada como conferida no MaxData (WMS Inbound).
+     * Endpoint: PUT /v2/entry/{id}/markaschecked
+     */
+    async markEntryAsChecked(entryId) {
+        if (!entryId) throw new Error('ID da entrada obrigatório.');
+        const headers = await this._authHeaders();
+        const url = this._buildUrl(`entry/${entryId}/markaschecked`);
+        this._log('info', `Marcando NF de entrada #${entryId} como conferida no MaxData...`);
+
+        const resp = await fetch(url, { method: 'PUT', headers });
+        if (!resp.ok) {
+            const errTxt = await resp.text().catch(() => resp.statusText);
+            throw new Error(`Falha ao marcar entrada como conferida (HTTP ${resp.status}): ${errTxt}`);
+        }
+        this._log('success', `✅ Entrada #${entryId} marcada como conferida no MaxData.`);
+        return { success: true, entryId };
+    }
+
+    /**
+     * Consulta produto diretamente pelo código de barras (EAN-13, DUN-14, etc.).
+     * Endpoint: GET /v2/product/ean?ean={ean} ou POST /v2/product/ean
+     */
+    async getProductByEan(ean) {
+        if (!ean) return null;
+        const cleanEan = String(ean).trim();
+        const headers = await this._authHeaders();
+
+        try {
+            const url = this._buildUrl('product/ean', { ean: cleanEan });
+            let resp = await fetch(url, { method: 'GET', headers });
+
+            if (!resp.ok && resp.status === 405) {
+                const postUrl = this._buildUrl('product/ean');
+                resp = await fetch(postUrl, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ ean: cleanEan })
+                });
+            }
+
+            if (resp.ok) {
+                const prod = await resp.json();
+                return this._mapProduct(prod);
+            }
+            return null;
+        } catch (e) {
+            this._log('warning', `Consulta de produto por EAN (${cleanEan}) falhou: ${e.message}`);
+            return null;
+        }
+    }
+
+    /**
+     * Lista cargas ativas para expedição e despacho logístico.
+     * Endpoint: GET /v2/carga
+     */
+    async listLoads(params = {}) {
+        const headers = await this._authHeaders();
+        const url = this._buildUrl('carga', params);
+        const resp = await fetch(url, { method: 'GET', headers });
+        if (!resp.ok) throw new Error(`Falha ao consultar cargas (HTTP ${resp.status})`);
+        const data = await resp.json();
+        return Array.isArray(data) ? data : (data.docs || data.data || []);
+    }
+
+    /**
+     * Obtém detalhes e itens de uma carga logística específica.
+     * Endpoint: GET /v2/carga/{id} e GET /v2/carga/{id}/itens
+     */
+    async getLoadDetails(loadId) {
+        if (!loadId) throw new Error('ID da carga obrigatório.');
+        const headers = await this._authHeaders();
+        const [cargaResp, itensResp] = await Promise.all([
+            fetch(this._buildUrl(`carga/${loadId}`), { method: 'GET', headers }),
+            fetch(this._buildUrl(`carga/${loadId}/itens`), { method: 'GET', headers }).catch(() => null)
+        ]);
+
+        if (!cargaResp.ok) throw new Error(`Carga #${loadId} não encontrada`);
+        const carga = await cargaResp.json();
+        const itens = itensResp && itensResp.ok ? await itensResp.json() : [];
+        return {
+            ...carga,
+            itens: Array.isArray(itens) ? itens : (itens.docs || itens.data || [])
+        };
+    }
+
+    /**
+     * Registra ajuste de inventário ou avaria diretamente no estoque do MaxData.
+     * Endpoints: POST /v2/adjustmentstock -> POST /v2/adjustmentstock/items -> POST /v2/adjustmentstock/conclude
+     */
+    async createStockAdjustment({ usuarioId = 0, motivo = 'Inventário WMS', itens = [] }) {
+        if (!itens || !itens.length) throw new Error('Nenhum item informado para ajuste de estoque.');
+        const headers = await this._authHeaders();
+
+        const createUrl = this._buildUrl('adjustmentstock');
+        const headResp = await fetch(createUrl, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ usuarioId, motivo, data: new Date().toISOString() })
+        });
+        if (!headResp.ok) throw new Error(`Falha ao criar cabeçalho de ajuste (HTTP ${headResp.status})`);
+        const headData = await headResp.json();
+        const adjustmentId = headData.id || headData.adjustmentStockId;
+
+        const itemsUrl = this._buildUrl('adjustmentstock/items');
+        const itemsPayload = itens.map(it => ({
+            adjustmentStockId: adjustmentId,
+            produtoId: it.produtoId || it.id,
+            qtdeAjuste: Number(it.qtdeAjuste || it.quantidade),
+            tipo: it.tipo || (Number(it.qtdeAjuste) >= 0 ? 'ENTRADA' : 'SAIDA'),
+            motivo: it.motivo || motivo
+        }));
+
+        const itemsResp = await fetch(itemsUrl, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(itemsPayload)
+        });
+        if (!itemsResp.ok) throw new Error(`Falha ao inserir itens do ajuste (HTTP ${itemsResp.status})`);
+
+        const concludeUrl = this._buildUrl('adjustmentstock/conclude');
+        await fetch(concludeUrl, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ id: adjustmentId })
+        }).catch(() => {});
+
+        this._log('success', `✅ Ajuste de estoque #${adjustmentId} concluído no MaxData com ${itens.length} item(ns).`);
+        return { success: true, adjustmentId, totalItens: itens.length };
+    }
+
+    // ─────────────────────────────────────────────────────────
     //  LOG
     // ─────────────────────────────────────────────────────────
 
