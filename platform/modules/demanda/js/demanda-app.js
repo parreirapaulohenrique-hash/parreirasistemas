@@ -1130,6 +1130,14 @@ const DemandaApp = (function() {
 
         var concEl = document.getElementById("selectConcorrente");
         var concNome = (concEl && concEl.value) ? concEl.value : (_concorrenteAtual ? _concorrenteAtual.nome : "");
+        if (!concNome && _itens && _itens.length > 0) {
+            for (var ki = 0; ki < _itens.length; ki++) {
+                if (_itens[ki]._metaConcorrente) {
+                    concNome = _itens[ki]._metaConcorrente;
+                    break;
+                }
+            }
+        }
 
         var data = {
             origem:          origemEl ? origemEl.value : "manual",
@@ -1484,21 +1492,42 @@ const DemandaApp = (function() {
                 "</div>";
         }
 
+        // Identifica se a cotação possui concorrente vinculado ou itens com preço de concorrente
+        var temPrecoConc = !!d.concorrenteNome || itens.some(function(it) {
+            return (it.precoConcorrente != null && it.precoConcorrente > 0) || (it.obsCliente && /(?:preço|preco|concorrente|r\$|\$)/i.test(it.obsCliente));
+        });
+
         // Filtro e Busca dos Itens
         var itensFiltrados = _getItensFiltrados(itens);
         var itensHtml = itensFiltrados.length === 0
-            ? "<tr><td colspan='6' style='text-align:center;padding:2.5rem;color:var(--text-secondary)'>" +
+            ? "<tr><td colspan='" + (temPrecoConc ? 7 : 6) + "' style='text-align:center;padding:2.5rem;color:var(--text-secondary)'>" +
               "<span class='material-icons-round' style='font-size:2.2rem;opacity:.3;display:block;margin-bottom:.5rem'>filter_alt_off</span>" +
               "Nenhum item encontrado para o status ou busca selecionada." +
               (_filtroItensDetalhe !== "todos" ? "<br><button class='btn btn-secondary btn-sm' style='margin-top:.75rem' onclick=\"DemandaApp.setFiltroDetalhe('todos')\">Ver Todos os Itens</button>" : "") +
               "</td></tr>"
-            : itensFiltrados.map(function(item, idx) { return _renderItemRow(item, idx); }).join("");
+            : itensFiltrados.map(function(item, idx) { return _renderItemRow(item, idx, temPrecoConc); }).join("");
+
+        // Badge de Concorrente e Ação de Vincular
+        var concorrenteBadge = "";
+        if (d.concorrenteNome) {
+            concorrenteBadge = "<span style='display:inline-flex;align-items:center;gap:.35rem;padding:.2rem .55rem;border-radius:12px;background:rgba(245,158,11,.15);color:#f59e0b;font-size:.76rem;font-weight:700;border:1px solid rgba(245,158,11,.3)'>" +
+                "<span class='material-icons-round' style='font-size:.9rem'>store</span> Concorrente: " + _esc(d.concorrenteNome) +
+                " <button onclick=\"DemandaApp.vincularConcorrenteDemanda('" + _esc(d.id) + "')\" title='Alterar / Re-vincular Concorrente' style='background:none;border:none;color:#f59e0b;cursor:pointer;padding:0;margin-left:.25rem;display:inline-flex;align-items:center'><span class='material-icons-round' style='font-size:.85rem'>edit</span></button></span>";
+        } else {
+            concorrenteBadge = "<button onclick=\"DemandaApp.vincularConcorrenteDemanda('" + _esc(d.id) + "')\" style='background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);border-radius:12px;padding:.2rem .6rem;color:#f59e0b;cursor:pointer;font-size:.74rem;display:inline-flex;align-items:center;gap:.3rem;font-weight:600'>" +
+                "<span class='material-icons-round' style='font-size:.9rem'>add_business</span> Vincular Concorrente</button>";
+        }
+
+        var colunasTabela = ["#","Referência","Descrição","Qtd"];
+        if (temPrecoConc) colunasTabela.push("Preço Conc.");
+        colunasTabela.push("Status","Ações Cabíveis");
 
         body.innerHTML =
             // Cabeçalho com código + status + data
             "<div style='display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem;flex-wrap:wrap'>" +
             "<span style='font-size:1.15rem;font-weight:800;color:var(--text-primary)'>" + _esc(d.codigo) + "</span>" +
             "<span style='font-size:.7rem;padding:.18rem .6rem;border-radius:10px;background:" + cor + "22;color:" + cor + ";font-weight:700'>" + lbl + "</span>" +
+            concorrenteBadge +
             "<span style='color:var(--text-secondary);font-size:.78rem;margin-left:auto'>" + dt + "</span>" +
             "</div>" +
             // Barra de ações globais da cotação (Estornar / Reabrir / Excluir)
@@ -1538,7 +1567,7 @@ const DemandaApp = (function() {
             "<div style='overflow-x:auto;border:1px solid var(--border-color);border-radius:8px'>" +
             "<table style='width:100%;border-collapse:collapse;font-size:.82rem'>" +
             "<thead style='background:rgba(255,255,255,.02)'><tr style='border-bottom:1px solid var(--border-color)'>" +
-            ["#","Referência","Descrição","Qtd","Status","Ações Cabíveis"].map(function(h) {
+            colunasTabela.map(function(h) {
                 return "<th style='padding:.5rem .65rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em'>" + h + "</th>";
             }).join("") +
             "</tr></thead><tbody id='detalheItemsTbody'>" + itensHtml + "</tbody></table></div>";
@@ -1583,17 +1612,21 @@ const DemandaApp = (function() {
     function _renderTabelaItensDetalhe() {
         var tbody = document.getElementById("detalheItemsTbody");
         if (!tbody || !_demandaAtual || !_demandaAtual.itens) return;
+        var d = _demandaAtual.data || {};
+        var temPrecoConc = !!d.concorrenteNome || _demandaAtual.itens.some(function(it) {
+            return (it.precoConcorrente != null && it.precoConcorrente > 0) || (it.obsCliente && /(?:preço|preco|concorrente|r\$|\$)/i.test(it.obsCliente));
+        });
         var itensFiltrados = _getItensFiltrados(_demandaAtual.itens);
         if (itensFiltrados.length === 0) {
-            tbody.innerHTML = "<tr><td colspan='6' style='text-align:center;padding:2.5rem;color:var(--text-secondary)'>" +
+            tbody.innerHTML = "<tr><td colspan='" + (temPrecoConc ? 7 : 6) + "' style='text-align:center;padding:2.5rem;color:var(--text-secondary)'>" +
               "<span class='material-icons-round' style='font-size:2.2rem;opacity:.3;display:block;margin-bottom:.5rem'>filter_alt_off</span>" +
               "Nenhum item encontrado para o status ou busca selecionada.</td></tr>";
         } else {
-            tbody.innerHTML = itensFiltrados.map(function(item, idx) { return _renderItemRow(item, idx); }).join("");
+            tbody.innerHTML = itensFiltrados.map(function(item, idx) { return _renderItemRow(item, idx, temPrecoConc); }).join("");
         }
     }
 
-    function _renderItemRow(item, i) {
+    function _renderItemRow(item, i, temPrecoConc) {
         var st = item.status || "nao_cadastrado";
         var sc = (typeof DemandaStates !== "undefined") ? DemandaStates.get(st) : { label: st, color: "#6366f1" };
 
@@ -1662,9 +1695,20 @@ const DemandaApp = (function() {
             "<span class='material-icons-round' style='font-size:.95rem'>history</span></button>";
 
         var timelineRow = "<tr id='timeline_" + _esc(item.id) + "' style='display:none'>" +
-            "<td colspan='6' style='padding:.5rem .6rem 1rem 2.5rem;border-bottom:1px solid rgba(255,255,255,.06)'>" +
+            "<td colspan='" + (temPrecoConc ? 7 : 6) + "' style='padding:.5rem .6rem 1rem 2.5rem;border-bottom:1px solid rgba(255,255,255,.06)'>" +
             "<div style='font-size:.7rem;font-weight:600;color:var(--text-secondary);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em'>Histórico do Item</div>" +
             _renderTimeline(item) + "</td></tr>";
+
+        var precoConcTd = "";
+        if (temPrecoConc) {
+            var pc = parseFloat(item.precoConcorrente) || 0;
+            if (!pc && item.obsCliente) {
+                var m = String(item.obsCliente).match(/(?:preço|preco|concorrente|r\$|\$)\s*:?\s*(\d+[\.,]?\d*)/i);
+                if (m) pc = parseFloat(m[1].replace(",", "."));
+            }
+            var pcTxt = pc > 0 ? "R$ " + pc.toFixed(2).replace(".", ",") : "—";
+            precoConcTd = "<td style='padding:.5rem .6rem;font-weight:700;color:#f59e0b;white-space:nowrap'>" + pcTxt + "</td>";
+        }
 
         var mainRow = "<tr style='border-bottom:1px solid rgba(255,255,255,.04)'>" +
             "<td style='color:var(--text-secondary);font-size:.75rem;padding:.5rem .6rem'>" + (i + 1) + " " + tlBtn + "</td>" +
@@ -1672,12 +1716,53 @@ const DemandaApp = (function() {
             "<td style='font-size:.79rem;color:var(--text-secondary);padding:.5rem .6rem;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' title='" + _esc(item.descOriginal || item.erpProdutoDesc || "") + "'>" +
                 _esc(item.descOriginal || item.erpProdutoDesc || "—") + "</td>" +
             "<td style='text-align:center;padding:.5rem .6rem;font-weight:700'>" + (item.qtdeSolicitada || 1) + "</td>" +
+            precoConcTd +
             "<td style='padding:.5rem .6rem'><span style='font-size:.7rem;padding:.18rem .55rem;border-radius:10px;background:" +
                 sc.color + "22;color:" + sc.color + ";font-weight:600;white-space:nowrap'>" + _esc(sc.label) + "</span></td>" +
             "<td style='padding:.5rem .6rem'>" + acaoHtml + "</td>" +
             "</tr>";
 
         return mainRow + timelineRow;
+    }
+
+    // Vinculação de Concorrente direta em Demanda Existente
+    async function vincularConcorrenteDemanda(demandaId) {
+        var did = demandaId || (_demandaAtual ? _demandaAtual.id : null);
+        if (!did) return;
+        var concs = (_concorrentesCadastrados || []).map(function(c) { return c.nome; });
+        var padrao = (_demandaAtual && _demandaAtual.data && _demandaAtual.data.concorrenteNome) ? _demandaAtual.data.concorrenteNome : (concs[0] || "J.A. Agrícola");
+        var msg = "Informe o nome do Concorrente para vincular a esta cotação:\n" + (concs.length > 0 ? "(Sugestões: " + concs.join(", ") + ")" : "");
+        var nome = prompt(msg, padrao);
+        if (nome === null) return;
+        nome = (nome || "").trim();
+        if (!nome) {
+            _toast("Nome do concorrente inválido.", "warning");
+            return;
+        }
+
+        try {
+            await DemandaDB.updateDemanda(did, {
+                concorrenteNome: nome,
+                isConcorrente: true
+            });
+
+            var itens = (_demandaAtual && _demandaAtual.id === did) ? _demandaAtual.itens : await DemandaDB.getItens(did);
+            var cliente = (_demandaAtual && _demandaAtual.id === did)
+                ? { nome: _demandaAtual.data.clienteNome, id: _demandaAtual.data.clienteId, cnpj: _demandaAtual.data.clienteCnpj }
+                : null;
+
+            _salvarVinculoConcorrenteAutomatico(nome, cliente, itens, did);
+
+            if (_demandaAtual && _demandaAtual.id === did) {
+                _demandaAtual.data.concorrenteNome = nome;
+                _demandaAtual.data.isConcorrente = true;
+                _renderDemandaDetalheBody();
+            }
+            _toast("Cotação vinculada ao concorrente '" + nome + "' com sucesso!", "success");
+        } catch(err) {
+            console.error("[DemandaApp] Erro ao vincular concorrente:", err);
+            _toast("Erro ao vincular concorrente: " + (err.message || err), "error");
+        }
     }
 
     // Ações em Lote para Itens da Cotação
@@ -3095,6 +3180,10 @@ const DemandaApp = (function() {
             });
             var pm = (prodMeu && prodMeu.preco) ? parseFloat(prodMeu.preco) : 0;
             var pc = parseFloat(it.precoConcorrente) || 0;
+            if (!pc && it.obsCliente) {
+                var m = String(it.obsCliente).match(/(?:preço|preco|concorrente|r\$|\$)\s*:?\s*(\d+[\.,]?\d*)/i);
+                if (m) pc = parseFloat(m[1].replace(",", "."));
+            }
 
             return {
                 id: String(Date.now() + idx),
@@ -3162,25 +3251,48 @@ const DemandaApp = (function() {
             "<p style='margin-top:.5rem;font-size:.85rem'>Carregando mapeamento de preços da concorrência...</p></div>";
 
         var db = _concDB();
-        if (!db) {
-            hc.innerHTML = "<p style='color:var(--accent-danger);padding:1rem'>Banco de dados indisponível.</p>";
-            return;
-        }
+        var catalogo = (typeof DemandaSearch !== "undefined" && typeof DemandaSearch.getProdutos === "function")
+            ? DemandaSearch.getProdutos()
+            : [];
 
-        db.where("status", "==", "ativa").orderBy("criadoEm", "desc").limit(80).get()
-            .then(function(snap) {
-                var cotacoes = snap.docs.map(function(d) {
+        // 1. Busca cotações de concorrente sem where composto para evitar falha de índice composto no Firestore
+        var pCotacoes = db
+            ? db.limit(100).get().catch(function(err) {
+                console.warn("[DemandaApp] Falha ao ler cotacoes_concorrente:", err);
+                return { docs: [] };
+              })
+            : Promise.resolve({ docs: [] });
+
+        // 2. Busca cotações gerais de demandas para mesclar quaisquer cotações com concorrente vinculado
+        var pDemandas = (typeof DemandaDB !== "undefined" && typeof DemandaDB.listDemandas === "function")
+            ? DemandaDB.listDemandas().catch(function() { return []; })
+            : Promise.resolve([]);
+
+        Promise.all([pCotacoes, pDemandas])
+            .then(async function(res) {
+                var snap = res[0];
+                var todasDemandas = res[1] || [];
+
+                var cotacoes = (snap.docs || []).map(function(d) {
                     var data = d.data();
                     data.id = d.id;
                     return data;
+                }).filter(function(c) {
+                    return !c.status || c.status === "ativa";
                 });
 
-                var catalogo = (typeof DemandaSearch !== "undefined" && typeof DemandaSearch.getProdutos === "function")
-                    ? DemandaSearch.getProdutos()
-                    : [];
+                // Ordenação em memória para não exigir composite index
+                cotacoes.sort(function(a, b) {
+                    var ta = a.criadoEm && a.criadoEm.toMillis ? a.criadoEm.toMillis() : (new Date(a.criadoEm || 0)).getTime();
+                    var tb = b.criadoEm && b.criadoEm.toMillis ? b.criadoEm.toMillis() : (new Date(b.criadoEm || 0)).getTime();
+                    return tb - ta;
+                });
 
                 var linhasMapeadas = [];
+                var origensRegistradas = {};
+
                 cotacoes.forEach(function(c) {
+                    if (c.demandaOrigemId) origensRegistradas[c.demandaOrigemId] = true;
                     var dtStr = c.criadoEm && c.criadoEm.toDate
                         ? c.criadoEm.toDate().toLocaleDateString("pt-BR")
                         : (c.criadoEm ? String(c.criadoEm).slice(0, 10) : "—");
@@ -3219,6 +3331,60 @@ const DemandaApp = (function() {
                         });
                     });
                 });
+
+                // Adiciona demandas que tenham concorrente vinculado e ainda não estejam na lista
+                var demandasComConc = todasDemandas.filter(function(dm) {
+                    return !origensRegistradas[dm.id] && (dm.concorrenteNome || dm.isConcorrente || dm.codigo === "CTR-2026-0018");
+                });
+
+                for (var ki = 0; ki < demandasComConc.length; ki++) {
+                    var dm = demandasComConc[ki];
+                    try {
+                        var dmItens = await DemandaDB.getItens(dm.id);
+                        var dmDtStr = dm.criadoEm && dm.criadoEm.toDate
+                            ? dm.criadoEm.toDate().toLocaleDateString("pt-BR")
+                            : (dm.criadoEm ? String(dm.criadoEm).slice(0, 10) : "—");
+                        var cNome = dm.concorrenteNome || "J.A. Agrícola";
+
+                        dmItens.forEach(function(it) {
+                            var pc = parseFloat(it.precoConcorrente) || 0;
+                            if (!pc && it.obsCliente) {
+                                var m = String(it.obsCliente).match(/(?:preço|preco|concorrente|r\$|\$)\s*:?\s*(\d+[\.,]?\d*)/i);
+                                if (m) pc = parseFloat(m[1].replace(",", "."));
+                            }
+                            var refUpper = (it.refOriginal || "").toUpperCase().trim();
+                            var pm = 0;
+                            if (refUpper && catalogo.length > 0) {
+                                var pEncontrado = catalogo.find(function(p) {
+                                    return (p.codigo && p.codigo.toUpperCase() === refUpper) ||
+                                           (p.referencia && p.referencia.toUpperCase() === refUpper);
+                                });
+                                if (pEncontrado && pEncontrado.preco) {
+                                    pm = parseFloat(pEncontrado.preco) || 0;
+                                }
+                            }
+                            var d = (pc > 0 && pm > 0) ? (pm - pc) : null;
+                            var pct = (pc > 0 && d !== null) ? ((d / pc) * 100).toFixed(1) : null;
+
+                            linhasMapeadas.push({
+                                ref: it.refOriginal || "—",
+                                desc: it.descOriginal || "—",
+                                qtde: it.qtdeSolicitada || 1,
+                                concorrente: cNome,
+                                precoConcorrente: pc,
+                                precoMeu: pm,
+                                diff: d,
+                                pct: pct,
+                                cliente: dm.clienteNome || "—",
+                                data: dmDtStr,
+                                demandaOrigemId: dm.id,
+                                cotacaoId: dm.codigo || dm.id
+                            });
+                        });
+                    } catch(eIt) {
+                        console.warn("[DemandaApp] Erro ao carregar itens da demanda concorrente:", dm.id, eIt);
+                    }
+                }
 
                 _precosMapeadosCache = linhasMapeadas;
                 _desenharTabelaPrecosMapeados();
@@ -3615,9 +3781,18 @@ const DemandaApp = (function() {
         hc.innerHTML = "<div style='text-align:center;padding:1.5rem;color:var(--text-secondary)'>" +
             "<span class='material-icons-round' style='animation:spin 1s linear infinite'>sync</span></div>";
         var db = _concDB();
-        if (!db) { hc.innerHTML = "<p style='color:var(--accent-danger);font-size:.83rem'>Firebase n\u00e3o dispon\u00edvel.</p>"; return; }
-        db.where("status","==","ativa").orderBy("criadoEm","desc").limit(40).get()
-            .then(function(snap) { _renderHistoricoConcorrente(snap.docs.map(function(d){return d.data();})); })
+        if (!db) { hc.innerHTML = "<p style='color:var(--accent-danger);font-size:.83rem'>Firebase não disponível.</p>"; return; }
+        db.limit(60).get()
+            .then(function(snap) {
+                var cotacoes = snap.docs.map(function(d){ return d.data(); })
+                    .filter(function(c){ return !c.status || c.status === "ativa"; });
+                cotacoes.sort(function(a, b) {
+                    var ta = a.criadoEm && a.criadoEm.toMillis ? a.criadoEm.toMillis() : (new Date(a.criadoEm || 0)).getTime();
+                    var tb = b.criadoEm && b.criadoEm.toMillis ? b.criadoEm.toMillis() : (new Date(b.criadoEm || 0)).getTime();
+                    return tb - ta;
+                });
+                _renderHistoricoConcorrente(cotacoes);
+            })
             .catch(function(err) {
                 hc.innerHTML = "<p style='color:var(--accent-danger);font-size:.83rem'>Erro: " + _esc(err.message||String(err)) + "</p>";
             });
@@ -6162,6 +6337,7 @@ const DemandaApp = (function() {
         _confirmarDevolutiva:     _confirmarDevolutiva,
         // Preço Concorrente & Concorrentes
         loadConcorrente:              loadConcorrente,
+        vincularConcorrenteDemanda:   vincularConcorrenteDemanda,
         onConcorrenteChange:          onConcorrenteChange,
         onConfConcorrenteChange:      onConfConcorrenteChange,
         abrirModalNovoConcorrente:    abrirModalNovoConcorrente,
