@@ -577,7 +577,16 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
     * **Bússola Gestão ERP & Fluxo de Caixa:** 💰 (`modules/erp-consultoria/index.html`, `modules/fluxo-caixa/index.html`)
     * **MAXCRM Prospecção & Painel:** 🎯 (`modules/prospeccao/index.html`, `modules/prospeccao/painel.html`)
     * **Painel Master / Admin:** 👑 (`modules/master/index.html`)
-    * **Hub Plataforma Principal:** ⚡ (`platform/index.html`)
-    * **Login Central:** 🔐 (`platform/login.html`)
+    * **2026-10-10 (v3.21.92 / WMS v2.2.1 / WMS-Coletor v3.23.1):**
+  - **Correção Crítica no Coletor Zebra (Bipagem de NF-e):**
+    * **Listener Laser Zebra DataWedge:** Ajustado o listener de alta cadência (`initLaserCadence` em `coletor-core.js`) para rotear diretamente a leitura para `processScan` e preencher os inputs ativos, eliminando o descarte de eventos do leitor industrial.
+    * **Auto-trigger de 44 dígitos:** Adicionado manipulador reativo `oninput` no campo `coletor-busca-nf-input` (`coletor-inbound.js`) disparando automaticamente a consulta ao detectar a chave completa (44 dígitos), mesmo em leitores configurados sem a tecla `Enter`.
+    * **Roteamento Inteligente em `processScan`:** Detecção inteligente de chave NF-e (44 dígitos ou número) direcionando imediatamente para o fluxo de recebimento sem colidir com conferência de itens.
+    * **Resolução Dinâmica de Container:** Ajustada a função `_exibirFormNovoRecebimento` para injetar o formulário na tela ativa correta (`screen-conferir` ou `screen-recebimento`).
+    * **Sincronização de Abas:** Alinhamento de `tabMap` para as 7 abas da barra inferior (`home`, `conferir`, `recebimento`, `armazenar`, `separar`, `inventario`, `config`).
+  - **Sanitização de QR Code / DANFE no Desktop:**
+    * Ampliação de `maxlength` de 44 para 255 no campo de entrada de NF do Desktop (`inbound.js`), permitindo leitura de URLs completas de DANFEs da SEFAZ com extração automática da chave de 44 dígitos via regex `\d{44}` sem truncamento.
+    * Registro explícito no menu do Desktop (`VIEW_REGISTRY` em `wms-core.js`) para abertura direta do **Kardex Multi-tenant** (`relo-movimentacao`, `aud-rastreio`) e **Reabastecimento Automático** (`reabastecimento`).
+
 
 

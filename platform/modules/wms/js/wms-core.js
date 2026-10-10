@@ -478,6 +478,9 @@ function switchView(viewId) {
             { id: 'est-transferencia', loader: (v) => window.loadControleView && window.loadControleView(v) },
             { id: 'est-bloqueio', loader: (v) => window.loadControleView && window.loadControleView(v) },
             { id: 'est-ajuste', loader: (v) => window.loadControleView && window.loadControleView(v) },
+            { id: 'relo-movimentacao', loader: () => window.renderKardexView && window.renderKardexView(document.getElementById('view-dynamic')) },
+            { id: 'aud-rastreio',      loader: () => window.renderKardexView && window.renderKardexView(document.getElementById('view-dynamic')) },
+            { id: 'reabastecimento',   loader: () => window.renderReabastecimentoView && window.renderReabastecimentoView(document.getElementById('view-dynamic')) },
 
             // Prefix matches (Lower priority)
             { prefix: 'aud-', loader: (v) => window.loadControleView && window.loadControleView(v) },

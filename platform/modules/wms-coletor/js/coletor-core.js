@@ -248,15 +248,15 @@ function navigateTo(screenId) {
         // Update bottom nav
         document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
         const tabs = document.querySelectorAll('.nav-tab');
-        const tabMap = ['home', 'recebimento', 'armazenar', 'separar', 'inventario', 'config'];
+        const tabMap = ['home', 'conferir', 'recebimento', 'armazenar', 'separar', 'inventario', 'config'];
         const idx = tabMap.indexOf(screenId);
         if (idx >= 0 && tabs[idx]) tabs[idx].classList.add('active');
 
         // Update top bar title
         const titles = {
             home: 'WMS Coletor',
-            recebimento: 'Conferir',
             conferir: 'Recebimento Docas',
+            recebimento: 'Conferência de Carga',
             armazenar: 'Armazenagem',
             separar: 'Separação',
             inventario: 'Inventário',
@@ -305,20 +305,37 @@ function injectPlaceholder(screenId, container) {
 }
 
 // ===== Scanner =====
-function processScan() {
+function processScan(overrideCode) {
     const input = document.getElementById('scannerInput');
-    const code = input.value.trim();
+    let code = (typeof overrideCode === 'string' ? overrideCode : (input ? input.value : '')).trim();
     if (!code) return;
 
-    console.log(`[SCAN] Screen: ${currentScreen}, Code: ${code}`);
+    // Se for URL SEFAZ ou tiver 44 dígitos contínuos, extrai a chave NF-e limpa
+    const match44 = code.match(/\d{44}/);
+    const clean44 = match44 ? match44[0] : code.replace(/\D/g, '');
+    const isChaveNfe = clean44.length === 44;
+
+    console.log(`⚡ [SCAN] Screen: ${currentScreen}, Code: ${code} (isChaveNfe: ${isChaveNfe})`);
 
     // Dispatch to active screen handler
     switch (currentScreen) {
         case 'conferir':
-            if (window.handleScanConferir) window.handleScanConferir(code);
-            break;
         case 'recebimento':
-            if (window.handleScanConferenciaItens) window.handleScanConferenciaItens(code);
+            // Se for chave NF de 44 dígitos ou se a conferência de itens não estiver aberta na tela, busca NF
+            if (isChaveNfe || (clean44.length >= 1 && clean44.length <= 9 && !window._confRecAtivo && !window._recNovaNF)) {
+                if (window.handleScanConferir) {
+                    window.handleScanConferir(isChaveNfe ? clean44 : code);
+                } else if (window.handleScanRecebimento) {
+                    window.handleScanRecebimento(isChaveNfe ? clean44 : code);
+                }
+            } else {
+                // Conferência de itens por SKU/EAN
+                if (window.handleScanConferenciaItens) {
+                    window.handleScanConferenciaItens(code);
+                } else if (window.handleScanConferir) {
+                    window.handleScanConferir(code);
+                }
+            }
             break;
         case 'armazenar':
             if (window.handleScanArmazenar) window.handleScanArmazenar(code);
@@ -332,8 +349,10 @@ function processScan() {
     }
 
     // Clear input for next scan
-    input.value = '';
-    input.focus();
+    if (input) {
+        input.value = '';
+        input.focus();
+    }
 }
 
 // Handle Enter key on scanner input + Escape para fechar camera
@@ -608,6 +627,16 @@ window.WmsBarcodeParser = {
                 if (typeof window.currentScanCallback === 'function') {
                     window.currentScanCallback(parsed.sku || parsed.raw, parsed);
                 } else {
+                    const scInput = document.getElementById('scannerInput');
+                    if (scInput) scInput.value = parsed.raw || scannedCode;
+                    const activeInput = document.activeElement;
+                    if (activeInput && activeInput.tagName === 'INPUT' && activeInput.id !== 'scannerInput') {
+                        activeInput.value = parsed.raw || scannedCode;
+                        activeInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        activeInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+                    } else {
+                        processScan(parsed.raw || scannedCode);
+                    }
                     window.dispatchEvent(new CustomEvent('wms:barcode-scanned', { detail: parsed }));
                 }
             } else {
@@ -639,6 +668,16 @@ window.WmsBarcodeParser = {
             if (typeof window.currentScanCallback === 'function') {
                 window.currentScanCallback(parsed.sku || parsed.raw, parsed);
             } else {
+                const scInput = document.getElementById('scannerInput');
+                if (scInput) scInput.value = parsed.raw || barcode;
+                const activeInput = document.activeElement;
+                if (activeInput && activeInput.tagName === 'INPUT' && activeInput.id !== 'scannerInput') {
+                    activeInput.value = parsed.raw || barcode;
+                    activeInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    activeInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+                } else {
+                    processScan(parsed.raw || barcode);
+                }
                 window.dispatchEvent(new CustomEvent('wms:barcode-scanned', { detail: parsed }));
             }
         }

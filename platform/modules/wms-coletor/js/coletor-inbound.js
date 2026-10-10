@@ -47,6 +47,7 @@ window.initConferirScreen = async function(container) {
                 <input id="coletor-busca-nf-input" type="text" class="m-input" 
                     placeholder="Chave 44 dígitos ou Nº da NF..." 
                     style="font-size:.82rem;padding:.45rem .6rem;"
+                    oninput="window.handleChaveNfInputColetor && window.handleChaveNfInputColetor(this.value)"
                     onkeydown="if(event.key==='Enter') window.consultarNfColetorManual()">
                 <button class="m-btn m-btn-primary" onclick="window.consultarNfColetorManual()" 
                     style="padding:.45rem .8rem;font-size:.8rem;white-space:nowrap;">
@@ -118,6 +119,15 @@ window.initConferirScreen = async function(container) {
     `;
 };
 
+window.handleChaveNfInputColetor = function(val) {
+    const raw = (val || '').trim();
+    const match44 = raw.match(/\d{44}/);
+    const clean = match44 ? match44[0] : raw.replace(/\D/g, '');
+    if (clean.length === 44) {
+        window.handleScanConferir(clean);
+    }
+};
+
 window.consultarNfColetorManual = function() {
     const input = document.getElementById('coletor-busca-nf-input');
     const val = input ? input.value.trim() : '';
@@ -126,8 +136,16 @@ window.consultarNfColetorManual = function() {
 };
 
 window.handleScanConferir = async function(code) {
-    const clean = code.replace(/\D/g, '');
+    let clean = (code || '').trim();
+    // Extrai os 44 dígitos se vier dentro de uma URL completa da SEFAZ ou código de barras com caracteres extras
+    const match44 = clean.match(/\d{44}/);
+    if (match44) {
+        clean = match44[0];
+    } else {
+        clean = clean.replace(/\D/g, '');
+    }
     if (!clean) return;
+
     try {
         const lista = await WmsStore.listarRecebimentos({ status: 'AGUARDANDO_CONFERENCIA' }).catch(() => []);
         const target = lista.find(r =>
@@ -145,7 +163,13 @@ window.handleScanConferir = async function(code) {
 };
 
 async function _exibirFormNovoRecebimento(chaveNfe) {
-    const container = document.getElementById('screen-conferir');
+    // Resolve dinamicamente o container ativo (screen-conferir ou screen-recebimento)
+    const container = (document.getElementById('screen-conferir')?.classList.contains('active') && document.getElementById('screen-conferir'))
+                   || (document.getElementById('screen-recebimento')?.classList.contains('active') && document.getElementById('screen-recebimento'))
+                   || document.getElementById('screen-conferir')
+                   || document.getElementById('screen-recebimento');
+
+    if (!container) return;
     container.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-secondary);"><span class="material-icons-round" style="font-size:2rem;display:block;animation:spin 1s linear infinite;margin-bottom:.4rem;">sync</span><span style="font-size:.82rem;">Consultando ERP...</span></div>`;
     try {
         const res = await WmsProcedures.proc_buscar_nf_destinada(chaveNfe);
@@ -159,7 +183,7 @@ async function _exibirFormNovoRecebimento(chaveNfe) {
         container.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
                 <strong style="font-size:.95rem;color:#ec4899;">📦 Recebendo NF ${nf.numero}</strong>
-                <button class="m-btn m-btn-outline" onclick="initConferirScreen(document.getElementById('screen-conferir'))" style="font-size:.75rem;padding:.3rem .65rem;">
+                <button class="m-btn m-btn-outline" onclick="initConferirScreen(document.getElementById('screen-conferir') || document.getElementById('screen-recebimento'))" style="font-size:.75rem;padding:.3rem .65rem;">
                     <span class="material-icons-round" style="font-size:.9rem;">arrow_back</span> Voltar</button>
             </div>
             <div style="background:rgba(236,72,153,.07);border:1px solid rgba(236,72,153,.2);border-radius:8px;padding:.85rem;margin-bottom:1rem;">
