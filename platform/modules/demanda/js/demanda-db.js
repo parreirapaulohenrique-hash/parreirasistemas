@@ -90,6 +90,8 @@ const DemandaDB = (() => {
             clienteCnpj:       data.clienteCnpj || '',
             vendedorId:        data.vendedorId  || null,
             vendedorNome:      data.vendedorNome || '',
+            concorrenteNome:   data.concorrenteNome || null,
+            isConcorrente:     !!(data.isConcorrente || data.concorrenteNome),
             filialId:          data.filialId    || 1,
             filialNome:        data.filialNome  || '',
             obs:               data.obs        || '',
@@ -257,6 +259,17 @@ const DemandaDB = (() => {
             qtdePerdida:     0,
             // Preço
             precoUnitario:   null,
+            precoConcorrente: (() => {
+                let pc = (raw.precoConcorrente != null && !isNaN(Number(raw.precoConcorrente))) ? Number(raw.precoConcorrente) : null;
+                if (pc === null && (raw.obs || raw.obsCliente)) {
+                    const m = String(raw.obs || raw.obsCliente).match(/pre[cç]o\s*conc\.?:\s*r\$\s*([\d\.,]+)/i);
+                    if (m) {
+                        const pv = parseFloat(m[1].replace(/\./g, '').replace(',', '.'));
+                        if (!isNaN(pv) && pv > 0) pc = pv;
+                    }
+                }
+                return pc;
+            })(),
             tabelaPrecoId:   null,
             desconto:        0,
             valorTotal:      null,
