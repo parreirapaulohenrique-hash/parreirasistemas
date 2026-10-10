@@ -2169,18 +2169,32 @@ const DemandaApp = (function() {
 
                 var produtoEncontrado = null;
 
-                // 1. Tenta buscar via DemandaSearch por código ou referência
-                var query = codErp || refBusca || descBusca;
-                if (query && query.length >= 2) {
+                // 1. Tenta buscar via DemandaSearch por código ERP ou referência/código de fábrica
+                var queryRef = codErp || refBusca;
+                if (queryRef && queryRef.length >= 2) {
                     try {
                         if (typeof DemandaSearch !== "undefined" && DemandaSearch.search) {
-                            var res = await DemandaSearch.search(query, { limit: 5, forceRefresh: true });
+                            var res = await DemandaSearch.search(queryRef, { limit: 5, forceRefresh: true });
                             if (res && res.length > 0) {
                                 produtoEncontrado = res[0];
                             }
                         }
                     } catch (e) {
-                        console.warn("[DemandaApp] Erro na busca DemandaSearch:", item.id, e);
+                        console.warn("[DemandaApp] Erro na busca DemandaSearch por código/ref:", item.id, e);
+                    }
+                }
+
+                // 1.1 Se não encontrou por ref/código, tenta pela descrição do item
+                if (!produtoEncontrado && descBusca && descBusca.length >= 3) {
+                    try {
+                        if (typeof DemandaSearch !== "undefined" && DemandaSearch.search) {
+                            var resDesc = await DemandaSearch.search(descBusca, { limit: 5, forceRefresh: true });
+                            if (resDesc && resDesc.length > 0) {
+                                produtoEncontrado = resDesc[0];
+                            }
+                        }
+                    } catch (e) {
+                        console.warn("[DemandaApp] Erro na busca DemandaSearch por descrição:", item.id, e);
                     }
                 }
 

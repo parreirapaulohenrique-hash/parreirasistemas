@@ -70,10 +70,105 @@ const DemandaSearch = (() => {
         throw new Error('MaxDataAdapter não encontrado. Verifique os scripts carregados.');
     }
 
+    // ── Busca na base local de 10.896 SKUs da integração MaxData ──────
+    function _searchCompactSkus(query, filialId) {
+        if (typeof window === 'undefined' || !Array.isArray(window.COMPACT_SKUS) || window.COMPACT_SKUS.length === 0) {
+            return [];
+        }
+        const q = (query || '').trim();
+        if (!q || q.length < 2) return [];
+
+        const qUp = q.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const qNorm = qUp.replace(/[^A-Z0-9]/g, '');
+        const qWords = qUp.split(/\s+/).filter(w => w.length >= 3);
+        const results = [];
+        const skus = window.COMPACT_SKUS;
+
+        for (let i = 0; i < skus.length; i++) {
+            const s = skus[i];
+            const codErp = String(s[0] || '');
+            const desc = String(s[1] || '').toUpperCase();
+            const marca = String(s[2] || '');
+            const estoque = Number(s[10] != null ? s[10] : (s[9] || 0));
+            const preco = Number(s[11] || 0);
+            const codFab = String(s[38] || '');
+            const crossRef = String(s[39] || '');
+
+            const fabNorm = codFab.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const crossNorm = crossRef.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const descNorm = desc.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9]/g, '');
+
+            let score = 0;
+            let tipoMatch = '';
+
+            // 1. Código Fabricante Exato
+            if (fabNorm && fabNorm === qNorm) {
+                score = 100;
+                tipoMatch = 'fab_exato';
+            } else if (codErp === q || (qNorm.length >= 2 && codErp === qNorm)) {
+                score = 99;
+                tipoMatch = 'erp_exato';
+            } else if (qNorm.length >= 3 && crossNorm.includes(qNorm)) {
+                score = 96;
+                tipoMatch = 'cross_ref';
+            } else if (fabNorm && (fabNorm.startsWith(qNorm) || (qNorm.length >= 4 && qNorm.startsWith(fabNorm)))) {
+                score = 92;
+                tipoMatch = 'fab_prefix';
+            } else if (descNorm === qNorm) {
+                score = 90;
+                tipoMatch = 'desc_exata';
+            } else if (qNorm.length >= 4 && descNorm.includes(qNorm)) {
+                score = 80;
+                tipoMatch = 'desc_contem';
+            } else if (qWords.length >= 2) {
+                let hitWords = 0;
+                for (const w of qWords) {
+                    if (desc.includes(w)) hitWords++;
+                }
+                if (hitWords >= Math.min(2, qWords.length)) {
+                    score = 75 + Math.round((hitWords / qWords.length) * 10);
+                    tipoMatch = 'desc_palavras';
+                }
+            }
+
+            if (score > 0) {
+                results.push({
+                    erpProdutoId: codErp,
+                    codigoErp: codErp,
+                    referencia: codFab || codErp,
+                    codigoFab: codFab,
+                    descricao: s[1],
+                    marca: marca,
+                    fabricante: marca,
+                    estoque: estoque,
+                    saldoEstoque: estoque,
+                    estoqueFilial: estoque,
+                    preco: preco,
+                    precoVenda: preco,
+                    valorVenda: preco,
+                    custo: Number(s[11] || 0),
+                    confidencia: score >= 95 ? 'alta' : 'media',
+                    _temEstoque: estoque > 0,
+                    _fonte: 'compact_skus_maxdata',
+                    _rank: score,
+                    _match: tipoMatch,
+                    _rawSku: s
+                });
+            }
+        }
+
+        results.sort((a, b) => {
+            if (b._rank !== a._rank) return b._rank - a._rank;
+            return (b.estoque > 0 ? 1 : 0) - (a.estoque > 0 ? 1 : 0);
+        });
+
+        return results.slice(0, 25);
+    }
+
     // ── Busca principal (rota multi-camada) ───────────────────
     /**
      * Busca um produto por qualquer informação disponível.
-     * Cascata: Firestore synced → base técnica → ERP (opcional)
+     * Cascata: Compact SKUs (10.896) → Firestore synced → base técnica → ERP (opcional)
      *
      * @param {string} query - Texto digitado pelo vendedor
      * @param {object} opts  - { filialId, limit, forceRefresh }
@@ -93,6 +188,20 @@ const DemandaSearch = (() => {
 
         const results = [];
         const seen    = new Set();
+
+        // CAMADA -1 (ULTRA RÁPIDA / OFFLINE): Base de 10.896 SKUs MaxData integrados (window.COMPACT_SKUS)
+        try {
+            const compactMatches = _searchCompactSkus(q, filialId);
+            for (const r of compactMatches) {
+                const key = `erp:${r.erpProdutoId}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    results.push(r);
+                }
+            }
+        } catch (e) {
+            console.warn('[DemandaSearch] COMPACT_SKUS falhou:', e.message);
+        }
 
         // CAMADA 0 (PRIMÁRIA): Produtos sincronizados no Firestore (maxdata_sync.py)
         // Sempre funciona, independente de acesso ao ERP.
@@ -579,12 +688,30 @@ const DemandaSearch = (() => {
         }).slice(0, 15);
     }
 
+    // ── Listar todos os produtos da base compacta integrada ──
+    function getProdutos() {
+        if (typeof window !== 'undefined' && Array.isArray(window.COMPACT_SKUS)) {
+            return window.COMPACT_SKUS.map(s => ({
+                codigo: String(s[0]),
+                erpProdutoId: String(s[0]),
+                referencia: String(s[38] || s[0]),
+                codigoFab: String(s[38] || ''),
+                descricao: String(s[1]),
+                marca: String(s[2] || ''),
+                estoque: Number(s[10] != null ? s[10] : (s[9] || 0)),
+                preco: Number(s[11] || 0)
+            }));
+        }
+        return [];
+    }
+
     // ── Limpar cache ──────────────────────────────────────────
     function clearCache() { _cache.clear(); }
 
     return {
         search,
         getProductDetails,
+        getProdutos,
         searchClients,
         clearCache,
         getAdapter: _getAdapter,   // exposto para DemandaLookup.syncMaxdataToTechbase
