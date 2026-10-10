@@ -1371,124 +1371,126 @@ const DemandaApp = (function() {
         }).length;
         var pct = itens.length > 0 ? Math.round((terminal / itens.length) * 100) : 0;
 
-        // Lista de Chips de Totalizadores
+        // Lista de Chips de Totalizadores (apenas os com itens ou o selecionado)
         var chipsList = [
-            { key: "todos",          label: "Todos",           count: contadores.todos,          color: "var(--text-primary)", icon: "format_list_bulleted" },
-            { key: "nao_cadastrado", label: "Não Cadastrados", count: contadores.nao_cadastrado,  color: "#f97316",             icon: "error_outline" }
+            { key: "todos", label: "Todos", count: contadores.todos, color: "var(--text-primary)", icon: "format_list_bulleted" }
         ];
 
-        if (contadores.catalogado > 0) {
+        if (contadores.nao_cadastrado > 0 || _filtroItensDetalhe === "nao_cadastrado") {
+            chipsList.push({ key: "nao_cadastrado", label: "Não Cadastrados", count: contadores.nao_cadastrado, color: "#f97316", icon: "error_outline" });
+        }
+        if (contadores.catalogado > 0 || _filtroItensDetalhe === "catalogado") {
             chipsList.push({ key: "catalogado", label: "Catalogados", count: contadores.catalogado, color: "#3b82f6", icon: "hub" });
         }
-        if (contadores.nao_encontrado > 0) {
+        if (contadores.nao_encontrado > 0 || _filtroItensDetalhe === "nao_encontrado") {
             chipsList.push({ key: "nao_encontrado", label: "Não Encontrados", count: contadores.nao_encontrado, color: "#f59e0b", icon: "help_outline" });
         }
-
-        chipsList.push(
-            { key: "sem_estoque",    label: "Sem Estoque",     count: contadores.sem_estoque,     color: "#ef4444",             icon: "inventory_2" },
-            { key: "em_estoque",     label: "Em Estoque",      count: contadores.em_estoque,      color: "#10b981",             icon: "inventory" }
-        );
-
-        if (contadores.compras > 0) {
+        if (contadores.sem_estoque > 0 || _filtroItensDetalhe === "sem_estoque") {
+            chipsList.push({ key: "sem_estoque", label: "Sem Estoque", count: contadores.sem_estoque, color: "#ef4444", icon: "inventory_2" });
+        }
+        if (contadores.em_estoque > 0 || _filtroItensDetalhe === "em_estoque") {
+            chipsList.push({ key: "em_estoque", label: "Em Estoque", count: contadores.em_estoque, color: "#10b981", icon: "inventory" });
+        }
+        if (contadores.compras > 0 || _filtroItensDetalhe === "compras") {
             chipsList.push({ key: "compras", label: "Em Compras", count: contadores.compras, color: "#8b5cf6", icon: "shopping_cart" });
         }
-        if (contadores.filiais > 0) {
+        if (contadores.filiais > 0 || _filtroItensDetalhe === "filiais") {
             chipsList.push({ key: "filiais", label: "Outras Filiais", count: contadores.filiais, color: "#06b6d4", icon: "store" });
         }
-        if (contadores.proposta > 0) {
+        if (contadores.proposta > 0 || _filtroItensDetalhe === "proposta") {
             chipsList.push({ key: "proposta", label: "Proposta/Venda", count: contadores.proposta, color: "#10b981", icon: "request_quote" });
         }
-        if (contadores.perdida > 0) {
+        if (contadores.perdida > 0 || _filtroItensDetalhe === "perdida") {
             chipsList.push({ key: "perdida", label: "Perdida/Cancelada", count: contadores.perdida, color: "#6b7280", icon: "cancel" });
         }
 
-        var chipsHtml = "<div style='display:flex;gap:.5rem;overflow-x:auto;padding-bottom:.5rem;margin-bottom:.75rem;scrollbar-width:thin'>" +
+        var chipsHtml = "<div class='no-scrollbar' style='display:flex;gap:.3rem;overflow-x:auto;padding:.1rem 0;scrollbar-width:none;-ms-overflow-style:none;align-items:center'>" +
             chipsList.map(function(c) {
                 var isActive = (_filtroItensDetalhe === c.key);
                 var activeStyle = isActive
                     ? "background:" + (c.color.startsWith("#") ? c.color + "22" : "rgba(255,255,255,.12)") + ";border-color:" + (c.color.startsWith("#") ? c.color : "var(--primary-color)") + ";box-shadow:0 0 0 1px " + (c.color.startsWith("#") ? c.color : "var(--primary-color)") + ";color:var(--text-primary);"
                     : "background:var(--bg-card);border-color:var(--border-color);color:var(--text-secondary);";
                 return "<button type='button' onclick=\"DemandaApp.setFiltroDetalhe('" + c.key + "')\" " +
-                    "style='display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .75rem;border-radius:20px;font-size:.76rem;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;" + activeStyle + "'>" +
-                    "<span class='material-icons-round' style='font-size:.95rem;color:" + c.color + "'>" + c.icon + "</span>" +
+                    "style='display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .55rem;border-radius:14px;font-size:.72rem;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;" + activeStyle + "'>" +
+                    "<span class='material-icons-round' style='font-size:.85rem;color:" + c.color + "'>" + c.icon + "</span>" +
                     "<span>" + c.label + "</span>" +
-                    "<span style='background:" + (c.color.startsWith("#") ? c.color + "33" : "rgba(255,255,255,.15)") + ";color:" + (c.color.startsWith("#") ? c.color : "var(--text-primary)") + ";padding:.1rem .45rem;border-radius:10px;font-size:.7rem;font-weight:700'>" + c.count + "</span>" +
+                    "<span style='background:" + (c.color.startsWith("#") ? c.color + "33" : "rgba(255,255,255,.15)") + ";color:" + (c.color.startsWith("#") ? c.color : "var(--text-primary)") + ";padding:.05rem .35rem;border-radius:8px;font-size:.68rem;font-weight:700'>" + c.count + "</span>" +
                     "</button>";
             }).join("") +
             "</div>";
 
-        // Barra de Ações Cabíveis para o Status Selecionado
+        // Barra de Ações Cabíveis para o Status Selecionado (Compacta)
         var totalFaltam = contadores.nao_cadastrado + contadores.catalogado + contadores.nao_encontrado + contadores.sem_estoque;
         var acoesStatusHtml = "";
 
         if (_filtroItensDetalhe === "nao_cadastrado" && contadores.nao_cadastrado > 0) {
-            acoesStatusHtml = "<div style='display:flex;align-items:center;justify-content:space-between;padding:.6rem .85rem;background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.25);border-radius:8px;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem'>" +
-                "<div style='display:flex;align-items:center;gap:.4rem;font-size:.82rem;color:var(--text-primary)'>" +
-                "<span class='material-icons-round' style='color:#f97316;font-size:1.15rem'>error_outline</span>" +
+            acoesStatusHtml = "<div style='display:flex;align-items:center;justify-content:space-between;padding:.35rem .65rem;background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.25);border-radius:6px;margin-bottom:.5rem;flex-wrap:wrap;gap:.4rem'>" +
+                "<div style='display:flex;align-items:center;gap:.35rem;font-size:.78rem;color:var(--text-primary)'>" +
+                "<span class='material-icons-round' style='color:#f97316;font-size:1rem'>error_outline</span>" +
                 "<span><strong>" + contadores.nao_cadastrado + "</strong> " + (contadores.nao_cadastrado === 1 ? "peça sem cadastro no ERP" : "peças sem cadastro no ERP") + "</span>" +
                 "</div>" +
-                "<div style='display:flex;gap:.5rem;align-items:center'>" +
-                "<button onclick=\"DemandaApp.enviarItensParaComprasLote('nao_cadastrado')\" class='btn btn-primary btn-sm' style='background:#8b5cf6;border-color:#8b5cf6;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'>" +
-                "<span class='material-icons-round' style='font-size:.95rem'>shopping_cart</span> Enviar Não Cadastrados p/ Compras</button>" +
+                "<div style='display:flex;gap:.4rem;align-items:center'>" +
+                "<button onclick=\"DemandaApp.enviarItensParaComprasLote('nao_cadastrado')\" class='btn btn-primary btn-sm' style='background:#8b5cf6;border-color:#8b5cf6;display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .55rem;font-size:.74rem;font-weight:600'>" +
+                "<span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Enviar Não Cadastrados p/ Compras</button>" +
                 "</div></div>";
         } else if (_filtroItensDetalhe === "catalogado" && contadores.catalogado > 0) {
-            acoesStatusHtml = "<div style='display:flex;align-items:center;justify-content:space-between;padding:.6rem .85rem;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:8px;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem'>" +
-                "<div style='display:flex;align-items:center;gap:.4rem;font-size:.82rem;color:var(--text-primary)'>" +
-                "<span class='material-icons-round' style='color:#3b82f6;font-size:1.15rem'>hub</span>" +
+            acoesStatusHtml = "<div style='display:flex;align-items:center;justify-content:space-between;padding:.35rem .65rem;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:6px;margin-bottom:.5rem;flex-wrap:wrap;gap:.4rem'>" +
+                "<div style='display:flex;align-items:center;gap:.35rem;font-size:.78rem;color:var(--text-primary)'>" +
+                "<span class='material-icons-round' style='color:#3b82f6;font-size:1rem'>hub</span>" +
                 "<span><strong>" + contadores.catalogado + "</strong> " + (contadores.catalogado === 1 ? "peça na Base Técnica / Catálogo" : "peças na Base Técnica / Catálogo") + "</span>" +
                 "</div>" +
-                "<div style='display:flex;gap:.5rem;align-items:center'>" +
-                "<button onclick=\"DemandaApp.enviarItensParaComprasLote('catalogado')\" class='btn btn-primary btn-sm' style='background:#8b5cf6;border-color:#8b5cf6;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'>" +
-                "<span class='material-icons-round' style='font-size:.95rem'>shopping_cart</span> Enviar Catalogados p/ Compras</button>" +
+                "<div style='display:flex;gap:.4rem;align-items:center'>" +
+                "<button onclick=\"DemandaApp.enviarItensParaComprasLote('catalogado')\" class='btn btn-primary btn-sm' style='background:#8b5cf6;border-color:#8b5cf6;display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .55rem;font-size:.74rem;font-weight:600'>" +
+                "<span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Enviar Catalogados p/ Compras</button>" +
                 "</div></div>";
         } else if (_filtroItensDetalhe === "nao_encontrado" && contadores.nao_encontrado > 0) {
-            acoesStatusHtml = "<div style='display:flex;align-items:center;justify-content:space-between;padding:.6rem .85rem;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem'>" +
-                "<div style='display:flex;align-items:center;gap:.4rem;font-size:.82rem;color:var(--text-primary)'>" +
-                "<span class='material-icons-round' style='color:#f59e0b;font-size:1.15rem'>help_outline</span>" +
+            acoesStatusHtml = "<div style='display:flex;align-items:center;justify-content:space-between;padding:.35rem .65rem;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:6px;margin-bottom:.5rem;flex-wrap:wrap;gap:.4rem'>" +
+                "<div style='display:flex;align-items:center;gap:.35rem;font-size:.78rem;color:var(--text-primary)'>" +
+                "<span class='material-icons-round' style='color:#f59e0b;font-size:1rem'>help_outline</span>" +
                 "<span><strong>" + contadores.nao_encontrado + "</strong> " + (contadores.nao_encontrado === 1 ? "peça não encontrada" : "peças não encontradas") + "</span>" +
                 "</div>" +
-                "<div style='display:flex;gap:.5rem;align-items:center'>" +
-                "<button onclick=\"DemandaApp.enviarItensParaComprasLote('nao_encontrado')\" class='btn btn-primary btn-sm' style='background:#8b5cf6;border-color:#8b5cf6;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'>" +
-                "<span class='material-icons-round' style='font-size:.95rem'>shopping_cart</span> Enviar Não Encontrados p/ Compras</button>" +
+                "<div style='display:flex;gap:.4rem;align-items:center'>" +
+                "<button onclick=\"DemandaApp.enviarItensParaComprasLote('nao_encontrado')\" class='btn btn-primary btn-sm' style='background:#8b5cf6;border-color:#8b5cf6;display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .55rem;font-size:.74rem;font-weight:600'>" +
+                "<span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Enviar Não Encontrados p/ Compras</button>" +
                 "</div></div>";
         } else if (_filtroItensDetalhe === "sem_estoque" && contadores.sem_estoque > 0) {
-            acoesStatusHtml = "<div style='display:flex;align-items:center;justify-content:space-between;padding:.6rem .85rem;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:8px;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem'>" +
-                "<div style='display:flex;align-items:center;gap:.4rem;font-size:.82rem;color:var(--text-primary)'>" +
-                "<span class='material-icons-round' style='color:#ef4444;font-size:1.15rem'>inventory_2</span>" +
-                "<span><strong>" + contadores.sem_estoque + "</strong> " + (contadores.sem_estoque === 1 ? "peça cadastrada mas sem estoque" : "peças cadastradas mas sem estoque") + "</span>" +
+            acoesStatusHtml = "<div style='display:flex;align-items:center;justify-content:space-between;padding:.35rem .65rem;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:6px;margin-bottom:.5rem;flex-wrap:wrap;gap:.4rem'>" +
+                "<div style='display:flex;align-items:center;gap:.35rem;font-size:.78rem;color:var(--text-primary)'>" +
+                "<span class='material-icons-round' style='color:#ef4444;font-size:1rem'>inventory_2</span>" +
+                "<span><strong>" + contadores.sem_estoque + "</strong> " + (contadores.sem_estoque === 1 ? "peça sem estoque" : "peças sem estoque") + "</span>" +
                 "</div>" +
-                "<div style='display:flex;gap:.5rem;align-items:center'>" +
-                "<button onclick=\"DemandaApp.enviarItensParaComprasLote('sem_estoque')\" class='btn btn-primary btn-sm' style='background:#8b5cf6;border-color:#8b5cf6;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'>" +
-                "<span class='material-icons-round' style='font-size:.95rem'>shopping_cart</span> Enviar Sem Estoque p/ Compras</button>" +
-                "<button onclick='DemandaApp.consultarFiliaisLote()' class='btn btn-secondary btn-sm' style='display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem'>" +
-                "<span class='material-icons-round' style='font-size:.95rem'>store</span> Consultar Filiais</button>" +
+                "<div style='display:flex;gap:.4rem;align-items:center'>" +
+                "<button onclick=\"DemandaApp.enviarItensParaComprasLote('sem_estoque')\" class='btn btn-primary btn-sm' style='background:#8b5cf6;border-color:#8b5cf6;display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .55rem;font-size:.74rem;font-weight:600'>" +
+                "<span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Enviar Sem Estoque p/ Compras</button>" +
+                "<button onclick='DemandaApp.consultarFiliaisLote()' class='btn btn-secondary btn-sm' style='display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .55rem;font-size:.74rem'>" +
+                "<span class='material-icons-round' style='font-size:.85rem'>store</span> Consultar Filiais</button>" +
                 "</div></div>";
         } else if (_filtroItensDetalhe === "em_estoque" && contadores.em_estoque > 0) {
-            acoesStatusHtml = "<div style='display:flex;align-items:center;justify-content:space-between;padding:.6rem .85rem;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:8px;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem'>" +
-                "<div style='display:flex;align-items:center;gap:.4rem;font-size:.82rem;color:var(--text-primary)'>" +
-                "<span class='material-icons-round' style='color:#10b981;font-size:1.15rem'>inventory</span>" +
-                "<span><strong>" + contadores.em_estoque + "</strong> " + (contadores.em_estoque === 1 ? "peça com estoque disponível" : "peças com estoque disponível") + "</span>" +
+            acoesStatusHtml = "<div style='display:flex;align-items:center;justify-content:space-between;padding:.35rem .65rem;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:6px;margin-bottom:.5rem;flex-wrap:wrap;gap:.4rem'>" +
+                "<div style='display:flex;align-items:center;gap:.35rem;font-size:.78rem;color:var(--text-primary)'>" +
+                "<span class='material-icons-round' style='color:#10b981;font-size:1rem'>inventory</span>" +
+                "<span><strong>" + contadores.em_estoque + "</strong> peças com estoque disponível</span>" +
                 "</div>" +
-                "<div style='display:flex;gap:.5rem;align-items:center'>" +
-                "<button onclick='DemandaApp.enviarItensParaOrcamentoLote()' class='btn btn-primary btn-sm' style='background:#10b981;border-color:#10b981;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'>" +
-                "<span class='material-icons-round' style='font-size:.95rem'>request_quote</span> Gerar Proposta com Disponíveis</button>" +
+                "<div style='display:flex;gap:.4rem;align-items:center'>" +
+                "<button onclick='DemandaApp.enviarItensParaOrcamentoLote()' class='btn btn-primary btn-sm' style='background:#10b981;border-color:#10b981;display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .55rem;font-size:.74rem;font-weight:600'>" +
+                "<span class='material-icons-round' style='font-size:.85rem'>request_quote</span> Gerar Proposta com Disponíveis</button>" +
                 "</div></div>";
         } else if (_filtroItensDetalhe === "todos") {
             var btns = [];
             if (totalFaltam > 0) {
-                btns.push("<button onclick=\"DemandaApp.enviarItensParaComprasLote('todos_faltantes')\" class='btn btn-primary btn-sm' style='background:#8b5cf6;border-color:#8b5cf6;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'>" +
-                    "<span class='material-icons-round' style='font-size:.95rem'>shopping_cart</span> Enviar Faltantes p/ Compras (" + totalFaltam + ")</button>");
+                btns.push("<button onclick=\"DemandaApp.enviarItensParaComprasLote('todos_faltantes')\" class='btn btn-primary btn-sm' style='background:#8b5cf6;border-color:#8b5cf6;display:inline-flex;align-items:center;gap:.25rem;padding:.2rem .55rem;font-size:.74rem;font-weight:600'>" +
+                    "<span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Enviar Faltantes p/ Compras (" + totalFaltam + ")</button>");
             }
             if (contadores.em_estoque > 0) {
-                btns.push("<button onclick='DemandaApp.enviarItensParaOrcamentoLote()' class='btn btn-sm' style='background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'>" +
-                    "<span class='material-icons-round' style='font-size:.95rem'>request_quote</span> Orçar Disponíveis (" + contadores.em_estoque + ")</button>");
+                btns.push("<button onclick='DemandaApp.enviarItensParaOrcamentoLote()' class='btn btn-sm' style='background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);display:inline-flex;align-items:center;gap:.25rem;padding:.2rem .55rem;font-size:.74rem;font-weight:600'>" +
+                    "<span class='material-icons-round' style='font-size:.85rem'>request_quote</span> Orçar Disponíveis (" + contadores.em_estoque + ")</button>");
             }
-            btns.push("<button onclick=\"DemandaApp.reavaliarEstoque('" + _esc(d.id) + "')\" class='btn btn-secondary btn-sm' style='display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem'>" +
-                "<span class='material-icons-round' style='font-size:.95rem'>sync</span> Reavaliar Estoque</button>");
+            btns.push("<button onclick=\"DemandaApp.reavaliarEstoque('" + _esc(d.id) + "')\" class='btn btn-secondary btn-sm' style='display:inline-flex;align-items:center;gap:.25rem;padding:.2rem .55rem;font-size:.74rem'>" +
+                "<span class='material-icons-round' style='font-size:.85rem'>sync</span> Reavaliar Estoque</button>");
 
-            acoesStatusHtml = "<div style='display:flex;align-items:center;justify-content:space-between;padding:.5rem .85rem;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem'>" +
-                "<span style='font-size:.78rem;color:var(--text-secondary)'>Ações rápidas da cotação:</span>" +
-                "<div style='display:flex;gap:.5rem;align-items:center;flex-wrap:wrap'>" + btns.join("") + "</div>" +
+            acoesStatusHtml = "<div style='display:flex;align-items:center;justify-content:space-between;padding:.35rem .65rem;background:rgba(255,255,255,.02);border:1px solid var(--border-color);border-radius:6px;margin-bottom:.5rem;flex-wrap:wrap;gap:.4rem'>" +
+                "<span style='font-size:.74rem;color:var(--text-secondary);font-weight:600'>Ações rápidas da cotação:</span>" +
+                "<div style='display:flex;gap:.4rem;align-items:center;flex-wrap:wrap'>" + btns.join("") + "</div>" +
                 "</div>";
         }
 
@@ -1500,22 +1502,22 @@ const DemandaApp = (function() {
         // Filtro e Busca dos Itens
         var itensFiltrados = _getItensFiltrados(itens);
         var itensHtml = itensFiltrados.length === 0
-            ? "<tr><td colspan='" + (temPrecoConc ? 7 : 6) + "' style='text-align:center;padding:2.5rem;color:var(--text-secondary)'>" +
-              "<span class='material-icons-round' style='font-size:2.2rem;opacity:.3;display:block;margin-bottom:.5rem'>filter_alt_off</span>" +
+            ? "<tr><td colspan='" + (temPrecoConc ? 7 : 6) + "' style='text-align:center;padding:2rem;color:var(--text-secondary)'>" +
+              "<span class='material-icons-round' style='font-size:2rem;opacity:.3;display:block;margin-bottom:.4rem'>filter_alt_off</span>" +
               "Nenhum item encontrado para o status ou busca selecionada." +
-              (_filtroItensDetalhe !== "todos" ? "<br><button class='btn btn-secondary btn-sm' style='margin-top:.75rem' onclick=\"DemandaApp.setFiltroDetalhe('todos')\">Ver Todos os Itens</button>" : "") +
+              (_filtroItensDetalhe !== "todos" ? "<br><button class='btn btn-secondary btn-sm' style='margin-top:.6rem;padding:.2rem .6rem;font-size:.74rem' onclick=\"DemandaApp.setFiltroDetalhe('todos')\">Ver Todos os Itens</button>" : "") +
               "</td></tr>"
             : itensFiltrados.map(function(item, idx) { return _renderItemRow(item, idx, temPrecoConc); }).join("");
 
         // Badge de Concorrente e Ação de Vincular
         var concorrenteBadge = "";
         if (d.concorrenteNome) {
-            concorrenteBadge = "<span style='display:inline-flex;align-items:center;gap:.35rem;padding:.2rem .55rem;border-radius:12px;background:rgba(245,158,11,.15);color:#f59e0b;font-size:.76rem;font-weight:700;border:1px solid rgba(245,158,11,.3)'>" +
-                "<span class='material-icons-round' style='font-size:.9rem'>store</span> Concorrente: " + _esc(d.concorrenteNome) +
-                " <button onclick=\"DemandaApp.vincularConcorrenteDemanda('" + _esc(d.id) + "')\" title='Alterar / Re-vincular Concorrente' style='background:none;border:none;color:#f59e0b;cursor:pointer;padding:0;margin-left:.25rem;display:inline-flex;align-items:center'><span class='material-icons-round' style='font-size:.85rem'>edit</span></button></span>";
+            concorrenteBadge = "<span style='display:inline-flex;align-items:center;gap:.3rem;padding:.15rem .5rem;border-radius:10px;background:rgba(245,158,11,.15);color:#f59e0b;font-size:.72rem;font-weight:700;border:1px solid rgba(245,158,11,.3)'>" +
+                "<span class='material-icons-round' style='font-size:.85rem'>store</span> Concorrente: " + _esc(d.concorrenteNome) +
+                " <button onclick=\"DemandaApp.vincularConcorrenteDemanda('" + _esc(d.id) + "')\" title='Alterar / Re-vincular Concorrente' style='background:none;border:none;color:#f59e0b;cursor:pointer;padding:0;margin-left:.2rem;display:inline-flex;align-items:center'><span class='material-icons-round' style='font-size:.8rem'>edit</span></button></span>";
         } else {
-            concorrenteBadge = "<button onclick=\"DemandaApp.vincularConcorrenteDemanda('" + _esc(d.id) + "')\" style='background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);border-radius:12px;padding:.2rem .6rem;color:#f59e0b;cursor:pointer;font-size:.74rem;display:inline-flex;align-items:center;gap:.3rem;font-weight:600'>" +
-                "<span class='material-icons-round' style='font-size:.9rem'>add_business</span> Vincular Concorrente</button>";
+            concorrenteBadge = "<button onclick=\"DemandaApp.vincularConcorrenteDemanda('" + _esc(d.id) + "')\" style='background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);border-radius:10px;padding:.15rem .5rem;color:#f59e0b;cursor:pointer;font-size:.72rem;display:inline-flex;align-items:center;gap:.25rem;font-weight:600'>" +
+                "<span class='material-icons-round' style='font-size:.85rem'>add_business</span> Vincular Concorrente</button>";
         }
 
         var colunasTabela = ["#","Referência","Descrição","Qtd"];
@@ -1523,52 +1525,57 @@ const DemandaApp = (function() {
         colunasTabela.push("Status","Ações Cabíveis");
 
         body.innerHTML =
-            // Cabeçalho com código + status + data
-            "<div style='display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem;flex-wrap:wrap'>" +
-            "<span style='font-size:1.15rem;font-weight:800;color:var(--text-primary)'>" + _esc(d.codigo) + "</span>" +
-            "<span style='font-size:.7rem;padding:.18rem .6rem;border-radius:10px;background:" + cor + "22;color:" + cor + ";font-weight:700'>" + lbl + "</span>" +
+            // Cartão de Controle Superior Unificado e Compacto
+            "<div style='background:rgba(255,255,255,.02);border:1px solid var(--border-color);border-radius:8px;padding:.5rem .75rem;margin-bottom:.5rem;display:flex;flex-direction:column;gap:.4rem'>" +
+            // Linha 1: Código, Status, Concorrente, Cliente / Vendedor, Data e Botões de Ação
+            "<div style='display:flex;align-items:center;gap:.6rem;flex-wrap:wrap'>" +
+            "<span style='font-size:1.05rem;font-weight:800;color:var(--text-primary);letter-spacing:.02em'>" + _esc(d.codigo) + "</span>" +
+            "<span style='font-size:.68rem;padding:.15rem .5rem;border-radius:8px;background:" + cor + "22;color:" + cor + ";font-weight:700'>" + lbl + "</span>" +
             concorrenteBadge +
-            "<span style='color:var(--text-secondary);font-size:.78rem;margin-left:auto'>" + dt + "</span>" +
-            "</div>" +
-            // Barra de ações globais da cotação (Estornar / Reabrir / Excluir)
-            "<div style='display:flex;gap:.5rem;align-items:center;justify-content:flex-end;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border-color)'>" +
-            (d.status === "cancelada"
-                ? "<button onclick=\"DemandaApp.reabrirDemanda('" + _esc(d.id) + "', '" + _esc(d.codigo || "") + "')\" style='background:rgba(59,130,246,.15);color:#3b82f6;border:1px solid rgba(59,130,246,.3);border-radius:6px;padding:.35rem .75rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'><span class='material-icons-round' style='font-size:.95rem'>restore</span> Reabrir Cotação</button>"
-                : "<button onclick=\"DemandaApp.estornarDemanda('" + _esc(d.id) + "', '" + _esc(d.codigo || "") + "')\" style='background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);border-radius:6px;padding:.35rem .75rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'><span class='material-icons-round' style='font-size:.95rem'>undo</span> Estornar Cotação</button>"
-            ) +
-            "<button onclick=\"DemandaApp.excluirDemanda('" + _esc(d.id) + "', '" + _esc(d.codigo || "") + "')\" style='background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:.35rem .75rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:600'><span class='material-icons-round' style='font-size:.95rem'>delete_forever</span> Excluir Cotação</button>" +
-            "</div>" +
-            // Info cliente / vendedor
-            (d.clienteNome ? "<div style='font-size:.84rem;margin-bottom:.75rem;color:var(--text-secondary)'>" +
+            (d.clienteNome ? "<span style='color:var(--text-secondary);font-size:.76rem;margin-left:.3rem'>" +
                 "<strong style='color:var(--text-primary)'>Cliente:</strong> " + _esc(d.clienteNome) +
                 (d.vendedorNome ? " &nbsp;·&nbsp; <strong style='color:var(--text-primary)'>Vendedor:</strong> " + _esc(d.vendedorNome) : "") +
-                "</div>" : "") +
-            // Barra de progresso dos itens
-            (itens.length > 0 ? "<div style='margin-bottom:1rem'>" +
-                "<div style='display:flex;justify-content:space-between;font-size:.75rem;color:var(--text-secondary);margin-bottom:.3rem'>" +
-                "<span>Progresso do atendimento</span><span>" + terminal + "/" + itens.length + " concluídos (" + pct + "%)</span></div>" +
-                "<div style='height:5px;background:var(--border-color);border-radius:4px;overflow:hidden'>" +
+                "</span>" : "") +
+            "<div style='margin-left:auto;display:flex;align-items:center;gap:.35rem'>" +
+            "<span style='color:var(--text-secondary);font-size:.73rem;margin-right:.4rem'>" + dt + "</span>" +
+            (d.status === "cancelada"
+                ? "<button onclick=\"DemandaApp.reabrirDemanda('" + _esc(d.id) + "', '" + _esc(d.codigo || "") + "')\" style='background:rgba(59,130,246,.15);color:#3b82f6;border:1px solid rgba(59,130,246,.3);border-radius:5px;padding:.2rem .55rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;font-size:.72rem;font-weight:600'><span class='material-icons-round' style='font-size:.85rem'>restore</span> Reabrir</button>"
+                : "<button onclick=\"DemandaApp.estornarDemanda('" + _esc(d.id) + "', '" + _esc(d.codigo || "") + "')\" style='background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);border-radius:5px;padding:.2rem .55rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;font-size:.72rem;font-weight:600'><span class='material-icons-round' style='font-size:.85rem'>undo</span> Estornar</button>"
+            ) +
+            "<button onclick=\"DemandaApp.excluirDemanda('" + _esc(d.id) + "', '" + _esc(d.codigo || "") + "')\" style='background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:5px;padding:.2rem .55rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;font-size:.72rem;font-weight:600'><span class='material-icons-round' style='font-size:.85rem'>delete_forever</span> Excluir</button>" +
+            "</div>" +
+            "</div>" +
+            // Linha 2: Progresso inline + Filtros de Status (chips compactos)
+            "<div style='display:flex;align-items:center;gap:.75rem;justify-content:space-between;flex-wrap:wrap'>" +
+            (itens.length > 0 ? "<div style='display:flex;align-items:center;gap:.45rem' title='Progresso do atendimento'>" +
+                "<span style='font-size:.7rem;color:var(--text-secondary);white-space:nowrap'>Progresso:</span>" +
+                "<div style='height:6px;width:75px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden'>" +
                 "<div style='height:100%;width:" + pct + "%;background:var(--accent-success);transition:width .4s'></div></div>" +
+                "<span style='font-size:.7rem;color:var(--text-secondary);font-weight:600;white-space:nowrap'>" + terminal + "/" + itens.length + " (" + pct + "%)</span>" +
                 "</div>" : "") +
-            // TOTALIZADORES INTERATIVOS DE TODOS OS STATUS
+            "<div class='no-scrollbar' style='display:flex;gap:.3rem;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;align-items:center;flex:1'>" +
             chipsHtml +
-            // AÇÕES EM LOTE CABÍVEIS AO STATUS
+            "</div>" +
+            "</div>" +
+            "</div>" +
+            // Ações do status ativo
             acoesStatusHtml +
             // Barra de busca textual rápida nos itens
-            "<div style='display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem'>" +
+            "<div style='display:flex;align-items:center;gap:.5rem;margin-bottom:.45rem'>" +
             "<div style='position:relative;flex:1'>" +
-            "<span class='material-icons-round' style='position:absolute;left:.65rem;top:50%;transform:translateY(-50%);font-size:1.05rem;color:var(--text-secondary)'>search</span>" +
+            "<span class='material-icons-round' style='position:absolute;left:.55rem;top:50%;transform:translateY(-50%);font-size:.95rem;color:var(--text-secondary)'>search</span>" +
             "<input type='text' id='inpBuscaItensDetalhe' value='" + _esc(_buscaTextoDetalhe) + "' oninput='DemandaApp.onFiltroTextoChange(this.value)' placeholder='Filtrar por código de referência ou descrição...' " +
-            "style='width:100%;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;padding:.4rem .65rem .4rem 2.2rem;font-size:.82rem;color:var(--text-primary);box-sizing:border-box'>" +
+            "style='width:100%;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;padding:.28rem .55rem .28rem 2rem;font-size:.78rem;color:var(--text-primary);box-sizing:border-box'>" +
             "</div>" +
-            "<span style='font-size:.75rem;color:var(--text-secondary);white-space:nowrap'>" + itensFiltrados.length + " de " + itens.length + " itens</span>" +
+            "<span style='font-size:.72rem;color:var(--text-secondary);white-space:nowrap'>" + itensFiltrados.length + " de " + itens.length + " itens</span>" +
             "</div>" +
-            // Tabela de itens
-            "<div style='overflow-x:auto;border:1px solid var(--border-color);border-radius:8px'>" +
-            "<table style='width:100%;border-collapse:collapse;font-size:.82rem'>" +
-            "<thead style='background:rgba(255,255,255,.02)'><tr style='border-bottom:1px solid var(--border-color)'>" +
+            // Tabela de itens com altura estendida e cabeçalho sticky
+            "<div style='max-height:calc(92vh - 225px);min-height:280px;overflow-y:auto;overflow-x:auto;border:1px solid var(--border-color);border-radius:8px' class='no-scrollbar-thumb'>" +
+            "<table style='width:100%;border-collapse:collapse;font-size:.78rem'>" +
+            "<thead style='position:sticky;top:0;background:#131823;z-index:3;box-shadow:0 1px 0 var(--border-color)'><tr style='border-bottom:1px solid var(--border-color)'>" +
             colunasTabela.map(function(h) {
-                return "<th style='padding:.5rem .65rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em'>" + h + "</th>";
+                var align = (h === "#" || h === "Qtd") ? "center" : (h === "Preço Conc." || h === "Ações Cabíveis" ? "right" : "left");
+                return "<th style='padding:.35rem .55rem;text-align:" + align + ";color:var(--text-secondary);font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap'>" + h + "</th>";
             }).join("") +
             "</tr></thead><tbody id='detalheItemsTbody'>" + itensHtml + "</tbody></table></div>";
     }
@@ -1644,59 +1651,59 @@ const DemandaApp = (function() {
 
         var acoesCabiveis = [];
 
-        // Botões de Ação Direta conforme o Status do Item
+        // Botões de Ação Direta conforme o Status do Item (Ultra-compactos e horizontais)
         if (st === "nao_cadastrado") {
-            acoesCabiveis.push("<button onclick=\"DemandaApp.abrirModalEquivalencias('" + _esc(_demandaAtual ? _demandaAtual.id : '') + "','" + _esc(item.id) + "','" + _esc(item.refOriginal || '') + "','" + _esc(item.descOriginal || '') + "','" + _esc(st) + "')\" title='Ver Equivalências OEM & Similares' style='background:rgba(56,189,248,.15);color:#38bdf8;border:1px solid rgba(56,189,248,.35);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>compare_arrows</span> Equivalências OEM</button>");
-            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
-            acoesCabiveis.push("<button onclick=\"DemandaApp._abrirBuscaERP('" + _esc(item.id) + "','" + _esc(item.refOriginal || "") + "','" + _esc(item.descOriginal || "") + "')\" title='Buscar Peça ou Similares no ERP' style='background:transparent;border:1px solid var(--accent-primary);border-radius:5px;padding:.22rem .55rem;color:var(--accent-primary);font-size:.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>search</span> ERP</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp.abrirModalEquivalencias('" + _esc(_demandaAtual ? _demandaAtual.id : '') + "','" + _esc(item.id) + "','" + _esc(item.refOriginal || '') + "','" + _esc(item.descOriginal || '') + "','" + _esc(st) + "')\" title='Ver Equivalências OEM & Similares' style='background:rgba(56,189,248,.15);color:#38bdf8;border:1px solid rgba(56,189,248,.35);border-radius:4px;padding:.15rem .45rem;cursor:pointer;font-size:.7rem;font-weight:600;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;line-height:1.2'><span class='material-icons-round' style='font-size:.85rem'>compare_arrows</span> Equiv. OEM</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:4px;padding:.15rem .45rem;cursor:pointer;font-size:.7rem;font-weight:600;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;line-height:1.2'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp._abrirBuscaERP('" + _esc(item.id) + "','" + _esc(item.refOriginal || "") + "','" + _esc(item.descOriginal || "") + "')\" title='Buscar Peça ou Similares no ERP' style='background:transparent;border:1px solid var(--accent-primary);border-radius:4px;padding:.15rem .45rem;color:var(--accent-primary);font-size:.7rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;line-height:1.2'><span class='material-icons-round' style='font-size:.85rem'>search</span> ERP</button>");
         } else if (st === "catalogado") {
-            acoesCabiveis.push("<button onclick=\"DemandaApp.abrirModalEquivalencias('" + _esc(_demandaAtual ? _demandaAtual.id : '') + "','" + _esc(item.id) + "','" + _esc(item.refOriginal || item.codigoFab || '') + "','" + _esc(item.descOriginal || item.descricao || '') + "','" + _esc(st) + "')\" title='Ver Equivalências OEM & Similares' style='background:rgba(56,189,248,.15);color:#38bdf8;border:1px solid rgba(56,189,248,.35);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>compare_arrows</span> Equivalências OEM</button>");
-            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
-            acoesCabiveis.push("<button onclick=\"DemandaApp._abrirBuscaERP('" + _esc(item.id) + "','" + _esc(item.refOriginal || "") + "','" + _esc(item.descOriginal || "") + "')\" title='Vincular ao ERP / Similares' style='background:transparent;border:1px solid var(--accent-primary);border-radius:5px;padding:.22rem .55rem;color:var(--accent-primary);font-size:.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>search</span> ERP</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp.abrirModalEquivalencias('" + _esc(_demandaAtual ? _demandaAtual.id : '') + "','" + _esc(item.id) + "','" + _esc(item.refOriginal || item.codigoFab || '') + "','" + _esc(item.descOriginal || item.descricao || '') + "','" + _esc(st) + "')\" title='Ver Equivalências OEM & Similares' style='background:rgba(56,189,248,.15);color:#38bdf8;border:1px solid rgba(56,189,248,.35);border-radius:4px;padding:.15rem .45rem;cursor:pointer;font-size:.7rem;font-weight:600;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;line-height:1.2'><span class='material-icons-round' style='font-size:.85rem'>compare_arrows</span> Equiv. OEM</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:4px;padding:.15rem .45rem;cursor:pointer;font-size:.7rem;font-weight:600;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;line-height:1.2'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp._abrirBuscaERP('" + _esc(item.id) + "','" + _esc(item.refOriginal || "") + "','" + _esc(item.descOriginal || "") + "')\" title='Vincular ao ERP / Similares' style='background:transparent;border:1px solid var(--accent-primary);border-radius:4px;padding:.15rem .45rem;color:var(--accent-primary);font-size:.7rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;line-height:1.2'><span class='material-icons-round' style='font-size:.85rem'>search</span> ERP</button>");
         } else if (st === "demanda_recebida" || st === "nao_encontrado" || st === "em_identificacao" || st === "identificado") {
-            acoesCabiveis.push("<button onclick=\"DemandaApp.abrirModalEquivalencias('" + _esc(_demandaAtual ? _demandaAtual.id : '') + "','" + _esc(item.id) + "','" + _esc(item.refOriginal || '') + "','" + _esc(item.descOriginal || '') + "','" + _esc(st) + "')\" title='Ver Equivalências OEM & Similares' style='background:rgba(56,189,248,.15);color:#38bdf8;border:1px solid rgba(56,189,248,.35);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>compare_arrows</span> Equivalências OEM</button>");
-            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
-            acoesCabiveis.push("<button onclick=\"DemandaApp._abrirBuscaERP('" + _esc(item.id) + "','" + _esc(item.refOriginal || "") + "','" + _esc(item.descOriginal || "") + "')\" title='Buscar / Identificar Similares no ERP' style='background:transparent;border:1px solid var(--accent-primary);border-radius:5px;padding:.22rem .55rem;color:var(--accent-primary);font-size:.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>search</span> ERP</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp.abrirModalEquivalencias('" + _esc(_demandaAtual ? _demandaAtual.id : '') + "','" + _esc(item.id) + "','" + _esc(item.refOriginal || '') + "','" + _esc(item.descOriginal || '') + "','" + _esc(st) + "')\" title='Ver Equivalências OEM & Similares' style='background:rgba(56,189,248,.15);color:#38bdf8;border:1px solid rgba(56,189,248,.35);border-radius:4px;padding:.15rem .45rem;cursor:pointer;font-size:.7rem;font-weight:600;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;line-height:1.2'><span class='material-icons-round' style='font-size:.85rem'>compare_arrows</span> Equiv. OEM</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:4px;padding:.15rem .45rem;cursor:pointer;font-size:.7rem;font-weight:600;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;line-height:1.2'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp._abrirBuscaERP('" + _esc(item.id) + "','" + _esc(item.refOriginal || "") + "','" + _esc(item.descOriginal || "") + "')\" title='Buscar / Identificar Similares no ERP' style='background:transparent;border:1px solid var(--accent-primary);border-radius:4px;padding:.15rem .45rem;color:var(--accent-primary);font-size:.7rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;line-height:1.2'><span class='material-icons-round' style='font-size:.85rem'>search</span> ERP</button>");
         } else if (st === "sem_estoque") {
-            acoesCabiveis.push("<button onclick=\"DemandaApp.abrirModalEquivalencias('" + _esc(_demandaAtual ? _demandaAtual.id : '') + "','" + _esc(item.id) + "','" + _esc(item.refOriginal || item.codigoFab || '') + "','" + _esc(item.descOriginal || item.descricao || '') + "','" + _esc(st) + "')\" title='Ver Equivalências OEM & Similares' style='background:rgba(56,189,248,.15);color:#38bdf8;border:1px solid rgba(56,189,248,.35);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>compare_arrows</span> Equivalências OEM</button>");
-            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
-            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','consulta_outras_filiais')\" title='Consultar Estoque em Outras Filiais' style='background:rgba(6,182,212,.15);color:#06b6d4;border:1px solid rgba(6,182,212,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>store</span> Filiais</button>");
-            acoesCabiveis.push("<button onclick=\"DemandaApp._confirmarVendaPerdida('" + _esc(item.id) + "','" + _esc(st) + "')\" title='Registrar Ruptura Comercial / Venda Perdida' style='background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>report_problem</span> Ruptura</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp.abrirModalEquivalencias('" + _esc(_demandaAtual ? _demandaAtual.id : '') + "','" + _esc(item.id) + "','" + _esc(item.refOriginal || item.codigoFab || '') + "','" + _esc(item.descOriginal || item.descricao || '') + "','" + _esc(st) + "')\" title='Ver Equivalências OEM & Similares' style='background:rgba(56,189,248,.15);color:#38bdf8;border:1px solid rgba(56,189,248,.35);border-radius:4px;padding:.15rem .45rem;cursor:pointer;font-size:.7rem;font-weight:600;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;line-height:1.2'><span class='material-icons-round' style='font-size:.85rem'>compare_arrows</span> Equiv. OEM</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:4px;padding:.15rem .45rem;cursor:pointer;font-size:.7rem;font-weight:600;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;line-height:1.2'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','consulta_outras_filiais')\" title='Consultar Estoque em Outras Filiais' style='background:rgba(6,182,212,.15);color:#06b6d4;border:1px solid rgba(6,182,212,.3);border-radius:4px;padding:.15rem .45rem;cursor:pointer;font-size:.7rem;font-weight:600;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;line-height:1.2'><span class='material-icons-round' style='font-size:.85rem'>store</span> Filiais</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp._confirmarVendaPerdida('" + _esc(item.id) + "','" + _esc(st) + "')\" title='Registrar Ruptura Comercial / Venda Perdida' style='background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:.15rem .45rem;cursor:pointer;font-size:.7rem;font-weight:600;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;line-height:1.2'><span class='material-icons-round' style='font-size:.85rem'>report_problem</span> Ruptura</button>");
         } else if (st === "estoque_disponivel") {
-            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','proposta_enviada')\" title='Incluir item na Proposta / Orçamento' style='background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>request_quote</span> Orçar</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','proposta_enviada')\" title='Incluir item na Proposta / Orçamento' style='background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:4px;padding:.15rem .45rem;cursor:pointer;font-size:.7rem;font-weight:600;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;line-height:1.2'><span class='material-icons-round' style='font-size:.85rem'>request_quote</span> Orçar</button>");
         } else if (st === "estoque_parcial") {
-            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','proposta_enviada')\" title='Orçar quantidade disponível' style='background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>request_quote</span> Orçar</button>");
-            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Comprar saldo faltante' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Comprar Saldo</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','proposta_enviada')\" title='Orçar quantidade disponível' style='background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:4px;padding:.15rem .45rem;cursor:pointer;font-size:.7rem;font-weight:600;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;line-height:1.2'><span class='material-icons-round' style='font-size:.85rem'>request_quote</span> Orçar</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Comprar saldo faltante' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:4px;padding:.15rem .45rem;cursor:pointer;font-size:.7rem;font-weight:600;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;line-height:1.2'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Comprar Saldo</button>");
         } else if (st === "encaminhado_compras" || st === "cotacao_fornecedor") {
-            acoesCabiveis.push("<button onclick=\"DemandaApp._abrirDevolutivaCompras('" + _esc(item.id) + "','" + _esc(_demandaAtual.id) + "')\" title='Informar Cotação do Fornecedor' style='background:rgba(249,115,22,.15);color:#f97316;border:1px solid rgba(249,115,22,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>local_shipping</span> Cotar</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp._abrirDevolutivaCompras('" + _esc(item.id) + "','" + _esc(_demandaAtual.id) + "')\" title='Informar Cotação do Fornecedor' style='background:rgba(249,115,22,.15);color:#f97316;border:1px solid rgba(249,115,22,.3);border-radius:4px;padding:.15rem .45rem;cursor:pointer;font-size:.7rem;font-weight:600;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;line-height:1.2'><span class='material-icons-round' style='font-size:.85rem'>local_shipping</span> Cotar</button>");
         } else if (st === "proposta_enviada" || st === "aguardando_cliente") {
-            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','venda_aprovada')\" title='Aprovar Venda' style='background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>check</span> Aprovar</button>");
-            acoesCabiveis.push("<button onclick=\"DemandaApp._confirmarVendaPerdida('" + _esc(item.id) + "','" + _esc(st) + "')\" title='Registrar Perda' style='background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:5px;padding:.22rem .55rem;cursor:pointer;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>close</span> Perder</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','venda_aprovada')\" title='Aprovar Venda' style='background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:4px;padding:.15rem .45rem;cursor:pointer;font-size:.7rem;font-weight:600;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;line-height:1.2'><span class='material-icons-round' style='font-size:.85rem'>check</span> Aprovar</button>");
+            acoesCabiveis.push("<button onclick=\"DemandaApp._confirmarVendaPerdida('" + _esc(item.id) + "','" + _esc(st) + "')\" title='Registrar Perda' style='background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:.15rem .45rem;cursor:pointer;font-size:.7rem;font-weight:600;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;line-height:1.2'><span class='material-icons-round' style='font-size:.85rem'>close</span> Perder</button>");
         }
 
         // Select dropdown para outras transições
         var selectHtml = "";
         if (isRealEnd) {
-            selectHtml = "<span style='font-size:.72rem;color:var(--text-secondary);font-weight:600'>Concluído</span>";
+            selectHtml = "<span style='font-size:.7rem;color:var(--text-secondary);font-weight:600;padding:0 .2rem'>Concluído</span>";
         } else if (nexts.length > 0) {
             selectHtml = "<select onchange=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "',this.value,this)\" " +
-                "style='background:var(--bg-dark);border:1px solid var(--border-color);border-radius:5px;padding:.2rem .4rem;" +
-                "color:var(--text-secondary);font-size:.72rem;cursor:pointer;max-width:130px'>" +
+                "style='background:var(--bg-dark);border:1px solid var(--border-color);border-radius:4px;padding:.1rem .25rem;" +
+                "color:var(--text-secondary);font-size:.68rem;cursor:pointer;height:22px;line-height:20px;max-width:85px'>" +
                 "<option value=''>Mais...</option>" +
                 nexts.map(function(n) { return "<option value='" + n.key + "' style='color:" + n.color + "'>" + n.label + "</option>"; }).join("") +
                 "</select>";
         }
 
-        var acaoHtml = "<div style='display:flex;align-items:center;gap:.35rem;flex-wrap:wrap'>" +
+        var acaoHtml = "<div style='display:flex;align-items:center;justify-content:flex-end;gap:.25rem;flex-wrap:nowrap'>" +
             acoesCabiveis.join("") + selectHtml + "</div>";
 
-        var tlBtn = "<button id='btnTimeline_" + _esc(item.id) + "' title='Histórico' onclick=\"DemandaApp.toggleItemTimeline('" + _esc(item.id) + "')\" " +
-            "style='background:transparent;border:none;color:var(--text-secondary);cursor:pointer;padding:.1rem;vertical-align:middle'>" +
-            "<span class='material-icons-round' style='font-size:.95rem'>history</span></button>";
+        var tlBtn = "<button id='btnTimeline_" + _esc(item.id) + "' title='Histórico do Item' onclick=\"DemandaApp.toggleItemTimeline('" + _esc(item.id) + "')\" " +
+            "style='background:transparent;border:none;color:var(--text-secondary);cursor:pointer;padding:.05rem;vertical-align:middle;display:inline-flex;align-items:center'>" +
+            "<span class='material-icons-round' style='font-size:.85rem'>history</span></button>";
 
         var timelineRow = "<tr id='timeline_" + _esc(item.id) + "' style='display:none'>" +
-            "<td colspan='" + (temPrecoConc ? 7 : 6) + "' style='padding:.5rem .6rem 1rem 2.5rem;border-bottom:1px solid rgba(255,255,255,.06)'>" +
-            "<div style='font-size:.7rem;font-weight:600;color:var(--text-secondary);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em'>Histórico do Item</div>" +
+            "<td colspan='" + (temPrecoConc ? 7 : 6) + "' style='padding:.4rem .6rem .8rem 2.5rem;border-bottom:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.15)'>" +
+            "<div style='font-size:.68rem;font-weight:700;color:var(--text-secondary);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em'>Histórico do Item</div>" +
             _renderTimeline(item) + "</td></tr>";
 
         var precoConcTd = "";
@@ -1707,19 +1714,21 @@ const DemandaApp = (function() {
                 if (m) pc = parseFloat(m[1].replace(",", "."));
             }
             var pcTxt = pc > 0 ? "R$ " + pc.toFixed(2).replace(".", ",") : "—";
-            precoConcTd = "<td style='padding:.5rem .6rem;font-weight:700;color:#f59e0b;white-space:nowrap'>" + pcTxt + "</td>";
+            precoConcTd = "<td style='padding:.28rem .5rem;text-align:right;font-weight:700;color:#f59e0b;white-space:nowrap;font-size:.78rem'>" + pcTxt + "</td>";
         }
 
-        var mainRow = "<tr style='border-bottom:1px solid rgba(255,255,255,.04)'>" +
-            "<td style='color:var(--text-secondary);font-size:.75rem;padding:.5rem .6rem'>" + (i + 1) + " " + tlBtn + "</td>" +
-            "<td style='font-weight:600;font-size:.82rem;padding:.5rem .6rem'>" + _esc(item.refOriginal || item.erpProdutoId || "—") + "</td>" +
-            "<td style='font-size:.79rem;color:var(--text-secondary);padding:.5rem .6rem;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' title='" + _esc(item.descOriginal || item.erpProdutoDesc || "") + "'>" +
+        var mainRow = "<tr style='border-bottom:1px solid rgba(255,255,255,.04);transition:background .15s' onmouseover=\"this.style.background='rgba(255,255,255,.025)'\" onmouseout=\"this.style.background='transparent'\">" +
+            "<td style='color:var(--text-secondary);font-size:.72rem;padding:.28rem .45rem;text-align:center;white-space:nowrap'>" + (i + 1) + " " + tlBtn + "</td>" +
+            "<td style='font-weight:700;font-family:monospace;font-size:.79rem;color:var(--text-primary);padding:.28rem .5rem;white-space:nowrap'>" + _esc(item.refOriginal || item.erpProdutoId || "—") + "</td>" +
+            "<td style='font-size:.78rem;color:var(--text-secondary);padding:.28rem .5rem;max-width:340px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' title='" + _esc(item.descOriginal || item.erpProdutoDesc || "") + "'>" +
                 _esc(item.descOriginal || item.erpProdutoDesc || "—") + "</td>" +
-            "<td style='text-align:center;padding:.5rem .6rem;font-weight:700'>" + (item.qtdeSolicitada || 1) + "</td>" +
+            "<td style='text-align:center;padding:.28rem .45rem;font-weight:700;font-size:.79rem'>" + (item.qtdeSolicitada || 1) + "</td>" +
             precoConcTd +
-            "<td style='padding:.5rem .6rem'><span style='font-size:.7rem;padding:.18rem .55rem;border-radius:10px;background:" +
-                sc.color + "22;color:" + sc.color + ";font-weight:600;white-space:nowrap'>" + _esc(sc.label) + "</span></td>" +
-            "<td style='padding:.5rem .6rem'>" + acaoHtml + "</td>" +
+            "<td style='padding:.28rem .5rem;white-space:nowrap'><span style='font-size:.68rem;padding:.12rem .45rem;border-radius:8px;background:" +
+                sc.color + "22;color:" + sc.color + ";font-weight:600;white-space:nowrap;display:inline-flex;align-items:center;gap:.25rem'>" +
+                (sc.icon ? "<span class='material-icons-round' style='font-size:.8rem'>" + sc.icon + "</span>" : "") +
+                _esc(sc.label) + "</span></td>" +
+            "<td style='padding:.28rem .5rem;text-align:right;white-space:nowrap'>" + acaoHtml + "</td>" +
             "</tr>";
 
         return mainRow + timelineRow;

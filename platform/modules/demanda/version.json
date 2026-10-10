@@ -1,9 +1,9 @@
 {
-  "version": "3.2.4",
-  "build": "20261010-v3.2.4",
+  "version": "3.2.5",
+  "build": "20261010-v3.2.5",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-10",
-  "change": "v3.2.4 - fix(demanda): sincronizacao de exclusao de cotacoes com cotacoes_concorrente, auto-limpeza de orfaos no mapeamento e acoes de exclusao direta.",
-  "releaseDate": "2026-10-10T08:45:00-03:00"
+  "change": "v3.2.5 - ux(demanda): modal de detalhe da cotacao ultra-compacto e responsivo (modal-2xl), linhas compactas (32px), acoes horizontais e visibilidade total dos itens.",
+  "releaseDate": "2026-10-10T09:00:00-03:00"
 }
