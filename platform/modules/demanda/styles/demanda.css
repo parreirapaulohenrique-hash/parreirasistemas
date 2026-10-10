@@ -935,6 +935,10 @@ body {
 }
 .modal-card.modal-lg { max-width: 720px; }
 .modal-card.modal-xl { max-width: 960px; }
+.modal-card.modal-2xl { max-width: 1280px; width: 96vw; max-height: 94vh; }
+
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
 
 @keyframes modalIn {
     from { opacity: 0; transform: scale(0.95) translateY(-8px); }
