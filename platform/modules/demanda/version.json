@@ -1,9 +1,9 @@
 {
-  "version": "3.2.7",
-  "build": "20261010-v3.2.7",
+  "version": "3.2.8",
+  "build": "20261010-v3.2.8",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-10",
-  "change": "v3.2.7 - feat(demanda): integracao instantanea do DemandaSearch com os 10.896 produtos MaxData (window.COMPACT_SKUS) e fallback inteligente por descricao na reavaliacao de estoque.",
-  "releaseDate": "2026-10-10T10:15:00-03:00"
+  "change": "v3.2.8 - fix(ocr): multi-engine fallback (Engine 1 -> Engine 2 Deep Learning) e otimizacao de resolucao de imagem para eliminar falhas de leitura.",
+  "releaseDate": "2026-10-10T10:38:00-03:00"
 }

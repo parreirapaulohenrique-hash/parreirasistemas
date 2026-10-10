@@ -711,15 +711,14 @@ const DemandaApp = (function() {
             if (msg) msg.textContent = "Lendo imagem via OCR...";
             if (pct) pct.textContent = "";
 
-            // Comprime imagem via Canvas (max 1200px) antes de enviar
+            // Comprime imagem via Canvas (max 1600px / 0.85) para caber no limite da API OCR sem perder nitidez
             var reader = new FileReader();
             reader.onerror = function() { _toast("Erro ao ler arquivo.", "error"); };
             reader.onload = function(ev) {
                 var dataUrl = ev.target.result;
-                imgEl.src = dataUrl;
-                imgEl.onload = function() {
-                    // Mantém alta resolução legível (max 2048px) para o motor OCR reconhecer tabelas e fontes pequenas
-                    var maxDim = 2048;
+
+                var iniciarOcr = function() {
+                    var maxDim = 1600;
                     var w = imgEl.naturalWidth || 1200, h = imgEl.naturalHeight || 800;
                     var ratio = Math.min(maxDim / w, maxDim / h, 1);
                     var cv = document.createElement("canvas");
@@ -727,56 +726,69 @@ const DemandaApp = (function() {
                     cv.height = Math.round(h * ratio);
                     var ctx   = cv.getContext("2d");
                     ctx.drawImage(imgEl, 0, 0, cv.width, cv.height);
-                    var base64 = cv.toDataURL("image/jpeg", 0.88);
+                    var base64 = cv.toDataURL("image/jpeg", 0.85);
 
-                    // Envia para proxy local /api/ocr (resolve CORS)
-                    fetch("/api/ocr", {
-                        method:  "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body:    JSON.stringify({ base64: base64 })
-                    }).then(function(r) { return r.json(); }).then(function(data) {
+                    function tentarReconhecimento(engineTentativa) {
+                        return fetch("/api/ocr", {
+                            method:  "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body:    JSON.stringify({ base64: base64, engine: engineTentativa })
+                        }).then(function(r) { return r.json(); });
+                    }
+
+                    tentarReconhecimento("1").then(async function(data) {
+                        var texto = (data && data.text ? data.text : "").trim();
+                        // Se retornou pouco texto no Engine 1, tenta automaticamente Engine 2
+                        if (texto.length < 15) {
+                            if (msg) msg.textContent = "Tentando motor OCR de alta sensibilidade...";
+                            try {
+                                var data2 = await tentarReconhecimento("2");
+                                var texto2 = (data2 && data2.text ? data2.text : "").trim();
+                                if (texto2.length > texto.length) {
+                                    texto = texto2;
+                                }
+                            } catch (_) {}
+                        }
+
                         if (status) status.style.display = "none";
-                        if (data.error) throw new Error(data.error);
-                        var texto = (data.text || "").trim();
+                        if (ta) { ta.value = texto; }
+
                         if (texto.length > 5) {
-                            // Texto suficiente: processa automaticamente e vai para conferencia
-                            _fecharImportFoto();
+                            // Texto suficiente: processa e vai para conferencia
                             if (typeof DemandaImport !== "undefined") {
                                 var parsed    = DemandaImport.parseText(texto);
                                 var validados = DemandaImport.validateItens(parsed);
                                 if (validados.length > 0) {
+                                    _fecharImportFoto();
                                     _showConferencia(validados);
                                     _toast("\u2713 " + validados.length + " " + (validados.length === 1 ? "item" : "itens") + " reconhecidos do OCR!", "success");
-                                } else {
-                                    // Parser nao encontrou itens: mostra texto no modal de texto para revisao
-                                    if (ta) { ta.value = texto; ta.placeholder = ""; }
-                                    _fecharImportFoto();
-                                    var taImport = document.getElementById("textareaImport");
-                                    if (taImport) taImport.value = texto;
-                                    _openModal("modalTexto");
-                                    _toast("Texto extraido, mas nao foram encontrados itens no formato esperado. Revise.", "warning");
+                                    return;
                                 }
-                            } else {
-                                // DemandaImport nao disponivel: cai no modal de texto
-                                var taImport = document.getElementById("textareaImport");
-                                if (taImport) taImport.value = texto;
-                                _fecharImportFoto();
-                                _openModal("modalTexto");
-                                _toast("Texto extraido! Revise e clique em Processar.", "info");
                             }
+                            // Se parser de tabela não achou linhas limpas, coloca no modal de texto com aviso
+                            _fecharImportFoto();
+                            var taImport = document.getElementById("textareaImport");
+                            if (taImport) taImport.value = texto;
+                            _openModal("modalTexto");
+                            _toast("Texto extraído da foto! Revise as linhas e clique em Processar.", "info");
                         } else {
-                            // Pouco texto: mantém modal aberto para edicao manual
-                            if (ta) { ta.value = texto; ta.placeholder = texto.length === 0 ? "OCR nao reconheceu texto. Digite manualmente." : ""; }
-                            _toast("Pouco texto reconhecido. Revise o campo e clique em Processar.", "warning");
+                            if (ta) { ta.placeholder = "OCR não encontrou texto nesta imagem. Cole ou digite manualmente acima."; }
+                            _toast("Pouco texto detectado. Você pode colar ou digitar o texto no campo ao lado.", "warning");
                         }
                     }).catch(function(err) {
                         console.error("[OCR]", err);
                         if (status) status.style.display = "none";
-                        if (ta) { ta.value = ""; ta.placeholder = "Falha no OCR. Digite o texto manualmente."; }
+                        if (ta) { ta.placeholder = "Falha no OCR. Cole ou digite o texto manualmente."; }
                         _toast("Falha OCR: " + (err.message || "verifique a conexao"), "error");
                     });
                 };
+
+                imgEl.onload = iniciarOcr;
                 imgEl.onerror = function() { _toast("Imagem invalida.", "error"); };
+                imgEl.src = dataUrl;
+                if (imgEl.complete && imgEl.naturalWidth) {
+                    iniciarOcr();
+                }
             };
             reader.readAsDataURL(file);
         };

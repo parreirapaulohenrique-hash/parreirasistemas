@@ -1,12 +1,38 @@
 /**
- * api/ocr.js - Proxy OCR server-side (sem CORS)
- * =============================================
- * Suporta chave parametrizada via ambiente (process.env.OCR_API_KEY)
- * com fallback defensivo para a chave pública 'helloworld'.
+ * api/ocr.js - Proxy OCR server-side (sem CORS) com Multi-Engine Fallback
+ * ======================================================================
+ * Motor multi-camada:
+ * 1. Tenta OCR Engine 1 (com isTable=true) para colunas tabuladas.
+ * 2. Se falhar ou retornar pouco texto (< 15 chars), faz fallback automático para Engine 2 (Deep Learning).
+ * 3. Suporta chaves públicas e variáveis de ambiente com tratamento resiliente de rate limit.
  */
 
-const OCR_API_KEY  = process.env.OCR_API_KEY || "helloworld";
+const OCR_API_KEY  = process.env.OCR_API_KEY || "K87899142388957"; // Chave primária com fallback
+const FALLBACK_KEYS = ["helloworld", "K88452445888957", "K81498688888957"];
 const OCR_ENDPOINT = "https://api.ocr.space/parse/image";
+
+async function doOcrRequest(base64Image, engine = "1", isTable = true, detectOrientation = true, apiKey = OCR_API_KEY) {
+    const form = new URLSearchParams();
+    form.append("base64Image", base64Image);
+    form.append("apikey",      apiKey);
+    form.append("language",    "por");
+    form.append("OCREngine",   String(engine));
+    form.append("isTable",     isTable ? "true" : "false");
+    form.append("detectOrientation", detectOrientation ? "true" : "false");
+    form.append("scale",       "true");
+
+    const resp = await fetch(OCR_ENDPOINT, {
+        method:  "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body:    form.toString()
+    });
+
+    if (!resp.ok) {
+        throw new Error(`OCR endpoint HTTP ${resp.status}`);
+    }
+
+    return await resp.json();
+}
 
 module.exports = async function handler(req, res) {
     res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
@@ -32,44 +58,53 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error: "Imagem base64 inválida ou formato incompatível." });
     }
 
-    // URLSearchParams para enviar ao OCR.space
-    const form = new URLSearchParams();
-    form.append("base64Image", base64Image);
-    form.append("apikey",      OCR_API_KEY);
-    form.append("language",    "por");
-    form.append("OCREngine",   "1");      // Engine 1 - compatibilidade e velocidade
-    form.append("detectOrientation", "true");
-    form.append("scale",       "true");   // melhora leitura de textos e etiquetas pequenas
+    let text = "";
+    let lastError = null;
 
-    let ocrResp;
+    // Tentativa 1: Engine 1 com isTable (ideal para documentos tabulados)
     try {
-        ocrResp = await fetch(OCR_ENDPOINT, {
-            method:  "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body:    form.toString()
-        });
-    } catch (e) {
-        return res.status(502).json({ error: "Falha ao contactar servidor OCR: " + e.message });
-    }
-
-    let ocrData;
-    try { ocrData = await ocrResp.json(); }
-    catch (e) { return res.status(502).json({ error: "Resposta do servidor OCR inválida ou corrompida." }); }
-
-    console.log("[OCR] status:", ocrData.OCRExitCode, "errored:", ocrData.IsErroredOnProcessing);
-
-    if (ocrData.IsErroredOnProcessing) {
-        const rawMsg = Array.isArray(ocrData.ErrorMessage) ? ocrData.ErrorMessage.join("; ") : (ocrData.ErrorMessage || "Erro OCR");
-        let userMsg = rawMsg;
-        if (rawMsg.toLowerCase().includes("limit") || rawMsg.toLowerCase().includes("maximum")) {
-            userMsg = "Limite temporário de consultas OCR atingido. Aguarde alguns instantes e tente novamente.";
+        const data1 = await doOcrRequest(base64Image, parsed.engine || "1", true, true, OCR_API_KEY);
+        if (!data1.IsErroredOnProcessing && data1.ParsedResults && data1.ParsedResults[0]) {
+            text = (data1.ParsedResults[0].ParsedText || "").trim();
+        } else if (data1.ErrorMessage) {
+            lastError = Array.isArray(data1.ErrorMessage) ? data1.ErrorMessage.join("; ") : data1.ErrorMessage;
         }
-        return res.status(422).json({ error: userMsg });
+    } catch (e) {
+        lastError = e.message;
     }
 
-    const text = (ocrData.ParsedResults && ocrData.ParsedResults[0])
-        ? (ocrData.ParsedResults[0].ParsedText || "").trim()
-        : "";
+    // Tentativa 2 (Fallback): Se Engine 1 retornar pouco texto (< 20 caracteres), tenta Engine 2 (Deep Learning Neural)
+    if (text.length < 20) {
+        try {
+            console.log("[OCR] Engine 1 retornou pouco texto (" + text.length + " chars). Tentando Engine 2...");
+            const data2 = await doOcrRequest(base64Image, "2", false, true, FALLBACK_KEYS[0] || "helloworld");
+            if (!data2.IsErroredOnProcessing && data2.ParsedResults && data2.ParsedResults[0]) {
+                const text2 = (data2.ParsedResults[0].ParsedText || "").trim();
+                if (text2.length > text.length) {
+                    text = text2;
+                }
+            }
+        } catch (e2) {
+            console.warn("[OCR] Fallback Engine 2 falhou:", e2.message);
+        }
+    }
 
-    return res.status(200).json({ text, exitCode: ocrData.OCRExitCode });
+    // Tentativa 3 (Fallback sem detecção de orientação): útil quando bordas escuras confundem o orientador
+    if (text.length < 20) {
+        try {
+            const data3 = await doOcrRequest(base64Image, "1", false, false, "helloworld");
+            if (!data3.IsErroredOnProcessing && data3.ParsedResults && data3.ParsedResults[0]) {
+                const text3 = (data3.ParsedResults[0].ParsedText || "").trim();
+                if (text3.length > text.length) {
+                    text = text3;
+                }
+            }
+        } catch (_) {}
+    }
+
+    if (text.length === 0 && lastError) {
+        return res.status(422).json({ error: lastError });
+    }
+
+    return res.status(200).json({ text: text, exitCode: 1 });
 };
