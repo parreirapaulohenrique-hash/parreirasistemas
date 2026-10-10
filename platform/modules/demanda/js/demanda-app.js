@@ -1787,6 +1787,30 @@ const DemandaApp = (function() {
                 await batch.commit();
             }
 
+            // Exclui também da coleção cotacoes_concorrente para não deixar registros na concorrência
+            try {
+                var cdb = _concDB();
+                if (cdb) {
+                    var cSnap1 = await cdb.where("demandaOrigemId", "==", did).get();
+                    var batchC = firebase.firestore().batch();
+                    cSnap1.docs.forEach(function(docC) { batchC.delete(docC.ref); });
+                    if (cod) {
+                        var cSnap2 = await cdb.where("demandaOrigemId", "==", cod).get();
+                        cSnap2.docs.forEach(function(docC) { batchC.delete(docC.ref); });
+                    }
+                    var cAll = await cdb.limit(100).get();
+                    cAll.docs.forEach(function(docC) {
+                        var cd = docC.data();
+                        if (cd.obs && (cd.obs.indexOf(did) >= 0 || (cod && cd.obs.indexOf(cod) >= 0))) {
+                            batchC.delete(docC.ref);
+                        }
+                    });
+                    await batchC.commit();
+                }
+            } catch(eC) {
+                console.warn("[DemandaApp] Aviso ao limpar cotacoes_concorrente vinculadas:", eC);
+            }
+
             _demandaAtual = null;
             closeModal("modalDemandaDetalhe");
             _toast("Cotação " + (cod || did) + " excluída com sucesso!", "success");
@@ -1818,6 +1842,19 @@ const DemandaApp = (function() {
                     ? firebase.firestore.FieldValue.serverTimestamp()
                     : new Date()
             });
+
+            // Atualiza status em cotacoes_concorrente para 'cancelada'
+            try {
+                var cdb2 = _concDB();
+                if (cdb2) {
+                    var cSnapCanc = await cdb2.where("demandaOrigemId", "==", did).get();
+                    var bCanc = firebase.firestore().batch();
+                    cSnapCanc.docs.forEach(function(docC) {
+                        bCanc.update(docC.ref, { status: "cancelada" });
+                    });
+                    await bCanc.commit();
+                }
+            } catch(_) {}
 
             if (_demandaAtual && _demandaAtual.id === did) {
                 _demandaAtual.data.status = "cancelada";
@@ -3389,6 +3426,30 @@ const DemandaApp = (function() {
                     return tb - ta;
                 });
 
+                // Limpeza e filtro de cotações órfãs (cuja demanda original foi excluída ou cancelada)
+                cotacoes = cotacoes.filter(function(c) {
+                    if (c.demandaOrigemId) {
+                        var dmOrigem = todasDemandas.find(function(dm) {
+                            return dm.id === c.demandaOrigemId || dm.codigo === c.demandaOrigemId;
+                        });
+                        if (!dmOrigem || dmOrigem.status === "cancelada") {
+                            if (db && c.id) db.doc(c.id).delete().catch(function() {});
+                            return false;
+                        }
+                    } else if (c.obs && /Gerado a partir da Cotação #([^\s\)]+)/i.test(c.obs)) {
+                        var mCod = c.obs.match(/Gerado a partir da Cotação #([^\s\)]+)/i);
+                        var codAlvo = mCod ? mCod[1] : "";
+                        var dmOrigem2 = todasDemandas.find(function(dm) {
+                            return dm.id === codAlvo || dm.codigo === codAlvo;
+                        });
+                        if (!dmOrigem2 || dmOrigem2.status === "cancelada") {
+                            if (db && c.id) db.doc(c.id).delete().catch(function() {});
+                            return false;
+                        }
+                    }
+                    return true;
+                });
+
                 var linhasMapeadas = [];
                 var origensRegistradas = {};
 
@@ -3413,6 +3474,9 @@ const DemandaApp = (function() {
                             }
                         }
 
+                        // Não inclui itens que não possuam nem preço nosso nem do concorrente
+                        if (pc <= 0 && pm <= 0) return;
+
                         var d = (pc > 0 && pm > 0) ? (pm - pc) : null;
                         var pct = (pc > 0 && d !== null) ? ((d / pc) * 100).toFixed(1) : null;
 
@@ -3433,9 +3497,9 @@ const DemandaApp = (function() {
                     });
                 });
 
-                // Adiciona demandas que tenham concorrente vinculado e ainda não estejam na lista
+                // Adiciona demandas que tenham concorrente vinculado e estejam ativas
                 var demandasComConc = todasDemandas.filter(function(dm) {
-                    return !origensRegistradas[dm.id] && (dm.concorrenteNome || dm.isConcorrente || dm.codigo === "CTR-2026-0018");
+                    return !origensRegistradas[dm.id] && (dm.concorrenteNome || dm.isConcorrente) && dm.status !== "cancelada";
                 });
 
                 for (var ki = 0; ki < demandasComConc.length; ki++) {
@@ -3464,6 +3528,9 @@ const DemandaApp = (function() {
                                     pm = parseFloat(pEncontrado.preco) || 0;
                                 }
                             }
+
+                            if (pc <= 0 && pm <= 0) return;
+
                             var d = (pc > 0 && pm > 0) ? (pm - pc) : null;
                             var pct = (pc > 0 && d !== null) ? ((d / pc) * 100).toFixed(1) : null;
 
@@ -3479,7 +3546,7 @@ const DemandaApp = (function() {
                                 cliente: dm.clienteNome || "—",
                                 data: dmDtStr,
                                 demandaOrigemId: dm.id,
-                                cotacaoId: dm.codigo || dm.id
+                                cotacaoId: dm.id
                             });
                         });
                     } catch(eIt) {
@@ -3559,6 +3626,9 @@ const DemandaApp = (function() {
                         return "<option value='" + _escAttr(c) + "' " + (concFiltro.toLowerCase() === c.toLowerCase() ? "selected" : "") + ">" + _esc(c) + "</option>";
                     }).join("") +
                 "</select>" +
+                "<button class='btn btn-secondary btn-sm' onclick='DemandaApp._limparMapeamentoOrfao()' title='Limpar cotações e registros excluídos da concorrência' style='display:inline-flex;align-items:center;gap:.3rem'>" +
+                    "<span class='material-icons-round' style='font-size:.9rem'>cleaning_services</span> Limpar Excluídos" +
+                "</button>" +
                 "<button class='btn btn-primary btn-sm' onclick='DemandaApp.switchView(\"captura\")' style='display:inline-flex;align-items:center;gap:.3rem;margin-left:auto'>" +
                     "<span class='material-icons-round' style='font-size:.9rem'>add_circle</span> Nova Cotação" +
                 "</button>" +
@@ -3591,6 +3661,11 @@ const DemandaApp = (function() {
                 "<td style='padding:.45rem .6rem;text-align:center'>" + badgeComparativo + " " + (r.diff !== null ? "<div style='font-size:.72rem;color:" + cor + ";margin-top:2px'>" + diffTxt + "</div>" : "") + "</td>" +
                 "<td style='padding:.45rem .6rem;font-size:.78rem;color:var(--text-secondary)'>" + _esc(r.cliente) + "</td>" +
                 "<td style='padding:.45rem .6rem;font-size:.75rem;color:var(--text-secondary);white-space:nowrap'>" + r.data + "</td>" +
+                "<td style='padding:.45rem .6rem;text-align:center'>" +
+                    "<button onclick=\"DemandaApp._excluirItemMapeamento('" + _esc(r.cotacaoId || "") + "')\" title='Excluir do mapeamento' style='background:none;border:none;color:var(--accent-danger);cursor:pointer;padding:.2rem;display:inline-flex;align-items:center;opacity:.8' onmouseover='this.style.opacity=\"1\"' onmouseout='this.style.opacity=\"0.8\"'>" +
+                        "<span class='material-icons-round' style='font-size:1.05rem'>delete</span>" +
+                    "</button>" +
+                "</td>" +
             "</tr>";
         }).join("");
 
@@ -3608,9 +3683,10 @@ const DemandaApp = (function() {
                             "<th style='padding:.5rem .6rem;text-align:center;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Comparativo</th>" +
                             "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Cliente</th>" +
                             "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Data</th>" +
+                            "<th style='padding:.5rem .6rem;text-align:center;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Ação</th>" +
                         "</tr></thead>" +
                         "<tbody>" +
-                            (tableRows || "<tr><td colspan='9' style='text-align:center;padding:2.5rem;color:var(--text-secondary)'>Nenhum preço mapeado encontrado.</td></tr>") +
+                            (tableRows || "<tr><td colspan='10' style='text-align:center;padding:2.5rem;color:var(--text-secondary)'>Nenhum preço mapeado encontrado.</td></tr>") +
                         "</tbody>" +
                     "</table>" +
                 "</div>" +
@@ -3957,8 +4033,9 @@ const DemandaApp = (function() {
                 ["#","Ref.","Descri\u00e7\u00e3o","Qtde","Pre\u00e7o Concorrente","Pre\u00e7o Nosso","Diferen\u00e7a"].map(function(h){
                     return "<th style='padding:.28rem .5rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:600;text-transform:uppercase'>" + h + "</th>";
                 }).join("") + "</tr></thead><tbody>" + rows + "</tbody></table></div>" +
-                "<div style='margin-top:.75rem;text-align:right'>" +
+                "<div style='margin-top:.75rem;text-align:right;display:flex;justify-content:flex-end;gap:.5rem'>" +
                 "<button onclick=\"DemandaApp._arquivarCotacaoConcorrente('" + cid + "')\" style='background:transparent;border:1px solid var(--border-color);border-radius:6px;padding:.25rem .65rem;color:var(--text-secondary);cursor:pointer;font-size:.75rem'>Arquivar</button>" +
+                "<button onclick=\"DemandaApp._excluirCotacaoConcorrente('" + cid + "')\" style='background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:.25rem .65rem;color:#ef4444;cursor:pointer;font-size:.75rem;display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.85rem'>delete</span> Excluir</button>" +
                 "</div></div></div>";
         }).join("");
         hc.innerHTML = header + cards;
@@ -3980,6 +4057,81 @@ const DemandaApp = (function() {
         db.doc(id).update({ status: "arquivada" })
             .then(function() { _toast("Cota\u00e7\u00e3o arquivada.", "info"); _loadHistoricoConcorrente(); })
             .catch(function(e) { _toast("Erro: " + e.message, "error"); });
+    }
+
+    function _excluirCotacaoConcorrente(id) {
+        if (!id || !confirm("Tem certeza que deseja EXCLUIR DEFINITIVAMENTE esta cotação do concorrente?")) return;
+        var db = _concDB();
+        if (!db) return;
+        db.doc(id).delete()
+            .then(function() {
+                _toast("Cotação excluída com sucesso!", "success");
+                _loadHistoricoConcorrente();
+                _renderMapeamentoPrecos();
+            })
+            .catch(function(e) { _toast("Erro ao excluir: " + e.message, "error"); });
+    }
+
+    async function _excluirItemMapeamento(cotacaoId) {
+        if (!cotacaoId) return;
+        if (!confirm("Deseja remover este registro do mapeamento de concorrência?")) return;
+        var db = _concDB();
+        try {
+            if (db) {
+                await db.doc(cotacaoId).delete().catch(function() {});
+                var snap = await db.where("demandaOrigemId", "==", cotacaoId).get();
+                var batch = firebase.firestore().batch();
+                snap.docs.forEach(function(d) { batch.delete(d.ref); });
+                await batch.commit();
+            }
+            _toast("Registro removido da concorrência!", "success");
+            _renderMapeamentoPrecos();
+        } catch(err) {
+            console.error("[DemandaApp] Erro ao excluir do mapeamento:", err);
+            _toast("Erro: " + (err.message || err), "error");
+        }
+    }
+
+    async function _limparMapeamentoOrfao() {
+        if (!confirm("Deseja verificar e remover todas as cotações excluídas ou canceladas do mapeamento de concorrência?")) return;
+        var db = _concDB();
+        if (!db) return;
+        try {
+            var snap = await db.get();
+            var todasDemandas = (typeof DemandaDB !== "undefined" && typeof DemandaDB.listDemandas === "function")
+                ? await DemandaDB.listDemandas()
+                : [];
+            var batch = firebase.firestore().batch();
+            var count = 0;
+            snap.docs.forEach(function(doc) {
+                var c = doc.data();
+                var deveExcluir = false;
+                if (c.demandaOrigemId) {
+                    var dm = todasDemandas.find(function(d) { return d.id === c.demandaOrigemId || d.codigo === c.demandaOrigemId; });
+                    if (!dm || dm.status === "cancelada") deveExcluir = true;
+                } else if (c.obs && /Gerado a partir da Cotação #([^\s\)]+)/i.test(c.obs)) {
+                    var m = c.obs.match(/Gerado a partir da Cotação #([^\s\)]+)/i);
+                    var cod = m ? m[1] : "";
+                    var dm2 = todasDemandas.find(function(d) { return d.id === cod || d.codigo === cod; });
+                    if (!dm2 || dm2.status === "cancelada") deveExcluir = true;
+                }
+                if (deveExcluir) {
+                    batch.delete(doc.ref);
+                    count++;
+                }
+            });
+            if (count > 0) {
+                await batch.commit();
+                _toast(count + " cotação(ões) órfã(s) removida(s) da concorrência!", "success");
+            } else {
+                _toast("Nenhum registro órfão pendente.", "info");
+            }
+            _renderMapeamentoPrecos();
+            _loadHistoricoConcorrente();
+        } catch(err) {
+            console.error("[DemandaApp] Erro ao limpar órfãos:", err);
+            _toast("Erro: " + (err.message || err), "error");
+        }
     }
 
     function _populateConcSugestoes() {
@@ -6459,6 +6611,9 @@ const DemandaApp = (function() {
         _loadHistoricoConcorrente:    _loadHistoricoConcorrente,
         _toggleConcCard:              _toggleConcCard,
         _arquivarCotacaoConcorrente:  _arquivarCotacaoConcorrente,
+        _excluirCotacaoConcorrente:   _excluirCotacaoConcorrente,
+        _excluirItemMapeamento:       _excluirItemMapeamento,
+        _limparMapeamentoOrfao:       _limparMapeamentoOrfao,
         // Cadastro de Produtos (ERP Maxdata)
         loadProdutosErp:              loadProdutosErp,
         onErpBuscaInput:              onErpBuscaInput,
