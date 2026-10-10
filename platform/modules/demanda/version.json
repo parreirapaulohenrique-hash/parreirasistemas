@@ -1,9 +1,9 @@
 {
-  "version": "3.2.2",
-  "build": "20261009-v3.2.2",
+  "version": "3.2.3",
+  "build": "20261010-v3.2.3",
   "module": "demanda",
   "name": "Cotacao",
-  "lastUpdate": "2026-10-09",
-  "change": "v3.2.2 - fix(demanda): persistencia de concorrente e preco concorrente no detalhe da cotacao, integracao direta com aba preco concorrente sem erro de indice composto e botao para vincular concorrente em cotacoes existentes.",
-  "releaseDate": "2026-10-09T23:30:00-03:00"
+  "lastUpdate": "2026-10-10",
+  "change": "v3.2.3 - fix(demanda): implementacao e exposicao de excluirDemanda, estornarDemanda e reabrirDemanda na API publica com exclusao no DemandaDB e Firestore.",
+  "releaseDate": "2026-10-10T08:30:00-03:00"
 }

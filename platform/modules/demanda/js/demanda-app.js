@@ -1765,6 +1765,107 @@ const DemandaApp = (function() {
         }
     }
 
+    // Gestão da Cotação: Excluir, Estornar e Reabrir
+    async function excluirDemanda(id, codigo) {
+        var did = id || (_demandaAtual ? _demandaAtual.id : null);
+        var cod = codigo || (_demandaAtual && _demandaAtual.data ? _demandaAtual.data.codigo : did);
+        if (!did) return;
+
+        var confirmMsg = "Tem certeza que deseja EXCLUIR DEFINITIVAMENTE a cotação " + (cod || did) + "?\n\nEsta ação removerá a cotação e todos os seus itens do banco de dados.";
+        if (!confirm(confirmMsg)) return;
+
+        try {
+            if (typeof DemandaDB !== "undefined" && typeof DemandaDB.deleteDemanda === "function") {
+                await DemandaDB.deleteDemanda(did);
+            } else {
+                var t = _currentTenant() || "centralpecas";
+                var db = firebase.firestore().collection("tenants").doc(t).collection("demandas");
+                var snapItens = await db.doc(did).collection("items").get();
+                var batch = firebase.firestore().batch();
+                snapItens.docs.forEach(function(d) { batch.delete(d.ref); });
+                batch.delete(db.doc(did));
+                await batch.commit();
+            }
+
+            _demandaAtual = null;
+            closeModal("modalDemandaDetalhe");
+            _toast("Cotação " + (cod || did) + " excluída com sucesso!", "success");
+
+            if (typeof loadDemandasLista === "function") {
+                loadDemandasLista(_filterAtual);
+            }
+            if (typeof loadDashboard === "function") {
+                loadDashboard();
+            }
+        } catch(err) {
+            console.error("[DemandaApp] Erro ao excluir demanda:", err);
+            _toast("Erro ao excluir cotação: " + (err.message || err), "error");
+        }
+    }
+
+    async function estornarDemanda(id, codigo) {
+        var did = id || (_demandaAtual ? _demandaAtual.id : null);
+        var cod = codigo || (_demandaAtual && _demandaAtual.data ? _demandaAtual.data.codigo : did);
+        if (!did) return;
+
+        if (!confirm("Deseja estornar/cancelar a cotação " + (cod || did) + "?")) return;
+
+        try {
+            await DemandaDB.updateDemanda(did, {
+                status: "cancelada",
+                motivoCancelamento: "Estornada pelo usuário",
+                canceladaEm: (typeof firebase !== "undefined" && firebase.firestore)
+                    ? firebase.firestore.FieldValue.serverTimestamp()
+                    : new Date()
+            });
+
+            if (_demandaAtual && _demandaAtual.id === did) {
+                _demandaAtual.data.status = "cancelada";
+                _renderDemandaDetalheBody();
+            }
+
+            _toast("Cotação " + (cod || did) + " estornada!", "success");
+
+            if (typeof loadDemandasLista === "function") {
+                loadDemandasLista(_filterAtual);
+            }
+        } catch(err) {
+            console.error("[DemandaApp] Erro ao estornar demanda:", err);
+            _toast("Erro ao estornar: " + (err.message || err), "error");
+        }
+    }
+
+    async function reabrirDemanda(id, codigo) {
+        var did = id || (_demandaAtual ? _demandaAtual.id : null);
+        var cod = codigo || (_demandaAtual && _demandaAtual.data ? _demandaAtual.data.codigo : did);
+        if (!did) return;
+
+        if (!confirm("Deseja reabrir a cotação " + (cod || did) + "?")) return;
+
+        try {
+            await DemandaDB.updateDemanda(did, {
+                status: "aberta",
+                reabertaEm: (typeof firebase !== "undefined" && firebase.firestore)
+                    ? firebase.firestore.FieldValue.serverTimestamp()
+                    : new Date()
+            });
+
+            if (_demandaAtual && _demandaAtual.id === did) {
+                _demandaAtual.data.status = "aberta";
+                _renderDemandaDetalheBody();
+            }
+
+            _toast("Cotação " + (cod || did) + " reaberta com sucesso!", "success");
+
+            if (typeof loadDemandasLista === "function") {
+                loadDemandasLista(_filterAtual);
+            }
+        } catch(err) {
+            console.error("[DemandaApp] Erro ao reabrir demanda:", err);
+            _toast("Erro ao reabrir: " + (err.message || err), "error");
+        }
+    }
+
     // Ações em Lote para Itens da Cotação
     function enviarItensParaComprasLote(tipo) {
         if (!_demandaAtual || !_demandaAtual.itens) return;
@@ -6332,6 +6433,10 @@ const DemandaApp = (function() {
         consultarFiliaisLote:         consultarFiliaisLote,
         enviarItensParaOrcamentoLote: enviarItensParaOrcamentoLote,
         enviarItensParaComprasLote:   enviarItensParaComprasLote,
+        // Gestão da Cotação
+        excluirDemanda:               excluirDemanda,
+        estornarDemanda:              estornarDemanda,
+        reabrirDemanda:               reabrirDemanda,
         // Devolutiva Compras
         _abrirDevolutivaCompras:  _abrirDevolutivaCompras,
         _confirmarDevolutiva:     _confirmarDevolutiva,

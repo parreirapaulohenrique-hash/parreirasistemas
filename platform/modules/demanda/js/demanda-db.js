@@ -420,6 +420,21 @@ const DemandaDB = (() => {
     }
 
     /**
+     * Remove uma demanda e todos os itens de sua subcoleção items.
+     */
+    async function deleteDemanda(demandaId) {
+        if (!demandaId) return;
+        const db = _db();
+        const itemsSnap = await db.collection(`${DEMANDS_COL}/${demandaId}/items`).get();
+        const batch = db.batch();
+        itemsSnap.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        batch.delete(db.doc(`${DEMANDS_COL}/${demandaId}`));
+        await batch.commit();
+    }
+
+    /**
      * Recalcula e salva os totalizadores de uma demanda.
      */
     async function recalcTotals(demandaId) {
@@ -613,7 +628,7 @@ const DemandaDB = (() => {
     }
 
     return {
-        createDemanda, getDemanda, updateDemanda, listDemandas,
+        createDemanda, getDemanda, updateDemanda, deleteDemanda, listDemandas,
         addItens, getItens, updateItem, updateItemStatus, updateItensBatch, deleteItem, recalcTotals, splitItem,
         onItensChanged, listItensFila, getDashboardStats,
         saveSession, loadSession, clearSession, saveCatalogoItem, listCatalogoItems,
