@@ -81,7 +81,58 @@ const DemandaSearch = (() => {
         '83210508': 'M8 PARLOCK',// PORCA A/TRAVANTE M8
         '12577511': 'M12 PARLOC',// PORCA A/TRAVANTE M12
         '1611':     'PS8X55',    // PARAFUSO SEXTAVADO AC MA 8.8 8X55
+        'ALM8':     '6004',      // ARRUELA LISA 8MM (Central Peças)
+        '14M7166':  'M8 PARLOCK',// PORCA A/TRAVANTE M8
+        '14M7291':  'M16FL',     // PORCA SEXT. FLANGE M16
     };
+
+    function _extractBaseRef(ref) {
+        if (!ref) return '';
+        var r = String(ref).trim();
+        // Remove sufixos comuns de marcas ou concorrentes (/JA, -INA, /PFI, /228, /199, -952, /RL, /FC, etc.)
+        var base = r.replace(/[\/\-_](?:JA|INA|PFI|REX|FEY|CISER|RL|FC|THOR|DB|\d{2,4})$/i, '').trim();
+        if (base.indexOf('/') >= 0) {
+            base = base.split('/')[0].trim();
+        }
+        return base || r;
+    }
+
+    var _GENERIC_STOPWORDS = {
+        'DE':1, 'DA':1, 'DO':1, 'DOS':1, 'DAS':1, 'COM':1, 'SEM':1, 'PARA':1, 'POR':1, 'EM':1, 'NO':1, 'NA':1, 'NOS':1, 'NAS':1,
+        'E':1, 'OU':1, 'A':1, 'O':1, 'AS':1, 'OS':1, 'UM':1, 'UMA':1, 'UN':1, 'PC':1, 'KG':1, 'M':1, 'MM':1, 'CM':1,
+        'ROLAMENTO':1, 'PARAFUSO':1, 'ARRUELA':1, 'PORCA':1, 'MANGOTE':1, 'RETENTOR':1, 'CORREIA':1,
+        'PINHAO':1, 'CONJUNTO':1, 'ANEL':1, 'DISCO':1, 'MOLA':1, 'CHAPA':1, 'SUPORTE':1, 'EIXO':1, 'VEDADOR':1,
+        'LISA':1, 'SEXTAVADO':1, 'ESFERAS':1, 'GERAL':1, 'ORIGINAL':1, 'ESPECIAL':1
+    };
+
+    function _formatMatchResult(sku, score, tipoMatch) {
+        var estq = Number(sku[10] != null ? sku[10] : (sku[9] || 0));
+        var prc = Number(sku[11] || 0);
+        var codErp = String(sku[0] || '');
+        var codFab = String(sku[38] || '');
+        var desc = sku[1] || '';
+        var marca = sku[2] || '';
+        return {
+            erpProdutoId:   codErp,
+            codigoErp:      codErp,
+            referencia:     codFab || codErp,
+            erpCodigoFab:   codFab || codErp,
+            codigoFab:      codFab,
+            descricao:      desc,
+            erpProdutoDesc: desc,
+            marca:          marca,
+            fabricante:     marca,
+            estoqueFilial:  estq,
+            saldoEstoque:   estq,
+            preco:          prc,
+            precoUnitario:  prc,
+            status:         estq > 0 ? 'estoque_disponivel' : 'sem_estoque',
+            score:          score,
+            tipoMatch:      tipoMatch,
+            confidencia:    score >= 95 ? 'alta' : 'media',
+            _rawSku:        sku
+        };
+    }
 
     function _getConcorrenteMappings() {
         var map = Object.assign({}, _DEFAULT_CONCORRENTE_MAP);
@@ -204,7 +255,8 @@ const DemandaSearch = (() => {
     // ── Smart Match Especializado para Cotações e Concorrentes ────────
     /**
      * Localiza o produto exato ou equivalente mais provável na base Central Peças
-     * combinando referência de fábrica, código de concorrente, dimensões e termos agrícolas.
+     * combinando referência de fábrica, código de concorrente, normalização de rolamentos e dimensões.
+     * NUNCA chuta produtos aleatórios se não houver correlação técnica forte.
      *
      * @param {object|string} itemOrQuery - { refOriginal, descOriginal, precoConcorrente, concorrenteNome }
      * @param {object} opts
@@ -227,16 +279,25 @@ const DemandaSearch = (() => {
             precoConc = itemOrQuery.precoConcorrente != null ? Number(itemOrQuery.precoConcorrente) : null;
         }
 
-        var refClean  = String(refOrig || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-        var descClean = String(descOrig || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-        var descUpper = String(descOrig || '').toUpperCase();
-        var skus = window.COMPACT_SKUS;
+        refOrig = String(refOrig || '').trim();
+        descOrig = String(descOrig || '').trim();
+
+        var baseRef   = _extractBaseRef(refOrig);
+        var refClean  = refOrig.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        var baseClean = baseRef.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        var descUpper = descOrig.toUpperCase();
+        var skus      = window.COMPACT_SKUS;
 
         // 1. Mapeamento direto de Código de Concorrente (ex: J.A. Agrícola -> Central Peças)
         var mapConcorrente = _getConcorrenteMappings();
         var targetCode = null;
-        if (refClean && (mapConcorrente[refClean] || mapConcorrente[refOrig.trim()])) {
-            targetCode = mapConcorrente[refClean] || mapConcorrente[refOrig.trim()];
+        var keysToCheck = [refClean, baseClean, refOrig, baseRef];
+        for (var kIdx = 0; kIdx < keysToCheck.length; kIdx++) {
+            var k = keysToCheck[kIdx];
+            if (k && mapConcorrente[k]) {
+                targetCode = mapConcorrente[k];
+                break;
+            }
         }
         if (targetCode) {
             var targetClean = String(targetCode).toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -245,173 +306,127 @@ const DemandaSearch = (() => {
                 var smErp = String(sm[0] || '');
                 var smFab = String(sm[38] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
                 var smCross = String(sm[39] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+                var smDesc = String(sm[1] || '').toUpperCase();
                 if (smFab === targetClean || smErp === targetCode || smCross.indexOf(targetClean) >= 0) {
-                    var estqM = Number(sm[10] != null ? sm[10] : (sm[9] || 0));
-                    var prcM  = Number(sm[11] || 0);
-                    return {
-                        erpProdutoId:   smErp,
-                        codigoErp:      smErp,
-                        referencia:     sm[38] || smErp,
-                        erpCodigoFab:   sm[38] || smErp,
-                        codigoFab:      sm[38] || '',
-                        descricao:      sm[1],
-                        erpProdutoDesc: sm[1],
-                        marca:          sm[2] || '',
-                        fabricante:     sm[2] || '',
-                        estoqueFilial:  estqM,
-                        saldoEstoque:   estqM,
-                        preco:          prcM,
-                        precoUnitario:  prcM,
-                        status:         estqM > 0 ? 'estoque_disponivel' : 'sem_estoque',
-                        score:          100,
-                        tipoMatch:      'concorrente_map',
-                        confidencia:    'alta',
-                        _rawSku:        sm
-                    };
+                    if (targetCode === '6004' && smDesc.indexOf('ARRUELA') < 0) continue;
+                    return _formatMatchResult(sm, 100, 'concorrente_map');
                 }
             }
         }
 
-        // 2. Busca por Código de Fabricante ou CrossRef Exato
-        if (refClean && refClean.length >= 3) {
+        // 2. Busca por Código de Fabricante ou CrossRef Exato (testando baseRef limpa e refOrig)
+        var codesToTest = [];
+        if (baseClean && baseClean.length >= 3) codesToTest.push(baseClean);
+        if (refClean && refClean.length >= 3 && refClean !== baseClean) codesToTest.push(refClean);
+
+        for (var cIdx = 0; cIdx < codesToTest.length; cIdx++) {
+            var c = codesToTest[cIdx];
+            var exactCandidates = [];
             for (var i = 0; i < skus.length; i++) {
                 var s = skus[i];
                 var fabC = String(s[38] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
                 var erpC = String(s[0] || '');
                 var crossC = String(s[39] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-                if (refClean === fabC || refClean === erpC) {
-                    var estq = Number(s[10] != null ? s[10] : (s[9] || 0));
-                    var prc = Number(s[11] || 0);
-                    return {
-                        erpProdutoId:   erpC,
-                        codigoErp:      erpC,
-                        referencia:     s[38] || erpC,
-                        erpCodigoFab:   s[38] || erpC,
-                        codigoFab:      s[38] || '',
-                        descricao:      s[1],
-                        erpProdutoDesc: s[1],
-                        marca:          s[2] || '',
-                        fabricante:     s[2] || '',
-                        estoqueFilial:  estq,
-                        saldoEstoque:   estq,
-                        preco:          prc,
-                        precoUnitario:  prc,
-                        status:         estq > 0 ? 'estoque_disponivel' : 'sem_estoque',
-                        score:          100,
-                        tipoMatch:      'fab_exato',
-                        confidencia:    'alta',
-                        _rawSku:        s
-                    };
+                if (c === fabC || c === erpC) {
+                    exactCandidates.push({ sku: s, score: 100, tipo: 'cod_fab_exato' });
+                } else if (c.length >= 4 && crossC.indexOf(c) >= 0) {
+                    exactCandidates.push({ sku: s, score: 96, tipo: 'cross_ref_exato' });
                 }
-                if (refClean.length >= 4 && crossC.indexOf(refClean) >= 0) {
-                    var estqC = Number(s[10] != null ? s[10] : (s[9] || 0));
-                    var prcC = Number(s[11] || 0);
-                    return {
-                        erpProdutoId:   erpC,
-                        codigoErp:      erpC,
-                        referencia:     s[38] || erpC,
-                        erpCodigoFab:   s[38] || erpC,
-                        codigoFab:      s[38] || '',
-                        descricao:      s[1],
-                        erpProdutoDesc: s[1],
-                        marca:          s[2] || '',
-                        fabricante:     s[2] || '',
-                        estoqueFilial:  estqC,
-                        saldoEstoque:   estqC,
-                        preco:          prcC,
-                        precoUnitario:  prcC,
-                        status:         estqC > 0 ? 'estoque_disponivel' : 'sem_estoque',
-                        score:          98,
-                        tipoMatch:      'cross_ref',
-                        confidencia:    'alta',
-                        _rawSku:        s
-                    };
-                }
+            }
+            if (exactCandidates.length > 0) {
+                // Prioriza quem tem estoque positivo e maior score
+                exactCandidates.sort(function(a, b) {
+                    var estA = Number(a.sku[10] != null ? a.sku[10] : (a.sku[9] || 0));
+                    var estB = Number(b.sku[10] != null ? b.sku[10] : (b.sku[9] || 0));
+                    if (b.score !== a.score) return b.score - a.score;
+                    return (estB > 0 ? 1 : 0) - (estA > 0 ? 1 : 0);
+                });
+                return _formatMatchResult(exactCandidates[0].sku, exactCandidates[0].score, exactCandidates[0].tipo);
             }
         }
 
-        // 3. Extração de Código Embutido na Descrição (ex: "BLINDAGEM DA LINHA KK34847", "MOLA AX10319", "ROLAMENTO PF110415", "HXE168052")
+        // 3. Normalização e Correspondência de Rolamentos Industriais/Agrícolas
+        // (ex: 6006-2RS-C3/PFI -> 6006-2RS C3, F110390 -INA -> F110390 / PF110390)
+        var bearingRegex = /\b(6\d{3}|5\d{3}|3\d{4}|F\d{5,6}|PF\d{5,6})\b/i;
+        var bMatch = refOrig.match(bearingRegex);
+        var bNum = null;
+        if (bMatch) {
+            bNum = bMatch[1].toUpperCase();
+        } else if (descUpper.indexOf('ROLAMENTO') >= 0) {
+            var numInRef = baseClean.match(/(\d{4,6})/);
+            if (numInRef) bNum = numInRef[1];
+        }
+
+        if (bNum && bNum.length >= 4) {
+            var bCand = [];
+            for (var bIdx = 0; bIdx < skus.length; bIdx++) {
+                var sb = skus[bIdx];
+                var sbFabClean = String(sb[38] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+                var sbCrossClean = String(sb[39] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+                var sbDesc = String(sb[1] || '').toUpperCase();
+
+                if (sbDesc.indexOf('ROLAMENTO') >= 0) {
+                    if (sbFabClean.indexOf(bNum) >= 0 || sbCrossClean.indexOf(bNum) >= 0) {
+                        var bScore = 92;
+                        if (refClean.indexOf('2RS') >= 0 && sbFabClean.indexOf('2RS') >= 0) bScore += 4;
+                        if (refClean.indexOf('C3') >= 0 && sbFabClean.indexOf('C3') >= 0) bScore += 3;
+                        bCand.push({ sku: sb, score: bScore, tipo: 'rolamento_normativo' });
+                    }
+                }
+            }
+            if (bCand.length > 0) {
+                bCand.sort(function(a, b) {
+                    var estA = Number(a.sku[10] != null ? a.sku[10] : (a.sku[9] || 0));
+                    var estB = Number(b.sku[10] != null ? b.sku[10] : (b.sku[9] || 0));
+                    if (b.score !== a.score) return b.score - a.score;
+                    return (estB > 0 ? 1 : 0) - (estA > 0 ? 1 : 0);
+                });
+                return _formatMatchResult(bCand[0].sku, bCand[0].score, bCand[0].tipo);
+            }
+        }
+
+        // 4. Extração de Código Alfanumérico Embutido na Descrição (ex: "BLINDAGEM KK34847", "MOLA AX10319")
         var tokensDesc = descUpper.match(/[A-Z0-9\/\-\.]{4,}/g) || [];
         for (var t = 0; t < tokensDesc.length; t++) {
             var tokC = tokensDesc[t].replace(/[^A-Z0-9]/g, '');
-            // Se possui dígitos e letras (código alfanumérico)
             if (tokC.length >= 4 && !/^[A-Z]+$/.test(tokC) && !/^[0-9]+$/.test(tokC)) {
                 for (var j = 0; j < skus.length; j++) {
                     var sj = skus[j];
                     var fabJ = String(sj[38] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
                     var crossJ = String(sj[39] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
                     if (tokC === fabJ || (tokC.length >= 5 && crossJ.indexOf(tokC) >= 0)) {
-                        var estqJ = Number(sj[10] != null ? sj[10] : (sj[9] || 0));
-                        var prcJ = Number(sj[11] || 0);
-                        return {
-                            erpProdutoId:   String(sj[0] || ''),
-                            codigoErp:      String(sj[0] || ''),
-                            referencia:     sj[38] || String(sj[0] || ''),
-                            erpCodigoFab:   sj[38] || String(sj[0] || ''),
-                            codigoFab:      sj[38] || '',
-                            descricao:      sj[1],
-                            erpProdutoDesc: sj[1],
-                            marca:          sj[2] || '',
-                            fabricante:     sj[2] || '',
-                            estoqueFilial:  estqJ,
-                            saldoEstoque:   estqJ,
-                            preco:          prcJ,
-                            precoUnitario:  prcJ,
-                            status:         estqJ > 0 ? 'estoque_disponivel' : 'sem_estoque',
-                            score:          95,
-                            tipoMatch:      'codigo_na_descricao',
-                            confidencia:    'alta',
-                            _rawSku:        sj
-                        };
+                        return _formatMatchResult(sj, 95, 'codigo_na_descricao');
                     }
                 }
             }
         }
 
-        // 4. Detecção de Dimensões de Fixadores (ex: "12 X 160" -> "M12X160", "12 X 40" -> "19M7791" / "M12X40", "8X55" -> "PS8X55")
-        var dimMatch = descUpper.match(/(\d+)\s*[xX]\s*(\d+)/);
-        if (dimMatch) {
-            var dimCode = 'M' + dimMatch[1] + 'X' + dimMatch[2];
-            var dimClean = dimCode.replace(/[^A-Z0-9]/g, '');
-            for (var d = 0; d < skus.length; d++) {
-                var sd = skus[d];
-                var fabD = String(sd[38] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-                var crossD = String(sd[39] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-                var descD = String(sd[1] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-                if (dimClean === fabD || crossD.indexOf(dimClean) >= 0 || descD.indexOf(dimClean) >= 0) {
-                    // Se a descrição do documento tem "FLANGEADO" / "FLANG", prefere parafuso flangeado (19M7791)
-                    if (descUpper.indexOf('FLANG') >= 0 && String(sd[1] || '').toUpperCase().indexOf('FLANG') < 0) {
-                        continue;
+        // 5. Detecção de Dimensões de Parafusos/Fixadores
+        // ATENÇÃO: Dispara APENAS se a descrição contiver explicitamente fixadores (NUNCA para mangotes ou anéis!)
+        var isFastener = (descUpper.indexOf('PARAFUSO') >= 0 || descUpper.indexOf('BARRA') >= 0 || descUpper.indexOf('PRISIONEIRO') >= 0 || descUpper.indexOf('SEXTAVADO') >= 0);
+        if (isFastener) {
+            var dimMatch = descUpper.match(/(\d+)\s*[xX]\s*(\d+)/);
+            if (dimMatch) {
+                var dimCode = 'M' + dimMatch[1] + 'X' + dimMatch[2];
+                var dimClean = dimCode.replace(/[^A-Z0-9]/g, '');
+                for (var d = 0; d < skus.length; d++) {
+                    var sd = skus[d];
+                    var fabD = String(sd[38] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+                    var crossD = String(sd[39] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+                    var descD = String(sd[1] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+                    if (dimClean === fabD || crossD.indexOf(dimClean) >= 0 || descD.indexOf(dimClean) >= 0) {
+                        if (descUpper.indexOf('FLANG') >= 0 && String(sd[1] || '').toUpperCase().indexOf('FLANG') < 0) {
+                            continue;
+                        }
+                        return _formatMatchResult(sd, 94, 'dimensao_fixador');
                     }
-                    var estqD = Number(sd[10] != null ? sd[10] : (sd[9] || 0));
-                    var prcD = Number(sd[11] || 0);
-                    return {
-                        erpProdutoId:   String(sd[0] || ''),
-                        codigoErp:      String(sd[0] || ''),
-                        referencia:     sd[38] || String(sd[0] || ''),
-                        erpCodigoFab:   sd[38] || String(sd[0] || ''),
-                        codigoFab:      sd[38] || '',
-                        descricao:      sd[1],
-                        erpProdutoDesc: sd[1],
-                        marca:          sd[2] || '',
-                        fabricante:     sd[2] || '',
-                        estoqueFilial:  estqD,
-                        saldoEstoque:   estqD,
-                        preco:          prcD,
-                        precoUnitario:  prcD,
-                        status:         estqD > 0 ? 'estoque_disponivel' : 'sem_estoque',
-                        score:          94,
-                        tipoMatch:      'dimensao_fixador',
-                        confidencia:    'alta',
-                        _rawSku:        sd
-                    };
                 }
             }
         }
 
-        // 5. Casos de Porcas Auto-Travantes / Parlock com Diâmetro (ex: "PORCA A/TRAV MA 20", "PORCA 12MM MA PRESSAO")
-        var isPorcaTrav = descUpper.indexOf('PORCA') >= 0 && (descUpper.indexOf('TRAV') >= 0 || descUpper.indexOf('PRESS') >= 0 || descUpper.indexOf('FREN') >= 0);
+        // 6. Porcas Auto-Travantes / Parlock
+        var isPorcaTrav = descUpper.indexOf('PORCA') >= 0 && (descUpper.indexOf('TRAV') >= 0 || descUpper.indexOf('PRESS') >= 0 || descUpper.indexOf('FREN') >= 0 || descUpper.indexOf('PARLOCK') >= 0 || descUpper.indexOf('PARLOC') >= 0);
         if (isPorcaTrav) {
             var diaMatch = descUpper.match(/(?:MA|M)\s*(\d+)|\b(\d+)\s*MM/);
             if (diaMatch) {
@@ -423,122 +438,51 @@ const DemandaSearch = (() => {
                     var fabP = String(sp[38] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
                     var descP = String(sp[1] || '').toUpperCase();
                     if (fabP === porcaTargetClean || (descP.indexOf('PORCA') >= 0 && descP.indexOf('M' + diaNum) >= 0 && descP.indexOf('TRAVANTE') >= 0)) {
-                        var estqP = Number(sp[10] != null ? sp[10] : (sp[9] || 0));
-                        var prcP = Number(sp[11] || 0);
-                        return {
-                            erpProdutoId:   String(sp[0] || ''),
-                            codigoErp:      String(sp[0] || ''),
-                            referencia:     sp[38] || String(sp[0] || ''),
-                            erpCodigoFab:   sp[38] || String(sp[0] || ''),
-                            codigoFab:      sp[38] || '',
-                            descricao:      sp[1],
-                            erpProdutoDesc: sp[1],
-                            marca:          sp[2] || '',
-                            fabricante:     sp[2] || '',
-                            estoqueFilial:  estqP,
-                            saldoEstoque:   estqP,
-                            preco:          prcP,
-                            precoUnitario:  prcP,
-                            status:         estqP > 0 ? 'estoque_disponivel' : 'sem_estoque',
-                            score:          93,
-                            tipoMatch:      'porca_travante',
-                            confidencia:    'alta',
-                            _rawSku:        sp
-                        };
+                        return _formatMatchResult(sp, 93, 'porca_travante');
                     }
                 }
             }
         }
 
-        // 6. Normalização e Expansão de Sinônimos Agrícolas
-        // (LE -> ESQUERDO, LD -> DIREITO, CAL -> CALIBRADORA, CUBRIDORA -> COBRIDORA, etc.)
+        // 7. Normalização e Expansão Semântica Agrícola ESTRITA
+        // EXIGE pelo menos 2 palavras técnicas distintas e específicas (ignorando stopwords genéricas)
         var expDesc = descUpper
             .replace(/\bLE\b/g, 'ESQUERDO')
             .replace(/\bLD\b/g, 'DIREITO')
-            .replace(/\bSEX\b|\bSEXT\b|\bSX\b/g, 'SEXTAVADO')
             .replace(/\bCAL\b/g, 'CALIBRADORA')
             .replace(/\bCUBRIDORA\b/g, 'COBRIDORA')
             .replace(/\bFLANG\b/g, 'FLANGEADO');
 
-        var expWords = expDesc.split(/[^A-Z0-9]+/).filter(function(w) { return w.length >= 3; });
-        var bestSku = null;
-        var bestScore = 0;
-        var bestMatch = '';
+        var rawWords = expDesc.split(/[^A-Z0-9]+/).filter(function(w) { return w.length >= 3; });
+        var expWords = rawWords.filter(function(w) { return !_GENERIC_STOPWORDS[w]; });
 
-        for (var k = 0; k < skus.length; k++) {
-            var sk = skus[k];
-            var skDesc = String(sk[1] || '').toUpperCase();
-            var skDescClean = skDesc.replace(/[^A-Z0-9]/g, '');
+        if (expWords.length >= 2) {
+            var bestSku = null;
+            var bestHits = 0;
 
-            // Descrição idêntica à expandida
-            if (skDescClean === expDesc.replace(/[^A-Z0-9]/g, '') || skDescClean === descClean) {
-                var estqK = Number(sk[10] != null ? sk[10] : (sk[9] || 0));
-                var prcK = Number(sk[11] || 0);
-                return {
-                    erpProdutoId:   String(sk[0] || ''),
-                    codigoErp:      String(sk[0] || ''),
-                    referencia:     sk[38] || String(sk[0] || ''),
-                    erpCodigoFab:   sk[38] || String(sk[0] || ''),
-                    codigoFab:      sk[38] || '',
-                    descricao:      sk[1],
-                    erpProdutoDesc: sk[1],
-                    marca:          sk[2] || '',
-                    fabricante:     sk[2] || '',
-                    estoqueFilial:  estqK,
-                    saldoEstoque:   estqK,
-                    preco:          prcK,
-                    precoUnitario:  prcK,
-                    status:         estqK > 0 ? 'estoque_disponivel' : 'sem_estoque',
-                    score:          92,
-                    tipoMatch:      'desc_exata_expandida',
-                    confidencia:    'alta',
-                    _rawSku:        sk
-                };
-            }
+            for (var k = 0; k < skus.length; k++) {
+                var sk = skus[k];
+                var skDesc = String(sk[1] || '').toUpperCase();
 
-            // Confronto de palavras-chave agrícolas
-            if (expWords.length >= 2) {
                 var matchedWords = 0;
                 for (var w = 0; w < expWords.length; w++) {
                     if (skDesc.indexOf(expWords[w]) >= 0) matchedWords++;
                 }
-                var ratio = matchedWords / expWords.length;
-                if (ratio >= 0.70 && matchedWords >= 2) {
-                    var sScore = 75 + Math.round(ratio * 15);
-                    if (sScore > bestScore) {
-                        bestScore = sScore;
-                        bestSku = sk;
-                        bestMatch = 'palavras_expandidas (' + matchedWords + '/' + expWords.length + ')';
-                    }
+
+                if (matchedWords >= 2 && matchedWords === expWords.length) {
+                    return _formatMatchResult(sk, 91, 'desc_palavras_estritas');
+                } else if (matchedWords >= 2 && matchedWords > bestHits) {
+                    bestHits = matchedWords;
+                    bestSku = sk;
                 }
+            }
+
+            if (bestSku && (bestHits / expWords.length) >= 0.75) {
+                return _formatMatchResult(bestSku, 88, 'desc_palavras_parciais');
             }
         }
 
-        if (bestSku && bestScore >= 80) {
-            var estqB = Number(bestSku[10] != null ? bestSku[10] : (bestSku[9] || 0));
-            var prcB = Number(bestSku[11] || 0);
-            return {
-                erpProdutoId:   String(bestSku[0] || ''),
-                codigoErp:      String(bestSku[0] || ''),
-                referencia:     bestSku[38] || String(bestSku[0] || ''),
-                erpCodigoFab:   bestSku[38] || String(bestSku[0] || ''),
-                codigoFab:      bestSku[38] || '',
-                descricao:      bestSku[1],
-                erpProdutoDesc: bestSku[1],
-                marca:          bestSku[2] || '',
-                fabricante:     bestSku[2] || '',
-                estoqueFilial:  estqB,
-                saldoEstoque:   estqB,
-                preco:          prcB,
-                precoUnitario:  prcB,
-                status:         estqB > 0 ? 'estoque_disponivel' : 'sem_estoque',
-                score:          bestScore,
-                tipoMatch:      bestMatch,
-                confidencia:    bestScore >= 90 ? 'alta' : 'media',
-                _rawSku:        bestSku
-            };
-        }
-
+        // Se não houver correspondência forte e segura, retorna null (NUNCA CHUTA PRODUTO ERRADO!)
         return null;
     }
 

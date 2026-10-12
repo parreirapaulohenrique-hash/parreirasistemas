@@ -610,5 +610,11 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
     * **Conferência Prévia com Indicador de Estoque:** Na tela de conferência de importação, o sistema exibe imediatamente o código Central Peças localizado, descrição completa, saldo de estoque e preço unitário.
     * **Persistência de Dados de ERP na Criação:** Correção em `DemandaDB._buildItemDoc` para registrar e salvar `erpProdutoId`, `erpCodigoFab`, `erpProdutoDesc`, `fabricante`, `estoqueFilial`, `precoUnitario` e definir o status diretamente como `estoque_disponivel` ou `sem_estoque` em vez de "Não Encontrado".
     * **Botão & Auto-Match Preventivo em Cotações Abertas:** Ao abrir qualquer cotação com itens pendentes, o sistema auto-identifica as peças preventivamente na base Central Peças e disponibiliza o botão "⚡ Auto-Match" no cabeçalho do detalhe.
+* **2026-10-12 (v3.21.97 / Demanda v3.2.12):**
+  - **Eliminação de Falsos-Positivos no Auto-Match & Controle Manual na Conferência (`demanda-search.js`, `demanda-app.js`):**
+    * **Sanitização de Sufixos de Concorrentes:** Extração inteligente do código-base eliminando sufixos de marcas e concorrentes (`/JA`, `-INA`, `/PFI`, `/199`, `/228`, `-952`, `/DB`, `/RL`, etc.), permitindo que peças como `6006-2RS-C3/PFI` e `F110390 -INA` correspondam com 100% de exatidão a seus códigos genuínos (`6006-2RS C3` e `F110390 / PF110390`).
+    * **Eliminação de Matches Falsos por Palavras Genéricas:** Remoção do fallback frouxo que casava termos simples como "ROLAMENTO" a produtos não relacionados (ex: rolamento NTN G15208 de R$ 265,08).
+    * **Proteção Estrita de Fixadores:** A detecção por dimensões (`12X40`, `M12X160`) agora só opera se a descrição contiver explicitamente termos de fixadores (`PARAFUSO`, `BARRA`, `PRISIONEIRO`, `SEXTAVADO`), impedindo que mangotes como `MANGOTE 1.3/4` fossem associados a parafusos Phillips.
+    * **Botão ✕ Desvincular e 🔍 Vincular Manualmente na Conferência:** Adicionada ação rápida direta em cada linha da tabela de conferência de importação para desvincular imediatamente qualquer auto-match indesejado e abrir a busca no ERP para vincular a peça correta antes de salvar a cotação.
 
 
