@@ -1,9 +1,9 @@
 {
-  "version": "3.2.13",
-  "build": "20261012-v3.2.13",
+  "version": "3.2.14",
+  "build": "20261012-v3.2.14",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-12",
-  "change": "v3.2.13 - fix(pricing): correção crítica na extração de preço — substituição do custo unitário pelo preço de venda oficial do ERP MaxData (18.852 produtos sincronizados), garantindo que a coluna 'Nosso Preço' e as cotações exibam o valor de venda ao cliente e margens comparativas exatas.",
-  "releaseDate": "2026-10-12T17:10:00-03:00"
+  "change": "v3.2.14 - fix(cotacoes): correção no cálculo e persistência dos totalizadores (Itens, Estoque, Faltam) na criação de cotações, com auto-healing dinâmico na listagem para cotações existentes com totais zerados.",
+  "releaseDate": "2026-10-12T17:55:00-03:00"
 }
