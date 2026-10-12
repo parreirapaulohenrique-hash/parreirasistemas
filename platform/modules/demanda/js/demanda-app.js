@@ -233,14 +233,32 @@ const DemandaApp = (function() {
                   "</td>"
                 : "";
 
+            var refHtml = item.erpCodigoFab
+                ? "<span style='color:#10b981;font-weight:700'>" + _esc(item.erpCodigoFab) + "</span>" +
+                  (item.refOriginal && item.refOriginal !== item.erpCodigoFab ? "<span style='display:block;font-size:.68rem;color:var(--text-secondary);font-weight:normal'>Orig: " + _esc(item.refOriginal) + "</span>" : "")
+                : "<span style='font-weight:600'>" + _esc(item.refOriginal || "—") + "</span>";
+
+            var descHtml = item.erpProdutoDesc
+                ? "<span style='color:var(--text-primary);font-weight:500'>" + _esc(item.erpProdutoDesc) + "</span>" +
+                  (item.descOriginal && item.descOriginal !== item.erpProdutoDesc ? "<span style='display:block;font-size:.68rem;color:var(--text-secondary)'>Orig: " + _esc(item.descOriginal) + "</span>" : "")
+                : (_esc(item.descOriginal) || "—");
+
+            var badgeStatus = "";
+            if (item.status === "estoque_disponivel") {
+                badgeStatus = "<span style='font-size:.72rem;padding:.15rem .5rem;border-radius:10px;background:rgba(16,185,129,.15);color:#10b981;font-weight:700'>🟢 Em Estoque (" + (item.estoqueFilial || 0) + ")</span>";
+            } else if (item.status === "sem_estoque") {
+                badgeStatus = "<span style='font-size:.72rem;padding:.15rem .5rem;border-radius:10px;background:rgba(239,68,68,.15);color:#ef4444;font-weight:700'>🟡 Sem Estoque</span>";
+            } else {
+                badgeStatus = "<span style='font-size:.72rem;padding:.15rem .5rem;border-radius:10px;background:rgba(99,102,241,.15);color:#6366f1'>Recebida</span>";
+            }
+
             return "<tr>" +
                 "<td style='color:var(--text-secondary);font-size:.8rem'>" + (i + 1) + "</td>" +
-                "<td style='font-weight:600;font-size:.83rem'>" + _esc(item.refOriginal) + "</td>" +
-                "<td style='font-size:.8rem;color:var(--text-secondary)'>" + (_esc(item.descOriginal) || "—") + "</td>" +
-                "<td style='text-align:center'>" + item.qtdeSolicitada + "</td>" +
+                "<td style='font-size:.83rem'>" + refHtml + "</td>" +
+                "<td style='font-size:.8rem;color:var(--text-secondary)'>" + descHtml + "</td>" +
+                "<td style='text-align:center;font-weight:700'>" + item.qtdeSolicitada + "</td>" +
                 colConc +
-                "<td><span style='font-size:.72rem;padding:.15rem .5rem;border-radius:10px;" +
-                    "background:rgba(99,102,241,.15);color:#6366f1'>Recebida</span></td>" +
+                "<td>" + badgeStatus + "</td>" +
                 "<td><button onclick='DemandaApp.removeItem(" + i + ")' title='Remover' " +
                     "style='background:none;border:none;color:var(--accent-danger);cursor:pointer;padding:.2rem'>" +
                     "<span class='material-icons-round' style='font-size:1rem'>close</span></button></td>" +
@@ -985,9 +1003,27 @@ const DemandaApp = (function() {
             if (btnClear) btnClear.style.display = "inline-block";
         }
 
+        // Auto-match prévio para conferência contra base de 10.896 SKUs da Central Peças
+        var matchCount = 0;
+        itens.forEach(function(item) {
+            if (typeof DemandaSearch !== 'undefined' && typeof DemandaSearch.smartMatch === 'function') {
+                var m = DemandaSearch.smartMatch({
+                    refOriginal: item.refOriginal,
+                    descOriginal: item.descOriginal,
+                    precoConcorrente: item.precoConcorrente,
+                    concorrenteNome: concFinal || (_concorrenteAtual ? _concorrenteAtual.nome : '')
+                });
+                if (m) {
+                    item._match = m;
+                    matchCount++;
+                }
+            }
+        });
+
         var ok  = itens.filter(function(i) { return !i._erros || i._erros.length === 0; }).length;
         var err = itens.length - ok;
         if (stats) stats.innerHTML =
+            (matchCount > 0 ? "<span style='color:var(--accent-success);font-weight:700'>⚡ " + matchCount + "/" + itens.length + " identificados na Central Peças</span> &nbsp;·&nbsp; " : "") +
             "<span style='color:var(--accent-success)'><strong>" + ok + "</strong> ok</span>" +
             (err > 0 ? " &nbsp;·&nbsp; <span style='color:var(--accent-warning)'><strong>" + err + "</strong> com alerta</span>" : "") +
             " &nbsp;·&nbsp; " + itens.length + " total";
@@ -997,17 +1033,34 @@ const DemandaApp = (function() {
             var hasErr = item._erros && item._erros.length > 0;
             var incert = item.incerteza;
             var rowStyle = hasErr ? "opacity:.75" : "";
-            var statusHtml = hasErr
-                ? "<span id='conf-status-" + i + "' style='color:var(--accent-danger);font-size:.72rem' title='" + _esc((item._erros || []).join(", ")) + "'>&#9888; Alerta</span>"
-                : incert
-                    ? "<span id='conf-status-" + i + "' style='color:var(--accent-warning);font-size:.72rem'>? Incerto</span>"
-                    : "<span id='conf-status-" + i + "' style='color:var(--accent-success);font-size:.72rem'>&#10003; Ok</span>";
+            var m = item._match;
+
+            var matchPill = m
+                ? "<div id='conf-match-" + i + "' style='margin-top:.25rem;display:flex;align-items:center;gap:.35rem;font-size:.72rem;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);border-radius:4px;padding:.15rem .4rem;color:#10b981'>" +
+                    "<span class='material-icons-round' style='font-size:.85rem'>" + (m.estoqueFilial > 0 ? "check_circle" : "inventory_2") + "</span>" +
+                    "<span><strong>" + _esc(m.erpCodigoFab || m.erpProdutoId) + "</strong> — " + _esc(m.erpProdutoDesc) + "</span>" +
+                    "<span style='margin-left:auto;color:" + (m.estoqueFilial > 0 ? "#10b981" : "#f59e0b") + ";font-weight:700'>" +
+                    (m.estoqueFilial > 0 ? ("Estq: " + m.estoqueFilial + " un") : "Sem Estoque") +
+                    (m.precoUnitario > 0 ? (" · R$ " + m.precoUnitario.toFixed(2).replace(".", ",")) : "") +
+                    "</span></div>"
+                : "<div id='conf-match-" + i + "' style='display:none'></div>";
+
+            var statusHtml = m
+                ? "<span id='conf-status-" + i + "' style='color:" + (m.estoqueFilial > 0 ? "var(--accent-success)" : "#f59e0b") + ";font-size:.72rem;font-weight:700;display:inline-flex;align-items:center;gap:.2rem'>" +
+                  "<span class='material-icons-round' style='font-size:.85rem'>" + (m.estoqueFilial > 0 ? "inventory" : "inventory_2") + "</span>" +
+                  (m.estoqueFilial > 0 ? "Em Estoque" : "Sem Estoque") + "</span>"
+                : (hasErr
+                    ? "<span id='conf-status-" + i + "' style='color:var(--accent-danger);font-size:.72rem' title='" + _esc((item._erros || []).join(", ")) + "'>&#9888; Alerta</span>"
+                    : incert
+                        ? "<span id='conf-status-" + i + "' style='color:var(--accent-warning);font-size:.72rem'>? Incerto</span>"
+                        : "<span id='conf-status-" + i + "' style='color:var(--accent-success);font-size:.72rem'>&#10003; Ok</span>");
+
             return "<tr style='" + rowStyle + "'>" +
                 "<td><input type='checkbox' class='conf-chk' data-idx='" + i + "' " + (!hasErr ? "checked" : "") + "></td>" +
                 "<td style='color:var(--text-secondary);font-size:.78rem'>" + (i + 1) + "</td>" +
                 "<td><input type='text' value='" + _esc(item.refOriginal) + "' " +
                     "style='background:transparent;border:1px solid var(--border);border-radius:4px;padding:.2rem .5rem;color:var(--text-primary);width:100%;font-size:.82rem' " +
-                    "onchange=\"DemandaApp.updateConferenciaItem(" + i + ",'ref',this.value)\"></td>" +
+                    "onchange=\"DemandaApp.updateConferenciaItem(" + i + ",'ref',this.value)\">" + matchPill + "</td>" +
                 "<td><input type='text' value='" + _esc(item.descOriginal) + "' " +
                     "style='background:transparent;border:1px solid var(--border);border-radius:4px;padding:.2rem .5rem;color:var(--text-primary);width:100%;font-size:.82rem' " +
                     "onchange=\"DemandaApp.updateConferenciaItem(" + i + ",'desc',this.value)\"></td>" +
@@ -1037,21 +1090,53 @@ const DemandaApp = (function() {
             }
         }
 
-        // Quando referencia muda, recalcula incerteza e atualiza badge de status
+        // Quando referencia ou descricao muda, recalcula auto-match em tempo real
+        if (field === "ref" || field === "desc") {
+            if (typeof DemandaSearch !== 'undefined' && typeof DemandaSearch.smartMatch === 'function') {
+                var m = DemandaSearch.smartMatch({
+                    refOriginal: _importItensTemp[idx].refOriginal,
+                    descOriginal: _importItensTemp[idx].descOriginal,
+                    precoConcorrente: _importItensTemp[idx].precoConcorrente
+                });
+                _importItensTemp[idx]._match = m || null;
+                var matchEl = document.getElementById("conf-match-" + idx);
+                var statusEl = document.getElementById("conf-status-" + idx);
+                if (matchEl) {
+                    if (m) {
+                        matchEl.style.display = "flex";
+                        matchEl.innerHTML = "<span class='material-icons-round' style='font-size:.85rem'>" + (m.estoqueFilial > 0 ? "check_circle" : "inventory_2") + "</span>" +
+                            "<span><strong>" + _esc(m.erpCodigoFab || m.erpProdutoId) + "</strong> — " + _esc(m.erpProdutoDesc) + "</span>" +
+                            "<span style='margin-left:auto;color:" + (m.estoqueFilial > 0 ? "#10b981" : "#f59e0b") + ";font-weight:700'>" +
+                            (m.estoqueFilial > 0 ? ("Estq: " + m.estoqueFilial + " un") : "Sem Estoque") +
+                            (m.precoUnitario > 0 ? (" · R$ " + m.precoUnitario.toFixed(2).replace(".", ",")) : "") + "</span>";
+                    } else {
+                        matchEl.style.display = "none";
+                        matchEl.innerHTML = "";
+                    }
+                }
+                if (statusEl && m) {
+                    statusEl.style.color = (m.estoqueFilial > 0 ? "var(--accent-success)" : "#f59e0b");
+                    statusEl.innerHTML = "<span class='material-icons-round' style='font-size:.85rem'>" + (m.estoqueFilial > 0 ? "inventory" : "inventory_2") + "</span> " + (m.estoqueFilial > 0 ? "Em Estoque" : "Sem Estoque");
+                }
+            }
+        }
+
+        // Quando referencia muda, recalcula incerteza e atualiza badge de status se nao teve match
         if (field === "ref") {
             var temRef = value && value.trim().length > 0;
             _importItensTemp[idx].incerteza = !temRef;
-            var badge = document.getElementById("conf-status-" + idx);
-            if (badge) {
-                if (temRef) {
-                    badge.style.color = "var(--accent-success)";
-                    badge.textContent = "\u2713 Ok";
-                } else {
-                    badge.style.color = "var(--accent-warning)";
-                    badge.textContent = "? Incerto";
+            if (!_importItensTemp[idx]._match) {
+                var badge = document.getElementById("conf-status-" + idx);
+                if (badge) {
+                    if (temRef) {
+                        badge.style.color = "var(--accent-success)";
+                        badge.textContent = "\u2713 Ok";
+                    } else {
+                        badge.style.color = "var(--accent-warning)";
+                        badge.textContent = "? Incerto";
+                    }
                 }
             }
-            // Marca o checkbox automaticamente quando o usuario define uma referencia
             if (temRef) {
                 var chk = document.querySelector(".conf-chk[data-idx='" + idx + "']");
                 if (chk) chk.checked = true;
@@ -1072,14 +1157,14 @@ const DemandaApp = (function() {
         var count = 0;
         document.querySelectorAll(".conf-chk").forEach(function(chk) {
             var idx = parseInt(chk.getAttribute("data-idx"), 10);
-            if (_importItensTemp[idx] && _importItensTemp[idx].incerteza) {
+            if (_importItensTemp[idx] && _importItensTemp[idx].incerteza && !_importItensTemp[idx]._match) {
                 chk.checked = false;
                 count++;
             }
         });
         _toast(count > 0
             ? count + " incerto" + (count > 1 ? "s" : "") + " desmarcado" + (count > 1 ? "s" : "") + "."
-            : "Nenhum item incerto encontrado.",
+            : "Nenhum item incerto sem identificação encontrado.",
             count > 0 ? "info" : "warning");
     }
 
@@ -1111,12 +1196,28 @@ const DemandaApp = (function() {
         }
 
         selecionados.forEach(function(item) {
+            var m = item._match;
+            if (!m && typeof DemandaSearch !== 'undefined' && typeof DemandaSearch.smartMatch === 'function') {
+                m = DemandaSearch.smartMatch({
+                    refOriginal: item.refOriginal,
+                    descOriginal: item.descOriginal,
+                    precoConcorrente: item.precoConcorrente,
+                    concorrenteNome: concValor
+                });
+            }
             _itens.push({
                 refOriginal:      item.refOriginal,
                 descOriginal:     item.descOriginal,
                 qtdeSolicitada:   item.qtdeSolicitada || 1,
                 precoConcorrente: item.precoConcorrente || null,
-                _metaConcorrente: item._metaConcorrente || concValor || null
+                _metaConcorrente: item._metaConcorrente || concValor || null,
+                erpProdutoId:     m ? m.erpProdutoId : null,
+                erpCodigoFab:     m ? (m.erpCodigoFab || m.referencia) : '',
+                erpProdutoDesc:   m ? (m.erpProdutoDesc || m.descricao) : '',
+                fabricante:       m ? (m.fabricante || m.marca) : '',
+                estoqueFilial:    m ? m.estoqueFilial : null,
+                precoUnitario:    m ? (m.precoUnitario || m.preco) : null,
+                status:           m ? (Number(m.estoqueFilial || 0) > 0 ? 'estoque_disponivel' : 'sem_estoque') : 'demanda_recebida'
             });
         });
         renderItens();
@@ -1416,6 +1517,47 @@ const DemandaApp = (function() {
                     console.warn("[DemandaApp] Erro na sincronização com concorrência:", eSync);
                 }
 
+                // Auto-match inteligente para itens ainda não vinculados ao ERP
+                try {
+                    var itensSemVinculo = itens.filter(function(it) {
+                        return !it.erpProdutoId && (!it.status || it.status === "demanda_recebida" || it.status === "nao_encontrado" || it.status === "nao_cadastrado");
+                    });
+                    if (itensSemVinculo.length > 0 && typeof DemandaSearch !== "undefined" && typeof DemandaSearch.smartMatch === "function") {
+                        var vinculadosAuto = 0;
+                        for (var vi = 0; vi < itensSemVinculo.length; vi++) {
+                            var itAlvo = itensSemVinculo[vi];
+                            var mRes = DemandaSearch.smartMatch({
+                                refOriginal: itAlvo.refOriginal,
+                                descOriginal: itAlvo.descOriginal,
+                                precoConcorrente: itAlvo.precoConcorrente,
+                                concorrenteNome: d.concorrenteNome
+                            });
+                            if (mRes) {
+                                var novoSt = (Number(mRes.estoqueFilial || 0) > 0) ? "estoque_disponivel" : "sem_estoque";
+                                var upFields = {
+                                    erpProdutoId:   mRes.erpProdutoId,
+                                    erpCodigoFab:   mRes.erpCodigoFab,
+                                    erpProdutoDesc: mRes.erpProdutoDesc,
+                                    fabricante:     mRes.fabricante,
+                                    estoqueFilial:  mRes.estoqueFilial,
+                                    precoUnitario:  mRes.precoUnitario,
+                                    status:         novoSt,
+                                    confidenciaIdentificacao: "alta",
+                                    identificadoPor: "automatch"
+                                };
+                                Object.assign(itAlvo, upFields);
+                                DemandaDB.updateItem(id, itAlvo.id, upFields).catch(function(e){ console.warn(e); });
+                                vinculadosAuto++;
+                            }
+                        }
+                        if (vinculadosAuto > 0) {
+                            console.log("[DemandaApp] Auto-match vinculou preventivamente " + vinculadosAuto + " itens da cotação " + (d.codigo || id) + " à Central Peças");
+                        }
+                    }
+                } catch(eAuto) {
+                    console.warn("[DemandaApp] Erro no auto-match preventivo:", eAuto);
+                }
+
                 _renderDemandaDetalheBody();
             })
             .catch(function(err) {
@@ -1661,6 +1803,7 @@ const DemandaApp = (function() {
                 (d.vendedorNome ? " &nbsp;·&nbsp; <strong style='color:var(--text-primary)'>Vendedor:</strong> " + _esc(d.vendedorNome) : "") +
                 "</span>" : "") +
             "<div style='margin-left:auto;display:flex;align-items:center;gap:.35rem'>" +
+            "<button onclick=\"DemandaApp.autoMatchDemanda('" + _esc(d.id) + "')\" title='Identificar peças automaticamente usando a base de 10.896 SKUs da Central Peças' style='background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.35);border-radius:5px;padding:.2rem .55rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;font-size:.72rem;font-weight:700'><span class='material-icons-round' style='font-size:.85rem'>bolt</span> Auto-Match</button>" +
             "<span style='color:var(--text-secondary);font-size:.73rem;margin-right:.4rem'>" + dt + "</span>" +
             (d.status === "cancelada"
                 ? "<button onclick=\"DemandaApp.reabrirDemanda('" + _esc(d.id) + "', '" + _esc(d.codigo || "") + "')\" style='background:rgba(59,130,246,.15);color:#3b82f6;border:1px solid rgba(59,130,246,.3);border-radius:5px;padding:.2rem .55rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;font-size:.72rem;font-weight:600'><span class='material-icons-round' style='font-size:.85rem'>restore</span> Reabrir</button>"
@@ -1768,6 +1911,10 @@ const DemandaApp = (function() {
             sc = { label: "Não Cadastrado", color: "#f97316", icon: "error_outline" };
         } else if (st === "catalogado") {
             sc = { label: "Catalogado", color: "#3b82f6", icon: "hub" };
+        } else if (st === "estoque_disponivel" || st === "em_estoque") {
+            sc = { label: "Em Estoque (" + (item.estoqueFilial != null ? item.estoqueFilial : 0) + " un)", color: "#10b981", icon: "inventory" };
+        } else if (st === "sem_estoque") {
+            sc = { label: "Sem Estoque (0 un)", color: "#ef4444", icon: "inventory_2" };
         }
 
         var nexts = (typeof DemandaStates !== "undefined") ? DemandaStates.nextStates(st) : [];
@@ -1793,7 +1940,7 @@ const DemandaApp = (function() {
             acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','encaminhado_compras')\" title='Encaminhar para Fila de Compras' style='background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.3);border-radius:4px;padding:.15rem .45rem;cursor:pointer;font-size:.7rem;font-weight:600;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;line-height:1.2'><span class='material-icons-round' style='font-size:.85rem'>shopping_cart</span> Compras</button>");
             acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','consulta_outras_filiais')\" title='Consultar Estoque em Outras Filiais' style='background:rgba(6,182,212,.15);color:#06b6d4;border:1px solid rgba(6,182,212,.3);border-radius:4px;padding:.15rem .45rem;cursor:pointer;font-size:.7rem;font-weight:600;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;line-height:1.2'><span class='material-icons-round' style='font-size:.85rem'>store</span> Filiais</button>");
             acoesCabiveis.push("<button onclick=\"DemandaApp._confirmarVendaPerdida('" + _esc(item.id) + "','" + _esc(st) + "')\" title='Registrar Ruptura Comercial / Venda Perdida' style='background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:.15rem .45rem;cursor:pointer;font-size:.7rem;font-weight:600;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;line-height:1.2'><span class='material-icons-round' style='font-size:.85rem'>report_problem</span> Ruptura</button>");
-        } else if (st === "estoque_disponivel") {
+        } else if (st === "estoque_disponivel" || st === "em_estoque") {
             acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','proposta_enviada')\" title='Incluir item na Proposta / Orçamento' style='background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:4px;padding:.15rem .45rem;cursor:pointer;font-size:.7rem;font-weight:600;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;line-height:1.2'><span class='material-icons-round' style='font-size:.85rem'>request_quote</span> Orçar</button>");
         } else if (st === "estoque_parcial") {
             acoesCabiveis.push("<button onclick=\"DemandaApp.avancarItemStatus('" + _esc(item.id) + "','proposta_enviada')\" title='Orçar quantidade disponível' style='background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:4px;padding:.15rem .45rem;cursor:pointer;font-size:.7rem;font-weight:600;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;line-height:1.2'><span class='material-icons-round' style='font-size:.85rem'>request_quote</span> Orçar</button>");
@@ -1841,11 +1988,21 @@ const DemandaApp = (function() {
             precoConcTd = "<td style='padding:.28rem .5rem;text-align:right;font-weight:700;color:#f59e0b;white-space:nowrap;font-size:.78rem'>" + pcTxt + "</td>";
         }
 
+        var refColHtml = item.erpCodigoFab
+            ? "<span style='color:#10b981;font-weight:700'>" + _esc(item.erpCodigoFab) + "</span>" +
+              (item.refOriginal && item.refOriginal !== item.erpCodigoFab ? "<span style='display:block;font-size:.68rem;color:var(--text-secondary);font-weight:normal'>Orig: " + _esc(item.refOriginal) + "</span>" : "")
+            : _esc(item.refOriginal || item.erpProdutoId || "—");
+
+        var descColHtml = item.erpProdutoDesc
+            ? "<span style='color:var(--text-primary);font-weight:500'>" + _esc(item.erpProdutoDesc) + "</span>" +
+              (item.descOriginal && item.descOriginal !== item.erpProdutoDesc ? "<span style='display:block;font-size:.68rem;color:var(--text-secondary)'>Orig: " + _esc(item.descOriginal) + "</span>" : "")
+            : _esc(item.descOriginal || "—");
+
         var mainRow = "<tr style='border-bottom:1px solid rgba(255,255,255,.04);transition:background .15s' onmouseover=\"this.style.background='rgba(255,255,255,.025)'\" onmouseout=\"this.style.background='transparent'\">" +
             "<td style='color:var(--text-secondary);font-size:.72rem;padding:.28rem .45rem;text-align:center;white-space:nowrap'>" + (i + 1) + " " + tlBtn + "</td>" +
-            "<td style='font-weight:700;font-family:monospace;font-size:.79rem;color:var(--text-primary);padding:.28rem .5rem;white-space:nowrap'>" + _esc(item.refOriginal || item.erpProdutoId || "—") + "</td>" +
-            "<td style='font-size:.78rem;color:var(--text-secondary);padding:.28rem .5rem;max-width:340px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' title='" + _esc(item.descOriginal || item.erpProdutoDesc || "") + "'>" +
-                _esc(item.descOriginal || item.erpProdutoDesc || "—") + "</td>" +
+            "<td style='font-weight:700;font-family:monospace;font-size:.79rem;color:var(--text-primary);padding:.28rem .5rem;white-space:nowrap'>" + refColHtml + "</td>" +
+            "<td style='font-size:.78rem;color:var(--text-secondary);padding:.28rem .5rem;max-width:340px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' title='" + _esc(item.erpProdutoDesc || item.descOriginal || "") + "'>" +
+                descColHtml + "</td>" +
             "<td style='text-align:center;padding:.28rem .45rem;font-weight:700;font-size:.79rem'>" + (item.qtdeSolicitada || 1) + "</td>" +
             precoConcTd +
             "<td style='padding:.28rem .5rem;white-space:nowrap'><span style='font-size:.68rem;padding:.12rem .45rem;border-radius:8px;background:" +
@@ -1895,6 +2052,63 @@ const DemandaApp = (function() {
         } catch(err) {
             console.error("[DemandaApp] Erro ao vincular concorrente:", err);
             _toast("Erro ao vincular concorrente: " + (err.message || err), "error");
+        }
+    }
+
+    // Auto-match manual para a demanda aberta
+    async function autoMatchDemanda(demandaId) {
+        var did = demandaId || (_demandaAtual ? _demandaAtual.id : null);
+        if (!did) return;
+        var itens = (_demandaAtual && _demandaAtual.id === did) ? _demandaAtual.itens : await DemandaDB.getItens(did);
+        var conc = (_demandaAtual && _demandaAtual.data) ? _demandaAtual.data.concorrenteNome : '';
+
+        var total = 0;
+        var modificados = [];
+
+        for (var i = 0; i < (itens || []).length; i++) {
+            var it = itens[i];
+            if (typeof DemandaSearch !== 'undefined' && typeof DemandaSearch.smartMatch === 'function') {
+                var m = DemandaSearch.smartMatch({
+                    refOriginal: it.refOriginal,
+                    descOriginal: it.descOriginal,
+                    precoConcorrente: it.precoConcorrente,
+                    concorrenteNome: conc
+                });
+                if (m) {
+                    var newSt = (Number(m.estoqueFilial || 0) > 0) ? 'estoque_disponivel' : 'sem_estoque';
+                    var upFields = {
+                        erpProdutoId:   m.erpProdutoId,
+                        erpCodigoFab:   m.erpCodigoFab,
+                        erpProdutoDesc: m.erpProdutoDesc,
+                        fabricante:     m.fabricante,
+                        estoqueFilial:  m.estoqueFilial,
+                        precoUnitario:  m.precoUnitario,
+                        status:         newSt,
+                        confidenciaIdentificacao: 'alta',
+                        identificadoPor: 'automatch'
+                    };
+                    Object.assign(it, upFields);
+                    modificados.push({ id: it.id, fields: upFields });
+                    total++;
+                }
+            }
+        }
+
+        if (total === 0) {
+            _toast("Nenhuma correspondência adicional encontrada na base de 10.896 SKUs.", "info");
+            return;
+        }
+
+        try {
+            await Promise.all(modificados.map(function(m) {
+                return DemandaDB.updateItem(did, m.id, m.fields);
+            }));
+            _toast("⚡ " + total + " peças identificadas e vinculadas automaticamente com sucesso!", "success");
+            _renderDemandaDetalheBody();
+            loadDemandasLista(_filterAtual);
+        } catch (err) {
+            console.error("[DemandaApp] Erro no auto-match:", err);
+            _toast("Erro ao salvar auto-match: " + (err.message || err), "error");
         }
     }
 
@@ -2975,7 +3189,7 @@ const DemandaApp = (function() {
         var por    = _sessao ? (_sessao.login || _sessao.nome || "sistema") : "sistema";
 
         var estoque = Number(produto.estoque || 0);
-        var novoStatus = estoque > 0 ? "em_estoque" : "sem_estoque";
+        var novoStatus = estoque > 0 ? "estoque_disponivel" : "sem_estoque";
 
         var fields = {
             erpProdutoId:   String(produto.erpId || ""),
@@ -2984,8 +3198,19 @@ const DemandaApp = (function() {
             fabricante:     produto.fabricante || "",
             estoqueFilial:  estoque,
             preco:          Number(produto.preco || 0),
-            status:         novoStatus
+            precoUnitario:  Number(produto.preco || 0),
+            status:         novoStatus,
+            confidenciaIdentificacao: "alta",
+            identificadoPor: por
         };
+
+        // Se a demanda tem concorrente informado, registra o de-para automaticamente
+        if (_demandaAtual && _demandaAtual.data && _demandaAtual.data.concorrenteNome) {
+            var itemBase = _demandaAtual.itens ? _demandaAtual.itens.find(function(it){ return it.id === itemId; }) : null;
+            if (itemBase && itemBase.refOriginal && typeof DemandaSearch !== "undefined" && typeof DemandaSearch.addConcorrenteMapping === "function") {
+                DemandaSearch.addConcorrenteMapping(itemBase.refOriginal, produto.referencia || produto.erpId);
+            }
+        }
 
         var tl = {
             evento: "produto_vinculado",
@@ -6733,6 +6958,7 @@ const DemandaApp = (function() {
         enviarItensParaOrcamentoLote: enviarItensParaOrcamentoLote,
         enviarItensParaComprasLote:   enviarItensParaComprasLote,
         // Gestão da Cotação
+        autoMatchDemanda:             autoMatchDemanda,
         excluirDemanda:               excluirDemanda,
         estornarDemanda:              estornarDemanda,
         reabrirDemanda:               reabrirDemanda,

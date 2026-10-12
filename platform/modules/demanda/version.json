@@ -1,9 +1,9 @@
 {
-  "version": "3.2.10",
-  "build": "20261012-v3.2.10",
+  "version": "3.2.11",
+  "build": "20261012-v3.2.11",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-12",
-  "change": "v3.2.10 - fix(ocr/parser): rotacao resiliente de chaves OCR (K88452445888957), priorizacao de Engine 1 com colunas tabuladas e descarte de rodapes.",
-  "releaseDate": "2026-10-12T00:50:00-03:00"
+  "change": "v3.2.11 - feat(automatch): auto-identificação inteligente e cruzamento automático de 10.896 SKUs Central Peças para cotações de concorrentes (J.A. Agrícola DAV 0000048543), dimensões e sinônimos agrícolas.",
+  "releaseDate": "2026-10-12T01:30:00-03:00"
 }
