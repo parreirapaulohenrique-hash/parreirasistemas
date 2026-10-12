@@ -595,8 +595,13 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
     * **Eliminação de Falsos Positivos de Marca e Endereço:** Ignora a penúltima coluna correspondente ao endereço físico de prateleira (`1D03`, `2A00`, regex `^[0-9][A-Z0-9][0-9]{2}$`) e evita que números de marcas (como `37 INGA` ou `59 SW`) sejam erroneamente convertidos em quantidades e produtos separados.
     * **Filtro Rigoroso de Cabeçalhos e Metadados:** Descarte automático de cabeçalhos de vendedores e operações fiscais (`17.578 FERNANDO`, `10 VENDA`, `ORC 17.578`, `TIPO COD`, etc.).
     * **Atualização de Cache-Busters:** Cache-buster atualizado para `v=3.21.75` no `platform/modules/demanda/index.html`.
-
-
-
+* **2026-10-12 (v3.21.95 / Demanda v3.2.10):**
+  - **Correção Definitiva do OCR Serverless e Rotação Resiliente de Chaves (`platform/api/ocr.js`):**
+    * **Pool Rotativo Multi-Key:** Adicionada rotação ativa de chaves de API (`K88452445888957`, `K81498688888957`, etc.). Quando a chave principal excede a cota ou responde HTTP 429, o backend tenta imediatamente a próxima chave válida mantendo estritamente o Engine 1 com `isTable=true`.
+    * **Prevenção do Fallback Destrutivo para Engine 2:** Evita que falhas temporárias de rede/cota forcem o documento tabular a cair no Engine 2 (Deep Learning) sem colunas, que fragmentava linhas em 43 itens desordenados.
+  - **Refinamento do Motor Universal de Importação (`demanda-import.js`):**
+    * **Filtro de Marcas e Locais Isolados:** Ignora linhas isoladas contendo apenas marcas (`37 INGA`, `59 SW`, `50 SOLUS`, `GERAL`) e locais (`1D03`, `2A00`), impedindo conversão espúria em quantidade e produto.
+    * **Descarte de Rodapé Financeiro:** Ignora linhas finais de `0,00 Outras Despesas: 0,00` e `Frete: 0,00`, garantindo a contagem exata de 23 itens reais da J.A. Agrícola.
+    * **Atualização de Cache-Busters:** Cache-buster atualizado para `v=3.21.95` em `platform/modules/demanda/index.html`.
 
 

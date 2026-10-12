@@ -103,6 +103,8 @@ const DemandaImport = (() => {
         if (/^\.?\d{1,3}$/.test(s)) return true; // números isolados curtos tipo 1, 2, 99
         if (/^[.:,]?\d+([.,]\d+)+$/.test(s) && s.length <= 12) return true; // números isolados tipo preço
         if (/^\.+$/.test(s)) return true; // ponto isolado
+        if (/^(geral|geral-|37\s*inga|59\s*sw|56\s*cont\s*star|50\s*solus)$/i.test(s)) return true; // marcas isoladas
+        if (/^[0-9][a-z0-9][0-9]{2}$/i.test(s)) return true; // locais de prateleira isolados
 
         for (let i = 0; i < NOISE_LINE_PATTERNS.length; i++) {
             if (NOISE_LINE_PATTERNS[i].test(s)) return true;
@@ -112,6 +114,7 @@ const DemandaImport = (() => {
         }
         return false;
     }
+
 
     /**
      * Converte strings numéricas em formato brasileiro de moeda para float.
@@ -216,7 +219,8 @@ const DemandaImport = (() => {
 
             let partsRow = rowLine.split(/\t+|\s{2,}/).map(p => p.trim()).filter(Boolean);
             if (partsRow.length === 0) continue;
-            if (/^0[,.]00$/.test(partsRow[0]) || /outras\s*despesas/i.test(partsRow[0])) continue;
+            if (/^0[,.]00$/.test(partsRow[0]) || /^(outras\s*despesas|frete|total\b|servi[cç]os)/i.test(partsRow[0])) continue;
+            if (partsRow.some(p => /^(outras\s*despesas|frete\s*:|total\s*geral|nro\s*itens)/i.test(p))) continue;
 
             let desc = '', ref = '', qtde = 1, preco = null, marca = '', local = '';
 

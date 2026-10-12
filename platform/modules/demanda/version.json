@@ -1,9 +1,9 @@
 {
-  "version": "3.2.9",
-  "build": "20261010-v3.2.9",
+  "version": "3.2.10",
+  "build": "20261012-v3.2.10",
   "module": "demanda",
   "name": "Cotacao",
-  "lastUpdate": "2026-10-10",
-  "change": "v3.2.9 - fix(parser): suporte universal para tabelas de balcao (J.A. Agricola) com espacos simples e remocao de ruido de cabecalho.",
-  "releaseDate": "2026-10-10T11:05:00-03:00"
+  "lastUpdate": "2026-10-12",
+  "change": "v3.2.10 - fix(ocr/parser): rotacao resiliente de chaves OCR (K88452445888957), priorizacao de Engine 1 com colunas tabuladas e descarte de rodapes.",
+  "releaseDate": "2026-10-12T00:50:00-03:00"
 }
