@@ -1391,6 +1391,29 @@ const DemandaApp = (function() {
                 }
                 container.innerHTML = "<div style='padding:1rem 1.5rem'>" +
                     demandas.map(_renderDemandaCard).join("") + "</div>";
+
+                // Auto-healing para demandas que estejam com totalItens zerados ou não calculados
+                demandas.forEach(function(d) {
+                    if (!d || !d.id) return;
+                    if (d.totalItens == null || d.totalItens === 0) {
+                        DemandaDB.recalcTotals(d.id).then(function(totals) {
+                            if (totals && totals.totalItens > 0) {
+                                d.totalItens = totals.totalItens;
+                                d.totalComEstoque = totals.totalComEstoque;
+                                d.totalSemEstoque = totals.totalSemEstoque;
+                                var el = document.getElementById("card-totais-" + d.id);
+                                if (el) {
+                                    el.innerHTML =
+                                        _miniStat("Itens",   totals.totalItens, "var(--text-primary)") +
+                                        _miniStat("Estoque", totals.totalComEstoque, "var(--accent-success)") +
+                                        _miniStat("Faltam",  totals.totalSemEstoque, (totals.totalSemEstoque || 0) > 0 ? "var(--accent-danger)" : "var(--text-secondary)");
+                                }
+                            }
+                        }).catch(function(e) {
+                            console.warn("[DemandaApp] Auto-healing recalcTotals para " + d.id + ":", e);
+                        });
+                    }
+                });
             })
             .catch(function(err) {
                 console.error("[DemandaApp] Erro ao listar:", err);
@@ -1408,12 +1431,18 @@ const DemandaApp = (function() {
             ? d.criadoEm.toDate().toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" })
             : "—";
 
-        return "<div onclick='DemandaApp.abrirDemanda(\"" + _esc(d.id) + "\")'" +
+        var totalItens = Number(d.totalItens || 0);
+        var totalComEstoque = Number(d.totalComEstoque || 0);
+        var totalSemEstoque = (d.totalSemEstoque != null) ? Number(d.totalSemEstoque) : Math.max(0, totalItens - totalComEstoque);
+
+        return "<div role='button' tabindex='0' onclick='DemandaApp.abrirDemanda(\"" + _esc(d.id) + "\")'" +
+            " onkeydown='if(event.key===\"Enter\") DemandaApp.abrirDemanda(\"" + _esc(d.id) + "\")'" +
             " style='background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);" +
-            "padding:1rem 1.25rem;margin-bottom:.75rem;display:flex;align-items:center;gap:1rem;" +
-            "cursor:pointer;transition:border-color var(--transition)'" +
-            " onmouseover='this.style.borderColor=\"var(--primary-color)\"'" +
-            " onmouseout='this.style.borderColor=\"var(--border-color)\"'>" +
+            "padding:1rem 1.25rem;margin-bottom:.75rem;display:flex;align-items:center;gap:1.25rem;" +
+            "cursor:pointer;transition:all var(--transition)'" +
+            " onmouseover='this.style.borderColor=\"var(--primary-color)\";this.style.boxShadow=\"0 4px 16px rgba(0,0,0,.25)\"'" +
+            " onmouseout='this.style.borderColor=\"var(--border-color)\";this.style.boxShadow=\"none\"'" +
+            " title='Clique para abrir e gerenciar a cotação " + _esc(d.codigo || "") + "'>" +
             // Info principal
             "<div style='flex:1;min-width:0'>" +
             "<div style='display:flex;align-items:center;gap:.5rem;margin-bottom:.25rem;flex-wrap:wrap'>" +
@@ -1427,13 +1456,16 @@ const DemandaApp = (function() {
             dt +
             "</div>" +
             "</div>" +
-            // Contadores
-            "<div style='display:flex;gap:1.25rem;text-align:center;flex-shrink:0'>" +
-            _miniStat("Itens",   d.totalItens      || 0, "var(--text-primary)") +
-            _miniStat("Estoque", d.totalComEstoque  || 0, "var(--accent-success)") +
-            _miniStat("Faltam",  d.totalSemEstoque  || 0, (d.totalSemEstoque || 0) > 0 ? "var(--accent-danger)" : "var(--text-secondary)") +
+            // Contadores / Totais
+            "<div id='card-totais-" + _esc(d.id) + "' style='display:flex;gap:1.25rem;text-align:center;flex-shrink:0;align-items:center'>" +
+            _miniStat("Itens",   totalItens, "var(--text-primary)") +
+            _miniStat("Estoque", totalComEstoque, "var(--accent-success)") +
+            _miniStat("Faltam",  totalSemEstoque, totalSemEstoque > 0 ? "var(--accent-danger)" : "var(--text-secondary)") +
             "</div>" +
-            "<span class='material-icons-round' style='color:var(--text-secondary);font-size:1.1rem'>chevron_right</span>" +
+            // Botão Chevron
+            "<div style='display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid var(--border-color);color:var(--text-secondary);flex-shrink:0' title='Abrir cotação'>" +
+            "<span class='material-icons-round' style='font-size:1.15rem'>chevron_right</span>" +
+            "</div>" +
             "</div>";
     }
 
@@ -1459,6 +1491,13 @@ const DemandaApp = (function() {
                 var d = res[0] || {};
                 var itens = res[1] || [];
                 _demandaAtual = { id: id, data: d, itens: itens };
+
+                // Se d.totalItens está zerado mas temos itens carregados, auto-cura no Firestore
+                if ((!d.totalItens || d.totalItens === 0) && itens.length > 0) {
+                    DemandaDB.recalcTotals(id).then(function(t) {
+                        if (t) Object.assign(d, t);
+                    }).catch(function(){});
+                }
 
                 // Sincronização inteligente com cotacoes_concorrente:
                 // Se a demanda não possui concorrenteNome ou se itens faltam precoConcorrente, busca o registro vinculado

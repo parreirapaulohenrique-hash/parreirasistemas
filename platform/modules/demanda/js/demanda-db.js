@@ -78,6 +78,28 @@ const DemandaDB = (() => {
         const demandaRef = db.collection(_demandsCol()).doc();
         const demandaId  = demandaRef.id;
 
+        // Calcula totalizadores reais com base nos itens passados
+        const totalItens = Array.isArray(itens) ? itens.length : 0;
+        let totalIdentificados = 0;
+        let totalComEstoque = 0;
+        let totalPerdidos = 0;
+
+        if (totalItens > 0) {
+            itens.forEach(it => {
+                const temId = !!(it.erpProdutoId || it.parteMestreId);
+                if (temId) totalIdentificados++;
+
+                const st = it.status || (it.erpProdutoId ? (Number(it.estoqueFilial || 0) > 0 ? 'estoque_disponivel' : 'sem_estoque') : 'demanda_recebida');
+                const temEstoque = ['estoque_disponivel', 'estoque_parcial'].includes(st) || (it.estoqueFilial != null && Number(it.estoqueFilial) > 0);
+                if (temEstoque) {
+                    totalComEstoque++;
+                } else if (st === 'venda_perdida') {
+                    totalPerdidos++;
+                }
+            });
+        }
+        const totalSemEstoque = Math.max(0, totalItens - totalComEstoque);
+
         const demandaDoc = {
             id:                demandaId,
             tenantId:          _getTenantId(),
@@ -96,11 +118,11 @@ const DemandaDB = (() => {
             filialNome:        data.filialNome  || '',
             obs:               data.obs        || '',
             documentos:        [],
-            totalItens:        0,
-            totalIdentificados: 0,
-            totalComEstoque:   0,
-            totalSemEstoque:   0,
-            totalPerdidos:     0,
+            totalItens:        totalItens,
+            totalIdentificados: totalIdentificados,
+            totalComEstoque:   totalComEstoque,
+            totalSemEstoque:   totalSemEstoque,
+            totalPerdidos:     totalPerdidos,
             erpSaleId:         null,
             quoteId:           null,
             criadoEm:          now,
@@ -327,6 +349,7 @@ const DemandaDB = (() => {
         });
 
         await batch.commit();
+        await recalcTotals(demandaId).catch(() => {});
         return itemIds;
     }
 
@@ -414,10 +437,7 @@ const DemandaDB = (() => {
             throw new Error('Só é possível remover itens no estado inicial.');
         }
         await ref.delete();
-        await db.doc(`${DEMANDS_COL}/${demandaId}`).update({
-            totalItens:   firebase.firestore.FieldValue.increment(-1),
-            atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        await recalcTotals(demandaId).catch(() => {});
     }
 
     /**
@@ -439,13 +459,20 @@ const DemandaDB = (() => {
      * Recalcula e salva os totalizadores de uma demanda.
      */
     async function recalcTotals(demandaId) {
+        if (!demandaId) return { totalItens: 0, totalIdentificados: 0, totalComEstoque: 0, totalSemEstoque: 0, totalPerdidos: 0 };
         const itens = await getItens(demandaId);
+        const totalItens = itens.length;
+        const totalIdentificados = itens.filter(i => i.erpProdutoId || i.parteMestreId).length;
+        const totalComEstoque = itens.filter(i => ['estoque_disponivel', 'estoque_parcial'].includes(i.status) || (i.estoqueFilial != null && Number(i.estoqueFilial) > 0)).length;
+        const totalPerdidos = itens.filter(i => i.status === 'venda_perdida').length;
+        const totalSemEstoque = Math.max(0, totalItens - totalComEstoque);
+
         const totals = {
-            totalItens:         itens.length,
-            totalIdentificados: itens.filter(i => i.erpProdutoId || i.parteMestreId).length,
-            totalComEstoque:    itens.filter(i => ['estoque_disponivel', 'estoque_parcial'].includes(i.status)).length,
-            totalSemEstoque:    itens.filter(i => i.status === 'sem_estoque').length,
-            totalPerdidos:      itens.filter(i => i.status === 'venda_perdida').length,
+            totalItens,
+            totalIdentificados,
+            totalComEstoque,
+            totalSemEstoque,
+            totalPerdidos,
         };
         await updateDemanda(demandaId, totals);
         return totals;
