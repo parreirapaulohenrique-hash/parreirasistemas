@@ -105,13 +105,55 @@ const DemandaSearch = (() => {
         'LISA':1, 'SEXTAVADO':1, 'ESFERAS':1, 'GERAL':1, 'ORIGINAL':1, 'ESPECIAL':1
     };
 
+    // ── Resolução de Preços MaxData ERP (Preço de Venda x Custo) ──
+    function _getErpPrice(codErp, codFab, rawSku) {
+        var pId = String(codErp || '').trim();
+        var pFab = String(codFab || '').trim().toUpperCase();
+        var pData = null;
+        if (typeof window !== 'undefined') {
+            if (window.ERP_PRICES_BY_ID && pId && window.ERP_PRICES_BY_ID[pId]) {
+                pData = window.ERP_PRICES_BY_ID[pId];
+            } else if (window.ERP_PRICES_BY_FAB && pFab && window.ERP_PRICES_BY_FAB[pFab]) {
+                pData = window.ERP_PRICES_BY_FAB[pFab];
+            }
+        }
+        if (pData) {
+            return {
+                v: Number(pData.v || pData.preco || 0),
+                a: Number(pData.a || pData.valorAtacado || pData.v || 0),
+                c: Number(pData.c || pData.valorCusto || (rawSku ? rawSku[11] : 0) || 0)
+            };
+        }
+        // Fallback: se não estiver no mapa ERP direto mas tem histórico analítico
+        if (rawSku && Array.isArray(rawSku)) {
+            var custo = Number(rawSku[11] || 0);
+            var qtdVendida = Number(rawSku[23] || 0);
+            var fatTotal = Number(rawSku[24] || 0);
+            var margemPct = Number(rawSku[26] || 0);
+            var vVenda = 0;
+            if (qtdVendida > 0 && fatTotal > 0) {
+                vVenda = Number((fatTotal / qtdVendida).toFixed(2));
+            } else if (custo > 0) {
+                if (margemPct > 0 && margemPct < 90) {
+                    vVenda = Number((custo / (1 - margemPct / 100)).toFixed(2));
+                } else {
+                    vVenda = Number((custo * 1.85).toFixed(2));
+                }
+            }
+            return { v: vVenda, a: vVenda, c: custo };
+        }
+        return { v: 0, a: 0, c: 0 };
+    }
+
     function _formatMatchResult(sku, score, tipoMatch) {
         var estq = Number(sku[10] != null ? sku[10] : (sku[9] || 0));
-        var prc = Number(sku[11] || 0);
         var codErp = String(sku[0] || '');
         var codFab = String(sku[38] || '');
         var desc = sku[1] || '';
         var marca = sku[2] || '';
+        var prcData = _getErpPrice(codErp, codFab, sku);
+        var prcVenda = Number(prcData.v || 0);
+        var custo = Number(prcData.c || sku[11] || 0);
         return {
             erpProdutoId:   codErp,
             codigoErp:      codErp,
@@ -124,8 +166,13 @@ const DemandaSearch = (() => {
             fabricante:     marca,
             estoqueFilial:  estq,
             saldoEstoque:   estq,
-            preco:          prc,
-            precoUnitario:  prc,
+            preco:          prcVenda,
+            precoUnitario:  prcVenda,
+            precoVenda:     prcVenda,
+            valorVenda:     prcVenda,
+            valorAtacado:   Number(prcData.a || prcVenda),
+            custo:          custo,
+            valorCusto:     custo,
             status:         estq > 0 ? 'estoque_disponivel' : 'sem_estoque',
             score:          score,
             tipoMatch:      tipoMatch,
@@ -177,9 +224,12 @@ const DemandaSearch = (() => {
             const desc = String(s[1] || '').toUpperCase();
             const marca = String(s[2] || '');
             const estoque = Number(s[10] != null ? s[10] : (s[9] || 0));
-            const preco = Number(s[11] || 0);
             const codFab = String(s[38] || '');
             const crossRef = String(s[39] || '');
+
+            const prcData = _getErpPrice(codErp, codFab, s);
+            const precoVenda = Number(prcData.v || 0);
+            const custo = Number(prcData.c || s[11] || 0);
 
             const fabNorm = codFab.toUpperCase().replace(/[^A-Z0-9]/g, '');
             const crossNorm = crossRef.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -230,10 +280,13 @@ const DemandaSearch = (() => {
                     estoque: estoque,
                     saldoEstoque: estoque,
                     estoqueFilial: estoque,
-                    preco: preco,
-                    precoVenda: preco,
-                    valorVenda: preco,
-                    custo: Number(s[11] || 0),
+                    preco: precoVenda,
+                    precoUnitario: precoVenda,
+                    precoVenda: precoVenda,
+                    valorVenda: precoVenda,
+                    valorAtacado: Number(prcData.a || precoVenda),
+                    custo: custo,
+                    valorCusto: custo,
                     confidencia: score >= 95 ? 'alta' : 'media',
                     _temEstoque: estoque > 0,
                     _fonte: 'compact_skus_maxdata',
@@ -1012,16 +1065,29 @@ const DemandaSearch = (() => {
     // ── Listar todos os produtos da base compacta integrada ──
     function getProdutos() {
         if (typeof window !== 'undefined' && Array.isArray(window.COMPACT_SKUS)) {
-            return window.COMPACT_SKUS.map(s => ({
-                codigo: String(s[0]),
-                erpProdutoId: String(s[0]),
-                referencia: String(s[38] || s[0]),
-                codigoFab: String(s[38] || ''),
-                descricao: String(s[1]),
-                marca: String(s[2] || ''),
-                estoque: Number(s[10] != null ? s[10] : (s[9] || 0)),
-                preco: Number(s[11] || 0)
-            }));
+            return window.COMPACT_SKUS.map(s => {
+                var codErp = String(s[0] || '');
+                var codFab = String(s[38] || '');
+                var prcData = _getErpPrice(codErp, codFab, s);
+                var precoVenda = Number(prcData.v || 0);
+                var custo = Number(prcData.c || s[11] || 0);
+                return {
+                    codigo: codErp,
+                    erpProdutoId: codErp,
+                    referencia: codFab || codErp,
+                    codigoFab: codFab,
+                    descricao: String(s[1] || ''),
+                    marca: String(s[2] || ''),
+                    estoque: Number(s[10] != null ? s[10] : (s[9] || 0)),
+                    preco: precoVenda,
+                    precoUnitario: precoVenda,
+                    precoVenda: precoVenda,
+                    valorVenda: precoVenda,
+                    valorAtacado: Number(prcData.a || precoVenda),
+                    custo: custo,
+                    valorCusto: custo
+                };
+            });
         }
         return [];
     }

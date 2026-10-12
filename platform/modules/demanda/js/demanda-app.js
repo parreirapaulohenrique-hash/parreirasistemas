@@ -3777,12 +3777,21 @@ const DemandaApp = (function() {
             : [];
 
         var itensFormatados = itens.map(function(it, idx) {
-            var refUpper = (it.refOriginal || "").toUpperCase().trim();
+            var refUpper = (it.refOriginal || it.erpCodigoFab || it.ref || "").toUpperCase().trim();
             var prodMeu = catalogo.find(function(p) {
                 return (p.codigo && p.codigo.toUpperCase() === refUpper) ||
-                       (p.referencia && p.referencia.toUpperCase() === refUpper);
+                       (p.referencia && p.referencia.toUpperCase() === refUpper) ||
+                       (p.codigoFab && p.codigoFab.toUpperCase() === refUpper);
             });
-            var pm = (prodMeu && prodMeu.preco) ? parseFloat(prodMeu.preco) : 0;
+            var pm = (prodMeu && prodMeu.preco > 0) ? parseFloat(prodMeu.preco) : 0;
+            if (!pm && typeof window !== "undefined") {
+                if (window.ERP_PRICES_BY_FAB && window.ERP_PRICES_BY_FAB[refUpper]) {
+                    pm = window.ERP_PRICES_BY_FAB[refUpper].v || 0;
+                } else if (window.ERP_PRICES_BY_ID && window.ERP_PRICES_BY_ID[refUpper]) {
+                    pm = window.ERP_PRICES_BY_ID[refUpper].v || 0;
+                }
+            }
+            if (!pm && it.precoUnitario) pm = parseFloat(it.precoUnitario) || 0;
             var pc = parseFloat(it.precoConcorrente) || 0;
             if (!pc && it.obsCliente) {
                 var m = String(it.obsCliente).match(/(?:preço|preco|concorrente|r\$|\$)\s*:?\s*(\d+[\.,]?\d*)/i);
@@ -3930,13 +3939,22 @@ const DemandaApp = (function() {
                         var pm = parseFloat(it.precoMeu) || 0;
                         var refUpper = (it.ref || "").toUpperCase().trim();
 
-                        if (!pm && refUpper && catalogo.length > 0) {
+                        // Atualiza com o preço de venda do ERP/catálogo (evita usar custo unitário)
+                        if (refUpper && catalogo.length > 0) {
                             var pEncontrado = catalogo.find(function(p) {
                                 return (p.codigo && p.codigo.toUpperCase() === refUpper) ||
-                                       (p.referencia && p.referencia.toUpperCase() === refUpper);
+                                       (p.referencia && p.referencia.toUpperCase() === refUpper) ||
+                                       (p.codigoFab && p.codigoFab.toUpperCase() === refUpper);
                             });
-                            if (pEncontrado && pEncontrado.preco) {
-                                pm = parseFloat(pEncontrado.preco) || 0;
+                            if (pEncontrado && pEncontrado.preco > 0) {
+                                pm = parseFloat(pEncontrado.preco);
+                            }
+                        }
+                        if ((!pm || pm <= 0) && typeof window !== "undefined") {
+                            if (window.ERP_PRICES_BY_FAB && window.ERP_PRICES_BY_FAB[refUpper]) {
+                                pm = window.ERP_PRICES_BY_FAB[refUpper].v || 0;
+                            } else if (window.ERP_PRICES_BY_ID && window.ERP_PRICES_BY_ID[refUpper]) {
+                                pm = window.ERP_PRICES_BY_ID[refUpper].v || 0;
                             }
                         }
 
@@ -3983,16 +4001,27 @@ const DemandaApp = (function() {
                                 var m = String(it.obsCliente).match(/(?:preço|preco|concorrente|r\$|\$)\s*:?\s*(\d+[\.,]?\d*)/i);
                                 if (m) pc = parseFloat(m[1].replace(",", "."));
                             }
-                            var refUpper = (it.refOriginal || "").toUpperCase().trim();
+                            var refUpper = (it.refOriginal || it.erpCodigoFab || it.erpProdutoId || "").toUpperCase().trim();
                             var pm = 0;
                             if (refUpper && catalogo.length > 0) {
                                 var pEncontrado = catalogo.find(function(p) {
                                     return (p.codigo && p.codigo.toUpperCase() === refUpper) ||
-                                           (p.referencia && p.referencia.toUpperCase() === refUpper);
+                                           (p.referencia && p.referencia.toUpperCase() === refUpper) ||
+                                           (p.codigoFab && p.codigoFab.toUpperCase() === refUpper);
                                 });
-                                if (pEncontrado && pEncontrado.preco) {
-                                    pm = parseFloat(pEncontrado.preco) || 0;
+                                if (pEncontrado && pEncontrado.preco > 0) {
+                                    pm = parseFloat(pEncontrado.preco);
                                 }
+                            }
+                            if ((!pm || pm <= 0) && typeof window !== "undefined") {
+                                if (window.ERP_PRICES_BY_FAB && window.ERP_PRICES_BY_FAB[refUpper]) {
+                                    pm = window.ERP_PRICES_BY_FAB[refUpper].v || 0;
+                                } else if (window.ERP_PRICES_BY_ID && window.ERP_PRICES_BY_ID[refUpper]) {
+                                    pm = window.ERP_PRICES_BY_ID[refUpper].v || 0;
+                                }
+                            }
+                            if ((!pm || pm <= 0) && it.precoUnitario) {
+                                pm = parseFloat(it.precoUnitario) || 0;
                             }
 
                             if (pc <= 0 && pm <= 0) return;
@@ -4299,6 +4328,16 @@ const DemandaApp = (function() {
     function _concUpdateItem(idx, field, value) {
         if (!_concItens[idx]) return;
         _concItens[idx][field] = value;
+        if (field === 'ref' && value && !_concItens[idx].precoMeu) {
+            var valUp = String(value).toUpperCase().trim();
+            if (typeof window !== 'undefined') {
+                var foundPrc = (window.ERP_PRICES_BY_FAB && window.ERP_PRICES_BY_FAB[valUp])
+                    || (window.ERP_PRICES_BY_ID && window.ERP_PRICES_BY_ID[valUp]);
+                if (foundPrc && foundPrc.v) {
+                    _concItens[idx].precoMeu = foundPrc.v;
+                }
+            }
+        }
         var tbody = document.getElementById("concTbody");
         if (tbody) _renderConcTbody();
     }
