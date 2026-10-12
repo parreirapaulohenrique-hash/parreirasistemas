@@ -1,9 +1,9 @@
 {
-  "version": "3.2.16",
-  "build": "20261012-v3.2.16",
+  "version": "3.2.17",
+  "build": "20261012-v3.2.17",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-12",
-  "change": "v3.2.16 - fix(cotacao): origem do orçamento padronizada obrigatoriamente como Cotação Própria (Central Peças) por padrão, e base limpa de cadastros fictícios de testes para início dos cadastros reais.",
-  "releaseDate": "2026-10-12T19:00:00-03:00"
+  "change": "v3.2.17 - fix(import): reconhecimento preciso de orçamentos DAV com 10 itens completos, offset de sequência e compensação de deslocamento de colunas OCR.",
+  "releaseDate": "2026-10-12T19:40:00-03:00"
 }

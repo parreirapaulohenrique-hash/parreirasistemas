@@ -60,6 +60,22 @@ const DemandaImport = (() => {
         /\bn[uú]mero\s+vendedor/i,
         /\bcod\.?\s*int\.?/i,
         /\bdescri[cç][aã]o\s+marca\s+local/i,
+        /n\.?\s*itens/i,
+        /tt\.?\s*itens/i,
+        /desconto\s*:/i,
+        /^total\b/i,
+        /total\s*:/i,
+        /observa[cç][oõ]es/i,
+        /notas\s*:/i,
+        /p[aá]gina\s*\d+/i,
+        /vedada\s+a\s+autentica/i,
+        /tipo\s+retirada/i,
+        /identifica[cç][aã]o\s+do\s+destinat/i,
+        /fantasia\s*:/i,
+        /documento\s+fiscal/i,
+        /\bmais\s+mangueira/i,
+        /\bman\s+queira/i,
+        /^\d+,\d{2}\s+(?:cliente|total)/i,
         /^(cod\.?\s*item|denominação|denomina|quantidade|qtde?|referencia|descrição|descri|titulo|título|peças|pecas|trator|produto|marca|obs|n[°º]|item|ref|seq|#|un|und|unid\.?)$/i
     ];
 
@@ -104,7 +120,7 @@ const DemandaImport = (() => {
         if (/^[.:,]?\d+([.,]\d+)+$/.test(s) && s.length <= 12) return true; // números isolados tipo preço
         if (/^\.+$/.test(s)) return true; // ponto isolado
         if (/^(geral|geral-|37\s*inga|59\s*sw|56\s*cont\s*star|50\s*solus)$/i.test(s)) return true; // marcas isoladas
-        if (/^[0-9][a-z0-9][0-9]{2}$/i.test(s)) return true; // locais de prateleira isolados
+        if (/^[0-9][a-z][0-9]{2}$/i.test(s)) return true; // locais de prateleira isolados (ex: 1D03, 2A00; números puros como 1423 não são ruído)
 
         for (let i = 0; i < NOISE_LINE_PATTERNS.length; i++) {
             if (NOISE_LINE_PATTERNS[i].test(s)) return true;
@@ -219,7 +235,7 @@ const DemandaImport = (() => {
             if (isPickingSlip) {
                 // Separação de Balcão / Picking (ex: J.A. Agrícola):
                 // Estrutura das colunas: Descrição [Marca] [Local] [Referência]
-                const locPattern = /\b([0-9][A-Z0-9][0-9]{2})\b/i;
+                const locPattern = /\b([0-9][A-Za-z][0-9]{2})\b/;
 
                 // Caso especial: linha veio com espaço simples (sem \t), localiza pelo padrão de local
                 if (partsRow.length === 1 && locPattern.test(rowLine)) {
@@ -241,7 +257,7 @@ const DemandaImport = (() => {
                 } else if (partsRow.length >= 2) {
                     desc = partsRow[0];
                     const lastTok = partsRow[partsRow.length - 1];
-                    const isLastLocal = /^[0-9][A-Z0-9][0-9]{2}$/i.test(lastTok);
+                    const isLastLocal = /^[0-9][A-Za-z][0-9]{2}$/.test(lastTok);
 
                     if (isLastLocal) {
                         // Último token é local (ex: 2A00), linha sem código de referência explícito
@@ -380,62 +396,107 @@ const DemandaImport = (() => {
         }
 
         // ─── Formato 0: Tabela com colunas tabuladas (\t) ou múltiplos espaços ───
+        // Pré-varredura: detecta se cabeçalho ou linhas superiores contêm quantidade/preço soltos (deslocamento OCR)
+        let prePreco = null;
+        let preQtde = null;
+        for (let idx = 0; idx < Math.min(30, linhas.length); idx++) {
+            const pl = linhas[idx];
+            if (/(?:c[oó]d|item|un\b|p\.\s*unit)/i.test(pl)) {
+                const partsPre = pl.split(/\t+|\s{2,}/).map(p => p.trim()).filter(Boolean);
+                for (let pi = 0; pi < partsPre.length; pi++) {
+                    if (/^(UN|PC|PÇ|CX|UND|JG|PAR|M|UNI)$/i.test(partsPre[pi]) && pi + 1 < partsPre.length) {
+                        const mq = partsPre[pi + 1].match(/^(\d+(?:[.,]\d+)?)$/);
+                        if (mq && !preQtde) preQtde = Math.round(parseFloat(mq[1].replace(',', '.')));
+                    }
+                    if (/^\d+,\d{2,5}$/.test(partsPre[pi]) && !prePreco) {
+                        const pv = _parseMoedaBR(partsPre[pi]);
+                        if (pv && pv > 0) prePreco = pv;
+                    }
+                }
+            }
+        }
+
         const tabRows = [];
         for (const l of linhas) {
             if (_isNoiseLine(l)) continue;
             const parts = l.split(/\t+|\s{2,}/).map(p => p.trim()).filter(Boolean);
-            if (parts.length >= 2 && _isPartCode(parts[0])) {
-                const ref = parts[0].toUpperCase();
-                const desc = parts[1];
-                let qtde = 1;
-                let qIdx = -1;
-                for (let idx = 2; idx < parts.length; idx++) {
-                    const p = parts[idx];
-                    // Quantidade após unidade
-                    if (/^(UN|PC|PÇ|CX|UND|JG|PAR|M)$/i.test(p) && idx + 1 < parts.length) {
-                        const mq = parts[idx + 1].match(/^(\d+(?:[.,]\d+)?)$/);
-                        if (mq) {
-                            qtde = Math.round(parseFloat(mq[1].replace(',', '.'))) || 1;
-                            qIdx = idx + 1;
-                            break;
-                        }
-                    }
-                    // Quantidade com zeros ou formato inteiro
-                    const mq2 = p.match(/^(\d+(?:\.0+|\.0000)?)$/);
-                    if (mq2) {
-                        const qv = parseFloat(mq2[1]);
-                        if (qv > 0 && qv < 10000) {
-                            qtde = Math.round(qv) || 1;
-                            qIdx = idx;
-                            break;
-                        }
+            if (parts.length < 2) continue;
+
+            let pOffset = 0;
+            // Se primeiro token é número de item (ex: 1, 2, 7, 8, 10) e segundo token é código da peça:
+            if (/^\d{1,3}$/.test(parts[0]) && parts.length >= 3 && _isPartCode(parts[1])) {
+                pOffset = 1;
+            } else if (!_isPartCode(parts[0])) {
+                continue;
+            }
+
+            const ref = parts[pOffset].toUpperCase();
+            const desc = (pOffset + 1 < parts.length) ? parts[pOffset + 1] : ref;
+            let qtde = 1;
+            let qIdx = -1;
+            for (let idx = pOffset + 2; idx < parts.length; idx++) {
+                const p = parts[idx];
+                // Quantidade após unidade
+                if (/^(UN|PC|PÇ|CX|UND|JG|PAR|M|UNI)$/i.test(p) && idx + 1 < parts.length) {
+                    const mq = parts[idx + 1].match(/^(\d+(?:[.,]\d+)?)$/);
+                    if (mq) {
+                        qtde = Math.round(parseFloat(mq[1].replace(',', '.'))) || 1;
+                        qIdx = idx + 1;
+                        break;
                     }
                 }
-
-                // Tenta extrair preço unitário do concorrente se houver valor monetário após a quantidade
-                let precoConcorrente = null;
-                if (qIdx !== -1 && qIdx + 1 < parts.length) {
-                    const cand = parts[qIdx + 1];
-                    const candClean = cand.replace(/\./g, '').replace(',', '.');
-                    const val = parseFloat(candClean);
-                    if (!isNaN(val) && val > 0 && val < 500000) {
-                        precoConcorrente = val;
+                // Quantidade com zeros ou formato inteiro
+                const mq2 = p.match(/^(\d+(?:\.0+|\.0000)?)$/);
+                if (mq2) {
+                    const qv = parseFloat(mq2[1]);
+                    if (qv > 0 && qv < 10000) {
+                        qtde = Math.round(qv) || 1;
+                        qIdx = idx;
+                        break;
                     }
                 }
+            }
 
-                const obsTxt = precoConcorrente ? ('Preço conc.: R$ ' + precoConcorrente.toFixed(2).replace('.', ',')) : '';
+            // Tenta extrair preço unitário do concorrente se houver valor monetário após a quantidade
+            let precoConcorrente = null;
+            if (qIdx !== -1 && qIdx + 1 < parts.length) {
+                const cand = parts[qIdx + 1];
+                const candClean = cand.replace(/\./g, '').replace(',', '.');
+                const val = parseFloat(candClean);
+                if (!isNaN(val) && val > 0 && val < 500000) {
+                    precoConcorrente = val;
+                }
+            }
 
-                tabRows.push({
-                    refOriginal: ref,
-                    descOriginal: desc || ref,
-                    qtdeSolicitada: qtde,
-                    precoConcorrente: precoConcorrente,
-                    obs: obsTxt,
-                    incerteza: false,
-                    _metaConcorrente: detectedConcorrente || null,
-                    _metaCliente: detectedCliente || null,
-                    _metaOrcamento: detectedOrcamento || null
-                });
+            const obsTxt = precoConcorrente ? ('Preço conc.: R$ ' + precoConcorrente.toFixed(2).replace('.', ',')) : '';
+
+            tabRows.push({
+                refOriginal: ref,
+                descOriginal: desc || ref,
+                qtdeSolicitada: qtde,
+                precoConcorrente: precoConcorrente,
+                obs: obsTxt,
+                incerteza: false,
+                _metaConcorrente: detectedConcorrente || null,
+                _metaCliente: detectedCliente || null,
+                _metaOrcamento: detectedOrcamento || null
+            });
+        }
+
+        // Correção de deslocamento vertical de 1 linha gerado por algoritmos OCR de tabela
+        if (prePreco !== null && tabRows.length >= 3 && tabRows[tabRows.length - 1].precoConcorrente === null) {
+            let shiftedQtde = preQtde || 1;
+            let shiftedPreco = prePreco;
+            for (let ti = 0; ti < tabRows.length; ti++) {
+                const nextQ = tabRows[ti].qtdeSolicitada;
+                const nextP = tabRows[ti].precoConcorrente;
+                tabRows[ti].qtdeSolicitada = shiftedQtde;
+                tabRows[ti].precoConcorrente = shiftedPreco;
+                if (shiftedPreco) {
+                    tabRows[ti].obs = 'Preço conc.: R$ ' + shiftedPreco.toFixed(2).replace('.', ',');
+                }
+                shiftedQtde = nextQ;
+                shiftedPreco = nextP;
             }
         }
         if (tabRows.length >= 2 || (tabRows.length === 1 && linhas.length <= 6)) {
@@ -522,6 +583,7 @@ const DemandaImport = (() => {
         if (/^\d+([.,]\d+)+$/.test(s) && s.length < 10 && !/[A-Za-z]/.test(s)) return false; // preço/decimal puro
         if (/^\d{1,3}$/.test(s)) return false; // número curto (1 a 3 dígitos é quantidade/índice)
         if (/^(5101|5102|5405|6102|6405|7102|7401)$/.test(s)) return false; // CFOPs fiscais comuns
+        if (/^(n\.?\s*itens|tt\.?\s*itens|mais\s+|man\s+queira|total|desconto|observa|notas|vendedor|p[aá]gina)/i.test(s)) return false;
 
         // 1. Alfanumérico com letras e dígitos (ex: 6028-2RS, FL. 204, F113407, UC211-32, F 600)
         if (/[A-Za-z]/.test(s) && /\d/.test(s)) return true;
