@@ -1,9 +1,9 @@
 {
-  "version": "3.2.12",
-  "build": "20261012-v3.2.12",
+  "version": "3.2.13",
+  "build": "20261012-v3.2.13",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-12",
-  "change": "v3.2.12 - fix(automatch): eliminação de falsos-positivos genéricos, sanitização de sufixos (/JA, -INA, /PFI, /228, /199), normalização de rolamentos industriais e botão de desvincular/vincular manual direto na conferência.",
-  "releaseDate": "2026-10-12T13:20:00-03:00"
+  "change": "v3.2.13 - fix(pricing): correção crítica na extração de preço — substituição do custo unitário pelo preço de venda oficial do ERP MaxData (18.852 produtos sincronizados), garantindo que a coluna 'Nosso Preço' e as cotações exibam o valor de venda ao cliente e margens comparativas exatas.",
+  "releaseDate": "2026-10-12T17:10:00-03:00"
 }
