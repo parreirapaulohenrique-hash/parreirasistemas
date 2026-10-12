@@ -463,8 +463,13 @@ const DemandaDB = (() => {
         const itens = await getItens(demandaId);
         const totalItens = itens.length;
         const totalIdentificados = itens.filter(i => i.erpProdutoId || i.parteMestreId).length;
-        const totalComEstoque = itens.filter(i => ['estoque_disponivel', 'estoque_parcial'].includes(i.status) || (i.estoqueFilial != null && Number(i.estoqueFilial) > 0)).length;
-        const totalPerdidos = itens.filter(i => i.status === 'venda_perdida').length;
+        const totalComEstoque = itens.filter(i => {
+            const st = i.status;
+            if (['estoque_disponivel', 'estoque_parcial'].includes(st)) return true;
+            if (st === 'sem_estoque' || st === 'venda_perdida' || st === 'cancelado') return false;
+            return (i.estoqueFilial != null && Number(i.estoqueFilial) > 0);
+        }).length;
+        const totalPerdidos = itens.filter(i => i.status === 'venda_perdida' || i.status === 'cancelado').length;
         const totalSemEstoque = Math.max(0, totalItens - totalComEstoque);
 
         const totals = {
