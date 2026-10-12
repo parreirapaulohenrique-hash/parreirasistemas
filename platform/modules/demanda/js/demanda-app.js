@@ -969,11 +969,11 @@ const DemandaApp = (function() {
                         sel1.appendChild(newOpt1);
                     }
                 }
-                selConf.value = concFinal;
-                onConfConcorrenteChange(concFinal);
-            } else if (_concorrenteAtual) {
-                selConf.value = _concorrenteAtual.nome;
             }
+            // A origem do orçamento abre sempre como Cotação Própria (Central Peças)
+            selConf.value = "";
+            _concorrenteAtual = null;
+            onConfConcorrenteChange("");
         }
 
         var badgeOrc = document.getElementById("confBadgeOrcamento");
@@ -3729,27 +3729,26 @@ const DemandaApp = (function() {
         var sel1 = document.getElementById("selectConcorrente");
         var sel2 = document.getElementById("confSelectConcorrente");
 
-        var html1 = "<option value=''>-- Cotação Própria (Sem Concorrente) --</option>" +
+        var html1 = "<option value=''>📁 Cotação Própria (Sem Concorrente)</option>" +
             _concorrentesCadastrados.map(function(c) {
                 var sel = (_concorrenteAtual && _concorrenteAtual.nome === c.nome) ? "selected" : "";
                 return "<option value='" + _escAttr(c.nome) + "' " + sel + ">" + _esc(c.nome) + (c.cidade ? " (" + _esc(c.cidade) + ")" : "") + "</option>";
             }).join("");
 
         if (sel1) {
-            var valAtual = sel1.value;
             sel1.innerHTML = html1;
-            if (valAtual) sel1.value = valAtual;
+            sel1.value = _concorrenteAtual ? _concorrenteAtual.nome : "";
         }
 
-        var html2 = "<option value=''>-- Cotação Própria / Sem Concorrente --</option>" +
+        var html2 = "<option value=''>📁 Cotação Própria (Central Peças)</option>" +
             _concorrentesCadastrados.map(function(c) {
-                return "<option value='" + _escAttr(c.nome) + "'>" + _esc(c.nome) + "</option>";
+                var sel = (_concorrenteAtual && _concorrenteAtual.nome === c.nome) ? "selected" : "";
+                return "<option value='" + _escAttr(c.nome) + "' " + sel + ">" + _esc(c.nome) + "</option>";
             }).join("");
 
         if (sel2) {
-            var valAtual2 = sel2.value;
             sel2.innerHTML = html2;
-            if (valAtual2) sel2.value = valAtual2;
+            sel2.value = _concorrenteAtual ? _concorrenteAtual.nome : "";
         }
 
         _populateConcSugestoes();

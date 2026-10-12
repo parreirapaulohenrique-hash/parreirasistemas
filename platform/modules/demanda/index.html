@@ -332,7 +332,7 @@
                                     <span class="material-icons-round" style="font-size:1rem;color:#f59e0b">store</span>
                                     <span style="font-size:.73rem;color:#f59e0b;font-weight:700;white-space:nowrap">Concorrente:</span>
                                     <select id="selectConcorrente" class="form-select" style="flex:1;padding:.2rem .4rem;font-size:.76rem;background:var(--bg-dark);border:1px solid var(--border-color);color:var(--text-primary);border-radius:4px" onchange="DemandaApp.onConcorrenteChange(this.value)">
-                                        <option value="">-- Cotação Própria (Sem Concorrente) --</option>
+                                        <option value="" selected>📁 Cotação Própria (Sem Concorrente)</option>
                                     </select>
                                     <button type="button" class="btn btn-secondary btn-sm" onclick="DemandaApp.abrirModalNovoConcorrente()" title="Cadastrar Novo Concorrente" style="padding:.2rem .45rem;font-size:.72rem;display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;background:rgba(255,255,255,.05)">
                                         <span class="material-icons-round" style="font-size:.85rem">add</span> Novo
@@ -5967,7 +5967,7 @@
                     <span class="material-icons-round" style="color:#f59e0b;font-size:1.15rem">storefront</span>
                     <span style="font-size:.78rem;font-weight:700;color:#f59e0b">Origem do Orçamento:</span>
                     <select id="confSelectConcorrente" style="flex:1;min-width:200px;max-width:320px;background:var(--bg-dark);color:var(--text-primary);border:1px solid var(--border-color);border-radius:5px;padding:.3rem .5rem;font-size:.8rem" onchange="DemandaApp.onConfConcorrenteChange(this.value)">
-                        <option value="">-- Cotação Própria / Sem Concorrente --</option>
+                        <option value="" selected>📁 Cotação Própria (Central Peças)</option>
                     </select>
                     <button class="btn btn-secondary btn-sm" onclick="DemandaApp.abrirModalNovoConcorrente()" style="font-size:.75rem;padding:.25rem .6rem;display:inline-flex;align-items:center;gap:.25rem">
                         <span class="material-icons-round" style="font-size:.85rem">add</span> Novo Concorrente
@@ -6389,8 +6389,8 @@
 
     <!-- Módulo de Demanda -->
     <script src="js/demanda-states.js?v=3.21.49"></script>
-    <script src="js/demanda-db.js?v=3.21.100"></script>
-    <script src="js/demanda-import.js?v=3.21.98"></script>
+    <script src="js/demanda-db.js?v=3.21.101"></script>
+    <script src="js/demanda-import.js?v=3.21.101"></script>
     <script src="js/demanda-search.js?v=3.21.98"></script>
     <script src="js/demanda-lookup.js?v=3.21.66"></script>
     <script src="js/demanda-pdf.js?v=3.21.60"></script>
@@ -6400,7 +6400,7 @@
     <script src="js/demanda-analytics.js?v=3.0.9"></script>
     <script src="js/demanda-comercial.js?v=3.0.6"></script>
     <script src="js/demanda-enrichment.js?v=3.21.66"></script>
-    <script src="js/demanda-app.js?v=3.21.100"></script>
+    <script src="js/demanda-app.js?v=3.21.101"></script>
 
     <!-- ═══════════════════════════════════════════════════════════
          MODAL: Administração da Base Técnica de Peças

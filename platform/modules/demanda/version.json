@@ -1,9 +1,9 @@
 {
-  "version": "3.2.15",
-  "build": "20261012-v3.2.15",
+  "version": "3.2.16",
+  "build": "20261012-v3.2.16",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-12",
-  "change": "v3.2.15 - fix(cotacoes): sincronização completa entre contadores internos (modal de detalhe) e externos (lista de cotações), garantindo 100% de batimento dos itens em estoque e faltantes em todas as cotações.",
-  "releaseDate": "2026-10-12T18:30:00-03:00"
+  "change": "v3.2.16 - fix(cotacao): origem do orçamento padronizada obrigatoriamente como Cotação Própria (Central Peças) por padrão, e base limpa de cadastros fictícios de testes para início dos cadastros reais.",
+  "releaseDate": "2026-10-12T19:00:00-03:00"
 }

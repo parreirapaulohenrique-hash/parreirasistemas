@@ -159,14 +159,6 @@ const DemandaImport = (() => {
         let detectedCliente = '';
         let detectedOrcamento = '';
 
-        if (/j\.?\s*a\.?\s*agricola/i.test(text)) {
-            detectedConcorrente = 'J.A. Agrícola';
-        } else if (/carlos\s+central\s+pe/i.test(text)) {
-            detectedConcorrente = 'Carlos Central Peças';
-        } else if (/rondobras/i.test(text)) {
-            detectedConcorrente = 'Rondobras';
-        }
-
         const mCli = text.match(/cliente\s*:\s*(?:\d+\s+)?([A-Za-zÀ-ÿ\s]{4,40})/i);
         if (mCli) detectedCliente = mCli[1].trim();
 
@@ -377,13 +369,6 @@ const DemandaImport = (() => {
         let detectedOrcamento = '';
 
         for (const l of linhas) {
-            if (/j\.?\s*a\.?\s*agricola/i.test(l)) {
-                detectedConcorrente = 'J.A. Agrícola';
-            } else if (/carlos\s+central\s+pe/i.test(l)) {
-                detectedConcorrente = 'Carlos Central Peças';
-            } else if (/rondobras/i.test(l)) {
-                detectedConcorrente = 'Rondobras';
-            }
             const mCli = l.match(/cliente\s*:\s*(?:\d+\s+)?([A-Za-zÀ-ÿ\s]{4,40})/i);
             if (mCli && !detectedCliente) {
                 detectedCliente = mCli[1].trim();
