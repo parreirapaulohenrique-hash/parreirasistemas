@@ -236,29 +236,30 @@ const DemandaDB = (() => {
             unidadeOriginal: raw.unidade || 'UN',
             obsCliente:    raw.obs || '',
             // Identificação
-            status:        'demanda_recebida',
-            parteMestreId: null,
-            erpProdutoId:  null,
-            erpProdutoDesc: '',
-            erpCodigoFab:  '',
-            erpGrupo:      '',
-            confidenciaIdentificacao: 'pendente',
-            identificadoPor:  null,
-            identificadoEm:   null,
+            status:        raw.status || (raw.erpProdutoId ? (Number(raw.estoqueFilial || 0) > 0 ? 'estoque_disponivel' : 'sem_estoque') : 'demanda_recebida'),
+            parteMestreId: raw.parteMestreId || null,
+            erpProdutoId:  raw.erpProdutoId  || null,
+            erpProdutoDesc: raw.erpProdutoDesc || '',
+            erpCodigoFab:  raw.erpCodigoFab  || '',
+            erpGrupo:      raw.erpGrupo      || '',
+            fabricante:    raw.fabricante    || '',
+            confidenciaIdentificacao: raw.confidenciaIdentificacao || (raw.erpProdutoId ? 'alta' : 'pendente'),
+            identificadoPor:  raw.identificadoPor || (raw.erpProdutoId ? 'automatch' : null),
+            identificadoEm:   raw.identificadoEm || (raw.erpProdutoId ? timestamp : null),
             // Estoque
-            estoqueFilial:    null,
-            estoqueOutrasFiliais: [],
-            estoqueVerificadoEm:  null,
+            estoqueFilial:    raw.estoqueFilial != null ? Number(raw.estoqueFilial) : null,
+            estoqueOutrasFiliais: raw.estoqueOutrasFiliais || [],
+            estoqueVerificadoEm:  raw.estoqueVerificadoEm || (raw.estoqueFilial != null ? timestamp : null),
             // Quantidades
-            qtdeDisponivel:  0,
-            qtdeFaltante:    0,
-            qtdeTransferencia: 0,
-            qtdeCompra:      0,
-            qtdeAprovada:    0,
-            qtdeVendida:     0,
-            qtdePerdida:     0,
+            qtdeDisponivel:  raw.qtdeDisponivel || (raw.estoqueFilial != null ? Math.min(Number(raw.qtdeSolicitada || 1), Math.max(0, Number(raw.estoqueFilial))) : 0),
+            qtdeFaltante:    raw.qtdeFaltante || (raw.estoqueFilial != null ? Math.max(0, Number(raw.qtdeSolicitada || 1) - Math.max(0, Number(raw.estoqueFilial))) : 0),
+            qtdeTransferencia: raw.qtdeTransferencia || 0,
+            qtdeCompra:      raw.qtdeCompra || 0,
+            qtdeAprovada:    raw.qtdeAprovada || 0,
+            qtdeVendida:     raw.qtdeVendida || 0,
+            qtdePerdida:     raw.qtdePerdida || 0,
             // Preço
-            precoUnitario:   null,
+            precoUnitario:   raw.precoUnitario != null ? Number(raw.precoUnitario) : (raw.preco != null ? Number(raw.preco) : null),
             precoConcorrente: (() => {
                 let pc = (raw.precoConcorrente != null && !isNaN(Number(raw.precoConcorrente))) ? Number(raw.precoConcorrente) : null;
                 if (pc === null && (raw.obs || raw.obsCliente)) {
@@ -282,12 +283,12 @@ const DemandaDB = (() => {
             motivoPerdaDetalhe: '',
             // Timeline
             timeline: [{
-                evento: 'item_criado',
+                evento: raw.erpProdutoId ? 'produto_vinculado' : 'item_criado',
                 de:     null,
-                para:   'demanda_recebida',
+                para:   raw.status || (raw.erpProdutoId ? (Number(raw.estoqueFilial || 0) > 0 ? 'estoque_disponivel' : 'sem_estoque') : 'demanda_recebida'),
                 por:    raw.criadoPor || 'sistema',
                 em:     new Date().toISOString(),
-                obs:    'Item registrado na demanda.'
+                obs:    raw.erpProdutoId ? ('Auto-match Central Peças: ' + (raw.erpCodigoFab || raw.erpProdutoId)) : 'Item registrado na demanda.'
             }],
             criadoEm:     timestamp,
             atualizadoEm: timestamp,

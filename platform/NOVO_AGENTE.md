@@ -602,6 +602,13 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
   - **Refinamento do Motor Universal de Importação (`demanda-import.js`):**
     * **Filtro de Marcas e Locais Isolados:** Ignora linhas isoladas contendo apenas marcas (`37 INGA`, `59 SW`, `50 SOLUS`, `GERAL`) e locais (`1D03`, `2A00`), impedindo conversão espúria em quantidade e produto.
     * **Descarte de Rodapé Financeiro:** Ignora linhas finais de `0,00 Outras Despesas: 0,00` e `Frete: 0,00`, garantindo a contagem exata de 23 itens reais da J.A. Agrícola.
-    * **Atualização de Cache-Busters:** Cache-buster atualizado para `v=3.21.95` em `platform/modules/demanda/index.html`.
+* **2026-10-12 (v3.21.96 / Demanda v3.2.11):**
+  - **Auto-Match Inteligente de Peças & Cruzamento com Base de 10.896 SKUs Central Peças:**
+    * **Resolução Automática de Códigos de Concorrente (J.A. Agrícola DAV 0000048543):** Adicionado dicionário e mecanismo de auto-aprendizado de referências de concorrentes (`00440185` ➔ `CQ54027/1`, `00440190` ➔ `CQ54028/1`, `39` ➔ `CQ69725`, `399` ➔ `CQ69723`, `KK34847` ➔ `KK14927`, `1298` ➔ `CQ16233`, `83210508` ➔ `M8 PARLOCK`, `12577511` ➔ `M12 PARLOC`, `1611` ➔ `PS8X55`).
+    * **Normalização de Fixadores & Dimensões:** Detecção algorítmica de parafusos e porcas (`12 X 160` ➔ `M12X160`, `12 X 40` flangeado ➔ `19M7791`, `MA 20` travante ➔ `M20 PARLOCK`, `M16` alto frenante ➔ `M16 PARLOCK`).
+    * **Expansão Semântica de Termos Agrícolas:** Expansão automática de termos abreviados (`LE` ➔ `ESQUERDO`, `LD` ➔ `DIREITO`, `CAL` ➔ `CALIBRADORA`, `CUBRIDORA` ➔ `COBRIDORA`, `FLANG` ➔ `FLANGEADO`).
+    * **Conferência Prévia com Indicador de Estoque:** Na tela de conferência de importação, o sistema exibe imediatamente o código Central Peças localizado, descrição completa, saldo de estoque e preço unitário.
+    * **Persistência de Dados de ERP na Criação:** Correção em `DemandaDB._buildItemDoc` para registrar e salvar `erpProdutoId`, `erpCodigoFab`, `erpProdutoDesc`, `fabricante`, `estoqueFilial`, `precoUnitario` e definir o status diretamente como `estoque_disponivel` ou `sem_estoque` em vez de "Não Encontrado".
+    * **Botão & Auto-Match Preventivo em Cotações Abertas:** Ao abrir qualquer cotação com itens pendentes, o sistema auto-identifica as peças preventivamente na base Central Peças e disponibiliza o botão "⚡ Auto-Match" no cabeçalho do detalhe.
 
 
