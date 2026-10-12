@@ -1,17 +1,24 @@
 /**
- * api/ocr.js - Proxy OCR server-side (sem CORS) com Multi-Engine Fallback
- * ======================================================================
+ * api/ocr.js - Proxy OCR server-side (sem CORS) com Rotação Ativa de Chaves & Multi-Engine Fallback
+ * ==============================================================================================
  * Motor multi-camada:
- * 1. Tenta OCR Engine 1 (com isTable=true) para colunas tabuladas.
- * 2. Se falhar ou retornar pouco texto (< 15 chars), faz fallback automático para Engine 2 (Deep Learning).
- * 3. Suporta chaves públicas e variáveis de ambiente com tratamento resiliente de rate limit.
+ * 1. Prioriza OCR Engine 1 com isTable=true (essencial para capturar colunas com \t preservadas).
+ * 2. Pool rotativo de chaves: se uma chave sofrer rate limit (HTTP 429) ou erro, rotaciona imediatamente
+ *    para a próxima chave mantendo Engine 1 e isTable=true.
+ * 3. Fallbacks automáticos (Engine 1 sem orientação, Engine 2 Deep Learning) caso a imagem esteja rotacionada.
  */
 
-const OCR_API_KEY  = process.env.OCR_API_KEY || "K87899142388957"; // Chave primária com fallback
-const FALLBACK_KEYS = ["helloworld", "K88452445888957", "K81498688888957"];
+const OCR_KEYS = [
+    "K88452445888957",
+    "K81498688888957",
+    process.env.OCR_API_KEY,
+    "K87899142388957",
+    "helloworld"
+].filter(Boolean);
+
 const OCR_ENDPOINT = "https://api.ocr.space/parse/image";
 
-async function doOcrRequest(base64Image, engine = "1", isTable = true, detectOrientation = true, apiKey = OCR_API_KEY) {
+async function doOcrRequest(base64Image, engine = "1", isTable = true, detectOrientation = true, apiKey = OCR_KEYS[0]) {
     const form = new URLSearchParams();
     form.append("base64Image", base64Image);
     form.append("apikey",      apiKey);
@@ -32,6 +39,27 @@ async function doOcrRequest(base64Image, engine = "1", isTable = true, detectOri
     }
 
     return await resp.json();
+}
+
+async function tryOcrAcrossKeys(base64Image, engine = "1", isTable = true, detectOrientation = true) {
+    let lastError = null;
+    for (const key of OCR_KEYS) {
+        try {
+            const data = await doOcrRequest(base64Image, engine, isTable, detectOrientation, key);
+            if (!data.IsErroredOnProcessing && data.ParsedResults && data.ParsedResults[0]) {
+                const text = (data.ParsedResults[0].ParsedText || "").trim();
+                if (text.length >= 20) {
+                    return { text: text, keyUsed: key, error: null };
+                }
+            } else if (data.ErrorMessage) {
+                lastError = Array.isArray(data.ErrorMessage) ? data.ErrorMessage.join("; ") : data.ErrorMessage;
+            }
+        } catch (err) {
+            lastError = err.message;
+            console.warn(`[OCR] Chave ${key.slice(0, 5)}... falhou (${err.message}). Tentando próxima chave...`);
+        }
+    }
+    return { text: "", error: lastError };
 }
 
 module.exports = async function handler(req, res) {
@@ -61,45 +89,30 @@ module.exports = async function handler(req, res) {
     let text = "";
     let lastError = null;
 
-    // Tentativa 1: Engine 1 com isTable (ideal para documentos tabulados)
-    try {
-        const data1 = await doOcrRequest(base64Image, parsed.engine || "1", true, true, OCR_API_KEY);
-        if (!data1.IsErroredOnProcessing && data1.ParsedResults && data1.ParsedResults[0]) {
-            text = (data1.ParsedResults[0].ParsedText || "").trim();
-        } else if (data1.ErrorMessage) {
-            lastError = Array.isArray(data1.ErrorMessage) ? data1.ErrorMessage.join("; ") : data1.ErrorMessage;
-        }
-    } catch (e) {
-        lastError = e.message;
+    // Tentativa 1: Engine 1 com isTable (ideal para tabelas e romaneios) testando chaves válidas
+    const res1 = await tryOcrAcrossKeys(base64Image, parsed.engine || "1", true, true);
+    if (res1.text && res1.text.length >= 20) {
+        text = res1.text;
+    } else {
+        lastError = res1.error;
     }
 
-    // Tentativa 2 (Fallback): Se Engine 1 retornar pouco texto (< 20 caracteres), tenta Engine 2 (Deep Learning Neural)
+    // Tentativa 2: Engine 1 com isTable sem detecção de orientação (caso bordas escuras atrapalhem)
     if (text.length < 20) {
-        try {
-            console.log("[OCR] Engine 1 retornou pouco texto (" + text.length + " chars). Tentando Engine 2...");
-            const data2 = await doOcrRequest(base64Image, "2", false, true, FALLBACK_KEYS[0] || "helloworld");
-            if (!data2.IsErroredOnProcessing && data2.ParsedResults && data2.ParsedResults[0]) {
-                const text2 = (data2.ParsedResults[0].ParsedText || "").trim();
-                if (text2.length > text.length) {
-                    text = text2;
-                }
-            }
-        } catch (e2) {
-            console.warn("[OCR] Fallback Engine 2 falhou:", e2.message);
+        console.log("[OCR] Tentativa 2: Engine 1 sem detecção de orientação...");
+        const res2 = await tryOcrAcrossKeys(base64Image, "1", true, false);
+        if (res2.text && res2.text.length > text.length) {
+            text = res2.text;
         }
     }
 
-    // Tentativa 3 (Fallback sem detecção de orientação): útil quando bordas escuras confundem o orientador
+    // Tentativa 3 (Fallback): Engine 2 (Deep Learning Neural) caso Engine 1 não reconheça nada
     if (text.length < 20) {
-        try {
-            const data3 = await doOcrRequest(base64Image, "1", false, false, "helloworld");
-            if (!data3.IsErroredOnProcessing && data3.ParsedResults && data3.ParsedResults[0]) {
-                const text3 = (data3.ParsedResults[0].ParsedText || "").trim();
-                if (text3.length > text.length) {
-                    text = text3;
-                }
-            }
-        } catch (_) {}
+        console.log("[OCR] Tentativa 3: Engine 2 Deep Learning...");
+        const res3 = await tryOcrAcrossKeys(base64Image, "2", false, true);
+        if (res3.text && res3.text.length > text.length) {
+            text = res3.text;
+        }
     }
 
     if (text.length === 0 && lastError) {
