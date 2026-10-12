@@ -850,6 +850,9 @@ const DemandaApp = (function() {
             el.style.display = "none";
             el.classList.remove("open");
         }
+        if (id === "modalDemandaDetalhe") {
+            loadDemandasLista(_filterAtual);
+        }
     }
     function addItemFromDetails() { closeModal("modalItemDetalhes"); }
 
@@ -1392,27 +1395,30 @@ const DemandaApp = (function() {
                 container.innerHTML = "<div style='padding:1rem 1.5rem'>" +
                     demandas.map(_renderDemandaCard).join("") + "</div>";
 
-                // Auto-healing para demandas que estejam com totalItens zerados ou não calculados
+                // Sincronização e verificação ativa de TODAS as cotações listadas:
+                // Garante que a informação externa (card) bata 100% com a informação interna dos itens
                 demandas.forEach(function(d) {
                     if (!d || !d.id) return;
-                    if (d.totalItens == null || d.totalItens === 0) {
-                        DemandaDB.recalcTotals(d.id).then(function(totals) {
-                            if (totals && totals.totalItens > 0) {
-                                d.totalItens = totals.totalItens;
-                                d.totalComEstoque = totals.totalComEstoque;
-                                d.totalSemEstoque = totals.totalSemEstoque;
-                                var el = document.getElementById("card-totais-" + d.id);
-                                if (el) {
-                                    el.innerHTML =
-                                        _miniStat("Itens",   totals.totalItens, "var(--text-primary)") +
-                                        _miniStat("Estoque", totals.totalComEstoque, "var(--accent-success)") +
-                                        _miniStat("Faltam",  totals.totalSemEstoque, (totals.totalSemEstoque || 0) > 0 ? "var(--accent-danger)" : "var(--text-secondary)");
-                                }
+                    DemandaDB.recalcTotals(d.id).then(function(totals) {
+                        if (!totals) return;
+                        var mudou = (d.totalItens !== totals.totalItens || 
+                                     d.totalComEstoque !== totals.totalComEstoque || 
+                                     d.totalSemEstoque !== totals.totalSemEstoque);
+                        d.totalItens = totals.totalItens;
+                        d.totalComEstoque = totals.totalComEstoque;
+                        d.totalSemEstoque = totals.totalSemEstoque;
+                        if (mudou) {
+                            var el = document.getElementById("card-totais-" + d.id);
+                            if (el) {
+                                el.innerHTML =
+                                    _miniStat("Itens",   totals.totalItens, "var(--text-primary)") +
+                                    _miniStat("Estoque", totals.totalComEstoque, "var(--accent-success)") +
+                                    _miniStat("Faltam",  totals.totalSemEstoque, (totals.totalSemEstoque || 0) > 0 ? "var(--accent-danger)" : "var(--text-secondary)");
                             }
-                        }).catch(function(e) {
-                            console.warn("[DemandaApp] Auto-healing recalcTotals para " + d.id + ":", e);
-                        });
-                    }
+                        }
+                    }).catch(function(e) {
+                        console.warn("[DemandaApp] Erro na sincronização da demanda " + d.id, e);
+                    });
                 });
             })
             .catch(function(err) {
@@ -1632,6 +1638,25 @@ const DemandaApp = (function() {
                     }
                 } catch(eAuto) {
                     console.warn("[DemandaApp] Erro no auto-match preventivo:", eAuto);
+                }
+
+                // Sincroniza e recalcula totais no Firestore SEMPRE após carregar a cotação e após auto-match
+                if (typeof DemandaDB !== "undefined" && DemandaDB.recalcTotals) {
+                    try {
+                        var totalsRecalc = await DemandaDB.recalcTotals(id).catch(function() { return null; });
+                        if (totalsRecalc) {
+                            Object.assign(d, totalsRecalc);
+                            var elCard = document.getElementById("card-totais-" + id);
+                            if (elCard) {
+                                elCard.innerHTML =
+                                    _miniStat("Itens",   totalsRecalc.totalItens, "var(--text-primary)") +
+                                    _miniStat("Estoque", totalsRecalc.totalComEstoque, "var(--accent-success)") +
+                                    _miniStat("Faltam",  totalsRecalc.totalSemEstoque, (totalsRecalc.totalSemEstoque || 0) > 0 ? "var(--accent-danger)" : "var(--text-secondary)");
+                            }
+                        }
+                    } catch(eRecalc) {
+                        console.warn("[DemandaApp] Erro ao recalcular no abrirDemanda:", eRecalc);
+                    }
                 }
 
                 _renderDemandaDetalheBody();
@@ -7213,7 +7238,39 @@ const DemandaApp = (function() {
         abrirModalImportarCatalogo:   abrirModalImportarCatalogo,
         fecharModalImportarCatalogo:  fecharModalImportarCatalogo,
         processarImportacaoCatalogo:  processarImportacaoCatalogo,
+        sincronizarTodasCotacoes:     sincronizarTodasCotacoes,
     };
+
+    async function sincronizarTodasCotacoes() {
+        var btn = document.getElementById("btnSincronizarCotacoes");
+        var textoOrig = btn ? btn.innerHTML : "";
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = "<span class='material-icons-round' style='animation:spin 1s linear infinite'>sync</span> Sincronizando...";
+        }
+        _toast("Sincronizando e conferindo totalizadores de todas as cotações...", "info");
+        try {
+            var demandas = await DemandaDB.listDemandas({});
+            var cont = 0;
+            for (var i = 0; i < demandas.length; i++) {
+                var dItem = demandas[i];
+                if (dItem && dItem.id) {
+                    await DemandaDB.recalcTotals(dItem.id).catch(function(){});
+                    cont++;
+                }
+            }
+            _toast("Totalizadores de " + cont + " cotações conferidos e sincronizados com sucesso!", "success");
+            loadDemandasLista(_filterAtual);
+        } catch(e) {
+            console.error(e);
+            _toast("Erro ao sincronizar: " + (e.message || e), "error");
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = textoOrig || "<span class='material-icons-round'>sync</span> Sincronizar Totais";
+            }
+        }
+    }
 
 })();
 

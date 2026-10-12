@@ -414,7 +414,11 @@
                         <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">list_alt</span>
                         <span class="current">Minhas Cotações</span>
                     </div>
-                    <div class="topbar-actions">
+                    <div class="topbar-actions" style="display:flex;gap:.5rem;align-items:center">
+                        <button class="btn btn-secondary btn-sm" onclick="DemandaApp.sincronizarTodasCotacoes()" title="Recalcular e sincronizar totalizadores de todas as cotações" id="btnSincronizarCotacoes" style="display:inline-flex;align-items:center;gap:.35rem">
+                            <span class="material-icons-round" style="font-size:1rem">sync</span>
+                            Sincronizar Totais
+                        </button>
                         <button class="btn btn-primary btn-sm" onclick="DemandaApp.switchView('captura')">
                             <span class="material-icons-round">add</span>
                             Nova Cotação
@@ -6385,7 +6389,7 @@
 
     <!-- Módulo de Demanda -->
     <script src="js/demanda-states.js?v=3.21.49"></script>
-    <script src="js/demanda-db.js?v=3.21.99"></script>
+    <script src="js/demanda-db.js?v=3.21.100"></script>
     <script src="js/demanda-import.js?v=3.21.98"></script>
     <script src="js/demanda-search.js?v=3.21.98"></script>
     <script src="js/demanda-lookup.js?v=3.21.66"></script>
@@ -6396,7 +6400,7 @@
     <script src="js/demanda-analytics.js?v=3.0.9"></script>
     <script src="js/demanda-comercial.js?v=3.0.6"></script>
     <script src="js/demanda-enrichment.js?v=3.21.66"></script>
-    <script src="js/demanda-app.js?v=3.21.99"></script>
+    <script src="js/demanda-app.js?v=3.21.100"></script>
 
     <!-- ═══════════════════════════════════════════════════════════
          MODAL: Administração da Base Técnica de Peças
