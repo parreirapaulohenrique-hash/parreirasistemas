@@ -1,9 +1,9 @@
 {
-  "version": "3.2.11",
-  "build": "20261012-v3.2.11",
+  "version": "3.2.12",
+  "build": "20261012-v3.2.12",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-12",
-  "change": "v3.2.11 - feat(automatch): auto-identificação inteligente e cruzamento automático de 10.896 SKUs Central Peças para cotações de concorrentes (J.A. Agrícola DAV 0000048543), dimensões e sinônimos agrícolas.",
-  "releaseDate": "2026-10-12T01:30:00-03:00"
+  "change": "v3.2.12 - fix(automatch): eliminação de falsos-positivos genéricos, sanitização de sufixos (/JA, -INA, /PFI, /228, /199), normalização de rolamentos industriais e botão de desvincular/vincular manual direto na conferência.",
+  "releaseDate": "2026-10-12T13:20:00-03:00"
 }

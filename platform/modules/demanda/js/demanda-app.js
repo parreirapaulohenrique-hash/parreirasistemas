@@ -1042,8 +1042,12 @@ const DemandaApp = (function() {
                     "<span style='margin-left:auto;color:" + (m.estoqueFilial > 0 ? "#10b981" : "#f59e0b") + ";font-weight:700'>" +
                     (m.estoqueFilial > 0 ? ("Estq: " + m.estoqueFilial + " un") : "Sem Estoque") +
                     (m.precoUnitario > 0 ? (" · R$ " + m.precoUnitario.toFixed(2).replace(".", ",")) : "") +
-                    "</span></div>"
-                : "<div id='conf-match-" + i + "' style='display:none'></div>";
+                    "</span>" +
+                    "<button type='button' onclick='event.stopPropagation(); DemandaApp.desvincularConferenciaItem(" + i + ")' title='Desvincular produto deste item' style='background:rgba(239,68,68,.15);border:none;border-radius:3px;color:#ef4444;cursor:pointer;padding:1px 5px;margin-left:6px;font-weight:700;font-size:.72rem;display:inline-flex;align-items:center;'>✕</button>" +
+                    "</div>"
+                : "<div id='conf-match-" + i + "' style='margin-top:.25rem;display:flex;align-items:center;'>" +
+                    "<button type='button' onclick='event.stopPropagation(); DemandaApp.buscarErpConferenciaItem(" + i + ")' style='background:rgba(59,130,246,.1);border:1px dashed rgba(59,130,246,.35);border-radius:4px;padding:.12rem .4rem;color:#60a5fa;font-size:.69rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;'><span class='material-icons-round' style='font-size:.75rem'>search</span> Vincular Manualmente</button>" +
+                    "</div>";
 
             var statusHtml = m
                 ? "<span id='conf-status-" + i + "' style='color:" + (m.estoqueFilial > 0 ? "var(--accent-success)" : "#f59e0b") + ";font-size:.72rem;font-weight:700;display:inline-flex;align-items:center;gap:.2rem'>" +
@@ -1077,6 +1081,32 @@ const DemandaApp = (function() {
         _openModal("modalConferencia");
     }
 
+    var _buscaErpConferenciaIdx = null;
+
+    function desvincularConferenciaItem(idx) {
+        if (!_importItensTemp || !_importItensTemp[idx]) return;
+        _importItensTemp[idx]._match = null;
+        _importItensTemp[idx]._manualUnlinked = true;
+        var matchEl = document.getElementById("conf-match-" + idx);
+        var statusEl = document.getElementById("conf-status-" + idx);
+        if (matchEl) {
+            matchEl.style.display = "flex";
+            matchEl.innerHTML = "<button type='button' onclick='event.stopPropagation(); DemandaApp.buscarErpConferenciaItem(" + idx + ")' style='background:rgba(59,130,246,.1);border:1px dashed rgba(59,130,246,.35);border-radius:4px;padding:.12rem .4rem;color:#60a5fa;font-size:.69rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;'><span class='material-icons-round' style='font-size:.75rem'>search</span> Vincular Manualmente</button>";
+        }
+        if (statusEl) {
+            statusEl.style.color = "var(--text-secondary)";
+            statusEl.innerHTML = "<span class='material-icons-round' style='font-size:.85rem'>help_outline</span> Não Vinculado";
+        }
+    }
+
+    function buscarErpConferenciaItem(idx) {
+        if (!_importItensTemp || !_importItensTemp[idx]) return;
+        _buscaErpConferenciaIdx = idx;
+        var item = _importItensTemp[idx];
+        var query = (item.refOriginal || "").trim() || (item.descOriginal || "").trim();
+        _abrirBuscaERP(null, query, item.descOriginal || "");
+    }
+
     function updateConferenciaItem(idx, field, value) {
         if (!_importItensTemp[idx]) return;
         if (field === "ref")  _importItensTemp[idx].refOriginal    = value;
@@ -1092,6 +1122,7 @@ const DemandaApp = (function() {
 
         // Quando referencia ou descricao muda, recalcula auto-match em tempo real
         if (field === "ref" || field === "desc") {
+            _importItensTemp[idx]._manualUnlinked = false;
             if (typeof DemandaSearch !== 'undefined' && typeof DemandaSearch.smartMatch === 'function') {
                 var m = DemandaSearch.smartMatch({
                     refOriginal: _importItensTemp[idx].refOriginal,
@@ -1108,15 +1139,21 @@ const DemandaApp = (function() {
                             "<span><strong>" + _esc(m.erpCodigoFab || m.erpProdutoId) + "</strong> — " + _esc(m.erpProdutoDesc) + "</span>" +
                             "<span style='margin-left:auto;color:" + (m.estoqueFilial > 0 ? "#10b981" : "#f59e0b") + ";font-weight:700'>" +
                             (m.estoqueFilial > 0 ? ("Estq: " + m.estoqueFilial + " un") : "Sem Estoque") +
-                            (m.precoUnitario > 0 ? (" · R$ " + m.precoUnitario.toFixed(2).replace(".", ",")) : "") + "</span>";
+                            (m.precoUnitario > 0 ? (" · R$ " + m.precoUnitario.toFixed(2).replace(".", ",")) : "") + "</span>" +
+                            "<button type='button' onclick='event.stopPropagation(); DemandaApp.desvincularConferenciaItem(" + idx + ")' title='Desvincular produto deste item' style='background:rgba(239,68,68,.15);border:none;border-radius:3px;color:#ef4444;cursor:pointer;padding:1px 5px;margin-left:6px;font-weight:700;font-size:.72rem;display:inline-flex;align-items:center;'>✕</button>";
                     } else {
-                        matchEl.style.display = "none";
-                        matchEl.innerHTML = "";
+                        matchEl.style.display = "flex";
+                        matchEl.innerHTML = "<button type='button' onclick='event.stopPropagation(); DemandaApp.buscarErpConferenciaItem(" + idx + ")' style='background:rgba(59,130,246,.1);border:1px dashed rgba(59,130,246,.35);border-radius:4px;padding:.12rem .4rem;color:#60a5fa;font-size:.69rem;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;'><span class='material-icons-round' style='font-size:.75rem'>search</span> Vincular Manualmente</button>";
                     }
                 }
-                if (statusEl && m) {
-                    statusEl.style.color = (m.estoqueFilial > 0 ? "var(--accent-success)" : "#f59e0b");
-                    statusEl.innerHTML = "<span class='material-icons-round' style='font-size:.85rem'>" + (m.estoqueFilial > 0 ? "inventory" : "inventory_2") + "</span> " + (m.estoqueFilial > 0 ? "Em Estoque" : "Sem Estoque");
+                if (statusEl) {
+                    if (m) {
+                        statusEl.style.color = (m.estoqueFilial > 0 ? "var(--accent-success)" : "#f59e0b");
+                        statusEl.innerHTML = "<span class='material-icons-round' style='font-size:.85rem'>" + (m.estoqueFilial > 0 ? "inventory" : "inventory_2") + "</span> " + (m.estoqueFilial > 0 ? "Em Estoque" : "Sem Estoque");
+                    } else {
+                        statusEl.style.color = "var(--text-secondary)";
+                        statusEl.innerHTML = "<span class='material-icons-round' style='font-size:.85rem'>help_outline</span> Não Vinculado";
+                    }
                 }
             }
         }
@@ -3047,6 +3084,7 @@ const DemandaApp = (function() {
         if (modal) modal.style.display = "none";
         _buscaErpItemId = null;
         _buscaErpItemRef = "";
+        _buscaErpConferenciaIdx = null;
     }
 
     function _executarBuscaERP() {
@@ -3183,8 +3221,64 @@ const DemandaApp = (function() {
     }
 
     function _vincularProduto(produto) {
-        if (!_buscaErpItemId || !_demandaAtual) { _toast("Contexto perdido. Reabra a cotação.", "error"); return; }
         if (typeof produto === "string") { try { produto = JSON.parse(produto); } catch(e) { _toast("Erro ao processar produto.", "error"); return; } }
+
+        // Caso 1: Vinculação direta a partir do modal de Conferência de Importação
+        if (_buscaErpConferenciaIdx !== null && _buscaErpConferenciaIdx !== undefined && _importItensTemp && _importItensTemp[_buscaErpConferenciaIdx]) {
+            var cIdx = _buscaErpConferenciaIdx;
+            var itemConf = _importItensTemp[cIdx];
+            var estqConf = Number(produto.estoque || 0);
+            var prcConf = Number(produto.preco || 0);
+            var refP = produto.referencia || produto.erpId || "";
+
+            var m = {
+                erpProdutoId:   String(produto.erpId || ""),
+                codigoErp:      String(produto.erpId || ""),
+                referencia:     refP,
+                erpCodigoFab:   refP,
+                codigoFab:      refP,
+                descricao:      produto.desc || "",
+                erpProdutoDesc: produto.desc || "",
+                fabricante:     produto.fabricante || "",
+                estoqueFilial:  estqConf,
+                saldoEstoque:   estqConf,
+                preco:          prcConf,
+                precoUnitario:  prcConf,
+                status:         estqConf > 0 ? "estoque_disponivel" : "sem_estoque",
+                score:          100,
+                tipoMatch:      "manual_conferencia"
+            };
+            itemConf._match = m;
+            itemConf._manualUnlinked = false;
+
+            if (itemConf.refOriginal && typeof DemandaSearch !== "undefined" && typeof DemandaSearch.addConcorrenteMapping === "function") {
+                DemandaSearch.addConcorrenteMapping(itemConf.refOriginal, refP);
+            }
+
+            var matchEl = document.getElementById("conf-match-" + cIdx);
+            var statusEl = document.getElementById("conf-status-" + cIdx);
+            if (matchEl) {
+                matchEl.style.display = "flex";
+                matchEl.innerHTML = "<span class='material-icons-round' style='font-size:.85rem'>" + (m.estoqueFilial > 0 ? "check_circle" : "inventory_2") + "</span>" +
+                    "<span><strong>" + _esc(m.erpCodigoFab || m.erpProdutoId) + "</strong> — " + _esc(m.erpProdutoDesc) + "</span>" +
+                    "<span style='margin-left:auto;color:" + (m.estoqueFilial > 0 ? "#10b981" : "#f59e0b") + ";font-weight:700'>" +
+                    (m.estoqueFilial > 0 ? ("Estq: " + m.estoqueFilial + " un") : "Sem Estoque") +
+                    (m.precoUnitario > 0 ? (" · R$ " + m.precoUnitario.toFixed(2).replace(".", ",")) : "") + "</span>" +
+                    "<button type='button' onclick='event.stopPropagation(); DemandaApp.desvincularConferenciaItem(" + cIdx + ")' title='Desvincular produto deste item' style='background:rgba(239,68,68,.15);border:none;border-radius:3px;color:#ef4444;cursor:pointer;padding:1px 5px;margin-left:6px;font-weight:700;font-size:.72rem;display:inline-flex;align-items:center;'>✕</button>";
+            }
+            if (statusEl) {
+                statusEl.style.color = (m.estoqueFilial > 0 ? "var(--accent-success)" : "#f59e0b");
+                statusEl.innerHTML = "<span class='material-icons-round' style='font-size:.85rem'>" + (m.estoqueFilial > 0 ? "inventory" : "inventory_2") + "</span> " + (m.estoqueFilial > 0 ? "Em Estoque" : "Sem Estoque");
+            }
+
+            _buscaErpConferenciaIdx = null;
+            _fecharBuscaERP();
+            _toast("Peça " + refP + " vinculada ao item " + (cIdx + 1) + "!", "success");
+            return;
+        }
+
+        // Caso 2: Vinculação a item já gravado na demanda
+        if (!_buscaErpItemId || !_demandaAtual) { _toast("Contexto perdido. Reabra a cotação.", "error"); return; }
         var itemId = _buscaErpItemId;
         var por    = _sessao ? (_sessao.login || _sessao.nome || "sistema") : "sistema";
 
@@ -6905,6 +6999,8 @@ const DemandaApp = (function() {
         toggleAllConferencia:          toggleAllConferencia,
         desmarcarIncertosConferencia:  desmarcarIncertosConferencia,
         confirmConferencia:            confirmConferencia,
+        desvincularConferenciaItem:    desvincularConferenciaItem,
+        buscarErpConferenciaItem:      buscarErpConferenciaItem,
         // Grade de entrada
         addItemGrade:           addItemGrade,
         onGradeKeydown:         onGradeKeydown,
