@@ -1,9 +1,9 @@
 {
-  "version": "3.2.19",
-  "build": "20261013-v3.2.19",
+  "version": "3.2.20",
+  "build": "20261013-v3.2.20",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-13",
-  "change": "v3.2.19 - fix(demanda): restauracao completa de cotacoes anteriores e inteligencia de preco concorrente.",
-  "releaseDate": "2026-10-13T13:40:00-03:00"
+  "change": "v3.2.20 - fix(demanda): correcao de vinculacoes indevidas (smartMatch/reavaliarEstoque), desativacao de auto-match silencioso, limpeza de CTR-2026-0014 e exibicao de Nao Encontrados nos cards de resumo.",
+  "releaseDate": "2026-10-13T16:30:00-03:00"
 }
