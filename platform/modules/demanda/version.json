@@ -1,9 +1,9 @@
 ﻿{
-  "version": "3.2.22",
-  "build": "20261013-v3.2.22",
+  "version": "3.2.23",
+  "build": "20261013-v3.2.23",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-13",
-  "change": "v3.2.22 - feat(demanda): Preco Concorrente exibe referencia interna vinculada (ERP) com Orig: da referencia do orcamento importado e compara usando o preco do produto interno.",
-  "releaseDate": "2026-10-13T17:35:00-03:00"
+  "change": "v3.2.23 - fix(demanda): Preco Concorrente so exibe Nosso Preco com vinculo comprovado (cotacao de origem, manual, cod. fabrica exato ou cross-ref); botao Vincular para itens sem vinculo.",
+  "releaseDate": "2026-10-13T19:20:00-03:00"
 }

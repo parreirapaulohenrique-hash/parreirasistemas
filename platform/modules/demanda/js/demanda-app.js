@@ -3985,38 +3985,23 @@ const DemandaApp = (function() {
 
                     (c.itens || []).forEach(function(it, itIdx) {
                         var pc = parseFloat(it.precoConcorrente) || 0;
-                        var pm = parseFloat(it.precoMeu) || 0;
                         var refUpper = (it.ref || "").toUpperCase().trim();
 
-                        // Localiza o item correspondente na cotação de origem
+                        // 1. Vínculo na cotação de origem
                         var itOrig = refUpper ? itensOrigem.find(function(io) {
                             return (io.refOriginal || "").toUpperCase().trim() === refUpper;
                         }) : null;
                         if (!itOrig && itensOrigem.length === (c.itens || []).length) itOrig = itensOrigem[itIdx];
-                        var vinc = _extrairVinculoInterno(itOrig || it);
-                        var pmInterno = _precoVendaInterno(vinc, catalogo);
-                        if (pmInterno > 0) pm = pmInterno;
+                        var vinc = _extrairVinculoInterno(itOrig);
+                        if (vinc.ref) vinc.origem = "Cotação de origem";
+                        // 2. Vínculo salvo manualmente neste item
+                        if (!vinc.ref) { vinc = _extrairVinculoInterno(it); if (vinc.ref) vinc.origem = it.vinculoOrigem || "Vínculo manual"; }
+                        // 3. Código de fábrica / cross-ref exato no ERP
+                        if (!vinc.ref) vinc = _resolverVinculoPorCodigo(it.ref);
 
-                        // Atualiza com o preço de venda do ERP/catálogo (evita usar custo unitário)
-                        if (!(pmInterno > 0) && refUpper && catalogo.length > 0) {
-                            var pEncontrado = catalogo.find(function(p) {
-                                return (p.codigo && p.codigo.toUpperCase() === refUpper) ||
-                                       (p.referencia && p.referencia.toUpperCase() === refUpper) ||
-                                       (p.codigoFab && p.codigoFab.toUpperCase() === refUpper);
-                            });
-                            if (pEncontrado && pEncontrado.preco > 0) {
-                                pm = parseFloat(pEncontrado.preco);
-                            }
-                        }
-                        if ((!pm || pm <= 0) && typeof window !== "undefined") {
-                            if (window.ERP_PRICES_BY_FAB && window.ERP_PRICES_BY_FAB[refUpper]) {
-                                pm = window.ERP_PRICES_BY_FAB[refUpper].v || 0;
-                            } else if (window.ERP_PRICES_BY_ID && window.ERP_PRICES_BY_ID[refUpper]) {
-                                pm = window.ERP_PRICES_BY_ID[refUpper].v || 0;
-                            }
-                        }
+                        // Preço interno SOMENTE com vínculo comprovado
+                        var pm = vinc.ref ? _precoVendaInterno(vinc, catalogo) : 0;
 
-                        // Não inclui itens que não possuam nem preço nosso nem do concorrente
                         if (pc <= 0 && pm <= 0) return;
 
                         var d = (pc > 0 && pm > 0) ? (pm - pc) : null;
@@ -4028,6 +4013,9 @@ const DemandaApp = (function() {
                             refInterna: vinc.ref,
                             descInterna: vinc.desc,
                             idInterno: vinc.id,
+                            vinculoOrigem: vinc.origem || "",
+                            itemIndex: itIdx,
+                            fonte: "conc",
                             qtde: it.qtde || 1,
                             concorrente: c.concorrente || "Concorrente",
                             precoConcorrente: pc,
@@ -4063,28 +4051,12 @@ const DemandaApp = (function() {
                                 if (m) pc = parseFloat(m[1].replace(",", "."));
                             }
                             var vincD = _extrairVinculoInterno(it);
-                            var pm = _precoVendaInterno(vincD, catalogo);
-                            var refUpper = (it.refOriginal || it.erpCodigoFab || it.erpProdutoId || "").toUpperCase().trim();
-                            if (pm <= 0 && !vincD.id) {
-                            if (refUpper && catalogo.length > 0) {
-                                var pEncontrado = catalogo.find(function(p) {
-                                    return (p.codigo && p.codigo.toUpperCase() === refUpper) ||
-                                           (p.referencia && p.referencia.toUpperCase() === refUpper) ||
-                                           (p.codigoFab && p.codigoFab.toUpperCase() === refUpper);
-                                });
-                                if (pEncontrado && pEncontrado.preco > 0) {
-                                    pm = parseFloat(pEncontrado.preco);
-                                }
-                            }
-                            if ((!pm || pm <= 0) && typeof window !== "undefined") {
-                                if (window.ERP_PRICES_BY_FAB && window.ERP_PRICES_BY_FAB[refUpper]) {
-                                    pm = window.ERP_PRICES_BY_FAB[refUpper].v || 0;
-                                } else if (window.ERP_PRICES_BY_ID && window.ERP_PRICES_BY_ID[refUpper]) {
-                                    pm = window.ERP_PRICES_BY_ID[refUpper].v || 0;
-                                }
-                            }
-                            }
-                            if ((!pm || pm <= 0) && it.precoUnitario) {
+                            if (vincD.ref) vincD.origem = "Cotação de origem";
+                            else vincD = _resolverVinculoPorCodigo(it.refOriginal);
+
+                            // Preço interno SOMENTE com vínculo comprovado
+                            var pm = vincD.ref ? _precoVendaInterno(vincD, catalogo) : 0;
+                            if (vincD.ref && pm <= 0 && it.precoUnitario) {
                                 pm = parseFloat(it.precoUnitario) || 0;
                             }
 
@@ -4099,6 +4071,9 @@ const DemandaApp = (function() {
                                 refInterna: vincD.ref,
                                 descInterna: vincD.desc,
                                 idInterno: vincD.id,
+                                vinculoOrigem: vincD.origem || "",
+                                itemId: it.id,
+                                fonte: "demanda",
                                 qtde: it.qtdeSolicitada || 1,
                                 concorrente: cNome,
                                 precoConcorrente: pc,
@@ -4123,6 +4098,106 @@ const DemandaApp = (function() {
                 console.error("[DemandaApp] Erro ao carregar preços concorrentes:", err);
                 hc.innerHTML = "<p style='color:var(--accent-danger);padding:1rem'>Erro: " + _esc(err.message || String(err)) + "</p>";
             });
+    }
+
+    // Resolve o vínculo SOMENTE por correspondência exata de código (comprovável).
+    // Nunca compara a referência do concorrente com o ID interno do ERP (evita colisões numéricas).
+    function _resolverVinculoPorCodigo(refConc) {
+        var vazio = { ref: "", desc: "", id: "", origem: "" };
+        var refNorm = String(refConc || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+        if (refNorm.length < 3 || typeof window === "undefined" || !Array.isArray(window.COMPACT_SKUS)) return vazio;
+        var skus = window.COMPACT_SKUS;
+        var estq = function(s) { return Number(s[10] != null ? s[10] : (s[9] || 0)); };
+        var montar = function(s, origem) {
+            return { ref: String(s[38] || s[0] || ""), desc: String(s[1] || ""), id: String(s[0] || ""), origem: origem };
+        };
+
+        // 1. Mapa de referências do concorrente salvo por vinculação manual anterior
+        try {
+            var mapa = JSON.parse(localStorage.getItem("demanda_concorrente_cross_ref") || "{}");
+            var alvo = mapa[refNorm] || mapa[String(refConc || "").trim()];
+            if (alvo) {
+                var alvoNorm = String(alvo).toUpperCase().replace(/[^A-Z0-9]/g, "");
+                var sMap = skus.find(function(s) {
+                    return String(s[0]) === String(alvo) || String(s[38] || "").toUpperCase().replace(/[^A-Z0-9]/g, "") === alvoNorm;
+                });
+                if (sMap) return montar(sMap, "Vínculo manual salvo");
+            }
+        } catch (_) {}
+
+        // 2. Código de fábrica exato / 3. Cross-reference exato (token inteiro)
+        var porFab = [], porCross = [];
+        for (var i = 0; i < skus.length; i++) {
+            var s = skus[i];
+            var fabN = String(s[38] || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+            if (fabN && fabN === refNorm) { porFab.push(s); continue; }
+            if (refNorm.length >= 4 && s[39]) {
+                var tokens = String(s[39]).toUpperCase().split(/[\s,;]+/);
+                for (var t = 0; t < tokens.length; t++) {
+                    if (tokens[t].replace(/[^A-Z0-9]/g, "") === refNorm) { porCross.push(s); break; }
+                }
+            }
+        }
+        var escolher = function(lista) {
+            return lista.slice().sort(function(a, b) { return (estq(b) > 0 ? 1 : 0) - (estq(a) > 0 ? 1 : 0); })[0];
+        };
+        if (porFab.length > 0) return montar(escolher(porFab), "Cód. fábrica exato" + (porFab.length > 1 ? " (" + porFab.length + " opções)" : ""));
+        if (porCross.length > 0) return montar(escolher(porCross), "Cross-reference ERP" + (porCross.length > 1 ? " (" + porCross.length + " opções)" : ""));
+        return vazio;
+    }
+
+    // Vincula manualmente um item do mapeamento a um produto interno do ERP
+    async function vincularItemMapeamento(cacheIdx) {
+        var r = _precosMapeadosCache[cacheIdx];
+        if (!r) return;
+        var cod = prompt("Vincular a referência do concorrente \"" + r.ref + "\" (" + r.desc + ")\n\nInforme o CÓDIGO INTERNO (ERP) ou o CÓDIGO DE FÁBRICA do produto Central Peças:", r.refInterna || "");
+        if (cod === null) return;
+        cod = String(cod).trim();
+        if (!cod) return;
+        var codNorm = cod.toUpperCase().replace(/[^A-Z0-9]/g, "");
+        var skus = (typeof window !== "undefined" && Array.isArray(window.COMPACT_SKUS)) ? window.COMPACT_SKUS : [];
+        var s = skus.find(function(x) { return String(x[0]) === cod; }) ||
+                skus.find(function(x) { return String(x[38] || "").toUpperCase().replace(/[^A-Z0-9]/g, "") === codNorm; });
+        if (!s) { _toast("Código \"" + cod + "\" não encontrado no cadastro do ERP.", "error"); return; }
+
+        var vinc = { id: String(s[0]), ref: String(s[38] || s[0]), desc: String(s[1] || "") };
+        var preco = _precoVendaInterno(vinc, []);
+        var estoque = Number(s[10] != null ? s[10] : (s[9] || 0));
+        if (!confirm("Confirmar vínculo?\n\nConcorrente: " + r.ref + " — " + r.desc +
+                     "\nInterno: " + vinc.ref + " — " + vinc.desc + " (ERP " + vinc.id + ")" +
+                     "\nPreço de venda: " + (preco > 0 ? "R$ " + preco.toFixed(2).replace(".", ",") : "sem preço") +
+                     " · Estoque: " + estoque)) return;
+
+        var campos = { erpProdutoId: vinc.id, erpCodigoFab: vinc.ref, erpProdutoDesc: vinc.desc, vinculoOrigem: "Vínculo manual" };
+        try {
+            if (r.fonte === "conc" && r.cotacaoId) {
+                var cdb = _concDB();
+                var snap = await cdb.doc(r.cotacaoId).get();
+                if (snap.exists) {
+                    var itens = (snap.data().itens || []).slice();
+                    if (itens[r.itemIndex]) {
+                        itens[r.itemIndex] = Object.assign({}, itens[r.itemIndex], campos);
+                        await cdb.doc(r.cotacaoId).update({ itens: itens });
+                    }
+                }
+            } else if (r.fonte === "demanda" && r.itemId && r.demandaOrigemId) {
+                await DemandaDB.updateItem(r.demandaOrigemId, r.itemId, {
+                    erpProdutoId: vinc.id, erpCodigoFab: vinc.ref, erpProdutoDesc: vinc.desc,
+                    estoqueFilial: estoque, precoUnitario: preco || null,
+                    status: estoque > 0 ? "estoque_disponivel" : "sem_estoque",
+                    identificadoPor: "manual_preco_concorrente"
+                }, { evento: "produto_vinculado", para: estoque > 0 ? "estoque_disponivel" : "sem_estoque", por: (_sessao && _sessao.nome) || "usuario", obs: "Vínculo manual via Preço Concorrente" });
+                DemandaDB.recalcTotals(r.demandaOrigemId).catch(function(){});
+            }
+            if (typeof DemandaSearch !== "undefined" && typeof DemandaSearch.addConcorrenteMapping === "function") {
+                DemandaSearch.addConcorrenteMapping(r.ref, vinc.id);
+            }
+            _toast("Vínculo salvo: " + r.ref + " → " + vinc.ref, "success");
+            _renderMapeamentoPrecos();
+        } catch (err) {
+            console.error("[DemandaApp] Erro ao vincular item:", err);
+            _toast("Erro ao salvar vínculo: " + (err.message || err), "error");
+        }
     }
 
     // Extrai o vínculo interno (ERP Central Peças) de um item de cotação
@@ -4230,6 +4305,7 @@ const DemandaApp = (function() {
             "</div>";
 
         var tableRows = filtrados.map(function(r, idx) {
+            var ci = _precosMapeadosCache.indexOf(r);
             var cor = r.diff !== null
                 ? (r.diff < 0 ? "#10b981" : r.diff > 0 ? "#ef4444" : "var(--text-secondary)")
                 : "var(--text-secondary)";
@@ -4238,7 +4314,9 @@ const DemandaApp = (function() {
                 ? ("R$ " + Math.abs(r.diff).toFixed(2).replace(".", ",") + " <span style='font-size:.7rem;opacity:.85'>(" + (r.diff > 0 ? "+" : "") + r.pct + "%)</span>")
                 : "—";
 
-            var badgeComparativo = r.diff !== null
+            var badgeComparativo = !r.refInterna
+                ? "<span style='padding:.15rem .45rem;border-radius:4px;background:rgba(245,158,11,.12);color:#f59e0b;font-size:.72rem;font-weight:700'>Sem vínculo</span>"
+                : r.diff !== null
                 ? (r.diff < 0
                     ? "<span style='padding:.15rem .45rem;border-radius:4px;background:rgba(16,185,129,.15);color:#10b981;font-size:.72rem;font-weight:700'>Nós - Barato</span>"
                     : r.diff > 0
@@ -4248,7 +4326,9 @@ const DemandaApp = (function() {
 
             var refCell = r.refInterna
                 ? "<strong style='font-size:.85rem;color:#10b981;letter-spacing:.02em;font-family:monospace' title='Referência interna vinculada (ERP)'>" + _esc(r.refInterna) + "</strong>" +
-                  (r.ref && r.ref !== r.refInterna ? "<span style='display:block;font-size:.68rem;color:var(--text-secondary);font-weight:normal'>Orig: " + _esc(r.ref) + "</span>" : "")
+                  " <button onclick='DemandaApp.vincularItemMapeamento(" + ci + ")' title='Alterar vínculo' style='background:none;border:none;color:var(--text-secondary);cursor:pointer;padding:0;vertical-align:middle'><span class='material-icons-round' style='font-size:.85rem'>edit</span></button>" +
+                  (r.ref && r.ref !== r.refInterna ? "<span style='display:block;font-size:.68rem;color:var(--text-secondary);font-weight:normal'>Orig: " + _esc(r.ref) + "</span>" : "") +
+                  (r.vinculoOrigem ? "<span style='display:block;font-size:.64rem;color:#10b981;opacity:.85'>✓ " + _esc(r.vinculoOrigem) + "</span>" : "")
                 : "<strong style='font-size:.85rem;color:var(--text-primary);letter-spacing:.02em;font-family:monospace'>" + _esc(r.ref) + "</strong>" +
                   "<span style='display:block;font-size:.66rem;color:#f59e0b;font-weight:600'>Sem vínculo interno</span>";
 
@@ -4264,7 +4344,9 @@ const DemandaApp = (function() {
                 "<td style='padding:.45rem .6rem;font-size:.8rem;color:var(--text-secondary);max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' title='" + _escAttr(descTitle) + "'>" + descCell + "</td>" +
                 "<td style='padding:.45rem .6rem'><span style='padding:.18rem .55rem;border-radius:4px;background:rgba(245,158,11,.12);color:#f59e0b;font-size:.74rem;font-weight:700;display:inline-block;white-space:nowrap'><span class='material-icons-round' style='font-size:.8rem;vertical-align:middle;margin-right:2px'>store</span>" + _esc(r.concorrente) + "</span></td>" +
                 "<td style='padding:.45rem .6rem;text-align:right;font-weight:700;color:#f59e0b;font-size:.85rem'>" + (r.precoConcorrente > 0 ? "R$ " + r.precoConcorrente.toFixed(2).replace(".", ",") : "—") + "</td>" +
-                "<td style='padding:.45rem .6rem;text-align:right;font-weight:600;font-size:.85rem;color:var(--text-primary)'>" + (r.precoMeu > 0 ? "R$ " + r.precoMeu.toFixed(2).replace(".", ",") : "<span style='color:var(--text-secondary);font-size:.75rem'>—</span>") + "</td>" +
+                "<td style='padding:.45rem .6rem;text-align:right;font-weight:600;font-size:.85rem;color:var(--text-primary)'>" + (!r.refInterna
+                    ? "<button class='btn btn-secondary btn-sm' onclick='DemandaApp.vincularItemMapeamento(" + ci + ")' title='Vincular a um produto interno para ver nosso preço' style='display:inline-flex;align-items:center;gap:.2rem;font-size:.72rem;padding:.2rem .5rem'><span class='material-icons-round' style='font-size:.85rem'>link</span> Vincular</button>"
+                    : r.precoMeu > 0 ? "R$ " + r.precoMeu.toFixed(2).replace(".", ",") : "<span style='color:var(--text-secondary);font-size:.72rem'>Sem preço ERP</span>") + "</td>" +
                 "<td style='padding:.45rem .6rem;text-align:center'>" + badgeComparativo + " " + (r.diff !== null ? "<div style='font-size:.72rem;color:" + cor + ";margin-top:2px'>" + diffTxt + "</div>" : "") + "</td>" +
                 "<td style='padding:.45rem .6rem;font-size:.78rem;color:var(--text-secondary)'>" + _esc(r.cliente) + "</td>" +
                 "<td style='padding:.45rem .6rem;font-size:.75rem;color:var(--text-secondary);white-space:nowrap'>" + r.data + "</td>" +
@@ -7206,6 +7288,7 @@ const DemandaApp = (function() {
         enviarItensParaComprasLote:   enviarItensParaComprasLote,
         // Gestão da Cotação
         autoMatchDemanda:             autoMatchDemanda,
+        vincularItemMapeamento:       vincularItemMapeamento,
         excluirDemanda:               excluirDemanda,
         estornarDemanda:              estornarDemanda,
         reabrirDemanda:               reabrirDemanda,
