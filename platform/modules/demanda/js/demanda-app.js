@@ -3663,15 +3663,13 @@ const DemandaApp = (function() {
 
     function _concDB() {
         if (typeof firebase === "undefined" || !firebase.firestore) return null;
-        var t = _currentTenant();
-        if (!t || typeof t !== "string") t = "centralpecas";
+        var t = (typeof DemandaDB !== "undefined" && DemandaDB.TENANT_ID) ? DemandaDB.TENANT_ID : "centralpecas";
         return firebase.firestore().collection("tenants").doc(t).collection("cotacoes_concorrente");
     }
 
     function _concorrentesCadDB() {
         if (typeof firebase === "undefined" || !firebase.firestore) return null;
-        var t = _currentTenant();
-        if (!t || typeof t !== "string") t = "centralpecas";
+        var t = (typeof DemandaDB !== "undefined" && DemandaDB.TENANT_ID) ? DemandaDB.TENANT_ID : "centralpecas";
         return firebase.firestore().collection("tenants").doc(t).collection("concorrentes_cadastro");
     }
 
@@ -3964,28 +3962,9 @@ const DemandaApp = (function() {
                     return tb - ta;
                 });
 
-                // Limpeza e filtro de cotações órfãs (cuja demanda original foi excluída ou cancelada)
+                // Mantém cotações ativas sem exclusão automática destrutiva
                 cotacoes = cotacoes.filter(function(c) {
-                    if (c.demandaOrigemId) {
-                        var dmOrigem = todasDemandas.find(function(dm) {
-                            return dm.id === c.demandaOrigemId || dm.codigo === c.demandaOrigemId;
-                        });
-                        if (!dmOrigem || dmOrigem.status === "cancelada") {
-                            if (db && c.id) db.doc(c.id).delete().catch(function() {});
-                            return false;
-                        }
-                    } else if (c.obs && /Gerado a partir da Cotação #([^\s\)]+)/i.test(c.obs)) {
-                        var mCod = c.obs.match(/Gerado a partir da Cotação #([^\s\)]+)/i);
-                        var codAlvo = mCod ? mCod[1] : "";
-                        var dmOrigem2 = todasDemandas.find(function(dm) {
-                            return dm.id === codAlvo || dm.codigo === codAlvo;
-                        });
-                        if (!dmOrigem2 || dmOrigem2.status === "cancelada") {
-                            if (db && c.id) db.doc(c.id).delete().catch(function() {});
-                            return false;
-                        }
-                    }
-                    return true;
+                    return !c.status || c.status === "ativa";
                 });
 
                 var linhasMapeadas = [];

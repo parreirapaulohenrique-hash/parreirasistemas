@@ -1,9 +1,9 @@
 {
-  "version": "3.2.18",
-  "build": "20261013-v3.2.18",
+  "version": "3.2.19",
+  "build": "20261013-v3.2.19",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-13",
-  "change": "v3.2.18 - fix(db): saneamento rigoroso de tenantId e reconciliação transparente de cotações para tenants/centralpecas.",
-  "releaseDate": "2026-10-13T10:55:00-03:00"
+  "change": "v3.2.19 - fix(demanda): restauracao completa de cotacoes anteriores e inteligencia de preco concorrente.",
+  "releaseDate": "2026-10-13T13:40:00-03:00"
 }
