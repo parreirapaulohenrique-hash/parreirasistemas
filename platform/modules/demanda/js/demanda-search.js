@@ -102,7 +102,8 @@ const DemandaSearch = (() => {
         'E':1, 'OU':1, 'A':1, 'O':1, 'AS':1, 'OS':1, 'UM':1, 'UMA':1, 'UN':1, 'PC':1, 'KG':1, 'M':1, 'MM':1, 'CM':1,
         'ROLAMENTO':1, 'PARAFUSO':1, 'ARRUELA':1, 'PORCA':1, 'MANGOTE':1, 'RETENTOR':1, 'CORREIA':1,
         'PINHAO':1, 'CONJUNTO':1, 'ANEL':1, 'DISCO':1, 'MOLA':1, 'CHAPA':1, 'SUPORTE':1, 'EIXO':1, 'VEDADOR':1,
-        'LISA':1, 'SEXTAVADO':1, 'ESFERAS':1, 'GERAL':1, 'ORIGINAL':1, 'ESPECIAL':1
+        'LISA':1, 'SEXTAVADO':1, 'ESFERAS':1, 'GERAL':1, 'ORIGINAL':1, 'ESPECIAL':1,
+        'COMPONENTE':1, 'REVISAO':1, 'MAQ':1, 'PECA':1, 'PECAS':1, 'ITEM':1, 'PRODUTO':1, 'SERVICO':1, 'DIVERSOS':1, 'OUTROS':1
     };
 
     // ── Resolução de Preços MaxData ERP (Preço de Venda x Custo) ──
@@ -239,7 +240,7 @@ const DemandaSearch = (() => {
             let tipoMatch = '';
 
             // 1. Código Fabricante Exato
-            if (fabNorm && fabNorm === qNorm) {
+            if (fabNorm && fabNorm.length >= 2 && fabNorm === qNorm) {
                 score = 100;
                 tipoMatch = 'fab_exato';
             } else if (codErp === q || (qNorm.length >= 2 && codErp === qNorm)) {
@@ -248,7 +249,7 @@ const DemandaSearch = (() => {
             } else if (qNorm.length >= 3 && crossNorm.includes(qNorm)) {
                 score = 96;
                 tipoMatch = 'cross_ref';
-            } else if (fabNorm && (fabNorm.startsWith(qNorm) || (qNorm.length >= 4 && qNorm.startsWith(fabNorm)))) {
+            } else if (fabNorm && fabNorm.length >= 3 && qNorm.length >= 3 && (fabNorm.startsWith(qNorm) || (qNorm.length >= 4 && fabNorm.length >= 4 && qNorm.startsWith(fabNorm)))) {
                 score = 92;
                 tipoMatch = 'fab_prefix';
             } else if (descNorm === qNorm) {

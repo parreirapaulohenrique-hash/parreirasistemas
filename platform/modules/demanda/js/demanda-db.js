@@ -518,24 +518,41 @@ const DemandaDB = (() => {
      * Recalcula e salva os totalizadores de uma demanda.
      */
     async function recalcTotals(demandaId) {
-        if (!demandaId) return { totalItens: 0, totalIdentificados: 0, totalComEstoque: 0, totalSemEstoque: 0, totalPerdidos: 0 };
+        if (!demandaId) return { totalItens: 0, totalIdentificados: 0, totalComEstoque: 0, totalSemEstoque: 0, totalNaoEncontrados: 0, totalPerdidos: 0 };
         const itens = await getItens(demandaId);
         const totalItens = itens.length;
-        const totalIdentificados = itens.filter(i => i.erpProdutoId || i.parteMestreId).length;
-        const totalComEstoque = itens.filter(i => {
-            const st = i.status;
-            if (['estoque_disponivel', 'estoque_parcial'].includes(st)) return true;
-            if (st === 'sem_estoque' || st === 'venda_perdida' || st === 'cancelado') return false;
-            return (i.estoqueFilial != null && Number(i.estoqueFilial) > 0);
-        }).length;
-        const totalPerdidos = itens.filter(i => i.status === 'venda_perdida' || i.status === 'cancelado').length;
-        const totalSemEstoque = Math.max(0, totalItens - totalComEstoque);
+        let totalComEstoque = 0;
+        let totalSemEstoque = 0;
+        let totalNaoEncontrados = 0;
+        let totalIdentificados = 0;
+        let totalPerdidos = 0;
+
+        itens.forEach(i => {
+            const st = i.status || 'nao_encontrado';
+            if (['estoque_disponivel', 'estoque_parcial'].includes(st) || (i.estoqueFilial != null && Number(i.estoqueFilial) > 0)) {
+                totalComEstoque++;
+                totalIdentificados++;
+            } else if (st === 'sem_estoque') {
+                totalSemEstoque++;
+                totalIdentificados++;
+            } else if (['demanda_recebida', 'nao_encontrado', 'nao_cadastrado', 'em_identificacao', 'identificado'].includes(st)) {
+                totalNaoEncontrados++;
+            } else if (st === 'venda_perdida' || st === 'cancelado') {
+                totalPerdidos++;
+            } else if (i.erpProdutoId || i.parteMestreId) {
+                totalIdentificados++;
+                totalSemEstoque++;
+            } else {
+                totalNaoEncontrados++;
+            }
+        });
 
         const totals = {
             totalItens,
             totalIdentificados,
             totalComEstoque,
             totalSemEstoque,
+            totalNaoEncontrados,
             totalPerdidos,
         };
         await updateDemanda(demandaId, totals);

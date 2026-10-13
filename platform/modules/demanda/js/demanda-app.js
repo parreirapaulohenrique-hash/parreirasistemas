@@ -1403,17 +1403,20 @@ const DemandaApp = (function() {
                         if (!totals) return;
                         var mudou = (d.totalItens !== totals.totalItens || 
                                      d.totalComEstoque !== totals.totalComEstoque || 
-                                     d.totalSemEstoque !== totals.totalSemEstoque);
+                                     d.totalSemEstoque !== totals.totalSemEstoque ||
+                                     d.totalNaoEncontrados !== totals.totalNaoEncontrados);
                         d.totalItens = totals.totalItens;
                         d.totalComEstoque = totals.totalComEstoque;
                         d.totalSemEstoque = totals.totalSemEstoque;
+                        d.totalNaoEncontrados = totals.totalNaoEncontrados;
                         if (mudou) {
                             var el = document.getElementById("card-totais-" + d.id);
                             if (el) {
                                 el.innerHTML =
-                                    _miniStat("Itens",   totals.totalItens, "var(--text-primary)") +
-                                    _miniStat("Estoque", totals.totalComEstoque, "var(--accent-success)") +
-                                    _miniStat("Faltam",  totals.totalSemEstoque, (totals.totalSemEstoque || 0) > 0 ? "var(--accent-danger)" : "var(--text-secondary)");
+                                    _miniStat("Itens",        totals.totalItens, "var(--text-primary)") +
+                                    _miniStat("Não Encontr.", totals.totalNaoEncontrados || 0, (totals.totalNaoEncontrados || 0) > 0 ? "#f59e0b" : "var(--text-secondary)") +
+                                    _miniStat("Sem Estoque",  totals.totalSemEstoque || 0, (totals.totalSemEstoque || 0) > 0 ? "var(--accent-danger)" : "var(--text-secondary)") +
+                                    _miniStat("Estoque",      totals.totalComEstoque || 0, "var(--accent-success)");
                             }
                         }
                     }).catch(function(e) {
@@ -1439,12 +1442,13 @@ const DemandaApp = (function() {
 
         var totalItens = Number(d.totalItens || 0);
         var totalComEstoque = Number(d.totalComEstoque || 0);
-        var totalSemEstoque = (d.totalSemEstoque != null) ? Number(d.totalSemEstoque) : Math.max(0, totalItens - totalComEstoque);
+        var totalSemEstoque = Number(d.totalSemEstoque || 0);
+        var totalNaoEncontrados = (d.totalNaoEncontrados != null) ? Number(d.totalNaoEncontrados) : Math.max(0, totalItens - totalComEstoque - totalSemEstoque);
 
         return "<div role='button' tabindex='0' onclick='DemandaApp.abrirDemanda(\"" + _esc(d.id) + "\")'" +
             " onkeydown='if(event.key===\"Enter\") DemandaApp.abrirDemanda(\"" + _esc(d.id) + "\")'" +
             " style='background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);" +
-            "padding:1rem 1.25rem;margin-bottom:.75rem;display:flex;align-items:center;gap:1.25rem;" +
+            "padding:.85rem 1.15rem;margin-bottom:.75rem;display:flex;align-items:center;gap:1rem;" +
             "cursor:pointer;transition:all var(--transition)'" +
             " onmouseover='this.style.borderColor=\"var(--primary-color)\";this.style.boxShadow=\"0 4px 16px rgba(0,0,0,.25)\"'" +
             " onmouseout='this.style.borderColor=\"var(--border-color)\";this.style.boxShadow=\"none\"'" +
@@ -1463,10 +1467,11 @@ const DemandaApp = (function() {
             "</div>" +
             "</div>" +
             // Contadores / Totais
-            "<div id='card-totais-" + _esc(d.id) + "' style='display:flex;gap:1.25rem;text-align:center;flex-shrink:0;align-items:center'>" +
-            _miniStat("Itens",   totalItens, "var(--text-primary)") +
-            _miniStat("Estoque", totalComEstoque, "var(--accent-success)") +
-            _miniStat("Faltam",  totalSemEstoque, totalSemEstoque > 0 ? "var(--accent-danger)" : "var(--text-secondary)") +
+            "<div id='card-totais-" + _esc(d.id) + "' style='display:flex;gap:.85rem;text-align:center;flex-shrink:0;align-items:center'>" +
+            _miniStat("Itens",        totalItens, "var(--text-primary)") +
+            _miniStat("Não Encontr.", totalNaoEncontrados, totalNaoEncontrados > 0 ? "#f59e0b" : "var(--text-secondary)") +
+            _miniStat("Sem Estoque",  totalSemEstoque, totalSemEstoque > 0 ? "var(--accent-danger)" : "var(--text-secondary)") +
+            _miniStat("Estoque",      totalComEstoque, "var(--accent-success)") +
             "</div>" +
             // Botão Chevron
             "<div style='display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid var(--border-color);color:var(--text-secondary);flex-shrink:0' title='Abrir cotação'>" +
@@ -1478,7 +1483,7 @@ const DemandaApp = (function() {
     function _miniStat(label, val, color) {
         return "<div style='min-width:44px'>" +
             "<div style='font-size:1rem;font-weight:700;color:" + color + "'>" + val + "</div>" +
-            "<div style='font-size:.62rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.06em'>" + label + "</div>" +
+            "<div style='font-size:.62rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap'>" + label + "</div>" +
             "</div>";
     }
 
@@ -1599,48 +1604,7 @@ const DemandaApp = (function() {
                     console.warn("[DemandaApp] Erro na sincronização com concorrência:", eSync);
                 }
 
-                // Auto-match inteligente para itens ainda não vinculados ao ERP
-                try {
-                    var itensSemVinculo = itens.filter(function(it) {
-                        return !it.erpProdutoId && (!it.status || it.status === "demanda_recebida" || it.status === "nao_encontrado" || it.status === "nao_cadastrado");
-                    });
-                    if (itensSemVinculo.length > 0 && typeof DemandaSearch !== "undefined" && typeof DemandaSearch.smartMatch === "function") {
-                        var vinculadosAuto = 0;
-                        for (var vi = 0; vi < itensSemVinculo.length; vi++) {
-                            var itAlvo = itensSemVinculo[vi];
-                            var mRes = DemandaSearch.smartMatch({
-                                refOriginal: itAlvo.refOriginal,
-                                descOriginal: itAlvo.descOriginal,
-                                precoConcorrente: itAlvo.precoConcorrente,
-                                concorrenteNome: d.concorrenteNome
-                            });
-                            if (mRes) {
-                                var novoSt = (Number(mRes.estoqueFilial || 0) > 0) ? "estoque_disponivel" : "sem_estoque";
-                                var upFields = {
-                                    erpProdutoId:   mRes.erpProdutoId,
-                                    erpCodigoFab:   mRes.erpCodigoFab,
-                                    erpProdutoDesc: mRes.erpProdutoDesc,
-                                    fabricante:     mRes.fabricante,
-                                    estoqueFilial:  mRes.estoqueFilial,
-                                    precoUnitario:  mRes.precoUnitario,
-                                    status:         novoSt,
-                                    confidenciaIdentificacao: "alta",
-                                    identificadoPor: "automatch"
-                                };
-                                Object.assign(itAlvo, upFields);
-                                DemandaDB.updateItem(id, itAlvo.id, upFields).catch(function(e){ console.warn(e); });
-                                vinculadosAuto++;
-                            }
-                        }
-                        if (vinculadosAuto > 0) {
-                            console.log("[DemandaApp] Auto-match vinculou preventivamente " + vinculadosAuto + " itens da cotação " + (d.codigo || id) + " à Central Peças");
-                        }
-                    }
-                } catch(eAuto) {
-                    console.warn("[DemandaApp] Erro no auto-match preventivo:", eAuto);
-                }
-
-                // Sincroniza e recalcula totais no Firestore SEMPRE após carregar a cotação e após auto-match
+                // Sincroniza e recalcula totais no Firestore SEMPRE após carregar a cotação
                 if (typeof DemandaDB !== "undefined" && DemandaDB.recalcTotals) {
                     try {
                         var totalsRecalc = await DemandaDB.recalcTotals(id).catch(function() { return null; });
@@ -1649,9 +1613,10 @@ const DemandaApp = (function() {
                             var elCard = document.getElementById("card-totais-" + id);
                             if (elCard) {
                                 elCard.innerHTML =
-                                    _miniStat("Itens",   totalsRecalc.totalItens, "var(--text-primary)") +
-                                    _miniStat("Estoque", totalsRecalc.totalComEstoque, "var(--accent-success)") +
-                                    _miniStat("Faltam",  totalsRecalc.totalSemEstoque, (totalsRecalc.totalSemEstoque || 0) > 0 ? "var(--accent-danger)" : "var(--text-secondary)");
+                                    _miniStat("Itens",        totalsRecalc.totalItens, "var(--text-primary)") +
+                                    _miniStat("Não Encontr.", totalsRecalc.totalNaoEncontrados || 0, (totalsRecalc.totalNaoEncontrados || 0) > 0 ? "#f59e0b" : "var(--text-secondary)") +
+                                    _miniStat("Sem Estoque",  totalsRecalc.totalSemEstoque || 0, (totalsRecalc.totalSemEstoque || 0) > 0 ? "var(--accent-danger)" : "var(--text-secondary)") +
+                                    _miniStat("Estoque",      totalsRecalc.totalComEstoque || 0, "var(--accent-success)");
                             }
                         }
                     } catch(eRecalc) {
@@ -2511,17 +2476,19 @@ const DemandaApp = (function() {
                     }
                 }
 
-                // 1.1 Se não encontrou por ref/código, tenta pela descrição do item
-                if (!produtoEncontrado && descBusca && descBusca.length >= 3) {
+                // 1.1 Se não encontrou por ref/código exato, tenta via smartMatch com alta confiança
+                if (!produtoEncontrado && typeof DemandaSearch !== "undefined" && typeof DemandaSearch.smartMatch === "function") {
                     try {
-                        if (typeof DemandaSearch !== "undefined" && DemandaSearch.search) {
-                            var resDesc = await DemandaSearch.search(descBusca, { limit: 5, forceRefresh: true });
-                            if (resDesc && resDesc.length > 0) {
-                                produtoEncontrado = resDesc[0];
-                            }
+                        var mSmart = DemandaSearch.smartMatch({
+                            refOriginal: item.refOriginal,
+                            descOriginal: item.descOriginal,
+                            precoConcorrente: item.precoConcorrente
+                        });
+                        if (mSmart && (mSmart.score >= 90 || mSmart.confidencia === 'alta')) {
+                            produtoEncontrado = mSmart;
                         }
                     } catch (e) {
-                        console.warn("[DemandaApp] Erro na busca DemandaSearch por descrição:", item.id, e);
+                        console.warn("[DemandaApp] Erro na busca smartMatch:", item.id, e);
                     }
                 }
 
