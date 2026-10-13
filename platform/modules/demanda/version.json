@@ -1,9 +1,9 @@
 {
-  "version": "3.2.17",
-  "build": "20261012-v3.2.17",
+  "version": "3.2.18",
+  "build": "20261013-v3.2.18",
   "module": "demanda",
   "name": "Cotacao",
-  "lastUpdate": "2026-10-12",
-  "change": "v3.2.17 - fix(import): reconhecimento preciso de orçamentos DAV com 10 itens completos, offset de sequência e compensação de deslocamento de colunas OCR.",
-  "releaseDate": "2026-10-12T19:40:00-03:00"
+  "lastUpdate": "2026-10-13",
+  "change": "v3.2.18 - fix(db): saneamento rigoroso de tenantId e reconciliação transparente de cotações para tenants/centralpecas.",
+  "releaseDate": "2026-10-13T10:55:00-03:00"
 }

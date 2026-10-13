@@ -12,30 +12,46 @@
 const DemandaDB = (() => {
 
     // ── Configuração Multi-Tenant Dinâmica ───────────────────
+    function _sanitizeTenant(raw) {
+        if (!raw) return null;
+        if (typeof raw === 'object') {
+            if (raw.id && typeof raw.id === 'string') return _sanitizeTenant(raw.id);
+            return null;
+        }
+        const s = String(raw).trim();
+        if (!s || s === '[object Object]' || s === 'undefined' || s === 'null') return null;
+        return s;
+    }
+
     function _getTenantId() {
         try {
             if (window.ParreiraAuth) {
                 if (typeof ParreiraAuth.getTenantId === 'function') {
-                    const tid = ParreiraAuth.getTenantId();
-                    if (tid) return String(tid);
+                    const tid = _sanitizeTenant(ParreiraAuth.getTenantId());
+                    if (tid) return tid;
                 }
                 if (typeof ParreiraAuth.getTenant === 'function') {
                     const t = ParreiraAuth.getTenant();
-                    if (t && typeof t === 'object' && t.id) return String(t.id);
-                    if (t && typeof t === 'string') return t;
+                    const tid = _sanitizeTenant(t);
+                    if (tid) return tid;
                 }
             }
             if (window.sessionManager && typeof sessionManager.getTenantId === 'function') {
-                const t = sessionManager.getTenantId();
-                if (t) return String(t);
+                const tid = _sanitizeTenant(sessionManager.getTenantId());
+                if (tid) return tid;
             }
             const s = JSON.parse(sessionStorage.getItem('parreira_session') || localStorage.getItem('parreira_session_ls') || 'null');
-            if (s && s.tenantId) return String(s.tenantId);
+            if (s && s.tenantId) {
+                const tid = _sanitizeTenant(s.tenantId);
+                if (tid) return tid;
+            }
         } catch (_) {}
-        return String(localStorage.getItem('app_tenant_id') || 'centralpecas');
+        const ls = _sanitizeTenant(localStorage.getItem('app_tenant_id'));
+        if (ls) return ls;
+        return 'centralpecas';
     }
 
-        const _basePath   = () => 'tenants/' + _getTenantId() + '/demanda';
+    const _basePath   = () => 'tenants/' + _getTenantId() + '/demanda';
     const _demandsCol = () => _basePath() + '/data/demands';
     const _configCol  = () => _basePath() + '/config';
     const _catalogCol = () => _basePath() + '/techbase/catalogos';
@@ -147,7 +163,16 @@ const DemandaDB = (() => {
      * Busca uma demanda pelo ID (sem itens).
      */
     async function getDemanda(demandaId) {
-        const snap = await _db().doc(`${_demandsCol()}/${demandaId}`).get();
+        const db = _db();
+        let snap = await db.doc(`${_demandsCol()}/${demandaId}`).get();
+        if (!snap.exists) {
+            // Tenta em centralpecas
+            snap = await db.doc(`tenants/centralpecas/demanda/data/demands/${demandaId}`).get();
+        }
+        if (!snap.exists) {
+            // Tenta em [object Object]
+            snap = await db.doc(`tenants/[object Object]/demanda/data/demands/${demandaId}`).get();
+        }
         if (!snap.exists) throw new Error(`Demanda ${demandaId} não encontrada.`);
         return snap.data();
     }
@@ -166,7 +191,7 @@ const DemandaDB = (() => {
 
     /**
      * Lista demandas do tenant com filtros opcionais.
-     * Suporta fallback para o tenant histórico 'centralpecas' e cache local resiliente (caso cota do Firestore estoure).
+     * Suporta fallback para o tenant histórico 'centralpecas', tenants legados '[object Object]' e cache local resiliente.
      * @param {object} filters - { vendedorId, status, filialId, limit }
      * @returns {Promise<Array>}
      */
@@ -183,25 +208,49 @@ const DemandaDB = (() => {
             const snap = await q.get();
             let lista = snap.docs.map(d => ({ ...d.data(), id: d.id }));
 
-            // Fallback histórico transparente: se tenant atual for diferente de 'centralpecas'
-            // e retornou poucas/nenhuma cotação, consulta também o histórico de 'centralpecas'
-            if (tid !== 'centralpecas' && lista.length < 5) {
+            // Fallback histórico transparente 1: se tenant atual for diferente de 'centralpecas'
+            // consulta também o histórico de 'centralpecas'
+            const mapIds = new Map();
+            lista.forEach(item => mapIds.set(item.id, item));
+
+            if (tid !== 'centralpecas') {
                 try {
                     let qFallback = _db().collection(`tenants/centralpecas/demanda/data/demands`).orderBy('criadoEm', 'desc').limit(filters.limit || 60);
                     if (filters.status && filters.status !== 'todas') qFallback = qFallback.where('status', '==', filters.status);
                     const snapFallback = await qFallback.get();
-                    const listaFallback = snapFallback.docs.map(d => ({ ...d.data(), id: d.id, _origemFallback: 'centralpecas' }));
-                    // Mescla sem duplicar IDs
-                    const mapIds = new Map();
-                    lista.forEach(item => mapIds.set(item.id, item));
-                    listaFallback.forEach(item => { if (!mapIds.has(item.id)) mapIds.set(item.id, item); });
-                    lista = Array.from(mapIds.values());
+                    snapFallback.docs.forEach(d => {
+                        if (!mapIds.has(d.id)) {
+                            mapIds.set(d.id, { ...d.data(), id: d.id, _origemFallback: 'centralpecas' });
+                        }
+                    });
                 } catch (_) { /* Ignora se permissão ou cota */ }
             }
+
+            // Fallback histórico transparente 2: consulta também tenants/[object Object] caso existam cotações não migradas
+            try {
+                let qObj = _db().collection(`tenants/[object Object]/demanda/data/demands`).orderBy('criadoEm', 'desc').limit(filters.limit || 60);
+                if (filters.status && filters.status !== 'todas') qObj = qObj.where('status', '==', filters.status);
+                const snapObj = await qObj.get();
+                snapObj.docs.forEach(d => {
+                    if (!mapIds.has(d.id)) {
+                        mapIds.set(d.id, { ...d.data(), id: d.id, _origemFallback: 'legado_obj' });
+                    }
+                });
+            } catch (_) { /* Ignora se não existir */ }
+
+            lista = Array.from(mapIds.values());
+
+            // Ordena lista combinada por criadoEm decrescente
+            lista.sort((a, b) => {
+                const ta = a.criadoEm ? (a.criadoEm.toMillis ? a.criadoEm.toMillis() : new Date(a.criadoEm).getTime()) : 0;
+                const tb = b.criadoEm ? (b.criadoEm.toMillis ? b.criadoEm.toMillis() : new Date(b.criadoEm).getTime()) : 0;
+                return tb - ta;
+            });
 
             // Salva no cache local resiliente
             try {
                 localStorage.setItem(_CACHE_KEY_DEMANDAS(), JSON.stringify(lista));
+                localStorage.setItem('demanda_cache_demandas_centralpecas', JSON.stringify(lista));
             } catch (_) {}
 
             return lista;
@@ -247,6 +296,7 @@ const DemandaDB = (() => {
      * Constrói o documento de um item com todos os campos default.
      */
     function _buildItemDoc(itemId, demandaId, raw, seq, timestamp) {
+
         return {
             id:            itemId,
             demandaId,
@@ -354,13 +404,22 @@ const DemandaDB = (() => {
     }
 
     /**
-     * Busca os itens de uma demanda.
+     * Busca os itens de uma demanda com busca resiliente caso o documento tenha sido gravado sob caminho legado.
      */
     async function getItens(demandaId) {
-        const snap = await _db()
+        const db = _db();
+        let snap = await db
             .collection(`${DEMANDS_COL}/${demandaId}/items`)
             .orderBy('seq', 'asc')
             .get();
+        if (snap.empty) {
+            // Tenta em centralpecas
+            const s2 = await db.collection(`tenants/centralpecas/demanda/data/demands/${demandaId}/items`).orderBy('seq', 'asc').get();
+            if (!s2.empty) return s2.docs.map(d => d.data());
+            // Tenta em [object Object]
+            const s3 = await db.collection(`tenants/[object Object]/demanda/data/demands/${demandaId}/items`).orderBy('seq', 'asc').get();
+            if (!s3.empty) return s3.docs.map(d => d.data());
+        }
         return snap.docs.map(d => d.data());
     }
 
