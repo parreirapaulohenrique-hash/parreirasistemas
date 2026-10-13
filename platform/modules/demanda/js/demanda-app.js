@@ -3963,19 +3963,42 @@ const DemandaApp = (function() {
                 var linhasMapeadas = [];
                 var origensRegistradas = {};
 
+                // Pré-carrega os itens das cotações de origem para comprovar o vínculo
+                // entre a referência do orçamento importado e a referência interna (ERP)
+                var itensPorDemanda = {};
+                var idsOrigem = [];
+                cotacoes.forEach(function(c) {
+                    if (c.demandaOrigemId && idsOrigem.indexOf(c.demandaOrigemId) < 0) idsOrigem.push(c.demandaOrigemId);
+                });
+                for (var oi = 0; oi < idsOrigem.length; oi++) {
+                    try {
+                        itensPorDemanda[idsOrigem[oi]] = await DemandaDB.getItens(idsOrigem[oi]);
+                    } catch (_) { itensPorDemanda[idsOrigem[oi]] = []; }
+                }
+
                 cotacoes.forEach(function(c) {
                     if (c.demandaOrigemId) origensRegistradas[c.demandaOrigemId] = true;
                     var dtStr = c.criadoEm && c.criadoEm.toDate
                         ? c.criadoEm.toDate().toLocaleDateString("pt-BR")
                         : (c.criadoEm ? String(c.criadoEm).slice(0, 10) : "—");
+                    var itensOrigem = itensPorDemanda[c.demandaOrigemId] || [];
 
-                    (c.itens || []).forEach(function(it) {
+                    (c.itens || []).forEach(function(it, itIdx) {
                         var pc = parseFloat(it.precoConcorrente) || 0;
                         var pm = parseFloat(it.precoMeu) || 0;
                         var refUpper = (it.ref || "").toUpperCase().trim();
 
+                        // Localiza o item correspondente na cotação de origem
+                        var itOrig = refUpper ? itensOrigem.find(function(io) {
+                            return (io.refOriginal || "").toUpperCase().trim() === refUpper;
+                        }) : null;
+                        if (!itOrig && itensOrigem.length === (c.itens || []).length) itOrig = itensOrigem[itIdx];
+                        var vinc = _extrairVinculoInterno(itOrig || it);
+                        var pmInterno = _precoVendaInterno(vinc, catalogo);
+                        if (pmInterno > 0) pm = pmInterno;
+
                         // Atualiza com o preço de venda do ERP/catálogo (evita usar custo unitário)
-                        if (refUpper && catalogo.length > 0) {
+                        if (!(pmInterno > 0) && refUpper && catalogo.length > 0) {
                             var pEncontrado = catalogo.find(function(p) {
                                 return (p.codigo && p.codigo.toUpperCase() === refUpper) ||
                                        (p.referencia && p.referencia.toUpperCase() === refUpper) ||
@@ -4002,6 +4025,9 @@ const DemandaApp = (function() {
                         linhasMapeadas.push({
                             ref: it.ref || "—",
                             desc: it.desc || "—",
+                            refInterna: vinc.ref,
+                            descInterna: vinc.desc,
+                            idInterno: vinc.id,
                             qtde: it.qtde || 1,
                             concorrente: c.concorrente || "Concorrente",
                             precoConcorrente: pc,
@@ -4036,8 +4062,10 @@ const DemandaApp = (function() {
                                 var m = String(it.obsCliente).match(/(?:preço|preco|concorrente|r\$|\$)\s*:?\s*(\d+[\.,]?\d*)/i);
                                 if (m) pc = parseFloat(m[1].replace(",", "."));
                             }
+                            var vincD = _extrairVinculoInterno(it);
+                            var pm = _precoVendaInterno(vincD, catalogo);
                             var refUpper = (it.refOriginal || it.erpCodigoFab || it.erpProdutoId || "").toUpperCase().trim();
-                            var pm = 0;
+                            if (pm <= 0 && !vincD.id) {
                             if (refUpper && catalogo.length > 0) {
                                 var pEncontrado = catalogo.find(function(p) {
                                     return (p.codigo && p.codigo.toUpperCase() === refUpper) ||
@@ -4055,6 +4083,7 @@ const DemandaApp = (function() {
                                     pm = window.ERP_PRICES_BY_ID[refUpper].v || 0;
                                 }
                             }
+                            }
                             if ((!pm || pm <= 0) && it.precoUnitario) {
                                 pm = parseFloat(it.precoUnitario) || 0;
                             }
@@ -4067,6 +4096,9 @@ const DemandaApp = (function() {
                             linhasMapeadas.push({
                                 ref: it.refOriginal || "—",
                                 desc: it.descOriginal || "—",
+                                refInterna: vincD.ref,
+                                descInterna: vincD.desc,
+                                idInterno: vincD.id,
                                 qtde: it.qtdeSolicitada || 1,
                                 concorrente: cNome,
                                 precoConcorrente: pc,
@@ -4093,6 +4125,39 @@ const DemandaApp = (function() {
             });
     }
 
+    // Extrai o vínculo interno (ERP Central Peças) de um item de cotação
+    function _extrairVinculoInterno(it) {
+        if (!it) return { ref: "", desc: "", id: "" };
+        var id = String(it.erpProdutoId || "").trim();
+        var ref = String(it.erpCodigoFab || "").trim();
+        if (!id && !ref) return { ref: "", desc: "", id: "" };
+        return { ref: ref || id, desc: String(it.erpProdutoDesc || "").trim(), id: id };
+    }
+
+    // Preço de venda do produto interno vinculado (ERP > catálogo)
+    function _precoVendaInterno(vinc, catalogo) {
+        if (!vinc || (!vinc.id && !vinc.ref)) return 0;
+        var refU = (vinc.ref || "").toUpperCase();
+        if (typeof window !== "undefined") {
+            if (vinc.id && window.ERP_PRICES_BY_ID && window.ERP_PRICES_BY_ID[vinc.id]) {
+                var v1 = Number(window.ERP_PRICES_BY_ID[vinc.id].v || 0);
+                if (v1 > 0) return v1;
+            }
+            if (refU && window.ERP_PRICES_BY_FAB && window.ERP_PRICES_BY_FAB[refU]) {
+                var v2 = Number(window.ERP_PRICES_BY_FAB[refU].v || 0);
+                if (v2 > 0) return v2;
+            }
+        }
+        if (catalogo && catalogo.length > 0) {
+            var p = catalogo.find(function(x) {
+                return (vinc.id && String(x.codigo || x.codigoErp || "") === vinc.id) ||
+                       (refU && (x.codigoFab || "").toUpperCase() === refU);
+            });
+            if (p && Number(p.preco) > 0) return Number(p.preco);
+        }
+        return 0;
+    }
+
     function _desenharTabelaPrecosMapeados() {
         var hc = document.getElementById("concHistoricoContainer");
         if (!hc) return;
@@ -4105,7 +4170,7 @@ const DemandaApp = (function() {
                 return false;
             }
             if (q) {
-                var hay = (r.ref + " " + r.desc + " " + r.concorrente + " " + r.cliente).toLowerCase();
+                var hay = (r.ref + " " + r.desc + " " + (r.refInterna || "") + " " + (r.descInterna || "") + " " + r.concorrente + " " + r.cliente).toLowerCase();
                 return hay.indexOf(q) >= 0;
             }
             return true;
@@ -4181,10 +4246,22 @@ const DemandaApp = (function() {
                         : "<span style='padding:.15rem .45rem;border-radius:4px;background:rgba(255,255,255,.08);color:var(--text-secondary);font-size:.72rem'>Empatado</span>")
                 : "<span style='color:var(--text-secondary);font-size:.72rem'>Sem preço ERP</span>";
 
+            var refCell = r.refInterna
+                ? "<strong style='font-size:.85rem;color:#10b981;letter-spacing:.02em;font-family:monospace' title='Referência interna vinculada (ERP)'>" + _esc(r.refInterna) + "</strong>" +
+                  (r.ref && r.ref !== r.refInterna ? "<span style='display:block;font-size:.68rem;color:var(--text-secondary);font-weight:normal'>Orig: " + _esc(r.ref) + "</span>" : "")
+                : "<strong style='font-size:.85rem;color:var(--text-primary);letter-spacing:.02em;font-family:monospace'>" + _esc(r.ref) + "</strong>" +
+                  "<span style='display:block;font-size:.66rem;color:#f59e0b;font-weight:600'>Sem vínculo interno</span>";
+
+            var descTitle = (r.descInterna || r.desc) + (r.descInterna && r.desc && r.desc !== r.descInterna ? " | Orig: " + r.desc : "");
+            var descCell = r.descInterna
+                ? "<span style='color:var(--text-primary);font-weight:500'>" + _esc(r.descInterna) + "</span>" +
+                  (r.desc && r.desc !== r.descInterna ? "<span style='display:block;font-size:.68rem;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis'>Orig: " + _esc(r.desc) + "</span>" : "")
+                : _esc(r.desc);
+
             return "<tr style='border-bottom:1px solid rgba(255,255,255,.04)'>" +
                 "<td style='padding:.45rem .6rem;color:var(--text-secondary);font-size:.75rem'>" + (idx + 1) + "</td>" +
-                "<td style='padding:.45rem .6rem'><strong style='font-size:.85rem;color:var(--text-primary);letter-spacing:.02em'>" + _esc(r.ref) + "</strong></td>" +
-                "<td style='padding:.45rem .6rem;font-size:.8rem;color:var(--text-secondary);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' title='" + _escAttr(r.desc) + "'>" + _esc(r.desc) + "</td>" +
+                "<td style='padding:.45rem .6rem;white-space:nowrap'>" + refCell + "</td>" +
+                "<td style='padding:.45rem .6rem;font-size:.8rem;color:var(--text-secondary);max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' title='" + _escAttr(descTitle) + "'>" + descCell + "</td>" +
                 "<td style='padding:.45rem .6rem'><span style='padding:.18rem .55rem;border-radius:4px;background:rgba(245,158,11,.12);color:#f59e0b;font-size:.74rem;font-weight:700;display:inline-block;white-space:nowrap'><span class='material-icons-round' style='font-size:.8rem;vertical-align:middle;margin-right:2px'>store</span>" + _esc(r.concorrente) + "</span></td>" +
                 "<td style='padding:.45rem .6rem;text-align:right;font-weight:700;color:#f59e0b;font-size:.85rem'>" + (r.precoConcorrente > 0 ? "R$ " + r.precoConcorrente.toFixed(2).replace(".", ",") : "—") + "</td>" +
                 "<td style='padding:.45rem .6rem;text-align:right;font-weight:600;font-size:.85rem;color:var(--text-primary)'>" + (r.precoMeu > 0 ? "R$ " + r.precoMeu.toFixed(2).replace(".", ",") : "<span style='color:var(--text-secondary);font-size:.75rem'>—</span>") + "</td>" +
