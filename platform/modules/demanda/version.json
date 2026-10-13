@@ -1,9 +1,9 @@
 ﻿{
-  "version": "3.2.23",
-  "build": "20261013-v3.2.23",
+  "version": "3.2.24",
+  "build": "20261013-v3.2.24",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-13",
-  "change": "v3.2.23 - fix(demanda): Preco Concorrente so exibe Nosso Preco com vinculo comprovado (cotacao de origem, manual, cod. fabrica exato ou cross-ref); botao Vincular para itens sem vinculo.",
-  "releaseDate": "2026-10-13T19:20:00-03:00"
+  "change": "v3.2.24 - fix(demanda): importacao por foto corrige inclinacao do papel (reconstroi linhas pelas coordenadas do OCR), ignora coluna Item e rodape; qtde/preco no item certo.",
+  "releaseDate": "2026-10-13T19:45:00-03:00"
 }

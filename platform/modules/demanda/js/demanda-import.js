@@ -175,7 +175,7 @@ const DemandaImport = (() => {
         let detectedCliente = '';
         let detectedOrcamento = '';
 
-        const mCli = text.match(/cliente\s*:\s*(?:\d+\s+)?([A-Za-zÀ-ÿ\s]{4,40})/i);
+        const mCli = text.match(/cliente\s*:\s*(?:\d+\s*-?\s*)?([A-Za-zÀ-ÿ\s]{4,40})/i);
         if (mCli) detectedCliente = mCli[1].trim();
 
         const mOrc = text.match(/(?:or[cç]amento|orc|cod\.?\s*int\.?)\s*:\s*(?:orc\s*)?([0-9.]+)/i);
@@ -205,6 +205,14 @@ const DemandaImport = (() => {
                 else if (/^(quant\.?|quantidade|qtde?|qtd)$/i.test(pClean)) { mapping.qtde = pIdx; matches++; }
                 else if (/^(pre[cç]o\s*unit\.?|unit[aá]rio|vlr\.?\s*unit\.?)$/i.test(pClean)) { mapping.preco_unit = pIdx; matches++; }
                 else if (/^(pre[cç]o\s*bruto|total|subtotal)$/i.test(pClean)) { mapping.preco_total = pIdx; matches++; }
+                else {
+                    // Cabeçalhos compostos de ERPs (ex.: "Item Cód. Fab Descrição Produto", "Qtde.", "P. Unit.")
+                    if (/^item\b/i.test(pClean)) { mapping.item = pIdx; }
+                    if (/\bc[oó]d(?:igo)?\.?(\s*(fab|f[aá]brica|int|prod)\.?)?\b/i.test(pClean) && mapping.produto === undefined) { mapping.produto = pIdx; matches++; }
+                    if (/\bdescri[cç][aã]o\b/i.test(pClean) && mapping.descricao === undefined) { mapping.descricao = pIdx; matches++; }
+                    if (/^(quant|qtde?|qtd)\.?$/i.test(pClean) && mapping.qtde === undefined) { mapping.qtde = pIdx; matches++; }
+                    if (/^(p\.?\s*unit\.?|pre[cç]o\s*unit[aá]rio|vl\.?\s*unit\.?)$/i.test(pClean) && mapping.preco_unit === undefined) { mapping.preco_unit = pIdx; matches++; }
+                }
             }
             if (matches >= 2 && (mapping.descricao !== undefined || mapping.referencia !== undefined || mapping.produto !== undefined)) {
                 headerIdx = idx;
@@ -221,6 +229,8 @@ const DemandaImport = (() => {
 
         for (let r = headerIdx + 1; r < rawLines.length; r++) {
             const rowLine = rawLines[r];
+            // Fim da tabela (rodapé do orçamento): nada abaixo daqui é item
+            if (/^(n\.?\s*itens|nro\.?\s*itens|observa[cç][oõ]es|notas\s*:|desconto\s*:)/i.test(rowLine)) break;
             // Ignora rodapés / totais / mensagens do ERP e cabeçalhos residuais
             if (/^(frete|outras\s*despesas|total|nro\s*itens|condi[cç][aã]o|servi[cç]os|p[aá]g|balcao|tipo\s+cod|orc\s+[\d.]+|\d+\s+fernando|10\s+venda)\b/i.test(rowLine)) continue;
             if (/^[\d\s.,\-]+$/.test(rowLine) && rowLine.length < 8) continue;
@@ -282,32 +292,54 @@ const DemandaImport = (() => {
                 }
             } else {
                 // Layout com Produto / Quantidade / Preço (Orçamento completo)
+                // Remove o número sequencial do item (coluna "Item") quando vier antes do código
+                if (partsRow.length >= 3 && /^\d{1,3}$/.test(partsRow[0]) && /\d/.test(partsRow[1]) && /^[A-Z0-9][A-Z0-9.\-\/]*$/i.test(partsRow[1])) {
+                    partsRow = partsRow.slice(1);
+                }
+                // Código e descrição colados na mesma coluna ("CJT0410 DIVISOR MANG...")
+                if (/\s/.test(partsRow[0])) {
+                    const mCod = partsRow[0].match(/^([A-Z0-9][A-Z0-9.\-\/]{2,})\s+(.+)$/i);
+                    if (mCod && /\d/.test(mCod[1]) && !/^\d+[.,]\d+$/.test(mCod[1])) {
+                        partsRow = [mCod[1], mCod[2]].concat(partsRow.slice(1));
+                    }
+                }
+                // Linha sem descrição nem números (lixo de OCR, ex.: "UNpC") não é item
+                if (partsRow.length < 2) continue;
+
                 ref = partsRow[0];
                 if (partsRow.length > 1) desc = partsRow[1];
+                const isNum = (s) => /^\d{1,3}(\.\d{3})*(,\d+)?$|^\d+([.,]\d+)?$/.test(String(s || '').trim());
+                const toQtde = (s) => {
+                    let c = String(s || '').trim();
+                    if (c.indexOf(',') >= 0) c = c.replace(/\./g, '').replace(',', '.');
+                    else if (!/^\d+\.\d{1,2}$/.test(c)) c = c.replace(/\./g, '');
+                    return Math.round(parseFloat(c)) || 1;
+                };
 
                 // Localiza índice da unidade de medida (UN, PC, etc.)
                 let unIdx = -1;
-                for (let u = 0; u < partsRow.length; u++) {
+                for (let u = 1; u < partsRow.length; u++) {
                     if (/^(UN|PC|PÇ|CX|UND|JG|PAR|M)$/i.test(partsRow[u])) {
                         unIdx = u;
                         break;
                     }
                 }
 
-                if (unIdx !== -1 && unIdx + 1 < partsRow.length) {
-                    const qv = parseFloat(partsRow[unIdx + 1].replace(',', '.'));
-                    qtde = Math.round(qv) || 1;
+                if (unIdx !== -1 && unIdx + 1 < partsRow.length && isNum(partsRow[unIdx + 1])) {
+                    qtde = toQtde(partsRow[unIdx + 1]);
                     if (unIdx + 2 < partsRow.length) {
                         const pv = _parseMoedaBR(partsRow[unIdx + 2]);
                         if (pv > 0) preco = pv;
                     }
-                } else {
-                    if (colMap.qtde !== undefined && colMap.qtde < partsRow.length) {
-                        const qv = parseFloat(partsRow[colMap.qtde].replace(',', '.'));
-                        qtde = Math.round(qv) || 1;
+                } else if (colMap.qtde !== undefined) {
+                    // Sem coluna UN legível: 1º número após a descrição = Qtde, 2º = Preço unitário
+                    const nums = partsRow.slice(2).filter(isNum);
+                    if (nums.length === 0 && partsRow.length === 2 && !isNum(partsRow[1]) && !/\d/.test(ref)) continue;
+                    if (nums.length > 0) {
+                        qtde = toQtde(nums[0]);
                     }
-                    if (colMap.preco_unit !== undefined && colMap.preco_unit < partsRow.length) {
-                        const pv = _parseMoedaBR(partsRow[colMap.preco_unit]);
+                    if (nums.length > 1 && colMap.preco_unit !== undefined) {
+                        const pv = _parseMoedaBR(nums[1]);
                         if (pv > 0) preco = pv;
                     }
                 }
