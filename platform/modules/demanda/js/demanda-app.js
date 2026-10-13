@@ -756,6 +756,7 @@ const DemandaApp = (function() {
 
                     tentarReconhecimento("1").then(async function(data) {
                         var texto = (data && data.text ? data.text : "").trim();
+                        var textoBruto = (data && data.rawText ? data.rawText : "").trim();
                         // Se retornou pouco texto no Engine 1, tenta automaticamente Engine 2
                         if (texto.length < 15) {
                             if (msg) msg.textContent = "Tentando motor OCR de alta sensibilidade...";
@@ -776,6 +777,9 @@ const DemandaApp = (function() {
                             if (typeof DemandaImport !== "undefined") {
                                 var parsed    = DemandaImport.parseText(texto);
                                 var validados = DemandaImport.validateItens(parsed);
+                                if (validados.length === 0 && textoBruto && textoBruto !== texto) {
+                                    validados = DemandaImport.validateItens(DemandaImport.parseText(textoBruto));
+                                }
                                 if (validados.length > 0) {
                                     _fecharImportFoto();
                                     _showConferencia(validados);
