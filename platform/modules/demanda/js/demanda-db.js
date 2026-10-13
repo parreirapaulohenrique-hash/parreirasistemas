@@ -160,21 +160,29 @@ const DemandaDB = (() => {
     }
 
     /**
-     * Busca uma demanda pelo ID (sem itens).
+     * Busca uma demanda pelo ID com busca resiliente em múltiplos caminhos e fallback.
+     * Retorna null se não encontrada ou se for documento fantasma sem dados.
      */
     async function getDemanda(demandaId) {
+        if (!demandaId) return null;
         const db = _db();
-        let snap = await db.doc(`${_demandsCol()}/${demandaId}`).get();
+        let snap = await db.doc(`${_demandsCol()}/${demandaId}`).get().catch(() => ({ exists: false }));
         if (!snap.exists) {
             // Tenta em centralpecas
-            snap = await db.doc(`tenants/centralpecas/demanda/data/demands/${demandaId}`).get();
+            snap = await db.doc(`tenants/centralpecas/demanda/data/demands/${demandaId}`).get().catch(() => ({ exists: false }));
         }
         if (!snap.exists) {
             // Tenta em [object Object]
-            snap = await db.doc(`tenants/[object Object]/demanda/data/demands/${demandaId}`).get();
+            snap = await db.doc(`tenants/[object Object]/demanda/data/demands/${demandaId}`).get().catch(() => ({ exists: false }));
         }
-        if (!snap.exists) throw new Error(`Demanda ${demandaId} não encontrada.`);
-        return snap.data();
+        if (!snap.exists) {
+            // Tenta em demandas legado
+            snap = await db.doc(`tenants/centralpecas/demandas/${demandaId}`).get().catch(() => ({ exists: false }));
+        }
+        if (!snap.exists) return null;
+        const data = snap.data();
+        if (!data || (!data.codigo && !data.clienteNome && !data.totalItens)) return null;
+        return { id: snap.id, ...data };
     }
 
     /**
@@ -238,7 +246,7 @@ const DemandaDB = (() => {
                 });
             } catch (_) { /* Ignora se não existir */ }
 
-            lista = Array.from(mapIds.values());
+            lista = Array.from(mapIds.values()).filter(d => d && d.id && (d.codigo || d.clienteNome || (d.totalItens && d.totalItens > 0)));
 
             // Ordena lista combinada por criadoEm decrescente
             lista.sort((a, b) => {
@@ -500,18 +508,71 @@ const DemandaDB = (() => {
     }
 
     /**
-     * Remove uma demanda e todos os itens de sua subcoleção items.
+     * Remove uma demanda e todos os itens de sua subcoleção items em todos os caminhos conhecidos.
+     * Limpa também o cache local do navegador para que a cotação não continue aparecendo no resumo.
      */
     async function deleteDemanda(demandaId) {
         if (!demandaId) return;
         const db = _db();
-        const itemsSnap = await db.collection(`${DEMANDS_COL}/${demandaId}/items`).get();
-        const batch = db.batch();
-        itemsSnap.docs.forEach(doc => {
-            batch.delete(doc.ref);
-        });
-        batch.delete(db.doc(`${DEMANDS_COL}/${demandaId}`));
-        await batch.commit();
+
+        // 1. Remove de todos os caches locais do navegador imediatamente
+        _purgeLocalDemandCache(demandaId);
+
+        // 2. Caminhos possíveis de onde a demanda pode ter sido criada/persistida
+        const candidatePaths = [
+            `${DEMANDS_COL}/${demandaId}`,
+            `tenants/centralpecas/demanda/data/demands/${demandaId}`,
+            `tenants/[object Object]/demanda/data/demands/${demandaId}`,
+            `tenants/centralpecas/demandas/${demandaId}`
+        ];
+
+        for (const p of candidatePaths) {
+            try {
+                const docRef = db.doc(p);
+                const snap = await docRef.get().catch(() => ({ exists: false }));
+                if (snap.exists) {
+                    const itemsSnap = await docRef.collection('items').get().catch(() => ({ docs: [] }));
+                    const batch = db.batch();
+                    if (itemsSnap.docs && itemsSnap.docs.length > 0) {
+                        itemsSnap.docs.forEach(doc => {
+                            batch.delete(doc.ref);
+                        });
+                    }
+                    batch.delete(docRef);
+                    await batch.commit().catch(() => {});
+                }
+            } catch (_) {}
+        }
+    }
+
+    function _purgeLocalDemandCache(demandaId) {
+        if (!demandaId || typeof localStorage === 'undefined') return;
+        try {
+            const cacheKeys = [
+                _CACHE_KEY_DEMANDAS(),
+                'demanda_cache_demandas_centralpecas',
+                'demanda_cache_demandas_[object Object]',
+                'demanda_backup_demandas'
+            ];
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith('demanda_cache_demandas')) {
+                    if (!cacheKeys.includes(k)) cacheKeys.push(k);
+                }
+            }
+            cacheKeys.forEach(k => {
+                const raw = localStorage.getItem(k);
+                if (raw) {
+                    try {
+                        const arr = JSON.parse(raw);
+                        if (Array.isArray(arr)) {
+                            const filtered = arr.filter(d => d && d.id !== demandaId);
+                            localStorage.setItem(k, JSON.stringify(filtered));
+                        }
+                    } catch (_) {}
+                }
+            });
+        } catch (_) {}
     }
 
     /**
@@ -643,32 +704,7 @@ const DemandaDB = (() => {
         try { sessionStorage.removeItem(_sessionKey(key)); } catch (_) {}
     }
 
-    /**
-     * Carrega uma demanda por ID, incluindo seus itens da subcoleção.
-     * @param {string} id - ID do documento da demanda
-     * @returns {Promise<object|null>}
-     */
-    async function getDemanda(id) {
-        const db   = _db();
-        const snap = await db.doc(`${DEMANDS_COL}/${id}`).get();
-        if (!snap.exists) return null;
 
-        const data = { id: snap.id, ...snap.data() };
-
-        // Carrega itens da subcoleção (se existir)
-        try {
-            const itensSnap = await db
-                .collection(`${DEMANDS_COL}/${id}/items`)
-                .orderBy('seq', 'asc')
-                .get();
-            data.itens = itensSnap.docs.map(d => d.data());
-        } catch (_) {
-            // Pode ser que itens estejam embutidos no documento (modo flat)
-            if (!data.itens) data.itens = [];
-        }
-
-        return data;
-    }
 
     /**
      * Busca itens da fila de compras usando collectionGroup.
@@ -741,6 +777,7 @@ const DemandaDB = (() => {
         addItens, getItens, updateItem, updateItemStatus, updateItensBatch, deleteItem, recalcTotals, splitItem,
         onItensChanged, listItensFila, getDashboardStats,
         saveSession, loadSession, clearSession, saveCatalogoItem, listCatalogoItems,
+        purgeLocalCache: _purgeLocalDemandCache,
         get TENANT_ID()   { return _getTenantId(); },
         get BASE_PATH()   { return _basePath(); },
         get DEMANDS_COL() { return _demandsCol(); },
