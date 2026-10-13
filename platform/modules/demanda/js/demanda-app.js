@@ -1499,8 +1499,23 @@ const DemandaApp = (function() {
         }
         Promise.all([ DemandaDB.getDemanda(id), DemandaDB.getItens(id) ])
             .then(async function(res) {
-                var d = res[0] || {};
+                var d = res[0];
                 var itens = res[1] || [];
+
+                // Se a demanda não existe ou já foi excluída, não abre modal em branco
+                if (!d || (!d.codigo && !d.clienteNome && (!itens || itens.length === 0))) {
+                    closeModal("modalDemandaDetalhe");
+                    _toast("Esta cotação não foi encontrada ou já foi excluída.", "warning");
+                    var cardEl = document.getElementById("card-totais-" + id);
+                    if (cardEl && cardEl.closest("[role='button']")) {
+                        cardEl.closest("[role='button']").remove();
+                    }
+                    if (typeof DemandaDB !== "undefined" && typeof DemandaDB.purgeLocalCache === "function") {
+                        DemandaDB.purgeLocalCache(id);
+                    }
+                    return;
+                }
+
                 _demandaAtual = { id: id, data: d, itens: itens };
 
                 // Se d.totalItens está zerado mas temos itens carregados, auto-cura no Firestore
@@ -2187,6 +2202,19 @@ const DemandaApp = (function() {
         var confirmMsg = "Tem certeza que deseja EXCLUIR DEFINITIVAMENTE a cotação " + (cod || did) + "?\n\nEsta ação removerá a cotação e todos os seus itens do banco de dados.";
         if (!confirm(confirmMsg)) return;
 
+        // 1. Remove da interface visual e fecha modal imediatamente
+        var cardEl = document.getElementById("card-totais-" + did);
+        if (cardEl && cardEl.closest("[role='button']")) {
+            cardEl.closest("[role='button']").remove();
+        }
+        _demandaAtual = null;
+        closeModal("modalDemandaDetalhe");
+
+        // 2. Limpa cache local do navegador imediatamente
+        if (typeof DemandaDB !== "undefined" && typeof DemandaDB.purgeLocalCache === "function") {
+            DemandaDB.purgeLocalCache(did);
+        }
+
         try {
             if (typeof DemandaDB !== "undefined" && typeof DemandaDB.deleteDemanda === "function") {
                 await DemandaDB.deleteDemanda(did);
@@ -2224,8 +2252,6 @@ const DemandaApp = (function() {
                 console.warn("[DemandaApp] Aviso ao limpar cotacoes_concorrente vinculadas:", eC);
             }
 
-            _demandaAtual = null;
-            closeModal("modalDemandaDetalhe");
             _toast("Cotação " + (cod || did) + " excluída com sucesso!", "success");
 
             if (typeof loadDemandasLista === "function") {
