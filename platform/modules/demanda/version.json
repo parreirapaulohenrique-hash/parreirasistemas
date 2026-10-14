@@ -1,9 +1,9 @@
 {
-  "version": "3.2.28",
-  "build": "20261014-v3.2.28",
+  "version": "3.2.29",
+  "build": "20261014-v3.2.29",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-14",
-  "change": "v3.2.28 - feat(demanda): coluna Fabricante no Preco Concorrente (nosso fabricante ERP x marca cotada pelo concorrente, destaque quando divergem).",
-  "releaseDate": "2026-10-14T16:40:00-03:00"
+  "change": "v3.2.29 - feat(demanda): filial na cotacao (padrao do usuario, auto pelo cliente, escolha manual), preco/estoque por filial (MaxData multiloja) na busca, itens e Preco Concorrente.",
+  "releaseDate": "2026-10-14T17:57:00-03:00"
 }

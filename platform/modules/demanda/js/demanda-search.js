@@ -119,8 +119,14 @@ const DemandaSearch = (() => {
             }
         }
         if (pData) {
+            var vFil = Number(pData.v || pData.preco || 0);
+            // Preço de venda da filial da cotação (MaxData multiloja)
+            if (typeof window !== 'undefined' && window.DemandaFilial && pId) {
+                var pf = window.DemandaFilial.preco(pId);
+                if (pf && pf.exato && pf.v > 0) vFil = pf.v;
+            }
             return {
-                v: Number(pData.v || pData.preco || 0),
+                v: vFil,
                 a: Number(pData.a || pData.valorAtacado || pData.v || 0),
                 c: Number(pData.c || pData.valorCusto || (rawSku ? rawSku[11] : 0) || 0)
             };
@@ -146,8 +152,17 @@ const DemandaSearch = (() => {
         return { v: 0, a: 0, c: 0 };
     }
 
+    function _estoqueFilialSku(sku) {
+        var e1 = Number(sku[10] != null ? sku[10] : (sku[9] || 0));
+        if (typeof window !== 'undefined' && window.DemandaFilial) {
+            var ef = window.DemandaFilial.estoque(String(sku[0] || ''));
+            if (ef !== null && ef !== undefined) return ef;
+        }
+        return e1;
+    }
+
     function _formatMatchResult(sku, score, tipoMatch) {
-        var estq = Number(sku[10] != null ? sku[10] : (sku[9] || 0));
+        var estq = _estoqueFilialSku(sku);
         var codErp = String(sku[0] || '');
         var codFab = String(sku[38] || '');
         var desc = sku[1] || '';
@@ -224,7 +239,7 @@ const DemandaSearch = (() => {
             const codErp = String(s[0] || '');
             const desc = String(s[1] || '').toUpperCase();
             const marca = String(s[2] || '');
-            const estoque = Number(s[10] != null ? s[10] : (s[9] || 0));
+            const estoque = _estoqueFilialSku(s);
             const codFab = String(s[38] || '');
             const crossRef = String(s[39] || '');
 
@@ -553,7 +568,7 @@ const DemandaSearch = (() => {
         const q     = (query || '').trim();
         if (!q || q.length < 2) return [];
 
-        const { filialId = 1, limit = 25, forceRefresh = false } = opts;
+        const { filialId = ((typeof window !== 'undefined' && window.DemandaFilial) ? window.DemandaFilial.atual() : 1), limit = 25, forceRefresh = false } = opts;
         const cacheKey = `search:${q}:${filialId}`;
 
         if (!forceRefresh) {
@@ -944,10 +959,10 @@ const DemandaSearch = (() => {
 
         // Estoque em outras filiais
         const outrasFiliaisMap = {
-            1: 'CTR MATRIZ PALMAS ATACADO',
-            2: 'CTR FILIAL PALMAS VAREJO',
-            4: 'CTR PORTO VAREJO',
-            5: 'CTR REDENÇÃO',
+            1: (window.DemandaFilial ? DemandaFilial.nome(1) : 'CTR MATRIZ'),
+            2: (window.DemandaFilial ? DemandaFilial.nome(2) : 'Filial 2'),
+            3: (window.DemandaFilial ? DemandaFilial.nome(3) : 'Filial 3'),
+            5: (window.DemandaFilial ? DemandaFilial.nome(5) : 'Filial 5'),
         };
 
         const estoqueOutrasFiliais = multiloja
