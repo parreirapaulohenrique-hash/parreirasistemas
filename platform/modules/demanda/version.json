@@ -1,9 +1,9 @@
-﻿{
-  "version": "3.2.26",
-  "build": "20261014-v3.2.26",
+{
+  "version": "3.2.27",
+  "build": "20261014-v3.2.27",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-14",
-  "change": "v3.2.26 - feat(demanda): botao Limpar tudo na Cotacao Atual; cancelar aviso de duplicidade descarta a importacao/limpa a cotacao automaticamente.",
-  "releaseDate": "2026-10-14T14:31:00-03:00"
+  "change": "v3.2.27 - fix(demanda): PDF lido por coordenadas (linhas/colunas reais); parser de orcamento/pedido com coluna Item, Marca, unidades por extenso, cabecalho/rodape de paginas ignorados.",
+  "releaseDate": "2026-10-14T15:53:00-03:00"
 }
