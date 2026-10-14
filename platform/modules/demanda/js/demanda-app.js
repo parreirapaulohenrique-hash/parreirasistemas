@@ -3938,7 +3938,8 @@ const DemandaApp = (function() {
                 desc: it.descOriginal || "",
                 qtde: parseFloat(it.qtdeSolicitada) || 1,
                 precoConcorrente: pc,
-                precoMeu: pm
+                precoMeu: pm,
+                marca: _marcaConcorrenteItem(it)
             };
         });
 
@@ -4100,6 +4101,8 @@ const DemandaApp = (function() {
                             concorrente: c.concorrente || "Concorrente",
                             precoConcorrente: pc,
                             precoMeu: pm,
+                            fabInterno: _fabricanteInterno(vinc, itOrig),
+                            marcaConc: _marcaConcorrenteItem(it) || _marcaConcorrenteItem(itOrig),
                             diff: d,
                             pct: pct,
                             cliente: c.clienteRef || "—",
@@ -4158,6 +4161,8 @@ const DemandaApp = (function() {
                                 concorrente: cNome,
                                 precoConcorrente: pc,
                                 precoMeu: pm,
+                                fabInterno: _fabricanteInterno(vincD, it),
+                                marcaConc: _marcaConcorrenteItem(it),
                                 diff: d,
                                 pct: pct,
                                 cliente: dm.clienteNome || "—",
@@ -4287,6 +4292,30 @@ const DemandaApp = (function() {
         var ref = String(it.erpCodigoFab || "").trim();
         if (!id && !ref) return { ref: "", desc: "", id: "" };
         return { ref: ref || id, desc: String(it.erpProdutoDesc || "").trim(), id: id };
+    }
+
+    // Marca/fabricante cotada pelo concorrente (vem do orçamento importado: "Marca: X")
+    function _marcaConcorrenteItem(it) {
+        if (!it) return "";
+        if (it.marca) return String(it.marca).trim();
+        var m = String(it.obsCliente || it.obs || "").match(/marca\s*:\s*([^|]+)/i);
+        return m ? m[1].trim() : "";
+    }
+
+    // Fabricante do nosso produto vinculado (cadastro ERP / MaxData)
+    var _fabPorIdCache = null;
+    function _fabricanteInterno(vinc, itOrig) {
+        if (!vinc || (!vinc.id && !vinc.ref)) return "";
+        if (itOrig && itOrig.fabricante && _extrairVinculoInterno(itOrig).id === vinc.id) return String(itOrig.fabricante).trim();
+        if (!_fabPorIdCache) {
+            _fabPorIdCache = {};
+            if (typeof window !== "undefined" && Array.isArray(window.COMPACT_SKUS)) {
+                window.COMPACT_SKUS.forEach(function(s) {
+                    if (s && s[0] != null && s[2] && !/^n[aã]o informado$/i.test(String(s[2]).trim())) _fabPorIdCache[String(s[0])] = String(s[2]).trim();
+                });
+            }
+        }
+        return (vinc.id && _fabPorIdCache[String(vinc.id)]) || "";
     }
 
     // Preço de venda do produto interno vinculado (ERP > catálogo)
@@ -4422,6 +4451,11 @@ const DemandaApp = (function() {
                 "<td style='padding:.45rem .6rem;color:var(--text-secondary);font-size:.75rem'>" + (idx + 1) + "</td>" +
                 "<td style='padding:.45rem .6rem;white-space:nowrap'>" + refCell + "</td>" +
                 "<td style='padding:.45rem .6rem;font-size:.8rem;color:var(--text-secondary);max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' title='" + _escAttr(descTitle) + "'>" + descCell + "</td>" +
+                "<td style='padding:.45rem .6rem;font-size:.78rem;white-space:nowrap' title='Nosso fabricante (ERP) / marca cotada pelo concorrente'>" +
+                    (r.fabInterno ? "<span style='color:var(--text-primary);font-weight:600'>" + _esc(r.fabInterno) + "</span>" : (r.refInterna ? "<span style='color:var(--text-secondary)'>—</span>" : "")) +
+                    (r.marcaConc ? "<span style='display:block;font-size:.68rem;color:" + (r.fabInterno && r.fabInterno.toUpperCase() !== r.marcaConc.toUpperCase() ? "#f59e0b" : "var(--text-secondary)") + "'>Conc.: " + _esc(r.marcaConc) + "</span>" : "") +
+                    (!r.fabInterno && !r.marcaConc ? "<span style='color:var(--text-secondary)'>—</span>" : "") +
+                "</td>" +
                 "<td style='padding:.45rem .6rem'><span style='padding:.18rem .55rem;border-radius:4px;background:rgba(245,158,11,.12);color:#f59e0b;font-size:.74rem;font-weight:700;display:inline-block;white-space:nowrap'><span class='material-icons-round' style='font-size:.8rem;vertical-align:middle;margin-right:2px'>store</span>" + _esc(r.concorrente) + "</span></td>" +
                 "<td style='padding:.45rem .6rem;text-align:right;font-weight:700;color:#f59e0b;font-size:.85rem'>" + (r.precoConcorrente > 0 ? "R$ " + r.precoConcorrente.toFixed(2).replace(".", ",") : "—") + "</td>" +
                 "<td style='padding:.45rem .6rem;text-align:right;font-weight:600;font-size:.85rem;color:var(--text-primary)'>" + (!r.refInterna
@@ -4446,6 +4480,7 @@ const DemandaApp = (function() {
                             "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>#</th>" +
                             "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Referência</th>" +
                             "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Descrição</th>" +
+                            "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Fabricante</th>" +
                             "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Concorrente</th>" +
                             "<th style='padding:.5rem .6rem;text-align:right;color:#f59e0b;font-size:.7rem;font-weight:700;text-transform:uppercase'>Preço Concorrente</th>" +
                             "<th style='padding:.5rem .6rem;text-align:right;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Nosso Preço</th>" +
@@ -4455,7 +4490,7 @@ const DemandaApp = (function() {
                             "<th style='padding:.5rem .6rem;text-align:center;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Ação</th>" +
                         "</tr></thead>" +
                         "<tbody>" +
-                            (tableRows || "<tr><td colspan='10' style='text-align:center;padding:2.5rem;color:var(--text-secondary)'>Nenhum preço mapeado encontrado.</td></tr>") +
+                            (tableRows || "<tr><td colspan='11' style='text-align:center;padding:2.5rem;color:var(--text-secondary)'>Nenhum preço mapeado encontrado.</td></tr>") +
                         "</tbody>" +
                     "</table>" +
                 "</div>" +
