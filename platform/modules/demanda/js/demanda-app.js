@@ -276,14 +276,17 @@ const DemandaApp = (function() {
         _itens[idx].precoConcorrente = (!isNaN(p) && p > 0) ? p : null;
     }
 
-    function limparDemanda() {
-        if (_itens.length > 0 && !confirm("Limpar todos os itens da cotação?")) return;
+    function limparDemanda(semConfirmar) {
+        if (semConfirmar !== true && _itens.length > 0 && !confirm("Limpar TODA a cotação atual (" + _itens.length + " itens, cliente e concorrente)?")) return;
         _itens = [];
+        _importItensTemp = [];
         _clienteAtual = null;
         _concorrenteAtual = null;
         var selC = document.getElementById("selectConcorrente"); if (selC) selC.value = "";
-        var cl = document.getElementById("clienteLabel"); if (cl) cl.textContent = "Selecionar cliente";
+        var cl = document.getElementById("clienteLabel"); if (cl) cl.innerHTML = "Selecionar cliente <span style='color:var(--accent-danger);font-weight:bold;'>*</span>";
+        var bxc = document.getElementById("btnClearCliente"); if (bxc) bxc.style.display = "none";
         var si = document.getElementById("selectOrigem"); if (si) si.value = "whatsapp";
+        try { _limparRascunho(); } catch (_) {}
         renderItens();
     }
 
@@ -1256,12 +1259,19 @@ const DemandaApp = (function() {
             var listaRep = repetidos.slice(0, 8).map(function(it) { return "• " + (it.refOriginal || it.descOriginal); }).join("\n") +
                            (repetidos.length > 8 ? "\n• ... e mais " + (repetidos.length - 8) : "");
             if (novos.length === 0) {
+                closeModal("modalConferencia");
+                _importItensTemp = [];
                 alert("Este orçamento já foi importado nesta cotação.\n\nTodos os " + repetidos.length + " itens já existem:\n" + listaRep + "\n\nNada foi adicionado.");
                 return;
             }
             var addSoNovos = confirm(repetidos.length + " de " + selecionados.length + " itens JÁ EXISTEM nesta cotação:\n" + listaRep +
-                "\n\nOK = adicionar somente os " + novos.length + " itens novos\nCancelar = não adicionar nada");
-            if (!addSoNovos) return;
+                "\n\nOK = adicionar somente os " + novos.length + " itens novos\nCancelar = descartar esta importação");
+            if (!addSoNovos) {
+                closeModal("modalConferencia");
+                _importItensTemp = [];
+                _toast("Importação descartada. A cotação atual não foi alterada.", "info");
+                return;
+            }
             selecionados = novos;
         }
 
@@ -1393,8 +1403,10 @@ const DemandaApp = (function() {
 
         verificarDuplicada.then(function(dup) {
             if (dup && !confirm("Já existe a cotação " + (dup.demanda.codigo || dup.demanda.id) + " deste cliente com " + dup.iguais + " dos " + chavesNovas.length +
-                                " itens iguais (orçamento já importado).\n\nOK = salvar mesmo assim como NOVA cotação\nCancelar = não salvar")) {
+                                " itens iguais (orçamento já importado).\n\nOK = salvar mesmo assim como NOVA cotação\nCancelar = descartar e limpar a cotação atual")) {
                 _setBtnSaving(false);
+                limparDemanda(true);
+                _toast("Lançamento duplicado descartado. Cotação atual limpa.", "info");
                 return;
             }
             _criarDemandaConfirmada();
@@ -1408,7 +1420,7 @@ const DemandaApp = (function() {
                     _salvarVinculoConcorrenteAutomatico(concNome, _clienteAtual, _itens.slice(), demandaId);
                 }
                 _toast(concNome ? "Cotação vinculada ao concorrente e salva com sucesso!" : "Cotação salva com sucesso!", "success");
-                limparDemanda();
+                limparDemanda(true);
                 setTimeout(function() { switchView("lista"); }, 800);
             })
             .catch(function(err) {

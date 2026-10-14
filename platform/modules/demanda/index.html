@@ -290,9 +290,13 @@
 
                             <!-- Cabeçalho do painel -->
                             <div class="demanda-panel-header">
-                                <div class="demanda-panel-title">
+                                <div class="demanda-panel-title" style="display:flex;align-items:center;gap:.4rem">
                                     <span class="material-icons-round">receipt_long</span>
                                     Cotação Atual
+                                    <button type="button" id="btnLimparCotacaoAtual" onclick="DemandaApp.limparDemanda()" title="Limpar todos os itens, cliente e concorrente da cotação atual"
+                                        style="margin-left:auto;display:inline-flex;align-items:center;gap:.2rem;padding:.2rem .55rem;font-size:.72rem;font-weight:600;border-radius:5px;border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.1);color:#ef4444;cursor:pointer">
+                                        <span class="material-icons-round" style="font-size:.9rem">delete_sweep</span> Limpar tudo
+                                    </button>
                                 </div>
                                 <div class="demanda-client-info">
                                     <!-- Seletor de cliente -->
@@ -392,8 +396,8 @@
 
                             <!-- Rodapé de ações -->
                             <div class="demanda-panel-footer">
-                                <button class="btn btn-secondary btn-sm" onclick="DemandaApp.limparDemanda()" title="Limpar todos os itens">
-                                    <span class="material-icons-round">delete_sweep</span>
+                                <button class="btn btn-secondary btn-sm" onclick="DemandaApp.limparDemanda()" title="Limpar todos os itens" style="display:inline-flex;align-items:center;gap:.25rem;color:#ef4444">
+                                    <span class="material-icons-round">delete_sweep</span> Limpar
                                 </button>
                                 <button class="btn btn-success btn-sm" id="btnSalvarDemandaPanel" style="flex:1" onclick="DemandaApp.salvarDemanda()">
                                     <span class="material-icons-round">save</span>
@@ -6400,7 +6404,7 @@
     <script src="js/demanda-analytics.js?v=3.0.9"></script>
     <script src="js/demanda-comercial.js?v=3.0.6"></script>
     <script src="js/demanda-enrichment.js?v=3.21.66"></script>
-    <script src="js/demanda-app.js?v=3.21.110"></script>
+    <script src="js/demanda-app.js?v=3.21.111"></script>
 
     <!-- ═══════════════════════════════════════════════════════════
          MODAL: Administração da Base Técnica de Peças
