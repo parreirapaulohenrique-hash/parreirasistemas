@@ -1239,6 +1239,32 @@ const DemandaApp = (function() {
             }
         }
 
+        // Evita importar o mesmo orçamento duas vezes: compara com os itens já na cotação
+        var _chaveItem = function(it) {
+            var r = String(it.refOriginal || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+            return r ? "R:" + r : "D:" + String(it.descOriginal || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+        };
+        var chavesExistentes = {};
+        _itens.forEach(function(it) { chavesExistentes[_chaveItem(it)] = true; });
+        var novos = [], repetidos = [];
+        selecionados.forEach(function(it) {
+            var ch = _chaveItem(it);
+            if (chavesExistentes[ch]) repetidos.push(it);
+            else novos.push(it);
+        });
+        if (repetidos.length > 0) {
+            var listaRep = repetidos.slice(0, 8).map(function(it) { return "• " + (it.refOriginal || it.descOriginal); }).join("\n") +
+                           (repetidos.length > 8 ? "\n• ... e mais " + (repetidos.length - 8) : "");
+            if (novos.length === 0) {
+                alert("Este orçamento já foi importado nesta cotação.\n\nTodos os " + repetidos.length + " itens já existem:\n" + listaRep + "\n\nNada foi adicionado.");
+                return;
+            }
+            var addSoNovos = confirm(repetidos.length + " de " + selecionados.length + " itens JÁ EXISTEM nesta cotação:\n" + listaRep +
+                "\n\nOK = adicionar somente os " + novos.length + " itens novos\nCancelar = não adicionar nada");
+            if (!addSoNovos) return;
+            selecionados = novos;
+        }
+
         selecionados.forEach(function(item) {
             var m = item._match;
             if (!m && typeof DemandaSearch !== 'undefined' && typeof DemandaSearch.smartMatch === 'function') {
@@ -1338,6 +1364,43 @@ const DemandaApp = (function() {
         }
         _setBtnSaving(true);
 
+        // Verifica se já existe cotação salva deste cliente com os mesmos itens (orçamento importado 2x)
+        var _chaveIt = function(it) {
+            var r = String(it.refOriginal || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+            return r ? "R:" + r : "D:" + String(it.descOriginal || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+        };
+        var _normCli = function(n) { return String(n || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); };
+        var chavesNovas = _itens.map(_chaveIt);
+        var verificarDuplicada = DemandaDB.listDemandas({})
+            .then(async function(lista) {
+                var cliN = _normCli(data.clienteNome);
+                var candidatas = (lista || []).filter(function(d) {
+                    return d && d.status !== "cancelada" && cliN && _normCli(d.clienteNome) === cliN;
+                }).slice(0, 10);
+                for (var ci = 0; ci < candidatas.length; ci++) {
+                    var its = await DemandaDB.getItens(candidatas[ci].id).catch(function() { return []; });
+                    if (!its || its.length === 0) continue;
+                    var setExist = {};
+                    its.forEach(function(x) { setExist[_chaveIt(x)] = true; });
+                    var iguais = chavesNovas.filter(function(k) { return setExist[k]; }).length;
+                    if (iguais >= Math.max(2, Math.ceil(chavesNovas.length * 0.8))) {
+                        return { demanda: candidatas[ci], iguais: iguais };
+                    }
+                }
+                return null;
+            })
+            .catch(function() { return null; });
+
+        verificarDuplicada.then(function(dup) {
+            if (dup && !confirm("Já existe a cotação " + (dup.demanda.codigo || dup.demanda.id) + " deste cliente com " + dup.iguais + " dos " + chavesNovas.length +
+                                " itens iguais (orçamento já importado).\n\nOK = salvar mesmo assim como NOVA cotação\nCancelar = não salvar")) {
+                _setBtnSaving(false);
+                return;
+            }
+            _criarDemandaConfirmada();
+        });
+
+        function _criarDemandaConfirmada() {
         DemandaDB.createDemanda(data, _itens.slice())
             .then(function(demandaId) {
                 console.log("[DemandaApp] Demanda criada:", demandaId);
@@ -1353,6 +1416,7 @@ const DemandaApp = (function() {
                 _toast("Erro ao salvar: " + (err.message || err), "error");
             })
             .finally(function() { _setBtnSaving(false); });
+        }
     }
 
     // ════════════════════════════════════════════════════════
