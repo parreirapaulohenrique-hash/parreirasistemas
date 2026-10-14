@@ -1,9 +1,9 @@
 ﻿{
-  "version": "3.2.24",
-  "build": "20261013-v3.2.24",
+  "version": "3.2.25",
+  "build": "20261014-v3.2.25",
   "module": "demanda",
   "name": "Cotacao",
-  "lastUpdate": "2026-10-13",
-  "change": "v3.2.24 - fix(demanda): importacao por foto corrige inclinacao do papel (reconstroi linhas pelas coordenadas do OCR), ignora coluna Item e rodape; qtde/preco no item certo.",
-  "releaseDate": "2026-10-13T19:45:00-03:00"
+  "lastUpdate": "2026-10-14",
+  "change": "v3.2.25 - fix(demanda): bloqueia importacao duplicada do mesmo orcamento (avisa itens ja existentes) e alerta ao salvar cotacao igual a outra do mesmo cliente.",
+  "releaseDate": "2026-10-14T10:11:00-03:00"
 }
