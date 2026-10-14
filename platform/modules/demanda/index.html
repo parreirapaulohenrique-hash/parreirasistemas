@@ -293,6 +293,13 @@
                                 <div class="demanda-panel-title" style="display:flex;align-items:center;gap:.4rem">
                                     <span class="material-icons-round">receipt_long</span>
                                     Cotação Atual
+                                    <span style="display:inline-flex;align-items:center;gap:.15rem;margin-left:.5rem" title="Filial da cotação (define o preço e o estoque usados)">
+                                        <span class="material-icons-round" style="font-size:.95rem;color:#10b981">store</span>
+                                        <select id="selFilialCotacao" onchange="DemandaApp.setFilialCotacao(this.value)"
+                                            style="padding:.15rem .35rem;font-size:.72rem;font-weight:600;background:var(--bg-dark);border:1px solid rgba(16,185,129,.4);color:var(--text-primary);border-radius:5px;max-width:170px"></select>
+                                        <button type="button" id="btnFilialPadrao" onclick="DemandaApp.definirFilialPadrao()" title="Definir como minha filial padrão"
+                                            style="background:none;border:none;cursor:pointer;padding:0 .1rem;color:var(--text-secondary);display:inline-flex"><span class="material-icons-round" style="font-size:1rem">star_border</span></button>
+                                    </span>
                                     <button type="button" id="btnLimparCotacaoAtual" onclick="DemandaApp.limparDemanda()" title="Limpar todos os itens, cliente e concorrente da cotação atual"
                                         style="margin-left:auto;display:inline-flex;align-items:center;gap:.2rem;padding:.2rem .55rem;font-size:.72rem;font-weight:600;border-radius:5px;border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.1);color:#ef4444;cursor:pointer">
                                         <span class="material-icons-round" style="font-size:.9rem">delete_sweep</span> Limpar tudo
@@ -6389,13 +6396,15 @@
 
     <!-- Módulos Analíticos e Dataset MaxData (10.896 SKUs + Preços Atualizados ERP) -->
     <script src="js/demanda-analytics-data.js?v=3.0.6"></script>
-    <script src="js/demanda-erp-prices.js?v=3.21.98"></script>
+    <script src="js/demanda-erp-prices.js?v=3.21.113"></script>
+    <script src="js/demanda-erp-filiais.js?v=3.21.113"></script>
+    <script src="js/demanda-filial.js?v=3.21.113"></script>
 
     <!-- Módulo de Demanda -->
     <script src="js/demanda-states.js?v=3.21.49"></script>
     <script src="js/demanda-db.js?v=3.21.106"></script>
     <script src="js/demanda-import.js?v=3.21.110"></script>
-    <script src="js/demanda-search.js?v=3.21.106"></script>
+    <script src="js/demanda-search.js?v=3.21.113"></script>
     <script src="js/demanda-lookup.js?v=3.21.66"></script>
     <script src="js/demanda-pdf.js?v=3.21.61"></script>
     <script src="js/demanda-clientes.js?v=3.21.66"></script>
@@ -6404,7 +6413,7 @@
     <script src="js/demanda-analytics.js?v=3.0.9"></script>
     <script src="js/demanda-comercial.js?v=3.0.6"></script>
     <script src="js/demanda-enrichment.js?v=3.21.66"></script>
-    <script src="js/demanda-app.js?v=3.21.112"></script>
+    <script src="js/demanda-app.js?v=3.21.113"></script>
 
     <!-- ═══════════════════════════════════════════════════════════
          MODAL: Administração da Base Técnica de Peças

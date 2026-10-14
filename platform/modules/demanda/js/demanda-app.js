@@ -286,8 +286,80 @@ const DemandaApp = (function() {
         var cl = document.getElementById("clienteLabel"); if (cl) cl.innerHTML = "Selecionar cliente <span style='color:var(--accent-danger);font-weight:bold;'>*</span>";
         var bxc = document.getElementById("btnClearCliente"); if (bxc) bxc.style.display = "none";
         var si = document.getElementById("selectOrigem"); if (si) si.value = "whatsapp";
+        try { if (window.DemandaFilial) DemandaFilial.resetarAtual(); _renderSeletorFilial(); } catch (_) {}
         try { _limparRascunho(); } catch (_) {}
         renderItens();
+    }
+
+    // ════════════════════════════════════════════════════════
+    // FILIAL DA COTAÇÃO (empresa MaxData)
+    // ════════════════════════════════════════════════════════
+
+    function _renderSeletorFilial(destacar) {
+        var sel = document.getElementById("selFilialCotacao");
+        if (!sel || !window.DemandaFilial) return;
+        var atual = DemandaFilial.atual();
+        var padrao = DemandaFilial.padraoUsuario();
+        sel.innerHTML = DemandaFilial.listar().map(function(f) {
+            return "<option value='" + f.empId + "'" + (f.empId === atual ? " selected" : "") + ">" + _esc(f.nome) + (f.empId === padrao ? " ★" : "") + "</option>";
+        }).join("");
+        sel.style.borderColor = destacar ? "var(--accent-danger)" : "";
+        var bp = document.getElementById("btnFilialPadrao");
+        if (bp) {
+            var ehPadrao = padrao === atual;
+            bp.style.color = ehPadrao ? "#f59e0b" : "var(--text-secondary)";
+            bp.title = ehPadrao ? "Esta é a sua filial padrão" : "Definir " + DemandaFilial.nome(atual) + " como minha filial padrão";
+            bp.querySelector("span").textContent = ehPadrao ? "star" : "star_border";
+        }
+    }
+
+    function setFilialCotacao(v) {
+        if (!window.DemandaFilial) return;
+        DemandaFilial.definirAtual(v);
+        if (!DemandaFilial.padraoUsuario()) DemandaFilial.definirPadraoUsuario(v);
+        _renderSeletorFilial();
+        _atualizarPrecosItensFilial();
+        _toast("Filial da cotação: " + DemandaFilial.nome(v), "info");
+    }
+
+    function definirFilialPadrao() {
+        if (!window.DemandaFilial) return;
+        DemandaFilial.definirPadraoUsuario(DemandaFilial.atual());
+        _renderSeletorFilial();
+        _toast("Filial padrão definida: " + DemandaFilial.nome(DemandaFilial.atual()), "success");
+    }
+
+    // Atualiza preço/estoque dos itens já vinculados conforme a filial da cotação
+    function _atualizarPrecosItensFilial() {
+        if (!window.DemandaFilial || !DemandaFilial.temDadosPorFilial()) return;
+        var mudou = false;
+        _itens.forEach(function(it) {
+            if (!it.erpProdutoId) return;
+            var pf = DemandaFilial.preco(it.erpProdutoId);
+            if (pf.exato && pf.v > 0 && it.precoUnitario !== pf.v) { it.precoUnitario = pf.v; mudou = true; }
+            var ef = DemandaFilial.estoque(it.erpProdutoId);
+            if (ef !== null && it.estoqueFilial !== ef) { it.estoqueFilial = ef; mudou = true; }
+        });
+        if (mudou) renderItens();
+    }
+
+    // Define a filial pelo cadastro do cliente (1 filial = automático; várias = escolha manual)
+    function _aplicarFilialCliente(cli) {
+        if (!window.DemandaFilial) return;
+        var fs = DemandaFilial.filiaisDoCliente(cli);
+        if (fs.length === 1) {
+            if (fs[0] !== DemandaFilial.atual()) {
+                DemandaFilial.definirAtual(fs[0]);
+                _renderSeletorFilial();
+                _atualizarPrecosItensFilial();
+                _toast("Filial definida pelo cadastro do cliente: " + DemandaFilial.nome(fs[0]), "info");
+            }
+        } else if (fs.length > 1) {
+            if (fs.indexOf(DemandaFilial.atual()) < 0) {
+                _renderSeletorFilial(true);
+            }
+            _toast("Cliente com cadastro em " + fs.length + " filiais (" + fs.map(DemandaFilial.nome).join(", ") + "). Confirme a filial da cotação.", "warning");
+        }
     }
 
     // ════════════════════════════════════════════════════════
@@ -534,7 +606,7 @@ const DemandaApp = (function() {
     function selectClienteIdx(i) {
         if (i < 0 || i >= _clientesCache.length) return;
         var c = _clientesCache[i];
-        _clienteAtual = { id: c.id || c.codigo || null, codigo: c.codigo || "", nome: c.nome || "", cnpj: c.cnpj || c.cpf || "", cidade: c.cidade || "" };
+        _clienteAtual = { id: c.id || c.codigo || null, codigo: c.codigo || "", nome: c.nome || "", cnpj: c.cnpj || c.cpf || "", cidade: c.cidade || "", filiais: c.filiais || c.empIds || [] };
         var lbl = document.getElementById("clienteLabel");
         var btn = document.getElementById("btnSelectCliente");
         var btnClear = document.getElementById("btnClearCliente");
@@ -543,6 +615,7 @@ const DemandaApp = (function() {
         if (btnClear) btnClear.style.display = "inline-flex";
         var dd  = document.getElementById("clienteDropdown");
         if (dd) dd.style.display = "none";
+        _aplicarFilialCliente(_clienteAtual);
     }
 
     function usarClienteAvulso(nome) {
@@ -1356,8 +1429,8 @@ const DemandaApp = (function() {
             clienteCnpj:     _clienteAtual ? _clienteAtual.cnpj  : "",
             vendedorId:      s ? (s.login || s.email || null)     : null,
             vendedorNome:    s ? (s.nome  || s.name  || "")       : "",
-            filialId:        s ? (s.filialId    || 1)             : 1,
-            filialNome:      s ? (s.filial || s.tenantNome || "") : "",
+            filialId:        (window.DemandaFilial ? DemandaFilial.atual() : (s ? (s.filialId || 1) : 1)),
+            filialNome:      (window.DemandaFilial ? DemandaFilial.nome(DemandaFilial.atual()) : (s ? (s.filial || s.tenantNome || "") : "")),
             criadoPor:       s ? (s.login || s.email || "sistema"): "sistema"
         };
 
@@ -3724,6 +3797,7 @@ const DemandaApp = (function() {
     var _precosMapeadosCache      = [];
     var _termoFiltroPrecos        = "";
     var _concorrenteFiltroPrecos  = "todos";
+    var _filialFiltroPrecos       = null;   // null = filial padrão do usuário
     var _CONC_INP                 = "width:100%;background:var(--bg-dark);border:1px solid var(--border-color);border-radius:5px;padding:.3rem .55rem;color:var(--text-primary);font-size:.8rem;box-sizing:border-box";
 
     var _CONCORRENTES_DEFAULT = [
@@ -3953,6 +4027,7 @@ const DemandaApp = (function() {
             criadoEm:         (typeof firebase !== "undefined" && firebase.firestore) ? firebase.firestore.FieldValue.serverTimestamp() : new Date(),
             status:           "ativa",
             demandaOrigemId:  demandaId,
+            filialId:         (window.DemandaFilial ? DemandaFilial.atual() : 1),
             itens:            itensFormatados
         };
 
@@ -4101,6 +4176,7 @@ const DemandaApp = (function() {
                             concorrente: c.concorrente || "Concorrente",
                             precoConcorrente: pc,
                             precoMeu: pm,
+                            _pmFallback: pm,
                             fabInterno: _fabricanteInterno(vinc, itOrig),
                             marcaConc: _marcaConcorrenteItem(it) || _marcaConcorrenteItem(itOrig),
                             diff: d,
@@ -4161,6 +4237,7 @@ const DemandaApp = (function() {
                                 concorrente: cNome,
                                 precoConcorrente: pc,
                                 precoMeu: pm,
+                                _pmFallback: pm,
                                 fabInterno: _fabricanteInterno(vincD, it),
                                 marcaConc: _marcaConcorrenteItem(it),
                                 diff: d,
@@ -4342,9 +4419,32 @@ const DemandaApp = (function() {
         return 0;
     }
 
+    // Preço interno na filial escolhida: { v, exato, empId } (exato=false => caiu no preço da filial 1)
+    function _precoInternoFilial(vinc, empId) {
+        if (vinc && vinc.id && window.DemandaFilial && DemandaFilial.temDadosPorFilial()) {
+            var pf = DemandaFilial.preco(vinc.id, empId);
+            if (pf.v > 0) return pf;
+        }
+        var v = _precoVendaInterno(vinc, null);
+        return { v: v, exato: Number(empId) === 1, empId: 1 };
+    }
+
     function _desenharTabelaPrecosMapeados() {
         var hc = document.getElementById("concHistoricoContainer");
         if (!hc) return;
+
+        // Nosso preço conforme a filial selecionada (padrão = filial do usuário)
+        var empSel = _filialFiltroPrecos || (window.DemandaFilial ? (DemandaFilial.padraoUsuario() || DemandaFilial.atual()) : 1);
+        _precosMapeadosCache.forEach(function(r) {
+            if (!r.refInterna) return;
+            var pf = _precoInternoFilial({ id: r.idInterno, ref: r.refInterna }, empSel);
+            var pm = pf.v > 0 ? pf.v : (r._pmFallback || 0);
+            r.precoMeu = pm;
+            r.precoExato = pf.v > 0 ? pf.exato : false;
+            r.diff = (r.precoConcorrente > 0 && pm > 0) ? (pm - r.precoConcorrente) : null;
+            r.pct = (r.precoConcorrente > 0 && r.diff !== null) ? ((r.diff / r.precoConcorrente) * 100).toFixed(1) : null;
+        });
+        var nomeFilSel = window.DemandaFilial ? DemandaFilial.nome(empSel) : "";
 
         var q = (_termoFiltroPrecos || "").trim().toLowerCase();
         var concFiltro = _concorrenteFiltroPrecos || "todos";
@@ -4405,6 +4505,13 @@ const DemandaApp = (function() {
                         return "<option value='" + _escAttr(c) + "' " + (concFiltro.toLowerCase() === c.toLowerCase() ? "selected" : "") + ">" + _esc(c) + "</option>";
                     }).join("") +
                 "</select>" +
+                (window.DemandaFilial ?
+                "<select id='selFiltroFilialPrecos' onchange='DemandaApp.filtrarPorFilialPrecos(this.value)' title='Filial usada no Nosso Preço' " +
+                    "style='background:var(--bg-dark);border:1px solid rgba(16,185,129,.4);border-radius:6px;padding:.4rem .6rem;color:var(--text-primary);font-size:.82rem'>" +
+                    DemandaFilial.listar().map(function(f) {
+                        return "<option value='" + f.empId + "' " + (f.empId === empSel ? "selected" : "") + ">Nosso preço: " + _esc(f.nome) + "</option>";
+                    }).join("") +
+                "</select>" : "") +
                 "<button class='btn btn-secondary btn-sm' onclick='DemandaApp._limparMapeamentoOrfao()' title='Limpar cotações e registros excluídos da concorrência' style='display:inline-flex;align-items:center;gap:.3rem'>" +
                     "<span class='material-icons-round' style='font-size:.9rem'>cleaning_services</span> Limpar Excluídos" +
                 "</button>" +
@@ -4460,7 +4567,7 @@ const DemandaApp = (function() {
                 "<td style='padding:.45rem .6rem;text-align:right;font-weight:700;color:#f59e0b;font-size:.85rem'>" + (r.precoConcorrente > 0 ? "R$ " + r.precoConcorrente.toFixed(2).replace(".", ",") : "—") + "</td>" +
                 "<td style='padding:.45rem .6rem;text-align:right;font-weight:600;font-size:.85rem;color:var(--text-primary)'>" + (!r.refInterna
                     ? "<button class='btn btn-secondary btn-sm' onclick='DemandaApp.vincularItemMapeamento(" + ci + ")' title='Vincular a um produto interno para ver nosso preço' style='display:inline-flex;align-items:center;gap:.2rem;font-size:.72rem;padding:.2rem .5rem'><span class='material-icons-round' style='font-size:.85rem'>link</span> Vincular</button>"
-                    : r.precoMeu > 0 ? "R$ " + r.precoMeu.toFixed(2).replace(".", ",") : "<span style='color:var(--text-secondary);font-size:.72rem'>Sem preço ERP</span>") + "</td>" +
+                    : r.precoMeu > 0 ? "R$ " + r.precoMeu.toFixed(2).replace(".", ",") + (r.precoExato === false && empSel !== 1 ? "<span style='display:block;font-size:.62rem;color:#f59e0b;font-weight:600' title='Sem preço desta filial na carga; exibindo o preço da filial 1'>preço filial 1</span>" : "") : "<span style='color:var(--text-secondary);font-size:.72rem'>Sem preço ERP</span>") + "</td>" +
                 "<td style='padding:.45rem .6rem;text-align:center'>" + badgeComparativo + " " + (r.diff !== null ? "<div style='font-size:.72rem;color:" + cor + ";margin-top:2px'>" + diffTxt + "</div>" : "") + "</td>" +
                 "<td style='padding:.45rem .6rem;font-size:.78rem;color:var(--text-secondary)'>" + _esc(r.cliente) + "</td>" +
                 "<td style='padding:.45rem .6rem;font-size:.75rem;color:var(--text-secondary);white-space:nowrap'>" + r.data + "</td>" +
@@ -4483,7 +4590,7 @@ const DemandaApp = (function() {
                             "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Fabricante</th>" +
                             "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Concorrente</th>" +
                             "<th style='padding:.5rem .6rem;text-align:right;color:#f59e0b;font-size:.7rem;font-weight:700;text-transform:uppercase'>Preço Concorrente</th>" +
-                            "<th style='padding:.5rem .6rem;text-align:right;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Nosso Preço</th>" +
+                            "<th style='padding:.5rem .6rem;text-align:right;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Nosso Preço" + (nomeFilSel ? "<span style='display:block;font-size:.6rem;color:#10b981;text-transform:none'>" + _esc(nomeFilSel) + "</span>" : "") + "</th>" +
                             "<th style='padding:.5rem .6rem;text-align:center;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Comparativo</th>" +
                             "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Cliente</th>" +
                             "<th style='padding:.5rem .6rem;text-align:left;color:var(--text-secondary);font-size:.7rem;font-weight:700;text-transform:uppercase'>Data</th>" +
@@ -4506,6 +4613,11 @@ const DemandaApp = (function() {
 
     function filtrarPorConcorrente(conc) {
         _concorrenteFiltroPrecos = conc || "todos";
+        _desenharTabelaPrecosMapeados();
+    }
+
+    function filtrarPorFilialPrecos(v) {
+        _filialFiltroPrecos = Number(v) || null;
         _desenharTabelaPrecosMapeados();
     }
 
@@ -4643,7 +4755,8 @@ const DemandaApp = (function() {
                 var foundPrc = (window.ERP_PRICES_BY_FAB && window.ERP_PRICES_BY_FAB[valUp])
                     || (window.ERP_PRICES_BY_ID && window.ERP_PRICES_BY_ID[valUp]);
                 if (foundPrc && foundPrc.v) {
-                    _concItens[idx].precoMeu = foundPrc.v;
+                    var pfC = (window.DemandaFilial && window.ERP_PRICES_BY_ID && window.ERP_PRICES_BY_ID[valUp]) ? DemandaFilial.preco(valUp) : null;
+                    _concItens[idx].precoMeu = (pfC && pfC.exato && pfC.v > 0) ? pfC.v : foundPrc.v;
                 }
             }
         }
@@ -5045,6 +5158,14 @@ const DemandaApp = (function() {
 
         // Preenche sidebar
         try { _updateUser(_sessao || { nome: "Demo", filial: "Demo" }); } catch(e) {}
+
+        // Filial da cotação (padrão do usuário)
+        try {
+            _renderSeletorFilial(window.DemandaFilial && !DemandaFilial.padraoUsuario());
+            if (window.DemandaFilial && !DemandaFilial.padraoUsuario()) {
+                setTimeout(function() { _toast("Selecione a sua filial no topo da Cotação Atual (fica salva como padrão).", "warning"); }, 1500);
+            }
+        } catch(e) {}
 
         // Versão no footer
         fetch("version.json?v=" + Date.now())
@@ -7426,6 +7547,9 @@ const DemandaApp = (function() {
         _concRemoveItem:              _concRemoveItem,
         _concUpdateItem:              _concUpdateItem,
         _salvarCotacaoConcorrente:    _salvarCotacaoConcorrente,
+        setFilialCotacao:             setFilialCotacao,
+        definirFilialPadrao:          definirFilialPadrao,
+        filtrarPorFilialPrecos:       filtrarPorFilialPrecos,
         _loadHistoricoConcorrente:    _loadHistoricoConcorrente,
         _toggleConcCard:              _toggleConcCard,
         _arquivarCotacaoConcorrente:  _arquivarCotacaoConcorrente,
