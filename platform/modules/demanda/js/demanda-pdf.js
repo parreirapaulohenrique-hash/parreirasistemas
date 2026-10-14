@@ -85,6 +85,43 @@ const DemandaPDF = (() => {
     }
 
     // ── Extrai texto de todas as páginas ───────────────────────
+    // Remonta as linhas pela POSIÇÃO de cada trecho de texto (não pela ordem interna do PDF):
+    //   • agrupa trechos com o mesmo Y na mesma linha (ordem de leitura de cima p/ baixo);
+    //   • ordena por X e separa colunas com TAB quando há lacuna entre os trechos.
+    // Sem isso, PDFs de ERP (ex.: DAV Orçamento) vinham com cada item partido em 2 linhas
+    // e colunas coladas por espaço simples, gerando itens duplicados/errados.
+    function _montarLinhasPorCoordenadas(items) {
+        const trechos = [];
+        for (const it of items || []) {
+            if (!it || typeof it.str !== 'string' || !it.str.trim() || !it.transform) continue;
+            const h = Math.abs(it.transform[3]) || Math.abs(it.height || 0) || 8;
+            trechos.push({ s: it.str, x: it.transform[4], y: it.transform[5], w: Number(it.width) || 0, h: h });
+        }
+        if (trechos.length === 0) return '';
+        trechos.sort((a, b) => (b.y - a.y) || (a.x - b.x));
+        const linhas = [];
+        for (const t of trechos) {
+            const ult = linhas[linhas.length - 1];
+            if (ult && Math.abs(ult.y - t.y) <= Math.max(2, t.h * 0.45)) ult.itens.push(t);
+            else linhas.push({ y: t.y, itens: [t] });
+        }
+        return linhas.map(l => {
+            l.itens.sort((a, b) => a.x - b.x);
+            let txt = '', prev = null;
+            for (const t of l.itens) {
+                if (!prev) { txt = t.s.trim(); }
+                else {
+                    const gap = t.x - (prev.x + prev.w);
+                    const sep = gap > Math.max(2, t.h * 0.3) ? '\t'
+                              : (gap > 0.8 || /\s$/.test(prev.s) || /^\s/.test(t.s)) ? ' ' : '';
+                    txt += sep + t.s.trim();
+                }
+                prev = t;
+            }
+            return txt;
+        }).join('\n');
+    }
+
     async function _extractPages(pdfLib, file, onPageProgress) {
         const buffer = await file.arrayBuffer();
         const pdf    = await pdfLib.getDocument({ data: buffer }).promise;
@@ -93,16 +130,16 @@ const DemandaPDF = (() => {
         for (let i = 1; i <= pdf.numPages; i++) {
             const page    = await pdf.getPage(i);
             const content = await page.getTextContent();
-            let pageText = '';
-            let lastY = null;
-            for (const it of content.items) {
-                if (lastY !== null && Math.abs(it.transform[5] - lastY) > 5) {
-                    pageText += '\n';
-                } else if (pageText && !pageText.endsWith('\n') && !pageText.endsWith(' ')) {
-                    pageText += ' ';
+            let pageText = _montarLinhasPorCoordenadas(content.items);
+            if (!pageText) {
+                // Fallback: ordem original do PDF
+                let lastY = null;
+                for (const it of content.items) {
+                    if (lastY !== null && Math.abs(it.transform[5] - lastY) > 5) pageText += '\n';
+                    else if (pageText && !pageText.endsWith('\n') && !pageText.endsWith(' ')) pageText += ' ';
+                    pageText += it.str;
+                    lastY = it.transform[5];
                 }
-                pageText += it.str;
-                lastY = it.transform[5];
             }
             pages.push({ pageNum: i, text: pageText });
             if (onPageProgress) onPageProgress(i, pdf.numPages);
@@ -283,6 +320,7 @@ const DemandaPDF = (() => {
     return {
         importCatalogPDF,
         parseCotacaoPDF,
+        _extractPagesFromLib: _extractPages,
     };
 
 })();

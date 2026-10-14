@@ -196,6 +196,7 @@ const DemandaImport = (() => {
             const mapping = {};
             for (let pIdx = 0; pIdx < parts.length; pIdx++) {
                 const pClean = parts[pIdx].toLowerCase();
+                if (/^item/i.test(pClean)) mapping.item = pIdx;
                 if (/^(produto|c[oó]d(?:igo)?|c[oó]d\.?\s*int\.?)$/i.test(pClean)) { mapping.produto = pIdx; matches++; }
                 else if (/^(descri[cç][aã]o|denomina[cç][aã]o|item|denomina)$/i.test(pClean)) { mapping.descricao = pIdx; matches++; }
                 else if (/^(marca|fabricante)$/i.test(pClean)) { mapping.marca = pIdx; matches++; }
@@ -208,7 +209,7 @@ const DemandaImport = (() => {
                 else {
                     // Cabeçalhos compostos de ERPs (ex.: "Item Cód. Fab Descrição Produto", "Qtde.", "P. Unit.")
                     if (/^item\b/i.test(pClean)) { mapping.item = pIdx; }
-                    if (/\bc[oó]d(?:igo)?\.?(\s*(fab|f[aá]brica|int|prod)\.?)?\b/i.test(pClean) && mapping.produto === undefined) { mapping.produto = pIdx; matches++; }
+                    if (/c[oó]d(?:igo)?\.?(\s*(fab|f[aá]brica|int|prod)\.?)?(\s|$)/i.test(pClean) && mapping.produto === undefined) { mapping.produto = pIdx; matches++; }
                     if (/\bdescri[cç][aã]o\b/i.test(pClean) && mapping.descricao === undefined) { mapping.descricao = pIdx; matches++; }
                     if (/^(quant|qtde?|qtd)\.?$/i.test(pClean) && mapping.qtde === undefined) { mapping.qtde = pIdx; matches++; }
                     if (/^(p\.?\s*unit\.?|pre[cç]o\s*unit[aá]rio|vl\.?\s*unit\.?)$/i.test(pClean) && mapping.preco_unit === undefined) { mapping.preco_unit = pIdx; matches++; }
@@ -227,13 +228,20 @@ const DemandaImport = (() => {
         const isPickingSlip = (colMap.referencia !== undefined && colMap.descricao !== undefined && colMap.qtde === undefined);
         const items = [];
 
+        let ultimoFoiItem = false;
         for (let r = headerIdx + 1; r < rawLines.length; r++) {
             const rowLine = rawLines[r];
+            const anteriorFoiItem = ultimoFoiItem;
+            ultimoFoiItem = false;
             // Fim da tabela (rodapé do orçamento): nada abaixo daqui é item
-            if (/^(n\.?\s*itens|nro\.?\s*itens|observa[cç][oõ]es|notas\s*:|desconto\s*:)/i.test(rowLine)) break;
+            if (/^(n\.?\s*itens|nro\.?\s*itens|observa[cç][oõ]es|notas\s*:|desconto\s*:|ao\s+emitir|outras\s+informa[cç])/i.test(rowLine)) break;
             // Ignora rodapés / totais / mensagens do ERP e cabeçalhos residuais
             if (/^(frete|outras\s*despesas|total|nro\s*itens|condi[cç][aã]o|servi[cç]os|p[aá]g|balcao|tipo\s+cod|orc\s+[\d.]+|\d+\s+fernando|10\s+venda)\b/i.test(rowLine)) continue;
             if (/^[\d\s.,\-]+$/.test(rowLine) && rowLine.length < 8) continue;
+            // Cabeçalho/rodapé repetido em PDFs de várias páginas e linhas de totais (não são itens)
+            if (/^(pedido\s+de\s+(compra|cota[cç][aã]o)\s*n|or[cç]amento\s*n[ºo°.]|gerado\s+em|cnpj\b|inscri[cç][aã]o\s+estadual|itens\s+do\s+pedido|item\s+c[oó]d|rodovia\b|endere[cç]o\s*:|telefone|fone\s*:|e-?mail\s*:|d\s+e\s+s\s+c|ipi\s*:|icms\s*:)/i.test(rowLine) ||
+                /p[aá]gina\s+\d+\s*(de|\/)\s*\d+/i.test(rowLine) ||
+                (/descri[cç]/i.test(rowLine) && /(qtd|quant)/i.test(rowLine))) { ultimoFoiItem = false; continue; }
 
             let partsRow = rowLine.split(/\t+|\s{2,}/).map(p => p.trim()).filter(Boolean);
             if (partsRow.length === 0) continue;
@@ -291,55 +299,81 @@ const DemandaImport = (() => {
                     ref = mCode ? mCode[1] : desc;
                 }
             } else {
-                // Layout com Produto / Quantidade / Preço (Orçamento completo)
-                // Remove o número sequencial do item (coluna "Item") quando vier antes do código
-                if (partsRow.length >= 3 && /^\d{1,3}$/.test(partsRow[0]) && /\d/.test(partsRow[1]) && /^[A-Z0-9][A-Z0-9.\-\/]*$/i.test(partsRow[1])) {
-                    partsRow = partsRow.slice(1);
-                }
-                // Código e descrição colados na mesma coluna ("CJT0410 DIVISOR MANG...")
-                if (/\s/.test(partsRow[0])) {
-                    const mCod = partsRow[0].match(/^([A-Z0-9][A-Z0-9.\-\/]{2,})\s+(.+)$/i);
-                    if (mCod && /\d/.test(mCod[1]) && !/^\d+[.,]\d+$/.test(mCod[1])) {
-                        partsRow = [mCod[1], mCod[2]].concat(partsRow.slice(1));
-                    }
-                }
-                // Linha sem descrição nem números (lixo de OCR, ex.: "UNpC") não é item
-                if (partsRow.length < 2) continue;
-
-                ref = partsRow[0];
-                if (partsRow.length > 1) desc = partsRow[1];
+                // Layout com Produto / Quantidade / Preço (Orçamento / Pedido de ERP)
+                const UN_RE = /^(UN|UND|UNID[A-Z]{0,4}|PC|PÇ|PEC|PCS|PE[CÇ]AS?|CX|CAIXAS?|JG|JOGOS?|PAR|PARES|M|MT|MTS|METROS?|KG|KGS|LT|LITROS?|CJ|KIT|KITS|RL|ROLOS?|FD|GL|TB|BARRAS?)$/i;
                 const isNum = (s) => /^\d{1,3}(\.\d{3})*(,\d+)?$|^\d+([.,]\d+)?$/.test(String(s || '').trim());
+                const QTD_UN_RE = /^(\d[\d.,]*)\s*(UN|UND|UNID[A-Z]{0,4}|PC|PÇ|PEC|PCS|PE[CÇ]AS?|CX|CAIXAS?|JG|JOGOS?|PAR|PARES|MT|MTS|METROS?|KG|KGS|LT|LITROS?|CJ|KIT|KITS|RL|ROLOS?|FD|GL|TB|BARRAS?)$/i;
+                const isQtdUn = (s) => QTD_UN_RE.test(String(s || '').trim());
                 const toQtde = (s) => {
-                    let c = String(s || '').trim();
+                    let c = String(s || '').trim().replace(/\s*[A-ZÇ]+$/i, '');
                     if (c.indexOf(',') >= 0) c = c.replace(/\./g, '').replace(',', '.');
                     else if (!/^\d+\.\d{1,2}$/.test(c)) c = c.replace(/\./g, '');
                     return Math.round(parseFloat(c)) || 1;
                 };
+                const separarCodDesc = (s) => {
+                    const m = String(s || '').match(/^([A-Z0-9][A-Z0-9.\-\/+*]{2,})\s+(.+)$/i);
+                    return (m && /\d/.test(m[1]) && !/^\d+[.,]\d+$/.test(m[1])) ? [m[1], m[2]] : null;
+                };
 
-                // Localiza índice da unidade de medida (UN, PC, etc.)
-                let unIdx = -1;
-                for (let u = 1; u < partsRow.length; u++) {
-                    if (/^(UN|PC|PÇ|CX|UND|JG|PAR|M)$/i.test(partsRow[u])) {
-                        unIdx = u;
-                        break;
-                    }
+                // Remove o número sequencial do item (coluna "Item") quando vier antes do código
+                if (partsRow.length >= 3 && /^\d{1,4}$/.test(partsRow[0]) &&
+                    (colMap.item !== undefined || (/\d/.test(partsRow[1]) && /^[A-Z0-9][A-Z0-9.\-\/]*$/i.test(partsRow[1])))) {
+                    partsRow = partsRow.slice(1);
                 }
 
-                if (unIdx !== -1 && unIdx + 1 < partsRow.length && isNum(partsRow[unIdx + 1])) {
+                // Localiza a coluna de unidade (UN, PC, PEC...) seguida da quantidade
+                let unIdx = -1;
+                for (let u = 1; u < partsRow.length; u++) {
+                    if (UN_RE.test(partsRow[u]) && u + 1 < partsRow.length && isNum(partsRow[u + 1])) { unIdx = u; break; }
+                }
+                const nums = partsRow.slice(1).filter(s => isNum(s) || isQtdUn(s));
+
+                // Linha sem unidade e sem números = continuação da descrição / prateleira / referência cruzada / lixo de OCR
+                if (colMap.qtde !== undefined && unIdx === -1 && nums.length === 0) {
+                    if (anteriorFoiItem && items.length > 0 && !/^(prateleira|local|endere[cç]o)\b/i.test(rowLine) && !/:\s*$/.test(rowLine) && rowLine.length <= 60) {
+                        const ultimo = items[items.length - 1];
+                        ultimo.descOriginal = (ultimo.descOriginal + ' ' + partsRow.join(' ')).toUpperCase().trim();
+                        ultimoFoiItem = true;
+                    }
+                    continue;
+                }
+                if (partsRow.length < 2 && unIdx === -1) continue;
+
+                if (unIdx !== -1) {
+                    const entre = partsRow.slice(1, unIdx); // colunas entre o código e a unidade
+                    if (colMap.marca !== undefined && entre.length >= 2) {
+                        ref = partsRow[0]; desc = entre.slice(0, -1).join(' '); marca = entre[entre.length - 1];
+                    } else if (colMap.marca !== undefined && entre.length === 1) {
+                        // Código longo invadiu a coluna de descrição: "GE30KPPB3+COL ROLAMENTO..." | MARCA
+                        const sp = separarCodDesc(partsRow[0]);
+                        ref = sp ? sp[0] : partsRow[0]; desc = sp ? sp[1] : partsRow[0]; marca = entre[0];
+                    } else if (entre.length >= 1) {
+                        ref = partsRow[0]; desc = entre.join(' ');
+                    } else {
+                        const sp = separarCodDesc(partsRow[0]);
+                        ref = sp ? sp[0] : partsRow[0]; desc = sp ? sp[1] : partsRow[0];
+                    }
                     qtde = toQtde(partsRow[unIdx + 1]);
                     if (unIdx + 2 < partsRow.length) {
                         const pv = _parseMoedaBR(partsRow[unIdx + 2]);
                         if (pv > 0) preco = pv;
                     }
-                } else if (colMap.qtde !== undefined) {
-                    // Sem coluna UN legível: 1º número após a descrição = Qtde, 2º = Preço unitário
-                    const nums = partsRow.slice(2).filter(isNum);
-                    if (nums.length === 0 && partsRow.length === 2 && !isNum(partsRow[1]) && !/\d/.test(ref)) continue;
-                    if (nums.length > 0) {
-                        qtde = toQtde(nums[0]);
+                } else {
+                    // Sem coluna UN legível: código | descrição | 1º número = Qtde | 2º = Preço unitário
+                    ref = partsRow[0];
+                    desc = partsRow[1] && !isNum(partsRow[1]) ? partsRow[1] : '';
+                    if (!desc) {
+                        const sp = separarCodDesc(partsRow[0]);
+                        if (sp) { ref = sp[0]; desc = sp[1]; }
                     }
-                    if (nums.length > 1 && colMap.preco_unit !== undefined) {
-                        const pv = _parseMoedaBR(nums[1]);
+                    const numsQ = partsRow.slice(desc && partsRow[1] === desc ? 2 : 1).filter(s => isNum(s) || isQtdUn(s));
+                    // Quantidade com unidade colada ("15,00 UN") tem prioridade como Qtde
+                    const qtdUn = numsQ.find(isQtdUn);
+                    if (qtdUn) qtde = toQtde(qtdUn);
+                    else if (numsQ.length > 0) qtde = toQtde(numsQ[0]);
+                    const numsP = numsQ.filter(s => s !== qtdUn && isNum(s));
+                    if (colMap.preco_unit !== undefined && (qtdUn ? numsP.length > 0 : numsP.length > 1)) {
+                        const pv = _parseMoedaBR(qtdUn ? numsP[0] : numsP[1]);
                         if (pv > 0) preco = pv;
                     }
                 }
@@ -365,6 +399,7 @@ const DemandaImport = (() => {
                 _metaCliente: detectedCliente || null,
                 _metaOrcamento: detectedOrcamento || null
             });
+            ultimoFoiItem = true;
         }
         return items;
     }
