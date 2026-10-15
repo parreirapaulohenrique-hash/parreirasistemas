@@ -1,9 +1,9 @@
 {
-  "version": "3.2.33",
-  "build": "20261015-v3.2.33",
+  "version": "3.3.0",
+  "build": "20261015-v3.3.0",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-15",
-  "change": "v3.2.33 - fix(demanda): importacao Excel separa CODIGO - DESCRICAO em coluna unica, detecta cabecalho e coluna por conteudo, refs alternativas em obs.",
-  "releaseDate": "2026-10-15T11:05:00-03:00"
+  "change": "v3.3.0 - feat(demanda): Mapeador de Colunas na importacao Excel/CSV/texto (revisao do operador, juntar colunas, modelos salvos).",
+  "releaseDate": "2026-10-15T15:10:00-03:00"
 }
