@@ -616,5 +616,12 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
     * **Eliminação de Matches Falsos por Palavras Genéricas:** Remoção do fallback frouxo que casava termos simples como "ROLAMENTO" a produtos não relacionados (ex: rolamento NTN G15208 de R$ 265,08).
     * **Proteção Estrita de Fixadores:** A detecção por dimensões (`12X40`, `M12X160`) agora só opera se a descrição contiver explicitamente termos de fixadores (`PARAFUSO`, `BARRA`, `PRISIONEIRO`, `SEXTAVADO`), impedindo que mangotes como `MANGOTE 1.3/4` fossem associados a parafusos Phillips.
     * **Botão ✕ Desvincular e 🔍 Vincular Manualmente na Conferência:** Adicionada ação rápida direta em cada linha da tabela de conferência de importação para desvincular imediatamente qualquer auto-match indesejado e abrir a busca no ERP para vincular a peça correta antes de salvar a cotação.
+* **2026-10-14/15 (v3.21.102 / Demanda v3.2.27 → v3.3.0):**
+  - **PDF por coordenadas** (`demanda-pdf.js` `_montarLinhasPorCoordenadas`) + parser com unidades por extenso e descarte de cabeçalho/rodapé de página.
+  - **Coluna Fabricante** no Preço Concorrente (nosso fabricante × marca do concorrente, laranja quando diferem).
+  - **Filial da cotação** (`demanda-filial.js` + gerado `demanda-erp-filiais.js` com preço/estoque `multiloja` do MaxData, empIds 1,2,3,5): campo Filial começa vazio e é obrigatório para salvar; preço/estoque da cotação pela filial escolhida; filtro de filial em Minhas Cotações e Dashboard (filtro aplicado no cliente em `DemandaDB.listDemandas`, sem índice composto). Cotações antigas sem `filialId` contam como filial 1. API MaxData só autentica empId 1 → clientes por filial ainda indisponíveis.
+  - **Importação Excel**: separa "CÓDIGO - DESCRIÇÃO" em coluna única, refs alternativas entre parênteses vão para Obs.
+  - **Mapeador de Colunas (`demanda-mapeador.js`, novo)**: Excel/CSV e texto em colunas viram grade; o sistema sugere o padrão, o operador revisa (colunas fixas Referência/Descrição/Qtde, opcionais removíveis, juntar colunas com separador, linha inicial/linhas ignoradas) e só então os itens vão para a Conferência. Modelos salvos em `tenants/{tid}/demanda/data/mapeadorModelos` (todos os operadores) com sugestão por semelhança — nunca aplicados sem clique. Fases seguintes: PDF e imagem/OCR no mesmo mapeador.
+  - Política: módulo `demanda` segue com deploy direto (`deploy.ps1; promote.ps1`) — usuário testa sempre na versão web.
 
 
