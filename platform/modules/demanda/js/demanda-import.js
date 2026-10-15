@@ -843,12 +843,21 @@ const DemandaImport = (() => {
 
         if (rows.length < 2) throw new Error('Planilha vazia ou sem dados.');
 
-        // Detecta cabeçalho na primeira linha
-        const header  = rows[0].map(h => String(h).toLowerCase().trim());
-        const colMap  = _detectColumns(header);
-        const dataRows = rows.slice(1).filter(r => r.some(c => String(c).trim() !== ''));
+        // Localiza o cabeçalho nas 10 primeiras linhas (a que reconhecer mais colunas)
+        let hdrIdx = -1, colMap = null, melhor = 0;
+        for (let i = 0; i < Math.min(10, rows.length); i++) {
+            const m = _detectColumns(rows[i].map(h => String(h).toLowerCase().trim()));
+            const score = ['ref', 'desc', 'qtde', 'preco', 'marca'].filter(k => m[k] >= 0).length;
+            if (score > melhor) { melhor = score; hdrIdx = i; colMap = m; }
+        }
+        if (!colMap) colMap = { ref: -1, desc: -1, qtde: -1, preco: -1, marca: -1, obs: -1 };
 
-        const itens = dataRows.map((row, idx) => _mapExcelRow(row, colMap, idx + 2));
+        const dataRows = rows.slice(hdrIdx + 1).filter(r => r.some(c => String(c).trim() !== ''));
+        _completarColunasPorConteudo(colMap, dataRows);
+
+        const itens = dataRows
+            .map((row, idx) => _mapExcelRow(row, colMap, hdrIdx + 2 + idx))
+            .filter(Boolean);
 
         return {
             itens,
@@ -858,49 +867,129 @@ const DemandaImport = (() => {
     }
 
     /**
-     * Detecta automaticamente quais colunas contêm cada campo.
+     * Detecta automaticamente quais colunas contêm cada campo (pelo título).
      */
     function _detectColumns(header) {
-        const map = { ref: -1, desc: -1, qtde: -1, marca: -1, obs: -1, seq: -1 };
+        const map = { ref: -1, desc: -1, qtde: -1, preco: -1, marca: -1, obs: -1 };
 
         const patterns = {
-            ref:   /ref|c[oó]d|código|codigo|part|pn|n[úu]mero.pe[çc]|referencia|referência/i,
-            desc:  /desc|produto|pe[çc]a|item|denomina/i,
-            qtde:  /qtde?|quant|qty|unid|volume/i,
-            marca: /marca|fabr|brand|mfr/i,
-            obs:   /obs|note|coment|detalh|inform/i,
-            seq:   /seq|item|n[°oº]|linha|#/i,
+            ref:   /^(ref|c[oó]d|part\s*n|p\/n|pn$|n[úu]mero\s*(da\s*)?pe[çc]a)|refer[eê]ncia|c[oó]digo/i,
+            desc:  /desc|produto|^pe[çc]as?$|denomina|material|^itens?$/i,
+            qtde:  /^(qtde?|qtd|quant|qty|qt\.?$)/i,
+            preco: /pre[çc]o|valor\s*unit|vl\.?\s*unit|unit[áa]rio/i,
+            marca: /marca|fabric|brand/i,
+            obs:   /^obs|observ|coment/i,
         };
 
         header.forEach((col, idx) => {
+            if (!col) return;
+            if (/total/i.test(col) && !/pre[çc]o/i.test(col)) return; // coluna TOTAL não é preço
             for (const [field, pat] of Object.entries(patterns)) {
-                if (map[field] === -1 && pat.test(col)) {
-                    map[field] = idx;
-                }
+                if (map[field] === -1 && pat.test(col)) { map[field] = idx; break; }
             }
         });
 
         return map;
     }
 
+    /**
+     * Quando o título não identifica a coluna de descrição (ex.: título com o nome do cliente),
+     * escolhe pelo conteúdo a coluna com mais textos.
+     */
+    function _completarColunasPorConteudo(map, dataRows) {
+        if (map.desc >= 0 || !dataRows.length) return;
+        const usadas = new Set(Object.values(map).filter(v => v >= 0));
+        const nCols = Math.max(...dataRows.map(r => r.length));
+        let best = -1, bestScore = 0;
+        for (let c = 0; c < nCols; c++) {
+            if (usadas.has(c)) continue;
+            let score = 0;
+            dataRows.forEach(r => {
+                const v = String(r[c] == null ? '' : r[c]).trim();
+                if (v.length >= 4 && /[A-Za-zÀ-ÿ]{3,}/.test(v)) score++;
+            });
+            if (score > bestScore) { bestScore = score; best = c; }
+        }
+        if (best >= 0 && bestScore >= Math.max(1, dataRows.length * 0.3)) map.desc = best;
+    }
+
+    /**
+     * Separa "CÓDIGO - DESCRIÇÃO" de uma célula única.
+     * Ex.: "03M7194 - PARAFUSO 10X40", "14M7296-PORCA 10MM", "AH168161 (AH129451) - ROLAMENTO",
+     *      "AXE58085 SENSOR", "PARAFUSO H215214".
+     * @returns {{ref:string, desc:string, alternativas:string[]}}
+     */
+    function _splitCodigoDescricao(texto) {
+        const t = String(texto || '').replace(/\s+/g, ' ').trim();
+        const out = { ref: '', desc: t, alternativas: [] };
+        if (!t) return out;
+
+        const _alts = (s) => s.split(/[-,;\/]+/).map(x => x.replace(/\s+/g, ' ').trim().toUpperCase()).filter(x => x.length >= 3 && /\d/.test(x) && x.length <= 32);
+
+        // 1. Código no início (hífen só faz parte do código se o trecho seguinte tiver dígito: UC211-32)
+        const m = t.match(/^([A-Za-z0-9][A-Za-z0-9.\/]*(?:-[A-Za-z0-9.\/]*\d[A-Za-z0-9.\/]*)*)/);
+        if (m && _isPartCode(m[1]) && /\d/.test(m[1])) {
+            let resto = t.slice(m[1].length).trim();
+            const pegaParenteses = () => {
+                const p = resto.match(/^\(([^)]*)\)\s*/);
+                if (p) { out.alternativas.push(..._alts(p[1])); resto = resto.slice(p[0].length).trim(); }
+            };
+            pegaParenteses();
+            resto = resto.replace(/^[-–—:]+\s*/, '').trim();
+            pegaParenteses();
+            out.ref = m[1].toUpperCase();
+            out.desc = resto || out.ref;
+            return out;
+        }
+
+        // 2. Código no final: "PARAFUSO H215214" (exige 4+ dígitos seguidos para não pegar medidas tipo 8X30MM)
+        const f = t.match(/^(.+?)\s+([A-Za-z]{0,4}\d{4,}[A-Za-z0-9]*)$/);
+        if (f && _isPartCode(f[2])) {
+            out.ref = f[2].toUpperCase();
+            out.desc = f[1].trim();
+        }
+        return out;
+    }
+
     function _mapExcelRow(row, colMap, rowNum) {
-        const get = (col) => col >= 0 ? String(row[col] || '').trim() : '';
+        const raw = (col) => col >= 0 ? row[col] : '';
+        const get = (col) => String(raw(col) == null ? '' : raw(col)).trim();
 
-        const ref   = get(colMap.ref);
-        const desc  = get(colMap.desc);
-        const qtde  = parseFloat(get(colMap.qtde).replace(',', '.')) || 1;
+        let ref   = get(colMap.ref);
+        let desc  = get(colMap.desc);
         const marca = get(colMap.marca);
-        const obs   = get(colMap.obs);
+        let obs   = get(colMap.obs);
 
-        return {
+        const qRaw = raw(colMap.qtde);
+        const qtde = (typeof qRaw === 'number' ? qRaw : parseFloat(String(qRaw || '').replace(',', '.'))) || 1;
+
+        const pRaw = raw(colMap.preco);
+        const preco = typeof pRaw === 'number' ? pRaw : (pRaw ? (_parseMoedaBR(String(pRaw)) || 0) : 0);
+
+        // Sem coluna de código: separa "CÓDIGO - DESCRIÇÃO" da própria descrição
+        if (!ref && desc) {
+            const sp = _splitCodigoDescricao(desc);
+            ref = sp.ref;
+            desc = sp.desc;
+            if (sp.alternativas.length) {
+                obs = (obs ? obs + ' | ' : '') + 'Ref. alternativas: ' + sp.alternativas.join(', ');
+            }
+        }
+
+        if (!ref && !desc) return null;
+        if (!ref && /^(sub-?)?total\b/i.test(desc)) return null; // linha de total
+
+        const item = {
             refOriginal:    ref,
             descOriginal:   desc || ref,
             qtdeSolicitada: qtde,
             marca,
             obs,
-            incerteza:      !ref && !desc,
+            incerteza:      !ref,
             _rowNum:        rowNum,
         };
+        if (preco > 0) item.precoConcorrente = preco;
+        return item;
     }
 
     // ── Normalização de referências ───────────────────────────
