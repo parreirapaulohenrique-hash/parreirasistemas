@@ -298,25 +298,19 @@ const DemandaApp = (function() {
     function _renderSeletorFilial(destacar) {
         var sel = document.getElementById("selFilialCotacao");
         if (!sel || !window.DemandaFilial) return;
-        var atual = DemandaFilial.atual();
-        var padrao = DemandaFilial.padraoUsuario();
-        sel.innerHTML = DemandaFilial.listar().map(function(f) {
-            return "<option value='" + f.empId + "'" + (f.empId === atual ? " selected" : "") + ">" + _esc(f.nome) + (f.empId === padrao ? " ★" : "") + "</option>";
-        }).join("");
-        sel.style.borderColor = destacar ? "var(--accent-danger)" : "";
-        var bp = document.getElementById("btnFilialPadrao");
-        if (bp) {
-            var ehPadrao = padrao === atual;
-            bp.style.color = ehPadrao ? "#f59e0b" : "var(--text-secondary)";
-            bp.title = ehPadrao ? "Esta é a sua filial padrão" : "Definir " + DemandaFilial.nome(atual) + " como minha filial padrão";
-            bp.querySelector("span").textContent = ehPadrao ? "star" : "star_border";
-        }
+        var escolhida = DemandaFilial.selecionada();
+        sel.innerHTML = "<option value=''" + (!escolhida ? " selected" : "") + " disabled>Filial *</option>" +
+            DemandaFilial.listar().map(function(f) {
+                return "<option style='color:var(--text-primary)' value='" + f.empId + "'" + (f.empId === escolhida ? " selected" : "") + ">" + _esc(f.nome) + "</option>";
+            }).join("");
+        sel.style.borderColor = destacar ? "var(--accent-danger)" : (escolhida ? "rgba(16,185,129,.4)" : "rgba(239,68,68,.45)");
+        sel.style.color = escolhida ? "var(--text-primary)" : "#ef4444";
     }
 
     function setFilialCotacao(v) {
         if (!window.DemandaFilial) return;
         DemandaFilial.definirAtual(v);
-        if (!DemandaFilial.padraoUsuario()) DemandaFilial.definirPadraoUsuario(v);
+        DemandaFilial.definirPadraoUsuario(v); // última filial usada = padrão do Preço Concorrente
         _renderSeletorFilial();
         _atualizarPrecosItensFilial();
         _toast("Filial da cotação: " + DemandaFilial.nome(v), "info");
@@ -348,7 +342,7 @@ const DemandaApp = (function() {
         if (!window.DemandaFilial) return;
         var fs = DemandaFilial.filiaisDoCliente(cli);
         if (fs.length === 1) {
-            if (fs[0] !== DemandaFilial.atual()) {
+            if (fs[0] !== DemandaFilial.selecionada()) {
                 DemandaFilial.definirAtual(fs[0]);
                 _renderSeletorFilial();
                 _atualizarPrecosItensFilial();
@@ -1396,6 +1390,17 @@ const DemandaApp = (function() {
                 setTimeout(function() { if (btnCli) btnCli.style.animation = ""; }, 500);
             }
             toggleClienteDropdown();
+            return;
+        }
+        if (window.DemandaFilial && !DemandaFilial.selecionada()) {
+            _toast("Obrigatório selecionar a FILIAL da cotação antes de salvar.", "warning");
+            _renderSeletorFilial(true);
+            var selF = document.getElementById("selFilialCotacao");
+            if (selF) {
+                selF.style.animation = "shake 0.4s ease";
+                setTimeout(function() { if (selF) selF.style.animation = ""; }, 500);
+                try { selF.focus(); } catch (_) {}
+            }
             return;
         }
         if (typeof DemandaDB === "undefined") {
@@ -5159,13 +5164,8 @@ const DemandaApp = (function() {
         // Preenche sidebar
         try { _updateUser(_sessao || { nome: "Demo", filial: "Demo" }); } catch(e) {}
 
-        // Filial da cotação (padrão do usuário)
-        try {
-            _renderSeletorFilial(window.DemandaFilial && !DemandaFilial.padraoUsuario());
-            if (window.DemandaFilial && !DemandaFilial.padraoUsuario()) {
-                setTimeout(function() { _toast("Selecione a sua filial no topo da Cotação Atual (fica salva como padrão).", "warning"); }, 1500);
-            }
-        } catch(e) {}
+        // Filial da cotação: começa vazia (obrigatória para salvar)
+        try { _renderSeletorFilial(); } catch(e) {}
 
         // Versão no footer
         fetch("version.json?v=" + Date.now())

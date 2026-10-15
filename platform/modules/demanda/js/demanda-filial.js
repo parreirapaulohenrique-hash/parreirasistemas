@@ -59,6 +59,8 @@ const DemandaFilial = (() => {
 
     // ── Filial da cotação atual ──────────────────────────────
     function atual() { return _atual || padraoUsuario() || 1; }
+    /** Filial escolhida para a cotação (null enquanto não for escolhida) */
+    function selecionada() { return _atual || null; }
     function definirAtual(empId) { const v = Number(empId); _atual = v > 0 ? v : null; return atual(); }
     function resetarAtual() { _atual = null; return atual(); }
 
@@ -106,7 +108,7 @@ const DemandaFilial = (() => {
 
     function temDadosPorFilial() { return !!(window.ERP_FILIAIS && window.ERP_FILIAIS.p); }
 
-    return { listar, nome, padraoUsuario, definirPadraoUsuario, atual, definirAtual, resetarAtual,
+    return { listar, nome, padraoUsuario, definirPadraoUsuario, atual, selecionada, definirAtual, resetarAtual,
              filiaisDoCliente, preco, estoque, temDadosPorFilial };
 })();
 
