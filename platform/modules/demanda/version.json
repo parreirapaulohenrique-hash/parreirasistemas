@@ -1,9 +1,9 @@
 {
-  "version": "3.3.0",
-  "build": "20261015-v3.3.0",
+  "version": "3.3.1",
+  "build": "20261015-v3.3.1",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-15",
-  "change": "v3.3.0 - feat(demanda): Mapeador de Colunas na importacao Excel/CSV/texto (revisao do operador, juntar colunas, modelos salvos).",
-  "releaseDate": "2026-10-15T15:10:00-03:00"
+  "change": "v3.3.1 - fix(demanda): correcao tela preta appShell; filial no detalhe da cotacao; filtro por filial em orcamentos; reordenacao dos grupos da sidebar.",
+  "releaseDate": "2026-10-15T18:15:00-03:00"
 }
