@@ -1,9 +1,9 @@
 {
-  "version": "3.2.31",
-  "build": "20261014-v3.2.31",
+  "version": "3.2.32",
+  "build": "20261014-v3.2.32",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-14",
-  "change": "v3.2.31 - fix(demanda): remove botao Limpar tudo duplicado do cabecalho da Cotacao Atual.",
-  "releaseDate": "2026-10-14T21:25:00-03:00"
+  "change": "v3.2.32 - feat(demanda): filtro de filial em Minhas Cotacoes e Dashboard + selo de filial nos cards.",
+  "releaseDate": "2026-10-14T21:40:00-03:00"
 }

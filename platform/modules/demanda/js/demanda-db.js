@@ -203,13 +203,21 @@ const DemandaDB = (() => {
      * @param {object} filters - { vendedorId, status, filialId, limit }
      * @returns {Promise<Array>}
      */
+    // Filial da cotação (cotações antigas sem filialId contam como filial 1)
+    function _filialDe(d) { return Number((d && d.filialId) || 1); }
+    function _filtrarFilial(lista, filialId) {
+        const f = Number(filialId || 0);
+        return f > 0 ? lista.filter(d => _filialDe(d) === f) : lista;
+    }
+
     async function listDemandas(filters = {}) {
         const tid = _getTenantId();
+        // Filtro de filial é aplicado no cliente (evita índice composto no Firestore)
+        if (filters.filialId && !filters.limit) filters = { ...filters, limit: 200 };
         try {
             let q = _db().collection(_demandsCol()).orderBy('criadoEm', 'desc');
 
             if (filters.vendedorId) q = q.where('vendedorId', '==', filters.vendedorId);
-            if (filters.filialId)   q = q.where('filialId',   '==', filters.filialId);
             if (filters.status && filters.status !== 'todas') q = q.where('status', '==', filters.status);
             q = q.limit(filters.limit || 60);
 
@@ -261,7 +269,7 @@ const DemandaDB = (() => {
                 localStorage.setItem('demanda_cache_demandas_centralpecas', JSON.stringify(lista));
             } catch (_) {}
 
-            return lista;
+            return _filtrarFilial(lista, filters.filialId);
         } catch (err) {
             console.warn('[DemandaDB] listDemandas aviso/erro:', err.message || err);
             // Se cota excedida (429) ou offline, restaura do cache local
@@ -273,7 +281,7 @@ const DemandaDB = (() => {
                         if (typeof window !== 'undefined' && window.dispatchEvent) {
                             window.dispatchEvent(new CustomEvent('demanda:quota_warning', { detail: { msg: 'Exibindo dados do cache local (Cota do Firestore atingida).' } }));
                         }
-                        return cached;
+                        return _filtrarFilial(cached, filters.filialId);
                     }
                 } catch (_) {}
             }
@@ -744,8 +752,8 @@ const DemandaDB = (() => {
      * Agrega KPIs do dashboard a partir dos totalizadores das demandas.
      * @returns {Promise<object>}
      */
-    async function getDashboardStats() {
-        const demandas = await listDemandas({ limit: 200 });
+    async function getDashboardStats(filialId) {
+        const demandas = await listDemandas({ limit: 200, filialId: filialId || null });
         const stats = {
             totalDemandas:      demandas.length,
             porStatus:          {},

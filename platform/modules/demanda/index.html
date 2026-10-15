@@ -436,6 +436,12 @@
                         <button class="filter-chip" onclick="DemandaApp.filterDemandas('aberta', this)">Abertas</button>
                         <button class="filter-chip" onclick="DemandaApp.filterDemandas('em_atendimento', this)">Em Atendimento</button>
                         <button class="filter-chip" onclick="DemandaApp.filterDemandas('encerrada', this)">Encerradas</button>
+                        <span style="margin-left:auto;display:inline-flex;align-items:center;gap:.35rem">
+                            <span class="material-icons-round" style="font-size:1rem;color:#34d399">storefront</span>
+                            <select id="selFilialLista" onchange="DemandaApp.filtrarFilialRelatorio(this.value, 'lista')" title="Filtrar cotações por filial" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.3rem .6rem;color:var(--text-primary);font-size:.8rem">
+                                <option value="0">Todas as filiais</option>
+                            </select>
+                        </span>
                     </div>
                 </div>
                 <div style="flex:1;overflow-y:auto;padding:1rem 1.5rem" id="listaDemandasContainer">
@@ -533,7 +539,11 @@
                         <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">bar_chart</span>
                         <span>Dashboard</span>
                     </div>
-                    <div class="top-bar-actions">
+                    <div class="top-bar-actions" style="display:flex;gap:.5rem;align-items:center">
+                        <span class="material-icons-round" style="font-size:1rem;color:#34d399">storefront</span>
+                        <select id="selFilialDashboard" onchange="DemandaApp.filtrarFilialRelatorio(this.value, 'dashboard')" title="Filtrar indicadores por filial" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:8px;padding:.3rem .6rem;color:var(--text-primary);font-size:.8rem">
+                            <option value="0">Todas as filiais</option>
+                        </select>
                         <button class="btn btn-secondary btn-sm" onclick="DemandaApp.loadDashboard()">
                             <span class="material-icons-round">refresh</span> Atualizar
                         </button>
@@ -6396,7 +6406,7 @@
 
     <!-- Módulo de Demanda -->
     <script src="js/demanda-states.js?v=3.21.49"></script>
-    <script src="js/demanda-db.js?v=3.21.106"></script>
+    <script src="js/demanda-db.js?v=3.21.115"></script>
     <script src="js/demanda-import.js?v=3.21.110"></script>
     <script src="js/demanda-search.js?v=3.21.113"></script>
     <script src="js/demanda-lookup.js?v=3.21.66"></script>
@@ -6407,7 +6417,7 @@
     <script src="js/demanda-analytics.js?v=3.0.9"></script>
     <script src="js/demanda-comercial.js?v=3.0.6"></script>
     <script src="js/demanda-enrichment.js?v=3.21.66"></script>
-    <script src="js/demanda-app.js?v=3.21.114"></script>
+    <script src="js/demanda-app.js?v=3.21.115"></script>
 
     <!-- ═══════════════════════════════════════════════════════════
          MODAL: Administração da Base Técnica de Peças

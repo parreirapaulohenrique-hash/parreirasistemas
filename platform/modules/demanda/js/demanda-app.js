@@ -63,6 +63,7 @@ const DemandaApp = (function() {
     var _erpInitialized    = false;
     var _searchTimeout     = null;
     var _filterAtual       = "todas";
+    var _filialRelatorio   = Number(localStorage.getItem("demanda_filial_relatorio") || 0) || 0; // 0 = todas
     var _clientesCache     = [];      // Lista de clientes para o dropdown
     var _importItensTemp   = [];      // Itens parsed aguardando conferência
     var _excelItensTemp    = [];      // Itens do Excel antes de confirmar
@@ -1520,6 +1521,23 @@ const DemandaApp = (function() {
         loadDemandasLista(filtro);
     }
 
+    // ── Filtro de filial (Minhas Cotações + Dashboard) ─────────
+    function _popularSelFilialRelatorio(selId) {
+        var sel = document.getElementById(selId);
+        if (!sel) return;
+        var filiais = window.DemandaFilial ? DemandaFilial.listar() : [];
+        sel.innerHTML = "<option value='0'>Todas as filiais</option>" + filiais.map(function(f) {
+            return "<option value='" + f.empId + "'" + (f.empId === _filialRelatorio ? " selected" : "") + ">" + _esc(f.nome) + "</option>";
+        }).join("");
+        sel.value = String(_filialRelatorio || 0);
+    }
+
+    function filtrarFilialRelatorio(v, origem) {
+        _filialRelatorio = Number(v) || 0;
+        try { localStorage.setItem("demanda_filial_relatorio", String(_filialRelatorio)); } catch (_) {}
+        if (origem === "dashboard") loadDashboard(); else loadDemandasLista(_filterAtual);
+    }
+
     function loadDemandasLista(filtro) {
         var container = document.getElementById("listaDemandasContainer");
         if (!container) return;
@@ -1537,6 +1555,8 @@ const DemandaApp = (function() {
         if (filtro === "aberta")         filters.status = "aberta";
         if (filtro === "em_atendimento") filters.status = "em_atendimento";
         if (filtro === "encerrada")      filters.status = "encerrada";
+        _popularSelFilialRelatorio("selFilialLista");
+        if (_filialRelatorio) filters.filialId = _filialRelatorio;
 
         DemandaDB.listDemandas(filters)
             .then(function(demandas) {
@@ -1616,6 +1636,8 @@ const DemandaApp = (function() {
             "<div style='display:flex;align-items:center;gap:.5rem;margin-bottom:.25rem;flex-wrap:wrap'>" +
             "<span style='font-weight:700;font-size:.9rem'>" + _esc(d.codigo || "—") + "</span>" +
             "<span style='font-size:.7rem;padding:.1rem .5rem;border-radius:10px;background:" + cor + "22;color:" + cor + ";font-weight:600'>" + lbl + "</span>" +
+            "<span title='Filial da cotação' style='font-size:.68rem;padding:.1rem .45rem;border-radius:8px;background:rgba(16,185,129,.12);color:#34d399;font-weight:600;display:inline-flex;align-items:center;gap:.25rem;border:1px solid rgba(16,185,129,.3)'><span class='material-icons-round' style='font-size:.75rem'>storefront</span> " +
+                _esc(window.DemandaFilial ? DemandaFilial.nome(Number(d.filialId || 1)) : (d.filialNome || ("Filial " + (d.filialId || 1)))) + "</span>" +
             (d.concorrenteNome ? "<span style='font-size:.68rem;padding:.1rem .45rem;border-radius:8px;background:rgba(245,158,11,.15);color:#f59e0b;font-weight:600;display:inline-flex;align-items:center;gap:.25rem;border:1px solid rgba(245,158,11,.3)'><span class='material-icons-round' style='font-size:.75rem'>store</span> " + _esc(d.concorrenteNome) + "</span>" : "") +
             "</div>" +
             "<div style='font-size:.78rem;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>" +
@@ -2911,7 +2933,8 @@ const DemandaApp = (function() {
             container.innerHTML = "<p style='padding:2rem;color:var(--accent-danger)'>DemandaDB indisponível.</p>"; return;
         }
 
-        DemandaDB.getDashboardStats()
+        _popularSelFilialRelatorio("selFilialDashboard");
+        DemandaDB.getDashboardStats(_filialRelatorio || null)
             .then(function(s) {
                 var SL = { aberta: "Abertas", em_atendimento: "Em Atendimento", encerrada: "Encerradas", cancelada: "Canceladas" };
                 var SC = { aberta: "#6366f1", em_atendimento: "#f59e0b", encerrada: "#10b981", cancelada: "#6b7280" };
@@ -7491,6 +7514,7 @@ const DemandaApp = (function() {
         carregarClientes:       _carregarClientesAsync,
         // Lista
         filterDemandas:         filterDemandas,
+        filtrarFilialRelatorio: filtrarFilialRelatorio,
         loadDemandasLista:      loadDemandasLista,
         abrirDemanda:           abrirDemanda,
         setFiltroDetalhe:       setFiltroDetalhe,
