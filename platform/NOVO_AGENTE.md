@@ -623,5 +623,22 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
   - **Importação Excel**: separa "CÓDIGO - DESCRIÇÃO" em coluna única, refs alternativas entre parênteses vão para Obs.
   - **Mapeador de Colunas (`demanda-mapeador.js`, novo)**: Excel/CSV e texto em colunas viram grade; o sistema sugere o padrão, o operador revisa (colunas fixas Referência/Descrição/Qtde, opcionais removíveis, juntar colunas com separador, linha inicial/linhas ignoradas) e só então os itens vão para a Conferência. Modelos salvos em `tenants/{tid}/demanda/data/mapeadorModelos` (todos os operadores) com sugestão por semelhança — nunca aplicados sem clique. Fases seguintes: PDF e imagem/OCR no mesmo mapeador.
   - Política: módulo `demanda` segue com deploy direto (`deploy.ps1; promote.ps1`) — usuário testa sempre na versão web.
+* **2026-10-15 (v3.21.103 / Demanda v3.3.1):**
+  - **Correção Definitiva da Tela Preta no Carregamento (`index.html`, `demanda-app.js`):**
+    * Remoção do `style="display:none"` inline inicial no `#appShell`.
+    * Exibição imediata de `#appShell` no topo de `DemandaApp.init()` e suporte defensivo a `document.readyState !== 'loading'` (evita bloqueio quando scripts pesados de analytics e ERP terminam de avaliar após o disparo de `DOMContentLoaded`).
+    * Script de segurança no fechamento do `body` garantindo visibilidade e roteamento para view padrão caso a inicialização assíncrona demore.
+  - **Identificação da Filial no Detalhe da Cotação (`demanda-app.js`):**
+    * No modal de detalhe da cotação (`modalDemandaDetalhe`), exibição explícita e em destaque do badge de filial (ex: "🏬 Palmas (TO)") ao lado do badge de status.
+  - **Separação por Filial na Aba Orçamentos (`index.html`, `demanda-app.js`):**
+    * Adicionado seletor de filial na barra superior de `view-orcamento` (`selFilialOrcamento`).
+    * Filtro reativo por filial em `DemandaApp.loadOrcamento()` e badge visual da filial em cada card de orçamento.
+  - **Reordenação dos Grupos da Sidebar Conforme Diretriz Operacional (`index.html`):**
+    * 1. Cotações (Nova Cotação, Minhas Cotações, Pesquisar Peças, Preço Concorrente, Orçamentos)
+    * 2. Compras (Start Compra, Fila Unificada, Sugestão & Lead Time, Curva Fornecedores)
+    * 3. Análise Estoque (Visão Executiva, Curva ABC, Estoque & Cobertura, Sazonalidade, Cadastro ERP, Base Externa, Carga MaxData)
+    * 4. Ações Gerenciais (Rupturas & Zerados, Capital Excedente, Curva X > 90d, Devoluções & Motivos)
+    * 5. Ações Comerciais (Positivação, Mix, Recorrência, Ticket, Churn, Reativação, Vendedores)
+
 
 

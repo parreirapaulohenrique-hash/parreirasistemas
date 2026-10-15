@@ -21,7 +21,7 @@
     <script>if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <!-- Design system da plataforma -->
     <link rel="stylesheet" href="/platform/core/styles/portal.css">
-    <link rel="stylesheet" href="styles/demanda.css?v=3.21.117">
+    <link rel="stylesheet" href="styles/demanda.css?v=3.21.103">
     <link rel="stylesheet" href="styles/demanda-analytics.css?v=3.0.9">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2048%2048%22%20width%3D%2248%22%20height%3D%2248%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22bg_dmd%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%2248%22%20y2%3D%2248%22%20gradientUnits%3D%22userSpaceOnUse%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23064e3b%22/%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%23047857%22/%3E%0A%20%20%20%20%3C/linearGradient%3E%0A%20%20%3C/defs%3E%0A%20%20%3Crect%20width%3D%2248%22%20height%3D%2248%22%20rx%3D%2211%22%20fill%3D%22url%28%23bg_dmd%29%22/%3E%0A%20%20%3Crect%20x%3D%2210%22%20y%3D%2224%22%20width%3D%226%22%20height%3D%2214%22%20rx%3D%222%22%20fill%3D%22%23a7f3d0%22/%3E%0A%20%20%3Crect%20x%3D%2221%22%20y%3D%2217%22%20width%3D%226%22%20height%3D%2221%22%20rx%3D%222%22%20fill%3D%22%2334d399%22/%3E%0A%20%20%3Crect%20x%3D%2232%22%20y%3D%2211%22%20width%3D%226%22%20height%3D%2227%22%20rx%3D%222%22%20fill%3D%22%23ffffff%22/%3E%0A%20%20%3Cpath%20d%3D%22M10%2020%20L21%2013%20L33%208%20L38%2012%22%20fill%3D%22none%22%20stroke%3D%22%236ee7b7%22%20stroke-width%3D%222.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%0A%3C/svg%3E">
 </head>
@@ -43,7 +43,7 @@
     </script>
 
     <!-- ── Shell Principal ──────────────────────────────────── -->
-    <div class="demanda-shell" id="appShell" style="display:none">
+    <div class="demanda-shell" id="appShell">
 
         <!-- Sidebar -->
         <aside class="sidebar">
@@ -82,8 +82,27 @@
                     Orçamentos
                 </button>
 
-                <!-- 2º GRUPO: ANÁLISE ESTOQUE (MaxData) -->
-                <div class="nav-section-label">2. Análise Estoque</div>
+                <!-- 2º GRUPO: COMPRAS (Sugestões Unificadas Cotações + Estoque) -->
+                <div class="nav-section-label">2. Compras</div>
+                <button class="nav-item" id="nav-compras-start" onclick="DemandaApp.switchView('compras-start')">
+                    <span class="material-icons-round">bolt</span>
+                    Start Compra (Safra/Imediato)
+                </button>
+                <button class="nav-item" id="nav-compras" onclick="DemandaApp.switchView('compras')">
+                    <span class="material-icons-round">shopping_cart</span>
+                    Fila Unificada Compras
+                </button>
+                <button class="nav-item" id="nav-compras-sugestao" onclick="DemandaApp.switchView('compras-sugestao')">
+                    <span class="material-icons-round">calculate</span>
+                    Sugestão &amp; Lead Time
+                </button>
+                <button class="nav-item" id="nav-compras-fornecedores" onclick="DemandaApp.switchView('compras-fornecedores')">
+                    <span class="material-icons-round">local_shipping</span>
+                    Curva Fornecedores
+                </button>
+
+                <!-- 3º GRUPO: ANÁLISE ESTOQUE (MaxData) -->
+                <div class="nav-section-label">3. Análise Estoque</div>
                 <button class="nav-item" id="nav-estoque-visao" onclick="DemandaApp.switchView('estoque-visao')">
                     <span class="material-icons-round">dashboard</span>
                     Visão Executiva &amp; KPIs
@@ -113,8 +132,8 @@
                     Carga de Dados MaxData
                 </button>
 
-                <!-- 3º GRUPO: AÇÕES GERENCIAIS (Correções Futuras / Excesso / Ruptura) -->
-                <div class="nav-section-label">3. Ações Gerenciais</div>
+                <!-- 4º GRUPO: AÇÕES GERENCIAIS (Correções Futuras / Excesso / Ruptura) -->
+                <div class="nav-section-label">4. Ações Gerenciais</div>
                 <button class="nav-item" id="nav-acoes-rupturas" onclick="DemandaApp.switchView('acoes-rupturas')">
                     <span class="material-icons-round">error_outline</span>
                     Rupturas &amp; Zerados
@@ -130,25 +149,6 @@
                 <button class="nav-item" id="nav-acoes-devolucoes" onclick="DemandaApp.switchView('acoes-devolucoes')">
                     <span class="material-icons-round">assignment_return</span>
                     Devoluções &amp; Motivos
-                </button>
-
-                <!-- 4º GRUPO: COMPRAS (Sugestões Unificadas Cotações + Estoque) -->
-                <div class="nav-section-label">4. Compras</div>
-                <button class="nav-item" id="nav-compras-start" onclick="DemandaApp.switchView('compras-start')">
-                    <span class="material-icons-round">bolt</span>
-                    Start Compra (Safra/Imediato)
-                </button>
-                <button class="nav-item" id="nav-compras" onclick="DemandaApp.switchView('compras')">
-                    <span class="material-icons-round">shopping_cart</span>
-                    Fila Unificada Compras
-                </button>
-                <button class="nav-item" id="nav-compras-sugestao" onclick="DemandaApp.switchView('compras-sugestao')">
-                    <span class="material-icons-round">calculate</span>
-                    Sugestão &amp; Lead Time
-                </button>
-                <button class="nav-item" id="nav-compras-fornecedores" onclick="DemandaApp.switchView('compras-fornecedores')">
-                    <span class="material-icons-round">local_shipping</span>
-                    Curva Fornecedores
                 </button>
 
                 <!-- 5º GRUPO: AÇÕES COMERCIAIS (Positivação, Mix, Recorrência, Ticket, Churn, Reativação, Vendedores) -->
@@ -719,14 +719,23 @@
 
             <!-- VIEW: Orçamento Básico -->
             <div id="view-orcamento" style="display:none;flex-direction:column">
-                <div class="top-bar">
+                <div class="top-bar" style="flex-wrap:wrap;gap:.75rem">
                     <div class="breadcrumb">
                         <span class="material-icons-round" style="font-size:1rem;color:var(--primary-color)">description</span>
                         <span>Orçamentos</span>
+                        <span style="color:var(--text-secondary);font-size:.78rem">· Itens em proposta e aprovação</span>
                     </div>
-                    <button class="btn btn-sm" onclick="DemandaApp.loadOrcamento()" style="margin-left:auto">
-                        <span class="material-icons-round" style="font-size:.9rem">refresh</span> Atualizar
-                    </button>
+                    <div style="display:flex;align-items:center;gap:.5rem;margin-left:auto;flex-wrap:wrap">
+                        <div style="display:flex;align-items:center;gap:.35rem;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;padding:.2rem .55rem">
+                            <span class="material-icons-round" style="font-size:.95rem;color:var(--text-secondary)">store</span>
+                            <select id="selFilialOrcamento" onchange="DemandaApp.filtrarFilialOrcamento(this.value)" style="background:transparent;border:none;color:var(--text-primary);font-size:.78rem;font-weight:600;outline:none;cursor:pointer">
+                                <option value="" style="background:#0f172a;color:#fff">Todas as Filiais</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-sm" onclick="DemandaApp.loadOrcamento()">
+                            <span class="material-icons-round" style="font-size:.9rem">refresh</span> Atualizar
+                        </button>
+                    </div>
                 </div>
                 <div style="flex:1;overflow-y:auto;padding:1.25rem" id="orcamentoContainer">
                     <div style="padding:3rem;text-align:center;color:var(--text-secondary)">
@@ -6418,7 +6427,7 @@
     <script src="js/demanda-analytics.js?v=3.0.9"></script>
     <script src="js/demanda-comercial.js?v=3.0.6"></script>
     <script src="js/demanda-enrichment.js?v=3.21.66"></script>
-    <script src="js/demanda-app.js?v=3.21.117"></script>
+    <script src="js/demanda-app.js?v=3.21.103"></script>
 
     <!-- ═══════════════════════════════════════════════════════════
          MODAL: Administração da Base Técnica de Peças
@@ -6763,7 +6772,30 @@ AH213767	DEDO SEPARADOR DO ROTOR	Colheitadeiras STS 9650/9750	H171540
           <span id="sku-modal-footer-text" style="color: #64748b; font-size: 12px; font-weight: 500;">Dados Genuínos CENTRAL PEÇAS &amp; MAXDATA</span>
           <button id="sku-modal-btn-close" class="btn" style="background-color: #0ea5e9; color: #fff; border-radius: 8px; font-weight: 700; padding: 8px 26px; border: none; font-size: 13px; cursor: pointer;" onclick="closeSkuModal()">Fechar</button>
         </div>
-      </div>
     </div>
+
+    <!-- Garantia absoluta de renderização do Shell e Views (prevenção definitiva de tela preta) -->
+    <script>
+        (function() {
+            function garantirVisibilidade() {
+                var sh = document.getElementById("appShell");
+                if (sh && (sh.style.display === "none" || getComputedStyle(sh).display === "none")) {
+                    sh.style.display = "flex";
+                }
+                var activeView = document.querySelector("[id^='view-'][style*='display: block'], [id^='view-']:not([style*='display: none'])");
+                if (!activeView && window.DemandaApp && typeof DemandaApp.switchView === "function") {
+                    try { DemandaApp.switchView("captura"); } catch(_) {}
+                }
+            }
+            if (document.readyState === "complete" || document.readyState === "interactive") {
+                setTimeout(garantirVisibilidade, 300);
+            } else {
+                window.addEventListener("DOMContentLoaded", function() { setTimeout(garantirVisibilidade, 300); });
+                window.addEventListener("load", function() { setTimeout(garantirVisibilidade, 100); });
+            }
+            // Timeout de segurança após 1.5s
+            setTimeout(garantirVisibilidade, 1500);
+        })();
+    </script>
 </body>
 </html>
