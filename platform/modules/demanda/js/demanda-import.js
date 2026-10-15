@@ -1062,6 +1062,33 @@ const DemandaImport = (() => {
         });
     }
 
+    // ── Leitura em GRADE (linhas x colunas) para o Mapeador de Colunas ──
+    /** Lê Excel/CSV e devolve a grade crua de células (strings/números). */
+    async function lerGradeArquivo(file) {
+        if (typeof XLSX === 'undefined') throw new Error('SheetJS (XLSX) não está carregado.');
+        const buffer = await file.arrayBuffer();
+        const wb     = XLSX.read(buffer, { type: 'array' });
+        const sheet  = wb.Sheets[wb.SheetNames[0]];
+        const rows   = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: true });
+        return rows
+            .map(r => r.map(c => (c == null ? '' : c)))
+            .filter(r => r.some(c => String(c).trim() !== ''));
+    }
+
+    /** Converte texto colado em grade: tab, ';', '|' ou 2+ espaços (o que for mais consistente). */
+    function textoParaGrade(text) {
+        const linhas = String(text || '').split(/\r?\n/).map(l => l.replace(/\s+$/, '')).filter(l => l.trim());
+        if (!linhas.length) return [];
+        const seps = [/\t/, /;/, /\|/, /\s{2,}/];
+        let melhor = null, melhorScore = 0;
+        seps.forEach(sep => {
+            const multi = linhas.filter(l => l.trim().split(sep).length >= 2).length;
+            if (multi > melhorScore) { melhorScore = multi; melhor = sep; }
+        });
+        if (!melhor || melhorScore < linhas.length * 0.4) return linhas.map(l => [l.trim()]);
+        return linhas.map(l => l.trim().split(melhor).map(c => c.trim()));
+    }
+
     return {
         parseText,
         parseExcel,
@@ -1069,6 +1096,15 @@ const DemandaImport = (() => {
         normalizeRef,
         refsMatch,
         validateItens,
+        lerGradeArquivo,
+        textoParaGrade,
+        _util: {
+            splitCodigoDescricao: _splitCodigoDescricao,
+            parseMoedaBR:         _parseMoedaBR,
+            detectColumns:        _detectColumns,
+            completarColunasPorConteudo: _completarColunasPorConteudo,
+            isPartCode:           _isPartCode,
+        },
     };
 
 })();

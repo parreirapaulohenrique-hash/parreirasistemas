@@ -939,11 +939,30 @@ const DemandaApp = (function() {
         var ta = document.getElementById("textareaImport");
         if (!ta || !ta.value.trim()) { _toast("Cole um texto antes de processar.", "error"); return; }
         if (typeof DemandaImport === "undefined") { _toast("DemandaImport não disponível.", "error"); return; }
-        var parsed    = DemandaImport.parseText(ta.value);
-        var validados = DemandaImport.validateItens(parsed);
-        if (validados.length === 0) { _toast("Nenhum item encontrado no texto.", "error"); return; }
-        closeModal("modalTexto");
-        _showConferencia(validados);
+        var texto = ta.value;
+        var leituraAutomatica = function() {
+            var parsed    = DemandaImport.parseText(texto);
+            var validados = DemandaImport.validateItens(parsed);
+            if (validados.length === 0) { _toast("Nenhum item encontrado no texto.", "error"); return false; }
+            closeModal("modalTexto");
+            _showConferencia(validados);
+            return true;
+        };
+        // Texto em colunas (tab, ; , | ou espaços alinhados) -> Mapeador de Colunas para revisão
+        if (window.DemandaMapeador && typeof DemandaImport.textoParaGrade === "function") {
+            var grade = DemandaImport.textoParaGrade(texto);
+            var multi = grade.filter(function(r) { return r.length >= 2; }).length;
+            if (grade.length && multi >= grade.length * 0.4) {
+                closeModal("modalTexto");
+                DemandaMapeador.abrir({
+                    rows: grade, fonte: "texto", nome: "Texto colado", toast: _toast,
+                    onConfirm: function(itens) { _showConferencia(DemandaImport.validateItens(itens)); },
+                    onAutomatico: function() { var t2 = document.getElementById("textareaImport"); if (t2) t2.value = texto; leituraAutomatica(); }
+                });
+                return;
+            }
+        }
+        leituraAutomatica();
     }
 
     // ════════════════════════════════════════════════════════
@@ -964,6 +983,32 @@ const DemandaApp = (function() {
         }
         var area = document.getElementById("excelUploadArea"); if (area) area.style.display = "none";
         var prev = document.getElementById("excelPreviewArea");
+
+        // Excel/CSV -> Mapeador de Colunas (operador revisa o padrão antes de buscar os itens)
+        var nomeArq = (file.name || "").toLowerCase();
+        if (window.DemandaMapeador && typeof DemandaImport.lerGradeArquivo === "function" && /\.(xlsx|xls|csv)$/.test(nomeArq)) {
+            DemandaImport.lerGradeArquivo(file).then(function(rows) {
+                closeModal("modalExcel");
+                if (area) area.style.display = "";
+                if (prev) { prev.style.display = "none"; prev.innerHTML = ""; }
+                DemandaMapeador.abrir({
+                    rows: rows, fonte: "excel", nome: file.name, toast: _toast,
+                    onConfirm: function(itens) { _showConferencia(DemandaImport.validateItens(itens)); },
+                    onAutomatico: function() {
+                        DemandaImport.parseExcel(file).then(function(r) {
+                            var its = (r && r.itens) || [];
+                            if (!its.length) { _toast("Leitura automática não encontrou itens.", "warning"); return; }
+                            _showConferencia(DemandaImport.validateItens(its));
+                        }).catch(function(e) { _toast("Erro: " + (e.message || e), "error"); });
+                    }
+                });
+            }).catch(function(err) {
+                if (prev) { prev.style.display = ""; prev.innerHTML = "<div style='color:var(--accent-danger);padding:1rem'>Erro ao ler arquivo: " + _esc(err.message || err) + "</div>"; }
+                if (area) area.style.display = "";
+            });
+            return;
+        }
+
         if (prev) {
             prev.style.display = "";
             prev.innerHTML = "<div style='text-align:center;padding:1.5rem;color:var(--text-secondary)'>" +
