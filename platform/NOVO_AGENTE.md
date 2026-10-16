@@ -646,6 +646,13 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
     * Aumento do limite de leitura para 200 demandas para cobertura integral de orçamentos multi-filiais.
   - **Estrutura dos Grupos da Sidebar Ratificada:**
     * 1. Cotações | 2. Compras | 3. Análise Estoque | 4. Ações Gerenciais | 5. Ações Comerciais.
-
-
-
+* **2026-10-16 (v3.21.105 / Demanda v3.3.3):**
+  - **Correção de Sintaxe dos Botões de Importação (`demanda-app.js`):**
+    * Correção de aspas duplas não escapadas dentro de strings HTML em `_confirmarDevolutiva`, restaurando o carregamento global de `DemandaApp` e o funcionamento dos botões de importação.
+* **2026-10-16 (v3.21.106 / Demanda v3.3.4):**
+  - **Extensão do Mapeador de Colunas para Foto/Print (OCR) e PDF (`demanda-app.js`, `demanda-import.js`, `demanda-pdf.js`):**
+    * O operador agora possui total liberdade para reordenar, mapear, excluir colunas e juntar Código/Descrição ao importar Fotos/Prints (OCR) e documentos PDF.
+    * Ao concluir o OCR da foto ou ler o PDF, o sistema converte o conteúdo em grade tabular e abre diretamente o `DemandaMapeador`.
+    * No modal de Foto e PDF, adicionado botão "Ajustar Colunas & Processar" para revisão manual das colunas com drag-and-drop e modelos salvos.
+    * Nova função `DemandaPDF.extrairGradePDF` gerando grade estruturada por coordenadas e espaçamento.
+    * Aprimoramento de `DemandaImport.textoParaGrade` com detecção flexível de múltiplos separadores comuns em documentos agrícolas.

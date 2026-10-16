@@ -1079,14 +1079,21 @@ const DemandaImport = (() => {
     function textoParaGrade(text) {
         const linhas = String(text || '').split(/\r?\n/).map(l => l.replace(/\s+$/, '')).filter(l => l.trim());
         if (!linhas.length) return [];
-        const seps = [/\t/, /;/, /\|/, /\s{2,}/];
+        const seps = [/\t/, /;/, /\|/, /\s{2,}/, /\s+-\s+/];
         let melhor = null, melhorScore = 0;
         seps.forEach(sep => {
             const multi = linhas.filter(l => l.trim().split(sep).length >= 2).length;
             if (multi > melhorScore) { melhorScore = multi; melhor = sep; }
         });
-        if (!melhor || melhorScore < linhas.length * 0.4) return linhas.map(l => [l.trim()]);
-        return linhas.map(l => l.trim().split(melhor).map(c => c.trim()));
+        if (melhor && melhorScore >= linhas.length * 0.25) {
+            return linhas.map(l => l.trim().split(melhor).map(c => c.trim()));
+        }
+        // Fallback: se várias linhas têm múltiplos espaços ou tab
+        const multiEspacos = linhas.filter(l => /\t|\s{2,}/.test(l.trim())).length;
+        if (multiEspacos >= linhas.length * 0.25) {
+            return linhas.map(l => l.trim().split(/\t|\s{2,}/).map(c => c.trim()));
+        }
+        return linhas.map(l => [l.trim()]);
     }
 
     return {

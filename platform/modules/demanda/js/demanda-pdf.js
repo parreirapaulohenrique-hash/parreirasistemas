@@ -317,9 +317,25 @@ const DemandaPDF = (() => {
         return itens;
     }
 
+    /**
+     * Extrai o conteúdo do PDF como grade tabular (linhas x colunas) para o Mapeador de Colunas.
+     * @param {File} file - Arquivo PDF da cotação
+     * @returns {Promise<Array<Array<string>>>} Grade com colunas separadas
+     */
+     async function extrairGradePDF(file) {
+         const pdfLib = await _loadPDFjs();
+         const pages = await _extractPages(pdfLib, file);
+         const fullText = pages.map(p => p.text).join('\n');
+         if (typeof DemandaImport !== 'undefined' && typeof DemandaImport.textoParaGrade === 'function') {
+             return DemandaImport.textoParaGrade(fullText);
+         }
+         return fullText.split(/\r?\n/).map(l => l.split(/\t|\s{2,}/).map(c => c.trim())).filter(r => r.some(c => c));
+     }
+
     return {
         importCatalogPDF,
         parseCotacaoPDF,
+        extrairGradePDF,
         _extractPagesFromLib: _extractPages,
     };
 
