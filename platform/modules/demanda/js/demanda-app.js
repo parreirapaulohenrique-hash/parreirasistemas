@@ -3808,9 +3808,9 @@ const DemandaApp = (function() {
             fi("Observação", "_devObs", "text", "Opcional") +
             "</div>" +
             "<div style='display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem'>" +
-            "<button onclick="document.getElementById('overlayDevolutiva').remove()" " +
+            "<button onclick=\"document.getElementById('overlayDevolutiva').remove()\" " +
             "style='background:var(--bg-dark);border:1px solid var(--border);border-radius:6px;padding:.4rem .9rem;color:var(--text-secondary);cursor:pointer'>Cancelar</button>" +
-            "<button onclick="DemandaApp._confirmarDevolutiva('" + itemId + "','" + demandaId + "')" " +
+            "<button onclick=\"DemandaApp._confirmarDevolutiva('" + itemId + "','" + demandaId + "')\" " +
             "style='background:var(--accent-primary);border:none;border-radius:6px;padding:.4rem 1rem;color:#fff;cursor:pointer;font-weight:600'>Confirmar</button>" +
             "</div></div>";
         document.body.appendChild(overlay);

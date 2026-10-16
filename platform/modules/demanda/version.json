@@ -1,9 +1,9 @@
 {
-  "version": "3.3.2",
-  "build": "20261015-v3.3.2",
+  "version": "3.3.3",
+  "build": "20261016-v3.3.3",
   "module": "demanda",
   "name": "Cotacao",
-  "lastUpdate": "2026-10-15",
-  "change": "v3.3.2 - feat(demanda): informar/alterar filial no detalhe da cotacao com indicador no header; separacao de orcamentos por filial com pills e agrupamento visual; reordenacao dos grupos da sidebar.",
-  "releaseDate": "2026-10-15T22:20:00-03:00"
+  "lastUpdate": "2026-10-16",
+  "change": "v3.3.3 - fix(demanda): correcao de aspas no demanda-app.js restaurando inicializacao do DemandaApp e funcionamento dos botoes de importacao (Texto, Excel, PDF, Foto).",
+  "releaseDate": "2026-10-16T16:20:00-03:00"
 }
