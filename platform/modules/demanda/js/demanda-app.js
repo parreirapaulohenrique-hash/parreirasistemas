@@ -706,11 +706,35 @@ const DemandaApp = (function() {
             document.body.removeChild(inp);
             if (!file) return;
 
-            // Tentativa de extração direta automática em memória (sem exigir copiar/colar do usuário)
-            _toast("Processando cotação em PDF...", "info");
+            // Tentativa de abertura no Mapeador de Colunas com grade tabular do PDF
+            _toast("Lendo documento PDF...", "info");
             (async function() {
                 try {
-                    if (typeof DemandaPDF !== 'undefined' && typeof DemandaPDF.parseCotacaoPDF === 'function') {
+                    if (window.DemandaMapeador && typeof DemandaPDF !== 'undefined' && typeof DemandaPDF.extrairGradePDF === 'function') {
+                        var grade = await DemandaPDF.extrairGradePDF(file);
+                        if (grade && grade.length) {
+                            DemandaMapeador.abrir({
+                                rows: grade,
+                                fonte: "pdf",
+                                nome: file.name || "Cotação PDF",
+                                toast: _toast,
+                                onConfirm: function(itens) {
+                                    _showConferencia(DemandaImport.validateItens(itens));
+                                },
+                                onAutomatico: async function() {
+                                    try {
+                                        var itens = await DemandaPDF.parseCotacaoPDF(file);
+                                        if (Array.isArray(itens) && itens.length > 0) {
+                                            _showConferencia(DemandaImport.validateItens(itens));
+                                        } else {
+                                            _toast("Não foi possível extrair itens automaticamente.", "warning");
+                                        }
+                                    } catch(e) { _toast("Erro na extração: " + (e.message || e), "error"); }
+                                }
+                            });
+                            return;
+                        }
+                    } else if (typeof DemandaPDF !== 'undefined' && typeof DemandaPDF.parseCotacaoPDF === 'function') {
                         var itens = await DemandaPDF.parseCotacaoPDF(file);
                         if (Array.isArray(itens) && itens.length > 0) {
                             var validados = typeof DemandaImport !== 'undefined' && typeof DemandaImport.validateItens === 'function'
@@ -753,6 +777,27 @@ const DemandaApp = (function() {
         if (!ta || !ta.value.trim()) { _toast("Cole o texto do PDF antes de processar.", "warning"); return; }
         var texto = ta.value.trim();
         _fecharImportPDF();
+
+        if (window.DemandaMapeador && typeof DemandaImport !== 'undefined' && typeof DemandaImport.textoParaGrade === "function") {
+            var grade = DemandaImport.textoParaGrade(texto);
+            if (grade && grade.length) {
+                DemandaMapeador.abrir({
+                    rows: grade,
+                    fonte: "pdf",
+                    nome: "Texto extraído do PDF",
+                    toast: _toast,
+                    onConfirm: function(itens) {
+                        _showConferencia(DemandaImport.validateItens(itens));
+                    },
+                    onAutomatico: function() {
+                        var itens = typeof DemandaImport !== 'undefined' && typeof DemandaImport.parseText === 'function'
+                            ? DemandaImport.parseText(texto) : [];
+                        if (itens && itens.length) _showConferencia(DemandaImport.validateItens(itens));
+                    }
+                });
+                return;
+            }
+        }
 
         var itens = typeof DemandaImport !== 'undefined' && typeof DemandaImport.parseText === 'function'
             ? DemandaImport.parseText(texto)
@@ -844,7 +889,40 @@ const DemandaApp = (function() {
                         if (ta) { ta.value = texto; }
 
                         if (texto.length > 5) {
-                            // Texto suficiente: processa e vai para conferencia
+                            // Envia para o Mapeador de Colunas para que o operador revise e ajuste a ordem das colunas
+                            if (window.DemandaMapeador && typeof DemandaImport !== "undefined" && typeof DemandaImport.textoParaGrade === "function") {
+                                var grade = DemandaImport.textoParaGrade(texto);
+                                if (grade && grade.length) {
+                                    _fecharImportFoto();
+                                    DemandaMapeador.abrir({
+                                        rows: grade,
+                                        fonte: "foto",
+                                        nome: "Foto / Print (OCR)",
+                                        toast: _toast,
+                                        onConfirm: function(itens) {
+                                            _showConferencia(DemandaImport.validateItens(itens));
+                                        },
+                                        onAutomatico: function() {
+                                            var parsed = DemandaImport.parseText(texto);
+                                            var validados = DemandaImport.validateItens(parsed);
+                                            if (validados.length === 0 && textoBruto && textoBruto !== texto) {
+                                                validados = DemandaImport.validateItens(DemandaImport.parseText(textoBruto));
+                                            }
+                                            if (validados.length > 0) {
+                                                _showConferencia(validados);
+                                            } else {
+                                                var taImport = document.getElementById("textareaImport");
+                                                if (taImport) taImport.value = texto;
+                                                _openModal("modalTexto");
+                                            }
+                                        }
+                                    });
+                                    _toast("OCR concluído! Ajuste as colunas no Mapeador.", "info");
+                                    return;
+                                }
+                            }
+
+                            // Fallback clássico
                             if (typeof DemandaImport !== "undefined") {
                                 var parsed    = DemandaImport.parseText(texto);
                                 var validados = DemandaImport.validateItens(parsed);
@@ -902,6 +980,29 @@ const DemandaApp = (function() {
         if (!ta || !ta.value.trim()) { _toast("Aguarde o OCR ou edite o texto antes de processar.", "warning"); return; }
         var texto = ta.value.trim();
         _fecharImportFoto();
+
+        // Envia para o Mapeador de Colunas
+        if (window.DemandaMapeador && typeof DemandaImport !== "undefined" && typeof DemandaImport.textoParaGrade === "function") {
+            var grade = DemandaImport.textoParaGrade(texto);
+            if (grade && grade.length) {
+                DemandaMapeador.abrir({
+                    rows: grade,
+                    fonte: "foto",
+                    nome: "Foto / Print (OCR)",
+                    toast: _toast,
+                    onConfirm: function(itens) {
+                        _showConferencia(DemandaImport.validateItens(itens));
+                    },
+                    onAutomatico: function() {
+                        var parsed    = DemandaImport.parseText(texto);
+                        var validados = DemandaImport.validateItens(parsed);
+                        if (validados.length > 0) _showConferencia(validados);
+                    }
+                });
+                return;
+            }
+        }
+
         if (typeof DemandaImport !== "undefined") {
             var parsed    = DemandaImport.parseText(texto);
             var validados = DemandaImport.validateItens(parsed);
