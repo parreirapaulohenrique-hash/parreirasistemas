@@ -2096,10 +2096,48 @@ const DemandaApp = (function() {
         if (temPrecoConc) colunasTabela.push("Preço Conc.");
         colunasTabela.push("Status","Ações Cabíveis");
 
-        var fId = d.filialId || 1;
-        var fNome = d.filialNome || (window.DemandaFilial ? DemandaFilial.nome(fId) : ("Filial " + fId));
-        var filialBadge = "<span style='display:inline-flex;align-items:center;gap:.25rem;padding:.15rem .55rem;border-radius:8px;background:rgba(59,130,246,.15);color:#93c5fd;font-size:.72rem;font-weight:700;border:1px solid rgba(59,130,246,.3)' title='Filial responsável por esta cotação'>" +
-            "<span class='material-icons-round' style='font-size:.85rem;color:#60a5fa'>store</span> " + _esc(fNome) + "</span>";
+        var fId = (d.filialId !== undefined && d.filialId !== null && d.filialId !== "") ? Number(d.filialId) : null;
+        var filiaisLista = (window.DemandaFilial && typeof DemandaFilial.listar === "function") ? DemandaFilial.listar() : [
+            { empId: 1, nome: "1.CTR MATRIZ" },
+            { empId: 2, nome: "2.CTR PALMAS VAREJO" },
+            { empId: 3, nome: "4.CTR PORTO" },
+            { empId: 5, nome: "5.CTR REDENÇÃO" }
+        ];
+
+        // Atualiza título do modal informando a filial e o código da cotação
+        var titleEl = document.getElementById("modalDemandaDetalheTitle");
+        if (titleEl) {
+            var fNomeTitle = fId ? (d.filialNome || (window.DemandaFilial ? DemandaFilial.nome(fId) : ("Filial " + fId))) : null;
+            var badgeHeader = fNomeTitle
+                ? "<span style='font-size:.72rem;font-weight:700;padding:.12rem .55rem;border-radius:6px;background:rgba(59,130,246,.18);color:#93c5fd;border:1px solid rgba(59,130,246,.35);display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.8rem;color:#60a5fa'>store</span> " + _esc(fNomeTitle) + "</span>"
+                : "<span style='font-size:.72rem;font-weight:700;padding:.12rem .55rem;border-radius:6px;background:rgba(245,158,11,.18);color:#fbbf24;border:1px solid rgba(245,158,11,.35);display:inline-flex;align-items:center;gap:.25rem'><span class='material-icons-round' style='font-size:.8rem'>warning</span> Filial Não Informada</span>";
+            titleEl.innerHTML = "<span class='material-icons-round'>receipt_long</span> Detalhe da Cotação <strong style='color:var(--text-primary);margin-left:.25rem'>" + _esc(d.codigo || "") + "</strong> " + badgeHeader;
+        }
+
+        // Seletor/indicador interativo da Filial para Informar ou Alterar
+        var filialBadge = "";
+        if (!fId) {
+            filialBadge = "<div style='display:inline-flex;align-items:center;gap:.35rem;padding:.15rem .55rem;border-radius:8px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.4);color:#f59e0b;font-size:.72rem;font-weight:700'>" +
+                "<span class='material-icons-round' style='font-size:.85rem;color:#f59e0b'>warning</span>" +
+                "<span>Informar Filial:</span>" +
+                "<select onchange=\"DemandaApp.alterarFilialDemanda('" + _esc(d.id) + "', this.value)\" style='background:#1e293b;color:#fbbf24;border:1px solid rgba(245,158,11,.5);border-radius:5px;padding:.1rem .35rem;font-size:.72rem;font-weight:700;cursor:pointer;outline:none'>" +
+                "<option value='' selected disabled>⚠️ Selecione a Filial...</option>" +
+                filiaisLista.map(function(fl) {
+                    return "<option value='" + fl.empId + "' style='background:#0f172a;color:#fff'>" + _esc(fl.nome) + "</option>";
+                }).join("") +
+                "</select></div>";
+        } else {
+            var fNomeAtual = d.filialNome || (window.DemandaFilial ? DemandaFilial.nome(fId) : ("Filial " + fId));
+            filialBadge = "<div style='display:inline-flex;align-items:center;gap:.3rem;padding:.12rem .5rem;border-radius:8px;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.35);color:#93c5fd;font-size:.72rem;font-weight:700' title='Filial responsável por esta cotação. Clique para alterar'>" +
+                "<span class='material-icons-round' style='font-size:.85rem;color:#60a5fa'>store</span>" +
+                "<span>Filial:</span>" +
+                "<select onchange=\"DemandaApp.alterarFilialDemanda('" + _esc(d.id) + "', this.value)\" style='background:transparent;color:#93c5fd;border:none;border-bottom:1px dashed rgba(147,197,253,.6);padding:.1rem .2rem;font-size:.72rem;font-weight:700;cursor:pointer;outline:none'>" +
+                filiaisLista.map(function(fl) {
+                    var isSel = (Number(fl.empId) === fId) ? " selected" : "";
+                    return "<option value='" + fl.empId + "'" + isSel + " style='background:#0f172a;color:#fff'>" + _esc(fl.nome) + "</option>";
+                }).join("") +
+                "</select></div>";
+        }
 
         body.innerHTML =
             // Cartão de Controle Superior Unificado e Compacto
@@ -2570,6 +2608,34 @@ const DemandaApp = (function() {
         } catch(err) {
             console.error("[DemandaApp] Erro ao reabrir demanda:", err);
             _toast("Erro ao reabrir: " + (err.message || err), "error");
+        }
+    }
+
+    async function alterarFilialDemanda(id, filialId) {
+        var did = id || (_demandaAtual ? _demandaAtual.id : null);
+        if (!did || !filialId) return;
+        var fId = Number(filialId);
+        var fNome = (window.DemandaFilial && typeof DemandaFilial.nome === "function")
+            ? DemandaFilial.nome(fId)
+            : ("Filial " + fId);
+        try {
+            if (typeof DemandaDB !== "undefined" && typeof DemandaDB.updateDemanda === "function") {
+                await DemandaDB.updateDemanda(did, {
+                    filialId: fId,
+                    filialNome: fNome
+                });
+            }
+            if (_demandaAtual && _demandaAtual.id === did) {
+                _demandaAtual.data.filialId = fId;
+                _demandaAtual.data.filialNome = fNome;
+                _renderDemandaDetalheBody();
+            }
+            _toast("Filial da cotação informada/atualizada: " + fNome, "success");
+            if (typeof loadDemandasLista === "function") loadDemandasLista(_filterAtual);
+            if (typeof loadOrcamento === "function") loadOrcamento();
+        } catch(err) {
+            console.error("[DemandaApp] Erro ao alterar filial da demanda:", err);
+            _toast("Erro ao alterar filial: " + (err.message || err), "error");
         }
     }
 
@@ -3715,9 +3781,9 @@ const DemandaApp = (function() {
         };
     }
 
-    // ════════════════════════════════════════════════════════
+    // ========================================================
     // DEVOLUTIVA DE COMPRAS
-    // ════════════════════════════════════════════════════════
+    // ========================================================
 
     function _abrirDevolutivaCompras(itemId, demandaId) {
         var old = document.getElementById("overlayDevolutiva"); if (old) old.remove();
@@ -3734,17 +3800,17 @@ const DemandaApp = (function() {
             "<h4 style='margin:0 0 1rem;display:flex;align-items:center;gap:.5rem'>" +
             "<span class='material-icons-round' style='color:var(--accent-primary)'>local_shipping</span>Devolutiva de Compras</h4>" +
             "<div style='display:grid;gap:.6rem'>" +
-            fi("Fornecedor *", "_devFornecedor", "text", "Ex: Rolamentos Irm\u00e3os") +
+            fi("Fornecedor *", "_devFornecedor", "text", "Ex: Rolamentos Irmãos") +
             fi("Marca / Fabricante", "_devMarca", "text", "Ex: SKF, NSK, FAG") +
-            fi("Custo unit\u00e1rio (R$)", "_devCusto", "number", "0.00") +
-            fi("Qtde dispon\u00edvel", "_devQtde", "number", "1") +
+            fi("Custo unitário (R$)", "_devCusto", "number", "0.00") +
+            fi("Qtde disponível", "_devQtde", "number", "1") +
             fi("Prazo estimado (dias)", "_devPrazo", "number", "7") +
-            fi("Observa\u00e7\u00e3o", "_devObs", "text", "Opcional") +
+            fi("Observação", "_devObs", "text", "Opcional") +
             "</div>" +
             "<div style='display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem'>" +
-            "<button onclick=\"document.getElementById('overlayDevolutiva').remove()\" " +
+            "<button onclick="document.getElementById('overlayDevolutiva').remove()" " +
             "style='background:var(--bg-dark);border:1px solid var(--border);border-radius:6px;padding:.4rem .9rem;color:var(--text-secondary);cursor:pointer'>Cancelar</button>" +
-            "<button onclick=\"DemandaApp._confirmarDevolutiva('" + itemId + "','" + demandaId + "')\" " +
+            "<button onclick="DemandaApp._confirmarDevolutiva('" + itemId + "','" + demandaId + "')" " +
             "style='background:var(--accent-primary);border:none;border-radius:6px;padding:.4rem 1rem;color:#fff;cursor:pointer;font-weight:600'>Confirmar</button>" +
             "</div></div>";
         document.body.appendChild(overlay);
@@ -3763,7 +3829,7 @@ const DemandaApp = (function() {
             status: "cotacao_fornecedor"
         };
         var tl = { evento: "devolutiva_compras", para: "cotacao_fornecedor", por: por,
-            obs: "Forn.: " + fornecedor + (g("_devObs") ? " \u2014 " + g("_devObs") : "") };
+            obs: "Forn.: " + fornecedor + (g("_devObs") ? " — " + g("_devObs") : "") };
         DemandaDB.updateItem(demandaId, itemId, fields, tl)
             .then(function() {
                 var el = document.getElementById("overlayDevolutiva"); if (el) el.remove();
@@ -3773,9 +3839,9 @@ const DemandaApp = (function() {
             .catch(function(err) { _toast("Erro: " + (err.message || err), "error"); });
     }
 
-    // ════════════════════════════════════════════════════════
+    // ========================================================
     // VIEW: ORÇAMENTO BÁSICO (com separação por filial)
-    // ════════════════════════════════════════════════════════
+    // ========================================================
 
     var _filtroFilialOrcamento = "";
 
@@ -3804,21 +3870,63 @@ const DemandaApp = (function() {
             "<p style='margin-top:.5rem;font-size:.85rem'>Carregando orçamentos...</p></div>";
         if (typeof DemandaDB === "undefined") { container.innerHTML = "<p style='padding:2rem;color:var(--accent-danger)'>DemandaDB indisponível.</p>"; return; }
         var STATUS_ORC = ["proposta_enviada", "aguardando_cliente", "venda_aprovada"];
-        DemandaDB.listDemandas({ status: "todas", limit: 80 })
+        DemandaDB.listDemandas({ status: "todas", limit: 200 })
             .then(function(demandas) {
                 return Promise.all(demandas.map(function(d) {
                     return DemandaDB.getItens(d.id).then(function(itens) { return { demanda: d, itens: itens }; });
                 }));
             })
             .then(function(todos) {
-                var comItens = todos.filter(function(t) {
-                    var fMatch = true;
-                    if (_filtroFilialOrcamento !== "") {
-                        var dFilial = (t.demanda && t.demanda.filialId) ? Number(t.demanda.filialId) : 1;
-                        fMatch = (dFilial === _filtroFilialOrcamento);
-                    }
-                    return fMatch && t.itens.some(function(i) { return STATUS_ORC.indexOf(i.status) >= 0; });
+                // Filtra as demandas com ao menos 1 item em status de orçamento
+                var comItensOrcamento = todos.filter(function(t) {
+                    return t.itens.some(function(i) { return STATUS_ORC.indexOf(i.status) >= 0; });
                 });
+
+                // Calcula contadores por filial para os pills
+                var filiaisLista = (window.DemandaFilial && typeof DemandaFilial.listar === "function") ? DemandaFilial.listar() : [
+                    { empId: 1, nome: "1.CTR MATRIZ" },
+                    { empId: 2, nome: "2.CTR PALMAS VAREJO" },
+                    { empId: 3, nome: "4.CTR PORTO" },
+                    { empId: 5, nome: "5.CTR REDENÇÃO" }
+                ];
+                var contagemPorFilial = { "": comItensOrcamento.length };
+                filiaisLista.forEach(function(fl) { contagemPorFilial[fl.empId] = 0; });
+                comItensOrcamento.forEach(function(t) {
+                    var fid = (t.demanda && t.demanda.filialId) ? Number(t.demanda.filialId) : 1;
+                    if (contagemPorFilial[fid] !== undefined) contagemPorFilial[fid]++;
+                    else contagemPorFilial[fid] = 1;
+                });
+
+                // Renderiza Pills de Seleção Rápida por Filial
+                var pillsEl = document.getElementById("orcamentoFilialPills");
+                if (pillsEl) {
+                    var pillsData = [
+                        { id: "", label: "Todas as Filiais", count: comItensOrcamento.length }
+                    ];
+                    filiaisLista.forEach(function(fl) {
+                        pillsData.push({ id: fl.empId, label: fl.nome, count: contagemPorFilial[fl.empId] || 0 });
+                    });
+                    pillsEl.innerHTML = pillsData.map(function(p) {
+                        var isAct = String(_filtroFilialOrcamento) === String(p.id);
+                        var actStyle = isAct
+                            ? "background:rgba(59,130,246,.25);border-color:#3b82f6;color:#fff;font-weight:700;box-shadow:0 0 0 1px #3b82f6"
+                            : "background:rgba(255,255,255,.03);border-color:var(--border-color);color:var(--text-secondary)";
+                        return "<button type='button' onclick=\"DemandaApp.filtrarFilialOrcamento('" + p.id + "')\" " +
+                            "style='display:inline-flex;align-items:center;gap:.35rem;padding:.25rem .65rem;border-radius:20px;font-size:.74rem;border:1px solid;cursor:pointer;transition:all .15s;" + actStyle + "'>" +
+                            "<span class='material-icons-round' style='font-size:.85rem;color:" + (isAct ? "#60a5fa" : "inherit") + "'>store</span>" +
+                            "<span>" + _esc(p.label) + "</span>" +
+                            "<span style='background:" + (isAct ? "#3b82f6" : "rgba(255,255,255,.1)") + ";color:#fff;padding:.05rem .4rem;border-radius:10px;font-size:.68rem;font-weight:700'>" + p.count + "</span>" +
+                            "</button>";
+                    }).join("");
+                }
+
+                // Aplica o filtro de filial atual
+                var comItens = comItensOrcamento.filter(function(t) {
+                    if (_filtroFilialOrcamento === "") return true;
+                    var dFilial = (t.demanda && t.demanda.filialId) ? Number(t.demanda.filialId) : 1;
+                    return (dFilial === _filtroFilialOrcamento);
+                });
+
                 if (comItens.length === 0) {
                     var avisoF = _filtroFilialOrcamento !== "" && window.DemandaFilial
                         ? " para a filial " + DemandaFilial.nome(_filtroFilialOrcamento) : "";
@@ -3828,14 +3936,15 @@ const DemandaApp = (function() {
                         "<small>Itens em Proposta Enviada, Aguardando Cliente ou Venda Aprovada aparecem aqui.</small></div>";
                     return;
                 }
-                var html = comItens.map(function(t) {
+
+                function _renderCardOrcamento(t) {
                     var d = t.demanda;
                     var itensOrc = t.itens.filter(function(i) { return STATUS_ORC.indexOf(i.status) >= 0; });
                     var total = itensOrc.reduce(function(acc, i) { return acc + ((i.preco || 0) * (i.qtdeSolicitada || 1)); }, 0);
                     var dt = d.criadoEm && d.criadoEm.toDate ? d.criadoEm.toDate().toLocaleDateString("pt-BR") : "—";
-                    var dFId = d.filialId || 1;
+                    var dFId = (d.filialId !== undefined && d.filialId !== null && d.filialId !== "") ? Number(d.filialId) : 1;
                     var dFNome = d.filialNome || (window.DemandaFilial ? DemandaFilial.nome(dFId) : ("Filial " + dFId));
-                    var fBadge = "<span style='display:inline-flex;align-items:center;gap:.25rem;padding:.12rem .5rem;border-radius:6px;background:rgba(59,130,246,.12);color:#93c5fd;font-size:.7rem;font-weight:700;border:1px solid rgba(59,130,246,.3)'><span class='material-icons-round' style='font-size:.8rem'>store</span> " + _esc(dFNome) + "</span>";
+                    var fBadge = "<span style='display:inline-flex;align-items:center;gap:.25rem;padding:.15rem .55rem;border-radius:6px;background:rgba(59,130,246,.15);color:#93c5fd;font-size:.72rem;font-weight:700;border:1px solid rgba(59,130,246,.3)'><span class='material-icons-round' style='font-size:.85rem'>store</span> " + _esc(dFNome) + "</span>";
 
                     var rows = itensOrc.map(function(item) {
                         var sc = (typeof DemandaStates !== "undefined") ? DemandaStates.get(item.status) : { label: item.status, color: "#6366f1" };
@@ -3852,14 +3961,15 @@ const DemandaApp = (function() {
                             "<td style='padding:.38rem .5rem'>" + (item.preco ? "R$ " + Number(item.preco).toFixed(2).replace(".",",") : "—") + "</td>" +
                             "<td style='padding:.38rem .5rem'>" + btnAprovar + btnPerder + "</td></tr>";
                     }).join("");
+
                     return "<div style='background:var(--bg-sidebar);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1rem'>" +
                         "<div style='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem'>" +
                         "<div style='display:flex;flex-direction:column;gap:.25rem'>" +
                         "  <div style='display:flex;align-items:center;gap:.5rem;flex-wrap:wrap'>" +
-                        "    <span style='font-weight:800;font-size:1rem;color:var(--text-primary)'>" + _esc(d.codigo) + "</span>" +
+                        "    <span role='button' onclick=\"DemandaApp.abrirDemanda('" + _esc(d.id) + "')\" style='font-weight:800;font-size:1.05rem;color:var(--primary-color);cursor:pointer;text-decoration:underline' title='Abrir Detalhe desta Cotação'>" + _esc(d.codigo || d.id) + "</span>" +
                         "    " + fBadge +
                         "  </div>" +
-                        "  <div style='font-size:.8rem;color:var(--text-secondary)'>" + _esc(d.clienteNome || "—") + " · " + dt + "</div>" +
+                        "  <div style='font-size:.8rem;color:var(--text-secondary)'><strong style='color:var(--text-primary)'>Cliente:</strong> " + _esc(d.clienteNome || "—") + " · " + dt + "</div>" +
                         "</div>" +
                         (total > 0 ? "<div style='text-align:right'><div style='font-size:.7rem;color:var(--text-secondary)'>Total estimado</div>" +
                             "<div style='font-weight:700;color:var(--accent-success)'>R$ " + total.toFixed(2).replace(".",",") + "</div></div>" : "") + "</div>" +
@@ -3880,8 +3990,33 @@ const DemandaApp = (function() {
                         "      <span class='material-icons-round' style='font-size:.9rem'>description</span> Proposta PDF</button>" +
                         "  </div>" +
                         "</div></div>";
-                }).join("");
-                container.innerHTML = html;
+                }
+
+                // Se "Todas as Filiais" estiver selecionado, agrupa os orçamentos por Filial com cabeçalhos visuais
+                if (_filtroFilialOrcamento === "") {
+                    var gruposFilial = {};
+                    comItens.forEach(function(t) {
+                        var fId = (t.demanda && t.demanda.filialId) ? Number(t.demanda.filialId) : 1;
+                        if (!gruposFilial[fId]) gruposFilial[fId] = [];
+                        gruposFilial[fId].push(t);
+                    });
+
+                    var htmlAgrupado = "";
+                    var fIds = Object.keys(gruposFilial).map(Number).sort(function(a,b){ return a-b; });
+                    fIds.forEach(function(fid) {
+                        var fNomeG = (window.DemandaFilial && typeof DemandaFilial.nome === "function") ? DemandaFilial.nome(fid) : ("Filial " + fid);
+                        var listaGrupo = gruposFilial[fid];
+                        htmlAgrupado += "<div style='display:flex;align-items:center;gap:.5rem;padding:.45rem .85rem;background:rgba(59,130,246,.08);border-left:4px solid #3b82f6;border-radius:4px;margin-bottom:.85rem;margin-top:1.25rem'>" +
+                            "<span class='material-icons-round' style='font-size:1.1rem;color:#60a5fa'>store</span>" +
+                            "<strong style='font-size:.88rem;color:#93c5fd'>" + _esc(fNomeG) + "</strong>" +
+                            "<span style='font-size:.74rem;color:var(--text-secondary)'>(" + listaGrupo.length + (listaGrupo.length === 1 ? " orçamento" : " orçamentos") + ")</span>" +
+                            "</div>";
+                        htmlAgrupado += listaGrupo.map(_renderCardOrcamento).join("");
+                    });
+                    container.innerHTML = htmlAgrupado;
+                } else {
+                    container.innerHTML = comItens.map(_renderCardOrcamento).join("");
+                }
             })
             .catch(function(err) { container.innerHTML = "<p style='padding:2rem;color:var(--accent-danger)'>Erro: " + _esc(err.message || String(err)) + "</p>"; });
     }
@@ -7622,6 +7757,7 @@ const DemandaApp = (function() {
         // Orçamento
         loadOrcamento:          loadOrcamento,
         filtrarFilialOrcamento: filtrarFilialOrcamento,
+        alterarFilialDemanda:   alterarFilialDemanda,
         _aprovarItemOrcamento:  _aprovarItemOrcamento,
         _perderItemOrcamento:   _perderItemOrcamento,
         // Busca ERP
