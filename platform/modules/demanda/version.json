@@ -1,9 +1,9 @@
 {
-  "version": "3.3.1",
-  "build": "20261015-v3.3.1",
+  "version": "3.3.2",
+  "build": "20261015-v3.3.2",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-15",
-  "change": "v3.3.1 - fix(demanda): correcao tela preta appShell; filial no detalhe da cotacao; filtro por filial em orcamentos; reordenacao dos grupos da sidebar.",
-  "releaseDate": "2026-10-15T18:15:00-03:00"
+  "change": "v3.3.2 - feat(demanda): informar/alterar filial no detalhe da cotacao com indicador no header; separacao de orcamentos por filial com pills e agrupamento visual; reordenacao dos grupos da sidebar.",
+  "releaseDate": "2026-10-15T22:20:00-03:00"
 }

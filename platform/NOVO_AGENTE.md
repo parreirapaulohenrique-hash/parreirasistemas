@@ -633,12 +633,19 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
   - **Separação por Filial na Aba Orçamentos (`index.html`, `demanda-app.js`):**
     * Adicionado seletor de filial na barra superior de `view-orcamento` (`selFilialOrcamento`).
     * Filtro reativo por filial em `DemandaApp.loadOrcamento()` e badge visual da filial em cada card de orçamento.
-  - **Reordenação dos Grupos da Sidebar Conforme Diretriz Operacional (`index.html`):**
-    * 1. Cotações (Nova Cotação, Minhas Cotações, Pesquisar Peças, Preço Concorrente, Orçamentos)
-    * 2. Compras (Start Compra, Fila Unificada, Sugestão & Lead Time, Curva Fornecedores)
-    * 3. Análise Estoque (Visão Executiva, Curva ABC, Estoque & Cobertura, Sazonalidade, Cadastro ERP, Base Externa, Carga MaxData)
-    * 4. Ações Gerenciais (Rupturas & Zerados, Capital Excedente, Curva X > 90d, Devoluções & Motivos)
-    * 5. Ações Comerciais (Positivação, Mix, Recorrência, Ticket, Churn, Reativação, Vendedores)
+* **2026-10-15 (v3.21.104 / Demanda v3.3.2):**
+  - **Informar e Alterar Filial no Detalhe da Cotação (`demanda-app.js`, `index.html`):**
+    * Exibição explícita do código da cotação e badge de filial no título do modal (`modalDemandaDetalheTitle`).
+    * Alerta visual quando a filial não foi informada (`⚠️ Filial Não Informada`).
+    * Seletor interativo embutido no cabeçalho do detalhe da cotação permitindo informar ou alterar a filial a qualquer momento.
+    * Persistência imediata no Firestore via `DemandaDB.updateDemanda(id, { filialId, filialNome })` com recálculo reativo da view e toast de confirmação.
+  - **Aba Orçamentos com Separação Avançada por Filial (`index.html`, `demanda-app.js`):**
+    * Barra de filtros com Pills de seleção rápida por filial com contadores em tempo real (`Todas`, `1.CTR MATRIZ`, `2.CTR PALMAS VAREJO`, `4.CTR PORTO`, `5.CTR REDENÇÃO`).
+    * Agrupamento visual dos orçamentos por cabeçalho de filial quando "Todas as Filiais" estiver selecionado.
+    * Código da cotação clicável em cada card de orçamento, abrindo diretamente o modal de detalhe.
+    * Aumento do limite de leitura para 200 demandas para cobertura integral de orçamentos multi-filiais.
+  - **Estrutura dos Grupos da Sidebar Ratificada:**
+    * 1. Cotações | 2. Compras | 3. Análise Estoque | 4. Ações Gerenciais | 5. Ações Comerciais.
 
 
 
