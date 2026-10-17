@@ -446,33 +446,94 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
         // GLOBAL UI UTILS
-        // showToast — versão unificada (v3.12.2)
-        // Suporta duração customizada: showToast('msg', 5000)
-        window.showToast = (message, duration) => {
+        // showToast — versão unificada (v3.25.5)
+        // Suporta: showToast('msg', 'error'), showToast('msg', 5000), showToast('msg', 'error', 6500)
+        window.showToast = (message, typeOrDuration, customDuration) => {
+            let type = 'success';
+            let ms = 3500;
+
+            if (typeof typeOrDuration === 'number' && Number.isFinite(typeOrDuration) && typeOrDuration > 0) {
+                ms = typeOrDuration;
+            } else if (typeof typeOrDuration === 'string') {
+                const t = typeOrDuration.toLowerCase().trim();
+                if (t === 'error' || t === 'danger' || t === 'erro') {
+                    type = 'error';
+                    ms = 6500;
+                } else if (t === 'warning' || t === 'warn' || t === 'aviso') {
+                    type = 'warning';
+                    ms = 5500;
+                } else if (t === 'info') {
+                    type = 'info';
+                    ms = 4500;
+                } else {
+                    type = 'success';
+                    ms = 3500;
+                }
+            }
+
+            // Auto-detecta erro/aviso pelo prefixo da mensagem quando o tipo não foi informado explicitamente
+            const msgStr = String(message || '');
+            if (type === 'success' && typeof typeOrDuration !== 'string') {
+                if (msgStr.startsWith('❌') || /erro|inválid|incorret|falha/i.test(msgStr)) {
+                    type = 'error';
+                    if (typeof typeOrDuration !== 'number') ms = 6500;
+                } else if (msgStr.startsWith('⚠️') || msgStr.startsWith('⚠')) {
+                    type = 'warning';
+                    if (typeof typeOrDuration !== 'number') ms = 5500;
+                }
+            }
+
+            if (typeof customDuration === 'number' && Number.isFinite(customDuration) && customDuration > 0) {
+                ms = customDuration;
+            }
+
+            const palette = {
+                error:   { bg: '#dc2626', border: '1px solid #f87171', icon: 'error_outline' },
+                warning: { bg: '#d97706', border: '1px solid #fbbf24', icon: 'warning_amber' },
+                info:    { bg: '#2563eb', border: '1px solid #60a5fa', icon: 'info' },
+                success: { bg: 'var(--accent-success, #16a34a)', border: '1px solid rgba(255,255,255,0.2)', icon: 'check_circle' }
+            };
+            const theme = palette[type] || palette.success;
+
             const toast = document.createElement('div');
             toast.style.position = 'fixed';
-            toast.style.bottom = '20px';
-            toast.style.right = '20px';
-            toast.style.backgroundColor = 'var(--accent-success, #22c55e)';
+            toast.style.bottom = '24px';
+            toast.style.right = '24px';
+            toast.style.maxWidth = '460px';
+            toast.style.backgroundColor = theme.bg;
+            toast.style.border = theme.border;
             toast.style.color = 'white';
-            toast.style.padding = '12px 24px';
-            toast.style.borderRadius = 'var(--radius-md, 8px)';
-            toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
-            toast.style.zIndex = '1000000';
+            toast.style.padding = '14px 20px';
+            toast.style.borderRadius = 'var(--radius-md, 10px)';
+            toast.style.boxShadow = '0 10px 25px rgba(0,0,0,0.45)';
+            toast.style.zIndex = '2000000';
             toast.style.fontWeight = '600';
             toast.style.display = 'flex';
             toast.style.alignItems = 'center';
-            toast.style.gap = '8px';
-            toast.style.fontSize = '0.9rem';
+            toast.style.gap = '10px';
+            toast.style.fontSize = '0.92rem';
+            toast.style.lineHeight = '1.4';
             toast.style.animation = 'slideIn 0.3s ease-out';
-            toast.innerHTML = `<span class="material-icons-round">check_circle</span> ${message}`;
-            document.body.appendChild(toast);
-            const ms = duration || 3000;
-            setTimeout(() => {
+            toast.innerHTML = `
+                <span class="material-icons-round" style="font-size:1.3rem;flex-shrink:0;">${theme.icon}</span>
+                <span style="flex:1;">${message}</span>
+                <button type="button" style="background:none;border:none;color:rgba(255,255,255,0.85);cursor:pointer;font-size:1.2rem;line-height:1;padding:0 0 0 6px;flex-shrink:0;" title="Fechar">&times;</button>
+            `;
+            const closeBtn = toast.querySelector('button');
+            let removed = false;
+            const removeToast = () => {
+                if (removed) return;
+                removed = true;
                 toast.style.animation = 'slideOut 0.3s ease-in';
-                setTimeout(() => toast.remove(), 300);
-            }, ms);
+                setTimeout(() => { if (toast.parentNode) toast.remove(); }, 300);
+            };
+            if (closeBtn) closeBtn.onclick = removeToast;
+            document.body.appendChild(toast);
+            setTimeout(removeToast, ms);
         };
+        if (typeof Utils !== 'undefined') {
+            Utils.showToast = window.showToast;
+        }
 
         // Função global para normalizar texto (remover acentos e caracteres corrompidos)
         window.normalizeText = (str) => {
@@ -801,7 +862,172 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Helper: Check if current user is supervisor or adm
         window.isSupervisor = () => {
             const storedUser = Utils.getStorage('logged_user');
-            return storedUser && ['supervisor', 'admin', 'master', 'adm'].includes(storedUser.role);
+            const role = (storedUser?.role || '').toString().toLowerCase().trim();
+            return !!storedUser && ['supervisor', 'admin', 'master', 'adm', 'gerente', 'diretor', 'direcao'].includes(role);
+        };
+
+        // ──────────────────────────────────────────────────────────────────────────────
+        // Helper Unificado (v3.25.5): Valida credenciais de Supervisor / Admin / Master
+        // Suporta:
+        //  1. Usuários locais (app_users e _app_users_{tenantId})
+        //  2. Coleção Firestore tenants/{tenantId}/users (Modelo A — SHA-256 senhaHash / pin / pass)
+        //  3. Fallback tenant base (_hml -> prod) e credenciais Master (tenants/parreira/users)
+        //  4. Roles: supervisor, admin, master, adm, gerente, diretor, direcao (case-insensitive)
+        // ──────────────────────────────────────────────────────────────────────────────
+        window.verifySupervisorCredentials = async (rawPass) => {
+            if (rawPass === undefined || rawPass === null) return null;
+            const passRaw = String(rawPass);
+            const pass = passRaw.trim();
+            if (!pass) return null;
+
+            const ALLOWED_ROLES = ['supervisor', 'admin', 'master', 'adm', 'gerente', 'diretor', 'direcao'];
+
+            let passHash = '';
+            let passHashTrimmed = '';
+            try {
+                const bufRaw = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(passRaw));
+                passHash = Array.from(new Uint8Array(bufRaw)).map(b => b.toString(16).padStart(2, '0')).join('').toLowerCase();
+                if (pass !== passRaw) {
+                    const bufTrim = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass));
+                    passHashTrimmed = Array.from(new Uint8Array(bufTrim)).map(b => b.toString(16).padStart(2, '0')).join('').toLowerCase();
+                } else {
+                    passHashTrimmed = passHash;
+                }
+            } catch (_) {}
+
+            const matchUserInList = (list) => {
+                if (!Array.isArray(list)) return null;
+                for (const u of list) {
+                    if (!u || u.ativo === false) continue;
+                    const role = (u.role || '').toString().toLowerCase().trim();
+                    if (!ALLOWED_ROLES.includes(role)) continue;
+
+                    const passMatch = (u.pass !== undefined && u.pass !== null && String(u.pass) !== '') &&
+                                      (String(u.pass) === passRaw || String(u.pass).trim() === pass);
+                    const hashVal = (u.senhaHash || '').toString().toLowerCase().trim();
+                    const hashMatch = !!hashVal && (hashVal === passHash || hashVal === passHashTrimmed);
+                    const pinVal = (u.pin !== undefined && u.pin !== null) ? String(u.pin).trim() : '';
+                    const pinMatch = !!pinVal && pinVal === pass;
+
+                    if (passMatch || hashMatch || pinMatch) {
+                        const displayName = u.nome || u.name || u.login || 'Supervisor';
+                        return {
+                            ...u,
+                            name: displayName,
+                            nome: displayName,
+                            login: u.login || displayName,
+                            role: role
+                        };
+                    }
+                }
+                return null;
+            };
+
+            const tenantId = ((typeof Utils !== 'undefined' && Utils.Cloud?.tenantId) || localStorage.getItem('app_tenant_id') || window._tenantFromUrl || '').trim().toLowerCase();
+            const baseTenantId = tenantId.endsWith('_hml') ? tenantId.replace(/_hml$/, '') : '';
+
+            // 1. Verifica caches locais primeiro
+            const appUsers = Utils.getStorage('app_users') || [];
+            let localTenantUsers = [];
+            let localBaseUsers = [];
+            let localMasterUsers = [];
+            try { if (tenantId) localTenantUsers = JSON.parse(localStorage.getItem(`_app_users_${tenantId}`) || '[]'); } catch (_) {}
+            try { if (baseTenantId) localBaseUsers = JSON.parse(localStorage.getItem(`_app_users_${baseTenantId}`) || '[]'); } catch (_) {}
+            try { localMasterUsers = JSON.parse(localStorage.getItem('_app_users_parreira') || '[]'); } catch (_) {}
+
+            const localFound = matchUserInList([...appUsers, ...localTenantUsers, ...localBaseUsers, ...localMasterUsers]);
+            if (localFound) {
+                console.log(`✅ [SupervisorAuth] Validado via cache local: ${localFound.name} (${localFound.role})`);
+                return localFound;
+            }
+
+            // 2. Consulta Firestore ao vivo (essencial quando logado via SSO / Modelo A onde _app_users_ não foi populado no localStorage)
+            let db = window.db;
+            if (!db && typeof firebase !== 'undefined') {
+                try { db = window.db = firebase.firestore(); } catch (_) { db = null; }
+            }
+            if (!db) return null;
+
+            const fsTimeout = (ms) => new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms));
+
+            const fetchUsersFromFirestoreTenant = async (tId) => {
+                if (!tId) return [];
+                const fetched = [];
+                // 2a. Coleção Modelo A: tenants/{tId}/users
+                try {
+                    const snap = await Promise.race([
+                        db.collection('tenants').doc(tId).collection('users').get(),
+                        fsTimeout(6000)
+                    ]);
+                    if (snap && !snap.empty) {
+                        snap.docs.forEach(doc => {
+                            const d = doc.data() || {};
+                            if (d.ativo === false) return;
+                            fetched.push({
+                                name: d.nome || d.name || doc.id,
+                                nome: d.nome || d.name || doc.id,
+                                login: d.login || doc.id,
+                                pass: d.pass || '',
+                                senhaHash: d.senhaHash || '',
+                                pin: d.pin || '',
+                                role: d.role || 'operator',
+                                ativo: d.ativo !== false
+                            });
+                        });
+                    }
+                } catch (e) {
+                    console.warn(`[SupervisorAuth] Aviso ao ler tenants/${tId}/users:`, e.message);
+                }
+
+                // 2b. Coleção Legada: tenants/{tId}/legacy_store/app_users
+                try {
+                    const legDoc = await Promise.race([
+                        db.collection('tenants').doc(tId).collection('legacy_store').doc('app_users').get(),
+                        fsTimeout(4000)
+                    ]);
+                    if (legDoc && legDoc.exists && legDoc.data()?.content) {
+                        const legList = JSON.parse(legDoc.data().content);
+                        if (Array.isArray(legList)) {
+                            legList.forEach(lu => {
+                                if (!lu || lu.ativo === false) return;
+                                fetched.push({
+                                    name: lu.name || lu.nome || lu.login || '',
+                                    nome: lu.nome || lu.name || lu.login || '',
+                                    login: lu.login || lu.Login || '',
+                                    pass: lu.pass || '',
+                                    senhaHash: lu.senhaHash || '',
+                                    pin: lu.pin || '',
+                                    role: lu.role || 'operator',
+                                    ativo: lu.ativo !== false
+                                });
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.warn(`[SupervisorAuth] Aviso ao ler legacy_store/app_users [${tId}]:`, e.message);
+                }
+
+                if (fetched.length > 0) {
+                    try { localStorage.setItem(`_app_users_${tId}`, JSON.stringify(fetched)); } catch (_) {}
+                }
+                return fetched;
+            };
+
+            const tenantsToCheck = [];
+            if (tenantId) tenantsToCheck.push(tenantId);
+            if (baseTenantId && !tenantsToCheck.includes(baseTenantId)) tenantsToCheck.push(baseTenantId);
+            if (!tenantsToCheck.includes('parreira')) tenantsToCheck.push('parreira');
+
+            for (const tId of tenantsToCheck) {
+                const cloudUsers = await fetchUsersFromFirestoreTenant(tId);
+                const matched = matchUserInList(cloudUsers);
+                if (matched) {
+                    console.log(`✅ [SupervisorAuth] Validado no Firestore [${tId}]: ${matched.name} (${matched.role})`);
+                    return matched;
+                }
+            }
+
+            return null;
         };
 
         // ──────────────────────────────────────────────────────────────────────────────
@@ -833,7 +1059,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
                         </div>
                         <label style="display:block; font-size:0.82rem; color:#94a3b8;
-                                     margin-bottom:6px;">Senha de Supervisor</label>
+                                     margin-bottom:6px;">Senha de Supervisor / Admin</label>
                         <div style="position:relative;">
                             <input id="supPassInput" type="password" autocomplete="new-password" data-lpignore="true"
                                 placeholder="Digite a senha..."
@@ -850,8 +1076,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                                        background:none; border:none; cursor:pointer; font-size:1rem;
                                        color:#94a3b8; padding:0; line-height:1;">👁</button>
                         </div>
-                        <div id="supPassError" style="color:#ef4444; font-size:0.8rem;
-                                     min-height:18px; margin-top:6px;"></div>
+                        <div id="supPassError" style="color:#ef4444; font-size:0.82rem; font-weight:600;
+                                     min-height:18px; margin-top:8px;"></div>
                         <div style="display:flex; gap:10px; margin-top:18px; justify-content:flex-end;">
                             <button id="supPassCancel"
                                 style="padding:8px 20px; border-radius:8px; border:1px solid #475569;
@@ -896,26 +1122,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const doConfirm = async () => {
                 const pass = input.value;
-                if (!pass) return;
-                const allUsers = Utils.getStorage('app_users') || [];
-                const tenantId = (typeof Utils !== 'undefined' && Utils.Cloud?.tenantId) || localStorage.getItem('app_tenant_id') || '';
-                let localUsers = [];
-                try { localUsers = JSON.parse(localStorage.getItem(`_app_users_${tenantId}`) || '[]'); } catch (_) {}
-                const mergedUsers = [...allUsers, ...localUsers];
-
-                let passHash = '';
+                if (!pass) {
+                    errEl.textContent = '⚠️ Digite a senha de Supervisor ou Administrador.';
+                    input.focus();
+                    return;
+                }
+                const confirmBtn = document.getElementById('supPassConfirm');
+                if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Validando...'; }
+                let authUser = null;
                 try {
-                    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass));
-                    passHash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-                } catch (_) {}
-
-                const authUser = mergedUsers.find(u => {
-                    const isAdmOrSup = ['adm', 'admin', 'supervisor', 'master'].includes(u.role);
-                    if (!isAdmOrSup) return false;
-                    const passMatch = u.pass === pass;
-                    const hashMatch = u.senhaHash && u.senhaHash === passHash;
-                    return passMatch || hashMatch;
-                });
+                    authUser = await window.verifySupervisorCredentials(pass);
+                } finally {
+                    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Confirmar'; }
+                }
 
                 if (!authUser) {
                     errEl.textContent = '❌ Senha incorreta ou sem permissão de Administrador/Supervisor.';
@@ -6679,9 +6898,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                     </div>
                 `;
-                document.getElementById('invoiceSupervisorPass').value = '';
-                document.getElementById('invoiceJustification').value = '';
+                const passEl = document.getElementById('invoiceSupervisorPass');
+                const justEl = document.getElementById('invoiceJustification');
+                const errEl  = document.getElementById('invoiceSupervisorError');
+                const btnForce = document.getElementById('btnForceInvoiceConfirm') || document.querySelector('#invoiceSupervisorModal .btn-primary');
+                if (passEl) passEl.value = '';
+                if (justEl) justEl.value = '';
+                if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+                if (btnForce) { btnForce.disabled = false; btnForce.innerHTML = 'Confirmar'; }
                 modal.style.display = 'flex';
+                setTimeout(() => { if (passEl) passEl.focus(); }, 80);
                 return;
             }
 
@@ -6689,30 +6915,61 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.processInvoicePayment();
         };
 
-        // Force payment with supervisor password
-        window.forceInvoicePayment = () => {
-            const pass = document.getElementById('invoiceSupervisorPass').value;
-            const justification = document.getElementById('invoiceJustification').value.trim();
+        // Force payment with supervisor/admin password (v3.25.5)
+        window.forceInvoicePayment = async () => {
+            const passEl = document.getElementById('invoiceSupervisorPass');
+            const justEl = document.getElementById('invoiceJustification');
+            const errEl  = document.getElementById('invoiceSupervisorError');
+            const btnForce = document.getElementById('btnForceInvoiceConfirm') || document.querySelector('#invoiceSupervisorModal .btn-primary');
+
+            const pass = passEl ? passEl.value : '';
+            const justification = justEl ? justEl.value.trim() : '';
+
+            const showModalError = (msg) => {
+                if (errEl) {
+                    errEl.textContent = msg;
+                    errEl.style.display = 'block';
+                }
+                showToast(msg, 'error', 6500);
+            };
+
+            if (!pass || !pass.trim()) {
+                showModalError('⚠️ Por favor, informe a senha do Supervisor ou Administrador.');
+                if (passEl) passEl.focus();
+                return;
+            }
 
             if (!justification) {
-                showToast('Por favor, informe a justificativa.', 'error');
+                showModalError('⚠️ Por favor, informe a justificativa da divergência.');
+                if (justEl) justEl.focus();
                 return;
             }
 
-            // Verify supervisor password - CORRIGIDO: usar app_users (não users)
-            const users = Utils.getStorage('app_users') || [];
-            console.log('🔐 [Invoice] Verificando senha de supervisor. Usuários:', users.length);
-            const supervisor = users.find(u => u.role === 'supervisor' && u.pass === pass);
+            if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+            if (btnForce) { btnForce.disabled = true; btnForce.innerHTML = '⏳ Validando...'; }
+
+            let supervisor = null;
+            try {
+                supervisor = await window.verifySupervisorCredentials(pass);
+            } catch (err) {
+                console.error('[Invoice] Erro ao validar credenciais de supervisor:', err);
+            } finally {
+                if (btnForce) { btnForce.disabled = false; btnForce.innerHTML = 'Confirmar'; }
+            }
 
             if (!supervisor) {
-                showToast('Senha de supervisor inválida.', 'error');
-                console.log('❌ [Invoice] Supervisor não encontrado ou senha incorreta');
+                showModalError('❌ Senha incorreta ou usuário sem permissão de Supervisor/Administrador.');
+                console.log('❌ [Invoice] Supervisor/Admin não encontrado ou senha incorreta');
+                if (passEl) {
+                    passEl.select();
+                    passEl.focus();
+                }
                 return;
             }
 
-            console.log('✅ [Invoice] Supervisor autenticado:', supervisor.name);
+            console.log('✅ [Invoice] Autorizado por:', supervisor.name, `(${supervisor.role})`);
             document.getElementById('invoiceSupervisorModal').style.display = 'none';
-            window.processInvoicePayment(justification, supervisor.name);
+            await window.processInvoicePayment(justification, supervisor.name || supervisor.login);
         };
 
         // Process the payment (mark NFs as paid)
@@ -6726,7 +6983,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Desabilita botões durante o processamento
             const _btnConfirm = document.getElementById('btnConfirmInvoice');
-            const _btnForce   = document.querySelector('#invoiceSupervisorModal .btn-primary');
+            const _btnForce   = document.getElementById('btnForceInvoiceConfirm') || document.querySelector('#invoiceSupervisorModal .btn-primary');
             if (_btnConfirm) { _btnConfirm.disabled = true; _btnConfirm.innerHTML = '⏳ Processando...'; }
             if (_btnForce)   { _btnForce.disabled   = true; }
 
@@ -6932,12 +7189,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 { carrier, paidNFs, totalPaid, invoiceRef, invoiceValue, authorizedBy: authorizedBy || null }
             );
 
-            // Libera flag e restaura botão
+            // Libera flag e restaura botões
             window._invoicePaymentInProgress = false;
             const _btnConfirmEnd = document.getElementById('btnConfirmInvoice');
+            const _btnForceEnd   = document.getElementById('btnForceInvoiceConfirm') || document.querySelector('#invoiceSupervisorModal .btn-primary');
             if (_btnConfirmEnd) {
                 _btnConfirmEnd.disabled = false;
                 _btnConfirmEnd.innerHTML = '<span class="material-icons-round" style="font-size:1.1rem">check_circle</span> CONFIRMAR CONFERÊNCIA';
+            }
+            if (_btnForceEnd) {
+                _btnForceEnd.disabled = false;
+                _btnForceEnd.innerHTML = 'Confirmar';
             }
 
             // Clear form and refresh
@@ -7487,8 +7749,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const justEl = document.getElementById('estornoJustification');
             const passEl = document.getElementById('estornoSupervisorPass');
+            const errEl  = document.getElementById('invoiceEstornoError');
+            const btnEst = document.getElementById('btnConfirmEstornoModal');
             if (justEl) justEl.value = '';
             if (passEl) passEl.value = '';
+            if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+            if (btnEst) { btnEst.disabled = false; btnEst.innerHTML = 'Confirmar Estorno'; }
 
             document.getElementById('invoiceEstornoModal').style.display = 'flex';
             setTimeout(() => { if (justEl) justEl.focus(); }, 100);
@@ -7499,37 +7765,57 @@ document.addEventListener('DOMContentLoaded', async () => {
             _pendingEstornoId = null;
         };
 
-        window.confirmEstorno = () => {
-            const justification = document.getElementById('estornoJustification')?.value?.trim();
-            const supervisorPass = document.getElementById('estornoSupervisorPass')?.value?.trim();
+        window.confirmEstorno = async () => {
+            const justEl = document.getElementById('estornoJustification');
+            const passEl = document.getElementById('estornoSupervisorPass');
+            const errEl  = document.getElementById('invoiceEstornoError');
+            const btnEst = document.getElementById('btnConfirmEstornoModal');
+
+            const justification = justEl?.value?.trim();
+            const supervisorPass = passEl?.value;
+
+            const showEstornoError = (msg) => {
+                if (errEl) {
+                    errEl.textContent = msg;
+                    errEl.style.display = 'block';
+                }
+                showToast(msg, 'error', 6500);
+            };
 
             if (!justification) {
-                showToast('⚠️ Informe o motivo do estorno.');
-                document.getElementById('estornoJustification').focus();
+                showEstornoError('⚠️ Informe o motivo do estorno.');
+                if (justEl) justEl.focus();
                 return;
             }
 
-            if (!supervisorPass) {
-                showToast('⚠️ Informe a senha do supervisor.');
-                document.getElementById('estornoSupervisorPass').focus();
+            if (!supervisorPass || !supervisorPass.trim()) {
+                showEstornoError('⚠️ Informe a senha do Supervisor ou Administrador.');
+                if (passEl) passEl.focus();
                 return;
             }
 
-            // Valida a senha do supervisor (mesmo sistema do modal de autorização)
-            const users = Utils.getStorage('app_users') || [];
-            const supervisor = users.find(u =>
-                (u.role === 'supervisor' || u.role === 'admin' || u.role === 'master') &&
-                u.pass === supervisorPass
-            );
+            if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+            if (btnEst) { btnEst.disabled = true; btnEst.innerHTML = '⏳ Validando...'; }
+
+            let supervisor = null;
+            try {
+                supervisor = await window.verifySupervisorCredentials(supervisorPass);
+            } catch (err) {
+                console.error('[Estorno] Erro ao validar credenciais de supervisor:', err);
+            } finally {
+                if (btnEst) { btnEst.disabled = false; btnEst.innerHTML = 'Confirmar Estorno'; }
+            }
 
             if (!supervisor) {
-                showToast('❌ Senha de supervisor incorreta.');
-                document.getElementById('estornoSupervisorPass').value = '';
-                document.getElementById('estornoSupervisorPass').focus();
+                showEstornoError('❌ Senha incorreta ou usuário sem permissão de Supervisor/Administrador.');
+                if (passEl) {
+                    passEl.select();
+                    passEl.focus();
+                }
                 return;
             }
 
-            window.processEstornoInvoice(_pendingEstornoId, justification, supervisor.name);
+            await window.processEstornoInvoice(_pendingEstornoId, justification, supervisor.name || supervisor.login);
         };
 
         window.processEstornoInvoice = async (historyId, justification, supervisorName) => {

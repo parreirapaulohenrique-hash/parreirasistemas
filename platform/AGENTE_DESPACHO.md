@@ -1,6 +1,6 @@
 # 🚚 AGENTE DESPACHO — Contexto e Histórico de Melhorias
 > Arquivo de contexto para continuidade do desenvolvimento do Módulo de Despacho
-> **Última atualização:** 2026-09-30 | **Versão atual:** Dispatch v3.19.0 (Desacoplado)
+> **Última atualização:** 2026-10-16 | **Versão atual:** Dispatch v3.25.5 (Desacoplado)
 
 ---
 
@@ -13,6 +13,11 @@ C:\Users\Paulo H Parreira\.gemini\antigravity\scratch\platform\modules\dispatch\
 ---
 
 ## ✅ Melhorias Implementadas Nesta Sessão
+
+### v3.25.5 — Correção Conferência de Fatura c/ Divergência e Duração do showToast
+- **Causa raiz 1 (`showToast` desaparecendo em 0ms):** `window.showToast(message, duration)` recebia `'error'` como 2º parâmetro (`showToast('...', 'error')`), fazendo `setTimeout(fn, 'error')` converter `'error'` para `NaN` (`0ms`) e remover o toast imediatamente. Agora `showToast(message, typeOrDuration, customDuration)` suporta tipos (`'error'`, `'warning'`, `'info'`, `'success'`), estiliza erros em vermelho (`#dc2626`) com duração de **6,5 segundos**, botão de fechar (`×`) e `Utils.showToast = window.showToast`.
+- **Causa raiz 2 (Recusa na Conferência de Fatura com divergência):** `window.forceInvoicePayment` validava apenas `u.role === 'supervisor'` e `u.pass === pass` (texto puro) em `app_users` local. Criado `window.verifySupervisorCredentials(pass)` unificado e assíncrono que aceita perfis `supervisor`, `admin`, `master`, `adm`, `gerente`, `diretor`, `direcao`, valida `pass` (texto puro), `senhaHash` (SHA-256) e `pin`, e consulta tanto o cache local quanto o Firestore ao vivo (`tenants/{tenantId}/users` Modelo A, fallback `_hml` e credenciais globais `tenants/parreira/users`).
+- Adicionado banner de erro persistente (`#invoiceSupervisorError` e `#invoiceEstornoError`) dentro dos modais `#invoiceSupervisorModal` e `#invoiceEstornoModal`.
 
 ### v3.19.0 — Versão Própria Desacoplada + Integração MaxData API v2
 - Desacoplamento definitivo da numeração do Despacho em relação ao Hub (`deploy.ps1` preserva `modules/dispatch/version.json`).
