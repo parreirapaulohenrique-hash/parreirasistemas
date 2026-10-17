@@ -685,6 +685,11 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
     * **Digitalizar e Importar sob Demanda**: O OCR NÃO roda no upload; é acionado exclusivamente quando o operador clica em `🚀 Digitalizar e Importar`.
     * **Mapeamento por Coordenadas Bounding Box**: O backend `api/ocr.js` ativa `isOverlayRequired: true`, capturando as palavras com coordenadas $(x, y)$ nos pixels e distribuindo-as com precisão cirúrgica dentro de cada coluna demarcada.
     * **Retorno Bidirecional**: Botão `📷 Demarcação na Foto` no cabeçalho do Mapeador de Colunas permitindo reajustar cortes na imagem preservando o estado anterior.
+* **2026-10-17 (v3.21.110 / Demanda v3.3.8):**
+  - **Alças de Início/Fim Compactas e Desacoplamento dos Marcadores de Coluna (`demanda-imagem-demarcador.js`, `demanda.css`, `index.html`):**
+    * Remoção da frase longa que cobria as colunas à direita. Substituída por etiquetas ultra-compactas (`Início` e `Fim`) posicionadas na borda lateral esquerda (`left: 8px`).
+    * Fixação dos marcadores de coluna (`Col 1, Col 2...` e setas `▲`) na régua superior da imagem (`top: 2px` e `top: 20px`), desacoplando-os de `yTop` e eliminando qualquer colisão ao mover a linha de início dos produtos.
+
 
 
 

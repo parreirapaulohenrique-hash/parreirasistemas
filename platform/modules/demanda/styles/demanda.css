@@ -1745,7 +1745,7 @@ tr.inicio .mpd-rn-b{background:#34d399;color:#052e16;font-weight:800;border-colo
 .did-hline{position:absolute;left:0;height:0;z-index:4;pointer-events:none}
 .did-hline-top{border-top:2px dashed #10b981}
 .did-hline-bottom{border-top:2px dashed #f43f5e}
-.did-hline-handle{position:absolute;right:14px;transform:translateY(-50%);padding:4px 10px;border-radius:14px;font-size:.72rem;font-weight:700;display:flex;align-items:center;gap:4px;cursor:ns-resize;pointer-events:auto;box-shadow:0 4px 12px rgba(0,0,0,.5);user-select:none}
+.did-hline-handle{position:absolute;left:8px;transform:translateY(-50%);padding:2px 8px;border-radius:6px;font-size:.68rem;font-weight:700;display:flex;align-items:center;gap:3px;cursor:ns-resize;pointer-events:auto;box-shadow:0 3px 10px rgba(0,0,0,.6);user-select:none;letter-spacing:.02em;white-space:nowrap}
 #didHandleTop{background:#065f46;color:#a7f3d0;border:1px solid #10b981}
 #didHandleBottom{background:#881337;color:#fecdd3;border:1px solid #f43f5e}
 

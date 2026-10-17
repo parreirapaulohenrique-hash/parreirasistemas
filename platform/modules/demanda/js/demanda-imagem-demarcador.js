@@ -94,9 +94,8 @@ const DemandaImagemDemarcador = (() => {
                         <div id="didMaskTop" class="did-mask did-mask-top"></div>
                         <!-- Alça e Linha de Início dos Itens -->
                         <div id="didLineTop" class="did-hline did-hline-top">
-                            <div class="did-hline-handle" id="didHandleTop">
-                                <span class="material-icons-round" style="font-size:.8rem">expand_more</span>
-                                Início dos Produtos (ignorar cabeçalho acima)
+                            <div class="did-hline-handle" id="didHandleTop" title="Arraste para definir onde começam os produtos">
+                                <span class="material-icons-round" style="font-size:.78rem">drag_handle</span> Início
                             </div>
                         </div>
 
@@ -104,9 +103,8 @@ const DemandaImagemDemarcador = (() => {
                         <div id="didMaskBottom" class="did-mask did-mask-bottom"></div>
                         <!-- Alça e Linha de Fim dos Itens -->
                         <div id="didLineBottom" class="did-hline did-hline-bottom">
-                            <div class="did-hline-handle" id="didHandleBottom">
-                                <span class="material-icons-round" style="font-size:.8rem">expand_less</span>
-                                Fim dos Produtos (ignorar rodapé abaixo)
+                            <div class="did-hline-handle" id="didHandleBottom" title="Arraste para definir onde terminam os produtos">
+                                <span class="material-icons-round" style="font-size:.78rem">drag_handle</span> Fim
                             </div>
                         </div>
 
@@ -265,7 +263,7 @@ const DemandaImagemDemarcador = (() => {
             badge.className = 'did-col-badge';
             badge.style.left = leftPx + 'px';
             badge.style.width = colWidth + 'px';
-            badge.style.top = Math.max(4, yTopPx - 26) + 'px';
+            badge.style.top = '2px';
             badge.textContent = `Col ${i + 1}`;
             layer.appendChild(badge);
         }
@@ -274,18 +272,18 @@ const DemandaImagemDemarcador = (() => {
         _st.cortesPct.forEach((pct, idx) => {
             const xPx = pct * w;
 
-            // Linha guia vertical
+            // Linha guia vertical - cruza toda a extensão do documento
             const line = document.createElement('div');
             line.className = 'did-vline';
             line.style.left = xPx + 'px';
-            line.style.top = yTopPx + 'px';
-            line.style.height = Math.max(0, yBottomPx - yTopPx) + 'px';
+            line.style.top = '0px';
+            line.style.height = h + 'px';
 
-            // Marcador interativo (alça com seta)
+            // Marcador interativo (alça com seta) fixado no topo da imagem
             const handle = document.createElement('div');
             handle.className = 'did-vhandle';
             handle.style.left = xPx + 'px';
-            handle.style.top = Math.max(0, yTopPx - 16) + 'px';
+            handle.style.top = '20px';
             handle.title = `Coluna ${idx + 1} / ${idx + 2} (${Math.round(pct * 100)}%)\nArraste para mover · Duplo-clique para excluir`;
 
             handle.innerHTML = `
