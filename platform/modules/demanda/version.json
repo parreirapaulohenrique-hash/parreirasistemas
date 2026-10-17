@@ -1,9 +1,9 @@
 {
-  "version": "3.3.9",
-  "build": "20261017-v3.3.9",
+  "version": "3.3.10",
+  "build": "20261017-v3.3.10",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-17",
-  "change": "v3.3.9 - fix(demanda): retorno de TextOverlay no OCR e alinhamento milimétrico de palavras por coordenadas de coluna sem deslocamento lateral.",
-  "releaseDate": "2026-10-17T15:45:00-03:00"
+  "change": "v3.3.10 - fix(demanda): otimização de resolução e contraste no canvas do demarcador para captura total de caracteres e números isolados em colunas estreitas.",
+  "releaseDate": "2026-10-17T15:55:00-03:00"
 }

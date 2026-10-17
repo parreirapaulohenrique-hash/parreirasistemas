@@ -695,6 +695,10 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
     * `_montarGradePorOverlay` agrupa palavras por linhas com compensação de inclinação (deskew) e aloca cada palavra na respectiva coluna definida pelo operador pelas coordenadas horizontais do seu centroide.
     * Quando a coluna de sequência (`SEQ`) possui dígitos isolados (`1` a `9`) não capturados pelo OCR, as células das colunas subsequentes (`ITENS`, `MARCA`, `QNT`, `VALOR`) permanecem rigidamente alinhadas em suas colunas corretas, eliminando qualquer deslocamento horizontal.
     * No fallback textual `_montarGradePorTexto`, adicionada auto-correção para injetar coluna vazia em linhas que perderam o índice sequencial numérico inicial.
+* **2026-10-17 (v3.21.112 / Demanda v3.3.10):**
+  - **Otimização de Resolução e Contraste no Canvas do Demarcador (`demanda-imagem-demarcador.js`):**
+    * Upscale adaptativo em canvas de alta resolução para imagens com caracteres finos ou pequenos (como números de 1 dígito `1, 2, 3...` em colunas estreitas de `SEQ`).
+    * Filtro de contraste dinâmico (`contrast(120%) brightness(102%)`) aplicado no recorte da tabela antes da digitalização, evitando que dígitos isolados se fundam às linhas da grade e garantindo o lançamento de tudo o que estiver dentro da coluna.
 
 
 

@@ -480,16 +480,27 @@ const DemandaImagemDemarcador = (() => {
             const yBottomPx = Math.round(_st.yBottomPct * natH);
             const cropH = Math.max(50, yBottomPx - yTopPx);
 
-            // Canvas da tabela limpa
+            // Canvas da tabela limpa com resolução e contraste otimizados para OCR de precisão
             const cv = document.createElement('canvas');
-            const maxDim = 1800;
-            const scale = Math.min(maxDim / natW, maxDim / cropH, 1.0);
+            let scale = 1.0;
+            // Se a imagem/recorte for menor que 1800px, amplia (até 2x) para nitidez de dígitos isolados (1, 2, 3...)
+            if (natW < 1800 && cropH < 1800) {
+                scale = Math.min(2.0, 2200 / Math.max(natW, cropH));
+            } else if (natW > 2600 || cropH > 2600) {
+                scale = Math.min(2600 / natW, 2600 / cropH);
+            }
             cv.width = Math.round(natW * scale);
             cv.height = Math.round(cropH * scale);
 
             const ctx = cv.getContext('2d');
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            // Aumenta o contraste levemente para separar caracteres de bordas e linhas da tabela
+            try {
+                ctx.filter = 'contrast(120%) brightness(102%)';
+            } catch (e) {}
             ctx.drawImage(imgEl, 0, yTopPx, natW, cropH, 0, 0, cv.width, cv.height);
-            const croppedBase64 = cv.toDataURL('image/jpeg', 0.90);
+            const croppedBase64 = cv.toDataURL('image/jpeg', 0.95);
 
             // 2. Chama a API de OCR
             loadingMsg.textContent = 'Lendo e identificando texto nas coordenadas demarcadas...';
