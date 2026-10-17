@@ -778,11 +778,40 @@ const DemandaApp = (function() {
         var texto = ta.value.trim();
         _fecharImportPDF();
 
+        // Texto do PDF -> Assistente Texto em Colunas (Excel) / Mapeador
+        if (window.DemandaTextoColunas) {
+            DemandaTextoColunas.abrir({
+                text: texto,
+                nome: "Texto extraído do PDF",
+                fonte: "pdf",
+                toast: _toast,
+                onConfirm: function(grade) {
+                    DemandaMapeador.abrir({
+                        rows: grade,
+                        rawText: texto,
+                        fonte: "pdf",
+                        nome: "Texto extraído do PDF",
+                        toast: _toast,
+                        onConfirm: function(itens) {
+                            _showConferencia(DemandaImport.validateItens(itens));
+                        },
+                        onAutomatico: function() {
+                            var itens = typeof DemandaImport !== 'undefined' && typeof DemandaImport.parseText === 'function'
+                                ? DemandaImport.parseText(texto) : [];
+                            if (itens && itens.length) _showConferencia(DemandaImport.validateItens(itens));
+                        }
+                    });
+                }
+            });
+            return;
+        }
+
         if (window.DemandaMapeador && typeof DemandaImport !== 'undefined' && typeof DemandaImport.textoParaGrade === "function") {
             var grade = DemandaImport.textoParaGrade(texto);
             if (grade && grade.length) {
                 DemandaMapeador.abrir({
                     rows: grade,
+                    rawText: texto,
                     fonte: "pdf",
                     nome: "Texto extraído do PDF",
                     toast: _toast,
@@ -889,13 +918,50 @@ const DemandaApp = (function() {
                         if (ta) { ta.value = texto; }
 
                         if (texto.length > 5) {
-                            // Envia para o Mapeador de Colunas para que o operador revise e ajuste a ordem das colunas
-                            if (window.DemandaMapeador && typeof DemandaImport !== "undefined" && typeof DemandaImport.textoParaGrade === "function") {
+                            // Envia para o Assistente estilo Excel de Texto em Colunas
+                            if (window.DemandaTextoColunas) {
+                                _fecharImportFoto();
+                                DemandaTextoColunas.abrir({
+                                    text: texto,
+                                    nome: "Foto / Print (OCR)",
+                                    fonte: "foto",
+                                    toast: _toast,
+                                    onConfirm: function(grade) {
+                                        DemandaMapeador.abrir({
+                                            rows: grade,
+                                            rawText: texto,
+                                            fonte: "foto",
+                                            nome: "Foto / Print (OCR)",
+                                            toast: _toast,
+                                            onConfirm: function(itens) {
+                                                _showConferencia(DemandaImport.validateItens(itens));
+                                            },
+                                            onAutomatico: function() {
+                                                var parsed = DemandaImport.parseText(texto);
+                                                var validados = DemandaImport.validateItens(parsed);
+                                                if (validados.length === 0 && textoBruto && textoBruto !== texto) {
+                                                    validados = DemandaImport.validateItens(DemandaImport.parseText(textoBruto));
+                                                }
+                                                if (validados.length > 0) {
+                                                    _showConferencia(validados);
+                                                } else {
+                                                    var taImport = document.getElementById("textareaImport");
+                                                    if (taImport) taImport.value = texto;
+                                                    _openModal("modalTexto");
+                                                }
+                                            }
+                                        });
+                                    }
+                                });
+                                _toast("OCR concluído! Ajuste as colunas na Régua estilo Excel.", "info");
+                                return;
+                            } else if (window.DemandaMapeador && typeof DemandaImport !== "undefined" && typeof DemandaImport.textoParaGrade === "function") {
                                 var grade = DemandaImport.textoParaGrade(texto);
                                 if (grade && grade.length) {
                                     _fecharImportFoto();
                                     DemandaMapeador.abrir({
                                         rows: grade,
+                                        rawText: texto,
                                         fonte: "foto",
                                         nome: "Foto / Print (OCR)",
                                         toast: _toast,
@@ -981,12 +1047,40 @@ const DemandaApp = (function() {
         var texto = ta.value.trim();
         _fecharImportFoto();
 
-        // Envia para o Mapeador de Colunas
+        // Envia para o Assistente estilo Excel de Texto em Colunas (ou Mapeador)
+        if (window.DemandaTextoColunas) {
+            DemandaTextoColunas.abrir({
+                text: texto,
+                nome: "Foto / Print (OCR)",
+                fonte: "foto",
+                toast: _toast,
+                onConfirm: function(grade) {
+                    DemandaMapeador.abrir({
+                        rows: grade,
+                        rawText: texto,
+                        fonte: "foto",
+                        nome: "Foto / Print (OCR)",
+                        toast: _toast,
+                        onConfirm: function(itens) {
+                            _showConferencia(DemandaImport.validateItens(itens));
+                        },
+                        onAutomatico: function() {
+                            var parsed    = DemandaImport.parseText(texto);
+                            var validados = DemandaImport.validateItens(parsed);
+                            if (validados.length > 0) _showConferencia(validados);
+                        }
+                    });
+                }
+            });
+            return;
+        }
+
         if (window.DemandaMapeador && typeof DemandaImport !== "undefined" && typeof DemandaImport.textoParaGrade === "function") {
             var grade = DemandaImport.textoParaGrade(texto);
             if (grade && grade.length) {
                 DemandaMapeador.abrir({
                     rows: grade,
+                    rawText: texto,
                     fonte: "foto",
                     nome: "Foto / Print (OCR)",
                     toast: _toast,
@@ -1049,14 +1143,36 @@ const DemandaApp = (function() {
             _showConferencia(validados);
             return true;
         };
-        // Texto em colunas (tab, ; , | ou espaços alinhados) -> Mapeador de Colunas para revisão
+        // Texto em colunas -> Assistente Texto em Colunas (Excel) / Mapeador
+        if (window.DemandaTextoColunas && texto.trim().includes('\n')) {
+            closeModal("modalTexto");
+            DemandaTextoColunas.abrir({
+                text: texto,
+                fonte: "texto",
+                nome: "Texto colado",
+                toast: _toast,
+                onConfirm: function(grade) {
+                    DemandaMapeador.abrir({
+                        rows: grade,
+                        rawText: texto,
+                        fonte: "texto",
+                        nome: "Texto colado",
+                        toast: _toast,
+                        onConfirm: function(itens) { _showConferencia(DemandaImport.validateItens(itens)); },
+                        onAutomatico: function() { var t2 = document.getElementById("textareaImport"); if (t2) t2.value = texto; leituraAutomatica(); }
+                    });
+                }
+            });
+            return;
+        }
+
         if (window.DemandaMapeador && typeof DemandaImport.textoParaGrade === "function") {
             var grade = DemandaImport.textoParaGrade(texto);
             var multi = grade.filter(function(r) { return r.length >= 2; }).length;
             if (grade.length && multi >= grade.length * 0.4) {
                 closeModal("modalTexto");
                 DemandaMapeador.abrir({
-                    rows: grade, fonte: "texto", nome: "Texto colado", toast: _toast,
+                    rows: grade, rawText: texto, fonte: "texto", nome: "Texto colado", toast: _toast,
                     onConfirm: function(itens) { _showConferencia(DemandaImport.validateItens(itens)); },
                     onAutomatico: function() { var t2 = document.getElementById("textareaImport"); if (t2) t2.value = texto; leituraAutomatica(); }
                 });

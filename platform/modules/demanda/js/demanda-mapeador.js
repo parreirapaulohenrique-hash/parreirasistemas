@@ -395,7 +395,12 @@ const DemandaMapeador = (() => {
                 <span class="material-icons-round mpd-ico">view_column</span>
                 <div>
                   <h3 id="mpdTitulo">Mapear colunas da importação</h3>
-                  <div class="mpd-sub" id="mpdArquivo"></div>
+                  <div style="display:flex;align-items:center;gap:.5rem">
+                    <div class="mpd-sub" id="mpdArquivo"></div>
+                    <button class="mpd-btn mpd-btn-ghost mpd-btn-sm" id="mpdBtnAjustarCortes" style="display:none;padding:.15rem .45rem;font-size:.7rem;border-color:#38bdf8;color:#38bdf8" title="Voltar ao Assistente estilo Excel para ajustar as quebras de coluna">
+                        <span class="material-icons-round" style="font-size:.9rem">straighten</span> Ajustar Cortes (Excel)
+                    </button>
+                  </div>
                 </div>
               </div>
               <div class="mpd-head-r">
@@ -686,12 +691,27 @@ const DemandaMapeador = (() => {
         _garantirDOM();
         const rows = (opts.rows || []).filter(r => Array.isArray(r) && r.some(c => _str(c) !== ''));
         if (!rows.length) { (opts.toast || console.warn)('Documento sem linhas legíveis.', 'error'); return; }
-        _st = { rows, fonte: opts.fonte || 'excel', nome: opts.nome || '', onConfirm: opts.onConfirm, onAutomatico: opts.onAutomatico, toast: opts.toast,
+        _st = { rows, fonte: opts.fonte || 'excel', nome: opts.nome || '', rawText: opts.rawText || '', onConfirm: opts.onConfirm, onAutomatico: opts.onAutomatico, toast: opts.toast,
                 cfg: sugerir(rows), modeloId: null, modeloNome: '', modeloScore: null, removidos: new Set() };
         $('mpdArquivo').textContent = (_st.nome ? _st.nome + ' · ' : '') + rows.length + ' linhas · ' + _nCols(rows) + ' colunas';
         $('mpdChkSalvar').checked = false;
         $('mpdNomeModelo').value = '';
         $('mpdNomeModelo').style.display = 'none';
+
+        const btnCortes = $('mpdBtnAjustarCortes');
+        if (btnCortes) {
+            btnCortes.style.display = window.DemandaTextoColunas ? 'inline-flex' : 'none';
+            btnCortes.onclick = () => {
+                const raw = _st.rawText || (rows ? rows.map(r => Array.isArray(r) ? r.join('   ') : String(r)).join('\n') : '');
+                const nome = _st.nome, fonte = _st.fonte, onConf = _st.onConfirm;
+                fechar();
+                DemandaTextoColunas.abrir({
+                    text: raw, nome, fonte,
+                    onConfirm: (g) => abrir({ rows: g, nome, fonte, rawText: raw, onConfirm: onConf, toast: _st.toast })
+                });
+            };
+        }
+
         $('mpdOverlay').classList.add('open');
         _renderAviso();
         _render();

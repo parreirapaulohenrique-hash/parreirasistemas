@@ -1648,3 +1648,63 @@ tr.inicio .mpd-rn-b{background:#34d399;color:#052e16;font-weight:800;border-colo
 .mpd-chk{display:flex;align-items:center;gap:.45rem;font-size:.8rem;color:#cbd5e1;cursor:pointer}
 .mpd-acoes{display:flex;justify-content:space-between;gap:.5rem;padding:.8rem 1rem;border-top:1px solid rgba(148,163,184,.12);background:rgba(30,41,59,.35)}
 @media (max-width:1100px){.mpd-body{flex-direction:column}.mpd-side{width:auto;max-width:none;max-height:45%}.mpd-doc{border-right:none;border-bottom:1px solid rgba(148,163,184,.14)}}
+
+/* ══════════════════════════════════════════════════════════════════
+   ASSISTENTE DE QUEBRA DE COLUNAS ESTILO EXCEL (DemandaTextoColunas)
+   ══════════════════════════════════════════════════════════════════ */
+.dtc-overlay{position:fixed;inset:0;z-index:10060;display:none;align-items:stretch;justify-content:center;background:rgba(2,6,23,.82);backdrop-filter:blur(8px);padding:1.25rem}
+.dtc-overlay.open{display:flex;animation:mpdIn .18s ease-out}
+.dtc-shell{flex:1;display:flex;flex-direction:column;min-width:0;max-width:1400px;background:linear-gradient(180deg,#0f172a,#0b1222);border:1px solid rgba(148,163,184,.22);border-radius:16px;box-shadow:0 30px 80px rgba(0,0,0,.65);overflow:hidden;color:#e2e8f0;font-family:inherit}
+.dtc-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.85rem 1.25rem;border-bottom:1px solid rgba(148,163,184,.15);background:rgba(30,41,59,.5)}
+.dtc-head-l{display:flex;align-items:center;gap:.75rem}
+.dtc-head-r{display:flex;align-items:center;gap:.75rem}
+.dtc-ico{font-size:1.6rem;color:#38bdf8;background:rgba(56,189,248,.12);border-radius:10px;padding:.3rem}
+.dtc-head h3{margin:0;font-size:1.05rem;font-weight:800;letter-spacing:.2px;color:#f8fafc}
+.dtc-sub{font-size:.75rem;color:#94a3b8;margin-top:.15rem}
+.dtc-tabs{display:flex;background:#090d16;padding:3px;border-radius:9px;border:1px solid rgba(148,163,184,.2)}
+.dtc-tab{background:transparent;border:none;color:#94a3b8;font-size:.78rem;font-weight:700;padding:.35rem .75rem;border-radius:7px;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;transition:all .15s}
+.dtc-tab .material-icons-round{font-size:1rem}
+.dtc-tab.active{background:#1e293b;color:#38bdf8;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.dtc-instrucao{display:flex;align-items:center;gap:.6rem;padding:.6rem 1.25rem;font-size:.8rem;background:rgba(15,23,42,.7);border-bottom:1px solid rgba(148,163,184,.12);color:#cbd5e1}
+.dtc-painel{flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
+
+/* Régua e Texto Monoespaçado */
+.dtc-ruler-outer{flex:1;display:flex;flex-direction:column;min-height:0;background:#060a12;overflow:hidden;position:relative}
+.dtc-ruler-wrap{height:46px;background:#0c1322;border-bottom:2px solid #38bdf8;position:relative;user-select:none;cursor:crosshair;overflow:visible}
+.dtc-ruler{height:26px;position:relative}
+.dtc-tick{position:absolute;top:0;bottom:0;border-left:1px solid rgba(148,163,184,.3);height:14px}
+.dtc-tick-num{position:absolute;top:14px;left:2px;font-size:.62rem;color:#64748b;font-family:monospace}
+.dtc-markers{position:absolute;top:22px;left:0;right:0;height:24px;pointer-events:none}
+.dtc-marker{position:absolute;top:0;transform:translateX(-50%);cursor:ew-resize;pointer-events:auto;display:flex;flex-direction:column;align-items:center;z-index:10}
+.dtc-arrow{font-size:.7rem;color:#38bdf8;line-height:1;margin-bottom:-2px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6))}
+.dtc-marker-lbl{background:#0284c7;color:#fff;font-size:.65rem;font-weight:800;border-radius:3px;padding:0 3px;line-height:1.2;font-family:monospace}
+.dtc-text-scroll{flex:1;overflow:auto;position:relative}
+.dtc-text-canvas{position:relative;display:inline-block;min-width:100%}
+.dtc-vguides{position:absolute;top:0;bottom:0;left:0;right:0;pointer-events:none;z-index:2}
+.dtc-vguide{position:absolute;top:0;bottom:0;width:1px;background:#38bdf8;box-shadow:0 0 6px rgba(56,189,248,.5);border-right:1px dashed rgba(255,255,255,.4)}
+.dtc-pre{margin:0;padding:.75rem .5rem;font-family:'JetBrains Mono','Fira Code','Courier New',monospace;font-size:12px;line-height:1.55;color:#e2e8f0;white-space:pre;user-select:text}
+
+/* Grade & Alinhamento de Linhas */
+.dtc-grade-toolbar{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.5rem 1.25rem;background:#0d1527;border-bottom:1px solid rgba(148,163,184,.12)}
+.dtc-grade-scroll{flex:1;overflow:auto;min-height:0;background:#060a12}
+.dtc-table{width:100%;border-collapse:separate;border-spacing:0;font-size:.78rem}
+.dtc-table thead th{position:sticky;top:0;background:#0f172a;border-bottom:2px solid rgba(56,189,248,.4);padding:.5rem .6rem;text-align:left;color:#94a3b8;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;z-index:2}
+.dtc-table tbody tr:hover td{background:rgba(148,163,184,.06)}
+.dtc-table tbody td{padding:.35rem .6rem;border-bottom:1px solid rgba(148,163,184,.08);color:#cbd5e1;white-space:nowrap}
+.dtc-td-num{font-family:monospace;color:#64748b;text-align:center;background:#090d16;position:sticky;left:0;z-index:1;border-right:1px solid rgba(148,163,184,.14)}
+.dtc-td-actions{text-align:center;white-space:nowrap;background:#090d16;position:sticky;left:75px;z-index:1;border-right:1px solid rgba(148,163,184,.14)}
+.dtc-shift-b{background:#1e293b;border:1px solid rgba(148,163,184,.25);color:#38bdf8;font-size:.85rem;font-weight:900;border-radius:5px;padding:.15rem .45rem;cursor:pointer;margin:0 1px;transition:all .15s}
+.dtc-shift-b:hover{background:#0284c7;color:#fff;border-color:#38bdf8;transform:scale(1.08)}
+.dtc-del-b{background:none;border:none;color:#64748b;font-size:.75rem;cursor:pointer;padding:.15rem .3rem;border-radius:4px;margin-left:4px}
+.dtc-del-b:hover{color:#ef4444;background:rgba(239,68,68,.15)}
+.dtc-td-cell{outline:none}
+.dtc-td-cell:focus{background:rgba(56,189,248,.1);box-shadow:inset 0 0 0 1px #38bdf8}
+
+/* Rodapé e Botões */
+.dtc-foot{display:flex;align-items:center;justify-content:space-between;padding:.85rem 1.25rem;border-top:1px solid rgba(148,163,184,.15);background:rgba(30,41,59,.4)}
+.dtc-btn{display:inline-flex;align-items:center;gap:.4rem;border-radius:9px;border:1px solid transparent;padding:.45rem .95rem;font-size:.82rem;font-weight:700;cursor:pointer;transition:all .15s;font-family:inherit}
+.dtc-btn-sm{padding:.25rem .6rem;font-size:.74rem}
+.dtc-btn-ghost{background:transparent;color:#cbd5e1;border-color:rgba(148,163,184,.25)}
+.dtc-btn-ghost:hover{background:rgba(148,163,184,.12);color:#fff}
+.dtc-btn-pri{background:linear-gradient(135deg,#0284c7,#2563eb);color:#fff;box-shadow:0 6px 20px rgba(37,99,235,.4)}
+.dtc-btn-pri:hover{transform:translateY(-1px);box-shadow:0 10px 26px rgba(37,99,235,.5)}
