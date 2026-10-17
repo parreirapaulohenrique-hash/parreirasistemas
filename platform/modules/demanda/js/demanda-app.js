@@ -706,9 +706,41 @@ const DemandaApp = (function() {
             document.body.removeChild(inp);
             if (!file) return;
 
-            // Tentativa de abertura no Mapeador de Colunas com grade tabular do PDF
-            _toast("Lendo documento PDF...", "info");
+            // 1. Prioriza abertura no Demarcador Visual de Colunas (renderiza a página do PDF em canvas HD)
+            _toast("Renderizando página do PDF para demarcação visual...", "info");
             (async function() {
+                try {
+                    if (window.DemandaImagemDemarcador && typeof DemandaPDF !== 'undefined' && typeof DemandaPDF.renderizarPaginaComoImagem === 'function') {
+                        var rend = await DemandaPDF.renderizarPaginaComoImagem(file, 1);
+                        if (rend && rend.dataUrl) {
+                            DemandaImagemDemarcador.abrir({
+                                file: file,
+                                dataUrl: rend.dataUrl,
+                                nome: file.name || "Cotação PDF",
+                                toast: _toast,
+                                onConfirm: function(grade, estadoDemarcador) {
+                                    if (window.DemandaMapeador) {
+                                        DemandaMapeador.abrir({
+                                            rows: grade,
+                                            fonte: "pdf",
+                                            nome: file.name || "Cotação PDF",
+                                            estadoDemarcador: estadoDemarcador,
+                                            toast: _toast,
+                                            onConfirm: function(itens) {
+                                                _showConferencia(DemandaImport.validateItens(itens));
+                                            }
+                                        });
+                                    }
+                                }
+                            });
+                            return;
+                        }
+                    }
+                } catch (errRender) {
+                    console.warn("[DemandaApp] Não foi possível renderizar imagem do PDF, tentando leitura textual:", errRender);
+                }
+
+                // 2. Fallback: Leitura tabular estruturada
                 try {
                     if (window.DemandaMapeador && typeof DemandaPDF !== 'undefined' && typeof DemandaPDF.extrairGradePDF === 'function') {
                         var grade = await DemandaPDF.extrairGradePDF(file);

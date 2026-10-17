@@ -711,6 +711,11 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
     * Motor geral `_splitCodigoDescricao` aprimorado para limpar pontuações residuais de OCR (` .`, `.`, `-`, `;`) e capturar com 100% de sucesso códigos no final da descrição (ex: `15 PORCA CNH NEW HOLLAND 725637 .` -> Ref: `725637`, Desc: `15 PORCA CNH NEW HOLLAND`).
     * Detecção automática no Mapeador: se a coluna de descrição contiver códigos no final, o sistema já sugere automaticamente `[Descrição *] + [Referência *]`, eliminando os `49 sem referência`.
     * Modal de Conferência de Importação ampliado para `modal-2xl` (até 1400px de largura) e coluna `Descrição` expandida para `min-width: 340px`, acabando com o truncamento de textos longos.
+* **2026-10-17 (v3.21.115 / Demanda v3.3.13):**
+  - **Extensão do Demarcador Visual de Colunas para PDFs (`demanda-pdf.js`, `demanda-app.js`, `index.html`):**
+    * Ao importar qualquer PDF, o sistema renderiza a página do documento diretamente em canvas de alta resolução (`scale: 2.0`) via `DemandaPDF.renderizarPaginaComoImagem`.
+    * A página do PDF abre imediatamente dentro do `DemandaImagemDemarcador`, oferecendo ao operador a mesma experiência visual que na foto: marcação de limites Início/Fim e linhas de colunas arrastáveis sobre o documento real.
+    * No Mapeador de Colunas, o botão bidirecional `📷 Demarcação na Foto / PDF` permite retornar e reajustar cortes a qualquer momento.
 
 
 

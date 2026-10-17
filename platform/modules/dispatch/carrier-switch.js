@@ -501,12 +501,32 @@ window.CarrierSwitchModule = (function () {
     /**
      * Executa a análise comparativa de troca de transportadora
      */
-    function runAnalysis() {
-        // v3.24.7: Garante leitura em tempo real das tabelas de frete e configurações mais recentes (caso tenha havido novo cadastro de transportadora/regra)
+    async function runAnalysis() {
+        // v3.24.7 / v3.25.6: Garante leitura em tempo real das tabelas de frete, configurações e histórico de despachos
         if (window.Utils && typeof Utils.getStorage === 'function') {
             state.freightRules = Utils.getStorage('freight_tables') || [];
             state.carrierConfigs = Utils.getStorage('carrier_configs') || {};
             state.carrierList = Utils.getStorage('carrier_list') || [];
+
+            // Se state.dispatches estiver vazio ou só tiver pendentes sem custo (ex.: init rodou antes do banco carregar), recarrega
+            const validCostCount = (state.dispatches || []).filter(d => d && parseNum(d.total || d.mainTotal || d.freightCost || d.valor, 0) > 0).length;
+            const localDispatches = Utils.getStorage('dispatches') || [];
+            if (validCostCount < 10 || localDispatches.length > state.dispatches.length) {
+                let rawDispatches = localDispatches;
+                try {
+                    if (Utils.Cloud && typeof Utils.Cloud.getFullDispatchesHistory === 'function') {
+                        rawDispatches = await Utils.Cloud.getFullDispatchesHistory();
+                    }
+                } catch (e) {
+                    console.warn('[CarrierSwitch] Fallback para getStorage(dispatches) no runAnalysis:', e);
+                }
+                state.dispatches = (rawDispatches || []).filter(d => {
+                    if (!d) return false;
+                    const st = (d.status || '').toLowerCase();
+                    return !['cancelado', 'excluido', 'estornado'].includes(st);
+                });
+            }
+
             populateFilterSelectors();
         }
 

@@ -1,9 +1,9 @@
 {
-  "version": "3.3.12",
-  "build": "20261017-v3.3.12",
+  "version": "3.3.13",
+  "build": "20261017-v3.3.13",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-17",
-  "change": "v3.3.12 - fix(demanda): extração geral de código/referência no final do texto da descrição e alargamento generoso da coluna de descrição na conferência.",
-  "releaseDate": "2026-10-17T16:30:00-03:00"
+  "change": "v3.3.13 - feat(demanda): extensão do Demarcador Visual de Colunas para PDFs com renderização de página em alta resolução.",
+  "releaseDate": "2026-10-17T16:45:00-03:00"
 }

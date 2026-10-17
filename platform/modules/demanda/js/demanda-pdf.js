@@ -332,10 +332,37 @@ const DemandaPDF = (() => {
          return fullText.split(/\r?\n/).map(l => l.split(/\t|\s{2,}/).map(c => c.trim())).filter(r => r.some(c => c));
      }
 
+    /**
+     * Renderiza uma página de PDF diretamente para imagem base64 em alta resolução (canvas 2x).
+     * Permite abrir qualquer documento PDF no Demarcador Visual de Colunas.
+     * @param {File} file - Arquivo PDF da cotação
+     * @param {number} numPagina - Número da página (1-based)
+     */
+    async function renderizarPaginaComoImagem(file, numPagina = 1) {
+        const pdfLib = await _loadPDFjs();
+        const buffer = await file.arrayBuffer();
+        const pdf = await pdfLib.getDocument({ data: buffer }).promise;
+        const pageNum = Math.min(pdf.numPages, Math.max(1, numPagina || 1));
+        const page = await pdf.getPage(pageNum);
+        const viewport = page.getViewport({ scale: 2.0 }); // escala 2x para nitidez OCR
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(viewport.width);
+        canvas.height = Math.round(viewport.height);
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+        return {
+            dataUrl: canvas.toDataURL('image/jpeg', 0.95),
+            numPages: pdf.numPages,
+            pageWidth: canvas.width,
+            pageHeight: canvas.height
+        };
+    }
+
     return {
         importCatalogPDF,
         parseCotacaoPDF,
         extrairGradePDF,
+        renderizarPaginaComoImagem,
         _extractPagesFromLib: _extractPages,
     };
 
