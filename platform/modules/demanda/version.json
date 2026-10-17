@@ -1,9 +1,9 @@
 {
-  "version": "3.3.5",
-  "build": "20261017-v3.3.5",
+  "version": "3.3.6",
+  "build": "20261017-v3.3.6",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-17",
-  "change": "v3.3.5 - feat(demanda): linhas anteriores ao inicio enumeradas com 0, contagem a partir do 1o produto, opcao de exclusao de linha com lixeira/undo e exclusao na previa, e deteccao de rodape.",
-  "releaseDate": "2026-10-17T10:07:00-03:00"
+  "change": "v3.3.6 - feat(demanda): assistente de conversao de texto em colunas estilo Excel com regua graduada, marcadores de corte interativos, e grade de alinhamento com shift de celulas por linha e edicao inline.",
+  "releaseDate": "2026-10-17T10:48:00-03:00"
 }

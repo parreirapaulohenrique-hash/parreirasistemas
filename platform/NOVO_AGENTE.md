@@ -664,4 +664,17 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
     * Opção explícita de exclusão de linha adicionada na grade com botão de lixeira (`delete_outline`) e alternância para `Restaurar` (`undo`) com efeito tachado visual.
     * Adicionada coluna de exclusão direta com botão `✕` na tabela de Prévia lateral (permitindo remover itens individuais com 1 clique).
     * Auto-detecção e pré-exclusão no algoritmo `sugerir` para linhas de rodapé/totais no final do documento (`Serviços`, `Nro Itens`, `Condição de pagamento`, `Frete`, `Total de itens`).
+* **2026-10-17 (v3.21.108 / Demanda v3.3.6):**
+  - **Assistente de Conversão de Texto em Colunas Estilo Excel (`demanda-textocolunas.js`, `demanda-mapeador.js`, `demanda-app.js`, `demanda.css`, `index.html`):**
+    * Passo intermediário interativo anterior à extração para fotos (OCR), PDFs e textos colados, espelhando fielmente o Assistente do Microsoft Excel (etapa 2 de 3).
+    * **Régua Graduada Interativa (Largura Fixa)**: Régua com marcações de 0 a 100+ caracteres, marcadores de quebra com setas (`▲`) arrastáveis, guias verticais cruzando todas as linhas de texto monoespaçado, clique para criar corte, arrastar para reposicionar e duplo-clique para remover.
+    * **Auto-sugestão de Cortes**: Algoritmo inteligente baseado em vales de espaços em branco na matriz do documento monoespaçado.
+    * **Aba Grade & Alinhamento Fino**: Visualização imediata do corte em tabela com botões por linha para resolver assimetrias de OCR (onde o OCR pula a primeira coluna `SEQ` deslocando células para a esquerda):
+      - Botão `[ ⇥ ]` (Deslocar p/ Direita): insere célula vazia no início daquela linha específica, alinhando as colunas.
+      - Botão `[ ⇤ ]` (Deslocar p/ Esquerda): remove a primeira célula da linha específica.
+      - Botão `[ ✕ ]`: exclui a linha corrompida.
+      - Edição inline direta nas células (`contenteditable`) para correções rápidas de digitação.
+      - Botão de adicionar coluna manual no final da grade.
+    * **Integração Bidirecional**: O Mapeador de Colunas possui o botão "Ajustar Cortes (Excel)" permitindo ao operador retornar ao Assistente a qualquer momento sem perder o contexto do documento.
+
 
