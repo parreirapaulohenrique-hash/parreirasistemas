@@ -676,5 +676,15 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
       - Edição inline direta nas células (`contenteditable`) para correções rápidas de digitação.
       - Botão de adicionar coluna manual no final da grade.
     * **Integração Bidirecional**: O Mapeador de Colunas possui o botão "Ajustar Cortes (Excel)" permitindo ao operador retornar ao Assistente a qualquer momento sem perder o contexto do documento.
+* **2026-10-17 (v3.21.109 / Demanda v3.3.7):**
+  - **Demarcador Visual de Colunas na Foto Antes da Digitalização (`demanda-imagem-demarcador.js`, `ocr.js`, `demanda-mapeador.js`, `demanda-app.js`, `demanda.css`, `index.html`):**
+    * Atendendo à solicitação do operador para ver a imagem real primeiro e demarcar sobre ela antes de qualquer leitura:
+    * **Trazer a Imagem Imediatamente**: Ao carregar Foto/Print, a imagem real é exibida em tela cheia com zoom interativo (`+`, `-`, `Ajustar`).
+    * **Demarcação de Limites da Tabela**: Linhas horizontais arrastáveis de "Início dos Produtos" (corta fora cabeçalho e dados de cliente/empresa) e "Fim dos Produtos" (corta fora rodapés, serviços e totais), com máscaras escuras semitransparentes.
+    * **Divisões de Colunas Verticais sobre os Pixels da Foto**: Linhas verticais com marcadores arrastáveis `▲ [Col X]` posicionadas diretamente sobre a imagem real; clique para criar, arraste para mover, duplo clique para excluir.
+    * **Digitalizar e Importar sob Demanda**: O OCR NÃO roda no upload; é acionado exclusivamente quando o operador clica em `🚀 Digitalizar e Importar`.
+    * **Mapeamento por Coordenadas Bounding Box**: O backend `api/ocr.js` ativa `isOverlayRequired: true`, capturando as palavras com coordenadas $(x, y)$ nos pixels e distribuindo-as com precisão cirúrgica dentro de cada coluna demarcada.
+    * **Retorno Bidirecional**: Botão `📷 Demarcação na Foto` no cabeçalho do Mapeador de Colunas permitindo reajustar cortes na imagem preservando o estado anterior.
+
 
 

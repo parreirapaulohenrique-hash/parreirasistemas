@@ -861,6 +861,29 @@ const DemandaApp = (function() {
             var file = inp.files[0];
             document.body.removeChild(inp);
             if (!file) return;
+
+            // Se o Demarcador de Imagem estiver disponível, abre diretamente a imagem para demarcação antes do OCR!
+            if (window.DemandaImagemDemarcador) {
+                DemandaImagemDemarcador.abrir({
+                    file: file,
+                    nome: file.name || "Foto / Print",
+                    toast: _toast,
+                    onConfirm: function(grade, estadoDemarcador) {
+                        DemandaMapeador.abrir({
+                            rows: grade,
+                            fonte: "foto",
+                            nome: file.name || "Foto / Print",
+                            estadoDemarcador: estadoDemarcador,
+                            toast: _toast,
+                            onConfirm: function(itens) {
+                                _showConferencia(DemandaImport.validateItens(itens));
+                            }
+                        });
+                    }
+                });
+                return;
+            }
+
             var modal  = document.getElementById("modalImportFoto");
             var imgEl  = document.getElementById("fotoPreview");
             var ta     = document.getElementById("fotoTranscricao");
