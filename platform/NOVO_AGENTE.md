@@ -706,6 +706,11 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
     * Fusão automática de cortes colados às bordas (< 4.5% ou > 95.5%): se o operador tentar marcar o início ou fim da tabela com uma linha na ponta, o sistema a funde com a borda externa, impedindo que números como 1 a 9 ou totais sejam fatiados ou cortados.
     * Folga de segurança vertical (`padY = 12px a 1.5%`) aplicada no recorte de Início e Fim, impedindo que as linhas horizontais decepem o topo ou pé de caracteres da primeira e da última linha.
     * Badges visuais no topo da régua identificando claramente `◄ Col 1 (Borda Esq)` e `Col N (Borda Dir) ►`.
+* **2026-10-17 (v3.21.114 / Demanda v3.3.12):**
+  - **Extração Geral de Referência no Final da Descrição e Expansão da Coluna de Descrição (`demanda-import.js`, `demanda-mapeador.js`, `demanda.css`, `index.html`):**
+    * Motor geral `_splitCodigoDescricao` aprimorado para limpar pontuações residuais de OCR (` .`, `.`, `-`, `;`) e capturar com 100% de sucesso códigos no final da descrição (ex: `15 PORCA CNH NEW HOLLAND 725637 .` -> Ref: `725637`, Desc: `15 PORCA CNH NEW HOLLAND`).
+    * Detecção automática no Mapeador: se a coluna de descrição contiver códigos no final, o sistema já sugere automaticamente `[Descrição *] + [Referência *]`, eliminando os `49 sem referência`.
+    * Modal de Conferência de Importação ampliado para `modal-2xl` (até 1400px de largura) e coluna `Descrição` expandida para `min-width: 340px`, acabando com o truncamento de textos longos.
 
 
 

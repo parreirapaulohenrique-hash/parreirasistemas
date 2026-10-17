@@ -920,16 +920,20 @@ const DemandaImport = (() => {
      * @returns {{ref:string, desc:string, alternativas:string[]}}
      */
     function _splitCodigoDescricao(texto) {
-        const t = String(texto || '').replace(/\s+/g, ' ').trim();
+        let t = String(texto || '').replace(/\s+/g, ' ').trim();
         const out = { ref: '', desc: t, alternativas: [] };
         if (!t) return out;
+
+        // Limpa pontuações comuns de fim de linha de OCR (ex: " .", ".", ";", "-")
+        const t_clean = t.replace(/[\s.,;:\-]+$/, '').trim();
+        if (!t_clean) return out;
 
         const _alts = (s) => s.split(/[-,;\/]+/).map(x => x.replace(/\s+/g, ' ').trim().toUpperCase()).filter(x => x.length >= 3 && /\d/.test(x) && x.length <= 32);
 
         // 1. Código no início (hífen só faz parte do código se o trecho seguinte tiver dígito: UC211-32)
-        const m = t.match(/^([A-Za-z0-9][A-Za-z0-9.\/]*(?:-[A-Za-z0-9.\/]*\d[A-Za-z0-9.\/]*)*)/);
+        const m = t_clean.match(/^([A-Za-z0-9][A-Za-z0-9.\/]*(?:-[A-Za-z0-9.\/]*\d[A-Za-z0-9.\/]*)*)/);
         if (m && _isPartCode(m[1]) && /\d/.test(m[1])) {
-            let resto = t.slice(m[1].length).trim();
+            let resto = t_clean.slice(m[1].length).trim();
             const pegaParenteses = () => {
                 const p = resto.match(/^\(([^)]*)\)\s*/);
                 if (p) { out.alternativas.push(..._alts(p[1])); resto = resto.slice(p[0].length).trim(); }
@@ -942,11 +946,15 @@ const DemandaImport = (() => {
             return out;
         }
 
-        // 2. Código no final: "PARAFUSO H215214" (exige 4+ dígitos seguidos para não pegar medidas tipo 8X30MM)
-        const f = t.match(/^(.+?)\s+([A-Za-z]{0,4}\d{4,}[A-Za-z0-9]*)$/);
-        if (f && _isPartCode(f[2])) {
-            out.ref = f[2].toUpperCase();
-            out.desc = f[1].trim();
+        // 2. Código no final: "PARAFUSO H215214" ou "15 PORCA CNH NEW HOLLAND 725637 ."
+        const f = t_clean.match(/^(.*?)\s+([A-Za-z0-9.\/-]{3,32})$/);
+        if (f) {
+            const candidato = f[2].replace(/[.,;:]+$/, '').trim();
+            if (_isPartCode(candidato)) {
+                out.ref = candidato.toUpperCase();
+                out.desc = f[1].trim();
+                return out;
+            }
         }
         return out;
     }
