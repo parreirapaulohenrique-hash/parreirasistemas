@@ -1,9 +1,9 @@
 {
-  "version": "3.3.7",
-  "build": "20261017-v3.3.7",
+  "version": "3.3.8",
+  "build": "20261017-v3.3.8",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-17",
-  "change": "v3.3.7 - feat(demanda): demarcador visual de colunas e limites da tabela diretamente sobre a imagem da foto/print antes da digitalizacao e extracao via OCR.",
-  "releaseDate": "2026-10-17T11:55:00-03:00"
+  "change": "v3.3.8 - fix(demanda): alcas de inicio e fim reposicionadas e compactas (sem cobrir colunas) e marcadores de coluna fixados no topo da regua.",
+  "releaseDate": "2026-10-17T15:28:00-03:00"
 }
