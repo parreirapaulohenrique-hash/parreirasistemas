@@ -695,15 +695,8 @@ const DemandaApp = (function() {
 
     var _pdfBlobUrl = null;
 
-    function _abrirImportPDF() {
-        var inp = document.createElement("input");
-        inp.type = "file";
-        inp.accept = ".pdf,application/pdf";
-        inp.style.display = "none";
-        document.body.appendChild(inp);
-        inp.onchange = function() {
-            var file = inp.files[0];
-            document.body.removeChild(inp);
+    function _abrirImportPDF(fileParam) {
+        function _processarPDF(file) {
             if (!file) return;
 
             // 1. Prioriza abertura no Demarcador Visual de Colunas (renderiza a página do PDF em canvas HD)
@@ -793,8 +786,23 @@ const DemandaApp = (function() {
                 if (ta)    ta.value = "";
                 if (btn) { btn.href = _pdfBlobUrl; }
                 modal.style.display = "flex";
-                _toast("PDF escaneado ou sem texto selecionável. Cole o conteúdo manualmente.", "warning");
             })();
+        }
+
+        if (fileParam) {
+            _processarPDF(fileParam);
+            return;
+        }
+
+        var inp = document.createElement("input");
+        inp.type = "file";
+        inp.accept = ".pdf,application/pdf";
+        inp.style.display = "none";
+        document.body.appendChild(inp);
+        inp.onchange = function() {
+            var file = inp.files[0];
+            document.body.removeChild(inp);
+            _processarPDF(file);
         };
         inp.click();
     }
@@ -883,15 +891,8 @@ const DemandaApp = (function() {
     // IMPORT FOTO / PRINT (camera ou galeria + transcricao)
     // ════════════════════════════════════════════════════════
 
-    function _abrirImportFoto() {
-        var inp = document.createElement("input");
-        inp.type = "file";
-        inp.accept = "image/*";
-        inp.style.display = "none";
-        document.body.appendChild(inp);
-        inp.onchange = function() {
-            var file = inp.files[0];
-            document.body.removeChild(inp);
+    function _abrirImportFoto(fileParam) {
+        function _processarFoto(file) {
             if (!file) return;
 
             // Se o Demarcador de Imagem estiver disponível, abre diretamente a imagem para demarcação antes do OCR!
@@ -1083,6 +1084,22 @@ const DemandaApp = (function() {
                 }
             };
             reader.readAsDataURL(file);
+        }
+
+        if (fileParam) {
+            _processarFoto(fileParam);
+            return;
+        }
+
+        var inp = document.createElement("input");
+        inp.type = "file";
+        inp.accept = "image/*";
+        inp.style.display = "none";
+        document.body.appendChild(inp);
+        inp.onchange = function() {
+            var file = inp.files[0];
+            document.body.removeChild(inp);
+            _processarFoto(file);
         };
         inp.click();
     }
@@ -1256,8 +1273,27 @@ const DemandaApp = (function() {
         var area = document.getElementById("excelUploadArea"); if (area) area.style.display = "none";
         var prev = document.getElementById("excelPreviewArea");
 
-        // Excel/CSV -> Mapeador de Colunas (operador revisa o padrão antes de buscar os itens)
         var nomeArq = (file.name || "").toLowerCase();
+
+        // Se for PDF selecionado no modal geral, abre direto no Demarcador Visual de Colunas
+        if (/\.pdf$/i.test(nomeArq)) {
+            closeModal("modalExcel");
+            if (area) area.style.display = "";
+            if (prev) { prev.style.display = "none"; prev.innerHTML = ""; }
+            _abrirImportPDF(file);
+            return;
+        }
+
+        // Se for imagem selecionada no modal geral, abre direto no Demarcador Visual
+        if (/\.(png|jpe?g|webp|bmp)$/i.test(nomeArq)) {
+            closeModal("modalExcel");
+            if (area) area.style.display = "";
+            if (prev) { prev.style.display = "none"; prev.innerHTML = ""; }
+            _abrirImportFoto(file);
+            return;
+        }
+
+        // Excel/CSV -> Mapeador de Colunas (operador revisa o padrão antes de buscar os itens)
         if (window.DemandaMapeador && typeof DemandaImport.lerGradeArquivo === "function" && /\.(xlsx|xls|csv)$/.test(nomeArq)) {
             DemandaImport.lerGradeArquivo(file).then(function(rows) {
                 closeModal("modalExcel");

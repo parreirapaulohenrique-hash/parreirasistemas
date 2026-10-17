@@ -64,7 +64,7 @@ const DemandaMapeador = (() => {
     // cfg = { slots: [{campos:[], sep:'auto', sepCustom:'', ocorr:'primeira'}], inicio, excluidas:[] }
     function _novoSlot() { return { campos: [], sep: 'auto', sepCustom: '', ocorr: 'primeira' }; }
     function _nCols(rows) { return Math.max(1, ...rows.slice(0, 500).map(r => r.length)); }
-    function _cfgVazia(n) { return { slots: Array.from({ length: n }, _novoSlot), inicio: 0, excluidas: [] }; }
+    function _cfgVazia(n) { return { slots: Array.from({ length: n }, _novoSlot), inicio: 0, fim: null, excluidas: [] }; }
 
     // ── Sugestão automática ─────────────────────────────────
     const PADROES_TITULO = [
@@ -147,16 +147,19 @@ const DemandaMapeador = (() => {
             }
             if (best >= 0 && bestSc >= amostra.length * 0.6) cfg.slots[best].campos = ['qtde'];
         }
-        // 5. Detectar linhas de rodapé/totais no final do documento para pré-excluir
+        // 5. Detectar linhas de rodapé/totais no final do documento para pré-definir FIM ou pré-excluir
         const PADRAO_RODAPE = /^(servi[çc]os?:?|frete:?|outras\s+despesas:?|nro\s+itens:?|n[°º]?\s+itens:?|total\s+de\s+itens:?|total\s+geral:?|sub-?total:?|condi[çc][ãa]o\s+de\s+pagamento:?|forma\s+de\s+pagamento:?|vendedor:?|dados\s+banc[áa]rios:?|chave\s+pix:?|observa[çc][õo]es?:?)\b/i;
+        let primeiroRodape = -1;
         for (let r = cfg.inicio; r < rows.length; r++) {
             const col0 = _str(_cel(rows[r], 0));
             const col1 = _str(_cel(rows[r], 1));
             const txt = rows[r].map(c => _str(c)).join(' ').trim();
             if (PADRAO_RODAPE.test(col0) || PADRAO_RODAPE.test(col1) || (PADRAO_RODAPE.test(txt) && !/[A-Z0-9]{5,}/.test(col0))) {
+                if (primeiroRodape === -1) primeiroRodape = r - 1;
                 if (!cfg.excluidas.includes(r)) cfg.excluidas.push(r);
             }
         }
+        cfg.fim = (primeiroRodape >= cfg.inicio) ? primeiroRodape : (rows.length - 1);
         _ajustarOcorr(cfg);
         return cfg;
     }
@@ -219,7 +222,8 @@ const DemandaMapeador = (() => {
     function extrair(rows, cfg) {
         const excl = new Set(cfg.excluidas || []);
         const itens = [];
-        for (let r = cfg.inicio || 0; r < rows.length; r++) {
+        const fim = (cfg.fim != null && cfg.fim >= 0) ? Math.min(cfg.fim, rows.length - 1) : (rows.length - 1);
+        for (let r = cfg.inicio || 0; r <= fim; r++) {
             if (excl.has(r)) continue;
             const row = rows[r];
             const v = {};
@@ -397,11 +401,11 @@ const DemandaMapeador = (() => {
                   <h3 id="mpdTitulo">Mapear colunas da importação</h3>
                   <div style="display:flex;align-items:center;gap:.5rem">
                     <div class="mpd-sub" id="mpdArquivo"></div>
-                    <button class="mpd-btn mpd-btn-ghost mpd-btn-sm" id="mpdBtnDemarcarFoto" style="display:none;padding:.15rem .45rem;font-size:.7rem;border-color:#06b6d4;color:#06b6d4" title="Voltar ao Demarcador de Imagem para reajustar colunas e limites sobre a foto">
-                        <span class="material-icons-round" style="font-size:.9rem">crop</span> Demarcação na Foto
+                    <button class="mpd-btn mpd-btn-ghost mpd-btn-sm" id="mpdBtnDemarcarFoto" style="display:none;padding:.15rem .45rem;font-size:.7rem;border-color:#06b6d4;color:#06b6d4" title="Voltar ao Demarcador Visual para reajustar colunas e limites no documento">
+                        <span class="material-icons-round" style="font-size:.9rem">crop</span> Demarcação Visual
                     </button>
-                    <button class="mpd-btn mpd-btn-ghost mpd-btn-sm" id="mpdBtnAjustarCortes" style="display:none;padding:.15rem .45rem;font-size:.7rem;border-color:#38bdf8;color:#38bdf8" title="Voltar ao Assistente estilo Excel para ajustar as quebras de coluna">
-                        <span class="material-icons-round" style="font-size:.9rem">straighten</span> Ajustar Cortes (Excel)
+                    <button class="mpd-btn mpd-btn-ghost mpd-btn-sm" id="mpdBtnAjustarCortes" style="display:none;padding:.15rem .45rem;font-size:.7rem;border-color:#38bdf8;color:#38bdf8" title="Abrir Assistente de Linhas de Divisão com Régua interativa">
+                        <span class="material-icons-round" style="font-size:.9rem">straighten</span> Linhas de Divisão (Régua)
                     </button>
                   </div>
                 </div>
@@ -489,18 +493,38 @@ const DemandaMapeador = (() => {
     function _renderGrid() {
         const rows = _st.rows, cfg = _st.cfg;
         const n = cfg.slots.length;
-        const excl = new Set(cfg.excluidas);
+        const excl = new Set(cfg.excluidas || []);
+        const fim = (cfg.fim != null && cfg.fim >= 0) ? Math.min(cfg.fim, rows.length - 1) : (rows.length - 1);
         const lim = Math.min(rows.length, MAX_LINHAS_VIEW);
-        let h = '<table class="mpd-grid"><thead><tr><th class="mpd-rn-h">Linha</th>' + cfg.slots.map(_slotHtml).join('') + '</tr></thead><tbody>';
+
+        let h = '<div class="mpd-grid-info-bar">' +
+            `<div class="mpd-limite-tag ini"><span class="mpd-dot ini"></span> Início: <strong>Linha ${cfg.inicio + 1}</strong></div>` +
+            `<div class="mpd-limite-tag fim"><span class="mpd-dot fim"></span> Fim: <strong>Linha ${fim + 1}</strong></div>` +
+            `<div class="mpd-limite-tag col"><span class="mpd-dot col"></span> <strong>${n}</strong> Colunas de Divisão</div>` +
+            `<div class="mpd-limite-dica">Clique no número para definir o Início 🟢 ou no botão ⏹ para definir o Fim 🔴</div>` +
+            '</div>';
+
+        h += '<table class="mpd-grid"><thead><tr><th class="mpd-rn-h">Linha</th>' + cfg.slots.map(_slotHtml).join('') + '</tr></thead><tbody>';
         for (let r = 0; r < lim; r++) {
-            const antes = r < cfg.inicio, fora = excl.has(r);
-            const numExibicao = antes ? 0 : (r - cfg.inicio + 1);
-            h += `<tr class="${antes ? 'antes' : ''}${fora ? ' fora' : ''}${r === cfg.inicio ? ' inicio' : ''}">` +
+            const antes = r < cfg.inicio;
+            const depois = r > fim;
+            const fora = excl.has(r) || depois;
+            const numExibicao = (antes || depois) ? 0 : (r - cfg.inicio + 1);
+            const classesLinha = [
+                antes ? 'antes' : '',
+                depois ? 'depois' : '',
+                fora ? 'fora' : '',
+                r === cfg.inicio ? 'inicio' : '',
+                r === fim ? 'fim' : ''
+            ].filter(Boolean).join(' ');
+
+            h += `<tr class="${classesLinha}">` +
                 `<td class="mpd-rn">` +
-                `<button class="mpd-rn-b ${antes ? 'mpd-rn-zero' : ''}" data-ini="${r}" title="${antes ? 'Linha ' + (r + 1) + ' (cabeçalho). Clique para iniciar produtos aqui' : 'Item ' + numExibicao + ' (Linha ' + (r + 1) + ' do documento)'}">${numExibicao}</button>` +
-                (antes ? '' : `<button class="mpd-exc-b ${fora ? 'is-fora' : ''}" data-exc="${r}" title="${fora ? 'Restaurar linha ' + numExibicao : 'Excluir linha ' + numExibicao + ' da importação'}">` +
-                    `<span class="material-icons-round" style="font-size:15px;vertical-align:middle">${fora ? 'undo' : 'delete_outline'}</span>` +
-                    (fora ? '<span class="mpd-exc-lbl">Restaurar</span>' : '') +
+                `<button class="mpd-rn-b ${antes ? 'mpd-rn-zero' : ''} ${r === cfg.inicio ? 'is-ini' : ''}" data-ini="${r}" title="${antes ? 'Linha ' + (r + 1) + ' (cabeçalho). Clique para iniciar produtos aqui' : 'Definir INÍCIO dos produtos na Linha ' + (r + 1)}">${numExibicao}</button>` +
+                `<button class="mpd-rn-fim-b ${r === fim ? 'is-fim' : ''} ${depois ? 'mpd-rn-zero' : ''}" data-fim="${r}" title="${r === fim ? 'Linha de FIM das peças (clique para remover corte)' : 'Definir FIM dos produtos na Linha ' + (r + 1) + ' (linhas abaixo são ignoradas)'}"><span class="material-icons-round" style="font-size:13px">vertical_align_bottom</span></button>` +
+                (antes || depois ? '' : `<button class="mpd-exc-b ${excl.has(r) ? 'is-fora' : ''}" data-exc="${r}" title="${excl.has(r) ? 'Restaurar linha ' + numExibicao : 'Excluir linha ' + numExibicao + ' da importação'}">` +
+                    `<span class="material-icons-round" style="font-size:14px;vertical-align:middle">${excl.has(r) ? 'undo' : 'delete_outline'}</span>` +
+                    (excl.has(r) ? '<span class="mpd-exc-lbl">Restaurar</span>' : '') +
                 `</button>`) +
                 `</td>`;
             for (let c = 0; c < n; c++) {
@@ -635,7 +659,21 @@ const DemandaMapeador = (() => {
         root.querySelectorAll('[data-ocorr]').forEach(s => s.onchange = () => { _st.cfg.slots[Number(s.dataset.ocorr)].ocorr = s.value; _renderPreview(); });
         root.querySelectorAll('[data-inv]').forEach(b => b.onclick = () => { const sl = _st.cfg.slots[Number(b.dataset.inv)]; sl.campos.reverse(); _ajustarOcorr(_st.cfg); _render(); });
         root.querySelectorAll('[data-sep1]').forEach(b => b.onclick = () => { const sl = _st.cfg.slots[Number(b.dataset.sep1)]; sl.campos = sl.campos.slice(0, 1); sl.sep = 'auto'; _render(); });
-        root.querySelectorAll('[data-ini]').forEach(b => b.onclick = () => { _st.cfg.inicio = Number(b.dataset.ini); _st.cfg.excluidas = _st.cfg.excluidas.filter(r => r >= _st.cfg.inicio); _render(); });
+        root.querySelectorAll('[data-ini]').forEach(b => b.onclick = () => {
+            _st.cfg.inicio = Number(b.dataset.ini);
+            _st.cfg.excluidas = _st.cfg.excluidas.filter(r => r >= _st.cfg.inicio);
+            if (_st.cfg.fim != null && _st.cfg.fim < _st.cfg.inicio) _st.cfg.fim = _st.rows.length - 1;
+            _render();
+        });
+        root.querySelectorAll('[data-fim]').forEach(b => b.onclick = () => {
+            const f = Number(b.dataset.fim);
+            if (_st.cfg.fim === f) {
+                _st.cfg.fim = _st.rows.length - 1;
+            } else {
+                _st.cfg.fim = f;
+            }
+            _render();
+        });
         root.querySelectorAll('[data-exc]').forEach(b => b.onclick = () => {
             const r = Number(b.dataset.exc); const ex = new Set(_st.cfg.excluidas);
             ex.has(r) ? ex.delete(r) : ex.add(r); _st.cfg.excluidas = Array.from(ex); _render();
@@ -705,7 +743,7 @@ const DemandaMapeador = (() => {
         if (btnFoto) {
             btnFoto.style.display = (_st.estadoDemarcador && window.DemandaImagemDemarcador) ? 'inline-flex' : 'none';
             btnFoto.onclick = () => {
-                const est = _st.estadoDemarcador, nome = _st.nome, onConf = _st.onConfirm;
+                const est = _st.estadoDemarcador, nome = _st.nome, fonte = _st.fonte, onConf = _st.onConfirm;
                 fechar();
                 DemandaImagemDemarcador.abrir({
                     file: est.file,
@@ -715,7 +753,7 @@ const DemandaMapeador = (() => {
                     yBottomPct: est.yBottomPct,
                     nome: nome,
                     toast: _st.toast,
-                    onConfirm: (g, novoEst) => abrir({ rows: g, nome, fonte: 'foto', estadoDemarcador: novoEst, onConfirm: onConf, toast: _st.toast })
+                    onConfirm: (g, novoEst) => abrir({ rows: g, nome, fonte: fonte, estadoDemarcador: novoEst, onConfirm: onConf, toast: _st.toast })
                 });
             };
         }
