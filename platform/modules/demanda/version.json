@@ -1,9 +1,9 @@
 {
-  "version": "3.3.11",
-  "build": "20261017-v3.3.11",
+  "version": "3.3.12",
+  "build": "20261017-v3.3.12",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-17",
-  "change": "v3.3.11 - fix(demanda): extremidades horizontais abrangem 0% a 100% da imagem sem perigo de cortar números de borda e folga vertical de segurança nas linhas de Início/Fim.",
-  "releaseDate": "2026-10-17T16:05:00-03:00"
+  "change": "v3.3.12 - fix(demanda): extração geral de código/referência no final do texto da descrição e alargamento generoso da coluna de descrição na conferência.",
+  "releaseDate": "2026-10-17T16:30:00-03:00"
 }

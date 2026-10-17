@@ -1084,14 +1084,24 @@ body {
     background: var(--bg-body);
     border: 1px solid var(--border-color);
     border-radius: 4px;
-    padding: 0.25rem 0.4rem;
+    padding: 0.28rem 0.5rem;
     color: var(--text-primary);
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     font-family: 'Inter', sans-serif;
     outline: none;
     width: 100%;
+    box-sizing: border-box;
 }
 .conferencia-table input:focus { border-color: var(--primary-color); }
+
+.conferencia-table td:nth-child(3) { min-width: 260px; }
+.conferencia-table td:nth-child(4) { min-width: 340px; }
+.conferencia-table td:nth-child(4) input[type="text"] {
+    min-width: 330px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: #f1f5f9;
+}
 
 .conf-select-bar {
     display: flex;
