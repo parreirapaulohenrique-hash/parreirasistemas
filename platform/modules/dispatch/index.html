@@ -2089,7 +2089,7 @@
                             <h3 style="margin:0.5rem 0;color:#ef4444;">Estornar Fatura</h3>
                             <p style="color:var(--text-secondary);font-size:0.88rem;">
                                 Esta ação irá reverter o pagamento e retornar as NFs para o status <strong>Despachado</strong>.<br>
-                                Requer senha de Supervisor.
+                                Requer senha de Supervisor ou Administrador.
                             </p>
                         </div>
                         <div id="estornoDetails"
@@ -2098,15 +2098,20 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Motivo do Estorno</label>
-                            <input type="text" id="estornoJustification" class="form-input" placeholder="Informe o motivo" required>
+                            <input type="text" id="estornoJustification" class="form-input" placeholder="Informe o motivo" required
+                                oninput="var e=document.getElementById('invoiceEstornoError');if(e)e.style.display='none';"
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();window.confirmEstorno();}">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Senha do Supervisor</label>
-                            <input type="password" id="estornoSupervisorPass" class="form-input" placeholder="Digite a senha">
+                            <label class="form-label">Senha do Supervisor / Admin</label>
+                            <input type="password" id="estornoSupervisorPass" class="form-input" placeholder="Digite a senha"
+                                oninput="var e=document.getElementById('invoiceEstornoError');if(e)e.style.display='none';"
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();window.confirmEstorno();}">
                         </div>
+                        <div id="invoiceEstornoError" style="display:none; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.45); color:#fca5a5; padding:0.7rem 0.9rem; border-radius:8px; font-size:0.85rem; font-weight:600; margin-top:0.5rem; text-align:left; line-height:1.4;"></div>
                         <div style="display:flex;gap:1rem;margin-top:1rem;">
                             <button class="btn btn-secondary" onclick="window.closeEstornoModal()" style="flex:1;">Cancelar</button>
-                            <button class="btn" onclick="window.confirmEstorno()"
+                            <button id="btnConfirmEstornoModal" class="btn" onclick="window.confirmEstorno()"
                                 style="flex:1;background:#ef4444;color:#fff;border-color:#ef4444;">Confirmar Estorno</button>
                         </div>
                     </div>
@@ -2158,7 +2163,7 @@
                             <h3 style="margin: 0.5rem 0;">Diferença Detectada</h3>
                             <p style="color: var(--text-secondary); font-size: 0.9rem;">
                                 O valor calculado não confere com a fatura.<br>
-                                Para continuar, informe a senha de um Supervisor.
+                                Para continuar, informe a senha de um Supervisor ou Administrador.
                             </p>
                         </div>
                         <div id="invoiceDiffDetails"
@@ -2166,20 +2171,25 @@
                             <!-- Detalhes da diferença -->
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Senha do Supervisor</label>
+                            <label class="form-label">Senha do Supervisor / Admin</label>
                             <input type="password" id="invoiceSupervisorPass" class="form-input"
-                                placeholder="Digite a senha">
+                                placeholder="Digite a senha"
+                                oninput="var e=document.getElementById('invoiceSupervisorError');if(e)e.style.display='none';"
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();window.forceInvoicePayment();}">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Justificativa</label>
                             <input type="text" id="invoiceJustification" class="form-input"
-                                placeholder="Motivo da diferença" required>
+                                placeholder="Motivo da diferença" required
+                                oninput="var e=document.getElementById('invoiceSupervisorError');if(e)e.style.display='none';"
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();window.forceInvoicePayment();}">
                         </div>
+                        <div id="invoiceSupervisorError" style="display:none; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.45); color:#fca5a5; padding:0.7rem 0.9rem; border-radius:8px; font-size:0.85rem; font-weight:600; margin-top:0.5rem; text-align:left; line-height:1.4;"></div>
                         <div style="display: flex; gap: 1rem; margin-top: 1rem;">
                             <button class="btn btn-secondary"
                                 onclick="document.getElementById('invoiceSupervisorModal').style.display='none'"
                                 style="flex: 1;">Cancelar</button>
-                            <button class="btn btn-primary" onclick="window.forceInvoicePayment()"
+                            <button id="btnForceInvoiceConfirm" class="btn btn-primary" onclick="window.forceInvoicePayment()"
                                 style="flex: 1;">Confirmar</button>
                         </div>
                     </div>
@@ -3146,7 +3156,7 @@
     <script src="/platform/shared/integrations/erp-ui.js?v=3.22.37"></script>
     <script src="/platform/shared/integrations/index.js?v=3.22.37"></script>
     <script src="occurrences.js?v=3.22.37"></script>
-    <script src="app.js?v=3.25.3"></script>
+    <script src="app.js?v=3.25.5"></script>
     <script>
         // Inicializa a UI de configuração ERP na seção de Integração do Dispatch
         document.addEventListener('DOMContentLoaded', function () {

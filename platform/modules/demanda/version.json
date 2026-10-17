@@ -1,9 +1,9 @@
 {
-  "version": "3.3.4",
-  "build": "20261016-v3.3.4",
+  "version": "3.3.5",
+  "build": "20261017-v3.3.5",
   "module": "demanda",
   "name": "Cotacao",
-  "lastUpdate": "2026-10-16",
-  "change": "v3.3.4 - feat(demanda): extensao do Mapeador de Colunas para Foto/Print (OCR) e PDF, permitindo reordenar e ajustar colunas antes da conferencia.",
-  "releaseDate": "2026-10-16T16:55:00-03:00"
+  "lastUpdate": "2026-10-17",
+  "change": "v3.3.5 - feat(demanda): linhas anteriores ao inicio enumeradas com 0, contagem a partir do 1o produto, opcao de exclusao de linha com lixeira/undo e exclusao na previa, e deteccao de rodape.",
+  "releaseDate": "2026-10-17T10:07:00-03:00"
 }

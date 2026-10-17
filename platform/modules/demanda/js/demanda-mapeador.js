@@ -147,6 +147,16 @@ const DemandaMapeador = (() => {
             }
             if (best >= 0 && bestSc >= amostra.length * 0.6) cfg.slots[best].campos = ['qtde'];
         }
+        // 5. Detectar linhas de rodapé/totais no final do documento para pré-excluir
+        const PADRAO_RODAPE = /^(servi[çc]os?:?|frete:?|outras\s+despesas:?|nro\s+itens:?|n[°º]?\s+itens:?|total\s+de\s+itens:?|total\s+geral:?|sub-?total:?|condi[çc][ãa]o\s+de\s+pagamento:?|forma\s+de\s+pagamento:?|vendedor:?|dados\s+banc[áa]rios:?|chave\s+pix:?|observa[çc][õo]es?:?)\b/i;
+        for (let r = cfg.inicio; r < rows.length; r++) {
+            const col0 = _str(_cel(rows[r], 0));
+            const col1 = _str(_cel(rows[r], 1));
+            const txt = rows[r].map(c => _str(c)).join(' ').trim();
+            if (PADRAO_RODAPE.test(col0) || PADRAO_RODAPE.test(col1) || (PADRAO_RODAPE.test(txt) && !/[A-Z0-9]{5,}/.test(col0))) {
+                if (!cfg.excluidas.includes(r)) cfg.excluidas.push(r);
+            }
+        }
         _ajustarOcorr(cfg);
         return cfg;
     }
@@ -227,6 +237,8 @@ const DemandaMapeador = (() => {
             const desc = _str(v.desc);
             if (!ref && !desc) continue;
             if (!ref && /^(sub-?\s*)?total\b|^valor\s+total|^total\s+geral/i.test(desc)) continue;
+            // Filtro defensivo contra rodapés típicos caso não tenham sido excluídos manualmente
+            if (/^(servi[çc]os?:?|frete:?|nro\s+itens:?|total\s+de\s+itens:?|condi[çc][ãa]o\s+de\s+pagamento:?)/i.test(ref)) continue;
 
             const qRaw = v.qtde;
             const qtdeInformada = _str(qRaw) !== '';
@@ -249,7 +261,9 @@ const DemandaMapeador = (() => {
                 marca:          _str(v.marca),
                 obs:            obsPartes.join(' | '),
                 incerteza:      !ref,
-                _rowNum:        r + 1,
+                _rowNum:        r - (cfg.inicio || 0) + 1,
+                _docLine:       r + 1,
+                _rawIndex:      r,
                 _qtdeInvalida:  qtdeInvalida,
             };
             if (unit > 0) item.precoConcorrente = unit;
@@ -397,7 +411,7 @@ const DemandaMapeador = (() => {
                 <div class="mpd-tray-wrap">
                   <span class="mpd-tray-tit">Colunas disponíveis</span>
                   <div class="mpd-tray" id="mpdTray"></div>
-                  <span class="mpd-dica">Arraste cada coluna para cima da coluna do documento. Solte em <b>+ juntar</b> para combinar duas informações na mesma coluna. Clique no nº da linha para marcar onde começam os itens; clique na ✓ para ignorar uma linha.</span>
+                  <span class="mpd-dica">Arraste cada coluna para cima da coluna do documento. Solte em <b>+ juntar</b> para combinar duas informações na mesma coluna. Linhas de cabeçalho ficam como <b>0</b>; clique na lixeira ou no ✕ para excluir linhas de rodapé/totais.</span>
                 </div>
                 <div class="mpd-grid-wrap" id="mpdGridWrap"></div>
               </section>
@@ -472,9 +486,15 @@ const DemandaMapeador = (() => {
         let h = '<table class="mpd-grid"><thead><tr><th class="mpd-rn-h">Linha</th>' + cfg.slots.map(_slotHtml).join('') + '</tr></thead><tbody>';
         for (let r = 0; r < lim; r++) {
             const antes = r < cfg.inicio, fora = excl.has(r);
+            const numExibicao = antes ? 0 : (r - cfg.inicio + 1);
             h += `<tr class="${antes ? 'antes' : ''}${fora ? ' fora' : ''}${r === cfg.inicio ? ' inicio' : ''}">` +
-                `<td class="mpd-rn"><button class="mpd-rn-b" data-ini="${r}" title="Os itens começam nesta linha">${r + 1}</button>` +
-                (antes ? '' : `<button class="mpd-ok-b" data-exc="${r}" title="${fora ? 'Incluir linha' : 'Ignorar linha'}">${fora ? '✕' : '✓'}</button>`) + '</td>';
+                `<td class="mpd-rn">` +
+                `<button class="mpd-rn-b ${antes ? 'mpd-rn-zero' : ''}" data-ini="${r}" title="${antes ? 'Linha ' + (r + 1) + ' (cabeçalho). Clique para iniciar produtos aqui' : 'Item ' + numExibicao + ' (Linha ' + (r + 1) + ' do documento)'}">${numExibicao}</button>` +
+                (antes ? '' : `<button class="mpd-exc-b ${fora ? 'is-fora' : ''}" data-exc="${r}" title="${fora ? 'Restaurar linha ' + numExibicao : 'Excluir linha ' + numExibicao + ' da importação'}">` +
+                    `<span class="material-icons-round" style="font-size:15px;vertical-align:middle">${fora ? 'undo' : 'delete_outline'}</span>` +
+                    (fora ? '<span class="mpd-exc-lbl">Restaurar</span>' : '') +
+                `</button>`) +
+                `</td>`;
             for (let c = 0; c < n; c++) {
                 const v = _cel(rows[r], c);
                 h += `<td class="${cfg.slots[c].campos.length ? 'map' : ''}">${_esc(typeof v === 'number' ? String(v).replace('.', ',') : v)}</td>`;
@@ -502,12 +522,15 @@ const DemandaMapeador = (() => {
             (faltam.length ? `<div class="mpd-alerta err">Posicione ${faltam.join(', ')}.</div>` : '');
         const cols = ['ref', 'desc', 'qtde'].concat(usados.has('marca') ? ['marca'] : []).concat((usados.has('unit') || usados.has('total')) ? ['preco'] : []).concat(['obs']);
         const lab = { ref: 'Referência', desc: 'Descrição', qtde: 'Qtde', marca: 'Marca', preco: 'Preço', obs: 'Obs' };
-        let h = '<thead><tr><th>Lin.</th>' + cols.map(c => `<th>${lab[c]}</th>`).join('') + '</tr></thead><tbody>';
+        let h = '<thead><tr><th style="width:40px">Lin.</th>' + cols.map(c => `<th>${lab[c]}</th>`).join('') + '<th style="width:36px;text-align:center">Excluir</th></tr></thead><tbody>';
         itens.slice(0, 40).forEach(it => {
             const val = { ref: it.refOriginal, desc: it.descOriginal, qtde: String(it.qtdeSolicitada).replace('.', ','), marca: it.marca, preco: it.precoConcorrente ? it.precoConcorrente.toFixed(2).replace('.', ',') : '', obs: it.obs };
-            h += `<tr class="${!it.refOriginal || it._qtdeInvalida ? 'warn' : ''}"><td>${it._rowNum}</td>` + cols.map(c => `<td class="c-${c}">${_esc(val[c])}</td>`).join('') + '</tr>';
+            h += `<tr class="${!it.refOriginal || it._qtdeInvalida ? 'warn' : ''}"><td>#${it._rowNum}</td>` +
+                cols.map(c => `<td class="c-${c}">${_esc(val[c])}</td>`).join('') +
+                `<td style="text-align:center"><button class="mpd-prev-del-b" data-exc="${it._rawIndex}" title="Excluir item ${it._rowNum} (${_esc(it.refOriginal || it.descOriginal)})"><span class="material-icons-round" style="font-size:14px;color:#f87171">delete_outline</span></button></td>` +
+                '</tr>';
         });
-        if (itens.length > 40) h += `<tr><td colspan="${cols.length + 1}" class="mpd-mais-linhas">+ ${itens.length - 40} itens…</td></tr>`;
+        if (itens.length > 40) h += `<tr><td colspan="${cols.length + 2}" class="mpd-mais-linhas">+ ${itens.length - 40} itens…</td></tr>`;
         $('mpdPrev').innerHTML = h + '</tbody>';
         $('mpdBtnConfirmar').disabled = !itens.length || faltam.length > 0;
     }
