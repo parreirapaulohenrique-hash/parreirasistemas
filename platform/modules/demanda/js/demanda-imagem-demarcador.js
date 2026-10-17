@@ -63,7 +63,7 @@ const DemandaImagemDemarcador = (() => {
                         <!-- Dica de uso rápida -->
                         <span class="did-hint">
                             <span class="material-icons-round" style="font-size:.85rem;color:#38bdf8">info</span>
-                            Clique na imagem para criar coluna · Arraste para mover · Duplo-clique no marcador para excluir
+                            Colunas inicial e final cobrem até as bordas da imagem · Crie linhas apenas <b>ENTRE</b> as colunas (ex: entre SEQ e ITENS)
                         </span>
                     </div>
 
@@ -242,7 +242,7 @@ const DemandaImagemDemarcador = (() => {
         // 3. Atualiza contadores
         const qtdCortes = _st.cortesPct.length;
         const qtdCols = qtdCortes + 1;
-        $('didInfoColunas').textContent = `${qtdCortes} corte(s) definido(s) (${qtdCols} colunas geradas) · Linhas: ${Math.round(_st.yTopPct * 100)}% até ${Math.round(_st.yBottomPct * 100)}% da imagem`;
+        $('didInfoColunas').innerHTML = `<span style="color:#38bdf8;font-weight:600">${qtdCols} colunas</span> (${qtdCortes} divisória(s) interna(s)) · Extremidades chegam às <b style="color:#4ade80">bordas 0% e 100% da imagem</b> (sem perigo de cortar números)`;
     }
 
     function _renderizarColunas(w, h, yTopPx, yBottomPx) {
@@ -264,7 +264,15 @@ const DemandaImagemDemarcador = (() => {
             badge.style.left = leftPx + 'px';
             badge.style.width = colWidth + 'px';
             badge.style.top = '2px';
-            badge.textContent = `Col ${i + 1}`;
+            if (i === 0) {
+                badge.textContent = `◄ Col 1 (Borda Esq)`;
+                badge.title = 'Coluna 1: abrange desde a borda esquerda da imagem até a primeira divisória.';
+            } else if (i === borders.length - 2) {
+                badge.textContent = `Col ${i + 1} (Borda Dir) ►`;
+                badge.title = `Coluna ${i + 1}: abrange desde a última divisória até a borda direita da imagem.`;
+            } else {
+                badge.textContent = `Col ${i + 1}`;
+            }
             layer.appendChild(badge);
         }
 
@@ -476,8 +484,10 @@ const DemandaImagemDemarcador = (() => {
             const natW = _st.naturalW;
             const natH = _st.naturalH;
 
-            const yTopPx = Math.round(_st.yTopPct * natH);
-            const yBottomPx = Math.round(_st.yBottomPct * natH);
+            // Folga de segurança vertical de ~12px no topo e base para que as linhas de Início/Fim nunca decepem topos ou pés de números
+            const padY = Math.max(12, Math.round(natH * 0.015));
+            const yTopPx = Math.max(0, Math.round(_st.yTopPct * natH) - padY);
+            const yBottomPx = Math.min(natH, Math.round(_st.yBottomPct * natH) + padY);
             const cropH = Math.max(50, yBottomPx - yTopPx);
 
             // Canvas da tabela limpa com resolução e contraste otimizados para OCR de precisão
@@ -642,7 +652,11 @@ const DemandaImagemDemarcador = (() => {
         });
 
         // 3. Distribui cada palavra na sua respectiva coluna pelas coordenadas X
-        const borders = [0, ...cortesPct, 1].map(pct => pct * imgW);
+        // Se o operador colocou cortes muito próximos das bordas externas (< 4.5% na esquerda ou > 95.5% na direita)
+        // para "marcar o início/fim da tabela", funde com 0 e imgW para que a 1ª coluna e a última coluna
+        // cheguem até as bordas absolutas da imagem sem perigo de fatiar números de borda!
+        const cortesLimpos = (cortesPct || []).filter(p => p >= 0.045 && p <= 0.955);
+        const borders = [0, ...cortesLimpos, 1].map(pct => pct * imgW);
         const numCols = borders.length - 1;
 
         let grade = [];

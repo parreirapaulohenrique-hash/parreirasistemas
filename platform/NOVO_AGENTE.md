@@ -448,8 +448,9 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
 > Em discos com essa latência, operações ingênuas de disco e comandos globais do Git causam travamentos de 2 a 5 minutos.
 > O agente DEVE seguir impreterivelmente as regras abaixo:
 
-### 9.1. Regra de Agrupamento em Lote (Batching)
-* **Leitura e Análise em Lote (Batch Scan):** NUNCA inspecionar ou ler arquivos pela rede um a um de forma sequencial com ferramentas individuais (isso gera latência multiplicada de ~480ms por arquivo). Sempre utilizar um script consolidado (Python ou Node) para ler todo o diretório ou módulo de uma só vez para a memória, processar o diagnóstico e retornar o resultado em bloco.
+### 9.1. Regra de Agrupamento em Lote e Operação em Blocos na Rede `Z:\` (Batching)
+* **Leitura e Análise em Lote (Batch Scan — PROIBIDO fatiar `view_file` sequencial na rede `Z:\`):** NUNCA inspecionar ou ler arquivos grandes na rede `Z:\` em dezenas de chamadas sequenciais (ex.: ler `app.js` de 800 em 800 linhas via `view_file`), pois cada chamada sofre a latência da VPN (~480ms+ de overhead por round-trip). Sempre buscar os dados da rede `Z:\` **em bloco único** (copiando os arquivos-alvo de uma só vez para o diretório local `C:\Users\Paulo H Parreira\.gemini\antigravity\brain\<id>\scratch\` ou executando um único script consolidado que leia, filtre e entregue o diagnóstico completo de uma vez).
+* **Processamento em Disco Local (`C:\`) e Entrega em Bloco para `Z:\`:** Todo processamento pesado, consultas HTTP/Firestore (usando `curl.exe` ou `.NET HttpClient` direto para arquivo, nunca `Invoke-RestMethod | ConvertTo-Json` em objetos gigantes do PowerShell 5.1) e montagem de alterações devem ocorrer no disco local `C:\` (rápido, latência zero). Quando as alterações estiverem prontas e validadas, entregue/grave os arquivos de volta na rede `Z:\` em um único bloco consolidado.
 * **Planejamento em Bloco Único:** Apresentar o diagnóstico consolidado do módulo e a lista de melhorias de forma unificada antes da execução, evitando vaivéns fragmentados.
 * **Execução e Entrega em Lote (Batch Delivery):** Realizar todas as alterações de código, estilizações, HTML e regras de banco do pacote em sequência contínua e integrada.
 * **Teste e validação em Lote antes do Git:** Valide a sintaxe, dependências e funcionamento de todos os arquivos alterados em uma única rodada antes do commit.
@@ -699,6 +700,12 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
   - **Otimização de Resolução e Contraste no Canvas do Demarcador (`demanda-imagem-demarcador.js`):**
     * Upscale adaptativo em canvas de alta resolução para imagens com caracteres finos ou pequenos (como números de 1 dígito `1, 2, 3...` em colunas estreitas de `SEQ`).
     * Filtro de contraste dinâmico (`contrast(120%) brightness(102%)`) aplicado no recorte da tabela antes da digitalização, evitando que dígitos isolados se fundam às linhas da grade e garantindo o lançamento de tudo o que estiver dentro da coluna.
+* **2026-10-17 (v3.21.113 / Demanda v3.3.11):**
+  - **Cobertura Total de Bordas 0% a 100% e Folga de Segurança Vertical (`demanda-imagem-demarcador.js`, `index.html`):**
+    * As colunas inicial e final agora abrangem garantidamente desde `0%` (margem esquerda absoluta) até `100%` (margem direita absoluta) da imagem.
+    * Fusão automática de cortes colados às bordas (< 4.5% ou > 95.5%): se o operador tentar marcar o início ou fim da tabela com uma linha na ponta, o sistema a funde com a borda externa, impedindo que números como 1 a 9 ou totais sejam fatiados ou cortados.
+    * Folga de segurança vertical (`padY = 12px a 1.5%`) aplicada no recorte de Início e Fim, impedindo que as linhas horizontais decepem o topo ou pé de caracteres da primeira e da última linha.
+    * Badges visuais no topo da régua identificando claramente `◄ Col 1 (Borda Esq)` e `Col N (Borda Dir) ►`.
 
 
 
