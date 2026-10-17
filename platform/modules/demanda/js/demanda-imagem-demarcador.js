@@ -570,66 +570,80 @@ const DemandaImagemDemarcador = (() => {
 
     // ── Distribuição das Palavras nas Colunas Demarcadas ──────
     function _montarGradePorOverlay(overlay, cortesPct, imgW, imgH) {
-        // Coleta todas as palavras com suas coordenadas no recorte
         const palavras = [];
-        overlay.Lines.forEach(line => {
+        (overlay.Lines || []).forEach(line => {
             if (!line.Words) return;
             line.Words.forEach(w => {
                 const txt = String(w.WordText || '').trim();
                 if (!txt) return;
+                const l = Number(w.Left) || 0;
+                const t = Number(w.Top) || 0;
+                const wd = Number(w.Width) || 0;
+                const h = Number(w.Height) || 0;
                 palavras.push({
                     text: txt,
-                    left: w.Left,
-                    top: w.Top,
-                    height: w.Height || 16,
-                    width: w.Width || 40,
-                    centerY: w.Top + (w.Height || 16) / 2,
-                    centerX: w.Left + (w.Width || 40) / 2
+                    l: l,
+                    t: t,
+                    r: l + wd,
+                    h: h,
+                    cx: l + wd / 2,
+                    cy: t + h / 2
                 });
             });
         });
 
         if (!palavras.length) return [];
 
-        // 1. Agrupa palavras em Linhas usando proximidade vertical (Y)
-        palavras.sort((a, b) => a.centerY - b.centerY);
+        // 1. Estima inclinação (desentorta o papel) para fotos com leve ângulo
+        const median = arr => { const s = arr.slice().sort((a, b) => a - b); return s.length ? s[Math.floor(s.length / 2)] : 0; };
+        const H = median(palavras.filter(w => w.h > 0).map(w => w.h)) || 14;
 
-        const avgHeight = palavras.reduce((acc, p) => acc + p.height, 0) / palavras.length;
-        const lineTol = Math.max(8, avgHeight * 0.65);
-
-        const gruposLinhas = [];
-        let linhaAtual = [palavras[0]];
-
-        for (let i = 1; i < palavras.length; i++) {
-            const p = palavras[i];
-            const mediaYLinha = linhaAtual.reduce((acc, it) => acc + it.centerY, 0) / linhaAtual.length;
-
-            if (Math.abs(p.centerY - mediaYLinha) <= lineTol) {
-                linhaAtual.push(p);
-            } else {
-                gruposLinhas.push(linhaAtual);
-                linhaAtual = [p];
+        const slopes = [];
+        palavras.forEach(a => {
+            let best = null, bestGap = Infinity;
+            palavras.forEach(b => {
+                if (b === a) return;
+                const gap = b.l - a.r;
+                if (gap < -2 || gap > H * 2.5) return;
+                if (Math.abs(b.cy - a.cy) > H * 0.6) return;
+                if (gap < bestGap) { bestGap = gap; best = b; }
+            });
+            if (best) {
+                const dx = best.cx - a.cx;
+                if (dx > H) slopes.push((best.cy - a.cy) / dx);
             }
-        }
-        if (linhaAtual.length) gruposLinhas.push(linhaAtual);
+        });
+        let slope = slopes.length >= 5 ? median(slopes) : 0;
+        if (Math.abs(slope) > 0.15) slope = 0;
 
-        // 2. Para cada linha, distribui as palavras nas colunas demarcadas
+        palavras.forEach(w => { w.yd = w.cy - slope * w.cx; });
+
+        // 2. Agrupa palavras em Linhas pela coordenada vertical desentortada (yd)
+        const gruposLinhas = [];
+        palavras.slice().sort((a, b) => a.yd - b.yd).forEach(w => {
+            const last = gruposLinhas[gruposLinhas.length - 1];
+            if (last && Math.abs(w.yd - last.y) <= H * 0.55) {
+                last.ws.push(w);
+                last.y += (w.yd - last.y) / last.ws.length;
+            } else {
+                gruposLinhas.push({ y: w.yd, ws: [w] });
+            }
+        });
+
+        // 3. Distribui cada palavra na sua respectiva coluna pelas coordenadas X
         const borders = [0, ...cortesPct, 1].map(pct => pct * imgW);
         const numCols = borders.length - 1;
 
-        const grade = [];
+        let grade = [];
 
-        gruposLinhas.forEach(linha => {
+        gruposLinhas.forEach(grupo => {
             const cols = new Array(numCols).fill('');
+            grupo.ws.sort((a, b) => a.l - b.l);
 
-            // Ordena palavras da linha da esquerda para a direita
-            linha.sort((a, b) => a.left - b.left);
-
-            linha.forEach(p => {
-                // Encontra qual coluna contém o centro da palavra
+            grupo.ws.forEach(p => {
                 let colIdx = numCols - 1;
                 for (let c = 0; c < numCols; c++) {
-                    if (p.centerX >= borders[c] && p.centerX < borders[c + 1]) {
+                    if (p.cx >= borders[c] && p.cx < borders[c + 1]) {
                         colIdx = c;
                         break;
                     }
@@ -637,12 +651,20 @@ const DemandaImagemDemarcador = (() => {
                 cols[colIdx] = (cols[colIdx] ? cols[colIdx] + ' ' : '') + p.text;
             });
 
-            // Adiciona se a linha tiver pelo menos algum conteúdo não vazio
-            const temTexto = cols.some(c => c.trim().length > 0);
-            if (temTexto) {
+            if (cols.some(c => c.trim().length > 0)) {
                 grade.push(cols);
             }
         });
+
+        // 4. Remove colunas de borda que estejam 100% vazias (ex: margem esquerda antes do primeiro corte ou margem direita)
+        const colunasComDados = [];
+        for (let c = 0; c < numCols; c++) {
+            const temDado = grade.some(row => (row[c] || '').trim().length > 0);
+            if (temDado) colunasComDados.push(c);
+        }
+        if (colunasComDados.length > 0 && colunasComDados.length < numCols) {
+            grade = grade.map(row => colunasComDados.map(c => row[c]));
+        }
 
         return grade;
     }
@@ -651,7 +673,7 @@ const DemandaImagemDemarcador = (() => {
     function _montarGradePorTexto(texto, numCols) {
         if (!texto) return [];
         const linhas = texto.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-        const grade = [];
+        const gradeBruta = [];
 
         linhas.forEach(l => {
             let partes = [];
@@ -664,15 +686,28 @@ const DemandaImagemDemarcador = (() => {
             } else {
                 partes = [l];
             }
+            gradeBruta.push(partes);
+        });
 
-            // Normaliza para o número de colunas
+        // Detecta se linhas mais abaixo começam com índice numérico (10, 11...)
+        // enquanto as primeiras linhas tiveram o SEQ ignorado pelo OCR
+        const linhasComIndice = gradeBruta.filter(r => /^\d{1,3}$/.test(r[0] || ''));
+        const proporcaoIndices = linhasComIndice.length / (gradeBruta.length || 1);
+
+        const grade = gradeBruta.map(r => {
+            let partes = r.slice();
+            // Se a maioria das linhas tem índice numérico no início, mas esta linha começa com texto descritivo
+            if (proporcaoIndices > 0.4 && !/^\d{1,3}$/.test(partes[0] || '') && partes.length < numCols) {
+                partes.unshift(''); // Desloca para a direita para alinhar com SEQ
+            }
+
             while (partes.length < numCols) partes.push('');
             if (partes.length > numCols) {
                 const prim = partes.slice(0, numCols - 1);
                 prim.push(partes.slice(numCols - 1).join(' '));
                 partes = prim;
             }
-            grade.push(partes);
+            return partes;
         });
 
         return grade;

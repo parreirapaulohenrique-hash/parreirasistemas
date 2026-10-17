@@ -1,9 +1,9 @@
 {
-  "version": "3.3.8",
-  "build": "20261017-v3.3.8",
+  "version": "3.3.9",
+  "build": "20261017-v3.3.9",
   "module": "demanda",
   "name": "Cotacao",
   "lastUpdate": "2026-10-17",
-  "change": "v3.3.8 - fix(demanda): alcas de inicio e fim reposicionadas e compactas (sem cobrir colunas) e marcadores de coluna fixados no topo da regua.",
-  "releaseDate": "2026-10-17T15:28:00-03:00"
+  "change": "v3.3.9 - fix(demanda): retorno de TextOverlay no OCR e alinhamento milimétrico de palavras por coordenadas de coluna sem deslocamento lateral.",
+  "releaseDate": "2026-10-17T15:45:00-03:00"
 }
