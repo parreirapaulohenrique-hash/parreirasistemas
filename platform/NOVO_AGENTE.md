@@ -657,3 +657,11 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
     * No modal de Foto e PDF, adicionado botão "Ajustar Colunas & Processar" para revisão manual das colunas com drag-and-drop e modelos salvos.
     * Nova função `DemandaPDF.extrairGradePDF` gerando grade estruturada por coordenadas e espaçamento.
     * Aprimoramento de `DemandaImport.textoParaGrade` com detecção flexível de múltiplos separadores comuns em documentos agrícolas.
+* **2026-10-17 (v3.21.107 / Demanda v3.3.5):**
+  - **Numeração de Linhas com Zero e Exclusão no Mapeador (`demanda-mapeador.js`, `demanda.css`):**
+    * Linhas anteriores ao início dos produtos (cabeçalhos) agora exibem sempre o número `0`, identificando claramente que não são itens de dados.
+    * A numeração começa a contar sequencialmente (`1, 2, 3...`) estritamente a partir da primeira linha de produtos (`cfg.inicio`).
+    * Opção explícita de exclusão de linha adicionada na grade com botão de lixeira (`delete_outline`) e alternância para `Restaurar` (`undo`) com efeito tachado visual.
+    * Adicionada coluna de exclusão direta com botão `✕` na tabela de Prévia lateral (permitindo remover itens individuais com 1 clique).
+    * Auto-detecção e pré-exclusão no algoritmo `sugerir` para linhas de rodapé/totais no final do documento (`Serviços`, `Nro Itens`, `Condição de pagamento`, `Frete`, `Total de itens`).
+
