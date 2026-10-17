@@ -121,9 +121,10 @@ async function tryOcrAcrossKeys(base64Image, engine = "1", isTable = true, detec
             const data = await doOcrRequest(base64Image, engine, isTable, detectOrientation, key);
             if (!data.IsErroredOnProcessing && data.ParsedResults && data.ParsedResults[0]) {
                 const text = (data.ParsedResults[0].ParsedText || "").trim();
-                if (text.length >= 20) {
-                    const rec = reconstruirPorCoordenadas(data.ParsedResults[0].TextOverlay);
-                    return { text: rec.length >= 20 ? rec : text, rawText: text, keyUsed: key, error: null };
+                const overlay = data.ParsedResults[0].TextOverlay || null;
+                if (text.length >= 10 || (overlay && overlay.Lines && overlay.Lines.length > 0)) {
+                    const rec = reconstruirPorCoordenadas(overlay);
+                    return { text: rec.length >= 20 ? rec : text, rawText: text, overlay: overlay, keyUsed: key, error: null };
                 }
             } else if (data.ErrorMessage) {
                 lastError = Array.isArray(data.ErrorMessage) ? data.ErrorMessage.join("; ") : data.ErrorMessage;
@@ -133,7 +134,7 @@ async function tryOcrAcrossKeys(base64Image, engine = "1", isTable = true, detec
             console.warn(`[OCR] Chave ${key.slice(0, 5)}... falhou (${err.message}). Tentando próxima chave...`);
         }
     }
-    return { text: "", rawText: "", error: lastError };
+    return { text: "", rawText: "", overlay: null, error: lastError };
 }
 
 module.exports = async function handler(req, res) {
@@ -162,37 +163,38 @@ module.exports = async function handler(req, res) {
 
     let text = "";
     let rawText = "";
+    let overlay = null;
     let lastError = null;
 
     // Tentativa 1: Engine 1 com isTable (ideal para tabelas e romaneios) testando chaves válidas
     const res1 = await tryOcrAcrossKeys(base64Image, parsed.engine || "1", true, true);
-    if (res1.text && res1.text.length >= 20) {
-        text = res1.text; rawText = res1.rawText || "";
+    if ((res1.text && res1.text.length >= 20) || (res1.overlay && res1.overlay.Lines && res1.overlay.Lines.length > 0)) {
+        text = res1.text; rawText = res1.rawText || ""; overlay = res1.overlay || null;
     } else {
         lastError = res1.error;
     }
 
     // Tentativa 2: Engine 1 com isTable sem detecção de orientação (caso bordas escuras atrapalhem)
-    if (text.length < 20) {
+    if (text.length < 20 && !overlay) {
         console.log("[OCR] Tentativa 2: Engine 1 sem detecção de orientação...");
         const res2 = await tryOcrAcrossKeys(base64Image, "1", true, false);
         if (res2.text && res2.text.length > text.length) {
-            text = res2.text; rawText = res2.rawText || "";
+            text = res2.text; rawText = res2.rawText || ""; overlay = res2.overlay || null;
         }
     }
 
     // Tentativa 3 (Fallback): Engine 2 (Deep Learning Neural) caso Engine 1 não reconheça nada
-    if (text.length < 20) {
+    if (text.length < 20 && !overlay) {
         console.log("[OCR] Tentativa 3: Engine 2 Deep Learning...");
         const res3 = await tryOcrAcrossKeys(base64Image, "2", false, true);
         if (res3.text && res3.text.length > text.length) {
-            text = res3.text; rawText = res3.rawText || "";
+            text = res3.text; rawText = res3.rawText || ""; overlay = res3.overlay || null;
         }
     }
 
-    if (text.length === 0 && lastError) {
+    if (text.length === 0 && !overlay && lastError) {
         return res.status(422).json({ error: lastError });
     }
 
-    return res.status(200).json({ text: text, rawText: rawText, exitCode: 1 });
+    return res.status(200).json({ text: text, rawText: rawText, overlay: overlay, exitCode: 1 });
 };

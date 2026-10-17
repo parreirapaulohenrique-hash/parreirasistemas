@@ -689,6 +689,12 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
   - **Alças de Início/Fim Compactas e Desacoplamento dos Marcadores de Coluna (`demanda-imagem-demarcador.js`, `demanda.css`, `index.html`):**
     * Remoção da frase longa que cobria as colunas à direita. Substituída por etiquetas ultra-compactas (`Início` e `Fim`) posicionadas na borda lateral esquerda (`left: 8px`).
     * Fixação dos marcadores de coluna (`Col 1, Col 2...` e setas `▲`) na régua superior da imagem (`top: 2px` e `top: 20px`), desacoplando-os de `yTop` e eliminando qualquer colisão ao mover a linha de início dos produtos.
+* **2026-10-17 (v3.21.111 / Demanda v3.3.9):**
+  - **Retorno de Overlay no OCR e Alinhamento por Coordenadas Bounding Box sem Deslocamento (`api/ocr.js`, `demanda-imagem-demarcador.js`):**
+    * O endpoint serverless `api/ocr.js` agora expõe e retorna o objeto `TextOverlay` (coordenadas x, y, w, h de cada palavra reconhecida).
+    * `_montarGradePorOverlay` agrupa palavras por linhas com compensação de inclinação (deskew) e aloca cada palavra na respectiva coluna definida pelo operador pelas coordenadas horizontais do seu centroide.
+    * Quando a coluna de sequência (`SEQ`) possui dígitos isolados (`1` a `9`) não capturados pelo OCR, as células das colunas subsequentes (`ITENS`, `MARCA`, `QNT`, `VALOR`) permanecem rigidamente alinhadas em suas colunas corretas, eliminando qualquer deslocamento horizontal.
+    * No fallback textual `_montarGradePorTexto`, adicionada auto-correção para injetar coluna vazia em linhas que perderam o índice sequencial numérico inicial.
 
 
 
