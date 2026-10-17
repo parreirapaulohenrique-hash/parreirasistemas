@@ -170,11 +170,15 @@ const Utils = {
         for (const k of EVICTABLE) {
             if (k === keepKey) continue;
             const storageKey = tenantId ? `tenant_${tenantId}_${k}` : k;
-            const size = (localStorage.getItem(storageKey) || '').length;
+            const raw = localStorage.getItem(storageKey) || '';
+            const size = raw.length;
             if (size > 0) {
+                if (Utils._memStore && !Utils._memStore[k]) {
+                    try { Utils._memStore[k] = JSON.parse(raw); } catch(e) {}
+                }
                 localStorage.removeItem(storageKey);
                 freed += size;
-                console.warn(`🗑️ [Quota] Removido '${k}' (${size} chars) para liberar espaço.`);
+                console.warn(`🗑️ [Quota] Removido '${k}' (${size} chars) para liberar espaço (preservado em memória).`);
             }
         }
         // 2. Se ainda não liberou, remove versões sem prefixo de tenant
@@ -454,20 +458,43 @@ const Utils = {
             let cloud = [];
 
             const now = Date.now();
-            const isCacheValid = !forceRefresh && Array.isArray(this._dispatchesDbCache) && (now - this._dispatchesDbCacheTime < 60000);
+            const isCacheValid = !forceRefresh && Array.isArray(this._dispatchesDbCache) && this._dispatchesDbCache.length > 0 && (now - this._dispatchesDbCacheTime < 60000);
 
             if (isCacheValid) {
                 cloud = this._dispatchesDbCache;
             } else if (this.hasTenant() && window.db) {
                 try {
-                    // SEM orderBy: evita necessidade de índice Firestore
-                    // Ordenação feita 100% em memória usando d.id (= Date.now() no momento do despacho)
-                    const ref = window.db.collection('tenants').doc(this.tenantId).collection('dispatches_db');
-                    const snapshot = await ref.get();
-                    snapshot.forEach(doc => cloud.push(doc.data()));
-                    this._dispatchesDbCache = cloud;
-                    this._dispatchesDbCacheTime = now;
-                    console.log(`[Cloud] ${cloud.length} despachos carregados do Firestore (cache 60s atualizado).`);
+                    // Busca em paralelo dispatches_db + fallback legacy_store/dispatches (caso local tenha sido evictado)
+                    const refDb = window.db.collection('tenants').doc(this.tenantId).collection('dispatches_db');
+                    const refLegacy = window.db.collection('tenants').doc(this.tenantId).collection('legacy_store').doc('dispatches');
+                    const [snapshotResult, legacyResult] = await Promise.allSettled([refDb.get(), refLegacy.get()]);
+
+                    if (legacyResult.status === 'fulfilled' && legacyResult.value && legacyResult.value.exists) {
+                        const legData = legacyResult.value.data();
+                        if (legData && legData.content) {
+                            try {
+                                const parsedLeg = JSON.parse(legData.content);
+                                if (Array.isArray(parsedLeg) && parsedLeg.length > 0) {
+                                    const localMap = new Map();
+                                    local.forEach(d => { if (d) localMap.set(String(d.id || d.codigo), d); });
+                                    parsedLeg.forEach(d => { if (d && !localMap.has(String(d.id || d.codigo))) localMap.set(String(d.id || d.codigo), d); });
+                                    local = Array.from(localMap.values());
+                                }
+                            } catch (e) {}
+                        }
+                    }
+
+                    if (snapshotResult.status === 'fulfilled' && snapshotResult.value) {
+                        snapshotResult.value.forEach(doc => cloud.push(doc.data()));
+                        if (cloud.length > 0) {
+                            this._dispatchesDbCache = cloud;
+                            this._dispatchesDbCacheTime = now;
+                        }
+                        console.log(`[Cloud] ${cloud.length} despachos carregados do Firestore (cache 60s atualizado).`);
+                    } else if (snapshotResult.status === 'rejected') {
+                        console.error("Erro ao buscar dispatches_db:", snapshotResult.reason);
+                        if (this._dispatchesDbCache) cloud = this._dispatchesDbCache;
+                    }
                 } catch(e) {
                     console.error("Erro ao buscar histórico do banco:", e);
                     if (this._dispatchesDbCache) cloud = this._dispatchesDbCache;
@@ -480,12 +507,14 @@ const Utils = {
 
             // 1. Insere os locais primeiro (menor prioridade)
             local.forEach(d => {
+                if (!d) return;
                 const id = String(d.id || d.codigo);
                 if (!map.has(id)) map.set(id, d);
             });
 
             // 2. Firestore sobrescreve sempre (maior prioridade)
             cloud.forEach(d => {
+                if (!d) return;
                 const id = String(d.id || d.codigo);
                 map.set(id, d); // <-- sobrescreve o local, garantindo que o Firestore vença
             });
@@ -507,6 +536,11 @@ const Utils = {
                 return db2 - da;
             });
 
+            // Mantém _memStore['dispatches'] sincronizado com o histórico completo mesclado
+            if (all.length > 0 && Utils._memStore) {
+                Utils._memStore['dispatches'] = all;
+            }
+
             // Aplica filtros de data em memória (sem depender de índice Firestore)
             if (filters.start) all = all.filter(d => (d.date || '') >= new Date(filters.start).toISOString());
             if (filters.end)   all = all.filter(d => (d.date || '') <= new Date(filters.end).toISOString());
@@ -522,7 +556,7 @@ const Utils = {
             // Isso garante que mesmo se o loadAll geral der timeout, os dados de transportadora
             // (carrier_list, carrier_configs, freight_tables, carrier_info_v2) já estarão salvos.
             const CRITICAL_CARRIER_KEYS = ['freight_tables', 'carrier_list', 'carrier_configs', 'carrier_info_v2'];
-            const OTHER_KEYS = ['company_data', 'app_users', 'clients', 'invoice_history', 'app_sellers', 'app_settings', 'app_romaneios', 'delivery_history', 'dispatches'];
+            const OTHER_KEYS = ['company_data', 'app_users', 'dispatches', 'clients', 'invoice_history', 'app_sellers', 'app_settings', 'app_romaneios', 'delivery_history'];
             const keys = [...CRITICAL_CARRIER_KEYS, ...OTHER_KEYS];
 
             // Helper para salvar um doc do Firestore no localStorage
@@ -540,7 +574,13 @@ const Utils = {
                             Utils._memStore['app_romaneios'] = fullArray;
                             console.log(`📦 [Quota] loadAll app_romaneios: ${fullArray.length} itens em memória (localStorage ignorado).`);
                         } else {
-                            localStorage.setItem(tenantKey, JSON.stringify(fullArray));
+                            Utils._memStore[key] = fullArray;
+                            try {
+                                localStorage.setItem(tenantKey, JSON.stringify(fullArray));
+                            } catch (qErr) {
+                                Utils._freeStorageSpace(key);
+                                try { localStorage.setItem(tenantKey, JSON.stringify(fullArray)); } catch (_) {}
+                            }
                             console.log(`[loadAll] ${key} (chunked): ${fullArray.length} itens carregados.`);
                         }
                     }
@@ -551,6 +591,18 @@ const Utils = {
                         console.log(`📦 [Quota] loadAll app_romaneios (non-chunked): em memória (localStorage ignorado).`);
                     } else {
                         try {
+                            const parsedContent = JSON.parse(data.content);
+                            if (key === 'dispatches' && Array.isArray(Utils._memStore['dispatches']) && Utils._memStore['dispatches'].length > 0 && Array.isArray(parsedContent)) {
+                                const mergedMap = new Map();
+                                parsedContent.forEach(d => { if (d) mergedMap.set(String(d.id || d.codigo), d); });
+                                Utils._memStore['dispatches'].forEach(d => { if (d) mergedMap.set(String(d.id || d.codigo), d); });
+                                Utils._memStore['dispatches'] = Array.from(mergedMap.values());
+                            } else {
+                                Utils._memStore[key] = parsedContent;
+                            }
+                        } catch (parseErr) {}
+
+                        try {
                             localStorage.setItem(tenantKey, data.content);
                         } catch (quotaErr) {
                             if (quotaErr.name === 'QuotaExceededError' || quotaErr.code === 22) {
@@ -559,8 +611,7 @@ const Utils = {
                                 try {
                                     localStorage.setItem(tenantKey, data.content);
                                 } catch(e2) {
-                                    Utils._memStore[key] = JSON.parse(data.content);
-                                    console.warn(`⚠️ [loadAll/Quota] '${key}' salvo em memória.`);
+                                    console.warn(`⚠️ [loadAll/Quota] '${key}' mantido em memória (_memStore).`);
                                 }
                             }
                         }
@@ -830,12 +881,30 @@ const Utils = {
                         } catch(e) { console.warn('[Cloud] Erro ao parsear app_romaneios:', e); }
                         if (window.renderBaixaRomaneios) window.renderBaixaRomaneios();
                     } else {
-                        localStorage.setItem(storageKey, cloudContentString);
+                        try {
+                            const parsed = JSON.parse(cloudContentString);
+                            if (key === 'dispatches' && Array.isArray(Utils._memStore['dispatches']) && Utils._memStore['dispatches'].length > 0 && Array.isArray(parsed)) {
+                                const mergedMap = new Map();
+                                parsed.forEach(d => { if (d) mergedMap.set(String(d.id || d.codigo), d); });
+                                Utils._memStore['dispatches'].forEach(d => { if (d) mergedMap.set(String(d.id || d.codigo), d); });
+                                Utils._memStore['dispatches'] = Array.from(mergedMap.values());
+                            } else {
+                                Utils._memStore[key] = parsed;
+                            }
+                        } catch (parseErr) {}
+
+                        try {
+                            localStorage.setItem(storageKey, cloudContentString);
+                        } catch (quotaErr) {
+                            Utils._freeStorageSpace(key);
+                            try { localStorage.setItem(storageKey, cloudContentString); } catch (_) {}
+                        }
+
                         // UI Refresh
                         if (key === 'dispatches') {
                             if (window.renderDashboard) window.renderDashboard();
                             if (window.renderAppHistory) window.renderAppHistory();
-                            console.log(`📡 [SaaS] Despachos sincronizados de outra máquina: ${JSON.parse(cloudContentString).length} itens.`);
+                            console.log(`📡 [SaaS] Despachos sincronizados de outra máquina: ${(Utils._memStore['dispatches'] || []).length} itens.`);
                         }
                         if (key === 'freight_tables' && window.renderRulesList) window.renderRulesList();
                         if (key === 'carrier_configs' && window.renderCarrierConfigs) window.renderCarrierConfigs();
@@ -898,7 +967,12 @@ const Utils = {
 
                         if (modified) {
                             const storageKey = Utils._storageKey('dispatches');
-                            localStorage.setItem(storageKey, JSON.stringify(local));
+                            try {
+                                localStorage.setItem(storageKey, JSON.stringify(local));
+                            } catch (qErr) {
+                                Utils._freeStorageSpace('dispatches');
+                                try { localStorage.setItem(storageKey, JSON.stringify(local)); } catch (_) {}
+                            }
                             Utils._memStore['dispatches'] = local;
                             if (Utils.Cloud) Utils.Cloud._dispatchesDbCache = null;
                             if (window.renderDashboard) window.renderDashboard();
