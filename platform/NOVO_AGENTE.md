@@ -711,13 +711,13 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
     * Motor geral `_splitCodigoDescricao` aprimorado para limpar pontuações residuais de OCR (` .`, `.`, `-`, `;`) e capturar com 100% de sucesso códigos no final da descrição (ex: `15 PORCA CNH NEW HOLLAND 725637 .` -> Ref: `725637`, Desc: `15 PORCA CNH NEW HOLLAND`).
     * Detecção automática no Mapeador: se a coluna de descrição contiver códigos no final, o sistema já sugere automaticamente `[Descrição *] + [Referência *]`, eliminando os `49 sem referência`.
     * Modal de Conferência de Importação ampliado para `modal-2xl` (até 1400px de largura) e coluna `Descrição` expandida para `min-width: 340px`, acabando com o truncamento de textos longos.
-* **2026-10-19 (v3.21.117 / Demanda v3.3.15):**
-  - **Recuperação Imediata e Resiliência a Limite de Cota do Firestore nas Cotações (`demanda-app.js`, `demanda-db.js`, `firebase-config.js`, `index.html`):**
-    * **Eliminação do Loop Destrutivo de Recalculate:** Removida a iteração em massa `demandas.forEach(d => DemandaDB.recalcTotals(d.id))` em `listMinhasDemandas`. Cada visualização da lista lia e recalculava todos os itens de todas as cotações de forma simultânea, esgotando a cota diária gratuita do Google Cloud (Spark Plan 50k reads).
-    * **Renderização Local-First Instantânea (0ms):** `abrirDemanda(id)` agora renderiza de forma imediata caso os dados estejam no cache local (`DemandaDB.getDemandaLocal`), acabando de vez com o modal travado em "Carregando...".
-    * **Sincronização em Background Não-Bloqueante:** Consultas complementares de concorrente (`dbConc.limit(100).get()`) e reconciliação de totais foram movidas para execução assíncrona fora da cadeia de renderização principal da modal.
-    * **Proteção contra Backoff Infinito:** Chamadas ao Firestore agora contam com timeout de 2000ms e retorno de emergência com dados locais caso o backend retorne `resource-exhausted` ou entre em retry backoff.
-    * **Compatibilidade do SDK Firebase:** Upgrade dos scripts compat de `9.6.1` para `10.7.1` no HTML de demanda, unificando com o restante da plataforma e habilitando sincronização de abas com IndexedDB (`synchronizeTabs: true`).
+* **2026-10-19 (v3.21.118 / Demanda v3.3.16):**
+  - **Recuperação Exaustiva de Cotações Locais e Remotas com Suporte a Cotações Grandes (`demanda-db.js`, `demanda-app.js`, `index.html`):**
+    * **Scan Exaustivo de Cache Local:** Criada a função `_recuperarTodasDemandasLocais` que varre todas as chaves do `localStorage` (listas, backups e subcoleções `demanda_cache_itens_<id>`). Cotações de grande porte (como orçamentos com mais de 200 itens) salvas na máquina têm seu cabeçalho e contadores reconstruídos e preservados instantaneamente, sem depender de Firestore.
+    * **Busca Multi-Caminho no Firestore com Limite Elevado para 500:** `listDemandas` agora consulta simultaneamente em paralelo todas as coleções candidatas (`tenants/${tid}/demanda/data/demands`, `tenants/centralpecas/demanda/data/demands`, `tenants/centralpecas/demandas`, `tenants/[object Object]/demanda/data/demands`), eliminando o teto anterior de 60 itens.
+    * **Fallback para Documentos sem `criadoEm`:** Se o Firestore ignorar documentos por falta do campo de timestamp na ordenação `orderBy('criadoEm')`, uma segunda consulta com limite amplo captura os documentos legados.
+    * **Renderização Instantânea na Lista de Cotações (0ms):** A visualização de cotações (`loadDemandasLista`) exibe imediatamente os registros em cache no primeiro frame, atualizando de forma fluida sem travar o operador.
+
 
 
 

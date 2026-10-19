@@ -396,15 +396,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (totalBytes > 3 * 1024 * 1024) {
                 console.warn(`[LS Cleanup] localStorage com ${(totalBytes/1024/1024).toFixed(1)}MB. Limpando chaves grandes...`);
                 const removed = [];
+                window._preCleanClientsBackup = window._preCleanClientsBackup || {};
                 for (let i = localStorage.length - 1; i >= 0; i--) {
                     const k = localStorage.key(i);
                     if (k && (k.includes('_clients') || k.includes('_delivery_history') ||
                               k.includes('_invoice_history') || k.includes('_app_romaneios'))) {
+                        if (k.includes('_clients')) {
+                            try {
+                                const rawC = localStorage.getItem(k);
+                                if (rawC && rawC.length > 2) {
+                                    window._preCleanClientsBackup[k] = JSON.parse(rawC);
+                                }
+                            } catch (_) {}
+                        }
                         localStorage.removeItem(k);
                         removed.push(k);
                     }
                 }
-                console.warn(`[LS Cleanup] ${removed.length} chave(s) removida(s):`, removed);
+                console.warn(`[LS Cleanup] ${removed.length} chave(s) removida(s) (backup de clientes preservado em memória):`, removed);
             }
         } catch(e) { console.warn('[LS Cleanup] Erro na limpeza:', e.message); }
     })();
@@ -438,10 +447,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
         localStorage.setItem("app_tenant_id", tenantFromUrl);
+        if (typeof Utils !== "undefined" && Utils.Cloud) {
+            Utils.Cloud.setTenantId(tenantFromUrl);
+        }
         if (currentTenant || _sessaoDivergente) {
             location.reload();
             return;
         }
+    } else if (tenantFromUrl && typeof Utils !== "undefined" && Utils.Cloud && Utils.Cloud.tenantId !== tenantFromUrl) {
+        Utils.Cloud.setTenantId(tenantFromUrl);
     }
 
     try {
@@ -822,6 +836,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentUser = storedUser;
                 if (typeof AppState !== 'undefined') AppState.set('currentUser', storedUser);
                 if (loginOverlay) loginOverlay.style.display = 'none';
+                const _latestC = Utils.getStorage('clients');
+                if (Array.isArray(_latestC) && _latestC.length > 0) clients = _latestC;
+                if (Utils.Cloud && Utils.Cloud.hasTenant()) {
+                    Utils.Cloud.listen();
+                }
                 console.log(`[checkAuth] Sessão restaurada: ${storedUser.login} (${storedUser.role || 'operator'})`.replace(/pass.*/, '[senha omitida]'));;
                 return;
             }
@@ -1779,7 +1798,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     carrierInfo = Utils.getStorage('carrier_info_v2') || {};
                     if (Array.isArray(carrierInfo)) carrierInfo = {};
                     rules = Utils.getStorage('freight_tables') || [];
-                    console.log(`🔄 [Login] Variáveis recarregadas: ${carrierList.length} transportadoras, ${rules.length} tabelas.`);
+                    const _loadedClients = Utils.getStorage('clients');
+                    if (Array.isArray(_loadedClients) && _loadedClients.length > 0) clients = _loadedClients;
+                    console.log(`🔄 [Login] Variáveis recarregadas: ${carrierList.length} transportadoras, ${rules.length} tabelas, ${clients.length} clientes.`);
 
                     // v3.24.4 AUTO-REBUILD: MERGE transportadoras principais E de redespacho (tabelas + despachos)
                     // Garante que parceiros como EMBARCACAO BOM JESUS apareçam em Cadastro Transportadora
@@ -2015,6 +2036,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             carrierInfo = Utils.getStorage('carrier_info_v2') || {};
             if (Array.isArray(carrierInfo)) carrierInfo = {};
             rules = Utils.getStorage('freight_tables') || [];
+            const _c = Utils.getStorage('clients');
+            if (Array.isArray(_c) && _c.length > 0) clients = _c;
             console.log(`🔄 [_refreshCarrierVars:${source}] carrierList=${carrierList.length}, rules=${rules.length} (era ${prevLen})`);
 
             // Etapa 3: mantém AppState sincronizado quando Firestore atualiza
@@ -2037,6 +2060,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (Utils.Cloud && Utils.Cloud.hasTenant()) Utils.Cloud.save('carrier_list', carrierList);
                     if (typeof AppState !== 'undefined') AppState.set('carrierList', carrierList);
                 }
+            }
+        };
+
+        window._refreshClientVars = (arr) => {
+            const latest = Array.isArray(arr) ? arr : Utils.getStorage('clients');
+            if (Array.isArray(latest) && latest.length > 0) {
+                clients = latest;
             }
         };
 
@@ -2069,6 +2099,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         btnSearch.addEventListener('click', () => {
             const term = norm(inputClient.value);
             if (!term) return;
+
+            // Sempre sincroniza com _memStore / localStorage antes da busca para pegar clientes recém-sincronizados da nuvem
+            const latestClients = Utils.getStorage('clients');
+            if (Array.isArray(latestClients) && latestClients.length > 0) {
+                clients = latestClients;
+            }
 
             currentSearchMatches = clients.filter(c => norm(c.codigo) === term || norm(c.nome).includes(term));
             focusedClientIndex = -1;
@@ -2161,7 +2197,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         window.selectSearchResult = (code) => {
-            const found = clients.find(c => c.codigo === code);
+            const latestClients = Utils.getStorage('clients');
+            if (Array.isArray(latestClients) && latestClients.length > 0) clients = latestClients;
+            const found = clients.find(c => String(c.codigo) === String(code));
             if (found) selectClient(found);
         };
 
@@ -11487,6 +11525,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Editar cliente
         window.editClient = (idx) => {
+            const latestClients = Utils.getStorage('clients');
+            if (Array.isArray(latestClients) && latestClients.length >= clients.length) clients = latestClients;
             const client = clients[idx];
             if (!client) return;
 
@@ -11511,6 +11551,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Excluir cliente
         window.deleteClient = (idx) => {
+            const latestClients = Utils.getStorage('clients');
+            if (Array.isArray(latestClients) && latestClients.length >= clients.length) clients = latestClients;
             const client = clients[idx];
             if (!client) return;
 
@@ -11524,15 +11566,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const _deletedClient = { ...client };
                 clients.splice(idx, 1);
 
-                // 1. Salvar local
+                // 1. Salvar local + sincronizar com Firestore (setStorage já aciona Utils.Cloud.save)
                 Utils.setStorage('clients', clients);
 
-                // 2. v3.14.53: Sincronizar com Firestore
-                if (Utils.Cloud && Utils.Cloud.save) {
-                    Utils.Cloud.save('clients', clients);
-                }
-
-                // 3. v3.14.53: Audit Log
+                // 2. v3.14.53: Audit Log
                 if (Utils.writeLog) {
                     Utils.writeLog(
                         'CLIENT_DELETE',
@@ -11708,6 +11745,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             formNewClient.addEventListener('submit', (e) => {
                 e.preventDefault();
 
+                // Garante que estamos operando sobre a lista mais recente (incluindo chunks do Firestore)
+                const latestClients = Utils.getStorage('clients');
+                if (Array.isArray(latestClients) && latestClients.length >= clients.length) {
+                    clients = latestClients;
+                }
+
                 const isEditing = document.getElementById('editingClientMode').value === 'true';
                 const editIdx = parseInt(document.getElementById('editingClientId').value) || -1;
 
@@ -11750,15 +11793,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     showToast('✅ Cliente cadastrado!');
                 }
 
-                // 1. Salvar local
+                // 1. Salvar local + sincronizar com Firestore (setStorage já aciona Utils.Cloud.save)
                 Utils.setStorage('clients', clients);
 
-                // 2. v3.14.52: Sincronizar com Firestore
-                if (Utils.Cloud && Utils.Cloud.save) {
-                    Utils.Cloud.save('clients', clients);
-                }
-
-                // 3. v3.14.52: Audit Log
+                // 2. v3.14.52: Audit Log
                 if (Utils.writeLog) {
                     const _isEdit = isEditing && editIdx >= 0;
                     let _desc = clientData.nome;

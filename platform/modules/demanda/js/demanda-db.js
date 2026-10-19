@@ -181,10 +181,24 @@ const DemandaDB = (() => {
     function _getDemandaLocal(demandaId) {
         if (!demandaId || typeof localStorage === 'undefined') return null;
         const tid = _getTenantId();
+
+        // 1. Chave direta
+        try {
+            const rawDirect = localStorage.getItem('demanda_cache_demanda_' + demandaId);
+            if (rawDirect) {
+                const d = JSON.parse(rawDirect);
+                if (d && (d.id === demandaId || !d.id)) return { ...d, id: demandaId };
+            }
+        } catch (_) {}
+
+        // 2. Chaves de listas conhecidas
         const keys = [
             _CACHE_KEY_DEMANDAS(),
             'demanda_cache_demandas_centralpecas',
-            'demanda_cache_demandas_' + tid
+            'demanda_cache_demandas_' + tid,
+            'demanda_cache_demandas_[object Object]',
+            'demanda_demandas_backup',
+            'demanda_lista_demandas'
         ];
         for (let i = 0; i < keys.length; i++) {
             try {
@@ -198,6 +212,34 @@ const DemandaDB = (() => {
                 }
             } catch (_) {}
         }
+
+        // 3. Reconstrução de emergência a partir de subcoleções de itens em cache
+        try {
+            const rawIt = localStorage.getItem(_CACHE_KEY_ITENS(demandaId));
+            if (rawIt) {
+                const itens = JSON.parse(rawIt);
+                if (Array.isArray(itens) && itens.length > 0) {
+                    const totalComEstoque = itens.filter(x => ['estoque_disponivel','estoque_parcial'].includes(x.status) || (x.estoqueFilial > 0)).length;
+                    const totalSemEstoque = itens.filter(x => x.status === 'sem_estoque' || (!x.estoqueFilial || x.estoqueFilial <= 0)).length;
+                    const totalNaoEncontrados = itens.filter(x => ['nao_encontrado', 'demanda_recebida', 'em_identificacao'].includes(x.status)).length;
+                    return {
+                        id: demandaId,
+                        codigo: 'CTR-' + demandaId.slice(0, 8).toUpperCase(),
+                        clienteNome: 'Cotação (' + itens.length + ' itens)',
+                        totalItens: itens.length,
+                        totalComEstoque: totalComEstoque,
+                        totalSemEstoque: totalSemEstoque,
+                        totalNaoEncontrados: totalNaoEncontrados,
+                        status: 'aberta',
+                        filialId: 1,
+                        criadoEm: new Date(),
+                        itens: itens,
+                        _origemFallback: 'cache_local_itens'
+                    };
+                }
+            }
+        } catch (_) {}
+
         return null;
     }
 
@@ -212,6 +254,7 @@ const DemandaDB = (() => {
             else arr.unshift(d);
             localStorage.setItem(_CACHE_KEY_DEMANDAS(), JSON.stringify(arr));
             localStorage.setItem('demanda_cache_demandas_centralpecas', JSON.stringify(arr));
+            localStorage.setItem('demanda_cache_demanda_' + d.id, JSON.stringify(d));
         } catch (_) {}
     }
 
@@ -304,83 +347,172 @@ const DemandaDB = (() => {
         return f > 0 ? lista.filter(d => _filialDe(d) === f) : lista;
     }
 
+    function _recuperarTodasDemandasLocais() {
+        const mapLocais = new Map();
+        if (typeof localStorage === 'undefined') return [];
+
+        // 1. Chaves de listas conhecidas
+        const chavesLista = [
+            _CACHE_KEY_DEMANDAS(),
+            'demanda_cache_demandas_centralpecas',
+            'demanda_cache_demandas_[object Object]',
+            'demanda_demandas_backup',
+            'demanda_lista_demandas'
+        ];
+        chavesLista.forEach(k => {
+            try {
+                const raw = localStorage.getItem(k);
+                if (raw) {
+                    const arr = JSON.parse(raw);
+                    if (Array.isArray(arr)) {
+                        arr.forEach(d => {
+                            if (d && d.id) {
+                                mapLocais.set(d.id, { ...(mapLocais.get(d.id) || {}), ...d });
+                            }
+                        });
+                    }
+                }
+            } catch (_) {}
+        });
+
+        // 2. Scan exaustivo de todas as chaves do localStorage para recuperar cotações órfãs
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (!k) continue;
+
+                // Demandas salvas individualmente
+                if (k.startsWith('demanda_cache_demanda_') || k.startsWith('demanda_doc_')) {
+                    try {
+                        const rawDoc = localStorage.getItem(k);
+                        if (rawDoc) {
+                            const d = JSON.parse(rawDoc);
+                            if (d && d.id) {
+                                mapLocais.set(d.id, { ...(mapLocais.get(d.id) || {}), ...d });
+                            }
+                        }
+                    } catch (_) {}
+                }
+
+                // Subcoleções de itens salvas localmente (especialmente cotações com 200+ itens)
+                if (k.startsWith('demanda_cache_itens_')) {
+                    try {
+                        const did = k.replace('demanda_cache_itens_', '');
+                        if (did) {
+                            const rawIt = localStorage.getItem(k);
+                            if (rawIt) {
+                                const itens = JSON.parse(rawIt);
+                                if (Array.isArray(itens) && itens.length > 0) {
+                                    const existente = mapLocais.get(did) || {};
+                                    const totalComEstoque = itens.filter(x => ['estoque_disponivel','estoque_parcial'].includes(x.status) || (x.estoqueFilial > 0)).length;
+                                    const totalSemEstoque = itens.filter(x => x.status === 'sem_estoque' || (!x.estoqueFilial || x.estoqueFilial <= 0)).length;
+                                    const totalNaoEncontrados = itens.filter(x => ['nao_encontrado', 'demanda_recebida', 'em_identificacao'].includes(x.status)).length;
+
+                                    const dRecup = {
+                                        id: did,
+                                        codigo: existente.codigo || ('CTR-' + did.slice(0, 8).toUpperCase()),
+                                        clienteNome: existente.clienteNome || ('Cotação (' + itens.length + ' itens)'),
+                                        clienteId: existente.clienteId || null,
+                                        totalItens: Math.max(existente.totalItens || 0, itens.length),
+                                        totalComEstoque: existente.totalComEstoque != null ? existente.totalComEstoque : totalComEstoque,
+                                        totalSemEstoque: existente.totalSemEstoque != null ? existente.totalSemEstoque : totalSemEstoque,
+                                        totalNaoEncontrados: existente.totalNaoEncontrados != null ? existente.totalNaoEncontrados : totalNaoEncontrados,
+                                        status: existente.status || 'aberta',
+                                        filialId: existente.filialId || 1,
+                                        criadoEm: existente.criadoEm || new Date(),
+                                        itens: itens,
+                                        _origemFallback: 'cache_local_itens'
+                                    };
+                                    mapLocais.set(did, dRecup);
+                                }
+                            }
+                        }
+                    } catch (_) {}
+                }
+            }
+        } catch (_) {}
+
+        return Array.from(mapLocais.values());
+    }
+
     async function listDemandas(filters = {}) {
         const tid = _getTenantId();
-        // Filtro de filial é aplicado no cliente (evita índice composto no Firestore)
-        if (filters.filialId && !filters.limit) filters = { ...filters, limit: 200 };
+        const limitCount = filters.limit || 500;
+        const mapIds = new Map();
+
+        // 1. Carrega todas as cotações já conhecidas localmente (0ms)
+        const locais = _recuperarTodasDemandasLocais();
+        locais.forEach(d => { if (d && d.id) mapIds.set(d.id, d); });
+
         try {
-            let q = _db().collection(_demandsCol()).orderBy('criadoEm', 'desc');
+            const db = _db();
+            const candidateCols = [
+                _demandsCol(),
+                'tenants/centralpecas/demanda/data/demands',
+                'tenants/centralpecas/demandas',
+                'tenants/[object Object]/demanda/data/demands',
+                'tenants/[object Object]/demandas'
+            ];
+            const colsUnicas = Array.from(new Set(candidateCols));
 
-            if (filters.vendedorId) q = q.where('vendedorId', '==', filters.vendedorId);
-            if (filters.status && filters.status !== 'todas') q = q.where('status', '==', filters.status);
-            q = q.limit(filters.limit || 60);
-
-            const snap = await q.get();
-            let lista = snap.docs.map(d => ({ ...d.data(), id: d.id }));
-
-            // Fallback histórico transparente 1: se tenant atual for diferente de 'centralpecas'
-            // consulta também o histórico de 'centralpecas'
-            const mapIds = new Map();
-            lista.forEach(item => mapIds.set(item.id, item));
-
-            if (tid !== 'centralpecas') {
+            // Executa consultas paralelas nos caminhos candidatos com timeout protetivo de 3000ms
+            const promessas = colsUnicas.map(async colPath => {
                 try {
-                    let qFallback = _db().collection(`tenants/centralpecas/demanda/data/demands`).orderBy('criadoEm', 'desc').limit(filters.limit || 60);
-                    if (filters.status && filters.status !== 'todas') qFallback = qFallback.where('status', '==', filters.status);
-                    const snapFallback = await qFallback.get();
-                    snapFallback.docs.forEach(d => {
-                        if (!mapIds.has(d.id)) {
-                            mapIds.set(d.id, { ...d.data(), id: d.id, _origemFallback: 'centralpecas' });
-                        }
-                    });
-                } catch (_) { /* Ignora se permissão ou cota */ }
-            }
-
-            // Fallback histórico transparente 2: consulta também tenants/[object Object] caso existam cotações não migradas
-            try {
-                let qObj = _db().collection(`tenants/[object Object]/demanda/data/demands`).orderBy('criadoEm', 'desc').limit(filters.limit || 60);
-                if (filters.status && filters.status !== 'todas') qObj = qObj.where('status', '==', filters.status);
-                const snapObj = await qObj.get();
-                snapObj.docs.forEach(d => {
-                    if (!mapIds.has(d.id)) {
-                        mapIds.set(d.id, { ...d.data(), id: d.id, _origemFallback: 'legado_obj' });
+                    let colRef = db.collection(colPath);
+                    if (filters.status && filters.status !== 'todas') {
+                        colRef = colRef.where('status', '==', filters.status);
                     }
-                });
-            } catch (_) { /* Ignora se não existir */ }
+                    if (filters.vendedorId) {
+                        colRef = colRef.where('vendedorId', '==', filters.vendedorId);
+                    }
 
-            lista = Array.from(mapIds.values()).filter(d => d && d.id && (d.codigo || d.clienteNome || (d.totalItens && d.totalItens > 0)));
+                    // Tenta ordenado por criadoEm decrescente com timeout de 3s
+                    let snap = await _withTimeout(colRef.orderBy('criadoEm', 'desc').limit(limitCount).get(), 3000)
+                        .catch(() => null);
 
-            // Ordena lista combinada por criadoEm decrescente
-            lista.sort((a, b) => {
-                const ta = a.criadoEm ? (a.criadoEm.toMillis ? a.criadoEm.toMillis() : new Date(a.criadoEm).getTime()) : 0;
-                const tb = b.criadoEm ? (b.criadoEm.toMillis ? b.criadoEm.toMillis() : new Date(b.criadoEm).getTime()) : 0;
-                return tb - ta;
-            });
+                    // Fallback se orderBy falhar ou omitir documentos sem criadoEm
+                    if (!snap || snap.empty) {
+                        snap = await _withTimeout(colRef.limit(limitCount).get(), 2500)
+                            .catch(() => null);
+                    }
 
-            // Salva no cache local resiliente
-            try {
-                localStorage.setItem(_CACHE_KEY_DEMANDAS(), JSON.stringify(lista));
-                localStorage.setItem('demanda_cache_demandas_centralpecas', JSON.stringify(lista));
-            } catch (_) {}
-
-            return _filtrarFilial(lista, filters.filialId);
-        } catch (err) {
-            console.warn('[DemandaDB] listDemandas aviso/erro:', err.message || err);
-            // Se cota excedida (429) ou offline, restaura do cache local
-            const rawCache = localStorage.getItem(_CACHE_KEY_DEMANDAS()) || localStorage.getItem('demanda_cache_demandas_centralpecas');
-            if (rawCache) {
-                try {
-                    const cached = JSON.parse(rawCache);
-                    if (Array.isArray(cached) && cached.length > 0) {
-                        if (typeof window !== 'undefined' && window.dispatchEvent) {
-                            window.dispatchEvent(new CustomEvent('demanda:quota_warning', { detail: { msg: 'Exibindo dados do cache local (Cota do Firestore atingida).' } }));
-                        }
-                        return _filtrarFilial(cached, filters.filialId);
+                    if (snap && snap.docs && snap.docs.length > 0) {
+                        snap.docs.forEach(docSnap => {
+                            const dData = docSnap.data();
+                            if (dData) {
+                                const exist = mapIds.get(docSnap.id) || {};
+                                mapIds.set(docSnap.id, { ...exist, ...dData, id: docSnap.id });
+                            }
+                        });
                     }
                 } catch (_) {}
-            }
-            throw err;
+            });
+
+            await Promise.all(promessas).catch(() => {});
+        } catch (err) {
+            console.warn('[DemandaDB] listDemandas nuvem (usando dados locais consolidados):', err.message || err);
         }
+
+        let lista = Array.from(mapIds.values()).filter(d => d && d.id && (d.codigo || d.clienteNome || (d.totalItens && d.totalItens > 0)));
+
+        // Ordena lista combinada por criadoEm decrescente
+        lista.sort((a, b) => {
+            const ta = a.criadoEm ? (a.criadoEm.toMillis ? a.criadoEm.toMillis() : new Date(a.criadoEm).getTime()) : 0;
+            const tb = b.criadoEm ? (b.criadoEm.toMillis ? b.criadoEm.toMillis() : new Date(b.criadoEm).getTime()) : 0;
+            return tb - ta;
+        });
+
+        // Salva lista consolidada no cache local resiliente para que nada seja perdido
+        try {
+            localStorage.setItem(_CACHE_KEY_DEMANDAS(), JSON.stringify(lista));
+            localStorage.setItem('demanda_cache_demandas_centralpecas', JSON.stringify(lista));
+        } catch (_) {}
+
+        if (filters.status && filters.status !== 'todas') {
+            lista = lista.filter(d => d.status === filters.status);
+        }
+
+        return _filtrarFilial(lista, filters.filialId);
     }
 
     // ── ITENS ─────────────────────────────────────────────────
