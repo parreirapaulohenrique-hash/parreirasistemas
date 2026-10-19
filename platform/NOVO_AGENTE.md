@@ -711,11 +711,14 @@ $bytes = [System.IO.File]::ReadAllBytes("vercel.json")
     * Motor geral `_splitCodigoDescricao` aprimorado para limpar pontuações residuais de OCR (` .`, `.`, `-`, `;`) e capturar com 100% de sucesso códigos no final da descrição (ex: `15 PORCA CNH NEW HOLLAND 725637 .` -> Ref: `725637`, Desc: `15 PORCA CNH NEW HOLLAND`).
     * Detecção automática no Mapeador: se a coluna de descrição contiver códigos no final, o sistema já sugere automaticamente `[Descrição *] + [Referência *]`, eliminando os `49 sem referência`.
     * Modal de Conferência de Importação ampliado para `modal-2xl` (até 1400px de largura) e coluna `Descrição` expandida para `min-width: 340px`, acabando com o truncamento de textos longos.
-* **2026-10-17 (v3.21.116 / Demanda v3.3.14):**
-  - **Demarcação Visual Unificada para Todas as Formas de Importação — PDF e Excel/CSV (`demanda-mapeador.js`, `demanda-app.js`, `demanda.css`, `index.html`):**
-    * **PDF:** Roteamento unificado em todos os pontos de entrada (arrastar para área de upload geral `modalExcel`, botão PDF no topo e clique manual) direcionam diretamente para a renderização HD e abertura no Demarcador Visual interativo.
-    * **Excel / CSV / Texto:** O Mapeador de Colunas agora conta com divisas visuais nítidas entre todas as colunas (bordas pontilhadas/sólidas destacadas), barra de status superior informando Início, Fim e quantidade de colunas demarcadas, e botão `Linhas de Divisão (Régua)` para acessar a régua interativa de cortes estilo Excel.
-    * **Linha de Fim das Peças no Excel:** Implementado suporte a `cfg.fim` no Mapeador, permitindo marcar com 1 clique a linha final dos produtos (botão `⏹` na coluna de linhas), traçando a linha de corte vermelha e desconsiderando automaticamente rodapés, observações e dados bancários.
+* **2026-10-19 (v3.21.117 / Demanda v3.3.15):**
+  - **Recuperação Imediata e Resiliência a Limite de Cota do Firestore nas Cotações (`demanda-app.js`, `demanda-db.js`, `firebase-config.js`, `index.html`):**
+    * **Eliminação do Loop Destrutivo de Recalculate:** Removida a iteração em massa `demandas.forEach(d => DemandaDB.recalcTotals(d.id))` em `listMinhasDemandas`. Cada visualização da lista lia e recalculava todos os itens de todas as cotações de forma simultânea, esgotando a cota diária gratuita do Google Cloud (Spark Plan 50k reads).
+    * **Renderização Local-First Instantânea (0ms):** `abrirDemanda(id)` agora renderiza de forma imediata caso os dados estejam no cache local (`DemandaDB.getDemandaLocal`), acabando de vez com o modal travado em "Carregando...".
+    * **Sincronização em Background Não-Bloqueante:** Consultas complementares de concorrente (`dbConc.limit(100).get()`) e reconciliação de totais foram movidas para execução assíncrona fora da cadeia de renderização principal da modal.
+    * **Proteção contra Backoff Infinito:** Chamadas ao Firestore agora contam com timeout de 2000ms e retorno de emergência com dados locais caso o backend retorne `resource-exhausted` ou entre em retry backoff.
+    * **Compatibilidade do SDK Firebase:** Upgrade dos scripts compat de `9.6.1` para `10.7.1` no HTML de demanda, unificando com o restante da plataforma e habilitando sincronização de abas com IndexedDB (`synchronizeTabs: true`).
+
 
 
 

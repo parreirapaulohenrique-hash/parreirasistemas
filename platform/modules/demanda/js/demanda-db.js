@@ -150,13 +150,90 @@ const DemandaDB = (() => {
         batch.set(demandaRef, demandaDoc);
 
         // Adiciona itens na sub-coleção se houver
+        const itensComDoc = [];
         for (let i = 0; i < itens.length; i++) {
             const itemRef = demandaRef.collection('items').doc();
-            batch.set(itemRef, _buildItemDoc(itemRef.id, demandaId, itens[i], i + 1, now));
+            const itDoc = _buildItemDoc(itemRef.id, demandaId, itens[i], i + 1, now);
+            batch.set(itemRef, itDoc);
+            itensComDoc.push(itDoc);
         }
 
-        await batch.commit();
+        demandaDoc.itens = itensComDoc;
+        _salvarItensLocal(demandaId, itensComDoc);
+        _salvarDemandaLocal(demandaDoc);
+
+        await batch.commit().catch(e => {
+            console.warn('[DemandaDB] commit Firestore falhou (salvo no cache local):', e.message || e);
+        });
         return demandaId;
+    }
+
+    const _CACHE_KEY_DEMANDAS = () => 'demanda_cache_demandas_' + _getTenantId();
+    const _CACHE_KEY_ITENS = (did) => 'demanda_cache_itens_' + did;
+
+    function _withTimeout(promise, ms = 2000) {
+        return Promise.race([
+            promise,
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout Firestore')), ms))
+        ]);
+    }
+
+    function _getDemandaLocal(demandaId) {
+        if (!demandaId || typeof localStorage === 'undefined') return null;
+        const tid = _getTenantId();
+        const keys = [
+            _CACHE_KEY_DEMANDAS(),
+            'demanda_cache_demandas_centralpecas',
+            'demanda_cache_demandas_' + tid
+        ];
+        for (let i = 0; i < keys.length; i++) {
+            try {
+                const raw = localStorage.getItem(keys[i]);
+                if (raw) {
+                    const arr = JSON.parse(raw);
+                    if (Array.isArray(arr)) {
+                        const d = arr.find(x => x && x.id === demandaId);
+                        if (d) return { ...d };
+                    }
+                }
+            } catch (_) {}
+        }
+        return null;
+    }
+
+    function _salvarDemandaLocal(d) {
+        if (!d || !d.id || typeof localStorage === 'undefined') return;
+        try {
+            const raw = localStorage.getItem(_CACHE_KEY_DEMANDAS());
+            let arr = raw ? JSON.parse(raw) : [];
+            if (!Array.isArray(arr)) arr = [];
+            const idx = arr.findIndex(x => x && x.id === d.id);
+            if (idx >= 0) arr[idx] = { ...arr[idx], ...d };
+            else arr.unshift(d);
+            localStorage.setItem(_CACHE_KEY_DEMANDAS(), JSON.stringify(arr));
+            localStorage.setItem('demanda_cache_demandas_centralpecas', JSON.stringify(arr));
+        } catch (_) {}
+    }
+
+    function _getItensLocal(demandaId) {
+        if (!demandaId || typeof localStorage === 'undefined') return [];
+        try {
+            const raw = localStorage.getItem(_CACHE_KEY_ITENS(demandaId));
+            if (raw) {
+                const arr = JSON.parse(raw);
+                if (Array.isArray(arr) && arr.length > 0) return arr;
+            }
+            const d = _getDemandaLocal(demandaId);
+            if (d && Array.isArray(d.itens) && d.itens.length > 0) return d.itens;
+        } catch (_) {}
+        return [];
+    }
+
+    function _salvarItensLocal(demandaId, itens) {
+        if (!demandaId || !Array.isArray(itens) || typeof localStorage === 'undefined') return;
+        try {
+            localStorage.setItem(_CACHE_KEY_ITENS(demandaId), JSON.stringify(itens));
+        } catch (_) {}
     }
 
     /**
@@ -165,37 +242,54 @@ const DemandaDB = (() => {
      */
     async function getDemanda(demandaId) {
         if (!demandaId) return null;
-        const db = _db();
-        let snap = await db.doc(`${_demandsCol()}/${demandaId}`).get().catch(() => ({ exists: false }));
-        if (!snap.exists) {
-            // Tenta em centralpecas
-            snap = await db.doc(`tenants/centralpecas/demanda/data/demands/${demandaId}`).get().catch(() => ({ exists: false }));
+        const local = _getDemandaLocal(demandaId);
+
+        try {
+            const db = _db();
+            let snap = await _withTimeout(db.doc(`${_demandsCol()}/${demandaId}`).get()).catch(() => ({ exists: false }));
+            if (!snap || !snap.exists) {
+                snap = await _withTimeout(db.doc(`tenants/centralpecas/demanda/data/demands/${demandaId}`).get()).catch(() => ({ exists: false }));
+            }
+            if (!snap || !snap.exists) {
+                snap = await _withTimeout(db.doc(`tenants/[object Object]/demanda/data/demands/${demandaId}`).get()).catch(() => ({ exists: false }));
+            }
+            if (!snap || !snap.exists) {
+                snap = await _withTimeout(db.doc(`tenants/centralpecas/demandas/${demandaId}`).get()).catch(() => ({ exists: false }));
+            }
+            if (snap && snap.exists) {
+                const data = snap.data();
+                if (data && (data.codigo || data.clienteNome || data.totalItens)) {
+                    const ret = { id: snap.id, ...data };
+                    _salvarDemandaLocal(ret);
+                    return ret;
+                }
+            }
+        } catch (e) {
+            console.warn('[DemandaDB] getDemanda Firestore indisponível/cota excedida, usando cache local:', e.message || e);
         }
-        if (!snap.exists) {
-            // Tenta em [object Object]
-            snap = await db.doc(`tenants/[object Object]/demanda/data/demands/${demandaId}`).get().catch(() => ({ exists: false }));
-        }
-        if (!snap.exists) {
-            // Tenta em demandas legado
-            snap = await db.doc(`tenants/centralpecas/demandas/${demandaId}`).get().catch(() => ({ exists: false }));
-        }
-        if (!snap.exists) return null;
-        const data = snap.data();
-        if (!data || (!data.codigo && !data.clienteNome && !data.totalItens)) return null;
-        return { id: snap.id, ...data };
+
+        if (local) return local;
+        return null;
     }
 
     /**
      * Atualiza campos da demanda.
      */
     async function updateDemanda(demandaId, fields) {
-        await _db().doc(`${_demandsCol()}/${demandaId}`).update({
-            ...fields,
-            atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
-        });
-    }
+        try {
+            const d = _getDemandaLocal(demandaId);
+            if (d) _salvarDemandaLocal({ ...d, ...fields });
+        } catch (_) {}
 
-    const _CACHE_KEY_DEMANDAS = () => 'demanda_cache_demandas_' + _getTenantId();
+        try {
+            await _withTimeout(_db().doc(`${_demandsCol()}/${demandaId}`).update({
+                ...fields,
+                atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+            }));
+        } catch (e) {
+            console.warn('[DemandaDB] updateDemanda Firestore falhou (salvo no cache local):', e.message || e);
+        }
+    }
 
     /**
      * Lista demandas do tenant com filtros opcionais.
@@ -420,23 +514,38 @@ const DemandaDB = (() => {
     }
 
     /**
-     * Busca os itens de uma demanda com busca resiliente caso o documento tenha sido gravado sob caminho legado.
+     * Busca os itens de uma demanda com busca resiliente e cache local offline-first.
      */
     async function getItens(demandaId) {
-        const db = _db();
-        let snap = await db
-            .collection(`${DEMANDS_COL}/${demandaId}/items`)
-            .orderBy('seq', 'asc')
-            .get();
-        if (snap.empty) {
-            // Tenta em centralpecas
-            const s2 = await db.collection(`tenants/centralpecas/demanda/data/demands/${demandaId}/items`).orderBy('seq', 'asc').get();
-            if (!s2.empty) return s2.docs.map(d => d.data());
-            // Tenta em [object Object]
-            const s3 = await db.collection(`tenants/[object Object]/demanda/data/demands/${demandaId}/items`).orderBy('seq', 'asc').get();
-            if (!s3.empty) return s3.docs.map(d => d.data());
+        if (!demandaId) return [];
+        const local = _getItensLocal(demandaId);
+
+        try {
+            const db = _db();
+            let snap = await _withTimeout(
+                db.collection(`${DEMANDS_COL}/${demandaId}/items`).orderBy('seq', 'asc').get()
+            ).catch(() => ({ empty: true }));
+            if (snap.empty) {
+                // Tenta em centralpecas
+                const s2 = await _withTimeout(db.collection(`tenants/centralpecas/demanda/data/demands/${demandaId}/items`).orderBy('seq', 'asc').get()).catch(() => ({ empty: true }));
+                if (!s2.empty) snap = s2;
+                else {
+                    // Tenta em [object Object]
+                    const s3 = await _withTimeout(db.collection(`tenants/[object Object]/demanda/data/demands/${demandaId}/items`).orderBy('seq', 'asc').get()).catch(() => ({ empty: true }));
+                    if (!s3.empty) snap = s3;
+                }
+            }
+            if (snap && !snap.empty) {
+                const itens = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+                _salvarItensLocal(demandaId, itens);
+                return itens;
+            }
+        } catch (err) {
+            console.warn('[DemandaDB] getItens Firestore indisponível/cota excedida, usando cache local:', err.message || err);
         }
-        return snap.docs.map(d => d.data());
+
+        if (local && local.length > 0) return local;
+        return [];
     }
 
     /**
@@ -444,20 +553,33 @@ const DemandaDB = (() => {
      * Acrescenta entrada na timeline se houver mudança de status.
      */
     async function updateItem(demandaId, itemId, fields, timelineEntry = null) {
-        const ref    = _db().doc(`${DEMANDS_COL}/${demandaId}/items/${itemId}`);
-        const update = {
-            ...fields,
-            atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
-        };
+        try {
+            const itens = _getItensLocal(demandaId);
+            const idx = itens.findIndex(it => (it.id === itemId || it._itemId === itemId));
+            if (idx >= 0) {
+                itens[idx] = { ...itens[idx], ...fields };
+                _salvarItensLocal(demandaId, itens);
+            }
+        } catch (_) {}
 
-        if (timelineEntry) {
-            update.timeline = firebase.firestore.FieldValue.arrayUnion({
-                ...timelineEntry,
-                em: new Date().toISOString()
-            });
+        try {
+            const ref    = _db().doc(`${DEMANDS_COL}/${demandaId}/items/${itemId}`);
+            const update = {
+                ...fields,
+                atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            if (timelineEntry) {
+                update.timeline = firebase.firestore.FieldValue.arrayUnion({
+                    ...timelineEntry,
+                    em: new Date().toISOString()
+                });
+            }
+
+            await _withTimeout(ref.update(update));
+        } catch (e) {
+            console.warn('[DemandaDB] updateItem Firestore falhou (salvo no cache local):', e.message || e);
         }
-
-        await ref.update(update);
     }
 
     /**
@@ -785,6 +907,8 @@ const DemandaDB = (() => {
         addItens, getItens, updateItem, updateItemStatus, updateItensBatch, deleteItem, recalcTotals, splitItem,
         onItensChanged, listItensFila, getDashboardStats,
         saveSession, loadSession, clearSession, saveCatalogoItem, listCatalogoItems,
+        getDemandaLocal: _getDemandaLocal,
+        getItensLocal: _getItensLocal,
         purgeLocalCache: _purgeLocalDemandCache,
         get TENANT_ID()   { return _getTenantId(); },
         get BASE_PATH()   { return _basePath(); },
