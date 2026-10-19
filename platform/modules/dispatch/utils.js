@@ -285,7 +285,41 @@ const Utils = {
 
     Cloud: {
         // CRÍTICO: Não usar tenant padrão! Cada cliente deve ter seu próprio tenant.
-        tenantId: localStorage.getItem('app_tenant_id') || null,
+        tenantId: (() => {
+            const ls = localStorage.getItem('app_tenant_id');
+            if (ls && ls !== 'null' && ls !== 'undefined') return ls;
+            try {
+                const segs = window.location.pathname.split('/').filter(Boolean);
+                const cand = segs[0] ? segs[0].trim().toLowerCase() : '';
+                const res = ['modules', 'platform', 'core', 'fix_frete', 'fix_viopex', 'fix_romaneios', 'web', 'homolog'];
+                if (cand && !res.includes(cand)) {
+                    localStorage.setItem('app_tenant_id', cand);
+                    return cand;
+                }
+            } catch (_) {}
+            return null;
+        })(),
+
+        _resolveTenantId() {
+            if (this.tenantId && this.tenantId !== 'null' && this.tenantId !== 'undefined') {
+                return this.tenantId;
+            }
+            let fallback = localStorage.getItem('app_tenant_id') || window._tenantFromUrl || null;
+            if (!fallback || fallback === 'null' || fallback === 'undefined') {
+                try {
+                    const segs = window.location.pathname.split('/').filter(Boolean);
+                    const cand = segs[0] ? segs[0].trim().toLowerCase() : '';
+                    const res = ['modules', 'platform', 'core', 'fix_frete', 'fix_viopex', 'fix_romaneios', 'web', 'homolog'];
+                    if (cand && !res.includes(cand)) fallback = cand;
+                } catch (_) {}
+            }
+            if (fallback && fallback !== 'null' && fallback !== 'undefined') {
+                this.tenantId = fallback;
+                try { localStorage.setItem('app_tenant_id', fallback); } catch (_) {}
+                return fallback;
+            }
+            return null;
+        },
 
         setTenantId(id) {
             console.log(`🏢 [Cloud] setTenantId: ${id}`);
@@ -296,13 +330,14 @@ const Utils = {
 
         // Verificar se tenant está definido
         hasTenant() {
-            return !!this.tenantId && this.tenantId !== 'null' && this.tenantId !== 'undefined';
+            return !!this._resolveTenantId();
         },
 
         // --- SAVE LOGIC (Direct to TenantID) ---
         async save(key, data) {
+            this._resolveTenantId();
             // --- FIREBASE MODE ---
-            if (typeof firebase !== 'undefined' && window.db) {
+            if (typeof firebase !== 'undefined' && window.db && this.hasTenant()) {
                 try {
                     const jsonContent = JSON.stringify(data);
                     const size = jsonContent.length;
@@ -747,33 +782,110 @@ const Utils = {
                             try {
                                 let bestArray = [];
 
-                                // Caminho A: Auto-Chunking (clients doc + clients_chunk_N)
+                                // Caminho A: Auto-Chunking (clients doc + clients_chunk_N ou inline content)
                                 if (doc.exists) {
                                     const docData = doc.data();
                                     if (docData.isChunked && docData.chunkCount > 0) {
                                         console.log(`[Cloud] clients auto-chunked: ${docData.chunkCount} chunk(s), ${docData.totalCount} registros.`);
                                         const arrayA = await this.loadChunks('clients', docData.chunkCount);
                                         if (arrayA.length > bestArray.length) bestArray = arrayA;
+                                    } else if (docData.content && docData.content.length > 2) {
+                                        try {
+                                            const parsedA = JSON.parse(docData.content);
+                                            if (Array.isArray(parsedA) && parsedA.length > bestArray.length) bestArray = parsedA;
+                                        } catch (_) {}
                                     }
                                 }
 
                                 // Caminho B: Migração legacy (clients__meta + clients__N)
+                                // Otimização v3.25.8: Só baixa chunks do Caminho B se Caminho A veio vazio ou com menos registros que clients__meta
                                 const metaDoc = await window.db.collection('tenants').doc(this.tenantId)
                                     .collection('legacy_store').doc('clients__meta').get();
                                 if (metaDoc.exists) {
                                     const meta = metaDoc.data();
                                     const totalChunks = meta.totalChunks || 0;
-                                    if (totalChunks > 0) {
-                                        console.log(`[Cloud] clients legacy-chunked: ${totalChunks} chunk(s), ${meta.totalCount} registros.`);
+                                    const metaCount = meta.totalCount || 0;
+                                    if (totalChunks > 0 && (bestArray.length === 0 || metaCount > bestArray.length)) {
+                                        console.log(`[Cloud] clients legacy-chunked: ${totalChunks} chunk(s), ${metaCount} registros.`);
                                         const arrayB = await this._loadChunkedKey('clients', totalChunks);
                                         if (arrayB.length > bestArray.length) bestArray = arrayB;
                                     }
                                 }
 
+                                // Auto-Heal v3.25.8: Recupera clientes cadastrados localmente na máquina que não haviam subido
+                                // para o Firestore (ex: quando app_tenant_id havia ficado null após logout)
+                                let healedLocalClients = false;
+                                try {
+                                    const tKey = `tenant_${this.tenantId}_clients`;
+                                    let localClients = (window._preCleanClientsBackup && Array.isArray(window._preCleanClientsBackup[tKey]))
+                                        ? window._preCleanClientsBackup[tKey]
+                                        : null;
+                                    if (!localClients) {
+                                        const rawLocal = localStorage.getItem(tKey);
+                                        if (rawLocal && rawLocal.length > 2) {
+                                            localClients = JSON.parse(rawLocal);
+                                        }
+                                    }
+                                    const existingCodes = new Set(bestArray.map(c => String(c?.codigo || '').trim().toUpperCase()).filter(Boolean));
+                                    if (Array.isArray(localClients) && localClients.length > bestArray.length && bestArray.length > 0) {
+                                        for (const lc of localClients) {
+                                            const code = String(lc?.codigo || '').trim().toUpperCase();
+                                            if (code && !existingCodes.has(code)) {
+                                                bestArray.push(lc);
+                                                existingCodes.add(code);
+                                                healedLocalClients = true;
+                                                console.warn(`🛠️ [Auto-Heal Clients] Recuperado cliente local pendente de sync: ${code} - ${lc.nome}`);
+                                            }
+                                        }
+                                    }
+                                    // Também verifica audit_log local por CLIENT_CREATE / CLIENT_EDIT recentes desta empresa
+                                    const rawAudit = localStorage.getItem('audit_log');
+                                    if (rawAudit && rawAudit.length > 2) {
+                                        const auditList = JSON.parse(rawAudit);
+                                        if (Array.isArray(auditList)) {
+                                            const tenantUsers = (Utils.getStorage('app_users') || []).map(u => String(u.name || u.login || '').toUpperCase().trim()).filter(Boolean);
+                                            const loggedU = Utils.getStorage('logged_user');
+                                            if (loggedU) {
+                                                if (loggedU.name) tenantUsers.push(String(loggedU.name).toUpperCase().trim());
+                                                if (loggedU.login) tenantUsers.push(String(loggedU.login).toUpperCase().trim());
+                                            }
+                                            const deletedCodes = new Set();
+                                            // auditList está em ordem decrescente (mais recente primeiro)
+                                            for (let ai = auditList.length - 1; ai >= 0; ai--) {
+                                                const entry = auditList[ai];
+                                                if (!entry || !entry.action) continue;
+                                                const entryUser = String(entry.user || '').toUpperCase().trim();
+                                                const userMatchesTenant = tenantUsers.length === 0 || tenantUsers.some(tu => tu && (entryUser.includes(tu) || tu.includes(entryUser)));
+                                                if (!userMatchesTenant) continue;
+                                                if (entry.action === 'CLIENT_DELETE' && entry.before?.codigo) {
+                                                    deletedCodes.add(String(entry.before.codigo).trim().toUpperCase());
+                                                } else if ((entry.action === 'CLIENT_CREATE' || entry.action === 'CLIENT_EDIT') && entry.after?.codigo) {
+                                                    const cCode = String(entry.after.codigo).trim().toUpperCase();
+                                                    deletedCodes.delete(cCode);
+                                                    if (cCode && !existingCodes.has(cCode)) {
+                                                        bestArray.push(entry.after);
+                                                        existingCodes.add(cCode);
+                                                        healedLocalClients = true;
+                                                        console.warn(`🛠️ [Auto-Heal AuditLog] Recuperado cliente ${cCode} (${entry.after.nome}) do log local e sincronizando com nuvem!`);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                } catch (healErr) {
+                                    console.warn('[Auto-Heal Clients] Aviso:', healErr);
+                                }
+
                                 if (bestArray.length > 0) {
                                     Utils._memStore.clients = bestArray;
+                                    try { localStorage.setItem(`tenant_${this.tenantId}_clients`, JSON.stringify(bestArray)); } catch (_) {}
                                     console.log(`[Cloud] ✅ clients: ${bestArray.length} registros em memória (melhor fonte).`);
+                                    if (window._refreshClientVars) window._refreshClientVars(bestArray);
                                     if (window.renderClientsList) window.renderClientsList();
+                                    if (healedLocalClients) {
+                                        console.log(`☁️ [Auto-Heal Clients] Enviando lista unificada (${bestArray.length} clientes) para o Firestore...`);
+                                        this.save('clients', bestArray);
+                                    }
                                     continue;
                                 }
                             } catch (chunkErr) {
@@ -905,6 +1017,7 @@ const Utils = {
 
         // --- LÓGICA CENTRAL DE RECEBIMENTO DE DADOS ---
         processIncomingData(key, cloudContentString) {
+            this._resolveTenantId();
             console.log(`📩 [Cloud] Recebendo ${key}: ${cloudContentString ? cloudContentString.length + ' chars' : 'null'}`);
             const storageKey = `tenant_${this.tenantId}_${key}`;
             const localContent = localStorage.getItem(storageKey);
@@ -915,10 +1028,11 @@ const Utils = {
             if (timeSinceWrite < 60000) {
                 // v3.11.74 FIX: Se o dado local está VAZIO para chaves críticas, o Anti-Echo
                 // NÃO bloqueia — dados da nuvem são aceitos para evitar tela em branco.
-                const CRITICAL_KEYS_AE = ['carrier_list', 'carrier_configs', 'carrier_info_v2', 'freight_tables'];
+                const CRITICAL_KEYS_AE = ['carrier_list', 'carrier_configs', 'carrier_info_v2', 'freight_tables', 'clients'];
                 if (CRITICAL_KEYS_AE.includes(key)) {
                     const localVal = localContent;
-                    const localEmpty = !localVal || localVal === '[]' || localVal === '{}' || localVal === 'null';
+                    const memEmpty = key === 'clients' && (!Array.isArray(Utils._memStore.clients) || Utils._memStore.clients.length === 0);
+                    const localEmpty = memEmpty || !localVal || localVal === '[]' || localVal === '{}' || localVal === 'null';
                     if (localEmpty) {
                         console.log(`🛡️ [Anti-Echo] Chave crítica '${key}' está vazia localmente — aceitando dados da nuvem (ignorando Anti-Echo).`);
                         // Não retorna — deixa o fluxo continuar
@@ -950,7 +1064,8 @@ const Utils = {
 
             // 3. Anti-Rollback (Tamanho) - Aceita dados válidos da nuvem
             if (cloudContentString && cloudContentString.length >= 2) {
-                if (cloudContentString !== localContent) {
+                const memClientsOutdated = key === 'clients' && (!Array.isArray(Utils._memStore.clients) || JSON.stringify(Utils._memStore.clients).length !== cloudContentString.length);
+                if (cloudContentString !== localContent || memClientsOutdated) {
                     console.log(`🔄 [SaaS] Atualizando local: ${key}`);
 
                     // clients vai para memória + localStorage (persistência entre reloads)
@@ -960,6 +1075,7 @@ const Utils = {
                             Utils._memStore.clients = parsed;
                             // Salva tb no localStorage para persistir entre reloads
                             try { localStorage.setItem(storageKey, cloudContentString); } catch(e) {}
+                            if (window._refreshClientVars) window._refreshClientVars(parsed);
                             if (window.renderClientsList) window.renderClientsList();
                         } catch(e) { console.warn('[Cloud] Erro ao parsear clients da nuvem:', e); }
                     } else if (key === 'app_romaneios') {
@@ -1025,8 +1141,9 @@ const Utils = {
         },
 
         listen() {
+            this._resolveTenantId();
             // --- FIREBASE MODE ---
-            if (typeof firebase !== 'undefined' && window.db && !window.hasAttachedListeners) {
+            if (typeof firebase !== 'undefined' && window.db && this.hasTenant() && !window.hasAttachedListeners) {
                 window.hasAttachedListeners = true;
                 const keys = ['freight_tables', 'carrier_list', 'carrier_configs', 'company_data', 'app_users', 'carrier_info_v2', 'clients', 'invoice_history', 'app_sellers', 'app_settings', 'app_romaneios', 'delivery_history', 'dispatches'];
                 console.log(`📡 Iniciando Sync SaaS (Firestore) para: ${this.tenantId}`);
@@ -1336,7 +1453,7 @@ Utils.writeLog = async function(action, entity, description, before = null, afte
         };
 
         // ── 1. Firestore (persistência primária) ──
-        if (window.db && Utils.Cloud && Utils.Cloud.tenantId) {
+        if (window.db && Utils.Cloud && Utils.Cloud.hasTenant()) {
             try {
                 await window.db
                     .collection('tenants').doc(Utils.Cloud.tenantId)
@@ -1354,7 +1471,10 @@ Utils.writeLog = async function(action, entity, description, before = null, afte
         local.unshift(entry);
         // Purge entries older than 90 days and cap at 2000
         local = local.filter(e => e.timestamp > cutoff).slice(0, 2000);
-        try { Utils.setStorage('audit_log', local); } catch (_) {}
+        try {
+            Utils._memStore['audit_log'] = local;
+            localStorage.setItem('audit_log', JSON.stringify(local));
+        } catch (_) {}
 
     } catch (err) {
         console.warn('[AuditLog] Erro inesperado:', err);
