@@ -508,17 +508,19 @@ window.CarrierSwitchModule = (function () {
             state.carrierConfigs = Utils.getStorage('carrier_configs') || {};
             state.carrierList = Utils.getStorage('carrier_list') || [];
 
-            // Se state.dispatches estiver vazio ou só tiver pendentes sem custo (ex.: init rodou antes do banco carregar), recarrega
+            // Se state.dispatches estiver vazio ou incompleto, recarrega do histórico completo isolado
             const validCostCount = (state.dispatches || []).filter(d => d && parseNum(d.total || d.mainTotal || d.freightCost || d.valor, 0) > 0).length;
-            const localDispatches = Utils.getStorage('dispatches') || [];
-            if (validCostCount < 10 || localDispatches.length > state.dispatches.length) {
-                let rawDispatches = localDispatches;
+            const cachedFull = (Utils._fullDispatchesHistoryCache && Array.isArray(Utils._fullDispatchesHistoryCache))
+                ? Utils._fullDispatchesHistoryCache
+                : (Utils.getStorage('dispatches') || []);
+            if (validCostCount < 10 || cachedFull.length > state.dispatches.length) {
+                let rawDispatches = cachedFull;
                 try {
                     if (Utils.Cloud && typeof Utils.Cloud.getFullDispatchesHistory === 'function') {
                         rawDispatches = await Utils.Cloud.getFullDispatchesHistory();
                     }
                 } catch (e) {
-                    console.warn('[CarrierSwitch] Fallback para getStorage(dispatches) no runAnalysis:', e);
+                    console.warn('[CarrierSwitch] Fallback para cache em runAnalysis:', e);
                 }
                 state.dispatches = (rawDispatches || []).filter(d => {
                     if (!d) return false;

@@ -72,14 +72,88 @@ const Utils = {
         } catch(e) {}
     },
 
+    // Mantém o cache operacional de 'dispatches' enxuto (~350 mais recentes + 100% dos Pendente Despacho),
+    // pois o histórico completo (4.100+ itens) vive na coleção dispatches_db e em Utils._fullDispatchesHistoryCache.
+    _compactDispatchesForLocal(list) {
+        if (!Array.isArray(list) || list.length <= 500) return list;
+        const pending = [];
+        const others = [];
+        for (const d of list) {
+            if (!d) continue;
+            if (d.status === 'Pendente Despacho' || d.status === 'pendente') {
+                pending.push(d);
+            } else {
+                others.push(d);
+            }
+        }
+        others.sort((a, b) => {
+            const da = Number(a.id) || (a.date ? new Date(a.date).getTime() : 0);
+            const db2 = Number(b.id) || (b.date ? new Date(b.date).getTime() : 0);
+            return db2 - da;
+        });
+        return [...pending, ...others.slice(0, 350)];
+    },
+
     saveRaw: (key, stringData) => {
-        localStorage.setItem(Utils._storageKey(key), stringData);
-        Utils.lastWriteTime[key] = Date.now();
-        Utils._persistLastWriteTime(); // FIX v3.11.64: persiste para sobreviver a refreshes
         try {
-            const data = JSON.parse(stringData);
-            Utils._memStore[key] = data; // Keep memory store in sync!
-            if (Utils.Cloud) {
+            let data = null;
+            try { data = JSON.parse(stringData); } catch (e) {}
+
+            // v3.25.7 FIX DEFINITIVO: app_romaneios NUNCA vai para localStorage (nem via saveRaw)
+            if (key === 'app_romaneios') {
+                try { localStorage.removeItem(Utils._storageKey('app_romaneios')); } catch (_) {}
+                if (data !== null) Utils._memStore[key] = data;
+                Utils.lastWriteTime[key] = Date.now();
+                Utils._persistLastWriteTime();
+                if (Utils.Cloud && Array.isArray(data) && data.length > 0) {
+                    if (!window.db || typeof firebase === 'undefined') {
+                        Utils._pendingSync = Utils._pendingSync || {};
+                        Utils._pendingSync[key] = data;
+                        Utils.Cloud._showOfflineBadge();
+                    } else {
+                        Utils.Cloud.save(key, data);
+                    }
+                }
+                return;
+            }
+
+            // Se 'dispatches' estiver inflado com o histórico completo do dispatches_db (>500 itens),
+            // preserva no histórico completo em memória e compacta a versão operacional para localStorage/legacy_store
+            if (key === 'dispatches' && Array.isArray(data)) {
+                if (Array.isArray(Utils._fullDispatchesHistoryCache) && Utils._fullDispatchesHistoryCache.length > 0) {
+                    const fullMap = new Map();
+                    Utils._fullDispatchesHistoryCache.forEach(d => { if (d) fullMap.set(String(d.id || d.codigo), d); });
+                    data.forEach(d => { if (d) fullMap.set(String(d.id || d.codigo), d); });
+                    Utils._fullDispatchesHistoryCache = Array.from(fullMap.values());
+                }
+                if (data.length > 500) {
+                    data = Utils._compactDispatchesForLocal(data);
+                    stringData = JSON.stringify(data);
+                }
+            }
+
+            if (data !== null) {
+                Utils._memStore[key] = data; // Keep memory store in sync!
+            }
+
+            try {
+                localStorage.setItem(Utils._storageKey(key), stringData);
+            } catch (quotaErr) {
+                if (quotaErr.name === 'QuotaExceededError' || quotaErr.code === 22) {
+                    console.warn(`⚠️ [saveRaw/Quota] localStorage cheio ao salvar '${key}'. Liberando espaço...`);
+                    Utils._freeStorageSpace(key);
+                    try {
+                        localStorage.setItem(Utils._storageKey(key), stringData);
+                    } catch (e2) {
+                        console.warn(`⚠️ [saveRaw/Quota] '${key}' mantido em memória (_memStore) sem interromper operação.`);
+                    }
+                }
+            }
+
+            Utils.lastWriteTime[key] = Date.now();
+            Utils._persistLastWriteTime(); // FIX v3.11.64: persiste para sobreviver a refreshes
+
+            if (Utils.Cloud && data !== null) {
                 // PROTEÇÃO: Não enviar arrays vazios para a nuvem
                 if (Array.isArray(data) && data.length === 0) {
                     console.warn(`⚠️ [Proteção] saveRaw: Não enviando array vazio para nuvem: ${key}`);
@@ -100,13 +174,10 @@ const Utils = {
 
     addToStorage: (key, item) => {
         try {
-            const list = Utils.getStorage(key);
+            let list = Utils.getStorage(key);
+            if (!Array.isArray(list)) list = [];
             list.push(item);
-            const str = JSON.stringify(list);
-            localStorage.setItem(Utils._storageKey(key), str);
-            Utils.lastWriteTime[key] = Date.now();
-            Utils._persistLastWriteTime();
-            if (Utils.Cloud) Utils.Cloud.save(key, list);
+            Utils.setStorage(key, list);
         } catch (e) { console.error(e); }
     },
 
@@ -116,6 +187,7 @@ const Utils = {
             // É sempre carregado do Firebase em chunks a cada sessão → caching local só causa QuotaExceededError.
             // Todos os 2070+ itens ficam em _memStore durante a sessão (acesso normal garantido).
             if (key === 'app_romaneios') {
+                try { localStorage.removeItem(Utils._storageKey('app_romaneios')); } catch (_) {}
                 Utils._memStore[key] = data;
                 console.log(`📦 [Quota] app_romaneios: ${Array.isArray(data) ? data.length : '?'} itens em memória (localStorage ignorado).`);
                 // Ainda sincroniza com Firebase se necessário, mas não grava no localStorage
@@ -123,6 +195,18 @@ const Utils = {
                     Utils.Cloud.save(key, data);
                 }
                 return;
+            }
+
+            if (key === 'dispatches' && Array.isArray(data)) {
+                if (Array.isArray(Utils._fullDispatchesHistoryCache) && Utils._fullDispatchesHistoryCache.length > 0) {
+                    const fullMap = new Map();
+                    Utils._fullDispatchesHistoryCache.forEach(d => { if (d) fullMap.set(String(d.id || d.codigo), d); });
+                    data.forEach(d => { if (d) fullMap.set(String(d.id || d.codigo), d); });
+                    Utils._fullDispatchesHistoryCache = Array.from(fullMap.values());
+                }
+                if (data.length > 500) {
+                    data = Utils._compactDispatchesForLocal(data);
+                }
             }
 
             const serialized = JSON.stringify(data);
@@ -143,7 +227,7 @@ const Utils = {
                         console.warn(`⚠️ [Quota] '${key}' salvo em memória (localStorage ainda cheio).`);
                     }
                 } else {
-                    throw quotaErr;
+                    console.warn(`⚠️ [Quota] Erro ao gravar '${key}' no localStorage:`, quotaErr);
                 }
             }
             Utils.lastWriteTime[key] = Date.now();
@@ -479,6 +563,10 @@ const Utils = {
                                     local.forEach(d => { if (d) localMap.set(String(d.id || d.codigo), d); });
                                     parsedLeg.forEach(d => { if (d && !localMap.has(String(d.id || d.codigo))) localMap.set(String(d.id || d.codigo), d); });
                                     local = Array.from(localMap.values());
+                                    // Atualiza _memStore['dispatches'] apenas com o pacote operacional leve (legacy_store), nunca com os 4.100+ do dispatches_db
+                                    if (Utils._memStore && (!Array.isArray(Utils._memStore['dispatches']) || Utils._memStore['dispatches'].length < local.length)) {
+                                        Utils._memStore['dispatches'] = Utils._compactDispatchesForLocal(local);
+                                    }
                                 }
                             } catch (e) {}
                         }
@@ -536,9 +624,10 @@ const Utils = {
                 return db2 - da;
             });
 
-            // Mantém _memStore['dispatches'] sincronizado com o histórico completo mesclado
-            if (all.length > 0 && Utils._memStore) {
-                Utils._memStore['dispatches'] = all;
+            // v3.25.7: Salva o histórico completo em cache separado (_fullDispatchesHistoryCache)
+            // para NÃO inflar Utils._memStore['dispatches'] nem estourar o localStorage ao gerar romaneio
+            if (all.length > 0) {
+                Utils._fullDispatchesHistoryCache = all;
             }
 
             // Aplica filtros de data em memória (sem depender de índice Firestore)
