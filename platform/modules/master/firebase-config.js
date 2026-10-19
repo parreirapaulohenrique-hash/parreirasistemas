@@ -22,11 +22,11 @@ try {
         db = firebase.firestore();
         window.db = db; // Force Global Accessibility
 
-        // Enable offline persistence if possible
-        db.enablePersistence()
+        // Enable offline persistence with multi-tab support
+        db.enablePersistence({ synchronizeTabs: true })
             .catch((err) => {
                 if (err.code == 'failed-precondition') {
-                    console.warn('Persistência falhou: Múltiplas abas abertas.');
+                    console.warn('Persistência: Múltiplas abas ou versão anterior. Operando com resiliência local.');
                 } else if (err.code == 'unimplemented') {
                     console.warn('Persistência não suportada neste navegador.');
                 }

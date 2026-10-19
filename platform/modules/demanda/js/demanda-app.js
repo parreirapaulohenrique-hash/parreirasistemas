@@ -1925,35 +1925,6 @@ const DemandaApp = (function() {
                 }
                 container.innerHTML = "<div style='padding:1rem 1.5rem'>" +
                     demandas.map(_renderDemandaCard).join("") + "</div>";
-
-                // Sincronização e verificação ativa de TODAS as cotações listadas:
-                // Garante que a informação externa (card) bata 100% com a informação interna dos itens
-                demandas.forEach(function(d) {
-                    if (!d || !d.id) return;
-                    DemandaDB.recalcTotals(d.id).then(function(totals) {
-                        if (!totals) return;
-                        var mudou = (d.totalItens !== totals.totalItens || 
-                                     d.totalComEstoque !== totals.totalComEstoque || 
-                                     d.totalSemEstoque !== totals.totalSemEstoque ||
-                                     d.totalNaoEncontrados !== totals.totalNaoEncontrados);
-                        d.totalItens = totals.totalItens;
-                        d.totalComEstoque = totals.totalComEstoque;
-                        d.totalSemEstoque = totals.totalSemEstoque;
-                        d.totalNaoEncontrados = totals.totalNaoEncontrados;
-                        if (mudou) {
-                            var el = document.getElementById("card-totais-" + d.id);
-                            if (el) {
-                                el.innerHTML =
-                                    _miniStat("Itens",        totals.totalItens, "var(--text-primary)") +
-                                    _miniStat("Não Encontr.", totals.totalNaoEncontrados || 0, (totals.totalNaoEncontrados || 0) > 0 ? "#f59e0b" : "var(--text-secondary)") +
-                                    _miniStat("Sem Estoque",  totals.totalSemEstoque || 0, (totals.totalSemEstoque || 0) > 0 ? "var(--accent-danger)" : "var(--text-secondary)") +
-                                    _miniStat("Estoque",      totals.totalComEstoque || 0, "var(--accent-success)");
-                            }
-                        }
-                    }).catch(function(e) {
-                        console.warn("[DemandaApp] Erro na sincronização da demanda " + d.id, e);
-                    });
-                });
             })
             .catch(function(err) {
                 console.error("[DemandaApp] Erro ao listar:", err);
@@ -2030,37 +2001,57 @@ const DemandaApp = (function() {
         if (typeof DemandaDB === "undefined") {
             if (body) body.innerHTML = "<p style='color:var(--accent-danger)'>DemandaDB indisponível.</p>"; return;
         }
-        Promise.all([ DemandaDB.getDemanda(id), DemandaDB.getItens(id) ])
-            .then(async function(res) {
-                var d = res[0];
-                var itens = res[1] || [];
 
-                // Se a demanda não existe ou já foi excluída, não abre modal em branco
-                if (!d || (!d.codigo && !d.clienteNome && (!itens || itens.length === 0))) {
-                    closeModal("modalDemandaDetalhe");
-                    _toast("Esta cotação não foi encontrada ou já foi excluída.", "warning");
-                    var cardEl = document.getElementById("card-totais-" + id);
-                    if (cardEl && cardEl.closest("[role='button']")) {
-                        cardEl.closest("[role='button']").remove();
-                    }
-                    if (typeof DemandaDB !== "undefined" && typeof DemandaDB.purgeLocalCache === "function") {
-                        DemandaDB.purgeLocalCache(id);
-                    }
-                    return;
+        // 1. Renderização Instantânea se já estiver em Cache Local (0ms)
+        var dLocal = (typeof DemandaDB.getDemandaLocal === "function") ? DemandaDB.getDemandaLocal(id) : null;
+        var itensLocal = (typeof DemandaDB.getItensLocal === "function") ? DemandaDB.getItensLocal(id) : null;
+        if (dLocal) {
+            _demandaAtual = { id: id, data: dLocal, itens: itensLocal || [] };
+            _renderDemandaDetalheBody();
+        }
+
+        // 2. Consulta Firestore com timeout protetivo e fallback automático
+        Promise.all([
+            DemandaDB.getDemanda(id).catch(function(e) {
+                console.warn("[abrirDemanda] getDemanda fallback para cache:", e);
+                return dLocal;
+            }),
+            DemandaDB.getItens(id).catch(function(e) {
+                console.warn("[abrirDemanda] getItens fallback para cache:", e);
+                return itensLocal || [];
+            })
+        ]).then(function(res) {
+            var d = res[0] || dLocal;
+            var itens = res[1] || itensLocal || [];
+
+            // Se a demanda não existe ou já foi excluída, não abre modal em branco
+            if (!d || (!d.codigo && !d.clienteNome && (!itens || itens.length === 0))) {
+                closeModal("modalDemandaDetalhe");
+                _toast("Esta cotação não foi encontrada ou já foi excluída.", "warning");
+                var cardEl = document.getElementById("card-totais-" + id);
+                if (cardEl && cardEl.closest("[role='button']")) {
+                    cardEl.closest("[role='button']").remove();
                 }
-
-                _demandaAtual = { id: id, data: d, itens: itens };
-
-                // Se d.totalItens está zerado mas temos itens carregados, auto-cura no Firestore
-                if ((!d.totalItens || d.totalItens === 0) && itens.length > 0) {
-                    DemandaDB.recalcTotals(id).then(function(t) {
-                        if (t) Object.assign(d, t);
-                    }).catch(function(){});
+                if (typeof DemandaDB !== "undefined" && typeof DemandaDB.purgeLocalCache === "function") {
+                    DemandaDB.purgeLocalCache(id);
                 }
+                return;
+            }
 
-                // Sincronização inteligente com cotacoes_concorrente:
-                // Se a demanda não possui concorrenteNome ou se itens faltam precoConcorrente, busca o registro vinculado
+            _demandaAtual = { id: id, data: d, itens: itens };
+            _renderDemandaDetalheBody();
+
+            // 3. Sincronização em background assíncrona (não atrasa abertura da modal)
+            setTimeout(async function() {
                 try {
+                    // Se d.totalItens está zerado mas temos itens carregados
+                    if ((!d.totalItens || d.totalItens === 0) && itens.length > 0) {
+                        DemandaDB.recalcTotals(id).then(function(t) {
+                            if (t) Object.assign(d, t);
+                        }).catch(function(){});
+                    }
+
+                    // Sincronização inteligente com cotacoes_concorrente
                     var precisaConcorrente = !d.concorrenteNome;
                     var precisaPrecoItens = itens.some(function(it) { return it.precoConcorrente == null || it.precoConcorrente <= 0; });
 
@@ -2077,7 +2068,6 @@ const DemandaApp = (function() {
                             var codDemanda = (d.codigo || "").toUpperCase().trim();
                             var cliDemanda = (d.clienteNome || "").toLowerCase().trim();
 
-                            // 1. Busca por vínculo direto (demandaOrigemId ou obs)
                             var concDoc = docsConc.find(function(c) {
                                 if (c.status === "cancelada") return false;
                                 if (c.demandaOrigemId && (c.demandaOrigemId === id || (codDemanda && String(c.demandaOrigemId).toUpperCase() === codDemanda))) return true;
@@ -2085,7 +2075,6 @@ const DemandaApp = (function() {
                                 return false;
                             });
 
-                            // 2. Fallback: mesmo cliente e itens com referências compatíveis
                             if (!concDoc && cliDemanda) {
                                 concDoc = docsConc.find(function(c) {
                                     if (c.status === "cancelada") return false;
@@ -2108,12 +2097,10 @@ const DemandaApp = (function() {
                                     atualizouDemanda = true;
                                 }
 
-                                // Garante que o documento em cotacoes_concorrente tenha demandaOrigemId apontado
                                 if (!concDoc.demandaOrigemId || concDoc.demandaOrigemId !== id) {
                                     dbConc.doc(concDoc.id).set({ demandaOrigemId: id }, { merge: true }).catch(function(){});
                                 }
 
-                                // Sincroniza precoConcorrente nos itens da demanda
                                 var itensModificados = [];
                                 itens.forEach(function(it, idx) {
                                     var pcAtual = parseFloat(it.precoConcorrente) || 0;
@@ -2148,35 +2135,16 @@ const DemandaApp = (function() {
                             }
                         }
                     }
-                } catch(eSync) {
-                    console.warn("[DemandaApp] Erro na sincronização com concorrência:", eSync);
+                } catch(eAsync) {
+                    console.warn("[abrirDemanda] Sincronização em background falhou:", eAsync);
                 }
-
-                // Sincroniza e recalcula totais no Firestore SEMPRE após carregar a cotação
-                if (typeof DemandaDB !== "undefined" && DemandaDB.recalcTotals) {
-                    try {
-                        var totalsRecalc = await DemandaDB.recalcTotals(id).catch(function() { return null; });
-                        if (totalsRecalc) {
-                            Object.assign(d, totalsRecalc);
-                            var elCard = document.getElementById("card-totais-" + id);
-                            if (elCard) {
-                                elCard.innerHTML =
-                                    _miniStat("Itens",        totalsRecalc.totalItens, "var(--text-primary)") +
-                                    _miniStat("Não Encontr.", totalsRecalc.totalNaoEncontrados || 0, (totalsRecalc.totalNaoEncontrados || 0) > 0 ? "#f59e0b" : "var(--text-secondary)") +
-                                    _miniStat("Sem Estoque",  totalsRecalc.totalSemEstoque || 0, (totalsRecalc.totalSemEstoque || 0) > 0 ? "var(--accent-danger)" : "var(--text-secondary)") +
-                                    _miniStat("Estoque",      totalsRecalc.totalComEstoque || 0, "var(--accent-success)");
-                            }
-                        }
-                    } catch(eRecalc) {
-                        console.warn("[DemandaApp] Erro ao recalcular no abrirDemanda:", eRecalc);
-                    }
-                }
-
-                _renderDemandaDetalheBody();
-            })
-            .catch(function(err) {
-                if (body) body.innerHTML = "<p style='color:var(--accent-danger);padding:1rem'>Erro: " + _esc(err.message || String(err)) + "</p>";
-            });
+            }, 60);
+        }).catch(function(err) {
+            console.error("[abrirDemanda] Erro:", err);
+            if (!dLocal && body) {
+                body.innerHTML = "<p style='color:var(--accent-danger);padding:1rem'>Erro: " + _esc(err.message || String(err)) + "</p>";
+            }
+        });
     }
 
     // ════════════════════════════════════════════════════════
@@ -2244,6 +2212,14 @@ const DemandaApp = (function() {
                 contadores.nao_cadastrado++;
             }
         });
+
+        // Se os itens ainda não foram baixados por limite de cota, preserva contadores do cabeçalho
+        if (itens.length === 0 && (d.totalItens || 0) > 0) {
+            contadores.todos = d.totalItens || 0;
+            contadores.em_estoque = d.totalComEstoque || 0;
+            contadores.sem_estoque = d.totalSemEstoque || 0;
+            contadores.nao_encontrado = d.totalNaoEncontrados || 0;
+        }
 
         var terminal = itens.filter(function(i) {
             var s = i.status;
@@ -2381,13 +2357,24 @@ const DemandaApp = (function() {
 
         // Filtro e Busca dos Itens
         var itensFiltrados = _getItensFiltrados(itens);
-        var itensHtml = itensFiltrados.length === 0
-            ? "<tr><td colspan='" + (temPrecoConc ? 7 : 6) + "' style='text-align:center;padding:2rem;color:var(--text-secondary)'>" +
-              "<span class='material-icons-round' style='font-size:2rem;opacity:.3;display:block;margin-bottom:.4rem'>filter_alt_off</span>" +
-              "Nenhum item encontrado para o status ou busca selecionada." +
-              (_filtroItensDetalhe !== "todos" ? "<br><button class='btn btn-secondary btn-sm' style='margin-top:.6rem;padding:.2rem .6rem;font-size:.74rem' onclick=\"DemandaApp.setFiltroDetalhe('todos')\">Ver Todos os Itens</button>" : "") +
-              "</td></tr>"
-            : itensFiltrados.map(function(item, idx) { return _renderItemRow(item, idx, temPrecoConc); }).join("");
+        var itensHtml = "";
+        if (itensFiltrados.length === 0) {
+            if (itens.length === 0 && (d.totalItens || 0) > 0) {
+                itensHtml = "<tr><td colspan='" + (temPrecoConc ? 7 : 6) + "' style='text-align:center;padding:2.5rem 1rem;color:var(--text-secondary)'>" +
+                    "<span class='material-icons-round' style='font-size:2.4rem;color:#f59e0b;display:block;margin-bottom:.5rem'>cloud_off</span>" +
+                    "<strong style='color:var(--text-primary);font-size:.92rem;display:block;margin-bottom:.3rem'>Itens aguardando sincronização de rede (" + d.totalItens + " itens registrados)</strong>" +
+                    "<span style='font-size:.8rem;line-height:1.45;display:inline-block;max-width:520px;color:var(--text-secondary)'>A cota diária de leitura do banco de dados na nuvem (Google Cloud) foi temporariamente excedida. O cabeçalho e totais desta cotação foram recuperados com sucesso pelo cache local. Os detalhes dos itens serão exibidos assim que a cota do Google Cloud for renovada.</span>" +
+                    "</td></tr>";
+            } else {
+                itensHtml = "<tr><td colspan='" + (temPrecoConc ? 7 : 6) + "' style='text-align:center;padding:2rem;color:var(--text-secondary)'>" +
+                    "<span class='material-icons-round' style='font-size:2rem;opacity:.3;display:block;margin-bottom:.4rem'>filter_alt_off</span>" +
+                    "Nenhum item encontrado para o status ou busca selecionada." +
+                    (_filtroItensDetalhe !== "todos" ? "<br><button class='btn btn-secondary btn-sm' style='margin-top:.6rem;padding:.2rem .6rem;font-size:.74rem' onclick=\"DemandaApp.setFiltroDetalhe('todos')\">Ver Todos os Itens</button>" : "") +
+                    "</td></tr>";
+            }
+        } else {
+            itensHtml = itensFiltrados.map(function(item, idx) { return _renderItemRow(item, idx, temPrecoConc); }).join("");
+        }
 
         // Badge de Concorrente e Ação de Vincular
         var concorrenteBadge = "";
