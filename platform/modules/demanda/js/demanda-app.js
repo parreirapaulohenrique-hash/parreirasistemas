@@ -1895,9 +1895,32 @@ const DemandaApp = (function() {
         var container = document.getElementById("listaDemandasContainer");
         if (!container) return;
 
-        container.innerHTML = "<div style='padding:3rem;text-align:center;color:var(--text-secondary)'>" +
-            "<span class='material-icons-round' style='font-size:2rem;display:block;animation:spin 1s linear infinite'>sync</span>" +
-            "<p style='margin-top:.5rem;font-size:.85rem'>Carregando cotações...</p></div>";
+        // 1. Renderização Instantânea (0ms) a partir do cache local para que nenhuma cotação fique invisível
+        try {
+            var rawC = localStorage.getItem("demanda_cache_demandas_" + (window.DemandaDB ? DemandaDB.TENANT_ID : "centralpecas")) ||
+                       localStorage.getItem("demanda_cache_demandas_centralpecas");
+            if (rawC) {
+                var cachedArr = JSON.parse(rawC);
+                if (Array.isArray(cachedArr) && cachedArr.length > 0) {
+                    var fil = (_filialRelatorio && _filialRelatorio > 0)
+                        ? cachedArr.filter(function(x) { return Number(x.filialId || 1) === _filialRelatorio; })
+                        : cachedArr;
+                    if (filtro && filtro !== "todas") {
+                        fil = fil.filter(function(x) { return x.status === filtro; });
+                    }
+                    if (fil.length > 0) {
+                        container.innerHTML = "<div style='padding:1rem 1.5rem'>" +
+                            fil.map(_renderDemandaCard).join("") + "</div>";
+                    }
+                }
+            }
+        } catch (_) {}
+
+        if (!container.innerHTML || container.innerHTML.indexOf("_renderDemandaCard") >= 0 || container.innerHTML.trim() === "") {
+            container.innerHTML = "<div style='padding:3rem;text-align:center;color:var(--text-secondary)'>" +
+                "<span class='material-icons-round' style='font-size:2rem;display:block;animation:spin 1s linear infinite'>sync</span>" +
+                "<p style='margin-top:.5rem;font-size:.85rem'>Carregando cotações...</p></div>";
+        }
 
         if (typeof DemandaDB === "undefined") {
             container.innerHTML = "<div style='padding:2rem;text-align:center;color:var(--accent-danger)'>DemandaDB não disponível.</div>";
@@ -1928,8 +1951,10 @@ const DemandaApp = (function() {
             })
             .catch(function(err) {
                 console.error("[DemandaApp] Erro ao listar:", err);
-                container.innerHTML = "<div style='padding:2rem;text-align:center;color:var(--accent-danger)'>" +
-                    "<span class='material-icons-round'>error</span><p>Erro ao carregar: " + _esc(err.message || String(err)) + "</p></div>";
+                if (!container.querySelector("[role='button']")) {
+                    container.innerHTML = "<div style='padding:2rem;text-align:center;color:var(--accent-danger)'>" +
+                        "<span class='material-icons-round'>error</span><p>Erro ao carregar: " + _esc(err.message || String(err)) + "</p></div>";
+                }
             });
     }
 
@@ -1938,9 +1963,19 @@ const DemandaApp = (function() {
         var STATUS_LABEL = { aberta: "Aberta", em_atendimento: "Em Atendimento", encerrada: "Encerrada", cancelada: "Cancelada" };
         var cor = STATUS_COLOR[d.status] || "#6366f1";
         var lbl = STATUS_LABEL[d.status] || d.status;
-        var dt  = d.criadoEm && d.criadoEm.toDate
-            ? d.criadoEm.toDate().toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" })
-            : "—";
+        var dt = "—";
+        if (d.criadoEm) {
+            if (d.criadoEm.toDate && typeof d.criadoEm.toDate === "function") {
+                dt = d.criadoEm.toDate().toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" });
+            } else {
+                try {
+                    var dObj = new Date(d.criadoEm);
+                    if (!isNaN(dObj.getTime())) {
+                        dt = dObj.toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" });
+                    }
+                } catch(_) {}
+            }
+        }
 
         var totalItens = Number(d.totalItens || 0);
         var totalComEstoque = Number(d.totalComEstoque || 0);
