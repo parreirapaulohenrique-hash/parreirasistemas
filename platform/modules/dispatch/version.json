@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.25.9",
-  "build": "20261030-v3.25.9",
+  "version": "3.25.10",
+  "build": "20261030-v3.25.10",
   "lastUpdate": "2026-10-30",
-  "releaseDate": "2026-10-30T12:00:00-03:00",
-  "change": "v3.25.9: Funcionalidade Ativar/Desativar Transportadoras (botão/chave de 1 clique, badge visual Ativa/Inativa, preservação integral de dados e exclusão de inativas nas cotações e seleções)"
+  "releaseDate": "2026-10-30T12:55:00-03:00",
+  "change": "v3.25.10: FIX login e parse de scripts no ambiente de homologação (correção de duplicação de escopo e regex Unicode)."
 }

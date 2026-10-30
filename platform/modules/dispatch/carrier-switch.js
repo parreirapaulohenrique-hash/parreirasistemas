@@ -50,7 +50,7 @@ window.CarrierSwitchModule = (function () {
         if (!str) return '';
         return String(str)
             .normalize('NFD')
-            .replace(/[̀-ͯ]/g, '')
+            .replace(/[\u0300-\u036f]/g, '')
             .toUpperCase()
             .trim()
             .replace(/\s+/g, ' ');

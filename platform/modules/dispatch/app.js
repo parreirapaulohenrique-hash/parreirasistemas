@@ -31,6 +31,23 @@
     };
 })();
 
+// v3.25.9: Helper global para verificacao de transportadora ativa (topo)
+window.isCarrierActive = function(name) {
+    if (!name) return false;
+    const clean = String(name).trim().toUpperCase();
+    const info = (typeof carrierInfo !== 'undefined' && carrierInfo && carrierInfo[clean])
+        ? carrierInfo[clean]
+        : ((typeof Utils !== 'undefined' && Utils.getStorage ? Utils.getStorage('carrier_info_v2') : null) || {})[clean] || {};
+    const cfg = (typeof carrierConfigs !== 'undefined' && carrierConfigs && carrierConfigs[clean])
+        ? carrierConfigs[clean]
+        : ((typeof Utils !== 'undefined' && Utils.getStorage ? Utils.getStorage('carrier_configs') : null) || {})[clean] || {};
+    if (info.ativo === false || cfg.ativo === false || info.status === 'inativo') {
+        return false;
+    }
+    return true;
+};
+
+
 // ═══════════════════════════════════════════════════════════════════════════════
 //  ErpNFQueue — Fila Universal de NFs do ERP (Maxdata / Acontec / Multi-Tenant)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -4444,7 +4461,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const info = carrierInfo[c] || { cnpj: '-', ie: '-', address: '-', city: '-' };
                 const safeC = c.replace(/'/g, "\\'");
                 const inList = carrierList.includes(c);
-                const isActive = window.isCarrierActive(c);
                 const isActive = window.isCarrierActive(c);
 
                 // v3.16.13: formata data de cadastro
