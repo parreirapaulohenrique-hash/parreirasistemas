@@ -1,9 +1,9 @@
 {
   "module": "dispatch",
   "name": "Bússola Log",
-  "version": "3.25.5",
-  "build": "20261016-v3.25.5",
-  "lastUpdate": "2026-10-16",
-  "releaseDate": "2026-10-16T17:10:00-03:00",
-  "change": "v3.25.5: Correção na Conferência de Fatura com divergência (validação de senha Supervisor/Admin/Master via SHA-256, PIN, local e Firestore Modelo A) e correção do tempo de exibição de alertas de erro no showToast + mensagem fixa nos modais."
+  "version": "3.25.10",
+  "build": "20261030-v3.25.10",
+  "lastUpdate": "2026-10-30",
+  "releaseDate": "2026-10-30T12:55:00-03:00",
+  "change": "v3.25.10: FIX login e parse de scripts no ambiente de homologação (correção de duplicação de escopo e regex Unicode)."
 }

@@ -50,7 +50,7 @@ window.CarrierSwitchModule = (function () {
         if (!str) return '';
         return String(str)
             .normalize('NFD')
-            .replace(/[̀-ͯ]/g, '')
+            .replace(/[\u0300-\u036f]/g, '')
             .toUpperCase()
             .trim()
             .replace(/\s+/g, ' ');
@@ -253,10 +253,12 @@ window.CarrierSwitchModule = (function () {
             if (currentVal) currentCarrierSel.value = currentVal;
         }
 
-        // Transportadoras Sugeridas (Candidatas à simulação global)
+        // Transportadoras Sugeridas (Candidatas à simulação global - v3.25.9: apenas ativas)
         const carriersFromList = (state.carrierList || []).map(c => String(c).trim().toUpperCase());
         const carriersFromRules = (state.freightRules || []).map(r => String(r.transportadora || '').trim().toUpperCase());
-        const allCandidateCarriers = [...new Set([...carriersFromList, ...carriersFromRules])].filter(c => c && c !== 'FOB').sort();
+        const allCandidateCarriers = [...new Set([...carriersFromList, ...carriersFromRules])]
+            .filter(c => c && c !== 'FOB' && (!window.isCarrierActive || window.isCarrierActive(c)))
+            .sort();
 
         if (targetCarrierSel) {
             const currentVal = targetCarrierSel.value;
@@ -274,6 +276,9 @@ window.CarrierSwitchModule = (function () {
      * em uma transportadora candidata com base nas regras de tabela e configurações.
      */
     function calculateCostForCarrier(dispatch, candidateCarrierName) {
+        if (window.isCarrierActive && !window.isCarrierActive(candidateCarrierName)) {
+            return null; // v3.25.9: Transportadora inativa não participa de simulação
+        }
         const nfValue = parseNum(dispatch.nfValue || dispatch.valorNF || dispatch.value, 0);
         const weight = parseNum(dispatch.weight || dispatch.peso, 0);
         const volume = Math.max(1, parseInt(dispatch.volume || dispatch.volumes) || 1);
@@ -576,7 +581,7 @@ window.CarrierSwitchModule = (function () {
         console.log(`📊 [CarrierSwitch] ${filteredDispatches.length} despachos passaram pelos filtros.`);
 
         // 2. Simula o custo de cada despacho na transportadora candidata
-        const allCandidateCarriers = [...new Set(state.freightRules.map(r => String(r.transportadora || '').trim().toUpperCase()))].filter(c => c && c !== 'FOB');
+        const allCandidateCarriers = [...new Set(state.freightRules.map(r => String(r.transportadora || '').trim().toUpperCase()))].filter(c => c && c !== 'FOB' && (!window.isCarrierActive || window.isCarrierActive(c)));
 
         const simulatedDispatches = [];
 
